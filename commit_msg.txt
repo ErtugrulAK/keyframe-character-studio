@@ -1,0 +1,6 @@
+fix: rotation gizmo drift and gold handle position
+
+- Add clientToSVG coordinate converter for accurate screen-to-SVG mapping
+- Store initial angle offset on drag start to prevent rotation snap/jump
+- Calculate rotation using relative angle delta (currentAngle - initialAngle)
+- Fix gold handle knob position to use cos/sin matching atan2 convention

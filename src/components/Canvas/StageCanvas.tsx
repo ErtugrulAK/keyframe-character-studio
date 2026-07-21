@@ -370,6 +370,25 @@ export const StageCanvas: React.FC = () => {
     );
   };
 
+  // Convert client (screen) coordinates to SVG world coordinates
+  const clientToSVG = useCallback(
+    (clientX: number, clientY: number): { svgX: number; svgY: number } => {
+      if (!containerRef.current) return { svgX: 0, svgY: 0 };
+      const rect = containerRef.current.getBoundingClientRect();
+      // Screen position relative to container center
+      const relX = clientX - rect.left - rect.width / 2;
+      const relY = clientY - rect.top - rect.height / 2;
+      // Undo CSS scale and pan to get SVG world coordinates
+      const svgX = relX / zoomLevel - panOffset.x + rect.width / 2;
+      const svgY = relY / zoomLevel - panOffset.y + rect.height / 2;
+      return { svgX, svgY };
+    },
+    [zoomLevel, panOffset]
+  );
+
+  // Store initial angle on drag start for rotation
+  const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
+
   // Drag interaction handlers
   const handleMouseDown = (mode: 'translate' | 'rotate' | 'scale', e: React.MouseEvent) => {
     e.stopPropagation();
@@ -377,6 +396,14 @@ export const StageCanvas: React.FC = () => {
 
     setIsDragging(true);
     setDragMode(mode);
+
+    if (mode === 'rotate') {
+      // Calculate the initial angle from object center to mouse position
+      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+      const initialAngle = Math.atan2(svgY - selectedTransform.y, svgX - selectedTransform.x) * (180 / Math.PI);
+      setDragInitialAngle(initialAngle - selectedTransform.rotation);
+    }
+
     setDragStart({
       x: e.clientX,
       y: e.clientY,
@@ -397,19 +424,17 @@ export const StageCanvas: React.FC = () => {
           y: Math.round(dragStart.initialTransform.y + dy),
         });
       } else if (dragMode === 'rotate') {
+        // Convert mouse position to SVG world coordinates
+        const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
         const centerX = dragStart.initialTransform.x;
         const centerY = dragStart.initialTransform.y;
 
-        if (!containerRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        const mouseX = (e.clientX - rect.left - panOffset.x) / zoomLevel;
-        const mouseY = (e.clientY - rect.top - panOffset.y) / zoomLevel;
-
-        const angleRad = Math.atan2(mouseY - centerY, mouseX - centerX);
-        const angleDeg = Math.round((angleRad * 180) / Math.PI);
+        // Calculate angle from object center to current mouse position
+        const currentAngle = Math.atan2(svgY - centerY, svgX - centerX) * (180 / Math.PI);
+        const newRotation = Math.round(currentAngle - dragInitialAngle);
 
         updateCurrentTransform({
-          rotation: angleDeg,
+          rotation: newRotation,
         });
       } else if (dragMode === 'scale') {
         const scaleDelta = (dx + dy) * 0.005;
@@ -421,7 +446,7 @@ export const StageCanvas: React.FC = () => {
         });
       }
     },
-    [isDragging, dragMode, dragStart, selectedTransform, selectedPartId, updateCurrentTransform, zoomLevel, panOffset]
+    [isDragging, dragMode, dragStart, selectedTransform, selectedPartId, updateCurrentTransform, zoomLevel, clientToSVG, dragInitialAngle]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -692,8 +717,8 @@ export const StageCanvas: React.FC = () => {
               />
               {/* 360° Gold Handle Knob */}
               <circle
-                cx={70 * Math.sin((selectedTransform.rotation * Math.PI) / 180)}
-                cy={-70 * Math.cos((selectedTransform.rotation * Math.PI) / 180)}
+                cx={70 * Math.cos((selectedTransform.rotation * Math.PI) / 180)}
+                cy={70 * Math.sin((selectedTransform.rotation * Math.PI) / 180)}
                 r={8}
                 fill="#fbbf24"
                 stroke="#12141a"

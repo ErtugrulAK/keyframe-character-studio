@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { CharacterPart, Transform } from '../../types/animator';
-import { Grid, ZoomIn, ZoomOut, Compass } from 'lucide-react';
+import { Grid, ZoomIn, ZoomOut, Compass, Bone, Layers } from 'lucide-react';
 import './StageCanvas.css';
 
 export const StageCanvas: React.FC = () => {
@@ -20,6 +20,8 @@ export const StageCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [showBones, setShowBones] = useState<boolean>(true);
+  const [showOnionSkin, setShowOnionSkin] = useState<boolean>(false);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | null>(null);
@@ -33,18 +35,21 @@ export const StageCanvas: React.FC = () => {
   const selectedTransform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
 
   // Render 2D Vector Path for each body part
-  const renderPartPath = (part: CharacterPart, transform: Transform) => {
-    const isSelected = selectedPartId === part.id;
+  const renderPartPath = (part: CharacterPart, transform: Transform, isGhost: boolean = false, ghostColor?: string) => {
+    const isSelected = !isGhost && selectedPartId === part.id;
+    const opacity = isGhost ? 0.35 : transform.opacity;
 
     let pathContent: React.ReactNode = null;
+    const fill = isGhost && ghostColor ? ghostColor : part.fillColor;
+    const stroke = isGhost ? ghostColor : isSelected ? '#00d2ff' : part.strokeColor;
 
     switch (part.type) {
       case 'hair':
         pathContent = (
           <path
             d="M -35 -20 Q -45 -60 0 -65 Q 45 -60 35 -20 Q 40 10 25 25 Q 0 35 -25 25 Q -40 10 -35 -20 Z"
-            fill={part.fillColor}
-            stroke={isSelected ? '#00d2ff' : part.strokeColor}
+            fill={fill}
+            stroke={stroke}
             strokeWidth={isSelected ? 3 : 2}
           />
         );
@@ -52,23 +57,24 @@ export const StageCanvas: React.FC = () => {
       case 'head':
         pathContent = (
           <g>
-            {/* Head Oval */}
             <ellipse
               cx={0}
               cy={0}
               rx={30}
               ry={35}
-              fill={part.fillColor}
-              stroke={isSelected ? '#00d2ff' : part.strokeColor}
+              fill={fill}
+              stroke={stroke}
               strokeWidth={isSelected ? 3 : 2}
             />
-            {/* Eyes */}
-            <circle cx={-10} cy={-5} r={4} fill="#222" />
-            <circle cx={10} cy={-5} r={4} fill="#222" />
-            <circle cx={-8} cy={-7} r={1.5} fill="#fff" />
-            <circle cx={12} cy={-7} r={1.5} fill="#fff" />
-            {/* Smile */}
-            <path d="M -8 12 Q 0 20 8 12" fill="none" stroke="#aa5533" strokeWidth={2.5} strokeLinecap="round" />
+            {!isGhost && (
+              <>
+                <circle cx={-10} cy={-5} r={4} fill="#222" />
+                <circle cx={10} cy={-5} r={4} fill="#222" />
+                <circle cx={-8} cy={-7} r={1.5} fill="#fff" />
+                <circle cx={12} cy={-7} r={1.5} fill="#fff" />
+                <path d="M -8 12 Q 0 20 8 12" fill="none" stroke="#aa5533" strokeWidth={2.5} strokeLinecap="round" />
+              </>
+            )}
           </g>
         );
         break;
@@ -76,8 +82,8 @@ export const StageCanvas: React.FC = () => {
         pathContent = (
           <path
             d="M -30 -45 L 30 -45 L 22 45 L -22 45 Z"
-            fill={part.fillColor}
-            stroke={isSelected ? '#00d2ff' : part.strokeColor}
+            fill={fill}
+            stroke={stroke}
             strokeWidth={isSelected ? 3 : 2}
           />
         );
@@ -91,8 +97,8 @@ export const StageCanvas: React.FC = () => {
             width={24}
             height={55}
             rx={10}
-            fill={part.fillColor}
-            stroke={isSelected ? '#00d2ff' : part.strokeColor}
+            fill={fill}
+            stroke={stroke}
             strokeWidth={isSelected ? 3 : 2}
           />
         );
@@ -107,11 +113,11 @@ export const StageCanvas: React.FC = () => {
               width={20}
               height={50}
               rx={8}
-              fill={part.fillColor}
-              stroke={isSelected ? '#00d2ff' : part.strokeColor}
+              fill={fill}
+              stroke={stroke}
               strokeWidth={isSelected ? 3 : 2}
             />
-            <circle cx={0} cy={55} r={10} fill="#ffdbac" stroke="#d6a374" strokeWidth={2} />
+            <circle cx={0} cy={55} r={10} fill={isGhost ? ghostColor : '#ffdbac'} stroke={stroke} strokeWidth={2} />
           </g>
         );
         break;
@@ -124,8 +130,8 @@ export const StageCanvas: React.FC = () => {
             width={30}
             height={65}
             rx={10}
-            fill={part.fillColor}
-            stroke={isSelected ? '#00d2ff' : part.strokeColor}
+            fill={fill}
+            stroke={stroke}
             strokeWidth={isSelected ? 3 : 2}
           />
         );
@@ -140,12 +146,175 @@ export const StageCanvas: React.FC = () => {
               width={24}
               height={60}
               rx={8}
-              fill={part.fillColor}
-              stroke={isSelected ? '#00d2ff' : part.strokeColor}
+              fill={fill}
+              stroke={stroke}
               strokeWidth={isSelected ? 3 : 2}
             />
-            {/* Shoe */}
-            <path d="M -14 55 L 18 55 Q 22 55 22 65 L -14 65 Z" fill="#111" />
+            <path d="M -14 55 L 18 55 Q 22 55 22 65 L -14 65 Z" fill={isGhost ? ghostColor : '#111'} />
+          </g>
+        );
+        break;
+      case 'custom_sword':
+        pathContent = (
+          <g>
+            {/* Sword Blade */}
+            <path d="M -5 0 L -5 -70 L 0 -85 L 5 -70 L 5 0 Z" fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
+            {/* Hilt */}
+            <rect x={-20} y={0} width={40} height={8} rx={3} fill={isGhost ? ghostColor : '#ffb700'} stroke={stroke} strokeWidth={1.5} />
+            {/* Handle */}
+            <rect x={-4} y={8} width={8} height={22} rx={2} fill={isGhost ? ghostColor : '#4a2e15'} />
+            {/* Knob */}
+            <circle cx={0} cy={33} r={6} fill={isGhost ? ghostColor : '#ffb700'} />
+          </g>
+        );
+        break;
+      case 'custom_shield':
+        pathContent = (
+          <g>
+            <path d="M -30 -35 L 30 -35 L 30 0 C 30 35 0 55 0 55 C 0 55 -30 35 -30 0 Z" fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
+            {!isGhost && <path d="M 0 -30 L 0 50 M -25 -5 L 25 -5" stroke="#ffb700" strokeWidth={2.5} />}
+          </g>
+        );
+        break;
+      case 'custom_crown':
+        pathContent = (
+          <g>
+            <path d="M -30 15 L -30 -20 L -15 -5 L 0 -30 L 15 -5 L 30 -20 L 30 15 Z" fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
+            {!isGhost && (
+              <>
+                <circle cx={-30} cy={-22} r={3} fill="#ff3366" />
+                <circle cx={0} cy={-32} r={4} fill="#00d2ff" />
+                <circle cx={30} cy={-22} r={3} fill="#ff3366" />
+              </>
+            )}
+          </g>
+        );
+        break;
+      case 'custom_star':
+        pathContent = (
+          <polygon
+            points="0,-35 10,-10 35,-10 15,5 22,30 0,15 -22,30 -15,5 -35,-10 -10,-10"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={isSelected ? 3 : 2}
+          />
+        );
+        break;
+      case 'custom_circle':
+        pathContent = (
+          <circle cx={0} cy={0} r={30} fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
+        );
+        break;
+      case 'custom_box':
+        pathContent = (
+          <rect x={-30} y={-30} width={60} height={60} rx={8} fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
+        );
+        break;
+      case 'custom_triangle':
+        pathContent = (
+          <polygon points="0,-35 35,25 -35,25" fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
+        );
+        break;
+      case 'custom_text':
+        pathContent = (
+          <g>
+            <text
+              x={0}
+              y={0}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill={fill}
+              stroke={stroke}
+              strokeWidth={0.5}
+              fontSize={part.fontSize || 24}
+              fontWeight="bold"
+              fontFamily="Inter, system-ui, sans-serif"
+            >
+              {part.textValue || 'TEXT'}
+            </text>
+          </g>
+        );
+        break;
+      case 'custom_banner':
+        pathContent = (
+          <g>
+            <rect
+              x={-80}
+              y={-25}
+              width={160}
+              height={50}
+              rx={10}
+              fill={fill}
+              stroke={stroke}
+              strokeWidth={isSelected ? 3 : 2}
+            />
+            <text
+              x={0}
+              y={0}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill={part.strokeColor || '#ffffff'}
+              fontSize={part.fontSize || 16}
+              fontWeight="700"
+              fontFamily="Inter, system-ui, sans-serif"
+            >
+              {part.textValue || 'BANNER LABEL'}
+            </text>
+          </g>
+        );
+        break;
+      case 'custom_capsule':
+        pathContent = (
+          <rect
+            x={-50}
+            y={-20}
+            width={100}
+            height={40}
+            rx={20}
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={isSelected ? 3 : 2}
+          />
+        );
+        break;
+      case 'custom_diamond':
+        pathContent = (
+          <polygon
+            points="0,-35 35,0 0,35 -35,0"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={isSelected ? 3 : 2}
+          />
+        );
+        break;
+      case 'custom_card':
+        pathContent = (
+          <g>
+            <rect
+              x={-90}
+              y={-50}
+              width={180}
+              height={100}
+              rx={12}
+              fill={fill}
+              stroke={stroke}
+              strokeWidth={isSelected ? 3 : 2}
+            />
+            {/* Card Header Pill */}
+            <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} />
+            <circle cx={-68} cy={-29} r={4} fill="#00d2ff" />
+            <text x={-58} y={-29} dominantBaseline="middle" fill="#00d2ff" fontSize={11} fontWeight="800" fontFamily="Outfit, sans-serif">
+              {part.textValue || 'STUDIO CARD'}
+            </text>
+            {/* Body Title */}
+            <text x={-80} y={0} dominantBaseline="middle" fill="#f8fafc" fontSize={13} fontWeight="700" fontFamily="Outfit, sans-serif">
+              MOTION GRAPHIC
+            </text>
+            {/* Status Action Button */}
+            <rect x={-80} y={15} width={75} height={22} rx={4} fill="#00d2ff" />
+            <text x={-42.5} y={26} textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize={11} fontWeight="800" fontFamily="Outfit, sans-serif">
+              ACTIVE
+            </text>
           </g>
         );
         break;
@@ -156,23 +325,46 @@ export const StageCanvas: React.FC = () => {
             y={-20}
             width={40}
             height={40}
-            fill={part.fillColor}
-            stroke={isSelected ? '#00d2ff' : part.strokeColor}
+            fill={fill}
+            stroke={stroke}
             strokeWidth={isSelected ? 3 : 2}
           />
         );
     }
 
+    // Dynamic Drop Shadow / Glow Filter ID
+    const filterId = !isGhost && part.shadowColor ? `drop-shadow-${part.id}` : undefined;
+
     return (
       <g
-        key={part.id}
+        key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
         transform={`translate(${transform.x}, ${transform.y}) rotate(${transform.rotation}) scale(${transform.scaleX}, ${transform.scaleY})`}
-        style={{ opacity: transform.opacity, cursor: 'pointer' }}
+        style={{
+          opacity,
+          cursor: isGhost ? 'default' : 'pointer',
+          filter: filterId ? `url(#${filterId})` : undefined,
+        }}
         onClick={(e) => {
-          e.stopPropagation();
-          setSelectedPartId(part.id);
+          if (!isGhost) {
+            e.stopPropagation();
+            setSelectedPartId(part.id);
+          }
         }}
       >
+        {/* Dynamic SVG Filter definition for Shadow/Glow */}
+        {!isGhost && part.shadowColor && (
+          <defs>
+            <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow
+                dx={part.shadowOffsetX || 0}
+                dy={part.shadowOffsetY || 4}
+                stdDeviation={part.shadowBlur || 8}
+                floodColor={part.shadowColor || 'rgba(0,0,0,0.5)'}
+                floodOpacity="0.85"
+              />
+            </filter>
+          </defs>
+        )}
         {pathContent}
       </g>
     );
@@ -248,18 +440,92 @@ export const StageCanvas: React.FC = () => {
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  // Canvas Panning State (Right-click or Middle-click drag)
+  const [isPanning, setIsPanning] = useState<boolean>(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number; initialPan: { x: number; y: number } }>({
+    x: 0,
+    y: 0,
+    initialPan: { x: 0, y: 0 },
+  });
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Right Click (button 2) or Middle Click (button 1) or Pan tool initiates map panning
+    if (e.button === 2 || e.button === 1 || activeTool === 'pan') {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({
+        x: e.clientX,
+        y: e.clientY,
+        initialPan: { ...panOffset },
+      });
+    }
+  };
+
+  const handlePanMouseMove = useCallback(
+    (e: MouseEvent) => {
+      if (!isPanning) return;
+      const dx = (e.clientX - panStart.x) / zoomLevel;
+      const dy = (e.clientY - panStart.y) / zoomLevel;
+      setPanOffset({
+        x: Math.round(panStart.initialPan.x + dx),
+        y: Math.round(panStart.initialPan.y + dy),
+      });
+    },
+    [isPanning, panStart, zoomLevel]
+  );
+
+  const handlePanMouseUp = useCallback(() => {
+    if (isPanning) {
+      setIsPanning(false);
+    }
+  }, [isPanning]);
+
+  useEffect(() => {
+    if (isPanning) {
+      window.addEventListener('mousemove', handlePanMouseMove);
+      window.addEventListener('mouseup', handlePanMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handlePanMouseMove);
+      window.removeEventListener('mouseup', handlePanMouseUp);
+    };
+  }, [isPanning, handlePanMouseMove, handlePanMouseUp]);
+
+  // Direct Mouse Scroll Wheel Zooming (Wheel Up = Zoom In, Wheel Down = Zoom Out)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      // Direct mouse wheel scroll zooms the map directly
+      const zoomDelta = e.deltaY < 0 ? 0.12 : -0.12;
+      setZoomLevel((prev) => Math.max(0.2, Math.min(4.0, Number((prev + zoomDelta).toFixed(2)))));
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   const sortedParts = [...characterParts].sort((a, b) => a.zIndex - b.zIndex);
 
   return (
     <div
       ref={containerRef}
       className={`stage-canvas ${showGrid ? 'bg-grid' : ''}`}
-      onClick={() => setSelectedPartId(null)}
+      style={{ cursor: isPanning ? 'grabbing' : activeTool === 'pan' ? 'grab' : 'default' }}
+      onMouseDown={handleCanvasMouseDown}
+      onContextMenu={(e) => e.preventDefault()}
+      onClick={() => {
+        if (!isPanning) setSelectedPartId(null);
+      }}
     >
       {/* Top Bar Overlay Info */}
       <div className="canvas-header-info">
-        <span className="stage-title">2D CHARACTER VIEWPORT</span>
-        <span className="info-tool">TOOL: {activeTool.toUpperCase()}</span>
+        <span className="stage-title">2D ANIMATION VIEWPORT</span>
+        <span className="info-tool">MOD: {isPanning ? 'PAN NAV' : activeTool.toUpperCase()}</span>
       </div>
 
       {/* Top Right Viewport Tools Overlay */}
@@ -267,15 +533,33 @@ export const StageCanvas: React.FC = () => {
         <button
           className={`btn-icon viewport-btn ${showGrid ? 'active' : ''}`}
           onClick={() => setShowGrid(!showGrid)}
-          title="Izgarayı Göster/Gizle"
+          title="Toggle Grid (Show/Hide)"
         >
           <Grid size={15} />
         </button>
 
         <button
+          className={`btn-icon viewport-btn ${showBones ? 'active' : ''}`}
+          onClick={() => setShowBones(!showBones)}
+          title="Toggle Bone Hierarchy (Show/Hide)"
+        >
+          <Bone size={15} />
+        </button>
+
+        <button
+          className={`btn-icon viewport-btn ${showOnionSkin ? 'active' : ''}`}
+          onClick={() => setShowOnionSkin(!showOnionSkin)}
+          title="Toggle Onion Skinning (Ghost Frames)"
+        >
+          <Layers size={15} />
+        </button>
+
+        <div className="divider-v-sm" />
+
+        <button
           className="btn-icon viewport-btn"
           onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.15))}
-          title="Yakınlaş"
+          title="Zoom In"
         >
           <ZoomIn size={15} />
         </button>
@@ -285,7 +569,7 @@ export const StageCanvas: React.FC = () => {
         <button
           className="btn-icon viewport-btn"
           onClick={() => setZoomLevel((z) => Math.max(0.4, z - 0.15))}
-          title="Uzaklaş"
+          title="Zoom Out"
         >
           <ZoomOut size={15} />
         </button>
@@ -296,7 +580,7 @@ export const StageCanvas: React.FC = () => {
             setZoomLevel(1);
             setPanOffset({ x: 0, y: 0 });
           }}
-          title="Görünümü Sıfırla"
+          title="Reset View"
         >
           <Compass size={15} />
         </button>
@@ -308,108 +592,179 @@ export const StageCanvas: React.FC = () => {
         height="100%"
         style={{ transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`, transformOrigin: 'center center' }}
       >
-        {/* Origin Axes */}
-        <line x1="300" y1="0" x2="300" y2="100%" stroke="rgba(0, 210, 255, 0.2)" strokeDasharray="4 4" />
-        <line x1="0" y1="240" x2="100%" y2="240" stroke="rgba(0, 210, 255, 0.2)" strokeDasharray="4 4" />
+        <defs>
+          <pattern id="svg-dashed-grid" width="40" height="40" patternUnits="userSpaceOnUse" x="300" y="240">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" strokeDasharray="3 3" />
+          </pattern>
+        </defs>
 
-        {/* Character Parts */}
+        {/* Dashed Grid Lines (Infinite Canvas Grid in All Directions) */}
+        {showGrid && (
+          <rect x="-300000" y="-300000" width="600000" height="600000" fill="url(#svg-dashed-grid)" />
+        )}
+
+        {/* Origin Center Grid Axes (Infinite Red X-Axis & Green Y-Axis) */}
+        <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth="1.5" strokeDasharray="6 4" />
+        <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth="1.5" strokeDasharray="6 4" />
+        <circle cx={300} cy={240} r={5} fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
+        <text x={310} y={235} fill="rgba(255, 255, 255, 0.7)" fontSize="11" fontWeight="700" fontFamily="JetBrains Mono, monospace">
+          (0,0) ORIGIN
+        </text>
+
+        {/* ONION SKINNING: Ghost Frame Before (Cyan) & After (Magenta) */}
+        {showOnionSkin && currentFrame > 0 && (
+          sortedParts.map((part) => {
+            const prevTransform = getComputedTransform(part.id, currentFrame - 1);
+            return renderPartPath(part, prevTransform, true, '#00d2ff');
+          })
+        )}
+        {showOnionSkin && (
+          sortedParts.map((part) => {
+            const nextTransform = getComputedTransform(part.id, currentFrame + 1);
+            return renderPartPath(part, nextTransform, true, '#ff3366');
+          })
+        )}
+
+        {/* Character Parts Active Render */}
         {sortedParts.map((part) => {
           const transform = getComputedTransform(part.id, currentFrame);
           return renderPartPath(part, transform);
         })}
 
+        {/* Skeletal Bone Hierarchy Links */}
+        {showBones &&
+          characterParts.map((part) => {
+            if (!part.parentId) return null;
+            const parentPart = characterParts.find((p) => p.id === part.parentId);
+            if (!parentPart) return null;
+
+            const pT = getComputedTransform(parentPart.id, currentFrame);
+            const cT = getComputedTransform(part.id, currentFrame);
+
+            const isSelectedLink = selectedPartId === part.id || selectedPartId === parentPart.id;
+
+            return (
+              <g key={`bone-${part.id}`}>
+                <line
+                  x1={pT.x}
+                  y1={pT.y}
+                  x2={cT.x}
+                  y2={cT.y}
+                  stroke={isSelectedLink ? '#ffb700' : 'rgba(0, 210, 255, 0.4)'}
+                  strokeWidth={isSelectedLink ? 2.5 : 1.5}
+                  strokeDasharray={isSelectedLink ? 'none' : '4 3'}
+                />
+                <circle cx={pT.x} cy={pT.y} r={3} fill="#00d2ff" />
+                <circle cx={cT.x} cy={cT.y} r={3} fill="#ffb700" />
+              </g>
+            );
+          })}
+
         {/* Interactive Transform Gizmo on Selected Part */}
         {selectedPart && selectedTransform && (
           <g transform={`translate(${selectedTransform.x}, ${selectedTransform.y})`}>
             {/* Center Pivot Axis */}
-            <circle cx={0} cy={0} r={4} fill="#00d2ff" className="gizmo-center" />
+            <circle cx={0} cy={0} r={5} fill="#00d2ff" stroke="#fff" strokeWidth={1.5} className="gizmo-center" />
 
             {/* Drag Angle Floating Tooltip */}
             {isDragging && dragMode === 'rotate' && (
               <g transform="translate(0, -75)">
-                <rect x={-35} y={-14} width={70} height={24} rx={4} fill="rgba(0, 210, 255, 0.9)" />
+                <rect x={-35} y={-14} width={70} height={24} rx={4} fill="rgba(0, 210, 255, 0.95)" />
                 <text x={0} y={2} textAnchor="middle" fill="#000" fontSize={11} fontWeight={700} fontFamily="monospace">
                   {selectedTransform.rotation}°
                 </text>
               </g>
             )}
 
-            {/* Rotation Ring */}
-            {(activeTool === 'rotate' || activeTool === 'select') && (
-              <g>
-                <circle
-                  cx={0}
-                  cy={0}
-                  r={60}
-                  fill="none"
-                  stroke="#00d2ff"
-                  strokeWidth={1.5}
-                  strokeDasharray="4 3"
-                  className="gizmo-ring"
-                />
-                <circle
-                  cx={60 * Math.cos((selectedTransform.rotation * Math.PI) / 180)}
-                  cy={60 * Math.sin((selectedTransform.rotation * Math.PI) / 180)}
-                  r={7}
-                  fill="#ffb700"
-                  stroke="#000"
-                  strokeWidth={2}
-                  className="gizmo-handle"
-                  onMouseDown={(e) => handleMouseDown('rotate', e)}
-                />
-              </g>
-            )}
+            {/* Unified 360° Dashed Rotation Circle Ring */}
+            <g>
+              <circle
+                cx={0}
+                cy={0}
+                r={70}
+                fill="none"
+                stroke="var(--accent-teal)"
+                strokeWidth={2}
+                strokeDasharray="5 4"
+                className="gizmo-ring-360"
+                style={{ cursor: 'grab' }}
+                onMouseDown={(e) => handleMouseDown('rotate', e)}
+              />
+              {/* 360° Gold Handle Knob */}
+              <circle
+                cx={70 * Math.sin((selectedTransform.rotation * Math.PI) / 180)}
+                cy={-70 * Math.cos((selectedTransform.rotation * Math.PI) / 180)}
+                r={8}
+                fill="#fbbf24"
+                stroke="#12141a"
+                strokeWidth={2}
+                className="gizmo-handle-gold"
+                style={{ cursor: 'grab' }}
+                onMouseDown={(e) => handleMouseDown('rotate', e)}
+              />
+            </g>
 
-            {/* Translation Arrows */}
-            {(activeTool === 'move' || activeTool === 'select') && (
-              <g>
-                <line x1={0} y1={0} x2={50} y2={0} stroke="#ff3366" strokeWidth={3} />
-                <polygon points="50,-5 60,0 50,5" fill="#ff3366" />
+            {/* Translation Arrows (Red X / Green Y) */}
+            <g>
+              <line x1={0} y1={0} x2={55} y2={0} stroke="#f43f5e" strokeWidth={3.5} strokeLinecap="round" />
+              <polygon points="55,-6 67,0 55,6" fill="#f43f5e" />
 
-                <line x1={0} y1={0} x2={0} y2={50} stroke="#10b981" strokeWidth={3} />
-                <polygon points="-5,50 0,60 5,50" fill="#10b981" />
+              <line x1={0} y1={0} x2={0} y2={55} stroke="#10b981" strokeWidth={3.5} strokeLinecap="round" />
+              <polygon points="-6,55 0,67 6,55" fill="#10b981" />
 
-                <rect
-                  x={-8}
-                  y={-8}
-                  width={16}
-                  height={16}
-                  fill="#00d2ff"
-                  opacity={0.85}
-                  rx={3}
-                  className="gizmo-handle"
-                  onMouseDown={(e) => handleMouseDown('translate', e)}
-                />
-              </g>
-            )}
+              {/* Center Move Square Handle */}
+              <rect
+                x={-9}
+                y={-9}
+                width={18}
+                height={18}
+                fill="var(--accent-teal)"
+                stroke="#ffffff"
+                strokeWidth={1.5}
+                rx={4}
+                className="gizmo-handle-center"
+                style={{ cursor: 'move' }}
+                onMouseDown={(e) => handleMouseDown('translate', e)}
+              />
+            </g>
 
-            {/* Scale Gizmo Handles */}
-            {activeTool === 'scale' && (
-              <g>
-                <rect
-                  x={40}
-                  y={40}
-                  width={14}
-                  height={14}
-                  fill="#a855f7"
-                  stroke="#fff"
-                  strokeWidth={1.5}
-                  className="gizmo-handle"
-                  onMouseDown={(e) => handleMouseDown('scale', e)}
-                />
-                <line x1={0} y1={0} x2={40} y2={40} stroke="#a855f7" strokeWidth={2} strokeDasharray="3 3" />
-              </g>
-            )}
+            {/* Proportional Scale Corner Handles */}
+            <g>
+              <line x1={0} y1={0} x2={48} y2={48} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="3 3" />
+              <rect
+                x={42}
+                y={42}
+                width={14}
+                height={14}
+                fill="#a855f7"
+                stroke="#ffffff"
+                strokeWidth={1.5}
+                rx={3}
+                className="gizmo-handle-scale"
+                style={{ cursor: 'nwse-resize' }}
+                onMouseDown={(e) => handleMouseDown('scale', e)}
+              />
+            </g>
           </g>
         )}
       </svg>
 
-      {/* Bottom Footer Legend */}
+      {/* Keyframes Studio Viewport Bottom Bar */}
       <div className="canvas-footer-legend">
-        <span>Fare: Tutamakları Sürükleyin</span>
-        <span>|</span>
-        <span>Seçili: <strong>{selectedPart ? selectedPart.name : 'Yok'}</strong></span>
+        <div className="footer-left">
+          <span className="aspect-badge">16:9 Pro Canvas</span>
+          <span className="divider-dot">•</span>
+          <span>Selected: <strong style={{ color: 'var(--accent-teal)' }}>{selectedPart ? selectedPart.name : 'None'}</strong></span>
+        </div>
+
+        <div className="footer-right">
+          <button className="footer-btn" onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}>
+            Fit Canvas
+          </button>
+          <span className="zoom-level-text">{Math.round(zoomLevel * 100)}%</span>
+        </div>
       </div>
     </div>
   );
 };
+

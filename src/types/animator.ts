@@ -1,4 +1,12 @@
-export type EasingType = 'linear' | 'easeIn' | 'easeOut' | 'easeInOut' | 'bounce';
+export type EasingType = 
+  | 'linear' 
+  | 'easeIn' 
+  | 'easeOut' 
+  | 'easeInOut' 
+  | 'bounce' 
+  | 'elastic' 
+  | 'anticipate' 
+  | 'overshoot';
 
 export interface Transform {
   x: number;
@@ -42,7 +50,19 @@ export type BodyPartType =
   | 'upper_leg_r' 
   | 'lower_leg_r' 
   | 'foot_r'
-  | 'accessory';
+  | 'accessory'
+  | 'custom_sword'
+  | 'custom_shield'
+  | 'custom_crown'
+  | 'custom_star'
+  | 'custom_circle'
+  | 'custom_box'
+  | 'custom_triangle'
+  | 'custom_text'
+  | 'custom_banner'
+  | 'custom_capsule'
+  | 'custom_diamond'
+  | 'custom_card';
 
 export interface CharacterPart {
   id: string;
@@ -54,9 +74,15 @@ export interface CharacterPart {
   pivot: { x: number; y: number }; // Relative pivot point
   parentId?: string; // Parent part for FK hierarchy
   baseTransform: Transform;
+  textValue?: string; // Content string for text/banner objects
+  fontSize?: number; // Font size in px
+  shadowColor?: string; // Drop shadow or glow color
+  shadowBlur?: number; // Shadow blur radius in px
+  shadowOffsetX?: number; // Shadow offset X in px
+  shadowOffsetY?: number; // Shadow offset Y in px
 }
 
-export type ToolType = 'select' | 'move' | 'rotate' | 'scale';
+export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan';
 
 export interface PresetPose {
   id: string;

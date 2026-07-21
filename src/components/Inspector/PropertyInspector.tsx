@@ -1,11 +1,27 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import { PRESET_POSES } from '../../utils/defaults';
-import type { EasingType } from '../../types/animator';
-import { Sliders, Sparkles, Layers, Activity, Palette, Zap } from 'lucide-react';
+import { PRESET_POSES, applyEasing } from '../../utils/defaults';
+import type { EasingType, CharacterPart } from '../../types/animator';
+import {
+  Sliders,
+  Sparkles,
+  Activity,
+  Palette,
+  Zap,
+  Plus,
+  Trash2,
+  Sun,
+} from 'lucide-react';
 import './PropertyInspector.css';
 
 type TabType = 'transform' | 'style' | 'easing' | 'presets';
+
+const PRESET_COLOR_SWATCHES = [
+  '#00d2ff', '#ffb700', '#ff3366', '#a855f7', '#10b981',
+  '#ff7b00', '#ec4899', '#3b82f6', '#06b6d4', '#14b8a6',
+  '#84cc16', '#eab308', '#f97316', '#ef4444', '#6366f1',
+  '#ffffff', '#94a0b8', '#334155', '#0f172a', '#000000',
+];
 
 export const PropertyInspector: React.FC = () => {
   const {
@@ -19,6 +35,8 @@ export const PropertyInspector: React.FC = () => {
     updateKeyframeEasing,
     applyPresetPose,
     selectedKeyframeId,
+    deletePart,
+    addKeyframeForSelected,
   } = useAnimator();
 
   const [activeTab, setActiveTab] = useState<TabType>('transform');
@@ -28,30 +46,59 @@ export const PropertyInspector: React.FC = () => {
   const currentTrack = selectedPartId ? tracks.find((t) => t.partId === selectedPartId) : null;
   const currentKf = currentTrack?.keyframes.find((k) => k.frame === currentFrame || k.id === selectedKeyframeId);
 
-  const handlePartColorChange = (key: 'fillColor' | 'strokeColor', color: string) => {
+  const handlePartPropChange = (key: keyof CharacterPart, value: any) => {
     if (!selectedPartId) return;
     setCharacterParts((prev) =>
-      prev.map((p) => (p.id === selectedPartId ? { ...p, [key]: color } : p))
+      prev.map((p) => (p.id === selectedPartId ? { ...p, [key]: value } : p))
     );
+  };
+
+  const handlePartColorChange = (key: 'fillColor' | 'strokeColor', color: string) => {
+    handlePartPropChange(key, color);
   };
 
   const handleZIndexChange = (zIndex: number) => {
-    if (!selectedPartId) return;
-    setCharacterParts((prev) =>
-      prev.map((p) => (p.id === selectedPartId ? { ...p, zIndex } : p))
-    );
+    handlePartPropChange('zIndex', zIndex);
   };
 
+  // Plot Mathematical Curve Points for Graph Curve Editor
   const renderEasingCurvePreview = (easing: EasingType) => {
-    let pathD = 'M 0 40 L 60 0';
-    if (easing === 'easeIn') pathD = 'M 0 40 Q 40 40 60 0';
-    if (easing === 'easeOut') pathD = 'M 0 40 Q 20 0 60 0';
-    if (easing === 'easeInOut') pathD = 'M 0 40 C 30 40 30 0 60 0';
-    if (easing === 'bounce') pathD = 'M 0 40 L 30 10 L 40 25 L 50 5 L 60 0';
+    const width = 280;
+    const height = 150;
+    const padding = 20;
+    const innerW = width - padding * 2;
+    const innerH = height - padding * 2;
+
+    const points: string[] = [];
+    const steps = 40;
+
+    for (let i = 0; i <= steps; i++) {
+      const t = i / steps;
+      const easedT = applyEasing(t, easing);
+      const x = padding + t * innerW;
+      const y = height - padding - easedT * innerH;
+      points.push(`${x},${y}`);
+    }
+
+    const pathD = `M ${points.join(' L ')}`;
 
     return (
-      <svg className="easing-curve-svg" width="60" height="40" viewBox="0 0 60 40">
-        <path d={pathD} fill="none" stroke="#00d2ff" strokeWidth="2.5" />
+      <svg width={width} height={height} className="curve-svg">
+        {/* Background Grid */}
+        <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+        <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="rgba(255,255,255,0.15)" />
+
+        <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="rgba(255,255,255,0.15)" />
+        <line x1={width / 2} y1={padding} x2={width / 2} y2={height - padding} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+        <line x1={width - padding} y1={padding} x2={width - padding} y2={height - padding} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
+
+        {/* Acceleration Bezier Curve Path */}
+        <path d={pathD} fill="none" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
+
+        {/* Start / End Curve Handles */}
+        <circle cx={padding} cy={height - padding} r={4} fill="#6366f1" />
+        <circle cx={width - padding} cy={padding} r={4} fill="#38bdf8" />
       </svg>
     );
   };
@@ -59,8 +106,8 @@ export const PropertyInspector: React.FC = () => {
   return (
     <aside className="property-inspector">
       <div className="inspector-header">
-        <Sliders size={15} className="text-cyan" />
-        <span>PROPERTY INSPECTOR</span>
+        <Sliders size={16} className="text-cyan" />
+        <span>PROPERTIES INSPECTOR</span>
       </div>
 
       {/* Inspector Navigation Tabs */}
@@ -68,37 +115,37 @@ export const PropertyInspector: React.FC = () => {
         <button
           className={`tab-btn ${activeTab === 'transform' ? 'active' : ''}`}
           onClick={() => setActiveTab('transform')}
-          title="Transform Değerleri"
+          title="Transform Controls"
         >
-          <Activity size={14} />
+          <Activity size={13} />
           <span>Transform</span>
         </button>
 
         <button
           className={`tab-btn ${activeTab === 'style' ? 'active' : ''}`}
           onClick={() => setActiveTab('style')}
-          title="Renk ve Görünüm"
+          title="Color & Style"
         >
-          <Palette size={14} />
-          <span>Stil</span>
+          <Palette size={13} />
+          <span>Color</span>
         </button>
 
         <button
           className={`tab-btn ${activeTab === 'easing' ? 'active' : ''}`}
           onClick={() => setActiveTab('easing')}
-          title="Keyframe Eğrileri"
+          title="Curve Editor"
         >
-          <Zap size={14} />
-          <span>Eğriler</span>
+          <Zap size={13} />
+          <span>Curve Graph</span>
         </button>
 
         <button
           className={`tab-btn ${activeTab === 'presets' ? 'active' : ''}`}
           onClick={() => setActiveTab('presets')}
-          title="Hazır Duruşlar"
+          title="Preset Poses"
         >
-          <Sparkles size={14} />
-          <span>Duruşlar</span>
+          <Sparkles size={13} />
+          <span>Presets</span>
         </button>
       </div>
 
@@ -111,91 +158,179 @@ export const PropertyInspector: React.FC = () => {
                 <span className="part-name">{selectedPart.name}</span>
                 <span className="part-id-tag">ID: {selectedPart.id}</span>
               </div>
-              <div className="part-type-badge">{selectedPart.type.toUpperCase()}</div>
+              
+              <button
+                className="btn-icon delete-part-btn"
+                onClick={() => deletePart(selectedPart.id)}
+                title="Delete Selected Object (Backspace / Delete)"
+              >
+                <Trash2 size={14} className="text-red" />
+              </button>
             </div>
 
             {/* TAB 1: TRANSFORM */}
             {activeTab === 'transform' && (
               <div className="inspector-section">
-                <div className="section-title">
-                  <Activity size={13} />
-                  <span>POZİSYON & DÖNDÜRME (FRAME {currentFrame})</span>
+                <div className="section-title-bar">
+                  <div className="section-title">
+                    <Activity size={13} />
+                    <span>TRANSFORM (FRAME {currentFrame})</span>
+                  </div>
+                  <button
+                    className="btn-secondary add-kf-prop-btn"
+                    onClick={addKeyframeForSelected}
+                    title="Add explicit keyframe at current frame for selected object"
+                  >
+                    <Plus size={12} className="text-gold" /> Keyframe
+                  </button>
                 </div>
 
                 <div className="input-grid">
                   <div className="input-field">
-                    <label>POZİSYON X</label>
+                    <label>POSITION X</label>
                     <input
                       type="number"
                       value={Math.round(transform.x)}
-                      onChange={(e) => updateCurrentTransform({ x: parseFloat(e.target.value) || 0 })}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateCurrentTransform({ x: val === '' ? 0 : parseFloat(val) || 0 });
+                      }}
                     />
                   </div>
 
                   <div className="input-field">
-                    <label>POZİSYON Y</label>
+                    <label>POSITION Y</label>
                     <input
                       type="number"
                       value={Math.round(transform.y)}
-                      onChange={(e) => updateCurrentTransform({ y: parseFloat(e.target.value) || 0 })}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateCurrentTransform({ y: val === '' ? 0 : parseFloat(val) || 0 });
+                      }}
                     />
                   </div>
 
                   <div className="input-field">
-                    <label>AÇI (°)</label>
+                    <label>ROTATION (°)</label>
                     <input
                       type="number"
                       value={Math.round(transform.rotation)}
-                      onChange={(e) => updateCurrentTransform({ rotation: parseFloat(e.target.value) || 0 })}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateCurrentTransform({ rotation: val === '' ? 0 : parseFloat(val) || 0 });
+                      }}
                     />
                   </div>
 
                   <div className="input-field">
-                    <label>SAYDAMLIK (0-1)</label>
+                    <label>OPACITY (0-1)</label>
                     <input
                       type="number"
                       step={0.1}
                       min={0}
                       max={1}
                       value={transform.opacity}
-                      onChange={(e) => updateCurrentTransform({ opacity: parseFloat(e.target.value) || 1 })}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateCurrentTransform({ opacity: val === '' ? 1 : parseFloat(val) || 1 });
+                      }}
                     />
                   </div>
 
                   <div className="input-field">
-                    <label>ÖLÇEK X (SCALE)</label>
+                    <label>SCALE X</label>
                     <input
                       type="number"
                       step={0.1}
                       value={transform.scaleX}
-                      onChange={(e) => updateCurrentTransform({ scaleX: parseFloat(e.target.value) || 1 })}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateCurrentTransform({ scaleX: val === '' ? 1 : parseFloat(val) || 1 });
+                      }}
                     />
                   </div>
 
                   <div className="input-field">
-                    <label>ÖLÇEK Y (SCALE)</label>
+                    <label>SCALE Y</label>
                     <input
                       type="number"
                       step={0.1}
                       value={transform.scaleY}
-                      onChange={(e) => updateCurrentTransform({ scaleY: parseFloat(e.target.value) || 1 })}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        updateCurrentTransform({ scaleY: val === '' ? 1 : parseFloat(val) || 1 });
+                      }}
                     />
                   </div>
+                </div>
+
+                <div className="transform-quick-actions" style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+                  <button
+                    className="btn-secondary"
+                    style={{ flex: 1, fontSize: 11 }}
+                    onClick={() => updateCurrentTransform({ rotation: 0 })}
+                  >
+                    Reset Rotation (0°)
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    style={{ flex: 1, fontSize: 11 }}
+                    onClick={() => updateCurrentTransform({ scaleX: 1, scaleY: 1 })}
+                  >
+                    Reset Scale (1.0)
+                  </button>
                 </div>
               </div>
             )}
 
-            {/* TAB 2: STYLE */}
+            {/* TAB 2: STYLE, TEXT & DROP SHADOW CONTROLS */}
             {activeTab === 'style' && (
               <div className="inspector-section">
                 <div className="section-title">
                   <Palette size={13} />
-                  <span>RENK PALETİ & KATMAN DÜZENİ</span>
+                  <span>COLOR PICKER & PALETTE SWATCHES</span>
                 </div>
 
                 <div className="style-controls-list">
+                  {/* Text Input Control if object is Text, Banner, or Card */}
+                  {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner' || selectedPart.type === 'custom_card') && (
+                    <div className="input-field">
+                      <label>TEXT CONTENT</label>
+                      <input
+                        type="text"
+                        value={selectedPart.textValue || ''}
+                        placeholder="Enter text..."
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handlePartPropChange('textValue', e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner' || selectedPart.type === 'custom_card') && (
+                    <div className="input-field">
+                      <label>FONT SIZE (PX)</label>
+                      <input
+                        type="number"
+                        min={8}
+                        max={120}
+                        value={selectedPart.fontSize || 20}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handlePartPropChange('fontSize', val === '' ? '' : parseInt(val) || 20);
+                        }}
+                      />
+                    </div>
+                  )}
+
                   <div className="color-picker-row">
-                    <label>Gövde Dolgu Rengi</label>
+                    <label>Body Fill Color</label>
                     <div className="picker-wrapper">
                       <input
                         type="color"
@@ -207,7 +342,7 @@ export const PropertyInspector: React.FC = () => {
                   </div>
 
                   <div className="color-picker-row">
-                    <label>Çizgi Kenarlık Rengi</label>
+                    <label>Outline Stroke Color</label>
                     <div className="picker-wrapper">
                       <input
                         type="color"
@@ -218,52 +353,129 @@ export const PropertyInspector: React.FC = () => {
                     </div>
                   </div>
 
+                  {/* Preset Color Swatches */}
+                  <div className="color-swatch-section">
+                    <label className="swatch-title">STUDIO COLOR PALETTE</label>
+                    <div className="color-swatch-grid">
+                      {PRESET_COLOR_SWATCHES.map((hex) => (
+                        <button
+                          key={hex}
+                          className="swatch-btn"
+                          style={{ backgroundColor: hex }}
+                          onClick={() => handlePartColorChange('fillColor', hex)}
+                          title={`Set Fill Color to ${hex}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
                   <div className="input-field zindex-full">
-                    <label>Z-INDEX KATMAN ÖNCELİĞİ</label>
+                    <label>Z-INDEX LAYER PRIORITY</label>
                     <input
                       type="number"
                       value={selectedPart.zIndex}
-                      onChange={(e) => handleZIndexChange(parseInt(e.target.value) || 0)}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleZIndexChange(val === '' ? 0 : parseInt(val) || 0);
+                      }}
                     />
+                  </div>
+
+                  {/* DROP SHADOW & GLOW SECTION */}
+                  <div className="section-title" style={{ marginTop: 8 }}>
+                    <Sun size={13} className="text-gold" />
+                    <span>DROP SHADOW & SHADING EFFECTS</span>
+                  </div>
+
+                  <div className="color-picker-row">
+                    <label>Shadow / Glow Color</label>
+                    <div className="picker-wrapper">
+                      <input
+                        type="color"
+                        value={selectedPart.shadowColor || '#000000'}
+                        onChange={(e) => handlePartPropChange('shadowColor', e.target.value)}
+                      />
+                      <span className="color-hex">{selectedPart.shadowColor || 'None'}</span>
+                    </div>
+                  </div>
+
+                  <div className="input-grid">
+                    <div className="input-field">
+                      <label>SHADOW BLUR (PX)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={50}
+                        value={selectedPart.shadowBlur || 0}
+                        onChange={(e) => handlePartPropChange('shadowBlur', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+
+                    <div className="input-field">
+                      <label>OFFSET X (PX)</label>
+                      <input
+                        type="number"
+                        min={-50}
+                        max={50}
+                        value={selectedPart.shadowOffsetX || 0}
+                        onChange={(e) => handlePartPropChange('shadowOffsetX', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
+
+                    <div className="input-field">
+                      <label>OFFSET Y (PX)</label>
+                      <input
+                        type="number"
+                        min={-50}
+                        max={50}
+                        value={selectedPart.shadowOffsetY || 0}
+                        onChange={(e) => handlePartPropChange('shadowOffsetY', parseInt(e.target.value) || 0)}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* TAB 3: EASING */}
+            {/* TAB 3: CURVE EDITOR (GRAPH VIEW) */}
             {activeTab === 'easing' && (
               <div className="inspector-section">
                 <div className="section-title">
                   <Zap size={13} className="text-gold" />
-                  <span>İNTERPOLASYON EĞRİSİ</span>
+                  <span>CURVE GRAPH EDITOR</span>
                 </div>
 
                 {currentKf && currentTrack ? (
                   <div className="easing-editor">
-                    <div className="curve-preview-container">
+                    <div className="curve-graph-box">
+                      <span className="graph-label">ACCELERATION CURVE GRAPH</span>
                       {renderEasingCurvePreview(currentKf.easing)}
-                      <span className="curve-name">{currentKf.easing.toUpperCase()}</span>
+                      <span className="curve-name-badge">{currentKf.easing.toUpperCase()}</span>
                     </div>
 
                     <div className="easing-field">
-                      <label>Seçili Keyframe Easing Türü</label>
+                      <label>Acceleration Curve Type</label>
                       <select
                         value={currentKf.easing}
                         onChange={(e) =>
                           updateKeyframeEasing(currentTrack.id, currentKf.id, e.target.value as EasingType)
                         }
                       >
-                        <option value="linear">Linear (Doğrusal)</option>
-                        <option value="easeIn">Ease In (Hızlanan)</option>
-                        <option value="easeOut">Ease Out (Yavaşlayan)</option>
-                        <option value="easeInOut">Ease In Out (Yumuşak Geçiş)</option>
-                        <option value="bounce">Bounce (Sıçrama)</option>
+                        <option value="linear">Linear - Constant Speed</option>
+                        <option value="easeIn">Ease In - Slow Start Acceleration</option>
+                        <option value="easeOut">Ease Out - Fast Start Deceleration</option>
+                        <option value="easeInOut">Ease In Out - Smooth Both Sides</option>
+                        <option value="bounce">Bounce - Acceleration Spring</option>
+                        <option value="elastic">Elastic - Oscillation & Vibration</option>
+                        <option value="anticipate">Anticipate - Pull Back & Shoot</option>
+                        <option value="overshoot">Overshoot - Exceed & Settle</option>
                       </select>
                     </div>
                   </div>
                 ) : (
                   <div className="no-kf-warning">
-                    <span>Frame {currentFrame}'de keyframe bulunmuyor. Üst menüden "Keyframe Ekle"ye basın.</span>
+                    <span>No keyframe at Frame {currentFrame}. Click "Add Keyframe" to create one.</span>
                   </div>
                 )}
               </div>
@@ -271,17 +483,20 @@ export const PropertyInspector: React.FC = () => {
           </>
         ) : (
           <div className="no-selection">
-            <Layers size={36} className="text-muted" />
-            <p>Sahneden bir 2D karakter parçası seçin</p>
+            <Sparkles size={36} className="text-teal text-glow" />
+            <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#f8fafc', margin: '10px 0 4px' }}>NO OBJECT SELECTED</h3>
+            <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', lineHeight: 1.5, maxWidth: 240 }}>
+              Select an object on the canvas or pick a track from the timeline to edit transforms, colors, and motion curves.
+            </p>
           </div>
         )}
 
-        {/* TAB 4: PRESETS (Or always visible at bottom when Presets tab active) */}
+        {/* TAB 5: PRESETS */}
         {activeTab === 'presets' && (
           <div className="inspector-section presets-section">
             <div className="section-title">
               <Sparkles size={13} className="text-gold" />
-              <span>HAZIR DURUŞ KÜTÜPHANESİ</span>
+              <span>PRESET POSE LIBRARY</span>
             </div>
 
             <div className="preset-grid">
@@ -290,7 +505,7 @@ export const PropertyInspector: React.FC = () => {
                   key={pose.id}
                   className="btn-secondary preset-btn"
                   onClick={() => applyPresetPose(pose.id)}
-                  title={`Karaktere ${pose.name} duruşunu uygula`}
+                  title={`Apply ${pose.name} pose to character`}
                 >
                   {pose.name}
                 </button>
@@ -302,3 +517,4 @@ export const PropertyInspector: React.FC = () => {
     </aside>
   );
 };
+

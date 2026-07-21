@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import type {
   CharacterPart,
+  BodyPartType,
   Track,
   Keyframe,
   Transform,
@@ -15,7 +16,12 @@ import {
   interpolateTransform,
 } from '../utils/defaults';
 
-const AUTOSAVE_STORAGE_KEY = 'SEQUENCER_2D_STUDIO_AUTOSAVE_V1';
+const AUTOSAVE_STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
+
+interface HistoryState {
+  tracks: Track[];
+  characterParts: CharacterPart[];
+}
 
 interface AnimatorContextType {
   currentFrame: number;
@@ -53,6 +59,12 @@ interface AnimatorContextType {
   lastSavedAt: Date | null;
   triggerManualSave: () => void;
 
+  // Undo / Redo History
+  undo: () => void;
+  redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
+
   // Helper getters
   getComputedTransform: (partId: string, frame: number) => Transform;
 
@@ -69,6 +81,8 @@ interface AnimatorContextType {
   exportProject: () => string;
   importProject: (jsonStr: string) => boolean;
   resetProject: () => void;
+  addCustomPart: (type: BodyPartType, name: string) => void;
+  deletePart: (partId: string) => void;
 }
 
 const AnimatorContext = createContext<AnimatorContextType | null>(null);
@@ -80,13 +94,18 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [totalFrames, setTotalFrames] = useState<number>(60);
   const [isLooping, setIsLooping] = useState<boolean>(true);
 
-  const [selectedPartId, setSelectedPartId] = useState<string | null>('head');
-  const [selectedTrackId, setSelectedTrackId] = useState<string | null>('track_head');
+  const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [selectedKeyframeId, setSelectedKeyframeId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ToolType>('select');
 
   const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
   const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
+
+  // Undo / Redo Stack State
+  const [history, setHistory] = useState<HistoryState[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const isUndoRedoRef = useRef<boolean>(false);
 
   const [timelineZoom, setTimelineZoom] = useState<number>(18); // px per frame
   const [showGrid, setShowGrid] = useState<boolean>(true);
@@ -95,19 +114,68 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
 
-  // 1. Initial Load: Restore from LocalStorage if available
+  // Record History Snapshot whenever tracks or characterParts change
+  useEffect(() => {
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      return;
+    }
+    const snap: HistoryState = {
+      tracks: JSON.parse(JSON.stringify(tracks)),
+      characterParts: JSON.parse(JSON.stringify(characterParts)),
+    };
+    setHistory((prev) => {
+      const trimmed = prev.slice(0, historyIndex + 1);
+      return [...trimmed.slice(-30), snap];
+    });
+    setHistoryIndex((prev) => Math.min(prev + 1, 30));
+  }, [tracks, characterParts]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      const targetState = history[prevIndex];
+      if (targetState) {
+        isUndoRedoRef.current = true;
+        setTracks(JSON.parse(JSON.stringify(targetState.tracks)));
+        setCharacterParts(JSON.parse(JSON.stringify(targetState.characterParts)));
+        setHistoryIndex(prevIndex);
+      }
+    }
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1;
+      const targetState = history[nextIndex];
+      if (targetState) {
+        isUndoRedoRef.current = true;
+        setTracks(JSON.parse(JSON.stringify(targetState.tracks)));
+        setCharacterParts(JSON.parse(JSON.stringify(targetState.characterParts)));
+        setHistoryIndex(nextIndex);
+      }
+    }
+  }, [history, historyIndex]);
+
+  // 1. Initial Load: Restore from LocalStorage if available (filtering legacy stickman)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
       if (saved) {
         const parsed: AnimationProject & { lastSavedTime?: string } = JSON.parse(saved);
-        if (parsed.tracks && parsed.characterParts) {
+        const hasLegacyStickman = parsed.characterParts?.some((p) => p.type === 'head' || p.type === 'torso');
+        if (parsed.tracks && parsed.characterParts && !hasLegacyStickman) {
           setTracks(parsed.tracks);
           setCharacterParts(parsed.characterParts);
           if (parsed.fps) setFps(parsed.fps);
           if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
           setLastSavedAt(parsed.lastSavedTime ? new Date(parsed.lastSavedTime) : new Date());
-          console.log('[AutoSave] Previous session restored from LocalStorage');
+        } else {
+          // Clear legacy stickman data
+          localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
         }
       }
     } catch (e) {
@@ -144,6 +212,54 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const triggerManualSave = () => {
     performSave();
   };
+
+  // Delete part directly without confirm
+  const deletePart = useCallback((partId: string) => {
+    setCharacterParts((prev) => prev.filter((p) => p.id !== partId));
+    setTracks((prev) => prev.filter((t) => t.partId !== partId));
+    if (selectedPartId === partId) {
+      setSelectedPartId(null);
+    }
+  }, [selectedPartId]);
+
+  // Global Keyboard Shortcuts (Ctrl+Z, Ctrl+Y, Backspace/Delete)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInputActive =
+        activeEl &&
+        (activeEl.tagName === 'INPUT' ||
+          activeEl.tagName === 'TEXTAREA' ||
+          activeEl.tagName === 'SELECT' ||
+          (activeEl as HTMLElement).isContentEditable);
+
+      if (isInputActive) return;
+
+      // Undo: Ctrl + Z
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      }
+      // Redo: Ctrl + Y or Ctrl + Shift + Z
+      else if (
+        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
+        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')
+      ) {
+        e.preventDefault();
+        redo();
+      }
+      // Instant Delete without alert modal on Backspace or Delete
+      else if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (selectedPartId) {
+          e.preventDefault();
+          deletePart(selectedPartId);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPartId, deletePart, undo, redo]);
 
   // Calculate position/rotation at given frame using interpolation
   const getComputedTransform = useCallback(
@@ -249,39 +365,34 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const addKeyframeForSelected = () => {
     if (!selectedPartId) return;
-    let track = tracks.find((t) => t.partId === selectedPartId);
-    if (!track) {
-      const part = characterParts.find((p) => p.id === selectedPartId);
-      const newTrack: Track = {
-        id: `track_${selectedPartId}`,
-        partId: selectedPartId,
-        name: `${part?.name || selectedPartId} Track`,
-        color: `#${Math.floor(Math.random() * 16777215).toString(16)}`,
-        visible: true,
-        locked: false,
-        keyframes: [],
-      };
-      setTracks((prev) => [...prev, newTrack]);
-      track = newTrack;
+    const track = tracks.find((t) => t.partId === selectedPartId);
+    if (track) {
+      addKeyframeToTrack(track.id, currentFrame);
     }
-    addKeyframeToTrack(track.id, currentFrame);
   };
 
   const deleteKeyframe = (trackId: string, keyframeId: string) => {
     setTracks((prev) =>
-      prev.map((tr) => (tr.id === trackId ? { ...tr, keyframes: tr.keyframes.filter((k) => k.id !== keyframeId) } : tr))
+      prev.map((tr) => {
+        if (tr.id !== trackId) return tr;
+        return {
+          ...tr,
+          keyframes: tr.keyframes.filter((k) => k.id !== keyframeId),
+        };
+      })
     );
-    if (selectedKeyframeId === keyframeId) setSelectedKeyframeId(null);
   };
 
   const updateKeyframeFrame = (trackId: string, keyframeId: string, newFrame: number) => {
-    const clampedFrame = Math.max(0, Math.min(totalFrames, newFrame));
     setTracks((prev) =>
       prev.map((tr) => {
         if (tr.id !== trackId) return tr;
-        const newKfs = tr.keyframes.map((k) => (k.id === keyframeId ? { ...k, frame: clampedFrame } : k));
-        newKfs.sort((a, b) => a.frame - b.frame);
-        return { ...tr, keyframes: newKfs };
+        const targetKf = tr.keyframes.find((k) => k.id === keyframeId);
+        if (!targetKf) return tr;
+
+        const updatedKfs = tr.keyframes.map((k) => (k.id === keyframeId ? { ...k, frame: newFrame } : k));
+        updatedKfs.sort((a, b) => a.frame - b.frame);
+        return { ...tr, keyframes: updatedKfs };
       })
     );
   };
@@ -300,50 +411,37 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const updateCurrentTransform = (newTransform: Partial<Transform>) => {
     if (!selectedPartId) return;
+    const track = tracks.find((t) => t.partId === selectedPartId);
+    if (!track) return;
 
-    let track = tracks.find((t) => t.partId === selectedPartId);
+    const existingKf = track.keyframes.find((k) => k.frame === currentFrame);
 
-    if (!track) {
-      const part = characterParts.find((p) => p.id === selectedPartId);
-      const newTrack: Track = {
-        id: `track_${selectedPartId}`,
-        partId: selectedPartId,
-        name: `${part?.name || selectedPartId} Track`,
-        color: '#00d2ff',
-        visible: true,
-        locked: false,
-        keyframes: [],
-      };
-      track = newTrack;
-      setTracks((prev) => [...prev, newTrack]);
-    }
-
-    const currentComp = getComputedTransform(selectedPartId, currentFrame);
-    const updatedTransform: Transform = { ...currentComp, ...newTransform };
-
-    setTracks((prevTracks) =>
-      prevTracks.map((tr) => {
-        if (tr.partId !== selectedPartId) return tr;
-        const kfIdx = tr.keyframes.findIndex((k) => k.frame === currentFrame);
-        let updatedKfs = [...tr.keyframes];
-
-        if (kfIdx >= 0) {
-          updatedKfs[kfIdx] = {
-            ...updatedKfs[kfIdx],
-            transform: updatedTransform,
+    if (existingKf) {
+      setTracks((prev) =>
+        prev.map((tr) => {
+          if (tr.id !== track.id) return tr;
+          return {
+            ...tr,
+            keyframes: tr.keyframes.map((k) =>
+              k.frame === currentFrame ? { ...k, transform: { ...k.transform, ...newTransform } } : k
+            ),
           };
-        } else {
-          updatedKfs.push({
-            id: `kf_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-            frame: currentFrame,
-            transform: updatedTransform,
-            easing: 'easeInOut',
-          });
-          updatedKfs.sort((a, b) => a.frame - b.frame);
-        }
-        return { ...tr, keyframes: updatedKfs };
-      })
-    );
+        })
+      );
+    } else if (track.keyframes.length > 0) {
+      setCharacterParts((prev) =>
+        prev.map((p) =>
+          p.id === selectedPartId ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
+        )
+      );
+      addKeyframeToTrack(track.id, currentFrame);
+    } else {
+      setCharacterParts((prev) =>
+        prev.map((p) =>
+          p.id === selectedPartId ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
+        )
+      );
+    }
   };
 
   const applyPresetPose = (poseId: string) => {
@@ -351,28 +449,31 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!pose) return;
 
     Object.entries(pose.transforms).forEach(([partId, transform]) => {
-      const current = getComputedTransform(partId, currentFrame);
-      const updated = { ...current, ...transform };
+      const track = tracks.find((t) => t.partId === partId);
+      if (track) {
+        setTracks((prevTracks) =>
+          prevTracks.map((tr) => {
+            if (tr.partId !== partId) return tr;
+            const currentT = getComputedTransform(partId, currentFrame);
+            const updatedT = { ...currentT, ...transform };
+            const existingIdx = tr.keyframes.findIndex((k) => k.frame === currentFrame);
 
-      setTracks((prev) =>
-        prev.map((tr) => {
-          if (tr.partId !== partId) return tr;
-          const idx = tr.keyframes.findIndex((k) => k.frame === currentFrame);
-          let newKfs = [...tr.keyframes];
-          if (idx >= 0) {
-            newKfs[idx] = { ...newKfs[idx], transform: updated };
-          } else {
-            newKfs.push({
-              id: `kf_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-              frame: currentFrame,
-              transform: updated,
-              easing: 'easeInOut',
-            });
-            newKfs.sort((a, b) => a.frame - b.frame);
-          }
-          return { ...tr, keyframes: newKfs };
-        })
-      );
+            let newKfs = [...tr.keyframes];
+            if (existingIdx >= 0) {
+              newKfs[existingIdx] = { ...newKfs[existingIdx], transform: updatedT };
+            } else {
+              newKfs.push({
+                id: `kf_${Date.now()}_${partId}`,
+                frame: currentFrame,
+                transform: updatedT,
+                easing: 'easeInOut',
+              });
+              newKfs.sort((a, b) => a.frame - b.frame);
+            }
+            return { ...tr, keyframes: newKfs };
+          })
+        );
+      }
     });
   };
 
@@ -399,17 +500,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const parsed: AnimationProject = JSON.parse(jsonStr);
       if (parsed.tracks && parsed.characterParts) {
-        setFps(parsed.fps || 30);
-        setTotalFrames(parsed.totalFrames || 60);
         setTracks(parsed.tracks);
         setCharacterParts(parsed.characterParts);
-        setCurrentFrame(0);
-        performSave();
+        if (parsed.fps) setFps(parsed.fps);
+        if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
         return true;
       }
       return false;
-    } catch (e) {
-      console.error('Failed to parse project JSON', e);
+    } catch {
       return false;
     }
   };
@@ -421,6 +519,40 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsPlaying(false);
     localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
     setLastSavedAt(null);
+  };
+
+  const addCustomPart = (type: BodyPartType, name: string) => {
+    const partId = `part_${type}_${Date.now()}`;
+    const colors = ['#00d2ff', '#ffb700', '#ff3366', '#a855f7', '#10b981', '#ff7b00', '#ec4899'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    const newPart: CharacterPart = {
+      id: partId,
+      name,
+      type,
+      zIndex: characterParts.length + 1,
+      fillColor: randomColor,
+      strokeColor: '#101218',
+      pivot: { x: 0.5, y: 0.5 },
+      parentId: selectedPartId || 'torso',
+      baseTransform: { x: 300, y: 240, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      textValue: type === 'custom_text' ? 'NEW TEXT' : type === 'custom_banner' ? 'CARD LABEL' : undefined,
+      fontSize: 20,
+    };
+
+    const newTrack: Track = {
+      id: `track_${partId}`,
+      partId,
+      name: `${name} Track`,
+      color: randomColor,
+      visible: true,
+      locked: false,
+      keyframes: [], // UE5 Sequencer workflow: 0 auto keyframes on creation
+    };
+
+    setCharacterParts((prev) => [...prev, newPart]);
+    setTracks((prev) => [...prev, newTrack]);
+    setSelectedPartId(partId);
   };
 
   return (
@@ -454,6 +586,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setShowGrid,
         lastSavedAt,
         triggerManualSave,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
         getComputedTransform,
         addKeyframeForSelected,
         addKeyframeToTrack,
@@ -467,6 +603,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         exportProject,
         importProject,
         resetProject,
+        addCustomPart,
+        deletePart,
       }}
     >
       {children}

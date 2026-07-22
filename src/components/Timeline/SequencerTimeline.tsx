@@ -555,7 +555,7 @@ export const SequencerTimeline: React.FC = () => {
                   {/* ── PARENT LANE (composite keyframes) ── */}
                   <div
                     className={`ue-track-lane ${isSelected ? 'selected' : ''}`}
-                    style={{ height: TRACK_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px` }}
+                    style={{ height: TRACK_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}
                   >
                     {/* Span bars between composite keyframes */}
                     {sortedKfs.map((kf, idx) => {
@@ -597,18 +597,18 @@ export const SequencerTimeline: React.FC = () => {
                   {isTrackExpanded && (
                     <div className="ue-channel-lanes">
                       {/* Transform Header Lane Spacer */}
-                      <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px` }} />
+                      <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }} />
 
                       {isTransformExpanded && (
                         <>
                           {/* Location Header Lane Spacer */}
-                          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px` }} />
+                          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }} />
                           {isLocationExpanded && ['x', 'y'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
                             const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
                             return (
-                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px` }}>
+                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {/* Horizontal connecting trajectory line for keyframes (Unreal Engine style) */}
                                 {chKfs.length > 0 && (
                                   <div
@@ -637,13 +637,13 @@ export const SequencerTimeline: React.FC = () => {
                           })}
 
                           {/* Rotation Header Lane Spacer */}
-                          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px` }} />
+                          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }} />
                           {isRotationExpanded && ['rotation'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
                             const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
                             return (
-                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px` }}>
+                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {chKfs.length > 0 && (
                                   <div
                                     className="ue-trajectory-line"
@@ -671,13 +671,13 @@ export const SequencerTimeline: React.FC = () => {
                           })}
 
                           {/* Scale Header Lane Spacer */}
-                          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px` }} />
+                          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }} />
                           {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
                             const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
                             return (
-                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px` }}>
+                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {chKfs.length > 0 && (
                                   <div
                                     className="ue-trajectory-line"
@@ -710,7 +710,7 @@ export const SequencerTimeline: React.FC = () => {
                             const meta = CHANNEL_META[ch];
                             const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
                             return (
-                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px` }}>
+                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {chKfs.length > 0 && (
                                   <div
                                     className="ue-trajectory-line"

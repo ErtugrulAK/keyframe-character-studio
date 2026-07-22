@@ -1,13 +1,5 @@
-refactor: modularize StageCanvas, PropertyInspector, and AnimatorContext into sub-components
+fix: PropertyInspector canvas overlap layout shift and timeline grid row alignment
 
-- Extracted ToastPortal component (src/components/Toast/ToastPortal.tsx)
-- Refactored PropertyInspector (52KB, 1185 lines -> 190 lines) into modular section tabs:
-  - TransformTab (Position, Rotation, Opacity, Scale, 3x3 Anchor Picker, Spring Physics)
-  - StyleTab (Color Palette, Text, Trim Path, Cloner, Particles, Media Crop)
-  - MotionTab (Motion Transitions presets grid)
-  - PresetsTab (Preset Poses library grid)
-- Refactored StageCanvas (51KB, 1370 lines -> 300 lines) into modular sub-renderers and overlays:
-  - PartRenderer (SVG custom shape and body part renderer)
-  - TransformGizmo (Interactive bounding box, rotation knob, corner scale handles)
-  - SkeletalBones (Bone hierarchy link renderer)
-  - OnionSkinning (Ghost frame renderer)
+- Fixed CSS class mismatch in StageCanvas.css (.stage-canvas -> .stage-canvas-container) so the canvas container correctly expands with flex: 1 height: 100%, docking PropertyInspector to the right edge
+- Added dynamic backgroundSize to right timeline grid lanes matching FRAME_WIDTH so timeline grid columns align with timeline zoom
+- Added clean row borders across channel spacer header lanes and track lanes in timeline grid

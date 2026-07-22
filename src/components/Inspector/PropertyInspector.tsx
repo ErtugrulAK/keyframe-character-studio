@@ -374,6 +374,20 @@ export const PropertyInspector: React.FC = () => {
                     </div>
                   )}
 
+                  {/* Video URL Input Control if object is Custom Video */}
+                  {selectedPart.type === 'custom_video' && (
+                    <div className="input-field">
+                      <label>VIDEO SOURCE (URL / MP4 / WEBM)</label>
+                      <input
+                        type="text"
+                        value={selectedPart.videoUrl || ''}
+                        placeholder="Paste video URL..."
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handlePartPropChange('videoUrl', e.target.value)}
+                      />
+                    </div>
+                  )}
+
                   <div className="color-picker-row">
                     <label>Body Fill Color</label>
                     <div className="picker-wrapper">

@@ -311,6 +311,42 @@ export const StageCanvas: React.FC = () => {
           </g>
         );
         break;
+      case 'custom_video':
+        pathContent = (
+          <g>
+            {part.videoUrl ? (
+              <foreignObject x={-100} y={-60} width={200} height={120}>
+                <video
+                  src={part.videoUrl}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 8,
+                    pointerEvents: 'none',
+                  }}
+                />
+              </foreignObject>
+            ) : (
+              <rect x={-100} y={-60} width={200} height={120} rx={8} fill={fill} />
+            )}
+            <rect
+              x={-100}
+              y={-60}
+              width={200}
+              height={120}
+              rx={8}
+              fill="none"
+              stroke={stroke}
+              strokeWidth={isSelected ? 3 : 1.5}
+            />
+          </g>
+        );
+        break;
       default:
         pathContent = (
           <rect

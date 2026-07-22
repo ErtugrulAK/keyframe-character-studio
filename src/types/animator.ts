@@ -62,7 +62,8 @@ export type BodyPartType =
   | 'custom_capsule'
   | 'custom_diamond'
   | 'custom_card'
-  | 'custom_image';
+  | 'custom_image'
+  | 'custom_video';
 
 export interface CharacterPart {
   id: string;
@@ -80,6 +81,7 @@ export interface CharacterPart {
   cardTitle?: string; // e.g. "MOTION GRAPHIC"
   cardButtonText?: string; // e.g. "ACTIVE"
   imageUrl?: string; // Image URL / Data URL for custom_image
+  videoUrl?: string; // Video URL / Data URL / Object URL for custom_video
   shadowColor?: string; // Drop shadow or glow color
   shadowBlur?: number; // Shadow blur radius in px
   shadowOffsetX?: number; // Shadow offset X in px

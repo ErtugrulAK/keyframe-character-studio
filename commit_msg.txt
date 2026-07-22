@@ -1,5 +1,7 @@
-fix: adjust gizmo rotation ring radius to stay snug around object while scaling knobs for readability
+feat: add Fullscreen High-Precision Motion Curve Studio modal with Live Physics preview
 
-- Fixed issue where zScale caused the gizmo rotation ring radius (r0) to blow up into a giant circle across the canvas when zooming out
-- Keeps rotation ring (r0) and translation arrows strictly proportional to object size (objScale)
-- Scales knob handle radii and stroke widths slightly for easy clickability and readability at any zoom level
+- Added 'Expand Studio' button to open a high-precision full-screen 2D Cubic Bezier Editor Modal
+- Modal includes a 520x320px SVG canvas with coordinate readout for precise P1 (Cyan) and P2 (Gold) curve handles
+- Direct numeric input fields for x1, y1, x2, y2 coordinates (cubic-bezier.com style)
+- Real-time Live Physics Motion preview track showing an animated object moving driven by the exact bezier physics
+- Extended preset buttons (Linear, Ease In/Out, Overshoot, Anticipate, Slow Mo, Elastic) and one-click CSS code copy

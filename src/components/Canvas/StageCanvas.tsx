@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { CharacterPart, Transform } from '../../types/animator';
-import { Grid, ZoomIn, ZoomOut, Compass, Bone, Layers } from 'lucide-react';
+import { Grid, ZoomIn, ZoomOut, Compass, Bone, Layers, Sparkles } from 'lucide-react';
 import './StageCanvas.css';
 
 export const StageCanvas: React.FC = () => {
@@ -15,6 +15,7 @@ export const StageCanvas: React.FC = () => {
     activeTool,
     showGrid,
     setShowGrid,
+    addCustomPart,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -693,19 +694,99 @@ export const StageCanvas: React.FC = () => {
     };
   }, []);
 
+  const [isDropTargetActive, setIsDropTargetActive] = useState<boolean>(false);
+
+  const handleCanvasDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    if (!isDropTargetActive) setIsDropTargetActive(true);
+  };
+
+  const handleCanvasDragLeave = () => {
+    setIsDropTargetActive(false);
+  };
+
+  const handleCanvasDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDropTargetActive(false);
+
+    try {
+      const jsonStr = e.dataTransfer.getData('application/json');
+      if (!jsonStr) return;
+      const data = JSON.parse(jsonStr);
+
+      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+
+      addCustomPart(data.type, data.name || 'Dropped Element', {
+        imageUrl: data.imageUrl,
+        videoUrl: data.videoUrl,
+        baseTransform: {
+          x: Math.round(svgX),
+          y: Math.round(svgY),
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+        },
+      });
+    } catch (err) {
+      console.error('Failed to parse dropped element data:', err);
+    }
+  };
+
   const sortedParts = [...characterParts].sort((a, b) => a.zIndex - b.zIndex);
 
   return (
     <div
       ref={containerRef}
       className={`stage-canvas ${showGrid ? 'bg-grid' : ''}`}
-      style={{ cursor: isPanning ? 'grabbing' : activeTool === 'pan' ? 'grab' : 'default' }}
+      style={{ cursor: isPanning ? 'grabbing' : activeTool === 'pan' ? 'grab' : 'default', position: 'relative' }}
       onMouseDown={handleCanvasMouseDown}
       onContextMenu={(e) => e.preventDefault()}
+      onDragOver={handleCanvasDragOver}
+      onDragLeave={handleCanvasDragLeave}
+      onDrop={handleCanvasDrop}
       onClick={() => {
         if (!isPanning) setSelectedPartId(null);
       }}
     >
+      {/* Drag & Drop Target Active Overlay */}
+      {isDropTargetActive && (
+        <div
+          style={{
+            position: 'absolute',
+            inset: 12,
+            borderRadius: 16,
+            border: '2px dashed var(--accent-teal)',
+            background: 'rgba(20, 184, 166, 0.14)',
+            pointerEvents: 'none',
+            zIndex: 999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backdropFilter: 'blur(4px)',
+          }}
+        >
+          <div
+            style={{
+              padding: '14px 28px',
+              background: 'var(--bg-darkest)',
+              borderRadius: 12,
+              border: '1px solid var(--accent-teal)',
+              boxShadow: '0 0 30px var(--accent-teal-glow)',
+              color: 'var(--accent-teal)',
+              fontWeight: 800,
+              fontSize: 14,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <Sparkles size={18} />
+            <span>RELEASE TO DROP ELEMENT ONTO STAGE CANVAS</span>
+          </div>
+        </div>
+      )}
       {/* Top Bar Overlay Info */}
       <div className="canvas-header-info">
         <span className="stage-title">2D ANIMATION VIEWPORT</span>

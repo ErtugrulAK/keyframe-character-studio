@@ -167,7 +167,7 @@ export const PropertyInspector: React.FC = () => {
     <aside className="property-inspector">
       <div className="inspector-header">
         <Sliders size={16} className="text-cyan" />
-        <span>PROPERTIES INSPECTOR</span>
+        <span>INSPECTOR / COMPOSITION PARAMS</span>
       </div>
 
       {/* Inspector Navigation Tabs */}

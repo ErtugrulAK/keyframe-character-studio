@@ -107,6 +107,18 @@ export const LeftToolbar: React.FC = () => {
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, type: BodyPartType, label: string, extraData?: Record<string, any>) => {
+    e.dataTransfer.setData(
+      'application/json',
+      JSON.stringify({
+        type,
+        name: label,
+        ...extraData,
+      })
+    );
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <aside className="left-toolbar-container">
       <input
@@ -118,7 +130,6 @@ export const LeftToolbar: React.FC = () => {
         style={{ display: 'none' }}
       />
 
-      {/* Keyframes Studio 86px Vertical Icon Sidebar */}
       <div className="left-sidebar-nav">
         <button
           className={`sidebar-nav-item ${activeCategory === 'media' ? 'active' : ''}`}
@@ -175,7 +186,6 @@ export const LeftToolbar: React.FC = () => {
         </button>
       </div>
 
-      {/* Expanding Panel Drawer (280px) */}
       <div className="left-drawer-panel">
         {activeCategory === 'transitions' && (
           <div className="drawer-content">
@@ -210,7 +220,6 @@ export const LeftToolbar: React.FC = () => {
               <span className="drawer-title">Media Library</span>
             </div>
 
-            {/* Dropzone Container */}
             <div
               className={`dropzone-box ${isDragOver ? 'drag-over' : ''}`}
               onClick={() => fileInputRef.current?.click()}
@@ -232,6 +241,8 @@ export const LeftToolbar: React.FC = () => {
                 <button
                   key={item.type}
                   className="drawer-item-card"
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, item.type, item.label)}
                   onClick={() => addCustomPart(item.type, item.label)}
                 >
                   <div className="item-icon-box">{item.icon}</div>
@@ -333,6 +344,8 @@ export const LeftToolbar: React.FC = () => {
             </div>
             <button
               className="btn-primary w-full text-add-btn"
+              draggable={true}
+              onDragStart={(e) => handleDragStart(e, 'custom_text', 'HEADING TEXT')}
               onClick={() => addCustomPart('custom_text', 'HEADING TEXT')}
             >
               <Type size={16} />
@@ -351,6 +364,8 @@ export const LeftToolbar: React.FC = () => {
                 <button
                   key={item.type}
                   className="drawer-item-card"
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, item.type, item.label)}
                   onClick={() => addCustomPart(item.type, item.label)}
                 >
                   <div className="item-icon-box">{item.icon}</div>

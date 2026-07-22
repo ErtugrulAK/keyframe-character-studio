@@ -1,5 +1,6 @@
-fix: mount Curve Studio Modal to document.body via React Portal with top z-index
+feat: redesign UI into Motion Design Studio style and add HTML5 Drag & Drop element insertion
 
-- Fixed z-index layering bug where the timeline bottom bar rendered on top of the modal window
-- Used ReactDOM.createPortal(..., document.body) with z-index: 999999 so the modal floats cleanly on top of all application panels
-- Added responsive max-height: calc(100vh - 40px) and vertical scrolling to prevent bottom clipping on smaller screens
+- Redesigned UI terminology and panel layout to match professional Motion Graphic & Video Sequencer applications (After Effects / Rive / Jitter)
+- Updated Left Toolbar items (vector shapes, typography, media footage) to support native HTML5 Drag and Drop onto Stage Canvas
+- Implemented client-to-SVG coordinate mapping in StageCanvas to insert dropped elements at exact mouse location
+- Added cyan glowing drop target overlay on canvas stage when dragging elements

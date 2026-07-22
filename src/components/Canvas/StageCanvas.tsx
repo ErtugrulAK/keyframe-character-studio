@@ -161,23 +161,29 @@ export const StageCanvas: React.FC = () => {
             points="0,-35 10,-10 35,-10 15,5 22,30 0,15 -22,30 -15,5 -35,-10 -10,-10"
             fill={fill}
             stroke={stroke}
-            strokeWidth={isSelected ? 3 : 2}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
           />
         );
         break;
       case 'custom_circle':
         pathContent = (
-          <circle cx={0} cy={0} r={30} fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
+          <circle cx={0} cy={0} r={30} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
         );
         break;
       case 'custom_box':
         pathContent = (
-          <rect x={-30} y={-30} width={60} height={60} rx={8} fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
+          <rect x={-30} y={-30} width={60} height={60} rx={8} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
+        );
+        break;
+      case 'custom_rect':
+        pathContent = (
+          <rect x={-60} y={-35} width={120} height={70} rx={10} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
         );
         break;
       case 'custom_triangle':
         pathContent = (
-          <polygon points="0,-35 35,25 -35,25" fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
+          <polygon points="0,-35 35,25 -35,25" fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
         );
         break;
       case 'custom_text':
@@ -194,6 +200,7 @@ export const StageCanvas: React.FC = () => {
               fontSize={part.fontSize || 24}
               fontWeight="bold"
               fontFamily="Inter, system-ui, sans-serif"
+              vectorEffect="non-scaling-stroke"
             >
               {part.textValue || 'TEXT'}
             </text>
@@ -211,7 +218,8 @@ export const StageCanvas: React.FC = () => {
               rx={10}
               fill={fill}
               stroke={stroke}
-              strokeWidth={isSelected ? 3 : 2}
+              strokeWidth={isSelected ? 2 : 1.5}
+              vectorEffect="non-scaling-stroke"
             />
             <text
               x={0}
@@ -238,7 +246,8 @@ export const StageCanvas: React.FC = () => {
             rx={20}
             fill={fill}
             stroke={stroke}
-            strokeWidth={isSelected ? 3 : 2}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
           />
         );
         break;
@@ -248,7 +257,8 @@ export const StageCanvas: React.FC = () => {
             points="0,-35 35,0 0,35 -35,0"
             fill={fill}
             stroke={stroke}
-            strokeWidth={isSelected ? 3 : 2}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
           />
         );
         break;
@@ -263,7 +273,8 @@ export const StageCanvas: React.FC = () => {
               rx={12}
               fill={fill}
               stroke={stroke}
-              strokeWidth={isSelected ? 3 : 2}
+              strokeWidth={isSelected ? 2 : 1.5}
+              vectorEffect="non-scaling-stroke"
             />
             {/* Card Header Pill */}
             <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} />
@@ -306,7 +317,8 @@ export const StageCanvas: React.FC = () => {
               rx={8}
               fill="none"
               stroke={stroke}
-              strokeWidth={isSelected ? 3 : 1.5}
+              strokeWidth={isSelected ? 2 : 1.5}
+              vectorEffect="non-scaling-stroke"
             />
           </g>
         );
@@ -342,7 +354,8 @@ export const StageCanvas: React.FC = () => {
               rx={8}
               fill="none"
               stroke={stroke}
-              strokeWidth={isSelected ? 3 : 1.5}
+              strokeWidth={isSelected ? 2 : 1.5}
+              vectorEffect="non-scaling-stroke"
             />
           </g>
         );
@@ -356,7 +369,8 @@ export const StageCanvas: React.FC = () => {
             height={40}
             fill={fill}
             stroke={stroke}
-            strokeWidth={isSelected ? 3 : 2}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
           />
         );
     }
@@ -415,8 +429,9 @@ export const StageCanvas: React.FC = () => {
     [zoomLevel, panOffset]
   );
 
-  // Store initial angle on drag start for rotation
+  // Store initial angle and distance on drag start for rotation & scaling
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
+  const [dragInitialDist, setDragInitialDist] = useState<number>(1);
 
   // Drag interaction handlers
   const handleMouseDown = (mode: 'translate' | 'rotate' | 'scale', e: React.MouseEvent) => {
@@ -431,6 +446,10 @@ export const StageCanvas: React.FC = () => {
       const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
       const initialAngle = Math.atan2(svgY - selectedTransform.y, svgX - selectedTransform.x) * (180 / Math.PI);
       setDragInitialAngle(initialAngle - selectedTransform.rotation);
+    } else if (mode === 'scale') {
+      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+      const dist = Math.max(10, Math.hypot(svgX - selectedTransform.x, svgY - selectedTransform.y));
+      setDragInitialDist(dist);
     }
 
     setDragStart({
@@ -466,16 +485,18 @@ export const StageCanvas: React.FC = () => {
           rotation: newRotation,
         });
       } else if (dragMode === 'scale') {
-        const scaleDelta = (dx + dy) * 0.005;
-        const newScaleX = Math.max(0.2, Math.min(3, dragStart.initialTransform.scaleX + scaleDelta));
-        const newScaleY = Math.max(0.2, Math.min(3, dragStart.initialTransform.scaleY + scaleDelta));
+        const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+        const currentDist = Math.hypot(svgX - dragStart.initialTransform.x, svgY - dragStart.initialTransform.y);
+        const ratio = currentDist / Math.max(1, dragInitialDist);
+        const newScaleX = Math.max(0.05, Math.min(50, Number((dragStart.initialTransform.scaleX * ratio).toFixed(2))));
+        const newScaleY = Math.max(0.05, Math.min(50, Number((dragStart.initialTransform.scaleY * ratio).toFixed(2))));
         updateCurrentTransform({
-          scaleX: Number(newScaleX.toFixed(2)),
-          scaleY: Number(newScaleY.toFixed(2)),
+          scaleX: newScaleX,
+          scaleY: newScaleY,
         });
       }
     },
-    [isDragging, dragMode, dragStart, selectedTransform, selectedPartId, updateCurrentTransform, zoomLevel, clientToSVG, dragInitialAngle]
+    [isDragging, dragMode, dragStart, selectedTransform, selectedPartId, updateCurrentTransform, zoomLevel, clientToSVG, dragInitialAngle, dragInitialDist]
   );
 
   const handleMouseUp = useCallback(() => {

@@ -56,6 +56,7 @@ export type BodyPartType =
   | 'custom_star'
   | 'custom_circle'
   | 'custom_box'
+  | 'custom_rect'
   | 'custom_triangle'
   | 'custom_text'
   | 'custom_banner'

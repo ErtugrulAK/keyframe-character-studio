@@ -1,6 +1,5 @@
-fix: improve timeline duration management, auto-clamping, crop-to-content, and preset pills
+fix: smooth distance-ratio scaling math, add Rectangle shape, and non-scaling-stroke outline
 
-- Removed unwanted auto-expansion when scrubbing past totalFrames in getFrameFromMouse
-- Implemented handleCropToContent (Auto-Crop) to instantly trim sequence length to the last keyframe
-- Added interactive Duration input (in seconds) and quick preset buttons (1s, 2s, 3s, 5s, 10s)
-- Clamped currentFrame automatically whenever timeline duration is reduced
+- Removed hardcoded 3.0 scale limit in StageCanvas and implemented smooth distance-ratio scaling math up to 50x
+- Added custom_rect (Rectangle) shape item to LeftToolbar, animator types, and SVG renderer
+- Added vectorEffect="non-scaling-stroke" to all shape elements so outline borders remain crisp 1.5px/2px regardless of object scale

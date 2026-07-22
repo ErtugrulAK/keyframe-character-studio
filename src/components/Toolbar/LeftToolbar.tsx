@@ -34,7 +34,8 @@ const QUICK_SHAPES: { type: BodyPartType; label: string; icon: React.ReactNode }
   { type: 'custom_diamond', label: 'Diamond', icon: <Gem size={14} className="text-green" /> },
   { type: 'custom_star', label: 'Star', icon: <Star size={14} className="text-purple" /> },
   { type: 'custom_circle', label: 'Circle', icon: <Circle size={14} className="text-green" /> },
-  { type: 'custom_box', label: 'Rectangle Box', icon: <Square size={14} className="text-cyan" /> },
+  { type: 'custom_box', label: 'Square Box', icon: <Square size={14} className="text-cyan" /> },
+  { type: 'custom_rect', label: 'Rectangle', icon: <Layout size={14} className="text-teal" /> },
   { type: 'custom_triangle', label: 'Triangle', icon: <Triangle size={14} className="text-red" /> },
 ];
 

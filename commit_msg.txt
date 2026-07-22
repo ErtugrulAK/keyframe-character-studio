@@ -1,6 +1,6 @@
-feat: redesign UI into Motion Design Studio style and add HTML5 Drag & Drop element insertion
+feat: map Extended Bezier Y-range [-0.6, 1.6] inside SVG viewbox & add Floating Toast Notifications
 
-- Redesigned UI terminology and panel layout to match professional Motion Graphic & Video Sequencer applications (After Effects / Rive / Jitter)
-- Updated Left Toolbar items (vector shapes, typography, media footage) to support native HTML5 Drag and Drop onto Stage Canvas
-- Implemented client-to-SVG coordinate mapping in StageCanvas to insert dropped elements at exact mouse location
-- Added cyan glowing drop target overlay on canvas stage when dragging elements
+- Fixed issue in Curve Editor where handle knobs P1 & P2 disappeared or were cut off when Y went negative (-0.6) or positive (1.6)
+- Remapped SVG coordinate system so Y range [-0.6, 1.6] sits 100% inside the SVG viewbox boundaries with a clear solid Unit Box (0..1) outline
+- Added auto-dismissing Floating Toast Notification System (toasts slide in at top right, auto-dismiss in 3.2s with zero OK button click required)
+- Replaced native browser alert() windows with modern glassmorphism toast banners across the codebase

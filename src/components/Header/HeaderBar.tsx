@@ -19,6 +19,7 @@ export const HeaderBar: React.FC = () => {
     resetProject,
     lastSavedAt,
     triggerManualSave,
+    showToast,
   } = useAnimator();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +54,7 @@ export const HeaderBar: React.FC = () => {
     a.download = 'sequencer-project.json';
     a.click();
     URL.revokeObjectURL(url);
+    showToast('Project sequence exported successfully!', 'success');
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,9 +66,9 @@ export const HeaderBar: React.FC = () => {
       if (content) {
         const success = importProject(content);
         if (success) {
-          alert('Animation sequence loaded successfully!');
+          showToast('Animation sequence loaded successfully!', 'success');
         } else {
-          alert('Failed to read JSON file or format error!');
+          showToast('Failed to read JSON file or format error!', 'error');
         }
       }
     };

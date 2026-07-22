@@ -1,5 +1,5 @@
-fix: calculate gizmo rotation ring radius dynamically per element type bounds
+fix: scale gizmo rotation ring radius proportionally with exact scaleX and scaleY values
 
-- Replaced static gizmo radius with getPartBoundingRadius(selectedPart)
-- Dynamically measures element bounding box (UI Card: 180x110px, Banner: 220x60px, Media: 200x140px, Shapes: 60x60px)
-- Ensures the selection gizmo circle floats generously 16px OUTSIDE element borders for UI cards, images, and videos without cutting through text or internal elements
+- Fixed issue where gizmo rotation ring stopped expanding when scale exceeded 6x (causing small inner gizmo on large scaled objects)
+- Multiplied base half-width and half-height by exact scaleX and scaleY values (scaledHalfW = halfW * scaleX, scaledHalfH = halfH * scaleY)
+- Ensures the selection gizmo circle ALWAYS stays 16px outside object corners regardless of how large or small the object is scaled

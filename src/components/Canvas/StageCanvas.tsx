@@ -956,7 +956,7 @@ export const StageCanvas: React.FC = () => {
 
               {/* Interactive Transform Gizmo on Selected Part */}
               {selectedPart && selectedTransform && (() => {
-                const getPartBoundingRadius = (part: CharacterPart): number => {
+                const getPartBoundingRadius = (part: CharacterPart, transform: Transform): number => {
                   let halfW = 32;
                   let halfH = 32;
 
@@ -990,13 +990,13 @@ export const StageCanvas: React.FC = () => {
                       break;
                   }
 
-                  return Math.round(Math.hypot(halfW, halfH) + 16);
+                  const scaledHalfW = halfW * Math.abs(transform.scaleX);
+                  const scaledHalfH = halfH * Math.abs(transform.scaleY);
+
+                  return Math.round(Math.hypot(scaledHalfW, scaledHalfH) + 16);
                 };
 
-                const baseScale = (selectedTransform.scaleX + selectedTransform.scaleY) / 2;
-                const objScale = Math.max(0.4, Math.min(6, baseScale));
-                const baseRadius = getPartBoundingRadius(selectedPart);
-                const r0 = Math.max(40, baseRadius * objScale);
+                const r0 = Math.max(36, getPartBoundingRadius(selectedPart, selectedTransform));
                 const rRot = (selectedTransform.rotation * Math.PI) / 180;
                 const arrowLen = Math.min(r0 * 0.85, r0 - 14);
                 const scaleLine = Math.min(r0 * 0.75, r0 - 24);

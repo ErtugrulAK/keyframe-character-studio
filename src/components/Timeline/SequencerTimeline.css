@@ -242,16 +242,45 @@
 .ue-transform-header {
   display: flex;
   align-items: center;
-  padding: 0 8px 0 28px;
-  border-bottom: 1px solid rgba(255,255,255,0.025);
-  background: #0d0f14;
+  gap: 4px;
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: #11141b;
+  cursor: pointer;
+  user-select: none;
 }
+.ue-transform-header:hover { background: #161a24; }
 .ue-transform-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+
+.ue-subgroup-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px 0 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  background: #0d0f14;
+  cursor: pointer;
+  user-select: none;
+}
+.ue-subgroup-header:hover { background: #12151d; }
+.ue-subgroup-label {
   font-size: 10px;
   font-weight: 700;
-  color: #374151;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.4px;
+}
+
+.ue-sub-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  width: 12px;
 }
 
 /* ── CHANNEL ROW ── */
@@ -260,31 +289,46 @@
   align-items: center;
   padding: 0 6px 0 0;
   gap: 5px;
-  border-bottom: 1px solid rgba(255,255,255,0.025);
-  background: #0b0d10;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  background: #090b0e;
   transition: background 0.1s;
 }
 .ue-channel-row:hover { background: #10131a; }
 
 .ue-channel-indent {
-  width: 32px;
+  width: 44px;
+  flex-shrink: 0;
+}
+.ue-channel-indent-sm {
+  width: 28px;
   flex-shrink: 0;
 }
 
 .ue-channel-color-bar {
   width: 2px;
-  height: 16px;
+  height: 14px;
   border-radius: 1px;
   flex-shrink: 0;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .ue-channel-label {
   flex: 1;
   font-size: 11px;
   font-weight: 600;
-  opacity: 0.85;
+  opacity: 0.9;
   white-space: nowrap;
+}
+
+/* Trajectory Line Connecting Keyframes Across Channel Lane */
+.ue-trajectory-line {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 1.5px;
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 5;
 }
 
 /* ─────────────────────────────────────────────────────

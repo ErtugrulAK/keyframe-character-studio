@@ -1,5 +1,5 @@
-feat: set default rectangle/square corners sharp (0px) & add interactive Corner Radius slider to Inspector
+feat: allow clicking and dragging anywhere on element body to move it directly
 
-- Changed default corner radius for custom_rect and custom_box from hardcoded 8/10px down to sharp 0px corners
-- Added borderRadius property to CharacterPart interface
-- Added interactive Corner Radius slider (0px to 40px) in Style Tab of Property Inspector for rectangles, squares, cards, and banners
+- Replaced simple onClick with onMouseDown on SVG element path rendering
+- Immediately triggers translate move drag when clicking anywhere on an element's body (rectangle, box, card, banner, text, image, video, etc.)
+- Users no longer need to hit the tiny gizmo center square knob to move objects on stage

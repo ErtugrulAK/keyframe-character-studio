@@ -497,10 +497,11 @@ export const StageCanvas: React.FC = () => {
           cursor: isGhost ? 'default' : 'pointer',
           filter: filterId ? `url(#${filterId})` : undefined,
         }}
-        onClick={(e) => {
+        onMouseDown={(e) => {
           if (!isGhost) {
             e.stopPropagation();
             setSelectedPartId(part.id);
+            handleMouseDown('translate', e);
           }
         }}
       >

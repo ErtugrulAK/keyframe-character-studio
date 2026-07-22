@@ -190,7 +190,7 @@ export const PropertyInspector: React.FC = () => {
                     <label>POSITION X</label>
                     <input
                       type="number"
-                      value={Math.round(transform.x)}
+                      value={transform.x === 0 ? '0' : transform.x}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -203,7 +203,7 @@ export const PropertyInspector: React.FC = () => {
                     <label>POSITION Y</label>
                     <input
                       type="number"
-                      value={Math.round(transform.y)}
+                      value={transform.y === 0 ? '0' : transform.y}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -216,7 +216,7 @@ export const PropertyInspector: React.FC = () => {
                     <label>ROTATION (°)</label>
                     <input
                       type="number"
-                      value={Math.round(transform.rotation)}
+                      value={transform.rotation === 0 ? '0' : transform.rotation}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const val = e.target.value;
@@ -298,8 +298,49 @@ export const PropertyInspector: React.FC = () => {
                 </div>
 
                 <div className="style-controls-list">
-                  {/* Text Input Control if object is Text, Banner, or Card */}
-                  {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner' || selectedPart.type === 'custom_card') && (
+                  {/* UI CARD CUSTOMIZATION FIELDS */}
+                  {selectedPart.type === 'custom_card' && (
+                    <>
+                      <div className="input-field">
+                        <label>CARD HEADER / CATEGORY</label>
+                        <input
+                          type="text"
+                          value={selectedPart.cardCategory || selectedPart.textValue || ''}
+                          placeholder="e.g. STUDIO CARD"
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => {
+                            handlePartPropChange('cardCategory', e.target.value);
+                            handlePartPropChange('textValue', e.target.value);
+                          }}
+                        />
+                      </div>
+
+                      <div className="input-field">
+                        <label>MAIN TITLE TEXT</label>
+                        <input
+                          type="text"
+                          value={selectedPart.cardTitle || ''}
+                          placeholder="e.g. MOTION GRAPHIC"
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => handlePartPropChange('cardTitle', e.target.value)}
+                        />
+                      </div>
+
+                      <div className="input-field">
+                        <label>ACTION BUTTON TEXT</label>
+                        <input
+                          type="text"
+                          value={selectedPart.cardButtonText || ''}
+                          placeholder="e.g. ACTIVE"
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => handlePartPropChange('cardButtonText', e.target.value)}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Standard Text Input Control if object is Text or Banner */}
+                  {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner') && (
                     <div className="input-field">
                       <label>TEXT CONTENT</label>
                       <input
@@ -319,12 +360,26 @@ export const PropertyInspector: React.FC = () => {
                         type="number"
                         min={8}
                         max={120}
-                        value={selectedPart.fontSize || 20}
+                        value={selectedPart.fontSize ?? 20}
                         onFocus={(e) => e.target.select()}
                         onChange={(e) => {
                           const val = e.target.value;
-                          handlePartPropChange('fontSize', val === '' ? '' : parseInt(val) || 20);
+                          handlePartPropChange('fontSize', val === '' ? 20 : parseInt(val) || 20);
                         }}
+                      />
+                    </div>
+                  )}
+
+                  {/* Image URL Input Control if object is Custom Image */}
+                  {selectedPart.type === 'custom_image' && (
+                    <div className="input-field">
+                      <label>IMAGE SOURCE (URL / DATA URL)</label>
+                      <input
+                        type="text"
+                        value={selectedPart.imageUrl || ''}
+                        placeholder="Paste image URL..."
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => handlePartPropChange('imageUrl', e.target.value)}
                       />
                     </div>
                   )}
@@ -373,11 +428,11 @@ export const PropertyInspector: React.FC = () => {
                     <label>Z-INDEX LAYER PRIORITY</label>
                     <input
                       type="number"
-                      value={selectedPart.zIndex}
+                      value={selectedPart.zIndex ?? 1}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
                         const val = e.target.value;
-                        handleZIndexChange(val === '' ? 0 : parseInt(val) || 0);
+                        handleZIndexChange(val === '' ? 1 : parseInt(val) || 1);
                       }}
                     />
                   </div>
@@ -407,8 +462,12 @@ export const PropertyInspector: React.FC = () => {
                         type="number"
                         min={0}
                         max={50}
-                        value={selectedPart.shadowBlur || 0}
-                        onChange={(e) => handlePartPropChange('shadowBlur', parseInt(e.target.value) || 0)}
+                        value={selectedPart.shadowBlur ?? 0}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handlePartPropChange('shadowBlur', val === '' ? 0 : parseInt(val) || 0);
+                        }}
                       />
                     </div>
 
@@ -418,8 +477,12 @@ export const PropertyInspector: React.FC = () => {
                         type="number"
                         min={-50}
                         max={50}
-                        value={selectedPart.shadowOffsetX || 0}
-                        onChange={(e) => handlePartPropChange('shadowOffsetX', parseInt(e.target.value) || 0)}
+                        value={selectedPart.shadowOffsetX ?? 0}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handlePartPropChange('shadowOffsetX', val === '' ? 0 : parseInt(val) || 0);
+                        }}
                       />
                     </div>
 
@@ -429,8 +492,12 @@ export const PropertyInspector: React.FC = () => {
                         type="number"
                         min={-50}
                         max={50}
-                        value={selectedPart.shadowOffsetY || 0}
-                        onChange={(e) => handlePartPropChange('shadowOffsetY', parseInt(e.target.value) || 0)}
+                        value={selectedPart.shadowOffsetY ?? 0}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          handlePartPropChange('shadowOffsetY', val === '' ? 0 : parseInt(val) || 0);
+                        }}
                       />
                     </div>
                   </div>

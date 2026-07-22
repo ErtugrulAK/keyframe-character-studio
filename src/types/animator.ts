@@ -62,7 +62,8 @@ export type BodyPartType =
   | 'custom_banner'
   | 'custom_capsule'
   | 'custom_diamond'
-  | 'custom_card';
+  | 'custom_card'
+  | 'custom_image';
 
 export interface CharacterPart {
   id: string;
@@ -76,6 +77,10 @@ export interface CharacterPart {
   baseTransform: Transform;
   textValue?: string; // Content string for text/banner objects
   fontSize?: number; // Font size in px
+  cardCategory?: string; // e.g. "STUDIO CARD"
+  cardTitle?: string; // e.g. "MOTION GRAPHIC"
+  cardButtonText?: string; // e.g. "ACTIVE"
+  imageUrl?: string; // Image URL / Data URL for custom_image
   shadowColor?: string; // Drop shadow or glow color
   shadowBlur?: number; // Shadow blur radius in px
   shadowOffsetX?: number; // Shadow offset X in px

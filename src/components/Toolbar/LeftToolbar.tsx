@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { BodyPartType } from '../../types/animator';
 import {
@@ -16,6 +16,7 @@ import {
   Triangle,
   Layout,
   Sparkles,
+  Upload,
 } from 'lucide-react';
 import './LeftToolbar.css';
 
@@ -44,9 +45,48 @@ export const LeftToolbar: React.FC = () => {
   } = useAnimator();
 
   const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('media');
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const processFiles = (files: FileList | File[]) => {
+    Array.from(files).forEach((file) => {
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          const cleanName = file.name.replace(/\.[^/.]+$/, '');
+          addCustomPart('custom_image', cleanName, { imageUrl: dataUrl });
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      processFiles(e.target.files);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFiles(e.dataTransfer.files);
+    }
+  };
 
   return (
     <aside className="left-toolbar-container">
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        accept="image/*"
+        multiple
+        style={{ display: 'none' }}
+      />
+
       {/* Keyframes Studio 86px Vertical Icon Sidebar */}
       <div className="left-sidebar-nav">
         <button
@@ -93,7 +133,6 @@ export const LeftToolbar: React.FC = () => {
           <Sparkles size={20} className="nav-icon text-green" />
           <span className="nav-label">Presets</span>
         </button>
-
       </div>
 
       {/* Expanding Panel Drawer (280px) */}
@@ -105,10 +144,19 @@ export const LeftToolbar: React.FC = () => {
             </div>
 
             {/* Dropzone Container */}
-            <div className="dropzone-box" onClick={() => addCustomPart('custom_banner', 'Card Item')}>
-              <Tag size={28} className="text-teal mb-2" />
-              <span className="dropzone-title">Select media or cards</span>
-              <span className="dropzone-sub">Click to add card props or drag files here</span>
+            <div
+              className={`dropzone-box ${isDragOver ? 'drag-over' : ''}`}
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragOver(true);
+              }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleDrop}
+            >
+              <Upload size={28} className="text-teal mb-2" />
+              <span className="dropzone-title">Select media or images</span>
+              <span className="dropzone-sub">Click to browse or drag image files here</span>
             </div>
 
             <div className="drawer-subtitle">QUICK ADD OBJECTS</div>

@@ -1,5 +1,5 @@
-fix: support clean primary left-click selection and instant drag translation
+fix: flip Y axis display in Inspector to match Cartesian coordinate convention
 
-- Added startTranslateDragForPart helper retrieving target element transform dynamically on mousedown
-- Preserved primary left-click (e.button === 0) selection on element body
-- Ensures left-clicking selects the target element cleanly, while left-drag instantly translates it without state delays
+- Negated Position Y value in display (value = -transform.y) so that upward direction shows positive numbers
+- Negated input on change (y: -val) so that typing a positive Y value correctly moves the object upward on screen
+- Added label indicator "POSITION Y ↑+" to clarify convention for users

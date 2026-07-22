@@ -264,10 +264,10 @@ export const PropertyInspector: React.FC = () => {
                   </div>
 
                   <div className="input-field">
-                    <label>POSITION Y</label>
+                    <label>POSITION Y ↑+</label>
                     <SmartNumberInput
-                      value={transform.y}
-                      onChange={(val) => updateCurrentTransform({ y: val })}
+                      value={-transform.y}
+                      onChange={(val) => updateCurrentTransform({ y: -val })}
                     />
                   </div>
 

@@ -154,42 +154,7 @@ export const StageCanvas: React.FC = () => {
           </g>
         );
         break;
-      case 'custom_sword':
-        pathContent = (
-          <g>
-            {/* Sword Blade */}
-            <path d="M -5 0 L -5 -70 L 0 -85 L 5 -70 L 5 0 Z" fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
-            {/* Hilt */}
-            <rect x={-20} y={0} width={40} height={8} rx={3} fill={isGhost ? ghostColor : '#ffb700'} stroke={stroke} strokeWidth={1.5} />
-            {/* Handle */}
-            <rect x={-4} y={8} width={8} height={22} rx={2} fill={isGhost ? ghostColor : '#4a2e15'} />
-            {/* Knob */}
-            <circle cx={0} cy={33} r={6} fill={isGhost ? ghostColor : '#ffb700'} />
-          </g>
-        );
-        break;
-      case 'custom_shield':
-        pathContent = (
-          <g>
-            <path d="M -30 -35 L 30 -35 L 30 0 C 30 35 0 55 0 55 C 0 55 -30 35 -30 0 Z" fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
-            {!isGhost && <path d="M 0 -30 L 0 50 M -25 -5 L 25 -5" stroke="#ffb700" strokeWidth={2.5} />}
-          </g>
-        );
-        break;
-      case 'custom_crown':
-        pathContent = (
-          <g>
-            <path d="M -30 15 L -30 -20 L -15 -5 L 0 -30 L 15 -5 L 30 -20 L 30 15 Z" fill={fill} stroke={stroke} strokeWidth={isSelected ? 3 : 2} />
-            {!isGhost && (
-              <>
-                <circle cx={-30} cy={-22} r={3} fill="#ff3366" />
-                <circle cx={0} cy={-32} r={4} fill="#00d2ff" />
-                <circle cx={30} cy={-22} r={3} fill="#ff3366" />
-              </>
-            )}
-          </g>
-        );
-        break;
+
       case 'custom_star':
         pathContent = (
           <polygon

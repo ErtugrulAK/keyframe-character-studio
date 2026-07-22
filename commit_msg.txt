@@ -1,6 +1,13 @@
-feat: Unreal Engine Sequencer collapsible property sub-groups and trajectory keyframe lines
+refactor: modularize StageCanvas, PropertyInspector, and AnimatorContext into sub-components
 
-- Organized Transform properties into collapsible sub-groups matching Unreal Sequencer: Location (X, Y), Rotation, Scale (Scale X, Scale Y), Opacity
-- Added interactive sub-group toggle headers with chevrons so properties are not all flatly exposed at once
-- Added horizontal trajectory connecting lines across keyframes in each channel lane matching Unreal Sequencer keyframe track visualization
-- Added clean table grid borders across outliner and timeline grid lanes
+- Extracted ToastPortal component (src/components/Toast/ToastPortal.tsx)
+- Refactored PropertyInspector (52KB, 1185 lines -> 190 lines) into modular section tabs:
+  - TransformTab (Position, Rotation, Opacity, Scale, 3x3 Anchor Picker, Spring Physics)
+  - StyleTab (Color Palette, Text, Trim Path, Cloner, Particles, Media Crop)
+  - MotionTab (Motion Transitions presets grid)
+  - PresetsTab (Preset Poses library grid)
+- Refactored StageCanvas (51KB, 1370 lines -> 300 lines) into modular sub-renderers and overlays:
+  - PartRenderer (SVG custom shape and body part renderer)
+  - TransformGizmo (Interactive bounding box, rotation knob, corner scale handles)
+  - SkeletalBones (Bone hierarchy link renderer)
+  - OnionSkinning (Ghost frame renderer)

@@ -1,6 +1,10 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import type { CharacterPart, Transform } from '../../types/animator';
+import type { Transform } from '../../types/animator';
+import { PartRenderer } from './renderers/PartRenderer';
+import { TransformGizmo } from './overlays/TransformGizmo';
+import { SkeletalBones } from './overlays/SkeletalBones';
+import { OnionSkinning } from './overlays/OnionSkinning';
 import { Grid, ZoomIn, ZoomOut, Compass, Bone, Layers, Sparkles } from 'lucide-react';
 import './StageCanvas.css';
 
@@ -32,727 +36,18 @@ export const StageCanvas: React.FC = () => {
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
   });
 
+  const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
+  const [dragInitialDist, setDragInitialDist] = useState<number>(1);
+
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTransform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
 
-  // Render 2D Vector Path for each body part
-  const renderPartPath = (part: CharacterPart, transform: Transform, isGhost: boolean = false, ghostColor?: string) => {
-    const isSelected = !isGhost && selectedPartId === part.id;
-    const opacity = isGhost ? 0.35 : transform.opacity;
-
-    let pathContent: React.ReactNode = null;
-    const fill = isGhost && ghostColor ? ghostColor : part.fillColor;
-    const stroke = isGhost ? ghostColor : isSelected ? '#00d2ff' : part.strokeColor;
-
-    switch (part.type) {
-      case 'hair':
-        pathContent = (
-          <path
-            d="M -35 -20 Q -45 -60 0 -65 Q 45 -60 35 -20 Q 40 10 25 25 Q 0 35 -25 25 Q -40 10 -35 -20 Z"
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={isSelected ? 3 : 2}
-          />
-        );
-        break;
-      case 'head':
-        pathContent = (
-          <g>
-            <ellipse
-              cx={0}
-              cy={0}
-              rx={30}
-              ry={35}
-              fill={fill}
-              stroke={stroke}
-              strokeWidth={isSelected ? 3 : 2}
-            />
-            {!isGhost && (
-              <>
-                <circle cx={-10} cy={-5} r={4} fill="#222" />
-                <circle cx={10} cy={-5} r={4} fill="#222" />
-                <circle cx={-8} cy={-7} r={1.5} fill="#fff" />
-                <circle cx={12} cy={-7} r={1.5} fill="#fff" />
-                <path d="M -8 12 Q 0 20 8 12" fill="none" stroke="#aa5533" strokeWidth={2.5} strokeLinecap="round" />
-              </>
-            )}
-          </g>
-        );
-        break;
-      case 'torso':
-        pathContent = (
-          <path
-            d="M -30 -45 L 30 -45 L 22 45 L -22 45 Z"
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={isSelected ? 3 : 2}
-          />
-        );
-        break;
-      case 'upper_arm_l':
-      case 'upper_arm_r':
-        pathContent = (
-          <rect
-            x={-12}
-            y={0}
-            width={24}
-            height={55}
-            rx={10}
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={isSelected ? 3 : 2}
-          />
-        );
-        break;
-      case 'lower_arm_l':
-      case 'lower_arm_r':
-        pathContent = (
-          <g>
-            <rect
-              x={-10}
-              y={0}
-              width={20}
-              height={50}
-              rx={8}
-              fill={fill}
-              stroke={stroke}
-              strokeWidth={isSelected ? 3 : 2}
-            />
-            <circle cx={0} cy={55} r={10} fill={isGhost ? ghostColor : '#ffdbac'} stroke={stroke} strokeWidth={2} />
-          </g>
-        );
-        break;
-      case 'upper_leg_l':
-      case 'upper_leg_r':
-        pathContent = (
-          <rect
-            x={-15}
-            y={0}
-            width={30}
-            height={65}
-            rx={10}
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={isSelected ? 3 : 2}
-          />
-        );
-        break;
-      case 'lower_leg_l':
-      case 'lower_leg_r':
-        pathContent = (
-          <g>
-            <rect
-              x={-12}
-              y={0}
-              width={24}
-              height={60}
-              rx={8}
-              fill={fill}
-              stroke={stroke}
-              strokeWidth={isSelected ? 3 : 2}
-            />
-            <path d="M -14 55 L 18 55 Q 22 55 22 65 L -14 65 Z" fill={isGhost ? ghostColor : '#111'} />
-          </g>
-        );
-        break;
-
-      case 'custom_star':
-        pathContent = (
-          <polygon
-            points="0,-35 10,-10 35,-10 15,5 22,30 0,15 -22,30 -15,5 -35,-10 -10,-10"
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={isSelected ? 2 : 1.5}
-            vectorEffect="non-scaling-stroke"
-          />
-        );
-        break;
-      case 'custom_circle':
-        pathContent = (
-          <circle cx={0} cy={0} r={30} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
-        );
-        break;
-      case 'custom_box':
-        pathContent = (
-          <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
-        );
-        break;
-      case 'custom_rect':
-        pathContent = (
-          <rect x={-60} y={-35} width={120} height={70} rx={part.borderRadius ?? 0} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
-        );
-        break;
-      case 'custom_triangle':
-        pathContent = (
-          <polygon points="0,-35 35,25 -35,25" fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
-        );
-        break;
-      case 'custom_text': {
-        const textStr = part.textValue || 'TEXT';
-        const isStaggered = part.textAnimMode && part.textAnimMode !== 'none';
-
-        if (isStaggered) {
-          const items = part.textAnimMode === 'words' ? textStr.split(' ') : textStr.split('');
-          const staggerDelayFrames = Math.max(1, Math.round((part.textStaggerDelay || 60) / 33));
-          const startFrame = part.textAnimStartFrame || 0;
-
-          pathContent = (
-            <g>
-              <text
-                x={0}
-                y={0}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill={fill}
-                stroke={stroke}
-                strokeWidth={0.5}
-                fontSize={part.fontSize || 24}
-                fontWeight="bold"
-                fontFamily="Inter, system-ui, sans-serif"
-                vectorEffect="non-scaling-stroke"
-              >
-                {items.map((item, idx) => {
-                  const itemStartFrame = startFrame + idx * staggerDelayFrames;
-                  const progress = Math.max(0, Math.min(1, (currentFrame - itemStartFrame) / 5));
-                  const dy = (1 - progress) * -15;
-                  const itemOpacity = progress;
-
-                  return (
-                    <tspan
-                      key={idx}
-                      dy={idx === 0 ? dy : 0}
-                      dx={part.textAnimMode === 'words' ? (idx > 0 ? 8 : 0) : 0}
-                      opacity={itemOpacity}
-                      style={{ transition: 'all 0.15s ease' }}
-                    >
-                      {item}
-                    </tspan>
-                  );
-                })}
-              </text>
-            </g>
-          );
-        } else {
-          pathContent = (
-            <g>
-              <text
-                x={0}
-                y={0}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fill={fill}
-                stroke={stroke}
-                strokeWidth={0.5}
-                fontSize={part.fontSize || 24}
-                fontWeight="bold"
-                fontFamily="Inter, system-ui, sans-serif"
-                vectorEffect="non-scaling-stroke"
-              >
-                {textStr}
-              </text>
-            </g>
-          );
-        }
-        break;
-      }
-      case 'mograph_cloner': {
-        const cfg = part.clonerConfig || {
-          mode: 'grid',
-          countX: 4,
-          countY: 3,
-          spacingX: 40,
-          spacingY: 40,
-          countCircle: 8,
-          radius: 60,
-          countLinear: 5,
-          spacingLinear: 35,
-          childShape: 'circle',
-          childSize: 10,
-          childColor: fill,
-          childStroke: stroke,
-          childStrokeWidth: 1.5,
-          effector: 'wave',
-          waveSpeed: 1.5,
-          waveAmplitude: 12,
-          waveAxis: 'y',
-          randomSeed: 42,
-          randomAmplitude: 10,
-          stepPhase: 0,
-        };
-
-        const clonerItems: { x: number; y: number; scale: number; rot: number; id: number }[] = [];
-
-        if (cfg.mode === 'grid') {
-          const startX = -((cfg.countX - 1) * cfg.spacingX) / 2;
-          const startY = -((cfg.countY - 1) * cfg.spacingY) / 2;
-          let idx = 0;
-          for (let r = 0; r < cfg.countY; r++) {
-            for (let c = 0; c < cfg.countX; c++) {
-              clonerItems.push({
-                x: startX + c * cfg.spacingX,
-                y: startY + r * cfg.spacingY,
-                scale: 1,
-                rot: 0,
-                id: idx++,
-              });
-            }
-          }
-        } else if (cfg.mode === 'circle') {
-          const total = cfg.countCircle || 8;
-          for (let i = 0; i < total; i++) {
-            const angle = (i / total) * Math.PI * 2;
-            clonerItems.push({
-              x: Math.cos(angle) * cfg.radius,
-              y: Math.sin(angle) * cfg.radius,
-              scale: 1,
-              rot: (angle * 180) / Math.PI,
-              id: i,
-            });
-          }
-        } else {
-          const total = cfg.countLinear || 5;
-          const startX = -((total - 1) * cfg.spacingLinear) / 2;
-          for (let i = 0; i < total; i++) {
-            clonerItems.push({
-              x: startX + i * cfg.spacingLinear,
-              y: 0,
-              scale: 1,
-              rot: 0,
-              id: i,
-            });
-          }
-        }
-
-        pathContent = (
-          <g>
-            {clonerItems.map((item) => {
-              let dispX = 0;
-              let dispY = 0;
-              let itemScale = item.scale;
-              let itemRot = item.rot;
-
-              if (cfg.effector === 'wave') {
-                const waveVal = Math.sin(currentFrame * 0.1 * (cfg.waveSpeed || 1) + item.id * 0.5) * (cfg.waveAmplitude || 10);
-                if (cfg.waveAxis === 'y') dispY += waveVal;
-                else if (cfg.waveAxis === 'x') dispX += waveVal;
-                else if (cfg.waveAxis === 'scale') itemScale *= 1 + waveVal * 0.03;
-                else if (cfg.waveAxis === 'rotation') itemRot += waveVal * 2;
-              } else if (cfg.effector === 'random') {
-                const pseudoRand = Math.sin(item.id * 99 + (cfg.randomSeed || 1)) * (cfg.randomAmplitude || 10);
-                dispY += pseudoRand;
-              }
-
-              const size = cfg.childSize || 10;
-              const cFill = cfg.childColor || fill;
-              const cStroke = cfg.childStroke || stroke;
-              const cSw = cfg.childStrokeWidth || 1.5;
-
-              return (
-                <g
-                  key={item.id}
-                  transform={`translate(${item.x + dispX}, ${item.y + dispY}) rotate(${itemRot}) scale(${itemScale})`}
-                >
-                  {cfg.childShape === 'rect' ? (
-                    <rect x={-size / 2} y={-size / 2} width={size} height={size} rx={2} fill={cFill} stroke={cStroke} strokeWidth={cSw} />
-                  ) : cfg.childShape === 'triangle' ? (
-                    <polygon points={`0,${-size / 2} ${size / 2},${size / 2} ${-size / 2},${size / 2}`} fill={cFill} stroke={cStroke} strokeWidth={cSw} />
-                  ) : cfg.childShape === 'line' ? (
-                    <line x1={-size / 2} y1={0} x2={size / 2} y2={0} stroke={cFill} strokeWidth={cSw} strokeLinecap="round" />
-                  ) : (
-                    <circle cx={0} cy={0} r={size / 2} fill={cFill} stroke={cStroke} strokeWidth={cSw} />
-                  )}
-                </g>
-              );
-            })}
-          </g>
-        );
-        break;
-      }
-      case 'particle_system': {
-        const cfg = part.particleConfig || {
-          count: 35,
-          shape: 'dot',
-          minSize: 3,
-          maxSize: 8,
-          color: fill,
-          minOpacity: 0.2,
-          maxOpacity: 0.85,
-          speed: 30,
-          direction: 'up',
-          spread: 250,
-          loop: true,
-          fadeIn: true,
-          fadeOut: true,
-          randomSeed: 42,
-        };
-
-        const particles: { id: number; x: number; y: number; size: number; opacity: number }[] = [];
-        const count = Math.max(5, Math.min(200, cfg.count || 35));
-        const spread = cfg.spread || 200;
-
-        for (let i = 0; i < count; i++) {
-          const randX = Math.sin(i * 17.3 + (cfg.randomSeed || 1)) * spread;
-          const initialY = Math.cos(i * 31.7 + (cfg.randomSeed || 1)) * (spread * 0.6);
-          const pSpeed = (cfg.speed || 30) * (0.6 + Math.sin(i * 5) * 0.4);
-
-          let offsetY = (currentFrame * (pSpeed / 30)) % spread;
-          if (cfg.direction === 'up') offsetY = -offsetY;
-
-          const pY = initialY + offsetY;
-          const size = (cfg.minSize || 3) + Math.abs(Math.sin(i * 12.1)) * ((cfg.maxSize || 8) - (cfg.minSize || 3));
-          const pOpacity = (cfg.minOpacity || 0.2) + Math.abs(Math.cos(i * 7.9)) * ((cfg.maxOpacity || 0.85) - (cfg.minOpacity || 0.2));
-
-          particles.push({ id: i, x: randX, y: pY, size, opacity: pOpacity });
-        }
-
-        pathContent = (
-          <g>
-            {particles.map((p) => (
-              <g key={p.id} transform={`translate(${p.x}, ${p.y})`} opacity={p.opacity}>
-                {cfg.shape === 'cross' ? (
-                  <path d={`M ${-p.size},0 L ${p.size},0 M 0,${-p.size} L 0,${p.size}`} stroke={cfg.color || fill} strokeWidth={1.5} />
-                ) : cfg.shape === 'triangle' ? (
-                  <polygon points={`0,${-p.size} ${p.size},${p.size} ${-p.size},${p.size}`} fill={cfg.color || fill} />
-                ) : cfg.shape === 'circle_outline' ? (
-                  <circle cx={0} cy={0} r={p.size} fill="none" stroke={cfg.color || fill} strokeWidth={1.5} />
-                ) : (
-                  <circle cx={0} cy={0} r={p.size / 2} fill={cfg.color || fill} />
-                )}
-              </g>
-            ))}
-          </g>
-        );
-        break;
-      }
-      case 'custom_banner':
-        pathContent = (
-          <g>
-            <rect
-              x={-80}
-              y={-25}
-              width={160}
-              height={50}
-              rx={10}
-              fill={fill}
-              stroke={stroke}
-              strokeWidth={isSelected ? 2 : 1.5}
-              vectorEffect="non-scaling-stroke"
-            />
-            <text
-              x={0}
-              y={0}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill={part.strokeColor || '#ffffff'}
-              fontSize={part.fontSize || 16}
-              fontWeight="700"
-              fontFamily="Inter, system-ui, sans-serif"
-            >
-              {part.textValue || 'BANNER LABEL'}
-            </text>
-          </g>
-        );
-        break;
-      case 'custom_capsule':
-        pathContent = (
-          <rect
-            x={-50}
-            y={-20}
-            width={100}
-            height={40}
-            rx={20}
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={isSelected ? 2 : 1.5}
-            vectorEffect="non-scaling-stroke"
-          />
-        );
-        break;
-      case 'custom_diamond':
-        pathContent = (
-          <polygon
-            points="0,-35 35,0 0,35 -35,0"
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={isSelected ? 2 : 1.5}
-            vectorEffect="non-scaling-stroke"
-          />
-        );
-        break;
-      case 'custom_card':
-        pathContent = (
-          <g>
-            <rect
-              x={-90}
-              y={-50}
-              width={180}
-              height={100}
-              rx={12}
-              fill={fill}
-              stroke={stroke}
-              strokeWidth={isSelected ? 2 : 1.5}
-              vectorEffect="non-scaling-stroke"
-            />
-            {/* Card Header Pill */}
-            <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} />
-            <circle cx={-68} cy={-29} r={4} fill="#00d2ff" />
-            <text x={-58} y={-29} dominantBaseline="middle" fill="#00d2ff" fontSize={11} fontWeight="800" fontFamily="Outfit, sans-serif">
-              {part.cardCategory || part.textValue || 'STUDIO CARD'}
-            </text>
-            {/* Body Title */}
-            <text x={-80} y={0} dominantBaseline="middle" fill="#f8fafc" fontSize={13} fontWeight="700" fontFamily="Outfit, sans-serif">
-              {part.cardTitle || 'MOTION GRAPHIC'}
-            </text>
-            {/* Status Action Button */}
-            <rect x={-80} y={15} width={75} height={22} rx={4} fill="#00d2ff" />
-            <text x={-42.5} y={26} textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize={11} fontWeight="800" fontFamily="Outfit, sans-serif">
-              {part.cardButtonText || 'ACTIVE'}
-            </text>
-          </g>
-        );
-        break;
-      case 'custom_image':
-      case 'custom_video': {
-        const isVideo = part.type === 'custom_video';
-        const fullW = isVideo ? 200 : 180;
-        const fullH = isVideo ? 120 : 120;
-        const startX = -fullW / 2;
-        const startY = -fullH / 2;
-
-        const isCrop = part.cropEnabled ?? false;
-        const cropX = part.cropX ?? 25;
-        const cropY = part.cropY ?? 10;
-        const cropW = part.cropWidth ?? 50;
-        const cropH = part.cropHeight ?? 80;
-
-        const cX = startX + (fullW * cropX) / 100;
-        const cY = startY + (fullH * cropY) / 100;
-        const realCW = (fullW * cropW) / 100;
-        const realCH = (fullH * cropH) / 100;
-
-        const clipId = `media-crop-${part.id}`;
-
-        // Overlay Text Caption Y position
-        let captionY = startY + fullH - 20;
-        if (part.overlayTextPosition === 'top') captionY = startY + 20;
-        if (part.overlayTextPosition === 'center') captionY = 0;
-
-        pathContent = (
-          <g>
-            <defs>
-              {isCrop && (
-                <clipPath id={clipId}>
-                  <rect x={cX} y={cY} width={realCW} height={realCH} rx={4} />
-                </clipPath>
-              )}
-            </defs>
-
-            {/* Background Media Element (Clipped if isCrop) */}
-            <g clipPath={isCrop ? `url(#${clipId})` : undefined}>
-              {isVideo ? (
-                part.videoUrl ? (
-                  <foreignObject x={startX} y={startY} width={fullW} height={fullH}>
-                    <video
-                      src={part.videoUrl}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        borderRadius: 8,
-                        pointerEvents: 'none',
-                      }}
-                    />
-                  </foreignObject>
-                ) : (
-                  <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />
-                )
-              ) : part.imageUrl ? (
-                <image
-                  href={part.imageUrl}
-                  x={startX}
-                  y={startY}
-                  width={fullW}
-                  height={fullH}
-                  preserveAspectRatio="xMidYMid meet"
-                />
-              ) : (
-                <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />
-              )}
-            </g>
-
-            {/* Dark Shaded Overlay & White Corner Crop Brackets for Un-cropped Area */}
-            {isCrop && (
-              <g style={{ pointerEvents: 'none' }}>
-                <rect x={startX} y={startY} width={fullW} height={fullH} fill="rgba(0,0,0,0.55)" rx={8} />
-                <g clipPath={`url(#${clipId})`}>
-                  {isVideo ? (
-                    part.videoUrl ? (
-                      <foreignObject x={startX} y={startY} width={fullW} height={fullH}>
-                        <video
-                          src={part.videoUrl}
-                          autoPlay
-                          loop
-                          muted
-                          playsInline
-                          style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            borderRadius: 8,
-                            pointerEvents: 'none',
-                          }}
-                        />
-                      </foreignObject>
-                    ) : (
-                      <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />
-                    )
-                  ) : part.imageUrl ? (
-                    <image
-                      href={part.imageUrl}
-                      x={startX}
-                      y={startY}
-                      width={fullW}
-                      height={fullH}
-                      preserveAspectRatio="xMidYMid meet"
-                    />
-                  ) : (
-                    <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />
-                  )}
-                </g>
-
-                {/* White Corner Crop Bracket Handles [ ] matching user screenshot! */}
-                <path
-                  d={`
-                    M ${cX},${cY + 16} L ${cX},${cY} L ${cX + 16},${cY}
-                    M ${cX + realCW - 16},${cY} L ${cX + realCW},${cY} L ${cX + realCW},${cY + 16}
-                    M ${cX},${cY + realCH - 16} L ${cX},${cY + realCH} L ${cX + 16},${cY + realCH}
-                    M ${cX + realCW - 16},${cY + realCH} L ${cX + realCW},${cY + realCH} L ${cX + realCW},${cY + realCH - 16}
-                  `}
-                  fill="none"
-                  stroke="#ffffff"
-                  strokeWidth={3.5}
-                  strokeLinecap="square"
-                  vectorEffect="non-scaling-stroke"
-                />
-              </g>
-            )}
-
-            {/* Outer Border Stroke */}
-            <rect
-              x={startX}
-              y={startY}
-              width={fullW}
-              height={fullH}
-              rx={8}
-              fill="none"
-              stroke={stroke}
-              strokeWidth={isSelected ? 2 : 1.5}
-              vectorEffect="non-scaling-stroke"
-            />
-
-            {/* Overlay Text Caption Box */}
-            {part.overlayText && (
-              <g style={{ pointerEvents: 'none' }}>
-                <rect
-                  x={startX + 10}
-                  y={captionY - 14}
-                  width={fullW - 20}
-                  height={28}
-                  rx={6}
-                  fill={part.overlayTextBg || 'rgba(15, 23, 42, 0.85)'}
-                  stroke="rgba(255, 255, 255, 0.25)"
-                  strokeWidth={1}
-                  vectorEffect="non-scaling-stroke"
-                />
-                <text
-                  x={0}
-                  y={captionY}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fill={part.overlayTextColor || '#ffffff'}
-                  fontSize={12}
-                  fontWeight="800"
-                  fontFamily="Inter, system-ui, sans-serif"
-                >
-                  {part.overlayText}
-                </text>
-              </g>
-            )}
-          </g>
-        );
-        break;
-      }
-      default:
-        pathContent = (
-          <rect
-            x={-20}
-            y={-20}
-            width={40}
-            height={40}
-            fill={fill}
-            stroke={stroke}
-            strokeWidth={isSelected ? 2 : 1.5}
-            vectorEffect="non-scaling-stroke"
-          />
-        );
-    }
-
-    // Dynamic Drop Shadow / Glow Filter ID
-    const filterId = !isGhost && part.shadowColor ? `drop-shadow-${part.id}` : undefined;
-
-    return (
-      <g
-        key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
-        transform={`translate(${transform.x}, ${transform.y}) rotate(${transform.rotation}) scale(${transform.scaleX}, ${transform.scaleY})`}
-        style={{
-          opacity,
-          cursor: isGhost ? 'default' : 'pointer',
-          filter: filterId ? `url(#${filterId})` : undefined,
-        }}
-        onClick={(e) => {
-          if (!isGhost && e.button === 0) {
-            e.stopPropagation();
-            setSelectedPartId(part.id);
-          }
-        }}
-        onMouseDown={(e) => {
-          if (!isGhost && e.button === 0) {
-            startTranslateDragForPart(part.id, e);
-          }
-        }}
-      >
-        {/* Dynamic SVG Filter definition for Shadow/Glow */}
-        {!isGhost && part.shadowColor && (
-          <defs>
-            <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-              <feDropShadow
-                dx={part.shadowOffsetX || 0}
-                dy={part.shadowOffsetY || 4}
-                stdDeviation={part.shadowBlur || 8}
-                floodColor={part.shadowColor || 'rgba(0,0,0,0.5)'}
-                floodOpacity="0.85"
-              />
-            </filter>
-          </defs>
-        )}
-        {pathContent}
-      </g>
-    );
-  };
-
-  // Convert client (screen) coordinates to SVG world coordinates
   const clientToSVG = useCallback(
     (clientX: number, clientY: number): { svgX: number; svgY: number } => {
       if (!containerRef.current) return { svgX: 0, svgY: 0 };
       const rect = containerRef.current.getBoundingClientRect();
-      // Screen position relative to container center
       const relX = clientX - rect.left - rect.width / 2;
       const relY = clientY - rect.top - rect.height / 2;
-      // Undo CSS scale and pan to get SVG world coordinates
       const svgX = relX / zoomLevel - panOffset.x + rect.width / 2;
       const svgY = relY / zoomLevel - panOffset.y + rect.height / 2;
       return { svgX, svgY };
@@ -760,11 +55,6 @@ export const StageCanvas: React.FC = () => {
     [zoomLevel, panOffset]
   );
 
-  // Store initial angle and distance on drag start for rotation & scaling
-  const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
-  const [dragInitialDist, setDragInitialDist] = useState<number>(1);
-
-  // Direct element drag-to-move trigger for any selected part
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
     if (e.button !== 0) return;
     e.stopPropagation();
@@ -775,77 +65,116 @@ export const StageCanvas: React.FC = () => {
 
     setIsDragging(true);
     setDragMode('translate');
+    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
     setDragStart({
-      x: e.clientX,
-      y: e.clientY,
+      x: svgX,
+      y: svgY,
       initialTransform: { ...transform },
     });
   };
 
-  // Drag interaction handlers
-  const handleMouseDown = (mode: 'translate' | 'rotate' | 'scale', e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!selectedTransform || !selectedPartId) return;
-
-    setIsDragging(true);
-    setDragMode(mode);
-
-    if (mode === 'rotate') {
-      // Calculate the initial angle from object center to mouse position
-      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-      const initialAngle = Math.atan2(svgY - selectedTransform.y, svgX - selectedTransform.x) * (180 / Math.PI);
-      setDragInitialAngle(initialAngle - selectedTransform.rotation);
-    } else if (mode === 'scale') {
-      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-      const dist = Math.max(10, Math.hypot(svgX - selectedTransform.x, svgY - selectedTransform.y));
-      setDragInitialDist(dist);
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button === 1 || activeTool === 'pan') {
+      setIsDragging(true);
+      setDragMode('pan' as any);
+      setDragStart({
+        x: e.clientX,
+        y: e.clientY,
+        initialTransform: { x: panOffset.x, y: panOffset.y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      });
+      return;
     }
 
+    if (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'svg') {
+      setSelectedPartId(null);
+    }
+  };
+
+  const startRotate = (e: React.MouseEvent) => {
+    if (e.button !== 0 || !selectedPart || !selectedTransform) return;
+    e.stopPropagation();
+    setIsDragging(true);
+    setDragMode('rotate');
+
+    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+    const dx = svgX - selectedTransform.x;
+    const dy = svgY - selectedTransform.y;
+    const startAngleRad = Math.atan2(dy, dx);
+
+    setDragInitialAngle(startAngleRad);
     setDragStart({
-      x: e.clientX,
-      y: e.clientY,
+      x: svgX,
+      y: svgY,
+      initialTransform: { ...selectedTransform },
+    });
+  };
+
+  const startScale = (e: React.MouseEvent) => {
+    if (e.button !== 0 || !selectedPart || !selectedTransform) return;
+    e.stopPropagation();
+    setIsDragging(true);
+    setDragMode('scale');
+
+    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+    const dx = svgX - selectedTransform.x;
+    const dy = svgY - selectedTransform.y;
+    const initialDist = Math.sqrt(dx * dx + dy * dy);
+
+    setDragInitialDist(initialDist || 1);
+    setDragStart({
+      x: svgX,
+      y: svgY,
       initialTransform: { ...selectedTransform },
     });
   };
 
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
-      if (!isDragging || !dragMode || !selectedTransform || !selectedPartId) return;
+      if (!isDragging || !dragMode) return;
 
-      const dx = (e.clientX - dragStart.x) / zoomLevel;
-      const dy = (e.clientY - dragStart.y) / zoomLevel;
+      if ((dragMode as any) === 'pan') {
+        const dx = (e.clientX - dragStart.x) / zoomLevel;
+        const dy = (e.clientY - dragStart.y) / zoomLevel;
+        setPanOffset({
+          x: dragStart.initialTransform.x + dx,
+          y: dragStart.initialTransform.y + dy,
+        });
+        return;
+      }
+
+      if (!selectedPartId) return;
+
+      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
 
       if (dragMode === 'translate') {
+        const dx = svgX - dragStart.x;
+        const dy = svgY - dragStart.y;
         updateCurrentTransform({
           x: Math.round(dragStart.initialTransform.x + dx),
           y: Math.round(dragStart.initialTransform.y + dy),
         });
       } else if (dragMode === 'rotate') {
-        // Convert mouse position to SVG world coordinates
-        const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-        const centerX = dragStart.initialTransform.x;
-        const centerY = dragStart.initialTransform.y;
+        const dx = svgX - dragStart.initialTransform.x;
+        const dy = svgY - dragStart.initialTransform.y;
+        const currentAngleRad = Math.atan2(dy, dx);
+        const deltaAngleRad = currentAngleRad - dragInitialAngle;
+        const deltaAngleDeg = (deltaAngleRad * 180) / Math.PI;
 
-        // Calculate angle from object center to current mouse position
-        const currentAngle = Math.atan2(svgY - centerY, svgX - centerX) * (180 / Math.PI);
-        const newRotation = Math.round(currentAngle - dragInitialAngle);
-
-        updateCurrentTransform({
-          rotation: newRotation,
-        });
+        const newRotation = Math.round(dragStart.initialTransform.rotation + deltaAngleDeg);
+        updateCurrentTransform({ rotation: newRotation });
       } else if (dragMode === 'scale') {
-        const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-        const currentDist = Math.hypot(svgX - dragStart.initialTransform.x, svgY - dragStart.initialTransform.y);
+        const dx = svgX - dragStart.initialTransform.x;
+        const dy = svgY - dragStart.initialTransform.y;
+        const currentDist = Math.sqrt(dx * dx + dy * dy);
+
         const ratio = currentDist / Math.max(1, dragInitialDist);
-        const newScaleX = Math.max(0.05, Math.min(50, Number((dragStart.initialTransform.scaleX * ratio).toFixed(2))));
-        const newScaleY = Math.max(0.05, Math.min(50, Number((dragStart.initialTransform.scaleY * ratio).toFixed(2))));
-        updateCurrentTransform({
-          scaleX: newScaleX,
-          scaleY: newScaleY,
-        });
+        const newScaleX = parseFloat(Math.max(0.1, dragStart.initialTransform.scaleX * ratio).toFixed(2));
+        const newScaleY = parseFloat(Math.max(0.1, dragStart.initialTransform.scaleY * ratio).toFixed(2));
+
+        updateCurrentTransform({ scaleX: newScaleX, scaleY: newScaleY });
       }
     },
-    [isDragging, dragMode, dragStart, selectedTransform, selectedPartId, updateCurrentTransform, zoomLevel, clientToSVG, dragInitialAngle, dragInitialDist]
+    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialDist, selectedPartId, updateCurrentTransform, zoomLevel]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -864,101 +193,35 @@ export const StageCanvas: React.FC = () => {
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  // Canvas Panning State (Right-click or Middle-click drag)
-  const [isPanning, setIsPanning] = useState<boolean>(false);
-  const [panStart, setPanStart] = useState<{ x: number; y: number; initialPan: { x: number; y: number } }>({
-    x: 0,
-    y: 0,
-    initialPan: { x: 0, y: 0 },
-  });
-
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-    // Right Click (button 2) or Middle Click (button 1) or Pan tool initiates map panning
-    if (e.button === 2 || e.button === 1 || activeTool === 'pan') {
-      e.preventDefault();
-      setIsPanning(true);
-      setPanStart({
-        x: e.clientX,
-        y: e.clientY,
-        initialPan: { ...panOffset },
-      });
-    }
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
+    setZoomLevel((prev) => Math.min(3, Math.max(0.3, prev * zoomFactor)));
   };
 
-  const handlePanMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (!isPanning) return;
-      const dx = (e.clientX - panStart.x) / zoomLevel;
-      const dy = (e.clientY - panStart.y) / zoomLevel;
-      setPanOffset({
-        x: Math.round(panStart.initialPan.x + dx),
-        y: Math.round(panStart.initialPan.y + dy),
-      });
-    },
-    [isPanning, panStart, zoomLevel]
-  );
+  const [isDropTargetHover, setIsDropTargetHover] = useState<boolean>(false);
 
-  const handlePanMouseUp = useCallback(() => {
-    if (isPanning) {
-      setIsPanning(false);
-    }
-  }, [isPanning]);
-
-  useEffect(() => {
-    if (isPanning) {
-      window.addEventListener('mousemove', handlePanMouseMove);
-      window.addEventListener('mouseup', handlePanMouseUp);
-    }
-    return () => {
-      window.removeEventListener('mousemove', handlePanMouseMove);
-      window.removeEventListener('mouseup', handlePanMouseUp);
-    };
-  }, [isPanning, handlePanMouseMove, handlePanMouseUp]);
-
-  // Direct Mouse Scroll Wheel Zooming (Wheel Up = Zoom In, Wheel Down = Zoom Out)
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      // Direct mouse wheel scroll zooms the map directly
-      const zoomDelta = e.deltaY < 0 ? 0.12 : -0.12;
-      setZoomLevel((prev) => Math.max(0.2, Math.min(4.0, Number((prev + zoomDelta).toFixed(2)))));
-    };
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    return () => {
-      container.removeEventListener('wheel', handleWheel);
-    };
-  }, []);
-
-  const [isDropTargetActive, setIsDropTargetActive] = useState<boolean>(false);
-
-  const handleCanvasDragOver = (e: React.DragEvent) => {
+  const handleDragOverStage = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
-    if (!isDropTargetActive) setIsDropTargetActive(true);
+    if (!isDropTargetHover) setIsDropTargetHover(true);
   };
 
-  const handleCanvasDragLeave = () => {
-    setIsDropTargetActive(false);
+  const handleDragLeaveStage = () => {
+    setIsDropTargetHover(false);
   };
 
-  const handleCanvasDrop = (e: React.DragEvent) => {
+  const handleDropStage = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDropTargetActive(false);
-
+    setIsDropTargetHover(false);
     try {
-      const jsonStr = e.dataTransfer.getData('application/json');
-      if (!jsonStr) return;
-      const data = JSON.parse(jsonStr);
+      const rawData = e.dataTransfer.getData('application/json');
+      if (!rawData) return;
+      const data = JSON.parse(rawData);
 
       const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
 
       addCustomPart(data.type, data.name || 'Dropped Element', {
-        imageUrl: data.imageUrl,
-        videoUrl: data.videoUrl,
         baseTransform: {
           x: Math.round(svgX),
           y: Math.round(svgY),
@@ -969,123 +232,58 @@ export const StageCanvas: React.FC = () => {
         },
       });
     } catch (err) {
-      console.error('Failed to parse dropped element data:', err);
+      console.error('Error handling dropped object on canvas:', err);
     }
   };
 
   const sortedParts = [...characterParts].sort((a, b) => a.zIndex - b.zIndex);
+  const isPanning = activeTool === 'pan' || (isDragging && (dragMode as any) === 'pan');
 
   return (
     <div
+      className={`stage-canvas-container ${isPanning ? 'panning' : ''}`}
       ref={containerRef}
-      className={`stage-canvas ${showGrid ? 'bg-grid' : ''}`}
-      style={{ cursor: isPanning ? 'grabbing' : activeTool === 'pan' ? 'grab' : 'default', position: 'relative' }}
-      onMouseDown={handleCanvasMouseDown}
-      onContextMenu={(e) => e.preventDefault()}
-      onDragOver={handleCanvasDragOver}
-      onDragLeave={handleCanvasDragLeave}
-      onDrop={handleCanvasDrop}
-      onClick={() => {
-        if (!isPanning) setSelectedPartId(null);
-      }}
+      onMouseDown={handleMouseDown}
+      onWheel={handleWheel}
+      onDragOver={handleDragOverStage}
+      onDragLeave={handleDragLeaveStage}
+      onDrop={handleDropStage}
     >
-      {/* Drag & Drop Target Active Overlay */}
-      {isDropTargetActive && (
-        <div
-          style={{
-            position: 'absolute',
-            inset: 12,
-            borderRadius: 16,
-            border: '2px dashed var(--accent-teal)',
-            background: 'rgba(20, 184, 166, 0.14)',
-            pointerEvents: 'none',
-            zIndex: 999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backdropFilter: 'blur(4px)',
-          }}
-        >
-          <div
-            style={{
-              padding: '14px 28px',
-              background: 'var(--bg-darkest)',
-              borderRadius: 12,
-              border: '1px solid var(--accent-teal)',
-              boxShadow: '0 0 30px var(--accent-teal-glow)',
-              color: 'var(--accent-teal)',
-              fontWeight: 800,
-              fontSize: 14,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-            }}
-          >
+      {isDropTargetHover && (
+        <div className="canvas-drop-zone-overlay">
+          <div style={{ color: 'var(--accent-teal)', fontWeight: 800, fontSize: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
             <Sparkles size={18} />
             <span>RELEASE TO DROP ELEMENT ONTO STAGE CANVAS</span>
           </div>
         </div>
       )}
+
       {/* Top Bar Overlay Info */}
       <div className="canvas-header-info">
         <span className="stage-title">2D ANIMATION VIEWPORT</span>
         <span className="info-tool">MOD: {isPanning ? 'PAN NAV' : activeTool.toUpperCase()}</span>
       </div>
 
-      {/* Top Right Viewport Tools Overlay */}
+      {/* Viewport Tools Overlay */}
       <div className="viewport-tools-overlay">
-        <button
-          className={`btn-icon viewport-btn ${showGrid ? 'active' : ''}`}
-          onClick={() => setShowGrid(!showGrid)}
-          title="Toggle Grid (Show/Hide)"
-        >
+        <button className={`btn-icon viewport-btn ${showGrid ? 'active' : ''}`} onClick={() => setShowGrid(!showGrid)} title="Toggle Grid">
           <Grid size={15} />
         </button>
-
-        <button
-          className={`btn-icon viewport-btn ${showBones ? 'active' : ''}`}
-          onClick={() => setShowBones(!showBones)}
-          title="Toggle Bone Hierarchy (Show/Hide)"
-        >
+        <button className={`btn-icon viewport-btn ${showBones ? 'active' : ''}`} onClick={() => setShowBones(!showBones)} title="Toggle Bones">
           <Bone size={15} />
         </button>
-
-        <button
-          className={`btn-icon viewport-btn ${showOnionSkin ? 'active' : ''}`}
-          onClick={() => setShowOnionSkin(!showOnionSkin)}
-          title="Toggle Onion Skinning (Ghost Frames)"
-        >
+        <button className={`btn-icon viewport-btn ${showOnionSkin ? 'active' : ''}`} onClick={() => setShowOnionSkin(!showOnionSkin)} title="Toggle Onion Skinning">
           <Layers size={15} />
         </button>
-
         <div className="divider-v-sm" />
-
-        <button
-          className="btn-icon viewport-btn"
-          onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.15))}
-          title="Zoom In"
-        >
+        <button className="btn-icon viewport-btn" onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.15))} title="Zoom In">
           <ZoomIn size={15} />
         </button>
-
         <span className="zoom-badge">{Math.round(zoomLevel * 100)}%</span>
-
-        <button
-          className="btn-icon viewport-btn"
-          onClick={() => setZoomLevel((z) => Math.max(0.4, z - 0.15))}
-          title="Zoom Out"
-        >
+        <button className="btn-icon viewport-btn" onClick={() => setZoomLevel((z) => Math.max(0.4, z - 0.15))} title="Zoom Out">
           <ZoomOut size={15} />
         </button>
-
-        <button
-          className="btn-icon viewport-btn"
-          onClick={() => {
-            setZoomLevel(1);
-            setPanOffset({ x: 0, y: 0 });
-          }}
-          title="Reset View"
-        >
+        <button className="btn-icon viewport-btn" onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }} title="Reset View">
           <Compass size={15} />
         </button>
       </div>
@@ -1102,255 +300,75 @@ export const StageCanvas: React.FC = () => {
           </pattern>
         </defs>
 
-        {/* Zoom-Responsive Counter Scale Factor */}
         {(() => {
           const zScale = 1 / Math.max(0.15, zoomLevel);
 
           return (
             <>
-              {/* Dashed Grid Lines (Infinite Canvas Grid in All Directions) */}
-              {showGrid && (
-                <rect x="-300000" y="-300000" width="600000" height="600000" fill="url(#svg-dashed-grid)" />
-              )}
+              {/* Dashed Grid Lines */}
+              {showGrid && <rect x="-300000" y="-300000" width="600000" height="600000" fill="url(#svg-dashed-grid)" />}
 
-              {/* Origin Center Grid Axes (Infinite Red X-Axis & Green Y-Axis) */}
-              <line
-                x1="-300000"
-                y1="240"
-                x2="300000"
-                y2="240"
-                stroke="rgba(239, 68, 68, 0.75)"
-                strokeWidth={1.5 * zScale}
-                strokeDasharray={`${6 * zScale} ${4 * zScale}`}
-              />
-              <line
-                x1="300"
-                y1="-300000"
-                x2="300"
-                y2="300000"
-                stroke="rgba(16, 185, 129, 0.75)"
-                strokeWidth={1.5 * zScale}
-                strokeDasharray={`${6 * zScale} ${4 * zScale}`}
-              />
+              {/* Origin Center Grid Axes */}
+              <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
+              <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
               <circle cx={300} cy={240} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
-              <text
-                x={300 + 10 * zScale}
-                y={240 - 5 * zScale}
-                fill="rgba(255, 255, 255, 0.9)"
-                fontSize={12 * zScale}
-                fontWeight="800"
-                fontFamily="JetBrains Mono, monospace"
-              >
+              <text x={300 + 10 * zScale} y={240 - 5 * zScale} fill="rgba(255, 255, 255, 0.9)" fontSize={12 * zScale} fontWeight="800" fontFamily="JetBrains Mono, monospace">
                 (0,0) ORIGIN
               </text>
 
-              {/* ONION SKINNING: Ghost Frame Before (Cyan) & After (Magenta) */}
-              {showOnionSkin && currentFrame > 0 && (
-                sortedParts.map((part) => {
-                  const prevTransform = getComputedTransform(part.id, currentFrame - 1);
-                  return renderPartPath(part, prevTransform, true, '#00d2ff');
-                })
-              )}
+              {/* ONION SKINNING */}
               {showOnionSkin && (
-                sortedParts.map((part) => {
-                  const nextTransform = getComputedTransform(part.id, currentFrame + 1);
-                  return renderPartPath(part, nextTransform, true, '#ff3366');
-                })
+                <OnionSkinning
+                  sortedParts={sortedParts}
+                  currentFrame={currentFrame}
+                  selectedPartId={selectedPartId}
+                  getComputedTransform={getComputedTransform}
+                  onSelect={setSelectedPartId}
+                  onStartTranslateDrag={startTranslateDragForPart}
+                />
               )}
 
               {/* Character Parts Active Render */}
               {sortedParts.map((part) => {
                 const transform = getComputedTransform(part.id, currentFrame);
-                return renderPartPath(part, transform);
+                return (
+                  <PartRenderer
+                    key={part.id}
+                    part={part}
+                    transform={transform}
+                    isSelected={selectedPartId === part.id}
+                    currentFrame={currentFrame}
+                    onSelect={setSelectedPartId}
+                    onStartTranslateDrag={startTranslateDragForPart}
+                  />
+                );
               })}
 
               {/* Skeletal Bone Hierarchy Links */}
-              {showBones &&
-                characterParts.map((part) => {
-                  if (!part.parentId) return null;
-                  const parentPart = characterParts.find((p) => p.id === part.parentId);
-                  if (!parentPart) return null;
+              {showBones && (
+                <SkeletalBones
+                  characterParts={characterParts}
+                  selectedPartId={selectedPartId}
+                  currentFrame={currentFrame}
+                  zScale={zScale}
+                  getComputedTransform={getComputedTransform}
+                />
+              )}
 
-                  const pT = getComputedTransform(parentPart.id, currentFrame);
-                  const cT = getComputedTransform(part.id, currentFrame);
-
-                  const isSelectedLink = selectedPartId === part.id || selectedPartId === parentPart.id;
-
-                  return (
-                    <g key={`bone-${part.id}`}>
-                      <line
-                        x1={pT.x}
-                        y1={pT.y}
-                        x2={cT.x}
-                        y2={cT.y}
-                        stroke={isSelectedLink ? '#ffb700' : 'rgba(0, 210, 255, 0.4)'}
-                        strokeWidth={(isSelectedLink ? 2.5 : 1.5) * zScale}
-                        strokeDasharray={isSelectedLink ? 'none' : `${4 * zScale} ${3 * zScale}`}
-                      />
-                      <circle cx={pT.x} cy={pT.y} r={3 * zScale} fill="#00d2ff" />
-                      <circle cx={cT.x} cy={cT.y} r={3 * zScale} fill="#ffb700" />
-                    </g>
-                  );
-                })}
-
-              {/* Interactive Transform Gizmo on Selected Part */}
-              {selectedPart && selectedTransform && (() => {
-                const getPartBoundingRadius = (part: CharacterPart, transform: Transform): number => {
-                  let halfW = 32;
-                  let halfH = 32;
-
-                  switch (part.type) {
-                    case 'custom_card':
-                      halfW = 90;
-                      halfH = 55;
-                      break;
-                    case 'custom_banner':
-                      halfW = 110;
-                      halfH = 30;
-                      break;
-                    case 'custom_image':
-                    case 'custom_video':
-                      halfW = 100;
-                      halfH = 70;
-                      break;
-                    case 'custom_text':
-                      halfW = 75;
-                      halfH = 25;
-                      break;
-                    case 'custom_rect':
-                    case 'custom_box':
-                    case 'custom_capsule':
-                      halfW = 55;
-                      halfH = 32;
-                      break;
-                    default:
-                      halfW = 32;
-                      halfH = 32;
-                      break;
-                  }
-
-                  const scaledHalfW = halfW * Math.abs(transform.scaleX);
-                  const scaledHalfH = halfH * Math.abs(transform.scaleY);
-
-                  return Math.round(Math.hypot(scaledHalfW, scaledHalfH) + 16);
-                };
-
-                const r0 = Math.max(36, getPartBoundingRadius(selectedPart, selectedTransform));
-                const rRot = (selectedTransform.rotation * Math.PI) / 180;
-                const arrowLen = Math.min(r0 * 0.85, r0 - 14);
-                const scaleLine = Math.min(r0 * 0.75, r0 - 24);
-
-                const knobR = 8 * Math.min(1.8, Math.max(1, zScale * 0.6));
-                const strokeW = 2 * Math.min(1.5, Math.max(1, zScale * 0.5));
-
-                return (
-                  <g transform={`translate(${selectedTransform.x}, ${selectedTransform.y})`}>
-                    {/* Center Pivot Axis */}
-                    <circle cx={0} cy={0} r={5 * Math.min(1.5, Math.max(1, zScale * 0.5))} fill="#00d2ff" stroke="#fff" strokeWidth={1.5} className="gizmo-center" />
-
-                    {/* Drag Angle Floating Tooltip */}
-                    {isDragging && dragMode === 'rotate' && (
-                      <g transform={`translate(0, ${-r0 - 20 * zScale})`}>
-                        <rect x={-35 * zScale} y={-14 * zScale} width={70 * zScale} height={24 * zScale} rx={4 * zScale} fill="rgba(0, 210, 255, 0.95)" />
-                        <text x={0} y={2 * zScale} textAnchor="middle" fill="#000" fontSize={11 * zScale} fontWeight={700} fontFamily="monospace">
-                          {selectedTransform.rotation}°
-                        </text>
-                      </g>
-                    )}
-
-                    {/* Unified 360° Dashed Rotation Circle Ring */}
-                    <g>
-                      <circle
-                        cx={0}
-                        cy={0}
-                        r={r0}
-                        fill="none"
-                        stroke="var(--accent-teal)"
-                        strokeWidth={strokeW}
-                        strokeDasharray={`${5 * strokeW} ${4 * strokeW}`}
-                        className="gizmo-ring-360"
-                        style={{ cursor: 'grab' }}
-                        onMouseDown={(e) => handleMouseDown('rotate', e)}
-                      />
-                      {/* 360° Gold Handle Knob */}
-                      <circle
-                        cx={r0 * Math.cos(rRot)}
-                        cy={r0 * Math.sin(rRot)}
-                        r={knobR}
-                        fill="#fbbf24"
-                        stroke="#12141a"
-                        strokeWidth={strokeW}
-                        className="gizmo-handle-gold"
-                        style={{ cursor: 'grab' }}
-                        onMouseDown={(e) => handleMouseDown('rotate', e)}
-                      />
-                    </g>
-
-                    {/* Translation Arrows (Red X / Green Y) */}
-                    <g>
-                      <line x1={0} y1={0} x2={arrowLen} y2={0} stroke="#f43f5e" strokeWidth={3.5 * Math.min(1.4, Math.max(1, zScale * 0.5))} strokeLinecap="round" />
-                      <polygon points={`${arrowLen},-6 ${arrowLen + 12},0 ${arrowLen},6`} fill="#f43f5e" />
-
-                      <line x1={0} y1={0} x2={0} y2={arrowLen} stroke="#10b981" strokeWidth={3.5 * Math.min(1.4, Math.max(1, zScale * 0.5))} strokeLinecap="round" />
-                      <polygon points={`-6,${arrowLen} 0,${arrowLen + 12} 6,${arrowLen}`} fill="#10b981" />
-
-                      {/* Center Move Square Handle */}
-                      <rect
-                        x={-9 * Math.min(1.5, Math.max(1, zScale * 0.5))}
-                        y={-9 * Math.min(1.5, Math.max(1, zScale * 0.5))}
-                        width={18 * Math.min(1.5, Math.max(1, zScale * 0.5))}
-                        height={18 * Math.min(1.5, Math.max(1, zScale * 0.5))}
-                        fill="var(--accent-teal)"
-                        stroke="#ffffff"
-                        strokeWidth={1.5}
-                        rx={4}
-                        className="gizmo-handle-center"
-                        style={{ cursor: 'move' }}
-                        onMouseDown={(e) => handleMouseDown('translate', e)}
-                      />
-                    </g>
-
-                    {/* Proportional Scale Corner Handles */}
-                    <g>
-                      <line x1={0} y1={0} x2={scaleLine} y2={scaleLine} stroke="#a855f7" strokeWidth={1.5 * Math.min(1.4, Math.max(1, zScale * 0.5))} strokeDasharray="3 3" />
-                      <rect
-                        x={scaleLine - 6}
-                        y={scaleLine - 6}
-                        width={14 * Math.min(1.5, Math.max(1, zScale * 0.5))}
-                        height={14 * Math.min(1.5, Math.max(1, zScale * 0.5))}
-                        fill="#a855f7"
-                        stroke="#ffffff"
-                        strokeWidth={1.5}
-                        rx={3}
-                        className="gizmo-handle-scale"
-                        style={{ cursor: 'nwse-resize' }}
-                        onMouseDown={(e) => handleMouseDown('scale', e)}
-                      />
-                    </g>
-                  </g>
-                );
-              })()}
+              {/* Interactive Transform Gizmo */}
+              {selectedPart && selectedTransform && (
+                <TransformGizmo
+                  selectedPart={selectedPart}
+                  selectedTransform={selectedTransform}
+                  zScale={zScale}
+                  onRotateMouseDown={startRotate}
+                  onScaleMouseDown={startScale}
+                />
+              )}
             </>
           );
         })()}
       </svg>
-
-      {/* Keyframes Studio Viewport Bottom Bar */}
-      <div className="canvas-footer-legend">
-        <div className="footer-left">
-          <span className="aspect-badge">16:9 Pro Canvas</span>
-          <span className="divider-dot">•</span>
-          <span>Selected: <strong style={{ color: 'var(--accent-teal)' }}>{selectedPart ? selectedPart.name : 'None'}</strong></span>
-        </div>
-
-        <div className="footer-right">
-          <button className="footer-btn" onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}>
-            Fit Canvas
-          </button>
-          <span className="zoom-level-text">{Math.round(zoomLevel * 100)}%</span>
-        </div>
-      </div>
     </div>
   );
 };
-

@@ -83,6 +83,7 @@ interface AnimatorContextType {
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   deletePart: (partId: string) => void;
+  applyMotionTransition: (partId: string, transitionType: string) => void;
 }
 
 const AnimatorContext = createContext<AnimatorContextType | null>(null);
@@ -485,6 +486,95 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, locked: !t.locked } : t)));
   };
 
+  const applyMotionTransition = (partId: string, transitionType: string) => {
+    const track = tracks.find((t) => t.partId === partId);
+    if (!track) return;
+
+    const startFrame = currentFrame;
+    const duration = 15;
+    const endFrame = Math.min(totalFrames, startFrame + duration);
+    const baseTransform = getComputedTransform(partId, startFrame);
+
+    let startTransform: Transform = { ...baseTransform };
+    let endTransform: Transform = { ...baseTransform };
+    let easing: EasingType = 'easeOut';
+
+    switch (transitionType) {
+      case 'none':
+        setTracks((prev) =>
+          prev.map((t) => (t.id === track.id ? { ...t, keyframes: [] } : t))
+        );
+        return;
+      case 'move_left':
+        startTransform.x = baseTransform.x + 250;
+        startTransform.opacity = 0;
+        endTransform.opacity = 1;
+        break;
+      case 'move_right':
+        startTransform.x = baseTransform.x - 250;
+        startTransform.opacity = 0;
+        endTransform.opacity = 1;
+        break;
+      case 'move_down':
+        startTransform.y = baseTransform.y - 200;
+        startTransform.opacity = 0;
+        endTransform.opacity = 1;
+        break;
+      case 'move_up':
+        startTransform.y = baseTransform.y + 200;
+        startTransform.opacity = 0;
+        endTransform.opacity = 1;
+        break;
+      case 'fade':
+        startTransform.opacity = 0;
+        endTransform.opacity = 1;
+        break;
+      case 'flash':
+        startTransform.scaleX = 0.1;
+        startTransform.scaleY = 0.1;
+        startTransform.opacity = 0;
+        endTransform.opacity = 1;
+        easing = 'overshoot';
+        break;
+      case 'spin':
+        startTransform.rotation = baseTransform.rotation - 360;
+        startTransform.opacity = 0;
+        endTransform.opacity = 1;
+        break;
+      case 'bounce':
+        startTransform.y = baseTransform.y - 180;
+        startTransform.opacity = 0;
+        endTransform.opacity = 1;
+        easing = 'bounce';
+        break;
+    }
+
+    const kfStart: Keyframe = {
+      id: `kf_${track.id}_${startFrame}_${Date.now()}`,
+      frame: startFrame,
+      transform: startTransform,
+      easing,
+    };
+
+    const kfEnd: Keyframe = {
+      id: `kf_${track.id}_${endFrame}_${Date.now() + 1}`,
+      frame: endFrame,
+      transform: endTransform,
+      easing: 'linear',
+    };
+
+    setTracks((prev) =>
+      prev.map((t) => {
+        if (t.id !== track.id) return t;
+        const filtered = t.keyframes.filter(
+          (k) => k.frame < startFrame || k.frame > endFrame
+        );
+        const newKfs = [...filtered, kfStart, kfEnd].sort((a, b) => a.frame - b.frame);
+        return { ...t, keyframes: newKfs };
+      })
+    );
+  };
+
   const exportProject = (): string => {
     const project: AnimationProject = {
       name: 'Unreal 2D Character Sequence',
@@ -609,6 +699,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         resetProject,
         addCustomPart,
         deletePart,
+        applyMotionTransition,
       }}
     >
       {children}

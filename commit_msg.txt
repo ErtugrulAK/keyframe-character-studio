@@ -1,0 +1,6 @@
+feat: add Motion Transitions presets library for elements Inspired by keyframes.studio
+
+- Added Transitions category to left sidebar & drawer panel matching Keyframes.studio UI
+- Added Motion tab to PropertyInspector panel for quick access on selected object
+- Added 9 motion transition presets: None, Move to left, Move to right, Move down, Move up, Fade In, Pop Zoom, Spin 360°, Bounce In
+- Automated keyframe generation & track interpolation over 15 frames for selected element

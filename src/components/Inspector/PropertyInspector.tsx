@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import { PRESET_POSES, applyEasing } from '../../utils/defaults';
-import type { EasingType, CharacterPart } from '../../types/animator';
+import { PRESET_POSES } from '../../utils/defaults';
+import type { CharacterPart } from '../../types/animator';
+import { InteractiveCubicBezierEditor } from './InteractiveCubicBezierEditor';
 import {
   Sliders,
   Sparkles,
@@ -51,7 +52,7 @@ export const PropertyInspector: React.FC = () => {
     updateCurrentTransform,
     currentFrame,
     tracks,
-    updateKeyframeEasing,
+    updateKeyframeBezierPoints,
     applyPresetPose,
     selectedKeyframeId,
     deletePart,
@@ -81,47 +82,7 @@ export const PropertyInspector: React.FC = () => {
     handlePartPropChange('zIndex', zIndex);
   };
 
-  // Plot Mathematical Curve Points for Graph Curve Editor
-  const renderEasingCurvePreview = (easing: EasingType) => {
-    const width = 280;
-    const height = 150;
-    const padding = 20;
-    const innerW = width - padding * 2;
-    const innerH = height - padding * 2;
 
-    const points: string[] = [];
-    const steps = 40;
-
-    for (let i = 0; i <= steps; i++) {
-      const t = i / steps;
-      const easedT = applyEasing(t, easing);
-      const x = padding + t * innerW;
-      const y = height - padding - easedT * innerH;
-      points.push(`${x},${y}`);
-    }
-
-    const pathD = `M ${points.join(' L ')}`;
-
-    return (
-      <svg width={width} height={height} className="curve-svg">
-        {/* Background Grid */}
-        <line x1={padding} y1={padding} x2={width - padding} y2={padding} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-        <line x1={padding} y1={height / 2} x2={width - padding} y2={height / 2} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-        <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="rgba(255,255,255,0.15)" />
-
-        <line x1={padding} y1={padding} x2={padding} y2={height - padding} stroke="rgba(255,255,255,0.15)" />
-        <line x1={width / 2} y1={padding} x2={width / 2} y2={height - padding} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-        <line x1={width - padding} y1={padding} x2={width - padding} y2={height - padding} stroke="rgba(255,255,255,0.08)" strokeDasharray="3 3" />
-
-        {/* Acceleration Bezier Curve Path */}
-        <path d={pathD} fill="none" stroke="#fbbf24" strokeWidth="3" strokeLinecap="round" />
-
-        {/* Start / End Curve Handles */}
-        <circle cx={padding} cy={height - padding} r={4} fill="#6366f1" />
-        <circle cx={width - padding} cy={padding} r={4} fill="#38bdf8" />
-      </svg>
-    );
-  };
 
   return (
     <aside className="property-inspector">
@@ -584,44 +545,25 @@ export const PropertyInspector: React.FC = () => {
               </div>
             )}
 
-            {/* TAB 4: CURVE EDITOR (GRAPH VIEW) */}
+            {/* TAB 4: CURVE EDITOR (INTERACTIVE CUBIC BEZIER) */}
             {activeTab === 'easing' && (
               <div className="inspector-section">
                 <div className="section-title">
                   <Zap size={13} className="text-gold" />
-                  <span>CURVE GRAPH EDITOR</span>
+                  <span>INTERACTIVE CUBIC BEZIER EDITOR</span>
                 </div>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
+                  Drag Cyan P1 & Gold P2 handles to shape custom speed curves (cubic-bezier.com style).
+                </p>
 
                 {currentKf && currentTrack ? (
-                  <div className="easing-editor">
-                    <div className="curve-graph-box">
-                      <span className="graph-label">ACCELERATION CURVE GRAPH</span>
-                      {renderEasingCurvePreview(currentKf.easing)}
-                      <span className="curve-name-badge">{currentKf.easing.toUpperCase()}</span>
-                    </div>
-
-                    <div className="easing-field">
-                      <label>Acceleration Curve Type</label>
-                      <select
-                        value={currentKf.easing}
-                        onChange={(e) =>
-                          updateKeyframeEasing(currentTrack.id, currentKf.id, e.target.value as EasingType)
-                        }
-                      >
-                        <option value="linear">Linear - Constant Speed</option>
-                        <option value="easeIn">Ease In - Slow Start Acceleration</option>
-                        <option value="easeOut">Ease Out - Fast Start Deceleration</option>
-                        <option value="easeInOut">Ease In Out - Smooth Both Sides</option>
-                        <option value="bounce">Bounce - Acceleration Spring</option>
-                        <option value="elastic">Elastic - Oscillation & Vibration</option>
-                        <option value="anticipate">Anticipate - Pull Back & Shoot</option>
-                        <option value="overshoot">Overshoot - Exceed & Settle</option>
-                      </select>
-                    </div>
-                  </div>
+                  <InteractiveCubicBezierEditor
+                    controlPoints={currentKf.bezierControlPoints}
+                    onChange={(points) => updateKeyframeBezierPoints(currentTrack.id, currentKf.id, points)}
+                  />
                 ) : (
                   <div className="no-kf-warning">
-                    <span>No keyframe at Frame {currentFrame}. Click "Add Keyframe" to create one.</span>
+                    <span>No keyframe at Frame {currentFrame}. Click "Add Keyframe" to create or edit curves.</span>
                   </div>
                 )}
               </div>

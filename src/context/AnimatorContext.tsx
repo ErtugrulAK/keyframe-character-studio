@@ -74,6 +74,7 @@ interface AnimatorContextType {
   deleteKeyframe: (trackId: string, keyframeId: string) => void;
   updateKeyframeFrame: (trackId: string, keyframeId: string, newFrame: number) => void;
   updateKeyframeEasing: (trackId: string, keyframeId: string, easing: EasingType) => void;
+  updateKeyframeBezierPoints: (trackId: string, keyframeId: string, points: [number, number, number, number]) => void;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
   applyPresetPose: (poseId: string) => void;
   toggleTrackVisibility: (trackId: string) => void;
@@ -299,7 +300,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const duration = nextKf.frame - prevKf.frame;
       const progress = (frame - prevKf.frame) / duration;
-      return interpolateTransform(prevKf.transform, nextKf.transform, progress, prevKf.easing);
+      return interpolateTransform(prevKf.transform, nextKf.transform, progress, prevKf.easing, prevKf.bezierControlPoints);
     },
     [characterParts, tracks]
   );
@@ -405,6 +406,24 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return {
           ...tr,
           keyframes: tr.keyframes.map((k) => (k.id === keyframeId ? { ...k, easing } : k)),
+        };
+      })
+    );
+  };
+
+  const updateKeyframeBezierPoints = (
+    trackId: string,
+    keyframeId: string,
+    points: [number, number, number, number]
+  ) => {
+    setTracks((prev) =>
+      prev.map((tr) => {
+        if (tr.id !== trackId) return tr;
+        return {
+          ...tr,
+          keyframes: tr.keyframes.map((k) =>
+            k.id === keyframeId ? { ...k, easing: 'cubic_bezier', bezierControlPoints: points } : k
+          ),
         };
       })
     );
@@ -690,6 +709,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deleteKeyframe,
         updateKeyframeFrame,
         updateKeyframeEasing,
+        updateKeyframeBezierPoints,
         updateCurrentTransform,
         applyPresetPose,
         toggleTrackVisibility,

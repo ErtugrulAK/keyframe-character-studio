@@ -6,7 +6,8 @@ export type EasingType =
   | 'bounce' 
   | 'elastic' 
   | 'anticipate' 
-  | 'overshoot';
+  | 'overshoot'
+  | 'cubic_bezier';
 
 export interface Transform {
   x: number;
@@ -22,6 +23,7 @@ export interface Keyframe {
   frame: number; // 0 to totalFrames
   transform: Transform;
   easing: EasingType;
+  bezierControlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
 }
 
 export interface Track {

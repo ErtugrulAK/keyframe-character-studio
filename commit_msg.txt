@@ -1,0 +1,7 @@
+feat: add interactive Cubic Bezier Curve Editor (cubic-bezier.com style)
+
+Summary of updates & math solver:
+- 📈 Interactive Drag Handles: Added P1 (Cyan) and P2 (Gold) draggable control point knobs directly on the SVG coordinate curve grid
+- 🧮 Exact Cubic Bezier Solver: Implemented Newton-Raphson solveCubicBezier solver in defaults.ts for real-time keyframe interpolation
+- 🔢 Real-time Readout & Copy: Displays CSS cubic-bezier(x1, y1, x2, y2) string readout with one-click copy button
+- ⚡ Preset Acceleration Curves: Added quick buttons for Linear, Ease In, Ease Out, Ease In Out, Overshoot, and Anticipate curves

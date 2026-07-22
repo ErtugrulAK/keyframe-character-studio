@@ -65,44 +65,61 @@ export const PRESET_POSES: PresetPose[] = [
   },
 ];
 
-export function applyEasing(t: number, easing: EasingType): number {
+export function solveCubicBezier(x1: number, y1: number, x2: number, y2: number, X: number): number {
+  if (X <= 0) return 0;
+  if (X >= 1) return 1;
+
+  let t = X;
+  for (let i = 0; i < 8; i++) {
+    const currentX = 3 * (1 - t) * (1 - t) * t * x1 + 3 * (1 - t) * t * t * x2 + t * t * t;
+    const currentSlope = 3 * (1 - t) * (1 - t) * x1 + 6 * (1 - t) * t * (x2 - x1) + 3 * t * t * (1 - x2);
+    if (Math.abs(currentSlope) < 1e-6) break;
+    const error = currentX - X;
+    t -= error / currentSlope;
+    t = Math.max(0, Math.min(1, t));
+  }
+
+  const Y = 3 * (1 - t) * (1 - t) * t * y1 + 3 * (1 - t) * t * t * y2 + t * t * t;
+  return Y;
+}
+
+export function applyEasing(
+  t: number,
+  easing: EasingType,
+  controlPoints?: [number, number, number, number]
+): number {
+  if (controlPoints) {
+    return solveCubicBezier(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3], t);
+  }
+
   switch (easing) {
+    case 'cubic_bezier':
+      return controlPoints
+        ? solveCubicBezier(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3], t)
+        : solveCubicBezier(0.42, 0, 0.58, 1, t);
     case 'easeIn':
-      return t * t * t;
+      return solveCubicBezier(0.42, 0, 1, 1, t);
     case 'easeOut':
-      return 1 - Math.pow(1 - t, 3);
+      return solveCubicBezier(0, 0, 0.58, 1, t);
     case 'easeInOut':
-      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      return solveCubicBezier(0.42, 0, 0.58, 1, t);
     case 'bounce': {
       const n1 = 7.5625;
       const d1 = 2.75;
       let x = t;
-      if (x < 1 / d1) {
-        return n1 * x * x;
-      } else if (x < 2 / d1) {
-        return n1 * (x -= 1.5 / d1) * x + 0.75;
-      } else if (x < 2.5 / d1) {
-        return n1 * (x -= 2.25 / d1) * x + 0.9375;
-      } else {
-        return n1 * (x -= 2.625 / d1) * x + 0.984375;
-      }
+      if (x < 1 / d1) return n1 * x * x;
+      else if (x < 2 / d1) return n1 * (x -= 1.5 / d1) * x + 0.75;
+      else if (x < 2.5 / d1) return n1 * (x -= 2.25 / d1) * x + 0.9375;
+      else return n1 * (x -= 2.625 / d1) * x + 0.984375;
     }
     case 'elastic': {
       const c4 = (2 * Math.PI) / 3;
-      return t === 0
-        ? 0
-        : t === 1
-        ? 1
-        : -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * c4);
+      return t === 0 ? 0 : t === 1 ? 1 : -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * c4);
     }
-    case 'anticipate': {
-      const s = 1.70158;
-      return t * t * ((s + 1) * t - s);
-    }
-    case 'overshoot': {
-      const s = 1.70158;
-      return (t - 1) * (t - 1) * ((s + 1) * (t - 1) + s) + 1;
-    }
+    case 'anticipate':
+      return solveCubicBezier(0.6, -0.28, 0.735, 0.045, t);
+    case 'overshoot':
+      return solveCubicBezier(0.175, 0.885, 0.32, 1.275, t);
     case 'linear':
     default:
       return t;
@@ -117,9 +134,10 @@ export function interpolateTransform(
   t1: Transform,
   t2: Transform,
   progress: number,
-  easing: EasingType = 'linear'
+  easing: EasingType = 'linear',
+  controlPoints?: [number, number, number, number]
 ): Transform {
-  const eased = applyEasing(progress, easing);
+  const eased = applyEasing(progress, easing, controlPoints);
   return {
     x: lerp(t1.x, t2.x, eased),
     y: lerp(t1.y, t2.y, eased),

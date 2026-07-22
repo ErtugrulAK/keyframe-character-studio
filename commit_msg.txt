@@ -1,7 +1,5 @@
-feat: add Fullscreen High-Precision Motion Curve Studio modal with Live Physics preview
+fix: mount Curve Studio Modal to document.body via React Portal with top z-index
 
-- Added 'Expand Studio' button to open a high-precision full-screen 2D Cubic Bezier Editor Modal
-- Modal includes a 520x320px SVG canvas with coordinate readout for precise P1 (Cyan) and P2 (Gold) curve handles
-- Direct numeric input fields for x1, y1, x2, y2 coordinates (cubic-bezier.com style)
-- Real-time Live Physics Motion preview track showing an animated object moving driven by the exact bezier physics
-- Extended preset buttons (Linear, Ease In/Out, Overshoot, Anticipate, Slow Mo, Elastic) and one-click CSS code copy
+- Fixed z-index layering bug where the timeline bottom bar rendered on top of the modal window
+- Used ReactDOM.createPortal(..., document.body) with z-index: 999999 so the modal floats cleanly on top of all application panels
+- Added responsive max-height: calc(100vh - 40px) and vertical scrolling to prevent bottom clipping on smaller screens

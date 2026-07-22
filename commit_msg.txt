@@ -1,5 +1,5 @@
-feat: add real-time zoom counter-scaling for viewport typography, origin markers, and gizmos
+fix: adjust gizmo rotation ring radius to stay snug around object while scaling knobs for readability
 
-- Added zScale = 1 / Math.max(0.15, zoomLevel) counter-scaling formula to StageCanvas SVG viewport
-- Origin label '(0,0) ORIGIN', axes lines, grid marks, and bone links dynamically expand as the viewport zooms out so text remains 100% crisp, sharp, and readable at all zoom levels
-- Gizmo transform handles, rotation degree badge, and move arrows scale counter-proportionally to zoom out level so controls never turn into microscopic dots
+- Fixed issue where zScale caused the gizmo rotation ring radius (r0) to blow up into a giant circle across the canvas when zooming out
+- Keeps rotation ring (r0) and translation arrows strictly proportional to object size (objScale)
+- Scales knob handle radii and stroke widths slightly for easy clickability and readability at any zoom level

@@ -555,6 +555,33 @@ export const PropertyInspector: React.FC = () => {
                     </>
                   )}
 
+                  {/* CORNER RADIUS (KÖŞE YUVARLAMA) CONTROL */}
+                  {(selectedPart.type === 'custom_rect' ||
+                    selectedPart.type === 'custom_box' ||
+                    selectedPart.type === 'custom_card' ||
+                    selectedPart.type === 'custom_banner' ||
+                    selectedPart.type === 'custom_capsule') && (
+                    <div className="input-field" style={{ marginBottom: 12 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <label style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)' }}>
+                          CORNER RADIUS (KÖŞE YUVARLAMA)
+                        </label>
+                        <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent-cyan)', fontFamily: 'monospace' }}>
+                          {selectedPart.borderRadius ?? 0}px
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={40}
+                        step={1}
+                        value={selectedPart.borderRadius ?? 0}
+                        onChange={(e) => handlePartPropChange('borderRadius', parseInt(e.target.value) || 0)}
+                        style={{ width: '100%', accentColor: 'var(--accent-cyan)', cursor: 'pointer' }}
+                      />
+                    </div>
+                  )}
+
                   <div className="color-picker-row">
                     <label>Body Fill Color</label>
                     <div className="picker-wrapper">

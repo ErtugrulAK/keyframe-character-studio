@@ -87,6 +87,7 @@ export interface CharacterPart {
   shadowBlur?: number; // Shadow blur radius in px
   shadowOffsetX?: number; // Shadow offset X in px
   shadowOffsetY?: number; // Shadow offset Y in px
+  borderRadius?: number; // Corner radius in px (0 for sharp right angle corners)
 
   // Media Overlay Text Caption
   overlayText?: string;

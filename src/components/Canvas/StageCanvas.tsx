@@ -174,12 +174,12 @@ export const StageCanvas: React.FC = () => {
         break;
       case 'custom_box':
         pathContent = (
-          <rect x={-30} y={-30} width={60} height={60} rx={8} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
+          <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
         );
         break;
       case 'custom_rect':
         pathContent = (
-          <rect x={-60} y={-35} width={120} height={70} rx={10} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
+          <rect x={-60} y={-35} width={120} height={70} rx={part.borderRadius ?? 0} fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
         );
         break;
       case 'custom_triangle':

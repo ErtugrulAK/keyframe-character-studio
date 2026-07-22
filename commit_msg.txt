@@ -1,6 +1,5 @@
-feat: add Crop Frame Masking [ ] and Overlay Caption Text Box for videos & images
+feat: scale gizmo controls dynamically with object scale and display keyframe sequence list
 
-- Implemented SVG clipPath masking and dark outer shaded area for custom video and image elements
-- Added white corner bracket handles [ ] matching exact crop focus frame UI
-- Added Overlay Text Caption Box support (Top, Center, Bottom banner positions)
-- Added interactive Crop Mask controls in PropertyInspector with 9:16, 1:1, 4:5, and 16:9 aspect ratio presets
+- Made interactive transform gizmo (Rotate ring, Move arrows, Center square, Scale handles) scale proportionally with the object's scaleX/scaleY so controls never shrink into unclickable micro-dots
+- Added a chronological Keyframe Sequence list in LeftToolbar under the Keyframes drawer section
+- Keyframe sequence list displays all keyframe points (#1, #2, #3...) for the selected object, clicking any keyframe jumps the playhead to that exact frame

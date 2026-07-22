@@ -844,93 +844,101 @@ export const StageCanvas: React.FC = () => {
             );
           })}
 
-        {/* Interactive Transform Gizmo on Selected Part */}
-        {selectedPart && selectedTransform && (
-          <g transform={`translate(${selectedTransform.x}, ${selectedTransform.y})`}>
-            {/* Center Pivot Axis */}
-            <circle cx={0} cy={0} r={5} fill="#00d2ff" stroke="#fff" strokeWidth={1.5} className="gizmo-center" />
+        {/* Interactive Transform Gizmo on Selected Part (Scales dynamically with object!) */}
+        {selectedPart && selectedTransform && (() => {
+          const gScale = Math.max(0.6, Math.min(6, (selectedTransform.scaleX + selectedTransform.scaleY) / 2));
+          const r0 = 70 * gScale;
+          const rRot = (selectedTransform.rotation * Math.PI) / 180;
+          const arrowLen = 55 * gScale;
+          const scaleLine = 48 * gScale;
 
-            {/* Drag Angle Floating Tooltip */}
-            {isDragging && dragMode === 'rotate' && (
-              <g transform="translate(0, -75)">
-                <rect x={-35} y={-14} width={70} height={24} rx={4} fill="rgba(0, 210, 255, 0.95)" />
-                <text x={0} y={2} textAnchor="middle" fill="#000" fontSize={11} fontWeight={700} fontFamily="monospace">
-                  {selectedTransform.rotation}°
-                </text>
+          return (
+            <g transform={`translate(${selectedTransform.x}, ${selectedTransform.y})`}>
+              {/* Center Pivot Axis */}
+              <circle cx={0} cy={0} r={5 * Math.min(1.8, Math.max(1, gScale * 0.7))} fill="#00d2ff" stroke="#fff" strokeWidth={1.5} className="gizmo-center" />
+
+              {/* Drag Angle Floating Tooltip */}
+              {isDragging && dragMode === 'rotate' && (
+                <g transform={`translate(0, ${-r0 - 20})`}>
+                  <rect x={-35} y={-14} width={70} height={24} rx={4} fill="rgba(0, 210, 255, 0.95)" />
+                  <text x={0} y={2} textAnchor="middle" fill="#000" fontSize={11} fontWeight={700} fontFamily="monospace">
+                    {selectedTransform.rotation}°
+                  </text>
+                </g>
+              )}
+
+              {/* Unified 360° Dashed Rotation Circle Ring */}
+              <g>
+                <circle
+                  cx={0}
+                  cy={0}
+                  r={r0}
+                  fill="none"
+                  stroke="var(--accent-teal)"
+                  strokeWidth={2}
+                  strokeDasharray="5 4"
+                  className="gizmo-ring-360"
+                  style={{ cursor: 'grab' }}
+                  onMouseDown={(e) => handleMouseDown('rotate', e)}
+                />
+                {/* 360° Gold Handle Knob */}
+                <circle
+                  cx={r0 * Math.cos(rRot)}
+                  cy={r0 * Math.sin(rRot)}
+                  r={8 * Math.min(1.8, Math.max(1, gScale * 0.7))}
+                  fill="#fbbf24"
+                  stroke="#12141a"
+                  strokeWidth={2}
+                  className="gizmo-handle-gold"
+                  style={{ cursor: 'grab' }}
+                  onMouseDown={(e) => handleMouseDown('rotate', e)}
+                />
               </g>
-            )}
 
-            {/* Unified 360° Dashed Rotation Circle Ring */}
-            <g>
-              <circle
-                cx={0}
-                cy={0}
-                r={70}
-                fill="none"
-                stroke="var(--accent-teal)"
-                strokeWidth={2}
-                strokeDasharray="5 4"
-                className="gizmo-ring-360"
-                style={{ cursor: 'grab' }}
-                onMouseDown={(e) => handleMouseDown('rotate', e)}
-              />
-              {/* 360° Gold Handle Knob */}
-              <circle
-                cx={70 * Math.cos((selectedTransform.rotation * Math.PI) / 180)}
-                cy={70 * Math.sin((selectedTransform.rotation * Math.PI) / 180)}
-                r={8}
-                fill="#fbbf24"
-                stroke="#12141a"
-                strokeWidth={2}
-                className="gizmo-handle-gold"
-                style={{ cursor: 'grab' }}
-                onMouseDown={(e) => handleMouseDown('rotate', e)}
-              />
+              {/* Translation Arrows (Red X / Green Y) */}
+              <g>
+                <line x1={0} y1={0} x2={arrowLen} y2={0} stroke="#f43f5e" strokeWidth={3.5} strokeLinecap="round" />
+                <polygon points={`${arrowLen},-6 ${arrowLen + 12},0 ${arrowLen},6`} fill="#f43f5e" />
+
+                <line x1={0} y1={0} x2={0} y2={arrowLen} stroke="#10b981" strokeWidth={3.5} strokeLinecap="round" />
+                <polygon points={`-6,${arrowLen} 0,${arrowLen + 12} 6,${arrowLen}`} fill="#10b981" />
+
+                {/* Center Move Square Handle */}
+                <rect
+                  x={-9 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                  y={-9 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                  width={18 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                  height={18 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                  fill="var(--accent-teal)"
+                  stroke="#ffffff"
+                  strokeWidth={1.5}
+                  rx={4}
+                  className="gizmo-handle-center"
+                  style={{ cursor: 'move' }}
+                  onMouseDown={(e) => handleMouseDown('translate', e)}
+                />
+              </g>
+
+              {/* Proportional Scale Corner Handles */}
+              <g>
+                <line x1={0} y1={0} x2={scaleLine} y2={scaleLine} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="3 3" />
+                <rect
+                  x={scaleLine - 6}
+                  y={scaleLine - 6}
+                  width={14 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                  height={14 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                  fill="#a855f7"
+                  stroke="#ffffff"
+                  strokeWidth={1.5}
+                  rx={3}
+                  className="gizmo-handle-scale"
+                  style={{ cursor: 'nwse-resize' }}
+                  onMouseDown={(e) => handleMouseDown('scale', e)}
+                />
+              </g>
             </g>
-
-            {/* Translation Arrows (Red X / Green Y) */}
-            <g>
-              <line x1={0} y1={0} x2={55} y2={0} stroke="#f43f5e" strokeWidth={3.5} strokeLinecap="round" />
-              <polygon points="55,-6 67,0 55,6" fill="#f43f5e" />
-
-              <line x1={0} y1={0} x2={0} y2={55} stroke="#10b981" strokeWidth={3.5} strokeLinecap="round" />
-              <polygon points="-6,55 0,67 6,55" fill="#10b981" />
-
-              {/* Center Move Square Handle */}
-              <rect
-                x={-9}
-                y={-9}
-                width={18}
-                height={18}
-                fill="var(--accent-teal)"
-                stroke="#ffffff"
-                strokeWidth={1.5}
-                rx={4}
-                className="gizmo-handle-center"
-                style={{ cursor: 'move' }}
-                onMouseDown={(e) => handleMouseDown('translate', e)}
-              />
-            </g>
-
-            {/* Proportional Scale Corner Handles */}
-            <g>
-              <line x1={0} y1={0} x2={48} y2={48} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="3 3" />
-              <rect
-                x={42}
-                y={42}
-                width={14}
-                height={14}
-                fill="#a855f7"
-                stroke="#ffffff"
-                strokeWidth={1.5}
-                rx={3}
-                className="gizmo-handle-scale"
-                style={{ cursor: 'nwse-resize' }}
-                onMouseDown={(e) => handleMouseDown('scale', e)}
-              />
-            </g>
-          </g>
-        )}
+          );
+        })()}
       </svg>
 
       {/* Keyframes Studio Viewport Bottom Bar */}

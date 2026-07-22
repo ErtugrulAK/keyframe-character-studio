@@ -14,6 +14,15 @@ import {
   Layout,
   Sparkles,
   Upload,
+  Zap,
+  Ban,
+  ArrowLeft,
+  ArrowRight,
+  ArrowDown,
+  ArrowUp,
+  Layers,
+  RotateCw,
+  Activity,
 } from 'lucide-react';
 import './LeftToolbar.css';
 
@@ -29,16 +38,29 @@ const QUICK_SHAPES: { type: BodyPartType; label: string; icon: React.ReactNode }
   { type: 'custom_triangle', label: 'Triangle', icon: <Triangle size={14} className="text-red" /> },
 ];
 
-type ActiveNavCategory = 'media' | 'keyframes' | 'texts' | 'shapes' | 'presets';
+const MOTION_TRANSITIONS = [
+  { id: 'none', label: 'None', icon: <Ban size={22} style={{ color: '#94a3b8' }} /> },
+  { id: 'move_left', label: 'Move to left', icon: <ArrowLeft size={22} className="text-cyan" /> },
+  { id: 'move_right', label: 'Move to right', icon: <ArrowRight size={22} className="text-teal" /> },
+  { id: 'move_down', label: 'Move down', icon: <ArrowDown size={22} className="text-gold" /> },
+  { id: 'move_up', label: 'Move up', icon: <ArrowUp size={22} className="text-purple" /> },
+  { id: 'fade', label: 'Fade In', icon: <Layers size={22} className="text-green" /> },
+  { id: 'flash', label: 'Pop Zoom', icon: <Sparkles size={22} className="text-gold" /> },
+  { id: 'spin', label: 'Spin 360°', icon: <RotateCw size={22} className="text-cyan" /> },
+  { id: 'bounce', label: 'Bounce In', icon: <Activity size={22} className="text-red" /> },
+];
+
+type ActiveNavCategory = 'media' | 'keyframes' | 'texts' | 'shapes' | 'presets' | 'transitions';
 
 export const LeftToolbar: React.FC = () => {
   const {
     addKeyframeForSelected,
     selectedPartId,
     addCustomPart,
+    applyMotionTransition,
   } = useAnimator();
 
-  const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('media');
+  const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('transitions');
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -83,6 +105,15 @@ export const LeftToolbar: React.FC = () => {
 
       {/* Keyframes Studio 86px Vertical Icon Sidebar */}
       <div className="left-sidebar-nav">
+        <button
+          className={`sidebar-nav-item ${activeCategory === 'transitions' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('transitions')}
+          title="Motion Transitions"
+        >
+          <Zap size={20} className="nav-icon text-cyan" />
+          <span className="nav-label">Transitions</span>
+        </button>
+
         <button
           className={`sidebar-nav-item ${activeCategory === 'media' ? 'active' : ''}`}
           onClick={() => setActiveCategory('media')}
@@ -131,6 +162,33 @@ export const LeftToolbar: React.FC = () => {
 
       {/* Expanding Panel Drawer (280px) */}
       <div className="left-drawer-panel">
+        {activeCategory === 'transitions' && (
+          <div className="drawer-content">
+            <div className="drawer-header">
+              <span className="drawer-title">Motion Transitions</span>
+            </div>
+            <p className="drawer-desc" style={{ fontSize: 11, margin: '2px 0 8px' }}>
+              {selectedPartId
+                ? 'Select a transition to auto-generate motion keyframes for the selected object.'
+                : '⚠️ Click an object on the canvas first to apply motion transitions.'}
+            </p>
+
+            <div className="drawer-grid transition-grid">
+              {MOTION_TRANSITIONS.map((item) => (
+                <button
+                  key={item.id}
+                  className={`drawer-item-card transition-card ${selectedPartId ? 'enabled' : 'disabled'}`}
+                  onClick={() => selectedPartId && applyMotionTransition(selectedPartId, item.id)}
+                  title={selectedPartId ? `Apply ${item.label} to selected object` : 'Select an object first'}
+                >
+                  <div className="transition-icon-box">{item.icon}</div>
+                  <span className="item-label">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {activeCategory === 'media' && (
           <div className="drawer-content">
             <div className="drawer-header">

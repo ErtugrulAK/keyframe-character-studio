@@ -11,10 +11,29 @@ import {
   Plus,
   Trash2,
   Sun,
+  Ban,
+  ArrowLeft,
+  ArrowRight,
+  ArrowDown,
+  ArrowUp,
+  Layers,
+  RotateCw,
 } from 'lucide-react';
 import './PropertyInspector.css';
 
-type TabType = 'transform' | 'style' | 'easing' | 'presets';
+type TabType = 'transform' | 'style' | 'easing' | 'motion' | 'presets';
+
+const INSPECTOR_TRANSITIONS = [
+  { id: 'none', label: 'None', icon: <Ban size={20} style={{ color: '#94a3b8' }} /> },
+  { id: 'move_left', label: 'Move to left', icon: <ArrowLeft size={20} className="text-cyan" /> },
+  { id: 'move_right', label: 'Move to right', icon: <ArrowRight size={20} className="text-teal" /> },
+  { id: 'move_down', label: 'Move down', icon: <ArrowDown size={20} className="text-gold" /> },
+  { id: 'move_up', label: 'Move up', icon: <ArrowUp size={20} className="text-purple" /> },
+  { id: 'fade', label: 'Fade In', icon: <Layers size={20} className="text-green" /> },
+  { id: 'flash', label: 'Pop Zoom', icon: <Sparkles size={20} className="text-gold" /> },
+  { id: 'spin', label: 'Spin 360°', icon: <RotateCw size={20} className="text-cyan" /> },
+  { id: 'bounce', label: 'Bounce In', icon: <Activity size={20} className="text-red" /> },
+];
 
 const PRESET_COLOR_SWATCHES = [
   '#00d2ff', '#ffb700', '#ff3366', '#a855f7', '#10b981',
@@ -37,6 +56,7 @@ export const PropertyInspector: React.FC = () => {
     selectedKeyframeId,
     deletePart,
     addKeyframeForSelected,
+    applyMotionTransition,
   } = useAnimator();
 
   const [activeTab, setActiveTab] = useState<TabType>('transform');
@@ -128,6 +148,15 @@ export const PropertyInspector: React.FC = () => {
         >
           <Palette size={13} />
           <span>Color</span>
+        </button>
+
+        <button
+          className={`tab-btn ${activeTab === 'motion' ? 'active' : ''}`}
+          onClick={() => setActiveTab('motion')}
+          title="Motion Transitions"
+        >
+          <Zap size={13} className="text-cyan" />
+          <span>Motion</span>
         </button>
 
         <button
@@ -505,7 +534,57 @@ export const PropertyInspector: React.FC = () => {
               </div>
             )}
 
-            {/* TAB 3: CURVE EDITOR (GRAPH VIEW) */}
+            {/* TAB 3: MOTION TRANSITIONS */}
+            {activeTab === 'motion' && (
+              <div className="inspector-section">
+                <div className="section-title">
+                  <Zap size={13} className="text-cyan" />
+                  <span>MOTION TRANSITION PRESETS</span>
+                </div>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
+                  Click a motion transition to auto-generate keyframe animations for the selected object.
+                </p>
+
+                <div className="transition-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+                  {INSPECTOR_TRANSITIONS.map((item) => (
+                    <button
+                      key={item.id}
+                      className="transition-card"
+                      style={{
+                        padding: '10px 4px',
+                        background: 'var(--bg-dark)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 8,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: 6,
+                      }}
+                      onClick={() => selectedPartId && applyMotionTransition(selectedPartId, item.id)}
+                      title={`Apply ${item.label} to selected object`}
+                    >
+                      <div
+                        style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 8,
+                          background: 'var(--bg-input)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                      >
+                        {item.icon}
+                      </div>
+                      <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)' }}>{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: CURVE EDITOR (GRAPH VIEW) */}
             {activeTab === 'easing' && (
               <div className="inspector-section">
                 <div className="section-title">

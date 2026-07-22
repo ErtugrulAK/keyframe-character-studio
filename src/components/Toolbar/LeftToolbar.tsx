@@ -66,12 +66,19 @@ export const LeftToolbar: React.FC = () => {
 
   const processFiles = (files: FileList | File[]) => {
     Array.from(files).forEach((file) => {
+      const cleanName = file.name.replace(/\.[^/.]+$/, '');
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onload = (e) => {
           const dataUrl = e.target?.result as string;
-          const cleanName = file.name.replace(/\.[^/.]+$/, '');
           addCustomPart('custom_image', cleanName, { imageUrl: dataUrl });
+        };
+        reader.readAsDataURL(file);
+      } else if (file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(file.name)) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const dataUrl = e.target?.result as string;
+          addCustomPart('custom_video', cleanName, { videoUrl: dataUrl });
         };
         reader.readAsDataURL(file);
       }
@@ -98,7 +105,7 @@ export const LeftToolbar: React.FC = () => {
         type="file"
         ref={fileInputRef}
         onChange={handleFileSelect}
-        accept="image/*"
+        accept="image/*,video/*,.mp4,.webm,.mov"
         multiple
         style={{ display: 'none' }}
       />
@@ -207,8 +214,8 @@ export const LeftToolbar: React.FC = () => {
               onDrop={handleDrop}
             >
               <Upload size={28} className="text-teal mb-2" />
-              <span className="dropzone-title">Select media or images</span>
-              <span className="dropzone-sub">Click to browse or drag image files here</span>
+              <span className="dropzone-title">Select media (Images & Videos)</span>
+              <span className="dropzone-sub">Click to browse or drag MP4, WebM, PNG, JPG files here</span>
             </div>
 
             <div className="drawer-subtitle">QUICK ADD OBJECTS</div>

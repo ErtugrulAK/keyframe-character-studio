@@ -1,0 +1,6 @@
+feat: add full video media support (MP4, WebM, MOV) with SVG foreignObject player
+
+- Added custom_video element type and videoUrl property to animator types
+- Added MP4, WebM, MOV video file dropzone and picker support in LeftToolbar
+- Added SVG <foreignObject> HTML5 video player in StageCanvas for 360° transform, pan/zoom, and keyframe animations
+- Added VIDEO SOURCE URL inspector input in PropertyInspector

@@ -202,10 +202,10 @@ export const PropertyInspector: React.FC = () => {
         <button
           className={`tab-btn ${activeTab === 'easing' ? 'active' : ''}`}
           onClick={() => setActiveTab('easing')}
-          title="Curve Editor"
+          title="Cubic Bezier Curve Editor"
         >
           <Zap size={13} />
-          <span>Curve Graph</span>
+          <span>Curve</span>
         </button>
 
         <button

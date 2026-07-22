@@ -1,5 +1,5 @@
-feat: scale gizmo controls dynamically with object scale and display keyframe sequence list
+fix: expand right inspector panel width and make all 5 tabs fit seamlessly without scrollbar
 
-- Made interactive transform gizmo (Rotate ring, Move arrows, Center square, Scale handles) scale proportionally with the object's scaleX/scaleY so controls never shrink into unclickable micro-dots
-- Added a chronological Keyframe Sequence list in LeftToolbar under the Keyframes drawer section
-- Keyframe sequence list displays all keyframe points (#1, #2, #3...) for the selected object, clicking any keyframe jumps the playhead to that exact frame
+- Increased --inspector-width to 480px so the right inspector panel has plenty of breathing room
+- Removed horizontal scrollbar from inspector tabs header
+- All 5 tabs (Transform, Color, Motion, Curve, Presets) now fit cleanly side-by-side in one view

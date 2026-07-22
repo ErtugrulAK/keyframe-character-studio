@@ -497,11 +497,15 @@ export const StageCanvas: React.FC = () => {
           cursor: isGhost ? 'default' : 'pointer',
           filter: filterId ? `url(#${filterId})` : undefined,
         }}
-        onMouseDown={(e) => {
-          if (!isGhost) {
+        onClick={(e) => {
+          if (!isGhost && e.button === 0) {
             e.stopPropagation();
             setSelectedPartId(part.id);
-            handleMouseDown('translate', e);
+          }
+        }}
+        onMouseDown={(e) => {
+          if (!isGhost && e.button === 0) {
+            startTranslateDragForPart(part.id, e);
           }
         }}
       >
@@ -543,6 +547,24 @@ export const StageCanvas: React.FC = () => {
   // Store initial angle and distance on drag start for rotation & scaling
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
   const [dragInitialDist, setDragInitialDist] = useState<number>(1);
+
+  // Direct element drag-to-move trigger for any selected part
+  const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    setSelectedPartId(partId);
+
+    const transform = getComputedTransform(partId, currentFrame);
+    if (!transform) return;
+
+    setIsDragging(true);
+    setDragMode('translate');
+    setDragStart({
+      x: e.clientX,
+      y: e.clientY,
+      initialTransform: { ...transform },
+    });
+  };
 
   // Drag interaction handlers
   const handleMouseDown = (mode: 'translate' | 'rotate' | 'scale', e: React.MouseEvent) => {

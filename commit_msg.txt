@@ -1,5 +1,5 @@
-feat: allow clicking and dragging anywhere on element body to move it directly
+fix: support clean primary left-click selection and instant drag translation
 
-- Replaced simple onClick with onMouseDown on SVG element path rendering
-- Immediately triggers translate move drag when clicking anywhere on an element's body (rectangle, box, card, banner, text, image, video, etc.)
-- Users no longer need to hit the tiny gizmo center square knob to move objects on stage
+- Added startTranslateDragForPart helper retrieving target element transform dynamically on mousedown
+- Preserved primary left-click (e.button === 0) selection on element body
+- Ensures left-clicking selects the target element cleanly, while left-drag instantly translates it without state delays

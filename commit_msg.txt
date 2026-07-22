@@ -1,5 +1,5 @@
-fix: adjust gizmo rotation circle radius (r0) to wrap snugly around selected object bounds
+fix: calculate gizmo rotation ring radius dynamically per element type bounds
 
-- Adjusted base gizmo rotation ring radius from 70px down to 42px * objScale
-- Aligned translation arrow lengths and scale handle diagonal line proportionally (arrowLen = r0 * 0.78, scaleLine = r0 * 0.68)
-- Ensures the selection gizmo circle wraps tight and snug around all shapes, cards, and text layers without forming an oversized ring
+- Replaced static gizmo radius with getPartBoundingRadius(selectedPart)
+- Dynamically measures element bounding box (UI Card: 180x110px, Banner: 220x60px, Media: 200x140px, Shapes: 60x60px)
+- Ensures the selection gizmo circle floats generously 16px OUTSIDE element borders for UI cards, images, and videos without cutting through text or internal elements

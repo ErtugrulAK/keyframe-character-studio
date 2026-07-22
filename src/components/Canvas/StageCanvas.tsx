@@ -956,12 +956,50 @@ export const StageCanvas: React.FC = () => {
 
               {/* Interactive Transform Gizmo on Selected Part */}
               {selectedPart && selectedTransform && (() => {
+                const getPartBoundingRadius = (part: CharacterPart): number => {
+                  let halfW = 32;
+                  let halfH = 32;
+
+                  switch (part.type) {
+                    case 'custom_card':
+                      halfW = 90;
+                      halfH = 55;
+                      break;
+                    case 'custom_banner':
+                      halfW = 110;
+                      halfH = 30;
+                      break;
+                    case 'custom_image':
+                    case 'custom_video':
+                      halfW = 100;
+                      halfH = 70;
+                      break;
+                    case 'custom_text':
+                      halfW = 75;
+                      halfH = 25;
+                      break;
+                    case 'custom_rect':
+                    case 'custom_box':
+                    case 'custom_capsule':
+                      halfW = 55;
+                      halfH = 32;
+                      break;
+                    default:
+                      halfW = 32;
+                      halfH = 32;
+                      break;
+                  }
+
+                  return Math.round(Math.hypot(halfW, halfH) + 16);
+                };
+
                 const baseScale = (selectedTransform.scaleX + selectedTransform.scaleY) / 2;
                 const objScale = Math.max(0.4, Math.min(6, baseScale));
-                const r0 = Math.max(34, 42 * objScale);
+                const baseRadius = getPartBoundingRadius(selectedPart);
+                const r0 = Math.max(40, baseRadius * objScale);
                 const rRot = (selectedTransform.rotation * Math.PI) / 180;
-                const arrowLen = r0 * 0.78;
-                const scaleLine = r0 * 0.68;
+                const arrowLen = Math.min(r0 * 0.85, r0 - 14);
+                const scaleLine = Math.min(r0 * 0.75, r0 - 24);
 
                 const knobR = 8 * Math.min(1.8, Math.max(1, zScale * 0.6));
                 const strokeW = 2 * Math.min(1.5, Math.max(1, zScale * 0.5));

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Copy, Check, Maximize2, X, Play, Sparkles } from 'lucide-react';
+import { Copy, Check, Maximize2, X, Play, Pause, Sparkles, RefreshCw, Activity, Zap } from 'lucide-react';
 
 interface InteractiveCubicBezierEditorProps {
   controlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
@@ -25,6 +25,11 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   const [copied, setCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [draggingPoint, setDraggingPoint] = useState<1 | 2 | null>(null);
+
+  // Pro Studio Modal State
+  const [previewShape, setPreviewShape] = useState<'ball' | 'card' | 'arrow' | 'heart'>('ball');
+  const [previewDuration, setPreviewDuration] = useState<number>(1.6);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState<boolean>(true);
 
   const panelSvgRef = useRef<SVGSVGElement>(null);
   const modalSvgRef = useRef<SVGSVGElement>(null);
@@ -52,6 +57,17 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Analyze motion characteristics
+  const getMotionAnalysis = () => {
+    let tags = [];
+    if (p1.y < 0 || p2.y < 0) tags.push('🎒 Anticipation Pullback');
+    if (p1.y > 1 || p2.y > 1) tags.push('🎯 Elastic Overshoot');
+    if (p1.x < 0.2 && p2.x < 0.2) tags.push('⚡ Instant Velocity Burst');
+    if (p1.x > 0.8 && p2.x > 0.8) tags.push('🐢 Delayed Impulse');
+    if (tags.length === 0) tags.push('✨ Smooth Easing Flow');
+    return tags.join(' • ');
+  };
+
   // Helper for rendering SVG Graph
   const renderSvgGraph = (
     ref: React.RefObject<SVGSVGElement | null>,
@@ -64,10 +80,11 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     const innerWidth = svgWidth - paddingX * 2;
     const innerHeight = svgHeight - paddingY * 2;
 
-    // my ranges from -0.6 to 1.6 (total range = 2.2)
+    // Y Range is mapped from [-0.9, 1.9] (Total range = 2.8)
+    // This gives generous 30+ pixels of vertical padding below Y=-0.6 and above Y=1.6!
     const mathToSvg = (mx: number, my: number) => {
       const sx = paddingX + mx * innerWidth;
-      const yNormalized = (my - (-0.6)) / 2.2;
+      const yNormalized = (my - (-0.9)) / 2.8;
       const sy = paddingY + innerHeight - yNormalized * innerHeight;
       return { sx, sy };
     };
@@ -101,8 +118,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           y={oneBoxP.sy}
           width={oneBoxP.sx - zeroBoxP.sx}
           height={zeroBoxP.sy - oneBoxP.sy}
-          fill="rgba(255,255,255,0.02)"
-          stroke="rgba(255,255,255,0.2)"
+          fill="rgba(255,255,255,0.025)"
+          stroke="rgba(255,255,255,0.22)"
           strokeWidth={1.5}
         />
 
@@ -111,8 +128,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         <line x1={zeroBoxP.sx + (oneBoxP.sx - zeroBoxP.sx) / 2} y1={oneBoxP.sy} x2={zeroBoxP.sx + (oneBoxP.sx - zeroBoxP.sx) / 2} y2={zeroBoxP.sy} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" />
 
         {/* Extended Overshoot Upper/Lower Boundaries (-0.6 & 1.6) */}
-        <line x1={zeroBoxP.sx} y1={paddingY} x2={oneBoxP.sx} y2={paddingY} stroke="rgba(244,63,94,0.2)" strokeDasharray="3 3" />
-        <line x1={zeroBoxP.sx} y1={svgHeight - paddingY} x2={oneBoxP.sx} y2={svgHeight - paddingY} stroke="rgba(244,63,94,0.2)" strokeDasharray="3 3" />
+        <line x1={zeroBoxP.sx} y1={mathToSvg(0, 1.6).sy} x2={oneBoxP.sx} y2={mathToSvg(1, 1.6).sy} stroke="rgba(244,63,94,0.25)" strokeDasharray="3 3" />
+        <line x1={zeroBoxP.sx} y1={mathToSvg(0, -0.6).sy} x2={oneBoxP.sx} y2={mathToSvg(1, -0.6).sy} stroke="rgba(244,63,94,0.25)" strokeDasharray="3 3" />
 
         {/* Tangent Handle Lines */}
         <line x1={startP.sx} y1={startP.sy} x2={handle1P.sx} y2={handle1P.sy} stroke="#00d2ff" strokeWidth={1.75} strokeDasharray="4 3" />
@@ -181,16 +198,16 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       const mouseSx = e.clientX - rect.left;
       const mouseSy = e.clientY - rect.top;
 
-      const svgW = isModalOpen ? 520 : 280;
-      const svgH = isModalOpen ? 300 : 180;
+      const svgW = isModalOpen ? 560 : 280;
+      const svgH = isModalOpen ? 340 : 180;
       const padX = isModalOpen ? 50 : 35;
-      const padY = isModalOpen ? 40 : 25;
+      const padY = isModalOpen ? 35 : 25;
       const innerW = svgW - padX * 2;
       const innerH = svgH - padY * 2;
 
       const mx = Number(Math.max(0, Math.min(1, (mouseSx - padX) / innerW)).toFixed(2));
       const yNorm = (padY + innerH - mouseSy) / innerH;
-      const my = Number(Math.max(-0.6, Math.min(1.6, -0.6 + yNorm * 2.2)).toFixed(2));
+      const my = Number(Math.max(-0.6, Math.min(1.6, -0.9 + yNorm * 2.8)).toFixed(2));
 
       if (draggingPoint === 1) {
         updatePoints({ x: mx, y: my }, p2);
@@ -242,7 +259,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           justifyContent: 'center',
         }}
       >
-        {renderSvgGraph(panelSvgRef, 280, 180, 35, 35)}
+        {renderSvgGraph(panelSvgRef, 280, 180, 35, 25)}
       </div>
 
       {/* Preset Curve Buttons */}
@@ -289,7 +306,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
               position: 'fixed',
               inset: 0,
               zIndex: 999999,
-              background: 'rgba(8, 10, 15, 0.88)',
+              background: 'rgba(8, 10, 15, 0.9)',
               backdropFilter: 'blur(12px)',
               display: 'flex',
               alignItems: 'center',
@@ -302,7 +319,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
               className="bezier-modal-card"
               style={{
                 width: '100%',
-                maxWidth: 920,
+                maxWidth: 980,
                 maxHeight: 'calc(100vh - 40px)',
                 background: 'var(--bg-panel)',
                 border: '1px solid var(--border-light)',
@@ -335,7 +352,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                       HIGH-PRECISION MOTION CURVE STUDIO
                     </h3>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      Drag P1 & P2 handles or enter exact math coordinates to craft custom easing physics.
+                      Craft custom acceleration physics, test velocity profiles, and inspect live motion dynamics.
                     </span>
                   </div>
                 </div>
@@ -351,9 +368,10 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
               </div>
 
               {/* Modal Content Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, padding: 24 }}>
-                {/* Left Column: High-Precision SVG Bezier Canvas */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, padding: 24 }}>
+                {/* Left Column: SVG Canvas + Curve Actions */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  {/* SVG Canvas Box */}
                   <div
                     style={{
                       background: '#0a0c10',
@@ -362,9 +380,41 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                       padding: 16,
                       display: 'flex',
                       justifyContent: 'center',
+                      position: 'relative',
                     }}
                   >
-                    {renderSvgGraph(modalSvgRef, 520, 300, 50, 40)}
+                    {renderSvgGraph(modalSvgRef, 560, 340, 50, 35)}
+                  </div>
+
+                  {/* Curve Utility Actions Bar (Only in Expanded Studio!) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-dark)', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>CURVE UTILITIES:</span>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        className="btn-secondary"
+                        style={{ fontSize: 10, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}
+                        onClick={() => updatePoints({ x: p2.x, y: p2.y }, { x: p1.x, y: p1.y })}
+                        title="Swap P1 and P2 handles"
+                      >
+                        <RefreshCw size={11} /> Flip P1/P2
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        style={{ fontSize: 10, padding: '4px 8px', display: 'flex', alignItems: 'center', gap: 4 }}
+                        onClick={() => updatePoints(p1, { x: Number((1 - p1.x).toFixed(2)), y: Number((1 - p1.y).toFixed(2)) })}
+                        title="Set P2 symmetrical to P1"
+                      >
+                        <Zap size={11} /> Symmetrize
+                      </button>
+                      <button
+                        className="btn-secondary"
+                        style={{ fontSize: 10, padding: '4px 8px' }}
+                        onClick={() => updatePoints({ x: 0.42, y: 0.0 }, { x: 0.58, y: 1.0 })}
+                        title="Reset to Ease In Out"
+                      >
+                        Reset
+                      </button>
+                    </div>
                   </div>
 
                   {/* Direct Coordinate Inputs */}
@@ -427,20 +477,59 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                   </div>
                 </div>
 
-                {/* Right Column: Live Physics Motion Preview & Presets */}
+                {/* Right Column: Interactive Motion Physics & Presets */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {/* Live Motion Test Box */}
                   <div style={{ background: 'var(--bg-dark)', borderRadius: 10, border: '1px solid var(--border-color)', padding: 14 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                       <span style={{ fontSize: 11, fontWeight: 800, color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <Play size={12} /> LIVE PHYSICS MOTION TEST
+                        <Activity size={13} /> LIVE MOTION PHYSICS TEST
                       </span>
+                      <button
+                        className="btn-icon"
+                        onClick={() => setIsPreviewPlaying(!isPreviewPlaying)}
+                        style={{ width: 22, height: 22 }}
+                        title={isPreviewPlaying ? 'Pause Preview' : 'Play Preview'}
+                      >
+                        {isPreviewPlaying ? <Pause size={12} /> : <Play size={12} />}
+                      </button>
+                    </div>
+
+                    {/* Preview Shape Selector */}
+                    <div style={{ display: 'flex', gap: 4, marginBottom: 10 }}>
+                      {(['ball', 'card', 'arrow', 'heart'] as const).map((shape) => (
+                        <button
+                          key={shape}
+                          className={`btn-secondary ${previewShape === shape ? 'active' : ''}`}
+                          style={{ flex: 1, fontSize: 10, padding: '3px 0', textTransform: 'capitalize' }}
+                          onClick={() => setPreviewShape(shape)}
+                        >
+                          {shape}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Duration Slider */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>Test Speed:</span>
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        {[0.6, 1.2, 1.8, 3.0].map((dur) => (
+                          <button
+                            key={dur}
+                            className={`btn-secondary ${previewDuration === dur ? 'active' : ''}`}
+                            style={{ fontSize: 9, padding: '2px 6px' }}
+                            onClick={() => setPreviewDuration(dur)}
+                          >
+                            {dur}s
+                          </button>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Motion Track */}
                     <div
                       style={{
-                        height: 44,
+                        height: 52,
                         background: '#0a0c10',
                         borderRadius: 8,
                         position: 'relative',
@@ -452,23 +541,38 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                       }}
                     >
                       <style>{`
-                        @keyframes curveLivePreviewAnim {
-                          0% { transform: translateX(0px) scale(1); }
-                          50% { transform: translateX(200px) scale(1.15); }
-                          100% { transform: translateX(0px) scale(1); }
+                        @keyframes curveStudioPreviewAnim {
+                          0% { transform: translateX(0px) rotate(0deg); }
+                          50% { transform: translateX(210px) rotate(180deg); }
+                          100% { transform: translateX(0px) rotate(0deg); }
                         }
                       `}</style>
 
                       <div
                         style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: 6,
+                          width: previewShape === 'card' ? 40 : 28,
+                          height: 28,
+                          borderRadius: previewShape === 'ball' ? '50%' : 6,
                           background: 'linear-gradient(135deg, var(--accent-teal), #00d2ff)',
-                          boxShadow: '0 0 12px var(--accent-teal-glow)',
-                          animation: `curveLivePreviewAnim 1.8s ${cssString} infinite`,
+                          boxShadow: '0 0 14px var(--accent-teal-glow)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#000',
+                          fontWeight: 800,
+                          fontSize: 12,
+                          animation: isPreviewPlaying ? `curveStudioPreviewAnim ${previewDuration}s ${cssString} infinite` : 'none',
                         }}
-                      />
+                      >
+                        {previewShape === 'arrow' && '➔'}
+                        {previewShape === 'heart' && '♥'}
+                        {previewShape === 'card' && 'CARD'}
+                      </div>
+                    </div>
+
+                    {/* Motion Characteristics Badge */}
+                    <div style={{ marginTop: 10, fontSize: 10, fontWeight: 700, color: 'var(--accent-teal)', textAlign: 'center' }}>
+                      {getMotionAnalysis()}
                     </div>
                   </div>
 

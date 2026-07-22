@@ -1,6 +1,6 @@
-feat: map Extended Bezier Y-range [-0.6, 1.6] inside SVG viewbox & add Floating Toast Notifications
+feat: add generous Y-range vertical padding and Pro Motion Studio features to Expand Curve Modal
 
-- Fixed issue in Curve Editor where handle knobs P1 & P2 disappeared or were cut off when Y went negative (-0.6) or positive (1.6)
-- Remapped SVG coordinate system so Y range [-0.6, 1.6] sits 100% inside the SVG viewbox boundaries with a clear solid Unit Box (0..1) outline
-- Added auto-dismissing Floating Toast Notification System (toasts slide in at top right, auto-dismiss in 3.2s with zero OK button click required)
-- Replaced native browser alert() windows with modern glassmorphism toast banners across the codebase
+- Expanded SVG Y-range mapping from [-0.6, 1.6] to [-0.9, 1.9], providing 30+ pixels of generous vertical padding so lower anticipation handles (P1 Y=-0.6) never touch the bottom edge
+- Added live Motion Preview Shape Selector (Ball, Card, Arrow, Heart) and Speed/Duration selector (0.6s to 3.0s)
+- Added Curve Utility Action Bar with Flip P1/P2, Symmetrize, and Reset buttons
+- Added real-time Motion Analysis badges (Anticipation Pullback, Elastic Overshoot, Instant Burst detection)

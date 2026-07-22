@@ -1,5 +1,6 @@
-fix: smooth distance-ratio scaling math, add Rectangle shape, and non-scaling-stroke outline
+fix: add SmartNumberInput component for smooth typing with Enter/Blur submit
 
-- Removed hardcoded 3.0 scale limit in StageCanvas and implemented smooth distance-ratio scaling math up to 50x
-- Added custom_rect (Rectangle) shape item to LeftToolbar, animator types, and SVG renderer
-- Added vectorEffect="non-scaling-stroke" to all shape elements so outline borders remain crisp 1.5px/2px regardless of object scale
+- Implemented SmartNumberInput component with local string state buffer
+- Fixes issue where deleting text forced zero ('090' bug) or blocked typing negative values like '-45°'
+- Replaced all numeric inputs across Transform and Style tabs (Position, Rotation, Opacity, Scale X/Y, Z-Index, Font Size, Shadow Blur/Offset)
+- Supports selecting all text on focus, typing negative and decimal values freely, and submitting on Enter key press or Blur

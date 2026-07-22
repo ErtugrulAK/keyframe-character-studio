@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import { PRESET_POSES } from '../../utils/defaults';
 import type { CharacterPart } from '../../types/animator';
@@ -23,6 +23,83 @@ import {
 import './PropertyInspector.css';
 
 type TabType = 'transform' | 'style' | 'easing' | 'motion' | 'presets';
+
+interface SmartNumberInputProps {
+  value: number;
+  onChange: (val: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  placeholder?: string;
+}
+
+const SmartNumberInput: React.FC<SmartNumberInputProps> = ({
+  value,
+  onChange,
+  min,
+  max,
+  step,
+  placeholder,
+}) => {
+  const [localStr, setLocalStr] = useState<string>(String(value ?? 0));
+  const isEditingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!isEditingRef.current) {
+      setLocalStr(String(value ?? 0));
+    }
+  }, [value]);
+
+  const commit = (str: string) => {
+    if (str === '' || str === '-') return;
+    let parsed = parseFloat(str);
+    if (isNaN(parsed)) return;
+    if (min !== undefined) parsed = Math.max(min, parsed);
+    if (max !== undefined) parsed = Math.min(max, parsed);
+    onChange(parsed);
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setLocalStr(raw);
+    commit(raw);
+  };
+
+  const handleBlur = () => {
+    isEditingRef.current = false;
+    if (localStr === '' || localStr === '-') {
+      setLocalStr(String(value ?? 0));
+      return;
+    }
+    let parsed = parseFloat(localStr);
+    if (isNaN(parsed)) parsed = value ?? 0;
+    if (min !== undefined) parsed = Math.max(min, parsed);
+    if (max !== undefined) parsed = Math.min(max, parsed);
+    setLocalStr(String(parsed));
+    onChange(parsed);
+  };
+
+  return (
+    <input
+      type="text"
+      value={localStr}
+      step={step}
+      placeholder={placeholder}
+      onFocus={(e) => {
+        isEditingRef.current = true;
+        e.target.select();
+      }}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          handleBlur();
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+    />
+  );
+};
 
 const INSPECTOR_TRANSITIONS = [
   { id: 'none', label: 'None', icon: <Ban size={20} style={{ color: '#94a3b8' }} /> },
@@ -178,84 +255,58 @@ export const PropertyInspector: React.FC = () => {
                 <div className="input-grid">
                   <div className="input-field">
                     <label>POSITION X</label>
-                    <input
-                      type="number"
-                      value={transform.x === 0 ? '0' : transform.x}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateCurrentTransform({ x: val === '' ? 0 : parseFloat(val) || 0 });
-                      }}
+                    <SmartNumberInput
+                      value={transform.x}
+                      onChange={(val) => updateCurrentTransform({ x: val })}
                     />
                   </div>
 
                   <div className="input-field">
                     <label>POSITION Y</label>
-                    <input
-                      type="number"
-                      value={transform.y === 0 ? '0' : transform.y}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateCurrentTransform({ y: val === '' ? 0 : parseFloat(val) || 0 });
-                      }}
+                    <SmartNumberInput
+                      value={transform.y}
+                      onChange={(val) => updateCurrentTransform({ y: val })}
                     />
                   </div>
 
                   <div className="input-field">
                     <label>ROTATION (°)</label>
-                    <input
-                      type="number"
-                      value={transform.rotation === 0 ? '0' : transform.rotation}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateCurrentTransform({ rotation: val === '' ? 0 : parseFloat(val) || 0 });
-                      }}
+                    <SmartNumberInput
+                      value={transform.rotation}
+                      onChange={(val) => updateCurrentTransform({ rotation: val })}
                     />
                   </div>
 
                   <div className="input-field">
                     <label>OPACITY (0-1)</label>
-                    <input
-                      type="number"
-                      step={0.1}
+                    <SmartNumberInput
+                      value={transform.opacity}
                       min={0}
                       max={1}
-                      value={transform.opacity}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateCurrentTransform({ opacity: val === '' ? 1 : parseFloat(val) || 1 });
-                      }}
+                      step={0.1}
+                      onChange={(val) => updateCurrentTransform({ opacity: val })}
                     />
                   </div>
 
                   <div className="input-field">
                     <label>SCALE X</label>
-                    <input
-                      type="number"
-                      step={0.1}
+                    <SmartNumberInput
                       value={transform.scaleX}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateCurrentTransform({ scaleX: val === '' ? 1 : parseFloat(val) || 1 });
-                      }}
+                      min={0.05}
+                      max={50}
+                      step={0.1}
+                      onChange={(val) => updateCurrentTransform({ scaleX: val })}
                     />
                   </div>
 
                   <div className="input-field">
                     <label>SCALE Y</label>
-                    <input
-                      type="number"
-                      step={0.1}
+                    <SmartNumberInput
                       value={transform.scaleY}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        updateCurrentTransform({ scaleY: val === '' ? 1 : parseFloat(val) || 1 });
-                      }}
+                      min={0.05}
+                      max={50}
+                      step={0.1}
+                      onChange={(val) => updateCurrentTransform({ scaleY: val })}
                     />
                   </div>
                 </div>
@@ -346,16 +397,11 @@ export const PropertyInspector: React.FC = () => {
                   {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner' || selectedPart.type === 'custom_card') && (
                     <div className="input-field">
                       <label>FONT SIZE (PX)</label>
-                      <input
-                        type="number"
+                      <SmartNumberInput
+                        value={selectedPart.fontSize ?? 20}
                         min={8}
                         max={120}
-                        value={selectedPart.fontSize ?? 20}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          handlePartPropChange('fontSize', val === '' ? 20 : parseInt(val) || 20);
-                        }}
+                        onChange={(val) => handlePartPropChange('fontSize', val)}
                       />
                     </div>
                   )}
@@ -426,18 +472,11 @@ export const PropertyInspector: React.FC = () => {
                         />
                       ))}
                     </div>
-                  </div>
-
-                  <div className="input-field zindex-full">
+                  </div>                  <div className="input-field zindex-full">
                     <label>Z-INDEX LAYER PRIORITY</label>
-                    <input
-                      type="number"
+                    <SmartNumberInput
                       value={selectedPart.zIndex ?? 1}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        handleZIndexChange(val === '' ? 1 : parseInt(val) || 1);
-                      }}
+                      onChange={(val) => handleZIndexChange(val)}
                     />
                   </div>
 
@@ -462,46 +501,31 @@ export const PropertyInspector: React.FC = () => {
                   <div className="input-grid">
                     <div className="input-field">
                       <label>SHADOW BLUR (PX)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={50}
+                      <SmartNumberInput
                         value={selectedPart.shadowBlur ?? 0}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          handlePartPropChange('shadowBlur', val === '' ? 0 : parseInt(val) || 0);
-                        }}
+                        min={0}
+                        max={100}
+                        onChange={(val) => handlePartPropChange('shadowBlur', val)}
                       />
                     </div>
 
                     <div className="input-field">
                       <label>OFFSET X (PX)</label>
-                      <input
-                        type="number"
-                        min={-50}
-                        max={50}
+                      <SmartNumberInput
                         value={selectedPart.shadowOffsetX ?? 0}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          handlePartPropChange('shadowOffsetX', val === '' ? 0 : parseInt(val) || 0);
-                        }}
+                        min={-100}
+                        max={100}
+                        onChange={(val) => handlePartPropChange('shadowOffsetX', val)}
                       />
                     </div>
 
                     <div className="input-field">
                       <label>OFFSET Y (PX)</label>
-                      <input
-                        type="number"
-                        min={-50}
-                        max={50}
+                      <SmartNumberInput
                         value={selectedPart.shadowOffsetY ?? 0}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          handlePartPropChange('shadowOffsetY', val === '' ? 0 : parseInt(val) || 0);
-                        }}
+                        min={-100}
+                        max={100}
+                        onChange={(val) => handlePartPropChange('shadowOffsetY', val)}
                       />
                     </div>
                   </div>

@@ -80,11 +80,12 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     const innerWidth = svgWidth - paddingX * 2;
     const innerHeight = svgHeight - paddingY * 2;
 
-    // Y Range is mapped from [-0.9, 1.9] (Total range = 2.8)
-    // This gives generous 30+ pixels of vertical padding below Y=-0.6 and above Y=1.6!
+    // Y Range is mapped from [-1.4, 2.4] (Total range = 3.8)
+    // This pushes Y=-1.0 boundary line way down and Y=2.0 boundary line way up!
+    // Gives generous 40+ pixels of vertical padding so extreme curves never touch canvas edges!
     const mathToSvg = (mx: number, my: number) => {
       const sx = paddingX + mx * innerWidth;
-      const yNormalized = (my - (-0.9)) / 2.8;
+      const yNormalized = (my - (-1.4)) / 3.8;
       const sy = paddingY + innerHeight - yNormalized * innerHeight;
       return { sx, sy };
     };
@@ -119,7 +120,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           width={oneBoxP.sx - zeroBoxP.sx}
           height={zeroBoxP.sy - oneBoxP.sy}
           fill="rgba(255,255,255,0.025)"
-          stroke="rgba(255,255,255,0.22)"
+          stroke="rgba(255,255,255,0.25)"
           strokeWidth={1.5}
         />
 
@@ -127,9 +128,12 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         <line x1={zeroBoxP.sx} y1={oneBoxP.sy + (zeroBoxP.sy - oneBoxP.sy) / 2} x2={oneBoxP.sx} y2={oneBoxP.sy + (zeroBoxP.sy - oneBoxP.sy) / 2} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" />
         <line x1={zeroBoxP.sx + (oneBoxP.sx - zeroBoxP.sx) / 2} y1={oneBoxP.sy} x2={zeroBoxP.sx + (oneBoxP.sx - zeroBoxP.sx) / 2} y2={zeroBoxP.sy} stroke="rgba(255,255,255,0.08)" strokeDasharray="4 4" />
 
-        {/* Extended Overshoot Upper/Lower Boundaries (-0.6 & 1.6) */}
-        <line x1={zeroBoxP.sx} y1={mathToSvg(0, 1.6).sy} x2={oneBoxP.sx} y2={mathToSvg(1, 1.6).sy} stroke="rgba(244,63,94,0.25)" strokeDasharray="3 3" />
-        <line x1={zeroBoxP.sx} y1={mathToSvg(0, -0.6).sy} x2={oneBoxP.sx} y2={mathToSvg(1, -0.6).sy} stroke="rgba(244,63,94,0.25)" strokeDasharray="3 3" />
+        {/* Extended Overshoot Upper/Lower Boundaries (-1.0 & 2.0) - Pushed way out for total freedom! */}
+        <line x1={zeroBoxP.sx} y1={mathToSvg(0, 2.0).sy} x2={oneBoxP.sx} y2={mathToSvg(1, 2.0).sy} stroke="rgba(244,63,94,0.3)" strokeDasharray="3 3" />
+        <text x={oneBoxP.sx + 6} y={mathToSvg(0, 2.0).sy + 3} fill="rgba(244,63,94,0.6)" fontSize={9} fontFamily="monospace">Y = +2.0</text>
+
+        <line x1={zeroBoxP.sx} y1={mathToSvg(0, -1.0).sy} x2={oneBoxP.sx} y2={mathToSvg(1, -1.0).sy} stroke="rgba(244,63,94,0.3)" strokeDasharray="3 3" />
+        <text x={oneBoxP.sx + 6} y={mathToSvg(0, -1.0).sy + 3} fill="rgba(244,63,94,0.6)" fontSize={9} fontFamily="monospace">Y = -1.0</text>
 
         {/* Tangent Handle Lines */}
         <line x1={startP.sx} y1={startP.sy} x2={handle1P.sx} y2={handle1P.sy} stroke="#00d2ff" strokeWidth={1.75} strokeDasharray="4 3" />
@@ -199,7 +203,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       const mouseSy = e.clientY - rect.top;
 
       const svgW = isModalOpen ? 560 : 280;
-      const svgH = isModalOpen ? 340 : 180;
+      const svgH = isModalOpen ? 360 : 180;
       const padX = isModalOpen ? 50 : 35;
       const padY = isModalOpen ? 35 : 25;
       const innerW = svgW - padX * 2;
@@ -207,7 +211,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
       const mx = Number(Math.max(0, Math.min(1, (mouseSx - padX) / innerW)).toFixed(2));
       const yNorm = (padY + innerH - mouseSy) / innerH;
-      const my = Number(Math.max(-0.6, Math.min(1.6, -0.9 + yNorm * 2.8)).toFixed(2));
+      const my = Number(Math.max(-1.2, Math.min(2.2, -1.4 + yNorm * 3.8)).toFixed(2));
 
       if (draggingPoint === 1) {
         updatePoints({ x: mx, y: my }, p2);

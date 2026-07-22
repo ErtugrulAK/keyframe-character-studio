@@ -1,6 +1,5 @@
-feat: add generous Y-range vertical padding and Pro Motion Studio features to Expand Curve Modal
+fix: add generous modal backdrop padding and expand curve boundary limits to Y=[-1.0, 2.0]
 
-- Expanded SVG Y-range mapping from [-0.6, 1.6] to [-0.9, 1.9], providing 30+ pixels of generous vertical padding so lower anticipation handles (P1 Y=-0.6) never touch the bottom edge
-- Added live Motion Preview Shape Selector (Ball, Card, Arrow, Heart) and Speed/Duration selector (0.6s to 3.0s)
-- Added Curve Utility Action Bar with Flip P1/P2, Symmetrize, and Reset buttons
-- Added real-time Motion Analysis badges (Anticipation Pullback, Elastic Overshoot, Instant Burst detection)
+- Added spacious padding (32px 40px) to modal backdrop so modal card controls never touch screen borders
+- Expanded SVG Y-mapping from [-1.4, 2.4], pushing upper boundary line to Y=+2.0 and lower boundary line to Y=-1.0
+- Allows total freedom for drawing extreme bounce and anticipation curves with zero clipping or cramped borders

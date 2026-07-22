@@ -1,0 +1,5 @@
+fix: scale gizmo rotation ring radius proportionally with exact scaleX and scaleY values
+
+- Fixed issue where gizmo rotation ring stopped expanding when scale exceeded 6x (causing small inner gizmo on large scaled objects)
+- Multiplied base half-width and half-height by exact scaleX and scaleY values (scaledHalfW = halfW * scaleX, scaledHalfH = halfH * scaleY)
+- Ensures the selection gizmo circle ALWAYS stays 16px outside object corners regardless of how large or small the object is scaled

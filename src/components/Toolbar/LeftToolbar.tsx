@@ -23,6 +23,8 @@ import {
   Layers,
   RotateCw,
   Activity,
+  Trash2,
+  Clock,
 } from 'lucide-react';
 import './LeftToolbar.css';
 
@@ -34,7 +36,8 @@ const QUICK_SHAPES: { type: BodyPartType; label: string; icon: React.ReactNode }
   { type: 'custom_diamond', label: 'Diamond', icon: <Gem size={14} className="text-green" /> },
   { type: 'custom_star', label: 'Star', icon: <Star size={14} className="text-purple" /> },
   { type: 'custom_circle', label: 'Circle', icon: <Circle size={14} className="text-green" /> },
-  { type: 'custom_box', label: 'Rectangle Box', icon: <Square size={14} className="text-cyan" /> },
+  { type: 'custom_box', label: 'Square Box', icon: <Square size={14} className="text-cyan" /> },
+  { type: 'custom_rect', label: 'Rectangle', icon: <Layout size={14} className="text-teal" /> },
   { type: 'custom_triangle', label: 'Triangle', icon: <Triangle size={14} className="text-red" /> },
 ];
 
@@ -56,6 +59,11 @@ export const LeftToolbar: React.FC = () => {
   const {
     addKeyframeForSelected,
     selectedPartId,
+    characterParts,
+    tracks,
+    currentFrame,
+    setCurrentFrame,
+    deleteKeyframe,
     addCustomPart,
     applyMotionTransition,
   } = useAnimator();
@@ -99,6 +107,18 @@ export const LeftToolbar: React.FC = () => {
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, type: BodyPartType, label: string, extraData?: Record<string, any>) => {
+    e.dataTransfer.setData(
+      'application/json',
+      JSON.stringify({
+        type,
+        name: label,
+        ...extraData,
+      })
+    );
+    e.dataTransfer.effectAllowed = 'copy';
+  };
+
   return (
     <aside className="left-toolbar-container">
       <input
@@ -110,7 +130,6 @@ export const LeftToolbar: React.FC = () => {
         style={{ display: 'none' }}
       />
 
-      {/* Keyframes Studio 86px Vertical Icon Sidebar */}
       <div className="left-sidebar-nav">
         <button
           className={`sidebar-nav-item ${activeCategory === 'media' ? 'active' : ''}`}
@@ -167,7 +186,6 @@ export const LeftToolbar: React.FC = () => {
         </button>
       </div>
 
-      {/* Expanding Panel Drawer (280px) */}
       <div className="left-drawer-panel">
         {activeCategory === 'transitions' && (
           <div className="drawer-content">
@@ -202,7 +220,6 @@ export const LeftToolbar: React.FC = () => {
               <span className="drawer-title">Media Library</span>
             </div>
 
-            {/* Dropzone Container */}
             <div
               className={`dropzone-box ${isDragOver ? 'drag-over' : ''}`}
               onClick={() => fileInputRef.current?.click()}
@@ -224,6 +241,8 @@ export const LeftToolbar: React.FC = () => {
                 <button
                   key={item.type}
                   className="drawer-item-card"
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, item.type, item.label)}
                   onClick={() => addCustomPart(item.type, item.label)}
                 >
                   <div className="item-icon-box">{item.icon}</div>
@@ -234,23 +253,89 @@ export const LeftToolbar: React.FC = () => {
           </div>
         )}
 
-        {activeCategory === 'keyframes' && (
-          <div className="drawer-content">
-            <div className="drawer-header">
-              <span className="drawer-title">Keyframe Controls</span>
+        {activeCategory === 'keyframes' && (() => {
+          const selectedTrack = selectedPartId ? tracks.find((t) => t.partId === selectedPartId) : null;
+          const selectedPart = selectedPartId ? characterParts.find((p) => p.id === selectedPartId) : null;
+          const keyframes = selectedTrack ? [...selectedTrack.keyframes].sort((a, b) => a.frame - b.frame) : [];
+
+          return (
+            <div className="drawer-content">
+              <div className="drawer-header">
+                <span className="drawer-title">Keyframe Sequence</span>
+              </div>
+              <p className="drawer-desc" style={{ fontSize: 11, marginBottom: 8 }}>
+                {selectedPart ? `Track list for: ${selectedPart.name}` : 'Select an object on the canvas to view its keyframes.'}
+              </p>
+
+              <button
+                className="btn-primary w-full add-kf-drawer-btn"
+                onClick={addKeyframeForSelected}
+                disabled={!selectedPartId}
+                style={{ marginBottom: 12 }}
+              >
+                <PlusCircle size={15} />
+                <span>Add Keyframe at Frame {currentFrame}</span>
+              </button>
+
+              {selectedTrack && keyframes.length > 0 ? (
+                <div className="keyframe-history-list" style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
+                  <div className="drawer-subtitle" style={{ margin: '4px 0', fontSize: 10 }}>CHRONOLOGICAL KEYFRAMES</div>
+                  {keyframes.map((kf, idx) => {
+                    const isActiveKf = kf.frame === currentFrame;
+
+                    return (
+                      <div
+                        key={kf.id}
+                        className={`keyframe-list-item ${isActiveKf ? 'active-kf' : ''}`}
+                        onClick={() => setCurrentFrame(kf.frame)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: isActiveKf ? 'rgba(20, 184, 166, 0.15)' : 'var(--bg-dark)',
+                          border: `1px solid ${isActiveKf ? 'var(--accent-teal)' : 'var(--border-color)'}`,
+                          borderRadius: 6,
+                          padding: '6px 10px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <Gem size={14} className={isActiveKf ? 'text-teal' : 'text-gold'} />
+                          <span style={{ fontSize: 12, fontWeight: 700, color: isActiveKf ? 'var(--accent-teal)' : '#f8fafc' }}>
+                            Keyframe #{idx + 1}
+                          </span>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
+                            <Clock size={11} /> Frame {kf.frame}
+                          </span>
+
+                          <button
+                            className="btn-icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteKeyframe(selectedTrack.id, kf.id);
+                            }}
+                            title="Delete Keyframe"
+                            style={{ width: 22, height: 22, padding: 0 }}
+                          >
+                            <Trash2 size={12} className="text-red" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : selectedPartId ? (
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 8px', background: 'var(--bg-dark)', borderRadius: 6, border: '1px border-dashed var(--border-color)' }}>
+                  No keyframes recorded for this track yet.
+                </div>
+              ) : null}
             </div>
-            <p className="drawer-desc">Click below to record a keyframe at the current frame for the selected object.</p>
-            
-            <button
-              className="btn-primary w-full add-kf-drawer-btn"
-              onClick={addKeyframeForSelected}
-              disabled={!selectedPartId}
-            >
-              <PlusCircle size={16} />
-              <span>Add Keyframe</span>
-            </button>
-          </div>
-        )}
+          );
+        })()}
 
         {activeCategory === 'texts' && (
           <div className="drawer-content">
@@ -259,6 +344,8 @@ export const LeftToolbar: React.FC = () => {
             </div>
             <button
               className="btn-primary w-full text-add-btn"
+              draggable={true}
+              onDragStart={(e) => handleDragStart(e, 'custom_text', 'HEADING TEXT')}
               onClick={() => addCustomPart('custom_text', 'HEADING TEXT')}
             >
               <Type size={16} />
@@ -277,6 +364,8 @@ export const LeftToolbar: React.FC = () => {
                 <button
                   key={item.type}
                   className="drawer-item-card"
+                  draggable={true}
+                  onDragStart={(e) => handleDragStart(e, item.type, item.label)}
                   onClick={() => addCustomPart(item.type, item.label)}
                 >
                   <div className="item-icon-box">{item.icon}</div>

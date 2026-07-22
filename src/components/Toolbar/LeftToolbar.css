@@ -122,10 +122,11 @@
   transition: all 0.2s ease;
 }
 
-.dropzone-box:hover {
+.dropzone-box:hover,
+.dropzone-box.drag-over {
   background: var(--bg-panel-hover);
   border-color: var(--accent-teal);
-  box-shadow: 0 0 16px rgba(20, 184, 166, 0.15);
+  box-shadow: 0 0 16px rgba(20, 184, 166, 0.25);
 }
 
 .dropzone-title {

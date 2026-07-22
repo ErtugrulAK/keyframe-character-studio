@@ -1,0 +1,6 @@
+feat: enable working image dropzone, multi-text UI card customization, and input select-on-focus
+
+Summary of fixes & updates:
+- 📂 Dropzone Upload: Added working file picker and drag & drop image handler for PNG/JPG/SVG/WebP images onto canvas
+- 🎴 UI Card Customization: Added controls for Header Category, Main Title, and Action Button Text in PropertyInspector
+- 🔢 Input Selection & Reset: Enabled select-on-focus and clean zero/empty handling on all numeric inputs (Blur, Offsets, Position, Scale) so values can be deleted directly without typing 010

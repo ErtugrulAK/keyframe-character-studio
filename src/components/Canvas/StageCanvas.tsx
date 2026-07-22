@@ -304,17 +304,45 @@ export const StageCanvas: React.FC = () => {
             <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} />
             <circle cx={-68} cy={-29} r={4} fill="#00d2ff" />
             <text x={-58} y={-29} dominantBaseline="middle" fill="#00d2ff" fontSize={11} fontWeight="800" fontFamily="Outfit, sans-serif">
-              {part.textValue || 'STUDIO CARD'}
+              {part.cardCategory || part.textValue || 'STUDIO CARD'}
             </text>
             {/* Body Title */}
             <text x={-80} y={0} dominantBaseline="middle" fill="#f8fafc" fontSize={13} fontWeight="700" fontFamily="Outfit, sans-serif">
-              MOTION GRAPHIC
+              {part.cardTitle || 'MOTION GRAPHIC'}
             </text>
             {/* Status Action Button */}
             <rect x={-80} y={15} width={75} height={22} rx={4} fill="#00d2ff" />
             <text x={-42.5} y={26} textAnchor="middle" dominantBaseline="middle" fill="#000" fontSize={11} fontWeight="800" fontFamily="Outfit, sans-serif">
-              ACTIVE
+              {part.cardButtonText || 'ACTIVE'}
             </text>
+          </g>
+        );
+        break;
+      case 'custom_image':
+        pathContent = (
+          <g>
+            {part.imageUrl ? (
+              <image
+                href={part.imageUrl}
+                x={-75}
+                y={-50}
+                width={150}
+                height={100}
+                preserveAspectRatio="xMidYMid meet"
+              />
+            ) : (
+              <rect x={-75} y={-50} width={150} height={100} rx={8} fill={fill} />
+            )}
+            <rect
+              x={-75}
+              y={-50}
+              width={150}
+              height={100}
+              rx={8}
+              fill="none"
+              stroke={stroke}
+              strokeWidth={isSelected ? 3 : 1.5}
+            />
           </g>
         );
         break;

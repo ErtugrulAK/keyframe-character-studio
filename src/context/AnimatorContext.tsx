@@ -81,7 +81,7 @@ interface AnimatorContextType {
   exportProject: () => string;
   importProject: (jsonStr: string) => boolean;
   resetProject: () => void;
-  addCustomPart: (type: BodyPartType, name: string) => void;
+  addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   deletePart: (partId: string) => void;
 }
 
@@ -521,7 +521,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLastSavedAt(null);
   };
 
-  const addCustomPart = (type: BodyPartType, name: string) => {
+  const addCustomPart = (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => {
     const partId = `part_${type}_${Date.now()}`;
     const colors = ['#00d2ff', '#ffb700', '#ff3366', '#a855f7', '#10b981', '#ff7b00', '#ec4899'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
@@ -538,6 +538,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       baseTransform: { x: 300, y: 240, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
       textValue: type === 'custom_text' ? 'NEW TEXT' : type === 'custom_banner' ? 'CARD LABEL' : undefined,
       fontSize: 20,
+      cardCategory: type === 'custom_card' ? 'STUDIO CARD' : undefined,
+      cardTitle: type === 'custom_card' ? 'MOTION GRAPHIC' : undefined,
+      cardButtonText: type === 'custom_card' ? 'ACTIVE' : undefined,
+      ...extraProps,
     };
 
     const newTrack: Track = {

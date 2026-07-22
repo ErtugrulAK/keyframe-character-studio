@@ -1,6 +1,6 @@
-fix: add SmartNumberInput component for smooth typing with Enter/Blur submit
+feat: add Crop Frame Masking [ ] and Overlay Caption Text Box for videos & images
 
-- Implemented SmartNumberInput component with local string state buffer
-- Fixes issue where deleting text forced zero ('090' bug) or blocked typing negative values like '-45°'
-- Replaced all numeric inputs across Transform and Style tabs (Position, Rotation, Opacity, Scale X/Y, Z-Index, Font Size, Shadow Blur/Offset)
-- Supports selecting all text on focus, typing negative and decimal values freely, and submitting on Enter key press or Blur
+- Implemented SVG clipPath masking and dark outer shaded area for custom video and image elements
+- Added white corner bracket handles [ ] matching exact crop focus frame UI
+- Added Overlay Text Caption Box support (Top, Center, Bottom banner positions)
+- Added interactive Crop Mask controls in PropertyInspector with 9:16, 1:1, 4:5, and 16:9 aspect ratio presets

@@ -87,6 +87,20 @@ export interface CharacterPart {
   shadowBlur?: number; // Shadow blur radius in px
   shadowOffsetX?: number; // Shadow offset X in px
   shadowOffsetY?: number; // Shadow offset Y in px
+
+  // Media Overlay Text Caption
+  overlayText?: string;
+  overlayTextPosition?: 'top' | 'center' | 'bottom';
+  overlayTextColor?: string;
+  overlayTextBg?: string;
+
+  // Video & Image Crop Box / Aspect Mask
+  cropEnabled?: boolean;
+  cropMode?: 'custom' | '9:16' | '1:1' | '4:5' | '16:9';
+  cropX?: number; // percentage X (0..100)
+  cropY?: number; // percentage Y (0..100)
+  cropWidth?: number; // percentage width (10..100)
+  cropHeight?: number; // percentage height (10..100)
 }
 
 export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan';

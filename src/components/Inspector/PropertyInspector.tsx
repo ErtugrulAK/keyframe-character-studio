@@ -19,6 +19,8 @@ import {
   ArrowUp,
   Layers,
   RotateCw,
+  Crop,
+  Type,
 } from 'lucide-react';
 import './PropertyInspector.css';
 
@@ -432,6 +434,125 @@ export const PropertyInspector: React.FC = () => {
                         onChange={(e) => handlePartPropChange('videoUrl', e.target.value)}
                       />
                     </div>
+                  )}
+
+                  {/* OVERLAY CAPTION TEXT BOX FOR IMAGE & VIDEO */}
+                  {(selectedPart.type === 'custom_image' || selectedPart.type === 'custom_video') && (
+                    <>
+                      <div className="section-title" style={{ marginTop: 8 }}>
+                        <Type size={13} className="text-cyan" />
+                        <span>OVERLAY CAPTION TEXT</span>
+                      </div>
+
+                      <div className="input-field">
+                        <label>CAPTION TEXT</label>
+                        <input
+                          type="text"
+                          value={selectedPart.overlayText || ''}
+                          placeholder="e.g. BEFORE & AFTER"
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => handlePartPropChange('overlayText', e.target.value)}
+                        />
+                      </div>
+
+                      {selectedPart.overlayText && (
+                        <div className="input-field">
+                          <label>CAPTION POSITION</label>
+                          <select
+                            value={selectedPart.overlayTextPosition || 'bottom'}
+                            onChange={(e) => handlePartPropChange('overlayTextPosition', e.target.value)}
+                          >
+                            <option value="bottom">Bottom Banner</option>
+                            <option value="center">Center Badge</option>
+                            <option value="top">Top Header</option>
+                          </select>
+                        </div>
+                      )}
+
+                      {/* CROP MASK & ASPECT FOCUS WINDOW */}
+                      <div className="section-title" style={{ marginTop: 12 }}>
+                        <Crop size={13} className="text-gold" />
+                        <span>CROP & ASPECT FOCUS WINDOW</span>
+                      </div>
+
+                      <div className="crop-toggle-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 0 8px' }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)' }}>Enable Crop Frame Mask</span>
+                        <button
+                          className={`duration-preset-pill ${selectedPart.cropEnabled ? 'active' : ''}`}
+                          onClick={() => handlePartPropChange('cropEnabled', !selectedPart.cropEnabled)}
+                        >
+                          {selectedPart.cropEnabled ? 'ON' : 'OFF'}
+                        </button>
+                      </div>
+
+                      {selectedPart.cropEnabled && (
+                        <div className="crop-controls-box" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {/* Aspect Ratio Preset Pills */}
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            {[
+                              { label: '9:16', x: 25, y: 5, w: 50, h: 90 },
+                              { label: '1:1', x: 20, y: 10, w: 60, h: 80 },
+                              { label: '4:5', x: 15, y: 10, w: 70, h: 80 },
+                              { label: '16:9', x: 5, y: 20, w: 90, h: 60 },
+                            ].map((preset) => (
+                              <button
+                                key={preset.label}
+                                className="btn-secondary"
+                                style={{ flex: 1, fontSize: 10, padding: '3px 0' }}
+                                onClick={() => {
+                                  handlePartPropChange('cropX', preset.x);
+                                  handlePartPropChange('cropY', preset.y);
+                                  handlePartPropChange('cropWidth', preset.w);
+                                  handlePartPropChange('cropHeight', preset.h);
+                                }}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {/* Crop Frame Sliders & Inputs */}
+                          <div className="input-grid">
+                            <div className="input-field">
+                              <label>CROP X (%)</label>
+                              <SmartNumberInput
+                                value={selectedPart.cropX ?? 25}
+                                min={0}
+                                max={90}
+                                onChange={(val) => handlePartPropChange('cropX', val)}
+                              />
+                            </div>
+                            <div className="input-field">
+                              <label>CROP Y (%)</label>
+                              <SmartNumberInput
+                                value={selectedPart.cropY ?? 10}
+                                min={0}
+                                max={90}
+                                onChange={(val) => handlePartPropChange('cropY', val)}
+                              />
+                            </div>
+                            <div className="input-field">
+                              <label>CROP W (%)</label>
+                              <SmartNumberInput
+                                value={selectedPart.cropWidth ?? 50}
+                                min={10}
+                                max={100}
+                                onChange={(val) => handlePartPropChange('cropWidth', val)}
+                              />
+                            </div>
+                            <div className="input-field">
+                              <label>CROP H (%)</label>
+                              <SmartNumberInput
+                                value={selectedPart.cropHeight ?? 80}
+                                min={10}
+                                max={100}
+                                onChange={(val) => handlePartPropChange('cropHeight', val)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   <div className="color-picker-row">

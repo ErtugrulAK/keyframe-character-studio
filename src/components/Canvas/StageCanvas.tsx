@@ -295,71 +295,180 @@ export const StageCanvas: React.FC = () => {
         );
         break;
       case 'custom_image':
+      case 'custom_video': {
+        const isVideo = part.type === 'custom_video';
+        const fullW = isVideo ? 200 : 180;
+        const fullH = isVideo ? 120 : 120;
+        const startX = -fullW / 2;
+        const startY = -fullH / 2;
+
+        const isCrop = part.cropEnabled ?? false;
+        const cropX = part.cropX ?? 25;
+        const cropY = part.cropY ?? 10;
+        const cropW = part.cropWidth ?? 50;
+        const cropH = part.cropHeight ?? 80;
+
+        const cX = startX + (fullW * cropX) / 100;
+        const cY = startY + (fullH * cropY) / 100;
+        const realCW = (fullW * cropW) / 100;
+        const realCH = (fullH * cropH) / 100;
+
+        const clipId = `media-crop-${part.id}`;
+
+        // Overlay Text Caption Y position
+        let captionY = startY + fullH - 20;
+        if (part.overlayTextPosition === 'top') captionY = startY + 20;
+        if (part.overlayTextPosition === 'center') captionY = 0;
+
         pathContent = (
           <g>
-            {part.imageUrl ? (
-              <image
-                href={part.imageUrl}
-                x={-75}
-                y={-50}
-                width={150}
-                height={100}
-                preserveAspectRatio="xMidYMid meet"
-              />
-            ) : (
-              <rect x={-75} y={-50} width={150} height={100} rx={8} fill={fill} />
-            )}
-            <rect
-              x={-75}
-              y={-50}
-              width={150}
-              height={100}
-              rx={8}
-              fill="none"
-              stroke={stroke}
-              strokeWidth={isSelected ? 2 : 1.5}
-              vectorEffect="non-scaling-stroke"
-            />
-          </g>
-        );
-        break;
-      case 'custom_video':
-        pathContent = (
-          <g>
-            {part.videoUrl ? (
-              <foreignObject x={-100} y={-60} width={200} height={120}>
-                <video
-                  src={part.videoUrl}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover',
-                    borderRadius: 8,
-                    pointerEvents: 'none',
-                  }}
+            <defs>
+              {isCrop && (
+                <clipPath id={clipId}>
+                  <rect x={cX} y={cY} width={realCW} height={realCH} rx={4} />
+                </clipPath>
+              )}
+            </defs>
+
+            {/* Background Media Element (Clipped if isCrop) */}
+            <g clipPath={isCrop ? `url(#${clipId})` : undefined}>
+              {isVideo ? (
+                part.videoUrl ? (
+                  <foreignObject x={startX} y={startY} width={fullW} height={fullH}>
+                    <video
+                      src={part.videoUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        borderRadius: 8,
+                        pointerEvents: 'none',
+                      }}
+                    />
+                  </foreignObject>
+                ) : (
+                  <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />
+                )
+              ) : part.imageUrl ? (
+                <image
+                  href={part.imageUrl}
+                  x={startX}
+                  y={startY}
+                  width={fullW}
+                  height={fullH}
+                  preserveAspectRatio="xMidYMid meet"
                 />
-              </foreignObject>
-            ) : (
-              <rect x={-100} y={-60} width={200} height={120} rx={8} fill={fill} />
+              ) : (
+                <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />
+              )}
+            </g>
+
+            {/* Dark Shaded Overlay & White Corner Crop Brackets for Un-cropped Area */}
+            {isCrop && (
+              <g style={{ pointerEvents: 'none' }}>
+                <rect x={startX} y={startY} width={fullW} height={fullH} fill="rgba(0,0,0,0.55)" rx={8} />
+                <g clipPath={`url(#${clipId})`}>
+                  {isVideo ? (
+                    part.videoUrl ? (
+                      <foreignObject x={startX} y={startY} width={fullW} height={fullH}>
+                        <video
+                          src={part.videoUrl}
+                          autoPlay
+                          loop
+                          muted
+                          playsInline
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            borderRadius: 8,
+                            pointerEvents: 'none',
+                          }}
+                        />
+                      </foreignObject>
+                    ) : (
+                      <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />
+                    )
+                  ) : part.imageUrl ? (
+                    <image
+                      href={part.imageUrl}
+                      x={startX}
+                      y={startY}
+                      width={fullW}
+                      height={fullH}
+                      preserveAspectRatio="xMidYMid meet"
+                    />
+                  ) : (
+                    <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />
+                  )}
+                </g>
+
+                {/* White Corner Crop Bracket Handles [ ] matching user screenshot! */}
+                <path
+                  d={`
+                    M ${cX},${cY + 16} L ${cX},${cY} L ${cX + 16},${cY}
+                    M ${cX + realCW - 16},${cY} L ${cX + realCW},${cY} L ${cX + realCW},${cY + 16}
+                    M ${cX},${cY + realCH - 16} L ${cX},${cY + realCH} L ${cX + 16},${cY + realCH}
+                    M ${cX + realCW - 16},${cY + realCH} L ${cX + realCW},${cY + realCH} L ${cX + realCW},${cY + realCH - 16}
+                  `}
+                  fill="none"
+                  stroke="#ffffff"
+                  strokeWidth={3.5}
+                  strokeLinecap="square"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </g>
             )}
+
+            {/* Outer Border Stroke */}
             <rect
-              x={-100}
-              y={-60}
-              width={200}
-              height={120}
+              x={startX}
+              y={startY}
+              width={fullW}
+              height={fullH}
               rx={8}
               fill="none"
               stroke={stroke}
               strokeWidth={isSelected ? 2 : 1.5}
               vectorEffect="non-scaling-stroke"
             />
+
+            {/* Overlay Text Caption Box */}
+            {part.overlayText && (
+              <g style={{ pointerEvents: 'none' }}>
+                <rect
+                  x={startX + 10}
+                  y={captionY - 14}
+                  width={fullW - 20}
+                  height={28}
+                  rx={6}
+                  fill={part.overlayTextBg || 'rgba(15, 23, 42, 0.85)'}
+                  stroke="rgba(255, 255, 255, 0.25)"
+                  strokeWidth={1}
+                  vectorEffect="non-scaling-stroke"
+                />
+                <text
+                  x={0}
+                  y={captionY}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill={part.overlayTextColor || '#ffffff'}
+                  fontSize={12}
+                  fontWeight="800"
+                  fontFamily="Inter, system-ui, sans-serif"
+                >
+                  {part.overlayText}
+                </text>
+              </g>
+            )}
           </g>
         );
         break;
+      }
       default:
         pathContent = (
           <rect

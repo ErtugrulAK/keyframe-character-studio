@@ -1,0 +1,4 @@
+refactor: generalize element library for universal motion graphics
+
+- Removed niche gaming elements (Sword, Shield, Crown)
+- Streamlined Quick Add Library to clean, professional UI & motion graphics elements (UI Card, Text, Banner, Capsule, Diamond, Star, Circle, Box, Triangle)

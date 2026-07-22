@@ -782,161 +782,194 @@ export const StageCanvas: React.FC = () => {
           </pattern>
         </defs>
 
-        {/* Dashed Grid Lines (Infinite Canvas Grid in All Directions) */}
-        {showGrid && (
-          <rect x="-300000" y="-300000" width="600000" height="600000" fill="url(#svg-dashed-grid)" />
-        )}
-
-        {/* Origin Center Grid Axes (Infinite Red X-Axis & Green Y-Axis) */}
-        <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth="1.5" strokeDasharray="6 4" />
-        <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth="1.5" strokeDasharray="6 4" />
-        <circle cx={300} cy={240} r={5} fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
-        <text x={310} y={235} fill="rgba(255, 255, 255, 0.7)" fontSize="11" fontWeight="700" fontFamily="JetBrains Mono, monospace">
-          (0,0) ORIGIN
-        </text>
-
-        {/* ONION SKINNING: Ghost Frame Before (Cyan) & After (Magenta) */}
-        {showOnionSkin && currentFrame > 0 && (
-          sortedParts.map((part) => {
-            const prevTransform = getComputedTransform(part.id, currentFrame - 1);
-            return renderPartPath(part, prevTransform, true, '#00d2ff');
-          })
-        )}
-        {showOnionSkin && (
-          sortedParts.map((part) => {
-            const nextTransform = getComputedTransform(part.id, currentFrame + 1);
-            return renderPartPath(part, nextTransform, true, '#ff3366');
-          })
-        )}
-
-        {/* Character Parts Active Render */}
-        {sortedParts.map((part) => {
-          const transform = getComputedTransform(part.id, currentFrame);
-          return renderPartPath(part, transform);
-        })}
-
-        {/* Skeletal Bone Hierarchy Links */}
-        {showBones &&
-          characterParts.map((part) => {
-            if (!part.parentId) return null;
-            const parentPart = characterParts.find((p) => p.id === part.parentId);
-            if (!parentPart) return null;
-
-            const pT = getComputedTransform(parentPart.id, currentFrame);
-            const cT = getComputedTransform(part.id, currentFrame);
-
-            const isSelectedLink = selectedPartId === part.id || selectedPartId === parentPart.id;
-
-            return (
-              <g key={`bone-${part.id}`}>
-                <line
-                  x1={pT.x}
-                  y1={pT.y}
-                  x2={cT.x}
-                  y2={cT.y}
-                  stroke={isSelectedLink ? '#ffb700' : 'rgba(0, 210, 255, 0.4)'}
-                  strokeWidth={isSelectedLink ? 2.5 : 1.5}
-                  strokeDasharray={isSelectedLink ? 'none' : '4 3'}
-                />
-                <circle cx={pT.x} cy={pT.y} r={3} fill="#00d2ff" />
-                <circle cx={cT.x} cy={cT.y} r={3} fill="#ffb700" />
-              </g>
-            );
-          })}
-
-        {/* Interactive Transform Gizmo on Selected Part (Scales dynamically with object!) */}
-        {selectedPart && selectedTransform && (() => {
-          const gScale = Math.max(0.6, Math.min(6, (selectedTransform.scaleX + selectedTransform.scaleY) / 2));
-          const r0 = 70 * gScale;
-          const rRot = (selectedTransform.rotation * Math.PI) / 180;
-          const arrowLen = 55 * gScale;
-          const scaleLine = 48 * gScale;
+        {/* Zoom-Responsive Counter Scale Factor */}
+        {(() => {
+          const zScale = 1 / Math.max(0.15, zoomLevel);
 
           return (
-            <g transform={`translate(${selectedTransform.x}, ${selectedTransform.y})`}>
-              {/* Center Pivot Axis */}
-              <circle cx={0} cy={0} r={5 * Math.min(1.8, Math.max(1, gScale * 0.7))} fill="#00d2ff" stroke="#fff" strokeWidth={1.5} className="gizmo-center" />
-
-              {/* Drag Angle Floating Tooltip */}
-              {isDragging && dragMode === 'rotate' && (
-                <g transform={`translate(0, ${-r0 - 20})`}>
-                  <rect x={-35} y={-14} width={70} height={24} rx={4} fill="rgba(0, 210, 255, 0.95)" />
-                  <text x={0} y={2} textAnchor="middle" fill="#000" fontSize={11} fontWeight={700} fontFamily="monospace">
-                    {selectedTransform.rotation}°
-                  </text>
-                </g>
+            <>
+              {/* Dashed Grid Lines (Infinite Canvas Grid in All Directions) */}
+              {showGrid && (
+                <rect x="-300000" y="-300000" width="600000" height="600000" fill="url(#svg-dashed-grid)" />
               )}
 
-              {/* Unified 360° Dashed Rotation Circle Ring */}
-              <g>
-                <circle
-                  cx={0}
-                  cy={0}
-                  r={r0}
-                  fill="none"
-                  stroke="var(--accent-teal)"
-                  strokeWidth={2}
-                  strokeDasharray="5 4"
-                  className="gizmo-ring-360"
-                  style={{ cursor: 'grab' }}
-                  onMouseDown={(e) => handleMouseDown('rotate', e)}
-                />
-                {/* 360° Gold Handle Knob */}
-                <circle
-                  cx={r0 * Math.cos(rRot)}
-                  cy={r0 * Math.sin(rRot)}
-                  r={8 * Math.min(1.8, Math.max(1, gScale * 0.7))}
-                  fill="#fbbf24"
-                  stroke="#12141a"
-                  strokeWidth={2}
-                  className="gizmo-handle-gold"
-                  style={{ cursor: 'grab' }}
-                  onMouseDown={(e) => handleMouseDown('rotate', e)}
-                />
-              </g>
+              {/* Origin Center Grid Axes (Infinite Red X-Axis & Green Y-Axis) */}
+              <line
+                x1="-300000"
+                y1="240"
+                x2="300000"
+                y2="240"
+                stroke="rgba(239, 68, 68, 0.75)"
+                strokeWidth={1.5 * zScale}
+                strokeDasharray={`${6 * zScale} ${4 * zScale}`}
+              />
+              <line
+                x1="300"
+                y1="-300000"
+                x2="300"
+                y2="300000"
+                stroke="rgba(16, 185, 129, 0.75)"
+                strokeWidth={1.5 * zScale}
+                strokeDasharray={`${6 * zScale} ${4 * zScale}`}
+              />
+              <circle cx={300} cy={240} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+              <text
+                x={300 + 10 * zScale}
+                y={240 - 5 * zScale}
+                fill="rgba(255, 255, 255, 0.9)"
+                fontSize={12 * zScale}
+                fontWeight="800"
+                fontFamily="JetBrains Mono, monospace"
+              >
+                (0,0) ORIGIN
+              </text>
 
-              {/* Translation Arrows (Red X / Green Y) */}
-              <g>
-                <line x1={0} y1={0} x2={arrowLen} y2={0} stroke="#f43f5e" strokeWidth={3.5} strokeLinecap="round" />
-                <polygon points={`${arrowLen},-6 ${arrowLen + 12},0 ${arrowLen},6`} fill="#f43f5e" />
+              {/* ONION SKINNING: Ghost Frame Before (Cyan) & After (Magenta) */}
+              {showOnionSkin && currentFrame > 0 && (
+                sortedParts.map((part) => {
+                  const prevTransform = getComputedTransform(part.id, currentFrame - 1);
+                  return renderPartPath(part, prevTransform, true, '#00d2ff');
+                })
+              )}
+              {showOnionSkin && (
+                sortedParts.map((part) => {
+                  const nextTransform = getComputedTransform(part.id, currentFrame + 1);
+                  return renderPartPath(part, nextTransform, true, '#ff3366');
+                })
+              )}
 
-                <line x1={0} y1={0} x2={0} y2={arrowLen} stroke="#10b981" strokeWidth={3.5} strokeLinecap="round" />
-                <polygon points={`-6,${arrowLen} 0,${arrowLen + 12} 6,${arrowLen}`} fill="#10b981" />
+              {/* Character Parts Active Render */}
+              {sortedParts.map((part) => {
+                const transform = getComputedTransform(part.id, currentFrame);
+                return renderPartPath(part, transform);
+              })}
 
-                {/* Center Move Square Handle */}
-                <rect
-                  x={-9 * Math.min(1.6, Math.max(1, gScale * 0.7))}
-                  y={-9 * Math.min(1.6, Math.max(1, gScale * 0.7))}
-                  width={18 * Math.min(1.6, Math.max(1, gScale * 0.7))}
-                  height={18 * Math.min(1.6, Math.max(1, gScale * 0.7))}
-                  fill="var(--accent-teal)"
-                  stroke="#ffffff"
-                  strokeWidth={1.5}
-                  rx={4}
-                  className="gizmo-handle-center"
-                  style={{ cursor: 'move' }}
-                  onMouseDown={(e) => handleMouseDown('translate', e)}
-                />
-              </g>
+              {/* Skeletal Bone Hierarchy Links */}
+              {showBones &&
+                characterParts.map((part) => {
+                  if (!part.parentId) return null;
+                  const parentPart = characterParts.find((p) => p.id === part.parentId);
+                  if (!parentPart) return null;
 
-              {/* Proportional Scale Corner Handles */}
-              <g>
-                <line x1={0} y1={0} x2={scaleLine} y2={scaleLine} stroke="#a855f7" strokeWidth={1.5} strokeDasharray="3 3" />
-                <rect
-                  x={scaleLine - 6}
-                  y={scaleLine - 6}
-                  width={14 * Math.min(1.6, Math.max(1, gScale * 0.7))}
-                  height={14 * Math.min(1.6, Math.max(1, gScale * 0.7))}
-                  fill="#a855f7"
-                  stroke="#ffffff"
-                  strokeWidth={1.5}
-                  rx={3}
-                  className="gizmo-handle-scale"
-                  style={{ cursor: 'nwse-resize' }}
-                  onMouseDown={(e) => handleMouseDown('scale', e)}
-                />
-              </g>
-            </g>
+                  const pT = getComputedTransform(parentPart.id, currentFrame);
+                  const cT = getComputedTransform(part.id, currentFrame);
+
+                  const isSelectedLink = selectedPartId === part.id || selectedPartId === parentPart.id;
+
+                  return (
+                    <g key={`bone-${part.id}`}>
+                      <line
+                        x1={pT.x}
+                        y1={pT.y}
+                        x2={cT.x}
+                        y2={cT.y}
+                        stroke={isSelectedLink ? '#ffb700' : 'rgba(0, 210, 255, 0.4)'}
+                        strokeWidth={(isSelectedLink ? 2.5 : 1.5) * zScale}
+                        strokeDasharray={isSelectedLink ? 'none' : `${4 * zScale} ${3 * zScale}`}
+                      />
+                      <circle cx={pT.x} cy={pT.y} r={3 * zScale} fill="#00d2ff" />
+                      <circle cx={cT.x} cy={cT.y} r={3 * zScale} fill="#ffb700" />
+                    </g>
+                  );
+                })}
+
+              {/* Interactive Transform Gizmo on Selected Part (Scales dynamically with object & viewport zoom!) */}
+              {selectedPart && selectedTransform && (() => {
+                const baseScale = (selectedTransform.scaleX + selectedTransform.scaleY) / 2;
+                const gScale = Math.max(0.6, Math.min(6, baseScale)) * zScale;
+                const r0 = 70 * gScale;
+                const rRot = (selectedTransform.rotation * Math.PI) / 180;
+                const arrowLen = 55 * gScale;
+                const scaleLine = 48 * gScale;
+
+                return (
+                  <g transform={`translate(${selectedTransform.x}, ${selectedTransform.y})`}>
+                    {/* Center Pivot Axis */}
+                    <circle cx={0} cy={0} r={5 * Math.min(1.8, Math.max(1, gScale * 0.7))} fill="#00d2ff" stroke="#fff" strokeWidth={1.5 * zScale} className="gizmo-center" />
+
+                    {/* Drag Angle Floating Tooltip */}
+                    {isDragging && dragMode === 'rotate' && (
+                      <g transform={`translate(0, ${-r0 - 20 * zScale})`}>
+                        <rect x={-35 * zScale} y={-14 * zScale} width={70 * zScale} height={24 * zScale} rx={4 * zScale} fill="rgba(0, 210, 255, 0.95)" />
+                        <text x={0} y={2 * zScale} textAnchor="middle" fill="#000" fontSize={11 * zScale} fontWeight={700} fontFamily="monospace">
+                          {selectedTransform.rotation}°
+                        </text>
+                      </g>
+                    )}
+
+                    {/* Unified 360° Dashed Rotation Circle Ring */}
+                    <g>
+                      <circle
+                        cx={0}
+                        cy={0}
+                        r={r0}
+                        fill="none"
+                        stroke="var(--accent-teal)"
+                        strokeWidth={2 * zScale}
+                        strokeDasharray={`${5 * zScale} ${4 * zScale}`}
+                        className="gizmo-ring-360"
+                        style={{ cursor: 'grab' }}
+                        onMouseDown={(e) => handleMouseDown('rotate', e)}
+                      />
+                      {/* 360° Gold Handle Knob */}
+                      <circle
+                        cx={r0 * Math.cos(rRot)}
+                        cy={r0 * Math.sin(rRot)}
+                        r={8 * Math.min(1.8, Math.max(1, gScale * 0.7))}
+                        fill="#fbbf24"
+                        stroke="#12141a"
+                        strokeWidth={2 * zScale}
+                        className="gizmo-handle-gold"
+                        style={{ cursor: 'grab' }}
+                        onMouseDown={(e) => handleMouseDown('rotate', e)}
+                      />
+                    </g>
+
+                    {/* Translation Arrows (Red X / Green Y) */}
+                    <g>
+                      <line x1={0} y1={0} x2={arrowLen} y2={0} stroke="#f43f5e" strokeWidth={3.5 * zScale} strokeLinecap="round" />
+                      <polygon points={`${arrowLen},${-6 * zScale} ${arrowLen + 12 * zScale},0 ${arrowLen},${6 * zScale}`} fill="#f43f5e" />
+
+                      <line x1={0} y1={0} x2={0} y2={arrowLen} stroke="#10b981" strokeWidth={3.5 * zScale} strokeLinecap="round" />
+                      <polygon points={`${-6 * zScale},${arrowLen} 0,${arrowLen + 12 * zScale} ${6 * zScale},${arrowLen}`} fill="#10b981" />
+
+                      {/* Center Move Square Handle */}
+                      <rect
+                        x={-9 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                        y={-9 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                        width={18 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                        height={18 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                        fill="var(--accent-teal)"
+                        stroke="#ffffff"
+                        strokeWidth={1.5 * zScale}
+                        rx={4 * zScale}
+                        className="gizmo-handle-center"
+                        style={{ cursor: 'move' }}
+                        onMouseDown={(e) => handleMouseDown('translate', e)}
+                      />
+                    </g>
+
+                    {/* Proportional Scale Corner Handles */}
+                    <g>
+                      <line x1={0} y1={0} x2={scaleLine} y2={scaleLine} stroke="#a855f7" strokeWidth={1.5 * zScale} strokeDasharray={`${3 * zScale} ${3 * zScale}`} />
+                      <rect
+                        x={scaleLine - 6 * zScale}
+                        y={scaleLine - 6 * zScale}
+                        width={14 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                        height={14 * Math.min(1.6, Math.max(1, gScale * 0.7))}
+                        fill="#a855f7"
+                        stroke="#ffffff"
+                        strokeWidth={1.5 * zScale}
+                        rx={3 * zScale}
+                        className="gizmo-handle-scale"
+                        style={{ cursor: 'nwse-resize' }}
+                        onMouseDown={(e) => handleMouseDown('scale', e)}
+                      />
+                    </g>
+                  </g>
+                );
+              })()}
+            </>
           );
         })()}
       </svg>

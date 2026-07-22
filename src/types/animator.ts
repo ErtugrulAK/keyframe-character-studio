@@ -26,14 +26,30 @@ export interface Keyframe {
   bezierControlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
 }
 
+// Per-property (channel) keyframe for Unreal-style independent property animation
+export interface PropertyKeyframe {
+  id: string;
+  frame: number;
+  value: number;
+  easing: EasingType;
+  bezierControlPoints?: [number, number, number, number];
+}
+
+// Channel keys match Transform property names
+export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity';
+
+export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'];
+
 export interface Track {
   id: string;
   partId: string;
   name: string;
   color: string;
-  keyframes: Keyframe[];
+  keyframes: Keyframe[]; // legacy composite keyframes kept for backward compatibility
+  channels: Record<TrackChannel, PropertyKeyframe[]>; // per-property keyframe channels
   visible: boolean;
   locked: boolean;
+  expanded?: boolean; // Unreal-style collapse/expand state
 }
 
 export type BodyPartType = 

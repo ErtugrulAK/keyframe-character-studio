@@ -1,5 +1,9 @@
-fix: flip Y axis display in Inspector to match Cartesian coordinate convention
+feat: Unreal Engine Sequencer-style timeline with per-property channel keyframing
 
-- Negated Position Y value in display (value = -transform.y) so that upward direction shows positive numbers
-- Negated input on change (y: -val) so that typing a positive Y value correctly moves the object upward on screen
-- Added label indicator "POSITION Y ↑+" to clarify convention for users
+- Added PropertyKeyframe and TrackChannel types to animator.ts
+- Added channels field (x/y/rotation/scaleX/scaleY/opacity) to Track type
+- makeEmptyChannels and interpolateChannel helpers in defaults.ts
+- getComputedTransform reads per-channel data first, falls back to composite keyframes
+- toggleTrackExpanded, addPropertyKeyframe, deletePropertyKeyframe, updatePropertyKeyframeFrame actions
+- migrateTrack helper auto-patches old saves with empty channels on load
+- Full Unreal-style SequencerTimeline: collapsible hierarchy, channel lanes, color-coded diamonds

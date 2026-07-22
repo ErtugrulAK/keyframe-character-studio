@@ -1,4 +1,4 @@
-import type { CharacterPart, Track, Transform, PresetPose, EasingType } from '../types/animator';
+import type { CharacterPart, Track, Transform, PresetPose, EasingType, TrackChannel, PropertyKeyframe } from '../types/animator';
 
 export const DEFAULT_TRANSFORM: Transform = {
   x: 0,
@@ -12,6 +12,38 @@ export const DEFAULT_TRANSFORM: Transform = {
 export const DEFAULT_CHARACTER_PARTS: CharacterPart[] = [];
 
 export const DEFAULT_TRACKS: Track[] = [];
+
+/** Create an empty channels record with no keyframes for any property */
+export function makeEmptyChannels(): Record<TrackChannel, PropertyKeyframe[]> {
+  return { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] };
+}
+
+/** Interpolate a single numeric channel at a given frame */
+export function interpolateChannel(
+  keyframes: PropertyKeyframe[],
+  frame: number,
+  fallback: number
+): number {
+  if (!keyframes || keyframes.length === 0) return fallback;
+  const sorted = [...keyframes].sort((a, b) => a.frame - b.frame);
+  const exact = sorted.find((k) => k.frame === frame);
+  if (exact) return exact.value;
+  if (frame <= sorted[0].frame) return sorted[0].value;
+  if (frame >= sorted[sorted.length - 1].frame) return sorted[sorted.length - 1].value;
+  let prev = sorted[0];
+  let next = sorted[sorted.length - 1];
+  for (let i = 0; i < sorted.length - 1; i++) {
+    if (frame >= sorted[i].frame && frame <= sorted[i + 1].frame) {
+      prev = sorted[i];
+      next = sorted[i + 1];
+      break;
+    }
+  }
+  const duration = next.frame - prev.frame;
+  const progress = (frame - prev.frame) / duration;
+  const eased = applyEasing(progress, prev.easing, prev.bezierControlPoints);
+  return lerp(prev.value, next.value, eased);
+}
 
 export const PRESET_POSES: PresetPose[] = [
   {

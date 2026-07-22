@@ -10,15 +10,28 @@ import type {
   ToolType,
   EasingType,
   AnimationProject,
+  TrackChannel,
+  PropertyKeyframe,
 } from '../types/animator';
 import {
   DEFAULT_CHARACTER_PARTS,
   DEFAULT_TRACKS,
   PRESET_POSES,
   interpolateTransform,
+  makeEmptyChannels,
+  interpolateChannel,
 } from '../utils/defaults';
 
 const AUTOSAVE_STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
+
+/** Ensure legacy tracks (without channels) get empty channels injected */
+function migrateTrack(t: Track): Track {
+  return {
+    ...t,
+    channels: t.channels ?? makeEmptyChannels(),
+    expanded: t.expanded ?? false,
+  };
+}
 
 export interface ToastItem {
   id: string;
@@ -87,6 +100,7 @@ interface AnimatorContextType {
   applyPresetPose: (poseId: string) => void;
   toggleTrackVisibility: (trackId: string) => void;
   toggleTrackLock: (trackId: string) => void;
+  toggleTrackExpanded: (trackId: string) => void;
   exportProject: () => string;
   importProject: (jsonStr: string) => boolean;
   resetProject: () => void;
@@ -94,6 +108,10 @@ interface AnimatorContextType {
   deletePart: (partId: string) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  // Per-property channel keyframe actions (Unreal-style)
+  addPropertyKeyframe: (trackId: string, channel: TrackChannel, frame: number, value: number, easing?: EasingType) => void;
+  deletePropertyKeyframe: (trackId: string, channel: TrackChannel, keyframeId: string) => void;
+  updatePropertyKeyframeFrame: (trackId: string, channel: TrackChannel, keyframeId: string, newFrame: number) => void;
 }
 
 const AnimatorContext = createContext<AnimatorContextType | null>(null);
@@ -204,7 +222,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const parsed: AnimationProject & { lastSavedTime?: string } = JSON.parse(saved);
         const hasLegacyStickman = parsed.characterParts?.some((p) => p.type === 'head' || p.type === 'torso');
         if (parsed.tracks && parsed.characterParts && !hasLegacyStickman) {
-          setTracks(parsed.tracks);
+          setTracks(parsed.tracks.map(migrateTrack));
           setCharacterParts(parsed.characterParts);
           if (parsed.fps) setFps(parsed.fps);
           if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
@@ -298,40 +316,63 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [selectedPartId, deletePart, undo, redo]);
 
   // Calculate position/rotation at given frame using interpolation
+  // Channels take priority over legacy composite keyframes when populated
   const getComputedTransform = useCallback(
     (partId: string, frame: number): Transform => {
       const part = characterParts.find((p) => p.id === partId);
       const baseTransform = part ? part.baseTransform : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
 
       const track = tracks.find((t) => t.partId === partId);
-      if (!track || track.keyframes.length === 0) {
-        return baseTransform;
+      if (!track) return baseTransform;
+
+      const ch = track.channels;
+      const hasChannelData = ch && Object.values(ch).some((arr) => arr.length > 0);
+
+      // --- Per-property channel interpolation (Unreal-style, takes priority) ---
+      if (hasChannelData) {
+        // For any channel with no keyframes, fall back to legacy composite keyframe or base
+        const legacyTransform: Transform = (() => {
+          if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
+          const sorted = [...track.keyframes].sort((a, b) => a.frame - b.frame);
+          const exact = sorted.find((k) => k.frame === frame);
+          if (exact) return exact.transform;
+          if (frame <= sorted[0].frame) return sorted[0].transform;
+          if (frame >= sorted[sorted.length - 1].frame) return sorted[sorted.length - 1].transform;
+          let prev = sorted[0]; let next = sorted[sorted.length - 1];
+          for (let i = 0; i < sorted.length - 1; i++) {
+            if (frame >= sorted[i].frame && frame <= sorted[i + 1].frame) { prev = sorted[i]; next = sorted[i + 1]; break; }
+          }
+          const dur = next.frame - prev.frame;
+          const prog = (frame - prev.frame) / dur;
+          return interpolateTransform(prev.transform, next.transform, prog, prev.easing, prev.bezierControlPoints);
+        })();
+
+        return {
+          x:        ch.x.length > 0        ? interpolateChannel(ch.x,        frame, legacyTransform.x)        : legacyTransform.x,
+          y:        ch.y.length > 0        ? interpolateChannel(ch.y,        frame, legacyTransform.y)        : legacyTransform.y,
+          rotation: ch.rotation.length > 0 ? interpolateChannel(ch.rotation, frame, legacyTransform.rotation) : legacyTransform.rotation,
+          scaleX:   ch.scaleX.length > 0   ? interpolateChannel(ch.scaleX,   frame, legacyTransform.scaleX)   : legacyTransform.scaleX,
+          scaleY:   ch.scaleY.length > 0   ? interpolateChannel(ch.scaleY,   frame, legacyTransform.scaleY)   : legacyTransform.scaleY,
+          opacity:  ch.opacity.length > 0  ? interpolateChannel(ch.opacity,  frame, legacyTransform.opacity)  : legacyTransform.opacity,
+        };
       }
+
+      // --- Legacy composite keyframe interpolation (fallback) ---
+      if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
 
       const sortedKfs = [...track.keyframes].sort((a, b) => a.frame - b.frame);
-
       const exact = sortedKfs.find((k) => k.frame === frame);
       if (exact) return exact.transform;
-
-      if (frame <= sortedKfs[0].frame) {
-        return sortedKfs[0].transform;
-      }
-
-      if (frame >= sortedKfs[sortedKfs.length - 1].frame) {
-        return sortedKfs[sortedKfs.length - 1].transform;
-      }
+      if (frame <= sortedKfs[0].frame) return sortedKfs[0].transform;
+      if (frame >= sortedKfs[sortedKfs.length - 1].frame) return sortedKfs[sortedKfs.length - 1].transform;
 
       let prevKf = sortedKfs[0];
       let nextKf = sortedKfs[sortedKfs.length - 1];
-
       for (let i = 0; i < sortedKfs.length - 1; i++) {
         if (frame >= sortedKfs[i].frame && frame <= sortedKfs[i + 1].frame) {
-          prevKf = sortedKfs[i];
-          nextKf = sortedKfs[i + 1];
-          break;
+          prevKf = sortedKfs[i]; nextKf = sortedKfs[i + 1]; break;
         }
       }
-
       const duration = nextKf.frame - prevKf.frame;
       const progress = (frame - prevKf.frame) / duration;
       return interpolateTransform(prevKf.transform, nextKf.transform, progress, prevKf.easing, prevKf.bezierControlPoints);
@@ -539,6 +580,58 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, locked: !t.locked } : t)));
   };
 
+  const toggleTrackExpanded = (trackId: string) => {
+    setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, expanded: !t.expanded } : t)));
+  };
+
+  // Per-property channel keyframe actions (Unreal-style)
+  const addPropertyKeyframe = (
+    trackId: string,
+    channel: TrackChannel,
+    frame: number,
+    value: number,
+    easing: EasingType = 'easeInOut'
+  ) => {
+    setTracks((prev) =>
+      prev.map((t) => {
+        if (t.id !== trackId) return t;
+        const ch = t.channels ?? makeEmptyChannels();
+        const existing = ch[channel].find((k) => k.frame === frame);
+        const newKf: PropertyKeyframe = {
+          id: `pkf_${channel}_${frame}_${Date.now()}`,
+          frame,
+          value,
+          easing,
+        };
+        const updated = existing
+          ? ch[channel].map((k) => (k.frame === frame ? { ...k, value, easing } : k))
+          : [...ch[channel], newKf].sort((a, b) => a.frame - b.frame);
+        return { ...t, channels: { ...ch, [channel]: updated } };
+      })
+    );
+  };
+
+  const deletePropertyKeyframe = (trackId: string, channel: TrackChannel, keyframeId: string) => {
+    setTracks((prev) =>
+      prev.map((t) => {
+        if (t.id !== trackId) return t;
+        const ch = t.channels ?? makeEmptyChannels();
+        return { ...t, channels: { ...ch, [channel]: ch[channel].filter((k) => k.id !== keyframeId) } };
+      })
+    );
+  };
+
+  const updatePropertyKeyframeFrame = (trackId: string, channel: TrackChannel, keyframeId: string, newFrame: number) => {
+    setTracks((prev) =>
+      prev.map((t) => {
+        if (t.id !== trackId) return t;
+        const ch = t.channels ?? makeEmptyChannels();
+        const updated = ch[channel].map((k) => (k.id === keyframeId ? { ...k, frame: newFrame } : k)).sort((a, b) => a.frame - b.frame);
+        return { ...t, channels: { ...ch, [channel]: updated } };
+      })
+    );
+  };
+
   const applyMotionTransition = (partId: string, transitionType: string) => {
     const track = tracks.find((t) => t.partId === partId);
     if (!track) return;
@@ -643,7 +736,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const parsed: AnimationProject = JSON.parse(jsonStr);
       if (parsed.tracks && parsed.characterParts) {
-        setTracks(parsed.tracks);
+        setTracks(parsed.tracks.map(migrateTrack));
         setCharacterParts(parsed.characterParts);
         if (parsed.fps) setFps(parsed.fps);
         if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
@@ -694,7 +787,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       color: randomColor,
       visible: true,
       locked: false,
-      keyframes: [], // UE5 Sequencer workflow: 0 auto keyframes on creation
+      expanded: false,
+      keyframes: [],
+      channels: makeEmptyChannels(),
     };
 
     setCharacterParts((prev) => [...prev, newPart]);
@@ -748,6 +843,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         applyPresetPose,
         toggleTrackVisibility,
         toggleTrackLock,
+        toggleTrackExpanded,
         exportProject,
         importProject,
         resetProject,
@@ -755,6 +851,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         deletePart,
         applyMotionTransition,
         showToast,
+        addPropertyKeyframe,
+        deletePropertyKeyframe,
+        updatePropertyKeyframeFrame,
       }}
     >
       {children}

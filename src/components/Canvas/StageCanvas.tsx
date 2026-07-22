@@ -957,11 +957,11 @@ export const StageCanvas: React.FC = () => {
               {/* Interactive Transform Gizmo on Selected Part */}
               {selectedPart && selectedTransform && (() => {
                 const baseScale = (selectedTransform.scaleX + selectedTransform.scaleY) / 2;
-                const objScale = Math.max(0.5, Math.min(6, baseScale));
-                const r0 = 70 * objScale;
+                const objScale = Math.max(0.4, Math.min(6, baseScale));
+                const r0 = Math.max(34, 42 * objScale);
                 const rRot = (selectedTransform.rotation * Math.PI) / 180;
-                const arrowLen = 55 * objScale;
-                const scaleLine = 48 * objScale;
+                const arrowLen = r0 * 0.78;
+                const scaleLine = r0 * 0.68;
 
                 const knobR = 8 * Math.min(1.8, Math.max(1, zScale * 0.6));
                 const strokeW = 2 * Math.min(1.5, Math.max(1, zScale * 0.5));

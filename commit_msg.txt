@@ -1,5 +1,5 @@
-fix: add generous modal backdrop padding and expand curve boundary limits to Y=[-1.0, 2.0]
+fix: adjust gizmo rotation circle radius (r0) to wrap snugly around selected object bounds
 
-- Added spacious padding (32px 40px) to modal backdrop so modal card controls never touch screen borders
-- Expanded SVG Y-mapping from [-1.4, 2.4], pushing upper boundary line to Y=+2.0 and lower boundary line to Y=-1.0
-- Allows total freedom for drawing extreme bounce and anticipation curves with zero clipping or cramped borders
+- Adjusted base gizmo rotation ring radius from 70px down to 42px * objScale
+- Aligned translation arrow lengths and scale handle diagonal line proportionally (arrowLen = r0 * 0.78, scaleLine = r0 * 0.68)
+- Ensures the selection gizmo circle wraps tight and snug around all shapes, cards, and text layers without forming an oversized ring

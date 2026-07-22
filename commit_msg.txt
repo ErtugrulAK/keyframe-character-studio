@@ -1,0 +1,5 @@
+refactor: reorder sidebar navigation into intuitive creation workflow
+
+- Ordered 86px sidebar navigation: Media -> Elements -> Texts -> Transitions -> Keyframes -> Presets
+- Matches professional content creation workflow hierarchy (Assets -> Typography -> Motion -> Keyframing -> Presets)
+- Set default active category to Media on initial load

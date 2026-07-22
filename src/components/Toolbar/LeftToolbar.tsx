@@ -60,7 +60,7 @@ export const LeftToolbar: React.FC = () => {
     applyMotionTransition,
   } = useAnimator();
 
-  const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('transitions');
+  const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('media');
   const [isDragOver, setIsDragOver] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -106,15 +106,6 @@ export const LeftToolbar: React.FC = () => {
       {/* Keyframes Studio 86px Vertical Icon Sidebar */}
       <div className="left-sidebar-nav">
         <button
-          className={`sidebar-nav-item ${activeCategory === 'transitions' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('transitions')}
-          title="Motion Transitions"
-        >
-          <Zap size={20} className="nav-icon text-cyan" />
-          <span className="nav-label">Transitions</span>
-        </button>
-
-        <button
           className={`sidebar-nav-item ${activeCategory === 'media' ? 'active' : ''}`}
           onClick={() => setActiveCategory('media')}
           title="Media Library"
@@ -124,12 +115,12 @@ export const LeftToolbar: React.FC = () => {
         </button>
 
         <button
-          className={`sidebar-nav-item ${activeCategory === 'keyframes' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('keyframes')}
-          title="Keyframe Tools"
+          className={`sidebar-nav-item ${activeCategory === 'shapes' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('shapes')}
+          title="Shapes & Elements"
         >
-          <Gem size={20} className="nav-icon text-gold" />
-          <span className="nav-label">Keyframes</span>
+          <Square size={20} className="nav-icon text-purple" />
+          <span className="nav-label">Elements</span>
         </button>
 
         <button
@@ -142,12 +133,21 @@ export const LeftToolbar: React.FC = () => {
         </button>
 
         <button
-          className={`sidebar-nav-item ${activeCategory === 'shapes' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('shapes')}
-          title="Shapes & Elements"
+          className={`sidebar-nav-item ${activeCategory === 'transitions' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('transitions')}
+          title="Motion Transitions"
         >
-          <Square size={20} className="nav-icon text-purple" />
-          <span className="nav-label">Elements</span>
+          <Zap size={20} className="nav-icon text-teal" />
+          <span className="nav-label">Transitions</span>
+        </button>
+
+        <button
+          className={`sidebar-nav-item ${activeCategory === 'keyframes' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('keyframes')}
+          title="Keyframe Tools"
+        >
+          <Gem size={20} className="nav-icon text-gold" />
+          <span className="nav-label">Keyframes</span>
         </button>
 
         <button

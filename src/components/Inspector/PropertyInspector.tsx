@@ -21,6 +21,9 @@ import {
   RotateCw,
   Crop,
   Type,
+  Compass,
+  Grid3x3,
+  Atom,
 } from 'lucide-react';
 import './PropertyInspector.css';
 
@@ -328,6 +331,106 @@ export const PropertyInspector: React.FC = () => {
                   >
                     Reset Scale (1.0)
                   </button>
+                  {/* FEATURE 2: RESPONSIVE ANCHOR POINT 3x3 PICKER */}
+                  <div className="section-title" style={{ marginTop: 12 }}>
+                    <Compass size={13} className="text-cyan" />
+                    <span>RESPONSIVE ANCHOR POINT</span>
+                  </div>
+
+                  <div className="input-field">
+                    <label>ANCHOR PRESET</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: '100%', margin: '4px 0' }}>
+                      {[
+                        { id: 'top-left', label: '↖ TL' },
+                        { id: 'top-center', label: '↑ TC' },
+                        { id: 'top-right', label: '↗ TR' },
+                        { id: 'center-left', label: '← CL' },
+                        { id: 'center', label: '• C' },
+                        { id: 'center-right', label: '→ CR' },
+                        { id: 'bottom-left', label: '↙ BL' },
+                        { id: 'bottom-center', label: '↓ BC' },
+                        { id: 'bottom-right', label: '↘ BR' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.id}
+                          className={`btn-secondary ${selectedPart.anchor === preset.id ? 'active' : ''}`}
+                          style={{
+                            fontSize: 10,
+                            padding: '4px 2px',
+                            backgroundColor: selectedPart.anchor === preset.id ? 'var(--accent-teal)' : undefined,
+                            color: selectedPart.anchor === preset.id ? '#ffffff' : undefined,
+                          }}
+                          onClick={() =>
+                            handlePartPropChange(
+                              'anchor',
+                              selectedPart.anchor === preset.id ? 'none' : preset.id
+                            )
+                          }
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {selectedPart.anchor && selectedPart.anchor !== 'none' && (
+                    <div className="input-grid">
+                      <div className="input-field">
+                        <label>OFFSET X (PX)</label>
+                        <SmartNumberInput
+                          value={selectedPart.anchorOffsetX || 0}
+                          onChange={(val) => handlePartPropChange('anchorOffsetX', val)}
+                        />
+                      </div>
+                      <div className="input-field">
+                        <label>OFFSET Y (PX)</label>
+                        <SmartNumberInput
+                          value={selectedPart.anchorOffsetY || 0}
+                          onChange={(val) => handlePartPropChange('anchorOffsetY', val)}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* FEATURE 4: SPRING PHYSICS MODIFIER */}
+                  <div className="section-title" style={{ marginTop: 12 }}>
+                    <Zap size={13} className="text-gold" />
+                    <span>SPRING PHYSICS & DELAY</span>
+                  </div>
+
+                  <div className="input-field">
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedPart.springEnabled || false}
+                        onChange={(e) => handlePartPropChange('springEnabled', e.target.checked)}
+                      />
+                      <span>ENABLE SPRING ELASTICITY</span>
+                    </label>
+                  </div>
+
+                  {selectedPart.springEnabled && (
+                    <div className="input-grid">
+                      <div className="input-field">
+                        <label>STIFFNESS (10-100)</label>
+                        <SmartNumberInput
+                          value={selectedPart.springStiffness || 45}
+                          min={10}
+                          max={100}
+                          onChange={(val) => handlePartPropChange('springStiffness', val)}
+                        />
+                      </div>
+                      <div className="input-field">
+                        <label>DAMPING (5-50)</label>
+                        <SmartNumberInput
+                          value={selectedPart.springDamping || 18}
+                          min={5}
+                          max={50}
+                          onChange={(val) => handlePartPropChange('springDamping', val)}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -397,15 +500,302 @@ export const PropertyInspector: React.FC = () => {
                   )}
 
                   {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner' || selectedPart.type === 'custom_card') && (
-                    <div className="input-field">
-                      <label>FONT SIZE (PX)</label>
-                      <SmartNumberInput
-                        value={selectedPart.fontSize ?? 20}
-                        min={8}
-                        max={120}
-                        onChange={(val) => handlePartPropChange('fontSize', val)}
-                      />
-                    </div>
+                    <>
+                      <div className="input-field">
+                        <label>FONT SIZE (PX)</label>
+                        <SmartNumberInput
+                          value={selectedPart.fontSize ?? 20}
+                          min={8}
+                          max={120}
+                          onChange={(val) => handlePartPropChange('fontSize', val)}
+                        />
+                      </div>
+
+                      {/* FEATURE 3: STAGGERED TEXT ANIMATION */}
+                      <div className="input-field">
+                        <label>STAGGERED TEXT ANIMATION</label>
+                        <select
+                          value={selectedPart.textAnimMode || 'none'}
+                          onChange={(e) => handlePartPropChange('textAnimMode', e.target.value)}
+                          style={{
+                            width: '100%',
+                            height: 28,
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 4,
+                            color: '#fff',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          <option value="none">None (Standard Static Text)</option>
+                          <option value="chars">Character by Character (Stagger Chars)</option>
+                          <option value="words">Word by Word (Stagger Words)</option>
+                        </select>
+                      </div>
+
+                      {selectedPart.textAnimMode && selectedPart.textAnimMode !== 'none' && (
+                        <div className="input-field">
+                          <label>STAGGER DELAY (MS)</label>
+                          <SmartNumberInput
+                            value={selectedPart.textStaggerDelay || 60}
+                            min={10}
+                            max={500}
+                            step={10}
+                            onChange={(val) => handlePartPropChange('textStaggerDelay', val)}
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* FEATURE 1: TRIM PATH / STROKE PROGRESS ANIMATION */}
+                  <div className="input-field">
+                    <label>TRIM PATH / STROKE DRAW (0-100%)</label>
+                    <SmartNumberInput
+                      value={Math.round((selectedPart.strokeProgress ?? 1) * 100)}
+                      min={0}
+                      max={100}
+                      step={5}
+                      onChange={(val) => handlePartPropChange('strokeProgress', val / 100)}
+                    />
+                  </div>
+
+                  {/* FEATURE 5: MOGRAPH CLONER INSPECTOR CONTROLS */}
+                  {selectedPart.type === 'mograph_cloner' && selectedPart.clonerConfig && (
+                    <>
+                      <div className="section-title" style={{ marginTop: 12 }}>
+                        <Grid3x3 size={13} className="text-purple" />
+                        <span>MOGRAPH CLONER CONFIG</span>
+                      </div>
+
+                      <div className="input-field">
+                        <label>CLONER LAYOUT MODE</label>
+                        <select
+                          value={selectedPart.clonerConfig.mode}
+                          onChange={(e) =>
+                            handlePartPropChange('clonerConfig', {
+                              ...selectedPart.clonerConfig,
+                              mode: e.target.value as any,
+                            })
+                          }
+                          style={{
+                            width: '100%',
+                            height: 28,
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 4,
+                            color: '#fff',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          <option value="grid">2D Grid Layout</option>
+                          <option value="circle">Circular Radial Layout</option>
+                          <option value="linear">Linear Strip Layout</option>
+                        </select>
+                      </div>
+
+                      {selectedPart.clonerConfig.mode === 'grid' && (
+                        <div className="input-grid">
+                          <div className="input-field">
+                            <label>COUNT X</label>
+                            <SmartNumberInput
+                              value={selectedPart.clonerConfig.countX}
+                              min={1}
+                              max={10}
+                              onChange={(val) =>
+                                handlePartPropChange('clonerConfig', {
+                                  ...selectedPart.clonerConfig,
+                                  countX: val,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="input-field">
+                            <label>COUNT Y</label>
+                            <SmartNumberInput
+                              value={selectedPart.clonerConfig.countY}
+                              min={1}
+                              max={10}
+                              onChange={(val) =>
+                                handlePartPropChange('clonerConfig', {
+                                  ...selectedPart.clonerConfig,
+                                  countY: val,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedPart.clonerConfig.mode === 'circle' && (
+                        <div className="input-grid">
+                          <div className="input-field">
+                            <label>CIRCLE COUNT</label>
+                            <SmartNumberInput
+                              value={selectedPart.clonerConfig.countCircle}
+                              min={3}
+                              max={24}
+                              onChange={(val) =>
+                                handlePartPropChange('clonerConfig', {
+                                  ...selectedPart.clonerConfig,
+                                  countCircle: val,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="input-field">
+                            <label>RADIUS (PX)</label>
+                            <SmartNumberInput
+                              value={selectedPart.clonerConfig.radius}
+                              min={10}
+                              max={200}
+                              onChange={(val) =>
+                                handlePartPropChange('clonerConfig', {
+                                  ...selectedPart.clonerConfig,
+                                  radius: val,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="input-field">
+                        <label>EFFECTOR TYPE</label>
+                        <select
+                          value={selectedPart.clonerConfig.effector}
+                          onChange={(e) =>
+                            handlePartPropChange('clonerConfig', {
+                              ...selectedPart.clonerConfig,
+                              effector: e.target.value as any,
+                            })
+                          }
+                          style={{
+                            width: '100%',
+                            height: 28,
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 4,
+                            color: '#fff',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          <option value="none">None (Static Grid)</option>
+                          <option value="wave">Sinusoidal Wave Motion</option>
+                          <option value="random">Random Noise Motion</option>
+                        </select>
+                      </div>
+
+                      {selectedPart.clonerConfig.effector === 'wave' && (
+                        <div className="input-grid">
+                          <div className="input-field">
+                            <label>WAVE SPEED</label>
+                            <SmartNumberInput
+                              value={selectedPart.clonerConfig.waveSpeed}
+                              min={0.2}
+                              max={5}
+                              step={0.2}
+                              onChange={(val) =>
+                                handlePartPropChange('clonerConfig', {
+                                  ...selectedPart.clonerConfig,
+                                  waveSpeed: val,
+                                })
+                              }
+                            />
+                          </div>
+                          <div className="input-field">
+                            <label>AMPLITUDE</label>
+                            <SmartNumberInput
+                              value={selectedPart.clonerConfig.waveAmplitude}
+                              min={2}
+                              max={50}
+                              onChange={(val) =>
+                                handlePartPropChange('clonerConfig', {
+                                  ...selectedPart.clonerConfig,
+                                  waveAmplitude: val,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* FEATURE 6: PARTICLE SYSTEM INSPECTOR CONTROLS */}
+                  {selectedPart.type === 'particle_system' && selectedPart.particleConfig && (
+                    <>
+                      <div className="section-title" style={{ marginTop: 12 }}>
+                        <Atom size={13} className="text-teal" />
+                        <span>PARTICLE SYSTEM CONFIG</span>
+                      </div>
+
+                      <div className="input-grid">
+                        <div className="input-field">
+                          <label>PARTICLE COUNT</label>
+                          <SmartNumberInput
+                            value={selectedPart.particleConfig.count}
+                            min={5}
+                            max={150}
+                            onChange={(val) =>
+                              handlePartPropChange('particleConfig', {
+                                ...selectedPart.particleConfig,
+                                count: val,
+                              })
+                            }
+                          />
+                        </div>
+                        <div className="input-field">
+                          <label>SPEED (PX/S)</label>
+                          <SmartNumberInput
+                            value={selectedPart.particleConfig.speed}
+                            min={5}
+                            max={120}
+                            onChange={(val) =>
+                              handlePartPropChange('particleConfig', {
+                                ...selectedPart.particleConfig,
+                                speed: val,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+
+                      <div className="input-field">
+                        <label>PARTICLE SHAPE</label>
+                        <select
+                          value={selectedPart.particleConfig.shape}
+                          onChange={(e) =>
+                            handlePartPropChange('particleConfig', {
+                              ...selectedPart.particleConfig,
+                              shape: e.target.value as any,
+                            })
+                          }
+                          style={{
+                            width: '100%',
+                            height: 28,
+                            background: 'var(--bg-input)',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: 4,
+                            color: '#fff',
+                            fontSize: 11,
+                            fontWeight: 700,
+                            padding: '0 6px',
+                          }}
+                        >
+                          <option value="dot">Solid Dot</option>
+                          <option value="cross">Cross (+)</option>
+                          <option value="triangle">Triangle (▲)</option>
+                          <option value="circle_outline">Circle Ring (○)</option>
+                        </select>
+                      </div>
+                    </>
                   )}
 
                   {/* Image URL Input Control if object is Custom Image */}

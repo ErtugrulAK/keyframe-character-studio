@@ -25,6 +25,8 @@ import {
   Activity,
   Trash2,
   Clock,
+  Grid3x3,
+  Atom,
 } from 'lucide-react';
 import './LeftToolbar.css';
 
@@ -39,6 +41,8 @@ const QUICK_SHAPES: { type: BodyPartType; label: string; icon: React.ReactNode }
   { type: 'custom_box', label: 'Square Box', icon: <Square size={14} className="text-cyan" /> },
   { type: 'custom_rect', label: 'Rectangle', icon: <Layout size={14} className="text-teal" /> },
   { type: 'custom_triangle', label: 'Triangle', icon: <Triangle size={14} className="text-red" /> },
+  { type: 'mograph_cloner', label: 'Cloner Grid', icon: <Grid3x3 size={14} className="text-purple" /> },
+  { type: 'particle_system', label: 'Particles', icon: <Atom size={14} className="text-teal" /> },
 ];
 
 const MOTION_TRANSITIONS = [

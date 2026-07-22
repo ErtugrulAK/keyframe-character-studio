@@ -187,27 +187,243 @@ export const StageCanvas: React.FC = () => {
           <polygon points="0,-35 35,25 -35,25" fill={fill} stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
         );
         break;
-      case 'custom_text':
+      case 'custom_text': {
+        const textStr = part.textValue || 'TEXT';
+        const isStaggered = part.textAnimMode && part.textAnimMode !== 'none';
+
+        if (isStaggered) {
+          const items = part.textAnimMode === 'words' ? textStr.split(' ') : textStr.split('');
+          const staggerDelayFrames = Math.max(1, Math.round((part.textStaggerDelay || 60) / 33));
+          const startFrame = part.textAnimStartFrame || 0;
+
+          pathContent = (
+            <g>
+              <text
+                x={0}
+                y={0}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill={fill}
+                stroke={stroke}
+                strokeWidth={0.5}
+                fontSize={part.fontSize || 24}
+                fontWeight="bold"
+                fontFamily="Inter, system-ui, sans-serif"
+                vectorEffect="non-scaling-stroke"
+              >
+                {items.map((item, idx) => {
+                  const itemStartFrame = startFrame + idx * staggerDelayFrames;
+                  const progress = Math.max(0, Math.min(1, (currentFrame - itemStartFrame) / 5));
+                  const dy = (1 - progress) * -15;
+                  const itemOpacity = progress;
+
+                  return (
+                    <tspan
+                      key={idx}
+                      dy={idx === 0 ? dy : 0}
+                      dx={part.textAnimMode === 'words' ? (idx > 0 ? 8 : 0) : 0}
+                      opacity={itemOpacity}
+                      style={{ transition: 'all 0.15s ease' }}
+                    >
+                      {item}
+                    </tspan>
+                  );
+                })}
+              </text>
+            </g>
+          );
+        } else {
+          pathContent = (
+            <g>
+              <text
+                x={0}
+                y={0}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                fill={fill}
+                stroke={stroke}
+                strokeWidth={0.5}
+                fontSize={part.fontSize || 24}
+                fontWeight="bold"
+                fontFamily="Inter, system-ui, sans-serif"
+                vectorEffect="non-scaling-stroke"
+              >
+                {textStr}
+              </text>
+            </g>
+          );
+        }
+        break;
+      }
+      case 'mograph_cloner': {
+        const cfg = part.clonerConfig || {
+          mode: 'grid',
+          countX: 4,
+          countY: 3,
+          spacingX: 40,
+          spacingY: 40,
+          countCircle: 8,
+          radius: 60,
+          countLinear: 5,
+          spacingLinear: 35,
+          childShape: 'circle',
+          childSize: 10,
+          childColor: fill,
+          childStroke: stroke,
+          childStrokeWidth: 1.5,
+          effector: 'wave',
+          waveSpeed: 1.5,
+          waveAmplitude: 12,
+          waveAxis: 'y',
+          randomSeed: 42,
+          randomAmplitude: 10,
+          stepPhase: 0,
+        };
+
+        const clonerItems: { x: number; y: number; scale: number; rot: number; id: number }[] = [];
+
+        if (cfg.mode === 'grid') {
+          const startX = -((cfg.countX - 1) * cfg.spacingX) / 2;
+          const startY = -((cfg.countY - 1) * cfg.spacingY) / 2;
+          let idx = 0;
+          for (let r = 0; r < cfg.countY; r++) {
+            for (let c = 0; c < cfg.countX; c++) {
+              clonerItems.push({
+                x: startX + c * cfg.spacingX,
+                y: startY + r * cfg.spacingY,
+                scale: 1,
+                rot: 0,
+                id: idx++,
+              });
+            }
+          }
+        } else if (cfg.mode === 'circle') {
+          const total = cfg.countCircle || 8;
+          for (let i = 0; i < total; i++) {
+            const angle = (i / total) * Math.PI * 2;
+            clonerItems.push({
+              x: Math.cos(angle) * cfg.radius,
+              y: Math.sin(angle) * cfg.radius,
+              scale: 1,
+              rot: (angle * 180) / Math.PI,
+              id: i,
+            });
+          }
+        } else {
+          const total = cfg.countLinear || 5;
+          const startX = -((total - 1) * cfg.spacingLinear) / 2;
+          for (let i = 0; i < total; i++) {
+            clonerItems.push({
+              x: startX + i * cfg.spacingLinear,
+              y: 0,
+              scale: 1,
+              rot: 0,
+              id: i,
+            });
+          }
+        }
+
         pathContent = (
           <g>
-            <text
-              x={0}
-              y={0}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill={fill}
-              stroke={stroke}
-              strokeWidth={0.5}
-              fontSize={part.fontSize || 24}
-              fontWeight="bold"
-              fontFamily="Inter, system-ui, sans-serif"
-              vectorEffect="non-scaling-stroke"
-            >
-              {part.textValue || 'TEXT'}
-            </text>
+            {clonerItems.map((item) => {
+              let dispX = 0;
+              let dispY = 0;
+              let itemScale = item.scale;
+              let itemRot = item.rot;
+
+              if (cfg.effector === 'wave') {
+                const waveVal = Math.sin(currentFrame * 0.1 * (cfg.waveSpeed || 1) + item.id * 0.5) * (cfg.waveAmplitude || 10);
+                if (cfg.waveAxis === 'y') dispY += waveVal;
+                else if (cfg.waveAxis === 'x') dispX += waveVal;
+                else if (cfg.waveAxis === 'scale') itemScale *= 1 + waveVal * 0.03;
+                else if (cfg.waveAxis === 'rotation') itemRot += waveVal * 2;
+              } else if (cfg.effector === 'random') {
+                const pseudoRand = Math.sin(item.id * 99 + (cfg.randomSeed || 1)) * (cfg.randomAmplitude || 10);
+                dispY += pseudoRand;
+              }
+
+              const size = cfg.childSize || 10;
+              const cFill = cfg.childColor || fill;
+              const cStroke = cfg.childStroke || stroke;
+              const cSw = cfg.childStrokeWidth || 1.5;
+
+              return (
+                <g
+                  key={item.id}
+                  transform={`translate(${item.x + dispX}, ${item.y + dispY}) rotate(${itemRot}) scale(${itemScale})`}
+                >
+                  {cfg.childShape === 'rect' ? (
+                    <rect x={-size / 2} y={-size / 2} width={size} height={size} rx={2} fill={cFill} stroke={cStroke} strokeWidth={cSw} />
+                  ) : cfg.childShape === 'triangle' ? (
+                    <polygon points={`0,${-size / 2} ${size / 2},${size / 2} ${-size / 2},${size / 2}`} fill={cFill} stroke={cStroke} strokeWidth={cSw} />
+                  ) : cfg.childShape === 'line' ? (
+                    <line x1={-size / 2} y1={0} x2={size / 2} y2={0} stroke={cFill} strokeWidth={cSw} strokeLinecap="round" />
+                  ) : (
+                    <circle cx={0} cy={0} r={size / 2} fill={cFill} stroke={cStroke} strokeWidth={cSw} />
+                  )}
+                </g>
+              );
+            })}
           </g>
         );
         break;
+      }
+      case 'particle_system': {
+        const cfg = part.particleConfig || {
+          count: 35,
+          shape: 'dot',
+          minSize: 3,
+          maxSize: 8,
+          color: fill,
+          minOpacity: 0.2,
+          maxOpacity: 0.85,
+          speed: 30,
+          direction: 'up',
+          spread: 250,
+          loop: true,
+          fadeIn: true,
+          fadeOut: true,
+          randomSeed: 42,
+        };
+
+        const particles: { id: number; x: number; y: number; size: number; opacity: number }[] = [];
+        const count = Math.max(5, Math.min(200, cfg.count || 35));
+        const spread = cfg.spread || 200;
+
+        for (let i = 0; i < count; i++) {
+          const randX = Math.sin(i * 17.3 + (cfg.randomSeed || 1)) * spread;
+          const initialY = Math.cos(i * 31.7 + (cfg.randomSeed || 1)) * (spread * 0.6);
+          const pSpeed = (cfg.speed || 30) * (0.6 + Math.sin(i * 5) * 0.4);
+
+          let offsetY = (currentFrame * (pSpeed / 30)) % spread;
+          if (cfg.direction === 'up') offsetY = -offsetY;
+
+          const pY = initialY + offsetY;
+          const size = (cfg.minSize || 3) + Math.abs(Math.sin(i * 12.1)) * ((cfg.maxSize || 8) - (cfg.minSize || 3));
+          const pOpacity = (cfg.minOpacity || 0.2) + Math.abs(Math.cos(i * 7.9)) * ((cfg.maxOpacity || 0.85) - (cfg.minOpacity || 0.2));
+
+          particles.push({ id: i, x: randX, y: pY, size, opacity: pOpacity });
+        }
+
+        pathContent = (
+          <g>
+            {particles.map((p) => (
+              <g key={p.id} transform={`translate(${p.x}, ${p.y})`} opacity={p.opacity}>
+                {cfg.shape === 'cross' ? (
+                  <path d={`M ${-p.size},0 L ${p.size},0 M 0,${-p.size} L 0,${p.size}`} stroke={cfg.color || fill} strokeWidth={1.5} />
+                ) : cfg.shape === 'triangle' ? (
+                  <polygon points={`0,${-p.size} ${p.size},${p.size} ${-p.size},${p.size}`} fill={cfg.color || fill} />
+                ) : cfg.shape === 'circle_outline' ? (
+                  <circle cx={0} cy={0} r={p.size} fill="none" stroke={cfg.color || fill} strokeWidth={1.5} />
+                ) : (
+                  <circle cx={0} cy={0} r={p.size / 2} fill={cfg.color || fill} />
+                )}
+              </g>
+            ))}
+          </g>
+        );
+        break;
+      }
       case 'custom_banner':
         pathContent = (
           <g>

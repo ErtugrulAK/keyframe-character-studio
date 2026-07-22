@@ -80,8 +80,74 @@ export type BodyPartType =
   | 'custom_diamond'
   | 'custom_card'
   | 'custom_image'
-  | 'custom_video';
+  | 'custom_video'
+  | 'mograph_cloner'   // MoGraph Cloner
+  | 'particle_system'; // Particle System
 
+// ─── Feature 1: Trim Path / Stroke Animation ────────────────────────────────
+// strokeProgress 0..1 → how much of the outline is drawn
+
+// ─── Feature 2: Anchor Points ───────────────────────────────────────────────
+export type AnchorPreset =
+  | 'none'
+  | 'top-left'    | 'top-center'    | 'top-right'
+  | 'center-left' | 'center'        | 'center-right'
+  | 'bottom-left' | 'bottom-center' | 'bottom-right';
+
+// ─── Feature 3: Text Stagger Animation ──────────────────────────────────────
+export type TextAnimMode = 'none' | 'chars' | 'words' | 'lines';
+
+// ─── Feature 5: MoGraph Cloner ───────────────────────────────────────────────
+export type ClonerMode = 'grid' | 'circle' | 'linear';
+export type ClonerShape = 'circle' | 'rect' | 'triangle' | 'dot' | 'cross' | 'line';
+export type ClonerEffector = 'none' | 'wave' | 'random' | 'step';
+
+export interface ClonerConfig {
+  mode: ClonerMode;
+  countX: number;
+  countY: number;
+  spacingX: number;
+  spacingY: number;
+  countCircle: number;
+  radius: number;
+  countLinear: number;
+  spacingLinear: number;
+  childShape: ClonerShape;
+  childSize: number;
+  childColor: string;
+  childStroke: string;
+  childStrokeWidth: number;
+  effector: ClonerEffector;
+  waveSpeed: number;
+  waveAmplitude: number;
+  waveAxis: 'y' | 'x' | 'scale' | 'rotation';
+  randomSeed: number;
+  randomAmplitude: number;
+  stepPhase: number;
+}
+
+// ─── Feature 6: Particle System ─────────────────────────────────────────────
+export type ParticleShape = 'dot' | 'cross' | 'triangle' | 'line' | 'circle_outline';
+export type ParticleDirection = 'up' | 'down' | 'left' | 'right' | 'random' | 'radial';
+
+export interface ParticleConfig {
+  count: number;
+  shape: ParticleShape;
+  minSize: number;
+  maxSize: number;
+  color: string;
+  minOpacity: number;
+  maxOpacity: number;
+  speed: number;
+  direction: ParticleDirection;
+  spread: number;
+  loop: boolean;
+  fadeIn: boolean;
+  fadeOut: boolean;
+  randomSeed: number;
+}
+
+// ─── CharacterPart ────────────────────────────────────────────────────────────
 export interface CharacterPart {
   id: string;
   name: string;
@@ -89,21 +155,21 @@ export interface CharacterPart {
   zIndex: number;
   fillColor: string;
   strokeColor: string;
-  pivot: { x: number; y: number }; // Relative pivot point
-  parentId?: string; // Parent part for FK hierarchy
+  pivot: { x: number; y: number };
+  parentId?: string;
   baseTransform: Transform;
-  textValue?: string; // Content string for text/banner objects
-  fontSize?: number; // Font size in px
-  cardCategory?: string; // e.g. "STUDIO CARD"
-  cardTitle?: string; // e.g. "MOTION GRAPHIC"
-  cardButtonText?: string; // e.g. "ACTIVE"
-  imageUrl?: string; // Image URL / Data URL for custom_image
-  videoUrl?: string; // Video URL / Data URL / Object URL for custom_video
-  shadowColor?: string; // Drop shadow or glow color
-  shadowBlur?: number; // Shadow blur radius in px
-  shadowOffsetX?: number; // Shadow offset X in px
-  shadowOffsetY?: number; // Shadow offset Y in px
-  borderRadius?: number; // Corner radius in px (0 for sharp right angle corners)
+  textValue?: string;
+  fontSize?: number;
+  cardCategory?: string;
+  cardTitle?: string;
+  cardButtonText?: string;
+  imageUrl?: string;
+  videoUrl?: string;
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  borderRadius?: number;
 
   // Media Overlay Text Caption
   overlayText?: string;
@@ -114,10 +180,39 @@ export interface CharacterPart {
   // Video & Image Crop Box / Aspect Mask
   cropEnabled?: boolean;
   cropMode?: 'custom' | '9:16' | '1:1' | '4:5' | '16:9';
-  cropX?: number; // percentage X (0..100)
-  cropY?: number; // percentage Y (0..100)
-  cropWidth?: number; // percentage width (10..100)
-  cropHeight?: number; // percentage height (10..100)
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
+
+  // ── Feature 1: Trim Path / Stroke Animation ──
+  strokeProgress?: number;    // 0..1 (0=hidden, 1=full outline)
+  strokeWidth?: number;       // override stroke width for animated outline
+  strokeAnimColor?: string;   // override color for animated stroke
+
+  // ── Feature 2: Responsive Anchor Points ──
+  anchor?: AnchorPreset;
+  anchorOffsetX?: number;
+  anchorOffsetY?: number;
+
+  // ── Feature 3: Text Stagger Animation ──
+  textAnimMode?: TextAnimMode;
+  textStaggerDelay?: number;   // ms between each char/word/line
+  textAnimDuration?: number;   // ms for each unit animation
+  textAnimEasing?: EasingType;
+  textAnimStartFrame?: number; // timeline frame when stagger begins
+
+  // ── Feature 4: Spring Physics ──
+  springEnabled?: boolean;
+  springStiffness?: number;   // 0..100
+  springDamping?: number;     // 0..100
+  springDelay?: number;       // ms delay
+
+  // ── Feature 5: MoGraph Cloner ──
+  clonerConfig?: ClonerConfig;
+
+  // ── Feature 6: Particle System ──
+  particleConfig?: ParticleConfig;
 }
 
 export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan';

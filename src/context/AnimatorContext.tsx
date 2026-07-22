@@ -325,57 +325,82 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const track = tracks.find((t) => t.partId === partId);
       if (!track) return baseTransform;
 
-      const ch = track.channels;
-      const hasChannelData = ch && Object.values(ch).some((arr) => arr.length > 0);
+      const rawTransform = (() => {
+        const ch = track.channels;
+        const hasChannelData = ch && Object.values(ch).some((arr: any) => arr.length > 0);
 
-      // --- Per-property channel interpolation (Unreal-style, takes priority) ---
-      if (hasChannelData) {
-        // For any channel with no keyframes, fall back to legacy composite keyframe or base
-        const legacyTransform: Transform = (() => {
-          if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
-          const sorted = [...track.keyframes].sort((a, b) => a.frame - b.frame);
-          const exact = sorted.find((k) => k.frame === frame);
-          if (exact) return exact.transform;
-          if (frame <= sorted[0].frame) return sorted[0].transform;
-          if (frame >= sorted[sorted.length - 1].frame) return sorted[sorted.length - 1].transform;
-          let prev = sorted[0]; let next = sorted[sorted.length - 1];
-          for (let i = 0; i < sorted.length - 1; i++) {
-            if (frame >= sorted[i].frame && frame <= sorted[i + 1].frame) { prev = sorted[i]; next = sorted[i + 1]; break; }
+        if (hasChannelData) {
+          const legacyTransform: Transform = (() => {
+            if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
+            const sorted = [...track.keyframes].sort((a, b) => a.frame - b.frame);
+            const exact = sorted.find((k) => k.frame === frame);
+            if (exact) return exact.transform;
+            if (frame <= sorted[0].frame) return sorted[0].transform;
+            if (frame >= sorted[sorted.length - 1].frame) return sorted[sorted.length - 1].transform;
+            let prev = sorted[0]; let next = sorted[sorted.length - 1];
+            for (let i = 0; i < sorted.length - 1; i++) {
+              if (frame >= sorted[i].frame && frame <= sorted[i + 1].frame) { prev = sorted[i]; next = sorted[i + 1]; break; }
+            }
+            const dur = next.frame - prev.frame;
+            const prog = (frame - prev.frame) / dur;
+            return interpolateTransform(prev.transform, next.transform, prog, prev.easing, prev.bezierControlPoints);
+          })();
+
+          return {
+            x:        ch.x.length > 0        ? interpolateChannel(ch.x,        frame, legacyTransform.x)        : legacyTransform.x,
+            y:        ch.y.length > 0        ? interpolateChannel(ch.y,        frame, legacyTransform.y)        : legacyTransform.y,
+            rotation: ch.rotation.length > 0 ? interpolateChannel(ch.rotation, frame, legacyTransform.rotation) : legacyTransform.rotation,
+            scaleX:   ch.scaleX.length > 0   ? interpolateChannel(ch.scaleX,   frame, legacyTransform.scaleX)   : legacyTransform.scaleX,
+            scaleY:   ch.scaleY.length > 0   ? interpolateChannel(ch.scaleY,   frame, legacyTransform.scaleY)   : legacyTransform.scaleY,
+            opacity:  ch.opacity.length > 0  ? interpolateChannel(ch.opacity,  frame, legacyTransform.opacity)  : legacyTransform.opacity,
+          };
+        }
+
+        if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
+
+        const sortedKfs = [...track.keyframes].sort((a, b) => a.frame - b.frame);
+        const exact = sortedKfs.find((k) => k.frame === frame);
+        if (exact) return exact.transform;
+        if (frame <= sortedKfs[0].frame) return sortedKfs[0].transform;
+        if (frame >= sortedKfs[sortedKfs.length - 1].frame) return sortedKfs[sortedKfs.length - 1].transform;
+
+        let prevKf = sortedKfs[0];
+        let nextKf = sortedKfs[sortedKfs.length - 1];
+        for (let i = 0; i < sortedKfs.length - 1; i++) {
+          if (frame >= sortedKfs[i].frame && frame <= sortedKfs[i + 1].frame) {
+            prevKf = sortedKfs[i]; nextKf = sortedKfs[i + 1]; break;
           }
-          const dur = next.frame - prev.frame;
-          const prog = (frame - prev.frame) / dur;
-          return interpolateTransform(prev.transform, next.transform, prog, prev.easing, prev.bezierControlPoints);
-        })();
+        }
+        const duration = nextKf.frame - prevKf.frame;
+        const progress = (frame - prevKf.frame) / duration;
+        return interpolateTransform(prevKf.transform, nextKf.transform, progress, prevKf.easing, prevKf.bezierControlPoints);
+      })();
 
+      // Feature 2: Responsive Anchor Point Resolution
+      if (part && part.anchor && part.anchor !== 'none') {
+        const ox = part.anchorOffsetX ?? 0;
+        const oy = part.anchorOffsetY ?? 0;
+        let ax = 300;
+        let ay = 240;
+        switch (part.anchor) {
+          case 'top-left':      ax = 50;  ay = 50;  break;
+          case 'top-center':    ax = 300; ay = 50;  break;
+          case 'top-right':     ax = 550; ay = 50;  break;
+          case 'center-left':   ax = 50;  ay = 240; break;
+          case 'center':        ax = 300; ay = 240; break;
+          case 'center-right':  ax = 550; ay = 240; break;
+          case 'bottom-left':   ax = 50;  ay = 430; break;
+          case 'bottom-center': ax = 300; ay = 430; break;
+          case 'bottom-right':  ax = 550; ay = 430; break;
+        }
         return {
-          x:        ch.x.length > 0        ? interpolateChannel(ch.x,        frame, legacyTransform.x)        : legacyTransform.x,
-          y:        ch.y.length > 0        ? interpolateChannel(ch.y,        frame, legacyTransform.y)        : legacyTransform.y,
-          rotation: ch.rotation.length > 0 ? interpolateChannel(ch.rotation, frame, legacyTransform.rotation) : legacyTransform.rotation,
-          scaleX:   ch.scaleX.length > 0   ? interpolateChannel(ch.scaleX,   frame, legacyTransform.scaleX)   : legacyTransform.scaleX,
-          scaleY:   ch.scaleY.length > 0   ? interpolateChannel(ch.scaleY,   frame, legacyTransform.scaleY)   : legacyTransform.scaleY,
-          opacity:  ch.opacity.length > 0  ? interpolateChannel(ch.opacity,  frame, legacyTransform.opacity)  : legacyTransform.opacity,
+          ...rawTransform,
+          x: ax + ox,
+          y: ay + oy,
         };
       }
 
-      // --- Legacy composite keyframe interpolation (fallback) ---
-      if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
-
-      const sortedKfs = [...track.keyframes].sort((a, b) => a.frame - b.frame);
-      const exact = sortedKfs.find((k) => k.frame === frame);
-      if (exact) return exact.transform;
-      if (frame <= sortedKfs[0].frame) return sortedKfs[0].transform;
-      if (frame >= sortedKfs[sortedKfs.length - 1].frame) return sortedKfs[sortedKfs.length - 1].transform;
-
-      let prevKf = sortedKfs[0];
-      let nextKf = sortedKfs[sortedKfs.length - 1];
-      for (let i = 0; i < sortedKfs.length - 1; i++) {
-        if (frame >= sortedKfs[i].frame && frame <= sortedKfs[i + 1].frame) {
-          prevKf = sortedKfs[i]; nextKf = sortedKfs[i + 1]; break;
-        }
-      }
-      const duration = nextKf.frame - prevKf.frame;
-      const progress = (frame - prevKf.frame) / duration;
-      return interpolateTransform(prevKf.transform, nextKf.transform, progress, prevKf.easing, prevKf.bezierControlPoints);
+      return rawTransform;
     },
     [characterParts, tracks]
   );
@@ -777,6 +802,49 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       cardCategory: type === 'custom_card' ? 'STUDIO CARD' : undefined,
       cardTitle: type === 'custom_card' ? 'MOTION GRAPHIC' : undefined,
       cardButtonText: type === 'custom_card' ? 'ACTIVE' : undefined,
+      strokeProgress: 1,
+      anchor: 'none',
+      anchorOffsetX: 0,
+      anchorOffsetY: 0,
+      clonerConfig: type === 'mograph_cloner' ? {
+        mode: 'grid',
+        countX: 4,
+        countY: 3,
+        spacingX: 45,
+        spacingY: 45,
+        countCircle: 8,
+        radius: 70,
+        countLinear: 6,
+        spacingLinear: 40,
+        childShape: 'circle',
+        childSize: 12,
+        childColor: randomColor,
+        childStroke: '#ffffff',
+        childStrokeWidth: 1.5,
+        effector: 'wave',
+        waveSpeed: 1.5,
+        waveAmplitude: 15,
+        waveAxis: 'y',
+        randomSeed: 42,
+        randomAmplitude: 10,
+        stepPhase: 0,
+      } : undefined,
+      particleConfig: type === 'particle_system' ? {
+        count: 40,
+        shape: 'dot',
+        minSize: 3,
+        maxSize: 8,
+        color: randomColor,
+        minOpacity: 0.2,
+        maxOpacity: 0.85,
+        speed: 35,
+        direction: 'up',
+        spread: 300,
+        loop: true,
+        fadeIn: true,
+        fadeOut: true,
+        randomSeed: 123,
+      } : undefined,
       ...extraProps,
     };
 

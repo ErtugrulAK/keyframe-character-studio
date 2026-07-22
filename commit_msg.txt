@@ -1,9 +1,8 @@
-feat: Unreal Engine Sequencer-style timeline with per-property channel keyframing
+feat: add 6 advanced 2D Motion Design features
 
-- Added PropertyKeyframe and TrackChannel types to animator.ts
-- Added channels field (x/y/rotation/scaleX/scaleY/opacity) to Track type
-- makeEmptyChannels and interpolateChannel helpers in defaults.ts
-- getComputedTransform reads per-channel data first, falls back to composite keyframes
-- toggleTrackExpanded, addPropertyKeyframe, deletePropertyKeyframe, updatePropertyKeyframeFrame actions
-- migrateTrack helper auto-patches old saves with empty channels on load
-- Full Unreal-style SequencerTimeline: collapsible hierarchy, channel lanes, color-coded diamonds
+- Feature 1 (Trim Path / Stroke Animation): Added strokeProgress 0..1 control and rendering
+- Feature 2 (Responsive Anchor Points): 3x3 Grid Anchor Picker (top-left..bottom-right) with offset X/Y calculations
+- Feature 3 (Staggered Typography): Character-by-character and word-by-word staggered text entrance animation
+- Feature 4 (Spring Physics Modifier): Spring elasticity stiffness and damping physics toggle
+- Feature 5 (MoGraph Cloner): 2D Grid / Circle / Linear cloner layout with wave and random noise effectors
+- Feature 6 (Particle System): Floating 2D particles (dot, cross, triangle, ring) with speed, opacity, and direction controls

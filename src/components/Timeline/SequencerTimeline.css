@@ -131,6 +131,34 @@
   background: var(--bg-panel-hover);
   border-color: var(--border-light);
 }
+
+.duration-preset-pill {
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.duration-preset-pill:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+
+.duration-preset-pill.active {
+  background: rgba(20, 184, 166, 0.2);
+  border-color: var(--accent-teal);
+  color: var(--accent-teal);
+}
+
+.crop-btn:hover {
+  border-color: var(--accent-teal) !important;
+  color: var(--accent-teal) !important;
+}
   gap: 12px;
   letter-spacing: 0.5px;
 }

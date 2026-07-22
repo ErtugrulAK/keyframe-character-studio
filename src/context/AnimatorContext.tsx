@@ -93,7 +93,17 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [currentFrame, setCurrentFrame] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [fps, setFps] = useState<number>(30);
-  const [totalFrames, setTotalFrames] = useState<number>(60);
+  const [totalFrames, setTotalFramesState] = useState<number>(60);
+
+  const setTotalFrames = useCallback((newTotal: number | ((prev: number) => number)) => {
+    setTotalFramesState((prev) => {
+      const val = typeof newTotal === 'function' ? newTotal(prev) : newTotal;
+      const clamped = Math.max(10, Math.min(1200, Math.round(val)));
+      setCurrentFrame((cf) => Math.min(cf, clamped));
+      return clamped;
+    });
+  }, []);
+
   const [isLooping, setIsLooping] = useState<boolean>(true);
 
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);

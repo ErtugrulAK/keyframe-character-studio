@@ -1,0 +1,6 @@
+fix: improve timeline duration management, auto-clamping, crop-to-content, and preset pills
+
+- Removed unwanted auto-expansion when scrubbing past totalFrames in getFrameFromMouse
+- Implemented handleCropToContent (Auto-Crop) to instantly trim sequence length to the last keyframe
+- Added interactive Duration input (in seconds) and quick preset buttons (1s, 2s, 3s, 5s, 10s)
+- Clamped currentFrame automatically whenever timeline duration is reduced

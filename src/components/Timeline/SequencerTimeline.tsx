@@ -16,6 +16,7 @@ import {
   Undo2,
   Redo2,
   Clock,
+  Scissors,
 } from 'lucide-react';
 import './SequencerTimeline.css';
 
@@ -58,22 +59,32 @@ export const SequencerTimeline: React.FC = () => {
 
   const frameNumbers = Array.from({ length: totalFrames + 1 }, (_, i) => i);
 
-  // Convert click position on timeline grid to Frame index & auto-expand totalFrames if needed
+  // Convert click position on timeline grid to Frame index (clamped to totalFrames)
   const getFrameFromMouse = useCallback(
     (clientX: number) => {
       if (!timelineGridRef.current) return 0;
       const rect = timelineGridRef.current.getBoundingClientRect();
       const scrollLeft = timelineGridRef.current.scrollLeft;
       const offsetX = clientX - rect.left + scrollLeft;
-      const frame = Math.max(0, Math.round(offsetX / FRAME_WIDTH));
-
-      if (frame > totalFrames) {
-        setTotalFrames(frame + 30);
-      }
+      const frame = Math.max(0, Math.min(totalFrames, Math.round(offsetX / FRAME_WIDTH)));
       return frame;
     },
-    [totalFrames, setTotalFrames, FRAME_WIDTH]
+    [totalFrames, FRAME_WIDTH]
   );
+
+  // Crop timeline length to last keyframe position (removes empty trailing frames)
+  const handleCropToContent = () => {
+    let maxFrame = 0;
+    tracks.forEach((track) => {
+      track.keyframes.forEach((kf) => {
+        if (kf.frame > maxFrame) {
+          maxFrame = kf.frame;
+        }
+      });
+    });
+    const optimalFrames = maxFrame > 0 ? maxFrame : 30;
+    setTotalFrames(optimalFrames);
+  };
 
   // Scroll to Zoom & Pan Event Handler
   const handleWheel = useCallback(
@@ -266,11 +277,71 @@ export const SequencerTimeline: React.FC = () => {
 
       {/* Keyframes Studio Timeline Header Bar */}
       <div className="timeline-header">
-        {/* Left: Timecode Readout */}
-        <div className="timeline-header-left">
-          <Clock size={15} className="text-teal" />
-          <span className="timecode-text">{formatTimecode(currentFrame, fps)}</span>
-          <span className="timecode-total">/ {formatTimecode(totalFrames, fps)}</span>
+        {/* Left: Timecode Readout & Duration Controls */}
+        <div className="timeline-header-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Clock size={15} className="text-teal" />
+            <span className="timecode-text">{formatTimecode(currentFrame, fps)}</span>
+            <span className="timecode-total">/ {formatTimecode(totalFrames, fps)}</span>
+          </div>
+
+          <div className="divider-v" />
+
+          {/* Sequence Duration Control */}
+          <div className="duration-control-box" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)' }}>DURATION:</label>
+            <input
+              type="number"
+              step={0.5}
+              min={0.5}
+              max={40}
+              style={{
+                width: 44,
+                height: 22,
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 4,
+                color: '#fff',
+                fontSize: 11,
+                fontWeight: 700,
+                textAlign: 'center',
+              }}
+              value={Number((totalFrames / fps).toFixed(1))}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => {
+                const sec = parseFloat(e.target.value);
+                if (!isNaN(sec) && sec > 0) {
+                  setTotalFrames(Math.round(sec * fps));
+                }
+              }}
+            />
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>s</span>
+
+            {/* Quick Duration Preset Pills */}
+            <div style={{ display: 'flex', gap: 3, marginLeft: 2 }}>
+              {[1, 2, 3, 5, 10].map((sec) => (
+                <button
+                  key={sec}
+                  className={`duration-preset-pill ${totalFrames === sec * fps ? 'active' : ''}`}
+                  onClick={() => setTotalFrames(sec * fps)}
+                  title={`Set sequence duration to ${sec}s (${sec * fps} frames)`}
+                >
+                  {sec}s
+                </button>
+              ))}
+            </div>
+
+            {/* Crop Trailing Empty Frames Button */}
+            <button
+              className="fit-pill-btn crop-btn"
+              onClick={handleCropToContent}
+              title="Crop timeline duration to the last keyframe position (removes empty trailing frames)"
+              style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4, padding: '3px 8px' }}
+            >
+              <Scissors size={12} className="text-teal" />
+              <span>Crop Content</span>
+            </button>
+          </div>
         </div>
 
         {/* Center: Playback Transport Buttons */}

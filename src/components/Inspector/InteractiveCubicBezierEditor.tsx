@@ -235,17 +235,17 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   return (
     <div className="cubic-bezier-editor-container" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {/* Top Controls Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 5 }}>
-          <Sparkles size={13} className="text-teal" /> CUBIC BEZIER GRAPH
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.5px' }}>
+          <Activity size={13} className="text-teal" /> BEZIER GRAPH
         </span>
         <button
-          className="btn-icon"
+          className="btn-primary"
           onClick={() => setIsModalOpen(true)}
           title="Open Fullscreen High-Precision Curve Studio"
-          style={{ padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--accent-cyan)' }}
+          style={{ padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, borderRadius: 20, fontWeight: 600 }}
         >
-          <Maximize2 size={13} />
+          <Maximize2 size={12} />
           <span>Expand Studio</span>
         </button>
       </div>
@@ -254,30 +254,45 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       <div
         className="bezier-canvas-wrapper"
         style={{
-          background: '#0d0f14',
+          background: 'linear-gradient(to bottom, #0a0c10, #0d0f14)',
           borderRadius: 8,
-          border: '1px solid var(--border-color)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)',
           padding: 8,
           position: 'relative',
           display: 'flex',
           justifyContent: 'center',
+          overflow: 'hidden'
         }}
       >
         {renderSvgGraph(panelSvgRef, 280, 180, 35, 25)}
       </div>
 
       {/* Preset Curve Buttons */}
-      <div className="preset-curves-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4 }}>
-        {PRESET_BEZIERS.map((preset) => (
-          <button
-            key={preset.label}
-            className="btn-secondary"
-            style={{ fontSize: 10, padding: '4px 2px', textAlign: 'center' }}
-            onClick={() => updatePoints({ x: preset.points[0], y: preset.points[1] }, { x: preset.points[2], y: preset.points[3] })}
-          >
-            {preset.label}
-          </button>
-        ))}
+      <div style={{ marginTop: 4 }}>
+        <span style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, marginBottom: 6, display: 'block' }}>PRESETS</span>
+        <div className="preset-curves-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+          {PRESET_BEZIERS.map((preset) => (
+            <button
+              key={preset.label}
+              className="btn-secondary"
+              style={{ 
+                fontSize: 10, 
+                padding: '6px 4px', 
+                textAlign: 'center', 
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.05)',
+                borderRadius: 4,
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.borderColor = 'var(--accent-cyan)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'; }}
+              onClick={() => updatePoints({ x: preset.points[0], y: preset.points[1] }, { x: preset.points[2], y: preset.points[3] })}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* CSS Code Readout & Copy Button */}
@@ -287,10 +302,11 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: 'var(--bg-dark)',
-          border: '1px solid var(--border-color)',
+          background: '#0a0c10',
+          border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 6,
-          padding: '6px 10px',
+          padding: '8px 12px',
+          marginTop: 4
         }}
       >
         <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--accent-cyan)', fontWeight: 600 }}>

@@ -228,13 +228,15 @@ export const PropertyInspector: React.FC = () => {
             {/* TAB 4: CURVE EDITOR (INTERACTIVE CUBIC BEZIER) */}
             {activeTab === 'easing' && (
               <div className="inspector-section">
-                <div className="section-title">
-                  <Zap size={13} className="text-gold" />
-                  <span>INTERACTIVE CUBIC BEZIER EDITOR</span>
+                <div className="section-title" style={{ paddingBottom: 6 }}>
+                  <Zap size={14} className="text-gold" />
+                  <span style={{ letterSpacing: '0.5px' }}>MOTION CURVE STUDIO</span>
                 </div>
-                <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>
-                  Drag Cyan P1 & Gold P2 handles to shape custom speed curves (cubic-bezier.com style).
-                </p>
+                <div style={{ background: 'rgba(255, 183, 0, 0.05)', border: '1px solid rgba(255, 183, 0, 0.15)', borderRadius: 6, padding: '10px 12px', marginBottom: 15 }}>
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5, margin: 0 }}>
+                    <span className="text-gold" style={{ fontWeight: 600 }}>Pro Tip:</span> Shape the acceleration of your animation by dragging the <span className="text-cyan">Cyan (P1)</span> and <span className="text-gold">Gold (P2)</span> handles.
+                  </p>
+                </div>
 
                 {currentKf && currentTrack ? (
                   <InteractiveCubicBezierEditor

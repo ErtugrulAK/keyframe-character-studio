@@ -1,1 +1,1 @@
-fix: remove giant rotation circle from Gizmo and use fixed pixel distance for rotation handle  
+style: customize and beautify Curve Tab UI  

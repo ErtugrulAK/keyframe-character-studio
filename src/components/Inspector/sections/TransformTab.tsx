@@ -1,5 +1,5 @@
-import React from 'react';
-import { Activity, Compass, Zap, Plus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Activity, Compass, Zap, Plus, Link, Unlink, Maximize2 } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 interface SmartNumberInputProps {
@@ -80,6 +80,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   updateCurrentTransform,
   handlePartPropChange,
 }) => {
+  const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
   return (
     <div className="inspector-section">
       <div className="section-title-bar">
@@ -153,21 +154,132 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </div>
 
         <div className="input-field">
-          <label>SCALE X</label>
+          <label style={{ color: 'var(--accent-red, #ef4444)' }}>DISAPPEAR AT (FRAME)</label>
           <SmartNumberInput
-            value={transform.scaleX}
-            step={0.1}
-            onChange={(val) => updateCurrentTransform({ scaleX: val })}
+            value={selectedPart.visibleEndFrame ?? 0}
+            min={0}
+            max={1200}
+            onChange={(val) => handlePartPropChange('visibleEndFrame', val <= 0 ? undefined : val)}
           />
         </div>
+      </div>
 
-        <div className="input-field">
-          <label>SCALE Y</label>
-          <SmartNumberInput
-            value={transform.scaleY}
-            step={0.1}
-            onChange={(val) => updateCurrentTransform({ scaleY: val })}
+      {/* ── PROPORTIONAL SCALE & RATIO SECTION ── */}
+      <div 
+        style={{ 
+          marginTop: 12, 
+          background: 'var(--bg-dark)', 
+          border: '1px solid var(--border-color)', 
+          borderRadius: 8, 
+          padding: 10 
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-teal)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Maximize2 size={13} /> PROPORTIONAL SCALE & RATIO
+          </span>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ 
+              fontSize: 10, 
+              padding: '3px 8px', 
+              color: isScaleLocked ? '#10b981' : 'var(--text-muted)', 
+              background: isScaleLocked ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-input)',
+              border: `1px solid ${isScaleLocked ? '#10b981' : 'var(--border-color)'}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4
+            }}
+            onClick={() => setIsScaleLocked(!isScaleLocked)}
+            title={isScaleLocked ? 'Aspect Ratio Locked (Uniform Scale)' : 'Aspect Ratio Unlocked (Free Scale)'}
+          >
+            {isScaleLocked ? <Link size={12} /> : <Unlink size={12} />}
+            <span>{isScaleLocked ? 'Ratio Locked' : 'Ratio Unlocked'}</span>
+          </button>
+        </div>
+
+        {/* Master Uniform Scale Control */}
+        <div style={{ background: 'rgba(0,0,0,0.3)', padding: 8, borderRadius: 6, marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <label style={{ fontSize: 10, color: 'var(--text-muted)' }}>UNIFORM SCALE MULTIPLIER</label>
+            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-teal)' }}>
+              {((transform.scaleX + transform.scaleY) / 2).toFixed(2)}x ({(Math.round(((transform.scaleX + transform.scaleY) / 2) * 100))}% )
+            </span>
+          </div>
+          <input
+            type="range" min="0.1" max="15" step="0.1"
+            value={(transform.scaleX + transform.scaleY) / 2}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              updateCurrentTransform({ scaleX: val, scaleY: val });
+            }}
+            style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--accent-teal)', marginBottom: 6 }}
           />
+          {/* Quick Presets */}
+          <div style={{ display: 'flex', gap: 4 }}>
+            {[0.5, 1.0, 1.5, 2.0, 5.0, 6.42].map((s) => (
+              <button
+                key={`scale-preset-${s}`}
+                type="button"
+                className="btn-secondary"
+                style={{ flex: 1, fontSize: 9, padding: '3px 0', textAlign: 'center' }}
+                onClick={() => updateCurrentTransform({ scaleX: s, scaleY: s })}
+              >
+                {s}x
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Scale X & Scale Y Inputs */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div className="input-field" style={{ flex: 1 }}>
+            <label style={{ fontSize: 10 }}>SCALE X</label>
+            <SmartNumberInput
+              value={transform.scaleX}
+              step={0.1}
+              onChange={(val) => {
+                if (isScaleLocked) {
+                  const ratio = transform.scaleX !== 0 ? transform.scaleY / transform.scaleX : 1;
+                  updateCurrentTransform({ scaleX: val, scaleY: parseFloat((val * (ratio || 1)).toFixed(3)) });
+                } else {
+                  updateCurrentTransform({ scaleX: val });
+                }
+              }}
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsScaleLocked(!isScaleLocked)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: isScaleLocked ? '#10b981' : 'var(--text-muted)',
+              cursor: 'pointer',
+              padding: '12px 2px 0 2px',
+            }}
+            title={isScaleLocked ? 'Scale values linked proportionally' : 'Scale values unlinked'}
+          >
+            {isScaleLocked ? <Link size={14} /> : <Unlink size={14} />}
+          </button>
+
+          <div className="input-field" style={{ flex: 1 }}>
+            <label style={{ fontSize: 10 }}>SCALE Y</label>
+            <SmartNumberInput
+              value={transform.scaleY}
+              step={0.1}
+              onChange={(val) => {
+                if (isScaleLocked) {
+                  const ratio = transform.scaleY !== 0 ? transform.scaleX / transform.scaleY : 1;
+                  updateCurrentTransform({ scaleY: val, scaleX: parseFloat((val * (ratio || 1)).toFixed(3)) });
+                } else {
+                  updateCurrentTransform({ scaleY: val });
+                }
+              }}
+            />
+          </div>
         </div>
       </div>
 

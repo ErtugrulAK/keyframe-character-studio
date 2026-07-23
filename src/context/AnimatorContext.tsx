@@ -640,12 +640,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           })();
 
           return {
-            x:        ch.x.length > 0        ? interpolateChannel(ch.x,        frame, legacyTransform.x)        : legacyTransform.x,
-            y:        ch.y.length > 0        ? interpolateChannel(ch.y,        frame, legacyTransform.y)        : legacyTransform.y,
+            x: ch.x.length > 0 ? interpolateChannel(ch.x, frame, legacyTransform.x) : legacyTransform.x,
+            y: ch.y.length > 0 ? interpolateChannel(ch.y, frame, legacyTransform.y) : legacyTransform.y,
             rotation: ch.rotation.length > 0 ? interpolateChannel(ch.rotation, frame, legacyTransform.rotation) : legacyTransform.rotation,
-            scaleX:   ch.scaleX.length > 0   ? interpolateChannel(ch.scaleX,   frame, legacyTransform.scaleX)   : legacyTransform.scaleX,
-            scaleY:   ch.scaleY.length > 0   ? interpolateChannel(ch.scaleY,   frame, legacyTransform.scaleY)   : legacyTransform.scaleY,
-            opacity:  ch.opacity.length > 0  ? interpolateChannel(ch.opacity,  frame, legacyTransform.opacity)  : legacyTransform.opacity,
+            scaleX: ch.scaleX.length > 0 ? interpolateChannel(ch.scaleX, frame, legacyTransform.scaleX) : legacyTransform.scaleX,
+            scaleY: ch.scaleY.length > 0 ? interpolateChannel(ch.scaleY, frame, legacyTransform.scaleY) : legacyTransform.scaleY,
+            opacity: ch.opacity.length > 0 ? interpolateChannel(ch.opacity, frame, legacyTransform.opacity) : legacyTransform.opacity,
           };
         }
 
@@ -678,15 +678,15 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         let ax = 0;
         let ay = 0;
         switch (part.anchor) {
-          case 'top-left':      ax = -250; ay = -190; break;
-          case 'top-center':    ax = 0;    ay = -190; break;
-          case 'top-right':     ax = 250;  ay = -190; break;
-          case 'center-left':   ax = -250; ay = 0;    break;
-          case 'center':        ax = 0;    ay = 0;    break;
-          case 'center-right':  ax = 250;  ay = 0;    break;
-          case 'bottom-left':   ax = -250; ay = 190;  break;
-          case 'bottom-center': ax = 0;    ay = 190;  break;
-          case 'bottom-right':  ax = 250;  ay = 190;  break;
+          case 'top-left': ax = -250; ay = -190; break;
+          case 'top-center': ax = 0; ay = -190; break;
+          case 'top-right': ax = 250; ay = -190; break;
+          case 'center-left': ax = -250; ay = 0; break;
+          case 'center': ax = 0; ay = 0; break;
+          case 'center-right': ax = 250; ay = 0; break;
+          case 'bottom-left': ax = -250; ay = 190; break;
+          case 'bottom-center': ax = 0; ay = 190; break;
+          case 'bottom-right': ax = 250; ay = 190; break;
         }
         finalComputed = {
           ...rawTransform,
@@ -1212,7 +1212,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     try {
       localStorage.setItem('keyframe_custom_motion_presets', JSON.stringify(customPresets));
-    } catch {}
+    } catch { }
   }, [customPresets]);
 
   const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out', startFrame = 0, endFrame = 50) => {

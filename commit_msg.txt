@@ -1,1 +1,1 @@
-feat(preset): perfect reference origin math for OUT animation presets  
+feat(transform): add proportional uniform scale control and aspect ratio lock to TransformTab  

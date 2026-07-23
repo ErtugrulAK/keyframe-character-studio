@@ -1,1 +1,1 @@
-feat: add element copy, paste, and duplicate keyboard shortcuts (Ctrl+C, Ctrl+V, Ctrl+D)  
+fix: move copy/paste/duplicate functions above handleKeyDown useEffect to fix TDZ error  

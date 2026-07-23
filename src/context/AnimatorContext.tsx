@@ -379,6 +379,129 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, [selectedPartId]);
 
+  const [clipboardData, setClipboardData] = useState<{ part: CharacterPart; track?: Track } | null>(null);
+
+  const copySelectedPart = useCallback(() => {
+    if (!selectedPartId) return;
+    const part = characterParts.find((p) => p.id === selectedPartId);
+    if (!part) return;
+    const track = tracks.find((t) => t.partId === selectedPartId);
+    setClipboardData({
+      part: JSON.parse(JSON.stringify(part)),
+      track: track ? JSON.parse(JSON.stringify(track)) : undefined,
+    });
+    showToast(`Copied "${part.name}" to clipboard`, 'info');
+  }, [selectedPartId, characterParts, tracks, showToast]);
+
+  const pasteCopiedPart = useCallback(() => {
+    if (!clipboardData) return;
+    const newPartId = `part_${clipboardData.part.type}_${Date.now()}`;
+    const newPart: CharacterPart = {
+      ...JSON.parse(JSON.stringify(clipboardData.part)),
+      id: newPartId,
+      name: `${clipboardData.part.name} Copy`,
+      zIndex: characterParts.length + 1,
+      baseTransform: {
+        ...clipboardData.part.baseTransform,
+        x: clipboardData.part.baseTransform.x + 20,
+        y: clipboardData.part.baseTransform.y + 20,
+      },
+    };
+
+    let newTrack: Track = {
+      id: `track_${newPartId}`,
+      partId: newPartId,
+      keyframes: [],
+      visible: true,
+      locked: false,
+      expanded: false,
+    };
+
+    if (clipboardData.track) {
+      const clonedTrack: Track = JSON.parse(JSON.stringify(clipboardData.track));
+      newTrack = {
+        ...clonedTrack,
+        id: `track_${newPartId}`,
+        partId: newPartId,
+        keyframes: clonedTrack.keyframes.map((k, idx) => ({
+          ...k,
+          id: `kf_${newPartId}_${k.frame}_${Date.now()}_${idx}`,
+        })),
+      };
+      if (clonedTrack.channels) {
+        newTrack.channels = {
+          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: `pkf_x_${pk.frame}_${Date.now()}` })),
+          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: `pkf_y_${pk.frame}_${Date.now()}` })),
+          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: `pkf_rot_${pk.frame}_${Date.now()}` })),
+          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: `pkf_sx_${pk.frame}_${Date.now()}` })),
+          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: `pkf_sy_${pk.frame}_${Date.now()}` })),
+          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: `pkf_op_${pk.frame}_${Date.now()}` })),
+        };
+      }
+    }
+
+    setCharacterParts((prev) => [...prev, newPart]);
+    setTracks((prev) => [...prev, newTrack]);
+    setSelectedPartId(newPartId);
+    showToast(`Pasted "${newPart.name}"`, 'success');
+  }, [clipboardData, characterParts, showToast]);
+
+  const duplicateSelectedPart = useCallback(() => {
+    if (!selectedPartId) return;
+    const part = characterParts.find((p) => p.id === selectedPartId);
+    if (!part) return;
+    const track = tracks.find((t) => t.partId === selectedPartId);
+    const newPartId = `part_${part.type}_${Date.now()}`;
+    const newPart: CharacterPart = {
+      ...JSON.parse(JSON.stringify(part)),
+      id: newPartId,
+      name: `${part.name} Copy`,
+      zIndex: characterParts.length + 1,
+      baseTransform: {
+        ...part.baseTransform,
+        x: part.baseTransform.x + 20,
+        y: part.baseTransform.y + 20,
+      },
+    };
+
+    let newTrack: Track = {
+      id: `track_${newPartId}`,
+      partId: newPartId,
+      keyframes: [],
+      visible: true,
+      locked: false,
+      expanded: false,
+    };
+
+    if (track) {
+      const clonedTrack: Track = JSON.parse(JSON.stringify(track));
+      newTrack = {
+        ...clonedTrack,
+        id: `track_${newPartId}`,
+        partId: newPartId,
+        keyframes: clonedTrack.keyframes.map((k, idx) => ({
+          ...k,
+          id: `kf_${newPartId}_${k.frame}_${Date.now()}_${idx}`,
+        })),
+      };
+      if (clonedTrack.channels) {
+        newTrack.channels = {
+          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: `pkf_x_${pk.frame}_${Date.now()}` })),
+          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: `pkf_y_${pk.frame}_${Date.now()}` })),
+          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: `pkf_rot_${pk.frame}_${Date.now()}` })),
+          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: `pkf_sx_${pk.frame}_${Date.now()}` })),
+          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: `pkf_sy_${pk.frame}_${Date.now()}` })),
+          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: `pkf_op_${pk.frame}_${Date.now()}` })),
+        };
+      }
+    }
+
+    setCharacterParts((prev) => [...prev, newPart]);
+    setTracks((prev) => [...prev, newTrack]);
+    setSelectedPartId(newPartId);
+    showToast(`Duplicated "${newPart.name}"`, 'success');
+  }, [selectedPartId, characterParts, tracks, showToast]);
+
   // Global Keyboard Shortcuts (Ctrl+Z, Ctrl+Y, Backspace/Delete)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -994,129 +1117,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       prev.map((p) => (p.id === partId ? { ...p, innerMediaUrl: url, innerMediaType: type } : p))
     );
   };
-
-  const [clipboardData, setClipboardData] = useState<{ part: CharacterPart; track?: Track } | null>(null);
-
-  const copySelectedPart = useCallback(() => {
-    if (!selectedPartId) return;
-    const part = characterParts.find((p) => p.id === selectedPartId);
-    if (!part) return;
-    const track = tracks.find((t) => t.partId === selectedPartId);
-    setClipboardData({
-      part: JSON.parse(JSON.stringify(part)),
-      track: track ? JSON.parse(JSON.stringify(track)) : undefined,
-    });
-    showToast(`Copied "${part.name}" to clipboard`, 'info');
-  }, [selectedPartId, characterParts, tracks, showToast]);
-
-  const pasteCopiedPart = useCallback(() => {
-    if (!clipboardData) return;
-    const newPartId = `part_${clipboardData.part.type}_${Date.now()}`;
-    const newPart: CharacterPart = {
-      ...JSON.parse(JSON.stringify(clipboardData.part)),
-      id: newPartId,
-      name: `${clipboardData.part.name} Copy`,
-      zIndex: characterParts.length + 1,
-      baseTransform: {
-        ...clipboardData.part.baseTransform,
-        x: clipboardData.part.baseTransform.x + 20,
-        y: clipboardData.part.baseTransform.y + 20,
-      },
-    };
-
-    let newTrack: Track = {
-      id: `track_${newPartId}`,
-      partId: newPartId,
-      keyframes: [],
-      visible: true,
-      locked: false,
-      expanded: false,
-    };
-
-    if (clipboardData.track) {
-      const clonedTrack: Track = JSON.parse(JSON.stringify(clipboardData.track));
-      newTrack = {
-        ...clonedTrack,
-        id: `track_${newPartId}`,
-        partId: newPartId,
-        keyframes: clonedTrack.keyframes.map((k, idx) => ({
-          ...k,
-          id: `kf_${newPartId}_${k.frame}_${Date.now()}_${idx}`,
-        })),
-      };
-      if (clonedTrack.channels) {
-        newTrack.channels = {
-          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: `pkf_x_${pk.frame}_${Date.now()}` })),
-          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: `pkf_y_${pk.frame}_${Date.now()}` })),
-          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: `pkf_rot_${pk.frame}_${Date.now()}` })),
-          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: `pkf_sx_${pk.frame}_${Date.now()}` })),
-          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: `pkf_sy_${pk.frame}_${Date.now()}` })),
-          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: `pkf_op_${pk.frame}_${Date.now()}` })),
-        };
-      }
-    }
-
-    setCharacterParts((prev) => [...prev, newPart]);
-    setTracks((prev) => [...prev, newTrack]);
-    setSelectedPartId(newPartId);
-    showToast(`Pasted "${newPart.name}"`, 'success');
-  }, [clipboardData, characterParts, showToast]);
-
-  const duplicateSelectedPart = useCallback(() => {
-    if (!selectedPartId) return;
-    const part = characterParts.find((p) => p.id === selectedPartId);
-    if (!part) return;
-    const track = tracks.find((t) => t.partId === selectedPartId);
-    const newPartId = `part_${part.type}_${Date.now()}`;
-    const newPart: CharacterPart = {
-      ...JSON.parse(JSON.stringify(part)),
-      id: newPartId,
-      name: `${part.name} Copy`,
-      zIndex: characterParts.length + 1,
-      baseTransform: {
-        ...part.baseTransform,
-        x: part.baseTransform.x + 20,
-        y: part.baseTransform.y + 20,
-      },
-    };
-
-    let newTrack: Track = {
-      id: `track_${newPartId}`,
-      partId: newPartId,
-      keyframes: [],
-      visible: true,
-      locked: false,
-      expanded: false,
-    };
-
-    if (track) {
-      const clonedTrack: Track = JSON.parse(JSON.stringify(track));
-      newTrack = {
-        ...clonedTrack,
-        id: `track_${newPartId}`,
-        partId: newPartId,
-        keyframes: clonedTrack.keyframes.map((k, idx) => ({
-          ...k,
-          id: `kf_${newPartId}_${k.frame}_${Date.now()}_${idx}`,
-        })),
-      };
-      if (clonedTrack.channels) {
-        newTrack.channels = {
-          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: `pkf_x_${pk.frame}_${Date.now()}` })),
-          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: `pkf_y_${pk.frame}_${Date.now()}` })),
-          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: `pkf_rot_${pk.frame}_${Date.now()}` })),
-          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: `pkf_sx_${pk.frame}_${Date.now()}` })),
-          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: `pkf_sy_${pk.frame}_${Date.now()}` })),
-          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: `pkf_op_${pk.frame}_${Date.now()}` })),
-        };
-      }
-    }
-
-    setCharacterParts((prev) => [...prev, newPart]);
-    setTracks((prev) => [...prev, newTrack]);
-    setSelectedPartId(newPartId);
-    showToast(`Duplicated "${newPart.name}"`, 'success');
-  }, [selectedPartId, characterParts, tracks, showToast]);
 
   return (
     <AnimatorContext.Provider

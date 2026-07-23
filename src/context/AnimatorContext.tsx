@@ -321,6 +321,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const animationFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
 
+  const historyIndexRef = useRef(historyIndex);
+  useEffect(() => { historyIndexRef.current = historyIndex; }, [historyIndex]);
+
   // Record History Snapshot whenever tracks or characterParts change
   useEffect(() => {
     if (isUndoRedoRef.current) {
@@ -332,7 +335,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       characterParts: JSON.parse(JSON.stringify(characterParts)),
     };
     setHistory((prev) => {
-      const trimmed = prev.slice(0, historyIndex + 1);
+      const trimmed = prev.slice(0, historyIndexRef.current + 1);
       return [...trimmed.slice(-30), snap];
     });
     setHistoryIndex((prev) => Math.min(prev + 1, 30));
@@ -389,7 +392,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch (e) {
       console.warn('[AutoSave] Failed to restore saved state', e);
     }
-  }, []);
+  }, [setTotalFrames]);
 
   // 2. Auto-Save System: Every 10 Seconds
   const performSave = useCallback(() => {
@@ -1372,7 +1375,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setTotalFramesState(150);
       setFps(60);
       showToast("Loaded sample sequencer-project.json!", "success");
-    } catch (err) {
+    } catch {
       showToast("Failed to load sample project", "error");
     }
   }, [showToast]);

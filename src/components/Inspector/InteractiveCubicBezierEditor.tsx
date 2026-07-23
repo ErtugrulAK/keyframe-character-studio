@@ -45,11 +45,11 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
   const cssString = `cubic-bezier(${p1.x}, ${p1.y}, ${p2.x}, ${p2.y})`;
 
-  const updatePoints = (newP1: { x: number; y: number }, newP2: { x: number; y: number }) => {
+  const updatePoints = React.useCallback((newP1: { x: number; y: number }, newP2: { x: number; y: number }) => {
     setP1(newP1);
     setP2(newP2);
     onChange([newP1.x, newP1.y, newP2.x, newP2.y]);
-  };
+  }, [onChange]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(cssString);
@@ -230,7 +230,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
-  }, [draggingPoint, isModalOpen, p1, p2]);
+  }, [draggingPoint, isModalOpen, p1, p2, updatePoints]);
 
   return (
     <div className="cubic-bezier-editor-container" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

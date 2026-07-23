@@ -1,1 +1,1 @@
-fix(broadcast): hide selection gizmo and bounding handles during broadcast mode or when layer is hidden  
+refactor: clean up project dependencies, fix React hook dependency warnings, and optimize build  

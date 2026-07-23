@@ -94,13 +94,8 @@ export const HeaderBar: React.FC = () => {
         </div>
       </div>
 
-      {/* Auto-Save & FPS Status Controls */}
+      {/* Mode Toggle - Centered */}
       <div className="header-center-controls">
-        <div className="autosave-status-badge" onClick={triggerManualSave} title="Auto-saved every 10 seconds. Click to save manually.">
-          <div className="pulse-green-dot" />
-          <CheckCircle2 size={13} className="text-green" />
-          <span className="autosave-text">{timeAgoStr}</span>
-        </div>
 
         {/* Mode Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-dark)', borderRadius: 6, padding: '4px', gap: 4, flexShrink: 0 }}>
@@ -138,6 +133,18 @@ export const HeaderBar: React.FC = () => {
           </button>
         </div>
 
+      </div>
+
+      {/* Action Controls & Status (Right aligned) */}
+      <div className="header-actions">
+        {/* Auto-Save */}
+        <div className="autosave-status-badge" onClick={triggerManualSave} title="Auto-saved every 10 seconds. Click to save manually.">
+          <div className="pulse-green-dot" />
+          <CheckCircle2 size={13} className="text-green" />
+          <span className="autosave-text">{timeAgoStr}</span>
+        </div>
+
+        {/* FPS */}
         <div className="fps-selector" style={{ flexShrink: 0 }}>
           <span>FPS</span>
           <select value={fps} onChange={(e) => setFps(parseInt(e.target.value))}>
@@ -147,10 +154,9 @@ export const HeaderBar: React.FC = () => {
             <option value={60}>60 FPS</option>
           </select>
         </div>
-      </div>
 
-      {/* Keyframe & Export Action Controls */}
-      <div className="header-actions">
+        <div className="divider-v" />
+
         <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} title="Import JSON Animation File">
           <Upload size={14} />
           <span>Import</span>

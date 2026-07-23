@@ -1,1 +1,1 @@
-fix: resolve background deselect issue and header layout overlapping  
+style: refine HeaderBar layout for better spacing  

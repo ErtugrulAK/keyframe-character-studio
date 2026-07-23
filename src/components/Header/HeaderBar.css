@@ -15,6 +15,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  flex: 1;
 }
 
 .brand-title-top {
@@ -63,7 +64,9 @@
 .header-center-controls {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 16px;
+  flex: 1;
 }
 
 /* Auto-Save Status Badge */
@@ -180,7 +183,9 @@
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 12px;
+  flex: 1;
 }
 
 .add-kf-btn {

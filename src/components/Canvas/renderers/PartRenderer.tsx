@@ -60,18 +60,19 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   let animX = 0;
   let animY = 0;
 
-  const { appMode, broadcastState, customPresets } = useAnimator();
+  const { appMode, broadcastState, customPresets, tracks } = useAnimator();
 
   if (!isGhost) {
     const inDur = part.inAnimDuration || 30;
     const outDur = part.outAnimDuration || 30;
     const inPreset = part.inAnimPreset || 'none';
     const outPreset = part.outAnimPreset || 'none';
+    const targetTrack = tracks.find(t => t.partId === part.id);
 
     if (appMode === 'broadcast') {
       const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
       
-      if (bState.state === 'hidden') {
+      if (bState.state === 'hidden' || (targetTrack && targetTrack.visible === false)) {
         animOpacity = 0;
       } else if (bState.state === 'animating_in') {
         const cp = customPresets.find(p => p.id === inPreset);

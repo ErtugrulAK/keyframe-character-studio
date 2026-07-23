@@ -377,8 +377,12 @@ export const SequencerTimeline: React.FC = () => {
                     <span className="ue-kf-count">{totalKfs}</span>
 
                     <div className="ue-track-controls">
-                      <button className="btn-icon track-icon-btn" onClick={(e) => { e.stopPropagation(); toggleTrackVisibility(track.id); }} title={track.visible ? 'Hide' : 'Show'}>
-                        {track.visible ? <Eye size={12} /> : <EyeOff size={12} className="text-muted" />}
+                      <button
+                        className={`btn-icon track-icon-btn ${!track.visible ? 'muted' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); toggleTrackVisibility(track.id); }}
+                        title={track.visible ? 'Visible on Stage Canvas & Included in Live Broadcast' : 'Hidden on Stage Canvas & Muted from Live Broadcast'}
+                      >
+                        {track.visible ? <Eye size={12} className="text-teal" /> : <EyeOff size={12} style={{ color: '#ef4444' }} />}
                       </button>
                       <button className="btn-icon track-icon-btn" onClick={(e) => { e.stopPropagation(); toggleTrackLock(track.id); }} title={track.locked ? 'Unlock' : 'Lock'}>
                         {track.locked ? <Lock size={12} className="text-gold" /> : <Unlock size={12} />}

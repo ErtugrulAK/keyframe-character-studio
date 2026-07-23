@@ -1,1 +1,1 @@
-fix(canvas): add viewBox and preserveAspectRatio to center stage canvas perfectly on all screens  
+feat(broadcast): connect timeline eye icon to broadcast mode visibility and director muted status  

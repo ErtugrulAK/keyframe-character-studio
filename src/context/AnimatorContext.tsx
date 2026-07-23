@@ -171,6 +171,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const [isLooping, setIsLooping] = useState<boolean>(true);
+  const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
+  const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
+
+  const characterPartsRef = useRef(characterParts);
+  useEffect(() => { characterPartsRef.current = characterParts; }, [characterParts]);
+
+  const tracksRef = useRef(tracks);
+  useEffect(() => { tracksRef.current = tracks; }, [tracks]);
 
   // Broadcast Mode State
   const [appMode, setAppMode] = useState<AppMode>('edit');
@@ -181,11 +189,16 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const triggerBroadcastIn = useCallback((partId: string) => {
+    const track = tracksRef.current.find(t => t.partId === partId);
+    if (track && track.visible === false) {
+      showToast('Layer is hidden via eye icon on timeline (muted from broadcast)', 'info');
+      return;
+    }
     setBroadcastState(prev => ({
       ...prev,
       [partId]: { state: 'animating_in', progress: 0 }
     }));
-  }, []);
+  }, [showToast]);
 
   const triggerBroadcastOut = useCallback((partId: string) => {
     setBroadcastState(prev => ({
@@ -197,7 +210,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const triggerAllBroadcastIn = useCallback(() => {
     const nextState: Record<string, BroadcastObjectState> = {};
     characterPartsRef.current.forEach(p => {
-      nextState[p.id] = { state: 'animating_in', progress: 0 };
+      const track = tracksRef.current.find(t => t.partId === p.id);
+      if (!track || track.visible !== false) {
+        nextState[p.id] = { state: 'animating_in', progress: 0 };
+      }
     });
     setBroadcastState(nextState);
   }, []);
@@ -289,12 +305,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [selectedKeyframeId, setSelectedKeyframeId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ToolType>('select');
-
-  const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
-  const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
-
-  const characterPartsRef = useRef(characterParts);
-  useEffect(() => { characterPartsRef.current = characterParts; }, [characterParts]);
 
   const fpsRef = useRef(fps);
   useEffect(() => { fpsRef.current = fps; }, [fps]);

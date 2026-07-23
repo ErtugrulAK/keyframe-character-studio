@@ -1,11 +1,12 @@
 import React from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import { Play, Square, RefreshCw, Zap } from 'lucide-react';
+import { Play, Square, RefreshCw, Zap, EyeOff } from 'lucide-react';
 import './LiveDirector.css';
 
 export const LiveDirectorPanel: React.FC = () => {
   const {
     characterParts,
+    tracks,
     broadcastState,
     triggerBroadcastIn,
     triggerBroadcastOut,
@@ -53,6 +54,9 @@ export const LiveDirectorPanel: React.FC = () => {
       
       <div className="director-list">
         {directorParts.map(part => {
+          const track = tracks.find(t => t.partId === part.id);
+          const isMuted = track && track.visible === false;
+
           const st = broadcastState[part.id];
           const currentState = st ? st.state : 'hidden';
           const isAnimatingIn = currentState === 'animating_in';
@@ -61,14 +65,18 @@ export const LiveDirectorPanel: React.FC = () => {
           
           let statusColor = 'var(--text-muted)';
           let statusText = 'HIDDEN';
-          if (isAnimatingIn) { statusColor = 'var(--accent-cyan)'; statusText = 'PLAYING IN'; }
+          if (isMuted) { statusColor = '#ef4444'; statusText = 'EYE OFF (MUTED)'; }
+          else if (isAnimatingIn) { statusColor = 'var(--accent-cyan)'; statusText = 'PLAYING IN'; }
           else if (isVisible) { statusColor = 'var(--accent-green)'; statusText = 'LIVE'; }
           else if (isAnimatingOut) { statusColor = 'var(--accent-red)'; statusText = 'PLAYING OUT'; }
 
           return (
-            <div key={part.id} className="director-item">
+            <div key={part.id} className="director-item" style={{ opacity: isMuted ? 0.6 : 1 }}>
               <div className="director-item-info">
-                <span className="director-item-name">{part.name || part.type}</span>
+                <span className="director-item-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {isMuted && <EyeOff size={12} style={{ color: '#ef4444' }} />}
+                  {part.name || part.type}
+                </span>
                 <span className="director-item-status" style={{ color: statusColor }}>
                   <div className="status-dot" style={{ backgroundColor: statusColor }} />
                   {statusText}
@@ -76,15 +84,17 @@ export const LiveDirectorPanel: React.FC = () => {
               </div>
               <div className="director-item-actions">
                 <button 
-                  className={`btn-director ${currentState !== 'hidden' && !isAnimatingOut ? 'active' : ''}`}
+                  className={`btn-director ${currentState !== 'hidden' && !isAnimatingOut && !isMuted ? 'active' : ''}`}
                   onClick={() => triggerBroadcastIn(part.id)}
+                  disabled={!!isMuted}
+                  title={isMuted ? 'Layer is hidden via eye icon on timeline' : 'Trigger entrance animation'}
                 >
                   <Play size={14} /> PLAY IN
                 </button>
                 <button 
                   className="btn-director out"
                   onClick={() => triggerBroadcastOut(part.id)}
-                  disabled={currentState === 'hidden' && !isAnimatingOut}
+                  disabled={(currentState === 'hidden' && !isAnimatingOut) || !!isMuted}
                 >
                   <Square size={14} /> PLAY OUT
                 </button>

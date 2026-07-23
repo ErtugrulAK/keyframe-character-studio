@@ -110,6 +110,9 @@ interface AnimatorContextType {
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
   deletePart: (partId: string) => void;
+  copySelectedPart: () => void;
+  pasteCopiedPart: () => void;
+  duplicateSelectedPart: () => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   addPropertyKeyframe: (trackId: string, channel: TrackChannel, frame: number, value: number, easing?: EasingType) => void;
@@ -402,6 +405,25 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         e.preventDefault();
         redo();
       }
+      // Copy: Ctrl + C
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        if (selectedPartId) {
+          e.preventDefault();
+          copySelectedPart();
+        }
+      }
+      // Paste: Ctrl + V
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        pasteCopiedPart();
+      }
+      // Duplicate: Ctrl + D
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+        if (selectedPartId) {
+          e.preventDefault();
+          duplicateSelectedPart();
+        }
+      }
       // Instant Delete without alert modal on Backspace or Delete
       else if (e.key === 'Backspace' || e.key === 'Delete') {
         if (selectedPartId) {
@@ -413,7 +435,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPartId, deletePart, undo, redo]);
+  }, [selectedPartId, deletePart, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart]);
 
   // Calculate position/rotation at given frame using interpolation
   // Channels take priority over legacy composite keyframes when populated
@@ -973,6 +995,129 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
   };
 
+  const [clipboardData, setClipboardData] = useState<{ part: CharacterPart; track?: Track } | null>(null);
+
+  const copySelectedPart = useCallback(() => {
+    if (!selectedPartId) return;
+    const part = characterParts.find((p) => p.id === selectedPartId);
+    if (!part) return;
+    const track = tracks.find((t) => t.partId === selectedPartId);
+    setClipboardData({
+      part: JSON.parse(JSON.stringify(part)),
+      track: track ? JSON.parse(JSON.stringify(track)) : undefined,
+    });
+    showToast(`Copied "${part.name}" to clipboard`, 'info');
+  }, [selectedPartId, characterParts, tracks, showToast]);
+
+  const pasteCopiedPart = useCallback(() => {
+    if (!clipboardData) return;
+    const newPartId = `part_${clipboardData.part.type}_${Date.now()}`;
+    const newPart: CharacterPart = {
+      ...JSON.parse(JSON.stringify(clipboardData.part)),
+      id: newPartId,
+      name: `${clipboardData.part.name} Copy`,
+      zIndex: characterParts.length + 1,
+      baseTransform: {
+        ...clipboardData.part.baseTransform,
+        x: clipboardData.part.baseTransform.x + 20,
+        y: clipboardData.part.baseTransform.y + 20,
+      },
+    };
+
+    let newTrack: Track = {
+      id: `track_${newPartId}`,
+      partId: newPartId,
+      keyframes: [],
+      visible: true,
+      locked: false,
+      expanded: false,
+    };
+
+    if (clipboardData.track) {
+      const clonedTrack: Track = JSON.parse(JSON.stringify(clipboardData.track));
+      newTrack = {
+        ...clonedTrack,
+        id: `track_${newPartId}`,
+        partId: newPartId,
+        keyframes: clonedTrack.keyframes.map((k, idx) => ({
+          ...k,
+          id: `kf_${newPartId}_${k.frame}_${Date.now()}_${idx}`,
+        })),
+      };
+      if (clonedTrack.channels) {
+        newTrack.channels = {
+          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: `pkf_x_${pk.frame}_${Date.now()}` })),
+          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: `pkf_y_${pk.frame}_${Date.now()}` })),
+          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: `pkf_rot_${pk.frame}_${Date.now()}` })),
+          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: `pkf_sx_${pk.frame}_${Date.now()}` })),
+          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: `pkf_sy_${pk.frame}_${Date.now()}` })),
+          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: `pkf_op_${pk.frame}_${Date.now()}` })),
+        };
+      }
+    }
+
+    setCharacterParts((prev) => [...prev, newPart]);
+    setTracks((prev) => [...prev, newTrack]);
+    setSelectedPartId(newPartId);
+    showToast(`Pasted "${newPart.name}"`, 'success');
+  }, [clipboardData, characterParts, showToast]);
+
+  const duplicateSelectedPart = useCallback(() => {
+    if (!selectedPartId) return;
+    const part = characterParts.find((p) => p.id === selectedPartId);
+    if (!part) return;
+    const track = tracks.find((t) => t.partId === selectedPartId);
+    const newPartId = `part_${part.type}_${Date.now()}`;
+    const newPart: CharacterPart = {
+      ...JSON.parse(JSON.stringify(part)),
+      id: newPartId,
+      name: `${part.name} Copy`,
+      zIndex: characterParts.length + 1,
+      baseTransform: {
+        ...part.baseTransform,
+        x: part.baseTransform.x + 20,
+        y: part.baseTransform.y + 20,
+      },
+    };
+
+    let newTrack: Track = {
+      id: `track_${newPartId}`,
+      partId: newPartId,
+      keyframes: [],
+      visible: true,
+      locked: false,
+      expanded: false,
+    };
+
+    if (track) {
+      const clonedTrack: Track = JSON.parse(JSON.stringify(track));
+      newTrack = {
+        ...clonedTrack,
+        id: `track_${newPartId}`,
+        partId: newPartId,
+        keyframes: clonedTrack.keyframes.map((k, idx) => ({
+          ...k,
+          id: `kf_${newPartId}_${k.frame}_${Date.now()}_${idx}`,
+        })),
+      };
+      if (clonedTrack.channels) {
+        newTrack.channels = {
+          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: `pkf_x_${pk.frame}_${Date.now()}` })),
+          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: `pkf_y_${pk.frame}_${Date.now()}` })),
+          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: `pkf_rot_${pk.frame}_${Date.now()}` })),
+          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: `pkf_sx_${pk.frame}_${Date.now()}` })),
+          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: `pkf_sy_${pk.frame}_${Date.now()}` })),
+          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: `pkf_op_${pk.frame}_${Date.now()}` })),
+        };
+      }
+    }
+
+    setCharacterParts((prev) => [...prev, newPart]);
+    setTracks((prev) => [...prev, newTrack]);
+    setSelectedPartId(newPartId);
+    showToast(`Duplicated "${newPart.name}"`, 'success');
+  }, [selectedPartId, characterParts, tracks, showToast]);
+
   return (
     <AnimatorContext.Provider
       value={{
@@ -1028,6 +1173,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addCustomPart,
         updatePartMedia,
         deletePart,
+        copySelectedPart,
+        pasteCopiedPart,
+        duplicateSelectedPart,
         applyMotionTransition,
         showToast,
         addPropertyKeyframe,

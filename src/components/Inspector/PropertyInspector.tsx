@@ -6,7 +6,7 @@ import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { MotionTab } from './sections/MotionTab';
 import { PresetsTab } from './sections/PresetsTab';
-import { Sliders, Sparkles, Activity, Palette, Zap, Trash2, Monitor } from 'lucide-react';
+import { Sliders, Sparkles, Activity, Palette, Zap, Trash2, Monitor, Copy } from 'lucide-react';
 import './PropertyInspector.css';
 
 type TabType = 'project' | 'transform' | 'style' | 'easing' | 'motion' | 'presets';
@@ -24,6 +24,9 @@ export const PropertyInspector: React.FC = () => {
     updateKeyframeBezierPoints,
     applyPresetPose,
     deletePart,
+    copySelectedPart,
+    pasteCopiedPart,
+    duplicateSelectedPart,
     projectResolution,
     setProjectResolution,
   } = useAnimator();
@@ -186,13 +189,24 @@ export const PropertyInspector: React.FC = () => {
                 <span className="part-id-tag">ID: {selectedPart.id}</span>
               </div>
 
-              <button
-                className="btn-icon delete-part-btn"
-                onClick={() => deletePart(selectedPart.id)}
-                title="Delete Selected Object (Backspace / Delete)"
-              >
-                <Trash2 size={14} className="text-red" />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <button
+                  className="btn-icon"
+                  onClick={duplicateSelectedPart}
+                  title="Duplicate Object (Ctrl+D / Ctrl+C + Ctrl+V)"
+                  style={{ width: 28, height: 28 }}
+                >
+                  <Copy size={13} className="text-cyan" />
+                </button>
+                <button
+                  className="btn-icon delete-part-btn"
+                  onClick={() => deletePart(selectedPart.id)}
+                  title="Delete Selected Object (Backspace / Delete)"
+                  style={{ width: 28, height: 28 }}
+                >
+                  <Trash2 size={14} className="text-red" />
+                </button>
+              </div>
             </div>
 
             {/* TAB 1: TRANSFORM */}

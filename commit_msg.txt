@@ -1,1 +1,1 @@
-fix: resolve input Enter blur and real-time focus synchronization bug  
+feat: add element copy, paste, and duplicate keyboard shortcuts (Ctrl+C, Ctrl+V, Ctrl+D)  

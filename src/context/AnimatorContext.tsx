@@ -1236,13 +1236,15 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const maxF = filteredKfs[filteredKfs.length - 1].frame;
     const durF = Math.max(1, maxF - minF);
 
-    const targetBaseX = filteredKfs[filteredKfs.length - 1].transform.x;
-    const targetBaseY = filteredKfs[filteredKfs.length - 1].transform.y;
+    // For IN presets, reference origin is the ending position (progress 1)
+    // For OUT presets, reference origin is the starting position (progress 0)
+    const refBaseX = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.x : filteredKfs[0].transform.x;
+    const refBaseY = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.y : filteredKfs[0].transform.y;
 
     const presetKeyframes: CustomMotionPresetKeyframe[] = filteredKfs.map(kf => ({
       progress: (kf.frame - minF) / durF,
-      deltaX: kf.transform.x - targetBaseX,
-      deltaY: kf.transform.y - targetBaseY,
+      deltaX: kf.transform.x - refBaseX,
+      deltaY: kf.transform.y - refBaseY,
       rotation: kf.transform.rotation,
       scaleX: kf.transform.scaleX,
       scaleY: kf.transform.scaleY,

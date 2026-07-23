@@ -12,38 +12,52 @@ interface SmartNumberInputProps {
 
 const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, step = 1, onChange }) => {
   const [editingValue, setEditingValue] = React.useState<string>(String(value));
-  const [isEditing, setIsEditing] = React.useState<boolean>(false);
+  const [isFocused, setIsFocused] = React.useState<boolean>(false);
 
   React.useEffect(() => {
-    if (!isEditing) {
+    if (!isFocused) {
       setEditingValue(String(value));
     }
-  }, [value, isEditing]);
+  }, [value, isFocused]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valStr = e.target.value;
+    setEditingValue(valStr);
+    let parsed = parseFloat(valStr);
+    if (!isNaN(parsed)) {
+      if (min !== undefined) parsed = Math.max(min, parsed);
+      if (max !== undefined) parsed = Math.min(max, parsed);
+      onChange(parsed);
+    }
+  };
 
   const handleBlur = () => {
-    setIsEditing(false);
+    setIsFocused(false);
     let parsed = parseFloat(editingValue);
     if (isNaN(parsed)) {
       setEditingValue(String(value));
-      return;
+    } else {
+      if (min !== undefined) parsed = Math.max(min, parsed);
+      if (max !== undefined) parsed = Math.min(max, parsed);
+      setEditingValue(String(parsed));
+      onChange(parsed);
     }
-    if (min !== undefined) parsed = Math.max(min, parsed);
-    if (max !== undefined) parsed = Math.min(max, parsed);
-    onChange(parsed);
   };
 
   return (
     <input
       type="number"
-      value={isEditing ? editingValue : value}
+      value={isFocused ? editingValue : value}
       min={min}
       max={max}
       step={step}
-      onFocus={() => setIsEditing(true)}
-      onChange={(e) => setEditingValue(e.target.value)}
+      onFocus={() => setIsFocused(true)}
+      onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') handleBlur();
+        if (e.key === 'Enter') {
+          (e.target as HTMLInputElement).blur();
+        }
       }}
     />
   );

@@ -133,6 +133,26 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </div>
 
         <div className="input-field">
+          <label style={{ color: 'var(--accent-teal)' }}>APPEAR AT (FRAME)</label>
+          <SmartNumberInput
+            value={selectedPart.visibleStartFrame ?? 0}
+            min={0}
+            max={1200}
+            onChange={(val) => handlePartPropChange('visibleStartFrame', val <= 0 ? undefined : val)}
+          />
+        </div>
+
+        <div className="input-field">
+          <label style={{ color: 'var(--accent-red, #ef4444)' }}>DISAPPEAR AT (FRAME)</label>
+          <SmartNumberInput
+            value={selectedPart.visibleEndFrame ?? 0}
+            min={0}
+            max={1200}
+            onChange={(val) => handlePartPropChange('visibleEndFrame', val <= 0 ? undefined : val)}
+          />
+        </div>
+
+        <div className="input-field">
           <label>SCALE X</label>
           <SmartNumberInput
             value={transform.scaleX}

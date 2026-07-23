@@ -1,6 +1,7 @@
 import React from 'react';
-import { Zap, Play, Square } from 'lucide-react';
+import { Zap, Play, Square, Clock } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
+import { useAnimator } from '../../../context/AnimatorContext';
 
 const IN_ANIMATIONS = [
   { id: 'none', label: 'None' },
@@ -32,6 +33,8 @@ interface MotionTabProps {
 }
 
 export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPropChange }) => {
+  const { currentFrame, fps } = useAnimator();
+
   return (
     <div className="inspector-section">
       <div className="section-title">
@@ -156,6 +159,70 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
             </div>
           </div>
         )}
+      </div>
+
+      <div className="divider-h" style={{ margin: '15px 0' }} />
+
+      {/* TIMELINE VISIBILITY / APPEARANCE TIMING */}
+      <div className="form-group">
+        <div className="section-title" style={{ paddingBottom: 6 }}>
+          <Clock size={12} className="text-cyan" />
+          <span>APPEARANCE TIMING (START/END TIME)</span>
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+          Set exact start/end frames or seconds for when this layer appears on screen.
+        </p>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div className="input-field" style={{ flex: 1 }}>
+            <label>APPEAR AT (FRAME)</label>
+            <input
+              type="number" min="0" max="1200"
+              placeholder="0 (Start)"
+              value={selectedPart.visibleStartFrame ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? undefined : parseInt(e.target.value);
+                handlePartPropChange('visibleStartFrame', val);
+              }}
+              style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-dark)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4 }}
+            />
+          </div>
+          <div className="input-field" style={{ flex: 1 }}>
+            <label>DISAPPEAR AT (FRAME)</label>
+            <input
+              type="number" min="0" max="1200"
+              placeholder="Always visible"
+              value={selectedPart.visibleEndFrame ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? undefined : parseInt(e.target.value);
+                handlePartPropChange('visibleEndFrame', val);
+              }}
+              style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-dark)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4 }}
+            />
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+          <button
+            className="btn-secondary"
+            style={{ flex: 1, fontSize: 10, padding: '5px 8px', color: 'var(--accent-cyan)' }}
+            onClick={() => handlePartPropChange('visibleStartFrame', currentFrame)}
+          >
+            Start at Frame {currentFrame} ({(currentFrame / fps).toFixed(1)}s)
+          </button>
+          {(selectedPart.visibleStartFrame !== undefined || selectedPart.visibleEndFrame !== undefined) && (
+            <button
+              className="btn-secondary"
+              style={{ fontSize: 10, padding: '5px 8px', color: 'var(--text-muted)' }}
+              onClick={() => {
+                handlePartPropChange('visibleStartFrame', undefined);
+                handlePartPropChange('visibleEndFrame', undefined);
+              }}
+            >
+              Clear Timing
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

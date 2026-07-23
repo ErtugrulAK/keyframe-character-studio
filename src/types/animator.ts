@@ -228,6 +228,12 @@ export interface CharacterPart {
   // ── Feature 8: Canva-Style Shape Masking ──
   innerMediaUrl?: string;
   innerMediaType?: 'image' | 'video';
+
+  // ── Feature 9: Layer Appearance Timing (Start/End Frame) ──
+  visibleStartFrame?: number;
+  visibleEndFrame?: number;
+
+  fontFamily?: string;
 }
 
 export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan';

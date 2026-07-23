@@ -54,6 +54,8 @@ interface AnimatorContextType {
   setTotalFrames: (frames: number) => void;
   isLooping: boolean;
   setIsLooping: (loop: boolean) => void;
+  projectResolution: { width: number; height: number };
+  setProjectResolution: React.Dispatch<React.SetStateAction<{ width: number; height: number }>>;
 
   selectedPartId: string | null;
   setSelectedPartId: (id: string | null) => void;
@@ -146,6 +148,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const [isLooping, setIsLooping] = useState<boolean>(true);
+  const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
 
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
@@ -221,6 +224,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const parsed: AnimationProject & { lastSavedTime?: string } = JSON.parse(saved);
         const hasLegacyStickman = parsed.characterParts?.some((p) => p.type === 'head' || p.type === 'torso');
         if (parsed.tracks && parsed.characterParts && !hasLegacyStickman) {
+          if (parsed.projectResolution) setProjectResolution(parsed.projectResolution);
           setTracks(parsed.tracks.map(migrateTrack));
           setCharacterParts(parsed.characterParts);
           if (parsed.fps) setFps(parsed.fps);
@@ -243,6 +247,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         name: 'Unreal 2D Character Sequence',
         fps,
         totalFrames,
+        projectResolution,
         tracks,
         characterParts,
         lastSavedTime: new Date().toISOString(),
@@ -252,7 +257,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch (e) {
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
     }
-  }, [fps, totalFrames, tracks, characterParts]);
+  }, [fps, totalFrames, projectResolution, tracks, characterParts]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -750,6 +755,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       name: 'Unreal 2D Character Sequence',
       fps,
       totalFrames,
+      projectResolution,
       tracks,
       characterParts,
     };
@@ -760,6 +766,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const parsed: AnimationProject = JSON.parse(jsonStr);
       if (parsed.tracks && parsed.characterParts) {
+        if (parsed.projectResolution) setProjectResolution(parsed.projectResolution);
         setTracks(parsed.tracks.map(migrateTrack));
         setCharacterParts(parsed.characterParts);
         if (parsed.fps) setFps(parsed.fps);
@@ -877,6 +884,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTotalFrames,
         isLooping,
         setIsLooping,
+        projectResolution,
+        setProjectResolution,
         selectedPartId,
         setSelectedPartId,
         selectedTrackId,

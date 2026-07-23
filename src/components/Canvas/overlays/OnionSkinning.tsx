@@ -5,6 +5,7 @@ import { PartRenderer } from '../renderers/PartRenderer';
 interface OnionSkinningProps {
   sortedParts: CharacterPart[];
   currentFrame: number;
+  totalFrames: number;
   selectedPartId: string | null;
   getComputedTransform: (partId: string, frame: number) => Transform;
   onSelect: (partId: string) => void;
@@ -14,6 +15,7 @@ interface OnionSkinningProps {
 export const OnionSkinning: React.FC<OnionSkinningProps> = ({
   sortedParts,
   currentFrame,
+  totalFrames,
   selectedPartId,
   getComputedTransform,
   onSelect,
@@ -33,6 +35,7 @@ export const OnionSkinning: React.FC<OnionSkinningProps> = ({
               ghostColor="#00d2ff"
               isSelected={selectedPartId === part.id}
               currentFrame={currentFrame - 1}
+              totalFrames={totalFrames}
               onSelect={onSelect}
               onStartTranslateDrag={onStartTranslateDrag}
             />
@@ -49,6 +52,7 @@ export const OnionSkinning: React.FC<OnionSkinningProps> = ({
             ghostColor="#ff3366"
             isSelected={selectedPartId === part.id}
             currentFrame={currentFrame + 1}
+            totalFrames={totalFrames}
             onSelect={onSelect}
             onStartTranslateDrag={onStartTranslateDrag}
           />

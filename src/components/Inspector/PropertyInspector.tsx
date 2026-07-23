@@ -24,7 +24,8 @@ export const PropertyInspector: React.FC = () => {
     updateKeyframeBezierPoints,
     applyPresetPose,
     deletePart,
-    applyMotionTransition,
+    projectResolution,
+    setProjectResolution,
   } = useAnimator();
 
   const [activeTab, setActiveTab] = useState<TabType>('transform');
@@ -149,8 +150,8 @@ export const PropertyInspector: React.FC = () => {
             {/* TAB 3: MOTION TRANSITIONS */}
             {activeTab === 'motion' && (
               <MotionTab
-                selectedPartId={selectedPartId}
-                applyMotionTransition={applyMotionTransition}
+                selectedPart={selectedPart}
+                handlePartPropChange={handlePartPropChange}
               />
             )}
 
@@ -180,9 +181,65 @@ export const PropertyInspector: React.FC = () => {
           </>
         ) : (
           <div className="no-selection">
-            <Sparkles size={36} className="text-teal text-glow" />
-            <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#f8fafc', margin: '10px 0 4px' }}>NO OBJECT SELECTED</h3>
-            <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', lineHeight: 1.5, maxWidth: 240 }}>
+            <div className="section-title" style={{ marginTop: 20 }}>
+              <Zap size={13} className="text-cyan" />
+              <span>COMPOSITION SETTINGS</span>
+            </div>
+            
+            <div className="form-group" style={{ marginTop: 15 }}>
+              <label>Resolution Presets</label>
+              <div className="radio-group-wrap" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <button 
+                  className={`btn-icon ${projectResolution.width === 1920 && projectResolution.height === 1080 ? 'active' : ''}`}
+                  onClick={() => setProjectResolution({ width: 1920, height: 1080 })}
+                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
+                >
+                  1080p (16:9)
+                </button>
+                <button 
+                  className={`btn-icon ${projectResolution.width === 1080 && projectResolution.height === 1920 ? 'active' : ''}`}
+                  onClick={() => setProjectResolution({ width: 1080, height: 1920 })}
+                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
+                >
+                  Vertical (9:16)
+                </button>
+                <button 
+                  className={`btn-icon ${projectResolution.width === 1080 && projectResolution.height === 1080 ? 'active' : ''}`}
+                  onClick={() => setProjectResolution({ width: 1080, height: 1080 })}
+                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
+                >
+                  Square (1:1)
+                </button>
+                <button 
+                  className={`btn-icon ${projectResolution.width === 2560 && projectResolution.height === 1440 ? 'active' : ''}`}
+                  onClick={() => setProjectResolution({ width: 2560, height: 1440 })}
+                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
+                >
+                  1440p (16:9)
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 15, display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label>Width</label>
+                <input 
+                  type="number" 
+                  value={projectResolution.width} 
+                  onChange={(e) => setProjectResolution(p => ({ ...p, width: parseInt(e.target.value) || 1920 }))} 
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Height</label>
+                <input 
+                  type="number" 
+                  value={projectResolution.height} 
+                  onChange={(e) => setProjectResolution(p => ({ ...p, height: parseInt(e.target.value) || 1080 }))} 
+                />
+              </div>
+            </div>
+
+            <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', lineHeight: 1.5, marginTop: 40 }}>
               Select an object on the canvas or pick a track from the timeline to edit transforms, colors, and motion curves.
             </p>
           </div>

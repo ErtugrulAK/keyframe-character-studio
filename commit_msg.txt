@@ -1,5 +1,1 @@
-fix: PropertyInspector canvas overlap layout shift and timeline grid row alignment
-
-- Fixed CSS class mismatch in StageCanvas.css (.stage-canvas -> .stage-canvas-container) so the canvas container correctly expands with flex: 1 height: 100%, docking PropertyInspector to the right edge
-- Added dynamic backgroundSize to right timeline grid lanes matching FRAME_WIDTH so timeline grid columns align with timeline zoom
-- Added clean row borders across channel spacer header lanes and track lanes in timeline grid
+feat: Add Broadcast Features (Canvas Res, Masking, Animations)  

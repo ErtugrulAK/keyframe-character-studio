@@ -702,6 +702,59 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           </>
         )}
 
+        {/* SHAPE MASK MEDIA SETTINGS */}
+        {(selectedPart.type === 'custom_circle' ||
+          selectedPart.type === 'custom_box' ||
+          selectedPart.type === 'custom_rect' ||
+          selectedPart.type === 'custom_triangle') && (
+          <>
+            <div className="section-title" style={{ marginTop: 12 }}>
+              <Crop size={13} className="text-teal" />
+              <span>SHAPE MEDIA MASKING (CANVA STYLE)</span>
+            </div>
+
+            <div className="input-field">
+              <label>MASKED MEDIA TYPE</label>
+              <select
+                value={selectedPart.innerMediaType || 'image'}
+                onChange={(e) => handlePartPropChange('innerMediaType', e.target.value)}
+                style={{
+                  width: '100%',
+                  height: 28,
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 4,
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '0 6px',
+                }}
+              >
+                <option value="image">Image</option>
+                <option value="video">Video</option>
+              </select>
+            </div>
+
+            <div className="input-field">
+              <label>MEDIA SOURCE (URL)</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  value={selectedPart.innerMediaUrl || ''}
+                  placeholder="Paste media URL..."
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => handlePartPropChange('innerMediaUrl', e.target.value)}
+                  style={{ flex: 1 }}
+                />
+              </div>
+            </div>
+            
+            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 15 }}>
+              Media will be masked to perfectly fit inside this shape.
+            </p>
+          </>
+        )}
+
         {/* FILL COLOR */}
         <div className="input-field">
           <label>FILL COLOR</label>

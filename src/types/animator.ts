@@ -213,6 +213,16 @@ export interface CharacterPart {
 
   // ── Feature 6: Particle System ──
   particleConfig?: ParticleConfig;
+
+  // ── Feature 7: Broadcast In/Out Animations ──
+  inAnimPreset?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'pop' | 'spin';
+  inAnimDuration?: number; // duration in frames
+  outAnimPreset?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'pop' | 'spin';
+  outAnimDuration?: number; // duration in frames
+
+  // ── Feature 8: Canva-Style Shape Masking ──
+  innerMediaUrl?: string;
+  innerMediaType?: 'image' | 'video';
 }
 
 export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan';
@@ -227,6 +237,7 @@ export interface AnimationProject {
   name: string;
   fps: number;
   totalFrames: number;
+  projectResolution?: { width: number; height: number }; // 1920x1080 default
   tracks: Track[];
   characterParts: CharacterPart[];
 }

@@ -1,69 +1,113 @@
 import React from 'react';
-import { Zap, Ban, ArrowLeft, ArrowRight, ArrowDown, ArrowUp, Layers, Sparkles, RotateCw, Activity } from 'lucide-react';
+import { Zap, Play, Square } from 'lucide-react';
+import type { CharacterPart } from '../../../types/animator';
 
-const INSPECTOR_TRANSITIONS = [
-  { id: 'none', label: 'None', icon: <Ban size={18} style={{ color: '#94a3b8' }} /> },
-  { id: 'move_left', label: 'Move Left', icon: <ArrowLeft size={18} className="text-cyan" /> },
-  { id: 'move_right', label: 'Move Right', icon: <ArrowRight size={18} className="text-teal" /> },
-  { id: 'move_down', label: 'Move Down', icon: <ArrowDown size={18} className="text-gold" /> },
-  { id: 'move_up', label: 'Move Up', icon: <ArrowUp size={18} className="text-purple" /> },
-  { id: 'fade', label: 'Fade In', icon: <Layers size={18} className="text-green" /> },
-  { id: 'flash', label: 'Pop Zoom', icon: <Sparkles size={18} className="text-gold" /> },
-  { id: 'spin', label: 'Spin 360°', icon: <RotateCw size={18} className="text-cyan" /> },
-  { id: 'bounce', label: 'Bounce In', icon: <Activity size={18} className="text-red" /> },
+const IN_ANIMATIONS = [
+  { id: 'none', label: 'None' },
+  { id: 'fade', label: 'Fade In' },
+  { id: 'slide-left', label: 'Slide Right' },
+  { id: 'slide-right', label: 'Slide Left' },
+  { id: 'slide-up', label: 'Slide Up' },
+  { id: 'slide-down', label: 'Slide Down' },
+  { id: 'pop', label: 'Pop Zoom' },
+  { id: 'spin', label: 'Spin' },
+];
+
+const OUT_ANIMATIONS = [
+  { id: 'none', label: 'None' },
+  { id: 'fade', label: 'Fade Out' },
+  { id: 'slide-left', label: 'Slide Left' },
+  { id: 'slide-right', label: 'Slide Right' },
+  { id: 'slide-up', label: 'Slide Up' },
+  { id: 'slide-down', label: 'Slide Down' },
+  { id: 'pop', label: 'Pop Zoom' },
+  { id: 'spin', label: 'Spin' },
 ];
 
 interface MotionTabProps {
-  selectedPartId: string | null;
-  applyMotionTransition: (partId: string, transitionId: string) => void;
+  selectedPart: CharacterPart;
+  handlePartPropChange: (key: keyof CharacterPart, value: any) => void;
 }
 
-export const MotionTab: React.FC<MotionTabProps> = ({ selectedPartId, applyMotionTransition }) => {
+export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPropChange }) => {
   return (
     <div className="inspector-section">
       <div className="section-title">
         <Zap size={13} className="text-cyan" />
-        <span>MOTION TRANSITION PRESETS</span>
+        <span>BROADCAST IN / OUT ANIMATIONS</span>
       </div>
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
-        Click a motion transition to auto-generate keyframe animations for the selected object.
+      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 15 }}>
+        Set automatic entrance and exit animations without manual keyframes.
       </p>
 
-      <div className="transition-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-        {INSPECTOR_TRANSITIONS.map((item) => (
-          <button
-            key={item.id}
-            className="transition-card"
-            style={{
-              padding: '10px 4px',
-              background: 'var(--bg-dark)',
-              border: '1px solid var(--border-color)',
-              borderRadius: 8,
-              cursor: 'pointer',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 6,
-            }}
-            onClick={() => selectedPartId && applyMotionTransition(selectedPartId, item.id)}
-            title={`Apply ${item.label} to selected object`}
+      {/* IN ANIMATION */}
+      <div className="form-group" style={{ marginBottom: 20 }}>
+        <div className="section-title" style={{ paddingBottom: 6 }}>
+          <Play size={12} className="text-green" />
+          <span>IN ANIMATION (ENTRANCE)</span>
+        </div>
+        
+        <div className="input-field">
+          <label>PRESET</label>
+          <select
+            value={selectedPart.inAnimPreset || 'none'}
+            onChange={(e) => handlePartPropChange('inAnimPreset', e.target.value)}
+            style={{ width: '100%', height: 28, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11 }}
           >
-            <div
-              style={{
-                width: 40,
-                height: 40,
-                borderRadius: 8,
-                background: 'var(--bg-input)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              {item.icon}
-            </div>
-            <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)' }}>{item.label}</span>
-          </button>
-        ))}
+            {IN_ANIMATIONS.map(anim => <option key={anim.id} value={anim.id}>{anim.label}</option>)}
+          </select>
+        </div>
+
+        {selectedPart.inAnimPreset && selectedPart.inAnimPreset !== 'none' && (
+          <div className="input-field" style={{ marginTop: 10 }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>DURATION (FRAMES)</span>
+              <span className="text-cyan">{selectedPart.inAnimDuration || 30}f</span>
+            </label>
+            <input 
+              type="range" min="1" max="120" 
+              value={selectedPart.inAnimDuration || 30}
+              onChange={(e) => handlePartPropChange('inAnimDuration', parseInt(e.target.value))}
+              style={{ width: '100%', cursor: 'pointer' }}
+            />
+          </div>
+        )}
+      </div>
+
+      <div className="divider-h" style={{ margin: '15px 0' }} />
+
+      {/* OUT ANIMATION */}
+      <div className="form-group">
+        <div className="section-title" style={{ paddingBottom: 6 }}>
+          <Square size={12} className="text-red" />
+          <span>OUT ANIMATION (EXIT)</span>
+        </div>
+        
+        <div className="input-field">
+          <label>PRESET</label>
+          <select
+            value={selectedPart.outAnimPreset || 'none'}
+            onChange={(e) => handlePartPropChange('outAnimPreset', e.target.value)}
+            style={{ width: '100%', height: 28, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11 }}
+          >
+            {OUT_ANIMATIONS.map(anim => <option key={anim.id} value={anim.id}>{anim.label}</option>)}
+          </select>
+        </div>
+
+        {selectedPart.outAnimPreset && selectedPart.outAnimPreset !== 'none' && (
+          <div className="input-field" style={{ marginTop: 10 }}>
+            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span>DURATION (FRAMES)</span>
+              <span className="text-cyan">{selectedPart.outAnimDuration || 30}f</span>
+            </label>
+            <input 
+              type="range" min="1" max="120" 
+              value={selectedPart.outAnimDuration || 30}
+              onChange={(e) => handlePartPropChange('outAnimDuration', parseInt(e.target.value))}
+              style={{ width: '100%', cursor: 'pointer' }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

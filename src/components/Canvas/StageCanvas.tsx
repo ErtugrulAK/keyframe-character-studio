@@ -20,6 +20,8 @@ export const StageCanvas: React.FC = () => {
     showGrid,
     setShowGrid,
     addCustomPart,
+    projectResolution,
+    totalFrames,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -298,29 +300,79 @@ export const StageCanvas: React.FC = () => {
           <pattern id="svg-dashed-grid" width="40" height="40" patternUnits="userSpaceOnUse" x="300" y="240">
             <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" strokeDasharray="3 3" />
           </pattern>
+          <clipPath id="artboard-clip">
+            <rect
+              x={300 - projectResolution.width / 2}
+              y={240 - projectResolution.height / 2}
+              width={projectResolution.width}
+              height={projectResolution.height}
+            />
+          </clipPath>
+          <filter id="artboard-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="12" stdDeviation="24" floodColor="#000000" floodOpacity="0.8" />
+          </filter>
         </defs>
 
         {(() => {
           const zScale = 1 / Math.max(0.15, zoomLevel);
+          const artX = 300 - projectResolution.width / 2;
+          const artY = 240 - projectResolution.height / 2;
 
           return (
             <>
-              {/* Dashed Grid Lines */}
-              {showGrid && <rect x="-300000" y="-300000" width="600000" height="600000" fill="url(#svg-dashed-grid)" />}
+              {/* Outer dimmed area (everything outside artboard) */}
+              <path
+                d={`M-300000,-300000 L300000,-300000 L300000,300000 L-300000,300000 Z M${artX},${artY} L${artX},${artY + projectResolution.height} L${artX + projectResolution.width},${artY + projectResolution.height} L${artX + projectResolution.width},${artY} Z`}
+                fill="rgba(0, 0, 0, 0.65)"
+                fillRule="evenodd"
+              />
 
-              {/* Origin Center Grid Axes */}
-              <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
-              <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
-              <circle cx={300} cy={240} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
-              <text x={300 + 10 * zScale} y={240 - 5 * zScale} fill="rgba(255, 255, 255, 0.9)" fontSize={12 * zScale} fontWeight="800" fontFamily="JetBrains Mono, monospace">
-                (0,0) ORIGIN
-              </text>
+              {/* Artboard Base & Shadow */}
+              <rect
+                x={artX}
+                y={artY}
+                width={projectResolution.width}
+                height={projectResolution.height}
+                fill="var(--bg-darkest)"
+                filter="url(#artboard-shadow)"
+              />
+              {/* Dashed Grid Lines (Only inside artboard) */}
+              {showGrid && (
+                <rect 
+                  x={artX} y={artY} width={projectResolution.width} height={projectResolution.height} 
+                  fill="url(#svg-dashed-grid)" 
+                />
+              )}
+
+              {/* Origin Center Grid Axes (Inside artboard) */}
+              <g clipPath="url(#artboard-clip)">
+                <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
+                <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
+                <circle cx={300} cy={240} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+                <text x={300 + 10 * zScale} y={240 - 5 * zScale} fill="rgba(255, 255, 255, 0.9)" fontSize={12 * zScale} fontWeight="800" fontFamily="JetBrains Mono, monospace">
+                  (0,0) ORIGIN
+                </text>
+              </g>
+              
+              {/* Artboard Border Outline */}
+              <rect
+                x={artX}
+                y={artY}
+                width={projectResolution.width}
+                height={projectResolution.height}
+                fill="none"
+                stroke="rgba(255, 255, 255, 0.15)"
+                strokeWidth={2 * zScale}
+                vectorEffect="non-scaling-stroke"
+                pointerEvents="none"
+              />
 
               {/* ONION SKINNING */}
               {showOnionSkin && (
                 <OnionSkinning
                   sortedParts={sortedParts}
                   currentFrame={currentFrame}
+                  totalFrames={totalFrames}
                   selectedPartId={selectedPartId}
                   getComputedTransform={getComputedTransform}
                   onSelect={setSelectedPartId}
@@ -338,6 +390,7 @@ export const StageCanvas: React.FC = () => {
                     transform={transform}
                     isSelected={selectedPartId === part.id}
                     currentFrame={currentFrame}
+                    totalFrames={totalFrames}
                     onSelect={setSelectedPartId}
                     onStartTranslateDrag={startTranslateDragForPart}
                   />

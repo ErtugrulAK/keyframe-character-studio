@@ -109,8 +109,8 @@ export const StageCanvas: React.FC = () => {
     setDragMode('rotate');
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const dx = svgX - selectedTransform.x;
-    const dy = svgY - selectedTransform.y;
+    const dx = svgX - (300 + selectedTransform.x);
+    const dy = svgY - (240 + selectedTransform.y);
     const startAngleRad = Math.atan2(dy, dx);
 
     setDragInitialAngle(startAngleRad);
@@ -128,8 +128,8 @@ export const StageCanvas: React.FC = () => {
     setDragMode('scale');
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const dx = svgX - selectedTransform.x;
-    const dy = svgY - selectedTransform.y;
+    const dx = svgX - (300 + selectedTransform.x);
+    const dy = svgY - (240 + selectedTransform.y);
     const initialDist = Math.sqrt(dx * dx + dy * dy);
 
     setDragInitialDist(initialDist || 1);
@@ -258,8 +258,8 @@ export const StageCanvas: React.FC = () => {
             const part = characterParts[i];
             const transform = getComputedTransform(part.id, currentFrame);
             
-            const dx = svgX - transform.x;
-            const dy = svgY - transform.y;
+            const dx = svgX - (300 + transform.x);
+            const dy = svgY - (240 + transform.y);
             const rad = -transform.rotation * Math.PI / 180;
             const localX = dx * Math.cos(rad) - dy * Math.sin(rad);
             const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
@@ -282,7 +282,7 @@ export const StageCanvas: React.FC = () => {
           } else {
             // Drop in empty area -> create new media part
             addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
-              baseTransform: { x: Math.round(svgX), y: Math.round(svgY), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+              baseTransform: { x: Math.round(svgX - 300), y: Math.round(svgY - 240), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
               innerMediaUrl: url,
               innerMediaType: isVideo ? 'video' : 'image'
             });
@@ -298,8 +298,8 @@ export const StageCanvas: React.FC = () => {
 
       addCustomPart(data.type, data.name || 'Dropped Element', {
         baseTransform: {
-          x: Math.round(svgX),
-          y: Math.round(svgY),
+          x: Math.round(svgX - 300),
+          y: Math.round(svgY - 240),
           rotation: 0,
           scaleX: 1,
           scaleY: 1,

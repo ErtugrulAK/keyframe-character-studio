@@ -480,18 +480,18 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (part && part.anchor && part.anchor !== 'none') {
         const ox = part.anchorOffsetX ?? 0;
         const oy = part.anchorOffsetY ?? 0;
-        let ax = 300;
-        let ay = 240;
+        let ax = 0;
+        let ay = 0;
         switch (part.anchor) {
-          case 'top-left':      ax = 50;  ay = 50;  break;
-          case 'top-center':    ax = 300; ay = 50;  break;
-          case 'top-right':     ax = 550; ay = 50;  break;
-          case 'center-left':   ax = 50;  ay = 240; break;
-          case 'center':        ax = 300; ay = 240; break;
-          case 'center-right':  ax = 550; ay = 240; break;
-          case 'bottom-left':   ax = 50;  ay = 430; break;
-          case 'bottom-center': ax = 300; ay = 430; break;
-          case 'bottom-right':  ax = 550; ay = 430; break;
+          case 'top-left':      ax = -250; ay = -190; break;
+          case 'top-center':    ax = 0;    ay = -190; break;
+          case 'top-right':     ax = 250;  ay = -190; break;
+          case 'center-left':   ax = -250; ay = 0;    break;
+          case 'center':        ax = 0;    ay = 0;    break;
+          case 'center-right':  ax = 250;  ay = 0;    break;
+          case 'bottom-left':   ax = -250; ay = 190;  break;
+          case 'bottom-center': ax = 0;    ay = 190;  break;
+          case 'bottom-right':  ax = 250;  ay = 190;  break;
         }
         return {
           ...rawTransform,
@@ -898,7 +898,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       strokeColor: '#101218',
       pivot: { x: 0.5, y: 0.5 },
       parentId: selectedPartId || 'torso',
-      baseTransform: { x: 300, y: 240, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
       textValue: type === 'custom_text' ? 'NEW TEXT' : type === 'custom_banner' ? 'CARD LABEL' : undefined,
       fontSize: 20,
       cardCategory: type === 'custom_card' ? 'STUDIO CARD' : undefined,

@@ -112,8 +112,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   }
 
   const finalOpacity = (isGhost ? 0.35 : transform.opacity) * animOpacity;
-  const finalX = transform.x + animX;
-  const finalY = transform.y + animY;
+  const finalX = 300 + transform.x + animX;
+  const finalY = 240 + transform.y + animY;
   const finalScaleX = transform.scaleX * animScaleX;
   const finalScaleY = transform.scaleY * animScaleY;
   const finalRot = transform.rotation + animRot;

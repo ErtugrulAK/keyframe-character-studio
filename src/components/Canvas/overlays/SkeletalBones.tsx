@@ -31,16 +31,16 @@ export const SkeletalBones: React.FC<SkeletalBonesProps> = ({
         return (
           <g key={`bone-${part.id}`}>
             <line
-              x1={pT.x}
-              y1={pT.y}
-              x2={cT.x}
-              y2={cT.y}
+              x1={300 + pT.x}
+              y1={240 + pT.y}
+              x2={300 + cT.x}
+              y2={240 + cT.y}
               stroke={isSelectedLink ? '#ffb700' : 'rgba(0, 210, 255, 0.4)'}
               strokeWidth={(isSelectedLink ? 2.5 : 1.5) * zScale}
               strokeDasharray={isSelectedLink ? 'none' : `${4 * zScale} ${3 * zScale}`}
             />
-            <circle cx={pT.x} cy={pT.y} r={3 * zScale} fill="#00d2ff" />
-            <circle cx={cT.x} cy={cT.y} r={3 * zScale} fill="#ffb700" />
+            <circle cx={300 + pT.x} cy={240 + pT.y} r={3 * zScale} fill="#00d2ff" />
+            <circle cx={300 + cT.x} cy={240 + cT.y} r={3 * zScale} fill="#ffb700" />
           </g>
         );
       })}

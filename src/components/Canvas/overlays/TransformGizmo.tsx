@@ -43,7 +43,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
 
   return (
     <g
-      transform={`translate(${selectedTransform.x}, ${selectedTransform.y}) rotate(${selectedTransform.rotation})`}
+      transform={`translate(${300 + selectedTransform.x}, ${240 + selectedTransform.y}) rotate(${selectedTransform.rotation})`}
       style={{ pointerEvents: 'none' }}
     >
       {/* Dashed Bounding Box Outline */}

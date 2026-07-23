@@ -1,1 +1,1 @@
-style: customize and beautify Curve Tab UI  
+fix: align 2D canvas coordinate system so (0,0) position matches (0,0) ORIGIN crosshair  

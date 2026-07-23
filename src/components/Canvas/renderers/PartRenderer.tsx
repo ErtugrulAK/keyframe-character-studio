@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
+import { useAnimator } from '../../../context/AnimatorContext';
 
 interface PartRendererProps {
   part: CharacterPart;
@@ -31,43 +32,81 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   let animX = 0;
   let animY = 0;
 
+  const { appMode, broadcastState } = useAnimator();
+
   if (!isGhost) {
     const inDur = part.inAnimDuration || 30;
     const outDur = part.outAnimDuration || 30;
     const inPreset = part.inAnimPreset || 'none';
     const outPreset = part.outAnimPreset || 'none';
 
-    if (inPreset !== 'none' && currentFrame < inDur) {
-      const progress = currentFrame / inDur; 
-      const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
-
-      if (inPreset === 'fade') animOpacity = easeProgress;
-      else if (inPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
-      else if (inPreset === 'spin') { animRot = (1 - easeProgress) * -360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
-      else if (inPreset.startsWith('slide-')) {
-        animOpacity = easeProgress;
-        const dist = 300 * (1 - easeProgress);
-        if (inPreset === 'slide-left') animX = dist;
-        if (inPreset === 'slide-right') animX = -dist;
-        if (inPreset === 'slide-up') animY = dist;
-        if (inPreset === 'slide-down') animY = -dist;
+    if (appMode === 'broadcast') {
+      const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
+      
+      if (bState.state === 'hidden') {
+        animOpacity = 0;
+      } else if (bState.state === 'animating_in' && inPreset !== 'none') {
+        const easeProgress = 1 - Math.pow(1 - bState.progress, 3);
+        if (inPreset === 'fade') animOpacity = easeProgress;
+        else if (inPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+        else if (inPreset === 'spin') { animRot = (1 - easeProgress) * -360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+        else if (inPreset.startsWith('slide-')) {
+          animOpacity = easeProgress;
+          const dist = 300 * (1 - easeProgress);
+          if (inPreset === 'slide-left') animX = dist;
+          if (inPreset === 'slide-right') animX = -dist;
+          if (inPreset === 'slide-up') animY = dist;
+          if (inPreset === 'slide-down') animY = -dist;
+        }
+      } else if (bState.state === 'animating_out' && outPreset !== 'none') {
+        const easeProgress = Math.pow(bState.progress, 3);
+        if (outPreset === 'fade') animOpacity = easeProgress;
+        else if (outPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+        else if (outPreset === 'spin') { animRot = (1 - easeProgress) * 360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+        else if (outPreset.startsWith('slide-')) {
+          animOpacity = easeProgress;
+          const dist = 300 * (1 - easeProgress);
+          if (outPreset === 'slide-left') animX = -dist;
+          if (outPreset === 'slide-right') animX = dist;
+          if (outPreset === 'slide-up') animY = -dist;
+          if (outPreset === 'slide-down') animY = dist;
+        }
       }
-    }
+      // if visible, animOpacity is 1 (default)
+    } else {
+      // Linear Edit Mode timeline logic
+      if (inPreset !== 'none' && currentFrame < inDur) {
+        const progress = currentFrame / inDur; 
+        const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
 
-    if (outPreset !== 'none' && totalFrames - currentFrame <= outDur) {
-      const progress = Math.max(0, (totalFrames - currentFrame) / outDur); 
-      const easeProgress = Math.pow(progress, 3); // easeInCubic
+        if (inPreset === 'fade') animOpacity = easeProgress;
+        else if (inPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+        else if (inPreset === 'spin') { animRot = (1 - easeProgress) * -360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+        else if (inPreset.startsWith('slide-')) {
+          animOpacity = easeProgress;
+          const dist = 300 * (1 - easeProgress);
+          if (inPreset === 'slide-left') animX = dist;
+          if (inPreset === 'slide-right') animX = -dist;
+          if (inPreset === 'slide-up') animY = dist;
+          if (inPreset === 'slide-down') animY = -dist;
+        }
+      }
 
-      if (outPreset === 'fade') animOpacity = easeProgress;
-      else if (outPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
-      else if (outPreset === 'spin') { animRot = (1 - easeProgress) * 360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
-      else if (outPreset.startsWith('slide-')) {
-        animOpacity = easeProgress;
-        const dist = 300 * (1 - easeProgress);
-        if (outPreset === 'slide-left') animX = -dist;
-        if (outPreset === 'slide-right') animX = dist;
-        if (outPreset === 'slide-up') animY = -dist;
-        if (outPreset === 'slide-down') animY = dist;
+      if (outPreset !== 'none' && totalFrames - currentFrame <= outDur) {
+        const progress = Math.max(0, (totalFrames - currentFrame) / outDur); 
+        const easeProgress = Math.pow(progress, 3); // easeInCubic
+
+        if (outPreset === 'fade') animOpacity = easeProgress;
+        else if (outPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+        else if (outPreset === 'spin') { animRot = (1 - easeProgress) * 360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+        else if (outPreset.startsWith('slide-')) {
+          animOpacity = easeProgress;
+          const dist = 300 * (1 - easeProgress);
+          if (outPreset === 'slide-left') animX = -dist;
+          if (outPreset === 'slide-right') animX = dist;
+          if (outPreset === 'slide-up') animY = -dist;
+          if (outPreset === 'slide-down') animY = dist;
+        }
       }
     }
   }

@@ -241,3 +241,10 @@ export interface AnimationProject {
   tracks: Track[];
   characterParts: CharacterPart[];
 }
+
+export type AppMode = 'edit' | 'broadcast';
+
+export interface BroadcastObjectState {
+  state: 'hidden' | 'animating_in' | 'visible' | 'animating_out';
+  progress: number; // 0 to 1
+}

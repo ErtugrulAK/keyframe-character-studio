@@ -20,6 +20,8 @@ export const HeaderBar: React.FC = () => {
     lastSavedAt,
     triggerManualSave,
     showToast,
+    appMode,
+    setAppMode,
   } = useAnimator();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -98,6 +100,40 @@ export const HeaderBar: React.FC = () => {
           <div className="pulse-green-dot" />
           <CheckCircle2 size={13} className="text-green" />
           <span className="autosave-text">{timeAgoStr}</span>
+        </div>
+
+        {/* Mode Toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-dark)', borderRadius: 6, padding: '2px', gap: 2 }}>
+          <button
+            className="btn-icon"
+            style={{
+              padding: '6px 16px',
+              borderRadius: 4,
+              fontSize: 12,
+              fontWeight: 700,
+              color: appMode === 'edit' ? '#fff' : 'var(--text-muted)',
+              background: appMode === 'edit' ? 'var(--accent-teal)' : 'transparent',
+              transition: 'all 0.2s',
+            }}
+            onClick={() => setAppMode('edit')}
+          >
+            EDIT MODE
+          </button>
+          <button
+            className="btn-icon"
+            style={{
+              padding: '6px 16px',
+              borderRadius: 4,
+              fontSize: 12,
+              fontWeight: 700,
+              color: appMode === 'broadcast' ? '#fff' : 'var(--text-muted)',
+              background: appMode === 'broadcast' ? 'var(--accent-gold)' : 'transparent',
+              transition: 'all 0.2s',
+            }}
+            onClick={() => setAppMode('broadcast')}
+          >
+            BROADCAST
+          </button>
         </div>
 
         <div className="fps-selector">

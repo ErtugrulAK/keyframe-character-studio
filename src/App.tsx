@@ -5,14 +5,16 @@ import { LeftToolbar } from './components/Toolbar/LeftToolbar';
 import { StageCanvas } from './components/Canvas/StageCanvas';
 import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
+import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 import './App.css';
 
 const MainAppContent: React.FC = () => {
-  const { setIsPlaying } = useAnimator();
+  const { setIsPlaying, appMode } = useAnimator();
 
   // Keyboard shortcut: Spacebar toggles play/pause
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (appMode === 'broadcast') return; // Disable play/pause in broadcast mode
       // Don't trigger if typing inside input or select
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
         return;
@@ -25,17 +27,17 @@ const MainAppContent: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setIsPlaying]);
+  }, [setIsPlaying, appMode]);
 
   return (
     <div className="app-container">
       <HeaderBar />
       <div className="main-layout">
-        <LeftToolbar />
+        {appMode === 'edit' && <LeftToolbar />}
         <StageCanvas />
-        <PropertyInspector />
+        {appMode === 'edit' && <PropertyInspector />}
       </div>
-      <SequencerTimeline />
+      {appMode === 'edit' ? <SequencerTimeline /> : <LiveDirectorPanel />}
     </div>
   );
 };

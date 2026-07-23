@@ -11,6 +11,8 @@ import type {
   AnimationProject,
   TrackChannel,
   PropertyKeyframe,
+  AppMode,
+  BroadcastObjectState,
 } from '../types/animator';
 import {
   DEFAULT_CHARACTER_PARTS,
@@ -109,10 +111,17 @@ interface AnimatorContextType {
   deletePart: (partId: string) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
-  // Per-property channel keyframe actions (Unreal-style)
   addPropertyKeyframe: (trackId: string, channel: TrackChannel, frame: number, value: number, easing?: EasingType) => void;
   deletePropertyKeyframe: (trackId: string, channel: TrackChannel, keyframeId: string) => void;
   updatePropertyKeyframeFrame: (trackId: string, channel: TrackChannel, keyframeId: string, newFrame: number) => void;
+
+  // Broadcast Mode
+  appMode: AppMode;
+  setAppMode: (mode: AppMode) => void;
+  broadcastState: Record<string, BroadcastObjectState>;
+  triggerBroadcastIn: (partId: string) => void;
+  triggerBroadcastOut: (partId: string) => void;
+  resetBroadcastState: () => void;
 }
 
 const AnimatorContext = createContext<AnimatorContextType | null>(null);
@@ -148,6 +157,92 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const [isLooping, setIsLooping] = useState<boolean>(true);
+
+  // Broadcast Mode State
+  const [appMode, setAppMode] = useState<AppMode>('edit');
+  const [broadcastState, setBroadcastState] = useState<Record<string, BroadcastObjectState>>({});
+
+  const resetBroadcastState = useCallback(() => {
+    setBroadcastState({});
+  }, []);
+
+  const triggerBroadcastIn = useCallback((partId: string) => {
+    setBroadcastState(prev => ({
+      ...prev,
+      [partId]: { state: 'animating_in', progress: 0 }
+    }));
+  }, []);
+
+  const triggerBroadcastOut = useCallback((partId: string) => {
+    setBroadcastState(prev => {
+      const current = prev[partId];
+      if (current && current.state === 'hidden') return prev; // Cannot play out if hidden
+      return {
+        ...prev,
+        [partId]: { state: 'animating_out', progress: 0 }
+      };
+    });
+  }, []);
+
+  // Broadcast Loop
+  const broadcastLastTimeRef = useRef<number>(performance.now());
+  const broadcastReqRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (appMode !== 'broadcast') {
+      if (broadcastReqRef.current) cancelAnimationFrame(broadcastReqRef.current);
+      return;
+    }
+
+    broadcastLastTimeRef.current = performance.now();
+
+    const loop = (time: number) => {
+      const dtMs = time - broadcastLastTimeRef.current;
+      broadcastLastTimeRef.current = time;
+
+      // Update progress for animating objects
+      setBroadcastState(prev => {
+        let changed = false;
+        const nextState = { ...prev };
+
+        // We need access to characterParts to know their animation durations
+        // However, accessing characterParts directly in a state updater is tricky without it being in dependency array.
+        // We will assume 30 frames duration at 60fps = 500ms by default, 
+        // but we should ideally calculate progress based on exact duration.
+        // For simplicity, we convert dtMs to progress increment.
+        
+        Object.entries(nextState).forEach(([id, st]) => {
+          if (st.state === 'animating_in' || st.state === 'animating_out') {
+            changed = true;
+            // Assumed default duration is 30 frames (0.5s at 60fps)
+            // Progress per ms = 1 / 500ms
+            const progressDelta = dtMs / 500;
+            const newProgress = Math.min(1, st.progress + progressDelta);
+            
+            if (newProgress >= 1) {
+              nextState[id] = {
+                state: st.state === 'animating_in' ? 'visible' : 'hidden',
+                progress: 1
+              };
+            } else {
+              nextState[id] = { ...st, progress: newProgress };
+            }
+          }
+        });
+
+        return changed ? nextState : prev;
+      });
+
+      broadcastReqRef.current = requestAnimationFrame(loop);
+    };
+
+    broadcastReqRef.current = requestAnimationFrame(loop);
+
+    return () => {
+      if (broadcastReqRef.current) cancelAnimationFrame(broadcastReqRef.current);
+    };
+  }, [appMode]);
+
   const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
 
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
@@ -930,6 +1025,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addPropertyKeyframe,
         deletePropertyKeyframe,
         updatePropertyKeyframeFrame,
+        appMode,
+        setAppMode,
+        broadcastState,
+        triggerBroadcastIn,
+        triggerBroadcastOut,
+        resetBroadcastState,
       }}
     >
       {children}

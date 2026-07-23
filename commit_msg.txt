@@ -1,1 +1,1 @@
-fix: resolve text wrapping and overlap in header buttons  
+feat: implement custom timeline broadcast animations and drag-and-drop media masking  

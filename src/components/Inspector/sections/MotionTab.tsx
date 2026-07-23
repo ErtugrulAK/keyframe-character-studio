@@ -11,6 +11,7 @@ const IN_ANIMATIONS = [
   { id: 'slide-down', label: 'Slide Down' },
   { id: 'pop', label: 'Pop Zoom' },
   { id: 'spin', label: 'Spin' },
+  { id: 'custom_timeline', label: 'Custom Timeline' },
 ];
 
 const OUT_ANIMATIONS = [
@@ -22,6 +23,7 @@ const OUT_ANIMATIONS = [
   { id: 'slide-down', label: 'Slide Down' },
   { id: 'pop', label: 'Pop Zoom' },
   { id: 'spin', label: 'Spin' },
+  { id: 'custom_timeline', label: 'Custom Timeline' },
 ];
 
 interface MotionTabProps {
@@ -58,7 +60,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
           </select>
         </div>
 
-        {selectedPart.inAnimPreset && selectedPart.inAnimPreset !== 'none' && (
+        {selectedPart.inAnimPreset && selectedPart.inAnimPreset !== 'none' && selectedPart.inAnimPreset !== 'custom_timeline' && (
           <div className="input-field" style={{ marginTop: 10 }}>
             <label style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>DURATION (FRAMES)</span>
@@ -70,6 +72,29 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
               onChange={(e) => handlePartPropChange('inAnimDuration', parseInt(e.target.value))}
               style={{ width: '100%', cursor: 'pointer' }}
             />
+          </div>
+        )}
+
+        {selectedPart.inAnimPreset === 'custom_timeline' && (
+          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+            <div className="input-field" style={{ flex: 1 }}>
+              <label>START FRAME</label>
+              <input
+                type="number" min="0" max="1200"
+                value={selectedPart.inAnimTimelineStart ?? 0}
+                onChange={(e) => handlePartPropChange('inAnimTimelineStart', parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-dark)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4 }}
+              />
+            </div>
+            <div className="input-field" style={{ flex: 1 }}>
+              <label>END FRAME</label>
+              <input
+                type="number" min="0" max="1200"
+                value={selectedPart.inAnimTimelineEnd ?? 30}
+                onChange={(e) => handlePartPropChange('inAnimTimelineEnd', parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-dark)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4 }}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -94,7 +119,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
           </select>
         </div>
 
-        {selectedPart.outAnimPreset && selectedPart.outAnimPreset !== 'none' && (
+        {selectedPart.outAnimPreset && selectedPart.outAnimPreset !== 'none' && selectedPart.outAnimPreset !== 'custom_timeline' && (
           <div className="input-field" style={{ marginTop: 10 }}>
             <label style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span>DURATION (FRAMES)</span>
@@ -106,6 +131,29 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
               onChange={(e) => handlePartPropChange('outAnimDuration', parseInt(e.target.value))}
               style={{ width: '100%', cursor: 'pointer' }}
             />
+          </div>
+        )}
+
+        {selectedPart.outAnimPreset === 'custom_timeline' && (
+          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+            <div className="input-field" style={{ flex: 1 }}>
+              <label>START FRAME</label>
+              <input
+                type="number" min="0" max="1200"
+                value={selectedPart.outAnimTimelineStart ?? 0}
+                onChange={(e) => handlePartPropChange('outAnimTimelineStart', parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-dark)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4 }}
+              />
+            </div>
+            <div className="input-field" style={{ flex: 1 }}>
+              <label>END FRAME</label>
+              <input
+                type="number" min="0" max="1200"
+                value={selectedPart.outAnimTimelineEnd ?? 30}
+                onChange={(e) => handlePartPropChange('outAnimTimelineEnd', parseInt(e.target.value) || 0)}
+                style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-dark)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4 }}
+              />
+            </div>
           </div>
         )}
       </div>

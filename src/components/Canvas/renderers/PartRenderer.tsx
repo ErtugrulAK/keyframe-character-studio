@@ -45,7 +45,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       
       if (bState.state === 'hidden') {
         animOpacity = 0;
-      } else if (bState.state === 'animating_in' && inPreset !== 'none') {
+      } else if (bState.state === 'animating_in' && inPreset !== 'none' && inPreset !== 'custom_timeline') {
         const easeProgress = 1 - Math.pow(1 - bState.progress, 3);
         if (inPreset === 'fade') animOpacity = easeProgress;
         else if (inPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
@@ -58,7 +58,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           if (inPreset === 'slide-up') animY = dist;
           if (inPreset === 'slide-down') animY = -dist;
         }
-      } else if (bState.state === 'animating_out' && outPreset !== 'none') {
+      } else if (bState.state === 'animating_out' && outPreset !== 'none' && outPreset !== 'custom_timeline') {
         const easeProgress = Math.pow(bState.progress, 3);
         if (outPreset === 'fade') animOpacity = easeProgress;
         else if (outPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }

@@ -108,6 +108,7 @@ interface AnimatorContextType {
   importProject: (jsonStr: string) => boolean;
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
+  updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
   deletePart: (partId: string) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
@@ -966,6 +967,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSelectedPartId(partId);
   };
 
+  const updatePartMedia = (partId: string, url: string, type: 'image' | 'video') => {
+    setCharacterParts((prev) =>
+      prev.map((p) => (p.id === partId ? { ...p, innerMediaUrl: url, innerMediaType: type } : p))
+    );
+  };
+
   return (
     <AnimatorContext.Provider
       value={{
@@ -1019,6 +1026,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         importProject,
         resetProject,
         addCustomPart,
+        updatePartMedia,
         deletePart,
         applyMotionTransition,
         showToast,

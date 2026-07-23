@@ -20,8 +20,11 @@ export const StageCanvas: React.FC = () => {
     showGrid,
     setShowGrid,
     addCustomPart,
+    updatePartMedia,
     projectResolution,
     totalFrames,
+    appMode,
+    broadcastState,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,7 +61,7 @@ export const StageCanvas: React.FC = () => {
   );
 
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+    if (appMode === 'broadcast' || e.button !== 0) return;
     e.stopPropagation();
     setSelectedPartId(partId);
 
@@ -76,6 +79,8 @@ export const StageCanvas: React.FC = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (appMode === 'broadcast') return;
+
     if (e.button === 2 || activeTool === 'pan') {
       setIsDragging(true);
       setDragMode('pan' as any);
@@ -98,7 +103,7 @@ export const StageCanvas: React.FC = () => {
   };
 
   const startRotate = (e: React.MouseEvent) => {
-    if (e.button !== 0 || !selectedPart || !selectedTransform) return;
+    if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
     e.stopPropagation();
     setIsDragging(true);
     setDragMode('rotate');
@@ -117,7 +122,7 @@ export const StageCanvas: React.FC = () => {
   };
 
   const startScale = (e: React.MouseEvent) => {
-    if (e.button !== 0 || !selectedPart || !selectedTransform) return;
+    if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
     e.stopPropagation();
     setIsDragging(true);
     setDragMode('scale');
@@ -218,15 +223,78 @@ export const StageCanvas: React.FC = () => {
     setIsDropTargetHover(false);
   };
 
+  const getPartBounds = (partType: string): { halfW: number; halfH: number } => {
+    let halfW = 32; let halfH = 32;
+    switch (partType) {
+      case 'custom_card': halfW = 90; halfH = 50; break;
+      case 'custom_rect': halfW = 60; halfH = 30; break;
+      case 'custom_banner': halfW = 80; halfH = 25; break;
+      case 'custom_image':
+      case 'custom_video': halfW = partType === 'custom_video' ? 100 : 90; halfH = 60; break;
+    }
+    return { halfW, halfH };
+  };
+
   const handleDropStage = (e: React.DragEvent) => {
     e.preventDefault();
+    if (appMode === 'broadcast') return;
     setIsDropTargetHover(false);
+
     try {
+      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+
+      // Handle Files (Canva-style Masking or New Media)
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        const isVideo = file.type.startsWith('video/');
+        const isImage = file.type.startsWith('image/');
+        
+        if (isVideo || isImage) {
+          const url = URL.createObjectURL(file);
+          
+          // Check if dropped over an existing shape
+          let targetShapeId = null;
+          for (let i = characterParts.length - 1; i >= 0; i--) {
+            const part = characterParts[i];
+            const transform = getComputedTransform(part.id, currentFrame);
+            
+            const dx = svgX - transform.x;
+            const dy = svgY - transform.y;
+            const rad = -transform.rotation * Math.PI / 180;
+            const localX = dx * Math.cos(rad) - dy * Math.sin(rad);
+            const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
+            const unscaledX = localX / Math.abs(transform.scaleX || 1);
+            const unscaledY = localY / Math.abs(transform.scaleY || 1);
+            
+            const { halfW, halfH } = getPartBounds(part.type);
+            
+            if (Math.abs(unscaledX) <= halfW && Math.abs(unscaledY) <= halfH) {
+              // Only mask if it's a shape type
+              if (part.type === 'custom_rect' || part.type === 'custom_card' || part.type === 'custom_banner') {
+                targetShapeId = part.id;
+                break;
+              }
+            }
+          }
+
+          if (targetShapeId) {
+            updatePartMedia(targetShapeId, url, isVideo ? 'video' : 'image');
+          } else {
+            // Drop in empty area -> create new media part
+            addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
+              baseTransform: { x: Math.round(svgX), y: Math.round(svgY), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+              innerMediaUrl: url,
+              innerMediaType: isVideo ? 'video' : 'image'
+            });
+          }
+          return;
+        }
+      }
+
+      // Handle UI Panel JSON drops
       const rawData = e.dataTransfer.getData('application/json');
       if (!rawData) return;
       const data = JSON.parse(rawData);
-
-      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
 
       addCustomPart(data.type, data.name || 'Dropped Element', {
         baseTransform: {
@@ -391,14 +459,31 @@ export const StageCanvas: React.FC = () => {
 
               {/* Character Parts Active Render */}
               {sortedParts.map((part) => {
-                const transform = getComputedTransform(part.id, currentFrame);
+                let frameToEvaluate = currentFrame;
+
+                if (appMode === 'broadcast') {
+                  const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
+                  if (bState.state === 'animating_in' && part.inAnimPreset === 'custom_timeline') {
+                    const st = part.inAnimTimelineStart || 0;
+                    const en = part.inAnimTimelineEnd || 30;
+                    frameToEvaluate = st + bState.progress * (en - st);
+                  } else if (bState.state === 'visible' && part.inAnimPreset === 'custom_timeline') {
+                    frameToEvaluate = part.inAnimTimelineEnd || 30;
+                  } else if (bState.state === 'animating_out' && part.outAnimPreset === 'custom_timeline') {
+                    const st = part.outAnimTimelineStart || 0;
+                    const en = part.outAnimTimelineEnd || 30;
+                    frameToEvaluate = st + bState.progress * (en - st);
+                  }
+                }
+
+                const transform = getComputedTransform(part.id, frameToEvaluate);
                 return (
                   <PartRenderer
                     key={part.id}
                     part={part}
                     transform={transform}
                     isSelected={selectedPartId === part.id}
-                    currentFrame={currentFrame}
+                    currentFrame={frameToEvaluate}
                     totalFrames={totalFrames}
                     onSelect={setSelectedPartId}
                     onStartTranslateDrag={startTranslateDragForPart}

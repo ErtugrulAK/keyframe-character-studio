@@ -215,10 +215,15 @@ export interface CharacterPart {
   particleConfig?: ParticleConfig;
 
   // ── Feature 7: Broadcast In/Out Animations ──
-  inAnimPreset?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'pop' | 'spin';
+  inAnimPreset?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'pop' | 'spin' | 'custom_timeline';
   inAnimDuration?: number; // duration in frames
-  outAnimPreset?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'pop' | 'spin';
+  inAnimTimelineStart?: number;
+  inAnimTimelineEnd?: number;
+
+  outAnimPreset?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'pop' | 'spin' | 'custom_timeline';
   outAnimDuration?: number; // duration in frames
+  outAnimTimelineStart?: number;
+  outAnimTimelineEnd?: number;
 
   // ── Feature 8: Canva-Style Shape Masking ──
   innerMediaUrl?: string;

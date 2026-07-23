@@ -1,1 +1,1 @@
-fix: align 2D canvas coordinate system so (0,0) position matches (0,0) ORIGIN crosshair  
+fix: resolve passive wheel listener error by adding non-passive listener to StageCanvas  

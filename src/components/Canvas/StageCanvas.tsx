@@ -205,11 +205,18 @@ export const StageCanvas: React.FC = () => {
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  const handleWheel = (e: React.WheelEvent) => {
+  const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
     setZoomLevel((prev) => Math.min(3, Math.max(0.3, prev * zoomFactor)));
-  };
+  }, []);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => container.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
 
   const [isDropTargetHover, setIsDropTargetHover] = useState<boolean>(false);
 
@@ -320,7 +327,6 @@ export const StageCanvas: React.FC = () => {
       ref={containerRef}
       onMouseDown={handleMouseDown}
       onContextMenu={(e) => e.preventDefault()}
-      onWheel={handleWheel}
       onDragOver={handleDragOverStage}
       onDragLeave={handleDragLeaveStage}
       onDrop={handleDropStage}

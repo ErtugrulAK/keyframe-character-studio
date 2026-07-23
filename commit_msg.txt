@@ -1,1 +1,1 @@
-feat(transform): add proportional uniform scale control and aspect ratio lock to TransformTab  
+fix(canvas): add viewBox and preserveAspectRatio to center stage canvas perfectly on all screens  

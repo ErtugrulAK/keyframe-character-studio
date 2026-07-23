@@ -51,10 +51,15 @@ export const StageCanvas: React.FC = () => {
     (clientX: number, clientY: number): { svgX: number; svgY: number } => {
       if (!containerRef.current) return { svgX: 0, svgY: 0 };
       const rect = containerRef.current.getBoundingClientRect();
-      const relX = clientX - rect.left - rect.width / 2;
-      const relY = clientY - rect.top - rect.height / 2;
-      const svgX = relX / zoomLevel - panOffset.x + rect.width / 2;
-      const svgY = relY / zoomLevel - panOffset.y + rect.height / 2;
+      const scale = Math.min(rect.width / 600, rect.height / 480) || 1;
+      const viewBoxX = (clientX - rect.left - (rect.width - 600 * scale) / 2) / scale;
+      const viewBoxY = (clientY - rect.top - (rect.height - 480 * scale) / 2) / scale;
+
+      const relX = viewBoxX - 300;
+      const relY = viewBoxY - 240;
+
+      const svgX = relX / zoomLevel - panOffset.x + 300;
+      const svgY = relY / zoomLevel - panOffset.y + 240;
       return { svgX, svgY };
     },
     [zoomLevel, panOffset]
@@ -374,6 +379,8 @@ export const StageCanvas: React.FC = () => {
         className="stage-svg"
         width="100%"
         height="100%"
+        viewBox="0 0 600 480"
+        preserveAspectRatio="xMidYMid meet"
         style={{ transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`, transformOrigin: 'center center' }}
       >
         <defs>

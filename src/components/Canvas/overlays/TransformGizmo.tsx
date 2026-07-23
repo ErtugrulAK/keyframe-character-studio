@@ -39,8 +39,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   const halfW = baseBounds.halfW * Math.abs(selectedTransform.scaleX);
   const halfH = baseBounds.halfH * Math.abs(selectedTransform.scaleY);
 
-  const rotRadius = Math.sqrt(halfW * halfW + halfH * halfH) + 16;
-  const rotBarLength = rotRadius + 20;
+  const rotBarLength = halfH + 30 * zScale;
 
   return (
     <g
@@ -57,18 +56,6 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         stroke="#00d2ff"
         strokeWidth={1.5 * zScale}
         strokeDasharray={`${5 * zScale} ${4 * zScale}`}
-        vectorEffect="non-scaling-stroke"
-      />
-
-      {/* Rotation Circle Ring Overlay */}
-      <circle
-        cx={0}
-        cy={0}
-        r={rotRadius}
-        fill="none"
-        stroke="rgba(0, 210, 255, 0.45)"
-        strokeWidth={1.5 * zScale}
-        strokeDasharray={`${4 * zScale} ${3 * zScale}`}
         vectorEffect="non-scaling-stroke"
       />
 

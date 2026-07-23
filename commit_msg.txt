@@ -1,1 +1,1 @@
-feat: implement custom timeline broadcast animations and drag-and-drop media masking  
+fix: remove giant rotation circle from Gizmo and use fixed pixel distance for rotation handle  

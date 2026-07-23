@@ -125,6 +125,8 @@ interface AnimatorContextType {
   broadcastState: Record<string, BroadcastObjectState>;
   triggerBroadcastIn: (partId: string) => void;
   triggerBroadcastOut: (partId: string) => void;
+  triggerAllBroadcastIn: () => void;
+  triggerAllBroadcastOut: () => void;
   resetBroadcastState: () => void;
 }
 
@@ -178,13 +180,29 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const triggerBroadcastOut = useCallback((partId: string) => {
+    setBroadcastState(prev => ({
+      ...prev,
+      [partId]: { state: 'animating_out', progress: 0 }
+    }));
+  }, []);
+
+  const triggerAllBroadcastIn = useCallback(() => {
+    const nextState: Record<string, BroadcastObjectState> = {};
+    characterPartsRef.current.forEach(p => {
+      nextState[p.id] = { state: 'animating_in', progress: 0 };
+    });
+    setBroadcastState(nextState);
+  }, []);
+
+  const triggerAllBroadcastOut = useCallback(() => {
     setBroadcastState(prev => {
-      const current = prev[partId];
-      if (current && current.state === 'hidden') return prev; // Cannot play out if hidden
-      return {
-        ...prev,
-        [partId]: { state: 'animating_out', progress: 0 }
-      };
+      const nextState = { ...prev };
+      characterPartsRef.current.forEach(p => {
+        if (nextState[p.id] && nextState[p.id].state !== 'hidden') {
+          nextState[p.id] = { state: 'animating_out', progress: 0 };
+        }
+      });
+      return nextState;
     });
   }, []);
 
@@ -209,20 +227,30 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         let changed = false;
         const nextState = { ...prev };
 
-        // We need access to characterParts to know their animation durations
-        // However, accessing characterParts directly in a state updater is tricky without it being in dependency array.
-        // We will assume 30 frames duration at 60fps = 500ms by default, 
-        // but we should ideally calculate progress based on exact duration.
-        // For simplicity, we convert dtMs to progress increment.
-        
         Object.entries(nextState).forEach(([id, st]) => {
           if (st.state === 'animating_in' || st.state === 'animating_out') {
             changed = true;
-            // Assumed default duration is 30 frames (0.5s at 60fps)
-            // Progress per ms = 1 / 500ms
-            const progressDelta = dtMs / 500;
+            const part = characterPartsRef.current.find(p => p.id === id);
+            let durFrames = 30;
+            if (part) {
+              if (st.state === 'animating_in') {
+                if (part.inAnimPreset === 'custom_timeline') {
+                  durFrames = Math.max(1, (part.inAnimTimelineEnd || 30) - (part.inAnimTimelineStart || 0));
+                } else {
+                  durFrames = part.inAnimDuration || 30;
+                }
+              } else {
+                if (part.outAnimPreset === 'custom_timeline') {
+                  durFrames = Math.max(1, (part.outAnimTimelineEnd || 30) - (part.outAnimTimelineStart || 0));
+                } else {
+                  durFrames = part.outAnimDuration || 30;
+                }
+              }
+            }
+            const durMs = (durFrames / (fpsRef.current || 30)) * 1000;
+            const progressDelta = dtMs / Math.max(50, durMs);
             const newProgress = Math.min(1, st.progress + progressDelta);
-            
+
             if (newProgress >= 1) {
               nextState[id] = {
                 state: st.state === 'animating_in' ? 'visible' : 'hidden',
@@ -256,6 +284,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
   const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
+
+  const characterPartsRef = useRef(characterParts);
+  useEffect(() => { characterPartsRef.current = characterParts; }, [characterParts]);
+
+  const fpsRef = useRef(fps);
+  useEffect(() => { fpsRef.current = fps; }, [fps]);
 
   // Undo / Redo Stack State
   const [history, setHistory] = useState<HistoryState[]>([]);
@@ -411,7 +445,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let newTrack: Track = {
       id: `track_${newPartId}`,
       partId: newPartId,
+      name: newPart.name,
+      color: '#3b82f6',
       keyframes: [],
+      channels: { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] },
       visible: true,
       locked: false,
       expanded: false,
@@ -467,7 +504,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     let newTrack: Track = {
       id: `track_${newPartId}`,
       partId: newPartId,
+      name: newPart.name,
+      color: part.fillColor || '#3b82f6',
       keyframes: [],
+      channels: { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] },
       visible: true,
       locked: false,
       expanded: false,
@@ -621,6 +661,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return interpolateTransform(prevKf.transform, nextKf.transform, progress, prevKf.easing, prevKf.bezierControlPoints);
       })();
 
+      let finalComputed = rawTransform;
+
       // Feature 2: Responsive Anchor Point Resolution
       if (part && part.anchor && part.anchor !== 'none') {
         const ox = part.anchorOffsetX ?? 0;
@@ -638,14 +680,24 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           case 'bottom-center': ax = 0;    ay = 190;  break;
           case 'bottom-right':  ax = 250;  ay = 190;  break;
         }
-        return {
+        finalComputed = {
           ...rawTransform,
           x: ax + ox,
           y: ay + oy,
         };
       }
 
-      return rawTransform;
+      // Feature 9: Visibility Range Timing (Start/End Frame)
+      if (part) {
+        if (part.visibleStartFrame !== undefined && frame < part.visibleStartFrame) {
+          return { ...finalComputed, opacity: 0 };
+        }
+        if (part.visibleEndFrame !== undefined && frame > part.visibleEndFrame) {
+          return { ...finalComputed, opacity: 0 };
+        }
+      }
+
+      return finalComputed;
     },
     [characterParts, tracks]
   );
@@ -1186,6 +1238,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         broadcastState,
         triggerBroadcastIn,
         triggerBroadcastOut,
+        triggerAllBroadcastIn,
+        triggerAllBroadcastOut,
         resetBroadcastState,
       }}
     >

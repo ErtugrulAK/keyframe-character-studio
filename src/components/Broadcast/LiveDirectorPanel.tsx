@@ -1,18 +1,54 @@
 import React from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import { Play, Square } from 'lucide-react';
+import { Play, Square, RefreshCw, Zap } from 'lucide-react';
 import './LiveDirector.css';
 
 export const LiveDirectorPanel: React.FC = () => {
-  const { characterParts, broadcastState, triggerBroadcastIn, triggerBroadcastOut } = useAnimator();
+  const {
+    characterParts,
+    broadcastState,
+    triggerBroadcastIn,
+    triggerBroadcastOut,
+    triggerAllBroadcastIn,
+    triggerAllBroadcastOut,
+    resetBroadcastState,
+  } = useAnimator();
 
   const directorParts = characterParts; 
 
   return (
     <div className="live-director-panel">
-      <div className="director-header">
-        <h2 style={{ fontSize: 14, margin: 0, color: 'var(--accent-gold)' }}>LIVE DIRECTOR PANEL</h2>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger animations manually</span>
+      <div className="director-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <div>
+          <h2 style={{ fontSize: 14, margin: 0, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Zap size={14} /> LIVE DIRECTOR PANEL
+          </h2>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger broadcast graphic animations in real time</span>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            className="btn-director active"
+            style={{ fontSize: 11, padding: '4px 10px', height: 28, background: 'var(--accent-green)', color: '#000', fontWeight: 700 }}
+            onClick={triggerAllBroadcastIn}
+          >
+            <Play size={12} fill="#000" /> PLAY ALL IN
+          </button>
+          <button
+            className="btn-director out"
+            style={{ fontSize: 11, padding: '4px 10px', height: 28 }}
+            onClick={triggerAllBroadcastOut}
+          >
+            <Square size={12} /> PLAY ALL OUT
+          </button>
+          <button
+            className="btn-director"
+            style={{ fontSize: 11, padding: '4px 10px', height: 28, color: 'var(--text-muted)' }}
+            onClick={resetBroadcastState}
+          >
+            <RefreshCw size={12} /> RESET ALL
+          </button>
+        </div>
       </div>
       
       <div className="director-list">
@@ -42,14 +78,13 @@ export const LiveDirectorPanel: React.FC = () => {
                 <button 
                   className={`btn-director ${currentState !== 'hidden' && !isAnimatingOut ? 'active' : ''}`}
                   onClick={() => triggerBroadcastIn(part.id)}
-                  disabled={currentState !== 'hidden' && !isAnimatingOut}
                 >
                   <Play size={14} /> PLAY IN
                 </button>
                 <button 
                   className="btn-director out"
                   onClick={() => triggerBroadcastOut(part.id)}
-                  disabled={currentState === 'hidden' || isAnimatingOut}
+                  disabled={currentState === 'hidden' && !isAnimatingOut}
                 >
                   <Square size={14} /> PLAY OUT
                 </button>

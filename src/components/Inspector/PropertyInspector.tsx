@@ -24,8 +24,6 @@ export const PropertyInspector: React.FC = () => {
     updateKeyframeBezierPoints,
     applyPresetPose,
     deletePart,
-    copySelectedPart,
-    pasteCopiedPart,
     duplicateSelectedPart,
     projectResolution,
     setProjectResolution,

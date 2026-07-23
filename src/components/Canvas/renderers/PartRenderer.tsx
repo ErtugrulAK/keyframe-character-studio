@@ -377,7 +377,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
               strokeWidth={0.5}
               fontSize={part.fontSize || 24}
               fontWeight="bold"
-              fontFamily="Inter, system-ui, sans-serif"
+              fontFamily={part.fontFamily || 'Outfit'}
               vectorEffect="non-scaling-stroke"
             >
               {items.map((item, idx) => {
@@ -414,7 +414,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
               strokeWidth={0.5}
               fontSize={part.fontSize || 24}
               fontWeight="bold"
-              fontFamily="Inter, system-ui, sans-serif"
+              fontFamily={part.fontFamily || 'Outfit'}
               vectorEffect="non-scaling-stroke"
             >
               {textStr}
@@ -615,7 +615,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             fill={part.strokeColor || '#ffffff'}
             fontSize={part.fontSize || 16}
             fontWeight="700"
-            fontFamily="Inter, system-ui, sans-serif"
+            fontFamily={part.fontFamily || 'Outfit'}
           >
             {part.textValue || 'BANNER LABEL'}
           </text>

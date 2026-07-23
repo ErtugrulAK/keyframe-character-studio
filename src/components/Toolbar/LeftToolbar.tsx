@@ -31,7 +31,6 @@ import {
 import './LeftToolbar.css';
 
 const QUICK_SHAPES: { type: BodyPartType; label: string; icon: React.ReactNode }[] = [
-  { type: 'custom_card', label: 'UI Card', icon: <Layout size={14} className="text-cyan" /> },
   { type: 'custom_text', label: 'Text Label', icon: <Type size={14} className="text-cyan" /> },
   { type: 'custom_banner', label: 'Banner Card', icon: <Tag size={14} className="text-gold" /> },
   { type: 'custom_capsule', label: 'Capsule Pill', icon: <Pill size={14} className="text-purple" /> },
@@ -239,21 +238,58 @@ export const LeftToolbar: React.FC = () => {
               <span className="dropzone-sub">Click to browse or drag MP4, WebM, PNG, JPG files here</span>
             </div>
 
-            <div className="drawer-subtitle">QUICK ADD OBJECTS</div>
-            <div className="drawer-grid">
-              {QUICK_SHAPES.map((item) => (
-                <button
-                  key={item.type}
-                  className="drawer-item-card"
-                  draggable={true}
-                  onDragStart={(e) => handleDragStart(e, item.type, item.label)}
-                  onClick={() => addCustomPart(item.type, item.label)}
-                >
-                  <div className="item-icon-box">{item.icon}</div>
-                  <span className="item-label">{item.label}</span>
-                </button>
-              ))}
-            </div>
+            {(() => {
+              const recentMedia = Array.from(new Set(
+                characterParts
+                  .filter(p => p.type === 'custom_image' || p.type === 'custom_video')
+                  .map(p => p.imageUrl || p.videoUrl)
+                  .filter(url => url)
+              )) as string[];
+
+              if (recentMedia.length === 0) return null;
+
+              return (
+                <>
+                  <div className="drawer-subtitle" style={{ marginTop: 20 }}>RECENTLY ADDED MEDIA</div>
+                  <div className="media-preview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 8 }}>
+                    {recentMedia.map((url, i) => {
+                      const isVideo = url.startsWith('data:video') || url.match(/\.(mp4|webm|mov|ogg)$/i);
+                      return (
+                        <div 
+                          key={i} 
+                          className="media-preview-item"
+                          title="Click to add to canvas"
+                          style={{ 
+                            height: 60, 
+                            background: 'var(--bg-input)', 
+                            borderRadius: 6, 
+                            overflow: 'hidden', 
+                            cursor: 'pointer',
+                            border: '1px solid var(--border-color)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s'
+                          }}
+                          onClick={() => {
+                            const type = isVideo ? 'custom_video' : 'custom_image';
+                            addCustomPart(type, `Media ${i + 1}`, isVideo ? { videoUrl: url } : { imageUrl: url });
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--accent-teal)'}
+                          onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                        >
+                          {isVideo ? (
+                            <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                          ) : (
+                            <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="recent" />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -346,15 +382,64 @@ export const LeftToolbar: React.FC = () => {
             <div className="drawer-header">
               <span className="drawer-title">Text Elements</span>
             </div>
-            <button
-              className="btn-primary w-full text-add-btn"
-              draggable={true}
-              onDragStart={(e) => handleDragStart(e, 'custom_text', 'HEADING TEXT')}
-              onClick={() => addCustomPart('custom_text', 'HEADING TEXT')}
-            >
-              <Type size={16} />
-              <span>Add Heading Text</span>
-            </button>
+            
+            <div className="drawer-subtitle" style={{ marginBottom: 10 }}>TYPOGRAPHY PRESETS</div>
+            <div className="drawer-grid" style={{ gridTemplateColumns: '1fr' }}>
+              <button
+                className="drawer-item-card"
+                style={{ justifyContent: 'flex-start', padding: '10px 14px' }}
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'custom_text', 'HEADING', { fontFamily: 'Outfit', fontSize: 48 })}
+                onClick={() => addCustomPart('custom_text', 'HEADING', { fontFamily: 'Outfit', fontSize: 48 })}
+              >
+                <Type size={16} className="text-cyan" />
+                <span className="item-label" style={{ fontFamily: 'Outfit', fontSize: 16, fontWeight: 800 }}>Add Heading</span>
+              </button>
+
+              <button
+                className="drawer-item-card"
+                style={{ justifyContent: 'flex-start', padding: '10px 14px' }}
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'custom_text', 'Cinematic Title', { fontFamily: 'Playfair Display', fontSize: 42 })}
+                onClick={() => addCustomPart('custom_text', 'Cinematic Title', { fontFamily: 'Playfair Display', fontSize: 42 })}
+              >
+                <Type size={16} className="text-gold" />
+                <span className="item-label" style={{ fontFamily: '"Playfair Display", serif', fontSize: 16, fontStyle: 'italic' }}>Cinematic Title</span>
+              </button>
+
+              <button
+                className="drawer-item-card"
+                style={{ justifyContent: 'flex-start', padding: '10px 14px' }}
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'custom_text', 'Subheading', { fontFamily: 'Inter', fontSize: 24 })}
+                onClick={() => addCustomPart('custom_text', 'Subheading', { fontFamily: 'Inter', fontSize: 24 })}
+              >
+                <Type size={16} className="text-teal" />
+                <span className="item-label" style={{ fontFamily: 'Inter', fontSize: 14, fontWeight: 600 }}>Add Subheading</span>
+              </button>
+
+              <button
+                className="drawer-item-card"
+                style={{ justifyContent: 'flex-start', padding: '10px 14px' }}
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'custom_text', 'Body text block', { fontFamily: 'Roboto', fontSize: 16 })}
+                onClick={() => addCustomPart('custom_text', 'Body text block', { fontFamily: 'Roboto', fontSize: 16 })}
+              >
+                <Type size={16} className="text-purple" />
+                <span className="item-label" style={{ fontFamily: 'Roboto', fontSize: 12, fontWeight: 400 }}>Add Body Text</span>
+              </button>
+
+              <button
+                className="drawer-item-card"
+                style={{ justifyContent: 'flex-start', padding: '10px 14px' }}
+                draggable={true}
+                onDragStart={(e) => handleDragStart(e, 'custom_text', 'function_call()', { fontFamily: 'JetBrains Mono', fontSize: 14 })}
+                onClick={() => addCustomPart('custom_text', 'function_call()', { fontFamily: 'JetBrains Mono', fontSize: 14 })}
+              >
+                <Type size={16} className="text-red" />
+                <span className="item-label" style={{ fontFamily: '"JetBrains Mono", monospace', fontSize: 12 }}>Code Snippet</span>
+              </button>
+            </div>
           </div>
         )}
 

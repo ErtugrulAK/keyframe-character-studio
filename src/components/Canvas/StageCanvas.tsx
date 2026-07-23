@@ -76,7 +76,7 @@ export const StageCanvas: React.FC = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 || activeTool === 'pan') {
+    if (e.button === 2 || activeTool === 'pan') {
       setIsDragging(true);
       setDragMode('pan' as any);
       setDragStart({
@@ -246,6 +246,7 @@ export const StageCanvas: React.FC = () => {
       className={`stage-canvas-container ${isPanning ? 'panning' : ''}`}
       ref={containerRef}
       onMouseDown={handleMouseDown}
+      onContextMenu={(e) => e.preventDefault()}
       onWheel={handleWheel}
       onDragOver={handleDragOverStage}
       onDragLeave={handleDragLeaveStage}

@@ -6,10 +6,10 @@ import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { MotionTab } from './sections/MotionTab';
 import { PresetsTab } from './sections/PresetsTab';
-import { Sliders, Sparkles, Activity, Palette, Zap, Trash2 } from 'lucide-react';
+import { Sliders, Sparkles, Activity, Palette, Zap, Trash2, Monitor } from 'lucide-react';
 import './PropertyInspector.css';
 
-type TabType = 'transform' | 'style' | 'easing' | 'motion' | 'presets';
+type TabType = 'project' | 'transform' | 'style' | 'easing' | 'motion' | 'presets';
 
 export const PropertyInspector: React.FC = () => {
   const {
@@ -28,7 +28,7 @@ export const PropertyInspector: React.FC = () => {
     setProjectResolution,
   } = useAnimator();
 
-  const [activeTab, setActiveTab] = useState<TabType>('transform');
+  const [activeTab, setActiveTab] = useState<TabType>('project');
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -60,6 +60,14 @@ export const PropertyInspector: React.FC = () => {
 
       {/* Inspector Navigation Tabs */}
       <div className="inspector-tabs">
+        <button
+          className={`tab-btn ${activeTab === 'project' ? 'active' : ''}`}
+          onClick={() => setActiveTab('project')}
+          title="Project Settings"
+        >
+          <Monitor size={13} />
+          <span>Project</span>
+        </button>
         <button
           className={`tab-btn ${activeTab === 'transform' ? 'active' : ''}`}
           onClick={() => setActiveTab('transform')}
@@ -107,7 +115,69 @@ export const PropertyInspector: React.FC = () => {
       </div>
 
       <div className="inspector-body">
-        {selectedPart && transform ? (
+        {activeTab === 'project' ? (
+          <div className="inspector-section">
+            <div className="section-title">
+              <Zap size={13} className="text-cyan" />
+              <span>COMPOSITION SETTINGS</span>
+            </div>
+            
+            <div className="form-group" style={{ marginTop: 15 }}>
+              <label>Resolution Presets</label>
+              <div className="radio-group-wrap" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <button 
+                  className={`btn-icon ${projectResolution.width === 1920 && projectResolution.height === 1080 ? 'active' : ''}`}
+                  onClick={() => setProjectResolution({ width: 1920, height: 1080 })}
+                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
+                >
+                  1080p (16:9)
+                </button>
+                <button 
+                  className={`btn-icon ${projectResolution.width === 1080 && projectResolution.height === 1920 ? 'active' : ''}`}
+                  onClick={() => setProjectResolution({ width: 1080, height: 1920 })}
+                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
+                >
+                  Vertical (9:16)
+                </button>
+                <button 
+                  className={`btn-icon ${projectResolution.width === 1080 && projectResolution.height === 1080 ? 'active' : ''}`}
+                  onClick={() => setProjectResolution({ width: 1080, height: 1080 })}
+                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
+                >
+                  Square (1:1)
+                </button>
+                <button 
+                  className={`btn-icon ${projectResolution.width === 2560 && projectResolution.height === 1440 ? 'active' : ''}`}
+                  onClick={() => setProjectResolution({ width: 2560, height: 1440 })}
+                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
+                >
+                  1440p (16:9)
+                </button>
+              </div>
+            </div>
+
+            <div className="form-group" style={{ marginTop: 15, display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label>Width</label>
+                <input 
+                  type="number" 
+                  value={projectResolution.width} 
+                  onChange={(e) => setProjectResolution(p => ({ ...p, width: parseInt(e.target.value) || 1920 }))} 
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label>Height</label>
+                <input 
+                  type="number" 
+                  value={projectResolution.height} 
+                  onChange={(e) => setProjectResolution(p => ({ ...p, height: parseInt(e.target.value) || 1080 }))} 
+                />
+              </div>
+            </div>
+          </div>
+        ) : activeTab === 'presets' ? (
+          <PresetsTab applyPresetPose={applyPresetPose} />
+        ) : selectedPart && transform ? (
           <>
             {/* Header Selected Part Badge */}
             <div className="part-info-card">
@@ -181,73 +251,12 @@ export const PropertyInspector: React.FC = () => {
           </>
         ) : (
           <div className="no-selection">
-            <div className="section-title" style={{ marginTop: 20 }}>
-              <Zap size={13} className="text-cyan" />
-              <span>COMPOSITION SETTINGS</span>
-            </div>
-            
-            <div className="form-group" style={{ marginTop: 15 }}>
-              <label>Resolution Presets</label>
-              <div className="radio-group-wrap" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-                <button 
-                  className={`btn-icon ${projectResolution.width === 1920 && projectResolution.height === 1080 ? 'active' : ''}`}
-                  onClick={() => setProjectResolution({ width: 1920, height: 1080 })}
-                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
-                >
-                  1080p (16:9)
-                </button>
-                <button 
-                  className={`btn-icon ${projectResolution.width === 1080 && projectResolution.height === 1920 ? 'active' : ''}`}
-                  onClick={() => setProjectResolution({ width: 1080, height: 1920 })}
-                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
-                >
-                  Vertical (9:16)
-                </button>
-                <button 
-                  className={`btn-icon ${projectResolution.width === 1080 && projectResolution.height === 1080 ? 'active' : ''}`}
-                  onClick={() => setProjectResolution({ width: 1080, height: 1080 })}
-                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
-                >
-                  Square (1:1)
-                </button>
-                <button 
-                  className={`btn-icon ${projectResolution.width === 2560 && projectResolution.height === 1440 ? 'active' : ''}`}
-                  onClick={() => setProjectResolution({ width: 2560, height: 1440 })}
-                  style={{ width: '100%', borderRadius: 4, padding: 8, fontSize: 11 }}
-                >
-                  1440p (16:9)
-                </button>
-              </div>
-            </div>
-
-            <div className="form-group" style={{ marginTop: 15, display: 'flex', gap: 10 }}>
-              <div style={{ flex: 1 }}>
-                <label>Width</label>
-                <input 
-                  type="number" 
-                  value={projectResolution.width} 
-                  onChange={(e) => setProjectResolution(p => ({ ...p, width: parseInt(e.target.value) || 1920 }))} 
-                />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label>Height</label>
-                <input 
-                  type="number" 
-                  value={projectResolution.height} 
-                  onChange={(e) => setProjectResolution(p => ({ ...p, height: parseInt(e.target.value) || 1080 }))} 
-                />
-              </div>
-            </div>
-
-            <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', lineHeight: 1.5, marginTop: 40 }}>
+            <Sparkles size={36} className="text-teal text-glow" />
+            <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#f8fafc', margin: '10px 0 4px' }}>NO OBJECT SELECTED</h3>
+            <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', lineHeight: 1.5, maxWidth: 240 }}>
               Select an object on the canvas or pick a track from the timeline to edit transforms, colors, and motion curves.
             </p>
           </div>
-        )}
-
-        {/* TAB 5: PRESETS */}
-        {activeTab === 'presets' && (
-          <PresetsTab applyPresetPose={applyPresetPose} />
         )}
       </div>
     </aside>

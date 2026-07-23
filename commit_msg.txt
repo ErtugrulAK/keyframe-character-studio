@@ -1,1 +1,1 @@
-feat: Add Broadcast Features (Canvas Res, Masking, Animations)  
+feat: add typography presets to text tab  

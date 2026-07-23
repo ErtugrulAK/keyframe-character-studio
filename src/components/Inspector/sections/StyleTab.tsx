@@ -162,6 +162,33 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner' || selectedPart.type === 'custom_card') && (
           <>
             <div className="input-field">
+              <label>FONT FAMILY</label>
+              <select
+                value={selectedPart.fontFamily || 'Outfit'}
+                onChange={(e) => handlePartPropChange('fontFamily', e.target.value)}
+                style={{
+                  width: '100%',
+                  height: 28,
+                  background: 'var(--bg-input)',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: 4,
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: '0 6px',
+                }}
+              >
+                <option value="Outfit">Outfit</option>
+                <option value="Inter">Inter</option>
+                <option value="Roboto">Roboto</option>
+                <option value="Montserrat">Montserrat</option>
+                <option value="'Playfair Display'">Playfair Display</option>
+                <option value="'Bebas Neue'">Bebas Neue</option>
+                <option value="'JetBrains Mono'">JetBrains Mono</option>
+              </select>
+            </div>
+
+            <div className="input-field">
               <label>FONT SIZE (PX)</label>
               <SmartNumberInput
                 value={selectedPart.fontSize ?? 20}

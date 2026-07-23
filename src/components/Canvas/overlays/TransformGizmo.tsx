@@ -16,23 +16,6 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   onRotateMouseDown,
   onScaleMouseDown,
 }) => {
-  const getPartBoundingRadius = (part: CharacterPart): number => {
-    let halfW = 32;
-    let halfH = 32;
-
-    switch (part.type) {
-      case 'custom_card': halfW = 90; halfH = 50; break;
-      case 'custom_rect': halfW = 60; halfH = 30; break;
-      case 'custom_banner': halfW = 80; halfH = 25; break;
-      case 'custom_image':
-      case 'custom_video':
-        halfW = part.type === 'custom_video' ? 100 : 90;
-        halfH = 60;
-        break;
-    }
-    return Math.sqrt(halfW * halfW + halfH * halfH);
-  };
-
   const getPartBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
     let halfW = 32;
     let halfH = 32;
@@ -50,21 +33,26 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
     return { halfW, halfH };
   };
 
-  const bounds = getPartBounds(selectedPart);
-  const rotRadius = getPartBoundingRadius(selectedPart) + 16;
+  const baseBounds = getPartBounds(selectedPart);
+  
+  // Multiply bounds by absolute scale so handles don't get warped or flipped visually
+  const halfW = baseBounds.halfW * Math.abs(selectedTransform.scaleX);
+  const halfH = baseBounds.halfH * Math.abs(selectedTransform.scaleY);
+
+  const rotRadius = Math.sqrt(halfW * halfW + halfH * halfH) + 16;
   const rotBarLength = rotRadius + 20;
 
   return (
     <g
-      transform={`translate(${selectedTransform.x}, ${selectedTransform.y}) rotate(${selectedTransform.rotation}) scale(${selectedTransform.scaleX}, ${selectedTransform.scaleY})`}
+      transform={`translate(${selectedTransform.x}, ${selectedTransform.y}) rotate(${selectedTransform.rotation})`}
       style={{ pointerEvents: 'none' }}
     >
       {/* Dashed Bounding Box Outline */}
       <rect
-        x={-bounds.halfW}
-        y={-bounds.halfH}
-        width={bounds.halfW * 2}
-        height={bounds.halfH * 2}
+        x={-halfW}
+        y={-halfH}
+        width={halfW * 2}
+        height={halfH * 2}
         fill="none"
         stroke="#00d2ff"
         strokeWidth={1.5 * zScale}
@@ -87,7 +75,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
       {/* Rotation Top Bar & Handle Knob */}
       <line
         x1={0}
-        y1={-bounds.halfH}
+        y1={-halfH}
         x2={0}
         y2={-rotBarLength}
         stroke="#00d2ff"
@@ -107,10 +95,10 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
 
       {/* 4 Corner Scale Handles */}
       {[
-        { x: -bounds.halfW, y: -bounds.halfH },
-        { x: bounds.halfW, y: -bounds.halfH },
-        { x: bounds.halfW, y: bounds.halfH },
-        { x: -bounds.halfW, y: bounds.halfH },
+        { x: -halfW, y: -halfH },
+        { x: halfW, y: -halfH },
+        { x: halfW, y: halfH },
+        { x: -halfW, y: halfH },
       ].map((corner, i) => (
         <rect
           key={i}

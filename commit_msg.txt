@@ -1,1 +1,1 @@
-style: refine HeaderBar layout for better spacing  
+fix: prevent TransformGizmo UI elements from scaling with object transform  

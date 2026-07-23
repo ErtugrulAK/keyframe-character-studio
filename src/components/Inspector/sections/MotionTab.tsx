@@ -1,31 +1,33 @@
 import React from 'react';
-import { Zap, Play, Square, Clock } from 'lucide-react';
+import { Zap, Play, Square, Clock, Sparkles, MoveRight, MoveLeft, MoveUp, MoveDown, Minimize2, RotateCw, Film, EyeOff } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
 
-const IN_ANIMATIONS = [
-  { id: 'none', label: 'None' },
-  { id: 'fade', label: 'Fade In' },
-  { id: 'slide-left', label: 'Slide Right' },
-  { id: 'slide-right', label: 'Slide Left' },
-  { id: 'slide-up', label: 'Slide Up' },
-  { id: 'slide-down', label: 'Slide Down' },
-  { id: 'pop', label: 'Pop Zoom' },
-  { id: 'spin', label: 'Spin' },
-  { id: 'custom_timeline', label: 'Custom Timeline' },
+const IN_PRESETS = [
+  { id: 'none', label: 'None', icon: EyeOff, desc: 'Instant cut' },
+  { id: 'fade', label: 'Fade In', icon: Sparkles, desc: 'Smooth opacity fade' },
+  { id: 'slide-left', label: 'Slide In R', icon: MoveRight, desc: 'Slide from right' },
+  { id: 'slide-right', label: 'Slide In L', icon: MoveLeft, desc: 'Slide from left' },
+  { id: 'slide-up', label: 'Slide In Up', icon: MoveUp, desc: 'Slide from bottom' },
+  { id: 'slide-down', label: 'Slide In Dn', icon: MoveDown, desc: 'Slide from top' },
+  { id: 'pop', label: 'Pop Zoom', icon: Minimize2, desc: 'Scale pop entrance' },
+  { id: 'spin', label: 'Spin Entrance', icon: RotateCw, desc: 'Rotate + zoom' },
+  { id: 'custom_timeline', label: 'Custom Timeline', icon: Film, desc: 'Use keyframe frames' },
 ];
 
-const OUT_ANIMATIONS = [
-  { id: 'none', label: 'None' },
-  { id: 'fade', label: 'Fade Out' },
-  { id: 'slide-left', label: 'Slide Left' },
-  { id: 'slide-right', label: 'Slide Right' },
-  { id: 'slide-up', label: 'Slide Up' },
-  { id: 'slide-down', label: 'Slide Down' },
-  { id: 'pop', label: 'Pop Zoom' },
-  { id: 'spin', label: 'Spin' },
-  { id: 'custom_timeline', label: 'Custom Timeline' },
+const OUT_PRESETS = [
+  { id: 'none', label: 'None', icon: EyeOff, desc: 'Instant cut' },
+  { id: 'fade', label: 'Fade Out', icon: Sparkles, desc: 'Smooth opacity fade' },
+  { id: 'slide-left', label: 'Slide Out L', icon: MoveLeft, desc: 'Slide to left' },
+  { id: 'slide-right', label: 'Slide Out R', icon: MoveRight, desc: 'Slide to right' },
+  { id: 'slide-up', label: 'Slide Out Up', icon: MoveUp, desc: 'Slide to top' },
+  { id: 'slide-down', label: 'Slide Out Dn', icon: MoveDown, desc: 'Slide to bottom' },
+  { id: 'pop', label: 'Pop Exit', icon: Minimize2, desc: 'Scale shrink exit' },
+  { id: 'spin', label: 'Spin Exit', icon: RotateCw, desc: 'Rotate + shrink' },
+  { id: 'custom_timeline', label: 'Custom Timeline', icon: Film, desc: 'Use keyframe frames' },
 ];
+
+const DURATION_PRESETS = [15, 30, 45, 60];
 
 interface MotionTabProps {
   selectedPart: CharacterPart;
@@ -35,53 +37,134 @@ interface MotionTabProps {
 export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPropChange }) => {
   const { currentFrame, fps } = useAnimator();
 
+  const activeIn = selectedPart.inAnimPreset || 'none';
+  const activeOut = selectedPart.outAnimPreset || 'none';
+
   return (
-    <div className="inspector-section">
-      <div className="section-title">
-        <Zap size={13} className="text-cyan" />
-        <span>BROADCAST IN / OUT ANIMATIONS</span>
+    <div className="inspector-section" style={{ gap: 16 }}>
+      {/* Header Banner */}
+      <div 
+        style={{ 
+          background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(16, 185, 129, 0.12))', 
+          border: '1px solid rgba(6, 182, 212, 0.25)', 
+          borderRadius: 8, 
+          padding: '12px 14px' 
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Zap size={14} /> MOTION & BROADCAST ENGINE
+          </span>
+          <span className="badge-tag" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: 9 }}>
+            LIVE
+          </span>
+        </div>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
+          Preset or custom keyframe transitions for Broadcast Mode and layer visibility ranges.
+        </p>
       </div>
-      <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 15 }}>
-        Set automatic entrance and exit animations without manual keyframes.
-      </p>
 
-      {/* IN ANIMATION */}
-      <div className="form-group" style={{ marginBottom: 20 }}>
-        <div className="section-title" style={{ paddingBottom: 6 }}>
-          <Play size={12} className="text-green" />
-          <span>IN ANIMATION (ENTRANCE)</span>
-        </div>
-        
-        <div className="input-field">
-          <label>PRESET</label>
-          <select
-            value={selectedPart.inAnimPreset || 'none'}
-            onChange={(e) => handlePartPropChange('inAnimPreset', e.target.value)}
-            style={{ width: '100%', height: 28, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11 }}
-          >
-            {IN_ANIMATIONS.map(anim => <option key={anim.id} value={anim.id}>{anim.label}</option>)}
-          </select>
+      {/* ── SECTION 1: IN ANIMATION (ENTRANCE) ── */}
+      <div 
+        className="form-group" 
+        style={{ 
+          background: 'var(--bg-dark)', 
+          border: '1px solid rgba(16, 185, 129, 0.25)', 
+          borderRadius: 8, 
+          padding: 14 
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div className="section-title" style={{ margin: 0, padding: 0 }}>
+            <Play size={13} className="text-green" />
+            <span style={{ color: '#10b981', fontWeight: 700 }}>IN ANIMATION (ENTRANCE)</span>
+          </div>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+            {activeIn.toUpperCase()}
+          </span>
         </div>
 
-        {selectedPart.inAnimPreset && selectedPart.inAnimPreset !== 'none' && selectedPart.inAnimPreset !== 'custom_timeline' && (
-          <div className="input-field" style={{ marginTop: 10 }}>
-            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>DURATION (FRAMES)</span>
-              <span className="text-cyan">{selectedPart.inAnimDuration || 30}f</span>
-            </label>
+        {/* Visual Grid Selector */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
+          {IN_PRESETS.map((preset) => {
+            const IconComp = preset.icon;
+            const isSelected = activeIn === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handlePartPropChange('inAnimPreset', preset.id)}
+                title={preset.desc}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  padding: '8px 4px',
+                  background: isSelected ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-input)',
+                  border: `1px solid ${isSelected ? '#10b981' : 'var(--border-color)'}`,
+                  borderRadius: 6,
+                  color: isSelected ? '#10b981' : '#fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <IconComp size={14} />
+                <span style={{ fontSize: 10, fontWeight: isSelected ? 700 : 400, textAlign: 'center', lineHeight: 1.1 }}>
+                  {preset.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Duration Slider & Quick Pills for Presets */}
+        {activeIn !== 'none' && activeIn !== 'custom_timeline' && (
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ fontSize: 10, color: 'var(--text-muted)' }}>DURATION (FRAMES & SECONDS)</label>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#10b981' }}>
+                {selectedPart.inAnimDuration || 30}f ({((selectedPart.inAnimDuration || 30) / fps).toFixed(2)}s)
+              </span>
+            </div>
             <input 
-              type="range" min="1" max="120" 
+              type="range" min="5" max="120" step="5"
               value={selectedPart.inAnimDuration || 30}
               onChange={(e) => handlePartPropChange('inAnimDuration', parseInt(e.target.value))}
-              style={{ width: '100%', cursor: 'pointer' }}
+              style={{ width: '100%', cursor: 'pointer', accentColor: '#10b981', marginBottom: 8 }}
             />
+            {/* Quick Pills */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              {DURATION_PRESETS.map((f) => (
+                <button
+                  key={`in-dur-${f}`}
+                  type="button"
+                  onClick={() => handlePartPropChange('inAnimDuration', f)}
+                  style={{
+                    flex: 1,
+                    fontSize: 9,
+                    padding: '3px 0',
+                    background: (selectedPart.inAnimDuration || 30) === f ? '#10b981' : 'var(--bg-dark)',
+                    color: (selectedPart.inAnimDuration || 30) === f ? '#000' : 'var(--text-muted)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 4,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {f}f ({(f / fps).toFixed(1)}s)
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {selectedPart.inAnimPreset === 'custom_timeline' && (
-          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+        {/* Custom Timeline Range */}
+        {activeIn === 'custom_timeline' && (
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 6, display: 'flex', gap: 10 }}>
             <div className="input-field" style={{ flex: 1 }}>
-              <label>START FRAME</label>
+              <label style={{ fontSize: 10 }}>TIMELINE START FRAME</label>
               <input
                 type="number" min="0" max="1200"
                 value={selectedPart.inAnimTimelineStart ?? 0}
@@ -90,7 +173,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
               />
             </div>
             <div className="input-field" style={{ flex: 1 }}>
-              <label>END FRAME</label>
+              <label style={{ fontSize: 10 }}>TIMELINE END FRAME</label>
               <input
                 type="number" min="0" max="1200"
                 value={selectedPart.inAnimTimelineEnd ?? 30}
@@ -102,45 +185,107 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
         )}
       </div>
 
-      <div className="divider-h" style={{ margin: '15px 0' }} />
-
-      {/* OUT ANIMATION */}
-      <div className="form-group">
-        <div className="section-title" style={{ paddingBottom: 6 }}>
-          <Square size={12} className="text-red" />
-          <span>OUT ANIMATION (EXIT)</span>
+      {/* ── SECTION 2: OUT ANIMATION (EXIT) ── */}
+      <div 
+        className="form-group" 
+        style={{ 
+          background: 'var(--bg-dark)', 
+          border: '1px solid rgba(239, 68, 68, 0.25)', 
+          borderRadius: 8, 
+          padding: 14 
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <div className="section-title" style={{ margin: 0, padding: 0 }}>
+            <Square size={13} className="text-red" />
+            <span style={{ color: '#ef4444', fontWeight: 700 }}>OUT ANIMATION (EXIT)</span>
+          </div>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+            {activeOut.toUpperCase()}
+          </span>
         </div>
-        
-        <div className="input-field">
-          <label>PRESET</label>
-          <select
-            value={selectedPart.outAnimPreset || 'none'}
-            onChange={(e) => handlePartPropChange('outAnimPreset', e.target.value)}
-            style={{ width: '100%', height: 28, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11 }}
-          >
-            {OUT_ANIMATIONS.map(anim => <option key={anim.id} value={anim.id}>{anim.label}</option>)}
-          </select>
+
+        {/* Visual Grid Selector */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
+          {OUT_PRESETS.map((preset) => {
+            const IconComp = preset.icon;
+            const isSelected = activeOut === preset.id;
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => handlePartPropChange('outAnimPreset', preset.id)}
+                title={preset.desc}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 4,
+                  padding: '8px 4px',
+                  background: isSelected ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-input)',
+                  border: `1px solid ${isSelected ? '#ef4444' : 'var(--border-color)'}`,
+                  borderRadius: 6,
+                  color: isSelected ? '#ef4444' : '#fff',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <IconComp size={14} />
+                <span style={{ fontSize: 10, fontWeight: isSelected ? 700 : 400, textAlign: 'center', lineHeight: 1.1 }}>
+                  {preset.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
-        {selectedPart.outAnimPreset && selectedPart.outAnimPreset !== 'none' && selectedPart.outAnimPreset !== 'custom_timeline' && (
-          <div className="input-field" style={{ marginTop: 10 }}>
-            <label style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span>DURATION (FRAMES)</span>
-              <span className="text-cyan">{selectedPart.outAnimDuration || 30}f</span>
-            </label>
+        {/* Duration Slider & Quick Pills for Presets */}
+        {activeOut !== 'none' && activeOut !== 'custom_timeline' && (
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 6 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <label style={{ fontSize: 10, color: 'var(--text-muted)' }}>DURATION (FRAMES & SECONDS)</label>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444' }}>
+                {selectedPart.outAnimDuration || 30}f ({((selectedPart.outAnimDuration || 30) / fps).toFixed(2)}s)
+              </span>
+            </div>
             <input 
-              type="range" min="1" max="120" 
+              type="range" min="5" max="120" step="5"
               value={selectedPart.outAnimDuration || 30}
               onChange={(e) => handlePartPropChange('outAnimDuration', parseInt(e.target.value))}
-              style={{ width: '100%', cursor: 'pointer' }}
+              style={{ width: '100%', cursor: 'pointer', accentColor: '#ef4444', marginBottom: 8 }}
             />
+            {/* Quick Pills */}
+            <div style={{ display: 'flex', gap: 6 }}>
+              {DURATION_PRESETS.map((f) => (
+                <button
+                  key={`out-dur-${f}`}
+                  type="button"
+                  onClick={() => handlePartPropChange('outAnimDuration', f)}
+                  style={{
+                    flex: 1,
+                    fontSize: 9,
+                    padding: '3px 0',
+                    background: (selectedPart.outAnimDuration || 30) === f ? '#ef4444' : 'var(--bg-dark)',
+                    color: (selectedPart.outAnimDuration || 30) === f ? '#fff' : 'var(--text-muted)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 4,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {f}f ({(f / fps).toFixed(1)}s)
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
-        {selectedPart.outAnimPreset === 'custom_timeline' && (
-          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+        {/* Custom Timeline Range */}
+        {activeOut === 'custom_timeline' && (
+          <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 6, display: 'flex', gap: 10 }}>
             <div className="input-field" style={{ flex: 1 }}>
-              <label>START FRAME</label>
+              <label style={{ fontSize: 10 }}>TIMELINE START FRAME</label>
               <input
                 type="number" min="0" max="1200"
                 value={selectedPart.outAnimTimelineStart ?? 0}
@@ -149,7 +294,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
               />
             </div>
             <div className="input-field" style={{ flex: 1 }}>
-              <label>END FRAME</label>
+              <label style={{ fontSize: 10 }}>TIMELINE END FRAME</label>
               <input
                 type="number" min="0" max="1200"
                 value={selectedPart.outAnimTimelineEnd ?? 30}
@@ -161,21 +306,27 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
         )}
       </div>
 
-      <div className="divider-h" style={{ margin: '15px 0' }} />
-
-      {/* TIMELINE VISIBILITY / APPEARANCE TIMING */}
-      <div className="form-group">
+      {/* ── SECTION 3: LAYER APPEARANCE TIMING ── */}
+      <div 
+        className="form-group" 
+        style={{ 
+          background: 'var(--bg-dark)', 
+          border: '1px solid rgba(6, 182, 212, 0.25)', 
+          borderRadius: 8, 
+          padding: 14 
+        }}
+      >
         <div className="section-title" style={{ paddingBottom: 6 }}>
-          <Clock size={12} className="text-cyan" />
-          <span>APPEARANCE TIMING (START/END TIME)</span>
+          <Clock size={13} className="text-cyan" />
+          <span style={{ color: 'var(--accent-cyan)', fontWeight: 700 }}>APPEARANCE TIMING (IN / OUT FRAMES)</span>
         </div>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 10 }}>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
           Set exact start/end frames or seconds for when this layer appears on screen.
         </p>
 
         <div style={{ display: 'flex', gap: 10 }}>
           <div className="input-field" style={{ flex: 1 }}>
-            <label>APPEAR AT (FRAME)</label>
+            <label style={{ fontSize: 10, color: '#10b981' }}>APPEAR AT (FRAME)</label>
             <input
               type="number" min="0" max="1200"
               placeholder="0 (Start)"
@@ -184,11 +335,11 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
                 const val = e.target.value === '' ? undefined : parseInt(e.target.value);
                 handlePartPropChange('visibleStartFrame', val);
               }}
-              style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-dark)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4 }}
+              style={{ width: '100%', padding: '6px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
             />
           </div>
           <div className="input-field" style={{ flex: 1 }}>
-            <label>DISAPPEAR AT (FRAME)</label>
+            <label style={{ fontSize: 10, color: '#ef4444' }}>DISAPPEAR AT (FRAME)</label>
             <input
               type="number" min="0" max="1200"
               placeholder="Always visible"
@@ -197,15 +348,15 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
                 const val = e.target.value === '' ? undefined : parseInt(e.target.value);
                 handlePartPropChange('visibleEndFrame', val);
               }}
-              style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-dark)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4 }}
+              style={{ width: '100%', padding: '6px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
             />
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+        <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
           <button
             className="btn-secondary"
-            style={{ flex: 1, fontSize: 10, padding: '5px 8px', color: 'var(--accent-cyan)' }}
+            style={{ flex: 1, fontSize: 10, padding: '6px 10px', color: 'var(--accent-cyan)', background: 'rgba(6, 182, 212, 0.1)', border: '1px solid rgba(6, 182, 212, 0.3)', borderRadius: 6 }}
             onClick={() => handlePartPropChange('visibleStartFrame', currentFrame)}
           >
             Start at Frame {currentFrame} ({(currentFrame / fps).toFixed(1)}s)
@@ -213,7 +364,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
           {(selectedPart.visibleStartFrame !== undefined || selectedPart.visibleEndFrame !== undefined) && (
             <button
               className="btn-secondary"
-              style={{ fontSize: 10, padding: '5px 8px', color: 'var(--text-muted)' }}
+              style={{ fontSize: 10, padding: '6px 10px', color: 'var(--text-muted)', borderRadius: 6 }}
               onClick={() => {
                 handlePartPropChange('visibleStartFrame', undefined);
                 handlePartPropChange('visibleEndFrame', undefined);

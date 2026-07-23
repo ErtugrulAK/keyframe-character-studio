@@ -234,6 +234,29 @@ export interface CharacterPart {
   visibleEndFrame?: number;
 
   fontFamily?: string;
+
+  // ── Feature 10: Custom Preset Animation Engine ──
+  inCustomPresetId?: string;
+  outCustomPresetId?: string;
+}
+
+export interface CustomMotionPresetKeyframe {
+  progress: number; // 0..1
+  deltaX: number;
+  deltaY: number;
+  rotation: number;
+  scaleX: number;
+  scaleY: number;
+  opacity: number;
+  easing?: string;
+}
+
+export interface CustomMotionPreset {
+  id: string;
+  name: string;
+  type: 'in' | 'out';
+  durationFrames: number;
+  keyframes: CustomMotionPresetKeyframe[];
 }
 
 export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan';

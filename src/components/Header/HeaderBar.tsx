@@ -7,6 +7,7 @@ import {
   Sparkles,
   Save,
   CheckCircle2,
+  Film,
 } from 'lucide-react';
 import './HeaderBar.css';
 
@@ -22,6 +23,7 @@ export const HeaderBar: React.FC = () => {
     showToast,
     appMode,
     setAppMode,
+    loadSampleSequencerProject,
   } = useAnimator();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -154,6 +156,11 @@ export const HeaderBar: React.FC = () => {
         </div>
 
         <div className="divider-v" />
+
+        <button className="btn-secondary" onClick={loadSampleSequencerProject} title="Load sample sequencer-project.json" style={{ color: 'var(--accent-gold)' }}>
+          <Film size={14} />
+          <span>Sample Project</span>
+        </button>
 
         <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} title="Import JSON Animation File">
           <Upload size={14} />

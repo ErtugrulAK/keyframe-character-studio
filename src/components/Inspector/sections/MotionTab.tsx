@@ -1,5 +1,5 @@
-import React from 'react';
-import { Zap, Play, Square, Clock, Sparkles, MoveRight, MoveLeft, MoveUp, MoveDown, Minimize2, RotateCw, Film, EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { Zap, Play, Square, Clock, Sparkles, MoveRight, MoveLeft, MoveUp, MoveDown, Minimize2, RotateCw, Film, EyeOff, Trash2, BookmarkPlus } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
 
@@ -35,10 +35,37 @@ interface MotionTabProps {
 }
 
 export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPropChange }) => {
-  const { currentFrame, fps } = useAnimator();
+  const {
+    currentFrame,
+    fps,
+    customPresets,
+    saveTrackAsPreset,
+    deleteCustomPreset,
+    tracks,
+  } = useAnimator();
+
+  const [newPresetName, setNewPresetName] = useState('');
+  const [newPresetType, setNewPresetType] = useState<'in' | 'out'>('in');
+  const [presetStartF, setPresetStartF] = useState<number>(0);
+  const [presetEndF, setPresetEndF] = useState<number>(50);
+  const [showSaveCard, setShowSaveCard] = useState(false);
 
   const activeIn = selectedPart.inAnimPreset || 'none';
   const activeOut = selectedPart.outAnimPreset || 'none';
+
+  const inCustomPresets = customPresets.filter(p => p.type === 'in');
+  const outCustomPresets = customPresets.filter(p => p.type === 'out');
+
+  const selectedTrack = tracks.find(t => t.partId === selectedPart.id);
+  const hasKeyframes = selectedTrack && selectedTrack.keyframes.length > 0;
+
+  const handleSavePresetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPresetName.trim()) return;
+    saveTrackAsPreset(selectedPart.id, newPresetName.trim(), newPresetType, presetStartF, presetEndF);
+    setNewPresetName('');
+    setShowSaveCard(false);
+  };
 
   return (
     <div className="inspector-section" style={{ gap: 16 }}>
@@ -62,6 +89,103 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
         <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
           Preset or custom keyframe transitions for Broadcast Mode and layer visibility ranges.
         </p>
+      </div>
+
+      {/* ── SAVE KEYFRAMES AS REUSABLE PRESET CARD ── */}
+      <div
+        style={{
+          background: 'var(--bg-dark)',
+          border: '1px dashed var(--accent-gold)',
+          borderRadius: 8,
+          padding: 12,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <BookmarkPlus size={14} /> SAVE LAYER KEYFRAMES AS PRESET
+          </span>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ fontSize: 10, padding: '3px 8px', color: 'var(--accent-gold)' }}
+            onClick={() => setShowSaveCard(!showSaveCard)}
+          >
+            {showSaveCard ? 'Cancel' : '+ Create Preset'}
+          </button>
+        </div>
+
+        {showSaveCard && (
+          <form onSubmit={handleSavePresetSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 10 }}>
+            <div className="input-field">
+              <label style={{ fontSize: 10 }}>PRESET NAME</label>
+              <input
+                type="text"
+                placeholder="e.g. Pink Slide In Top"
+                value={newPresetName}
+                onChange={(e) => setNewPresetName(e.target.value)}
+                style={{ width: '100%', padding: '5px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4, fontSize: 11 }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div className="input-field" style={{ flex: 1 }}>
+                <label style={{ fontSize: 10 }}>TYPE</label>
+                <select
+                  value={newPresetType}
+                  onChange={(e) => setNewPresetType(e.target.value as 'in' | 'out')}
+                  style={{ width: '100%', height: 26, background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4, fontSize: 11 }}
+                >
+                  <option value="in">Entrance (IN)</option>
+                  <option value="out">Exit (OUT)</option>
+                </select>
+              </div>
+
+              <div className="input-field" style={{ flex: 1 }}>
+                <label style={{ fontSize: 10 }}>START FRAME</label>
+                <input
+                  type="number" min="0" max="1200"
+                  value={presetStartF}
+                  onChange={(e) => setPresetStartF(parseInt(e.target.value) || 0)}
+                  style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4, fontSize: 11 }}
+                />
+              </div>
+
+              <div className="input-field" style={{ flex: 1 }}>
+                <label style={{ fontSize: 10 }}>END FRAME</label>
+                <input
+                  type="number" min="0" max="1200"
+                  value={presetEndF}
+                  onChange={(e) => setPresetEndF(parseInt(e.target.value) || 0)}
+                  style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4, fontSize: 11 }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={!hasKeyframes || !newPresetName.trim()}
+              style={{
+                marginTop: 4,
+                padding: '6px',
+                background: 'var(--accent-gold)',
+                color: '#000',
+                fontWeight: 700,
+                fontSize: 11,
+                border: 'none',
+                borderRadius: 4,
+                cursor: hasKeyframes && newPresetName.trim() ? 'pointer' : 'not-allowed',
+                opacity: hasKeyframes && newPresetName.trim() ? 1 : 0.5,
+              }}
+            >
+              SAVE AS REUSABLE PRESET
+            </button>
+            {!hasKeyframes && (
+              <span style={{ fontSize: 10, color: 'var(--accent-red)', textAlign: 'center' }}>
+                Add keyframes to "{selectedPart.name}" first to save a preset.
+              </span>
+            )}
+          </form>
+        )}
       </div>
 
       {/* ── SECTION 1: IN ANIMATION (ENTRANCE) ── */}
@@ -118,6 +242,48 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
             );
           })}
         </div>
+
+        {/* Custom Presets Grid (if any) */}
+        {inCustomPresets.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <span style={{ fontSize: 10, color: 'var(--accent-gold)', fontWeight: 700, display: 'block', marginBottom: 6 }}>
+              CUSTOM SAVED IN PRESETS:
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {inCustomPresets.map((cp) => {
+                const isSelected = activeIn === cp.id;
+                return (
+                  <div
+                    key={cp.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '5px 8px',
+                      background: isSelected ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg-input)',
+                      border: `1px solid ${isSelected ? '#10b981' : 'var(--border-color)'}`,
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => handlePartPropChange('inAnimPreset', cp.id)}
+                  >
+                    <span style={{ fontSize: 10, color: isSelected ? '#10b981' : '#fff', fontWeight: isSelected ? 700 : 400 }}>
+                      ✨ {cp.name} ({cp.durationFrames}f)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); deleteCustomPreset(cp.id); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 2 }}
+                      title="Delete Preset"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Duration Slider & Quick Pills for Presets */}
         {activeIn !== 'none' && activeIn !== 'custom_timeline' && (
@@ -239,6 +405,48 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
             );
           })}
         </div>
+
+        {/* Custom Presets Grid (if any) */}
+        {outCustomPresets.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <span style={{ fontSize: 10, color: 'var(--accent-gold)', fontWeight: 700, display: 'block', marginBottom: 6 }}>
+              CUSTOM SAVED OUT PRESETS:
+            </span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {outCustomPresets.map((cp) => {
+                const isSelected = activeOut === cp.id;
+                return (
+                  <div
+                    key={cp.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '5px 8px',
+                      background: isSelected ? 'rgba(239, 68, 68, 0.2)' : 'var(--bg-input)',
+                      border: `1px solid ${isSelected ? '#ef4444' : 'var(--border-color)'}`,
+                      borderRadius: 4,
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => handlePartPropChange('outAnimPreset', cp.id)}
+                  >
+                    <span style={{ fontSize: 10, color: isSelected ? '#ef4444' : '#fff', fontWeight: isSelected ? 700 : 400 }}>
+                      ✨ {cp.name} ({cp.durationFrames}f)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); deleteCustomPreset(cp.id); }}
+                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 2 }}
+                      title="Delete Preset"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Duration Slider & Quick Pills for Presets */}
         {activeOut !== 'none' && activeOut !== 'custom_timeline' && (

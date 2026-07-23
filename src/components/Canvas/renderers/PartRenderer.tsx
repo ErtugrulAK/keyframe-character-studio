@@ -1,6 +1,34 @@
 import React from 'react';
-import type { CharacterPart, Transform } from '../../../types/animator';
+import type { CharacterPart, Transform, CustomMotionPresetKeyframe } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
+
+const sampleCustomPreset = (keyframes: CustomMotionPresetKeyframe[], progress: number) => {
+  if (!keyframes || keyframes.length === 0) return { deltaX: 0, deltaY: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+  if (progress <= 0) return keyframes[0];
+  if (progress >= 1) return keyframes[keyframes.length - 1];
+
+  let prev = keyframes[0];
+  let next = keyframes[keyframes.length - 1];
+  for (let i = 0; i < keyframes.length - 1; i++) {
+    if (progress >= keyframes[i].progress && progress <= keyframes[i + 1].progress) {
+      prev = keyframes[i];
+      next = keyframes[i + 1];
+      break;
+    }
+  }
+
+  const range = next.progress - prev.progress;
+  const p = range > 0 ? (progress - prev.progress) / range : 1;
+
+  return {
+    deltaX: prev.deltaX + (next.deltaX - prev.deltaX) * p,
+    deltaY: prev.deltaY + (next.deltaY - prev.deltaY) * p,
+    rotation: prev.rotation + (next.rotation - prev.rotation) * p,
+    scaleX: prev.scaleX + (next.scaleX - prev.scaleX) * p,
+    scaleY: prev.scaleY + (next.scaleY - prev.scaleY) * p,
+    opacity: prev.opacity + (next.opacity - prev.opacity) * p,
+  };
+};
 
 interface PartRendererProps {
   part: CharacterPart;
@@ -32,7 +60,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   let animX = 0;
   let animY = 0;
 
-  const { appMode, broadcastState } = useAnimator();
+  const { appMode, broadcastState, customPresets } = useAnimator();
 
   if (!isGhost) {
     const inDur = part.inAnimDuration || 30;
@@ -45,31 +73,49 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       
       if (bState.state === 'hidden') {
         animOpacity = 0;
-      } else if (bState.state === 'animating_in' && inPreset !== 'none' && inPreset !== 'custom_timeline') {
-        const easeProgress = 1 - Math.pow(1 - bState.progress, 3);
-        if (inPreset === 'fade') animOpacity = easeProgress;
-        else if (inPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
-        else if (inPreset === 'spin') { animRot = (1 - easeProgress) * -360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
-        else if (inPreset.startsWith('slide-')) {
-          animOpacity = easeProgress;
-          const dist = 300 * (1 - easeProgress);
-          if (inPreset === 'slide-left') animX = dist;
-          if (inPreset === 'slide-right') animX = -dist;
-          if (inPreset === 'slide-up') animY = dist;
-          if (inPreset === 'slide-down') animY = -dist;
+      } else if (bState.state === 'animating_in') {
+        const cp = customPresets.find(p => p.id === inPreset);
+        if (cp) {
+          const sample = sampleCustomPreset(cp.keyframes, bState.progress);
+          animX = sample.deltaX;
+          animY = sample.deltaY;
+          animRot = sample.rotation;
+          animOpacity = sample.opacity;
+        } else if (inPreset !== 'none' && inPreset !== 'custom_timeline') {
+          const easeProgress = 1 - Math.pow(1 - bState.progress, 3);
+          if (inPreset === 'fade') animOpacity = easeProgress;
+          else if (inPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+          else if (inPreset === 'spin') { animRot = (1 - easeProgress) * -360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+          else if (inPreset.startsWith('slide-')) {
+            animOpacity = easeProgress;
+            const dist = 300 * (1 - easeProgress);
+            if (inPreset === 'slide-left') animX = dist;
+            if (inPreset === 'slide-right') animX = -dist;
+            if (inPreset === 'slide-up') animY = dist;
+            if (inPreset === 'slide-down') animY = -dist;
+          }
         }
-      } else if (bState.state === 'animating_out' && outPreset !== 'none' && outPreset !== 'custom_timeline') {
-        const easeProgress = Math.pow(bState.progress, 3);
-        if (outPreset === 'fade') animOpacity = easeProgress;
-        else if (outPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
-        else if (outPreset === 'spin') { animRot = (1 - easeProgress) * 360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
-        else if (outPreset.startsWith('slide-')) {
-          animOpacity = easeProgress;
-          const dist = 300 * (1 - easeProgress);
-          if (outPreset === 'slide-left') animX = -dist;
-          if (outPreset === 'slide-right') animX = dist;
-          if (outPreset === 'slide-up') animY = -dist;
-          if (outPreset === 'slide-down') animY = dist;
+      } else if (bState.state === 'animating_out') {
+        const cp = customPresets.find(p => p.id === outPreset);
+        if (cp) {
+          const sample = sampleCustomPreset(cp.keyframes, bState.progress);
+          animX = sample.deltaX;
+          animY = sample.deltaY;
+          animRot = sample.rotation;
+          animOpacity = sample.opacity;
+        } else if (outPreset !== 'none' && outPreset !== 'custom_timeline') {
+          const easeProgress = Math.pow(bState.progress, 3);
+          if (outPreset === 'fade') animOpacity = easeProgress;
+          else if (outPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+          else if (outPreset === 'spin') { animRot = (1 - easeProgress) * 360; animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
+          else if (outPreset.startsWith('slide-')) {
+            animOpacity = easeProgress;
+            const dist = 300 * (1 - easeProgress);
+            if (outPreset === 'slide-left') animX = -dist;
+            if (outPreset === 'slide-right') animX = dist;
+            if (outPreset === 'slide-up') animY = -dist;
+            if (outPreset === 'slide-down') animY = dist;
+          }
         }
       }
       // if visible, animOpacity is 1 (default)

@@ -100,7 +100,6 @@ export const HeaderBar: React.FC = () => {
         {/* Mode Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-dark)', borderRadius: 6, padding: '4px', gap: 4, flexShrink: 0 }}>
           <button
-            className="btn-icon"
             style={{
               padding: '6px 12px',
               borderRadius: 4,
@@ -116,7 +115,6 @@ export const HeaderBar: React.FC = () => {
             EDIT MODE
           </button>
           <button
-            className="btn-icon"
             style={{
               padding: '6px 12px',
               borderRadius: 4,

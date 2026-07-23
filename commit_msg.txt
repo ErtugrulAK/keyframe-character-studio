@@ -1,1 +1,1 @@
-fix: prevent TransformGizmo UI elements from scaling with object transform  
+fix: resolve text wrapping and overlap in header buttons  

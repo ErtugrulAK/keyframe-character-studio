@@ -1,1 +1,1 @@
-feat(broadcast): connect timeline eye icon to broadcast mode visibility and director muted status  
+fix(broadcast): hide selection gizmo and bounding handles during broadcast mode or when layer is hidden  

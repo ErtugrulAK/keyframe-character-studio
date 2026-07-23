@@ -25,6 +25,7 @@ export const StageCanvas: React.FC = () => {
     totalFrames,
     appMode,
     broadcastState,
+    tracks,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -504,8 +505,8 @@ export const StageCanvas: React.FC = () => {
                 );
               })}
 
-              {/* Skeletal Bone Hierarchy Links */}
-              {showBones && (
+              {/* Skeletal Bone Hierarchy Links (Edit mode only) */}
+              {appMode !== 'broadcast' && showBones && (
                 <SkeletalBones
                   characterParts={characterParts}
                   selectedPartId={selectedPartId}
@@ -515,16 +516,20 @@ export const StageCanvas: React.FC = () => {
                 />
               )}
 
-              {/* Interactive Transform Gizmo */}
-              {selectedPart && selectedTransform && (
-                <TransformGizmo
-                  selectedPart={selectedPart}
-                  selectedTransform={selectedTransform}
-                  zScale={zScale}
-                  onRotateMouseDown={startRotate}
-                  onScaleMouseDown={startScale}
-                />
-              )}
+              {/* Interactive Transform Gizmo (Only in Edit Mode when track is visible) */}
+              {appMode !== 'broadcast' && selectedPart && selectedTransform && (() => {
+                const selTrack = tracks.find(t => t.partId === selectedPart.id);
+                if (selTrack && selTrack.visible === false) return null;
+                return (
+                  <TransformGizmo
+                    selectedPart={selectedPart}
+                    selectedTransform={selectedTransform}
+                    zScale={zScale}
+                    onRotateMouseDown={startRotate}
+                    onScaleMouseDown={startScale}
+                  />
+                );
+              })()}
             </>
           );
         })()}

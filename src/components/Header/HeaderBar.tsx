@@ -103,14 +103,15 @@ export const HeaderBar: React.FC = () => {
         </div>
 
         {/* Mode Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-dark)', borderRadius: 6, padding: '2px', gap: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-dark)', borderRadius: 6, padding: '4px', gap: 4, flexShrink: 0 }}>
           <button
             className="btn-icon"
             style={{
-              padding: '6px 16px',
+              padding: '6px 12px',
               borderRadius: 4,
               fontSize: 12,
               fontWeight: 700,
+              whiteSpace: 'nowrap',
               color: appMode === 'edit' ? '#fff' : 'var(--text-muted)',
               background: appMode === 'edit' ? 'var(--accent-teal)' : 'transparent',
               transition: 'all 0.2s',
@@ -122,10 +123,11 @@ export const HeaderBar: React.FC = () => {
           <button
             className="btn-icon"
             style={{
-              padding: '6px 16px',
+              padding: '6px 12px',
               borderRadius: 4,
               fontSize: 12,
               fontWeight: 700,
+              whiteSpace: 'nowrap',
               color: appMode === 'broadcast' ? '#fff' : 'var(--text-muted)',
               background: appMode === 'broadcast' ? 'var(--accent-gold)' : 'transparent',
               transition: 'all 0.2s',
@@ -136,7 +138,7 @@ export const HeaderBar: React.FC = () => {
           </button>
         </div>
 
-        <div className="fps-selector">
+        <div className="fps-selector" style={{ flexShrink: 0 }}>
           <span>FPS</span>
           <select value={fps} onChange={(e) => setFps(parseInt(e.target.value))}>
             <option value={12}>12 FPS</option>

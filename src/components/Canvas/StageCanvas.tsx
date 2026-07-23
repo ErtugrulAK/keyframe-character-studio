@@ -87,7 +87,12 @@ export const StageCanvas: React.FC = () => {
       return;
     }
 
-    if (e.target === containerRef.current || (e.target as HTMLElement).tagName === 'svg') {
+    const target = e.target as HTMLElement;
+    if (
+      target === containerRef.current || 
+      target.tagName === 'svg' ||
+      target.classList.contains('canvas-bg')
+    ) {
       setSelectedPartId(null);
     }
   };
@@ -323,6 +328,7 @@ export const StageCanvas: React.FC = () => {
             <>
               {/* Outer dimmed area (everything outside artboard) */}
               <path
+                className="canvas-bg"
                 d={`M-300000,-300000 L300000,-300000 L300000,300000 L-300000,300000 Z M${artX},${artY} L${artX},${artY + projectResolution.height} L${artX + projectResolution.width},${artY + projectResolution.height} L${artX + projectResolution.width},${artY} Z`}
                 fill="rgba(0, 0, 0, 0.65)"
                 fillRule="evenodd"
@@ -330,6 +336,7 @@ export const StageCanvas: React.FC = () => {
 
               {/* Artboard Base & Shadow */}
               <rect
+                className="canvas-bg"
                 x={artX}
                 y={artY}
                 width={projectResolution.width}
@@ -340,6 +347,7 @@ export const StageCanvas: React.FC = () => {
               {/* Dashed Grid Lines (Only inside artboard) */}
               {showGrid && (
                 <rect 
+                  className="canvas-bg"
                   x={artX} y={artY} width={projectResolution.width} height={projectResolution.height} 
                   fill="url(#svg-dashed-grid)" 
                 />

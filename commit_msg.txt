@@ -1,1 +1,1 @@
-feat: implement Broadcast Mode with Live Director Panel  
+fix: resolve background deselect issue and header layout overlapping  

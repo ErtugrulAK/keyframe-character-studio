@@ -145,6 +145,8 @@ interface AnimatorContextType {
   liveStuntsState: Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>;
   triggerLiveStunt: (partId: string, stunt: LiveStuntType, loop?: boolean, customPresetId?: string) => void;
   stopLiveStunt: (partId: string) => void;
+  setStuntLoopState: (loop: boolean) => void;
+  stopAllLiveStunts: () => void;
 }
 
 const AnimatorContext = createContext<AnimatorContextType | null>(null);
@@ -275,6 +277,22 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return next;
     });
     showToast('Stopped live stunt', 'info');
+  }, [showToast]);
+
+  const setStuntLoopState = useCallback((loop: boolean) => {
+    setLiveStuntsState(prev => {
+      const next = { ...prev };
+      Object.keys(next).forEach(id => {
+        next[id] = { ...next[id], loop };
+      });
+      return next;
+    });
+    showToast(`Live stunt loop set to ${loop ? 'ON' : 'OFF'}`, 'info');
+  }, [showToast]);
+
+  const stopAllLiveStunts = useCallback(() => {
+    setLiveStuntsState({});
+    showToast('Stopped all live stunts', 'info');
   }, [showToast]);
 
   // Broadcast Loop
@@ -1423,6 +1441,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         liveStuntsState,
         triggerLiveStunt,
         stopLiveStunt,
+        setStuntLoopState,
+        stopAllLiveStunts,
       }}
     >
       {children}

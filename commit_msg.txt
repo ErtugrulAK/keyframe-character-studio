@@ -1,1 +1,1 @@
-chore: add git branching policy to AGENTS.md  
+fix(stunts): sync liveStuntsState loop state when toggling LOOP ON/OFF  

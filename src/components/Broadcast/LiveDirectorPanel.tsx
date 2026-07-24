@@ -25,6 +25,8 @@ export const LiveDirectorPanel: React.FC = () => {
     resetBroadcastState,
     triggerLiveStunt,
     stopLiveStunt,
+    setStuntLoopState,
+    stopAllLiveStunts,
     liveStuntsState,
     customPresets,
   } = useAnimator();
@@ -49,7 +51,11 @@ export const LiveDirectorPanel: React.FC = () => {
           <button
             type="button"
             className="btn-director"
-            onClick={() => setIsLoopingStunt(!isLoopingStunt)}
+            onClick={() => {
+              const nextVal = !isLoopingStunt;
+              setIsLoopingStunt(nextVal);
+              setStuntLoopState(nextVal);
+            }}
             style={{
               fontSize: 10,
               padding: '4px 8px',
@@ -59,10 +65,22 @@ export const LiveDirectorPanel: React.FC = () => {
               color: isLoopingStunt ? '#c084fc' : 'var(--text-muted)',
               fontWeight: 700,
             }}
-            title={isLoopingStunt ? 'Looping Stunts is ON (Infinite Repeat)' : 'Single Shot Stunts (Click to enable Loop)'}
+            title={isLoopingStunt ? 'Looping Stunts is ON (Infinite Repeat)' : 'Single Shot Stunts (Click to disable Loop)'}
           >
             <Repeat size={12} /> {isLoopingStunt ? 'LOOP: ON' : 'LOOP: OFF'}
           </button>
+
+          {Object.keys(liveStuntsState).length > 0 && (
+            <button
+              type="button"
+              className="btn-director out"
+              onClick={stopAllLiveStunts}
+              style={{ fontSize: 10, padding: '4px 8px', height: 28, background: 'rgba(239, 68, 68, 0.2)', border: '1px solid #ef4444', color: '#ef4444', fontWeight: 700 }}
+              title="Stop All Running Live Stunts Immediately"
+            >
+              🛑 STOP ALL STUNTS
+            </button>
+          )}
 
           <button
             className="btn-director active"

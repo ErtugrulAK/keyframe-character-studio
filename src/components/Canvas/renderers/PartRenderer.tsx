@@ -38,13 +38,13 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   let animY = 0;
 
   const { appMode, broadcastState, customPresets, tracks, liveStuntsState } = useAnimator();
+  const targetTrack = tracks.find(t => t.partId === part.id);
 
   if (!isGhost) {
     const inDur = part.inAnimDuration || 30;
     const outDur = part.outAnimDuration || 30;
     const inPreset = part.inAnimPreset || 'none';
     const outPreset = part.outAnimPreset || 'none';
-    const targetTrack = tracks.find(t => t.partId === part.id);
     const allowMotion = part.enableMotionAnim !== false;
 
     if (appMode === 'broadcast') {
@@ -99,8 +99,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       }
     } else {
       // Linear Edit Mode timeline logic
-      if (targetTrack && targetTrack.visible === false) {
-        animOpacity = isSelected ? 0.5 : 0;
+      if (targetTrack && targetTrack.editVisible === false) {
+        animOpacity = 0; // Hard hidden from Edit Canvas
       } else if (allowMotion && inPreset !== 'none' && currentFrame < inDur) {
         const progress = currentFrame / inDur; 
         const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
@@ -229,6 +229,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   const filterId = !isGhost && part.shadowColor ? `drop-shadow-${part.id}` : undefined;
 
+  const isHardHidden = appMode !== 'broadcast' && targetTrack?.editVisible === false;
+
   return (
     <g
       key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
@@ -237,6 +239,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         opacity: finalOpacity,
         cursor: isGhost ? 'default' : 'pointer',
         filter: filterId ? `url(#${filterId})` : undefined,
+        pointerEvents: isHardHidden ? 'none' : 'auto',
       }}
       onClick={(e) => {
         if (!isGhost && e.button === 0) {

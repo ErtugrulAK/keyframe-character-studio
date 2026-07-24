@@ -5,6 +5,7 @@ import { TRACK_CHANNELS } from '../../types/animator';
 import {
   Eye,
   EyeOff,
+  Tv,
   Lock,
   Unlock,
   Plus,
@@ -55,6 +56,7 @@ export const SequencerTimeline: React.FC = () => {
     addKeyframeToTrack,
     updateKeyframeFrame,
     toggleTrackVisibility,
+    toggleTrackEditVisibility,
     toggleTrackLock,
     toggleTrackExpanded,
     deleteKeyframe,
@@ -377,16 +379,30 @@ export const SequencerTimeline: React.FC = () => {
                     <span className="ue-kf-count">{totalKfs}</span>
 
                     <div className="ue-track-controls">
+                      {/* 1. Edit Canvas Hard-Hide Eye */}
+                      <button
+                        className={`btn-icon track-icon-btn ${track.editVisible === false ? 'muted' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); toggleTrackEditVisibility(track.id); }}
+                        title={track.editVisible !== false ? 'Edit Canvas Eye: Visible & Editable on Canvas' : 'Edit Canvas Eye: HARD HIDDEN from Canvas (Completely Non-interactive & Non-clickable)'}
+                      >
+                        {track.editVisible !== false ? <Eye size={12} className="text-teal" /> : <EyeOff size={12} style={{ color: '#ef4444' }} />}
+                      </button>
+
+                      {/* 2. Broadcast Live Mute TV */}
                       <button
                         className={`btn-icon track-icon-btn ${!track.visible ? 'muted' : ''}`}
                         onClick={(e) => { e.stopPropagation(); toggleTrackVisibility(track.id); }}
-                        title={track.visible ? 'Visible on Stage Canvas & Included in Live Broadcast' : 'Hidden on Stage Canvas & Muted from Live Broadcast'}
+                        title={track.visible ? 'Broadcast Live Eye: Included in Live Director Reji' : 'Broadcast Live Eye: MUTED from Live Director Reji'}
                       >
-                        {track.visible ? <Eye size={12} className="text-teal" /> : <EyeOff size={12} style={{ color: '#ef4444' }} />}
+                        {track.visible ? <Tv size={12} style={{ color: '#10b981' }} /> : <Tv size={12} style={{ color: '#ef4444', opacity: 0.5 }} />}
                       </button>
-                      <button className="btn-icon track-icon-btn" onClick={(e) => { e.stopPropagation(); toggleTrackLock(track.id); }} title={track.locked ? 'Unlock' : 'Lock'}>
+
+                      {/* 3. Lock Button */}
+                      <button className="btn-icon track-icon-btn" onClick={(e) => { e.stopPropagation(); toggleTrackLock(track.id); }} title={track.locked ? 'Unlock' : 'Lock Layer'}>
                         {track.locked ? <Lock size={12} className="text-gold" /> : <Unlock size={12} />}
                       </button>
+
+                      {/* 4. Add Keyframe Button */}
                       <button className="btn-icon track-add-kf-btn" onClick={(e) => { e.stopPropagation(); addKeyframeToTrack(track.id, currentFrame); }} title="Add Composite Keyframe">
                         <Plus size={12} />
                       </button>

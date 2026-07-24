@@ -25,6 +25,7 @@ export const StageCanvas: React.FC = () => {
     totalFrames,
     appMode,
     broadcastState,
+    tracks,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -522,16 +523,20 @@ export const StageCanvas: React.FC = () => {
                 />
               )}
 
-              {/* Interactive Transform Gizmo (Only in Edit Mode) */}
-              {appMode !== 'broadcast' && selectedPart && selectedTransform && (
-                <TransformGizmo
-                  selectedPart={selectedPart}
-                  selectedTransform={selectedTransform}
-                  zScale={zScale}
-                  onRotateMouseDown={startRotate}
-                  onScaleMouseDown={startScale}
-                />
-              )}
+              {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden) */}
+              {appMode !== 'broadcast' && selectedPart && selectedTransform && (() => {
+                const selTrack = tracks.find(t => t.partId === selectedPart.id);
+                if (selTrack && selTrack.editVisible === false) return null;
+                return (
+                  <TransformGizmo
+                    selectedPart={selectedPart}
+                    selectedTransform={selectedTransform}
+                    zScale={zScale}
+                    onRotateMouseDown={startRotate}
+                    onScaleMouseDown={startScale}
+                  />
+                );
+              })()}
             </>
           );
         })()}

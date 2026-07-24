@@ -1,1 +1,1 @@
-fix(canvas): ensure selection gizmo dashed border and ghost preview show when selecting hidden layers in Edit mode  
+feat(timeline): add dual-eye controls for Edit Canvas hard-hide and Broadcast Live mute  

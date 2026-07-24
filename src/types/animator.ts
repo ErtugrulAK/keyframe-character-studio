@@ -47,7 +47,8 @@ export interface Track {
   color: string;
   keyframes: Keyframe[]; // legacy composite keyframes kept for backward compatibility
   channels: Record<TrackChannel, PropertyKeyframe[]>; // per-property keyframe channels
-  visible: boolean;
+  visible: boolean; // Broadcast Mute State
+  editVisible?: boolean; // Edit Canvas Hard Hide State
   locked: boolean;
   expanded?: boolean; // Unreal-style collapse/expand state
 }

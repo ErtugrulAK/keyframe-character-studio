@@ -35,6 +35,7 @@ function migrateTrack(t: Track): Track {
     ...t,
     channels: t.channels ?? makeEmptyChannels(),
     expanded: t.expanded ?? false,
+    editVisible: t.editVisible ?? true,
   };
 }
 
@@ -106,6 +107,7 @@ interface AnimatorContextType {
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
   applyPresetPose: (poseId: string) => void;
   toggleTrackVisibility: (trackId: string) => void;
+  toggleTrackEditVisibility: (trackId: string) => void;
   toggleTrackLock: (trackId: string) => void;
   toggleTrackExpanded: (trackId: string) => void;
   exportProject: () => string;
@@ -995,6 +997,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, visible: !t.visible } : t)));
   };
 
+  const toggleTrackEditVisibility = (trackId: string) => {
+    setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, editVisible: t.editVisible === false ? true : false } : t)));
+  };
+
   const toggleTrackLock = (trackId: string) => {
     setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, locked: !t.locked } : t)));
   };
@@ -1382,6 +1388,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateCurrentTransform,
         applyPresetPose,
         toggleTrackVisibility,
+        toggleTrackEditVisibility,
         toggleTrackLock,
         toggleTrackExpanded,
         exportProject,

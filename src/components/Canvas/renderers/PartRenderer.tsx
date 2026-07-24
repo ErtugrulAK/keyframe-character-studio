@@ -159,10 +159,22 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
     // Apply Live Stunts Deltas if active
     const activeStunt = liveStuntsState[part.id];
-    if (activeStunt && activeStunt.progress < 1) {
+    if (activeStunt) {
       const p = activeStunt.progress;
       const sType = activeStunt.stunt;
-      if (sType === 'bounce') {
+
+      if (activeStunt.customPresetId) {
+        const cp = customPresets.find(pr => pr.id === activeStunt.customPresetId);
+        if (cp) {
+          const sample = sampleCustomPreset(cp.keyframes, p);
+          animX += sample.deltaX;
+          animY += sample.deltaY;
+          animRot += sample.rotation;
+          animScaleX *= sample.scaleX;
+          animScaleY *= sample.scaleY;
+          animOpacity *= sample.opacity;
+        }
+      } else if (sType === 'bounce') {
         const bounceY = Math.sin(p * Math.PI) * -80;
         const stretch = 1 + Math.sin(p * Math.PI) * 0.25;
         const squash = 1 - Math.sin(p * Math.PI) * 0.15;

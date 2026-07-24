@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import { Play, Square, RefreshCw, Zap, EyeOff, Sparkles } from 'lucide-react';
+import { Play, Square, RefreshCw, Zap, EyeOff, Sparkles, Repeat, OctagonX } from 'lucide-react';
 import type { LiveStuntType } from '../../types/animator';
 import './LiveDirector.css';
 
-const STUNTS: { id: LiveStuntType; label: string; icon: string }[] = [
+const BUILTIN_STUNTS: { id: LiveStuntType; label: string; icon: string }[] = [
   { id: 'bounce', label: 'BOUNCE', icon: '🏀' },
   { id: 'pulse', label: 'PULSE', icon: '💥' },
   { id: 'wobble', label: 'WOBBLE', icon: '👋' },
@@ -24,10 +24,15 @@ export const LiveDirectorPanel: React.FC = () => {
     triggerAllBroadcastOut,
     resetBroadcastState,
     triggerLiveStunt,
+    stopLiveStunt,
     liveStuntsState,
+    customPresets,
   } = useAnimator();
 
+  const [isLoopingStunt, setIsLoopingStunt] = useState<boolean>(false);
+
   const directorParts = characterParts; 
+  const stuntPresets = customPresets.filter(p => p.type === 'stunt' || p.type === 'in' || p.type === 'out');
 
   return (
     <div className="live-director-panel">
@@ -36,10 +41,29 @@ export const LiveDirectorPanel: React.FC = () => {
           <h2 style={{ fontSize: 14, margin: 0, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Zap size={14} /> LIVE DIRECTOR PANEL
           </h2>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger broadcast graphic animations & live motion stunts in real time</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger broadcast graphic animations & live custom keyframe stunts in real time</span>
         </div>
 
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {/* Global Loop Stunt Toggle */}
+          <button
+            type="button"
+            className="btn-director"
+            onClick={() => setIsLoopingStunt(!isLoopingStunt)}
+            style={{
+              fontSize: 10,
+              padding: '4px 8px',
+              height: 28,
+              background: isLoopingStunt ? 'rgba(192, 132, 252, 0.25)' : 'var(--bg-input)',
+              border: `1px solid ${isLoopingStunt ? '#c084fc' : 'var(--border-color)'}`,
+              color: isLoopingStunt ? '#c084fc' : 'var(--text-muted)',
+              fontWeight: 700,
+            }}
+            title={isLoopingStunt ? 'Looping Stunts is ON (Infinite Repeat)' : 'Single Shot Stunts (Click to enable Loop)'}
+          >
+            <Repeat size={12} /> {isLoopingStunt ? 'LOOP: ON' : 'LOOP: OFF'}
+          </button>
+
           <button
             className="btn-director active"
             style={{ fontSize: 11, padding: '4px 10px', height: 28, background: 'var(--accent-green)', color: '#000', fontWeight: 700 }}
@@ -76,12 +100,15 @@ export const LiveDirectorPanel: React.FC = () => {
           const isVisible = currentState === 'visible';
 
           const activeStunt = liveStuntsState[part.id];
-          const isStunting = activeStunt && activeStunt.progress < 1;
+          const isStunting = !!activeStunt;
           
           let statusColor = 'var(--text-muted)';
           let statusText = 'HIDDEN';
           if (isMuted) { statusColor = '#ef4444'; statusText = 'EYE OFF (MUTED)'; }
-          else if (isStunting) { statusColor = 'var(--accent-gold)'; statusText = `STUNT (${activeStunt.stunt.toUpperCase()})`; }
+          else if (isStunting) {
+            statusColor = 'var(--accent-gold)';
+            statusText = `STUNT: ${activeStunt.stunt.toUpperCase()} ${activeStunt.loop ? '(LOOPING)' : ''}`;
+          }
           else if (isAnimatingIn) { statusColor = 'var(--accent-cyan)'; statusText = 'PLAYING IN'; }
           else if (isVisible) { statusColor = 'var(--accent-green)'; statusText = 'LIVE'; }
           else if (isAnimatingOut) { statusColor = 'var(--accent-red)'; statusText = 'PLAYING OUT'; }
@@ -118,36 +145,96 @@ export const LiveDirectorPanel: React.FC = () => {
                 </div>
               </div>
 
-              {/* Realtime Live Stunts Bar (Available when layer is on air/live) */}
+              {/* Realtime Live Stunts & Custom Motion Presets Bar */}
               {currentState !== 'hidden' && !isMuted && (
-                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: 4, marginRight: 2 }}>
-                    <Sparkles size={11} /> LIVE STUNTS:
-                  </span>
-                  {STUNTS.map((stunt) => (
-                    <button
-                      key={stunt.id}
-                      type="button"
-                      onClick={() => triggerLiveStunt(part.id, stunt.id)}
-                      style={{
-                        fontSize: 9,
-                        padding: '3px 7px',
-                        background: activeStunt?.stunt === stunt.id ? 'var(--accent-gold)' : 'var(--bg-input)',
-                        color: activeStunt?.stunt === stunt.id ? '#000' : '#fff',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: 4,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 3,
-                        transition: 'all 0.15s ease',
-                      }}
-                    >
-                      <span>{stunt.icon}</span>
-                      <span>{stunt.label}</span>
-                    </button>
-                  ))}
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <Sparkles size={11} /> LIVE STUNTS & CUSTOM KEYFRAME ATTRACTIONS:
+                    </span>
+                    {isStunting && (
+                      <button
+                        type="button"
+                        onClick={() => stopLiveStunt(part.id)}
+                        style={{
+                          fontSize: 9,
+                          padding: '2px 6px',
+                          background: '#ef4444',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: 4,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3,
+                        }}
+                      >
+                        <OctagonX size={10} /> STOP STUNT
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Built-in Instant Stunts */}
+                  <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+                    {BUILTIN_STUNTS.map((stunt) => (
+                      <button
+                        key={stunt.id}
+                        type="button"
+                        onClick={() => triggerLiveStunt(part.id, stunt.id, isLoopingStunt)}
+                        style={{
+                          fontSize: 9,
+                          padding: '3px 7px',
+                          background: activeStunt?.stunt === stunt.id ? 'var(--accent-gold)' : 'var(--bg-input)',
+                          color: activeStunt?.stunt === stunt.id ? '#000' : '#fff',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: 4,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 3,
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <span>{stunt.icon}</span>
+                        <span>{stunt.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Saved Keyframe Motion Presets */}
+                  {stuntPresets.length > 0 && (
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 2, paddingTop: 4, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                      <span style={{ fontSize: 9, color: '#c084fc', fontWeight: 700, alignSelf: 'center', marginRight: 4 }}>
+                        CUSTOM SAVED:
+                      </span>
+                      {stuntPresets.map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => triggerLiveStunt(part.id, preset.name, isLoopingStunt, preset.id)}
+                          style={{
+                            fontSize: 9,
+                            padding: '3px 7px',
+                            background: activeStunt?.customPresetId === preset.id ? '#c084fc' : 'rgba(147, 51, 234, 0.15)',
+                            color: activeStunt?.customPresetId === preset.id ? '#000' : '#c084fc',
+                            border: '1px solid rgba(147, 51, 234, 0.4)',
+                            borderRadius: 4,
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 3,
+                            transition: 'all 0.15s ease',
+                          }}
+                        >
+                          <span>⭐</span>
+                          <span>{preset.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

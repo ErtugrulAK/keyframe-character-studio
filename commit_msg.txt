@@ -1,1 +1,1 @@
-feat(broadcast): add geometric shape video masking and realtime live motion stunts bar  
+feat(broadcast): support custom keyframe live stunts and infinite looping animation presets  

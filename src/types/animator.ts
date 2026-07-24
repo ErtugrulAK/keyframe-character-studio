@@ -246,7 +246,7 @@ export interface CharacterPart {
 }
 
 export type MaskShapeType = 'none' | 'rectangle' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart';
-export type LiveStuntType = 'bounce' | 'pulse' | 'wobble' | 'spin' | 'shake' | 'float';
+export type LiveStuntType = 'bounce' | 'pulse' | 'wobble' | 'spin' | 'shake' | 'float' | string;
 
 export interface CustomMotionPresetKeyframe {
   progress: number; // 0..1
@@ -262,7 +262,7 @@ export interface CustomMotionPresetKeyframe {
 export interface CustomMotionPreset {
   id: string;
   name: string;
-  type: 'in' | 'out';
+  type: 'in' | 'out' | 'stunt';
   durationFrames: number;
   keyframes: CustomMotionPresetKeyframe[];
 }

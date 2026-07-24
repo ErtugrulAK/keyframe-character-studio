@@ -45,7 +45,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
   } = useAnimator();
 
   const [newPresetName, setNewPresetName] = useState('');
-  const [newPresetType, setNewPresetType] = useState<'in' | 'out'>('in');
+  const [newPresetType, setNewPresetType] = useState<'in' | 'out' | 'stunt'>('in');
   const [presetStartF, setPresetStartF] = useState<number>(0);
   const [presetEndF, setPresetEndF] = useState<number>(50);
   const [showSaveCard, setShowSaveCard] = useState(false);
@@ -213,11 +213,12 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
                 <label style={{ fontSize: 10 }}>TYPE</label>
                 <select
                   value={newPresetType}
-                  onChange={(e) => setNewPresetType(e.target.value as 'in' | 'out')}
+                  onChange={(e) => setNewPresetType(e.target.value as 'in' | 'out' | 'stunt')}
                   style={{ width: '100%', height: 26, background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4, fontSize: 11 }}
                 >
                   <option value="in">Entrance (IN)</option>
                   <option value="out">Exit (OUT)</option>
+                  <option value="stunt">Live Stunt / Loop (Atraksiyon)</option>
                 </select>
               </div>
 

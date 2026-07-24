@@ -134,13 +134,14 @@ interface AnimatorContextType {
 
   // Custom Motion Preset Engine & Sample Loader
   customPresets: CustomMotionPreset[];
-  saveTrackAsPreset: (partId: string, name: string, type: 'in' | 'out', startFrame?: number, endFrame?: number) => void;
+  saveTrackAsPreset: (partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame?: number, endFrame?: number) => void;
   deleteCustomPreset: (presetId: string) => void;
   loadSampleSequencerProject: () => void;
 
   // Realtime Live Stunts Engine
-  liveStuntsState: Record<string, { stunt: LiveStuntType; progress: number }>;
-  triggerLiveStunt: (partId: string, stunt: LiveStuntType) => void;
+  liveStuntsState: Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>;
+  triggerLiveStunt: (partId: string, stunt: LiveStuntType, loop?: boolean, customPresetId?: string) => void;
+  stopLiveStunt: (partId: string) => void;
 }
 
 const AnimatorContext = createContext<AnimatorContextType | null>(null);
@@ -184,6 +185,45 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const tracksRef = useRef(tracks);
   useEffect(() => { tracksRef.current = tracks; }, [tracks]);
+
+  const [customPresets, setCustomPresets] = useState<CustomMotionPreset[]>(() => {
+    try {
+      const saved = localStorage.getItem('keyframe_custom_motion_presets');
+      return saved ? JSON.parse(saved) : [
+        {
+          id: 'preset_pink_slide_down',
+          name: 'Pink Slide Down (Top -> Center)',
+          type: 'in',
+          durationFrames: 50,
+          keyframes: [
+            { progress: 0, deltaX: 0, deltaY: -700, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
+            { progress: 1, deltaX: 0, deltaY: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
+          ]
+        },
+        {
+          id: 'preset_blue_slide_right',
+          name: 'Blue Slide Right (Center -> Right)',
+          type: 'out',
+          durationFrames: 50,
+          keyframes: [
+            { progress: 0, deltaX: 0, deltaY: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
+            { progress: 1, deltaX: 1400, deltaY: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
+          ]
+        }
+      ];
+    } catch {
+      return [];
+    }
+  });
+
+  const customPresetsRef = useRef(customPresets);
+  useEffect(() => { customPresetsRef.current = customPresets; }, [customPresets]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('keyframe_custom_motion_presets', JSON.stringify(customPresets));
+    } catch { }
+  }, [customPresets]);
 
   // Broadcast Mode State
   const [appMode, setAppMode] = useState<AppMode>('edit');
@@ -236,14 +276,23 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   // Realtime Live Stunts Engine
-  const [liveStuntsState, setLiveStuntsState] = useState<Record<string, { stunt: LiveStuntType; progress: number }>>({});
+  const [liveStuntsState, setLiveStuntsState] = useState<Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>>({});
 
-  const triggerLiveStunt = useCallback((partId: string, stunt: LiveStuntType) => {
+  const triggerLiveStunt = useCallback((partId: string, stunt: LiveStuntType, loop?: boolean, customPresetId?: string) => {
     setLiveStuntsState(prev => ({
       ...prev,
-      [partId]: { stunt, progress: 0 }
+      [partId]: { stunt, progress: 0, loop, customPresetId }
     }));
-    showToast(`Triggered live stunt "${stunt.toUpperCase()}"!`, 'success');
+    showToast(`Triggered live stunt "${stunt.toUpperCase()}"${loop ? ' (LOOPING)' : ''}!`, 'success');
+  }, [showToast]);
+
+  const stopLiveStunt = useCallback((partId: string) => {
+    setLiveStuntsState(prev => {
+      const next = { ...prev };
+      delete next[partId];
+      return next;
+    });
+    showToast('Stopped live stunt', 'info');
   }, [showToast]);
 
   // Broadcast Loop
@@ -262,19 +311,32 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const dtMs = time - broadcastLastTimeRef.current;
       broadcastLastTimeRef.current = time;
 
-      // Update progress for active live stunts (~800ms duration)
+      // Update progress for active live stunts
       setLiveStuntsState(prev => {
         let changed = false;
         const next = { ...prev };
         Object.entries(next).forEach(([id, item]) => {
-          if (item.progress < 1) {
-            changed = true;
-            const newP = Math.min(1, item.progress + dtMs / 800);
-            if (newP >= 1) {
-              delete next[id];
-            } else {
-              next[id] = { ...item, progress: newP };
+          changed = true;
+          let stuntDurMs = 800; // default built-in stunt duration 800ms
+          if (item.customPresetId) {
+            const cp = customPresetsRef.current.find(p => p.id === item.customPresetId);
+            if (cp) {
+              const durF = cp.durationFrames || 30;
+              stuntDurMs = (durF / (fpsRef.current || 30)) * 1000;
             }
+          }
+          const deltaP = dtMs / Math.max(50, stuntDurMs);
+          let newP = item.progress + deltaP;
+
+          if (newP >= 1) {
+            if (item.loop) {
+              newP = newP % 1; // infinite loop reset
+              next[id] = { ...item, progress: newP };
+            } else {
+              delete next[id]; // finished single-shot
+            }
+          } else {
+            next[id] = { ...item, progress: newP };
           }
         });
         return changed ? next : prev;
@@ -1226,43 +1288,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   // ── Custom Motion Preset Engine & Sample Sequencer Project Loader ──
-  const [customPresets, setCustomPresets] = useState<CustomMotionPreset[]>(() => {
-    try {
-      const saved = localStorage.getItem('keyframe_custom_motion_presets');
-      return saved ? JSON.parse(saved) : [
-        {
-          id: 'preset_pink_slide_down',
-          name: 'Pink Slide Down (Top -> Center)',
-          type: 'in',
-          durationFrames: 50,
-          keyframes: [
-            { progress: 0, deltaX: 0, deltaY: -700, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
-            { progress: 1, deltaX: 0, deltaY: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
-          ]
-        },
-        {
-          id: 'preset_blue_slide_right',
-          name: 'Blue Slide Right (Center -> Right)',
-          type: 'out',
-          durationFrames: 50,
-          keyframes: [
-            { progress: 0, deltaX: 0, deltaY: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
-            { progress: 1, deltaX: 1400, deltaY: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
-          ]
-        }
-      ];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('keyframe_custom_motion_presets', JSON.stringify(customPresets));
-    } catch { }
-  }, [customPresets]);
-
-  const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out', startFrame = 0, endFrame = 50) => {
+  const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame = 0, endFrame = 50) => {
     const part = characterParts.find(p => p.id === partId);
     const track = tracks.find(t => t.partId === partId);
     if (!part || !track || track.keyframes.length === 0) {
@@ -1283,8 +1309,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const maxF = filteredKfs[filteredKfs.length - 1].frame;
     const durF = Math.max(1, maxF - minF);
 
-    // For IN presets, reference origin is the ending position (progress 1)
-    // For OUT presets, reference origin is the starting position (progress 0)
+    // For IN presets, reference origin is ending position
+    // For OUT/STUNT presets, reference origin is starting position
     const refBaseX = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.x : filteredKfs[0].transform.x;
     const refBaseY = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.y : filteredKfs[0].transform.y;
 
@@ -1491,6 +1517,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         loadSampleSequencerProject,
         liveStuntsState,
         triggerLiveStunt,
+        stopLiveStunt,
       }}
     >
       {children}

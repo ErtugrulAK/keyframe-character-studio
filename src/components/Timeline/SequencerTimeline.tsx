@@ -57,6 +57,7 @@ export const SequencerTimeline: React.FC = () => {
     updateKeyframeFrame,
     toggleTrackVisibility,
     toggleTrackEditVisibility,
+    renamePartAndTrack,
     toggleTrackLock,
     toggleTrackExpanded,
     deleteKeyframe,
@@ -269,6 +270,10 @@ export const SequencerTimeline: React.FC = () => {
   // State for sub-group collapsing (e.g., location, rotation, scale)
   const [subGroupState, setSubGroupState] = useState<Record<string, boolean>>({});
 
+  // Inline Layer Renaming State
+  const [editingPartId, setEditingPartId] = useState<string | null>(null);
+  const [editingNameValue, setEditingNameValue] = useState<string>('');
+
   const isGroupExpanded = (key: string, defaultVal: boolean = true) => {
     return subGroupState[key] !== undefined ? subGroupState[key] : defaultVal;
   };
@@ -347,16 +352,13 @@ export const SequencerTimeline: React.FC = () => {
           </div>
 
           <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll}>
-            {tracks.map((track) => {
+            {tracks.map((track, trackIdx) => {
               const isSelected = selectedPartId === track.partId;
               const isTrackExpanded = track.expanded === true;
               const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
               const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
               const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
               const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
-
-              const totalChannelKfs = TRACK_CHANNELS.reduce((s, ch) => s + (track.channels?.[ch]?.length ?? 0), 0);
-              const totalKfs = track.keyframes.length + totalChannelKfs;
 
               return (
                 <div key={track.id} className="ue-track-group">
@@ -375,8 +377,61 @@ export const SequencerTimeline: React.FC = () => {
                     </button>
 
                     <span className="ue-color-dot" style={{ backgroundColor: track.color }} />
-                    <span className="ue-track-name">{track.name}</span>
-                    <span className="ue-kf-count">{totalKfs}</span>
+                    
+                    {/* Double-Click Inline Renaming */}
+                    {editingPartId === track.partId ? (
+                      <input
+                        type="text"
+                        autoFocus
+                        value={editingNameValue}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setEditingNameValue(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            renamePartAndTrack(track.partId, editingNameValue);
+                            setEditingPartId(null);
+                          } else if (e.key === 'Escape') {
+                            setEditingPartId(null);
+                          }
+                        }}
+                        onBlur={() => {
+                          renamePartAndTrack(track.partId, editingNameValue);
+                          setEditingPartId(null);
+                        }}
+                        style={{
+                          background: 'var(--bg-input)',
+                          border: '1px solid var(--accent-cyan)',
+                          color: '#fff',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          padding: '1px 5px',
+                          borderRadius: 3,
+                          outline: 'none',
+                          maxWidth: 130,
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className="ue-track-name"
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setEditingPartId(track.partId);
+                          setEditingNameValue(track.name.replace(/ Track$/, ''));
+                        }}
+                        title="Double-click to rename layer"
+                      >
+                        {track.name}
+                      </span>
+                    )}
+
+                    {/* Clean 1-based Sequential Index Badge */}
+                    <span 
+                      className="ue-kf-count" 
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }} 
+                      title={`Layer Index #${trackIdx + 1}`}
+                    >
+                      #{trackIdx + 1}
+                    </span>
 
                     <div className="ue-track-controls">
                       {/* 1. Edit Canvas Hard-Hide Eye */}

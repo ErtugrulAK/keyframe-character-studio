@@ -115,6 +115,7 @@ interface AnimatorContextType {
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
+  renamePartAndTrack: (partId: string, newName: string) => void;
   deletePart: (partId: string) => void;
   copySelectedPart: () => void;
   pasteCopiedPart: () => void;
@@ -1291,6 +1292,18 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
   };
 
+  const renamePartAndTrack = useCallback((partId: string, newName: string) => {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    setCharacterParts((prev) =>
+      prev.map((p) => (p.id === partId ? { ...p, name: trimmed } : p))
+    );
+    setTracks((prev) =>
+      prev.map((t) => (t.partId === partId ? { ...t, name: trimmed.endsWith('Track') ? trimmed : `${trimmed} Track` } : t))
+    );
+    showToast(`Renamed layer to "${trimmed}"`, 'success');
+  }, [showToast]);
+
   // ── Custom Motion Preset Engine & Sample Sequencer Project Loader ──
   const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame = 0, endFrame = 50) => {
     const part = characterParts.find(p => p.id === partId);
@@ -1443,6 +1456,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         stopLiveStunt,
         setStuntLoopState,
         stopAllLiveStunts,
+        renamePartAndTrack,
       }}
     >
       {children}

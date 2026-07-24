@@ -1,1 +1,1 @@
-fix(stunts): sync liveStuntsState loop state when toggling LOOP ON/OFF  
+feat(timeline): add inline double-click layer renaming, clean #1 #2 #3 index badges, and stunt toggle mode  

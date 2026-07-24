@@ -195,49 +195,26 @@ export const LiveDirectorPanel: React.FC = () => {
 
                   {/* Built-in Instant Stunts */}
                   <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                    {BUILTIN_STUNTS.map((stunt) => (
-                      <button
-                        key={stunt.id}
-                        type="button"
-                        onClick={() => triggerLiveStunt(part.id, stunt.id, isLoopingStunt)}
-                        style={{
-                          fontSize: 9,
-                          padding: '3px 7px',
-                          background: activeStunt?.stunt === stunt.id ? 'var(--accent-gold)' : 'var(--bg-input)',
-                          color: activeStunt?.stunt === stunt.id ? '#000' : '#fff',
-                          border: '1px solid var(--border-color)',
-                          borderRadius: 4,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 3,
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <span>{stunt.icon}</span>
-                        <span>{stunt.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Custom Saved Keyframe Motion Presets */}
-                  {stuntPresets.length > 0 && (
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 2, paddingTop: 4, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
-                      <span style={{ fontSize: 9, color: '#c084fc', fontWeight: 700, alignSelf: 'center', marginRight: 4 }}>
-                        CUSTOM SAVED:
-                      </span>
-                      {stuntPresets.map((preset) => (
+                    {BUILTIN_STUNTS.map((stunt) => {
+                      const isActive = activeStunt?.stunt === stunt.id;
+                      return (
                         <button
-                          key={preset.id}
+                          key={stunt.id}
                           type="button"
-                          onClick={() => triggerLiveStunt(part.id, preset.name, isLoopingStunt, preset.id)}
+                          onClick={() => {
+                            if (isActive) {
+                              stopLiveStunt(part.id);
+                            } else {
+                              triggerLiveStunt(part.id, stunt.id, isLoopingStunt);
+                            }
+                          }}
                           style={{
                             fontSize: 9,
                             padding: '3px 7px',
-                            background: activeStunt?.customPresetId === preset.id ? '#c084fc' : 'rgba(147, 51, 234, 0.15)',
-                            color: activeStunt?.customPresetId === preset.id ? '#000' : '#c084fc',
-                            border: '1px solid rgba(147, 51, 234, 0.4)',
+                            background: isActive ? 'var(--accent-gold)' : 'var(--bg-input)',
+                            color: isActive ? '#000' : '#fff',
+                            border: `1px solid ${isActive ? '#f59e0b' : 'var(--border-color)'}`,
+                            boxShadow: isActive ? '0 0 8px rgba(245,158,11,0.5)' : 'none',
                             borderRadius: 4,
                             fontWeight: 700,
                             cursor: 'pointer',
@@ -246,11 +223,56 @@ export const LiveDirectorPanel: React.FC = () => {
                             gap: 3,
                             transition: 'all 0.15s ease',
                           }}
+                          title={isActive ? 'Click to stop stunt' : 'Click to trigger stunt'}
                         >
-                          <span>⭐</span>
-                          <span>{preset.name}</span>
+                          <span>{stunt.icon}</span>
+                          <span>{stunt.label}</span>
                         </button>
-                      ))}
+                      );
+                    })}
+                  </div>
+
+                  {/* Custom Saved Keyframe Motion Presets */}
+                  {stuntPresets.length > 0 && (
+                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 2, paddingTop: 4, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                      <span style={{ fontSize: 9, color: '#c084fc', fontWeight: 700, alignSelf: 'center', marginRight: 4 }}>
+                        CUSTOM SAVED:
+                      </span>
+                      {stuntPresets.map((preset) => {
+                        const isActive = activeStunt?.customPresetId === preset.id;
+                        return (
+                          <button
+                            key={preset.id}
+                            type="button"
+                            onClick={() => {
+                              if (isActive) {
+                                stopLiveStunt(part.id);
+                              } else {
+                                triggerLiveStunt(part.id, preset.name, isLoopingStunt, preset.id);
+                              }
+                            }}
+                            style={{
+                              fontSize: 9,
+                              padding: '3px 7px',
+                              background: isActive ? '#c084fc' : 'rgba(147, 51, 234, 0.15)',
+                              color: isActive ? '#000' : '#c084fc',
+                              border: `1px solid ${isActive ? '#c084fc' : 'rgba(147, 51, 234, 0.4)'}`,
+                              boxShadow: isActive ? '0 0 8px rgba(192,132,252,0.6)' : 'none',
+                              borderRadius: 4,
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 3,
+                              transition: 'all 0.15s ease',
+                            }}
+                            title={isActive ? 'Click to stop custom stunt' : 'Click to trigger custom stunt'}
+                          >
+                            <span>⭐</span>
+                            <span>{preset.name}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>

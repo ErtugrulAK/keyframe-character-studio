@@ -267,6 +267,7 @@ export interface CustomMotionPreset {
   durationFrames: number;
   scope?: 'both' | 'motion_only' | 'shape_only' | 'none';
   maskShape?: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart';
+  showInDirector?: boolean;
   keyframes: CustomMotionPresetKeyframe[];
 }
 

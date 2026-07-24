@@ -37,7 +37,9 @@ export const LiveDirectorPanel: React.FC = () => {
     const track = tracks.find(t => t.partId === part.id);
     return !track || track.visible !== false;
   });
-  const stuntPresets = customPresets.filter(p => p.type === 'stunt' || p.type === 'in' || p.type === 'out');
+  const stuntPresets = customPresets.filter(
+    p => (p.type === 'stunt' || p.type === 'in' || p.type === 'out') && p.showInDirector !== false
+  );
 
   return (
     <div className="live-director-panel">

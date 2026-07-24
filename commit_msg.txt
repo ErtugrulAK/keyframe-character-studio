@@ -1,1 +1,1 @@
-feat(i18n): update browser favicon, page title to Keyframe Studio, and complete 100% English UI localization  
+feat(broadcast): add Pin to Live Director Bar toggle per custom preset  

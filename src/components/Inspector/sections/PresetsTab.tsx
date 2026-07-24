@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAnimator } from '../../../context/AnimatorContext';
-import { Sparkles, Trash2, Play, Edit3, Move, Maximize2 } from 'lucide-react';
+import { Sparkles, Trash2, Play, Edit3, Move, Maximize2, Pin } from 'lucide-react';
 import type { CustomMotionPreset } from '../../../types/animator';
 
 export const PresetsTab: React.FC = () => {
@@ -117,7 +117,7 @@ export const PresetsTab: React.FC = () => {
                   </span>
                 </div>
 
-                {/* 2 Functional Scope Toggles */}
+                {/* 3 Functional Scope & Broadcast Pin Toggles */}
                 <div style={{ background: 'rgba(0,0,0,0.4)', padding: '5px 8px', borderRadius: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 10, color: isMotionChecked ? '#f8fafc' : '#64748b' }}>
                     <input
@@ -139,6 +139,17 @@ export const PresetsTab: React.FC = () => {
                     />
                     <Maximize2 size={11} style={{ color: isShapeChecked ? '#c084fc' : '#64748b' }} />
                     <span>Shape & Scale (Size & Transform)</span>
+                  </label>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 10, color: preset.showInDirector !== false ? '#f8fafc' : '#64748b', paddingTop: 2, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
+                    <input
+                      type="checkbox"
+                      checked={preset.showInDirector !== false}
+                      onChange={(e) => updateCustomPreset(preset.id, { showInDirector: e.target.checked })}
+                      style={{ cursor: 'pointer', accentColor: '#f59e0b' }}
+                    />
+                    <Pin size={11} style={{ color: preset.showInDirector !== false ? '#f59e0b' : '#64748b' }} />
+                    <span>Pin to Live Director Bar (Broadcast)</span>
                   </label>
                 </div>
 

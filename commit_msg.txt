@@ -1,1 +1,1 @@
-feat(ui): remove left sidebar Presets tab, remove Curve inspector tab, and add PRO CURVES button to Timeline header  
+feat(inspector): completely remove Presets tab from right Property Inspector  

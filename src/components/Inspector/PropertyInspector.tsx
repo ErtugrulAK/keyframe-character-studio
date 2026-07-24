@@ -4,11 +4,10 @@ import type { CharacterPart } from '../../types/animator';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { MotionTab } from './sections/MotionTab';
-import { PresetsTab } from './sections/PresetsTab';
 import { Sliders, Sparkles, Activity, Palette, Zap, Trash2, Monitor, Copy } from 'lucide-react';
 import './PropertyInspector.css';
 
-type TabType = 'project' | 'transform' | 'style' | 'motion' | 'presets';
+type TabType = 'project' | 'transform' | 'style' | 'motion';
 
 export const PropertyInspector: React.FC = () => {
   const {
@@ -19,7 +18,6 @@ export const PropertyInspector: React.FC = () => {
     getComputedTransform,
     addKeyframeForSelected,
     updateCurrentTransform,
-    applyPresetPose,
     deletePart,
     duplicateSelectedPart,
     projectResolution,
@@ -89,15 +87,6 @@ export const PropertyInspector: React.FC = () => {
           <Zap size={13} className="text-cyan" />
           <span>Motion</span>
         </button>
-
-        <button
-          className={`tab-btn ${activeTab === 'presets' ? 'active' : ''}`}
-          onClick={() => setActiveTab('presets')}
-          title="Preset Poses"
-        >
-          <Sparkles size={13} />
-          <span>Presets</span>
-        </button>
       </div>
 
       <div className="inspector-body">
@@ -161,8 +150,6 @@ export const PropertyInspector: React.FC = () => {
               </div>
             </div>
           </div>
-        ) : activeTab === 'presets' ? (
-          <PresetsTab applyPresetPose={applyPresetPose} />
         ) : selectedPart && transform ? (
           <>
             {/* Header Selected Part Badge */}

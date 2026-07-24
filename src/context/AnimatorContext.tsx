@@ -266,6 +266,30 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [liveStuntsState, setLiveStuntsState] = useState<Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>>({});
 
   const triggerLiveStunt = useCallback((partId: string, stunt: LiveStuntType, loop?: boolean, customPresetId?: string) => {
+    if (customPresetId) {
+      const cp = customPresetsRef.current.find(p => p.id === customPresetId);
+      if (cp) {
+        const isExit = cp.type === 'out' || cp.name.toLowerCase().includes('exit') || cp.name.toLowerCase().includes('out') || cp.name.toLowerCase().includes('çıkış');
+        const isEntrance = cp.type === 'in' || cp.name.toLowerCase().includes('enter') || cp.name.toLowerCase().includes('in') || cp.name.toLowerCase().includes('giriş');
+
+        if (isExit) {
+          setBroadcastState(prev => ({
+            ...prev,
+            [partId]: { state: 'animating_out', progress: 0 }
+          }));
+          showToast(`Triggered exit preset "${cp.name}"`, 'info');
+          return;
+        } else if (isEntrance) {
+          setBroadcastState(prev => ({
+            ...prev,
+            [partId]: { state: 'animating_in', progress: 0 }
+          }));
+          showToast(`Triggered entrance preset "${cp.name}"`, 'success');
+          return;
+        }
+      }
+    }
+
     setLiveStuntsState(prev => ({
       ...prev,
       [partId]: { stunt, progress: 0, loop, customPresetId }
@@ -357,13 +381,19 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             let durFrames = 30;
             if (part) {
               if (st.state === 'animating_in') {
-                if (part.inAnimPreset === 'custom_timeline') {
+                const cp = customPresetsRef.current.find(p => p.id === part.inAnimPreset);
+                if (cp) {
+                  durFrames = cp.durationFrames || part.inAnimDuration || 30;
+                } else if (part.inAnimPreset === 'custom_timeline') {
                   durFrames = Math.max(1, (part.inAnimTimelineEnd || 30) - (part.inAnimTimelineStart || 0));
                 } else {
                   durFrames = part.inAnimDuration || 30;
                 }
               } else {
-                if (part.outAnimPreset === 'custom_timeline') {
+                const cp = customPresetsRef.current.find(p => p.id === part.outAnimPreset);
+                if (cp) {
+                  durFrames = cp.durationFrames || part.outAnimDuration || 30;
+                } else if (part.outAnimPreset === 'custom_timeline') {
                   durFrames = Math.max(1, (part.outAnimTimelineEnd || 30) - (part.outAnimTimelineStart || 0));
                 } else {
                   durFrames = part.outAnimDuration || 30;

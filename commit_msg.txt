@@ -1,1 +1,1 @@
-fix(canvas): clip broadcast viewport to resolution bounds and apply solid black outer matte  
+chore: add git branching policy to AGENTS.md  

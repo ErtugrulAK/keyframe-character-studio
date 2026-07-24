@@ -472,8 +472,8 @@ export const StageCanvas: React.FC = () => {
                 />
               )}
 
-              {/* Origin Center Grid Axes (Edit mode only) */}
-              {appMode !== 'broadcast' && (
+              {/* Origin Center Grid Axes (Edit mode only when Grid is enabled) */}
+              {appMode !== 'broadcast' && showGrid && (
                 <g clipPath="url(#artboard-clip)">
                   <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
                   <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />

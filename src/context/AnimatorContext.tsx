@@ -1230,7 +1230,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       fillColor: randomColor,
       strokeColor: '#101218',
       pivot: { x: 0.5, y: 0.5 },
-      parentId: selectedPartId || 'torso',
+      parentId: extraProps?.parentId !== undefined ? extraProps.parentId : undefined,
       baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
       textValue: type === 'custom_text' ? 'NEW TEXT' : type === 'custom_banner' ? 'CARD LABEL' : undefined,
       fontSize: 20,

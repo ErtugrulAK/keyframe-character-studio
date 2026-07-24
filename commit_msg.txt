@@ -1,1 +1,1 @@
-fix(presets): normalize base scale references for small shapes to prevent instant growth during broadcast IN  
+fix(canvas): remove unneeded skeletal bone parent lines and tie origin axes to showGrid  

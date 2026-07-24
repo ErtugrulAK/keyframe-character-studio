@@ -497,8 +497,8 @@ export const StageCanvas: React.FC = () => {
                 />
               )}
 
-              {/* Character Parts Active Render (Strictly clipped to artboard resolution bounds) */}
-              <g clipPath="url(#artboard-clip)">
+              {/* Character Parts Active Render (Clipped in Broadcast mode, unclipped & visible in Edit mode) */}
+              <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
                 {sortedParts.map((part) => {
                   let frameToEvaluate = currentFrame;
 
@@ -533,11 +533,11 @@ export const StageCanvas: React.FC = () => {
                 })}
               </g>
 
-              {/* Outer Matte Mask (Dims outside in Edit mode, 100% Solid Black in Broadcast mode) */}
+              {/* Outer Matte Mask (Soft dim in Edit mode, 100% Solid Black in Broadcast mode) */}
               <path
                 className="canvas-bg"
                 d={`M-300000,-300000 L300000,-300000 L300000,300000 L-300000,300000 Z M${artX},${artY} L${artX},${artY + projectResolution.height} L${artX + projectResolution.width},${artY + projectResolution.height} L${artX + projectResolution.width},${artY} Z`}
-                fill={appMode === 'broadcast' ? '#000000' : 'rgba(0, 0, 0, 0.75)'}
+                fill={appMode === 'broadcast' ? '#000000' : 'rgba(0, 0, 0, 0.45)'}
                 fillRule="evenodd"
                 pointerEvents="none"
               />

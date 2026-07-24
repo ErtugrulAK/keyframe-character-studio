@@ -31,7 +31,7 @@ export const StageCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [showBones, setShowBones] = useState<boolean>(true);
+  const [showBones, setShowBones] = useState<boolean>(false);
   const [showOnionSkin, setShowOnionSkin] = useState<boolean>(false);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);

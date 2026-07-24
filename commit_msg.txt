@@ -1,1 +1,1 @@
-fix(canvas): remove unneeded skeletal bone parent lines and tie origin axes to showGrid  
+fix(canvas): default showBones to false and filter non-rigged part types in SkeletalBones  

@@ -19,7 +19,7 @@ export const SkeletalBones: React.FC<SkeletalBonesProps> = ({
   return (
     <>
       {characterParts.map((part) => {
-        if (!part.parentId) return null;
+        if (!part.parentId || part.type.startsWith('custom_') || part.type.startsWith('mograph_') || part.type.startsWith('particle_')) return null;
         const parentPart = characterParts.find((p) => p.id === part.parentId);
         if (!parentPart) return null;
 

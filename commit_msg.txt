@@ -1,1 +1,1 @@
-feat(database): complete zero-config SQLite embedded SQL database and Express REST API backend  
+docs: update README.md with badges, features breakdown, stack table, and npm scripts  

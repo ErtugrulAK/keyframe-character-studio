@@ -26,6 +26,7 @@ import {
   interpolateChannel,
 } from '../utils/defaults';
 import { DEFAULT_INITIAL_PRESETS, SAMPLE_SEQUENCER_PROJECT } from './initialStateData';
+import { generateId, initializeIdCounter } from '../utils/idGenerator';
 
 const AUTOSAVE_STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -481,6 +482,18 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (parsed.fps) setFps(parsed.fps);
           if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
           setLastSavedAt(parsed.lastSavedTime ? new Date(parsed.lastSavedTime) : new Date());
+
+          // Initialize sequential ID counter from existing IDs
+          const allIds: string[] = [];
+          parsed.characterParts.forEach(p => allIds.push(p.id));
+          parsed.tracks.forEach(t => {
+            allIds.push(t.id);
+            t.keyframes?.forEach(k => allIds.push(k.id));
+            if (t.channels) {
+              Object.values(t.channels).forEach((ch: any[]) => ch?.forEach(pk => allIds.push(pk.id)));
+            }
+          });
+          initializeIdCounter(allIds);
         } else {
           // Clear legacy stickman data
           localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
@@ -547,7 +560,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const pasteCopiedPart = useCallback(() => {
     if (!clipboardData) return;
-    const newPartId = `part_${clipboardData.part.type}_${Date.now()}`;
+    const newPartId = generateId('part');
     const newPart: CharacterPart = {
       ...JSON.parse(JSON.stringify(clipboardData.part)),
       id: newPartId,
@@ -561,7 +574,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     let newTrack: Track = {
-      id: `track_${newPartId}`,
+      id: generateId('track'),
       partId: newPartId,
       name: newPart.name,
       color: '#3b82f6',
@@ -576,21 +589,21 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const clonedTrack: Track = JSON.parse(JSON.stringify(clipboardData.track));
       newTrack = {
         ...clonedTrack,
-        id: `track_${newPartId}`,
+        id: generateId('track'),
         partId: newPartId,
-        keyframes: clonedTrack.keyframes.map((k, idx) => ({
+        keyframes: clonedTrack.keyframes.map((k) => ({
           ...k,
-          id: `kf_${newPartId}_${k.frame}_${Date.now()}_${idx}`,
+          id: generateId('kf'),
         })),
       };
       if (clonedTrack.channels) {
         newTrack.channels = {
-          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: `pkf_x_${pk.frame}_${Date.now()}` })),
-          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: `pkf_y_${pk.frame}_${Date.now()}` })),
-          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: `pkf_rot_${pk.frame}_${Date.now()}` })),
-          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: `pkf_sx_${pk.frame}_${Date.now()}` })),
-          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: `pkf_sy_${pk.frame}_${Date.now()}` })),
-          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: `pkf_op_${pk.frame}_${Date.now()}` })),
+          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: generateId('pkf_x') })),
+          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: generateId('pkf_y') })),
+          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: generateId('pkf_rot') })),
+          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: generateId('pkf_sx') })),
+          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: generateId('pkf_sy') })),
+          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: generateId('pkf_op') })),
         };
       }
     }
@@ -606,7 +619,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const part = characterParts.find((p) => p.id === selectedPartId);
     if (!part) return;
     const track = tracks.find((t) => t.partId === selectedPartId);
-    const newPartId = `part_${part.type}_${Date.now()}`;
+    const newPartId = generateId('part');
     const newPart: CharacterPart = {
       ...JSON.parse(JSON.stringify(part)),
       id: newPartId,
@@ -620,7 +633,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     let newTrack: Track = {
-      id: `track_${newPartId}`,
+      id: generateId('track'),
       partId: newPartId,
       name: newPart.name,
       color: part.fillColor || '#3b82f6',
@@ -635,21 +648,21 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const clonedTrack: Track = JSON.parse(JSON.stringify(track));
       newTrack = {
         ...clonedTrack,
-        id: `track_${newPartId}`,
+        id: generateId('track'),
         partId: newPartId,
-        keyframes: clonedTrack.keyframes.map((k, idx) => ({
+        keyframes: clonedTrack.keyframes.map((k) => ({
           ...k,
-          id: `kf_${newPartId}_${k.frame}_${Date.now()}_${idx}`,
+          id: generateId('kf'),
         })),
       };
       if (clonedTrack.channels) {
         newTrack.channels = {
-          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: `pkf_x_${pk.frame}_${Date.now()}` })),
-          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: `pkf_y_${pk.frame}_${Date.now()}` })),
-          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: `pkf_rot_${pk.frame}_${Date.now()}` })),
-          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: `pkf_sx_${pk.frame}_${Date.now()}` })),
-          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: `pkf_sy_${pk.frame}_${Date.now()}` })),
-          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: `pkf_op_${pk.frame}_${Date.now()}` })),
+          x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: generateId('pkf_x') })),
+          y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: generateId('pkf_y') })),
+          rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: generateId('pkf_rot') })),
+          scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: generateId('pkf_sx') })),
+          scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: generateId('pkf_sy') })),
+          opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: generateId('pkf_op') })),
         };
       }
     }
@@ -862,7 +875,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const existingIdx = tr.keyframes.findIndex((k) => k.frame === frame);
 
         const newKf: Keyframe = {
-          id: `kf_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          id: generateId('kf'),
           frame,
           transform: { ...currentTransform },
           easing: 'easeInOut',
@@ -998,7 +1011,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
               newKfs[existingIdx] = { ...newKfs[existingIdx], transform: updatedT };
             } else {
               newKfs.push({
-                id: `kf_${Date.now()}_${partId}`,
+                id: generateId('kf'),
                 frame: currentFrame,
                 transform: updatedT,
                 easing: 'easeInOut',
@@ -1042,7 +1055,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const ch = t.channels ?? makeEmptyChannels();
         const existing = ch[channel].find((k) => k.frame === frame);
         const newKf: PropertyKeyframe = {
-          id: `pkf_${channel}_${frame}_${Date.now()}`,
+          id: generateId(`pkf_${channel}`),
           frame,
           value,
           easing,
@@ -1140,14 +1153,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     const kfStart: Keyframe = {
-      id: `kf_${track.id}_${startFrame}_${Date.now()}`,
+      id: generateId('kf'),
       frame: startFrame,
       transform: startTransform,
       easing,
     };
 
     const kfEnd: Keyframe = {
-      id: `kf_${track.id}_${endFrame}_${Date.now() + 1}`,
+      id: generateId('kf'),
       frame: endFrame,
       transform: endTransform,
       easing: 'linear',
@@ -1204,7 +1217,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const addCustomPart = (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => {
-    const partId = `part_${type}_${Date.now()}`;
+    const partId = generateId('part');
     const colors = ['#00d2ff', '#ffb700', '#ff3366', '#a855f7', '#10b981', '#ff7b00', '#ec4899'];
     const randomColor = colors[Math.floor(Math.random() * colors.length)];
 
@@ -1270,7 +1283,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     const newTrack: Track = {
-      id: `track_${partId}`,
+      id: generateId('track'),
       partId,
       name: `${name} Track`,
       color: randomColor,
@@ -1346,7 +1359,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }));
 
     const newPreset: CustomMotionPreset = {
-      id: `preset_custom_${Date.now()}`,
+      id: generateId('preset'),
       name,
       type,
       durationFrames: durF,

@@ -7,8 +7,8 @@ export const SAMPLE_SEQUENCER_PROJECT = {
   projectResolution: { width: 1920, height: 1080 },
   tracks: [
     {
-      id: "track_part_custom_rect_1784804656612",
-      partId: "part_custom_rect_1784804656612",
+      id: "track_1",
+      partId: "part_1",
       name: "Pink Entrance Shape (Proxy)",
       color: "#ec4899",
       visible: true,
@@ -21,8 +21,8 @@ export const SAMPLE_SEQUENCER_PROJECT = {
       channels: { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] }
     },
     {
-      id: "track_part_custom_rect_1784808718976",
-      partId: "part_custom_rect_1784808718976",
+      id: "track_2",
+      partId: "part_2",
       name: "Green Live Hold Shape (Proxy)",
       color: "#b7ec46",
       visible: true,
@@ -32,8 +32,8 @@ export const SAMPLE_SEQUENCER_PROJECT = {
       channels: { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] }
     },
     {
-      id: "track_part_custom_rect_1784810139574",
-      partId: "part_custom_rect_1784810139574",
+      id: "track_3",
+      partId: "part_3",
       name: "Blue Exit Shape (Proxy)",
       color: "#1d4ad3",
       visible: true,
@@ -48,7 +48,7 @@ export const SAMPLE_SEQUENCER_PROJECT = {
   ],
   characterParts: [
     {
-      id: "part_custom_rect_1784804656612",
+      id: "part_1",
       name: "Pink Entrance Shape (Proxy)",
       type: "custom_rect",
       zIndex: 2,
@@ -60,7 +60,7 @@ export const SAMPLE_SEQUENCER_PROJECT = {
       visibleEndFrame: 50
     },
     {
-      id: "part_custom_rect_1784808718976",
+      id: "part_2",
       name: "Green Live Hold Shape (Proxy)",
       type: "custom_rect",
       zIndex: 2,
@@ -73,7 +73,7 @@ export const SAMPLE_SEQUENCER_PROJECT = {
       visibleEndFrame: 100
     },
     {
-      id: "part_custom_rect_1784810139574",
+      id: "part_3",
       name: "Blue Exit Shape (Proxy)",
       type: "custom_rect",
       zIndex: 2,
@@ -89,7 +89,7 @@ export const SAMPLE_SEQUENCER_PROJECT = {
 
 export const DEFAULT_INITIAL_PRESETS: CustomMotionPreset[] = [
   {
-    id: 'preset_pink_slide_down',
+    id: 'preset_1',
     name: 'Pink Slide Down (Top -> Center)',
     type: 'in',
     durationFrames: 50,
@@ -99,7 +99,7 @@ export const DEFAULT_INITIAL_PRESETS: CustomMotionPreset[] = [
     ]
   },
   {
-    id: 'preset_blue_slide_right',
+    id: 'preset_2',
     name: 'Blue Slide Right (Center -> Right)',
     type: 'out',
     durationFrames: 50,

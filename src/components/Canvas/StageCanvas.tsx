@@ -134,8 +134,10 @@ export const StageCanvas: React.FC = () => {
     setDragMode('scale');
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const dx = svgX - (300 + selectedTransform.x);
-    const dy = svgY - (240 + selectedTransform.y);
+    const centerX = 300 + selectedTransform.x;
+    const centerY = 240 + selectedTransform.y;
+    const dx = svgX - centerX;
+    const dy = svgY - centerY;
     const initialDist = Math.sqrt(dx * dx + dy * dy);
 
     setDragInitialDist(initialDist || 1);
@@ -172,8 +174,10 @@ export const StageCanvas: React.FC = () => {
           y: Math.round(dragStart.initialTransform.y + dy),
         });
       } else if (dragMode === 'rotate') {
-        const dx = svgX - dragStart.initialTransform.x;
-        const dy = svgY - dragStart.initialTransform.y;
+        const centerX = 300 + dragStart.initialTransform.x;
+        const centerY = 240 + dragStart.initialTransform.y;
+        const dx = svgX - centerX;
+        const dy = svgY - centerY;
         const currentAngleRad = Math.atan2(dy, dx);
         const deltaAngleRad = currentAngleRad - dragInitialAngle;
         const deltaAngleDeg = (deltaAngleRad * 180) / Math.PI;
@@ -181,13 +185,16 @@ export const StageCanvas: React.FC = () => {
         const newRotation = Math.round(dragStart.initialTransform.rotation + deltaAngleDeg);
         updateCurrentTransform({ rotation: newRotation });
       } else if (dragMode === 'scale') {
-        const dx = svgX - dragStart.initialTransform.x;
-        const dy = svgY - dragStart.initialTransform.y;
+        const centerX = 300 + dragStart.initialTransform.x;
+        const centerY = 240 + dragStart.initialTransform.y;
+        const dx = svgX - centerX;
+        const dy = svgY - centerY;
         const currentDist = Math.sqrt(dx * dx + dy * dy);
 
-        const ratio = currentDist / Math.max(1, dragInitialDist);
-        const newScaleX = parseFloat(Math.max(0.1, dragStart.initialTransform.scaleX * ratio).toFixed(2));
-        const newScaleY = parseFloat(Math.max(0.1, dragStart.initialTransform.scaleY * ratio).toFixed(2));
+        const ratio = currentDist / Math.max(10, dragInitialDist);
+        const precision = e.shiftKey ? 3 : 2;
+        const newScaleX = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleX * ratio).toFixed(precision));
+        const newScaleY = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleY * ratio).toFixed(precision));
 
         updateCurrentTransform({ scaleX: newScaleX, scaleY: newScaleY });
       }

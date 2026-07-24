@@ -1,1 +1,1 @@
-docs: update README.md with badges, features breakdown, stack table, and npm scripts  
+fix(canvas): fix scale and rotation drag calculation math centering for smooth precise sizing  

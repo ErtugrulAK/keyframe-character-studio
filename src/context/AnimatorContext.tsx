@@ -140,6 +140,7 @@ interface AnimatorContextType {
   // Custom Motion Preset Engine & Sample Loader
   customPresets: CustomMotionPreset[];
   saveTrackAsPreset: (partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame?: number, endFrame?: number, scope?: 'both' | 'motion_only' | 'shape_only') => void;
+  updateCustomPreset: (presetId: string, updates: Partial<CustomMotionPreset>) => void;
   deleteCustomPreset: (presetId: string) => void;
   loadSampleSequencerProject: () => void;
 
@@ -1390,6 +1391,11 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast(`Saved ${scope === 'motion_only' ? 'Motion Only' : scope === 'shape_only' ? 'Shape Only' : 'Full'} preset "${name}"!`, 'success');
   }, [characterParts, tracks, showToast]);
 
+  const updateCustomPreset = useCallback((presetId: string, updates: Partial<CustomMotionPreset>) => {
+    setCustomPresets(prev => prev.map(p => (p.id === presetId ? { ...p, ...updates } : p)));
+    showToast('Updated preset', 'success');
+  }, [showToast]);
+
   const deleteCustomPreset = useCallback((presetId: string) => {
     setCustomPresets(prev => prev.filter(p => p.id !== presetId));
     showToast('Deleted preset', 'info');
@@ -1482,6 +1488,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         resetBroadcastState,
         customPresets,
         saveTrackAsPreset,
+        updateCustomPreset,
         deleteCustomPreset,
         loadSampleSequencerProject,
         liveStuntsState,

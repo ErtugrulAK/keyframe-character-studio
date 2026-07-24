@@ -1,1 +1,1 @@
-feat(presets): add preset content scope option to choose between motion only, shape/scale only, or both  
+feat(presets): clean up header bar controls and add dedicated custom presets management tab to right inspector  

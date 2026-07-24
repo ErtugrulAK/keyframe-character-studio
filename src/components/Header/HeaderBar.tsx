@@ -5,16 +5,12 @@ import {
   Upload,
   RotateCcw,
   Sparkles,
-  Save,
   CheckCircle2,
-  Film,
 } from 'lucide-react';
 import './HeaderBar.css';
 
 export const HeaderBar: React.FC = () => {
   const {
-    fps,
-    setFps,
     exportProject,
     importProject,
     resetProject,
@@ -23,7 +19,6 @@ export const HeaderBar: React.FC = () => {
     showToast,
     appMode,
     setAppMode,
-    loadSampleSequencerProject,
   } = useAnimator();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -144,34 +139,18 @@ export const HeaderBar: React.FC = () => {
           <span className="autosave-text">{timeAgoStr}</span>
         </div>
 
-        {/* FPS */}
-        <div className="fps-selector" style={{ flexShrink: 0 }}>
-          <span>FPS</span>
-          <select value={fps} onChange={(e) => setFps(parseInt(e.target.value))}>
-            <option value={12}>12 FPS</option>
-            <option value={24}>24 FPS</option>
-            <option value={30}>30 FPS</option>
-            <option value={60}>60 FPS</option>
-          </select>
+        {/* Fixed 60 FPS Badge */}
+        <div className="fps-selector" style={{ flexShrink: 0, padding: '4px 8px', background: 'var(--bg-input)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--accent-cyan)' }}>
+          <span>60 FPS</span>
         </div>
 
         <div className="divider-v" />
-
-        <button className="btn-secondary" onClick={loadSampleSequencerProject} title="Load sample sequencer-project.json" style={{ color: 'var(--accent-gold)' }}>
-          <Film size={14} />
-          <span>Sample Project</span>
-        </button>
 
         <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} title="Import JSON Animation File">
           <Upload size={14} />
           <span>Import</span>
         </button>
         <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportFile} />
-
-        <button className="btn-secondary" onClick={triggerManualSave} title="Save Project Now">
-          <Save size={14} className="text-teal" />
-          <span>Save</span>
-        </button>
 
         <button className="btn-primary export-main-btn" onClick={handleExport} title="Export Video / Animation Sequence">
           <Download size={15} />

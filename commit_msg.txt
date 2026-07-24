@@ -1,1 +1,1 @@
-style(ui): standardize app typography to Outfit and style dark selects, color pickers, and checkboxes  
+fix(layout): restore app-container and main-layout flexbox layout rules  

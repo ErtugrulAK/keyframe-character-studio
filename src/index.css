@@ -60,6 +60,24 @@ body, html, #root {
   -webkit-font-smoothing: antialiased;
 }
 
+/* App Container Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-darkest);
+}
+
+.main-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
 /* Typography standardization across app UI */
 button, input, select, textarea, label, span {
   font-family: var(--font-main);

@@ -478,9 +478,6 @@ export const StageCanvas: React.FC = () => {
                   <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
                   <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
                   <circle cx={300} cy={240} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
-                  <text x={300 + 10 * zScale} y={240 - 5 * zScale} fill="rgba(255, 255, 255, 0.9)" fontSize={12 * zScale} fontWeight="800" fontFamily="JetBrains Mono, monospace">
-                    (0,0) ORIGIN
-                  </text>
                 </g>
               )}
 

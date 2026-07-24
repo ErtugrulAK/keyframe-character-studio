@@ -1,1 +1,1 @@
-fix(inspector): remove duplicate DISAPPEAR AT (FRAME) input field  
+style(canvas): remove (0,0) ORIGIN text label overlay from canvas center axes  

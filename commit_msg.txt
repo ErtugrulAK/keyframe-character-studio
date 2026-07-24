@@ -1,1 +1,1 @@
-feat(project): move Project settings tab to left toolbar  
+refactor(architecture): modularize LeftToolbar drawers and StageCanvas viewport overlays  

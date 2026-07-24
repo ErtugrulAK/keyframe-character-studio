@@ -5,7 +5,9 @@ import { PartRenderer } from './renderers/PartRenderer';
 import { TransformGizmo } from './overlays/TransformGizmo';
 import { SkeletalBones } from './overlays/SkeletalBones';
 import { OnionSkinning } from './overlays/OnionSkinning';
-import { Grid, ZoomIn, ZoomOut, Compass, Bone, Layers, Sparkles } from 'lucide-react';
+import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
+import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
+import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
 
 export const StageCanvas: React.FC = () => {
@@ -360,65 +362,17 @@ export const StageCanvas: React.FC = () => {
       </div>
 
       {/* Viewport Floating Glass Toolbar */}
-      <div className="viewport-tools-overlay">
-        <button
-          className={`btn-icon viewport-btn ${showGrid ? 'active' : ''}`}
-          onClick={() => setShowGrid(!showGrid)}
-          title={showGrid ? 'Grid Overlay: ON (Click to Hide)' : 'Grid Overlay: OFF (Click to Show)'}
-        >
-          <Grid size={14} />
-        </button>
-
-        <button
-          className={`btn-icon viewport-btn ${showBones ? 'active' : ''}`}
-          onClick={() => setShowBones(!showBones)}
-          title={showBones ? 'Skeletal Bones: ON (Click to Hide)' : 'Skeletal Bones: OFF (Click to Show)'}
-        >
-          <Bone size={14} />
-        </button>
-
-        <button
-          className={`btn-icon viewport-btn ${showOnionSkin ? 'active' : ''}`}
-          onClick={() => setShowOnionSkin(!showOnionSkin)}
-          title={showOnionSkin ? 'Onion Skinning: ON (Click to Hide)' : 'Onion Skinning: OFF (Click to Show)'}
-        >
-          <Layers size={14} />
-        </button>
-
-        <div style={{ height: 16, width: 1, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
-
-        <button
-          className="btn-icon viewport-btn"
-          onClick={() => setZoomLevel((z) => Math.max(0.3, parseFloat((z - 0.1).toFixed(2))))}
-          title="Zoom Out (-)"
-        >
-          <ZoomOut size={14} />
-        </button>
-
-        <span
-          className="zoom-badge"
-          onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}
-          title="Click to Reset View to 100% Fit Stage"
-        >
-          {Math.round(zoomLevel * 100)}%
-        </span>
-
-        <button
-          className="btn-icon viewport-btn"
-          onClick={() => setZoomLevel((z) => Math.min(3.0, parseFloat((z + 0.1).toFixed(2))))}
-          title="Zoom In (+)"
-        >
-          <ZoomIn size={14} />
-        </button>
-
-        <button
-          className="btn-icon viewport-btn"
-          onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}
-          title="Reset Viewport Pan & Zoom (Center Stage)"
-        >
-          <Compass size={14} />
-        </button>
-      </div>
+      <CanvasViewportToolbar
+        showGrid={showGrid}
+        setShowGrid={setShowGrid}
+        showBones={showBones}
+        setShowBones={setShowBones}
+        showOnionSkin={showOnionSkin}
+        setShowOnionSkin={setShowOnionSkin}
+        zoomLevel={zoomLevel}
+        setZoomLevel={setZoomLevel}
+        setPanOffset={setPanOffset}
+      />
 
       <svg
         className="stage-svg"
@@ -463,23 +417,16 @@ export const StageCanvas: React.FC = () => {
                 filter="url(#artboard-shadow)"
               />
 
-              {/* Dashed Grid Lines (Edit mode only) */}
-              {appMode !== 'broadcast' && showGrid && (
-                <rect 
-                  className="canvas-bg"
-                  x={artX} y={artY} width={projectResolution.width} height={projectResolution.height} 
-                  fill="url(#svg-dashed-grid)" 
-                />
-              )}
-
-              {/* Origin Center Grid Axes (Edit mode only when Grid is enabled) */}
-              {appMode !== 'broadcast' && showGrid && (
-                <g clipPath="url(#artboard-clip)">
-                  <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
-                  <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
-                  <circle cx={300} cy={240} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
-                </g>
-              )}
+              {/* Grid & Origin Axes Overlay */}
+              <CanvasGridOverlay
+                artX={artX}
+                artY={artY}
+                width={projectResolution.width}
+                height={projectResolution.height}
+                zScale={zScale}
+                showGrid={showGrid}
+                appMode={appMode}
+              />
 
               {/* ONION SKINNING */}
               {appMode !== 'broadcast' && showOnionSkin && (

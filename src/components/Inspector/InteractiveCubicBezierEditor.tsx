@@ -5,6 +5,8 @@ import { Copy, Check, Maximize2, X, Play, Pause, Sparkles, RefreshCw, Activity, 
 interface InteractiveCubicBezierEditorProps {
   controlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
   onChange: (points: [number, number, number, number]) => void;
+  initialModalOpen?: boolean;
+  onCloseModal?: () => void;
 }
 
 const PRESET_BEZIERS: { label: string; points: [number, number, number, number] }[] = [
@@ -21,9 +23,11 @@ const PRESET_BEZIERS: { label: string; points: [number, number, number, number] 
 export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditorProps> = ({
   controlPoints = [0.42, 0.0, 0.58, 1.0],
   onChange,
+  initialModalOpen = false,
+  onCloseModal,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(initialModalOpen);
   const [draggingPoint, setDraggingPoint] = useState<1 | 2 | null>(null);
 
   // Pro Studio Modal State
@@ -333,7 +337,10 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
               justifyContent: 'center',
               padding: 20,
             }}
-            onClick={() => setIsModalOpen(false)}
+            onClick={() => {
+              setIsModalOpen(false);
+              onCloseModal?.();
+            }}
           >
             <div
               className="bezier-modal-card"
@@ -379,7 +386,10 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
                 <button
                   className="btn-icon"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    onCloseModal?.();
+                  }}
                   title="Close Studio"
                   style={{ width: 32, height: 32, borderRadius: 8 }}
                 >

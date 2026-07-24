@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { CharacterPart } from '../../types/animator';
-import { InteractiveCubicBezierEditor } from './InteractiveCubicBezierEditor';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { MotionTab } from './sections/MotionTab';
@@ -9,7 +8,7 @@ import { PresetsTab } from './sections/PresetsTab';
 import { Sliders, Sparkles, Activity, Palette, Zap, Trash2, Monitor, Copy } from 'lucide-react';
 import './PropertyInspector.css';
 
-type TabType = 'project' | 'transform' | 'style' | 'easing' | 'motion' | 'presets';
+type TabType = 'project' | 'transform' | 'style' | 'motion' | 'presets';
 
 export const PropertyInspector: React.FC = () => {
   const {
@@ -17,11 +16,9 @@ export const PropertyInspector: React.FC = () => {
     selectedPartId,
     characterParts,
     setCharacterParts,
-    tracks,
     getComputedTransform,
     addKeyframeForSelected,
     updateCurrentTransform,
-    updateKeyframeBezierPoints,
     applyPresetPose,
     deletePart,
     duplicateSelectedPart,
@@ -33,9 +30,6 @@ export const PropertyInspector: React.FC = () => {
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
-
-  const currentTrack = selectedPartId ? tracks.find((t) => t.partId === selectedPartId) : null;
-  const currentKf = currentTrack ? currentTrack.keyframes.find((k) => k.frame === currentFrame) : null;
 
   const handlePartPropChange = (key: keyof CharacterPart, value: any) => {
     if (!selectedPartId) return;
@@ -90,19 +84,10 @@ export const PropertyInspector: React.FC = () => {
         <button
           className={`tab-btn ${activeTab === 'motion' ? 'active' : ''}`}
           onClick={() => setActiveTab('motion')}
-          title="Motion Transitions"
+          title="Motion Transitions & Custom Presets"
         >
           <Zap size={13} className="text-cyan" />
           <span>Motion</span>
-        </button>
-
-        <button
-          className={`tab-btn ${activeTab === 'easing' ? 'active' : ''}`}
-          onClick={() => setActiveTab('easing')}
-          title="Cubic Bezier Curve Editor"
-        >
-          <Zap size={13} />
-          <span>Curve</span>
         </button>
 
         <button
@@ -235,32 +220,6 @@ export const PropertyInspector: React.FC = () => {
                 selectedPart={selectedPart}
                 handlePartPropChange={handlePartPropChange}
               />
-            )}
-
-            {/* TAB 4: CURVE EDITOR (INTERACTIVE CUBIC BEZIER) */}
-            {activeTab === 'easing' && (
-              <div className="inspector-section">
-                <div className="section-title" style={{ paddingBottom: 6 }}>
-                  <Zap size={14} className="text-gold" />
-                  <span style={{ letterSpacing: '0.5px' }}>MOTION CURVE STUDIO</span>
-                </div>
-                <div style={{ background: 'rgba(255, 183, 0, 0.05)', border: '1px solid rgba(255, 183, 0, 0.15)', borderRadius: 6, padding: '10px 12px', marginBottom: 15 }}>
-                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)', lineHeight: 1.5, margin: 0 }}>
-                    <span className="text-gold" style={{ fontWeight: 600 }}>Pro Tip:</span> Shape the acceleration of your animation by dragging the <span className="text-cyan">Cyan (P1)</span> and <span className="text-gold">Gold (P2)</span> handles.
-                  </p>
-                </div>
-
-                {currentKf && currentTrack ? (
-                  <InteractiveCubicBezierEditor
-                    controlPoints={currentKf.bezierControlPoints}
-                    onChange={(points) => updateKeyframeBezierPoints(currentTrack.id, currentKf.id, points)}
-                  />
-                ) : (
-                  <div className="no-kf-warning">
-                    <span>No keyframe at Frame {currentFrame}. Click "Add Keyframe" to create or edit curves.</span>
-                  </div>
-                )}
-              </div>
             )}
           </>
         ) : (

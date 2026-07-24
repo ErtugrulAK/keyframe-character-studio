@@ -178,15 +178,6 @@ export const LeftToolbar: React.FC = () => {
           <Gem size={20} className="nav-icon text-gold" />
           <span className="nav-label">Keyframes</span>
         </button>
-
-        <button
-          className={`sidebar-nav-item ${activeCategory === 'presets' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('presets')}
-          title="Presets & Styles"
-        >
-          <Sparkles size={20} className="nav-icon text-green" />
-          <span className="nav-label">Presets</span>
-        </button>
       </div>
 
       <div className="left-drawer-panel">
@@ -462,15 +453,6 @@ export const LeftToolbar: React.FC = () => {
                 </button>
               ))}
             </div>
-          </div>
-        )}
-
-        {activeCategory === 'presets' && (
-          <div className="drawer-content">
-            <div className="drawer-header">
-              <span className="drawer-title">Preset Styles</span>
-            </div>
-            <p className="drawer-desc">Select an object to edit color swatches and shadow styling in the Inspector.</p>
           </div>
         )}
       </div>

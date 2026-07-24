@@ -23,7 +23,9 @@ import {
   ChevronRight,
   ChevronDown,
   Diamond,
+  TrendingUp,
 } from 'lucide-react';
+import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import './SequencerTimeline.css';
 
 // Visual metadata for each Transform channel
@@ -72,10 +74,14 @@ export const SequencerTimeline: React.FC = () => {
     addPropertyKeyframe,
     deletePropertyKeyframe,
     updatePropertyKeyframeFrame,
+    updateKeyframeBezierPoints,
     getComputedTransform,
     characterParts,
     setCharacterParts,
   } = useAnimator();
+
+  // Expanded Pro Curve Studio Modal State
+  const [isCurveModalOpen, setIsCurveModalOpen] = useState<boolean>(false);
 
   const timelineGridRef = useRef<HTMLDivElement>(null);
   const timelineBodyRef = useRef<HTMLDivElement>(null);
@@ -332,6 +338,31 @@ export const SequencerTimeline: React.FC = () => {
         </div>
 
         <div className="timeline-header-right">
+          <button
+            type="button"
+            className="btn-director active"
+            onClick={() => setIsCurveModalOpen(true)}
+            style={{
+              fontSize: 10,
+              fontWeight: 800,
+              padding: '3px 9px',
+              height: 26,
+              background: 'rgba(56, 189, 248, 0.15)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              color: 'var(--accent-cyan)',
+              borderRadius: 6,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              marginRight: 6,
+            }}
+            title="Open Expanded Pro Cubic Bezier Motion Curve Studio Modal"
+          >
+            <TrendingUp size={13} className="text-cyan" />
+            <span>PRO CURVES</span>
+          </button>
+          <div className="divider-v" style={{ marginRight: 6 }} />
           <button className="btn-icon transport-btn" onClick={undo} disabled={!canUndo} title="Undo"><Undo2 size={15} /></button>
           <button className="btn-icon transport-btn" onClick={redo} disabled={!canRedo} title="Redo"><Redo2 size={15} /></button>
           <div className="divider-v" />
@@ -946,6 +977,26 @@ export const SequencerTimeline: React.FC = () => {
           <span className="tooltip-frame">F{hoveredKf.frame}</span>
           <span className="tooltip-easing">{hoveredKf.label}</span>
         </div>
+      )}
+
+      {/* Expanded Pro Cubic Bezier Curve Studio Modal */}
+      {isCurveModalOpen && (
+        <InteractiveCubicBezierEditor
+          controlPoints={(() => {
+            const track = tracks.find((t) => t.partId === selectedPartId);
+            const kf = track?.keyframes.find((k) => k.frame === currentFrame);
+            return kf?.bezierControlPoints || [0.42, 0, 0.58, 1];
+          })()}
+          onChange={(points) => {
+            const track = tracks.find((t) => t.partId === selectedPartId);
+            const kf = track?.keyframes.find((k) => k.frame === currentFrame);
+            if (track && kf) {
+              updateKeyframeBezierPoints(track.id, kf.id, points);
+            }
+          }}
+          initialModalOpen={true}
+          onCloseModal={() => setIsCurveModalOpen(false)}
+        />
       )}
     </footer>
   );

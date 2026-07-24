@@ -1,1 +1,1 @@
-style(canvas): enhance viewport floating glass toolbar layout, tooltips, and zoom percentage badge  
+feat(ui): remove left sidebar Presets tab, remove Curve inspector tab, and add PRO CURVES button to Timeline header  

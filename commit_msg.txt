@@ -1,1 +1,1 @@
-refactor: modularize monolithic PartRenderer and AnimatorContext files into focused sub-modules  
+feat(database): add PostgreSQL schema, seed data, setup scripts and Express REST API backend  

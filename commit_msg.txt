@@ -1,1 +1,1 @@
-refactor(architecture): modularize LeftToolbar drawers and StageCanvas viewport overlays  
+feat(presets): apply circular ball mask shape to video layers when playing ball presets  

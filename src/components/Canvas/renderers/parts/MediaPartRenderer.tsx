@@ -6,9 +6,10 @@ interface MediaPartProps {
   fill: string;
   stroke: string;
   isSelected: boolean;
+  overrideMaskShape?: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart';
 }
 
-export const renderMediaPart = ({ part, fill, stroke, isSelected }: MediaPartProps): React.ReactNode => {
+export const renderMediaPart = ({ part, fill, stroke, isSelected, overrideMaskShape }: MediaPartProps): React.ReactNode => {
   const isVideo = part.type === 'custom_video';
   const fullW = isVideo ? 200 : 180;
   const fullH = isVideo ? 120 : 120;
@@ -26,7 +27,7 @@ export const renderMediaPart = ({ part, fill, stroke, isSelected }: MediaPartPro
   const realCW = (fullW * cropW) / 100;
   const realCH = (fullH * cropH) / 100;
   const clipId = `media-crop-${part.id}`;
-  const mShape = part.enableMaskShape !== false ? (part.maskShape || 'none') : 'none';
+  const mShape = overrideMaskShape || (part.enableMaskShape !== false ? (part.maskShape || 'none') : 'none');
   const isGeometricMask = mShape !== 'none';
   const isClipActive = isCrop || isGeometricMask;
 

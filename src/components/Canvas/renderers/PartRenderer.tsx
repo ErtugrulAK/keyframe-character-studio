@@ -37,6 +37,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   let animX = 0;
   let animY = 0;
 
+  let overrideMaskShape: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart' | undefined = undefined;
+
   const { appMode, broadcastState, customPresets, tracks, liveStuntsState } = useAnimator();
   const targetTrack = tracks.find(t => t.partId === part.id);
 
@@ -74,6 +76,12 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             }
             animScaleX = sScaleX;
             animScaleY = sScaleY;
+
+            if (cp.maskShape) {
+              overrideMaskShape = cp.maskShape;
+            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle') || cp.name.toLowerCase().includes('top') || cp.name.toLowerCase().includes('yuvarla')) {
+              overrideMaskShape = 'circle';
+            }
           }
           animOpacity = sample.opacity;
         } else if (inPreset !== 'none' && inPreset !== 'custom_timeline') {
@@ -112,6 +120,12 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             }
             animScaleX = sScaleX;
             animScaleY = sScaleY;
+
+            if (cp.maskShape) {
+              overrideMaskShape = cp.maskShape;
+            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle') || cp.name.toLowerCase().includes('top') || cp.name.toLowerCase().includes('yuvarla')) {
+              overrideMaskShape = 'circle';
+            }
           }
           animOpacity = sample.opacity;
         } else if (outPreset !== 'none' && outPreset !== 'custom_timeline') {
@@ -199,11 +213,18 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
             animScaleX *= sScaleX;
             animScaleY *= sScaleY;
+
+            if (cp.maskShape) {
+              overrideMaskShape = cp.maskShape;
+            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle') || cp.name.toLowerCase().includes('top') || cp.name.toLowerCase().includes('yuvarla')) {
+              overrideMaskShape = 'circle';
+            }
           }
 
           animOpacity *= sample.opacity;
         }
-      } else if (sType === 'bounce') {
+      } else if (sType === 'bounce' || sType.toLowerCase().includes('ball')) {
+        overrideMaskShape = 'circle';
         const bounceY = Math.sin(p * Math.PI) * -80;
         animY += bounceY;
       } else if (sType === 'pulse') {
@@ -264,7 +285,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   let pathContent: React.ReactNode = null;
 
   if (part.type === 'custom_video' || part.type === 'custom_image') {
-    pathContent = renderMediaPart({ part, fill, stroke, isSelected });
+    pathContent = renderMediaPart({ part, fill, stroke, isSelected, overrideMaskShape });
   } else if (part.type === 'custom_text' || part.type === 'mograph_cloner') {
     pathContent = renderTextOrClonerPart({ part, fill, stroke, isSelected, currentFrame });
   } else if (part.type.startsWith('custom_')) {

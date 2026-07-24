@@ -266,6 +266,7 @@ export interface CustomMotionPreset {
   type: 'in' | 'out' | 'stunt';
   durationFrames: number;
   scope?: 'both' | 'motion_only' | 'shape_only' | 'none';
+  maskShape?: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart';
   keyframes: CustomMotionPresetKeyframe[];
 }
 

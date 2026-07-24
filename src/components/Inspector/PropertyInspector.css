@@ -189,9 +189,17 @@
 .color-picker-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--text-secondary);
+  gap: 8px;
+  width: 100%;
+}
+
+.color-picker-row input[type="text"] {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  height: 32px;
 }
 
 .picker-wrapper {
@@ -200,20 +208,10 @@
   gap: 8px;
 }
 
-.picker-wrapper input[type="color"] {
-  -webkit-appearance: none;
-  border: 1px solid var(--border-color);
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  background: none;
-  padding: 0;
-}
-
 .color-hex {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text-muted);
 }
 

@@ -1,1 +1,1 @@
-feat(presets): apply circular ball mask shape to video layers when playing ball presets  
+style(ui): standardize app typography to Outfit and style dark selects, color pickers, and checkboxes  

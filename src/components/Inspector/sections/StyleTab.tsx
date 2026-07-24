@@ -607,16 +607,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                 <select
                   value={selectedPart.overlayTextPosition || 'bottom'}
                   onChange={(e) => handlePartPropChange('overlayTextPosition', e.target.value as any)}
-                  style={{
-                    width: '100%',
-                    height: 28,
-                    background: 'var(--bg-input)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 4,
-                    color: '#fff',
-                    fontSize: 11,
-                    fontWeight: 700,
-                  }}
+                  style={{ width: '100%' }}
                 >
                   <option value="top">Top</option>
                   <option value="center">Center</option>
@@ -626,12 +617,19 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
               <div className="input-field">
                 <label>TEXT COLOR</label>
-                <input
-                  type="color"
-                  value={selectedPart.overlayTextColor || '#ffffff'}
-                  onChange={(e) => handlePartPropChange('overlayTextColor', e.target.value)}
-                  style={{ width: '100%', height: 28, padding: 0, cursor: 'pointer' }}
-                />
+                <div className="color-picker-row">
+                  <input
+                    type="color"
+                    value={selectedPart.overlayTextColor || '#ffffff'}
+                    onChange={(e) => handlePartPropChange('overlayTextColor', e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    value={selectedPart.overlayTextColor || '#ffffff'}
+                    onChange={(e) => handlePartPropChange('overlayTextColor', e.target.value)}
+                    placeholder="#FFFFFF"
+                  />
+                </div>
               </div>
             </div>
           </>

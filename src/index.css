@@ -60,22 +60,9 @@ body, html, #root {
   -webkit-font-smoothing: antialiased;
 }
 
-/* App Container Layout */
-.app-container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  background: var(--bg-darkest);
-}
-
-.main-layout {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  overflow: hidden;
-  position: relative;
+/* Typography standardization across app UI */
+button, input, select, textarea, label, span {
+  font-family: var(--font-main);
 }
 
 /* Scrollbar Customization */
@@ -100,7 +87,7 @@ button {
   border: none;
   color: var(--text-primary);
   cursor: pointer;
-  font-family: inherit;
+  font-family: var(--font-main);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -163,7 +150,21 @@ button:disabled {
 }
 
 /* Input Fields */
-input[type="number"], input[type="text"], select {
+input[type="text"] {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-main);
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.15s ease;
+  user-select: text;
+}
+
+input[type="number"] {
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
@@ -175,6 +176,107 @@ input[type="number"], input[type="text"], select {
   outline: none;
   transition: all 0.15s ease;
   user-select: text;
+}
+
+/* Custom Sleek Dark Select Dropdown */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--bg-input);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  padding: 4px 30px 4px 10px !important;
+  font-family: var(--font-main) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-sm) !important;
+  height: 32px !important;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+select:hover {
+  border-color: var(--border-light) !important;
+}
+
+select:focus {
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 0 2px var(--accent-teal-glow) !important;
+}
+
+/* Custom Sleek Dark Color Picker Swatch */
+input[type="color"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 32px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 3px;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.18s ease;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: 4px;
+}
+
+input[type="color"]:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-teal-glow);
+}
+
+/* Custom Dark Checkbox */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--accent-teal);
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 10px var(--accent-teal-glow);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-bottom: 2px;
 }
 
 /* Hide Spinners in Number Inputs for clean typing */

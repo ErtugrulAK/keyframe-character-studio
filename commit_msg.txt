@@ -1,1 +1,1 @@
-feat(database): add PostgreSQL schema, seed data, setup scripts and Express REST API backend  
+feat(database): complete zero-config SQLite embedded SQL database and Express REST API backend  

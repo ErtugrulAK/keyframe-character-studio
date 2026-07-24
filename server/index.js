@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { pool, checkDbHealth } from './db/index.js';
+import { initSqliteDb, runQuery, getQuery, allQuery } from './db/sqlite.js';
 
 dotenv.config();
 
@@ -11,9 +12,8 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
-// In-Memory Fallback Storage (when PostgreSQL is not connected)
-const inMemoryProjects = new Map();
-const inMemoryPresets = new Map();
+// Initialize SQLite Database
+initSqliteDb().catch(console.error);
 
 // ── 1. Health Check Endpoint ──
 app.get('/api/health', async (req, res) => {
@@ -21,8 +21,8 @@ app.get('/api/health', async (req, res) => {
   res.json({
     status: 'online',
     service: 'Keyframe Studio API',
-    database: health.connected ? 'PostgreSQL' : 'In-Memory Fallback',
-    dbDetails: health,
+    database: health.connected ? 'PostgreSQL' : 'SQLite (Embedded Local DB)',
+    pgDetails: health,
   });
 });
 
@@ -38,9 +38,13 @@ app.get('/api/projects', async (req, res) => {
     }
   }
 
-  // Fallback to In-Memory
-  const list = Array.from(inMemoryProjects.values());
-  res.json({ success: true, source: 'in_memory', projects: list });
+  // SQLite Embedded DB
+  try {
+    const rows = await allQuery('SELECT id, name, fps, total_frames, resolution_w, resolution_h, created_at, updated_at FROM projects ORDER BY updated_at DESC');
+    res.json({ success: true, source: 'sqlite', projects: rows });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.get('/api/projects/:id', async (req, res) => {
@@ -51,17 +55,20 @@ app.get('/api/projects/:id', async (req, res) => {
     try {
       const result = await pool.query('SELECT * FROM projects WHERE id = $1', [id]);
       if (result.rows.length === 0) return res.status(404).json({ success: false, error: 'Project not found' });
-      return res.json({ success: true, source: 'postgresql', project: result.rows[0].data });
+      return res.json({ success: true, source: 'postgresql', project: JSON.parse(result.rows[0].data) });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
     }
   }
 
-  if (inMemoryProjects.has(id)) {
-    return res.json({ success: true, source: 'in_memory', project: inMemoryProjects.get(id) });
+  // SQLite
+  try {
+    const row = await getQuery('SELECT * FROM projects WHERE id = ?', [id]);
+    if (!row) return res.status(404).json({ success: false, error: 'Project not found' });
+    res.json({ success: true, source: 'sqlite', project: JSON.parse(row.data) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
   }
-
-  res.status(404).json({ success: false, error: 'Project not found' });
 });
 
 app.post('/api/projects', async (req, res) => {
@@ -72,6 +79,7 @@ app.post('/api/projects', async (req, res) => {
   const totalFrames = project.totalFrames || 150;
   const resW = project.projectResolution?.width || 1920;
   const resH = project.projectResolution?.height || 1080;
+  const dataStr = JSON.stringify(project);
 
   const health = await checkDbHealth();
 
@@ -90,16 +98,32 @@ app.post('/api/projects', async (req, res) => {
           updated_at = NOW()
         RETURNING *;
       `;
-      const result = await pool.query(query, [id, name, fps, totalFrames, resW, resH, JSON.stringify(project)]);
+      const result = await pool.query(query, [id, name, fps, totalFrames, resW, resH, dataStr]);
       return res.json({ success: true, source: 'postgresql', project: result.rows[0] });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
     }
   }
 
-  // Fallback
-  inMemoryProjects.set(id, { ...project, id, updatedAt: new Date().toISOString() });
-  res.json({ success: true, source: 'in_memory', id });
+  // SQLite
+  try {
+    await runQuery(`
+      INSERT INTO projects (id, name, fps, total_frames, resolution_w, resolution_h, data, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        fps = excluded.fps,
+        total_frames = excluded.total_frames,
+        resolution_w = excluded.resolution_w,
+        resolution_h = excluded.resolution_h,
+        data = excluded.data,
+        updated_at = CURRENT_TIMESTAMP;
+    `, [id, name, fps, totalFrames, resW, resH, dataStr]);
+
+    res.json({ success: true, source: 'sqlite', id });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.delete('/api/projects/:id', async (req, res) => {
@@ -115,8 +139,13 @@ app.delete('/api/projects/:id', async (req, res) => {
     }
   }
 
-  inMemoryProjects.delete(id);
-  res.json({ success: true, source: 'in_memory' });
+  // SQLite
+  try {
+    await runQuery('DELETE FROM projects WHERE id = ?', [id]);
+    res.json({ success: true, source: 'sqlite' });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // ── 3. Motion Presets Endpoints ──
@@ -132,7 +161,17 @@ app.get('/api/presets', async (req, res) => {
     }
   }
 
-  res.json({ success: true, source: 'in_memory', presets: Array.from(inMemoryPresets.values()) });
+  // SQLite
+  try {
+    const rows = await allQuery('SELECT * FROM motion_presets ORDER BY created_at DESC');
+    const parsed = rows.map(r => ({
+      ...r,
+      keyframes: typeof r.keyframes === 'string' ? JSON.parse(r.keyframes) : r.keyframes
+    }));
+    res.json({ success: true, source: 'sqlite', presets: parsed });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.post('/api/presets', async (req, res) => {
@@ -141,6 +180,7 @@ app.post('/api/presets', async (req, res) => {
   const name = preset.name || 'Custom Preset';
   const type = preset.type || 'stunt';
   const durationFrames = preset.durationFrames || 50;
+  const keyframesStr = JSON.stringify(preset.keyframes || []);
 
   const health = await checkDbHealth();
 
@@ -156,15 +196,29 @@ app.post('/api/presets', async (req, res) => {
           keyframes = EXCLUDED.keyframes
         RETURNING *;
       `;
-      const result = await pool.query(query, [id, name, type, durationFrames, JSON.stringify(preset.keyframes || [])]);
+      const result = await pool.query(query, [id, name, type, durationFrames, keyframesStr]);
       return res.json({ success: true, source: 'postgresql', preset: result.rows[0] });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
     }
   }
 
-  inMemoryPresets.set(id, preset);
-  res.json({ success: true, source: 'in_memory', preset });
+  // SQLite
+  try {
+    await runQuery(`
+      INSERT INTO motion_presets (id, name, type, duration_frames, keyframes)
+      VALUES (?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        type = excluded.type,
+        duration_frames = excluded.duration_frames,
+        keyframes = excluded.keyframes;
+    `, [id, name, type, durationFrames, keyframesStr]);
+
+    res.json({ success: true, source: 'sqlite', preset });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.listen(PORT, () => {

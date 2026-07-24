@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { BodyPartType } from '../../types/animator';
+import { PresetsTab } from '../Inspector/sections/PresetsTab';
 import {
   PlusCircle,
   Type,
@@ -171,6 +172,15 @@ export const LeftToolbar: React.FC = () => {
         </button>
 
         <button
+          className={`sidebar-nav-item ${activeCategory === 'presets' ? 'active' : ''}`}
+          onClick={() => setActiveCategory('presets')}
+          title="My Custom Saved Presets Library"
+        >
+          <Sparkles size={20} className="nav-icon text-gold" />
+          <span className="nav-label">Presets</span>
+        </button>
+
+        <button
           className={`sidebar-nav-item ${activeCategory === 'keyframes' ? 'active' : ''}`}
           onClick={() => setActiveCategory('keyframes')}
           title="Keyframe Tools"
@@ -181,6 +191,12 @@ export const LeftToolbar: React.FC = () => {
       </div>
 
       <div className="left-drawer-panel">
+        {activeCategory === 'presets' && (
+          <div className="drawer-content" style={{ padding: '12px 14px' }}>
+            <PresetsTab applyPresetPose={() => {}} />
+          </div>
+        )}
+
         {activeCategory === 'transitions' && (
           <div className="drawer-content">
             <div className="drawer-header">

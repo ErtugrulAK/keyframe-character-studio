@@ -1,1 +1,1 @@
-feat(presets): clean up header bar controls and add dedicated custom presets management tab to right inspector  
+feat(presets): move custom presets library and manager to left toolbar drawer  

@@ -4,11 +4,10 @@ import type { CharacterPart } from '../../types/animator';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { MotionTab } from './sections/MotionTab';
-import { PresetsTab } from './sections/PresetsTab';
 import { Sliders, Sparkles, Activity, Palette, Zap, Trash2, Monitor, Copy } from 'lucide-react';
 import './PropertyInspector.css';
 
-type TabType = 'project' | 'transform' | 'style' | 'motion' | 'presets';
+type TabType = 'project' | 'transform' | 'style' | 'motion';
 
 export const PropertyInspector: React.FC = () => {
   const {
@@ -87,15 +86,6 @@ export const PropertyInspector: React.FC = () => {
         >
           <Zap size={13} className="text-cyan" />
           <span>Motion</span>
-        </button>
-
-        <button
-          className={`tab-btn ${activeTab === 'presets' ? 'active' : ''}`}
-          onClick={() => setActiveTab('presets')}
-          title="Custom Saved Presets Library & Controls"
-        >
-          <Sparkles size={13} className="text-gold" />
-          <span>Presets</span>
         </button>
       </div>
 
@@ -218,14 +208,7 @@ export const PropertyInspector: React.FC = () => {
                 handlePartPropChange={handlePartPropChange}
               />
             )}
-
-            {/* TAB 5: PRESETS MANAGER & LIBRARY */}
-            {activeTab === 'presets' && (
-              <PresetsTab applyPresetPose={() => {}} />
-            )}
           </>
-        ) : activeTab === 'presets' ? (
-          <PresetsTab applyPresetPose={() => {}} />
         ) : (
           <div className="no-selection">
             <Sparkles size={36} className="text-teal text-glow" />

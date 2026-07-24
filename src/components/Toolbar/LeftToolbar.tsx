@@ -193,7 +193,7 @@ export const LeftToolbar: React.FC = () => {
       <div className="left-drawer-panel">
         {activeCategory === 'presets' && (
           <div className="drawer-content" style={{ padding: '12px 14px' }}>
-            <PresetsTab applyPresetPose={() => {}} />
+            <PresetsTab />
           </div>
         )}
 

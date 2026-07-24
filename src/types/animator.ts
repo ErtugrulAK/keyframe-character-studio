@@ -265,7 +265,7 @@ export interface CustomMotionPreset {
   name: string;
   type: 'in' | 'out' | 'stunt';
   durationFrames: number;
-  scope?: 'both' | 'motion_only' | 'shape_only';
+  scope?: 'both' | 'motion_only' | 'shape_only' | 'none';
   keyframes: CustomMotionPresetKeyframe[];
 }
 

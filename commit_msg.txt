@@ -1,1 +1,1 @@
-feat(presets): move custom presets library and manager to left toolbar drawer  
+fix(presets): fix scope calculation bug when unchecking motion and clean up preset drawer layout  

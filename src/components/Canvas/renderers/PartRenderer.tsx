@@ -56,9 +56,17 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         const cp = customPresets.find(p => p.id === inPreset);
         if (cp) {
           const sample = sampleCustomPreset(cp.keyframes, bState.progress);
-          animX = sample.deltaX;
-          animY = sample.deltaY;
-          animRot = sample.rotation;
+          const scope = cp.scope || 'both';
+
+          if (scope === 'both' || scope === 'motion_only') {
+            animX = sample.deltaX;
+            animY = sample.deltaY;
+            animRot = sample.rotation;
+          }
+          if (scope === 'both' || scope === 'shape_only') {
+            animScaleX = sample.scaleX;
+            animScaleY = sample.scaleY;
+          }
           animOpacity = sample.opacity;
         } else if (inPreset !== 'none' && inPreset !== 'custom_timeline') {
           const easeProgress = 1 - Math.pow(1 - bState.progress, 3);
@@ -78,9 +86,17 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         const cp = customPresets.find(p => p.id === outPreset);
         if (cp) {
           const sample = sampleCustomPreset(cp.keyframes, bState.progress);
-          animX = sample.deltaX;
-          animY = sample.deltaY;
-          animRot = sample.rotation;
+          const scope = cp.scope || 'both';
+
+          if (scope === 'both' || scope === 'motion_only') {
+            animX = sample.deltaX;
+            animY = sample.deltaY;
+            animRot = sample.rotation;
+          }
+          if (scope === 'both' || scope === 'shape_only') {
+            animScaleX = sample.scaleX;
+            animScaleY = sample.scaleY;
+          }
           animOpacity = sample.opacity;
         } else if (outPreset !== 'none' && outPreset !== 'custom_timeline') {
           const easeProgress = Math.pow(bState.progress, 3);
@@ -146,22 +162,29 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         const cp = customPresets.find(pr => pr.id === activeStunt.customPresetId);
         if (cp) {
           const sample = sampleCustomPreset(cp.keyframes, p);
-          animX += sample.deltaX;
-          animY += sample.deltaY;
-          animRot += sample.rotation;
+          const scope = cp.scope || 'both';
 
-          // Safe scale multiplier normalization (prevents 40x mega zoom)
-          let sScaleX = sample.scaleX;
-          let sScaleY = sample.scaleY;
-          if (sScaleX > 2.5 && transform.scaleX > 2) {
-            sScaleX = sScaleX / transform.scaleX;
-          }
-          if (sScaleY > 2.5 && transform.scaleY > 2) {
-            sScaleY = sScaleY / transform.scaleY;
+          if (scope === 'both' || scope === 'motion_only') {
+            animX += sample.deltaX;
+            animY += sample.deltaY;
+            animRot += sample.rotation;
           }
 
-          animScaleX *= sScaleX;
-          animScaleY *= sScaleY;
+          if (scope === 'both' || scope === 'shape_only') {
+            // Safe scale multiplier normalization (prevents 40x mega zoom)
+            let sScaleX = sample.scaleX;
+            let sScaleY = sample.scaleY;
+            if (sScaleX > 2.5 && transform.scaleX > 2) {
+              sScaleX = sScaleX / transform.scaleX;
+            }
+            if (sScaleY > 2.5 && transform.scaleY > 2) {
+              sScaleY = sScaleY / transform.scaleY;
+            }
+
+            animScaleX *= sScaleX;
+            animScaleY *= sScaleY;
+          }
+
           animOpacity *= sample.opacity;
         }
       } else if (sType === 'bounce') {

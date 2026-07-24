@@ -4,7 +4,7 @@ import {
   Download,
   Upload,
   RotateCcw,
-  Sparkles,
+  Film,
   CheckCircle2,
 } from 'lucide-react';
 import './HeaderBar.css';
@@ -80,14 +80,10 @@ export const HeaderBar: React.FC = () => {
       {/* Brand & Project Workspace Title */}
       <div className="header-brand">
         <div className="brand-logo">
-          <Sparkles className="logo-icon" size={18} />
+          <Film className="logo-icon" size={18} />
         </div>
         <div className="brand-title">
-          <div className="brand-title-top">
-            <span className="title-primary">KEYFRAME STUDIO</span>
-            <span className="pro-badge">PRO v3.0</span>
-          </div>
-          <span className="title-sub">Pro Workspace // 2D Motion Sequencer</span>
+          <span className="title-primary">KEYFRAME STUDIO</span>
         </div>
       </div>
 

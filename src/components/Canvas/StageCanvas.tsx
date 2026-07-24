@@ -357,7 +357,6 @@ export const StageCanvas: React.FC = () => {
 
       {/* Top Bar Overlay Info */}
       <div className="canvas-header-info">
-        <span className="stage-title">2D ANIMATION VIEWPORT</span>
         <span className="info-tool">MOD: {isPanning ? 'PAN NAV' : activeTool.toUpperCase()}</span>
       </div>
 

@@ -1,1 +1,1 @@
-feat(broadcast): filter out muted eye-off layers from Live Director Panel  
+style(header): update brand logo icon to Film and remove PRO v3.0, subtitle, and viewport labels  

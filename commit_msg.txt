@@ -1,1 +1,1 @@
-feat(canvas): allow elements overflowing stage resolution boundary to be visible in edit mode  
+fix(inspector): remove duplicate DISAPPEAR AT (FRAME) input field  

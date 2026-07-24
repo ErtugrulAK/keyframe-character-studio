@@ -152,16 +152,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             onChange={(val) => handlePartPropChange('visibleEndFrame', val <= 0 ? undefined : val)}
           />
         </div>
-
-        <div className="input-field">
-          <label style={{ color: 'var(--accent-red, #ef4444)' }}>DISAPPEAR AT (FRAME)</label>
-          <SmartNumberInput
-            value={selectedPart.visibleEndFrame ?? 0}
-            min={0}
-            max={1200}
-            onChange={(val) => handlePartPropChange('visibleEndFrame', val <= 0 ? undefined : val)}
-          />
-        </div>
       </div>
 
       {/* ── PROPORTIONAL SCALE & RATIO SECTION ── */}

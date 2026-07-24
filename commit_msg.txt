@@ -1,1 +1,1 @@
-fix(canvas): fix scale and rotation drag calculation math centering for smooth precise sizing  
+fix(canvas): ensure selection gizmo dashed border and ghost preview show when selecting hidden layers in Edit mode  

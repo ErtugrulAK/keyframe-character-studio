@@ -99,7 +99,9 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       }
     } else {
       // Linear Edit Mode timeline logic
-      if (allowMotion && inPreset !== 'none' && currentFrame < inDur) {
+      if (targetTrack && targetTrack.visible === false) {
+        animOpacity = isSelected ? 0.5 : 0;
+      } else if (allowMotion && inPreset !== 'none' && currentFrame < inDur) {
         const progress = currentFrame / inDur; 
         const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
 

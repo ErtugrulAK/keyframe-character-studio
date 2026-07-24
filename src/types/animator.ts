@@ -238,7 +238,15 @@ export interface CharacterPart {
   // ── Feature 10: Custom Preset Animation Engine ──
   inCustomPresetId?: string;
   outCustomPresetId?: string;
+
+  // ── Feature 11: Dynamic Mask Shapes & Live Stunts ──
+  maskShape?: MaskShapeType;
+  enableMaskShape?: boolean;
+  enableMotionAnim?: boolean;
 }
+
+export type MaskShapeType = 'none' | 'rectangle' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart';
+export type LiveStuntType = 'bounce' | 'pulse' | 'wobble' | 'spin' | 'shake' | 'float';
 
 export interface CustomMotionPresetKeyframe {
   progress: number; // 0..1

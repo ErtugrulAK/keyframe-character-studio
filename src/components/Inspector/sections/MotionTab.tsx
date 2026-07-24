@@ -91,6 +91,87 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
         </p>
       </div>
 
+      {/* ── DYNAMIC GEOMETRIC MASK SHAPE & MODE TOGGLES ── */}
+      <div 
+        className="form-group" 
+        style={{ 
+          background: 'var(--bg-dark)', 
+          border: '1px solid rgba(147, 51, 234, 0.3)', 
+          borderRadius: 8, 
+          padding: 14 
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Sparkles size={14} /> GEOMETRIC MASK SHAPE FRAME
+          </span>
+          <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+            {(selectedPart.maskShape || 'none').toUpperCase()}
+          </span>
+        </div>
+
+        {/* Visual Shape Selectors */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
+          {[
+            { id: 'none', label: 'Default Box', desc: 'Standard rectangle frame' },
+            { id: 'circle', label: 'Circle (Daire)', desc: 'Clip inside circle' },
+            { id: 'pill', label: 'Pill / Capsule', desc: 'Rounded pill shape' },
+            { id: 'star', label: 'Star (Yıldız)', desc: '5-point star frame' },
+            { id: 'hexagon', label: 'Hexagon', desc: '6-side polygon' },
+            { id: 'heart', label: 'Heart (Kalp)', desc: 'Heart shape frame' },
+          ].map((shape) => {
+            const isSelected = (selectedPart.maskShape || 'none') === shape.id;
+            return (
+              <button
+                key={shape.id}
+                type="button"
+                onClick={() => handlePartPropChange('maskShape', shape.id)}
+                title={shape.desc}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  padding: '6px 4px',
+                  background: isSelected ? 'rgba(147, 51, 234, 0.25)' : 'var(--bg-input)',
+                  border: `1px solid ${isSelected ? '#c084fc' : 'var(--border-color)'}`,
+                  borderRadius: 6,
+                  color: isSelected ? '#c084fc' : '#fff',
+                  fontSize: 10,
+                  fontWeight: isSelected ? 700 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                {shape.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Independent Mode Toggles */}
+        <div style={{ background: 'rgba(0,0,0,0.3)', padding: 10, borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 11, color: '#fff' }}>
+            <input
+              type="checkbox"
+              checked={selectedPart.enableMaskShape !== false}
+              onChange={(e) => handlePartPropChange('enableMaskShape', e.target.checked)}
+              style={{ cursor: 'pointer', accentColor: '#c084fc' }}
+            />
+            <span>Apply Geometric Mask Shape</span>
+          </label>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 11, color: '#fff' }}>
+            <input
+              type="checkbox"
+              checked={selectedPart.enableMotionAnim !== false}
+              onChange={(e) => handlePartPropChange('enableMotionAnim', e.target.checked)}
+              style={{ cursor: 'pointer', accentColor: '#10b981' }}
+            />
+            <span>Apply Entrance & Exit Motion Animations</span>
+          </label>
+        </div>
+      </div>
+
       {/* ── SAVE KEYFRAMES AS REUSABLE PRESET CARD ── */}
       <div
         style={{

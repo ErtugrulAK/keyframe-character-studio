@@ -60,7 +60,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   let animX = 0;
   let animY = 0;
 
-  const { appMode, broadcastState, customPresets, tracks } = useAnimator();
+  const { appMode, broadcastState, customPresets, tracks, liveStuntsState } = useAnimator();
 
   if (!isGhost) {
     const inDur = part.inAnimDuration || 30;
@@ -68,13 +68,14 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     const inPreset = part.inAnimPreset || 'none';
     const outPreset = part.outAnimPreset || 'none';
     const targetTrack = tracks.find(t => t.partId === part.id);
+    const allowMotion = part.enableMotionAnim !== false;
 
     if (appMode === 'broadcast') {
       const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
       
       if (bState.state === 'hidden' || (targetTrack && targetTrack.visible === false)) {
         animOpacity = 0;
-      } else if (bState.state === 'animating_in') {
+      } else if (allowMotion && bState.state === 'animating_in') {
         const cp = customPresets.find(p => p.id === inPreset);
         if (cp) {
           const sample = sampleCustomPreset(cp.keyframes, bState.progress);
@@ -96,7 +97,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             if (inPreset === 'slide-down') animY = -dist;
           }
         }
-      } else if (bState.state === 'animating_out') {
+      } else if (allowMotion && bState.state === 'animating_out') {
         const cp = customPresets.find(p => p.id === outPreset);
         if (cp) {
           const sample = sampleCustomPreset(cp.keyframes, bState.progress);
@@ -119,10 +120,9 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           }
         }
       }
-      // if visible, animOpacity is 1 (default)
     } else {
       // Linear Edit Mode timeline logic
-      if (inPreset !== 'none' && currentFrame < inDur) {
+      if (allowMotion && inPreset !== 'none' && currentFrame < inDur) {
         const progress = currentFrame / inDur; 
         const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
 
@@ -139,7 +139,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         }
       }
 
-      if (outPreset !== 'none' && totalFrames - currentFrame <= outDur) {
+      if (allowMotion && outPreset !== 'none' && totalFrames - currentFrame <= outDur) {
         const progress = Math.max(0, (totalFrames - currentFrame) / outDur); 
         const easeProgress = Math.pow(progress, 3); // easeInCubic
 
@@ -154,6 +154,35 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           if (outPreset === 'slide-up') animY = -dist;
           if (outPreset === 'slide-down') animY = dist;
         }
+      }
+    }
+
+    // Apply Live Stunts Deltas if active
+    const activeStunt = liveStuntsState[part.id];
+    if (activeStunt && activeStunt.progress < 1) {
+      const p = activeStunt.progress;
+      const sType = activeStunt.stunt;
+      if (sType === 'bounce') {
+        const bounceY = Math.sin(p * Math.PI) * -80;
+        const stretch = 1 + Math.sin(p * Math.PI) * 0.25;
+        const squash = 1 - Math.sin(p * Math.PI) * 0.15;
+        animY += bounceY;
+        animScaleY *= stretch;
+        animScaleX *= squash;
+      } else if (sType === 'pulse') {
+        const factor = 1 + Math.sin(p * Math.PI) * 0.35;
+        animScaleX *= factor;
+        animScaleY *= factor;
+      } else if (sType === 'wobble') {
+        animRot += Math.sin(p * Math.PI * 4) * 18 * (1 - p);
+      } else if (sType === 'spin') {
+        animRot += p * 360;
+      } else if (sType === 'shake') {
+        const vib = (1 - p) * 15;
+        animX += (Math.random() - 0.5) * vib;
+        animY += (Math.random() - 0.5) * vib;
+      } else if (sType === 'float') {
+        animY += Math.sin(p * Math.PI * 2) * -30;
       }
     }
   }
@@ -782,6 +811,9 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       const realCW = (fullW * cropW) / 100;
       const realCH = (fullH * cropH) / 100;
       const clipId = `media-crop-${part.id}`;
+      const mShape = part.enableMaskShape !== false ? (part.maskShape || 'none') : 'none';
+      const isGeometricMask = mShape !== 'none';
+      const isClipActive = isCrop || isGeometricMask;
 
       let captionY = startY + fullH - 20;
       if (part.overlayTextPosition === 'top') captionY = startY + 20;
@@ -790,14 +822,28 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       pathContent = (
         <g>
           <defs>
-            {isCrop && (
+            {isClipActive && (
               <clipPath id={clipId}>
-                <rect x={cX} y={cY} width={realCW} height={realCH} rx={4} />
+                {mShape === 'circle' ? (
+                  <circle cx={0} cy={0} r={Math.min(fullW, fullH) / 2} />
+                ) : mShape === 'pill' ? (
+                  <rect x={startX} y={startY} width={fullW} height={fullH} rx={fullH / 2} />
+                ) : mShape === 'star' ? (
+                  <polygon points="0,-55 16,-16 55,-16 24,9 36,45 0,22 -36,45 -24,9 -55,-16 -16,-16" />
+                ) : mShape === 'hexagon' ? (
+                  <polygon points="0,-55 46,-27 46,27 0,55 -46,27 -46,-27" />
+                ) : mShape === 'heart' ? (
+                  <path d="M 0 -22 C -40 -60 -80 0 0 48 C 80 0 40 -60 0 -22 Z" />
+                ) : isCrop ? (
+                  <rect x={cX} y={cY} width={realCW} height={realCH} rx={4} />
+                ) : (
+                  <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} />
+                )}
               </clipPath>
             )}
           </defs>
 
-          <g clipPath={isCrop ? `url(#${clipId})` : undefined}>
+          <g clipPath={isClipActive ? `url(#${clipId})` : undefined}>
             {isVideo ? (
               part.videoUrl ? (
                 <foreignObject x={startX} y={startY} width={fullW} height={fullH}>

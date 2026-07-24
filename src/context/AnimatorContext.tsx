@@ -15,6 +15,7 @@ import type {
   BroadcastObjectState,
   CustomMotionPreset,
   CustomMotionPresetKeyframe,
+  LiveStuntType,
 } from '../types/animator';
 import {
   DEFAULT_CHARACTER_PARTS,
@@ -136,6 +137,10 @@ interface AnimatorContextType {
   saveTrackAsPreset: (partId: string, name: string, type: 'in' | 'out', startFrame?: number, endFrame?: number) => void;
   deleteCustomPreset: (presetId: string) => void;
   loadSampleSequencerProject: () => void;
+
+  // Realtime Live Stunts Engine
+  liveStuntsState: Record<string, { stunt: LiveStuntType; progress: number }>;
+  triggerLiveStunt: (partId: string, stunt: LiveStuntType) => void;
 }
 
 const AnimatorContext = createContext<AnimatorContextType | null>(null);
@@ -230,6 +235,17 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, []);
 
+  // Realtime Live Stunts Engine
+  const [liveStuntsState, setLiveStuntsState] = useState<Record<string, { stunt: LiveStuntType; progress: number }>>({});
+
+  const triggerLiveStunt = useCallback((partId: string, stunt: LiveStuntType) => {
+    setLiveStuntsState(prev => ({
+      ...prev,
+      [partId]: { stunt, progress: 0 }
+    }));
+    showToast(`Triggered live stunt "${stunt.toUpperCase()}"!`, 'success');
+  }, [showToast]);
+
   // Broadcast Loop
   const broadcastLastTimeRef = useRef<number>(performance.now());
   const broadcastReqRef = useRef<number | null>(null);
@@ -245,6 +261,24 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const loop = (time: number) => {
       const dtMs = time - broadcastLastTimeRef.current;
       broadcastLastTimeRef.current = time;
+
+      // Update progress for active live stunts (~800ms duration)
+      setLiveStuntsState(prev => {
+        let changed = false;
+        const next = { ...prev };
+        Object.entries(next).forEach(([id, item]) => {
+          if (item.progress < 1) {
+            changed = true;
+            const newP = Math.min(1, item.progress + dtMs / 800);
+            if (newP >= 1) {
+              delete next[id];
+            } else {
+              next[id] = { ...item, progress: newP };
+            }
+          }
+        });
+        return changed ? next : prev;
+      });
 
       // Update progress for animating objects
       setBroadcastState(prev => {
@@ -1455,6 +1489,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         saveTrackAsPreset,
         deleteCustomPreset,
         loadSampleSequencerProject,
+        liveStuntsState,
+        triggerLiveStunt,
       }}
     >
       {children}

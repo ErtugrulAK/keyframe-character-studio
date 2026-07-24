@@ -1,7 +1,17 @@
 import React from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import { Play, Square, RefreshCw, Zap, EyeOff } from 'lucide-react';
+import { Play, Square, RefreshCw, Zap, EyeOff, Sparkles } from 'lucide-react';
+import type { LiveStuntType } from '../../types/animator';
 import './LiveDirector.css';
+
+const STUNTS: { id: LiveStuntType; label: string; icon: string }[] = [
+  { id: 'bounce', label: 'BOUNCE', icon: '🏀' },
+  { id: 'pulse', label: 'PULSE', icon: '💥' },
+  { id: 'wobble', label: 'WOBBLE', icon: '👋' },
+  { id: 'spin', label: 'SPIN 360', icon: '🌀' },
+  { id: 'shake', label: 'SHAKE', icon: '🔥' },
+  { id: 'float', label: 'FLOAT', icon: '🎈' },
+];
 
 export const LiveDirectorPanel: React.FC = () => {
   const {
@@ -13,6 +23,8 @@ export const LiveDirectorPanel: React.FC = () => {
     triggerAllBroadcastIn,
     triggerAllBroadcastOut,
     resetBroadcastState,
+    triggerLiveStunt,
+    liveStuntsState,
   } = useAnimator();
 
   const directorParts = characterParts; 
@@ -24,7 +36,7 @@ export const LiveDirectorPanel: React.FC = () => {
           <h2 style={{ fontSize: 14, margin: 0, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: 6 }}>
             <Zap size={14} /> LIVE DIRECTOR PANEL
           </h2>
-          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger broadcast graphic animations in real time</span>
+          <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Trigger broadcast graphic animations & live motion stunts in real time</span>
         </div>
 
         <div style={{ display: 'flex', gap: 8 }}>
@@ -52,7 +64,7 @@ export const LiveDirectorPanel: React.FC = () => {
         </div>
       </div>
       
-      <div className="director-list">
+      <div className="director-list" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {directorParts.map(part => {
           const track = tracks.find(t => t.partId === part.id);
           const isMuted = track && track.visible === false;
@@ -62,43 +74,82 @@ export const LiveDirectorPanel: React.FC = () => {
           const isAnimatingIn = currentState === 'animating_in';
           const isAnimatingOut = currentState === 'animating_out';
           const isVisible = currentState === 'visible';
+
+          const activeStunt = liveStuntsState[part.id];
+          const isStunting = activeStunt && activeStunt.progress < 1;
           
           let statusColor = 'var(--text-muted)';
           let statusText = 'HIDDEN';
           if (isMuted) { statusColor = '#ef4444'; statusText = 'EYE OFF (MUTED)'; }
+          else if (isStunting) { statusColor = 'var(--accent-gold)'; statusText = `STUNT (${activeStunt.stunt.toUpperCase()})`; }
           else if (isAnimatingIn) { statusColor = 'var(--accent-cyan)'; statusText = 'PLAYING IN'; }
           else if (isVisible) { statusColor = 'var(--accent-green)'; statusText = 'LIVE'; }
           else if (isAnimatingOut) { statusColor = 'var(--accent-red)'; statusText = 'PLAYING OUT'; }
 
           return (
-            <div key={part.id} className="director-item" style={{ opacity: isMuted ? 0.6 : 1 }}>
-              <div className="director-item-info">
-                <span className="director-item-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {isMuted && <EyeOff size={12} style={{ color: '#ef4444' }} />}
-                  {part.name || part.type}
-                </span>
-                <span className="director-item-status" style={{ color: statusColor }}>
-                  <div className="status-dot" style={{ backgroundColor: statusColor }} />
-                  {statusText}
-                </span>
+            <div key={part.id} className="director-item" style={{ opacity: isMuted ? 0.6 : 1, flexDirection: 'column', alignItems: 'stretch', gap: 8, padding: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="director-item-info">
+                  <span className="director-item-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {isMuted && <EyeOff size={12} style={{ color: '#ef4444' }} />}
+                    {part.name || part.type}
+                  </span>
+                  <span className="director-item-status" style={{ color: statusColor }}>
+                    <div className="status-dot" style={{ backgroundColor: statusColor }} />
+                    {statusText}
+                  </span>
+                </div>
+                <div className="director-item-actions">
+                  <button 
+                    className={`btn-director ${currentState !== 'hidden' && !isAnimatingOut && !isMuted ? 'active' : ''}`}
+                    onClick={() => triggerBroadcastIn(part.id)}
+                    disabled={!!isMuted}
+                    title={isMuted ? 'Layer is hidden via eye icon on timeline' : 'Trigger entrance animation'}
+                  >
+                    <Play size={14} /> PLAY IN
+                  </button>
+                  <button 
+                    className="btn-director out"
+                    onClick={() => triggerBroadcastOut(part.id)}
+                    disabled={(currentState === 'hidden' && !isAnimatingOut) || !!isMuted}
+                  >
+                    <Square size={14} /> PLAY OUT
+                  </button>
+                </div>
               </div>
-              <div className="director-item-actions">
-                <button 
-                  className={`btn-director ${currentState !== 'hidden' && !isAnimatingOut && !isMuted ? 'active' : ''}`}
-                  onClick={() => triggerBroadcastIn(part.id)}
-                  disabled={!!isMuted}
-                  title={isMuted ? 'Layer is hidden via eye icon on timeline' : 'Trigger entrance animation'}
-                >
-                  <Play size={14} /> PLAY IN
-                </button>
-                <button 
-                  className="btn-director out"
-                  onClick={() => triggerBroadcastOut(part.id)}
-                  disabled={(currentState === 'hidden' && !isAnimatingOut) || !!isMuted}
-                >
-                  <Square size={14} /> PLAY OUT
-                </button>
-              </div>
+
+              {/* Realtime Live Stunts Bar (Available when layer is on air/live) */}
+              {currentState !== 'hidden' && !isMuted && (
+                <div style={{ background: 'rgba(0,0,0,0.3)', padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: 4, marginRight: 2 }}>
+                    <Sparkles size={11} /> LIVE STUNTS:
+                  </span>
+                  {STUNTS.map((stunt) => (
+                    <button
+                      key={stunt.id}
+                      type="button"
+                      onClick={() => triggerLiveStunt(part.id, stunt.id)}
+                      style={{
+                        fontSize: 9,
+                        padding: '3px 7px',
+                        background: activeStunt?.stunt === stunt.id ? 'var(--accent-gold)' : 'var(--bg-input)',
+                        color: activeStunt?.stunt === stunt.id ? '#000' : '#fff',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: 4,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 3,
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <span>{stunt.icon}</span>
+                      <span>{stunt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

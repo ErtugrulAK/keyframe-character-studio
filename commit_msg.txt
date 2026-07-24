@@ -1,1 +1,1 @@
-fix(stunts): fix custom preset scale ratio math preventing mega zoom on live stunts  
+fix(canvas): clip broadcast viewport to resolution bounds and apply solid black outer matte  

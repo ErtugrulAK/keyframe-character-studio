@@ -415,14 +415,6 @@ export const StageCanvas: React.FC = () => {
 
           return (
             <>
-              {/* Outer dimmed area (everything outside artboard) */}
-              <path
-                className="canvas-bg"
-                d={`M-300000,-300000 L300000,-300000 L300000,300000 L-300000,300000 Z M${artX},${artY} L${artX},${artY + projectResolution.height} L${artX + projectResolution.width},${artY + projectResolution.height} L${artX + projectResolution.width},${artY} Z`}
-                fill="rgba(0, 0, 0, 0.65)"
-                fillRule="evenodd"
-              />
-
               {/* Artboard Base & Shadow */}
               <rect
                 className="canvas-bg"
@@ -433,8 +425,9 @@ export const StageCanvas: React.FC = () => {
                 fill="var(--bg-darkest)"
                 filter="url(#artboard-shadow)"
               />
-              {/* Dashed Grid Lines (Only inside artboard) */}
-              {showGrid && (
+
+              {/* Dashed Grid Lines (Edit mode only) */}
+              {appMode !== 'broadcast' && showGrid && (
                 <rect 
                   className="canvas-bg"
                   x={artX} y={artY} width={projectResolution.width} height={projectResolution.height} 
@@ -442,31 +435,20 @@ export const StageCanvas: React.FC = () => {
                 />
               )}
 
-              {/* Origin Center Grid Axes (Inside artboard) */}
-              <g clipPath="url(#artboard-clip)">
-                <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
-                <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
-                <circle cx={300} cy={240} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
-                <text x={300 + 10 * zScale} y={240 - 5 * zScale} fill="rgba(255, 255, 255, 0.9)" fontSize={12 * zScale} fontWeight="800" fontFamily="JetBrains Mono, monospace">
-                  (0,0) ORIGIN
-                </text>
-              </g>
-              
-              {/* Artboard Border Outline */}
-              <rect
-                x={artX}
-                y={artY}
-                width={projectResolution.width}
-                height={projectResolution.height}
-                fill="none"
-                stroke="rgba(255, 255, 255, 0.15)"
-                strokeWidth={2 * zScale}
-                vectorEffect="non-scaling-stroke"
-                pointerEvents="none"
-              />
+              {/* Origin Center Grid Axes (Edit mode only) */}
+              {appMode !== 'broadcast' && (
+                <g clipPath="url(#artboard-clip)">
+                  <line x1="-300000" y1="240" x2="300000" y2="240" stroke="rgba(239, 68, 68, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
+                  <line x1="300" y1="-300000" x2="300" y2="300000" stroke="rgba(16, 185, 129, 0.75)" strokeWidth={1.5 * zScale} strokeDasharray={`${6 * zScale} ${4 * zScale}`} />
+                  <circle cx={300} cy={240} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+                  <text x={300 + 10 * zScale} y={240 - 5 * zScale} fill="rgba(255, 255, 255, 0.9)" fontSize={12 * zScale} fontWeight="800" fontFamily="JetBrains Mono, monospace">
+                    (0,0) ORIGIN
+                  </text>
+                </g>
+              )}
 
               {/* ONION SKINNING */}
-              {showOnionSkin && (
+              {appMode !== 'broadcast' && showOnionSkin && (
                 <OnionSkinning
                   sortedParts={sortedParts}
                   currentFrame={currentFrame}
@@ -478,39 +460,63 @@ export const StageCanvas: React.FC = () => {
                 />
               )}
 
-              {/* Character Parts Active Render */}
-              {sortedParts.map((part) => {
-                let frameToEvaluate = currentFrame;
+              {/* Character Parts Active Render (Strictly clipped to artboard resolution bounds) */}
+              <g clipPath="url(#artboard-clip)">
+                {sortedParts.map((part) => {
+                  let frameToEvaluate = currentFrame;
 
-                if (appMode === 'broadcast') {
-                  const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
-                  if (bState.state === 'animating_in' && part.inAnimPreset === 'custom_timeline') {
-                    const st = part.inAnimTimelineStart || 0;
-                    const en = part.inAnimTimelineEnd || 30;
-                    frameToEvaluate = st + bState.progress * (en - st);
-                  } else if (bState.state === 'visible' && part.inAnimPreset === 'custom_timeline') {
-                    frameToEvaluate = part.inAnimTimelineEnd || 30;
-                  } else if (bState.state === 'animating_out' && part.outAnimPreset === 'custom_timeline') {
-                    const st = part.outAnimTimelineStart || 0;
-                    const en = part.outAnimTimelineEnd || 30;
-                    frameToEvaluate = st + bState.progress * (en - st);
+                  if (appMode === 'broadcast') {
+                    const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
+                    if (bState.state === 'animating_in' && part.inAnimPreset === 'custom_timeline') {
+                      const st = part.inAnimTimelineStart || 0;
+                      const en = part.inAnimTimelineEnd || 30;
+                      frameToEvaluate = st + bState.progress * (en - st);
+                    } else if (bState.state === 'visible' && part.inAnimPreset === 'custom_timeline') {
+                      frameToEvaluate = part.inAnimTimelineEnd || 30;
+                    } else if (bState.state === 'animating_out' && part.outAnimPreset === 'custom_timeline') {
+                      const st = part.outAnimTimelineStart || 0;
+                      const en = part.outAnimTimelineEnd || 30;
+                      frameToEvaluate = st + bState.progress * (en - st);
+                    }
                   }
-                }
 
-                const transform = getComputedTransform(part.id, frameToEvaluate);
-                return (
-                  <PartRenderer
-                    key={part.id}
-                    part={part}
-                    transform={transform}
-                    isSelected={selectedPartId === part.id}
-                    currentFrame={frameToEvaluate}
-                    totalFrames={totalFrames}
-                    onSelect={setSelectedPartId}
-                    onStartTranslateDrag={startTranslateDragForPart}
-                  />
-                );
-              })}
+                  const transform = getComputedTransform(part.id, frameToEvaluate);
+                  return (
+                    <PartRenderer
+                      key={part.id}
+                      part={part}
+                      transform={transform}
+                      isSelected={selectedPartId === part.id}
+                      currentFrame={frameToEvaluate}
+                      totalFrames={totalFrames}
+                      onSelect={setSelectedPartId}
+                      onStartTranslateDrag={startTranslateDragForPart}
+                    />
+                  );
+                })}
+              </g>
+
+              {/* Outer Matte Mask (Dims outside in Edit mode, 100% Solid Black in Broadcast mode) */}
+              <path
+                className="canvas-bg"
+                d={`M-300000,-300000 L300000,-300000 L300000,300000 L-300000,300000 Z M${artX},${artY} L${artX},${artY + projectResolution.height} L${artX + projectResolution.width},${artY + projectResolution.height} L${artX + projectResolution.width},${artY} Z`}
+                fill={appMode === 'broadcast' ? '#000000' : 'rgba(0, 0, 0, 0.75)'}
+                fillRule="evenodd"
+                pointerEvents="none"
+              />
+
+              {/* Artboard Border Outline */}
+              <rect
+                x={artX}
+                y={artY}
+                width={projectResolution.width}
+                height={projectResolution.height}
+                fill="none"
+                stroke={appMode === 'broadcast' ? 'none' : 'rgba(255, 255, 255, 0.15)'}
+                strokeWidth={2 * zScale}
+                vectorEffect="non-scaling-stroke"
+                pointerEvents="none"
+              />
 
               {/* Skeletal Bone Hierarchy Links (Edit mode only) */}
               {appMode !== 'broadcast' && showBones && (

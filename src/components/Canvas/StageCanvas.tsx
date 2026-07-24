@@ -359,27 +359,64 @@ export const StageCanvas: React.FC = () => {
         <span className="info-tool">MOD: {isPanning ? 'PAN NAV' : activeTool.toUpperCase()}</span>
       </div>
 
-      {/* Viewport Tools Overlay */}
+      {/* Viewport Floating Glass Toolbar */}
       <div className="viewport-tools-overlay">
-        <button className={`btn-icon viewport-btn ${showGrid ? 'active' : ''}`} onClick={() => setShowGrid(!showGrid)} title="Toggle Grid">
-          <Grid size={15} />
+        <button
+          className={`btn-icon viewport-btn ${showGrid ? 'active' : ''}`}
+          onClick={() => setShowGrid(!showGrid)}
+          title={showGrid ? 'Grid Overlay: ON (Click to Hide)' : 'Grid Overlay: OFF (Click to Show)'}
+        >
+          <Grid size={14} />
         </button>
-        <button className={`btn-icon viewport-btn ${showBones ? 'active' : ''}`} onClick={() => setShowBones(!showBones)} title="Toggle Bones">
-          <Bone size={15} />
+
+        <button
+          className={`btn-icon viewport-btn ${showBones ? 'active' : ''}`}
+          onClick={() => setShowBones(!showBones)}
+          title={showBones ? 'Skeletal Bones: ON (Click to Hide)' : 'Skeletal Bones: OFF (Click to Show)'}
+        >
+          <Bone size={14} />
         </button>
-        <button className={`btn-icon viewport-btn ${showOnionSkin ? 'active' : ''}`} onClick={() => setShowOnionSkin(!showOnionSkin)} title="Toggle Onion Skinning">
-          <Layers size={15} />
+
+        <button
+          className={`btn-icon viewport-btn ${showOnionSkin ? 'active' : ''}`}
+          onClick={() => setShowOnionSkin(!showOnionSkin)}
+          title={showOnionSkin ? 'Onion Skinning: ON (Click to Hide)' : 'Onion Skinning: OFF (Click to Show)'}
+        >
+          <Layers size={14} />
         </button>
-        <div className="divider-v-sm" />
-        <button className="btn-icon viewport-btn" onClick={() => setZoomLevel((z) => Math.min(2.5, z + 0.15))} title="Zoom In">
-          <ZoomIn size={15} />
+
+        <div style={{ height: 16, width: 1, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
+
+        <button
+          className="btn-icon viewport-btn"
+          onClick={() => setZoomLevel((z) => Math.max(0.3, parseFloat((z - 0.1).toFixed(2))))}
+          title="Zoom Out (-)"
+        >
+          <ZoomOut size={14} />
         </button>
-        <span className="zoom-badge">{Math.round(zoomLevel * 100)}%</span>
-        <button className="btn-icon viewport-btn" onClick={() => setZoomLevel((z) => Math.max(0.4, z - 0.15))} title="Zoom Out">
-          <ZoomOut size={15} />
+
+        <span
+          className="zoom-badge"
+          onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}
+          title="Click to Reset View to 100% Fit Stage"
+        >
+          {Math.round(zoomLevel * 100)}%
+        </span>
+
+        <button
+          className="btn-icon viewport-btn"
+          onClick={() => setZoomLevel((z) => Math.min(3.0, parseFloat((z + 0.1).toFixed(2))))}
+          title="Zoom In (+)"
+        >
+          <ZoomIn size={14} />
         </button>
-        <button className="btn-icon viewport-btn" onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }} title="Reset View">
-          <Compass size={15} />
+
+        <button
+          className="btn-icon viewport-btn"
+          onClick={() => { setZoomLevel(1); setPanOffset({ x: 0, y: 0 }); }}
+          title="Reset Viewport Pan & Zoom (Center Stage)"
+        >
+          <Compass size={14} />
         </button>
       </div>
 

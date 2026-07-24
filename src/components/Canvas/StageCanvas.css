@@ -34,35 +34,70 @@
   border-radius: 4px;
 }
 
-/* Viewport Tools Overlay */
+/* Viewport Tools Overlay (Floating Glass Pill Toolbar) */
 .viewport-tools-overlay {
   position: absolute;
   top: 14px;
   right: 18px;
   display: flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(14, 17, 25, 0.88);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border-color);
-  padding: 5px 10px;
-  border-radius: var(--radius-md);
-  z-index: 10;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  gap: 4px;
+  height: 38px;
+  background: rgba(13, 16, 23, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0 8px;
+  border-radius: 20px;
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.4);
 }
 
 .viewport-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: var(--radius-sm);
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewport-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.viewport-btn.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
 }
 
 .zoom-badge {
   font-family: var(--font-mono);
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-primary);
-  padding: 0 6px;
+  color: var(--accent-cyan);
+  min-width: 44px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 4px;
+  user-select: none;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.zoom-badge:hover {
+  background: rgba(56, 189, 248, 0.12);
 }
 
 .stage-svg {

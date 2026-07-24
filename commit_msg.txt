@@ -1,1 +1,1 @@
-feat(timeline): add inline double-click layer renaming, clean #1 #2 #3 index badges, and stunt toggle mode  
+style(canvas): enhance viewport floating glass toolbar layout, tooltips, and zoom percentage badge  

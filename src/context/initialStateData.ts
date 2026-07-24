@@ -94,8 +94,8 @@ export const DEFAULT_INITIAL_PRESETS: CustomMotionPreset[] = [
     type: 'in',
     durationFrames: 50,
     keyframes: [
-      { progress: 0, deltaX: 0, deltaY: -700, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
-      { progress: 1, deltaX: 0, deltaY: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
+      { progress: 0, deltaX: 0, deltaY: -700, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, easing: 'easeInOut' },
+      { progress: 1, deltaX: 0, deltaY: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, easing: 'easeInOut' },
     ]
   },
   {
@@ -104,8 +104,8 @@ export const DEFAULT_INITIAL_PRESETS: CustomMotionPreset[] = [
     type: 'out',
     durationFrames: 50,
     keyframes: [
-      { progress: 0, deltaX: 0, deltaY: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
-      { progress: 1, deltaX: 1400, deltaY: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1, easing: 'easeInOut' },
+      { progress: 0, deltaX: 0, deltaY: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, easing: 'easeInOut' },
+      { progress: 1, deltaX: 1400, deltaY: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, easing: 'easeInOut' },
     ]
   }
 ];

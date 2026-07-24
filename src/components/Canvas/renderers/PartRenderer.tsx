@@ -149,8 +149,19 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           animX += sample.deltaX;
           animY += sample.deltaY;
           animRot += sample.rotation;
-          animScaleX *= sample.scaleX;
-          animScaleY *= sample.scaleY;
+
+          // Safe scale multiplier normalization (prevents 40x mega zoom)
+          let sScaleX = sample.scaleX;
+          let sScaleY = sample.scaleY;
+          if (sScaleX > 2.5 && transform.scaleX > 2) {
+            sScaleX = sScaleX / transform.scaleX;
+          }
+          if (sScaleY > 2.5 && transform.scaleY > 2) {
+            sScaleY = sScaleY / transform.scaleY;
+          }
+
+          animScaleX *= sScaleX;
+          animScaleY *= sScaleY;
           animOpacity *= sample.opacity;
         }
       } else if (sType === 'bounce') {

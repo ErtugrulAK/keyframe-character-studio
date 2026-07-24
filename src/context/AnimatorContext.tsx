@@ -1299,14 +1299,17 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // For OUT/STUNT presets, reference origin is starting position
     const refBaseX = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.x : filteredKfs[0].transform.x;
     const refBaseY = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.y : filteredKfs[0].transform.y;
+    const refBaseRot = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.rotation : filteredKfs[0].transform.rotation;
+    const refBaseScaleX = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleX : filteredKfs[0].transform.scaleX;
+    const refBaseScaleY = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleY : filteredKfs[0].transform.scaleY;
 
     const presetKeyframes: CustomMotionPresetKeyframe[] = filteredKfs.map(kf => ({
       progress: (kf.frame - minF) / durF,
       deltaX: kf.transform.x - refBaseX,
       deltaY: kf.transform.y - refBaseY,
-      rotation: kf.transform.rotation,
-      scaleX: kf.transform.scaleX,
-      scaleY: kf.transform.scaleY,
+      rotation: kf.transform.rotation - refBaseRot,
+      scaleX: refBaseScaleX && refBaseScaleX !== 0 ? kf.transform.scaleX / refBaseScaleX : 1,
+      scaleY: refBaseScaleY && refBaseScaleY !== 0 ? kf.transform.scaleY / refBaseScaleY : 1,
       opacity: kf.transform.opacity,
       easing: kf.easing,
     }));

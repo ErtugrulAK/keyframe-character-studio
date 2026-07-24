@@ -1,1 +1,1 @@
-feat(timeline): add dual-eye controls for Edit Canvas hard-hide and Broadcast Live mute  
+fix(stunts): fix custom preset scale ratio math preventing mega zoom on live stunts  

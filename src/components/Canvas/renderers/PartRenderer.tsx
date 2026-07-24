@@ -166,11 +166,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         }
       } else if (sType === 'bounce') {
         const bounceY = Math.sin(p * Math.PI) * -80;
-        const stretch = 1 + Math.sin(p * Math.PI) * 0.25;
-        const squash = 1 - Math.sin(p * Math.PI) * 0.15;
         animY += bounceY;
-        animScaleY *= stretch;
-        animScaleX *= squash;
       } else if (sType === 'pulse') {
         const factor = 1 + Math.sin(p * Math.PI) * 0.35;
         animScaleX *= factor;

@@ -1,1 +1,1 @@
-feat: replace all random IDs with clean sequential numbering system and fix stunt toggle hooks violation  
+fix(stunts): remove scale stretch/squash distortion from bounce stunt to keep element size fixed  

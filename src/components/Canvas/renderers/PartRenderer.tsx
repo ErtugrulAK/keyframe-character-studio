@@ -64,8 +64,16 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             animRot = sample.rotation;
           }
           if (scope === 'both' || scope === 'shape_only') {
-            animScaleX = sample.scaleX;
-            animScaleY = sample.scaleY;
+            let sScaleX = sample.scaleX;
+            let sScaleY = sample.scaleY;
+            if (sScaleX > 2.5 && transform.scaleX > 1.5) {
+              sScaleX = sScaleX / transform.scaleX;
+            }
+            if (sScaleY > 2.5 && transform.scaleY > 1.5) {
+              sScaleY = sScaleY / transform.scaleY;
+            }
+            animScaleX = sScaleX;
+            animScaleY = sScaleY;
           }
           animOpacity = sample.opacity;
         } else if (inPreset !== 'none' && inPreset !== 'custom_timeline') {
@@ -94,8 +102,16 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             animRot = sample.rotation;
           }
           if (scope === 'both' || scope === 'shape_only') {
-            animScaleX = sample.scaleX;
-            animScaleY = sample.scaleY;
+            let sScaleX = sample.scaleX;
+            let sScaleY = sample.scaleY;
+            if (sScaleX > 2.5 && transform.scaleX > 1.5) {
+              sScaleX = sScaleX / transform.scaleX;
+            }
+            if (sScaleY > 2.5 && transform.scaleY > 1.5) {
+              sScaleY = sScaleY / transform.scaleY;
+            }
+            animScaleX = sScaleX;
+            animScaleY = sScaleY;
           }
           animOpacity = sample.opacity;
         } else if (outPreset !== 'none' && outPreset !== 'custom_timeline') {

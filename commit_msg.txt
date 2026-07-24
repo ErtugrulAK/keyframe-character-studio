@@ -1,1 +1,1 @@
-fix(presets): fix scope calculation bug when unchecking motion and clean up preset drawer layout  
+fix(presets): fix scale multiplier mega-zoom bug for custom IN and OUT presets  

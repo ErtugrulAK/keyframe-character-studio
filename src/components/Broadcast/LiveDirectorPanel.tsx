@@ -113,7 +113,7 @@ export const LiveDirectorPanel: React.FC = () => {
         {activeDirectorParts.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '24px 12px', background: 'var(--bg-dark)', borderRadius: 8, border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: 11 }}>
             <EyeOff size={20} style={{ marginBottom: 6, display: 'block', margin: '0 auto 6px', color: '#ef4444' }} />
-            <span>Yayında aktif katman bulunmuyor. Zaman çizelgesinden göz simgesi kapalı olan katmanlar yayından gizlenir.</span>
+            <span>No active layers for broadcast. Layers with hidden eye icons on the timeline are muted from broadcast.</span>
           </div>
         ) : (
           activeDirectorParts.map(part => {

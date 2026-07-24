@@ -35,7 +35,7 @@ export const PresetsTab: React.FC = () => {
 
   const handleTriggerPreset = (preset: CustomMotionPreset) => {
     if (!selectedPartId) {
-      showToast('Canvas üzerinde uygulamak istediğiniz katmana tıklayın', 'info');
+      showToast('Select a layer on stage canvas to apply preset', 'info');
       return;
     }
     triggerLiveStunt(selectedPartId, preset.name, false, preset.id);
@@ -46,14 +46,14 @@ export const PresetsTab: React.FC = () => {
       {/* Header Title */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: 6, borderBottom: '1px solid var(--border-color)' }}>
         <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.5px' }}>
-          <Sparkles size={14} /> ÖZEL PRESET'LERİM ({customPresets.length})
+          <Sparkles size={14} /> MY CUSTOM PRESETS ({customPresets.length})
         </span>
       </div>
 
       {customPresets.length === 0 ? (
         <div style={{ padding: '20px 14px', background: 'rgba(0,0,0,0.25)', border: '1px dashed var(--border-color)', borderRadius: 8, textAlign: 'center' }}>
           <span style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-            Henüz özel preset yok. <b>Motion</b> sekmesinden <b>+ Create Preset</b> diyerek keyframe hareketlerinizi kaydedebilirsiniz!
+            No custom presets saved yet. Go to the <b>Motion</b> tab and click <b>+ Create Preset</b> to save keyframe animations!
           </span>
         </div>
       ) : (
@@ -96,7 +96,7 @@ export const PresetsTab: React.FC = () => {
                         width: '100%',
                         outline: 'none',
                       }}
-                      title="Preset ismini düzenlemek için tıkla"
+                      title="Click to edit preset name"
                     />
                   </div>
 
@@ -127,7 +127,7 @@ export const PresetsTab: React.FC = () => {
                       style={{ cursor: 'pointer', accentColor: '#38bdf8' }}
                     />
                     <Move size={11} style={{ color: isMotionChecked ? '#38bdf8' : '#64748b' }} />
-                    <span>Hareket / Konum (Position X-Y)</span>
+                    <span>Motion / Position (X-Y Translation)</span>
                   </label>
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 10, color: isShapeChecked ? '#f8fafc' : '#64748b' }}>
@@ -138,7 +138,7 @@ export const PresetsTab: React.FC = () => {
                       style={{ cursor: 'pointer', accentColor: '#c084fc' }}
                     />
                     <Maximize2 size={11} style={{ color: isShapeChecked ? '#c084fc' : '#64748b' }} />
-                    <span>Şekil & Ölçek (Shape & Scale)</span>
+                    <span>Shape & Scale (Size & Transform)</span>
                   </label>
                 </div>
 
@@ -162,10 +162,10 @@ export const PresetsTab: React.FC = () => {
                       justifyContent: 'center',
                       gap: 4,
                     }}
-                    title={selectedPart ? `"${selectedPart.name}" katmanında çalıştır` : 'Çalıştırmak için tuvalden katman seçin'}
+                    title={selectedPart ? `Trigger on "${selectedPart.name}" layer` : 'Select a layer on stage to trigger'}
                   >
                     <Play size={10} fill="#000" />
-                    <span>Uygula / Çalıştır</span>
+                    <span>Apply / Trigger</span>
                   </button>
 
                   <button
@@ -183,10 +183,10 @@ export const PresetsTab: React.FC = () => {
                       alignItems: 'center',
                       gap: 4,
                     }}
-                    title="Sil"
+                    title="Delete preset"
                   >
                     <Trash2 size={10} />
-                    <span>Sil</span>
+                    <span>Delete</span>
                   </button>
                 </div>
               </div>

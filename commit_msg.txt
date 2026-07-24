@@ -1,1 +1,1 @@
-style(header): update brand logo icon to Film and remove PRO v3.0, subtitle, and viewport labels  
+feat(i18n): update browser favicon, page title to Keyframe Studio, and complete 100% English UI localization  

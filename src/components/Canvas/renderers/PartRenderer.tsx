@@ -66,11 +66,11 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           if (scope === 'both' || scope === 'shape_only') {
             let sScaleX = sample.scaleX;
             let sScaleY = sample.scaleY;
-            if (sScaleX > 2.5 && transform.scaleX > 1.5) {
-              sScaleX = sScaleX / transform.scaleX;
+            if (sScaleX > 2.5) {
+              sScaleX = sScaleX / 6.42;
             }
-            if (sScaleY > 2.5 && transform.scaleY > 1.5) {
-              sScaleY = sScaleY / transform.scaleY;
+            if (sScaleY > 2.5) {
+              sScaleY = sScaleY / 6.42;
             }
             animScaleX = sScaleX;
             animScaleY = sScaleY;
@@ -104,11 +104,11 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           if (scope === 'both' || scope === 'shape_only') {
             let sScaleX = sample.scaleX;
             let sScaleY = sample.scaleY;
-            if (sScaleX > 2.5 && transform.scaleX > 1.5) {
-              sScaleX = sScaleX / transform.scaleX;
+            if (sScaleX > 2.5) {
+              sScaleX = sScaleX / 6.42;
             }
-            if (sScaleY > 2.5 && transform.scaleY > 1.5) {
-              sScaleY = sScaleY / transform.scaleY;
+            if (sScaleY > 2.5) {
+              sScaleY = sScaleY / 6.42;
             }
             animScaleX = sScaleX;
             animScaleY = sScaleY;
@@ -190,11 +190,11 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             // Safe scale multiplier normalization (prevents 40x mega zoom)
             let sScaleX = sample.scaleX;
             let sScaleY = sample.scaleY;
-            if (sScaleX > 2.5 && transform.scaleX > 2) {
-              sScaleX = sScaleX / transform.scaleX;
+            if (sScaleX > 2.5) {
+              sScaleX = sScaleX / 6.42;
             }
-            if (sScaleY > 2.5 && transform.scaleY > 2) {
-              sScaleY = sScaleY / transform.scaleY;
+            if (sScaleY > 2.5) {
+              sScaleY = sScaleY / 6.42;
             }
 
             animScaleX *= sScaleX;

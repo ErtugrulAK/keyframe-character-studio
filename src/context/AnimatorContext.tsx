@@ -1345,8 +1345,13 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const refBaseX = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.x : filteredKfs[0].transform.x;
     const refBaseY = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.y : filteredKfs[0].transform.y;
     const refBaseRot = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.rotation : filteredKfs[0].transform.rotation;
-    const refBaseScaleX = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleX : filteredKfs[0].transform.scaleX;
-    const refBaseScaleY = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleY : filteredKfs[0].transform.scaleY;
+    const targetPart = characterParts.find(p => p.id === track.partId);
+    const refBaseScaleX = (targetPart?.baseTransform.scaleX && targetPart.baseTransform.scaleX > 0)
+      ? targetPart.baseTransform.scaleX
+      : (type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleX : filteredKfs[0].transform.scaleX);
+    const refBaseScaleY = (targetPart?.baseTransform.scaleY && targetPart.baseTransform.scaleY > 0)
+      ? targetPart.baseTransform.scaleY
+      : (type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleY : filteredKfs[0].transform.scaleY);
 
     const presetKeyframes: CustomMotionPresetKeyframe[] = filteredKfs.map(kf => {
       let dX = kf.transform.x - refBaseX;

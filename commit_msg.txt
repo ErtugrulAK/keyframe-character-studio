@@ -1,1 +1,1 @@
-fix(broadcast): synchronize exit preset speed and trigger broadcast OUT when clicking saved exit presets  
+feat(broadcast): filter out muted eye-off layers from Live Director Panel  

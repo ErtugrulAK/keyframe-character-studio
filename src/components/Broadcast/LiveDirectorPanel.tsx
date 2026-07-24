@@ -33,7 +33,10 @@ export const LiveDirectorPanel: React.FC = () => {
 
   const [isLoopingStunt, setIsLoopingStunt] = useState<boolean>(false);
 
-  const directorParts = characterParts; 
+  const activeDirectorParts = characterParts.filter(part => {
+    const track = tracks.find(t => t.partId === part.id);
+    return !track || track.visible !== false;
+  });
   const stuntPresets = customPresets.filter(p => p.type === 'stunt' || p.type === 'in' || p.type === 'out');
 
   return (
@@ -107,36 +110,37 @@ export const LiveDirectorPanel: React.FC = () => {
       </div>
       
       <div className="director-list" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-        {directorParts.map(part => {
-          const track = tracks.find(t => t.partId === part.id);
-          const isMuted = track && track.visible === false;
+        {activeDirectorParts.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '24px 12px', background: 'var(--bg-dark)', borderRadius: 8, border: '1px dashed var(--border-color)', color: 'var(--text-muted)', fontSize: 11 }}>
+            <EyeOff size={20} style={{ marginBottom: 6, display: 'block', margin: '0 auto 6px', color: '#ef4444' }} />
+            <span>Yayında aktif katman bulunmuyor. Zaman çizelgesinden göz simgesi kapalı olan katmanlar yayından gizlenir.</span>
+          </div>
+        ) : (
+          activeDirectorParts.map(part => {
+            const st = broadcastState[part.id];
+            const currentState = st ? st.state : 'hidden';
+            const isAnimatingIn = currentState === 'animating_in';
+            const isAnimatingOut = currentState === 'animating_out';
+            const isVisible = currentState === 'visible';
 
-          const st = broadcastState[part.id];
-          const currentState = st ? st.state : 'hidden';
-          const isAnimatingIn = currentState === 'animating_in';
-          const isAnimatingOut = currentState === 'animating_out';
-          const isVisible = currentState === 'visible';
-
-          const activeStunt = liveStuntsState[part.id];
-          const isStunting = !!activeStunt;
-          
-          let statusColor = 'var(--text-muted)';
-          let statusText = 'HIDDEN';
-          if (isMuted) { statusColor = '#ef4444'; statusText = 'EYE OFF (MUTED)'; }
-          else if (isStunting) {
-            statusColor = 'var(--accent-gold)';
-            statusText = `STUNT: ${activeStunt.stunt.toUpperCase()} ${activeStunt.loop ? '(LOOPING)' : ''}`;
-          }
-          else if (isAnimatingIn) { statusColor = 'var(--accent-cyan)'; statusText = 'PLAYING IN'; }
-          else if (isVisible) { statusColor = 'var(--accent-green)'; statusText = 'LIVE'; }
-          else if (isAnimatingOut) { statusColor = 'var(--accent-red)'; statusText = 'PLAYING OUT'; }
+            const activeStunt = liveStuntsState[part.id];
+            const isStunting = !!activeStunt;
+            
+            let statusColor = 'var(--text-muted)';
+            let statusText = 'HIDDEN';
+            if (isStunting) {
+              statusColor = 'var(--accent-gold)';
+              statusText = `STUNT: ${activeStunt.stunt.toUpperCase()} ${activeStunt.loop ? '(LOOPING)' : ''}`;
+            }
+            else if (isAnimatingIn) { statusColor = 'var(--accent-cyan)'; statusText = 'PLAYING IN'; }
+            else if (isVisible) { statusColor = 'var(--accent-green)'; statusText = 'LIVE'; }
+            else if (isAnimatingOut) { statusColor = 'var(--accent-red)'; statusText = 'PLAYING OUT'; }
 
           return (
-            <div key={part.id} className="director-item" style={{ opacity: isMuted ? 0.6 : 1, flexDirection: 'column', alignItems: 'stretch', gap: 8, padding: 12 }}>
+            <div key={part.id} className="director-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 8, padding: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div className="director-item-info">
                   <span className="director-item-name" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {isMuted && <EyeOff size={12} style={{ color: '#ef4444' }} />}
                     {part.name || part.type}
                   </span>
                   <span className="director-item-status" style={{ color: statusColor }}>
@@ -146,17 +150,16 @@ export const LiveDirectorPanel: React.FC = () => {
                 </div>
                 <div className="director-item-actions">
                   <button 
-                    className={`btn-director ${currentState !== 'hidden' && !isAnimatingOut && !isMuted ? 'active' : ''}`}
+                    className={`btn-director ${currentState !== 'hidden' && !isAnimatingOut ? 'active' : ''}`}
                     onClick={() => triggerBroadcastIn(part.id)}
-                    disabled={!!isMuted}
-                    title={isMuted ? 'Layer is hidden via eye icon on timeline' : 'Trigger entrance animation'}
+                    title="Trigger entrance animation"
                   >
                     <Play size={14} /> PLAY IN
                   </button>
                   <button 
                     className="btn-director out"
                     onClick={() => triggerBroadcastOut(part.id)}
-                    disabled={(currentState === 'hidden' && !isAnimatingOut) || !!isMuted}
+                    disabled={currentState === 'hidden' && !isAnimatingOut}
                   >
                     <Square size={14} /> PLAY OUT
                   </button>
@@ -164,7 +167,7 @@ export const LiveDirectorPanel: React.FC = () => {
               </div>
 
               {/* Realtime Live Stunts & Custom Motion Presets Bar */}
-              {currentState !== 'hidden' && !isMuted && (
+              {currentState !== 'hidden' && (
                 <div style={{ background: 'rgba(0,0,0,0.3)', padding: '8px 10px', borderRadius: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--accent-gold)', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -279,7 +282,8 @@ export const LiveDirectorPanel: React.FC = () => {
               )}
             </div>
           );
-        })}
+        })
+      )}
       </div>
     </div>
   );

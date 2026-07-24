@@ -139,7 +139,7 @@ interface AnimatorContextType {
 
   // Custom Motion Preset Engine & Sample Loader
   customPresets: CustomMotionPreset[];
-  saveTrackAsPreset: (partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame?: number, endFrame?: number) => void;
+  saveTrackAsPreset: (partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame?: number, endFrame?: number, scope?: 'both' | 'motion_only' | 'shape_only') => void;
   deleteCustomPreset: (presetId: string) => void;
   loadSampleSequencerProject: () => void;
 
@@ -1318,7 +1318,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [showToast]);
 
   // ── Custom Motion Preset Engine & Sample Sequencer Project Loader ──
-  const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame = 0, endFrame = 50) => {
+  const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame = 0, endFrame = 50, scope: 'both' | 'motion_only' | 'shape_only' = 'both') => {
     const part = characterParts.find(p => p.id === partId);
     const track = tracks.find(t => t.partId === partId);
     if (!part || !track || track.keyframes.length === 0) {
@@ -1347,27 +1347,47 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const refBaseScaleX = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleX : filteredKfs[0].transform.scaleX;
     const refBaseScaleY = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleY : filteredKfs[0].transform.scaleY;
 
-    const presetKeyframes: CustomMotionPresetKeyframe[] = filteredKfs.map(kf => ({
-      progress: (kf.frame - minF) / durF,
-      deltaX: kf.transform.x - refBaseX,
-      deltaY: kf.transform.y - refBaseY,
-      rotation: kf.transform.rotation - refBaseRot,
-      scaleX: refBaseScaleX && refBaseScaleX !== 0 ? kf.transform.scaleX / refBaseScaleX : 1,
-      scaleY: refBaseScaleY && refBaseScaleY !== 0 ? kf.transform.scaleY / refBaseScaleY : 1,
-      opacity: kf.transform.opacity,
-      easing: kf.easing,
-    }));
+    const presetKeyframes: CustomMotionPresetKeyframe[] = filteredKfs.map(kf => {
+      let dX = kf.transform.x - refBaseX;
+      let dY = kf.transform.y - refBaseY;
+      let rot = kf.transform.rotation - refBaseRot;
+      let sX = refBaseScaleX && refBaseScaleX !== 0 ? kf.transform.scaleX / refBaseScaleX : 1;
+      let sY = refBaseScaleY && refBaseScaleY !== 0 ? kf.transform.scaleY / refBaseScaleY : 1;
+
+      if (scope === 'motion_only') {
+        // Lock scale to 1 (pure movement, no size changes)
+        sX = 1;
+        sY = 1;
+      } else if (scope === 'shape_only') {
+        // Lock position & rotation to 0 (pure scale/shape, no movement)
+        dX = 0;
+        dY = 0;
+        rot = 0;
+      }
+
+      return {
+        progress: (kf.frame - minF) / durF,
+        deltaX: dX,
+        deltaY: dY,
+        rotation: rot,
+        scaleX: sX,
+        scaleY: sY,
+        opacity: kf.transform.opacity,
+        easing: kf.easing,
+      };
+    });
 
     const newPreset: CustomMotionPreset = {
       id: generateId('preset'),
       name,
       type,
       durationFrames: durF,
+      scope,
       keyframes: presetKeyframes,
     };
 
     setCustomPresets(prev => [...prev, newPreset]);
-    showToast(`Saved preset "${name}"!`, 'success');
+    showToast(`Saved ${scope === 'motion_only' ? 'Motion Only' : scope === 'shape_only' ? 'Shape Only' : 'Full'} preset "${name}"!`, 'success');
   }, [characterParts, tracks, showToast]);
 
   const deleteCustomPreset = useCallback((presetId: string) => {

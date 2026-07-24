@@ -46,6 +46,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
 
   const [newPresetName, setNewPresetName] = useState('');
   const [newPresetType, setNewPresetType] = useState<'in' | 'out' | 'stunt'>('in');
+  const [newPresetScope, setNewPresetScope] = useState<'both' | 'motion_only' | 'shape_only'>('both');
   const [presetStartF, setPresetStartF] = useState<number>(0);
   const [presetEndF, setPresetEndF] = useState<number>(50);
   const [showSaveCard, setShowSaveCard] = useState(false);
@@ -62,7 +63,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
   const handleSavePresetSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPresetName.trim()) return;
-    saveTrackAsPreset(selectedPart.id, newPresetName.trim(), newPresetType, presetStartF, presetEndF);
+    saveTrackAsPreset(selectedPart.id, newPresetName.trim(), newPresetType, presetStartF, presetEndF, newPresetScope);
     setNewPresetName('');
     setShowSaveCard(false);
   };
@@ -241,6 +242,19 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
                   style={{ width: '100%', padding: '4px 6px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 4, fontSize: 11 }}
                 />
               </div>
+            </div>
+
+            <div className="input-field">
+              <label style={{ fontSize: 10, color: 'var(--accent-gold)' }}>PRESET CONTENT SCOPE (İÇERİK KAPSAMI)</label>
+              <select
+                value={newPresetScope}
+                onChange={(e) => setNewPresetScope(e.target.value as 'both' | 'motion_only' | 'shape_only')}
+                style={{ width: '100%', height: 26, background: 'var(--bg-input)', border: '1px solid var(--accent-gold)', color: '#fff', borderRadius: 4, fontSize: 11, fontWeight: 600 }}
+              >
+                <option value="both">⚡ Both Motion & Shape (Hem Hareket Hem Şekil/Ölçek)</option>
+                <option value="motion_only">🏃 Motion Only (Sadece Hareket / X-Y Konum)</option>
+                <option value="shape_only">📐 Shape & Scale Only (Sadece Şekil / Boyut-Ölçek)</option>
+              </select>
             </div>
 
             <button

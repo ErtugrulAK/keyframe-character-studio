@@ -1,1 +1,1 @@
-style(canvas): remove (0,0) ORIGIN text label overlay from canvas center axes  
+feat(presets): add preset content scope option to choose between motion only, shape/scale only, or both  

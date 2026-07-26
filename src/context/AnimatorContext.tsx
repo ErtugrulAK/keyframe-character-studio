@@ -203,7 +203,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, []);
 
-  const [isLooping, setIsLooping] = useState<boolean>(true);
+  const [isLooping, setIsLooping] = useState<boolean>(false);
   const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
   const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
 

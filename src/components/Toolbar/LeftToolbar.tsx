@@ -7,11 +7,11 @@ import { TransitionsDrawer } from './drawers/TransitionsDrawer';
 import { KeyframesDrawer } from './drawers/KeyframesDrawer';
 import {
   Type,
-  Gem,
   Square,
   Layout,
   Zap,
   Monitor,
+  Film,
 } from 'lucide-react';
 import './LeftToolbar.css';
 
@@ -71,10 +71,10 @@ export const LeftToolbar: React.FC = () => {
         <button
           className={`sidebar-nav-item ${activeCategory === 'keyframes' ? 'active' : ''}`}
           onClick={() => setActiveCategory('keyframes')}
-          title="Keyframe Tools"
+          title="Animation Sequences Library"
         >
-          <Gem size={20} className="nav-icon text-gold" />
-          <span className="nav-label">Keyframes</span>
+          <Film size={20} className="nav-icon text-gold" />
+          <span className="nav-label">Sequences</span>
         </button>
       </div>
 

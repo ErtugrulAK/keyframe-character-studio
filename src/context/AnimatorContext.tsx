@@ -220,10 +220,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [projectTemplates, setProjectTemplates] = useState<ProjectTemplate[]>([
-    { id: 'tmpl_1', name: 'Template Star' },
+    { id: 'tmpl_1', name: 'Template' },
   ]);
   const [activeProjectTemplateId, setActiveProjectTemplateIdState] = useState<string>('tmpl_1');
-  const [sceneTitle, setSceneTitleState] = useState<string>('Template Star');
+  const [sceneTitle, setSceneTitleState] = useState<string>('Template');
 
   const setSceneTitle = useCallback((title: string) => {
     setSceneTitleState(title);
@@ -243,7 +243,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
-    const cleanId = name.trim().replace(/\s+/g, '_') || `Sequence_${motionTemplates.length + 1}`;
+    const defaultSeqName = motionTemplates.length === 1 && motionTemplates[0].name === 'Sequence' ? 'Sequence 1' : `Sequence ${motionTemplates.length}`;
+    const cleanId = name.trim() || defaultSeqName;
     const newTmpl: MotionTemplate = {
       id: cleanId,
       name: cleanId,
@@ -253,7 +254,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
     setMotionTemplates((prev) => [...prev, newTmpl]);
     setActiveTemplateIdState(cleanId);
-  }, [motionTemplates.length]);
+  }, [motionTemplates]);
 
   const setActiveProjectTemplateId = useCallback((targetId: string) => {
     if (targetId === activeProjectTemplateId) return;

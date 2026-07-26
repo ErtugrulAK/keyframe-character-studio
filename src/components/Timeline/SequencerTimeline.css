@@ -54,23 +54,33 @@
   position: relative;
 }
 
-/* Active Sequence Pill & Sequencer Tree Popup (From User Screenshots) */
+/* Active Sequence Pill & Sequencer Tree Popup (Spacious & Sleek Unreal Design) */
 .active-sequence-tab-pill {
   display: flex;
   align-items: center;
-  gap: 5px;
-  background: #1e2433;
-  border: 1px solid #38bdf8;
-  border-radius: 4px;
-  padding: 2px 8px;
-  height: 22px;
+  gap: 8px;
+  background: #181e2a;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 6px;
+  padding: 4px 12px;
+  height: 28px;
+  margin: 3px 6px;
+  transition: all 0.15s ease;
+  user-select: none;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.active-sequence-tab-pill:hover {
+  background: #22293a;
+  border-color: #38bdf8;
 }
 
 .active-sequence-name {
-  font-size: 11px;
-  font-weight: 800;
-  color: #fff;
-  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: #f8fafc;
+  letter-spacing: 0.3px;
+  -webkit-font-smoothing: antialiased;
 }
 
 .seq-menu-toggle-btn {
@@ -83,10 +93,10 @@
   padding: 0 2px;
 }
 
-/* Sequencer Tree Modal Popup (Matching Screenshot 4) */
+/* Sequencer Tree Modal Popup (Crisp & Sharp Typography) */
 .sequencer-tree-modal {
   position: absolute;
-  top: 30px;
+  top: 36px;
   left: 10px;
   width: 230px;
   background: #141720;
@@ -97,7 +107,9 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  font-family: var(--font-mono);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .seq-tree-header-tabs {
@@ -109,12 +121,13 @@
 .seq-tab {
   flex: 1;
   height: 24px;
-  font-size: 9.5px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   background: transparent;
   border: none;
-  color: #64748b;
+  color: #94a3b8;
   cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .seq-tab.active {
@@ -136,8 +149,8 @@
   padding: 0 6px;
   background: #16a34a;
   color: #fff;
-  font-size: 9.5px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 700;
   border: none;
   border-radius: 3px;
   cursor: pointer;
@@ -151,30 +164,32 @@
 }
 .seq-tree-search-box input {
   width: 100%;
-  height: 20px;
+  height: 22px;
   background: #101218;
   border: 1px solid #282e3f;
   border-radius: 3px;
   color: #fff;
-  font-size: 9.5px;
+  font-size: 11px;
   padding: 0 6px;
   outline: none;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .seq-tree-table-header {
   display: flex;
   justify-content: space-between;
-  padding: 4px 10px;
+  padding: 5px 10px;
   background: #12141a;
   border-bottom: 1px solid #232734;
-  font-size: 10px;
+  font-size: 10.5px;
   font-weight: 700;
   color: #94a3b8;
   text-transform: uppercase;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .seq-tree-list {
-  max-height: 180px;
+  max-height: 200px;
   overflow-y: auto;
   background: #0e1014;
 }
@@ -183,27 +198,31 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 5px 10px;
-  font-size: 10px;
+  padding: 7px 12px;
+  font-size: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   cursor: pointer;
   color: #cbd5e1;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .seq-tree-row:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.07);
 }
 
 .seq-tree-row.active {
-  background: rgba(2, 132, 199, 0.2);
-  border-left: 2px solid #38bdf8;
-  color: #fff;
-  font-weight: 800;
+  background: rgba(2, 132, 199, 0.22);
+  border-left: 3px solid #38bdf8;
+  color: #ffffff;
+  font-weight: 700;
 }
 
 .seq-status {
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 600;
   color: #94a3b8;
+  font-family: 'Inter', system-ui, sans-serif;
 }
 
 .timeline-scene-title-chip {

@@ -119,10 +119,10 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
 
       {/* 4 Corner Scale Handles (Proportional / Uniform Scale) */}
       {[
-        { x: -halfW, y: -halfH },
-        { x: halfW, y: -halfH },
-        { x: halfW, y: halfH },
-        { x: -halfW, y: halfH },
+        { x: -halfW, y: -halfH, cursor: 'nwse-resize' }, // Top-Left (NW)
+        { x: halfW, y: -halfH, cursor: 'nesw-resize' },  // Top-Right (NE)
+        { x: halfW, y: halfH, cursor: 'nwse-resize' },   // Bottom-Right (SE)
+        { x: -halfW, y: halfH, cursor: 'nesw-resize' },  // Bottom-Left (SW)
       ].map((corner, i) => (
         <rect
           key={`corner-${i}`}
@@ -133,7 +133,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
           fill="#00d2ff"
           stroke="#ffffff"
           strokeWidth={1.5 * zScale}
-          style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
+          style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
           onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
         />
       ))}

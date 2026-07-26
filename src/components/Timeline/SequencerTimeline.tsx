@@ -1,3 +1,4 @@
+// Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { TrackChannel } from '../../types/animator';
@@ -154,9 +155,24 @@ export const SequencerTimeline: React.FC = () => {
     addMotionTemplate,
   } = useAnimator();
 
-  // Sequencer Tree Modal Toggle State
+  // Sequencer Tree Modal Toggle State & Click-Outside Listener
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
   const [isAddSeqModalOpen, setIsAddSeqModalOpen] = useState<boolean>(false);
+  const seqMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (seqMenuRef.current && !seqMenuRef.current.contains(e.target as Node)) {
+        setIsSeqTreeOpen(false);
+      }
+    };
+    if (isSeqTreeOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSeqTreeOpen]);
 
   // Expanded Pro Curve Studio Modal State
   const [isCurveModalOpen, setIsCurveModalOpen] = useState<boolean>(false);
@@ -365,7 +381,7 @@ export const SequencerTimeline: React.FC = () => {
       </div>
 
       {/* Motion Design Sequence Active Selector Pill & Clean Dropdown Menu */}
-      <div className="timeline-template-tabs-bar">
+      <div className="timeline-template-tabs-bar" ref={seqMenuRef}>
         {/* Active Animation Sequence Selector Pill */}
         <div
           className="active-sequence-tab-pill"
@@ -374,7 +390,7 @@ export const SequencerTimeline: React.FC = () => {
           style={{ cursor: 'pointer' }}
         >
           <Film size={12} className="text-teal" />
-          <span className="active-sequence-name">{activeTemplateId}*</span>
+          <span className="active-sequence-name">{activeTemplateId}</span>
           <ChevronDown size={12} className="text-cyan" style={{ marginLeft: 4 }} />
         </div>
 
@@ -1080,7 +1096,7 @@ export const SequencerTimeline: React.FC = () => {
         title="Create New Sequence"
         subtitle="Add a new animation sequence to the active template."
         placeholder="Sequence name (e.g. In_V1, Out_V1)..."
-        defaultValue={`Sequence_${motionTemplates.length + 1}`}
+        defaultValue={motionTemplates.length === 1 && motionTemplates[0].name === 'Sequence' ? 'Sequence 1' : `Sequence ${motionTemplates.length}`}
         confirmLabel="Create Sequence"
         onClose={() => setIsAddSeqModalOpen(false)}
         onSubmit={(val) => addMotionTemplate(val)}

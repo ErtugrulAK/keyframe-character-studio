@@ -224,7 +224,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 170px;
+  max-width: 100%;
 }
 
 .tree-node .col-eye {
@@ -241,12 +241,6 @@
   align-items: center;
   gap: 6px;
   overflow: hidden;
-}
-
-.tree-node .col-sequencer {
-  width: 110px;
-  display: flex;
-  align-items: center;
   padding-right: 8px;
 }
 
@@ -332,9 +326,9 @@
   text-transform: uppercase;
 }
 
-.details-actor-card {
+.details-actor-header {
   height: 28px;
-  background: #161a24;
+  background: #141720;
   border-bottom: 1px solid #232734;
   display: flex;
   align-items: center;
@@ -343,29 +337,26 @@
   flex-shrink: 0;
 }
 
-.actor-title-line {
+.actor-title-box {
   display: flex;
   align-items: center;
   gap: 6px;
+  overflow: hidden;
 }
 
 .actor-main-name {
-  font-size: 10px;
-  font-weight: 800;
-  color: #fff;
-}
-
-.actor-instance-tag {
-  font-size: 10px;
-  font-weight: 600;
-  color: #7889a0;
-  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #38bdf8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .actor-quick-actions {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
 }
 
 /* Category Filter Chips Bar */

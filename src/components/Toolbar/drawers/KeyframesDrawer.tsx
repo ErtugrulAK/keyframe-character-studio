@@ -1,97 +1,83 @@
 import React from 'react';
 import { useAnimator } from '../../../context/AnimatorContext';
-import { PlusCircle, Gem, Clock, Trash2 } from 'lucide-react';
+import { Film, Plus, CheckCircle2 } from 'lucide-react';
 
 export const KeyframesDrawer: React.FC = () => {
   const {
-    selectedPartId,
-    characterParts,
-    tracks,
-    currentFrame,
-    setCurrentFrame,
-    addKeyframeForSelected,
-    deleteKeyframe,
+    motionTemplates,
+    activeTemplateId,
+    setActiveTemplateId,
+    addMotionTemplate,
   } = useAnimator();
-
-  const selectedTrack = selectedPartId ? tracks.find((t) => t.partId === selectedPartId) : null;
-  const selectedPart = selectedPartId ? characterParts.find((p) => p.id === selectedPartId) : null;
-  const keyframes = selectedTrack ? [...selectedTrack.keyframes].sort((a, b) => a.frame - b.frame) : [];
 
   return (
     <div className="drawer-content">
       <div className="drawer-header">
-        <span className="drawer-title">Keyframe Sequence</span>
+        <span className="drawer-title">Animation Sequences</span>
       </div>
-      <p className="drawer-desc" style={{ fontSize: 11, marginBottom: 8 }}>
-        {selectedPart ? `Track list for: ${selectedPart.name}` : 'Select an object on the canvas to view its keyframes.'}
+      <p className="drawer-desc" style={{ fontSize: 11, marginBottom: 12 }}>
+        Manage animation sequences for the active graphic template.
       </p>
 
       <button
         className="btn-primary w-full add-kf-drawer-btn"
-        onClick={addKeyframeForSelected}
-        disabled={!selectedPartId}
-        style={{ marginBottom: 12 }}
+        onClick={() => {
+          const nextNum = motionTemplates.length + 1;
+          addMotionTemplate(`Sequence ${nextNum}`);
+        }}
+        style={{ marginBottom: 14 }}
       >
-        <PlusCircle size={15} />
-        <span>Add Keyframe at Frame {currentFrame}</span>
+        <Plus size={15} />
+        <span>New Sequence</span>
       </button>
 
-      {selectedTrack && keyframes.length > 0 ? (
-        <div className="keyframe-history-list" style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 320, overflowY: 'auto' }}>
-          <div className="drawer-subtitle" style={{ margin: '4px 0', fontSize: 10 }}>CHRONOLOGICAL KEYFRAMES</div>
-          {keyframes.map((kf, idx) => {
-            const isActiveKf = kf.frame === currentFrame;
+      <div className="drawer-subtitle" style={{ marginBottom: 8, fontSize: 10 }}>
+        ACTIVE TEMPLATE SEQUENCES ({motionTemplates.length})
+      </div>
 
-            return (
-              <div
-                key={kf.id}
-                className={`keyframe-list-item ${isActiveKf ? 'active-kf' : ''}`}
-                onClick={() => setCurrentFrame(kf.frame)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  background: isActiveKf ? 'rgba(20, 184, 166, 0.15)' : 'var(--bg-dark)',
-                  border: `1px solid ${isActiveKf ? 'var(--accent-teal)' : 'var(--border-color)'}`,
-                  borderRadius: 6,
-                  padding: '6px 10px',
-                  cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <Gem size={14} className={isActiveKf ? 'text-teal' : 'text-gold'} />
-                  <span style={{ fontSize: 12, fontWeight: 700, color: isActiveKf ? 'var(--accent-teal)' : '#f8fafc' }}>
-                    Keyframe #{idx + 1}
-                  </span>
-                </div>
+      <div className="keyframe-history-list" style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 380, overflowY: 'auto' }}>
+        {motionTemplates.map((tmpl) => {
+          const isActive = tmpl.id === activeTemplateId;
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 3 }}>
-                    <Clock size={11} /> Frame {kf.frame}
-                  </span>
-
-                  <button
-                    className="btn-icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteKeyframe(selectedTrack.id, kf.id);
-                    }}
-                    title="Delete Keyframe"
-                    style={{ width: 22, height: 22, padding: 0 }}
-                  >
-                    <Trash2 size={12} className="text-red" />
-                  </button>
-                </div>
+          return (
+            <div
+              key={tmpl.id}
+              className={`keyframe-list-item ${isActive ? 'active-kf' : ''}`}
+              onClick={() => setActiveTemplateId(tmpl.id)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: isActive ? 'rgba(20, 184, 166, 0.15)' : 'var(--bg-dark)',
+                border: `1px solid ${isActive ? 'var(--accent-teal)' : 'var(--border-color)'}`,
+                borderRadius: 6,
+                padding: '8px 12px',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Film size={14} className={isActive ? 'text-teal' : 'text-cyan'} />
+                <span style={{ fontSize: 12, fontWeight: 700, color: isActive ? 'var(--accent-teal)' : '#f8fafc' }}>
+                  {tmpl.name}
+                </span>
               </div>
-            );
-          })}
-        </div>
-      ) : selectedPartId ? (
-        <div style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', padding: '16px 8px', background: 'var(--bg-dark)', borderRadius: 6, border: '1px border-dashed var(--border-color)' }}>
-          No keyframes recorded for this track yet.
-        </div>
-      ) : null}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                {isActive ? (
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#2dd4bf', background: 'rgba(20,184,166,0.2)', padding: '2px 6px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <CheckCircle2 size={10} /> Active
+                  </span>
+                ) : (
+                  <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+                    Select
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 };

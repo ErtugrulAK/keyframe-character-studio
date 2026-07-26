@@ -60,7 +60,6 @@ export const DetailsPanel: React.FC = () => {
         <div className="details-actor-header">
           <div className="actor-title-box">
             <span className="actor-main-name">{selectedPart.name}</span>
-            <span className="actor-instance-tag">({selectedPart.type})</span>
           </div>
 
           <div className="actor-quick-actions">

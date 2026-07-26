@@ -9,6 +9,7 @@ export const PropertyInspector: React.FC = () => {
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     isResizingRef.current = true;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
@@ -16,7 +17,7 @@ export const PropertyInspector: React.FC = () => {
     const handleMouseMove = (ev: MouseEvent) => {
       if (!isResizingRef.current) return;
       const newWidth = window.innerWidth - ev.clientX;
-      setSidebarWidth(Math.max(280, Math.min(650, newWidth)));
+      setSidebarWidth(Math.max(250, Math.min(750, newWidth)));
     };
 
     const handleMouseUp = () => {
@@ -32,7 +33,15 @@ export const PropertyInspector: React.FC = () => {
   };
 
   return (
-    <aside className="motion-design-right-sidebar" style={{ width: `${sidebarWidth}px` }}>
+    <aside
+      className="motion-design-right-sidebar"
+      style={{
+        width: `${sidebarWidth}px`,
+        minWidth: `${sidebarWidth}px`,
+        maxWidth: `${sidebarWidth}px`,
+        flex: `0 0 ${sidebarWidth}px`,
+      }}
+    >
       {/* Left Vertical Resizer Drag Handle */}
       <div
         className="sidebar-left-resizer"

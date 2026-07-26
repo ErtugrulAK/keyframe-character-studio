@@ -1,6 +1,5 @@
-/* ── Unreal Engine / Reality 5 Motion Design Right Sidebar Suite ── */
 .motion-design-right-sidebar {
-  width: 360px;
+  position: relative;
   background: #12141a;
   border-left: 1px solid #232734;
   display: flex;
@@ -10,6 +9,7 @@
   box-shadow: -6px 0 24px rgba(0, 0, 0, 0.4);
   overflow: hidden;
   user-select: none;
+  font-size: 9.5px;
 }
 
 .sidebar-dock-pane {
@@ -460,14 +460,33 @@
   left: 0;
   top: 0;
   bottom: 0;
-  width: 5px;
+  width: 8px;
   cursor: col-resize;
-  z-index: 100;
-  background: transparent;
+  z-index: 9999;
+  background: rgba(255, 255, 255, 0.02);
   transition: background 0.15s ease;
 }
 .sidebar-left-resizer:hover, .sidebar-left-resizer:active {
   background: #14b8a6;
+}
+
+/* Master Inspector Input & Typography Enforcement */
+.motion-design-right-sidebar input[type="number"],
+.motion-design-right-sidebar input[type="text"],
+.motion-design-right-sidebar select {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  font-family: var(--font-mono) !important;
+  height: 22px !important;
+}
+
+.input-field label,
+.param-label {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
 }
 
 /* Unified Design System for Inspector & Sections */
@@ -525,14 +544,6 @@
   box-sizing: border-box;
 }
 
-.param-label {
-  font-size: 9.5px;
-  font-weight: 700;
-  color: #94a3b8;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
-}
-
 .param-row input {
   width: 54px !important;
   height: 18px !important;
@@ -540,7 +551,7 @@
   border: 1px solid #282e3f !important;
   border-radius: 3px !important;
   color: #f8fafc !important;
-  font-size: 10px !important;
+  font-size: 9.5px !important;
   font-weight: 700 !important;
   font-family: var(--font-mono) !important;
   text-align: center !important;

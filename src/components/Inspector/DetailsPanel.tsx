@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
-import { MotionTab } from './sections/MotionTab';
+import { KeyframesTab } from './sections/KeyframesTab';
 import {
   Sliders,
   Copy,
   Trash2,
   Activity,
   Palette,
-  Zap,
+  Diamond,
 } from 'lucide-react';
 
 export const DetailsPanel: React.FC = () => {
@@ -25,7 +25,7 @@ export const DetailsPanel: React.FC = () => {
     duplicateSelectedPart,
   } = useAnimator();
 
-  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'motion'>('transform');
+  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes'>('transform');
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -103,11 +103,11 @@ export const DetailsPanel: React.FC = () => {
             <span>Style</span>
           </button>
           <button
-            className={`tab-btn ${activeTabSection === 'motion' ? 'active' : ''}`}
-            onClick={() => setActiveTabSection('motion')}
+            className={`tab-btn ${activeTabSection === 'keyframes' ? 'active' : ''}`}
+            onClick={() => setActiveTabSection('keyframes')}
           >
-            <Zap size={12} className="text-cyan" />
-            <span>Motion</span>
+            <Diamond size={12} className="text-teal" />
+            <span>Keyframes</span>
           </button>
         </div>
       )}
@@ -135,10 +135,9 @@ export const DetailsPanel: React.FC = () => {
             />
           )}
 
-          {activeTabSection === 'motion' && (
-            <MotionTab
+          {activeTabSection === 'keyframes' && (
+            <KeyframesTab
               selectedPart={selectedPart}
-              handlePartPropChange={handlePartPropChange}
             />
           )}
         </div>

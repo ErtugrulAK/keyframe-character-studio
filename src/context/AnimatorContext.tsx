@@ -1187,11 +1187,27 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTracks((prev) =>
       prev.map((tr) => {
         if (tr.id !== trackId) return tr;
+
+        const updatedKfs = tr.keyframes.map((k) =>
+          k.id === keyframeId ? { ...k, easing: 'cubic_bezier' as EasingType, bezierControlPoints: points } : k
+        );
+
+        let updatedChannels = { ...tr.channels };
+        if (tr.channels) {
+          Object.keys(tr.channels).forEach((chKey) => {
+            const ch = chKey as TrackChannel;
+            if (updatedChannels[ch]) {
+              updatedChannels[ch] = updatedChannels[ch]!.map((pk) =>
+                pk.id === keyframeId ? { ...pk, easing: 'cubic_bezier' as EasingType, bezierControlPoints: points } : pk
+              );
+            }
+          });
+        }
+
         return {
           ...tr,
-          keyframes: tr.keyframes.map((k) =>
-            k.id === keyframeId ? { ...k, easing: 'cubic_bezier', bezierControlPoints: points } : k
-          ),
+          keyframes: updatedKfs,
+          channels: updatedChannels,
         };
       })
     );

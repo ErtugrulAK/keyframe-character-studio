@@ -1207,15 +1207,45 @@ export const SequencerTimeline: React.FC = () => {
       {isCurveModalOpen && (
         <InteractiveCubicBezierEditor
           controlPoints={(() => {
-            const track = tracks.find((t) => t.partId === selectedPartId);
-            const kf = track?.keyframes.find((k) => k.frame === currentFrame);
-            return kf?.bezierControlPoints || [0.42, 0, 0.58, 1];
+            const activeTmpl = activeTemplateId || 'Sequence';
+            const track = tracks.find((t) => t.partId === selectedPartId) || tracks[0];
+            if (!track) return [0.42, 0, 0.58, 1];
+
+            const tmplKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+            const exactKf = tmplKfs.find((k) => k.frame === currentFrame);
+            if (exactKf?.bezierControlPoints) return exactKf.bezierControlPoints;
+
+            const pastKfs = tmplKfs.filter((k) => k.frame <= currentFrame).sort((a, b) => b.frame - a.frame);
+            if (pastKfs.length > 0 && pastKfs[0].bezierControlPoints) return pastKfs[0].bezierControlPoints;
+            if (tmplKfs.length > 0 && tmplKfs[0].bezierControlPoints) return tmplKfs[0].bezierControlPoints;
+
+            if (track.channels) {
+              for (const ch of TRACK_CHANNELS) {
+                const chKfs = (track.channels[ch] || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+                const matchCh = chKfs.find((k) => k.frame === currentFrame) || chKfs[0];
+                if (matchCh?.bezierControlPoints) return matchCh.bezierControlPoints;
+              }
+            }
+
+            return [0.42, 0, 0.58, 1];
           })()}
           onChange={(points) => {
-            const track = tracks.find((t) => t.partId === selectedPartId);
-            const kf = track?.keyframes.find((k) => k.frame === currentFrame);
-            if (track && kf) {
-              updateKeyframeBezierPoints(track.id, kf.id, points);
+            const activeTmpl = activeTemplateId || 'Sequence';
+            const track = tracks.find((t) => t.partId === selectedPartId) || tracks[0];
+            if (!track) return;
+
+            const tmplKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+            let targetKf = tmplKfs.find((k) => k.frame === currentFrame);
+
+            if (!targetKf && tmplKfs.length > 0) {
+              const pastKfs = tmplKfs.filter((k) => k.frame <= currentFrame).sort((a, b) => b.frame - a.frame);
+              targetKf = pastKfs[0] || tmplKfs[0];
+            }
+
+            if (targetKf) {
+              updateKeyframeBezierPoints(track.id, targetKf.id, points);
+            } else {
+              addKeyframeToTrack(track.id, currentFrame);
             }
           }}
           initialModalOpen={true}

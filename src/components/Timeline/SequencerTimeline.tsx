@@ -157,10 +157,11 @@ export const SequencerTimeline: React.FC = () => {
     renameMotionTemplate,
   } = useAnimator();
 
-  // Sequencer Tree Modal Toggle State & Click-Outside Listener
+  // Sequencer Tree Modal Toggle State & Inline Sequence Rename
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
   const [isAddSeqModalOpen, setIsAddSeqModalOpen] = useState<boolean>(false);
-  const [renameSeqModal, setRenameSeqModal] = useState<{ id: string; name: string } | null>(null);
+  const [editingSeqId, setEditingSeqId] = useState<string | null>(null);
+  const [editingSeqName, setEditingSeqName] = useState<string>('');
   const seqMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -388,12 +389,62 @@ export const SequencerTimeline: React.FC = () => {
         {/* Active Animation Sequence Selector Pill */}
         <div
           className="active-sequence-tab-pill"
-          onClick={() => setIsSeqTreeOpen(!isSeqTreeOpen)}
-          title="Click to select active Animation Sequence Timeline"
+          onClick={() => {
+            if (editingSeqId !== activeTemplateId) {
+              setIsSeqTreeOpen(!isSeqTreeOpen);
+            }
+          }}
+          title="Click to select active sequence or double-click to rename"
           style={{ cursor: 'pointer' }}
         >
           <Film size={12} className="text-teal" />
-          <span className="active-sequence-name">{activeTemplateId}</span>
+          {editingSeqId === activeTemplateId ? (
+            <input
+              type="text"
+              value={editingSeqName}
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => setEditingSeqName(e.target.value)}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                if (e.key === 'Enter') {
+                  if (editingSeqName.trim()) renameMotionTemplate(activeTemplateId, editingSeqName.trim());
+                  setEditingSeqId(null);
+                } else if (e.key === 'Escape') {
+                  setEditingSeqId(null);
+                }
+              }}
+              onBlur={() => {
+                if (editingSeqName.trim()) renameMotionTemplate(activeTemplateId, editingSeqName.trim());
+                setEditingSeqId(null);
+              }}
+              style={{
+                background: '#090b10',
+                border: '1px solid #38bdf8',
+                color: '#fff',
+                borderRadius: 4,
+                padding: '1px 6px',
+                fontSize: 12,
+                fontWeight: 700,
+                outline: 'none',
+                width: 110,
+              }}
+            />
+          ) : (
+            <span
+              className="active-sequence-name"
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                const tmpl = motionTemplates.find((t) => t.id === activeTemplateId);
+                setEditingSeqId(activeTemplateId);
+                setEditingSeqName(tmpl?.name || activeTemplateId);
+              }}
+              title="Double-click to rename sequence directly"
+            >
+              {motionTemplates.find((t) => t.id === activeTemplateId)?.name || activeTemplateId}
+            </span>
+          )}
           <ChevronDown size={12} className="text-cyan" style={{ marginLeft: 4 }} />
         </div>
 
@@ -403,28 +454,76 @@ export const SequencerTimeline: React.FC = () => {
             <div className="seq-tree-list">
               {motionTemplates.map((tmpl) => {
                 const isActive = tmpl.id === activeTemplateId;
+                const isEditing = editingSeqId === tmpl.id;
+
                 return (
                   <div
                     key={tmpl.id}
                     className={`seq-tree-row ${isActive ? 'active' : ''}`}
                     onClick={() => {
-                      setActiveTemplateId(tmpl.id);
-                      setIsSeqTreeOpen(false);
+                      if (!isEditing) {
+                        setActiveTemplateId(tmpl.id);
+                        setIsSeqTreeOpen(false);
+                      }
                     }}
                   >
-                    <span className="seq-label" style={{ fontWeight: isActive ? 700 : 500 }}>
-                      {tmpl.name}
-                    </span>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editingSeqName}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => setEditingSeqName(e.target.value)}
+                        onKeyDown={(e) => {
+                          e.stopPropagation();
+                          if (e.key === 'Enter') {
+                            if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
+                            setEditingSeqId(null);
+                          } else if (e.key === 'Escape') {
+                            setEditingSeqId(null);
+                          }
+                        }}
+                        onBlur={() => {
+                          if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
+                          setEditingSeqId(null);
+                        }}
+                        style={{
+                          background: '#090b10',
+                          border: '1px solid #38bdf8',
+                          color: '#fff',
+                          borderRadius: 4,
+                          padding: '2px 6px',
+                          fontSize: 12,
+                          fontWeight: 700,
+                          outline: 'none',
+                          width: 120,
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className="seq-label"
+                        style={{ fontWeight: isActive ? 700 : 500 }}
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setEditingSeqId(tmpl.id);
+                          setEditingSeqName(tmpl.name);
+                        }}
+                        title="Double-click to rename sequence"
+                      >
+                        {tmpl.name}
+                      </span>
+                    )}
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <button
                         className="btn-icon"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setIsSeqTreeOpen(false);
-                          setRenameSeqModal({ id: tmpl.id, name: tmpl.name });
+                          setEditingSeqId(tmpl.id);
+                          setEditingSeqName(tmpl.name);
                         }}
-                        title="Rename sequence"
+                        title="Rename sequence directly"
                         style={{ width: 20, height: 20, padding: 0 }}
                       >
                         <Edit2 size={11} className="text-muted" />
@@ -1134,23 +1233,6 @@ export const SequencerTimeline: React.FC = () => {
         confirmLabel="Create Sequence"
         onClose={() => setIsAddSeqModalOpen(false)}
         onSubmit={(val) => addMotionTemplate(val)}
-      />
-
-      {/* Rename Sequence Modal */}
-      <NewItemModal
-        isOpen={!!renameSeqModal}
-        title="Rename Sequence"
-        subtitle={`Enter a new name for sequence "${renameSeqModal?.name || ''}".`}
-        placeholder="Sequence name..."
-        defaultValue={renameSeqModal?.name || ''}
-        confirmLabel="Rename Sequence"
-        onClose={() => setRenameSeqModal(null)}
-        onSubmit={(val) => {
-          if (renameSeqModal) {
-            renameMotionTemplate(renameSeqModal.id, val);
-            setRenameSeqModal(null);
-          }
-        }}
       />
     </footer>
   );

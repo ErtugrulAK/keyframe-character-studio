@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../../context/AnimatorContext';
 import { Film, Plus, CheckCircle2, Edit2 } from 'lucide-react';
-import { NewItemModal } from '../../Modal/NewItemModal';
 
 export const KeyframesDrawer: React.FC = () => {
   const {
@@ -12,7 +11,8 @@ export const KeyframesDrawer: React.FC = () => {
     renameMotionTemplate,
   } = useAnimator();
 
-  const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(null);
+  const [editingSeqId, setEditingSeqId] = useState<string | null>(null);
+  const [editingSeqName, setEditingSeqName] = useState<string>('');
 
   return (
     <div className="drawer-content">
@@ -42,12 +42,15 @@ export const KeyframesDrawer: React.FC = () => {
       <div className="keyframe-history-list" style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 380, overflowY: 'auto' }}>
         {motionTemplates.map((tmpl) => {
           const isActive = tmpl.id === activeTemplateId;
+          const isEditing = editingSeqId === tmpl.id;
 
           return (
             <div
               key={tmpl.id}
               className={`keyframe-list-item ${isActive ? 'active-kf' : ''}`}
-              onClick={() => setActiveTemplateId(tmpl.id)}
+              onClick={() => {
+                if (!isEditing) setActiveTemplateId(tmpl.id);
+              }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -60,11 +63,54 @@ export const KeyframesDrawer: React.FC = () => {
                 transition: 'all 0.15s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                 <Film size={14} className={isActive ? 'text-teal' : 'text-cyan'} />
-                <span style={{ fontSize: 12, fontWeight: 700, color: isActive ? 'var(--accent-teal)' : '#f8fafc' }}>
-                  {tmpl.name}
-                </span>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editingSeqName}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setEditingSeqName(e.target.value)}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') {
+                        if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
+                        setEditingSeqId(null);
+                      } else if (e.key === 'Escape') {
+                        setEditingSeqId(null);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
+                      setEditingSeqId(null);
+                    }}
+                    style={{
+                      background: '#090b10',
+                      border: '1px solid #38bdf8',
+                      color: '#fff',
+                      borderRadius: 4,
+                      padding: '2px 6px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      outline: 'none',
+                      width: 130,
+                    }}
+                  />
+                ) : (
+                  <span
+                    style={{ fontSize: 12, fontWeight: 700, color: isActive ? 'var(--accent-teal)' : '#f8fafc' }}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSeqId(tmpl.id);
+                      setEditingSeqName(tmpl.name);
+                    }}
+                    title="Double-click to rename sequence directly"
+                  >
+                    {tmpl.name}
+                  </span>
+                )}
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -72,7 +118,8 @@ export const KeyframesDrawer: React.FC = () => {
                   className="btn-icon"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setRenameTarget({ id: tmpl.id, name: tmpl.name });
+                    setEditingSeqId(tmpl.id);
+                    setEditingSeqName(tmpl.name);
                   }}
                   title="Rename Sequence"
                   style={{ width: 22, height: 22, padding: 0 }}
@@ -94,23 +141,6 @@ export const KeyframesDrawer: React.FC = () => {
           );
         })}
       </div>
-
-      {/* Rename Sequence Modal */}
-      <NewItemModal
-        isOpen={!!renameTarget}
-        title="Rename Sequence"
-        subtitle={`Enter a new name for sequence "${renameTarget?.name || ''}".`}
-        placeholder="Sequence name..."
-        defaultValue={renameTarget?.name || ''}
-        confirmLabel="Rename Sequence"
-        onClose={() => setRenameTarget(null)}
-        onSubmit={(val) => {
-          if (renameTarget) {
-            renameMotionTemplate(renameTarget.id, val);
-            setRenameTarget(null);
-          }
-        }}
-      />
     </div>
   );
 };

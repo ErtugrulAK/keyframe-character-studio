@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { Transform } from '../../types/animator';
 import { PartRenderer } from './renderers/PartRenderer';
-import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
+import { TransformGizmo, getPartBounds, type ScaleMode } from './overlays/TransformGizmo';
 import { SkeletalBones } from './overlays/SkeletalBones';
 import { OnionSkinning } from './overlays/OnionSkinning';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
@@ -218,7 +218,7 @@ export const StageCanvas: React.FC = () => {
         const part = characterParts.find((p) => p.id === selectedPartId);
         if (!part) return;
 
-        const bounds = getPartBounds(part.type);
+        const bounds = getPartBounds(part);
         const halfW0 = bounds.halfW;
         const halfH0 = bounds.halfH;
 
@@ -352,18 +352,6 @@ export const StageCanvas: React.FC = () => {
     setIsDropTargetHover(false);
   };
 
-  const getPartBounds = (partType: string): { halfW: number; halfH: number } => {
-    let halfW = 32; let halfH = 32;
-    switch (partType) {
-      case 'custom_card': halfW = 90; halfH = 50; break;
-      case 'custom_rect': halfW = 60; halfH = 30; break;
-      case 'custom_banner': halfW = 80; halfH = 25; break;
-      case 'custom_image':
-      case 'custom_video': halfW = partType === 'custom_video' ? 100 : 90; halfH = 60; break;
-    }
-    return { halfW, halfH };
-  };
-
   const handleDropStage = (e: React.DragEvent) => {
     e.preventDefault();
     if (appMode === 'broadcast') return;
@@ -395,7 +383,7 @@ export const StageCanvas: React.FC = () => {
             const unscaledX = localX / Math.abs(transform.scaleX || 1);
             const unscaledY = localY / Math.abs(transform.scaleY || 1);
             
-            const { halfW, halfH } = getPartBounds(part.type);
+            const { halfW, halfH } = getPartBounds(part);
             
             if (Math.abs(unscaledX) <= halfW && Math.abs(unscaledY) <= halfH) {
               // Only mask if it's a shape type

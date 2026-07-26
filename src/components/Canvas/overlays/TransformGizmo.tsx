@@ -6,15 +6,54 @@ export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: numb
   let halfH = 32;
 
   switch (part.type) {
-    case 'custom_card': halfW = 90; halfH = 50; break;
-    case 'custom_rect': halfW = 60; halfH = 30; break;
-    case 'custom_banner': halfW = 80; halfH = 25; break;
+    case 'custom_card':
+      halfW = part.width ? part.width / 2 : 90;
+      halfH = part.height ? part.height / 2 : 50;
+      break;
+    case 'custom_rect':
+      halfW = part.width ? part.width / 2 : 60;
+      halfH = part.height ? part.height / 2 : 30;
+      break;
+    case 'custom_banner':
+      halfW = part.width ? part.width / 2 : 80;
+      halfH = part.height ? part.height / 2 : 25;
+      break;
+    case 'custom_text': {
+      const textStr = part.textValue || part.name || 'TEXT';
+      const fontSize = part.fontSize || 24;
+      // Calculate font-specific text width & height dynamically according to string length and fontSize
+      const approxWidth = Math.max(40, textStr.length * fontSize * 0.58 + 24);
+      const approxHeight = Math.max(30, fontSize * 1.3);
+      halfW = approxWidth / 2;
+      halfH = approxHeight / 2;
+      break;
+    }
     case 'custom_image':
     case 'custom_video':
-      halfW = part.type === 'custom_video' ? 100 : 90;
-      halfH = 60;
+      halfW = part.width ? part.width / 2 : (part.type === 'custom_video' ? 100 : 90);
+      halfH = part.height ? part.height / 2 : 60;
       break;
+    case 'mograph_cloner': {
+      const cfg = part.clonerConfig;
+      if (cfg) {
+        if (cfg.mode === 'grid') {
+          halfW = Math.max(30, ((cfg.countX - 1) * cfg.spacingX + cfg.childSize * 2) / 2);
+          halfH = Math.max(30, ((cfg.countY - 1) * cfg.spacingY + cfg.childSize * 2) / 2);
+        } else if (cfg.mode === 'circle') {
+          halfW = Math.max(30, cfg.radius + cfg.childSize);
+          halfH = Math.max(30, cfg.radius + cfg.childSize);
+        } else {
+          halfW = Math.max(30, ((cfg.countLinear - 1) * cfg.spacingLinear + cfg.childSize * 2) / 2);
+          halfH = Math.max(20, cfg.childSize);
+        }
+      } else {
+        halfW = 60;
+        halfH = 40;
+      }
+      break;
+    }
   }
+
   return { halfW, halfH };
 };
 

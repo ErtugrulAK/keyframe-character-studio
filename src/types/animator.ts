@@ -179,6 +179,8 @@ export interface CharacterPart {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
+  width?: number;
+  height?: number;
 
   // Media Overlay Text Caption
   overlayText?: string;

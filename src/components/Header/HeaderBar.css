@@ -64,10 +64,9 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 6px;
-  padding: 3px 6px;
-  margin-left: 4px;
+  background: transparent;
+  padding: 0;
+  margin-left: 0;
 }
 
 .header-tab {

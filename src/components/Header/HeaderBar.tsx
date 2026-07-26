@@ -5,7 +5,6 @@ import {
   Upload,
   RotateCcw,
   CheckCircle2,
-  Globe,
   Plus,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
@@ -22,18 +21,18 @@ export const HeaderBar: React.FC = () => {
     appMode,
     setAppMode,
     sceneTitle,
-    setSceneTitle,
     projectTemplates,
     activeProjectTemplateId,
     setActiveProjectTemplateId,
     addProjectTemplate,
+    renameProjectTemplate,
     deleteProjectTemplate,
     fps,
     setFps,
   } = useAnimator();
 
-  const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
-  const [editingTitleVal, setEditingTitleVal] = useState<string>(sceneTitle);
+  const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
+  const [editingTmplName, setEditingTmplName] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,87 +89,82 @@ export const HeaderBar: React.FC = () => {
   return (
     <>
       <header className="header-bar">
-        {/* Template Title Pill (Editable Project Name) */}
         <div className="header-brand">
-          <div className="header-template-pill">
-            <Globe size={14} style={{ color: '#38bdf8', flexShrink: 0 }} />
-            {isEditingTitle ? (
-              <input
-                type="text"
-                className="header-title-input"
-                value={editingTitleVal}
-                autoFocus
-                onChange={(e) => setEditingTitleVal(e.target.value)}
-                onBlur={() => {
-                  if (editingTitleVal.trim()) setSceneTitle(editingTitleVal.trim());
-                  setIsEditingTitle(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    if (editingTitleVal.trim()) setSceneTitle(editingTitleVal.trim());
-                    setIsEditingTitle(false);
-                  }
-                }}
-              />
-            ) : (
-              <span
-                className="header-title-text"
-                onClick={() => {
-                  setEditingTitleVal(sceneTitle);
-                  setIsEditingTitle(true);
-                }}
-                title="Click to edit template name"
-              >
-                {sceneTitle}
-              </span>
-            )}
-          </div>
-
           {/* Browser-Tab Style Project Template Tabs */}
           <div className="header-template-tabs">
-            {projectTemplates.map((tmpl) => (
-              <button
-                key={tmpl.id}
-                className={`header-tab ${activeProjectTemplateId === tmpl.id ? 'active' : ''}`}
-                onClick={() => setActiveProjectTemplateId(tmpl.id)}
-                title={`Template: ${tmpl.name}`}
-                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-              >
-                <span>{tmpl.name}</span>
-                {projectTemplates.length > 1 && (
-                  <span
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteProjectTemplate(tmpl.id);
-                    }}
-                    title="Delete template"
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: 14,
-                      height: 14,
-                      borderRadius: '50%',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      fontSize: 9,
-                      lineHeight: 1,
-                      color: '#94a3b8',
-                      cursor: 'pointer',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#ef4444';
-                      e.currentTarget.style.color = '#fff';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                      e.currentTarget.style.color = '#94a3b8';
-                    }}
-                  >
-                    ✕
-                  </span>
-                )}
-              </button>
-            ))}
+            {projectTemplates.map((tmpl) => {
+              const isActive = activeProjectTemplateId === tmpl.id;
+              const isEditing = editingTmplId === tmpl.id;
+
+              return (
+                <div
+                  key={tmpl.id}
+                  className={`header-tab ${isActive ? 'active' : ''}`}
+                  onClick={() => setActiveProjectTemplateId(tmpl.id)}
+                  title={`Template: ${tmpl.name}`}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                >
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editingTmplName}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => setEditingTmplName(e.target.value)}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter') {
+                          if (editingTmplName.trim()) renameProjectTemplate(tmpl.id, editingTmplName.trim());
+                          setEditingTmplId(null);
+                        } else if (e.key === 'Escape') {
+                          setEditingTmplId(null);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (editingTmplName.trim()) renameProjectTemplate(tmpl.id, editingTmplName.trim());
+                        setEditingTmplId(null);
+                      }}
+                      style={{
+                        background: '#090b10',
+                        border: '1px solid #38bdf8',
+                        color: '#fff',
+                        borderRadius: 4,
+                        padding: '1px 6px',
+                        fontSize: 12,
+                        fontWeight: 700,
+                        outline: 'none',
+                        width: 90,
+                      }}
+                    />
+                  ) : (
+                    <span
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setEditingTmplId(tmpl.id);
+                        setEditingTmplName(tmpl.name);
+                      }}
+                      title="Double-click to rename template"
+                    >
+                      {tmpl.name}
+                    </span>
+                  )}
+
+                  {projectTemplates.length > 1 && (
+                    <span
+                      className="tab-close-icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteProjectTemplate(tmpl.id);
+                      }}
+                      title="Delete template"
+                    >
+                      ✕
+                    </span>
+                  )}
+                </div>
+              );
+            })}
             <button
               className="header-tab add-tab"
               onClick={() => setIsAddModalOpen(true)}

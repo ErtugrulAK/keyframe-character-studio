@@ -124,6 +124,7 @@ interface AnimatorContextType {
   activeProjectTemplateId: string;
   setActiveProjectTemplateId: (id: string) => void;
   addProjectTemplate: (name: string) => void;
+  renameProjectTemplate: (id: string, newName: string) => void;
   deleteProjectTemplate: (id: string) => void;
   motionTemplates: MotionTemplate[];
   activeTemplateId: string;
@@ -388,6 +389,19 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSceneTitleState(cleanName);
     setFps(60); // Strictly default to 60 FPS for new templates
   }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, projectTemplates.length]);
+
+  const renameProjectTemplate = useCallback((id: string, newName: string) => {
+    const cleanName = newName.trim();
+    if (!cleanName) return;
+
+    setProjectTemplates((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, name: cleanName } : t))
+    );
+
+    if (activeProjectTemplateId === id) {
+      setSceneTitleState(cleanName);
+    }
+  }, [activeProjectTemplateId]);
 
   const deleteProjectTemplate = useCallback((idToDelete: string) => {
     setProjectTemplates((prev) => {
@@ -1904,6 +1918,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         activeProjectTemplateId,
         setActiveProjectTemplateId,
         addProjectTemplate,
+        renameProjectTemplate,
         deleteProjectTemplate,
         motionTemplates,
         activeTemplateId,

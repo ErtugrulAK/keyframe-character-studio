@@ -26,7 +26,6 @@ import {
   Diamond,
   TrendingUp,
   GripVertical,
-  Film,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
@@ -398,8 +397,6 @@ export const SequencerTimeline: React.FC = () => {
                 onClick={() => setActiveTemplateId(tmpl.id)}
                 title={`Sequence: ${tmpl.name}`}
               >
-                <Film size={12} className={isActive ? 'text-teal' : 'text-muted'} />
-
                 {isEditing ? (
                   <input
                     type="text"

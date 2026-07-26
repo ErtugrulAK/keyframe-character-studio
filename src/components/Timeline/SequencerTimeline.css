@@ -53,8 +53,25 @@
   flex-shrink: 0;
 }
 .timeline-header-left { display: flex; align-items: center; gap: 10px; }
-.timecode-text { font-size: 14px; font-weight: 800; color: #14b8a6; letter-spacing: 1px; }
-.timecode-total { font-size: 12px; color: #4b5563; }
+.timecode-text {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  font-weight: 800;
+  color: #14b8a6;
+  letter-spacing: 0.5px;
+  min-width: 68px;
+  display: inline-block;
+  text-align: center;
+}
+.timecode-total {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: #4b5563;
+  min-width: 62px;
+  display: inline-block;
+}
 .timeline-header-center { display: flex; align-items: center; gap: 10px; }
 .timeline-header-right { display: flex; align-items: center; gap: 10px; }
 

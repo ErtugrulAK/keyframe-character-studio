@@ -218,7 +218,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
                 >
                   <option value="in">Entrance (IN)</option>
                   <option value="out">Exit (OUT)</option>
-                  <option value="stunt">Live Stunt / Loop (Atraksiyon)</option>
+                  <option value="stunt">Live Stunt / Loop</option>
                 </select>
               </div>
 
@@ -244,15 +244,15 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
             </div>
 
             <div className="input-field">
-              <label style={{ fontSize: 10, color: 'var(--accent-gold)' }}>PRESET CONTENT SCOPE (İÇERİK KAPSAMI)</label>
+              <label style={{ fontSize: 10, color: 'var(--accent-gold)' }}>PRESET CONTENT SCOPE</label>
               <select
                 value={newPresetScope}
                 onChange={(e) => setNewPresetScope(e.target.value as 'both' | 'motion_only' | 'shape_only')}
                 style={{ width: '100%', height: 26, background: 'var(--bg-input)', border: '1px solid var(--accent-gold)', color: '#fff', borderRadius: 4, fontSize: 11, fontWeight: 600 }}
               >
-                <option value="both">⚡ Both Motion & Shape (Hem Hareket Hem Şekil/Ölçek)</option>
-                <option value="motion_only">🏃 Motion Only (Sadece Hareket / X-Y Konum)</option>
-                <option value="shape_only">📐 Shape & Scale Only (Sadece Şekil / Boyut-Ölçek)</option>
+                <option value="both">⚡ Motion & Shape</option>
+                <option value="motion_only">🏃 Motion / Position Only</option>
+                <option value="shape_only">📐 Shape & Scale Only</option>
               </select>
             </div>
 

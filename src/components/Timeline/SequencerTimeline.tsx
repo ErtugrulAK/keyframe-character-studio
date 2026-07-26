@@ -63,6 +63,7 @@ export const SequencerTimeline: React.FC = () => {
     toggleTrackEditVisibility,
     renamePartAndTrack,
     reorderTracks,
+    setTrackIndex,
     toggleTrackLock,
     toggleTrackExpanded,
     deleteKeyframe,
@@ -349,7 +350,7 @@ export const SequencerTimeline: React.FC = () => {
             title="Open Expanded Pro Cubic Bezier Motion Curve Studio Modal"
           >
             <TrendingUp size={13} className="text-cyan" />
-            <span>PRO CURVES</span>
+            <span>Motion Curves</span>
           </button>
           <div className="divider-v" style={{ marginRight: 6 }} />
           <button className="btn-icon transport-btn" onClick={undo} disabled={!canUndo} title="Undo"><Undo2 size={15} /></button>
@@ -485,14 +486,34 @@ export const SequencerTimeline: React.FC = () => {
                       </span>
                     )}
 
-                    {/* Clean 1-based Sequential Index Badge */}
-                    <span 
-                      className="ue-kf-count" 
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }} 
-                      title={`Layer Index #${trackIdx + 1}`}
-                    >
-                      #{trackIdx + 1}
-                    </span>
+                    {/* Interactive 1-based Layer Index Input */}
+                    <input
+                      type="number"
+                      min={1}
+                      max={tracks.length}
+                      value={trackIdx + 1}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value);
+                        if (!isNaN(val) && val >= 1 && val <= tracks.length) {
+                          setTrackIndex(track.id, val);
+                        }
+                      }}
+                      style={{
+                        width: 32,
+                        height: 20,
+                        background: 'rgba(255,255,255,0.08)',
+                        border: '1px solid var(--border-color)',
+                        color: 'var(--accent-cyan)',
+                        fontSize: 10,
+                        fontWeight: 700,
+                        borderRadius: 4,
+                        textAlign: 'center',
+                        outline: 'none',
+                        cursor: 'pointer',
+                      }}
+                      title="Edit layer number (1 = top layer on canvas)"
+                    />
 
                     <div className="ue-track-controls">
                       {/* 1. Edit Canvas Hard-Hide Eye */}

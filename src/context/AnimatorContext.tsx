@@ -118,6 +118,7 @@ interface AnimatorContextType {
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderTracks: (dragIndex: number, hoverIndex: number) => void;
+  setTrackIndex: (trackId: string, target1BasedIndex: number) => void;
   deletePart: (partId: string) => void;
   copySelectedPart: () => void;
   pasteCopiedPart: () => void;
@@ -1417,6 +1418,32 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, []);
 
+  const setTrackIndex = useCallback((trackId: string, target1BasedIndex: number) => {
+    setTracks((prevTracks) => {
+      const currentIndex = prevTracks.findIndex((t) => t.id === trackId);
+      if (currentIndex < 0) return prevTracks;
+      const target0Based = Math.max(0, Math.min(prevTracks.length - 1, target1BasedIndex - 1));
+      if (currentIndex === target0Based) return prevTracks;
+
+      const updated = [...prevTracks];
+      const [movedTrack] = updated.splice(currentIndex, 1);
+      updated.splice(target0Based, 0, movedTrack);
+
+      const total = updated.length;
+      setCharacterParts((prevParts) =>
+        prevParts.map((p) => {
+          const idx = updated.findIndex((t) => t.partId === p.id);
+          if (idx >= 0) {
+            return { ...p, zIndex: total - idx };
+          }
+          return p;
+        })
+      );
+
+      return updated;
+    });
+  }, []);
+
   // ── Custom Motion Preset Engine & Sample Sequencer Project Loader ──
   const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame = 0, endFrame = 50, scope: 'both' | 'motion_only' | 'shape_only' = 'both') => {
     const part = characterParts.find(p => p.id === partId);
@@ -1602,6 +1629,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         stopAllLiveStunts,
         renamePartAndTrack,
         reorderTracks,
+        setTrackIndex,
       }}
     >
       {children}

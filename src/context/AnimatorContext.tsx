@@ -1076,6 +1076,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       return;
     }
 
+    // Automatically rewind to frame 0 if playback is started at or past totalFrames
+    setCurrentFrame((prev) => (prev >= totalFrames ? 0 : prev));
+
     const frameInterval = 1000 / fps;
 
     const tick = (now: number) => {

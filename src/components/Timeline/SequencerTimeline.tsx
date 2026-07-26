@@ -487,7 +487,16 @@ export const SequencerTimeline: React.FC = () => {
 
         <div className="timeline-header-center">
           <button className="btn-icon transport-btn" onClick={() => setCurrentFrame((f) => Math.max(0, f - 1))} title="Step Back"><SkipBack size={16} /></button>
-          <button className={`play-main-btn-teal ${isPlaying ? 'playing' : ''}`} onClick={() => setIsPlaying(!isPlaying)} title={isPlaying ? 'Pause' : 'Play'}>
+          <button
+            className={`play-main-btn-teal ${isPlaying ? 'playing' : ''}`}
+            onClick={() => {
+              if (!isPlaying && currentFrame >= totalFrames) {
+                setCurrentFrame(0);
+              }
+              setIsPlaying(!isPlaying);
+            }}
+            title={isPlaying ? 'Pause' : 'Play'}
+          >
             {isPlaying ? <Pause size={18} /> : <Play size={18} className="translate-x-px" />}
           </button>
           <button className="btn-icon transport-btn" onClick={() => setCurrentFrame((f) => Math.min(totalFrames, f + 1))} title="Step Forward"><SkipForward size={16} /></button>

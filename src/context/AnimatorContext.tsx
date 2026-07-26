@@ -640,11 +640,21 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
 
-    setCharacterParts((prev) => [...prev, newPart]);
-    setTracks((prev) => [...prev, newTrack]);
+    setTracks((prevTracks) => {
+      const nextTracks = [newTrack, ...prevTracks];
+      const total = nextTracks.length;
+      setCharacterParts((prevParts) => {
+        const updated = [newPart, ...prevParts];
+        return updated.map((p) => {
+          const idx = nextTracks.findIndex((t) => t.partId === p.id);
+          return { ...p, zIndex: idx >= 0 ? total - idx : p.zIndex };
+        });
+      });
+      return nextTracks;
+    });
     setSelectedPartId(newPartId);
     showToast(`Pasted "${newPart.name}"`, 'success');
-  }, [clipboardData, characterParts, showToast]);
+  }, [clipboardData, showToast]);
 
   const duplicateSelectedPart = useCallback(() => {
     if (!selectedPartId) return;
@@ -699,8 +709,18 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     }
 
-    setCharacterParts((prev) => [...prev, newPart]);
-    setTracks((prev) => [...prev, newTrack]);
+    setTracks((prevTracks) => {
+      const nextTracks = [newTrack, ...prevTracks];
+      const total = nextTracks.length;
+      setCharacterParts((prevParts) => {
+        const updated = [newPart, ...prevParts];
+        return updated.map((p) => {
+          const idx = nextTracks.findIndex((t) => t.partId === p.id);
+          return { ...p, zIndex: idx >= 0 ? total - idx : p.zIndex };
+        });
+      });
+      return nextTracks;
+    });
     setSelectedPartId(newPartId);
     showToast(`Duplicated "${newPart.name}"`, 'success');
   }, [selectedPartId, characterParts, tracks, showToast]);
@@ -848,6 +868,33 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           x: ax + ox,
           y: ay + oy,
         };
+      }
+
+      // Feature 3: Parent-Child Hierarchical Group Composition
+      if (part && part.parentId) {
+        const parentPart = characterParts.find((p) => p.id === part.parentId);
+        if (parentPart && parentPart.id !== partId) {
+          const parentTransform = getComputedTransform(parentPart.id, frame);
+          const rad = (parentTransform.rotation * Math.PI) / 180;
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
+
+          const scaledChildX = finalComputed.x * parentTransform.scaleX;
+          const scaledChildY = finalComputed.y * parentTransform.scaleY;
+
+          const rotatedChildX = scaledChildX * cos - scaledChildY * sin;
+          const rotatedChildY = scaledChildX * sin + scaledChildY * cos;
+
+          finalComputed = {
+            ...finalComputed,
+            x: parentTransform.x + rotatedChildX,
+            y: parentTransform.y + rotatedChildY,
+            rotation: parentTransform.rotation + finalComputed.rotation,
+            scaleX: parentTransform.scaleX * finalComputed.scaleX,
+            scaleY: parentTransform.scaleY * finalComputed.scaleY,
+            opacity: parentTransform.opacity * finalComputed.opacity,
+          };
+        }
       }
 
       return finalComputed;
@@ -1316,8 +1363,16 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       channels: makeEmptyChannels(),
     };
 
-    setCharacterParts((prev) => [...prev, newPart]);
-    setTracks((prev) => [...prev, newTrack]);
+    const nextTracks = [newTrack, ...tracks];
+    const total = nextTracks.length;
+    setTracks(nextTracks);
+    setCharacterParts((prev) => {
+      const updated = [newPart, ...prev];
+      return updated.map((p) => {
+        const idx = nextTracks.findIndex((t) => t.partId === p.id);
+        return { ...p, zIndex: idx >= 0 ? total - idx : p.zIndex };
+      });
+    });
     setSelectedPartId(partId);
   };
 

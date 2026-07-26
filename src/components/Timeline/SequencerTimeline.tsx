@@ -52,6 +52,7 @@ export const SequencerTimeline: React.FC = () => {
     setTotalFrames,
     fps,
     tracks,
+    characterParts,
     selectedPartId,
     setSelectedPartId,
     selectedKeyframeId,
@@ -379,12 +380,15 @@ export const SequencerTimeline: React.FC = () => {
               const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
               const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
 
+              const partItem = characterParts.find((p) => p.id === track.partId);
+              const isChildLayer = Boolean(partItem?.parentId);
+
               return (
                 <div key={track.id} className="ue-track-group">
                   {/* ── LAYER ROW ── */}
                   <div
                     className={`ue-track-row ${isSelected ? 'selected' : ''} ${draggedTrackIndex === trackIdx ? 'dragging' : ''} ${dragOverTrackIndex === trackIdx ? 'drag-over' : ''}`}
-                    style={{ height: TRACK_ROW_HEIGHT }}
+                    style={{ height: TRACK_ROW_HEIGHT, paddingLeft: isChildLayer ? 22 : 6 }}
                     onClick={() => setSelectedPartId(track.partId)}
                     draggable={true}
                     onDragStart={(e) => {
@@ -420,6 +424,10 @@ export const SequencerTimeline: React.FC = () => {
                     <span title="Drag up or down to reorder layer depth" style={{ display: 'flex', alignItems: 'center' }}>
                       <GripVertical size={13} className="track-drag-grip" />
                     </span>
+
+                    {isChildLayer && (
+                      <span style={{ fontSize: 10, color: 'var(--accent-cyan)', fontWeight: 800, marginRight: -2 }}>└─</span>
+                    )}
 
                     <button
                       className="ue-expand-btn"

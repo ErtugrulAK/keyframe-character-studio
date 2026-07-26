@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Activity, Compass, Zap, Plus, Link, Unlink, Maximize2 } from 'lucide-react';
+import { Activity, Compass, Zap, Plus, Link, Unlink, Maximize2, FolderTree } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
+import { useAnimator } from '../../../context/AnimatorContext';
 
 interface SmartNumberInputProps {
   value: number;
@@ -81,6 +82,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   handlePartPropChange,
 }) => {
   const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
+  const { characterParts, addCustomPart } = useAnimator();
   return (
     <div className="inspector-section">
       <div className="section-title-bar">
@@ -270,6 +272,50 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           Reset Scale (1.0)
         </button>
       </div>
+
+      {/* LAYER PARENTING & GROUPING */}
+      <div className="section-title" style={{ marginTop: 12 }}>
+        <FolderTree size={13} className="text-purple" />
+        <span>LAYER PARENTING & GROUPING</span>
+      </div>
+
+      <div className="input-field">
+        <label>PARENT GROUP LAYER</label>
+        <select
+          value={selectedPart.parentId || ''}
+          onChange={(e) => handlePartPropChange('parentId', e.target.value || undefined)}
+          style={{
+            background: 'var(--bg-input)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-primary)',
+            padding: '5px 8px',
+            borderRadius: 'var(--radius-sm)',
+            fontSize: 11,
+            fontWeight: 600,
+            width: '100%',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="">None (Independent Layer)</option>
+          {characterParts
+            .filter((p) => p.id !== selectedPart.id)
+            .map((p) => (
+              <option key={p.id} value={p.id}>
+                🔗 {p.name}
+              </option>
+            ))}
+        </select>
+      </div>
+
+      <button
+        className="btn-secondary"
+        style={{ width: '100%', marginTop: 6, fontSize: 11, gap: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        onClick={() => addCustomPart('custom_card', 'Group Folder', { parentId: undefined })}
+        title="Create a new Master Group Layer"
+      >
+        <FolderTree size={12} className="text-purple" />
+        <span>+ Create New Layer Group Folder</span>
+      </button>
 
       {/* RESPONSIVE ANCHOR POINT 3x3 PICKER */}
       <div className="section-title" style={{ marginTop: 12 }}>

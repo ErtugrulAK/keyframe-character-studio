@@ -193,7 +193,7 @@ export const SequencerTimeline: React.FC = () => {
 
   const FRAME_WIDTH = timelineZoom;
 
-  const frameNumbers = Array.from({ length: totalFrames + 1 }, (_, i) => i);
+  const frameNumbers = Array.from({ length: totalFrames + 31 }, (_, i) => i);
 
 
   const getFrameFromMouse = useCallback(
@@ -848,12 +848,12 @@ export const SequencerTimeline: React.FC = () => {
         {/* ── RIGHT SCROLLABLE GRID ── */}
         <div className="timeline-grid-container" ref={timelineGridRef} onScroll={handleGridScroll}>
           {/* Time Ruler */}
-          <div className="time-ruler" onMouseDown={handleRulerMouseDown}>
+          <div className="time-ruler" onMouseDown={handleRulerMouseDown} style={{ width: `${(totalFrames + 30) * FRAME_WIDTH}px`, minWidth: '100%' }}>
             {frameNumbers.map((frame) => {
               const labelStep =
-                FRAME_WIDTH >= 24 ? 5 :
-                FRAME_WIDTH >= 14 ? 10 :
-                FRAME_WIDTH >= 8  ? 20 : 50;
+                FRAME_WIDTH >= 20 ? 5 :
+                FRAME_WIDTH >= 10 ? 10 :
+                FRAME_WIDTH >= 5  ? 20 : 50;
 
               const isLabel = frame % labelStep === 0;
               const isTen = frame % 10 === 0;

@@ -189,41 +189,51 @@
 .color-grid-two-col {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 6px;
   width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .color-picker-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   background: var(--bg-dark);
   border: 1px solid var(--border-color);
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-radius: var(--radius-md);
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .color-card-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 800;
   color: var(--text-muted);
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .color-picker-compact {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .color-swatch-input {
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
+  width: 26px;
+  height: 26px;
+  min-width: 26px;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: none;
@@ -231,6 +241,7 @@
   padding: 0;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .color-swatch-input::-webkit-color-swatch-wrapper {
@@ -245,17 +256,19 @@
 .color-hex-input {
   flex: 1;
   min-width: 0;
-  height: 32px;
+  width: 100%;
+  height: 26px;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 4px 8px;
+  letter-spacing: 0.3px;
+  padding: 2px 5px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
+  box-sizing: border-box;
 }
 
 .color-hex-input:focus {

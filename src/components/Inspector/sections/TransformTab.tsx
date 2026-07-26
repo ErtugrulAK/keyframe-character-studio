@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Compass, Zap, Plus, Link, Unlink, Maximize2 } from 'lucide-react';
+import { Activity, Zap, Plus, Link, Unlink, Maximize2 } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 interface SmartNumberInputProps {
@@ -238,73 +238,12 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </button>
         <button
           className="btn-secondary"
-          style={{ flex: 1, fontSize: 11 }}
+          style={{ flex: 1 }}
           onClick={() => updateCurrentTransform({ scaleX: 1, scaleY: 1 })}
         >
           Reset Scale (1.0)
         </button>
       </div>
-
-      {/* RESPONSIVE ANCHOR POINT 3x3 PICKER */}
-      <div className="section-title" style={{ marginTop: 12 }}>
-        <Compass size={13} className="text-cyan" />
-        <span>RESPONSIVE ANCHOR POINT</span>
-      </div>
-
-      <div className="input-field">
-        <label>ANCHOR PRESET</label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: '100%', margin: '4px 0' }}>
-          {[
-            { id: 'top-left', label: '↖ TL' },
-            { id: 'top-center', label: '↑ TC' },
-            { id: 'top-right', label: '↗ TR' },
-            { id: 'center-left', label: '← CL' },
-            { id: 'center', label: '• C' },
-            { id: 'center-right', label: '→ CR' },
-            { id: 'bottom-left', label: '↙ BL' },
-            { id: 'bottom-center', label: '↓ BC' },
-            { id: 'bottom-right', label: '↘ BR' },
-          ].map((preset) => (
-            <button
-              key={preset.id}
-              className={`btn-secondary ${selectedPart.anchor === preset.id ? 'active' : ''}`}
-              style={{
-                fontSize: 10,
-                padding: '4px 2px',
-                backgroundColor: selectedPart.anchor === preset.id ? 'var(--accent-teal)' : undefined,
-                color: selectedPart.anchor === preset.id ? '#ffffff' : undefined,
-              }}
-              onClick={() =>
-                handlePartPropChange(
-                  'anchor',
-                  selectedPart.anchor === preset.id ? 'none' : preset.id
-                )
-              }
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {selectedPart.anchor && selectedPart.anchor !== 'none' && (
-        <div className="input-grid">
-          <div className="input-field">
-            <label>OFFSET X (PX)</label>
-            <SmartNumberInput
-              value={selectedPart.anchorOffsetX || 0}
-              onChange={(val) => handlePartPropChange('anchorOffsetX', val)}
-            />
-          </div>
-          <div className="input-field">
-            <label>OFFSET Y (PX)</label>
-            <SmartNumberInput
-              value={selectedPart.anchorOffsetY || 0}
-              onChange={(val) => handlePartPropChange('anchorOffsetY', val)}
-            />
-          </div>
-        </div>
-      )}
 
       {/* SPRING PHYSICS MODIFIER */}
       <div className="section-title" style={{ marginTop: 12 }}>

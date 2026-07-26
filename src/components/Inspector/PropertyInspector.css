@@ -69,10 +69,11 @@
 }
 
 .outliner-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   color: #e2e8f0;
   letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .outliner-header-actions {
@@ -134,7 +135,7 @@
   background: transparent;
   border: none;
   color: #fff;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 600;
   outline: none;
 }
@@ -146,11 +147,12 @@
   border-bottom: 1px solid #262b3a;
   display: flex;
   align-items: center;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   color: #64748b;
   padding: 0 4px;
   flex-shrink: 0;
+  text-transform: uppercase;
 }
 
 .outliner-table-header .col-eye { width: 24px; text-align: center; display: flex; justify-content: center; }
@@ -170,7 +172,7 @@
   height: 24px;
   display: flex;
   align-items: center;
-  font-size: 11px;
+  font-size: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   cursor: pointer;
   transition: background 0.12s ease;
@@ -259,11 +261,11 @@
   background: #1b202e;
   border: 1px solid #2e364a;
   color: #38bdf8;
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 800;
   padding: 1px 4px;
   border-radius: 3px;
-  width: 90px;
+  width: 82px;
   height: 18px;
   outline: none;
   cursor: pointer;
@@ -271,7 +273,7 @@
 
 .tree-node .col-type {
   width: 90px;
-  font-size: 9.5px;
+  font-size: 9px;
   color: #64748b;
   text-align: right;
   padding-right: 8px;
@@ -285,7 +287,7 @@
   height: 20px;
   background: #141720;
   border-top: 1px solid #232734;
-  font-size: 9.5px;
+  font-size: 9px;
   color: #64748b;
   display: flex;
   align-items: center;
@@ -302,7 +304,7 @@
 }
 
 .details-header {
-  height: 32px;
+  height: 30px;
   background: #181b24;
   border-bottom: 1px solid #262b3a;
   display: flex;
@@ -319,10 +321,11 @@
 }
 
 .details-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   color: #e2e8f0;
   letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .details-header-actions {
@@ -332,10 +335,10 @@
 }
 
 .btn-add-comp {
-  height: 20px;
+  height: 18px;
   background: #22c55e;
   color: #000;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
   border: none;
   border-radius: 3px;
@@ -344,10 +347,11 @@
   align-items: center;
   gap: 3px;
   cursor: pointer;
+  text-transform: uppercase;
 }
 
 .details-actor-card {
-  height: 30px;
+  height: 28px;
   background: #161a24;
   border-bottom: 1px solid #232734;
   display: flex;
@@ -364,13 +368,13 @@
 }
 
 .actor-main-name {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
   color: #fff;
 }
 
 .actor-instance-tag {
-  font-size: 9.5px;
+  font-size: 9px;
   color: #64748b;
   font-family: var(--font-mono);
 }
@@ -386,7 +390,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 8px;
+  padding: 4px 8px;
   background: #101218;
   border-bottom: 1px solid #232734;
   overflow-x: auto;
@@ -399,12 +403,14 @@
   background: #191d29;
   border: 1px solid #2b3144;
   color: #94a3b8;
-  font-size: 9.5px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  height: 20px;
+  border-radius: 3px;
   cursor: pointer;
   transition: all 0.12s ease;
+  text-transform: uppercase;
 }
 
 .chip-btn:hover {
@@ -427,9 +433,11 @@
 }
 
 .details-tabs-bar .tab-btn {
-  height: 28px;
-  font-size: 10px;
+  height: 24px;
+  font-size: 9.5px;
+  font-weight: 700;
   padding: 0 8px;
+  text-transform: uppercase;
 }
 
 /* Details Body */

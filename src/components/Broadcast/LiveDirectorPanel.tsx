@@ -45,7 +45,7 @@ export const LiveDirectorPanel: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setActiveTemplateId(tmpl.id);
-                  setIsLooping(true);
+                  setIsLooping(false);
                   setCurrentFrame(0);
                   setIsPlaying(true);
                 }}

@@ -52,7 +52,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     if (appMode === 'broadcast') {
       const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
       
-      if (bState.state === 'hidden' || (targetTrack && targetTrack.visible === false)) {
+      if (targetTrack && targetTrack.visible === false) {
         animOpacity = 0;
       } else if (allowMotion && bState.state === 'animating_in') {
         const cp = customPresets.find(p => p.id === inPreset);

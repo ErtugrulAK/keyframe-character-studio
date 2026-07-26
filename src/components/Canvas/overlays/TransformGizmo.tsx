@@ -1,12 +1,31 @@
 import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
+export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
+  let halfW = 32;
+  let halfH = 32;
+
+  switch (part.type) {
+    case 'custom_card': halfW = 90; halfH = 50; break;
+    case 'custom_rect': halfW = 60; halfH = 30; break;
+    case 'custom_banner': halfW = 80; halfH = 25; break;
+    case 'custom_image':
+    case 'custom_video':
+      halfW = part.type === 'custom_video' ? 100 : 90;
+      halfH = 60;
+      break;
+  }
+  return { halfW, halfH };
+};
+
+export type ScaleMode = 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom';
+
 interface TransformGizmoProps {
   selectedPart: CharacterPart;
   selectedTransform: Transform;
   zScale: number;
   onRotateMouseDown: (e: React.MouseEvent) => void;
-  onScaleMouseDown: (e: React.MouseEvent, mode: 'scale_corner' | 'scale_x' | 'scale_y') => void;
+  onScaleMouseDown: (e: React.MouseEvent, mode: ScaleMode) => void;
 }
 
 export const TransformGizmo: React.FC<TransformGizmoProps> = ({
@@ -16,23 +35,6 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   onRotateMouseDown,
   onScaleMouseDown,
 }) => {
-  const getPartBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
-    let halfW = 32;
-    let halfH = 32;
-
-    switch (part.type) {
-      case 'custom_card': halfW = 90; halfH = 50; break;
-      case 'custom_rect': halfW = 60; halfH = 30; break;
-      case 'custom_banner': halfW = 80; halfH = 25; break;
-      case 'custom_image':
-      case 'custom_video':
-        halfW = part.type === 'custom_video' ? 100 : 90;
-        halfH = 60;
-        break;
-    }
-    return { halfW, halfH };
-  };
-
   const baseBounds = getPartBounds(selectedPart);
   
   // Multiply bounds by absolute scale so handles don't get warped or flipped visually
@@ -80,42 +82,54 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         onMouseDown={onRotateMouseDown}
       />
 
-      {/* 4 Edge Midpoint Handles (Non-Uniform Stretch) */}
-      {/* Left & Right: Width (Scale X) */}
-      {[
-        { x: -halfW, y: 0 },
-        { x: halfW, y: 0 },
-      ].map((handle, i) => (
-        <circle
-          key={`edge-x-${i}`}
-          cx={handle.x}
-          cy={handle.y}
-          r={4.5 * zScale}
-          fill="#38bdf8"
-          stroke="#ffffff"
-          strokeWidth={1.5 * zScale}
-          style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
-          onMouseDown={(e) => onScaleMouseDown(e, 'scale_x')}
-        />
-      ))}
+      {/* 4 Edge Midpoint Handles (Single-Edge Directional Stretch) */}
+      {/* Left Handle: Stretch Left */}
+      <circle
+        cx={-halfW}
+        cy={0}
+        r={4.5 * zScale}
+        fill="#38bdf8"
+        stroke="#ffffff"
+        strokeWidth={1.5 * zScale}
+        style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
+        onMouseDown={(e) => onScaleMouseDown(e, 'scale_left')}
+      />
 
-      {/* Top & Bottom: Height (Scale Y) */}
-      {[
-        { x: 0, y: -halfH },
-        { x: 0, y: halfH },
-      ].map((handle, i) => (
-        <circle
-          key={`edge-y-${i}`}
-          cx={handle.x}
-          cy={handle.y}
-          r={4.5 * zScale}
-          fill="#c084fc"
-          stroke="#ffffff"
-          strokeWidth={1.5 * zScale}
-          style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
-          onMouseDown={(e) => onScaleMouseDown(e, 'scale_y')}
-        />
-      ))}
+      {/* Right Handle: Stretch Right */}
+      <circle
+        cx={halfW}
+        cy={0}
+        r={4.5 * zScale}
+        fill="#38bdf8"
+        stroke="#ffffff"
+        strokeWidth={1.5 * zScale}
+        style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
+        onMouseDown={(e) => onScaleMouseDown(e, 'scale_right')}
+      />
+
+      {/* Top Handle: Stretch Top */}
+      <circle
+        cx={0}
+        cy={-halfH}
+        r={4.5 * zScale}
+        fill="#c084fc"
+        stroke="#ffffff"
+        strokeWidth={1.5 * zScale}
+        style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
+        onMouseDown={(e) => onScaleMouseDown(e, 'scale_top')}
+      />
+
+      {/* Bottom Handle: Stretch Bottom */}
+      <circle
+        cx={0}
+        cy={halfH}
+        r={4.5 * zScale}
+        fill="#c084fc"
+        stroke="#ffffff"
+        strokeWidth={1.5 * zScale}
+        style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
+        onMouseDown={(e) => onScaleMouseDown(e, 'scale_bottom')}
+      />
 
       {/* 4 Corner Scale Handles (Proportional / Uniform Scale) */}
       {[

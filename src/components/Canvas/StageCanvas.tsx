@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { Transform } from '../../types/animator';
 import { PartRenderer } from './renderers/PartRenderer';
-import { TransformGizmo } from './overlays/TransformGizmo';
+import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
 import { SkeletalBones } from './overlays/SkeletalBones';
 import { OnionSkinning } from './overlays/OnionSkinning';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
@@ -37,7 +37,7 @@ export const StageCanvas: React.FC = () => {
   const [showOnionSkin, setShowOnionSkin] = useState<boolean>(false);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'pan' | null>(null);
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform }>({
     x: 0,
     y: 0,
@@ -133,11 +133,11 @@ export const StageCanvas: React.FC = () => {
     });
   };
 
-  const startScale = (e: React.MouseEvent, mode: 'scale_corner' | 'scale_x' | 'scale_y' = 'scale_corner') => {
+  const startScale = (e: React.MouseEvent, mode: ScaleMode = 'scale_corner') => {
     if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
     e.stopPropagation();
     setIsDragging(true);
-    setDragMode(mode);
+    setDragMode(mode as any);
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
     const centerX = 300 + selectedTransform.x;
@@ -209,6 +209,79 @@ export const StageCanvas: React.FC = () => {
         const newScaleY = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleY * ratio).toFixed(precision));
 
         updateCurrentTransform({ scaleX: newScaleX, scaleY: newScaleY });
+      } else if (
+        dragMode === 'scale_right' ||
+        dragMode === 'scale_left' ||
+        dragMode === 'scale_top' ||
+        dragMode === 'scale_bottom'
+      ) {
+        const part = characterParts.find((p) => p.id === selectedPartId);
+        if (!part) return;
+
+        const bounds = getPartBounds(part.type);
+        const halfW0 = bounds.halfW;
+        const halfH0 = bounds.halfH;
+
+        // World displacement vector from drag start
+        const deltaWorldX = svgX - dragStart.x;
+        const deltaWorldY = svgY - dragStart.y;
+
+        // Convert world delta to local coordinates of the unrotated element
+        const rotDeg = dragStart.initialTransform.rotation;
+        const rad = (rotDeg * Math.PI) / 180;
+        const cosR = Math.cos(rad);
+        const sinR = Math.sin(rad);
+
+        // Local displacement along element's X and Y axes
+        const dxLocal = deltaWorldX * cosR + deltaWorldY * sinR;
+        const dyLocal = -deltaWorldX * sinR + deltaWorldY * cosR;
+
+        const initScaleX = dragStart.initialTransform.scaleX;
+        const initScaleY = dragStart.initialTransform.scaleY;
+        const initX = dragStart.initialTransform.x;
+        const initY = dragStart.initialTransform.y;
+
+        let newScaleX = initScaleX;
+        let newScaleY = initScaleY;
+        let newX = initX;
+        let newY = initY;
+
+        if (dragMode === 'scale_right') {
+          // Keep Left edge fixed, stretch ONLY Right
+          const newScaleXVal = Math.max(0.05, initScaleX + dxLocal / (2 * halfW0));
+          const deltaScaleX = newScaleXVal - initScaleX;
+          newScaleX = parseFloat(newScaleXVal.toFixed(2));
+          newX = Math.round(initX + deltaScaleX * halfW0 * cosR);
+          newY = Math.round(initY + deltaScaleX * halfW0 * sinR);
+        } else if (dragMode === 'scale_left') {
+          // Keep Right edge fixed, stretch ONLY Left
+          const newScaleXVal = Math.max(0.05, initScaleX - dxLocal / (2 * halfW0));
+          const deltaScaleX = newScaleXVal - initScaleX;
+          newScaleX = parseFloat(newScaleXVal.toFixed(2));
+          newX = Math.round(initX - deltaScaleX * halfW0 * cosR);
+          newY = Math.round(initY - deltaScaleX * halfW0 * sinR);
+        } else if (dragMode === 'scale_bottom') {
+          // Keep Top edge fixed, stretch ONLY Bottom
+          const newScaleYVal = Math.max(0.05, initScaleY + dyLocal / (2 * halfH0));
+          const deltaScaleY = newScaleYVal - initScaleY;
+          newScaleY = parseFloat(newScaleYVal.toFixed(2));
+          newX = Math.round(initX - deltaScaleY * halfH0 * sinR);
+          newY = Math.round(initY + deltaScaleY * halfH0 * cosR);
+        } else if (dragMode === 'scale_top') {
+          // Keep Bottom edge fixed, stretch ONLY Top
+          const newScaleYVal = Math.max(0.05, initScaleY - dyLocal / (2 * halfH0));
+          const deltaScaleY = newScaleYVal - initScaleY;
+          newScaleY = parseFloat(newScaleYVal.toFixed(2));
+          newX = Math.round(initX + deltaScaleY * halfH0 * sinR);
+          newY = Math.round(initY - deltaScaleY * halfH0 * cosR);
+        }
+
+        updateCurrentTransform({
+          x: newX,
+          y: newY,
+          scaleX: newScaleX,
+          scaleY: newScaleY,
+        });
       } else if (dragMode === 'scale_x') {
         const centerX = 300 + dragStart.initialTransform.x;
         const centerY = 240 + dragStart.initialTransform.y;
@@ -235,7 +308,7 @@ export const StageCanvas: React.FC = () => {
         updateCurrentTransform({ scaleY: newScaleY });
       }
     },
-    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialDist, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, zoomLevel]
+    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialDist, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, zoomLevel]
   );
 
   const handleMouseUp = useCallback(() => {

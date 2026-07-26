@@ -56,8 +56,7 @@ export const SAMPLE_SEQUENCER_PROJECT = {
       strokeColor: "#101218",
       pivot: { x: 0.5, y: 0.5 },
       parentId: undefined,
-      baseTransform: { x: 0, y: -700, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1 },
-      visibleEndFrame: 50
+      baseTransform: { x: 0, y: -700, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1 }
     },
     {
       id: "part_2",
@@ -68,9 +67,7 @@ export const SAMPLE_SEQUENCER_PROJECT = {
       strokeColor: "#101218",
       pivot: { x: 0.5, y: 0.5 },
       parentId: undefined,
-      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1 },
-      visibleStartFrame: 50,
-      visibleEndFrame: 100
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1 }
     },
     {
       id: "part_3",
@@ -81,8 +78,7 @@ export const SAMPLE_SEQUENCER_PROJECT = {
       strokeColor: "#101218",
       pivot: { x: 0.5, y: 0.5 },
       parentId: undefined,
-      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1 },
-      visibleStartFrame: 100
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 6.42, scaleY: 6.42, opacity: 1 }
     }
   ]
 };

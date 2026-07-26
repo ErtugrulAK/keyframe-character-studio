@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, Play, Square, Clock, Sparkles, MoveRight, MoveLeft, MoveUp, MoveDown, Minimize2, RotateCw, Film, EyeOff, Trash2, BookmarkPlus } from 'lucide-react';
+import { Zap, Play, Square, Sparkles, MoveRight, MoveLeft, MoveUp, MoveDown, Minimize2, RotateCw, Film, EyeOff, Trash2, BookmarkPlus } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
 
@@ -36,7 +36,6 @@ interface MotionTabProps {
 
 export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPropChange }) => {
   const {
-    currentFrame,
     fps,
     customPresets,
     saveTrackAsPreset,
@@ -610,75 +609,6 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
         )}
       </div>
 
-      {/* ── SECTION 3: LAYER APPEARANCE TIMING ── */}
-      <div 
-        className="form-group" 
-        style={{ 
-          background: 'var(--bg-dark)', 
-          border: '1px solid rgba(6, 182, 212, 0.25)', 
-          borderRadius: 8, 
-          padding: 14 
-        }}
-      >
-        <div className="section-title" style={{ paddingBottom: 6 }}>
-          <Clock size={13} className="text-cyan" />
-          <span style={{ color: 'var(--accent-cyan)', fontWeight: 700 }}>APPEARANCE TIMING (IN / OUT FRAMES)</span>
-        </div>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 12 }}>
-          Set exact start/end frames or seconds for when this layer appears on screen.
-        </p>
-
-        <div style={{ display: 'flex', gap: 10 }}>
-          <div className="input-field" style={{ flex: 1 }}>
-            <label style={{ fontSize: 10, color: '#10b981' }}>APPEAR AT (FRAME)</label>
-            <input
-              type="number" min="0" max="1200"
-              placeholder="0 (Start)"
-              value={selectedPart.visibleStartFrame ?? ''}
-              onChange={(e) => {
-                const val = e.target.value === '' ? undefined : parseInt(e.target.value);
-                handlePartPropChange('visibleStartFrame', val);
-              }}
-              style={{ width: '100%', padding: '6px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
-            />
-          </div>
-          <div className="input-field" style={{ flex: 1 }}>
-            <label style={{ fontSize: 10, color: '#ef4444' }}>DISAPPEAR AT (FRAME)</label>
-            <input
-              type="number" min="0" max="1200"
-              placeholder="Always visible"
-              value={selectedPart.visibleEndFrame ?? ''}
-              onChange={(e) => {
-                const val = e.target.value === '' ? undefined : parseInt(e.target.value);
-                handlePartPropChange('visibleEndFrame', val);
-              }}
-              style={{ width: '100%', padding: '6px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-color)', color: '#fff', borderRadius: 6, fontSize: 12, fontFamily: 'monospace' }}
-            />
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
-          <button
-            className="btn-secondary"
-            style={{ flex: 1, fontSize: 10, padding: '6px 10px', color: 'var(--accent-cyan)', background: 'rgba(6, 182, 212, 0.1)', border: '1px solid rgba(6, 182, 212, 0.3)', borderRadius: 6 }}
-            onClick={() => handlePartPropChange('visibleStartFrame', currentFrame)}
-          >
-            Start at Frame {currentFrame} ({(currentFrame / fps).toFixed(1)}s)
-          </button>
-          {(selectedPart.visibleStartFrame !== undefined || selectedPart.visibleEndFrame !== undefined) && (
-            <button
-              className="btn-secondary"
-              style={{ fontSize: 10, padding: '6px 10px', color: 'var(--text-muted)', borderRadius: 6 }}
-              onClick={() => {
-                handlePartPropChange('visibleStartFrame', undefined);
-                handlePartPropChange('visibleEndFrame', undefined);
-              }}
-            >
-              Clear Timing
-            </button>
-          )}
-        </div>
-      </div>
     </div>
   );
 };

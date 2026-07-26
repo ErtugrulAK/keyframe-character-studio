@@ -76,8 +76,6 @@ export const SequencerTimeline: React.FC = () => {
     updatePropertyKeyframeFrame,
     updateKeyframeBezierPoints,
     getComputedTransform,
-    characterParts,
-    setCharacterParts,
   } = useAnimator();
 
   // Expanded Pro Curve Studio Modal State
@@ -89,8 +87,6 @@ export const SequencerTimeline: React.FC = () => {
 
   const [draggingKf, setDraggingKf] = useState<{ trackId: string; keyframeId: string } | null>(null);
   const [draggingPKf, setDraggingPKf] = useState<{ trackId: string; channel: TrackChannel; keyframeId: string } | null>(null);
-  const [draggingVisStart, setDraggingVisStart] = useState<{ partId: string } | null>(null);
-  const [draggingVisEnd, setDraggingVisEnd] = useState<{ partId: string } | null>(null);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [hoveredKf, setHoveredKf] = useState<{ frame: number; label: string } | null>(null);
 
@@ -189,31 +185,19 @@ export const SequencerTimeline: React.FC = () => {
         updateKeyframeFrame(draggingKf.trackId, draggingKf.keyframeId, getFrameFromMouse(e.clientX));
       } else if (draggingPKf) {
         updatePropertyKeyframeFrame(draggingPKf.trackId, draggingPKf.channel, draggingPKf.keyframeId, getFrameFromMouse(e.clientX));
-      } else if (draggingVisStart) {
-        const frame = getFrameFromMouse(e.clientX);
-        setCharacterParts((prev) =>
-          prev.map((p) => (p.id === draggingVisStart.partId ? { ...p, visibleStartFrame: frame <= 0 ? undefined : frame } : p))
-        );
-      } else if (draggingVisEnd) {
-        const frame = getFrameFromMouse(e.clientX);
-        setCharacterParts((prev) =>
-          prev.map((p) => (p.id === draggingVisEnd.partId ? { ...p, visibleEndFrame: frame >= totalFrames ? undefined : frame } : p))
-        );
       }
     },
-    [isScrubbing, draggingKf, draggingPKf, draggingVisStart, draggingVisEnd, getFrameFromMouse, setCurrentFrame, updateKeyframeFrame, updatePropertyKeyframeFrame, setCharacterParts, totalFrames]
+    [isScrubbing, draggingKf, draggingPKf, getFrameFromMouse, setCurrentFrame, updateKeyframeFrame, updatePropertyKeyframeFrame]
   );
 
   const handleMouseUp = useCallback(() => {
     setIsScrubbing(false);
     setDraggingKf(null);
     setDraggingPKf(null);
-    setDraggingVisStart(null);
-    setDraggingVisEnd(null);
   }, []);
 
   useEffect(() => {
-    if (isScrubbing || draggingKf || draggingPKf || draggingVisStart || draggingVisEnd) {
+    if (isScrubbing || draggingKf || draggingPKf) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
@@ -221,7 +205,7 @@ export const SequencerTimeline: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isScrubbing, draggingKf, draggingPKf, draggingVisStart, draggingVisEnd, handleMouseMove, handleMouseUp]);
+  }, [isScrubbing, draggingKf, draggingPKf, handleMouseMove, handleMouseUp]);
 
   // Timeline panel height resizing
   const [timelineHeight, setTimelineHeight] = useState<number>(320);
@@ -679,108 +663,6 @@ export const SequencerTimeline: React.FC = () => {
                     className={`ue-track-lane ${isSelected ? 'selected' : ''}`}
                     style={{ height: TRACK_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%`, position: 'relative' }}
                   >
-                    {/* Layer Visibility Dimmed Strips */}
-                    {(() => {
-                      const part = characterParts.find((p) => p.id === track.partId);
-                      if (!part) return null;
-                      const startF = part.visibleStartFrame;
-                      const endF = part.visibleEndFrame;
-                      return (
-                        <>
-                          {/* Dimmed pre-visibility strip */}
-                          {startF !== undefined && startF > 0 && (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                left: 0,
-                                top: 0,
-                                bottom: 0,
-                                width: `${startF * FRAME_WIDTH}px`,
-                                background: 'rgba(0, 0, 0, 0.55)',
-                                borderRight: '3px solid #10b981',
-                                zIndex: 2,
-                                display: 'flex',
-                                alignItems: 'center',
-                                paddingLeft: 6,
-                              }}
-                            >
-                              <span style={{ fontSize: 9, color: '#10b981', fontWeight: 700, fontFamily: 'monospace', pointerEvents: 'none' }}>
-                                ▶ HIDDEN UNTIL {startF}f ({(startF / fps).toFixed(1)}s)
-                              </span>
-                            </div>
-                          )}
-                          {/* Draggable Green Start Handle */}
-                          <div
-                            onMouseDown={(e) => {
-                              e.stopPropagation();
-                              setDraggingVisStart({ partId: part.id });
-                            }}
-                            style={{
-                              position: 'absolute',
-                              left: `${(startF || 0) * FRAME_WIDTH}px`,
-                              top: 0,
-                              bottom: 0,
-                              width: 14,
-                              marginLeft: -7,
-                              zIndex: 4,
-                              cursor: 'ew-resize',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                            title="Drag to set Layer Start Frame (Appearance In-Point)"
-                          >
-                            <div style={{ width: 4, height: '100%', background: '#10b981', borderRadius: 2, boxShadow: '0 0 6px #10b981' }} />
-                          </div>
-
-                          {/* Dimmed post-visibility strip */}
-                          {endF !== undefined && (
-                            <div
-                              style={{
-                                position: 'absolute',
-                                left: `${endF * FRAME_WIDTH}px`,
-                                top: 0,
-                                bottom: 0,
-                                right: 0,
-                                background: 'rgba(0, 0, 0, 0.55)',
-                                borderLeft: '3px solid #ef4444',
-                                zIndex: 2,
-                                display: 'flex',
-                                alignItems: 'center',
-                                paddingLeft: 6,
-                              }}
-                            >
-                              <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 700, fontFamily: 'monospace', pointerEvents: 'none' }}>
-                                ⏹ HIDDEN AFTER {endF}f ({(endF / fps).toFixed(1)}s)
-                              </span>
-                            </div>
-                          )}
-                          {/* Draggable Red End Handle */}
-                          <div
-                            onMouseDown={(e) => {
-                              e.stopPropagation();
-                              setDraggingVisEnd({ partId: part.id });
-                            }}
-                            style={{
-                              position: 'absolute',
-                              left: `${(endF !== undefined ? endF : totalFrames) * FRAME_WIDTH}px`,
-                              top: 0,
-                              bottom: 0,
-                              width: 14,
-                              marginLeft: -7,
-                              zIndex: 4,
-                              cursor: 'ew-resize',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                            title="Drag to set Layer End Frame (Disappear Out-Point)"
-                          >
-                            <div style={{ width: 4, height: '100%', background: '#ef4444', borderRadius: 2, boxShadow: '0 0 6px #ef4444' }} />
-                          </div>
-                        </>
-                      );
-                    })()}
                     {/* Span bars between composite keyframes */}
                     {sortedKfs.map((kf, idx) => {
                       if (idx === sortedKfs.length - 1) return null;

@@ -230,10 +230,6 @@ export interface CharacterPart {
   innerMediaUrl?: string;
   innerMediaType?: 'image' | 'video';
 
-  // ── Feature 9: Layer Appearance Timing (Start/End Frame) ──
-  visibleStartFrame?: number;
-  visibleEndFrame?: number;
-
   fontFamily?: string;
 
   // ── Feature 10: Custom Preset Animation Engine ──

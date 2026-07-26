@@ -1,1 +1,1 @@
-feat(broadcast): add Pin to Live Director Bar toggle per custom preset  
+feat(gizmo): add 8-handle non-uniform edge scaling gizmo and remove appear/disappear timing fields  

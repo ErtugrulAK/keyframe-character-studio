@@ -37,7 +37,7 @@ export const StageCanvas: React.FC = () => {
   const [showOnionSkin, setShowOnionSkin] = useState<boolean>(false);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | null>(null);
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'pan' | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform }>({
     x: 0,
     y: 0,
@@ -46,6 +46,8 @@ export const StageCanvas: React.FC = () => {
 
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
   const [dragInitialDist, setDragInitialDist] = useState<number>(1);
+  const [dragInitialLocalX, setDragInitialLocalX] = useState<number>(1);
+  const [dragInitialLocalY, setDragInitialLocalY] = useState<number>(1);
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTransform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -117,11 +119,13 @@ export const StageCanvas: React.FC = () => {
     setDragMode('rotate');
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const dx = svgX - (300 + selectedTransform.x);
-    const dy = svgY - (240 + selectedTransform.y);
-    const startAngleRad = Math.atan2(dy, dx);
+    const centerX = 300 + selectedTransform.x;
+    const centerY = 240 + selectedTransform.y;
+    const dx = svgX - centerX;
+    const dy = svgY - centerY;
+    const initialAngleRad = Math.atan2(dy, dx);
 
-    setDragInitialAngle(startAngleRad);
+    setDragInitialAngle(initialAngleRad);
     setDragStart({
       x: svgX,
       y: svgY,
@@ -129,11 +133,11 @@ export const StageCanvas: React.FC = () => {
     });
   };
 
-  const startScale = (e: React.MouseEvent) => {
+  const startScale = (e: React.MouseEvent, mode: 'scale_corner' | 'scale_x' | 'scale_y' = 'scale_corner') => {
     if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
     e.stopPropagation();
     setIsDragging(true);
-    setDragMode('scale');
+    setDragMode(mode);
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
     const centerX = 300 + selectedTransform.x;
@@ -142,7 +146,13 @@ export const StageCanvas: React.FC = () => {
     const dy = svgY - centerY;
     const initialDist = Math.sqrt(dx * dx + dy * dy);
 
+    const rad = (-selectedTransform.rotation * Math.PI) / 180;
+    const localX = Math.abs(dx * Math.cos(rad) - dy * Math.sin(rad));
+    const localY = Math.abs(dx * Math.sin(rad) + dy * Math.cos(rad));
+
     setDragInitialDist(initialDist || 1);
+    setDragInitialLocalX(localX || 1);
+    setDragInitialLocalY(localY || 1);
     setDragStart({
       x: svgX,
       y: svgY,
@@ -154,7 +164,7 @@ export const StageCanvas: React.FC = () => {
     (e: MouseEvent) => {
       if (!isDragging || !dragMode) return;
 
-      if ((dragMode as any) === 'pan') {
+      if (dragMode === 'pan') {
         const dx = (e.clientX - dragStart.x) / zoomLevel;
         const dy = (e.clientY - dragStart.y) / zoomLevel;
         setPanOffset({
@@ -186,7 +196,7 @@ export const StageCanvas: React.FC = () => {
 
         const newRotation = Math.round(dragStart.initialTransform.rotation + deltaAngleDeg);
         updateCurrentTransform({ rotation: newRotation });
-      } else if (dragMode === 'scale') {
+      } else if (dragMode === 'scale_corner' || (dragMode as any) === 'scale') {
         const centerX = 300 + dragStart.initialTransform.x;
         const centerY = 240 + dragStart.initialTransform.y;
         const dx = svgX - centerX;
@@ -199,9 +209,33 @@ export const StageCanvas: React.FC = () => {
         const newScaleY = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleY * ratio).toFixed(precision));
 
         updateCurrentTransform({ scaleX: newScaleX, scaleY: newScaleY });
+      } else if (dragMode === 'scale_x') {
+        const centerX = 300 + dragStart.initialTransform.x;
+        const centerY = 240 + dragStart.initialTransform.y;
+        const dx = svgX - centerX;
+        const dy = svgY - centerY;
+
+        const rad = (-dragStart.initialTransform.rotation * Math.PI) / 180;
+        const currentLocalX = Math.abs(dx * Math.cos(rad) - dy * Math.sin(rad));
+        const ratioX = currentLocalX / Math.max(5, dragInitialLocalX);
+
+        const newScaleX = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleX * ratioX).toFixed(2));
+        updateCurrentTransform({ scaleX: newScaleX });
+      } else if (dragMode === 'scale_y') {
+        const centerX = 300 + dragStart.initialTransform.x;
+        const centerY = 240 + dragStart.initialTransform.y;
+        const dx = svgX - centerX;
+        const dy = svgY - centerY;
+
+        const rad = (-dragStart.initialTransform.rotation * Math.PI) / 180;
+        const currentLocalY = Math.abs(dx * Math.sin(rad) + dy * Math.cos(rad));
+        const ratioY = currentLocalY / Math.max(5, dragInitialLocalY);
+
+        const newScaleY = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleY * ratioY).toFixed(2));
+        updateCurrentTransform({ scaleY: newScaleY });
       }
     },
-    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialDist, selectedPartId, updateCurrentTransform, zoomLevel]
+    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialDist, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, zoomLevel]
   );
 
   const handleMouseUp = useCallback(() => {

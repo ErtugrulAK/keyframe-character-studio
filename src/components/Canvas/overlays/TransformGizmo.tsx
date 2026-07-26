@@ -6,7 +6,7 @@ interface TransformGizmoProps {
   selectedTransform: Transform;
   zScale: number;
   onRotateMouseDown: (e: React.MouseEvent) => void;
-  onScaleMouseDown: (e: React.MouseEvent) => void;
+  onScaleMouseDown: (e: React.MouseEvent, mode: 'scale_corner' | 'scale_x' | 'scale_y') => void;
 }
 
 export const TransformGizmo: React.FC<TransformGizmoProps> = ({
@@ -80,7 +80,44 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         onMouseDown={onRotateMouseDown}
       />
 
-      {/* 4 Corner Scale Handles */}
+      {/* 4 Edge Midpoint Handles (Non-Uniform Stretch) */}
+      {/* Left & Right: Width (Scale X) */}
+      {[
+        { x: -halfW, y: 0 },
+        { x: halfW, y: 0 },
+      ].map((handle, i) => (
+        <circle
+          key={`edge-x-${i}`}
+          cx={handle.x}
+          cy={handle.y}
+          r={4.5 * zScale}
+          fill="#38bdf8"
+          stroke="#ffffff"
+          strokeWidth={1.5 * zScale}
+          style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
+          onMouseDown={(e) => onScaleMouseDown(e, 'scale_x')}
+        />
+      ))}
+
+      {/* Top & Bottom: Height (Scale Y) */}
+      {[
+        { x: 0, y: -halfH },
+        { x: 0, y: halfH },
+      ].map((handle, i) => (
+        <circle
+          key={`edge-y-${i}`}
+          cx={handle.x}
+          cy={handle.y}
+          r={4.5 * zScale}
+          fill="#c084fc"
+          stroke="#ffffff"
+          strokeWidth={1.5 * zScale}
+          style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
+          onMouseDown={(e) => onScaleMouseDown(e, 'scale_y')}
+        />
+      ))}
+
+      {/* 4 Corner Scale Handles (Proportional / Uniform Scale) */}
       {[
         { x: -halfW, y: -halfH },
         { x: halfW, y: -halfH },
@@ -88,7 +125,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         { x: -halfW, y: halfH },
       ].map((corner, i) => (
         <rect
-          key={i}
+          key={`corner-${i}`}
           x={corner.x - 5 * zScale}
           y={corner.y - 5 * zScale}
           width={10 * zScale}
@@ -97,7 +134,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
           stroke="#ffffff"
           strokeWidth={1.5 * zScale}
           style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
-          onMouseDown={onScaleMouseDown}
+          onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
         />
       ))}
 

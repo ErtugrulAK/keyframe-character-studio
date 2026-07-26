@@ -849,16 +849,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         };
       }
 
-      // Feature 9: Visibility Range Timing (Start/End Frame)
-      if (part) {
-        if (part.visibleStartFrame !== undefined && frame < part.visibleStartFrame) {
-          return { ...finalComputed, opacity: 0 };
-        }
-        if (part.visibleEndFrame !== undefined && frame > part.visibleEndFrame) {
-          return { ...finalComputed, opacity: 0 };
-        }
-      }
-
       return finalComputed;
     },
     [characterParts, tracks]

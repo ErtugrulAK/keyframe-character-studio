@@ -850,11 +850,17 @@ export const SequencerTimeline: React.FC = () => {
           {/* Time Ruler */}
           <div className="time-ruler" onMouseDown={handleRulerMouseDown}>
             {frameNumbers.map((frame) => {
-              const isMajor = frame % 5 === 0;
+              const labelStep =
+                FRAME_WIDTH >= 24 ? 5 :
+                FRAME_WIDTH >= 14 ? 10 :
+                FRAME_WIDTH >= 8  ? 20 : 50;
+
+              const isLabel = frame % labelStep === 0;
               const isTen = frame % 10 === 0;
+              const isFive = frame % 5 === 0;
               return (
-                <div key={frame} className={`ruler-mark ${isTen ? 'ten' : isMajor ? 'major' : 'minor'}`} style={{ left: `${frame * FRAME_WIDTH}px` }}>
-                  {isMajor && <span className="ruler-label">{frame}</span>}
+                <div key={frame} className={`ruler-mark ${isTen ? 'ten' : isFive ? 'major' : 'minor'}`} style={{ left: `${frame * FRAME_WIDTH}px` }}>
+                  {isLabel && <span className="ruler-label">{frame}</span>}
                 </div>
               );
             })}

@@ -675,8 +675,11 @@
 .ruler-mark.ten { border-left: 1px solid rgba(20,184,166,0.4); }
 .ruler-label {
   position: absolute; top: 4px; left: 4px;
-  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
-  color: #4b5563;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 10px; font-weight: 700;
+  color: #64748b;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* ── PLAYHEAD ── */

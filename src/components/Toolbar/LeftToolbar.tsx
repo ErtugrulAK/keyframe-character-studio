@@ -5,19 +5,17 @@ import { ElementsDrawer } from './drawers/ElementsDrawer';
 import { TextsDrawer } from './drawers/TextsDrawer';
 import { TransitionsDrawer } from './drawers/TransitionsDrawer';
 import { KeyframesDrawer } from './drawers/KeyframesDrawer';
-import { PresetsTab } from '../Inspector/sections/PresetsTab';
 import {
   Type,
   Gem,
   Square,
   Layout,
-  Sparkles,
   Zap,
   Monitor,
 } from 'lucide-react';
 import './LeftToolbar.css';
 
-type ActiveNavCategory = 'project' | 'media' | 'keyframes' | 'texts' | 'shapes' | 'presets' | 'transitions';
+type ActiveNavCategory = 'project' | 'media' | 'keyframes' | 'texts' | 'shapes' | 'transitions';
 
 export const LeftToolbar: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('media');
@@ -28,34 +26,34 @@ export const LeftToolbar: React.FC = () => {
         <button
           className={`sidebar-nav-item ${activeCategory === 'project' ? 'active' : ''}`}
           onClick={() => setActiveCategory('project')}
-          title="Project & Composition Settings"
+          title="Project Workspace"
         >
-          <Monitor size={20} className="nav-icon text-cyan" />
+          <Layout size={20} className="nav-icon text-teal" />
           <span className="nav-label">Project</span>
         </button>
 
         <button
           className={`sidebar-nav-item ${activeCategory === 'media' ? 'active' : ''}`}
           onClick={() => setActiveCategory('media')}
-          title="Media Library"
+          title="Media Assets"
         >
-          <Layout size={20} className="nav-icon" />
+          <Monitor size={20} className="nav-icon text-teal" />
           <span className="nav-label">Media</span>
         </button>
 
         <button
           className={`sidebar-nav-item ${activeCategory === 'shapes' ? 'active' : ''}`}
           onClick={() => setActiveCategory('shapes')}
-          title="Shapes & Elements"
+          title="Vector Shapes & Graphic Elements"
         >
-          <Square size={20} className="nav-icon text-purple" />
+          <Square size={20} className="nav-icon text-cyan" />
           <span className="nav-label">Elements</span>
         </button>
 
         <button
           className={`sidebar-nav-item ${activeCategory === 'texts' ? 'active' : ''}`}
           onClick={() => setActiveCategory('texts')}
-          title="Text Labels"
+          title="Typography & Headlines"
         >
           <Type size={20} className="nav-icon text-cyan" />
           <span className="nav-label">Texts</span>
@@ -68,15 +66,6 @@ export const LeftToolbar: React.FC = () => {
         >
           <Zap size={20} className="nav-icon text-teal" />
           <span className="nav-label">Transitions</span>
-        </button>
-
-        <button
-          className={`sidebar-nav-item ${activeCategory === 'presets' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('presets')}
-          title="My Custom Saved Presets Library"
-        >
-          <Sparkles size={20} className="nav-icon text-gold" />
-          <span className="nav-label">Presets</span>
         </button>
 
         <button
@@ -95,11 +84,6 @@ export const LeftToolbar: React.FC = () => {
         {activeCategory === 'shapes' && <ElementsDrawer />}
         {activeCategory === 'texts' && <TextsDrawer />}
         {activeCategory === 'transitions' && <TransitionsDrawer />}
-        {activeCategory === 'presets' && (
-          <div className="drawer-content" style={{ padding: '12px 14px' }}>
-            <PresetsTab />
-          </div>
-        )}
         {activeCategory === 'keyframes' && <KeyframesDrawer />}
       </div>
     </aside>

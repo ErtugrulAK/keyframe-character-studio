@@ -3,7 +3,6 @@ import { useAnimator } from '../../context/AnimatorContext';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { MotionTab } from './sections/MotionTab';
-import { PresetsTab } from './sections/PresetsTab';
 import {
   Sliders,
   Copy,
@@ -11,7 +10,6 @@ import {
   Activity,
   Palette,
   Zap,
-  Sparkles,
 } from 'lucide-react';
 
 export const DetailsPanel: React.FC = () => {
@@ -27,7 +25,7 @@ export const DetailsPanel: React.FC = () => {
     duplicateSelectedPart,
   } = useAnimator();
 
-  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'motion' | 'presets'>('transform');
+  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'motion'>('transform');
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -59,34 +57,36 @@ export const DetailsPanel: React.FC = () => {
 
       {/* 2. Selected Actor Instance Header */}
       {selectedPart ? (
-        <div className="details-actor-card">
-          <div className="actor-title-line">
+        <div className="details-actor-header">
+          <div className="actor-title-box">
             <span className="actor-main-name">{selectedPart.name}</span>
             <span className="actor-instance-tag">({selectedPart.type})</span>
           </div>
 
           <div className="actor-quick-actions">
             <button
-              className="btn-icon-sm"
+              className="btn-icon-small"
               onClick={duplicateSelectedPart}
-              title="Duplicate Actor"
+              title="Duplicate Actor Instance"
             >
-              <Copy size={12} className="text-cyan" />
+              <Copy size={12} />
             </button>
             <button
-              className="btn-icon-sm"
+              className="btn-icon-small danger"
               onClick={() => deletePart(selectedPart.id)}
-              title="Delete Actor"
+              title="Delete Actor Instance"
             >
-              <Trash2 size={12} className="text-red" />
+              <Trash2 size={12} />
             </button>
           </div>
         </div>
       ) : (
-        <div className="details-empty-state">Select an actor in Outliner or Stage Canvas</div>
+        <div className="details-empty-state">
+          <span>Select an element on Canvas or Outliner to view details</span>
+        </div>
       )}
 
-      {/* 3. Tab Sub-Navigation */}
+      {/* 3. Section Navigation Tabs */}
       {selectedPart && (
         <div className="details-tabs-bar">
           <button
@@ -109,13 +109,6 @@ export const DetailsPanel: React.FC = () => {
           >
             <Zap size={12} className="text-cyan" />
             <span>Motion</span>
-          </button>
-          <button
-            className={`tab-btn ${activeTabSection === 'presets' ? 'active' : ''}`}
-            onClick={() => setActiveTabSection('presets')}
-          >
-            <Sparkles size={12} className="text-gold" />
-            <span>Presets</span>
           </button>
         </div>
       )}
@@ -149,8 +142,6 @@ export const DetailsPanel: React.FC = () => {
               handlePartPropChange={handlePartPropChange}
             />
           )}
-
-          {activeTabSection === 'presets' && <PresetsTab />}
         </div>
       )}
     </div>

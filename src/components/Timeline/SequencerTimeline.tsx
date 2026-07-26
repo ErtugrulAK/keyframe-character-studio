@@ -28,6 +28,7 @@ import {
   GripVertical,
   Film,
   Edit2,
+  Check,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
@@ -166,7 +167,7 @@ export const SequencerTimeline: React.FC = () => {
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (seqMenuRef.current && !seqMenuRef.current.contains(e.target as Node)) {
+      if (seqMenuRef.current && !seqMenuRef.current.contains(e.target as Node) && !editingSeqId) {
         setIsSeqTreeOpen(false);
       }
     };
@@ -176,7 +177,7 @@ export const SequencerTimeline: React.FC = () => {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isSeqTreeOpen]);
+  }, [isSeqTreeOpen, editingSeqId]);
 
   // Expanded Pro Curve Studio Modal State
   const [isCurveModalOpen, setIsCurveModalOpen] = useState<boolean>(false);
@@ -468,71 +469,83 @@ export const SequencerTimeline: React.FC = () => {
                     }}
                   >
                     {isEditing ? (
-                      <input
-                        type="text"
-                        value={editingSeqName}
-                        autoFocus
-                        onClick={(e) => e.stopPropagation()}
-                        onFocus={(e) => e.target.select()}
-                        onChange={(e) => setEditingSeqName(e.target.value)}
-                        onKeyDown={(e) => {
-                          e.stopPropagation();
-                          if (e.key === 'Enter') {
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }} onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={editingSeqName}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                          onFocus={(e) => e.target.select()}
+                          onChange={(e) => setEditingSeqName(e.target.value)}
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === 'Enter') {
+                              if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
+                              setEditingSeqId(null);
+                            } else if (e.key === 'Escape') {
+                              setEditingSeqId(null);
+                            }
+                          }}
+                          style={{
+                            background: '#090b10',
+                            border: '1px solid #38bdf8',
+                            color: '#fff',
+                            borderRadius: 4,
+                            padding: '2px 6px',
+                            fontSize: 12,
+                            fontWeight: 700,
+                            outline: 'none',
+                            width: 110,
+                          }}
+                        />
+                        <button
+                          className="btn-icon text-teal"
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
                             setEditingSeqId(null);
-                          } else if (e.key === 'Escape') {
-                            setEditingSeqId(null);
-                          }
-                        }}
-                        onBlur={() => {
-                          if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
-                          setEditingSeqId(null);
-                        }}
-                        style={{
-                          background: '#090b10',
-                          border: '1px solid #38bdf8',
-                          color: '#fff',
-                          borderRadius: 4,
-                          padding: '2px 6px',
-                          fontSize: 12,
-                          fontWeight: 700,
-                          outline: 'none',
-                          width: 120,
-                        }}
-                      />
+                          }}
+                          title="Save sequence name"
+                          style={{ width: 22, height: 22, padding: 0 }}
+                        >
+                          <Check size={13} />
+                        </button>
+                      </div>
                     ) : (
-                      <span
-                        className="seq-label"
-                        style={{ fontWeight: isActive ? 700 : 500 }}
-                        onDoubleClick={(e) => {
-                          e.stopPropagation();
-                          setEditingSeqId(tmpl.id);
-                          setEditingSeqName(tmpl.name);
-                        }}
-                        title="Double-click to rename sequence"
-                      >
-                        {tmpl.name}
-                      </span>
+                      <>
+                        <span
+                          className="seq-label"
+                          style={{ fontWeight: isActive ? 700 : 500 }}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation();
+                            setEditingSeqId(tmpl.id);
+                            setEditingSeqName(tmpl.name);
+                          }}
+                          title="Double-click to rename sequence"
+                        >
+                          {tmpl.name}
+                        </span>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <button
+                            className="btn-icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingSeqId(tmpl.id);
+                              setEditingSeqName(tmpl.name);
+                            }}
+                            title="Rename sequence directly"
+                            style={{ width: 20, height: 20, padding: 0 }}
+                          >
+                            <Edit2 size={11} className="text-muted" />
+                          </button>
+
+                          <span className={`seq-status ${isActive ? 'text-teal' : ''}`}>
+                            {isActive ? 'Active' : 'Select'}
+                          </span>
+                        </div>
+                      </>
                     )}
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <button
-                        className="btn-icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingSeqId(tmpl.id);
-                          setEditingSeqName(tmpl.name);
-                        }}
-                        title="Rename sequence directly"
-                        style={{ width: 20, height: 20, padding: 0 }}
-                      >
-                        <Edit2 size={11} className="text-muted" />
-                      </button>
-
-                      <span className={`seq-status ${isActive ? 'text-teal' : ''}`}>
-                        {isActive ? 'Active' : 'Select'}
-                      </span>
-                    </div>
                   </div>
                 );
               })}

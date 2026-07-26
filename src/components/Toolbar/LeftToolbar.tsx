@@ -4,18 +4,16 @@ import { MediaDrawer } from './drawers/MediaDrawer';
 import { ElementsDrawer } from './drawers/ElementsDrawer';
 import { TextsDrawer } from './drawers/TextsDrawer';
 import { TransitionsDrawer } from './drawers/TransitionsDrawer';
-import { KeyframesDrawer } from './drawers/KeyframesDrawer';
 import {
   Type,
   Square,
   Layout,
   Zap,
   Monitor,
-  Film,
 } from 'lucide-react';
 import './LeftToolbar.css';
 
-type ActiveNavCategory = 'project' | 'media' | 'keyframes' | 'texts' | 'shapes' | 'transitions';
+type ActiveNavCategory = 'project' | 'media' | 'texts' | 'shapes' | 'transitions';
 
 export const LeftToolbar: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('media');
@@ -67,15 +65,6 @@ export const LeftToolbar: React.FC = () => {
           <Zap size={20} className="nav-icon text-teal" />
           <span className="nav-label">Transitions</span>
         </button>
-
-        <button
-          className={`sidebar-nav-item ${activeCategory === 'keyframes' ? 'active' : ''}`}
-          onClick={() => setActiveCategory('keyframes')}
-          title="Animation Sequences Library"
-        >
-          <Film size={20} className="nav-icon text-gold" />
-          <span className="nav-label">Sequences</span>
-        </button>
       </div>
 
       <div className="left-drawer-panel">
@@ -84,7 +73,6 @@ export const LeftToolbar: React.FC = () => {
         {activeCategory === 'shapes' && <ElementsDrawer />}
         {activeCategory === 'texts' && <TextsDrawer />}
         {activeCategory === 'transitions' && <TransitionsDrawer />}
-        {activeCategory === 'keyframes' && <KeyframesDrawer />}
       </div>
     </aside>
   );

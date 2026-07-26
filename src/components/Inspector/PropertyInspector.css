@@ -225,6 +225,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+  text-transform: capitalize !important;
 }
 
 .tree-node .col-eye {
@@ -351,6 +352,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  text-transform: capitalize !important;
 }
 
 .actor-quick-actions {

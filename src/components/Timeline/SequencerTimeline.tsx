@@ -26,7 +26,6 @@ import {
   TrendingUp,
   GripVertical,
   Film,
-  Zap,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import './SequencerTimeline.css';
@@ -363,86 +362,23 @@ export const SequencerTimeline: React.FC = () => {
         <div className="resizer-handle-pill" />
       </div>
 
-      {/* Motion Design Sequence Timeline Active Tab & Sequencer Tree Menu */}
+      {/* Motion Design Sequence Active Selector Pill & Clean Dropdown Menu */}
       <div className="timeline-template-tabs-bar">
-        {/* Active Animation Sequence Tab (e.g. Out_V2*, In_V1*) */}
-        <div className="active-sequence-tab-pill">
+        {/* Active Animation Sequence Selector Pill */}
+        <div
+          className="active-sequence-tab-pill"
+          onClick={() => setIsSeqTreeOpen(!isSeqTreeOpen)}
+          title="Click to select active Animation Sequence Timeline"
+          style={{ cursor: 'pointer' }}
+        >
           <Film size={12} className="text-teal" />
           <span className="active-sequence-name">{activeTemplateId}*</span>
-          <button
-            className="seq-menu-toggle-btn"
-            onClick={() => setIsSeqTreeOpen(!isSeqTreeOpen)}
-            title="Open Unreal Sequencer Animation Tree Menu"
-          >
-            <ChevronDown size={12} />
-          </button>
+          <ChevronDown size={12} className="text-cyan" style={{ marginLeft: 4 }} />
         </div>
 
-        {/* Browser Tab Style Sequence Tabs */}
-        <div className="template-browser-tabs">
-          {motionTemplates.map((tmpl) => (
-            <button
-              key={tmpl.id}
-              className={`template-tab-item ${activeTemplateId === tmpl.id ? 'active' : ''}`}
-              onClick={() => setActiveTemplateId(tmpl.id)}
-              title={tmpl.description}
-            >
-              <Zap
-                size={11}
-                className={tmpl.type === 'in' ? 'text-teal' : tmpl.type === 'out' ? 'text-red' : 'text-gold'}
-              />
-              <span>{tmpl.name}*</span>
-            </button>
-          ))}
-
-          {/* "+ Add Sequence Timeline" Button */}
-          <button
-            className="add-template-tab-btn"
-            onClick={() => {
-              const name = window.prompt('Enter new animation sequence name (e.g. Out_V2, ChangeIn_V1, In_V2):');
-              if (name && name.trim()) {
-                addMotionTemplate(name.trim());
-              }
-            }}
-            title="Add New Animation Sequence Timeline"
-          >
-            <Plus size={12} />
-          </button>
-        </div>
-
-        {/* ── UNREAL MOTION DESIGN SEQUENCER TREE POPUP (From Screenshot 4) ── */}
+        {/* ── CLEAN ANIMATION SEQUENCE DROPDOWN MENU (No extra tabs or search) ── */}
         {isSeqTreeOpen && (
           <div className="sequencer-tree-modal">
-            {/* Header Tabs: Tree / Playback / Settings */}
-            <div className="seq-tree-header-tabs">
-              <button className="seq-tab active">Tree</button>
-              <button className="seq-tab">Playback</button>
-              <button className="seq-tab">Settings</button>
-            </div>
-
-            {/* Sub-Header: + Add & Search */}
-            <div className="seq-tree-sub-header">
-              <button
-                className="btn-add-seq"
-                onClick={() => {
-                  const name = window.prompt('Create new sequence timeline:');
-                  if (name && name.trim()) addMotionTemplate(name.trim());
-                }}
-              >
-                <Plus size={11} /> Add
-              </button>
-              <div className="seq-tree-search-box">
-                <input type="text" placeholder="Search sequences..." />
-              </div>
-            </div>
-
-            {/* Table Header: Label / Status */}
-            <div className="seq-tree-table-header">
-              <span>Label</span>
-              <span>Status</span>
-            </div>
-
-            {/* Sequence Rows */}
             <div className="seq-tree-list">
               {motionTemplates.map((tmpl) => {
                 const isActive = tmpl.id === activeTemplateId;
@@ -455,13 +391,29 @@ export const SequencerTimeline: React.FC = () => {
                       setIsSeqTreeOpen(false);
                     }}
                   >
-                    <span className="seq-label">{tmpl.name}</span>
+                    <span className="seq-label" style={{ fontWeight: isActive ? 800 : 600 }}>
+                      {tmpl.name}
+                    </span>
                     <span className={`seq-status ${isActive ? 'text-teal' : ''}`}>
-                      {isActive ? 'Playing' : 'Not Playing'}
+                      {isActive ? 'Active' : 'Select'}
                     </span>
                   </div>
                 );
               })}
+
+              <div
+                className="seq-tree-row add-new-row"
+                style={{ borderTop: '1px solid #232734', background: '#12151e' }}
+                onClick={() => {
+                  setIsSeqTreeOpen(false);
+                  const name = window.prompt('Create new sequence timeline (e.g. Out_V2, ChangeIn_V1):');
+                  if (name && name.trim()) addMotionTemplate(name.trim());
+                }}
+              >
+                <span className="text-teal" style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 800 }}>
+                  <Plus size={12} /> + Create New Sequence...
+                </span>
+              </div>
             </div>
           </div>
         )}
@@ -764,7 +716,8 @@ export const SequencerTimeline: React.FC = () => {
                           {isRotationExpanded && ['rotation'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = track.channels?.[ch] ?? [];
+                            const activeTmpl = activeTemplateId || 'In_V1';
+                            const chKfs = (track.channels?.[ch] ?? []).filter((k) => (k.templateId || 'In_V1') === activeTmpl);
                             return (
                               <div key={ch} className="ue-channel-row" style={{ height: CHANNEL_ROW_HEIGHT }}>
                                 <span className="ue-channel-indent" />
@@ -879,7 +832,9 @@ export const SequencerTimeline: React.FC = () => {
               const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
               const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
 
-              const sortedKfs = [...track.keyframes].sort((a, b) => a.frame - b.frame);
+              const activeTmpl = activeTemplateId || 'In_V1';
+              const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'In_V1') === activeTmpl);
+              const sortedKfs = [...activeKfs].sort((a, b) => a.frame - b.frame);
 
               return (
                 <div key={track.id} className="ue-lane-group">
@@ -904,7 +859,7 @@ export const SequencerTimeline: React.FC = () => {
                       );
                     })}
                     {/* Composite keyframe diamonds */}
-                    {track.keyframes.map((kf) => {
+                    {activeKfs.map((kf) => {
                       const isKfSelected = selectedKeyframeId === kf.id;
                       return (
                         <div
@@ -937,7 +892,10 @@ export const SequencerTimeline: React.FC = () => {
                           {isLocationExpanded && ['x', 'y'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
+                            const activeTmpl = activeTemplateId || 'In_V1';
+                            const chKfs = [...(track.channels?.[ch] ?? [])]
+                              .filter((k) => (k.templateId || 'In_V1') === activeTmpl)
+                              .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {/* Horizontal connecting trajectory line for keyframes (Unreal Engine style) */}
@@ -972,7 +930,10 @@ export const SequencerTimeline: React.FC = () => {
                           {isRotationExpanded && ['rotation'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
+                            const activeTmpl = activeTemplateId || 'In_V1';
+                            const chKfs = [...(track.channels?.[ch] ?? [])]
+                              .filter((k) => (k.templateId || 'In_V1') === activeTmpl)
+                              .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {chKfs.length > 0 && (
@@ -1006,7 +967,10 @@ export const SequencerTimeline: React.FC = () => {
                           {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
+                            const activeTmpl = activeTemplateId || 'In_V1';
+                            const chKfs = [...(track.channels?.[ch] ?? [])]
+                              .filter((k) => (k.templateId || 'In_V1') === activeTmpl)
+                              .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {chKfs.length > 0 && (
@@ -1039,7 +1003,10 @@ export const SequencerTimeline: React.FC = () => {
                           {['opacity'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
+                            const activeTmpl = activeTemplateId || 'In_V1';
+                            const chKfs = [...(track.channels?.[ch] ?? [])]
+                              .filter((k) => (k.templateId || 'In_V1') === activeTmpl)
+                              .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {chKfs.length > 0 && (

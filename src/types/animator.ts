@@ -24,6 +24,7 @@ export interface Keyframe {
   transform: Transform;
   easing: EasingType;
   bezierControlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
+  templateId?: string; // Isolated to specific motion sequence template
 }
 
 // Per-property (channel) keyframe for Unreal-style independent property animation
@@ -33,6 +34,7 @@ export interface PropertyKeyframe {
   value: number;
   easing: EasingType;
   bezierControlPoints?: [number, number, number, number];
+  templateId?: string; // Isolated to specific motion sequence template
 }
 
 // Channel keys match Transform property names

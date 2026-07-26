@@ -838,14 +838,19 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const track = tracks.find((t) => t.partId === partId);
       if (!track) return baseTransform;
 
+      const activeTmpl = activeTemplateId || 'In_V1';
+
       const rawTransform = (() => {
         const ch = track.channels;
-        const hasChannelData = ch && Object.values(ch).some((arr: any) => arr.length > 0);
+        const filterCh = (arr: PropertyKeyframe[] = []) => arr.filter((k) => (k.templateId || 'In_V1') === activeTmpl);
+        const hasChannelData = ch && Object.values(ch).some((arr: any) => filterCh(arr).length > 0);
+
+        const filteredKfs = (track.keyframes || []).filter((k) => (k.templateId || 'In_V1') === activeTmpl);
 
         if (hasChannelData) {
           const legacyTransform: Transform = (() => {
-            if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
-            const sorted = [...track.keyframes].sort((a, b) => a.frame - b.frame);
+            if (filteredKfs.length === 0) return baseTransform;
+            const sorted = [...filteredKfs].sort((a, b) => a.frame - b.frame);
             const exact = sorted.find((k) => k.frame === frame);
             if (exact) return exact.transform;
             if (frame <= sorted[0].frame) return sorted[0].transform;
@@ -859,19 +864,26 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             return interpolateTransform(prev.transform, next.transform, prog, prev.easing, prev.bezierControlPoints);
           })();
 
+          const cx = filterCh(ch.x);
+          const cy = filterCh(ch.y);
+          const crot = filterCh(ch.rotation);
+          const csx = filterCh(ch.scaleX);
+          const csy = filterCh(ch.scaleY);
+          const cop = filterCh(ch.opacity);
+
           return {
-            x: ch.x.length > 0 ? interpolateChannel(ch.x, frame, legacyTransform.x) : legacyTransform.x,
-            y: ch.y.length > 0 ? interpolateChannel(ch.y, frame, legacyTransform.y) : legacyTransform.y,
-            rotation: ch.rotation.length > 0 ? interpolateChannel(ch.rotation, frame, legacyTransform.rotation) : legacyTransform.rotation,
-            scaleX: ch.scaleX.length > 0 ? interpolateChannel(ch.scaleX, frame, legacyTransform.scaleX) : legacyTransform.scaleX,
-            scaleY: ch.scaleY.length > 0 ? interpolateChannel(ch.scaleY, frame, legacyTransform.scaleY) : legacyTransform.scaleY,
-            opacity: ch.opacity.length > 0 ? interpolateChannel(ch.opacity, frame, legacyTransform.opacity) : legacyTransform.opacity,
+            x: cx.length > 0 ? interpolateChannel(cx, frame, legacyTransform.x) : legacyTransform.x,
+            y: cy.length > 0 ? interpolateChannel(cy, frame, legacyTransform.y) : legacyTransform.y,
+            rotation: crot.length > 0 ? interpolateChannel(crot, frame, legacyTransform.rotation) : legacyTransform.rotation,
+            scaleX: csx.length > 0 ? interpolateChannel(csx, frame, legacyTransform.scaleX) : legacyTransform.scaleX,
+            scaleY: csy.length > 0 ? interpolateChannel(csy, frame, legacyTransform.scaleY) : legacyTransform.scaleY,
+            opacity: cop.length > 0 ? interpolateChannel(cop, frame, legacyTransform.opacity) : legacyTransform.opacity,
           };
         }
 
-        if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
+        if (filteredKfs.length === 0) return baseTransform;
 
-        const sortedKfs = [...track.keyframes].sort((a, b) => a.frame - b.frame);
+        const sortedKfs = [...filteredKfs].sort((a, b) => a.frame - b.frame);
         const exact = sortedKfs.find((k) => k.frame === frame);
         if (exact) return exact.transform;
         if (frame <= sortedKfs[0].frame) return sortedKfs[0].transform;
@@ -993,6 +1005,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           frame,
           transform: { ...currentTransform },
           easing: 'easeInOut',
+          templateId: activeTemplateId || 'In_V1',
         };
 
         let newKfs = [...tr.keyframes];
@@ -1173,6 +1186,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           frame,
           value,
           easing,
+          templateId: activeTemplateId || 'In_V1',
         };
         const updated = existing
           ? ch[channel].map((k) => (k.frame === frame ? { ...k, value, easing } : k))

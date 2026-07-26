@@ -17,6 +17,7 @@ import type {
   CustomMotionPresetKeyframe,
   LiveStuntType,
   MotionTemplate,
+  ProjectTemplate,
 } from '../types/animator';
 import {
   DEFAULT_CHARACTER_PARTS,
@@ -119,6 +120,10 @@ interface AnimatorContextType {
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
   sceneTitle: string;
   setSceneTitle: (title: string) => void;
+  projectTemplates: ProjectTemplate[];
+  activeProjectTemplateId: string;
+  setActiveProjectTemplateId: (id: string) => void;
+  addProjectTemplate: (name: string) => void;
   motionTemplates: MotionTemplate[];
   activeTemplateId: string;
   setActiveTemplateId: (id: string) => void;
@@ -182,7 +187,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [currentFrame, setCurrentFrame] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [fps, setFps] = useState<number>(30);
+  const [fps, setFps] = useState<number>(60);
   const [totalFrames, setTotalFramesState] = useState<number>(60);
 
   const setTotalFrames = useCallback((newTotal: number | ((prev: number) => number)) => {
@@ -198,34 +203,123 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
   const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
 
-  const [sceneTitle, setSceneTitle] = useState<string>('News_LT_Main');
-  const [activeTemplateId, setActiveTemplateIdState] = useState<string>('In_V1');
+  interface TemplateCanvas {
+    characterParts: CharacterPart[];
+    tracks: Track[];
+    motionTemplates: MotionTemplate[];
+    activeTemplateId: string;
+  }
+
+  const [templateCanvasStore, setTemplateCanvasStore] = useState<Record<string, TemplateCanvas>>({
+    tmpl_1: {
+      characterParts: DEFAULT_CHARACTER_PARTS,
+      tracks: DEFAULT_TRACKS,
+      motionTemplates: [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }],
+      activeTemplateId: 'Sequence',
+    },
+  });
+
+  const [projectTemplates, setProjectTemplates] = useState<ProjectTemplate[]>([
+    { id: 'tmpl_1', name: 'News_LT_Main' },
+  ]);
+  const [activeProjectTemplateId, setActiveProjectTemplateIdState] = useState<string>('tmpl_1');
+  const [sceneTitle, setSceneTitleState] = useState<string>('News_LT_Main');
+
+  const setSceneTitle = useCallback((title: string) => {
+    setSceneTitleState(title);
+    setProjectTemplates((prev) =>
+      prev.map((t) => (t.id === activeProjectTemplateId ? { ...t, name: title } : t))
+    );
+  }, [activeProjectTemplateId]);
+
+  const [activeTemplateId, setActiveTemplateIdState] = useState<string>('Sequence');
 
   const [motionTemplates, setMotionTemplates] = useState<MotionTemplate[]>([
-    { id: 'In_V1', name: 'In_V1', type: 'in', durationFrames: 45, description: 'Standard Entrance Sequence' },
-    { id: 'Out_V1', name: 'Out_V1', type: 'out', durationFrames: 35, description: 'Standard Exit Sequence' },
-    { id: 'Stunt_V1', name: 'Stunt_V1', type: 'stunt', durationFrames: 60, description: 'Live Stunt Loop Sequence' },
-    { id: 'In_PopV2', name: 'In_PopV2', type: 'in', durationFrames: 30, description: 'Elastic Pop Entrance Sequence' },
+    { id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' },
   ]);
 
   const setActiveTemplateId = useCallback((id: string) => {
     setActiveTemplateIdState(id);
-    showToast(`Switched active Motion Template to "${id}"`, 'info');
-  }, [showToast]);
+  }, []);
 
   const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
-    const cleanId = name.trim().replace(/\s+/g, '_') || `Template_${motionTemplates.length + 1}`;
+    const cleanId = name.trim().replace(/\s+/g, '_') || `Sequence_${motionTemplates.length + 1}`;
     const newTmpl: MotionTemplate = {
       id: cleanId,
       name: cleanId,
       type,
-      durationFrames: 45,
-      description: 'Custom Motion Design Template Sequence',
+      durationFrames: 60,
+      description: 'Custom Sequence Timeline',
     };
     setMotionTemplates((prev) => [...prev, newTmpl]);
     setActiveTemplateIdState(cleanId);
-    showToast(`Created new sequence template "${cleanId}"`, 'success');
-  }, [motionTemplates.length, showToast]);
+  }, [motionTemplates.length]);
+
+  const setActiveProjectTemplateId = useCallback((targetId: string) => {
+    if (targetId === activeProjectTemplateId) return;
+
+    // 1. Save current active template's state into store
+    setTemplateCanvasStore((prev) => ({
+      ...prev,
+      [activeProjectTemplateId]: {
+        characterParts,
+        tracks,
+        motionTemplates,
+        activeTemplateId,
+      },
+    }));
+
+    // 2. Load target template's state from store or create empty default if missing
+    const targetData = templateCanvasStore[targetId] || {
+      characterParts: [],
+      tracks: [],
+      motionTemplates: [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }],
+      activeTemplateId: 'Sequence',
+    };
+
+    setCharacterParts(targetData.characterParts);
+    setTracks(targetData.tracks);
+    setMotionTemplates(targetData.motionTemplates);
+    setActiveTemplateIdState(targetData.activeTemplateId);
+    setActiveProjectTemplateIdState(targetId);
+
+    const tmpl = projectTemplates.find((t) => t.id === targetId);
+    if (tmpl) setSceneTitleState(tmpl.name);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, templateCanvasStore, projectTemplates]);
+
+  const addProjectTemplate = useCallback((name: string) => {
+    const cleanName = name.trim() || `Template ${projectTemplates.length + 1}`;
+    const newId = `tmpl_${Date.now()}`;
+    const newTmpl: ProjectTemplate = {
+      id: newId,
+      name: cleanName,
+    };
+
+    // Save current template state & set up fresh clean template
+    setTemplateCanvasStore((prev) => ({
+      ...prev,
+      [activeProjectTemplateId]: {
+        characterParts,
+        tracks,
+        motionTemplates,
+        activeTemplateId,
+      },
+      [newId]: {
+        characterParts: [],
+        tracks: [],
+        motionTemplates: [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }],
+        activeTemplateId: 'Sequence',
+      },
+    }));
+
+    setProjectTemplates((prev) => [...prev, newTmpl]);
+    setCharacterParts([]); // Clean fresh canvas for new template
+    setTracks([]);
+    setMotionTemplates([{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }]);
+    setActiveTemplateIdState('Sequence');
+    setActiveProjectTemplateIdState(newId);
+    setSceneTitleState(cleanName);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, projectTemplates.length]);
 
   const assignTemplateToLayer = useCallback((partId: string, templateId: string) => {
     setTracks((prev) =>
@@ -838,14 +932,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const track = tracks.find((t) => t.partId === partId);
       if (!track) return baseTransform;
 
-      const activeTmpl = activeTemplateId || 'In_V1';
+      const activeTmpl = activeTemplateId || 'Sequence';
 
       const rawTransform = (() => {
         const ch = track.channels;
-        const filterCh = (arr: PropertyKeyframe[] = []) => arr.filter((k) => (k.templateId || 'In_V1') === activeTmpl);
+        const filterCh = (arr: PropertyKeyframe[] = []) => arr.filter((k) => (k.templateId || 'Sequence') === activeTmpl);
         const hasChannelData = ch && Object.values(ch).some((arr: any) => filterCh(arr).length > 0);
 
-        const filteredKfs = (track.keyframes || []).filter((k) => (k.templateId || 'In_V1') === activeTmpl);
+        const filteredKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
 
         if (hasChannelData) {
           const legacyTransform: Transform = (() => {
@@ -1005,7 +1099,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           frame,
           transform: { ...currentTransform },
           easing: 'easeInOut',
-          templateId: activeTemplateId || 'In_V1',
+          templateId: activeTemplateId || 'Sequence',
         };
 
         let newKfs = [...tr.keyframes];
@@ -1186,7 +1280,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           frame,
           value,
           easing,
-          templateId: activeTemplateId || 'In_V1',
+          templateId: activeTemplateId || 'Sequence',
         };
         const updated = existing
           ? ch[channel].map((k) => (k.frame === frame ? { ...k, value, easing } : k))
@@ -1690,6 +1784,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTrackIndex,
         sceneTitle,
         setSceneTitle,
+        projectTemplates,
+        activeProjectTemplateId,
+        setActiveProjectTemplateId,
+        addProjectTemplate,
         motionTemplates,
         activeTemplateId,
         setActiveTemplateId,

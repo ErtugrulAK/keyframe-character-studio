@@ -167,9 +167,9 @@
   padding: 4px 10px;
   background: #12141a;
   border-bottom: 1px solid #232734;
-  font-size: 9px;
-  font-weight: 800;
-  color: #64748b;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
   text-transform: uppercase;
 }
 
@@ -202,8 +202,8 @@
 }
 
 .seq-status {
-  font-size: 9px;
-  color: #64748b;
+  font-size: 10px;
+  color: #94a3b8;
 }
 
 .timeline-scene-title-chip {
@@ -676,7 +676,7 @@
   display: flex; align-items: flex-start; justify-content: center;
 }
 .playhead-frame-label {
-  font-family: var(--font-mono); font-size: 8px; font-weight: 800; color: #fff; line-height: 10px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 800; color: #fff; line-height: 10px;
 }
 
 /* ── TRACK LANES ── */
@@ -732,8 +732,8 @@
   display: flex; align-items: center; justify-content: center; overflow: hidden;
 }
 .span-easing-tag {
-  font-size: 8px; font-family: var(--font-mono);
-  color: #374151; text-transform: lowercase; opacity: 0.6;
+  font-size: 9.5px; font-family: var(--font-mono); font-weight: 600;
+  color: #94a3b8; text-transform: lowercase; opacity: 0.8;
 }
 
 .keyframe-diamond {

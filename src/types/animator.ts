@@ -9,6 +9,11 @@ export type EasingType =
   | 'overshoot'
   | 'cubic_bezier';
 
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+}
+
 export interface Transform {
   x: number;
   y: number;

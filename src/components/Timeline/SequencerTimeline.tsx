@@ -28,6 +28,7 @@ import {
   Film,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
+import { NewItemModal } from '../Modal/NewItemModal';
 import './SequencerTimeline.css';
 
 // Visual metadata for each Transform channel
@@ -155,6 +156,7 @@ export const SequencerTimeline: React.FC = () => {
 
   // Sequencer Tree Modal Toggle State
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
+  const [isAddSeqModalOpen, setIsAddSeqModalOpen] = useState<boolean>(false);
 
   // Expanded Pro Curve Studio Modal State
   const [isCurveModalOpen, setIsCurveModalOpen] = useState<boolean>(false);
@@ -406,12 +408,11 @@ export const SequencerTimeline: React.FC = () => {
                 style={{ borderTop: '1px solid #232734', background: '#12151e' }}
                 onClick={() => {
                   setIsSeqTreeOpen(false);
-                  const name = window.prompt('Create new sequence timeline (e.g. Out_V2, ChangeIn_V1):');
-                  if (name && name.trim()) addMotionTemplate(name.trim());
+                  setIsAddSeqModalOpen(true);
                 }}
               >
                 <span className="text-teal" style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 800 }}>
-                  <Plus size={12} /> + Create New Sequence...
+                  <Plus size={12} /> New Sequence
                 </span>
               </div>
             </div>
@@ -716,8 +717,8 @@ export const SequencerTimeline: React.FC = () => {
                           {isRotationExpanded && ['rotation'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'In_V1';
-                            const chKfs = (track.channels?.[ch] ?? []).filter((k) => (k.templateId || 'In_V1') === activeTmpl);
+                            const activeTmpl = activeTemplateId || 'Sequence';
+                            const chKfs = (track.channels?.[ch] ?? []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
                             return (
                               <div key={ch} className="ue-channel-row" style={{ height: CHANNEL_ROW_HEIGHT }}>
                                 <span className="ue-channel-indent" />
@@ -832,8 +833,8 @@ export const SequencerTimeline: React.FC = () => {
               const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
               const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
 
-              const activeTmpl = activeTemplateId || 'In_V1';
-              const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'In_V1') === activeTmpl);
+              const activeTmpl = activeTemplateId || 'Sequence';
+              const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
               const sortedKfs = [...activeKfs].sort((a, b) => a.frame - b.frame);
 
               return (
@@ -892,9 +893,9 @@ export const SequencerTimeline: React.FC = () => {
                           {isLocationExpanded && ['x', 'y'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'In_V1';
+                            const activeTmpl = activeTemplateId || 'Sequence';
                             const chKfs = [...(track.channels?.[ch] ?? [])]
-                              .filter((k) => (k.templateId || 'In_V1') === activeTmpl)
+                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
                               .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
@@ -930,9 +931,9 @@ export const SequencerTimeline: React.FC = () => {
                           {isRotationExpanded && ['rotation'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'In_V1';
+                            const activeTmpl = activeTemplateId || 'Sequence';
                             const chKfs = [...(track.channels?.[ch] ?? [])]
-                              .filter((k) => (k.templateId || 'In_V1') === activeTmpl)
+                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
                               .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
@@ -967,9 +968,9 @@ export const SequencerTimeline: React.FC = () => {
                           {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'In_V1';
+                            const activeTmpl = activeTemplateId || 'Sequence';
                             const chKfs = [...(track.channels?.[ch] ?? [])]
-                              .filter((k) => (k.templateId || 'In_V1') === activeTmpl)
+                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
                               .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
@@ -1003,9 +1004,9 @@ export const SequencerTimeline: React.FC = () => {
                           {['opacity'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'In_V1';
+                            const activeTmpl = activeTemplateId || 'Sequence';
                             const chKfs = [...(track.channels?.[ch] ?? [])]
-                              .filter((k) => (k.templateId || 'In_V1') === activeTmpl)
+                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
                               .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
@@ -1072,6 +1073,19 @@ export const SequencerTimeline: React.FC = () => {
           onCloseModal={() => setIsCurveModalOpen(false)}
         />
       )}
+
+      {/* New Sequence Modal */}
+      <NewItemModal
+        isOpen={isAddSeqModalOpen}
+        title="Yeni Sekans (Sequence) Oluştur"
+        subtitle="Mevcut şablon için yeni bir animasyon sekansı ekleyin."
+        placeholder="Sekans adı (ör: In_V1, Out_V1, Stunt_Loop)..."
+        defaultValue={`Sequence_${motionTemplates.length + 1}`}
+        confirmLabel="Sekans Oluştur"
+        onClose={() => setIsAddSeqModalOpen(false)}
+        onSubmit={(val) => addMotionTemplate(val)}
+      />
     </footer>
   );
 };
+

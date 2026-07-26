@@ -229,8 +229,9 @@
 }
 
 .node-type-tag {
-  font-size: 9px;
-  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  color: #7889a0;
   padding-right: 8px;
   font-family: var(--font-mono);
 }
@@ -261,20 +262,21 @@
   background: #1b202e;
   border: 1px solid #2e364a;
   color: #38bdf8;
-  font-size: 9px;
-  font-weight: 800;
+  font-size: 10.5px;
+  font-weight: 700;
   padding: 1px 4px;
   border-radius: 3px;
-  width: 82px;
-  height: 18px;
+  width: 86px;
+  height: 20px;
   outline: none;
   cursor: pointer;
 }
 
 .tree-node .col-type {
   width: 90px;
-  font-size: 9px;
-  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  color: #7889a0;
   text-align: right;
   padding-right: 8px;
   font-family: var(--font-mono);
@@ -284,11 +286,12 @@
 }
 
 .outliner-footer {
-  height: 20px;
+  height: 22px;
   background: #141720;
   border-top: 1px solid #232734;
-  font-size: 9px;
-  color: #64748b;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #7889a0;
   display: flex;
   align-items: center;
   padding: 0 8px;
@@ -374,8 +377,9 @@
 }
 
 .actor-instance-tag {
-  font-size: 9px;
-  color: #64748b;
+  font-size: 10px;
+  font-weight: 600;
+  color: #7889a0;
   font-family: var(--font-mono);
 }
 
@@ -403,10 +407,10 @@
   background: #191d29;
   border: 1px solid #2b3144;
   color: #94a3b8;
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 700;
   padding: 2px 6px;
-  height: 20px;
+  height: 22px;
   border-radius: 3px;
   cursor: pointer;
   transition: all 0.12s ease;
@@ -474,15 +478,15 @@
 .motion-design-right-sidebar input[type="number"],
 .motion-design-right-sidebar input[type="text"],
 .motion-design-right-sidebar select {
-  font-size: 9.5px !important;
-  font-weight: 700 !important;
+  font-size: 11px !important;
+  font-weight: 600 !important;
   font-family: var(--font-mono) !important;
-  height: 22px !important;
+  height: 24px !important;
 }
 
 .input-field label,
 .param-label {
-  font-size: 9px !important;
+  font-size: 10.5px !important;
   font-weight: 700 !important;
   color: #94a3b8 !important;
   text-transform: uppercase !important;
@@ -604,8 +608,8 @@
 }
 
 .color-card-label {
-  font-size: 9px !important;
-  font-weight: 800 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
   color: #94a3b8 !important;
   text-transform: uppercase;
 }

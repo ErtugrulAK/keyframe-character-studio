@@ -1,27 +1,42 @@
 import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
-export const getTextMetrics = (text: string, fontSize: number): { halfW: number; halfH: number } => {
+export const getTextMetrics = (text: string, fontSize: number, fontFamily?: string): { halfW: number; halfH: number } => {
   if (!text) return { halfW: 20, halfH: 12 };
+
+  // Adjust base character multiplier dynamically based on font family style
+  let fontMultiplier = 0.48; // default sans-serif (Outfit / Inter / Roboto)
+  const family = (fontFamily || '').toLowerCase();
+
+  if (family.includes('playfair') || family.includes('serif') || family.includes('georgia')) {
+    fontMultiplier = 0.56; // Serif fonts have wider letterforms and decorative serifs
+  } else if (family.includes('mono') || family.includes('jetbrains') || family.includes('courier')) {
+    fontMultiplier = 0.62; // Monospace fonts have wide fixed-width characters
+  } else if (family.includes('bebas')) {
+    fontMultiplier = 0.40; // Condensed fonts are narrower
+  } else if (family.includes('montserrat')) {
+    fontMultiplier = 0.52;
+  }
 
   let totalWidth = 0;
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (char === ' ') {
-      totalWidth += fontSize * 0.22;
+      totalWidth += fontSize * (fontMultiplier * 0.55);
     } else if (/[ilIjtf1!.,:;\'\|()\[\]]/.test(char)) {
-      totalWidth += fontSize * 0.25;
+      totalWidth += fontSize * (fontMultiplier * 0.55);
     } else if (/[WMwm@#%QGO]/.test(char)) {
-      totalWidth += fontSize * 0.60;
+      totalWidth += fontSize * (fontMultiplier * 1.35);
     } else if (/[A-Z]/.test(char)) {
-      totalWidth += fontSize * 0.48;
+      totalWidth += fontSize * (fontMultiplier * 1.15);
     } else {
-      totalWidth += fontSize * 0.41;
+      totalWidth += fontSize * fontMultiplier;
     }
   }
 
-  const halfW = Math.max(16, (totalWidth + 16) / 2);
-  const halfH = Math.max(14, (fontSize * 0.85 + 10) / 2);
+  // Comfortably enclose all letters (including wide serifs) with 12px padding on each side
+  const halfW = Math.max(20, (totalWidth + 24) / 2);
+  const halfH = Math.max(14, (fontSize * 0.9 + 12) / 2);
 
   return { halfW, halfH };
 };
@@ -46,7 +61,7 @@ export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: numb
     case 'custom_text': {
       const textStr = part.textValue || part.name || 'TEXT';
       const fontSize = part.fontSize || 24;
-      const metrics = getTextMetrics(textStr, fontSize);
+      const metrics = getTextMetrics(textStr, fontSize, part.fontFamily);
       halfW = metrics.halfW;
       halfH = metrics.halfH;
       break;

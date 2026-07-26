@@ -2,26 +2,26 @@ import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 export const getTextMetrics = (text: string, fontSize: number): { halfW: number; halfH: number } => {
-  if (!text) return { halfW: 16, halfH: 10 };
+  if (!text) return { halfW: 20, halfH: 12 };
 
   let totalWidth = 0;
   for (let i = 0; i < text.length; i++) {
     const char = text[i];
     if (char === ' ') {
-      totalWidth += fontSize * 0.18;
+      totalWidth += fontSize * 0.22;
     } else if (/[ilIjtf1!.,:;\'\|()\[\]]/.test(char)) {
-      totalWidth += fontSize * 0.20;
+      totalWidth += fontSize * 0.25;
     } else if (/[WMwm@#%QGO]/.test(char)) {
-      totalWidth += fontSize * 0.55;
+      totalWidth += fontSize * 0.60;
     } else if (/[A-Z]/.test(char)) {
-      totalWidth += fontSize * 0.44;
+      totalWidth += fontSize * 0.48;
     } else {
-      totalWidth += fontSize * 0.36;
+      totalWidth += fontSize * 0.41;
     }
   }
 
-  const halfW = Math.max(12, (totalWidth + 8) / 2);
-  const halfH = Math.max(10, (fontSize * 0.76 + 4) / 2);
+  const halfW = Math.max(16, (totalWidth + 16) / 2);
+  const halfH = Math.max(14, (fontSize * 0.85 + 10) / 2);
 
   return { halfW, halfH };
 };

@@ -474,8 +474,8 @@ export const StageCanvas: React.FC = () => {
         style={{ transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`, transformOrigin: 'center center' }}
       >
         <defs>
-          <pattern id="svg-dashed-grid" width="40" height="40" patternUnits="userSpaceOnUse" x="300" y="240">
-            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" strokeDasharray="3 3" />
+          <pattern id="svg-dashed-grid" width="100" height="100" patternUnits="userSpaceOnUse" x="300" y="240">
+            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" strokeDasharray="3 3" />
           </pattern>
           <clipPath id="artboard-clip">
             <rect

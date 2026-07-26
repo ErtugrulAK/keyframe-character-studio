@@ -7,27 +7,34 @@ interface SmartNumberInputProps {
   min?: number;
   max?: number;
   step?: number;
+  displayScale?: number; // Display value = internal value * displayScale (e.g. 0.01 shows px/100)
+  precision?: number;    // Decimal places for display
   onChange: (val: number) => void;
 }
 
-const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, step = 1, onChange }) => {
-  const [editingValue, setEditingValue] = React.useState<string>(String(value));
+const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, step = 1, displayScale, precision, onChange }) => {
+  const scale = displayScale ?? 1;
+  const decimals = precision ?? (scale !== 1 ? 2 : undefined);
+  const displayVal = decimals !== undefined ? parseFloat((value * scale).toFixed(decimals)) : value * scale;
+
+  const [editingValue, setEditingValue] = React.useState<string>(String(displayVal));
   const [isFocused, setIsFocused] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (!isFocused) {
-      setEditingValue(String(value));
+      setEditingValue(String(displayVal));
     }
-  }, [value, isFocused]);
+  }, [displayVal, isFocused]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const valStr = e.target.value;
     setEditingValue(valStr);
     let parsed = parseFloat(valStr);
     if (!isNaN(parsed)) {
-      if (min !== undefined) parsed = Math.max(min, parsed);
-      if (max !== undefined) parsed = Math.min(max, parsed);
-      onChange(parsed);
+      let internal = parsed / scale;
+      if (min !== undefined) internal = Math.max(min, internal);
+      if (max !== undefined) internal = Math.min(max, internal);
+      onChange(internal);
     }
   };
 
@@ -35,22 +42,26 @@ const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, st
     setIsFocused(false);
     let parsed = parseFloat(editingValue);
     if (isNaN(parsed)) {
-      setEditingValue(String(value));
+      setEditingValue(String(displayVal));
     } else {
-      if (min !== undefined) parsed = Math.max(min, parsed);
-      if (max !== undefined) parsed = Math.min(max, parsed);
-      setEditingValue(String(parsed));
-      onChange(parsed);
+      let internal = parsed / scale;
+      if (min !== undefined) internal = Math.max(min, internal);
+      if (max !== undefined) internal = Math.min(max, internal);
+      const finalDisplay = decimals !== undefined ? parseFloat((internal * scale).toFixed(decimals)) : internal * scale;
+      setEditingValue(String(finalDisplay));
+      onChange(internal);
     }
   };
+
+  const displayStep = step !== undefined ? step * Math.abs(scale) : undefined;
 
   return (
     <input
       type="number"
-      value={isFocused ? editingValue : value}
-      min={min}
-      max={max}
-      step={step}
+      value={isFocused ? editingValue : displayVal}
+      min={min !== undefined ? min * scale : undefined}
+      max={max !== undefined ? max * scale : undefined}
+      step={displayStep}
       onFocus={() => setIsFocused(true)}
       onChange={handleChange}
       onBlur={handleBlur}
@@ -102,6 +113,9 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <span className="param-label text-red">POS X</span>
           <SmartNumberInput
             value={transform.x}
+            step={1}
+            displayScale={0.01}
+            precision={2}
             onChange={(val) => updateCurrentTransform({ x: val })}
           />
         </div>
@@ -110,6 +124,9 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <span className="param-label text-green">POS Y</span>
           <SmartNumberInput
             value={-transform.y}
+            step={1}
+            displayScale={0.01}
+            precision={2}
             onChange={(val) => updateCurrentTransform({ y: -val })}
           />
         </div>

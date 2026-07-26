@@ -124,6 +124,7 @@ interface AnimatorContextType {
   activeProjectTemplateId: string;
   setActiveProjectTemplateId: (id: string) => void;
   addProjectTemplate: (name: string) => void;
+  deleteProjectTemplate: (id: string) => void;
   motionTemplates: MotionTemplate[];
   activeTemplateId: string;
   setActiveTemplateId: (id: string) => void;
@@ -392,6 +393,36 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSceneTitleState(cleanName);
     setFps(60); // Strictly default to 60 FPS for new templates
   }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, projectTemplates.length]);
+
+  const deleteProjectTemplate = useCallback((idToDelete: string) => {
+    if (projectTemplates.length <= 1) return;
+
+    setProjectTemplates((prev) => prev.filter((t) => t.id !== idToDelete));
+    setTemplateCanvasStore((prev) => {
+      const nextStore = { ...prev };
+      delete nextStore[idToDelete];
+      return nextStore;
+    });
+
+    if (activeProjectTemplateId === idToDelete) {
+      const remaining = projectTemplates.filter((t) => t.id !== idToDelete);
+      if (remaining.length > 0) {
+        const nextId = remaining[0].id;
+        setActiveProjectTemplateIdState(nextId);
+        const targetData = templateCanvasStore[nextId] || {
+          characterParts: [],
+          tracks: [],
+          motionTemplates: [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }],
+          activeTemplateId: 'Sequence',
+        };
+        setCharacterParts(targetData.characterParts);
+        setTracks(targetData.tracks);
+        setMotionTemplates(targetData.motionTemplates);
+        setActiveTemplateIdState(targetData.activeTemplateId);
+        setSceneTitleState(remaining[0].name);
+      }
+    }
+  }, [projectTemplates, activeProjectTemplateId, templateCanvasStore]);
 
   const assignTemplateToLayer = useCallback((partId: string, templateId: string) => {
     setTracks((prev) =>
@@ -1879,6 +1910,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         activeProjectTemplateId,
         setActiveProjectTemplateId,
         addProjectTemplate,
+        deleteProjectTemplate,
         motionTemplates,
         activeTemplateId,
         setActiveTemplateId,

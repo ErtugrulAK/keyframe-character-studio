@@ -27,6 +27,7 @@ export const HeaderBar: React.FC = () => {
     activeProjectTemplateId,
     setActiveProjectTemplateId,
     addProjectTemplate,
+    deleteProjectTemplate,
     fps,
     setFps,
   } = useAnimator();
@@ -133,8 +134,41 @@ export const HeaderBar: React.FC = () => {
                 className={`header-tab ${activeProjectTemplateId === tmpl.id ? 'active' : ''}`}
                 onClick={() => setActiveProjectTemplateId(tmpl.id)}
                 title={`Template: ${tmpl.name}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
               >
-                {tmpl.name}
+                <span>{tmpl.name}</span>
+                {projectTemplates.length > 1 && (
+                  <span
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteProjectTemplate(tmpl.id);
+                    }}
+                    title="Delete template"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: 14,
+                      height: 14,
+                      borderRadius: '50%',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      fontSize: 9,
+                      lineHeight: 1,
+                      color: '#94a3b8',
+                      cursor: 'pointer',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#ef4444';
+                      e.currentTarget.style.color = '#fff';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                      e.currentTarget.style.color = '#94a3b8';
+                    }}
+                  >
+                    ✕
+                  </span>
+                )}
               </button>
             ))}
             <button

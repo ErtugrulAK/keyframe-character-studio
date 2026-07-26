@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Copy, Check, X, Play, Pause, Sparkles, RefreshCw, Activity, Zap } from 'lucide-react';
+import { Copy, Check, X, Play, Pause, Sparkles } from 'lucide-react';
 
 interface InteractiveCubicBezierEditorProps {
   controlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
@@ -31,7 +31,6 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   const [draggingPoint, setDraggingPoint] = useState<1 | 2 | null>(null);
 
   // Pro Studio Modal State
-  const [previewShape, setPreviewShape] = useState<'ball' | 'card' | 'arrow' | 'heart'>('ball');
   const [previewDuration, setPreviewDuration] = useState<number>(1.2);
   const [isPreviewPlaying, setIsPreviewPlaying] = useState<boolean>(true);
 
@@ -79,7 +78,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       const innerWidth = rect.width - paddingX * 2;
       const innerHeight = rect.height - paddingY * 2;
 
-      // Mouse X & Y mapped to math coordinates [0..1] and [-2.0..3.0] (range = 5.0)
+      // Mouse X & Y mapped strictly to math coordinates [0..1] and [-2.0..3.0] (range = 5.0)
       const mouseX = e.clientX - rect.left - paddingX;
       const mouseY = e.clientY - rect.top - paddingY;
 
@@ -272,7 +271,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         className="bezier-modal-card"
         style={{
           width: '100%',
-          maxWidth: 960,
+          maxWidth: 920,
           maxHeight: 'calc(100vh - 40px)',
           background: '#131722',
           border: '1px solid #242a3a',
@@ -281,91 +280,56 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           display: 'flex',
           flexDirection: 'column',
           overflowY: 'auto',
+          position: 'relative',
+          margin: '0 auto',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header (Clean Title Only) */}
-        <div
+        {/* Floating Close Button at Top-Right */}
+        <button
+          className="btn-icon"
+          onClick={() => {
+            setIsModalOpen(false);
+            onCloseModal?.();
+          }}
+          title="Close Studio"
           style={{
+            position: 'absolute',
+            top: 14,
+            right: 14,
+            zIndex: 20,
+            width: 30,
+            height: 30,
+            borderRadius: 6,
+            background: '#1c2230',
+            border: '1px solid #2d3548',
+            color: '#94a3b8',
+            cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '16px 24px',
-            background: '#0f121a',
-            borderBottom: '1px solid #232838',
-            position: 'sticky',
-            top: 0,
-            zIndex: 10,
+            justifyContent: 'center',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Sparkles size={18} className="text-teal" />
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: '#f8fafc', letterSpacing: '0.3px' }}>
-              Motion Curve Studio
-            </h3>
-          </div>
-
-          <button
-            className="btn-icon"
-            onClick={() => {
-              setIsModalOpen(false);
-              onCloseModal?.();
-            }}
-            title="Close Studio"
-            style={{ width: 30, height: 30, borderRadius: 6, background: '#1c2230', border: '1px solid #2d3548' }}
-          >
-            <X size={16} />
-          </button>
-        </div>
+          <X size={16} />
+        </button>
 
         {/* Modal Content Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, padding: 24 }}>
-          {/* Left Column: SVG Canvas + Curve Actions */}
+          {/* Left Column: SVG Canvas + P1/P2 Coordinates */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* SVG Canvas Box with Extended Y Limits [-2.5 .. 3.5] */}
+            {/* SVG Canvas Box with Exact Red Limit Lines */}
             <div
               style={{
                 background: '#090b10',
                 borderRadius: 12,
                 border: '1px solid #232838',
-                padding: '20px 16px',
+                padding: '24px 16px',
                 display: 'flex',
                 justifyContent: 'center',
                 position: 'relative',
               }}
             >
-              {renderSvgGraph(modalSvgRef, 540, 360, 50, 40)}
-            </div>
-
-            {/* Curve Utility Actions Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#181d2a', padding: '10px 14px', borderRadius: 8, border: '1px solid #283044' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>CURVE UTILITIES:</span>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  className="btn-secondary"
-                  style={{ fontSize: 11, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 5, background: '#10131c', border: '1px solid #2a3348', borderRadius: 5, color: '#e2e8f0', cursor: 'pointer' }}
-                  onClick={() => updatePoints({ x: p2.x, y: p2.y }, { x: p1.x, y: p1.y })}
-                  title="Swap P1 and P2 handles"
-                >
-                  <RefreshCw size={12} /> Flip P1/P2
-                </button>
-                <button
-                  className="btn-secondary"
-                  style={{ fontSize: 11, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 5, background: '#10131c', border: '1px solid #2a3348', borderRadius: 5, color: '#e2e8f0', cursor: 'pointer' }}
-                  onClick={() => updatePoints(p1, { x: Number((1 - p1.x).toFixed(2)), y: Number((1 - p1.y).toFixed(2)) })}
-                  title="Set P2 symmetrical to P1"
-                >
-                  <Zap size={12} /> Symmetrize
-                </button>
-                <button
-                  className="btn-secondary"
-                  style={{ fontSize: 11, padding: '5px 10px', background: '#10131c', border: '1px solid #2a3348', borderRadius: 5, color: '#e2e8f0', cursor: 'pointer' }}
-                  onClick={() => updatePoints({ x: 0.42, y: 0.0 }, { x: 0.58, y: 1.0 })}
-                  title="Reset to default Ease In Out"
-                >
-                  Reset
-                </button>
-              </div>
+              {renderSvgGraph(modalSvgRef, 500, 360, 50, 40)}
             </div>
 
             {/* Direct Coordinate Inputs */}
@@ -428,74 +392,47 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
             </div>
           </div>
 
-          {/* Right Column: Interactive Motion Physics & Presets */}
+          {/* Right Column: Live Motion Simulation, Presets, Easing Code & Apply */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Live Motion Test Box */}
             <div style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
+              {/* Duration & Play Controls */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Activity size={13} /> LIVE MOTION PHYSICS TEST
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 11, color: '#94a3b8' }}>Test Speed:</span>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[0.6, 1.2, 1.8, 3.0].map((dur) => (
+                      <button
+                        key={dur}
+                        style={{
+                          fontSize: 10,
+                          padding: '3px 8px',
+                          background: previewDuration === dur ? '#14b8a6' : '#0e1118',
+                          color: previewDuration === dur ? '#000' : '#cbd5e1',
+                          border: `1px solid ${previewDuration === dur ? '#2dd4bf' : '#2a3348'}`,
+                          borderRadius: 4,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                        onClick={() => setPreviewDuration(dur)}
+                      >
+                        {dur}s
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <button
                   className="btn-icon"
                   onClick={() => setIsPreviewPlaying(!isPreviewPlaying)}
-                  style={{ width: 24, height: 24, borderRadius: 4, background: '#0e1118', border: '1px solid #2a3348' }}
+                  style={{ width: 24, height: 24, borderRadius: 4, background: '#0e1118', border: '1px solid #2a3348', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   title={isPreviewPlaying ? 'Pause Preview' : 'Play Preview'}
                 >
                   {isPreviewPlaying ? <Pause size={12} /> : <Play size={12} />}
                 </button>
               </div>
 
-              {/* Preview Shape Selector */}
-              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                {(['ball', 'card', 'arrow', 'heart'] as const).map((shape) => (
-                  <button
-                    key={shape}
-                    className={`btn-secondary ${previewShape === shape ? 'active' : ''}`}
-                    style={{
-                      flex: 1,
-                      fontSize: 11,
-                      padding: '5px 0',
-                      textTransform: 'capitalize',
-                      background: previewShape === shape ? '#0284c7' : '#0e1118',
-                      color: previewShape === shape ? '#fff' : '#94a3b8',
-                      border: `1px solid ${previewShape === shape ? '#38bdf8' : '#2a3348'}`,
-                      borderRadius: 5,
-                      cursor: 'pointer',
-                    }}
-                    onClick={() => setPreviewShape(shape)}
-                  >
-                    {shape}
-                  </button>
-                ))}
-              </div>
-
-              {/* Duration Slider */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <span style={{ fontSize: 11, color: '#94a3b8' }}>Test Speed:</span>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  {[0.6, 1.2, 1.8, 3.0].map((dur) => (
-                    <button
-                      key={dur}
-                      style={{
-                        fontSize: 10,
-                        padding: '3px 8px',
-                        background: previewDuration === dur ? '#14b8a6' : '#0e1118',
-                        color: previewDuration === dur ? '#000' : '#cbd5e1',
-                        border: `1px solid ${previewDuration === dur ? '#2dd4bf' : '#2a3348'}`,
-                        borderRadius: 4,
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                      onClick={() => setPreviewDuration(dur)}
-                    >
-                      {dur}s
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Motion Track */}
+              {/* Motion Track with Ball Only */}
               <div
                 style={{
                   height: 54,
@@ -511,32 +448,23 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
               >
                 <style>{`
                   @keyframes curveStudioPreviewAnim {
-                    0% { transform: translateX(0px) rotate(0deg); }
-                    50% { transform: translateX(210px) rotate(180deg); }
-                    100% { transform: translateX(0px) rotate(0deg); }
+                    0% { transform: translateX(0px); }
+                    50% { transform: translateX(230px); }
+                    100% { transform: translateX(0px); }
                   }
                 `}</style>
 
+                {/* Always Render Glowing Cyan/Teal Ball Only */}
                 <div
                   style={{
-                    width: previewShape === 'card' ? 40 : 28,
+                    width: 28,
                     height: 28,
-                    borderRadius: previewShape === 'ball' ? '50%' : 6,
+                    borderRadius: '50%',
                     background: 'linear-gradient(135deg, #14b8a6, #38bdf8)',
-                    boxShadow: '0 0 14px rgba(20, 184, 166, 0.5)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: '#000',
-                    fontWeight: 800,
-                    fontSize: 12,
+                    boxShadow: '0 0 14px rgba(20, 184, 166, 0.6)',
                     animation: isPreviewPlaying ? `curveStudioPreviewAnim ${previewDuration}s ${cssString} infinite` : 'none',
                   }}
-                >
-                  {previewShape === 'arrow' && '➔'}
-                  {previewShape === 'heart' && '♥'}
-                  {previewShape === 'card' && 'CARD'}
-                </div>
+                />
               </div>
 
               {/* Motion Characteristics Badge */}
@@ -583,7 +511,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#38bdf8', fontWeight: 700 }}>
                   {cssString}
                 </span>
-                <button className="btn-icon" onClick={copyToClipboard} title="Copy CSS code" style={{ width: 24, height: 24, background: '#0e1118', border: '1px solid #2a3348', borderRadius: 4 }}>
+                <button className="btn-icon" onClick={copyToClipboard} title="Copy CSS code" style={{ width: 24, height: 24, background: '#0e1118', border: '1px solid #2a3348', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {copied ? <Check size={13} className="text-green" /> : <Copy size={13} />}
                 </button>
               </div>

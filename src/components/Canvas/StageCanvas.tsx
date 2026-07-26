@@ -89,8 +89,6 @@ export const StageCanvas: React.FC = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (appMode === 'broadcast') return;
-
     if (e.button === 2 || activeTool === 'pan') {
       setIsDragging(true);
       setDragMode('pan' as any);
@@ -101,6 +99,8 @@ export const StageCanvas: React.FC = () => {
       });
       return;
     }
+
+    if (appMode === 'broadcast') return;
 
     const target = e.target as HTMLElement;
     if (

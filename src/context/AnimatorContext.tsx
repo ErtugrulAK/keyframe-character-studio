@@ -1206,7 +1206,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       prevTracks.map((tr) => {
         if (tr.id !== trackId) return tr;
         const currentTransform = getComputedTransform(tr.partId, frame);
-        const existingIdx = tr.keyframes.findIndex((k) => k.frame === frame);
+        const activeTmpl = activeTemplateId || 'Sequence';
+        const existingIdx = tr.keyframes.findIndex((k) => k.frame === frame && (k.templateId || 'Sequence') === activeTmpl);
 
         const newKf: Keyframe = {
           id: generateId('kf'),
@@ -1313,21 +1314,25 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const track = tracks.find((t) => t.partId === selectedPartId);
     if (!track) return;
 
-    const existingKf = track.keyframes.find((k) => k.frame === currentFrame);
+    const activeTmpl = activeTemplateId || 'Sequence';
+    const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+    const hasActiveKfOnFrame = activeKfs.some((k) => k.frame === currentFrame);
 
-    if (existingKf) {
+    if (hasActiveKfOnFrame) {
       setTracks((prev) =>
         prev.map((tr) => {
           if (tr.id !== track.id) return tr;
           return {
             ...tr,
             keyframes: tr.keyframes.map((k) =>
-              k.frame === currentFrame ? { ...k, transform: { ...k.transform, ...newTransform } } : k
+              k.frame === currentFrame && (k.templateId || 'Sequence') === activeTmpl
+                ? { ...k, transform: { ...k.transform, ...newTransform } }
+                : k
             ),
           };
         })
       );
-    } else if (track.keyframes.length > 0) {
+    } else if (activeKfs.length > 0) {
       setCharacterParts((prev) =>
         prev.map((p) =>
           p.id === selectedPartId ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
@@ -1355,7 +1360,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             if (tr.partId !== partId) return tr;
             const currentT = getComputedTransform(partId, currentFrame);
             const updatedT = { ...currentT, ...transform };
-            const existingIdx = tr.keyframes.findIndex((k) => k.frame === currentFrame);
+            const activeTmpl = activeTemplateId || 'Sequence';
+            const existingIdx = tr.keyframes.findIndex((k) => k.frame === currentFrame && (k.templateId || 'Sequence') === activeTmpl);
 
             let newKfs = [...tr.keyframes];
             if (existingIdx >= 0) {

@@ -244,6 +244,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setActiveTemplateId = useCallback((id: string) => {
     setActiveTemplateIdState(id);
+    setCurrentFrame(0);
+    setIsPlaying(false);
   }, []);
 
   const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
@@ -1161,7 +1163,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       return finalComputed;
     },
-    [characterParts, tracks]
+    [characterParts, tracks, activeTemplateId]
   );
 
   // Playback Loop

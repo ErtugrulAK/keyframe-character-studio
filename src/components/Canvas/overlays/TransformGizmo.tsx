@@ -1,6 +1,31 @@
 import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
+export const getTextMetrics = (text: string, fontSize: number): { halfW: number; halfH: number } => {
+  if (!text) return { halfW: 20, halfH: 12 };
+
+  let totalWidth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === ' ') {
+      totalWidth += fontSize * 0.26;
+    } else if (/[ilIjtf1!.,:;\'\|()\[\]]/.test(char)) {
+      totalWidth += fontSize * 0.28;
+    } else if (/[WMwm@#%QGO]/.test(char)) {
+      totalWidth += fontSize * 0.65;
+    } else if (/[A-Z]/.test(char)) {
+      totalWidth += fontSize * 0.52;
+    } else {
+      totalWidth += fontSize * 0.45;
+    }
+  }
+
+  const halfW = Math.max(16, (totalWidth + 12) / 2);
+  const halfH = Math.max(12, (fontSize * 0.88 + 8) / 2);
+
+  return { halfW, halfH };
+};
+
 export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
   let halfW = 32;
   let halfH = 32;
@@ -21,11 +46,9 @@ export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: numb
     case 'custom_text': {
       const textStr = part.textValue || part.name || 'TEXT';
       const fontSize = part.fontSize || 24;
-      // Calculate font-specific text width & height dynamically according to string length and fontSize
-      const approxWidth = Math.max(40, textStr.length * fontSize * 0.58 + 24);
-      const approxHeight = Math.max(30, fontSize * 1.3);
-      halfW = approxWidth / 2;
-      halfH = approxHeight / 2;
+      const metrics = getTextMetrics(textStr, fontSize);
+      halfW = metrics.halfW;
+      halfH = metrics.halfH;
       break;
     }
     case 'custom_image':

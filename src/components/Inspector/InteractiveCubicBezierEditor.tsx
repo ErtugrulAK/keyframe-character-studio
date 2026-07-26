@@ -285,36 +285,34 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Floating Close Button at Top-Right */}
-        <button
-          className="btn-icon"
-          onClick={() => {
-            setIsModalOpen(false);
-            onCloseModal?.();
-          }}
-          title="Close Studio"
-          style={{
-            position: 'absolute',
-            top: 14,
-            right: 14,
-            zIndex: 20,
-            width: 30,
-            height: 30,
-            borderRadius: 6,
-            background: '#1c2230',
-            border: '1px solid #2d3548',
-            color: '#94a3b8',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <X size={16} />
-        </button>
+        {/* Top Header Row with Close Button */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '16px 24px 0 24px' }}>
+          <button
+            className="btn-icon"
+            onClick={() => {
+              setIsModalOpen(false);
+              onCloseModal?.();
+            }}
+            title="Close"
+            style={{
+              width: 30,
+              height: 30,
+              borderRadius: 6,
+              background: '#1c2230',
+              border: '1px solid #2d3548',
+              color: '#94a3b8',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={16} />
+          </button>
+        </div>
 
         {/* Modal Content Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 24, padding: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, padding: '12px 28px 28px 28px' }}>
           {/* Left Column: SVG Canvas + P1/P2 Coordinates */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* SVG Canvas Box with Exact Red Limit Lines */}

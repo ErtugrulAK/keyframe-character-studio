@@ -78,13 +78,13 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       const innerWidth = rect.width - paddingX * 2;
       const innerHeight = rect.height - paddingY * 2;
 
-      // Mouse X & Y mapped strictly to math coordinates [0..1] and [-2.0..3.0] (range = 5.0)
+      // Mouse X & Y mapped strictly to math coordinates [0..1] and [-3.0..4.0] (range = 7.0)
       const mouseX = e.clientX - rect.left - paddingX;
       const mouseY = e.clientY - rect.top - paddingY;
 
       const xClamped = Math.max(0, Math.min(1, parseFloat((mouseX / innerWidth).toFixed(2))));
       const yNormalized = Math.max(0, Math.min(1, 1 - mouseY / innerHeight));
-      const yMath = parseFloat((-2.0 + yNormalized * 5.0).toFixed(2));
+      const yMath = parseFloat((-3.0 + yNormalized * 7.0).toFixed(2));
 
       if (draggingPoint === 1) {
         updatePoints({ x: xClamped, y: yMath }, p2);
@@ -105,7 +105,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     };
   }, [draggingPoint, p1, p2, updatePoints]);
 
-  // Helper for rendering SVG Graph with exact max/min limit red boundary lines [-2.0, 3.0]
+  // Helper for rendering SVG Graph with exact max/min limit red boundary lines [-3.0, 4.0]
   const renderSvgGraph = (
     ref: React.RefObject<SVGSVGElement | null>,
     svgWidth: number,
@@ -116,11 +116,11 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     const innerWidth = svgWidth - paddingX * 2;
     const innerHeight = svgHeight - paddingY * 2;
 
-    // Y Range mapped strictly to [-2.0, 3.0] (Total range = 5.0)
-    // Red dashed lines mark the absolute top (Y = +3.0) and bottom (Y = -2.0) limits!
+    // Y Range mapped strictly to [-3.0, 4.0] (Total range = 7.0)
+    // Red dashed lines mark the absolute top (Y = +4.0) and bottom (Y = -3.0) limits!
     const mathToSvg = (mx: number, my: number) => {
       const sx = paddingX + mx * innerWidth;
-      const yNormalized = (my - (-2.0)) / 5.0;
+      const yNormalized = (my - (-3.0)) / 7.0;
       const sy = paddingY + innerHeight - yNormalized * innerHeight;
       return { sx, sy };
     };
@@ -132,8 +132,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
     const zeroBoxP = mathToSvg(0, 0);
     const oneBoxP = mathToSvg(1, 1);
-    const topLimitP = mathToSvg(0, 3.0);
-    const botLimitP = mathToSvg(0, -2.0);
+    const topLimitP = mathToSvg(0, 4.0);
+    const botLimitP = mathToSvg(0, -3.0);
 
     const bezierPathD = `M ${startP.sx},${startP.sy} C ${handle1P.sx},${handle1P.sy} ${handle2P.sx},${handle2P.sy} ${endP.sx},${endP.sy}`;
 
@@ -162,7 +162,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           strokeDasharray="4 4"
         />
 
-        {/* Upper Limit Boundary Line (Y = +3.0 MAX) */}
+        {/* Upper Limit Boundary Line (Y = +4.0 MAX) */}
         <line
           x1={paddingX}
           y1={topLimitP.sy}
@@ -173,10 +173,10 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           strokeDasharray="4 3"
         />
         <text x={svgWidth - paddingX + 6} y={topLimitP.sy + 3} fill="rgba(239, 68, 68, 0.85)" fontSize="10" fontWeight="700" fontFamily="monospace">
-          Y = +3.0 (MAX)
+          Y = +4.0 (MAX)
         </text>
 
-        {/* Lower Limit Boundary Line (Y = -2.0 MIN) */}
+        {/* Lower Limit Boundary Line (Y = -3.0 MIN) */}
         <line
           x1={paddingX}
           y1={botLimitP.sy}
@@ -187,7 +187,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           strokeDasharray="4 3"
         />
         <text x={svgWidth - paddingX + 6} y={botLimitP.sy + 3} fill="rgba(239, 68, 68, 0.85)" fontSize="10" fontWeight="700" fontFamily="monospace">
-          Y = -2.0 (MIN)
+          Y = -3.0 (MIN)
         </text>
 
         {/* Control Handle Lines */}
@@ -348,7 +348,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y1 (-2.0..3.0)</label>
+                    <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y1 (-3.0..4.0)</label>
                     <input
                       type="number"
                       step={0.05}
@@ -376,7 +376,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y2 (-2.0..3.0)</label>
+                    <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y2 (-3.0..4.0)</label>
                     <input
                       type="number"
                       step={0.05}

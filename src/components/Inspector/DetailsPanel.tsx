@@ -6,9 +6,6 @@ import { MotionTab } from './sections/MotionTab';
 import { PresetsTab } from './sections/PresetsTab';
 import {
   Sliders,
-  Plus,
-  Settings,
-  Lock,
   Copy,
   Trash2,
   Activity,
@@ -16,18 +13,6 @@ import {
   Zap,
   Sparkles,
 } from 'lucide-react';
-
-type FilterChip =
-  | 'All'
-  | 'General'
-  | 'Actor'
-  | 'Effects'
-  | 'Geometry'
-  | 'Layout'
-  | 'Rendering'
-  | 'Style'
-  | 'Text'
-  | 'Utilities';
 
 export const DetailsPanel: React.FC = () => {
   const {
@@ -42,7 +27,6 @@ export const DetailsPanel: React.FC = () => {
     duplicateSelectedPart,
   } = useAnimator();
 
-  const [activeChip, setActiveChip] = useState<FilterChip>('All');
   const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'motion' | 'presets'>('transform');
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
@@ -63,19 +47,6 @@ export const DetailsPanel: React.FC = () => {
     handlePartPropChange('zIndex', zIndex);
   };
 
-  const filterChips: FilterChip[] = [
-    'All',
-    'General',
-    'Actor',
-    'Effects',
-    'Geometry',
-    'Layout',
-    'Rendering',
-    'Style',
-    'Text',
-    'Utilities',
-  ];
-
   return (
     <div className="details-container">
       {/* 1. Header Bar */}
@@ -84,20 +55,6 @@ export const DetailsPanel: React.FC = () => {
           <Sliders size={14} className="text-cyan" />
           <span className="details-title">Details</span>
         </div>
-        {selectedPart && (
-          <div className="details-header-actions">
-            <button className="btn-add-comp">
-              <Plus size={12} />
-              <span>Add</span>
-            </button>
-            <button className="btn-icon-sm" title="Component Settings">
-              <Settings size={12} />
-            </button>
-            <button className="btn-icon-sm" title="Lock Details">
-              <Lock size={12} />
-            </button>
-          </div>
-        )}
       </div>
 
       {/* 2. Selected Actor Instance Header */}
@@ -129,22 +86,7 @@ export const DetailsPanel: React.FC = () => {
         <div className="details-empty-state">Select an actor in Outliner or Stage Canvas</div>
       )}
 
-      {/* 3. Category Filter Chips */}
-      {selectedPart && (
-        <div className="details-chips-bar">
-          {filterChips.map((chip) => (
-            <button
-              key={chip}
-              className={`chip-btn ${activeChip === chip ? 'active' : ''}`}
-              onClick={() => setActiveChip(chip)}
-            >
-              {chip}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* 4. Tab Sub-Navigation */}
+      {/* 3. Tab Sub-Navigation */}
       {selectedPart && (
         <div className="details-tabs-bar">
           <button
@@ -178,10 +120,10 @@ export const DetailsPanel: React.FC = () => {
         </div>
       )}
 
-      {/* 5. Property Section Body */}
+      {/* 4. Property Section Body */}
       {selectedPart && transform && (
         <div className="details-body">
-          {(activeTabSection === 'transform' || activeChip === 'Geometry' || activeChip === 'Layout') && (
+          {activeTabSection === 'transform' && (
             <TransformTab
               selectedPart={selectedPart}
               transform={transform}
@@ -192,7 +134,7 @@ export const DetailsPanel: React.FC = () => {
             />
           )}
 
-          {(activeTabSection === 'style' || activeChip === 'Style' || activeChip === 'Effects' || activeChip === 'Text') && (
+          {activeTabSection === 'style' && (
             <StyleTab
               selectedPart={selectedPart}
               handlePartPropChange={handlePartPropChange}

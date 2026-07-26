@@ -117,9 +117,12 @@ interface AnimatorContextType {
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
+  sceneTitle: string;
+  setSceneTitle: (title: string) => void;
   motionTemplates: MotionTemplate[];
   activeTemplateId: string;
   setActiveTemplateId: (id: string) => void;
+  addMotionTemplate: (name: string, type?: 'in' | 'out' | 'stunt') => void;
   assignTemplateToLayer: (partId: string, templateId: string) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderTracks: (dragIndex: number, hoverIndex: number) => void;
@@ -195,9 +198,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
   const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
 
+  const [sceneTitle, setSceneTitle] = useState<string>('News_LT_Main');
   const [activeTemplateId, setActiveTemplateIdState] = useState<string>('In_V1');
 
-  const [motionTemplates] = useState<MotionTemplate[]>([
+  const [motionTemplates, setMotionTemplates] = useState<MotionTemplate[]>([
     { id: 'In_V1', name: 'In_V1', type: 'in', durationFrames: 45, description: 'Standard Entrance Sequence' },
     { id: 'Out_V1', name: 'Out_V1', type: 'out', durationFrames: 35, description: 'Standard Exit Sequence' },
     { id: 'Stunt_V1', name: 'Stunt_V1', type: 'stunt', durationFrames: 60, description: 'Live Stunt Loop Sequence' },
@@ -208,6 +212,20 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setActiveTemplateIdState(id);
     showToast(`Switched active Motion Template to "${id}"`, 'info');
   }, [showToast]);
+
+  const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
+    const cleanId = name.trim().replace(/\s+/g, '_') || `Template_${motionTemplates.length + 1}`;
+    const newTmpl: MotionTemplate = {
+      id: cleanId,
+      name: cleanId,
+      type,
+      durationFrames: 45,
+      description: 'Custom Motion Design Template Sequence',
+    };
+    setMotionTemplates((prev) => [...prev, newTmpl]);
+    setActiveTemplateIdState(cleanId);
+    showToast(`Created new sequence template "${cleanId}"`, 'success');
+  }, [motionTemplates.length, showToast]);
 
   const assignTemplateToLayer = useCallback((partId: string, templateId: string) => {
     setTracks((prev) =>
@@ -1656,9 +1674,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         renamePartAndTrack,
         reorderTracks,
         setTrackIndex,
+        sceneTitle,
+        setSceneTitle,
         motionTemplates,
         activeTemplateId,
         setActiveTemplateId,
+        addMotionTemplate,
         assignTemplateToLayer,
       }}
     >

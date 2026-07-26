@@ -581,3 +581,82 @@
   color: #fff;
   border-color: #38bdf8;
 }
+
+/* Color Picker Grid & Swatches */
+.color-grid-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.color-picker-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #151822;
+  border: 1px solid #232838;
+  border-radius: 4px;
+  padding: 6px;
+  box-sizing: border-box;
+}
+
+.color-card-label {
+  font-size: 9px !important;
+  font-weight: 800 !important;
+  color: #94a3b8 !important;
+  text-transform: uppercase;
+}
+
+.color-picker-compact {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+}
+
+.color-swatch-input {
+  width: 28px !important;
+  height: 22px !important;
+  padding: 0 !important;
+  border: 1px solid #2d3548 !important;
+  border-radius: 3px !important;
+  cursor: pointer;
+  background: transparent !important;
+}
+
+.color-hex-input {
+  flex: 1 !important;
+  width: 100% !important;
+  height: 22px !important;
+  background: #101218 !important;
+  border: 1px solid #282e3f !important;
+  border-radius: 3px !important;
+  color: #fff !important;
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  font-family: var(--font-mono) !important;
+  padding: 0 6px !important;
+}
+
+.swatches-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  width: 100%;
+}
+
+.color-swatch-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+}
+.color-swatch-btn:hover {
+  transform: scale(1.15);
+  z-index: 2;
+}

@@ -6,8 +6,6 @@ import {
   RotateCcw,
   Film,
   CheckCircle2,
-  Globe,
-  Zap,
 } from 'lucide-react';
 import './HeaderBar.css';
 
@@ -21,9 +19,6 @@ export const HeaderBar: React.FC = () => {
     showToast,
     appMode,
     setAppMode,
-    motionTemplates,
-    activeTemplateId,
-    setActiveTemplateId,
   } = useAnimator();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -89,41 +84,6 @@ export const HeaderBar: React.FC = () => {
         </div>
         <div className="brand-title">
           <span className="title-primary">KEYFRAME STUDIO</span>
-        </div>
-
-        {/* Unreal / Reality 5 Motion Design Sequence Template Selector */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 12, borderLeft: '1px solid var(--border-color)', paddingLeft: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#161a24', padding: '3px 8px', borderRadius: 4, border: '1px solid #282d3c' }}>
-            <Globe size={13} className="text-teal" />
-            <span style={{ fontSize: 11, fontWeight: 800, color: '#e2e8f0' }}>News_LT_Main</span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 3, background: '#101218', padding: '2px', borderRadius: 5, border: '1px solid #232734' }}>
-            {motionTemplates.map((tmpl) => (
-              <button
-                key={tmpl.id}
-                onClick={() => setActiveTemplateId(tmpl.id)}
-                style={{
-                  padding: '3px 8px',
-                  borderRadius: 4,
-                  fontSize: 10.5,
-                  fontWeight: 800,
-                  color: activeTemplateId === tmpl.id ? '#fff' : '#64748b',
-                  background: activeTemplateId === tmpl.id ? '#0284c7' : 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 4,
-                  transition: 'all 0.15s ease',
-                }}
-                title={tmpl.description}
-              >
-                <Zap size={10} className={tmpl.type === 'in' ? 'text-teal' : tmpl.type === 'out' ? 'text-red' : 'text-gold'} />
-                <span>{tmpl.name}</span>
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 

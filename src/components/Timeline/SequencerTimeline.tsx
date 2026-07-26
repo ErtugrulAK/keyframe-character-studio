@@ -25,6 +25,8 @@ import {
   Diamond,
   TrendingUp,
   GripVertical,
+  Globe,
+  Zap,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import './SequencerTimeline.css';
@@ -146,7 +148,17 @@ export const SequencerTimeline: React.FC = () => {
     updatePropertyKeyframeFrame,
     updateKeyframeBezierPoints,
     getComputedTransform,
+    sceneTitle,
+    setSceneTitle,
+    motionTemplates,
+    activeTemplateId,
+    setActiveTemplateId,
+    addMotionTemplate,
   } = useAnimator();
+
+  // Scene Title Inline Editing State
+  const [isEditingSceneTitle, setIsEditingSceneTitle] = useState<boolean>(false);
+  const [editingSceneValue, setEditingSceneValue] = useState<string>(sceneTitle);
 
   // Expanded Pro Curve Studio Modal State
   const [isCurveModalOpen, setIsCurveModalOpen] = useState<boolean>(false);
@@ -352,6 +364,75 @@ export const SequencerTimeline: React.FC = () => {
       {/* Top Resizer Handle Bar */}
       <div className="timeline-resizer-bar" onMouseDown={handleResizeStart} title="Drag to resize timeline panel">
         <div className="resizer-handle-pill" />
+      </div>
+
+      {/* Motion Design Sequence & Template Browser Tabs Bar */}
+      <div className="timeline-template-tabs-bar">
+        {/* Editable Scene / Sequence Project Title */}
+        <div className="timeline-scene-title-chip">
+          <Globe size={13} className="text-teal" />
+          {isEditingSceneTitle ? (
+            <input
+              type="text"
+              className="scene-title-input"
+              value={editingSceneValue}
+              autoFocus
+              onChange={(e) => setEditingSceneValue(e.target.value)}
+              onBlur={() => {
+                if (editingSceneValue.trim()) setSceneTitle(editingSceneValue.trim());
+                setIsEditingSceneTitle(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  if (editingSceneValue.trim()) setSceneTitle(editingSceneValue.trim());
+                  setIsEditingSceneTitle(false);
+                }
+              }}
+            />
+          ) : (
+            <span
+              className="scene-title-text"
+              onClick={() => {
+                setEditingSceneValue(sceneTitle);
+                setIsEditingSceneTitle(true);
+              }}
+              title="Click to edit Scene / Sequence Project Name"
+            >
+              {sceneTitle}
+            </span>
+          )}
+        </div>
+
+        <div className="template-browser-tabs">
+          {motionTemplates.map((tmpl) => (
+            <button
+              key={tmpl.id}
+              className={`template-tab-item ${activeTemplateId === tmpl.id ? 'active' : ''}`}
+              onClick={() => setActiveTemplateId(tmpl.id)}
+              title={tmpl.description}
+            >
+              <Zap
+                size={11}
+                className={tmpl.type === 'in' ? 'text-teal' : tmpl.type === 'out' ? 'text-red' : 'text-gold'}
+              />
+              <span>{tmpl.name}</span>
+            </button>
+          ))}
+
+          {/* Browser Tab Style "+" Add New Sequence Template Button */}
+          <button
+            className="add-template-tab-btn"
+            onClick={() => {
+              const name = window.prompt('Enter new animation sequence template name (e.g. In_V2, Out_V2, Loop_V2):');
+              if (name && name.trim()) {
+                addMotionTemplate(name.trim());
+              }
+            }}
+            title="Add New Animation Sequence Template"
+          >
+            <Plus size={12} />
+          </button>
+        </div>
       </div>
 
       {/* Header Bar */}

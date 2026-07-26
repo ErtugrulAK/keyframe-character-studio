@@ -79,13 +79,13 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       const innerWidth = rect.width - paddingX * 2;
       const innerHeight = rect.height - paddingY * 2;
 
-      // Mouse X & Y mapped to math coordinates [0..1] and [-2.5..3.5] (range = 6.0)
+      // Mouse X & Y mapped to math coordinates [0..1] and [-4.0..5.0] (range = 9.0)
       const mouseX = e.clientX - rect.left - paddingX;
       const mouseY = e.clientY - rect.top - paddingY;
 
       const xClamped = Math.max(0, Math.min(1, parseFloat((mouseX / innerWidth).toFixed(2))));
       const yNormalized = 1 - mouseY / innerHeight;
-      const yMath = parseFloat((-2.5 + yNormalized * 6.0).toFixed(2));
+      const yMath = parseFloat((-4.0 + yNormalized * 9.0).toFixed(2));
 
       if (draggingPoint === 1) {
         updatePoints({ x: xClamped, y: yMath }, p2);
@@ -106,7 +106,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     };
   }, [draggingPoint, p1, p2, updatePoints]);
 
-  // Helper for rendering SVG Graph with expanded boundaries [-2.5, 3.5]
+  // Helper for rendering SVG Graph with expanded boundaries [-4.0, 5.0]
   const renderSvgGraph = (
     ref: React.RefObject<SVGSVGElement | null>,
     svgWidth: number,
@@ -117,11 +117,11 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     const innerWidth = svgWidth - paddingX * 2;
     const innerHeight = svgHeight - paddingY * 2;
 
-    // Y Range is mapped from [-2.5, 3.5] (Total range = 6.0)
+    // Y Range is mapped from [-4.0, 5.0] (Total range = 9.0)
     // Generous expanded top & bottom boundaries so curve handles never hit top/bottom edges!
     const mathToSvg = (mx: number, my: number) => {
       const sx = paddingX + mx * innerWidth;
-      const yNormalized = (my - (-2.5)) / 6.0;
+      const yNormalized = (my - (-4.0)) / 9.0;
       const sy = paddingY + innerHeight - yNormalized * innerHeight;
       return { sx, sy };
     };
@@ -133,8 +133,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
     const zeroBoxP = mathToSvg(0, 0);
     const oneBoxP = mathToSvg(1, 1);
-    const topLimitP = mathToSvg(0, 2.0);
-    const botLimitP = mathToSvg(0, -1.0);
+    const topLimitP = mathToSvg(0, 3.0);
+    const botLimitP = mathToSvg(0, -2.0);
 
     const bezierPathD = `M ${startP.sx},${startP.sy} C ${handle1P.sx},${handle1P.sy} ${handle2P.sx},${handle2P.sy} ${endP.sx},${endP.sy}`;
 
@@ -163,7 +163,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           strokeDasharray="4 4"
         />
 
-        {/* Extended Upper Boundary Line (Y = +2.0) */}
+        {/* Extended Upper Boundary Line (Y = +3.0) */}
         <line
           x1={paddingX}
           y1={topLimitP.sy}
@@ -174,10 +174,10 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           strokeDasharray="3 3"
         />
         <text x={svgWidth - paddingX + 6} y={topLimitP.sy + 3} fill="rgba(239, 68, 68, 0.6)" fontSize="9" fontFamily="monospace">
-          Y = +2.0
+          Y = +3.0
         </text>
 
-        {/* Extended Lower Boundary Line (Y = -1.0) */}
+        {/* Extended Lower Boundary Line (Y = -2.0) */}
         <line
           x1={paddingX}
           y1={botLimitP.sy}
@@ -188,7 +188,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           strokeDasharray="3 3"
         />
         <text x={svgWidth - paddingX + 6} y={botLimitP.sy + 3} fill="rgba(239, 68, 68, 0.6)" fontSize="9" fontFamily="monospace">
-          Y = -1.0
+          Y = -2.0
         </text>
 
         {/* Control Handle Lines */}

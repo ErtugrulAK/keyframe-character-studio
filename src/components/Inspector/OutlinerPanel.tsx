@@ -103,7 +103,14 @@ export const OutlinerPanel: React.FC = () => {
                     {/* Item Label Column */}
                     <div className="col-label" style={{ paddingLeft: 18 }}>
                       {getActorIcon(part.type)}
-                      <span className="actor-name">{part.name}</span>
+                      <span className="actor-name">
+                        {part.name
+                          ? part.name
+                              .split(' ')
+                              .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                              .join(' ')
+                          : part.name}
+                      </span>
                     </div>
                   </div>
                 );

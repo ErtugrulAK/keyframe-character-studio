@@ -25,8 +25,8 @@ export const TextsDrawer: React.FC = () => {
           className="drawer-item-card"
           style={{ justifyContent: 'flex-start', padding: '10px 14px' }}
           draggable={true}
-          onDragStart={(e) => handleDragStart(e, 'custom_text', 'HEADING', { fontFamily: 'Outfit', fontSize: 48 })}
-          onClick={() => addCustomPart('custom_text', 'HEADING', { fontFamily: 'Outfit', fontSize: 48 })}
+          onDragStart={(e) => handleDragStart(e, 'custom_text', 'Heading', { fontFamily: 'Outfit', fontSize: 48 })}
+          onClick={() => addCustomPart('custom_text', 'Heading', { fontFamily: 'Outfit', fontSize: 48 })}
         >
           <Type size={16} className="text-cyan" />
           <span className="item-label" style={{ fontFamily: 'Outfit', fontSize: 16, fontWeight: 800 }}>Add Heading</span>

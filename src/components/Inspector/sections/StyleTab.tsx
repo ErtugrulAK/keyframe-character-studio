@@ -113,8 +113,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   return (
     <div className="inspector-section">
       <div className="section-title">
-        <Palette size={13} />
-        <span>COLOR PICKER & PALETTE SWATCHES</span>
+        <Palette size={13} className="text-cyan" />
+        <span>SURFACE & MATERIAL DESIGN</span>
       </div>
 
       <div className="style-controls-list">
@@ -794,37 +794,44 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           </>
         )}
 
-        {/* FILL COLOR */}
-        <div className="input-field">
-          <label>FILL COLOR</label>
-          <div className="color-picker-row">
-            <input
-              type="color"
-              value={selectedPart.fillColor}
-              onChange={(e) => handlePartColorChange('fillColor', e.target.value)}
-            />
-            <input
-              type="text"
-              value={selectedPart.fillColor}
-              onChange={(e) => handlePartColorChange('fillColor', e.target.value)}
-            />
+        {/* FILL & STROKE COLOR GRID */}
+        <div className="color-grid-two-col">
+          <div className="color-picker-card">
+            <label className="color-card-label">FILL COLOR</label>
+            <div className="color-picker-compact">
+              <input
+                type="color"
+                className="color-swatch-input"
+                value={selectedPart.fillColor || '#00d2ff'}
+                onChange={(e) => handlePartColorChange('fillColor', e.target.value)}
+              />
+              <input
+                type="text"
+                className="color-hex-input"
+                value={selectedPart.fillColor || '#00d2ff'}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => handlePartColorChange('fillColor', e.target.value)}
+              />
+            </div>
           </div>
-        </div>
 
-        {/* STROKE COLOR */}
-        <div className="input-field">
-          <label>STROKE COLOR</label>
-          <div className="color-picker-row">
-            <input
-              type="color"
-              value={selectedPart.strokeColor}
-              onChange={(e) => handlePartColorChange('strokeColor', e.target.value)}
-            />
-            <input
-              type="text"
-              value={selectedPart.strokeColor}
-              onChange={(e) => handlePartColorChange('strokeColor', e.target.value)}
-            />
+          <div className="color-picker-card">
+            <label className="color-card-label">STROKE COLOR</label>
+            <div className="color-picker-compact">
+              <input
+                type="color"
+                className="color-swatch-input"
+                value={selectedPart.strokeColor || '#1e293b'}
+                onChange={(e) => handlePartColorChange('strokeColor', e.target.value)}
+              />
+              <input
+                type="text"
+                className="color-hex-input"
+                value={selectedPart.strokeColor || '#1e293b'}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => handlePartColorChange('strokeColor', e.target.value)}
+              />
+            </div>
           </div>
         </div>
 
@@ -833,9 +840,10 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           <label>QUICK PALETTE SWATCHES</label>
           <div className="swatches-grid">
             {COLOR_SWATCHES.map((color) => (
-              <div
+              <button
                 key={color}
-                className="color-swatch"
+                type="button"
+                className="color-swatch-btn"
                 style={{ backgroundColor: color }}
                 onClick={() => handlePartColorChange('fillColor', color)}
                 title={`Set Fill to ${color}`}
@@ -873,15 +881,25 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
         <div className="input-field">
           <label>SHADOW / GLOW COLOR</label>
-          <div className="color-picker-row">
+          <div className="color-picker-compact">
             <input
               type="color"
+              className="color-swatch-input"
               value={selectedPart.shadowColor || '#000000'}
               onChange={(e) => handlePartPropChange('shadowColor', e.target.value)}
             />
+            <input
+              type="text"
+              className="color-hex-input"
+              value={selectedPart.shadowColor || '#000000'}
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => handlePartPropChange('shadowColor', e.target.value)}
+              placeholder="NONE"
+            />
             <button
+              type="button"
               className="btn-secondary"
-              style={{ padding: '2px 8px', fontSize: 10 }}
+              style={{ padding: '2px 8px', fontSize: 10, height: 32, whiteSpace: 'nowrap' }}
               onClick={() => handlePartPropChange('shadowColor', undefined)}
             >
               Clear Shadow

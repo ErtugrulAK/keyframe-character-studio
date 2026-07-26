@@ -63,10 +63,10 @@ export const PropertyInspector: React.FC = () => {
         <button
           className={`tab-btn ${activeTab === 'style' ? 'active' : ''}`}
           onClick={() => setActiveTab('style')}
-          title="Color & Style"
+          title="Appearance, Colors & Materials"
         >
           <Palette size={13} />
-          <span>Color</span>
+          <span>Appearance</span>
         </button>
 
         <button

@@ -42,6 +42,72 @@ const CHANNEL_META: Record<TrackChannel, { label: string; color: string; shortLa
 const TRACK_ROW_HEIGHT = 34;   // parent track row
 const CHANNEL_ROW_HEIGHT = 28; // sub-channel row
 
+const LayerIndexInput: React.FC<{
+  trackId: string;
+  current1BasedIndex: number;
+  maxIndex: number;
+  setTrackIndex: (trackId: string, val: number) => void;
+}> = ({ trackId, current1BasedIndex, maxIndex, setTrackIndex }) => {
+  const [editingVal, setEditingVal] = useState<string>(String(current1BasedIndex));
+
+  useEffect(() => {
+    setEditingVal(String(current1BasedIndex));
+  }, [current1BasedIndex]);
+
+  const commitValue = () => {
+    let parsed = parseInt(editingVal, 10);
+    if (!isNaN(parsed)) {
+      parsed = Math.max(1, Math.min(maxIndex, parsed));
+      setTrackIndex(trackId, parsed);
+      setEditingVal(String(parsed));
+    } else {
+      setEditingVal(String(current1BasedIndex));
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      min={1}
+      max={maxIndex}
+      value={editingVal}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          commitValue();
+          (e.target as HTMLInputElement).blur();
+        } else if (e.key === 'Escape') {
+          setEditingVal(String(current1BasedIndex));
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+      onChange={(e) => {
+        setEditingVal(e.target.value);
+        const parsed = parseInt(e.target.value, 10);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= maxIndex) {
+          setTrackIndex(trackId, parsed);
+        }
+      }}
+      onBlur={commitValue}
+      style={{
+        width: 34,
+        height: 20,
+        background: 'rgba(255, 255, 255, 0.12)',
+        border: '1px solid var(--accent-cyan)',
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 800,
+        borderRadius: 4,
+        textAlign: 'center',
+        outline: 'none',
+        cursor: 'pointer',
+      }}
+      title="Edit layer index number (1 = top layer)"
+    />
+  );
+};
+
 export const SequencerTimeline: React.FC = () => {
   const {
     currentFrame,
@@ -486,33 +552,12 @@ export const SequencerTimeline: React.FC = () => {
                       </span>
                     )}
 
-                    {/* Interactive 1-based Layer Index Input */}
-                    <input
-                      type="number"
-                      min={1}
-                      max={tracks.length}
-                      value={trackIdx + 1}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        if (!isNaN(val) && val >= 1 && val <= tracks.length) {
-                          setTrackIndex(track.id, val);
-                        }
-                      }}
-                      style={{
-                        width: 32,
-                        height: 20,
-                        background: 'rgba(255,255,255,0.08)',
-                        border: '1px solid var(--border-color)',
-                        color: 'var(--accent-cyan)',
-                        fontSize: 10,
-                        fontWeight: 700,
-                        borderRadius: 4,
-                        textAlign: 'center',
-                        outline: 'none',
-                        cursor: 'pointer',
-                      }}
-                      title="Edit layer number (1 = top layer on canvas)"
+                    {/* Editable Layer Index Input */}
+                    <LayerIndexInput
+                      trackId={track.id}
+                      current1BasedIndex={trackIdx + 1}
+                      maxIndex={tracks.length}
+                      setTrackIndex={setTrackIndex}
                     />
 
                     <div className="ue-track-controls">

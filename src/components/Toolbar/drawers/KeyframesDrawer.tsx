@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAnimator } from '../../../context/AnimatorContext';
-import { Film, Plus, CheckCircle2 } from 'lucide-react';
+import { Film, Plus, CheckCircle2, Edit2 } from 'lucide-react';
+import { NewItemModal } from '../../Modal/NewItemModal';
 
 export const KeyframesDrawer: React.FC = () => {
   const {
@@ -8,7 +9,10 @@ export const KeyframesDrawer: React.FC = () => {
     activeTemplateId,
     setActiveTemplateId,
     addMotionTemplate,
+    renameMotionTemplate,
   } = useAnimator();
+
+  const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(null);
 
   return (
     <div className="drawer-content">
@@ -16,14 +20,14 @@ export const KeyframesDrawer: React.FC = () => {
         <span className="drawer-title">Animation Sequences</span>
       </div>
       <p className="drawer-desc" style={{ fontSize: 11, marginBottom: 12 }}>
-        Manage animation sequences for the active graphic template.
+        Manage and switch animation sequences for the active graphic template.
       </p>
 
       <button
         className="btn-primary w-full add-kf-drawer-btn"
         onClick={() => {
-          const nextNum = motionTemplates.length + 1;
-          addMotionTemplate(`Sequence ${nextNum}`);
+          const defaultSeqName = motionTemplates.length === 1 && motionTemplates[0].name === 'Sequence' ? 'Sequence 1' : `Sequence ${motionTemplates.length}`;
+          addMotionTemplate(defaultSeqName);
         }}
         style={{ marginBottom: 14 }}
       >
@@ -64,6 +68,18 @@ export const KeyframesDrawer: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <button
+                  className="btn-icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRenameTarget({ id: tmpl.id, name: tmpl.name });
+                  }}
+                  title="Rename Sequence"
+                  style={{ width: 22, height: 22, padding: 0 }}
+                >
+                  <Edit2 size={12} className="text-muted" />
+                </button>
+
                 {isActive ? (
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#2dd4bf', background: 'rgba(20,184,166,0.2)', padding: '2px 6px', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 3 }}>
                     <CheckCircle2 size={10} /> Active
@@ -78,6 +94,23 @@ export const KeyframesDrawer: React.FC = () => {
           );
         })}
       </div>
+
+      {/* Rename Sequence Modal */}
+      <NewItemModal
+        isOpen={!!renameTarget}
+        title="Rename Sequence"
+        subtitle={`Enter a new name for sequence "${renameTarget?.name || ''}".`}
+        placeholder="Sequence name..."
+        defaultValue={renameTarget?.name || ''}
+        confirmLabel="Rename Sequence"
+        onClose={() => setRenameTarget(null)}
+        onSubmit={(val) => {
+          if (renameTarget) {
+            renameMotionTemplate(renameTarget.id, val);
+            setRenameTarget(null);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -27,6 +27,7 @@ import {
   TrendingUp,
   GripVertical,
   Film,
+  Edit2,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
@@ -153,11 +154,13 @@ export const SequencerTimeline: React.FC = () => {
     activeTemplateId,
     setActiveTemplateId,
     addMotionTemplate,
+    renameMotionTemplate,
   } = useAnimator();
 
   // Sequencer Tree Modal Toggle State & Click-Outside Listener
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
   const [isAddSeqModalOpen, setIsAddSeqModalOpen] = useState<boolean>(false);
+  const [renameSeqModal, setRenameSeqModal] = useState<{ id: string; name: string } | null>(null);
   const seqMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -409,12 +412,28 @@ export const SequencerTimeline: React.FC = () => {
                       setIsSeqTreeOpen(false);
                     }}
                   >
-                    <span className="seq-label" style={{ fontWeight: isActive ? 800 : 600 }}>
+                    <span className="seq-label" style={{ fontWeight: isActive ? 700 : 500 }}>
                       {tmpl.name}
                     </span>
-                    <span className={`seq-status ${isActive ? 'text-teal' : ''}`}>
-                      {isActive ? 'Active' : 'Select'}
-                    </span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <button
+                        className="btn-icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsSeqTreeOpen(false);
+                          setRenameSeqModal({ id: tmpl.id, name: tmpl.name });
+                        }}
+                        title="Rename sequence"
+                        style={{ width: 20, height: 20, padding: 0 }}
+                      >
+                        <Edit2 size={11} className="text-muted" />
+                      </button>
+
+                      <span className={`seq-status ${isActive ? 'text-teal' : ''}`}>
+                        {isActive ? 'Active' : 'Select'}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -1100,6 +1119,23 @@ export const SequencerTimeline: React.FC = () => {
         confirmLabel="Create Sequence"
         onClose={() => setIsAddSeqModalOpen(false)}
         onSubmit={(val) => addMotionTemplate(val)}
+      />
+
+      {/* Rename Sequence Modal */}
+      <NewItemModal
+        isOpen={!!renameSeqModal}
+        title="Rename Sequence"
+        subtitle={`Enter a new name for sequence "${renameSeqModal?.name || ''}".`}
+        placeholder="Sequence name..."
+        defaultValue={renameSeqModal?.name || ''}
+        confirmLabel="Rename Sequence"
+        onClose={() => setRenameSeqModal(null)}
+        onSubmit={(val) => {
+          if (renameSeqModal) {
+            renameMotionTemplate(renameSeqModal.id, val);
+            setRenameSeqModal(null);
+          }
+        }}
       />
     </footer>
   );

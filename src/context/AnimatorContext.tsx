@@ -128,6 +128,7 @@ interface AnimatorContextType {
   activeTemplateId: string;
   setActiveTemplateId: (id: string) => void;
   addMotionTemplate: (name: string, type?: 'in' | 'out' | 'stunt') => void;
+  renameMotionTemplate: (oldId: string, newName: string) => void;
   assignTemplateToLayer: (partId: string, templateId: string) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderTracks: (dragIndex: number, hoverIndex: number) => void;
@@ -255,6 +256,19 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setMotionTemplates((prev) => [...prev, newTmpl]);
     setActiveTemplateIdState(cleanId);
   }, [motionTemplates]);
+
+  const renameMotionTemplate = useCallback((oldId: string, newName: string) => {
+    const cleanName = newName.trim();
+    if (!cleanName || cleanName === oldId) return;
+
+    setMotionTemplates((prev) =>
+      prev.map((t) => (t.id === oldId ? { ...t, id: cleanName, name: cleanName } : t))
+    );
+
+    if (activeTemplateId === oldId) {
+      setActiveTemplateIdState(cleanName);
+    }
+  }, [activeTemplateId]);
 
   const setActiveProjectTemplateId = useCallback((targetId: string) => {
     if (targetId === activeProjectTemplateId) return;
@@ -1794,6 +1808,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         activeTemplateId,
         setActiveTemplateId,
         addMotionTemplate,
+        renameMotionTemplate,
         assignTemplateToLayer,
       }}
     >

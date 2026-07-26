@@ -220,10 +220,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [projectTemplates, setProjectTemplates] = useState<ProjectTemplate[]>([
-    { id: 'tmpl_1', name: 'News_LT_Main' },
+    { id: 'tmpl_1', name: 'Template 1' },
   ]);
   const [activeProjectTemplateId, setActiveProjectTemplateIdState] = useState<string>('tmpl_1');
-  const [sceneTitle, setSceneTitleState] = useState<string>('News_LT_Main');
+  const [sceneTitle, setSceneTitleState] = useState<string>('Template 1');
 
   const setSceneTitle = useCallback((title: string) => {
     setSceneTitleState(title);

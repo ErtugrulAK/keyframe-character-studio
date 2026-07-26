@@ -24,6 +24,7 @@ import {
   ChevronDown,
   Diamond,
   TrendingUp,
+  GripVertical,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import './SequencerTimeline.css';
@@ -60,6 +61,7 @@ export const SequencerTimeline: React.FC = () => {
     toggleTrackVisibility,
     toggleTrackEditVisibility,
     renamePartAndTrack,
+    reorderTracks,
     toggleTrackLock,
     toggleTrackExpanded,
     deleteKeyframe,
@@ -89,6 +91,8 @@ export const SequencerTimeline: React.FC = () => {
   const [draggingPKf, setDraggingPKf] = useState<{ trackId: string; channel: TrackChannel; keyframeId: string } | null>(null);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [hoveredKf, setHoveredKf] = useState<{ frame: number; label: string } | null>(null);
+  const [draggedTrackIndex, setDraggedTrackIndex] = useState<number | null>(null);
+  const [dragOverTrackIndex, setDragOverTrackIndex] = useState<number | null>(null);
 
   const FRAME_WIDTH = timelineZoom;
 
@@ -379,10 +383,44 @@ export const SequencerTimeline: React.FC = () => {
                 <div key={track.id} className="ue-track-group">
                   {/* ── LAYER ROW ── */}
                   <div
-                    className={`ue-track-row ${isSelected ? 'selected' : ''}`}
+                    className={`ue-track-row ${isSelected ? 'selected' : ''} ${draggedTrackIndex === trackIdx ? 'dragging' : ''} ${dragOverTrackIndex === trackIdx ? 'drag-over' : ''}`}
                     style={{ height: TRACK_ROW_HEIGHT }}
                     onClick={() => setSelectedPartId(track.partId)}
+                    draggable={true}
+                    onDragStart={(e) => {
+                      setDraggedTrackIndex(trackIdx);
+                      e.dataTransfer.effectAllowed = 'move';
+                      e.dataTransfer.setData('text/plain', String(trackIdx));
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dragOverTrackIndex !== trackIdx) {
+                        setDragOverTrackIndex(trackIdx);
+                      }
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverTrackIndex === trackIdx) {
+                        setDragOverTrackIndex(null);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedTrackIndex !== null && draggedTrackIndex !== trackIdx) {
+                        reorderTracks(draggedTrackIndex, trackIdx);
+                      }
+                      setDraggedTrackIndex(null);
+                      setDragOverTrackIndex(null);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedTrackIndex(null);
+                      setDragOverTrackIndex(null);
+                    }}
                   >
+                    <span title="Drag up or down to reorder layer depth" style={{ display: 'flex', alignItems: 'center' }}>
+                      <GripVertical size={13} className="track-drag-grip" />
+                    </span>
+
                     <button
                       className="ue-expand-btn"
                       onClick={(e) => { e.stopPropagation(); toggleTrackExpanded(track.id); }}
@@ -431,7 +469,7 @@ export const SequencerTimeline: React.FC = () => {
                         onDoubleClick={(e) => {
                           e.stopPropagation();
                           setEditingPartId(track.partId);
-                          setEditingNameValue(track.name.replace(/ Track$/, ''));
+                          setEditingNameValue(track.name);
                         }}
                         title="Double-click to rename layer"
                       >

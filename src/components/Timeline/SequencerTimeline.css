@@ -161,18 +161,35 @@
 .ue-track-row {
   display: flex;
   align-items: center;
-  padding: 0 6px 0 8px;
+  padding: 0 6px 0 6px;
   gap: 6px;
   border-bottom: 1px solid rgba(255,255,255,0.035);
-  cursor: pointer;
-  transition: background 0.12s;
+  cursor: grab;
+  transition: background 0.12s, border-top 0.12s;
   background: #0e1014;
   position: relative;
 }
+.ue-track-row:active { cursor: grabbing; }
 .ue-track-row:hover { background: #14171f; }
 .ue-track-row.selected {
   background: rgba(20,184,166,0.08);
   border-left: 2px solid #14b8a6;
+}
+.ue-track-row.dragging {
+  opacity: 0.35;
+  background: #08090b !important;
+}
+.ue-track-row.drag-over {
+  border-top: 2px solid var(--accent-cyan) !important;
+  background: rgba(0, 210, 255, 0.15) !important;
+}
+.track-drag-grip {
+  cursor: grab;
+  transition: opacity 0.15s, color 0.15s;
+}
+.ue-track-row:hover .track-drag-grip {
+  opacity: 0.9 !important;
+  color: var(--accent-cyan) !important;
 }
 
 .ue-expand-btn {

@@ -117,6 +117,7 @@ interface AnimatorContextType {
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
+  reorderTracks: (dragIndex: number, hoverIndex: number) => void;
   deletePart: (partId: string) => void;
   copySelectedPart: () => void;
   pasteCopiedPart: () => void;
@@ -1306,7 +1307,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const newTrack: Track = {
       id: generateId('track'),
       partId,
-      name: `${name} Track`,
+      name: name,
       color: randomColor,
       visible: true,
       locked: false,
@@ -1333,10 +1334,33 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       prev.map((p) => (p.id === partId ? { ...p, name: trimmed } : p))
     );
     setTracks((prev) =>
-      prev.map((t) => (t.partId === partId ? { ...t, name: trimmed.endsWith('Track') ? trimmed : `${trimmed} Track` } : t))
+      prev.map((t) => (t.partId === partId ? { ...t, name: trimmed } : t))
     );
     showToast(`Renamed layer to "${trimmed}"`, 'success');
   }, [showToast]);
+
+  const reorderTracks = useCallback((dragIndex: number, hoverIndex: number) => {
+    if (dragIndex === hoverIndex) return;
+
+    setTracks((prevTracks) => {
+      const updated = [...prevTracks];
+      const [movedTrack] = updated.splice(dragIndex, 1);
+      updated.splice(hoverIndex, 0, movedTrack);
+
+      const total = updated.length;
+      setCharacterParts((prevParts) =>
+        prevParts.map((p) => {
+          const trackIdx = updated.findIndex((t) => t.partId === p.id);
+          if (trackIdx >= 0) {
+            return { ...p, zIndex: total - trackIdx };
+          }
+          return p;
+        })
+      );
+
+      return updated;
+    });
+  }, []);
 
   // ── Custom Motion Preset Engine & Sample Sequencer Project Loader ──
   const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame = 0, endFrame = 50, scope: 'both' | 'motion_only' | 'shape_only' = 'both') => {
@@ -1522,6 +1546,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setStuntLoopState,
         stopAllLiveStunts,
         renamePartAndTrack,
+        reorderTracks,
       }}
     >
       {children}

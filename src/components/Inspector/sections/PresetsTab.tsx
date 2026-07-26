@@ -127,7 +127,7 @@ export const PresetsTab: React.FC = () => {
                       style={{ cursor: 'pointer', accentColor: '#38bdf8' }}
                     />
                     <Move size={11} style={{ color: isMotionChecked ? '#38bdf8' : '#64748b' }} />
-                    <span>Motion / Position (X-Y Translation)</span>
+                    <span>Motion / Position (X, Y)</span>
                   </label>
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 10, color: isShapeChecked ? '#f8fafc' : '#64748b' }}>
@@ -138,7 +138,7 @@ export const PresetsTab: React.FC = () => {
                       style={{ cursor: 'pointer', accentColor: '#c084fc' }}
                     />
                     <Maximize2 size={11} style={{ color: isShapeChecked ? '#c084fc' : '#64748b' }} />
-                    <span>Shape & Scale (Size & Transform)</span>
+                    <span>Shape & Scale</span>
                   </label>
 
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: 10, color: preset.showInDirector !== false ? '#f8fafc' : '#64748b', paddingTop: 2, borderTop: '1px dashed rgba(255,255,255,0.1)' }}>
@@ -149,7 +149,7 @@ export const PresetsTab: React.FC = () => {
                       style={{ cursor: 'pointer', accentColor: '#f59e0b' }}
                     />
                     <Pin size={11} style={{ color: preset.showInDirector !== false ? '#f59e0b' : '#64748b' }} />
-                    <span>Pin to Live Director Bar (Broadcast)</span>
+                    <span>Live Director Pin</span>
                   </label>
                 </div>
 

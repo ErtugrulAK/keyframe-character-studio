@@ -14,9 +14,97 @@
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
+  min-width: 0;
 }
+
+/* Editable template name pill */
+.header-template-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #161a24;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid #282d3c;
+  flex-shrink: 0;
+}
+
+.header-title-input {
+  background: #0f1117;
+  border: 1px solid #38bdf8;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  padding: 1px 6px;
+  outline: none;
+  width: 130px;
+  height: 20px;
+}
+
+.header-title-text {
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: #e2e8f0;
+  cursor: pointer;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.25);
+  transition: color 0.15s;
+  white-space: nowrap;
+}
+.header-title-text:hover {
+  color: #38bdf8;
+}
+
+/* Browser-tab style template tabs */
+.header-template-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 5px;
+  padding: 2px;
+  margin-left: 4px;
+}
+
+.header-tab {
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+.header-tab:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+.header-tab.active {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.header-tab.add-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 6px;
+  color: var(--text-muted);
+}
+.header-tab.add-tab:hover {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+}
+
 
 .brand-title-top {
   display: flex;

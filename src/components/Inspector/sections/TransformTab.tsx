@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { Activity, Compass, Zap, Plus, Link, Unlink, Maximize2, FolderTree } from 'lucide-react';
+import { Activity, Zap, Plus, Link, Unlink, Maximize2 } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
-import { useAnimator } from '../../../context/AnimatorContext';
 
 interface SmartNumberInputProps {
   value: number;
@@ -82,7 +81,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   handlePartPropChange,
 }) => {
   const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
-  const { characterParts, addCustomPart } = useAnimator();
   return (
     <div className="inspector-section">
       <div className="section-title-bar">
@@ -99,33 +97,33 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </button>
       </div>
 
-      <div className="input-grid">
-        <div className="input-field">
-          <label>POSITION X</label>
+      <div className="transform-param-grid">
+        <div className="param-row">
+          <span className="param-label text-red">POS X</span>
           <SmartNumberInput
             value={transform.x}
             onChange={(val) => updateCurrentTransform({ x: val })}
           />
         </div>
 
-        <div className="input-field">
-          <label>POSITION Y ↑+</label>
+        <div className="param-row">
+          <span className="param-label text-green">POS Y</span>
           <SmartNumberInput
             value={-transform.y}
             onChange={(val) => updateCurrentTransform({ y: -val })}
           />
         </div>
 
-        <div className="input-field">
-          <label>ROTATION (°)</label>
+        <div className="param-row">
+          <span className="param-label text-blue">ROT (°)</span>
           <SmartNumberInput
             value={transform.rotation}
             onChange={(val) => updateCurrentTransform({ rotation: val })}
           />
         </div>
 
-        <div className="input-field">
-          <label>OPACITY (0-1)</label>
+        <div className="param-row">
+          <span className="param-label text-gold">OPACITY</span>
           <SmartNumberInput
             value={transform.opacity}
             min={0}
@@ -134,49 +132,38 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             onChange={(val) => updateCurrentTransform({ opacity: val })}
           />
         </div>
-
       </div>
 
       {/* ── PROPORTIONAL SCALE & RATIO SECTION ── */}
-      <div 
-        style={{ 
-          marginTop: 12, 
-          background: 'var(--bg-dark)', 
-          border: '1px solid var(--border-color)', 
-          borderRadius: 8, 
-          padding: 10 
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-teal)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Maximize2 size={13} /> PROPORTIONAL SCALE & RATIO
+      <div className="panel-card" style={{ marginTop: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Maximize2 size={12} /> PROPORTIONAL SCALE & RATIO
           </span>
           <button
             type="button"
             className="btn-secondary"
             style={{ 
-              fontSize: 10, 
-              padding: '3px 8px', 
-              color: isScaleLocked ? '#10b981' : 'var(--text-muted)', 
-              background: isScaleLocked ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-input)',
-              border: `1px solid ${isScaleLocked ? '#10b981' : 'var(--border-color)'}`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4
+              height: 20,
+              fontSize: 9, 
+              padding: '0 6px', 
+              color: isScaleLocked ? '#10b981' : '#64748b', 
+              background: isScaleLocked ? 'rgba(16, 185, 129, 0.12)' : '#101218',
+              border: `1px solid ${isScaleLocked ? 'rgba(16, 185, 129, 0.4)' : '#232836'}`,
             }}
             onClick={() => setIsScaleLocked(!isScaleLocked)}
             title={isScaleLocked ? 'Aspect Ratio Locked (Uniform Scale)' : 'Aspect Ratio Unlocked (Free Scale)'}
           >
-            {isScaleLocked ? <Link size={12} /> : <Unlink size={12} />}
+            {isScaleLocked ? <Link size={10} /> : <Unlink size={10} />}
             <span>{isScaleLocked ? 'Ratio Locked' : 'Ratio Unlocked'}</span>
           </button>
         </div>
 
         {/* Master Uniform Scale Control */}
-        <div style={{ background: 'rgba(0,0,0,0.3)', padding: 8, borderRadius: 6, marginBottom: 8 }}>
+        <div style={{ background: '#101218', padding: 6, borderRadius: 4, border: '1px solid #232836' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <label style={{ fontSize: 10, color: 'var(--text-muted)' }}>UNIFORM SCALE MULTIPLIER</label>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-teal)' }}>
+            <label style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8' }}>UNIFORM SCALE MULTIPLIER</label>
+            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
               {((transform.scaleX + transform.scaleY) / 2).toFixed(2)}x ({(Math.round(((transform.scaleX + transform.scaleY) / 2) * 100))}% )
             </span>
           </div>
@@ -187,16 +174,16 @@ export const TransformTab: React.FC<TransformTabProps> = ({
               const val = parseFloat(e.target.value);
               updateCurrentTransform({ scaleX: val, scaleY: val });
             }}
-            style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--accent-teal)', marginBottom: 6 }}
+            style={{ width: '100%', cursor: 'pointer', accentColor: '#38bdf8', marginBottom: 4 }}
           />
           {/* Quick Presets */}
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div style={{ display: 'flex', gap: 3 }}>
             {[0.5, 1.0, 1.5, 2.0, 5.0, 6.42].map((s) => (
               <button
                 key={`scale-preset-${s}`}
                 type="button"
                 className="btn-secondary"
-                style={{ flex: 1, fontSize: 9, padding: '3px 0', textAlign: 'center' }}
+                style={{ flex: 1, height: 18, fontSize: 8.5, padding: 0, textAlign: 'center' }}
                 onClick={() => updateCurrentTransform({ scaleX: s, scaleY: s })}
               >
                 {s}x
@@ -206,9 +193,9 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </div>
 
         {/* Scale X & Scale Y Inputs */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div className="input-field" style={{ flex: 1 }}>
-            <label style={{ fontSize: 10 }}>SCALE X</label>
+        <div className="transform-param-grid">
+          <div className="param-row">
+            <span className="param-label">SCALE X</span>
             <SmartNumberInput
               value={transform.scaleX}
               step={0.1}
@@ -223,23 +210,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsScaleLocked(!isScaleLocked)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: isScaleLocked ? '#10b981' : 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '12px 2px 0 2px',
-            }}
-            title={isScaleLocked ? 'Scale values linked proportionally' : 'Scale values unlinked'}
-          >
-            {isScaleLocked ? <Link size={14} /> : <Unlink size={14} />}
-          </button>
-
-          <div className="input-field" style={{ flex: 1 }}>
-            <label style={{ fontSize: 10 }}>SCALE Y</label>
+          <div className="param-row">
+            <span className="param-label">SCALE Y</span>
             <SmartNumberInput
               value={transform.scaleY}
               step={0.1}
@@ -266,117 +238,12 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </button>
         <button
           className="btn-secondary"
-          style={{ flex: 1, fontSize: 11 }}
+          style={{ flex: 1 }}
           onClick={() => updateCurrentTransform({ scaleX: 1, scaleY: 1 })}
         >
           Reset Scale (1.0)
         </button>
       </div>
-
-      {/* LAYER PARENTING & GROUPING */}
-      <div className="section-title" style={{ marginTop: 12 }}>
-        <FolderTree size={13} className="text-purple" />
-        <span>LAYER PARENTING & GROUPING</span>
-      </div>
-
-      <div className="input-field">
-        <label>PARENT GROUP LAYER</label>
-        <select
-          value={selectedPart.parentId || ''}
-          onChange={(e) => handlePartPropChange('parentId', e.target.value || undefined)}
-          style={{
-            background: 'var(--bg-input)',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)',
-            padding: '5px 8px',
-            borderRadius: 'var(--radius-sm)',
-            fontSize: 11,
-            fontWeight: 600,
-            width: '100%',
-            cursor: 'pointer',
-          }}
-        >
-          <option value="">None (Independent Layer)</option>
-          {characterParts
-            .filter((p) => p.id !== selectedPart.id)
-            .map((p) => (
-              <option key={p.id} value={p.id}>
-                🔗 {p.name}
-              </option>
-            ))}
-        </select>
-      </div>
-
-      <button
-        className="btn-secondary"
-        style={{ width: '100%', marginTop: 6, fontSize: 11, gap: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-        onClick={() => addCustomPart('custom_card', 'Group Folder', { parentId: undefined })}
-        title="Create a new Master Group Layer"
-      >
-        <FolderTree size={12} className="text-purple" />
-        <span>+ Create New Layer Group Folder</span>
-      </button>
-
-      {/* RESPONSIVE ANCHOR POINT 3x3 PICKER */}
-      <div className="section-title" style={{ marginTop: 12 }}>
-        <Compass size={13} className="text-cyan" />
-        <span>RESPONSIVE ANCHOR POINT</span>
-      </div>
-
-      <div className="input-field">
-        <label>ANCHOR PRESET</label>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, width: '100%', margin: '4px 0' }}>
-          {[
-            { id: 'top-left', label: '↖ TL' },
-            { id: 'top-center', label: '↑ TC' },
-            { id: 'top-right', label: '↗ TR' },
-            { id: 'center-left', label: '← CL' },
-            { id: 'center', label: '• C' },
-            { id: 'center-right', label: '→ CR' },
-            { id: 'bottom-left', label: '↙ BL' },
-            { id: 'bottom-center', label: '↓ BC' },
-            { id: 'bottom-right', label: '↘ BR' },
-          ].map((preset) => (
-            <button
-              key={preset.id}
-              className={`btn-secondary ${selectedPart.anchor === preset.id ? 'active' : ''}`}
-              style={{
-                fontSize: 10,
-                padding: '4px 2px',
-                backgroundColor: selectedPart.anchor === preset.id ? 'var(--accent-teal)' : undefined,
-                color: selectedPart.anchor === preset.id ? '#ffffff' : undefined,
-              }}
-              onClick={() =>
-                handlePartPropChange(
-                  'anchor',
-                  selectedPart.anchor === preset.id ? 'none' : preset.id
-                )
-              }
-            >
-              {preset.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {selectedPart.anchor && selectedPart.anchor !== 'none' && (
-        <div className="input-grid">
-          <div className="input-field">
-            <label>OFFSET X (PX)</label>
-            <SmartNumberInput
-              value={selectedPart.anchorOffsetX || 0}
-              onChange={(val) => handlePartPropChange('anchorOffsetX', val)}
-            />
-          </div>
-          <div className="input-field">
-            <label>OFFSET Y (PX)</label>
-            <SmartNumberInput
-              value={selectedPart.anchorOffsetY || 0}
-              onChange={(val) => handlePartPropChange('anchorOffsetY', val)}
-            />
-          </div>
-        </div>
-      )}
 
       {/* SPRING PHYSICS MODIFIER */}
       <div className="section-title" style={{ marginTop: 12 }}>

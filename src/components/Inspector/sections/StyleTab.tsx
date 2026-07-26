@@ -908,7 +908,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         </div>
 
         {selectedPart.shadowColor && (
-          <div className="input-grid">
+          <div className="input-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
             <div className="input-field">
               <label>BLUR RADIUS (PX)</label>
               <SmartNumberInput

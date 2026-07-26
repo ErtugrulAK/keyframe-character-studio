@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, Play, Square, Sparkles, MoveRight, MoveLeft, MoveUp, MoveDown, Minimize2, RotateCw, Film, EyeOff, Trash2, BookmarkPlus } from 'lucide-react';
+import { Play, Square, Sparkles, MoveRight, MoveLeft, MoveUp, MoveDown, Minimize2, RotateCw, Film, EyeOff, Trash2, BookmarkPlus } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
 
@@ -68,28 +68,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
   };
 
   return (
-    <div className="inspector-section" style={{ gap: 16 }}>
-      {/* Header Banner */}
-      <div 
-        style={{ 
-          background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.12), rgba(16, 185, 129, 0.12))', 
-          border: '1px solid rgba(6, 182, 212, 0.25)', 
-          borderRadius: 8, 
-          padding: '12px 14px' 
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-cyan)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Zap size={14} /> MOTION & BROADCAST ENGINE
-          </span>
-          <span className="badge-tag" style={{ background: 'rgba(16, 185, 129, 0.2)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)', fontSize: 9 }}>
-            LIVE
-          </span>
-        </div>
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', margin: 0, lineHeight: 1.4 }}>
-          Preset or custom keyframe transitions for Broadcast Mode and layer visibility ranges.
-        </p>
-      </div>
+    <div className="inspector-section" style={{ gap: 12 }}>
 
       {/* ── DYNAMIC GEOMETRIC MASK SHAPE & MODE TOGGLES ── */}
       <div 
@@ -218,7 +197,7 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
                 >
                   <option value="in">Entrance (IN)</option>
                   <option value="out">Exit (OUT)</option>
-                  <option value="stunt">Live Stunt / Loop (Atraksiyon)</option>
+                  <option value="stunt">Live Stunt / Loop</option>
                 </select>
               </div>
 
@@ -244,15 +223,15 @@ export const MotionTab: React.FC<MotionTabProps> = ({ selectedPart, handlePartPr
             </div>
 
             <div className="input-field">
-              <label style={{ fontSize: 10, color: 'var(--accent-gold)' }}>PRESET CONTENT SCOPE (İÇERİK KAPSAMI)</label>
+              <label style={{ fontSize: 10, color: 'var(--accent-gold)' }}>PRESET CONTENT SCOPE</label>
               <select
                 value={newPresetScope}
                 onChange={(e) => setNewPresetScope(e.target.value as 'both' | 'motion_only' | 'shape_only')}
                 style={{ width: '100%', height: 26, background: 'var(--bg-input)', border: '1px solid var(--accent-gold)', color: '#fff', borderRadius: 4, fontSize: 11, fontWeight: 600 }}
               >
-                <option value="both">⚡ Both Motion & Shape (Hem Hareket Hem Şekil/Ölçek)</option>
-                <option value="motion_only">🏃 Motion Only (Sadece Hareket / X-Y Konum)</option>
-                <option value="shape_only">📐 Shape & Scale Only (Sadece Şekil / Boyut-Ölçek)</option>
+                <option value="both">⚡ Motion & Shape</option>
+                <option value="motion_only">🏃 Motion / Position Only</option>
+                <option value="shape_only">📐 Shape & Scale Only</option>
               </select>
             </div>
 

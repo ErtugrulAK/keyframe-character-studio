@@ -16,6 +16,8 @@ import type {
   CustomMotionPreset,
   CustomMotionPresetKeyframe,
   LiveStuntType,
+  MotionTemplate,
+  ProjectTemplate,
 } from '../types/animator';
 import {
   DEFAULT_CHARACTER_PARTS,
@@ -116,8 +118,20 @@ interface AnimatorContextType {
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
+  sceneTitle: string;
+  setSceneTitle: (title: string) => void;
+  projectTemplates: ProjectTemplate[];
+  activeProjectTemplateId: string;
+  setActiveProjectTemplateId: (id: string) => void;
+  addProjectTemplate: (name: string) => void;
+  motionTemplates: MotionTemplate[];
+  activeTemplateId: string;
+  setActiveTemplateId: (id: string) => void;
+  addMotionTemplate: (name: string, type?: 'in' | 'out' | 'stunt') => void;
+  assignTemplateToLayer: (partId: string, templateId: string) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderTracks: (dragIndex: number, hoverIndex: number) => void;
+  setTrackIndex: (trackId: string, target1BasedIndex: number) => void;
   deletePart: (partId: string) => void;
   copySelectedPart: () => void;
   pasteCopiedPart: () => void;
@@ -173,7 +187,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [currentFrame, setCurrentFrame] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [fps, setFps] = useState<number>(30);
+  const [fps, setFps] = useState<number>(60);
   const [totalFrames, setTotalFramesState] = useState<number>(60);
 
   const setTotalFrames = useCallback((newTotal: number | ((prev: number) => number)) => {
@@ -188,6 +202,131 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [isLooping, setIsLooping] = useState<boolean>(true);
   const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
   const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
+
+  interface TemplateCanvas {
+    characterParts: CharacterPart[];
+    tracks: Track[];
+    motionTemplates: MotionTemplate[];
+    activeTemplateId: string;
+  }
+
+  const [templateCanvasStore, setTemplateCanvasStore] = useState<Record<string, TemplateCanvas>>({
+    tmpl_1: {
+      characterParts: DEFAULT_CHARACTER_PARTS,
+      tracks: DEFAULT_TRACKS,
+      motionTemplates: [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }],
+      activeTemplateId: 'Sequence',
+    },
+  });
+
+  const [projectTemplates, setProjectTemplates] = useState<ProjectTemplate[]>([
+    { id: 'tmpl_1', name: 'News_LT_Main' },
+  ]);
+  const [activeProjectTemplateId, setActiveProjectTemplateIdState] = useState<string>('tmpl_1');
+  const [sceneTitle, setSceneTitleState] = useState<string>('News_LT_Main');
+
+  const setSceneTitle = useCallback((title: string) => {
+    setSceneTitleState(title);
+    setProjectTemplates((prev) =>
+      prev.map((t) => (t.id === activeProjectTemplateId ? { ...t, name: title } : t))
+    );
+  }, [activeProjectTemplateId]);
+
+  const [activeTemplateId, setActiveTemplateIdState] = useState<string>('Sequence');
+
+  const [motionTemplates, setMotionTemplates] = useState<MotionTemplate[]>([
+    { id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' },
+  ]);
+
+  const setActiveTemplateId = useCallback((id: string) => {
+    setActiveTemplateIdState(id);
+  }, []);
+
+  const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
+    const cleanId = name.trim().replace(/\s+/g, '_') || `Sequence_${motionTemplates.length + 1}`;
+    const newTmpl: MotionTemplate = {
+      id: cleanId,
+      name: cleanId,
+      type,
+      durationFrames: 60,
+      description: 'Custom Sequence Timeline',
+    };
+    setMotionTemplates((prev) => [...prev, newTmpl]);
+    setActiveTemplateIdState(cleanId);
+  }, [motionTemplates.length]);
+
+  const setActiveProjectTemplateId = useCallback((targetId: string) => {
+    if (targetId === activeProjectTemplateId) return;
+
+    // 1. Save current active template's state into store
+    setTemplateCanvasStore((prev) => ({
+      ...prev,
+      [activeProjectTemplateId]: {
+        characterParts,
+        tracks,
+        motionTemplates,
+        activeTemplateId,
+      },
+    }));
+
+    // 2. Load target template's state from store or create empty default if missing
+    const targetData = templateCanvasStore[targetId] || {
+      characterParts: [],
+      tracks: [],
+      motionTemplates: [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }],
+      activeTemplateId: 'Sequence',
+    };
+
+    setCharacterParts(targetData.characterParts);
+    setTracks(targetData.tracks);
+    setMotionTemplates(targetData.motionTemplates);
+    setActiveTemplateIdState(targetData.activeTemplateId);
+    setActiveProjectTemplateIdState(targetId);
+
+    const tmpl = projectTemplates.find((t) => t.id === targetId);
+    if (tmpl) setSceneTitleState(tmpl.name);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, templateCanvasStore, projectTemplates]);
+
+  const addProjectTemplate = useCallback((name: string) => {
+    const cleanName = name.trim() || `Template ${projectTemplates.length + 1}`;
+    const newId = `tmpl_${Date.now()}`;
+    const newTmpl: ProjectTemplate = {
+      id: newId,
+      name: cleanName,
+    };
+
+    // Save current template state & set up fresh clean template
+    setTemplateCanvasStore((prev) => ({
+      ...prev,
+      [activeProjectTemplateId]: {
+        characterParts,
+        tracks,
+        motionTemplates,
+        activeTemplateId,
+      },
+      [newId]: {
+        characterParts: [],
+        tracks: [],
+        motionTemplates: [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }],
+        activeTemplateId: 'Sequence',
+      },
+    }));
+
+    setProjectTemplates((prev) => [...prev, newTmpl]);
+    setCharacterParts([]); // Clean fresh canvas for new template
+    setTracks([]);
+    setMotionTemplates([{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }]);
+    setActiveTemplateIdState('Sequence');
+    setActiveProjectTemplateIdState(newId);
+    setSceneTitleState(cleanName);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, projectTemplates.length]);
+
+  const assignTemplateToLayer = useCallback((partId: string, templateId: string) => {
+    setTracks((prev) =>
+      prev.map((t) => (t.partId === partId ? { ...t, sequencerTemplateId: templateId } : t))
+    );
+    showToast(`Assigned template ${templateId} to layer`, 'success');
+  }, [showToast]);
 
   const characterPartsRef = useRef(characterParts);
   useEffect(() => { characterPartsRef.current = characterParts; }, [characterParts]);
@@ -793,14 +932,19 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const track = tracks.find((t) => t.partId === partId);
       if (!track) return baseTransform;
 
+      const activeTmpl = activeTemplateId || 'Sequence';
+
       const rawTransform = (() => {
         const ch = track.channels;
-        const hasChannelData = ch && Object.values(ch).some((arr: any) => arr.length > 0);
+        const filterCh = (arr: PropertyKeyframe[] = []) => arr.filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+        const hasChannelData = ch && Object.values(ch).some((arr: any) => filterCh(arr).length > 0);
+
+        const filteredKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
 
         if (hasChannelData) {
           const legacyTransform: Transform = (() => {
-            if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
-            const sorted = [...track.keyframes].sort((a, b) => a.frame - b.frame);
+            if (filteredKfs.length === 0) return baseTransform;
+            const sorted = [...filteredKfs].sort((a, b) => a.frame - b.frame);
             const exact = sorted.find((k) => k.frame === frame);
             if (exact) return exact.transform;
             if (frame <= sorted[0].frame) return sorted[0].transform;
@@ -814,19 +958,26 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             return interpolateTransform(prev.transform, next.transform, prog, prev.easing, prev.bezierControlPoints);
           })();
 
+          const cx = filterCh(ch.x);
+          const cy = filterCh(ch.y);
+          const crot = filterCh(ch.rotation);
+          const csx = filterCh(ch.scaleX);
+          const csy = filterCh(ch.scaleY);
+          const cop = filterCh(ch.opacity);
+
           return {
-            x: ch.x.length > 0 ? interpolateChannel(ch.x, frame, legacyTransform.x) : legacyTransform.x,
-            y: ch.y.length > 0 ? interpolateChannel(ch.y, frame, legacyTransform.y) : legacyTransform.y,
-            rotation: ch.rotation.length > 0 ? interpolateChannel(ch.rotation, frame, legacyTransform.rotation) : legacyTransform.rotation,
-            scaleX: ch.scaleX.length > 0 ? interpolateChannel(ch.scaleX, frame, legacyTransform.scaleX) : legacyTransform.scaleX,
-            scaleY: ch.scaleY.length > 0 ? interpolateChannel(ch.scaleY, frame, legacyTransform.scaleY) : legacyTransform.scaleY,
-            opacity: ch.opacity.length > 0 ? interpolateChannel(ch.opacity, frame, legacyTransform.opacity) : legacyTransform.opacity,
+            x: cx.length > 0 ? interpolateChannel(cx, frame, legacyTransform.x) : legacyTransform.x,
+            y: cy.length > 0 ? interpolateChannel(cy, frame, legacyTransform.y) : legacyTransform.y,
+            rotation: crot.length > 0 ? interpolateChannel(crot, frame, legacyTransform.rotation) : legacyTransform.rotation,
+            scaleX: csx.length > 0 ? interpolateChannel(csx, frame, legacyTransform.scaleX) : legacyTransform.scaleX,
+            scaleY: csy.length > 0 ? interpolateChannel(csy, frame, legacyTransform.scaleY) : legacyTransform.scaleY,
+            opacity: cop.length > 0 ? interpolateChannel(cop, frame, legacyTransform.opacity) : legacyTransform.opacity,
           };
         }
 
-        if (!track.keyframes || track.keyframes.length === 0) return baseTransform;
+        if (filteredKfs.length === 0) return baseTransform;
 
-        const sortedKfs = [...track.keyframes].sort((a, b) => a.frame - b.frame);
+        const sortedKfs = [...filteredKfs].sort((a, b) => a.frame - b.frame);
         const exact = sortedKfs.find((k) => k.frame === frame);
         if (exact) return exact.transform;
         if (frame <= sortedKfs[0].frame) return sortedKfs[0].transform;
@@ -948,6 +1099,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           frame,
           transform: { ...currentTransform },
           easing: 'easeInOut',
+          templateId: activeTemplateId || 'Sequence',
         };
 
         let newKfs = [...tr.keyframes];
@@ -1128,6 +1280,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           frame,
           value,
           easing,
+          templateId: activeTemplateId || 'Sequence',
         };
         const updated = existing
           ? ch[channel].map((k) => (k.frame === frame ? { ...k, value, easing } : k))
@@ -1417,6 +1570,32 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, []);
 
+  const setTrackIndex = useCallback((trackId: string, target1BasedIndex: number) => {
+    setTracks((prevTracks) => {
+      const currentIndex = prevTracks.findIndex((t) => t.id === trackId);
+      if (currentIndex < 0) return prevTracks;
+      const target0Based = Math.max(0, Math.min(prevTracks.length - 1, target1BasedIndex - 1));
+      if (currentIndex === target0Based) return prevTracks;
+
+      const updated = [...prevTracks];
+      const [movedTrack] = updated.splice(currentIndex, 1);
+      updated.splice(target0Based, 0, movedTrack);
+
+      const total = updated.length;
+      setCharacterParts((prevParts) =>
+        prevParts.map((p) => {
+          const idx = updated.findIndex((t) => t.partId === p.id);
+          if (idx >= 0) {
+            return { ...p, zIndex: total - idx };
+          }
+          return p;
+        })
+      );
+
+      return updated;
+    });
+  }, []);
+
   // ── Custom Motion Preset Engine & Sample Sequencer Project Loader ──
   const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame = 0, endFrame = 50, scope: 'both' | 'motion_only' | 'shape_only' = 'both') => {
     const part = characterParts.find(p => p.id === partId);
@@ -1602,6 +1781,18 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         stopAllLiveStunts,
         renamePartAndTrack,
         reorderTracks,
+        setTrackIndex,
+        sceneTitle,
+        setSceneTitle,
+        projectTemplates,
+        activeProjectTemplateId,
+        setActiveProjectTemplateId,
+        addProjectTemplate,
+        motionTemplates,
+        activeTemplateId,
+        setActiveTemplateId,
+        addMotionTemplate,
+        assignTemplateToLayer,
       }}
     >
       {children}

@@ -25,8 +25,10 @@ import {
   Diamond,
   TrendingUp,
   GripVertical,
+  Film,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
+import { NewItemModal } from '../Modal/NewItemModal';
 import './SequencerTimeline.css';
 
 // Visual metadata for each Transform channel
@@ -41,6 +43,72 @@ const CHANNEL_META: Record<TrackChannel, { label: string; color: string; shortLa
 
 const TRACK_ROW_HEIGHT = 34;   // parent track row
 const CHANNEL_ROW_HEIGHT = 28; // sub-channel row
+
+const LayerIndexInput: React.FC<{
+  trackId: string;
+  current1BasedIndex: number;
+  maxIndex: number;
+  setTrackIndex: (trackId: string, val: number) => void;
+}> = ({ trackId, current1BasedIndex, maxIndex, setTrackIndex }) => {
+  const [editingVal, setEditingVal] = useState<string>(String(current1BasedIndex));
+
+  useEffect(() => {
+    setEditingVal(String(current1BasedIndex));
+  }, [current1BasedIndex]);
+
+  const commitValue = () => {
+    let parsed = parseInt(editingVal, 10);
+    if (!isNaN(parsed)) {
+      parsed = Math.max(1, Math.min(maxIndex, parsed));
+      setTrackIndex(trackId, parsed);
+      setEditingVal(String(parsed));
+    } else {
+      setEditingVal(String(current1BasedIndex));
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      min={1}
+      max={maxIndex}
+      value={editingVal}
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') {
+          commitValue();
+          (e.target as HTMLInputElement).blur();
+        } else if (e.key === 'Escape') {
+          setEditingVal(String(current1BasedIndex));
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+      onChange={(e) => {
+        setEditingVal(e.target.value);
+        const parsed = parseInt(e.target.value, 10);
+        if (!isNaN(parsed) && parsed >= 1 && parsed <= maxIndex) {
+          setTrackIndex(trackId, parsed);
+        }
+      }}
+      onBlur={commitValue}
+      style={{
+        width: 34,
+        height: 20,
+        background: 'rgba(255, 255, 255, 0.12)',
+        border: '1px solid var(--accent-cyan)',
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 800,
+        borderRadius: 4,
+        textAlign: 'center',
+        outline: 'none',
+        cursor: 'pointer',
+      }}
+      title="Edit layer index number (1 = top layer)"
+    />
+  );
+};
 
 export const SequencerTimeline: React.FC = () => {
   const {
@@ -63,6 +131,7 @@ export const SequencerTimeline: React.FC = () => {
     toggleTrackEditVisibility,
     renamePartAndTrack,
     reorderTracks,
+    setTrackIndex,
     toggleTrackLock,
     toggleTrackExpanded,
     deleteKeyframe,
@@ -79,7 +148,15 @@ export const SequencerTimeline: React.FC = () => {
     updatePropertyKeyframeFrame,
     updateKeyframeBezierPoints,
     getComputedTransform,
+    motionTemplates,
+    activeTemplateId,
+    setActiveTemplateId,
+    addMotionTemplate,
   } = useAnimator();
+
+  // Sequencer Tree Modal Toggle State
+  const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
+  const [isAddSeqModalOpen, setIsAddSeqModalOpen] = useState<boolean>(false);
 
   // Expanded Pro Curve Studio Modal State
   const [isCurveModalOpen, setIsCurveModalOpen] = useState<boolean>(false);
@@ -287,6 +364,62 @@ export const SequencerTimeline: React.FC = () => {
         <div className="resizer-handle-pill" />
       </div>
 
+      {/* Motion Design Sequence Active Selector Pill & Clean Dropdown Menu */}
+      <div className="timeline-template-tabs-bar">
+        {/* Active Animation Sequence Selector Pill */}
+        <div
+          className="active-sequence-tab-pill"
+          onClick={() => setIsSeqTreeOpen(!isSeqTreeOpen)}
+          title="Click to select active Animation Sequence Timeline"
+          style={{ cursor: 'pointer' }}
+        >
+          <Film size={12} className="text-teal" />
+          <span className="active-sequence-name">{activeTemplateId}*</span>
+          <ChevronDown size={12} className="text-cyan" style={{ marginLeft: 4 }} />
+        </div>
+
+        {/* ── CLEAN ANIMATION SEQUENCE DROPDOWN MENU (No extra tabs or search) ── */}
+        {isSeqTreeOpen && (
+          <div className="sequencer-tree-modal">
+            <div className="seq-tree-list">
+              {motionTemplates.map((tmpl) => {
+                const isActive = tmpl.id === activeTemplateId;
+                return (
+                  <div
+                    key={tmpl.id}
+                    className={`seq-tree-row ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTemplateId(tmpl.id);
+                      setIsSeqTreeOpen(false);
+                    }}
+                  >
+                    <span className="seq-label" style={{ fontWeight: isActive ? 800 : 600 }}>
+                      {tmpl.name}
+                    </span>
+                    <span className={`seq-status ${isActive ? 'text-teal' : ''}`}>
+                      {isActive ? 'Active' : 'Select'}
+                    </span>
+                  </div>
+                );
+              })}
+
+              <div
+                className="seq-tree-row add-new-row"
+                style={{ borderTop: '1px solid #232734', background: '#12151e' }}
+                onClick={() => {
+                  setIsSeqTreeOpen(false);
+                  setIsAddSeqModalOpen(true);
+                }}
+              >
+                <span className="text-teal" style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 800 }}>
+                  <Plus size={12} /> New Sequence
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Header Bar */}
       <div className="timeline-header">
         <div className="timeline-header-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -349,7 +482,7 @@ export const SequencerTimeline: React.FC = () => {
             title="Open Expanded Pro Cubic Bezier Motion Curve Studio Modal"
           >
             <TrendingUp size={13} className="text-cyan" />
-            <span>PRO CURVES</span>
+            <span>Motion Curves</span>
           </button>
           <div className="divider-v" style={{ marginRight: 6 }} />
           <button className="btn-icon transport-btn" onClick={undo} disabled={!canUndo} title="Undo"><Undo2 size={15} /></button>
@@ -485,14 +618,13 @@ export const SequencerTimeline: React.FC = () => {
                       </span>
                     )}
 
-                    {/* Clean 1-based Sequential Index Badge */}
-                    <span 
-                      className="ue-kf-count" 
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }} 
-                      title={`Layer Index #${trackIdx + 1}`}
-                    >
-                      #{trackIdx + 1}
-                    </span>
+                    {/* Editable Layer Index Input */}
+                    <LayerIndexInput
+                      trackId={track.id}
+                      current1BasedIndex={trackIdx + 1}
+                      maxIndex={tracks.length}
+                      setTrackIndex={setTrackIndex}
+                    />
 
                     <div className="ue-track-controls">
                       {/* 1. Edit Canvas Hard-Hide Eye */}
@@ -585,7 +717,8 @@ export const SequencerTimeline: React.FC = () => {
                           {isRotationExpanded && ['rotation'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = track.channels?.[ch] ?? [];
+                            const activeTmpl = activeTemplateId || 'Sequence';
+                            const chKfs = (track.channels?.[ch] ?? []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
                             return (
                               <div key={ch} className="ue-channel-row" style={{ height: CHANNEL_ROW_HEIGHT }}>
                                 <span className="ue-channel-indent" />
@@ -700,7 +833,9 @@ export const SequencerTimeline: React.FC = () => {
               const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
               const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
 
-              const sortedKfs = [...track.keyframes].sort((a, b) => a.frame - b.frame);
+              const activeTmpl = activeTemplateId || 'Sequence';
+              const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+              const sortedKfs = [...activeKfs].sort((a, b) => a.frame - b.frame);
 
               return (
                 <div key={track.id} className="ue-lane-group">
@@ -725,7 +860,7 @@ export const SequencerTimeline: React.FC = () => {
                       );
                     })}
                     {/* Composite keyframe diamonds */}
-                    {track.keyframes.map((kf) => {
+                    {activeKfs.map((kf) => {
                       const isKfSelected = selectedKeyframeId === kf.id;
                       return (
                         <div
@@ -758,7 +893,10 @@ export const SequencerTimeline: React.FC = () => {
                           {isLocationExpanded && ['x', 'y'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
+                            const activeTmpl = activeTemplateId || 'Sequence';
+                            const chKfs = [...(track.channels?.[ch] ?? [])]
+                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
+                              .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {/* Horizontal connecting trajectory line for keyframes (Unreal Engine style) */}
@@ -793,7 +931,10 @@ export const SequencerTimeline: React.FC = () => {
                           {isRotationExpanded && ['rotation'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
+                            const activeTmpl = activeTemplateId || 'Sequence';
+                            const chKfs = [...(track.channels?.[ch] ?? [])]
+                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
+                              .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {chKfs.length > 0 && (
@@ -827,7 +968,10 @@ export const SequencerTimeline: React.FC = () => {
                           {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
+                            const activeTmpl = activeTemplateId || 'Sequence';
+                            const chKfs = [...(track.channels?.[ch] ?? [])]
+                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
+                              .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {chKfs.length > 0 && (
@@ -860,7 +1004,10 @@ export const SequencerTimeline: React.FC = () => {
                           {['opacity'].map((chKey) => {
                             const ch = chKey as TrackChannel;
                             const meta = CHANNEL_META[ch];
-                            const chKfs = [...(track.channels?.[ch] ?? [])].sort((a, b) => a.frame - b.frame);
+                            const activeTmpl = activeTemplateId || 'Sequence';
+                            const chKfs = [...(track.channels?.[ch] ?? [])]
+                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
+                              .sort((a, b) => a.frame - b.frame);
                             return (
                               <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
                                 {chKfs.length > 0 && (
@@ -926,6 +1073,19 @@ export const SequencerTimeline: React.FC = () => {
           onCloseModal={() => setIsCurveModalOpen(false)}
         />
       )}
+
+      {/* New Sequence Modal */}
+      <NewItemModal
+        isOpen={isAddSeqModalOpen}
+        title="Yeni Sekans (Sequence) Oluştur"
+        subtitle="Mevcut şablon için yeni bir animasyon sekansı ekleyin."
+        placeholder="Sekans adı (ör: In_V1, Out_V1, Stunt_Loop)..."
+        defaultValue={`Sequence_${motionTemplates.length + 1}`}
+        confirmLabel="Sekans Oluştur"
+        onClose={() => setIsAddSeqModalOpen(false)}
+        onSubmit={(val) => addMotionTemplate(val)}
+      />
     </footer>
   );
 };
+

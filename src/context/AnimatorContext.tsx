@@ -118,6 +118,8 @@ interface AnimatorContextType {
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
   motionTemplates: MotionTemplate[];
+  activeTemplateId: string;
+  setActiveTemplateId: (id: string) => void;
   assignTemplateToLayer: (partId: string, templateId: string) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderTracks: (dragIndex: number, hoverIndex: number) => void;
@@ -193,12 +195,19 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [tracks, setTracks] = useState<Track[]>(DEFAULT_TRACKS);
   const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
 
+  const [activeTemplateId, setActiveTemplateIdState] = useState<string>('In_V1');
+
   const [motionTemplates] = useState<MotionTemplate[]>([
     { id: 'In_V1', name: 'In_V1', type: 'in', durationFrames: 45, description: 'Standard Entrance Sequence' },
     { id: 'Out_V1', name: 'Out_V1', type: 'out', durationFrames: 35, description: 'Standard Exit Sequence' },
     { id: 'Stunt_V1', name: 'Stunt_V1', type: 'stunt', durationFrames: 60, description: 'Live Stunt Loop Sequence' },
     { id: 'In_PopV2', name: 'In_PopV2', type: 'in', durationFrames: 30, description: 'Elastic Pop Entrance Sequence' },
   ]);
+
+  const setActiveTemplateId = useCallback((id: string) => {
+    setActiveTemplateIdState(id);
+    showToast(`Switched active Motion Template to "${id}"`, 'info');
+  }, [showToast]);
 
   const assignTemplateToLayer = useCallback((partId: string, templateId: string) => {
     setTracks((prev) =>
@@ -1648,6 +1657,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         reorderTracks,
         setTrackIndex,
         motionTemplates,
+        activeTemplateId,
+        setActiveTemplateId,
         assignTemplateToLayer,
       }}
     >

@@ -445,3 +445,60 @@
   color: #64748b;
   font-size: 11px;
 }
+
+/* ── Resizer & Parameter Grid ── */
+.sidebar-left-resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 100;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.sidebar-left-resizer:hover, .sidebar-left-resizer:active {
+  background: #14b8a6;
+}
+
+.transform-param-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.param-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #161a24;
+  border: 1px solid #232836;
+  border-radius: 4px;
+  padding: 4px 8px;
+  height: 28px;
+  box-sizing: border-box;
+}
+
+.param-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #94a3b8;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.param-row input {
+  width: 60px !important;
+  height: 20px !important;
+  background: #101218 !important;
+  border: 1px solid #282e3f !important;
+  border-radius: 3px !important;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+  outline: none !important;
+}

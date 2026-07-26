@@ -97,33 +97,33 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </button>
       </div>
 
-      <div className="input-grid">
-        <div className="input-field">
-          <label>POSITION X</label>
+      <div className="transform-param-grid">
+        <div className="param-row">
+          <span className="param-label text-red">POS X</span>
           <SmartNumberInput
             value={transform.x}
             onChange={(val) => updateCurrentTransform({ x: val })}
           />
         </div>
 
-        <div className="input-field">
-          <label>POSITION Y ↑+</label>
+        <div className="param-row">
+          <span className="param-label text-green">POS Y</span>
           <SmartNumberInput
             value={-transform.y}
             onChange={(val) => updateCurrentTransform({ y: -val })}
           />
         </div>
 
-        <div className="input-field">
-          <label>ROTATION (°)</label>
+        <div className="param-row">
+          <span className="param-label text-blue">ROT (°)</span>
           <SmartNumberInput
             value={transform.rotation}
             onChange={(val) => updateCurrentTransform({ rotation: val })}
           />
         </div>
 
-        <div className="input-field">
-          <label>OPACITY (0-1)</label>
+        <div className="param-row">
+          <span className="param-label text-gold">OPACITY</span>
           <SmartNumberInput
             value={transform.opacity}
             min={0}
@@ -132,7 +132,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             onChange={(val) => updateCurrentTransform({ opacity: val })}
           />
         </div>
-
       </div>
 
       {/* ── PROPORTIONAL SCALE & RATIO SECTION ── */}

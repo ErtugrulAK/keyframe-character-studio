@@ -27,9 +27,6 @@ import {
   TrendingUp,
   GripVertical,
   Film,
-  Edit2,
-  Check,
-  Trash2,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
@@ -387,200 +384,93 @@ export const SequencerTimeline: React.FC = () => {
         <div className="resizer-handle-pill" />
       </div>
 
-      {/* Motion Design Sequence Active Selector Pill & Clean Dropdown Menu */}
-      <div className="timeline-template-tabs-bar" ref={seqMenuRef}>
-        {/* Active Animation Sequence Selector Pill */}
-        <div
-          className="active-sequence-tab-pill"
-          onClick={() => {
-            if (editingSeqId !== activeTemplateId) {
-              setIsSeqTreeOpen(!isSeqTreeOpen);
-            }
-          }}
-          title="Click to select active sequence or double-click to rename"
-          style={{ cursor: 'pointer' }}
-        >
-          <Film size={12} className="text-teal" />
-          {editingSeqId === activeTemplateId ? (
-            <input
-              type="text"
-              value={editingSeqName}
-              autoFocus
-              onClick={(e) => e.stopPropagation()}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => setEditingSeqName(e.target.value)}
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === 'Enter') {
-                  if (editingSeqName.trim()) renameMotionTemplate(activeTemplateId, editingSeqName.trim());
-                  setEditingSeqId(null);
-                } else if (e.key === 'Escape') {
-                  setEditingSeqId(null);
-                }
-              }}
-              onBlur={() => {
-                if (editingSeqName.trim()) renameMotionTemplate(activeTemplateId, editingSeqName.trim());
-                setEditingSeqId(null);
-              }}
-              style={{
-                background: '#090b10',
-                border: '1px solid #38bdf8',
-                color: '#fff',
-                borderRadius: 4,
-                padding: '1px 6px',
-                fontSize: 12,
-                fontWeight: 700,
-                outline: 'none',
-                width: 110,
-              }}
-            />
-          ) : (
-            <span
-              className="active-sequence-name"
-              onDoubleClick={(e) => {
-                e.stopPropagation();
-                const tmpl = motionTemplates.find((t) => t.id === activeTemplateId);
-                setEditingSeqId(activeTemplateId);
-                setEditingSeqName(tmpl?.name || activeTemplateId);
-              }}
-              title="Double-click to rename sequence directly"
-            >
-              {motionTemplates.find((t) => t.id === activeTemplateId)?.name || activeTemplateId}
-            </span>
-          )}
-          <ChevronDown size={12} className="text-cyan" style={{ marginLeft: 4 }} />
-        </div>
+      {/* Motion Design Sequence Horizontal Browser-Style Tabs Bar */}
+      <div className="timeline-template-tabs-bar">
+        <div className="timeline-sequence-tabs-container">
+          {motionTemplates.map((tmpl) => {
+            const isActive = tmpl.id === activeTemplateId;
+            const isEditing = editingSeqId === tmpl.id;
 
-        {/* ── CLEAN ANIMATION SEQUENCE DROPDOWN MENU (No extra tabs or search) ── */}
-        {isSeqTreeOpen && (
-          <div className="sequencer-tree-modal">
-            <div className="seq-tree-list">
-              {motionTemplates.map((tmpl) => {
-                const isActive = tmpl.id === activeTemplateId;
-                const isEditing = editingSeqId === tmpl.id;
+            return (
+              <div
+                key={tmpl.id}
+                className={`timeline-seq-tab ${isActive ? 'active' : ''}`}
+                onClick={() => setActiveTemplateId(tmpl.id)}
+                title={`Sequence: ${tmpl.name}`}
+              >
+                <Film size={12} className={isActive ? 'text-teal' : 'text-muted'} />
 
-                return (
-                  <div
-                    key={tmpl.id}
-                    className={`seq-tree-row ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      if (!isEditing) {
-                        setActiveTemplateId(tmpl.id);
-                        setIsSeqTreeOpen(false);
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={editingSeqName}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onFocus={(e) => e.target.select()}
+                    onChange={(e) => setEditingSeqName(e.target.value)}
+                    onKeyDown={(e) => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter') {
+                        if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
+                        setEditingSeqId(null);
+                      } else if (e.key === 'Escape') {
+                        setEditingSeqId(null);
                       }
                     }}
+                    onBlur={() => {
+                      if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
+                      setEditingSeqId(null);
+                    }}
+                    style={{
+                      background: '#090b10',
+                      border: '1px solid #38bdf8',
+                      color: '#fff',
+                      borderRadius: 4,
+                      padding: '1px 6px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      outline: 'none',
+                      width: 90,
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="timeline-seq-tab-name"
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSeqId(tmpl.id);
+                      setEditingSeqName(tmpl.name);
+                    }}
+                    title="Double-click to rename sequence"
                   >
-                    {isEditing ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1 }} onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="text"
-                          value={editingSeqName}
-                          autoFocus
-                          onClick={(e) => e.stopPropagation()}
-                          onFocus={(e) => e.target.select()}
-                          onChange={(e) => setEditingSeqName(e.target.value)}
-                          onKeyDown={(e) => {
-                            e.stopPropagation();
-                            if (e.key === 'Enter') {
-                              if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
-                              setEditingSeqId(null);
-                            } else if (e.key === 'Escape') {
-                              setEditingSeqId(null);
-                            }
-                          }}
-                          style={{
-                            background: '#090b10',
-                            border: '1px solid #38bdf8',
-                            color: '#fff',
-                            borderRadius: 4,
-                            padding: '2px 6px',
-                            fontSize: 12,
-                            fontWeight: 700,
-                            outline: 'none',
-                            width: 110,
-                          }}
-                        />
-                        <button
-                          className="btn-icon text-teal"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
-                            setEditingSeqId(null);
-                          }}
-                          title="Save sequence name"
-                          style={{ width: 22, height: 22, padding: 0 }}
-                        >
-                          <Check size={13} />
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <span
-                          className="seq-label"
-                          style={{ fontWeight: isActive ? 700 : 500 }}
-                          onDoubleClick={(e) => {
-                            e.stopPropagation();
-                            setEditingSeqId(tmpl.id);
-                            setEditingSeqName(tmpl.name);
-                          }}
-                          title="Double-click to rename sequence"
-                        >
-                          {tmpl.name}
-                        </span>
+                    {tmpl.name}
+                  </span>
+                )}
 
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <button
-                            className="btn-icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingSeqId(tmpl.id);
-                              setEditingSeqName(tmpl.name);
-                            }}
-                            title="Rename sequence"
-                            style={{ width: 20, height: 20, padding: 0 }}
-                          >
-                            <Edit2 size={11} className="text-muted" />
-                          </button>
-
-                          {motionTemplates.length > 1 && (
-                            <button
-                              className="btn-icon danger"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteMotionTemplate(tmpl.id);
-                              }}
-                              title="Delete sequence"
-                              style={{ width: 20, height: 20, padding: 0 }}
-                            >
-                              <Trash2 size={11} />
-                            </button>
-                          )}
-
-                          <span className={`seq-status ${isActive ? 'text-teal' : ''}`}>
-                            {isActive ? 'Active' : 'Select'}
-                          </span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-
-              <div
-                className="seq-tree-row add-new-row"
-                style={{ borderTop: '1px solid #232734', background: '#12151e' }}
-                onClick={() => {
-                  setIsSeqTreeOpen(false);
-                  setIsAddSeqModalOpen(true);
-                }}
-              >
-                <span className="text-teal" style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 800 }}>
-                  <Plus size={12} /> New Sequence
-                </span>
+                {motionTemplates.length > 1 && (
+                  <span
+                    className="timeline-seq-tab-close"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteMotionTemplate(tmpl.id);
+                    }}
+                    title="Delete sequence"
+                  >
+                    ✕
+                  </span>
+                )}
               </div>
-            </div>
-          </div>
-        )}
+            );
+          })}
+
+          <button
+            className="timeline-seq-tab-add"
+            onClick={() => setIsAddSeqModalOpen(true)}
+            title="Create New Sequence"
+          >
+            <Plus size={13} />
+          </button>
+        </div>
       </div>
 
       {/* Header Bar */}

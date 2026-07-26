@@ -389,23 +389,20 @@ export const StageCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* Top Bar Overlay Info */}
-      <div className="canvas-header-info">
-        <span className="info-tool">MOD: {isPanning ? 'PAN NAV' : activeTool.toUpperCase()}</span>
-      </div>
-
-      {/* Viewport Floating Glass Toolbar */}
-      <CanvasViewportToolbar
-        showGrid={showGrid}
-        setShowGrid={setShowGrid}
-        showBones={showBones}
-        setShowBones={setShowBones}
-        showOnionSkin={showOnionSkin}
-        setShowOnionSkin={setShowOnionSkin}
-        zoomLevel={zoomLevel}
-        setZoomLevel={setZoomLevel}
-        setPanOffset={setPanOffset}
-      />
+      {/* Viewport Floating Glass Toolbar (Edit Mode Only) */}
+      {appMode !== 'broadcast' && (
+        <CanvasViewportToolbar
+          showGrid={showGrid}
+          setShowGrid={setShowGrid}
+          showBones={showBones}
+          setShowBones={setShowBones}
+          showOnionSkin={showOnionSkin}
+          setShowOnionSkin={setShowOnionSkin}
+          zoomLevel={zoomLevel}
+          setZoomLevel={setZoomLevel}
+          setPanOffset={setPanOffset}
+        />
+      )}
 
       <svg
         className="stage-svg"
@@ -457,7 +454,7 @@ export const StageCanvas: React.FC = () => {
                 width={projectResolution.width}
                 height={projectResolution.height}
                 zScale={zScale}
-                showGrid={showGrid}
+                showGrid={appMode === 'broadcast' ? false : showGrid}
                 appMode={appMode}
               />
 

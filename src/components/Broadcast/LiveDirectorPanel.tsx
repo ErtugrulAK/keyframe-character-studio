@@ -8,6 +8,8 @@ export const LiveDirectorPanel: React.FC = () => {
     motionTemplates,
     activeTemplateId,
     setActiveTemplateId,
+    setCurrentFrame,
+    setIsPlaying,
   } = useAnimator();
 
   return (
@@ -36,7 +38,11 @@ export const LiveDirectorPanel: React.FC = () => {
               <button
                 key={tmpl.id}
                 type="button"
-                onClick={() => setActiveTemplateId(tmpl.id)}
+                onClick={() => {
+                  setActiveTemplateId(tmpl.id);
+                  setCurrentFrame(0);
+                  setIsPlaying(true);
+                }}
                 style={{
                   padding: '8px 14px',
                   borderRadius: 6,

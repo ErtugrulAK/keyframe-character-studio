@@ -2,31 +2,22 @@ import React from 'react';
 import { useAnimator } from '../../../context/AnimatorContext';
 import type { BodyPartType } from '../../../types/animator';
 import {
-  Type,
-  Tag,
-  Pill,
-  Gem,
-  Star,
-  Circle,
   Square,
+  Circle,
   Triangle,
-  Layout,
-  Grid3x3,
-  Atom,
+  Star,
+  Diamond,
+  RectangleHorizontal,
+  Shapes,
 } from 'lucide-react';
 
-const QUICK_SHAPES: { type: BodyPartType; label: string; icon: React.ReactNode }[] = [
-  { type: 'custom_text', label: 'Text Label', icon: <Type size={14} className="text-cyan" /> },
-  { type: 'custom_banner', label: 'Banner Card', icon: <Tag size={14} className="text-gold" /> },
-  { type: 'custom_capsule', label: 'Capsule Pill', icon: <Pill size={14} className="text-purple" /> },
-  { type: 'custom_diamond', label: 'Diamond', icon: <Gem size={14} className="text-green" /> },
-  { type: 'custom_star', label: 'Star', icon: <Star size={14} className="text-purple" /> },
-  { type: 'custom_circle', label: 'Circle', icon: <Circle size={14} className="text-green" /> },
-  { type: 'custom_box', label: 'Square Box', icon: <Square size={14} className="text-cyan" /> },
-  { type: 'custom_rect', label: 'Rectangle', icon: <Layout size={14} className="text-teal" /> },
-  { type: 'custom_triangle', label: 'Triangle', icon: <Triangle size={14} className="text-red" /> },
-  { type: 'mograph_cloner', label: 'Cloner Grid', icon: <Grid3x3 size={14} className="text-purple" /> },
-  { type: 'particle_system', label: 'Particles', icon: <Atom size={14} className="text-teal" /> },
+const SHAPE_ITEMS: { type: BodyPartType; label: string; icon: React.ReactNode }[] = [
+  { type: 'custom_rect', label: 'Rectangle', icon: <RectangleHorizontal size={16} className="text-teal" /> },
+  { type: 'custom_box', label: 'Square', icon: <Square size={16} className="text-cyan" /> },
+  { type: 'custom_circle', label: 'Circle', icon: <Circle size={16} className="text-green" /> },
+  { type: 'custom_triangle', label: 'Triangle', icon: <Triangle size={16} className="text-red" /> },
+  { type: 'custom_star', label: 'Star', icon: <Star size={16} className="text-purple" /> },
+  { type: 'custom_diamond', label: 'Rhombus', icon: <Diamond size={16} className="text-gold" /> },
 ];
 
 export const ElementsDrawer: React.FC = () => {
@@ -46,10 +37,12 @@ export const ElementsDrawer: React.FC = () => {
   return (
     <div className="drawer-content">
       <div className="drawer-header">
-        <span className="drawer-title">Vector Elements</span>
+        <Shapes size={15} className="text-cyan" />
+        <span className="drawer-title">Vector Shapes</span>
       </div>
+
       <div className="drawer-grid">
-        {QUICK_SHAPES.map((item) => (
+        {SHAPE_ITEMS.map((item) => (
           <button
             key={item.type}
             className="drawer-item-card"
@@ -65,3 +58,4 @@ export const ElementsDrawer: React.FC = () => {
     </div>
   );
 };
+

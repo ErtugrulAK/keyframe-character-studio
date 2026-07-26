@@ -164,7 +164,7 @@
   box-sizing: border-box;
 }
 
-.input-field input {
+.input-field input:not([type="color"]) {
   width: 100%;
   box-sizing: border-box;
   font-size: 14px;
@@ -231,14 +231,15 @@
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  width: 26px;
-  height: 26px;
-  min-width: 26px;
+  width: 26px !important;
+  max-width: 26px !important;
+  height: 26px !important;
+  min-width: 26px !important;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: none;
   cursor: pointer;
-  padding: 0;
+  padding: 0 !important;
   overflow: hidden;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   flex-shrink: 0;

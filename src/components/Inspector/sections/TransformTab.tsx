@@ -135,35 +135,36 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       </div>
 
       {/* ── PROPORTIONAL SCALE & RATIO SECTION ── */}
-      <div className="panel-card" style={{ marginTop: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 10, fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 5 }}>
-            <Maximize2 size={12} /> PROPORTIONAL SCALE & RATIO
+      <div className="panel-card" style={{ marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
+            <Maximize2 size={13} /> PROPORTIONAL SCALE & RATIO
           </span>
           <button
             type="button"
             className="btn-secondary"
             style={{ 
-              height: 20,
-              fontSize: 9, 
-              padding: '0 6px', 
+              height: 22,
+              fontSize: 10, 
+              padding: '0 8px', 
               color: isScaleLocked ? '#10b981' : '#64748b', 
               background: isScaleLocked ? 'rgba(16, 185, 129, 0.12)' : '#101218',
               border: `1px solid ${isScaleLocked ? 'rgba(16, 185, 129, 0.4)' : '#232836'}`,
+              borderRadius: 4,
             }}
             onClick={() => setIsScaleLocked(!isScaleLocked)}
             title={isScaleLocked ? 'Aspect Ratio Locked (Uniform Scale)' : 'Aspect Ratio Unlocked (Free Scale)'}
           >
-            {isScaleLocked ? <Link size={10} /> : <Unlink size={10} />}
+            {isScaleLocked ? <Link size={11} /> : <Unlink size={11} />}
             <span>{isScaleLocked ? 'Ratio Locked' : 'Ratio Unlocked'}</span>
           </button>
         </div>
 
         {/* Master Uniform Scale Control */}
-        <div style={{ background: '#101218', padding: 6, borderRadius: 4, border: '1px solid #232836' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <label style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8' }}>UNIFORM SCALE MULTIPLIER</label>
-            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
+        <div style={{ background: '#0e1118', padding: '8px 10px', borderRadius: 6, border: '1px solid #232836', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.4px' }}>UNIFORM SCALE MULTIPLIER</label>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8' }}>
               {((transform.scaleX + transform.scaleY) / 2).toFixed(2)}x ({(Math.round(((transform.scaleX + transform.scaleY) / 2) * 100))}% )
             </span>
           </div>
@@ -174,16 +175,16 @@ export const TransformTab: React.FC<TransformTabProps> = ({
               const val = parseFloat(e.target.value);
               updateCurrentTransform({ scaleX: val, scaleY: val });
             }}
-            style={{ width: '100%', cursor: 'pointer', accentColor: '#38bdf8', marginBottom: 4 }}
+            style={{ width: '100%', cursor: 'pointer', accentColor: '#38bdf8' }}
           />
           {/* Quick Presets */}
-          <div style={{ display: 'flex', gap: 3 }}>
+          <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
             {[0.5, 1.0, 1.5, 2.0, 5.0, 6.42].map((s) => (
               <button
                 key={`scale-preset-${s}`}
                 type="button"
                 className="btn-secondary"
-                style={{ flex: 1, height: 18, fontSize: 8.5, padding: 0, textAlign: 'center' }}
+                style={{ flex: 1, height: 22, fontSize: 10, fontWeight: 700, padding: 0, textAlign: 'center', borderRadius: 4 }}
                 onClick={() => updateCurrentTransform({ scaleX: s, scaleY: s })}
               >
                 {s}x

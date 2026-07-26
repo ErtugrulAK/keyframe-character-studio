@@ -180,17 +180,6 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               <select
                 value={selectedPart.fontFamily || 'Outfit'}
                 onChange={(e) => handlePartPropChange('fontFamily', e.target.value)}
-                style={{
-                  width: '100%',
-                  height: 28,
-                  background: 'var(--bg-input)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 4,
-                  color: '#fff',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: '0 6px',
-                }}
               >
                 <option value="Outfit">Outfit</option>
                 <option value="Inter">Inter</option>
@@ -218,17 +207,6 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               <select
                 value={selectedPart.textAnimMode || 'none'}
                 onChange={(e) => handlePartPropChange('textAnimMode', e.target.value)}
-                style={{
-                  width: '100%',
-                  height: 28,
-                  background: 'var(--bg-input)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 4,
-                  color: '#fff',
-                  fontSize: 11,
-                  fontWeight: 700,
-                  padding: '0 6px',
-                }}
               >
                 <option value="none">None (Standard Static Text)</option>
                 <option value="chars">Character by Character (Stagger Chars)</option>

@@ -25,7 +25,7 @@ import {
   Diamond,
   TrendingUp,
   GripVertical,
-  Globe,
+  Film,
   Zap,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
@@ -148,17 +148,14 @@ export const SequencerTimeline: React.FC = () => {
     updatePropertyKeyframeFrame,
     updateKeyframeBezierPoints,
     getComputedTransform,
-    sceneTitle,
-    setSceneTitle,
     motionTemplates,
     activeTemplateId,
     setActiveTemplateId,
     addMotionTemplate,
   } = useAnimator();
 
-  // Scene Title Inline Editing State
-  const [isEditingSceneTitle, setIsEditingSceneTitle] = useState<boolean>(false);
-  const [editingSceneValue, setEditingSceneValue] = useState<string>(sceneTitle);
+  // Sequencer Tree Modal Toggle State
+  const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
 
   // Expanded Pro Curve Studio Modal State
   const [isCurveModalOpen, setIsCurveModalOpen] = useState<boolean>(false);
@@ -366,43 +363,22 @@ export const SequencerTimeline: React.FC = () => {
         <div className="resizer-handle-pill" />
       </div>
 
-      {/* Motion Design Sequence & Template Browser Tabs Bar */}
+      {/* Motion Design Sequence Timeline Active Tab & Sequencer Tree Menu */}
       <div className="timeline-template-tabs-bar">
-        {/* Editable Scene / Sequence Project Title */}
-        <div className="timeline-scene-title-chip">
-          <Globe size={13} className="text-teal" />
-          {isEditingSceneTitle ? (
-            <input
-              type="text"
-              className="scene-title-input"
-              value={editingSceneValue}
-              autoFocus
-              onChange={(e) => setEditingSceneValue(e.target.value)}
-              onBlur={() => {
-                if (editingSceneValue.trim()) setSceneTitle(editingSceneValue.trim());
-                setIsEditingSceneTitle(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  if (editingSceneValue.trim()) setSceneTitle(editingSceneValue.trim());
-                  setIsEditingSceneTitle(false);
-                }
-              }}
-            />
-          ) : (
-            <span
-              className="scene-title-text"
-              onClick={() => {
-                setEditingSceneValue(sceneTitle);
-                setIsEditingSceneTitle(true);
-              }}
-              title="Click to edit Scene / Sequence Project Name"
-            >
-              {sceneTitle}
-            </span>
-          )}
+        {/* Active Animation Sequence Tab (e.g. Out_V2*, In_V1*) */}
+        <div className="active-sequence-tab-pill">
+          <Film size={12} className="text-teal" />
+          <span className="active-sequence-name">{activeTemplateId}*</span>
+          <button
+            className="seq-menu-toggle-btn"
+            onClick={() => setIsSeqTreeOpen(!isSeqTreeOpen)}
+            title="Open Unreal Sequencer Animation Tree Menu"
+          >
+            <ChevronDown size={12} />
+          </button>
         </div>
 
+        {/* Browser Tab Style Sequence Tabs */}
         <div className="template-browser-tabs">
           {motionTemplates.map((tmpl) => (
             <button
@@ -415,24 +391,80 @@ export const SequencerTimeline: React.FC = () => {
                 size={11}
                 className={tmpl.type === 'in' ? 'text-teal' : tmpl.type === 'out' ? 'text-red' : 'text-gold'}
               />
-              <span>{tmpl.name}</span>
+              <span>{tmpl.name}*</span>
             </button>
           ))}
 
-          {/* Browser Tab Style "+" Add New Sequence Template Button */}
+          {/* "+ Add Sequence Timeline" Button */}
           <button
             className="add-template-tab-btn"
             onClick={() => {
-              const name = window.prompt('Enter new animation sequence template name (e.g. In_V2, Out_V2, Loop_V2):');
+              const name = window.prompt('Enter new animation sequence name (e.g. Out_V2, ChangeIn_V1, In_V2):');
               if (name && name.trim()) {
                 addMotionTemplate(name.trim());
               }
             }}
-            title="Add New Animation Sequence Template"
+            title="Add New Animation Sequence Timeline"
           >
             <Plus size={12} />
           </button>
         </div>
+
+        {/* ── UNREAL MOTION DESIGN SEQUENCER TREE POPUP (From Screenshot 4) ── */}
+        {isSeqTreeOpen && (
+          <div className="sequencer-tree-modal">
+            {/* Header Tabs: Tree / Playback / Settings */}
+            <div className="seq-tree-header-tabs">
+              <button className="seq-tab active">Tree</button>
+              <button className="seq-tab">Playback</button>
+              <button className="seq-tab">Settings</button>
+            </div>
+
+            {/* Sub-Header: + Add & Search */}
+            <div className="seq-tree-sub-header">
+              <button
+                className="btn-add-seq"
+                onClick={() => {
+                  const name = window.prompt('Create new sequence timeline:');
+                  if (name && name.trim()) addMotionTemplate(name.trim());
+                }}
+              >
+                <Plus size={11} /> Add
+              </button>
+              <div className="seq-tree-search-box">
+                <input type="text" placeholder="Search sequences..." />
+              </div>
+            </div>
+
+            {/* Table Header: Label / Status */}
+            <div className="seq-tree-table-header">
+              <span>Label</span>
+              <span>Status</span>
+            </div>
+
+            {/* Sequence Rows */}
+            <div className="seq-tree-list">
+              {motionTemplates.map((tmpl) => {
+                const isActive = tmpl.id === activeTemplateId;
+                return (
+                  <div
+                    key={tmpl.id}
+                    className={`seq-tree-row ${isActive ? 'active' : ''}`}
+                    onClick={() => {
+                      setActiveTemplateId(tmpl.id);
+                      setIsSeqTreeOpen(false);
+                    }}
+                  >
+                    <span className="seq-label">{tmpl.name}</span>
+                    <span className={`seq-status ${isActive ? 'text-teal' : ''}`}>
+                      {isActive ? 'Playing' : 'Not Playing'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Header Bar */}

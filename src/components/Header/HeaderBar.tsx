@@ -6,6 +6,7 @@ import {
   RotateCcw,
   Film,
   CheckCircle2,
+  Globe,
 } from 'lucide-react';
 import './HeaderBar.css';
 
@@ -19,7 +20,12 @@ export const HeaderBar: React.FC = () => {
     showToast,
     appMode,
     setAppMode,
+    sceneTitle,
+    setSceneTitle,
   } = useAnimator();
+
+  const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false);
+  const [editingTitleVal, setEditingTitleVal] = useState<string>(sceneTitle);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [timeAgoStr, setTimeAgoStr] = useState<string>('Not saved yet');
@@ -84,6 +90,60 @@ export const HeaderBar: React.FC = () => {
         </div>
         <div className="brand-title">
           <span className="title-primary">KEYFRAME STUDIO</span>
+        </div>
+
+        {/* Unreal / Reality 5 Motion Design Project Template Title Pill */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 12, borderLeft: '1px solid var(--border-color)', paddingLeft: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#161a24', padding: '3px 9px', borderRadius: 4, border: '1px solid #282d3c' }}>
+            <Globe size={13} className="text-teal" />
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={editingTitleVal}
+                autoFocus
+                onChange={(e) => setEditingTitleVal(e.target.value)}
+                onBlur={() => {
+                  if (editingTitleVal.trim()) setSceneTitle(editingTitleVal.trim());
+                  setIsEditingTitle(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (editingTitleVal.trim()) setSceneTitle(editingTitleVal.trim());
+                    setIsEditingTitle(false);
+                  }
+                }}
+                style={{
+                  background: '#0f1117',
+                  border: '1px solid #38bdf8',
+                  borderRadius: 3,
+                  color: '#fff',
+                  fontSize: 11,
+                  fontWeight: 800,
+                  padding: '0 4px',
+                  outline: 'none',
+                  width: 110,
+                  height: 18,
+                }}
+              />
+            ) : (
+              <span
+                onClick={() => {
+                  setEditingTitleVal(sceneTitle);
+                  setIsEditingTitle(true);
+                }}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 800,
+                  color: '#e2e8f0',
+                  cursor: 'pointer',
+                  borderBottom: '1px dashed rgba(255, 255, 255, 0.3)',
+                }}
+                title="Click to edit Motion Design Template Asset Name (e.g. News_LT_Main)"
+              >
+                {sceneTitle}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

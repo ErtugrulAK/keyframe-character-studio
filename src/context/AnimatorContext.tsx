@@ -220,10 +220,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [projectTemplates, setProjectTemplates] = useState<ProjectTemplate[]>([
-    { id: 'tmpl_1', name: 'Template 1' },
+    { id: 'tmpl_1', name: 'Template Star' },
   ]);
   const [activeProjectTemplateId, setActiveProjectTemplateIdState] = useState<string>('tmpl_1');
-  const [sceneTitle, setSceneTitleState] = useState<string>('Template 1');
+  const [sceneTitle, setSceneTitleState] = useState<string>('Template Star');
 
   const setSceneTitle = useCallback((title: string) => {
     setSceneTitleState(title);
@@ -288,7 +288,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, templateCanvasStore, projectTemplates]);
 
   const addProjectTemplate = useCallback((name: string) => {
-    const cleanName = name.trim() || `Template ${projectTemplates.length + 1}`;
+    const cleanName = name.trim() || `Template ${projectTemplates.length}`;
     const newId = `tmpl_${Date.now()}`;
     const newTmpl: ProjectTemplate = {
       id: newId,
@@ -319,6 +319,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setActiveTemplateIdState('Sequence');
     setActiveProjectTemplateIdState(newId);
     setSceneTitleState(cleanName);
+    setFps(60); // Strictly default to 60 FPS for new templates
   }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, projectTemplates.length]);
 
   const assignTemplateToLayer = useCallback((partId: string, templateId: string) => {

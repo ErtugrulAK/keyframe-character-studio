@@ -1077,11 +1077,11 @@ export const SequencerTimeline: React.FC = () => {
       {/* New Sequence Modal */}
       <NewItemModal
         isOpen={isAddSeqModalOpen}
-        title="Yeni Sekans (Sequence) Oluştur"
-        subtitle="Mevcut şablon için yeni bir animasyon sekansı ekleyin."
-        placeholder="Sekans adı (ör: In_V1, Out_V1, Stunt_Loop)..."
+        title="Create New Sequence"
+        subtitle="Add a new animation sequence to the active template."
+        placeholder="Sequence name (e.g. In_V1, Out_V1)..."
         defaultValue={`Sequence_${motionTemplates.length + 1}`}
-        confirmLabel="Sekans Oluştur"
+        confirmLabel="Create Sequence"
         onClose={() => setIsAddSeqModalOpen(false)}
         onSubmit={(val) => addMotionTemplate(val)}
       />

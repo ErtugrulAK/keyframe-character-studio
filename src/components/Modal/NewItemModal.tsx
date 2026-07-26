@@ -17,9 +17,9 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
   isOpen,
   title,
   subtitle,
-  placeholder = 'İsim girin...',
+  placeholder = 'Enter name...',
   defaultValue = '',
-  confirmLabel = 'Oluştur',
+  confirmLabel = 'Create',
   onClose,
   onSubmit,
 }) => {
@@ -78,7 +78,7 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
 
           <div className="modal-footer">
             <button type="button" className="btn-cancel" onClick={onClose}>
-              İptal
+              Cancel
             </button>
             <button type="submit" className="btn-confirm" disabled={!val.trim()}>
               {confirmLabel}

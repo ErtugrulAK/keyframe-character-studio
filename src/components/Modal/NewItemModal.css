@@ -30,7 +30,7 @@
   background: #141722;
   border: 1px solid #282f42;
   border-radius: 12px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 24px rgba(56, 189, 248, 0.1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
   padding: 20px;
   display: flex;
   flex-direction: column;

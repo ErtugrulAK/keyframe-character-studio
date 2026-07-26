@@ -4,9 +4,6 @@ import {
   Eye,
   EyeOff,
   Search,
-  Plus,
-  Settings,
-  Filter,
   Zap,
   Box,
   Type as TypeIcon,
@@ -27,32 +24,10 @@ export const OutlinerPanel: React.FC = () => {
     toggleTrackEditVisibility,
     motionTemplates,
     assignTemplateToLayer,
-    addCustomPart,
   } = useAnimator();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [isSceneExpanded, setIsSceneExpanded] = useState(true);
-
-  // Helper to map part type to Unreal Motion Design actor class name
-  const getActorTypeLabel = (type: string): string => {
-    switch (type) {
-      case 'custom_text':
-        return 'AvaTextActor';
-      case 'custom_image':
-        return 'AvaMediaActor';
-      case 'custom_video':
-        return 'AvaVideoActor';
-      case 'custom_card':
-      case 'custom_banner':
-        return 'AvaNullActor';
-      case 'mograph_cloner':
-        return 'AvaClonerActor';
-      case 'particle_system':
-        return 'AvaEmitterActor';
-      default:
-        return 'AvaShapeActor';
-    }
-  };
 
   const getActorIcon = (type: string) => {
     switch (type) {
@@ -81,27 +56,10 @@ export const OutlinerPanel: React.FC = () => {
           <Layers size={14} className="text-teal" />
           <span className="outliner-title">Outliner</span>
         </div>
-        <div className="outliner-header-actions">
-          <button
-            className="btn-icon-sm"
-            onClick={() => addCustomPart('custom_rect', 'New Shape')}
-            title="Add New Actor / Element"
-          >
-            <Plus size={13} />
-          </button>
-
-          <button className="btn-icon-sm" title="Outliner Filter Options">
-            <Filter size={13} />
-          </button>
-          <button className="btn-icon-sm" title="Outliner Settings">
-            <Settings size={13} />
-          </button>
-        </div>
       </div>
 
       {/* 2. Search & Filter Bar */}
       <div className="outliner-search-box">
-        <Filter size={12} className="search-filter-icon" />
         <div className="search-input-wrapper">
           <Search size={12} className="search-glass-icon" />
           <input
@@ -111,7 +69,6 @@ export const OutlinerPanel: React.FC = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <ChevronDown size={12} className="search-arrow-icon" />
       </div>
 
       {/* 3. Outliner Table Header */}
@@ -124,7 +81,6 @@ export const OutlinerPanel: React.FC = () => {
           <Zap size={11} className="text-cyan" />
           <span>Sequencer</span>
         </div>
-        <div className="col-type">Type</div>
       </div>
 
       {/* 4. Hierarchical Outliner Tree */}
@@ -141,7 +97,6 @@ export const OutlinerPanel: React.FC = () => {
             <Globe size={13} className="text-muted" />
             <span className="node-title">MotionDesign_Main (Editor)</span>
           </div>
-          <span className="node-type-tag">World</span>
         </div>
 
         {/* Scene Root Folder Node */}
@@ -153,7 +108,6 @@ export const OutlinerPanel: React.FC = () => {
                 <Layers size={13} className="text-purple" />
                 <span className="node-title">Default Scene</span>
               </div>
-              <span className="node-type-tag">AvaNullActor</span>
             </div>
 
             {/* Actor Rows */}
@@ -161,7 +115,7 @@ export const OutlinerPanel: React.FC = () => {
               const track = tracks.find((t) => t.partId === part.id);
               const isSelected = part.id === selectedPartId;
               const isVisible = track?.editVisible !== false;
-              const templateId = track?.sequencerTemplateId || 'In_V1';
+              const templateId = track?.sequencerTemplateId || 'Sequence';
 
               return (
                 <div
@@ -207,11 +161,6 @@ export const OutlinerPanel: React.FC = () => {
                         </option>
                       ))}
                     </select>
-                  </div>
-
-                  {/* Type Column */}
-                  <div className="col-type">
-                    <span>{getActorTypeLabel(part.type)}</span>
                   </div>
                 </div>
               );

@@ -121,7 +121,6 @@
   align-items: center;
   justify-content: center;
   color: #ffffff;
-  box-shadow: 0 0 16px var(--accent-teal-glow);
 }
 
 .title-primary {

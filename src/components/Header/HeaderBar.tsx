@@ -132,7 +132,7 @@ export const HeaderBar: React.FC = () => {
                 key={tmpl.id}
                 className={`header-tab ${activeProjectTemplateId === tmpl.id ? 'active' : ''}`}
                 onClick={() => setActiveProjectTemplateId(tmpl.id)}
-                title={`Şablon: ${tmpl.name}`}
+                title={`Template: ${tmpl.name}`}
               >
                 {tmpl.name}
               </button>
@@ -140,7 +140,7 @@ export const HeaderBar: React.FC = () => {
             <button
               className="header-tab add-tab"
               onClick={() => setIsAddModalOpen(true)}
-              title="Yeni Şablon Oluştur"
+              title="Create New Template"
             >
               <Plus size={13} />
             </button>
@@ -207,7 +207,7 @@ export const HeaderBar: React.FC = () => {
               height: 26,
               cursor: 'pointer',
             }}
-            title="Animasyon FPS ayarı"
+            title="Animation Frame Rate (FPS)"
           >
             <option value={24}>24 FPS</option>
             <option value={30}>30 FPS</option>
@@ -237,11 +237,11 @@ export const HeaderBar: React.FC = () => {
       {/* New Project Template Modal */}
       <NewItemModal
         isOpen={isAddModalOpen}
-        title="Yeni Şablon (Template) Oluştur"
-        subtitle="Grafik ve animasyon paketiniz için yeni bir şablon sekmesi ekleyin."
-        placeholder="Şablon adı (ör: LowerThird_v2, News_ST_01)..."
-        defaultValue={`Template ${projectTemplates.length + 1}`}
-        confirmLabel="Şablon Oluştur"
+        title="Create New Template"
+        subtitle="Add a new graphic template tab to your project workspace."
+        placeholder="Template name (e.g. LowerThird_v2)..."
+        defaultValue={`Template ${projectTemplates.length}`}
+        confirmLabel="Create Template"
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={(val) => addProjectTemplate(val)}
       />

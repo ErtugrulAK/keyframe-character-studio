@@ -51,6 +51,7 @@ export interface Track {
   editVisible?: boolean; // Edit Canvas Hard Hide State
   locked: boolean;
   expanded?: boolean; // Unreal-style collapse/expand state
+  sequencerTemplateId?: string; // Motion Design template ID (e.g. In_V1, Out_V1)
 }
 
 export type BodyPartType = 
@@ -289,4 +290,13 @@ export type AppMode = 'edit' | 'broadcast';
 export interface BroadcastObjectState {
   state: 'hidden' | 'animating_in' | 'visible' | 'animating_out';
   progress: number; // 0 to 1
+}
+
+// ── Motion Design Sequencer Templates (In_V1, Out_V1, Loop_V1) ──
+export interface MotionTemplate {
+  id: string;
+  name: string;
+  type: 'in' | 'out' | 'stunt';
+  durationFrames: number;
+  description?: string;
 }

@@ -29,6 +29,7 @@ import {
   Film,
   Edit2,
   Check,
+  Trash2,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
@@ -156,6 +157,7 @@ export const SequencerTimeline: React.FC = () => {
     setActiveTemplateId,
     addMotionTemplate,
     renameMotionTemplate,
+    deleteMotionTemplate,
   } = useAnimator();
 
   // Sequencer Tree Modal Toggle State & Inline Sequence Rename
@@ -534,11 +536,25 @@ export const SequencerTimeline: React.FC = () => {
                               setEditingSeqId(tmpl.id);
                               setEditingSeqName(tmpl.name);
                             }}
-                            title="Rename sequence directly"
+                            title="Rename sequence"
                             style={{ width: 20, height: 20, padding: 0 }}
                           >
                             <Edit2 size={11} className="text-muted" />
                           </button>
+
+                          {motionTemplates.length > 1 && (
+                            <button
+                              className="btn-icon danger"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteMotionTemplate(tmpl.id);
+                              }}
+                              title="Delete sequence"
+                              style={{ width: 20, height: 20, padding: 0 }}
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          )}
 
                           <span className={`seq-status ${isActive ? 'text-teal' : ''}`}>
                             {isActive ? 'Active' : 'Select'}

@@ -14,8 +14,8 @@ import {
 
 const MOTION_TRANSITIONS = [
   { id: 'none', label: 'None', icon: <Ban size={22} style={{ color: '#94a3b8' }} /> },
-  { id: 'move_left', label: 'Move to left', icon: <ArrowLeft size={22} className="text-cyan" /> },
-  { id: 'move_right', label: 'Move to right', icon: <ArrowRight size={22} className="text-teal" /> },
+  { id: 'move_left', label: 'Move left', icon: <ArrowLeft size={22} className="text-cyan" /> },
+  { id: 'move_right', label: 'Move right', icon: <ArrowRight size={22} className="text-teal" /> },
   { id: 'move_down', label: 'Move down', icon: <ArrowDown size={22} className="text-gold" /> },
   { id: 'move_up', label: 'Move up', icon: <ArrowUp size={22} className="text-purple" /> },
   { id: 'fade', label: 'Fade In', icon: <Layers size={22} className="text-green" /> },
@@ -29,10 +29,7 @@ export const TransitionsDrawer: React.FC = () => {
 
   return (
     <div className="drawer-content">
-      <div className="drawer-header">
-        <span className="drawer-title">Motion Transitions</span>
-      </div>
-      <p className="drawer-desc" style={{ fontSize: 11, margin: '2px 0 8px' }}>
+      <p className="drawer-desc" style={{ fontSize: 11, margin: '2px 0 10px' }}>
         {selectedPartId
           ? 'Select a transition to auto-generate motion keyframes for the selected object.'
           : '⚠️ Click an object on the canvas first to apply motion transitions.'}

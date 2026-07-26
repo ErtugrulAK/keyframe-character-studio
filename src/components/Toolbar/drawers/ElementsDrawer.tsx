@@ -8,7 +8,6 @@ import {
   Star,
   Diamond,
   RectangleHorizontal,
-  Shapes,
 } from 'lucide-react';
 
 const SHAPE_ITEMS: { type: BodyPartType; label: string; icon: React.ReactNode }[] = [
@@ -36,11 +35,6 @@ export const ElementsDrawer: React.FC = () => {
 
   return (
     <div className="drawer-content">
-      <div className="drawer-header">
-        <Shapes size={15} className="text-cyan" />
-        <span className="drawer-title">Vector Shapes</span>
-      </div>
-
       <div className="drawer-grid">
         {SHAPE_ITEMS.map((item) => (
           <button
@@ -58,4 +52,3 @@ export const ElementsDrawer: React.FC = () => {
     </div>
   );
 };
-

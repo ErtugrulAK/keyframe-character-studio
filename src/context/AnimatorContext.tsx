@@ -129,6 +129,7 @@ interface AnimatorContextType {
   setActiveTemplateId: (id: string) => void;
   addMotionTemplate: (name: string, type?: 'in' | 'out' | 'stunt') => void;
   renameMotionTemplate: (oldId: string, newName: string) => void;
+  deleteMotionTemplate: (id: string) => void;
   assignTemplateToLayer: (partId: string, templateId: string) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderTracks: (dragIndex: number, hoverIndex: number) => void;
@@ -265,10 +266,65 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       prev.map((t) => (t.id === oldId ? { ...t, id: cleanName, name: cleanName } : t))
     );
 
+    setTracks((prevTracks) =>
+      prevTracks.map((tr) => {
+        const updatedKfs = tr.keyframes.map((k) =>
+          (k.templateId || 'Sequence') === oldId ? { ...k, templateId: cleanName } : k
+        );
+
+        let updatedChannels = { ...tr.channels };
+        if (tr.channels) {
+          Object.keys(tr.channels).forEach((chKey) => {
+            const ch = chKey as TrackChannel;
+            if (updatedChannels[ch]) {
+              updatedChannels[ch] = updatedChannels[ch]!.map((pk) =>
+                (pk.templateId || 'Sequence') === oldId ? { ...pk, templateId: cleanName } : pk
+              );
+            }
+          });
+        }
+
+        return { ...tr, keyframes: updatedKfs, channels: updatedChannels };
+      })
+    );
+
     if (activeTemplateId === oldId) {
       setActiveTemplateIdState(cleanName);
     }
   }, [activeTemplateId]);
+
+  const deleteMotionTemplate = useCallback((idToDelete: string) => {
+    if (motionTemplates.length <= 1) return;
+
+    setMotionTemplates((prev) => prev.filter((t) => t.id !== idToDelete));
+
+    setTracks((prevTracks) =>
+      prevTracks.map((tr) => {
+        const updatedKfs = tr.keyframes.filter((k) => (k.templateId || 'Sequence') !== idToDelete);
+
+        let updatedChannels = { ...tr.channels };
+        if (tr.channels) {
+          Object.keys(tr.channels).forEach((chKey) => {
+            const ch = chKey as TrackChannel;
+            if (updatedChannels[ch]) {
+              updatedChannels[ch] = updatedChannels[ch]!.filter(
+                (pk) => (pk.templateId || 'Sequence') !== idToDelete
+              );
+            }
+          });
+        }
+
+        return { ...tr, keyframes: updatedKfs, channels: updatedChannels };
+      })
+    );
+
+    if (activeTemplateId === idToDelete) {
+      const remaining = motionTemplates.filter((t) => t.id !== idToDelete);
+      if (remaining.length > 0) {
+        setActiveTemplateIdState(remaining[0].id);
+      }
+    }
+  }, [motionTemplates, activeTemplateId]);
 
   const setActiveProjectTemplateId = useCallback((targetId: string) => {
     if (targetId === activeProjectTemplateId) return;
@@ -1828,6 +1884,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setActiveTemplateId,
         addMotionTemplate,
         renameMotionTemplate,
+        deleteMotionTemplate,
         assignTemplateToLayer,
       }}
     >

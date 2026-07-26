@@ -1,21 +1,14 @@
 import React from 'react';
 import { useAnimator } from '../../../context/AnimatorContext';
-import { Monitor } from 'lucide-react';
 
 export const ProjectDrawer: React.FC = () => {
   const { projectResolution, setProjectResolution } = useAnimator();
 
   return (
     <div className="drawer-content" style={{ padding: '12px 14px' }}>
-      <div className="drawer-header" style={{ marginBottom: 12 }}>
-        <span className="drawer-title" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Monitor size={14} className="text-cyan" /> PROJE & KOMPOZİSYON AYARLARI
-        </span>
-      </div>
-
       <div className="form-group" style={{ marginBottom: 15 }}>
         <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 6, display: 'block' }}>
-          Çözünürlük Şablonları
+          Resolution Presets
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
           <button
@@ -51,7 +44,7 @@ export const ProjectDrawer: React.FC = () => {
 
       <div style={{ display: 'flex', gap: 10 }}>
         <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' }}>Genişlik (Width)</label>
+          <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' }}>Width (px)</label>
           <input
             type="number"
             value={projectResolution.width}
@@ -69,7 +62,7 @@ export const ProjectDrawer: React.FC = () => {
           />
         </div>
         <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' }}>Yükseklik (Height)</label>
+          <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' }}>Height (px)</label>
           <input
             type="number"
             value={projectResolution.height}

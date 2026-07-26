@@ -62,10 +62,6 @@ export const MediaDrawer: React.FC = () => {
         style={{ display: 'none' }}
       />
 
-      <div className="drawer-header">
-        <span className="drawer-title">Media Library</span>
-      </div>
-
       <div
         className={`dropzone-box ${isDragOver ? 'drag-over' : ''}`}
         onClick={() => fileInputRef.current?.click()}

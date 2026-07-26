@@ -1,1 +1,0 @@
-feat(gizmo): add 8-handle non-uniform edge scaling gizmo and remove appear/disappear timing fields  

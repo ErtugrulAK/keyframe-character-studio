@@ -1,4 +1,4 @@
-# 🎬 Keyframe Character Studio & Live Broadcast Sequencer Pro
+# 🎬 Keyframe Character Studio & Live Broadcast Motion Graphics Sequencer Pro
 
 [![React 19](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -6,64 +6,64 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Express.js](https://img.shields.io/badge/Express-5.2-000000?logo=express&logoColor=white)](https://expressjs.com/)
 
-An advanced **2D Vector Animation Studio, Timeline Sequencer, & Real-Time Broadcast Motion Graphics Director** built with **React 19**, **TypeScript**, **Vite**, **Express**, and **PostgreSQL**.
+An advanced **2D Vector Animation Studio, Motion Graphics Sequencer, & Real-Time Broadcast Motion Graphics Director** built with **React 19**, **TypeScript**, **Vite**, **Express**, and **PostgreSQL**.
 
 ---
 
-## ✨ Highlights & Key Features
+## ✨ Key Features & Capabilities
 
-### 1. 🎭 Dynamic Geometric Video & Image Shape Masking
-Clip any `.mp4` video or `.png/.jpg` image cleanly into 6 custom geometric vector frames with independent animation toggles:
-- 🟡 **Circle (Daire)** - Seamless circular video frame
-- 💊 **Pill / Capsule** - Rounded capsule geometry
-- ⭐ **Star (Yıldız)** - 5-pointed star frame
-- 🔷 **Hexagon (Altıgen)** - 6-sided polygon frame
-- 💖 **Heart (Kalp)** - Heart-shaped video mask
-- 🟩 **Default Rect/Box** - Clean rectangular frame
+### 1. 🎬 Unreal Engine Style Motion Design Sequencer
+- **Multi-Track Hierarchy**: Layer ordering, track lock, eye visibility, and z-index grouping.
+- **Precision Keyframing**: Interpolate position (X, Y), scale (ScaleX, ScaleY), rotation, and opacity at 60 FPS.
+- **Interactive Cubic Bezier Easing**: Fine-tune animation curves with velocity control, preset curves, and real-time preview canvas.
+- **Unified Timeline & Sequence Management**: Seamless sequence creation with double-click inline renaming and deletion protection.
 
-### 2. 📡 Real-Time Live Director Panel (Reji Mode)
-Control live stream graphics in real-time with zero latency for broadcast platforms (OBS Studio, vMix, etc.):
+### 2. 📐 Single-Edge Directional Vector Transform Gizmo
+- **8-Handle Transform Controls**: Corner square handles for uniform proportional scaling + 4 midpoint circle handles for directional edge stretching.
+- **Directional Single-Edge Resizing**: Dragging top, bottom, left, or right handles expands the element strictly along that direction while keeping the opposite edge stationary in world coordinates (evaluated via 2D trigonometric matrix math).
+- **Interactive Rotation**: Top bar knob for intuitive 360° rotation.
+
+### 3. 🖼️ Dynamic Geometric Media Masking & Vector Shapes
+- Clip `.mp4` video or `.png/.jpg` image layers into 6 geometric vector frames:
+  - 🟡 **Circle** - Clean circular frame
+  - 💊 **Pill / Capsule** - Rounded capsule geometry
+  - ⭐ **Star** - 5-pointed star frame
+  - 🔷 **Hexagon** - 6-sided polygon frame
+  - 💖 **Heart** - Heart-shaped clip mask
+  - 🟩 **Rectangle / Box** - Standard rect frame with adjustable corner radius
+- **Media Crop & Overlay Captions**: Interactive crop positioning and custom text caption overlays.
+
+### 4. 🎨 Unified Graphic Template & Sequence Management
+- **Dual Tab Architecture**: Unified top Header bar (Graphic Templates) and bottom Timeline (Sequence Tabs) sharing identical styling, heights, hover states, and close icons.
+- **Inline Tab Renaming**: Double-click any template or sequence tab to edit its title directly in-place.
+- **Clean Defaults**: Clean modal workflow defaulting to `New Template` and `New Sequence`.
+
+### 5. 📡 Real-Time Live Director Panel (Reji Mode)
+- **Live Broadcast Controls**: Zero-latency triggers for broadcast streaming platforms (OBS Studio, vMix, NDI, etc.).
 - **PLAY IN / PLAY OUT**: Trigger entrance & exit motion transitions live on air per graphic layer or globally.
-- **Eye Mute Sync**: Layers muted on timeline are automatically hidden from broadcast.
+- **Eye Mute Sync**: Layers hidden or muted on timeline automatically sync state with broadcast output.
+- **Live Motion Stunts & Custom Loops**: Trigger mid-broadcast stunts (Bounce, Pulse, Wobble, Spin 360, High-frequency Shake, Float, and custom infinite keyframe loops).
 
-### 3. ⚡ Realtime Live Stunts & Custom Keyframe Loops
-Trigger instant mid-broadcast motion stunts without interrupting live streams:
-- 🏀 **BOUNCE**: Parabolic ball bounce with squash & stretch
-- 💥 **PULSE**: Heartbeat scale pulse
-- 👋 **WOBBLE**: Jiggle/shake rotation wobble
-- 🌀 **SPIN 360**: 360-degree rotation spin
-- 🔥 **SHAKE**: High-frequency earthquake sarsıntı efekti
-- 🎈 **FLOAT**: Floating wave displacement
-- 🔁 **`[✓] LOOP` Custom Keyframe Trajectories**: Save any timeline keyframe sequence (e.g. 5s loop) and trigger it live as an infinite looping stunt!
-
-### 4. 🗄️ Dual PostgreSQL & Embedded Local SQL Database
-- **PostgreSQL Database (`schema.sql` & `seed.sql`)**: Production-ready relational schema for projects, custom presets, and media assets.
-- **Zero-Config Local Embedded SQL (`keyframe_studio.sqlite`)**: Automatic zero-setup fallback database so the app runs instantly out of the box without external software installation.
-- **Express REST API Server**: Uç noktalar (`GET/POST /api/projects`, `GET/POST /api/presets`, `GET /api/health`).
-
-### 5. 📦 Modularized High-Performance Architecture
-- **SVG Vector Rendering Engine**: Crisp vector rendering with matrix math (`translate`, `rotate`, `scale`).
-- **Modular Renderers**:
-  - `MediaPartRenderer.tsx`: Video/Image cropping, overlay captions, and geometric clipPaths.
-  - `ShapePartRenderers.tsx`: 2D graphic shapes with inner media support.
-  - `TextAndClonerRenderers.tsx`: Staggered text animations and MoGraph cloner grids.
-  - `BodyPartRenderers.tsx`: Stickman character body parts.
+### 6. 🗄️ Dual Database Architecture & REST API Server
+- **PostgreSQL Database (`schema.sql` & `seed.sql`)**: Production-ready relational schema for project templates, presets, and asset management.
+- **Zero-Config Local Embedded SQL (`keyframe_studio.sqlite`)**: Automatic zero-setup fallback database enabling instant local app execution without external software requirements.
+- **Express REST API Backend**: Endpoints (`GET/POST /api/projects`, `GET/POST /api/presets`, `GET /api/health`).
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Technologies Used |
+| Layer | Technology |
 | :--- | :--- |
-| **Frontend UI** | React 19, TypeScript, Vite 8, Lucide React, Vanilla CSS3 (Glassmorphism) |
-| **Animation Engine**| SVG Vector Engine, Trigonometric Matrix Transforms, Bezier Interpolation |
+| **Frontend UI** | React 19, TypeScript 6, Vite 8, Lucide React, CSS3 Glassmorphism |
+| **Animation Engine**| SVG Vector Engine, Trigonometric Matrix Transforms, Cubic Bezier Velocity Interpolation |
 | **Backend REST API**| Node.js, Express 5, CORS, Dotenv |
-| **Database Layer** | PostgreSQL (Production) + Embedded SQLite (Zero-Config Local Fallback) |
-| **Build & Tooling** | Vite, TypeScript Compiler (`tsc -b`), Oxlint |
+| **Database Layer** | PostgreSQL (Production) + Embedded SQLite (Local Fallback) |
+| **Build & Quality** | Vite Compiler, TypeScript (`tsc -b`), Oxlint |
 
 ---
 
-## 🚀 Quick Start & Installation
+## 🚀 Quick Start
 
 ### 1. Clone & Install Dependencies
 ```bash
@@ -78,18 +78,17 @@ npm run dev
 ```
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-### 3. Start Express Backend API Server
+### 3. Start Backend REST API
 ```bash
 npm run server
 ```
-Backend REST API will run live at [http://localhost:5000](http://localhost:5000).
+Backend API will listen at [http://localhost:5000](http://localhost:5000).
 
-### 4. Setup PostgreSQL Database (Optional)
-If using PostgreSQL on `localhost:5432`:
+### 4. Setup PostgreSQL (Optional)
 ```bash
 npm run db:setup
 ```
-*(For detailed PostgreSQL installation, Docker, or Supabase setup, see [docs/postgres-setup-guide.md](docs/postgres-setup-guide.md))*
+*(For detailed PostgreSQL installation or Docker setup, see [docs/postgres-setup-guide.md](docs/postgres-setup-guide.md))*
 
 ---
 
@@ -100,8 +99,8 @@ npm run db:setup
 | `npm run dev` | Starts Vite frontend dev server on port `5173` |
 | `npm run server` | Starts Express REST API backend on port `5000` |
 | `npm run db:setup` | Runs PostgreSQL database setup and seeds initial data |
-| `npm run build` | Builds production bundle with `tsc` and `vite build` |
-| `npm run lint` | Runs `oxlint` code health check |
+| `npm run build` | Compiles production bundle with `tsc` and `vite build` |
+| `npm run lint` | Runs `oxlint` code quality check |
 
 ---
 

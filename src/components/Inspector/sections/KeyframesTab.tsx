@@ -14,6 +14,7 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
     setCurrentFrame,
     addKeyframeToTrack,
     deleteKeyframe,
+    updateKeyframeFrame,
     activeTemplateId,
     fps,
   } = useAnimator();
@@ -103,28 +104,54 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                   transition: 'all 0.15s ease',
                 }}
               >
-                {/* Left: Frame Info */}
+                {/* Left: Frame Jump & Editable Frame Input */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <button
-                    onClick={() => setCurrentFrame(kf.frame)}
+                  <div
                     style={{
-                      background: isCurrent ? '#14b8a6' : '#1e2535',
-                      color: isCurrent ? '#fff' : '#94a3b8',
-                      border: 'none',
-                      borderRadius: 4,
-                      padding: '3px 7px',
-                      fontSize: 11,
-                      fontWeight: 800,
-                      cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 4,
+                      background: '#0e1118',
+                      border: `1px solid ${isCurrent ? 'rgba(20, 184, 166, 0.5)' : '#23293a'}`,
+                      borderRadius: 6,
+                      padding: '2px 6px',
                     }}
-                    title={`Jump playhead to Frame ${kf.frame}`}
                   >
-                    <Play size={9} fill="currentColor" />
-                    <span>F{kf.frame}</span>
-                  </button>
+                    <button
+                      className="btn-icon"
+                      onClick={() => setCurrentFrame(kf.frame)}
+                      title={`Jump playhead to Frame ${kf.frame}`}
+                      style={{ width: 18, height: 18, padding: 0, color: isCurrent ? '#14b8a6' : '#94a3b8' }}
+                    >
+                      <Play size={10} fill="currentColor" />
+                    </button>
+                    <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8' }}>F</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={kf.frame}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val) && val >= 0 && track) {
+                          updateKeyframeFrame(track.id, kf.id, val);
+                        }
+                      }}
+                      onFocus={(e) => e.target.select()}
+                      style={{
+                        width: 48,
+                        height: 20,
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        border: '1px solid #2d374d',
+                        color: '#fff',
+                        borderRadius: 4,
+                        fontSize: 11,
+                        fontWeight: 800,
+                        textAlign: 'center',
+                        outline: 'none',
+                      }}
+                      title="Type to edit keyframe frame position manually"
+                    />
+                  </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: '#cbd5e1' }}>

@@ -1178,7 +1178,7 @@ export const SequencerTimeline: React.FC = () => {
         title="Create New Sequence"
         subtitle="Add a new animation sequence to the active template."
         placeholder="Sequence name (e.g. In_V1, Out_V1)..."
-        defaultValue={motionTemplates.length === 1 && motionTemplates[0].name === 'Sequence' ? 'Sequence 1' : `Sequence ${motionTemplates.length}`}
+        defaultValue={`New Sequence ${motionTemplates.length + 1}`}
         confirmLabel="Create Sequence"
         onClose={() => setIsAddSeqModalOpen(false)}
         onSubmit={(val) => addMotionTemplate(val)}

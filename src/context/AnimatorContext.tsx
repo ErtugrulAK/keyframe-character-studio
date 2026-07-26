@@ -246,17 +246,16 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
-    const defaultSeqName = motionTemplates.length === 1 && motionTemplates[0].name === 'Sequence' ? 'Sequence 1' : `Sequence ${motionTemplates.length}`;
-    const cleanId = name.trim() || defaultSeqName;
+    const cleanName = name.trim() || `New Sequence ${motionTemplates.length + 1}`;
     const newTmpl: MotionTemplate = {
-      id: cleanId,
-      name: cleanId,
+      id: cleanName,
+      name: cleanName,
       type,
       durationFrames: 60,
       description: 'Custom Sequence Timeline',
     };
     setMotionTemplates((prev) => [...prev, newTmpl]);
-    setActiveTemplateIdState(cleanId);
+    setActiveTemplateIdState(cleanName);
   }, [motionTemplates]);
 
   const renameMotionTemplate = useCallback((oldId: string, newName: string) => {
@@ -295,14 +294,18 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [activeTemplateId]);
 
   const deleteMotionTemplate = useCallback((idToDelete: string) => {
-    if (motionTemplates.length <= 1) return;
-
-    setMotionTemplates((prev) => prev.filter((t) => t.id !== idToDelete));
+    setMotionTemplates((prev) => {
+      if (prev.length <= 1) return prev;
+      const filtered = prev.filter((t) => t.id !== idToDelete);
+      if (activeTemplateId === idToDelete && filtered.length > 0) {
+        setActiveTemplateIdState(filtered[0].id);
+      }
+      return filtered;
+    });
 
     setTracks((prevTracks) =>
       prevTracks.map((tr) => {
         const updatedKfs = tr.keyframes.filter((k) => (k.templateId || 'Sequence') !== idToDelete);
-
         let updatedChannels = { ...tr.channels };
         if (tr.channels) {
           Object.keys(tr.channels).forEach((chKey) => {
@@ -314,18 +317,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             }
           });
         }
-
         return { ...tr, keyframes: updatedKfs, channels: updatedChannels };
       })
     );
-
-    if (activeTemplateId === idToDelete) {
-      const remaining = motionTemplates.filter((t) => t.id !== idToDelete);
-      if (remaining.length > 0) {
-        setActiveTemplateIdState(remaining[0].id);
-      }
-    }
-  }, [motionTemplates, activeTemplateId]);
+  }, [activeTemplateId]);
 
   const setActiveProjectTemplateId = useCallback((targetId: string) => {
     if (targetId === activeProjectTemplateId) return;
@@ -395,19 +390,11 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, projectTemplates.length]);
 
   const deleteProjectTemplate = useCallback((idToDelete: string) => {
-    if (projectTemplates.length <= 1) return;
-
-    setProjectTemplates((prev) => prev.filter((t) => t.id !== idToDelete));
-    setTemplateCanvasStore((prev) => {
-      const nextStore = { ...prev };
-      delete nextStore[idToDelete];
-      return nextStore;
-    });
-
-    if (activeProjectTemplateId === idToDelete) {
-      const remaining = projectTemplates.filter((t) => t.id !== idToDelete);
-      if (remaining.length > 0) {
-        const nextId = remaining[0].id;
+    setProjectTemplates((prev) => {
+      if (prev.length <= 1) return prev;
+      const filtered = prev.filter((t) => t.id !== idToDelete);
+      if (activeProjectTemplateId === idToDelete && filtered.length > 0) {
+        const nextId = filtered[0].id;
         setActiveProjectTemplateIdState(nextId);
         const targetData = templateCanvasStore[nextId] || {
           characterParts: [],
@@ -419,10 +406,17 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTracks(targetData.tracks);
         setMotionTemplates(targetData.motionTemplates);
         setActiveTemplateIdState(targetData.activeTemplateId);
-        setSceneTitleState(remaining[0].name);
+        setSceneTitleState(filtered[0].name);
       }
-    }
-  }, [projectTemplates, activeProjectTemplateId, templateCanvasStore]);
+      return filtered;
+    });
+
+    setTemplateCanvasStore((prev) => {
+      const nextStore = { ...prev };
+      delete nextStore[idToDelete];
+      return nextStore;
+    });
+  }, [activeProjectTemplateId, templateCanvasStore]);
 
   const assignTemplateToLayer = useCallback((partId: string, templateId: string) => {
     setTracks((prev) =>

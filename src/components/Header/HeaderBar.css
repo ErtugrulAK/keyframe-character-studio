@@ -295,3 +295,39 @@
   height: 22px;
   background: var(--border-color);
 }
+
+.header-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 14px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.import-btn {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+}
+.import-btn:hover {
+  background: #2b394e;
+  border-color: #475569;
+  color: #ffffff;
+}
+
+.export-btn {
+  background: #0d9488;
+  border: 1px solid #14b8a6;
+  color: #ffffff;
+  box-shadow: none;
+}
+.export-btn:hover {
+  background: #0f766e;
+  border-color: #2dd4bf;
+  box-shadow: none;
+}

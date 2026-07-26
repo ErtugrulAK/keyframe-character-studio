@@ -5,23 +5,56 @@ import './PropertyInspector.css';
 
 export const PropertyInspector: React.FC = () => {
   const [sidebarWidth, setSidebarWidth] = useState<number>(360);
-  const isResizingRef = useRef<boolean>(false);
+  const [outlinerHeight, setOutlinerHeight] = useState<number>(240);
+  const isResizingWidthRef = useRef<boolean>(false);
+  const isResizingHeightRef = useRef<boolean>(false);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  // Horizontal Width Resizer
+  const handleWidthMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    isResizingRef.current = true;
+    isResizingWidthRef.current = true;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
 
     const handleMouseMove = (ev: MouseEvent) => {
-      if (!isResizingRef.current) return;
+      if (!isResizingWidthRef.current) return;
       const newWidth = window.innerWidth - ev.clientX;
       setSidebarWidth(Math.max(250, Math.min(750, newWidth)));
     };
 
     const handleMouseUp = () => {
-      isResizingRef.current = false;
+      isResizingWidthRef.current = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  // Vertical Height Resizer (Outliner vs Details)
+  const handleHeightMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    isResizingHeightRef.current = true;
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+
+    const startY = e.clientY;
+    const startHeight = outlinerHeight;
+
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!isResizingHeightRef.current) return;
+      const deltaY = ev.clientY - startY;
+      const newHeight = Math.max(100, Math.min(650, startHeight + deltaY));
+      setOutlinerHeight(newHeight);
+    };
+
+    const handleMouseUp = () => {
+      isResizingHeightRef.current = false;
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
       window.removeEventListener('mousemove', handleMouseMove);
@@ -45,20 +78,28 @@ export const PropertyInspector: React.FC = () => {
       {/* Left Vertical Resizer Drag Handle */}
       <div
         className="sidebar-left-resizer"
-        onMouseDown={handleMouseDown}
+        onMouseDown={handleWidthMouseDown}
         title="Drag left/right to resize right panel width"
       />
 
-      {/* Top Dock Pane: Unreal Motion Design Outliner */}
-      <div className="sidebar-dock-pane outliner-dock">
+      {/* Top Dock Pane: Outliner */}
+      <div
+        className="sidebar-dock-pane outliner-dock"
+        style={{ height: `${outlinerHeight}px`, flex: 'none' }}
+      >
         <OutlinerPanel />
       </div>
 
-      {/* Resizer Divider Bar */}
-      <div className="sidebar-pane-divider" />
+      {/* Horizontal Resizer Divider Bar */}
+      <div
+        className="sidebar-pane-divider"
+        onMouseDown={handleHeightMouseDown}
+        style={{ cursor: 'ns-resize' }}
+        title="Drag up/down to resize Outliner and Details panel heights"
+      />
 
-      {/* Bottom Dock Pane: Unreal Motion Design Details */}
-      <div className="sidebar-dock-pane details-dock">
+      {/* Bottom Dock Pane: Details */}
+      <div className="sidebar-dock-pane details-dock" style={{ flex: 1, overflow: 'hidden' }}>
         <DetailsPanel />
       </div>
     </aside>

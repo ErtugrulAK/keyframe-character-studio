@@ -217,14 +217,14 @@ export const HeaderBar: React.FC = () => {
 
           <div className="divider-v" />
 
-          <button className="btn-secondary" onClick={() => fileInputRef.current?.click()} title="Import JSON Animation File">
+          <button className="header-action-btn import-btn" onClick={() => fileInputRef.current?.click()} title="Import JSON Animation File">
             <Upload size={14} />
             <span>Import</span>
           </button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportFile} />
 
-          <button className="btn-primary export-main-btn" onClick={handleExport} title="Export Video / Animation Sequence">
-            <Download size={15} />
+          <button className="header-action-btn export-btn" onClick={handleExport} title="Export Video / Animation Sequence">
+            <Download size={14} />
             <span>Export Video</span>
           </button>
 

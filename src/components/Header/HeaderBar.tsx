@@ -268,7 +268,7 @@ export const HeaderBar: React.FC = () => {
         title="Create New Template"
         subtitle="Add a new graphic template tab to your project workspace."
         placeholder="Template name (e.g. LowerThird_v2)..."
-        defaultValue={`New Template ${projectTemplates.length + 1}`}
+        defaultValue="New Template"
         confirmLabel="Create Template"
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={(val) => addProjectTemplate(val)}

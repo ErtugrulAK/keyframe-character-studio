@@ -247,7 +247,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
-    const cleanName = name.trim() || `New Sequence ${motionTemplates.length + 1}`;
+    const cleanName = name.trim() || 'New Sequence';
     const newTmpl: MotionTemplate = {
       id: cleanName,
       name: cleanName,
@@ -356,7 +356,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, templateCanvasStore, projectTemplates]);
 
   const addProjectTemplate = useCallback((name: string) => {
-    const cleanName = name.trim() || `Template ${projectTemplates.length}`;
+    const cleanName = name.trim() || 'New Template';
     const newId = `tmpl_${Date.now()}`;
     const newTmpl: ProjectTemplate = {
       id: newId,

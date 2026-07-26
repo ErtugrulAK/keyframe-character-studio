@@ -135,45 +135,35 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       </div>
 
       {/* ── PROPORTIONAL SCALE & RATIO SECTION ── */}
-      <div 
-        style={{ 
-          marginTop: 12, 
-          background: 'var(--bg-dark)', 
-          border: '1px solid var(--border-color)', 
-          borderRadius: 8, 
-          padding: 10 
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-teal)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Maximize2 size={13} /> PROPORTIONAL SCALE & RATIO
+      <div className="panel-card" style={{ marginTop: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 10, fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 5 }}>
+            <Maximize2 size={12} /> PROPORTIONAL SCALE & RATIO
           </span>
           <button
             type="button"
             className="btn-secondary"
             style={{ 
-              fontSize: 10, 
-              padding: '3px 8px', 
-              color: isScaleLocked ? '#10b981' : 'var(--text-muted)', 
-              background: isScaleLocked ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-input)',
-              border: `1px solid ${isScaleLocked ? '#10b981' : 'var(--border-color)'}`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4
+              height: 20,
+              fontSize: 9, 
+              padding: '0 6px', 
+              color: isScaleLocked ? '#10b981' : '#64748b', 
+              background: isScaleLocked ? 'rgba(16, 185, 129, 0.12)' : '#101218',
+              border: `1px solid ${isScaleLocked ? 'rgba(16, 185, 129, 0.4)' : '#232836'}`,
             }}
             onClick={() => setIsScaleLocked(!isScaleLocked)}
             title={isScaleLocked ? 'Aspect Ratio Locked (Uniform Scale)' : 'Aspect Ratio Unlocked (Free Scale)'}
           >
-            {isScaleLocked ? <Link size={12} /> : <Unlink size={12} />}
+            {isScaleLocked ? <Link size={10} /> : <Unlink size={10} />}
             <span>{isScaleLocked ? 'Ratio Locked' : 'Ratio Unlocked'}</span>
           </button>
         </div>
 
         {/* Master Uniform Scale Control */}
-        <div style={{ background: 'rgba(0,0,0,0.3)', padding: 8, borderRadius: 6, marginBottom: 8 }}>
+        <div style={{ background: '#101218', padding: 6, borderRadius: 4, border: '1px solid #232836' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <label style={{ fontSize: 10, color: 'var(--text-muted)' }}>UNIFORM SCALE MULTIPLIER</label>
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--accent-teal)' }}>
+            <label style={{ fontSize: 9.5, fontWeight: 700, color: '#94a3b8' }}>UNIFORM SCALE MULTIPLIER</label>
+            <span style={{ fontSize: 10, fontWeight: 700, fontFamily: 'var(--font-mono)', color: '#38bdf8' }}>
               {((transform.scaleX + transform.scaleY) / 2).toFixed(2)}x ({(Math.round(((transform.scaleX + transform.scaleY) / 2) * 100))}% )
             </span>
           </div>
@@ -184,16 +174,16 @@ export const TransformTab: React.FC<TransformTabProps> = ({
               const val = parseFloat(e.target.value);
               updateCurrentTransform({ scaleX: val, scaleY: val });
             }}
-            style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--accent-teal)', marginBottom: 6 }}
+            style={{ width: '100%', cursor: 'pointer', accentColor: '#38bdf8', marginBottom: 4 }}
           />
           {/* Quick Presets */}
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div style={{ display: 'flex', gap: 3 }}>
             {[0.5, 1.0, 1.5, 2.0, 5.0, 6.42].map((s) => (
               <button
                 key={`scale-preset-${s}`}
                 type="button"
                 className="btn-secondary"
-                style={{ flex: 1, fontSize: 9, padding: '3px 0', textAlign: 'center' }}
+                style={{ flex: 1, height: 18, fontSize: 8.5, padding: 0, textAlign: 'center' }}
                 onClick={() => updateCurrentTransform({ scaleX: s, scaleY: s })}
               >
                 {s}x
@@ -203,9 +193,9 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </div>
 
         {/* Scale X & Scale Y Inputs */}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div className="input-field" style={{ flex: 1 }}>
-            <label style={{ fontSize: 10 }}>SCALE X</label>
+        <div className="transform-param-grid">
+          <div className="param-row">
+            <span className="param-label">SCALE X</span>
             <SmartNumberInput
               value={transform.scaleX}
               step={0.1}
@@ -220,23 +210,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             />
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsScaleLocked(!isScaleLocked)}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: isScaleLocked ? '#10b981' : 'var(--text-muted)',
-              cursor: 'pointer',
-              padding: '12px 2px 0 2px',
-            }}
-            title={isScaleLocked ? 'Scale values linked proportionally' : 'Scale values unlinked'}
-          >
-            {isScaleLocked ? <Link size={14} /> : <Unlink size={14} />}
-          </button>
-
-          <div className="input-field" style={{ flex: 1 }}>
-            <label style={{ fontSize: 10 }}>SCALE Y</label>
+          <div className="param-row">
+            <span className="param-label">SCALE Y</span>
             <SmartNumberInput
               value={transform.scaleY}
               step={0.1}

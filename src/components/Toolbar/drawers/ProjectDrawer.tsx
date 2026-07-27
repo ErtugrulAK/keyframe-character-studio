@@ -7,7 +7,7 @@ export const ProjectDrawer: React.FC = () => {
   return (
     <div className="drawer-content" style={{ padding: '12px 14px' }}>
       <div className="form-group" style={{ marginBottom: 15 }}>
-        <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 6, display: 'block' }}>
+        <label className="form-label" style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 6, display: 'block' }}>
           Resolution Presets
         </label>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -44,9 +44,9 @@ export const ProjectDrawer: React.FC = () => {
 
       <div style={{ display: 'flex', gap: 10 }}>
         <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' }}>Width (px)</label>
-          <input
-            type="number"
+          <label className="form-label" style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' }}>Width (px)</label>
+          <input className="input-control"
+                type="number"
             value={projectResolution.width}
             onChange={(e) => setProjectResolution((p) => ({ ...p, width: parseInt(e.target.value) || 1920 }))}
             style={{
@@ -62,9 +62,9 @@ export const ProjectDrawer: React.FC = () => {
           />
         </div>
         <div style={{ flex: 1 }}>
-          <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' }}>Height (px)</label>
-          <input
-            type="number"
+          <label className="form-label" style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', marginBottom: 4, display: 'block' }}>Height (px)</label>
+          <input className="input-control"
+                type="number"
             value={projectResolution.height}
             onChange={(e) => setProjectResolution((p) => ({ ...p, height: parseInt(e.target.value) || 1080 }))}
             style={{

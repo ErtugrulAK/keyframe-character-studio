@@ -11,8 +11,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 6px;
-  gap: 6px;
+  padding: var(--space-xs) var(--space-2xs);
+  gap: var(--space-2xs);
   flex-shrink: 0;
 }
 
@@ -25,7 +25,7 @@
   height: 62px;
   border-radius: var(--radius-md);
   color: var(--text-muted);
-  gap: 5px;
+  gap: var(--space-2xs);
   transition: all 0.18s ease;
 }
 
@@ -50,7 +50,7 @@
 }
 
 .nav-label {
-  font-size: 11px;
+  font-size: var(--font-size-body);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -59,7 +59,7 @@
   width: 50px;
   height: 1px;
   background: var(--border-color);
-  margin: 6px 0;
+  margin: var(--space-2xs) 0;
 }
 
 /* Expanding Left Drawer Panel */
@@ -74,36 +74,36 @@
 }
 
 .drawer-content {
-  padding: 16px;
+  padding: var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-sm);
 }
 
 .drawer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 10px;
+  padding-bottom: var(--space-xs);
   border-bottom: 1px solid var(--border-color);
 }
 
 .drawer-title {
-  font-size: 15px;
+  font-size: var(--font-size-h4);
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .drawer-subtitle {
-  font-size: 11px;
+  font-size: var(--font-size-body);
   font-weight: 800;
   color: var(--text-muted);
   letter-spacing: 0.6px;
-  margin-top: 6px;
+  margin-top: var(--space-2xs);
 }
 
 .drawer-desc {
-  font-size: 12px;
+  font-size: var(--font-size-body);
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -113,7 +113,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px 14px;
+  padding: var(--space-lg) var(--space-sm);
   border: 2px dashed var(--border-light);
   border-radius: var(--radius-md);
   background: var(--bg-input);
@@ -130,26 +130,26 @@
 }
 
 .dropzone-title {
-  font-size: 13px;
+  font-size: var(--font-size-body-lg);
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .dropzone-sub {
-  font-size: 11px;
+  font-size: var(--font-size-body);
   color: var(--text-muted);
-  margin-top: 4px;
+  margin-top: var(--space-2xs);
 }
 
 .drawer-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: var(--space-xs);
 }
 
 .transition-grid {
   grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  gap: var(--space-xs);
 }
 
 .drawer-item-card {
@@ -157,8 +157,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 12px 8px;
+  gap: var(--space-2xs);
+  padding: var(--space-sm) var(--space-xs);
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -172,10 +172,10 @@
 }
 
 .transition-card {
-  padding: 10px 4px;
+  padding: var(--space-xs) var(--space-2xs);
   background: var(--bg-dark);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
 }
 
@@ -193,12 +193,12 @@
 .transition-icon-box {
   width: 44px;
   height: 44px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg-input);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 2px;
+  margin-bottom: var(--space-3xs);
   transition: all 0.2s ease;
 }
 
@@ -213,12 +213,12 @@
 }
 
 .item-label {
-  font-size: 11px;
+  font-size: var(--font-size-body);
   font-weight: 600;
   color: var(--text-secondary);
 }
 
 .add-kf-drawer-btn, .text-add-btn {
-  gap: 8px;
-  margin-top: 8px;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
 }

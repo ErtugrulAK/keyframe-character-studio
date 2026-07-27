@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Zap, Plus, Link, Unlink, Maximize2, Move } from 'lucide-react';
+import { Activity, Plus, Link, Unlink, Maximize2, Move } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 const getPartBaseBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
@@ -97,7 +97,7 @@ interface TransformTabProps {
   currentFrame: number;
   addKeyframeForSelected: () => void;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
-  handlePartPropChange: (key: keyof CharacterPart, value: any) => void;
+  handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
 }
 
 export const TransformTab: React.FC<TransformTabProps> = ({
@@ -106,7 +106,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   currentFrame,
   addKeyframeForSelected,
   updateCurrentTransform,
-  handlePartPropChange,
 }) => {
   const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
   const [pointMode, setPointMode] = useState<'edge' | 'corner'>('edge');
@@ -618,45 +617,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </button>
       </div>
 
-      {/* SPRING PHYSICS MODIFIER */}
-      <div className="section-title" style={{ marginTop: 12 }}>
-        <Zap size={13} className="text-gold" />
-        <span>SPRING PHYSICS & DELAY</span>
-      </div>
-
-      <div className="input-field">
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}>
-          <input
-            type="checkbox"
-            checked={selectedPart.springEnabled || false}
-            onChange={(e) => handlePartPropChange('springEnabled', e.target.checked)}
-          />
-          <span>ENABLE SPRING ELASTICITY</span>
-        </label>
-      </div>
-
-      {selectedPart.springEnabled && (
-        <div className="input-grid">
-          <div className="input-field">
-            <label>STIFFNESS (10-100)</label>
-            <SmartNumberInput
-              value={selectedPart.springStiffness || 45}
-              min={10}
-              max={100}
-              onChange={(val) => handlePartPropChange('springStiffness', val)}
-            />
-          </div>
-          <div className="input-field">
-            <label>DAMPING (5-50)</label>
-            <SmartNumberInput
-              value={selectedPart.springDamping || 18}
-              min={5}
-              max={50}
-              onChange={(val) => handlePartPropChange('springDamping', val)}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

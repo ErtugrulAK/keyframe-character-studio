@@ -213,12 +213,6 @@ export interface CharacterPart {
   textAnimEasing?: EasingType;
   textAnimStartFrame?: number; // timeline frame when stagger begins
 
-  // ── Feature 4: Spring Physics ──
-  springEnabled?: boolean;
-  springStiffness?: number;   // 0..100
-  springDamping?: number;     // 0..100
-  springDelay?: number;       // ms delay
-
   // ── Feature 5: MoGraph Cloner ──
   clonerConfig?: ClonerConfig;
 

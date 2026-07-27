@@ -1,1 +1,1 @@
-refactor(canvas): simplify boundary coordinate labels to ultra-clean numbers (+5.40, -5.40, -9.60, +9.60)  
+feat(inspector): make all 4 control points and corners 100 percent independent with fixed opposite anchors  

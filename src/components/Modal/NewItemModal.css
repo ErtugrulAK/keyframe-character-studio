@@ -29,12 +29,12 @@
   max-width: 90vw;
   background: #141722;
   border: 1px solid #282f42;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
-  padding: 20px;
+  padding: var(--space-md);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-sm);
 }
 
 .modal-header {
@@ -46,11 +46,11 @@
 .modal-title-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-xs);
 }
 
 .modal-title {
-  font-size: 14px;
+  font-size: var(--font-size-body-lg);
   font-weight: 700;
   color: #f1f5f9;
   margin: 0;
@@ -62,7 +62,7 @@
 }
 
 .modal-subtitle {
-  font-size: 12px;
+  font-size: var(--font-size-mono);
   color: #94a3b8;
   margin: 0;
   line-height: 1.4;
@@ -73,8 +73,8 @@
   border: none;
   color: #64748b;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+  padding: var(--space-2xs);
+  border-radius: var(--radius-xs);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -89,7 +89,7 @@
 .modal-body {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-md);
 }
 
 .input-wrapper {
@@ -102,11 +102,11 @@
   height: 38px;
   background: #0b0d14;
   border: 1px solid #2a3246;
-  border-radius: 7px;
+  border-radius: var(--radius-sm);
   color: #fff;
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 600;
-  padding: 0 12px;
+  padding: 0 var(--space-sm);
   outline: none;
   transition: all 0.15s ease;
   box-sizing: border-box;
@@ -121,13 +121,13 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: var(--space-xs);
 }
 
 .btn-cancel {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-mono);
   font-weight: 600;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -142,9 +142,9 @@
 }
 
 .btn-confirm {
-  padding: 8px 18px;
-  border-radius: 6px;
-  font-size: 12px;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-mono);
   font-weight: 700;
   background: #182232;
   border: 1px solid #2b394e;

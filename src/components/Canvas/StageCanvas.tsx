@@ -160,16 +160,23 @@ export const StageCanvas: React.FC = () => {
     });
   };
 
+  const rafPanRef = useRef<number | null>(null);
+
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isDragging || !dragMode) return;
 
       if (dragMode === 'pan') {
-        const dx = (e.clientX - dragStart.x) / zoomLevel;
-        const dy = (e.clientY - dragStart.y) / zoomLevel;
-        setPanOffset({
-          x: dragStart.initialTransform.x + dx,
-          y: dragStart.initialTransform.y + dy,
+        const clientX = e.clientX;
+        const clientY = e.clientY;
+        if (rafPanRef.current) cancelAnimationFrame(rafPanRef.current);
+        rafPanRef.current = requestAnimationFrame(() => {
+          const dx = (clientX - dragStart.x) / zoomLevel;
+          const dy = (clientY - dragStart.y) / zoomLevel;
+          setPanOffset({
+            x: dragStart.initialTransform.x + dx,
+            y: dragStart.initialTransform.y + dy,
+          });
         });
         return;
       }
@@ -474,8 +481,15 @@ export const StageCanvas: React.FC = () => {
         style={{ transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`, transformOrigin: 'center center' }}
       >
         <defs>
-          <pattern id="svg-dashed-grid" width="100" height="100" patternUnits="userSpaceOnUse" x="300" y="240">
-            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" strokeDasharray="3 3" />
+          <pattern
+            id="svg-dashed-grid"
+            width="60"
+            height="60"
+            patternUnits="userSpaceOnUse"
+            x={300 - projectResolution.width / 2}
+            y={240 - projectResolution.height / 2}
+          >
+            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" strokeDasharray="3 3" />
           </pattern>
           <clipPath id="artboard-clip">
             <rect

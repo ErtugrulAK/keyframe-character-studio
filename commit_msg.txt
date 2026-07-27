@@ -1,1 +1,1 @@
-feat(inspector): remove Spring Physics section  
+fix(canvas): smooth right-click panning with RAF and align grid pattern to artboard boundaries without half-squares  

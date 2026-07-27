@@ -89,7 +89,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           />
         ))}
 
-        {/* Boundary Coordinate Text Labels (Top, Bottom, Left, Right) */}
+        {/* Boundary Coordinate Text Labels (Minimal X / Y values matching Inspector) */}
         {/* Top Edge Label */}
         <text
           x={300}
@@ -100,7 +100,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           textAnchor="middle"
           style={{ userSelect: 'none', pointerEvents: 'none' }}
         >
-          TOP (Y: +{height / 2} | POS Y: +{(height / 200).toFixed(2)})
+          +{(height / 200).toFixed(2)}
         </text>
 
         {/* Bottom Edge Label */}
@@ -113,7 +113,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           textAnchor="middle"
           style={{ userSelect: 'none', pointerEvents: 'none' }}
         >
-          BOTTOM (Y: -{height / 2} | POS Y: -{(height / 200).toFixed(2)})
+          -{(height / 200).toFixed(2)}
         </text>
 
         {/* Left Edge Label */}
@@ -127,7 +127,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           dominantBaseline="middle"
           style={{ userSelect: 'none', pointerEvents: 'none' }}
         >
-          LEFT (X: -{width / 2} | POS X: -{(width / 200).toFixed(2)})
+          -{(width / 200).toFixed(2)}
         </text>
 
         {/* Right Edge Label */}
@@ -141,7 +141,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           dominantBaseline="middle"
           style={{ userSelect: 'none', pointerEvents: 'none' }}
         >
-          RIGHT (X: +{width / 2} | POS X: +{(width / 200).toFixed(2)})
+          +{(width / 200).toFixed(2)}
         </text>
       </g>
 

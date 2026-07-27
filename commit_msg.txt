@@ -1,1 +1,1 @@
-refactor(canvas): remove Turkish text and px suffix from boundary coordinate labels  
+refactor(canvas): simplify boundary coordinate labels to ultra-clean numbers (+5.40, -5.40, -9.60, +9.60)  

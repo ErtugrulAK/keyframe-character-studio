@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
+import { getYouTubeEmbedInfo } from '../utils/youtubeHelper';
 
 interface MediaPartProps {
   part: CharacterPart;
@@ -35,6 +36,8 @@ export const renderMediaPart = ({ part, fill, stroke, isSelected, overrideMaskSh
   if (part.overlayTextPosition === 'top') captionY = startY + 20;
   if (part.overlayTextPosition === 'center') captionY = 0;
 
+  const { isYouTube, embedUrl } = getYouTubeEmbedInfo(part.videoUrl);
+
   return (
     <g>
       <defs>
@@ -63,20 +66,39 @@ export const renderMediaPart = ({ part, fill, stroke, isSelected, overrideMaskSh
         {isVideo ? (
           part.videoUrl ? (
             <foreignObject x={startX} y={startY} width={fullW} height={fullH}>
-              <video
-                src={part.videoUrl}
-                autoPlay
-                loop
-                muted
-                playsInline
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  borderRadius: 8,
-                  pointerEvents: 'none',
-                }}
-              />
+              {isYouTube ? (
+                <div style={{ width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none', position: 'relative', borderRadius: 8 }}>
+                  <iframe
+                    src={embedUrl}
+                    title="YouTube Standalone Video"
+                    allow="autoplay; encrypted-media"
+                    style={{
+                      position: 'absolute',
+                      top: '-15%',
+                      left: '-15%',
+                      width: '130%',
+                      height: '130%',
+                      border: 'none',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                </div>
+              ) : (
+                <video
+                  src={part.videoUrl}
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    borderRadius: 8,
+                    pointerEvents: 'none',
+                  }}
+                />
+              )}
             </foreignObject>
           ) : (
             <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />

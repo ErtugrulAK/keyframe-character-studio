@@ -123,6 +123,7 @@ export const DetailsPanel: React.FC = () => {
               addKeyframeForSelected={addKeyframeForSelected}
               updateCurrentTransform={updateCurrentTransform}
               handlePartPropChange={handlePartPropChange}
+              handleZIndexChange={handleZIndexChange}
             />
           )}
 

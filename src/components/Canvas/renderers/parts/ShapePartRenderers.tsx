@@ -10,6 +10,23 @@ interface ShapePartProps {
   renderInnerMedia: (shapeWidth: number, shapeHeight: number, xOff?: number, yOff?: number) => React.ReactNode;
 }
 
+const getStrokeDashProps = (part: CharacterPart, totalPerimeter: number) => {
+  const progress = part.strokeProgress !== undefined ? Math.max(0, Math.min(1, part.strokeProgress)) : 1;
+  if (progress <= 0) {
+    return {
+      strokeDasharray: `0 ${totalPerimeter * 2}`,
+      strokeDashoffset: totalPerimeter,
+    };
+  }
+  if (progress >= 1) {
+    return {};
+  }
+  return {
+    strokeDasharray: totalPerimeter,
+    strokeDashoffset: totalPerimeter * (1 - progress),
+  };
+};
+
 export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMedia }: ShapePartProps): React.ReactNode => {
   switch (part.type) {
     case 'custom_star':
@@ -20,6 +37,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           stroke={stroke}
           strokeWidth={isSelected ? 2 : 1.5}
           vectorEffect="non-scaling-stroke"
+          {...getStrokeDashProps(part, 300)}
         />
       );
 
@@ -42,7 +60,16 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           ) : (
             <circle cx={0} cy={0} r={30} fill={fill} />
           )}
-          <circle cx={0} cy={0} r={30} fill="none" stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
+          <circle
+            cx={0}
+            cy={0}
+            r={30}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 188.5)}
+          />
         </g>
       );
     }
@@ -66,7 +93,18 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           ) : (
             <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill={fill} />
           )}
-          <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill="none" stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
+          <rect
+            x={-30}
+            y={-30}
+            width={60}
+            height={60}
+            rx={part.borderRadius ?? 0}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 240)}
+          />
         </g>
       );
     }
@@ -90,7 +128,18 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           ) : (
             <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill={fill} />
           )}
-          <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill="none" stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
+          <rect
+            x={-60}
+            y={-30}
+            width={120}
+            height={60}
+            rx={part.borderRadius ?? 0}
+            fill="none"
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 360)}
+          />
         </g>
       );
     }
@@ -114,7 +163,14 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           ) : (
             <polygon points="0,-35 35,25 -35,25" fill={fill} />
           )}
-          <polygon points="0,-35 35,25 -35,25" fill="none" stroke={stroke} strokeWidth={isSelected ? 2 : 1.5} vectorEffect="non-scaling-stroke" />
+          <polygon
+            points="0,-35 35,25 -35,25"
+            fill="none"
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 209)}
+          />
         </g>
       );
     }
@@ -132,6 +188,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 420)}
           />
           <text
             x={0}
@@ -160,6 +217,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           stroke={stroke}
           strokeWidth={isSelected ? 2 : 1.5}
           vectorEffect="non-scaling-stroke"
+          {...getStrokeDashProps(part, 280)}
         />
       );
 
@@ -171,6 +229,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           stroke={stroke}
           strokeWidth={isSelected ? 2 : 1.5}
           vectorEffect="non-scaling-stroke"
+          {...getStrokeDashProps(part, 198)}
         />
       );
 
@@ -187,6 +246,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 560)}
           />
           <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} />
           <circle cx={-68} cy={-29} r={4} fill="#00d2ff" />

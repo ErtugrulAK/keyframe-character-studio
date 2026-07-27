@@ -72,14 +72,13 @@ interface StyleTabProps {
   selectedPart: CharacterPart;
   handlePartPropChange: (key: keyof CharacterPart, value: any) => void;
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
-  handleZIndexChange: (zIndex: number) => void;
+  handleZIndexChange?: (zIndex: number) => void;
 }
 
 export const StyleTab: React.FC<StyleTabProps> = ({
   selectedPart,
   handlePartPropChange,
   handlePartColorChange,
-  handleZIndexChange,
 }) => {
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
@@ -830,26 +829,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           </div>
         </div>
 
-        {/* Z-INDEX LAYER ORDERING */}
-        <div className="input-field">
-          <label>LAYER Z-INDEX ORDER ({selectedPart.zIndex})</label>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <button
-              className="btn-secondary"
-              style={{ flex: 1 }}
-              onClick={() => handleZIndexChange(selectedPart.zIndex + 1)}
-            >
-              Bring Forward (+1)
-            </button>
-            <button
-              className="btn-secondary"
-              style={{ flex: 1 }}
-              onClick={() => handleZIndexChange(Math.max(1, selectedPart.zIndex - 1))}
-            >
-              Send Backward (-1)
-            </button>
-          </div>
-        </div>
+
 
         {/* DROP SHADOW / GLOW CONTROLS */}
         <div className="section-title" style={{ marginTop: 12 }}>

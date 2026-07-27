@@ -12,6 +12,7 @@ interface PartRendererProps {
   transform: Transform;
   isGhost?: boolean;
   ghostColor?: string;
+  isFocusGhost?: boolean;
   isSelected?: boolean;
   currentFrame: number;
   totalFrames: number;
@@ -24,6 +25,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   transform,
   isGhost = false,
   ghostColor,
+  isFocusGhost = false,
   isSelected = false,
   currentFrame,
   totalFrames,
@@ -39,7 +41,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   let overrideMaskShape: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart' | undefined = undefined;
 
-  const { appMode, broadcastState, customPresets, tracks, liveStuntsState } = useAnimator();
+  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId } = useAnimator();
   const targetTrack = tracks.find(t => t.partId === part.id);
 
   if (!isGhost) {
@@ -53,6 +55,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
       
       if (targetTrack && targetTrack.visible === false) {
+        animOpacity = 0;
+      } else if (bState.state === 'hidden') {
         animOpacity = 0;
       } else if (allowMotion && bState.state === 'animating_in') {
         const cp = customPresets.find(p => p.id === inPreset);
@@ -79,7 +83,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
             if (cp.maskShape) {
               overrideMaskShape = cp.maskShape;
-            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle') || cp.name.toLowerCase().includes('top') || cp.name.toLowerCase().includes('yuvarla')) {
+            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle')) {
               overrideMaskShape = 'circle';
             }
           }
@@ -97,6 +101,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             if (inPreset === 'slide-up') animY = dist;
             if (inPreset === 'slide-down') animY = -dist;
           }
+        } else {
+          animOpacity = 1;
         }
       } else if (allowMotion && bState.state === 'animating_out') {
         const cp = customPresets.find(p => p.id === outPreset);
@@ -123,7 +129,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
             if (cp.maskShape) {
               overrideMaskShape = cp.maskShape;
-            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle') || cp.name.toLowerCase().includes('top') || cp.name.toLowerCase().includes('yuvarla')) {
+            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle')) {
               overrideMaskShape = 'circle';
             }
           }
@@ -141,7 +147,11 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             if (outPreset === 'slide-up') animY = -dist;
             if (outPreset === 'slide-down') animY = dist;
           }
+        } else {
+          animOpacity = 0;
         }
+      } else if (bState.state === 'visible') {
+        animOpacity = 1;
       }
     } else {
       // Linear Edit Mode timeline logic
@@ -256,13 +266,21 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const stroke = (isGhost && ghostColor ? ghostColor : isSelected ? '#00d2ff' : part.strokeColor) || '#101218';
 
   // Inner Media Helper (Supports Direct MP4/WebM & YouTube Embed URLs)
-  const renderInnerMedia = (shapeWidth: number, shapeHeight: number, xOff: number = 0, yOff: number = 0) => {
-    if (!part.innerMediaUrl || isGhost) return null;
+  const renderInnerMedia = (shapeWidth: number, shapeHeight: number, xOff: number = 0, yOff: number = 0, overrideOpacity?: number) => {
+    if (!part.innerMediaUrl || (isGhost && !isFocusGhost)) return null;
+    
+    // Apply Mask Transforms
+    const mX = part.maskOffsetX || 0;
+    const mY = part.maskOffsetY || 0;
+    const mScale = part.maskScale ?? 1;
+    const mRot = part.maskRotation || 0;
+    const maskTransform = `translate(${mX}, ${mY}) scale(${mScale}) rotate(${mRot})`;
     if (part.innerMediaType === 'video') {
       const { isYouTube, embedUrl } = getYouTubeEmbedInfo(part.innerMediaUrl);
       return (
-        <foreignObject x={xOff} y={yOff} width={shapeWidth} height={shapeHeight} style={{ pointerEvents: 'none' }}>
-          {isYouTube ? (
+        <g transform={maskTransform} opacity={overrideOpacity ?? 1}>
+          <foreignObject x={xOff} y={yOff} width={shapeWidth} height={shapeHeight} style={{ pointerEvents: 'none' }}>
+            {isYouTube ? (
             <div style={{ width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none', position: 'relative' }}>
               <iframe
                 src={embedUrl}
@@ -290,25 +308,37 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             />
           )}
         </foreignObject>
+      </g>
       );
     }
     return (
-      <image
-        href={part.innerMediaUrl}
-        x={xOff}
-        y={yOff}
-        width={shapeWidth}
-        height={shapeHeight}
-        preserveAspectRatio="xMidYMid slice"
-        style={{ pointerEvents: 'none' }}
-      />
+      <g transform={maskTransform} opacity={overrideOpacity ?? 1}>
+        <image
+          href={part.innerMediaUrl}
+          x={xOff}
+          y={yOff}
+          width={shapeWidth}
+          height={shapeHeight}
+          preserveAspectRatio="xMidYMid slice"
+          style={{ pointerEvents: 'none' }}
+        />
+      </g>
     );
   };
 
   // Delegate Rendering to Sub-Renderers based on part type
   let pathContent: React.ReactNode = null;
 
-  if (part.type === 'custom_video' || part.type === 'custom_image') {
+  if (isFocusGhost) {
+    // Only render unclipped media for focus ghost
+    pathContent = renderInnerMedia(
+      part.type === 'custom_box' ? 80 : 120,
+      part.type === 'custom_box' ? 80 : 60,
+      part.type === 'custom_box' ? -40 : -60,
+      part.type === 'custom_box' ? -40 : -30,
+      0.4
+    );
+  } else if (part.type === 'custom_video' || part.type === 'custom_image') {
     pathContent = renderMediaPart({ part, fill, stroke, isSelected, overrideMaskShape });
   } else if (part.type === 'custom_text' || part.type === 'mograph_cloner') {
     pathContent = renderTextOrClonerPart({ part, fill, stroke, isSelected, currentFrame });
@@ -339,6 +369,12 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       onMouseDown={(e) => {
         if (!isGhost && e.button === 0) {
           onStartTranslateDrag(part.id, e);
+        }
+      }}
+      onDoubleClick={(e) => {
+        if (!isGhost && part.innerMediaUrl && e.button === 0) {
+          e.stopPropagation();
+          setFocusModeNodeId(part.id);
         }
       }}
     >

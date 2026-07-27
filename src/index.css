@@ -148,7 +148,7 @@ body, html, #root {
   background-color: var(--bg-darkest);
   color: var(--text-primary);
   font-family: var(--font-main);
-  font-size: 14px;
+  font-size: var(--font-size-body-lg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -203,7 +203,7 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-2xs);
   border-radius: var(--radius-md);
   white-space: nowrap;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
@@ -236,7 +236,7 @@ button:disabled {
 .btn-secondary {
   background: var(--bg-panel);
   border: 1px solid var(--border-color);
-  padding: 7px 16px;
+  padding: var(--space-2xs) var(--space-md);
   color: var(--text-primary);
   font-weight: 600;
   border-radius: var(--radius-pill);
@@ -251,7 +251,7 @@ button:disabled {
   background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
   color: #ffffff;
   font-weight: 700;
-  padding: 8px 18px;
+  padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-pill);
   box-shadow: 0 4px 14px var(--accent-teal-glow);
 }
@@ -266,10 +266,10 @@ input[type="text"] {
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  padding: 6px 10px;
+  padding: var(--space-2xs) var(--space-xs);
   border-radius: var(--radius-md);
   font-family: var(--font-main);
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 600;
   outline: none;
   transition: all 0.15s ease;
@@ -280,10 +280,10 @@ input[type="number"] {
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
-  padding: 6px 10px;
+  padding: var(--space-2xs) var(--space-xs);
   border-radius: var(--radius-md);
   font-family: var(--font-mono);
-  font-size: 13px;
+  font-size: var(--font-size-body);
   font-weight: 600;
   outline: none;
   transition: all 0.15s ease;
@@ -298,7 +298,7 @@ select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
   background-repeat: no-repeat !important;
   background-position: right 10px center !important;
-  padding: 4px 30px 4px 10px !important;
+  padding: var(--space-2xs) var(--space-lg) var(--space-2xs) var(--space-xs) !important;
   font-family: var(--font-main) !important;
   font-size: 12px !important;
   font-weight: 600 !important;
@@ -331,7 +331,7 @@ input[type="color"] {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  padding: 3px;
+  padding: var(--space-3xs);
   outline: none;
   box-sizing: border-box;
   transition: all 0.18s ease;
@@ -343,12 +343,12 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 
 input[type="color"]::-webkit-color-swatch {
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 input[type="color"]::-moz-color-swatch {
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 input[type="color"]:hover {
@@ -364,7 +364,7 @@ input[type="checkbox"] {
   height: 18px;
   background: var(--bg-input);
   border: 1.5px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -388,7 +388,7 @@ input[type="checkbox"]:checked::after {
   border: solid #ffffff;
   border-width: 0 2px 2px 0;
   transform: rotate(45deg);
-  margin-bottom: 2px;
+  margin-bottom: var(--space-3xs);
 }
 
 /* Hide Spinners in Number Inputs for clean typing */
@@ -413,4 +413,68 @@ input[type="number"]:focus, input[type="text"]:focus, select:focus {
     linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
   background-size: 24px 24px;
+}
+
+/* ── UNIFIED FORM CONTROL CSS SPECIFICATION ── */
+
+.input-group, .form-field-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input-label, .form-label {
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.input-field, .input-control, .select-control, .textarea-control {
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0 var(--space-xs);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+/* Number inputs should usually be centered if small */
+input[type="number"].input-control, .input-control.center-text {
+  text-align: center;
+}
+
+.input-control:hover, .select-control:hover, .textarea-control:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background-color: #12151e;
+}
+
+.input-control:focus, .select-control:focus, .textarea-control:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+  background-color: #0b0d12;
+}
+
+/* Hide Webkit Spinners globally */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+input[type="number"] {
+  -moz-appearance: textfield !important;
 }

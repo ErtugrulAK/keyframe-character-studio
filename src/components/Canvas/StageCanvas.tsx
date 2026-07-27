@@ -13,6 +13,8 @@ export const StageCanvas: React.FC = () => {
     currentFrame,
     characterParts,
     selectedPartId,
+    selectedPartIds,
+    handleSelectPart,
     setSelectedPartId,
     getComputedTransform,
     updateCurrentTransform,
@@ -26,6 +28,9 @@ export const StageCanvas: React.FC = () => {
     appMode,
     broadcastState,
     tracks,
+    focusModeNodeId,
+    setFocusModeNodeId,
+    updateCharacterPart,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,12 +38,14 @@ export const StageCanvas: React.FC = () => {
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform }>({
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | null>(null);
+  const [marqueeRect, setMarqueeRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; initialMaskX?: number; initialMaskY?: number }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
   });
+  const [snapLines, setSnapLines] = useState<{x1: number, y1: number, x2: number, y2: number, color?: string}[]>([]);
 
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
   const [dragInitialDist, setDragInitialDist] = useState<number>(1);
@@ -77,10 +84,23 @@ export const StageCanvas: React.FC = () => {
     setIsDragging(true);
     setDragMode('translate');
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+    
+    const part = characterParts.find(p => p.id === partId);
+    
+    const initialTransforms: Record<string, Transform> = {};
+    const relevantIds = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
+    relevantIds.forEach(id => {
+      const t = getComputedTransform(id, currentFrame);
+      if (t) initialTransforms[id] = { ...t };
+    });
+    
     setDragStart({
       x: svgX,
       y: svgY,
       initialTransform: { ...transform },
+      initialTransforms,
+      initialMaskX: part?.maskOffsetX || 0,
+      initialMaskY: part?.maskOffsetY || 0,
     });
   };
 
@@ -102,9 +122,20 @@ export const StageCanvas: React.FC = () => {
     if (
       target === containerRef.current || 
       target.tagName === 'svg' ||
-      target.classList.contains('canvas-bg')
+      target.classList.contains('canvas-bg') ||
+      target.classList.contains('focus-spotlight-dimmer')
     ) {
-      setSelectedPartId(null);
+      handleSelectPart(null);
+      setFocusModeNodeId(null);
+      
+      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+      setIsDragging(true);
+      setDragMode('marquee');
+      setDragStart({
+        x: svgX,
+        y: svgY,
+        initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }
+      });
     }
   };
 
@@ -181,13 +212,96 @@ export const StageCanvas: React.FC = () => {
 
       const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
 
+      if (dragMode === 'marquee') {
+        const minX = Math.min(dragStart.x, svgX);
+        const minY = Math.min(dragStart.y, svgY);
+        const w = Math.abs(svgX - dragStart.x);
+        const h = Math.abs(svgY - dragStart.y);
+        setMarqueeRect({ x: minX, y: minY, w, h });
+        return;
+      }
+
+      if (!selectedPartId) return;
+
       if (dragMode === 'translate') {
-        const dx = svgX - dragStart.x;
-        const dy = svgY - dragStart.y;
-        updateCurrentTransform({
-          x: Math.round(dragStart.initialTransform.x + dx),
-          y: Math.round(dragStart.initialTransform.y + dy),
-        });
+        let dx = svgX - dragStart.x;
+        let dy = svgY - dragStart.y;
+        
+        // Snapping Logic
+        let snappedX = dx;
+        let snappedY = dy;
+        const newSnapLines: {x1: number, y1: number, x2: number, y2: number, color?: string}[] = [];
+        const SNAP_DIST = 8 / zoomLevel;
+        
+        if (focusModeNodeId !== selectedPartId) {
+          // Compute moving group/part center and bounds
+          let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
+          
+          const relevantIds = selectedPartIds.includes(selectedPartId) ? selectedPartIds : [selectedPartId];
+          relevantIds.forEach(id => {
+            const part = characterParts.find(p => p.id === id);
+            if (!part) return;
+            const initT = dragStart.initialTransforms?.[id] || dragStart.initialTransform;
+            const b = getPartBounds(part);
+            const left = initT.x + dx - b.halfW * Math.abs(initT.scaleX);
+            const right = initT.x + dx + b.halfW * Math.abs(initT.scaleX);
+            const top = initT.y + dy - b.halfH * Math.abs(initT.scaleY);
+            const bottom = initT.y + dy + b.halfH * Math.abs(initT.scaleY);
+            if (left < minX) minX = left; if (right > maxX) maxX = right;
+            if (top < minY) minY = top; if (bottom > maxY) maxY = bottom;
+          });
+          
+          if (minX !== Infinity) {
+            const movingCX = (minX + maxX) / 2;
+            const movingCY = (minY + maxY) / 2;
+            
+            // Check canvas center
+            if (Math.abs(movingCX - 0) < SNAP_DIST) {
+              snappedX -= movingCX;
+              newSnapLines.push({ x1: 300, y1: -1000, x2: 300, y2: 1000, color: '#f472b6' }); // Canvas Center Y-Axis
+            }
+            if (Math.abs(movingCY - 0) < SNAP_DIST) {
+              snappedY -= movingCY;
+              newSnapLines.push({ x1: -1000, y1: 240, x2: 1000, y2: 240, color: '#f472b6' }); // Canvas Center X-Axis
+            }
+            
+            // Check other parts
+            characterParts.forEach(part => {
+              if (relevantIds.includes(part.id)) return;
+              const t = getComputedTransform(part.id, currentFrame);
+              const cx = t.x; const cy = t.y;
+              
+              if (Math.abs(movingCX - cx) < SNAP_DIST && newSnapLines.length < 5) {
+                snappedX -= (movingCX - cx);
+                newSnapLines.push({ x1: 300 + cx, y1: -1000, x2: 300 + cx, y2: 1000, color: '#38bdf8' });
+              }
+              if (Math.abs(movingCY - cy) < SNAP_DIST && newSnapLines.length < 5) {
+                snappedY -= (movingCY - cy);
+                newSnapLines.push({ x1: -1000, y1: 240 + cy, x2: 1000, y2: 240 + cy, color: '#38bdf8' });
+              }
+            });
+          }
+        }
+        
+        setSnapLines(newSnapLines);
+        
+        if (focusModeNodeId === selectedPartId) {
+          updateCharacterPart(selectedPartId, {
+            maskOffsetX: (dragStart.initialMaskX || 0) + snappedX,
+            maskOffsetY: (dragStart.initialMaskY || 0) + snappedY,
+          });
+        } else {
+          // If we have multiple selections and the dragged part is in it, move all of them
+          if (dragStart.initialTransforms) {
+            Object.keys(dragStart.initialTransforms).forEach(id => {
+              const initT = dragStart.initialTransforms![id];
+              updateCurrentTransform({ x: initT.x + snappedX, y: initT.y + snappedY }, id);
+            });
+          } else {
+            updateCurrentTransform({ x: dragStart.initialTransform.x + snappedX, y: dragStart.initialTransform.y + snappedY });
+          }
+        }
+        return;
       } else if (dragMode === 'rotate') {
         const centerX = 300 + dragStart.initialTransform.x;
         const centerY = 240 + dragStart.initialTransform.y;
@@ -315,9 +429,46 @@ export const StageCanvas: React.FC = () => {
   );
 
   const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-    setDragMode(null);
-  }, []);
+      if (dragMode === 'marquee' && marqueeRect) {
+        // Calculate collisions with all parts
+        const selected: string[] = [];
+        characterParts.forEach(part => {
+          const t = getComputedTransform(part.id, currentFrame);
+          const bounds = getPartBounds(part);
+          const cx = 300 + t.x;
+          const cy = 240 + t.y;
+          // Rough bounding box intersection
+          const partLeft = cx - bounds.halfW * t.scaleX;
+          const partRight = cx + bounds.halfW * t.scaleX;
+          const partTop = cy - bounds.halfH * t.scaleY;
+          const partBottom = cy + bounds.halfH * t.scaleY;
+          
+          if (
+            partRight > marqueeRect.x &&
+            partLeft < marqueeRect.x + marqueeRect.w &&
+            partBottom > marqueeRect.y &&
+            partTop < marqueeRect.y + marqueeRect.h
+          ) {
+            selected.push(part.id);
+          }
+        });
+        
+        if (selected.length > 0) {
+          handleSelectPart(selected[selected.length - 1], false);
+          // Manually update all selections
+          setTimeout(() => {
+            selected.forEach((id, i) => {
+              if (i < selected.length - 1) handleSelectPart(id, true);
+            });
+          }, 0);
+        }
+      }
+
+      setIsDragging(false);
+      setDragMode(null);
+      setMarqueeRect(null);
+      setSnapLines([]);
+  }, [dragMode, marqueeRect, characterParts, currentFrame, handleSelectPart, getComputedTransform]);
 
   useEffect(() => {
     if (isDragging) {
@@ -523,6 +674,8 @@ export const StageCanvas: React.FC = () => {
               {/* Character Parts Active Render (Clipped in Broadcast mode, unclipped & visible in Edit mode) */}
               <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
                 {sortedParts.map((part) => {
+                  if (focusModeNodeId && part.id === focusModeNodeId) return null; // Render later
+                  
                   let frameToEvaluate = currentFrame;
 
                   if (appMode === 'broadcast') {
@@ -554,7 +707,79 @@ export const StageCanvas: React.FC = () => {
                     />
                   );
                 })}
+                
+                {/* Focus Mode Overlay and Focused Part */}
+                {focusModeNodeId && (
+                  <>
+                    <rect
+                      className="focus-spotlight-dimmer"
+                      x={-300000}
+                      y={-300000}
+                      width={600000}
+                      height={600000}
+                      fill="rgba(0, 0, 0, 0.7)"
+                    />
+                    {sortedParts.filter(p => p.id === focusModeNodeId).map((part) => {
+                      const transform = getComputedTransform(part.id, currentFrame);
+                      return (
+                        <g key={`focus-${part.id}`}>
+                          <PartRenderer
+                            part={part}
+                            transform={transform}
+                            isSelected={true}
+                            currentFrame={currentFrame}
+                            totalFrames={totalFrames}
+                            onSelect={setSelectedPartId}
+                            onStartTranslateDrag={startTranslateDragForPart}
+                            isGhost={true}
+                            isFocusGhost={true}
+                          />
+                          <PartRenderer
+                            part={part}
+                            transform={transform}
+                            isSelected={true}
+                            currentFrame={currentFrame}
+                            totalFrames={totalFrames}
+                            onSelect={setSelectedPartId}
+                            onStartTranslateDrag={startTranslateDragForPart}
+                          />
+                        </g>
+                      );
+                    })}
+                  </>
+                )}
               </g>
+
+              {/* Snap Lines */}
+              {snapLines.map((line, i) => (
+                <line
+                  key={`snap-${i}`}
+                  x1={line.x1}
+                  y1={line.y1}
+                  x2={line.x2}
+                  y2={line.y2}
+                  stroke={line.color || '#38bdf8'}
+                  strokeWidth={1 / zoomLevel}
+                  pointerEvents="none"
+                  strokeDasharray="4,4"
+                />
+              ))}
+
+              {/* Marquee Tool */}
+              {marqueeRect && (
+                <rect
+                  x={marqueeRect.x}
+                  y={marqueeRect.y}
+                  width={marqueeRect.w}
+                  height={marqueeRect.h}
+                  fill="rgba(56, 189, 248, 0.1)"
+                  stroke="var(--accent-cyan)"
+                  strokeWidth={1 / zoomLevel}
+                  strokeDasharray="4,4"
+                  pointerEvents="none"
+                  z-index="1000"
+                />
+              )}
 
               {/* Outer Matte Mask (Soft dim in Edit mode, 100% Solid Black in Broadcast mode) */}
               <path
@@ -579,18 +804,68 @@ export const StageCanvas: React.FC = () => {
               />
 
               {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden) */}
-              {appMode !== 'broadcast' && selectedPart && selectedTransform && (() => {
-                const selTrack = tracks.find(t => t.partId === selectedPart.id);
-                if (selTrack && selTrack.editVisible === false) return null;
-                return (
-                  <TransformGizmo
-                    selectedPart={selectedPart}
-                    selectedTransform={selectedTransform}
-                    zScale={zScale}
-                    onRotateMouseDown={startRotate}
-                    onScaleMouseDown={startScale}
-                  />
-                );
+              {appMode !== 'broadcast' && (() => {
+                if (selectedPartIds.length > 1) {
+                  let minX = Infinity;
+                  let minY = Infinity;
+                  let maxX = -Infinity;
+                  let maxY = -Infinity;
+                  
+                  selectedPartIds.forEach(id => {
+                    const part = characterParts.find(p => p.id === id);
+                    if (!part) return;
+                    const t = getComputedTransform(id, currentFrame);
+                    const b = getPartBounds(part);
+                    const left = t.x - b.halfW * Math.abs(t.scaleX);
+                    const right = t.x + b.halfW * Math.abs(t.scaleX);
+                    const top = t.y - b.halfH * Math.abs(t.scaleY);
+                    const bottom = t.y + b.halfH * Math.abs(t.scaleY);
+                    if (left < minX) minX = left;
+                    if (right > maxX) maxX = right;
+                    if (top < minY) minY = top;
+                    if (bottom > maxY) maxY = bottom;
+                  });
+
+                  if (minX === Infinity) return null;
+                  
+                  const groupTransform: Transform = {
+                    x: (minX + maxX) / 2,
+                    y: (minY + maxY) / 2,
+                    rotation: 0,
+                    scaleX: 1,
+                    scaleY: 1,
+                    opacity: 1
+                  };
+                  
+                  const halfW = (maxX - minX) / 2;
+                  const halfH = (maxY - minY) / 2;
+
+                  return (
+                    <TransformGizmo
+                      selectedPart={characterParts[0]} // dummy
+                      selectedTransform={groupTransform}
+                      zScale={zScale}
+                      onRotateMouseDown={() => {}} // disabled for groups
+                      onScaleMouseDown={() => {}} // disabled for groups
+                      isGroup={true}
+                      overrideHalfW={halfW}
+                      overrideHalfH={halfH}
+                    />
+                  );
+                } else if (selectedPart && selectedTransform) {
+                  const selTrack = tracks.find(t => t.partId === selectedPart.id);
+                  if (selTrack && selTrack.editVisible === false) return null;
+                  return (
+                    <TransformGizmo
+                      selectedPart={selectedPart}
+                      selectedTransform={selectedTransform}
+                      zScale={zScale}
+                      onRotateMouseDown={startRotate}
+                      onScaleMouseDown={startScale}
+                    />
+                  );
+                }
+                return null;
               })()}
             </>
           );

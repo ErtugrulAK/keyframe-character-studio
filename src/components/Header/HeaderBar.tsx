@@ -103,8 +103,8 @@ export const HeaderBar: React.FC = () => {
                   style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                 >
                   {isEditing ? (
-                    <input
-                      type="text"
+                    <input className="input-control"
+                type="text"
                       value={editingTmplName}
                       autoFocus
                       onClick={(e) => e.stopPropagation()}
@@ -219,7 +219,7 @@ export const HeaderBar: React.FC = () => {
           </div>
 
           {/* FPS Control */}
-          <select
+          <select className="select-control"
             value={fps}
             onChange={(e) => setFps(Number(e.target.value))}
             style={{

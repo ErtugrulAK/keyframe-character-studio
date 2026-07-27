@@ -6,7 +6,6 @@ import { StageCanvas } from './components/Canvas/StageCanvas';
 import { PropertyInspector } from './components/Inspector/PropertyInspector';
 import { SequencerTimeline } from './components/Timeline/SequencerTimeline';
 import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
-import './App.css';
 
 const MainAppContent: React.FC = () => {
   const { setIsPlaying, appMode } = useAnimator();

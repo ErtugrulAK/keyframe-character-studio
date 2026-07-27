@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Activity, Zap, Plus, Link, Unlink, Maximize2, Move } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
-export const getPartBaseBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
+const getPartBaseBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
   let halfW = 32;
   let halfH = 32;
 

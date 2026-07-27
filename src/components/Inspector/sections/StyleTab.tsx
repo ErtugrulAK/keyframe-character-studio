@@ -25,8 +25,6 @@ const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, st
     setEditingValue(valStr);
     let parsed = parseFloat(valStr);
     if (!isNaN(parsed)) {
-      if (min !== undefined) parsed = Math.max(min, parsed);
-      if (max !== undefined) parsed = Math.min(max, parsed);
       onChange(parsed);
     }
   };
@@ -45,13 +43,78 @@ const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, st
   };
 
   return (
-    <input
-      type="number"
+    <input className="input-control"
+                type="number"
       value={isFocused ? editingValue : value}
       min={min}
       max={max}
       step={step}
       onFocus={() => setIsFocused(true)}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          (e.target as HTMLInputElement).blur();
+        }
+      }}
+    />
+  );
+};
+
+interface SmartHexInputProps {
+  value: string;
+  fallback: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+}
+
+const SmartHexInput: React.FC<SmartHexInputProps> = ({
+  value,
+  fallback,
+  onChange,
+  placeholder,
+  className,
+}) => {
+  const [editingValue, setEditingValue] = React.useState<string>(value || fallback);
+  const [isFocused, setIsFocused] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (!isFocused) {
+      setEditingValue(value || fallback);
+    }
+  }, [value, fallback, isFocused]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valStr = e.target.value;
+    setEditingValue(valStr);
+
+    if (/^#([0-9A-Fa-f]{3}){1,2}$/.test(valStr)) {
+      onChange(valStr);
+    } else if (valStr === '') {
+      onChange('');
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    if (!editingValue || !/^#([0-9A-Fa-f]{3}){1,2}$/.test(editingValue)) {
+      setEditingValue(value || fallback);
+    } else {
+      onChange(editingValue);
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      className={className || "input-control color-hex-input"}
+      value={isFocused ? editingValue : (value || fallback)}
+      placeholder={placeholder}
+      onFocus={(e) => {
+        setIsFocused(true);
+        e.target.select();
+      }}
       onChange={handleChange}
       onBlur={handleBlur}
       onKeyDown={(e) => {
@@ -117,12 +180,69 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       </div>
 
       <div className="style-controls-list">
+        {/* FILL & STROKE COLOR GRID */}
+        <div className="color-grid-two-col">
+          <div className="color-picker-card">
+            <label className="color-card-label">FILL COLOR</label>
+            <div className="color-picker-compact">
+              <input
+                type="color"
+                className="color-swatch-input"
+                value={selectedPart.fillColor || '#00d2ff'}
+                onChange={(e) => handlePartColorChange('fillColor', e.target.value)}
+              />
+              <SmartHexInput
+                value={selectedPart.fillColor || ''}
+                fallback="#00d2ff"
+                onChange={(val) => handlePartColorChange('fillColor', val)}
+              />
+            </div>
+          </div>
+
+          <div className="color-picker-card">
+            <label className="color-card-label">STROKE COLOR</label>
+            <div className="color-picker-compact">
+              <input
+                type="color"
+                className="color-swatch-input"
+                value={selectedPart.strokeColor || '#1e293b'}
+                onChange={(e) => handlePartColorChange('strokeColor', e.target.value)}
+              />
+              <SmartHexInput
+                value={selectedPart.strokeColor || ''}
+                fallback="#1e293b"
+                onChange={(val) => handlePartColorChange('strokeColor', val)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* PALETTE SWATCHES */}
+        <div className="form-field-group">
+          <label className="form-label">QUICK PALETTE SWATCHES</label>
+          <div className="swatches-grid">
+            {COLOR_SWATCHES.map((color) => (
+              <button
+                key={color}
+                type="button"
+                className="color-swatch-btn"
+                style={{ backgroundColor: color }}
+                onClick={() => handlePartColorChange('fillColor', color)}
+                title={`Set Fill to ${color}`}
+              />
+            ))}
+          </div>
+        </div>
+
+
+
+        
         {/* UI CARD CUSTOMIZATION FIELDS */}
         {selectedPart.type === 'custom_card' && (
           <>
-            <div className="input-field">
-              <label>CARD HEADER / CATEGORY</label>
-              <input
+            <div className="form-field-group">
+              <label className="form-label">CARD HEADER / CATEGORY</label>
+              <input className="input-control"
                 type="text"
                 value={selectedPart.cardCategory || selectedPart.textValue || ''}
                 placeholder="e.g. STUDIO CARD"
@@ -134,9 +254,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               />
             </div>
 
-            <div className="input-field">
-              <label>MAIN TITLE TEXT</label>
-              <input
+            <div className="form-field-group">
+              <label className="form-label">MAIN TITLE TEXT</label>
+              <input className="input-control"
                 type="text"
                 value={selectedPart.cardTitle || ''}
                 placeholder="e.g. MOTION GRAPHIC"
@@ -145,9 +265,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               />
             </div>
 
-            <div className="input-field">
-              <label>ACTION BUTTON TEXT</label>
-              <input
+            <div className="form-field-group">
+              <label className="form-label">ACTION BUTTON TEXT</label>
+              <input className="input-control"
                 type="text"
                 value={selectedPart.cardButtonText || ''}
                 placeholder="e.g. ACTIVE"
@@ -160,10 +280,10 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
         {/* Standard Text Input Control if object is Text or Banner */}
         {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner') && (
-          <div className="input-field">
-            <label>TEXT CONTENT</label>
-            <input
-              type="text"
+          <div className="form-field-group">
+            <label className="form-label">TEXT CONTENT</label>
+            <input className="input-control"
+                type="text"
               value={selectedPart.textValue || ''}
               placeholder="Enter text..."
               onFocus={(e) => e.target.select()}
@@ -174,9 +294,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
         {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner' || selectedPart.type === 'custom_card') && (
           <>
-            <div className="input-field">
-              <label>FONT FAMILY</label>
-              <select
+            <div className="form-field-group">
+              <label className="form-label">FONT FAMILY</label>
+              <select className="select-control"
                 value={selectedPart.fontFamily || 'Outfit'}
                 onChange={(e) => handlePartPropChange('fontFamily', e.target.value)}
               >
@@ -190,8 +310,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               </select>
             </div>
 
-            <div className="input-field">
-              <label>FONT SIZE (PX)</label>
+            <div className="form-field-group">
+              <label className="form-label">FONT SIZE (PX)</label>
               <SmartNumberInput
                 value={selectedPart.fontSize ?? 20}
                 min={8}
@@ -201,9 +321,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
             </div>
 
             {/* STAGGERED TEXT ANIMATION */}
-            <div className="input-field">
-              <label>STAGGERED TEXT ANIMATION</label>
-              <select
+            <div className="form-field-group">
+              <label className="form-label">STAGGERED TEXT ANIMATION</label>
+              <select className="select-control"
                 value={selectedPart.textAnimMode || 'none'}
                 onChange={(e) => handlePartPropChange('textAnimMode', e.target.value)}
               >
@@ -214,8 +334,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
             </div>
 
             {selectedPart.textAnimMode && selectedPart.textAnimMode !== 'none' && (
-              <div className="input-field">
-                <label>STAGGER DELAY (MS)</label>
+              <div className="form-field-group">
+                <label className="form-label">STAGGER DELAY (MS)</label>
                 <SmartNumberInput
                   value={selectedPart.textStaggerDelay || 60}
                   min={10}
@@ -229,8 +349,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         )}
 
         {/* TRIM PATH / STROKE PROGRESS ANIMATION */}
-        <div className="input-field">
-          <label>TRIM PATH / STROKE DRAW (0-100%)</label>
+        <div className="form-field-group">
+          <label className="form-label">TRIM PATH / STROKE DRAW (0-100%)</label>
           <SmartNumberInput
             value={Math.round((selectedPart.strokeProgress ?? 1) * 100)}
             min={0}
@@ -240,14 +360,14 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           />
         </div>
 
-        {/* CORNER RADIUS (KÖŞE YUVARLAMA) CONTROL */}
+        {/* CORNER RADIUS CONTROL */}
         {(selectedPart.type === 'custom_rect' ||
           selectedPart.type === 'custom_box' ||
           selectedPart.type === 'custom_card' ||
           selectedPart.type === 'custom_banner') && (
-          <div className="input-field">
-            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>CORNER RADIUS (KÖŞE YUVARLAMA)</span>
+          <div className="form-field-group">
+            <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>CORNER RADIUS</span>
               <span style={{ color: 'var(--accent-teal)', fontWeight: 800 }}>{selectedPart.borderRadius ?? 0}px</span>
             </label>
             <input
@@ -269,9 +389,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               <span>MOGRAPH CLONER CONFIG</span>
             </div>
 
-            <div className="input-field">
-              <label>CLONER LAYOUT MODE</label>
-              <select
+            <div className="form-field-group">
+              <label className="form-label">CLONER LAYOUT MODE</label>
+              <select className="select-control"
                 value={selectedPart.clonerConfig.mode}
                 onChange={(e) =>
                   handlePartPropChange('clonerConfig', {
@@ -299,8 +419,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
             {selectedPart.clonerConfig.mode === 'grid' && (
               <div className="input-grid">
-                <div className="input-field">
-                  <label>COUNT X</label>
+                <div className="form-field-group">
+                  <label className="form-label">COUNT X</label>
                   <SmartNumberInput
                     value={selectedPart.clonerConfig.countX}
                     min={1}
@@ -313,8 +433,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                     }
                   />
                 </div>
-                <div className="input-field">
-                  <label>COUNT Y</label>
+                <div className="form-field-group">
+                  <label className="form-label">COUNT Y</label>
                   <SmartNumberInput
                     value={selectedPart.clonerConfig.countY}
                     min={1}
@@ -332,8 +452,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
             {selectedPart.clonerConfig.mode === 'circle' && (
               <div className="input-grid">
-                <div className="input-field">
-                  <label>CIRCLE COUNT</label>
+                <div className="form-field-group">
+                  <label className="form-label">CIRCLE COUNT</label>
                   <SmartNumberInput
                     value={selectedPart.clonerConfig.countCircle}
                     min={3}
@@ -346,8 +466,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                     }
                   />
                 </div>
-                <div className="input-field">
-                  <label>RADIUS (PX)</label>
+                <div className="form-field-group">
+                  <label className="form-label">RADIUS (PX)</label>
                   <SmartNumberInput
                     value={selectedPart.clonerConfig.radius}
                     min={10}
@@ -363,9 +483,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               </div>
             )}
 
-            <div className="input-field">
-              <label>EFFECTOR TYPE</label>
-              <select
+            <div className="form-field-group">
+              <label className="form-label">EFFECTOR TYPE</label>
+              <select className="select-control"
                 value={selectedPart.clonerConfig.effector}
                 onChange={(e) =>
                   handlePartPropChange('clonerConfig', {
@@ -393,8 +513,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
             {selectedPart.clonerConfig.effector === 'wave' && (
               <div className="input-grid">
-                <div className="input-field">
-                  <label>WAVE SPEED</label>
+                <div className="form-field-group">
+                  <label className="form-label">WAVE SPEED</label>
                   <SmartNumberInput
                     value={selectedPart.clonerConfig.waveSpeed}
                     min={0.2}
@@ -408,8 +528,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                     }
                   />
                 </div>
-                <div className="input-field">
-                  <label>AMPLITUDE</label>
+                <div className="form-field-group">
+                  <label className="form-label">AMPLITUDE</label>
                   <SmartNumberInput
                     value={selectedPart.clonerConfig.waveAmplitude}
                     min={2}
@@ -436,8 +556,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
             </div>
 
             <div className="input-grid">
-              <div className="input-field">
-                <label>PARTICLE COUNT</label>
+              <div className="form-field-group">
+                <label className="form-label">PARTICLE COUNT</label>
                 <SmartNumberInput
                   value={selectedPart.particleConfig.count}
                   min={5}
@@ -450,8 +570,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                   }
                 />
               </div>
-              <div className="input-field">
-                <label>SPEED (PX/S)</label>
+              <div className="form-field-group">
+                <label className="form-label">SPEED (PX/S)</label>
                 <SmartNumberInput
                   value={selectedPart.particleConfig.speed}
                   min={5}
@@ -466,9 +586,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               </div>
             </div>
 
-            <div className="input-field">
-              <label>PARTICLE SHAPE</label>
-              <select
+            <div className="form-field-group">
+              <label className="form-label">PARTICLE SHAPE</label>
+              <select className="select-control"
                 value={selectedPart.particleConfig.shape}
                 onChange={(e) =>
                   handlePartPropChange('particleConfig', {
@@ -499,10 +619,10 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
         {/* Image URL Input Control if object is Custom Image */}
         {selectedPart.type === 'custom_image' && (
-          <div className="input-field">
-            <label>IMAGE SOURCE (URL / DATA URL)</label>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input
+          <div className="form-field-group">
+            <label className="form-label">IMAGE SOURCE (URL / DATA URL)</label>
+            <div style={{ display: 'flex', gap: 6, flex: 1, width: '100%' }}>
+              <input className="input-control"
                 type="text"
                 value={selectedPart.imageUrl || ''}
                 placeholder="Paste image URL..."
@@ -530,10 +650,10 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
         {/* Video URL Input Control if object is Custom Video */}
         {selectedPart.type === 'custom_video' && (
-          <div className="input-field">
-            <label>VIDEO SOURCE (URL / MP4 / WEBM)</label>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <input
+          <div className="form-field-group">
+            <label className="form-label">VIDEO SOURCE (URL / MP4 / WEBM)</label>
+            <div style={{ display: 'flex', gap: 6, flex: 1, width: '100%' }}>
+              <input className="input-control"
                 type="text"
                 value={selectedPart.videoUrl || ''}
                 placeholder="Paste video URL..."
@@ -570,9 +690,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               <span>SHAPE MEDIA MASKING (CANVA STYLE)</span>
             </div>
 
-            <div className="input-field">
-              <label>MASKED MEDIA TYPE</label>
-              <select
+            <div className="form-field-group">
+              <label className="form-label">MASKED MEDIA TYPE</label>
+              <select className="select-control"
                 value={selectedPart.innerMediaType || 'image'}
                 onChange={(e) => handlePartPropChange('innerMediaType', e.target.value)}
                 style={{
@@ -592,11 +712,11 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               </select>
             </div>
 
-            <div className="input-field">
-              <label>MEDIA SOURCE (URL)</label>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input
-                  type="text"
+            <div className="form-field-group">
+              <label className="form-label">MEDIA SOURCE (URL)</label>
+              <div style={{ display: 'flex', gap: 6, flex: 1, width: '100%' }}>
+                <input className="input-control"
+                type="text"
                   value={selectedPart.innerMediaUrl || ''}
                   placeholder="Paste media URL..."
                   onFocus={(e) => e.target.select()}
@@ -612,74 +732,14 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           </>
         )}
 
-        {/* FILL & STROKE COLOR GRID */}
-        <div className="color-grid-two-col">
-          <div className="color-picker-card">
-            <label className="color-card-label">FILL COLOR</label>
-            <div className="color-picker-compact">
-              <input
-                type="color"
-                className="color-swatch-input"
-                value={selectedPart.fillColor || '#00d2ff'}
-                onChange={(e) => handlePartColorChange('fillColor', e.target.value)}
-              />
-              <input
-                type="text"
-                className="color-hex-input"
-                value={selectedPart.fillColor || '#00d2ff'}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => handlePartColorChange('fillColor', e.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="color-picker-card">
-            <label className="color-card-label">STROKE COLOR</label>
-            <div className="color-picker-compact">
-              <input
-                type="color"
-                className="color-swatch-input"
-                value={selectedPart.strokeColor || '#1e293b'}
-                onChange={(e) => handlePartColorChange('strokeColor', e.target.value)}
-              />
-              <input
-                type="text"
-                className="color-hex-input"
-                value={selectedPart.strokeColor || '#1e293b'}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => handlePartColorChange('strokeColor', e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* PALETTE SWATCHES */}
-        <div className="input-field">
-          <label>QUICK PALETTE SWATCHES</label>
-          <div className="swatches-grid">
-            {COLOR_SWATCHES.map((color) => (
-              <button
-                key={color}
-                type="button"
-                className="color-swatch-btn"
-                style={{ backgroundColor: color }}
-                onClick={() => handlePartColorChange('fillColor', color)}
-                title={`Set Fill to ${color}`}
-              />
-            ))}
-          </div>
-        </div>
-
-
-
         {/* DROP SHADOW / GLOW CONTROLS */}
         <div className="section-title" style={{ marginTop: 12 }}>
           <Sun size={13} className="text-gold" />
           <span>DROP SHADOW & GLOW EFFECTS</span>
         </div>
 
-        <div className="input-field">
-          <label>SHADOW / GLOW COLOR</label>
+        <div className="form-field-group">
+          <label className="form-label">SHADOW / GLOW COLOR</label>
           <div className="color-picker-compact">
             <input
               type="color"
@@ -687,13 +747,11 @@ export const StyleTab: React.FC<StyleTabProps> = ({
               value={selectedPart.shadowColor || '#000000'}
               onChange={(e) => handlePartPropChange('shadowColor', e.target.value)}
             />
-            <input
-              type="text"
-              className="color-hex-input"
-              value={selectedPart.shadowColor || '#000000'}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => handlePartPropChange('shadowColor', e.target.value)}
+            <SmartHexInput
+              value={selectedPart.shadowColor || ''}
+              fallback="#000000"
               placeholder="NONE"
+              onChange={(val) => handlePartPropChange('shadowColor', val)}
             />
             <button
               type="button"
@@ -708,8 +766,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
         {selectedPart.shadowColor && (
           <div className="input-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            <div className="input-field">
-              <label>BLUR RADIUS (PX)</label>
+            <div className="form-field-group">
+              <label className="form-label">BLUR RADIUS (PX)</label>
               <SmartNumberInput
                 value={selectedPart.shadowBlur ?? 8}
                 min={0}
@@ -717,8 +775,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                 onChange={(val) => handlePartPropChange('shadowBlur', val)}
               />
             </div>
-            <div className="input-field">
-              <label>OFFSET X (PX)</label>
+            <div className="form-field-group">
+              <label className="form-label">OFFSET X (PX)</label>
               <SmartNumberInput
                 value={selectedPart.shadowOffsetX ?? 0}
                 min={-50}
@@ -726,8 +784,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                 onChange={(val) => handlePartPropChange('shadowOffsetX', val)}
               />
             </div>
-            <div className="input-field">
-              <label>OFFSET Y (PX)</label>
+            <div className="form-field-group">
+              <label className="form-label">OFFSET Y (PX)</label>
               <SmartNumberInput
                 value={selectedPart.shadowOffsetY ?? 4}
                 min={-50}

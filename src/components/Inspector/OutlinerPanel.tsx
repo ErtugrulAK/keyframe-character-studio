@@ -19,7 +19,8 @@ export const OutlinerPanel: React.FC = () => {
     tracks,
     characterParts,
     selectedPartId,
-    setSelectedPartId,
+    selectedPartIds,
+    handleSelectPart,
     toggleTrackEditVisibility,
     sceneTitle,
     reorderParts,
@@ -80,14 +81,13 @@ export const OutlinerPanel: React.FC = () => {
             ) : (
               characterParts.map((part, index) => {
                 const track = tracks.find((t) => t.partId === part.id);
-                const isSelected = part.id === selectedPartId;
                 const isVisible = track?.editVisible !== false;
 
                 return (
                   <div
                     key={part.id}
-                    className={`tree-node actor-node ${isSelected ? 'selected' : ''} ${draggedIdx === index ? 'dragging' : ''} ${dragOverIdx === index ? 'drag-over' : ''}`}
-                    onClick={() => setSelectedPartId(part.id)}
+                    className={`tree-node actor-node ${selectedPartIds?.includes(part.id) ? 'selected' : ''} ${selectedPartId === part.id ? 'primary-selected' : ''} ${draggedIdx === index ? 'dragging' : ''} ${dragOverIdx === index ? 'drag-over' : ''}`}
+                    onClick={(e) => handleSelectPart(part.id, e.shiftKey)}
                     draggable={true}
                     onDragStart={(e) => {
                       setDraggedIdx(index);

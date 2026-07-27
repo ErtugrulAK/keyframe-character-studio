@@ -338,9 +338,9 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 </span>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X1 (0..1)</label>
-                    <input
-                      type="number"
+                    <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X1 (0..1)</label>
+                    <input className="input-control"
+                type="number"
                       step={0.05}
                       value={p1.x}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
@@ -348,9 +348,9 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y1 (-1.0..2.0)</label>
-                    <input
-                      type="number"
+                    <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y1 (-1.0..2.0)</label>
+                    <input className="input-control"
+                type="number"
                       step={0.05}
                       value={p1.y}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
@@ -366,9 +366,9 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 </span>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X2 (0..1)</label>
-                    <input
-                      type="number"
+                    <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X2 (0..1)</label>
+                    <input className="input-control"
+                type="number"
                       step={0.05}
                       value={p2.x}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
@@ -376,9 +376,9 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y2 (-1.0..2.0)</label>
-                    <input
-                      type="number"
+                    <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y2 (-1.0..2.0)</label>
+                    <input className="input-control"
+                type="number"
                       step={0.05}
                       value={p2.y}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
@@ -473,7 +473,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
             {/* Presets Grid */}
             <div>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 8 }}>
+              <label className="form-label" style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 8 }}>
                 STUDIO BEZIER PRESETS
               </label>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
@@ -504,7 +504,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
             {/* CSS Code Output */}
             <div style={{ background: '#181d2a', padding: 12, borderRadius: 8, border: '1px solid #283044' }}>
-              <label style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>CSS EASING CODE</label>
+              <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>CSS EASING CODE</label>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#38bdf8', fontWeight: 700 }}>
                   {cssString}

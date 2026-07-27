@@ -126,8 +126,8 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                       <Play size={10} fill="currentColor" />
                     </button>
                     <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8' }}>F</span>
-                    <input
-                      type="number"
+                    <input className="input-control"
+                type="number"
                       min={0}
                       value={kf.frame}
                       onChange={(e) => {

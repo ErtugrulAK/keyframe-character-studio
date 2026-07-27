@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Activity, Link, Unlink, Maximize2, Move, Sun } from 'lucide-react';
+import { Activity, Link, Unlink, Maximize2, Move, Sun, AlignLeft, AlignCenter, AlignRight, AlignVerticalSpaceAround } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
+import { useAnimator } from '../../../context/AnimatorContext';
 
 const getTextMetrics = (text: string, fontSize: number): { halfW: number; halfH: number } => {
   if (!text) return { halfW: 20, halfH: 12 };
@@ -78,8 +79,6 @@ const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, st
     let parsed = parseFloat(valStr);
     if (!isNaN(parsed)) {
       let internal = parsed / scale;
-      if (min !== undefined) internal = Math.max(min, internal);
-      if (max !== undefined) internal = Math.min(max, internal);
       onChange(internal);
     }
   };
@@ -103,6 +102,7 @@ const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, st
 
   return (
     <input
+      className="input-control"
       type="number"
       value={isFocused ? editingValue : displayVal}
       min={min !== undefined ? min * scale : undefined}
@@ -135,13 +135,65 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   transform,
   currentFrame,
   updateCurrentTransform,
+  handlePartPropChange,
   handleZIndexChange,
 }) => {
   const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
   const [pointMode, setPointMode] = useState<'edge' | 'corner'>('edge');
+  
+  const { selectedPartIds, characterParts, getComputedTransform, updateCurrentTransform: ctxUpdateCurrentTransform } = useAnimator();
+
+  const handleAlign = (type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => {
+    if (selectedPartIds.length < 2) return;
+    const partsAndTransforms = selectedPartIds.map(id => {
+      const part = characterParts.find(p => p.id === id);
+      const t = getComputedTransform(id, currentFrame);
+      if (!part || !t) return null;
+      const b = getPartBaseBounds(part);
+      const w = b.halfW * Math.abs(t.scaleX);
+      const h = b.halfH * Math.abs(t.scaleY);
+      return { id, t, left: t.x - w, right: t.x + w, top: t.y - h, bottom: t.y + h, cx: t.x, cy: t.y };
+    }).filter(Boolean) as any[];
+
+    if (partsAndTransforms.length < 2) return;
+
+    if (type === 'left') {
+      const minLeft = Math.min(...partsAndTransforms.map(p => p.left));
+      partsAndTransforms.forEach(p => ctxUpdateCurrentTransform({ x: p.t.x - (p.left - minLeft) }, p.id));
+    } else if (type === 'right') {
+      const maxRight = Math.max(...partsAndTransforms.map(p => p.right));
+      partsAndTransforms.forEach(p => ctxUpdateCurrentTransform({ x: p.t.x + (maxRight - p.right) }, p.id));
+    } else if (type === 'center') {
+      const cx = partsAndTransforms.reduce((acc, p) => acc + p.cx, 0) / partsAndTransforms.length;
+      partsAndTransforms.forEach(p => ctxUpdateCurrentTransform({ x: p.t.x + (cx - p.cx) }, p.id));
+    } else if (type === 'top') {
+      const minTop = Math.min(...partsAndTransforms.map(p => p.top));
+      partsAndTransforms.forEach(p => ctxUpdateCurrentTransform({ y: p.t.y - (p.top - minTop) }, p.id));
+    } else if (type === 'bottom') {
+      const maxBottom = Math.max(...partsAndTransforms.map(p => p.bottom));
+      partsAndTransforms.forEach(p => ctxUpdateCurrentTransform({ y: p.t.y + (maxBottom - p.bottom) }, p.id));
+    } else if (type === 'middle') {
+      const cy = partsAndTransforms.reduce((acc, p) => acc + p.cy, 0) / partsAndTransforms.length;
+      partsAndTransforms.forEach(p => ctxUpdateCurrentTransform({ y: p.t.y + (cy - p.cy) }, p.id));
+    }
+  };
 
   return (
-    <div className="inspector-section">
+    <>
+      <div className="inspector-section" style={{ paddingTop: 8 }}>
+        
+        {/* ── ALIGNMENT BAR ── */}
+        {selectedPartIds.length > 1 && (
+          <div className="panel-card" style={{ marginBottom: 12, padding: 8, display: 'flex', justifyContent: 'space-between', background: 'var(--bg-card)' }}>
+            <button className="btn-icon-small" title="Align Left" onClick={() => handleAlign('left')}><AlignLeft size={14} /></button>
+            <button className="btn-icon-small" title="Align Center" onClick={() => handleAlign('center')}><AlignCenter size={14} /></button>
+            <button className="btn-icon-small" title="Align Right" onClick={() => handleAlign('right')}><AlignRight size={14} /></button>
+            <div style={{ width: 1, height: 16, background: 'var(--border-color)', margin: '0 4px' }} />
+            <button className="btn-icon-small" title="Align Top" onClick={() => handleAlign('top')}><AlignLeft size={14} style={{transform:'rotate(90deg)'}} /></button>
+            <button className="btn-icon-small" title="Align Middle" onClick={() => handleAlign('middle')}><AlignVerticalSpaceAround size={14} style={{transform:'rotate(90deg)'}} /></button>
+            <button className="btn-icon-small" title="Align Bottom" onClick={() => handleAlign('bottom')}><AlignRight size={14} style={{transform:'rotate(90deg)'}} /></button>
+          </div>
+        )}
       <div className="section-title-bar">
         <div className="section-title">
           <Activity size={13} />
@@ -149,9 +201,9 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </div>
       </div>
 
-      <div className="transform-param-grid">
-        <div className="param-row">
-          <span className="param-label text-red">POS X</span>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-sm)", width: "100%" }}>
+        <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+          <span className="form-label text-red">POS X</span>
           <SmartNumberInput
             value={transform.x}
             step={1}
@@ -161,8 +213,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         </div>
 
-        <div className="param-row">
-          <span className="param-label text-green">POS Y</span>
+        <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+          <span className="form-label text-green">POS Y</span>
           <SmartNumberInput
             value={-transform.y}
             step={1}
@@ -172,8 +224,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         </div>
 
-        <div className="param-row">
-          <span className="param-label text-blue">ROT (°)</span>
+        <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+          <span className="form-label text-blue">ROT (°)</span>
           <SmartNumberInput
             value={transform.rotation}
             onChange={(val) => updateCurrentTransform({ rotation: val })}
@@ -181,6 +233,119 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </div>
 
       </div>
+
+      <div className="panel-card" style={{ marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
+            <Maximize2 size={13} /> PROPORTIONAL SCALE & RATIO
+          </span>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ 
+              height: 22,
+              fontSize: 10, 
+              padding: '0 8px', 
+              color: isScaleLocked ? '#10b981' : '#64748b', 
+              background: isScaleLocked ? 'rgba(16, 185, 129, 0.12)' : '#101218',
+              border: `1px solid ${isScaleLocked ? 'rgba(16, 185, 129, 0.4)' : '#232836'}`,
+              borderRadius: 4,
+            }}
+            onClick={() => setIsScaleLocked(!isScaleLocked)}
+            title={isScaleLocked ? 'Aspect Ratio Locked (Uniform Scale)' : 'Aspect Ratio Unlocked (Free Scale)'}
+          >
+            {isScaleLocked ? <Link size={11} /> : <Unlink size={11} />}
+            <span>{isScaleLocked ? 'Ratio Locked' : 'Ratio Unlocked'}</span>
+          </button>
+        </div>
+
+        {/* Master Uniform Scale Control */}
+        <div style={{ background: '#0e1118', padding: '8px 10px', borderRadius: 6, border: '1px solid #232836', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.4px' }}>UNIFORM SCALE MULTIPLIER</label>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8' }}>
+              {((transform.scaleX + transform.scaleY) / 2).toFixed(2)}x ({(Math.round(((transform.scaleX + transform.scaleY) / 2) * 100))}% )
+            </span>
+          </div>
+          <input
+            type="range" min="0.1" max="15" step="0.1"
+            value={(transform.scaleX + transform.scaleY) / 2}
+            onChange={(e) => {
+              const val = parseFloat(e.target.value);
+              updateCurrentTransform({ scaleX: val, scaleY: val });
+            }}
+            style={{ width: '100%', cursor: 'pointer', accentColor: '#38bdf8' }}
+          />
+          {/* Quick Presets */}
+          <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+            {[0.5, 1.0, 1.5, 2.0, 5.0, 6.42].map((s) => (
+              <button
+                key={`scale-preset-${s}`}
+                type="button"
+                className="btn-secondary"
+                style={{ flex: 1, height: 22, fontSize: 10, fontWeight: 700, padding: 0, textAlign: 'center', borderRadius: 4 }}
+                onClick={() => updateCurrentTransform({ scaleX: s, scaleY: s })}
+              >
+                {s}x
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Scale X & Scale Y Inputs */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-sm)", width: "100%" }}>
+          <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+            <span className="param-label">SCALE X</span>
+            <SmartNumberInput
+              value={transform.scaleX}
+              step={0.1}
+              onChange={(val) => {
+                if (isScaleLocked) {
+                  const ratio = transform.scaleX !== 0 ? transform.scaleY / transform.scaleX : 1;
+                  updateCurrentTransform({ scaleX: val, scaleY: parseFloat((val * (ratio || 1)).toFixed(3)) });
+                } else {
+                  updateCurrentTransform({ scaleX: val });
+                }
+              }}
+            />
+          </div>
+
+          <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+            <span className="param-label">SCALE Y</span>
+            <SmartNumberInput
+              value={transform.scaleY}
+              step={0.1}
+              onChange={(val) => {
+                if (isScaleLocked) {
+                  const ratio = transform.scaleY !== 0 ? transform.scaleX / transform.scaleY : 1;
+                  updateCurrentTransform({ scaleY: val, scaleX: parseFloat((val * (ratio || 1)).toFixed(3)) });
+                } else {
+                  updateCurrentTransform({ scaleY: val });
+                }
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+        <button
+          className="btn-secondary"
+          style={{ flex: 1, fontSize: 11 }}
+          onClick={() => updateCurrentTransform({ rotation: 0 })}
+        >
+          Reset Rotation (0°)
+        </button>
+        <button
+          className="btn-secondary"
+          style={{ flex: 1 }}
+          onClick={() => updateCurrentTransform({ scaleX: 1, scaleY: 1 })}
+        >
+          Reset Scale (1.0)
+        </button>
+      </div>
+
+    </div>
 
       {/* ── OPACITY & TRANSPARENCY CONTROL CARD ── */}
       <div className="panel-card" style={{ marginTop: 8 }}>
@@ -194,7 +359,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </div>
 
         <div style={{ background: '#0e1118', padding: '8px 10px', borderRadius: 6, border: '1px solid #232836', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', boxSizing: 'border-box', width: '100%' }}>
             <input
               type="range"
               min="0"
@@ -202,9 +367,9 @@ export const TransformTab: React.FC<TransformTabProps> = ({
               step="0.01"
               value={transform.opacity}
               onChange={(e) => updateCurrentTransform({ opacity: parseFloat(e.target.value) })}
-              style={{ flex: 1, cursor: 'pointer', accentColor: '#f59e0b' }}
+              style={{ flex: 1, minWidth: 0, cursor: 'pointer', accentColor: '#f59e0b' }}
             />
-            <div style={{ width: 55 }}>
+            <div style={{ width: 60, minWidth: 60, flexShrink: 0 }}>
               <SmartNumberInput
                 value={transform.opacity}
                 min={0}
@@ -224,12 +389,13 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                 className="btn-secondary"
                 style={{
                   flex: 1,
-                  height: 22,
-                  fontSize: 10,
+                  height: 24,
+                  fontSize: 'var(--font-size-caption)',
                   fontWeight: 700,
                   padding: 0,
                   textAlign: 'center',
-                  borderRadius: 4,
+                  borderRadius: 'var(--radius-xs)',
+                  boxSizing: 'border-box',
                   color: Math.abs(transform.opacity - op) < 0.02 ? '#f59e0b' : undefined,
                   borderColor: Math.abs(transform.opacity - op) < 0.02 ? 'rgba(245, 158, 11, 0.5)' : undefined,
                   background: Math.abs(transform.opacity - op) < 0.02 ? 'rgba(245, 158, 11, 0.12)' : undefined,
@@ -245,7 +411,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
       {/* LAYER Z-INDEX ORDERING */}
       {handleZIndexChange && (
-        <div className="input-field" style={{ marginTop: 8, marginBottom: 8 }}>
+        <div className="panel-card" style={{ marginTop: 8, marginBottom: 8 }}>
           <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.4px' }}>
             LAYER Z-INDEX ORDER ({selectedPart.zIndex})
           </label>
@@ -333,8 +499,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> LEFT POINT
                     </span>
                   </div>
-                  <div className="param-row" style={{ marginBottom: 4 }}>
-                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
+                    <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
                     <SmartNumberInput
                       value={cx - currentHalfW}
                       step={1}
@@ -350,8 +516,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       }}
                     />
                   </div>
-                  <div className="param-row">
-                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                    <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
                     <SmartNumberInput
                       value={cy}
                       step={1}
@@ -369,8 +535,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> RIGHT POINT
                     </span>
                   </div>
-                  <div className="param-row" style={{ marginBottom: 4 }}>
-                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
+                    <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
                     <SmartNumberInput
                       value={cx + currentHalfW}
                       step={1}
@@ -386,8 +552,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       }}
                     />
                   </div>
-                  <div className="param-row">
-                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                    <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
                     <SmartNumberInput
                       value={cy}
                       step={1}
@@ -405,8 +571,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> TOP POINT
                     </span>
                   </div>
-                  <div className="param-row" style={{ marginBottom: 4 }}>
-                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
+                    <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
                     <SmartNumberInput
                       value={cx}
                       step={1}
@@ -415,8 +581,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       onChange={(targetX) => updateCurrentTransform({ x: targetX })}
                     />
                   </div>
-                  <div className="param-row">
-                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                    <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
                     <SmartNumberInput
                       value={cy + currentHalfH}
                       step={1}
@@ -441,8 +607,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> BOTTOM POINT
                     </span>
                   </div>
-                  <div className="param-row" style={{ marginBottom: 4 }}>
-                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
+                    <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
                     <SmartNumberInput
                       value={cx}
                       step={1}
@@ -451,8 +617,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       onChange={(targetX) => updateCurrentTransform({ x: targetX })}
                     />
                   </div>
-                  <div className="param-row">
-                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                    <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
                     <SmartNumberInput
                       value={cy - currentHalfH}
                       step={1}
@@ -478,8 +644,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 4 }}>
                     ↖ TOP-LEFT (TL)
                   </span>
-                  <div className="param-row" style={{ marginBottom: 4 }}>
-                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
+                    <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
                     <SmartNumberInput
                       value={cx - currentHalfW}
                       step={1}
@@ -495,8 +661,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       }}
                     />
                   </div>
-                  <div className="param-row">
-                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                    <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
                     <SmartNumberInput
                       value={cy + currentHalfH}
                       step={1}
@@ -519,8 +685,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 4 }}>
                     ↗ TOP-RIGHT (TR)
                   </span>
-                  <div className="param-row" style={{ marginBottom: 4 }}>
-                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
+                    <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
                     <SmartNumberInput
                       value={cx + currentHalfW}
                       step={1}
@@ -536,8 +702,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       }}
                     />
                   </div>
-                  <div className="param-row">
-                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                    <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
                     <SmartNumberInput
                       value={cy + currentHalfH}
                       step={1}
@@ -560,8 +726,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: 4 }}>
                     ↙ BOTTOM-LEFT (BL)
                   </span>
-                  <div className="param-row" style={{ marginBottom: 4 }}>
-                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
+                    <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
                     <SmartNumberInput
                       value={cx - currentHalfW}
                       step={1}
@@ -577,8 +743,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       }}
                     />
                   </div>
-                  <div className="param-row">
-                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                    <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
                     <SmartNumberInput
                       value={cy - currentHalfH}
                       step={1}
@@ -601,8 +767,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                   <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: 4 }}>
                     ↘ BOTTOM-RIGHT (BR)
                   </span>
-                  <div className="param-row" style={{ marginBottom: 4 }}>
-                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
+                    <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
                     <SmartNumberInput
                       value={cx + currentHalfW}
                       step={1}
@@ -618,8 +784,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       }}
                     />
                   </div>
-                  <div className="param-row">
-                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                  <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                    <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
                     <SmartNumberInput
                       value={cy - currentHalfH}
                       step={1}
@@ -643,117 +809,56 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       })()}
 
       {/* ── PROPORTIONAL SCALE & RATIO SECTION ── */}
-      <div className="panel-card" style={{ marginTop: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
-            <Maximize2 size={13} /> PROPORTIONAL SCALE & RATIO
-          </span>
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{ 
-              height: 22,
-              fontSize: 10, 
-              padding: '0 8px', 
-              color: isScaleLocked ? '#10b981' : '#64748b', 
-              background: isScaleLocked ? 'rgba(16, 185, 129, 0.12)' : '#101218',
-              border: `1px solid ${isScaleLocked ? 'rgba(16, 185, 129, 0.4)' : '#232836'}`,
-              borderRadius: 4,
-            }}
-            onClick={() => setIsScaleLocked(!isScaleLocked)}
-            title={isScaleLocked ? 'Aspect Ratio Locked (Uniform Scale)' : 'Aspect Ratio Unlocked (Free Scale)'}
-          >
-            {isScaleLocked ? <Link size={11} /> : <Unlink size={11} />}
-            <span>{isScaleLocked ? 'Ratio Locked' : 'Ratio Unlocked'}</span>
-          </button>
-        </div>
+      
 
-        {/* Master Uniform Scale Control */}
-        <div style={{ background: '#0e1118', padding: '8px 10px', borderRadius: 6, border: '1px solid #232836', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <label style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.4px' }}>UNIFORM SCALE MULTIPLIER</label>
-            <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8' }}>
-              {((transform.scaleX + transform.scaleY) / 2).toFixed(2)}x ({(Math.round(((transform.scaleX + transform.scaleY) / 2) * 100))}% )
-            </span>
+      {selectedPart.innerMediaUrl && handlePartPropChange && (
+        <div className="inspector-section" style={{ marginTop: 12 }}>
+          <div className="section-title-bar">
+            <div className="section-title">
+              <Move size={13} />
+              <span>MASK & FRAMING</span>
+            </div>
           </div>
-          <input
-            type="range" min="0.1" max="15" step="0.1"
-            value={(transform.scaleX + transform.scaleY) / 2}
-            onChange={(e) => {
-              const val = parseFloat(e.target.value);
-              updateCurrentTransform({ scaleX: val, scaleY: val });
-            }}
-            style={{ width: '100%', cursor: 'pointer', accentColor: '#38bdf8' }}
-          />
-          {/* Quick Presets */}
-          <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-            {[0.5, 1.0, 1.5, 2.0, 5.0, 6.42].map((s) => (
-              <button
-                key={`scale-preset-${s}`}
-                type="button"
-                className="btn-secondary"
-                style={{ flex: 1, height: 22, fontSize: 10, fontWeight: 700, padding: 0, textAlign: 'center', borderRadius: 4 }}
-                onClick={() => updateCurrentTransform({ scaleX: s, scaleY: s })}
-              >
-                {s}x
-              </button>
-            ))}
+          <div className="property-card">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-sm)", width: "100%" }}>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">OFFSET X</span>
+                <SmartNumberInput
+                  value={selectedPart.maskOffsetX || 0}
+                  step={1}
+                  onChange={(val) => handlePartPropChange('maskOffsetX', val)}
+                />
+              </div>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">OFFSET Y</span>
+                <SmartNumberInput
+                  value={selectedPart.maskOffsetY || 0}
+                  step={1}
+                  onChange={(val) => handlePartPropChange('maskOffsetY', val)}
+                />
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-sm)", width: "100%", marginTop: 8 }}>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">SCALE</span>
+                <SmartNumberInput
+                  value={selectedPart.maskScale ?? 1}
+                  step={0.05}
+                  onChange={(val) => handlePartPropChange('maskScale', val)}
+                />
+              </div>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">ROTATION</span>
+                <SmartNumberInput
+                  value={selectedPart.maskRotation || 0}
+                  step={1}
+                  onChange={(val) => handlePartPropChange('maskRotation', val)}
+                />
+              </div>
+            </div>
           </div>
         </div>
-
-        {/* Scale X & Scale Y Inputs */}
-        <div className="transform-param-grid">
-          <div className="param-row">
-            <span className="param-label">SCALE X</span>
-            <SmartNumberInput
-              value={transform.scaleX}
-              step={0.1}
-              onChange={(val) => {
-                if (isScaleLocked) {
-                  const ratio = transform.scaleX !== 0 ? transform.scaleY / transform.scaleX : 1;
-                  updateCurrentTransform({ scaleX: val, scaleY: parseFloat((val * (ratio || 1)).toFixed(3)) });
-                } else {
-                  updateCurrentTransform({ scaleX: val });
-                }
-              }}
-            />
-          </div>
-
-          <div className="param-row">
-            <span className="param-label">SCALE Y</span>
-            <SmartNumberInput
-              value={transform.scaleY}
-              step={0.1}
-              onChange={(val) => {
-                if (isScaleLocked) {
-                  const ratio = transform.scaleY !== 0 ? transform.scaleX / transform.scaleY : 1;
-                  updateCurrentTransform({ scaleY: val, scaleX: parseFloat((val * (ratio || 1)).toFixed(3)) });
-                } else {
-                  updateCurrentTransform({ scaleY: val });
-                }
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
-        <button
-          className="btn-secondary"
-          style={{ flex: 1, fontSize: 11 }}
-          onClick={() => updateCurrentTransform({ rotation: 0 })}
-        >
-          Reset Rotation (0°)
-        </button>
-        <button
-          className="btn-secondary"
-          style={{ flex: 1 }}
-          onClick={() => updateCurrentTransform({ scaleX: 1, scaleY: 1 })}
-        >
-          Reset Scale (1.0)
-        </button>
-      </div>
-
-    </div>
+      )}
+    </>
   );
 };

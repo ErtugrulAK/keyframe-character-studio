@@ -1,4 +1,4 @@
-import type { CharacterPart, Track, Transform, PresetPose, EasingType, TrackChannel, PropertyKeyframe } from '../types/animator';
+import type { CharacterPart, Track, Transform, EasingType, TrackChannel, PropertyKeyframe } from '../types/animator';
 
 export const DEFAULT_TRANSFORM: Transform = {
   x: 0,
@@ -44,58 +44,6 @@ export function interpolateChannel(
   const eased = applyEasing(progress, prev.easing, prev.bezierControlPoints);
   return lerp(prev.value, next.value, eased);
 }
-
-export const PRESET_POSES: PresetPose[] = [
-  {
-    id: 'idle',
-    name: 'Idle Stance',
-    transforms: {
-      head: { rotation: 0, y: 150 },
-      upper_arm_l: { rotation: 15 },
-      upper_arm_r: { rotation: -15 },
-      upper_leg_l: { rotation: 5 },
-      upper_leg_r: { rotation: -5 },
-    },
-  },
-  {
-    id: 'wave',
-    name: 'Friendly Wave',
-    transforms: {
-      head: { rotation: 5 },
-      upper_arm_r: { rotation: -140 },
-      lower_arm_r: { rotation: -30 },
-      upper_arm_l: { rotation: 25 },
-    },
-  },
-  {
-    id: 'combat',
-    name: 'Combat Ready',
-    transforms: {
-      head: { rotation: -5, y: 155 },
-      torso: { rotation: 8 },
-      upper_arm_l: { rotation: -60 },
-      lower_arm_l: { rotation: -40 },
-      upper_arm_r: { rotation: -45 },
-      lower_arm_r: { rotation: -70 },
-      upper_leg_l: { rotation: 25 },
-      upper_leg_r: { rotation: -30 },
-    },
-  },
-  {
-    id: 'jump',
-    name: 'Mid-Air Jump',
-    transforms: {
-      head: { rotation: -10, y: 130 },
-      torso: { y: 200 },
-      upper_arm_l: { rotation: -120 },
-      upper_arm_r: { rotation: 120 },
-      upper_leg_l: { rotation: 45 },
-      lower_leg_l: { rotation: -60 },
-      upper_leg_r: { rotation: -35 },
-      lower_leg_r: { rotation: -40 },
-    },
-  },
-];
 
 export function solveCubicBezier(x1: number, y1: number, x2: number, y2: number, X: number): number {
   if (X <= 0) return 0;

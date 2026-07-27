@@ -25,7 +25,6 @@ import {
   ChevronDown,
   Diamond,
   TrendingUp,
-  GripVertical,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
@@ -44,71 +43,7 @@ const CHANNEL_META: Record<TrackChannel, { label: string; color: string; shortLa
 const TRACK_ROW_HEIGHT = 34;   // parent track row
 const CHANNEL_ROW_HEIGHT = 28; // sub-channel row
 
-const LayerIndexInput: React.FC<{
-  trackId: string;
-  current1BasedIndex: number;
-  maxIndex: number;
-  setTrackIndex: (trackId: string, val: number) => void;
-}> = ({ trackId, current1BasedIndex, maxIndex, setTrackIndex }) => {
-  const [editingVal, setEditingVal] = useState<string>(String(current1BasedIndex));
 
-  useEffect(() => {
-    setEditingVal(String(current1BasedIndex));
-  }, [current1BasedIndex]);
-
-  const commitValue = () => {
-    let parsed = parseInt(editingVal, 10);
-    if (!isNaN(parsed)) {
-      parsed = Math.max(1, Math.min(maxIndex, parsed));
-      setTrackIndex(trackId, parsed);
-      setEditingVal(String(parsed));
-    } else {
-      setEditingVal(String(current1BasedIndex));
-    }
-  };
-
-  return (
-    <input
-      type="number"
-      min={1}
-      max={maxIndex}
-      value={editingVal}
-      onClick={(e) => e.stopPropagation()}
-      onKeyDown={(e) => {
-        e.stopPropagation();
-        if (e.key === 'Enter') {
-          commitValue();
-          (e.target as HTMLInputElement).blur();
-        } else if (e.key === 'Escape') {
-          setEditingVal(String(current1BasedIndex));
-          (e.target as HTMLInputElement).blur();
-        }
-      }}
-      onChange={(e) => {
-        setEditingVal(e.target.value);
-        const parsed = parseInt(e.target.value, 10);
-        if (!isNaN(parsed) && parsed >= 1 && parsed <= maxIndex) {
-          setTrackIndex(trackId, parsed);
-        }
-      }}
-      onBlur={commitValue}
-      style={{
-        width: 34,
-        height: 20,
-        background: 'rgba(255, 255, 255, 0.12)',
-        border: '1px solid var(--accent-cyan)',
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 800,
-        borderRadius: 4,
-        textAlign: 'center',
-        outline: 'none',
-        cursor: 'pointer',
-      }}
-      title="Edit layer index number (1 = top layer)"
-    />
-  );
-};
 
 export const SequencerTimeline: React.FC = () => {
   const {
@@ -130,8 +65,6 @@ export const SequencerTimeline: React.FC = () => {
     toggleTrackVisibility,
     toggleTrackEditVisibility,
     renamePartAndTrack,
-    reorderTracks,
-    setTrackIndex,
     toggleTrackLock,
     toggleTrackExpanded,
     deleteKeyframe,
@@ -188,8 +121,6 @@ export const SequencerTimeline: React.FC = () => {
   const [draggingPKf, setDraggingPKf] = useState<{ trackId: string; channel: TrackChannel; keyframeId: string } | null>(null);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [hoveredKf, setHoveredKf] = useState<{ frame: number; label: string } | null>(null);
-  const [draggedTrackIndex, setDraggedTrackIndex] = useState<number | null>(null);
-  const [dragOverTrackIndex, setDragOverTrackIndex] = useState<number | null>(null);
 
   const FRAME_WIDTH = timelineZoom;
 
@@ -564,7 +495,7 @@ export const SequencerTimeline: React.FC = () => {
           </div>
 
           <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll}>
-            {tracks.map((track, trackIdx) => {
+            {tracks.map((track) => {
               const isSelected = selectedPartId === track.partId;
               const isTrackExpanded = track.expanded === true;
               const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
@@ -579,44 +510,10 @@ export const SequencerTimeline: React.FC = () => {
                 <div key={track.id} className="ue-track-group">
                   {/* ── LAYER ROW ── */}
                   <div
-                    className={`ue-track-row ${isSelected ? 'selected' : ''} ${draggedTrackIndex === trackIdx ? 'dragging' : ''} ${dragOverTrackIndex === trackIdx ? 'drag-over' : ''}`}
-                    style={{ height: TRACK_ROW_HEIGHT, paddingLeft: isChildLayer ? 22 : 6 }}
+                    className={`ue-track-row ${isSelected ? 'selected' : ''}`}
+                    style={{ height: TRACK_ROW_HEIGHT, paddingLeft: isChildLayer ? 22 : 8 }}
                     onClick={() => setSelectedPartId(track.partId)}
-                    draggable={true}
-                    onDragStart={(e) => {
-                      setDraggedTrackIndex(trackIdx);
-                      e.dataTransfer.effectAllowed = 'move';
-                      e.dataTransfer.setData('text/plain', String(trackIdx));
-                    }}
-                    onDragOver={(e) => {
-                      e.preventDefault();
-                      e.dataTransfer.dropEffect = 'move';
-                      if (dragOverTrackIndex !== trackIdx) {
-                        setDragOverTrackIndex(trackIdx);
-                      }
-                    }}
-                    onDragLeave={() => {
-                      if (dragOverTrackIndex === trackIdx) {
-                        setDragOverTrackIndex(null);
-                      }
-                    }}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      if (draggedTrackIndex !== null && draggedTrackIndex !== trackIdx) {
-                        reorderTracks(draggedTrackIndex, trackIdx);
-                      }
-                      setDraggedTrackIndex(null);
-                      setDragOverTrackIndex(null);
-                    }}
-                    onDragEnd={() => {
-                      setDraggedTrackIndex(null);
-                      setDragOverTrackIndex(null);
-                    }}
                   >
-                    <span title="Drag up or down to reorder layer depth" style={{ display: 'flex', alignItems: 'center' }}>
-                      <GripVertical size={13} className="track-drag-grip" />
-                    </span>
-
                     {isChildLayer && (
                       <span style={{ fontSize: 10, color: 'var(--accent-cyan)', fontWeight: 800, marginRight: -2 }}>└─</span>
                     )}
@@ -676,14 +573,6 @@ export const SequencerTimeline: React.FC = () => {
                         {track.name}
                       </span>
                     )}
-
-                    {/* Editable Layer Index Input */}
-                    <LayerIndexInput
-                      trackId={track.id}
-                      current1BasedIndex={trackIdx + 1}
-                      maxIndex={tracks.length}
-                      setTrackIndex={setTrackIndex}
-                    />
 
                     <div className="ue-track-controls">
                       {/* 1. Edit Canvas Hard-Hide Eye */}

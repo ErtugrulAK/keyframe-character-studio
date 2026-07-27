@@ -127,6 +127,7 @@ interface TransformTabProps {
   addKeyframeForSelected: () => void;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
+  handleZIndexChange?: (zIndex: number) => void;
 }
 
 export const TransformTab: React.FC<TransformTabProps> = ({
@@ -135,6 +136,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   currentFrame,
   addKeyframeForSelected,
   updateCurrentTransform,
+  handleZIndexChange,
 }) => {
   const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
   const [pointMode, setPointMode] = useState<'edge' | 'corner'>('edge');
@@ -197,6 +199,33 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         </div>
       </div>
+
+      {/* LAYER Z-INDEX ORDERING */}
+      {handleZIndexChange && (
+        <div className="input-field" style={{ marginTop: 8, marginBottom: 8 }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.4px' }}>
+            LAYER Z-INDEX ORDER ({selectedPart.zIndex})
+          </label>
+          <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ flex: 1, padding: '5px 8px', fontSize: 11, fontWeight: 700 }}
+              onClick={() => handleZIndexChange(selectedPart.zIndex + 1)}
+            >
+              Bring Forward (+1)
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ flex: 1, padding: '5px 8px', fontSize: 11, fontWeight: 700 }}
+              onClick={() => handleZIndexChange(Math.max(1, selectedPart.zIndex - 1))}
+            >
+              Send Backward (-1)
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── 4 CONTROL POINTS (STAGE X & Y COORDINATES) ── */}
       {(() => {

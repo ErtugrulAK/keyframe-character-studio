@@ -14,7 +14,6 @@ import type {
   AppMode,
   BroadcastObjectState,
   CustomMotionPreset,
-  CustomMotionPresetKeyframe,
   LiveStuntType,
   MotionTemplate,
   ProjectTemplate,
@@ -22,12 +21,11 @@ import type {
 import {
   DEFAULT_CHARACTER_PARTS,
   DEFAULT_TRACKS,
-  PRESET_POSES,
   interpolateTransform,
   makeEmptyChannels,
   interpolateChannel,
 } from '../utils/defaults';
-import { DEFAULT_INITIAL_PRESETS, SAMPLE_SEQUENCER_PROJECT } from './initialStateData';
+import { DEFAULT_INITIAL_PRESETS } from './initialStateData';
 import { generateId, initializeIdCounter } from '../utils/idGenerator';
 
 const AUTOSAVE_STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
@@ -108,7 +106,6 @@ interface AnimatorContextType {
   updateKeyframeEasing: (trackId: string, keyframeId: string, easing: EasingType) => void;
   updateKeyframeBezierPoints: (trackId: string, keyframeId: string, points: [number, number, number, number]) => void;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
-  applyPresetPose: (poseId: string) => void;
   toggleTrackVisibility: (trackId: string) => void;
   toggleTrackEditVisibility: (trackId: string) => void;
   toggleTrackLock: (trackId: string) => void;
@@ -132,10 +129,8 @@ interface AnimatorContextType {
   addMotionTemplate: (name: string, type?: 'in' | 'out' | 'stunt') => void;
   renameMotionTemplate: (oldId: string, newName: string) => void;
   deleteMotionTemplate: (id: string) => void;
-  assignTemplateToLayer: (partId: string, templateId: string) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
-  reorderTracks: (dragIndex: number, hoverIndex: number) => void;
-  setTrackIndex: (trackId: string, target1BasedIndex: number) => void;
+  reorderParts: (dragIndex: number, hoverIndex: number) => void;
   deletePart: (partId: string) => void;
   copySelectedPart: () => void;
   pasteCopiedPart: () => void;
@@ -156,12 +151,8 @@ interface AnimatorContextType {
   triggerAllBroadcastOut: () => void;
   resetBroadcastState: () => void;
 
-  // Custom Motion Preset Engine & Sample Loader
+  // Custom Motion Preset Engine
   customPresets: CustomMotionPreset[];
-  saveTrackAsPreset: (partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame?: number, endFrame?: number, scope?: 'both' | 'motion_only' | 'shape_only') => void;
-  updateCustomPreset: (presetId: string, updates: Partial<CustomMotionPreset>) => void;
-  deleteCustomPreset: (presetId: string) => void;
-  loadSampleSequencerProject: () => void;
 
   // Realtime Live Stunts Engine
   liveStuntsState: Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>;
@@ -434,20 +425,13 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     });
   }, [activeProjectTemplateId, templateCanvasStore]);
 
-  const assignTemplateToLayer = useCallback((partId: string, templateId: string) => {
-    setTracks((prev) =>
-      prev.map((t) => (t.partId === partId ? { ...t, sequencerTemplateId: templateId } : t))
-    );
-    showToast(`Assigned template ${templateId} to layer`, 'success');
-  }, [showToast]);
-
   const characterPartsRef = useRef(characterParts);
   useEffect(() => { characterPartsRef.current = characterParts; }, [characterParts]);
 
   const tracksRef = useRef(tracks);
   useEffect(() => { tracksRef.current = tracks; }, [tracks]);
 
-  const [customPresets, setCustomPresets] = useState<CustomMotionPreset[]>(() => {
+  const [customPresets] = useState<CustomMotionPreset[]>(() => {
     try {
       const saved = localStorage.getItem('keyframe_custom_motion_presets');
       return saved ? JSON.parse(saved) : DEFAULT_INITIAL_PRESETS;
@@ -1350,40 +1334,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   };
 
-  const applyPresetPose = (poseId: string) => {
-    const pose = PRESET_POSES.find((p) => p.id === poseId);
-    if (!pose) return;
-
-    Object.entries(pose.transforms).forEach(([partId, transform]) => {
-      const track = tracks.find((t) => t.partId === partId);
-      if (track) {
-        setTracks((prevTracks) =>
-          prevTracks.map((tr) => {
-            if (tr.partId !== partId) return tr;
-            const currentT = getComputedTransform(partId, currentFrame);
-            const updatedT = { ...currentT, ...transform };
-            const activeTmpl = activeTemplateId || 'Sequence';
-            const existingIdx = tr.keyframes.findIndex((k) => k.frame === currentFrame && (k.templateId || 'Sequence') === activeTmpl);
-
-            let newKfs = [...tr.keyframes];
-            if (existingIdx >= 0) {
-              newKfs[existingIdx] = { ...newKfs[existingIdx], transform: updatedT };
-            } else {
-              newKfs.push({
-                id: generateId('kf'),
-                frame: currentFrame,
-                transform: updatedT,
-                easing: 'easeInOut',
-              });
-              newKfs.sort((a, b) => a.frame - b.frame);
-            }
-            return { ...tr, keyframes: newKfs };
-          })
-        );
-      }
-    });
-  };
-
   const toggleTrackVisibility = (trackId: string) => {
     setTracks((prev) => prev.map((t) => (t.id === trackId ? { ...t, visible: !t.visible } : t)));
   };
@@ -1557,7 +1507,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       const parsed: AnimationProject = JSON.parse(jsonStr);
       if (parsed.tracks && parsed.characterParts) {
-        const rawName = parsed.name || defaultName || 'Imported Template';
+        const rawName = defaultName || parsed.name || 'Imported Template';
         const templateName = rawName.replace(/\.json$/i, '').trim() || 'Imported Template';
         const newId = `tmpl_${Date.now()}`;
 
@@ -1725,155 +1675,38 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast(`Renamed layer to "${trimmed}"`, 'success');
   }, [showToast]);
 
-  const reorderTracks = useCallback((dragIndex: number, hoverIndex: number) => {
+  const reorderParts = useCallback((dragIndex: number, hoverIndex: number) => {
     if (dragIndex === hoverIndex) return;
 
-    setTracks((prevTracks) => {
-      const updated = [...prevTracks];
-      const [movedTrack] = updated.splice(dragIndex, 1);
-      updated.splice(hoverIndex, 0, movedTrack);
-
-      const total = updated.length;
-      setCharacterParts((prevParts) =>
-        prevParts.map((p) => {
-          const trackIdx = updated.findIndex((t) => t.partId === p.id);
-          if (trackIdx >= 0) {
-            return { ...p, zIndex: total - trackIdx };
-          }
-          return p;
-        })
-      );
-
-      return updated;
-    });
-  }, []);
-
-  const setTrackIndex = useCallback((trackId: string, target1BasedIndex: number) => {
-    setTracks((prevTracks) => {
-      const currentIndex = prevTracks.findIndex((t) => t.id === trackId);
-      if (currentIndex < 0) return prevTracks;
-      const target0Based = Math.max(0, Math.min(prevTracks.length - 1, target1BasedIndex - 1));
-      if (currentIndex === target0Based) return prevTracks;
-
-      const updated = [...prevTracks];
-      const [movedTrack] = updated.splice(currentIndex, 1);
-      updated.splice(target0Based, 0, movedTrack);
-
-      const total = updated.length;
-      setCharacterParts((prevParts) =>
-        prevParts.map((p) => {
-          const idx = updated.findIndex((t) => t.partId === p.id);
-          if (idx >= 0) {
-            return { ...p, zIndex: total - idx };
-          }
-          return p;
-        })
-      );
-
-      return updated;
-    });
-  }, []);
-
-  // ── Custom Motion Preset Engine & Sample Sequencer Project Loader ──
-  const saveTrackAsPreset = useCallback((partId: string, name: string, type: 'in' | 'out' | 'stunt', startFrame = 0, endFrame = 50, scope: 'both' | 'motion_only' | 'shape_only' = 'both') => {
-    const part = characterParts.find(p => p.id === partId);
-    const track = tracks.find(t => t.partId === partId);
-    if (!part || !track || track.keyframes.length === 0) {
-      showToast('No keyframes found on layer to save as preset', 'error');
-      return;
-    }
-
-    const filteredKfs = track.keyframes
-      .filter(k => k.frame >= startFrame && k.frame <= endFrame)
-      .sort((a, b) => a.frame - b.frame);
-
-    if (filteredKfs.length < 2) {
-      showToast('Need at least 2 keyframes in range to save preset', 'error');
-      return;
-    }
-
-    const minF = filteredKfs[0].frame;
-    const maxF = filteredKfs[filteredKfs.length - 1].frame;
-    const durF = Math.max(1, maxF - minF);
-
-    // For IN presets, reference origin is ending position
-    // For OUT/STUNT presets, reference origin is starting position
-    const refBaseX = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.x : filteredKfs[0].transform.x;
-    const refBaseY = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.y : filteredKfs[0].transform.y;
-    const refBaseRot = type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.rotation : filteredKfs[0].transform.rotation;
-    const targetPart = characterParts.find(p => p.id === track.partId);
-    const refBaseScaleX = (targetPart?.baseTransform.scaleX && targetPart.baseTransform.scaleX > 0)
-      ? targetPart.baseTransform.scaleX
-      : (type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleX : filteredKfs[0].transform.scaleX);
-    const refBaseScaleY = (targetPart?.baseTransform.scaleY && targetPart.baseTransform.scaleY > 0)
-      ? targetPart.baseTransform.scaleY
-      : (type === 'in' ? filteredKfs[filteredKfs.length - 1].transform.scaleY : filteredKfs[0].transform.scaleY);
-
-    const presetKeyframes: CustomMotionPresetKeyframe[] = filteredKfs.map(kf => {
-      let dX = kf.transform.x - refBaseX;
-      let dY = kf.transform.y - refBaseY;
-      let rot = kf.transform.rotation - refBaseRot;
-      let sX = refBaseScaleX && refBaseScaleX !== 0 ? kf.transform.scaleX / refBaseScaleX : 1;
-      let sY = refBaseScaleY && refBaseScaleY !== 0 ? kf.transform.scaleY / refBaseScaleY : 1;
-
-      if (scope === 'motion_only') {
-        // Lock scale to 1 (pure movement, no size changes)
-        sX = 1;
-        sY = 1;
-      } else if (scope === 'shape_only') {
-        // Lock position & rotation to 0 (pure scale/shape, no movement)
-        dX = 0;
-        dY = 0;
-        rot = 0;
+    setCharacterParts((prevParts) => {
+      if (dragIndex < 0 || hoverIndex < 0 || dragIndex >= prevParts.length || hoverIndex >= prevParts.length) {
+        return prevParts;
       }
+      const updatedParts = [...prevParts];
+      const [movedPart] = updatedParts.splice(dragIndex, 1);
+      updatedParts.splice(hoverIndex, 0, movedPart);
 
-      return {
-        progress: (kf.frame - minF) / durF,
-        deltaX: dX,
-        deltaY: dY,
-        rotation: rot,
-        scaleX: sX,
-        scaleY: sY,
-        opacity: kf.transform.opacity,
-        easing: kf.easing,
-      };
+      const total = updatedParts.length;
+      const reindexedParts = updatedParts.map((p, idx) => ({
+        ...p,
+        zIndex: total - idx,
+      }));
+
+      setTracks((prevTracks) => {
+        const sortedTracks = reindexedParts
+          .map((p) => prevTracks.find((t) => t.partId === p.id))
+          .filter(Boolean) as Track[];
+        prevTracks.forEach((t) => {
+          if (!sortedTracks.some((st) => st.id === t.id)) {
+            sortedTracks.push(t);
+          }
+        });
+        return sortedTracks;
+      });
+
+      return reindexedParts;
     });
-
-    const newPreset: CustomMotionPreset = {
-      id: generateId('preset'),
-      name,
-      type,
-      durationFrames: durF,
-      scope,
-      keyframes: presetKeyframes,
-    };
-
-    setCustomPresets(prev => [...prev, newPreset]);
-    showToast(`Saved ${scope === 'motion_only' ? 'Motion Only' : scope === 'shape_only' ? 'Shape Only' : 'Full'} preset "${name}"!`, 'success');
-  }, [characterParts, tracks, showToast]);
-
-  const updateCustomPreset = useCallback((presetId: string, updates: Partial<CustomMotionPreset>) => {
-    setCustomPresets(prev => prev.map(p => (p.id === presetId ? { ...p, ...updates } : p)));
-    showToast('Updated preset', 'success');
-  }, [showToast]);
-
-  const deleteCustomPreset = useCallback((presetId: string) => {
-    setCustomPresets(prev => prev.filter(p => p.id !== presetId));
-    showToast('Deleted preset', 'info');
-  }, [showToast]);
-
-  const loadSampleSequencerProject = useCallback(() => {
-    try {
-      const sampleData = SAMPLE_SEQUENCER_PROJECT;
-      setTracks(sampleData.tracks as any);
-      setCharacterParts(sampleData.characterParts as any);
-      setTotalFramesState(150);
-      setFps(60);
-      showToast("Loaded sample sequencer-project.json!", "success");
-    } catch {
-      showToast("Failed to load sample project", "error");
-    }
-  }, [showToast]);
+  }, []);
 
   return (
     <AnimatorContext.Provider
@@ -1920,7 +1753,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateKeyframeEasing,
         updateKeyframeBezierPoints,
         updateCurrentTransform,
-        applyPresetPose,
         toggleTrackVisibility,
         toggleTrackEditVisibility,
         toggleTrackLock,
@@ -1948,18 +1780,13 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         triggerAllBroadcastOut,
         resetBroadcastState,
         customPresets,
-        saveTrackAsPreset,
-        updateCustomPreset,
-        deleteCustomPreset,
-        loadSampleSequencerProject,
         liveStuntsState,
         triggerLiveStunt,
         stopLiveStunt,
         setStuntLoopState,
         stopAllLiveStunts,
         renamePartAndTrack,
-        reorderTracks,
-        setTrackIndex,
+        reorderParts,
         sceneTitle,
         setSceneTitle,
         projectTemplates,
@@ -1974,7 +1801,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addMotionTemplate,
         renameMotionTemplate,
         deleteMotionTemplate,
-        assignTemplateToLayer,
       }}
     >
       {children}

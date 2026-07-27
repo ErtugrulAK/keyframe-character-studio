@@ -4,10 +4,6 @@ import { Grid, ZoomIn, ZoomOut, Compass } from 'lucide-react';
 interface CanvasViewportToolbarProps {
   showGrid: boolean;
   setShowGrid: (val: boolean) => void;
-  showBones?: boolean;
-  setShowBones?: React.Dispatch<React.SetStateAction<boolean>>;
-  showOnionSkin?: boolean;
-  setShowOnionSkin?: React.Dispatch<React.SetStateAction<boolean>>;
   zoomLevel: number;
   setZoomLevel: React.Dispatch<React.SetStateAction<number>>;
   setPanOffset: (val: { x: number; y: number }) => void;

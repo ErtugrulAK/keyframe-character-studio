@@ -2,10 +2,10 @@ import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
 import { sampleCustomPreset } from './utils/presetSampler';
-import { renderBodyPart } from './parts/BodyPartRenderers';
 import { renderShapePart } from './parts/ShapePartRenderers';
 import { renderMediaPart } from './parts/MediaPartRenderer';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
+import { getYouTubeEmbedInfo } from './utils/youtubeHelper';
 
 interface PartRendererProps {
   part: CharacterPart;
@@ -255,20 +255,44 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const fill = (isGhost && ghostColor ? ghostColor : part.fillColor) || '#ffffff';
   const stroke = (isGhost && ghostColor ? ghostColor : isSelected ? '#00d2ff' : part.strokeColor) || '#101218';
 
-  // Inner Media Helper
+  // Inner Media Helper (Supports Direct MP4/WebM & YouTube Embed URLs)
   const renderInnerMedia = (shapeWidth: number, shapeHeight: number, xOff: number = 0, yOff: number = 0) => {
     if (!part.innerMediaUrl || isGhost) return null;
-    return part.innerMediaType === 'video' ? (
-      <foreignObject x={xOff} y={yOff} width={shapeWidth} height={shapeHeight} style={{ pointerEvents: 'none' }}>
-        <video
-          src={part.innerMediaUrl}
-          autoPlay
-          muted
-          loop
-          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-        />
-      </foreignObject>
-    ) : (
+    if (part.innerMediaType === 'video') {
+      const { isYouTube, embedUrl } = getYouTubeEmbedInfo(part.innerMediaUrl);
+      return (
+        <foreignObject x={xOff} y={yOff} width={shapeWidth} height={shapeHeight} style={{ pointerEvents: 'none' }}>
+          {isYouTube ? (
+            <div style={{ width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none', position: 'relative' }}>
+              <iframe
+                src={embedUrl}
+                title="YouTube Masked Video"
+                allow="autoplay; encrypted-media"
+                style={{
+                  position: 'absolute',
+                  top: '-15%',
+                  left: '-15%',
+                  width: '130%',
+                  height: '130%',
+                  border: 'none',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+          ) : (
+            <video
+              src={part.innerMediaUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          )}
+        </foreignObject>
+      );
+    }
+    return (
       <image
         href={part.innerMediaUrl}
         x={xOff}
@@ -288,10 +312,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     pathContent = renderMediaPart({ part, fill, stroke, isSelected, overrideMaskShape });
   } else if (part.type === 'custom_text' || part.type === 'mograph_cloner') {
     pathContent = renderTextOrClonerPart({ part, fill, stroke, isSelected, currentFrame });
-  } else if (part.type.startsWith('custom_')) {
-    pathContent = renderShapePart({ part, fill, stroke, isSelected, isGhost, renderInnerMedia });
   } else {
-    pathContent = renderBodyPart({ part, fill, stroke, isSelected, isGhost });
+    pathContent = renderShapePart({ part, fill, stroke, isSelected, isGhost, renderInnerMedia });
   }
 
   const filterId = !isGhost && part.shadowColor ? `drop-shadow-${part.id}` : undefined;

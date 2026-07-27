@@ -10,6 +10,8 @@ import {
   Layers,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
+  GripVertical,
 } from 'lucide-react';
 
 export const OutlinerPanel: React.FC = () => {
@@ -20,9 +22,12 @@ export const OutlinerPanel: React.FC = () => {
     setSelectedPartId,
     toggleTrackEditVisibility,
     sceneTitle,
+    reorderParts,
   } = useAnimator();
 
   const [isGroupExpanded, setIsGroupExpanded] = useState(true);
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
   const getActorIcon = (type: string) => {
     switch (type) {
@@ -73,7 +78,7 @@ export const OutlinerPanel: React.FC = () => {
                 No elements in active template yet. Add shapes or text from left toolbar.
               </div>
             ) : (
-              characterParts.map((part) => {
+              characterParts.map((part, index) => {
                 const track = tracks.find((t) => t.partId === part.id);
                 const isSelected = part.id === selectedPartId;
                 const isVisible = track?.editVisible !== false;
@@ -81,9 +86,49 @@ export const OutlinerPanel: React.FC = () => {
                 return (
                   <div
                     key={part.id}
-                    className={`tree-node actor-node ${isSelected ? 'selected' : ''}`}
+                    className={`tree-node actor-node ${isSelected ? 'selected' : ''} ${draggedIdx === index ? 'dragging' : ''} ${dragOverIdx === index ? 'drag-over' : ''}`}
                     onClick={() => setSelectedPartId(part.id)}
+                    draggable={true}
+                    onDragStart={(e) => {
+                      setDraggedIdx(index);
+                      e.dataTransfer.effectAllowed = 'move';
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = 'move';
+                      if (dragOverIdx !== index) {
+                        setDragOverIdx(index);
+                      }
+                    }}
+                    onDragLeave={() => {
+                      if (dragOverIdx === index) {
+                        setDragOverIdx(null);
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggedIdx !== null && draggedIdx !== index) {
+                        reorderParts(draggedIdx, index);
+                      }
+                      setDraggedIdx(null);
+                      setDragOverIdx(null);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedIdx(null);
+                      setDragOverIdx(null);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                    }}
                   >
+                    <span title="Drag up or down to reorder layer depth" style={{ display: 'flex', alignItems: 'center', cursor: 'grab', marginRight: 4 }}>
+                      <GripVertical size={12} className="track-drag-grip" style={{ color: '#64748b' }} />
+                    </span>
+
                     {/* Eye Visibility Column */}
                     <div
                       className="col-eye"
@@ -92,6 +137,7 @@ export const OutlinerPanel: React.FC = () => {
                         if (track) toggleTrackEditVisibility(track.id);
                       }}
                       title={isVisible ? 'Visible on stage' : 'Hidden from stage'}
+                      style={{ cursor: 'pointer', marginRight: 6 }}
                     >
                       {isVisible ? (
                         <Eye size={12} className="text-teal" />
@@ -101,9 +147,9 @@ export const OutlinerPanel: React.FC = () => {
                     </div>
 
                     {/* Item Label Column */}
-                    <div className="col-label" style={{ paddingLeft: 18 }}>
+                    <div className="col-label" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                       {getActorIcon(part.type)}
-                      <span className="actor-name">
+                      <span className="actor-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {part.name
                           ? part.name
                               .split(' ')
@@ -111,6 +157,50 @@ export const OutlinerPanel: React.FC = () => {
                               .join(' ')
                           : part.name}
                       </span>
+                    </div>
+
+                    {/* Up / Down Move Action Buttons */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginLeft: 'auto' }} onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        disabled={index === 0}
+                        onClick={() => {
+                          if (index > 0) reorderParts(index, index - 1);
+                        }}
+                        title="Move Layer Up (Bring Forward)"
+                        style={{
+                          opacity: index === 0 ? 0.25 : 1,
+                          padding: '1px 3px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#94a3b8',
+                          cursor: index === 0 ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <ChevronUp size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={index === characterParts.length - 1}
+                        onClick={() => {
+                          if (index < characterParts.length - 1) reorderParts(index, index + 1);
+                        }}
+                        title="Move Layer Down (Send Backward)"
+                        style={{
+                          opacity: index === characterParts.length - 1 ? 0.25 : 1,
+                          padding: '1px 3px',
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#94a3b8',
+                          cursor: index === characterParts.length - 1 ? 'default' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <ChevronDown size={12} />
+                      </button>
                     </div>
                   </div>
                 );

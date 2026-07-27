@@ -3,8 +3,6 @@ import { useAnimator } from '../../context/AnimatorContext';
 import type { Transform } from '../../types/animator';
 import { PartRenderer } from './renderers/PartRenderer';
 import { TransformGizmo, getPartBounds, type ScaleMode } from './overlays/TransformGizmo';
-import { SkeletalBones } from './overlays/SkeletalBones';
-import { OnionSkinning } from './overlays/OnionSkinning';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { Sparkles } from 'lucide-react';
@@ -33,8 +31,6 @@ export const StageCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [showBones, setShowBones] = useState<boolean>(false);
-  const [showOnionSkin, setShowOnionSkin] = useState<boolean>(false);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | null>(null);
@@ -462,10 +458,6 @@ export const StageCanvas: React.FC = () => {
         <CanvasViewportToolbar
           showGrid={showGrid}
           setShowGrid={setShowGrid}
-          showBones={showBones}
-          setShowBones={setShowBones}
-          showOnionSkin={showOnionSkin}
-          setShowOnionSkin={setShowOnionSkin}
           zoomLevel={zoomLevel}
           setZoomLevel={setZoomLevel}
           setPanOffset={setPanOffset}
@@ -533,19 +525,6 @@ export const StageCanvas: React.FC = () => {
                 appMode={appMode}
               />
 
-              {/* ONION SKINNING */}
-              {appMode !== 'broadcast' && showOnionSkin && (
-                <OnionSkinning
-                  sortedParts={sortedParts}
-                  currentFrame={currentFrame}
-                  totalFrames={totalFrames}
-                  selectedPartId={selectedPartId}
-                  getComputedTransform={getComputedTransform}
-                  onSelect={setSelectedPartId}
-                  onStartTranslateDrag={startTranslateDragForPart}
-                />
-              )}
-
               {/* Character Parts Active Render (Clipped in Broadcast mode, unclipped & visible in Edit mode) */}
               <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
                 {sortedParts.map((part) => {
@@ -603,17 +582,6 @@ export const StageCanvas: React.FC = () => {
                 vectorEffect="non-scaling-stroke"
                 pointerEvents="none"
               />
-
-              {/* Skeletal Bone Hierarchy Links (Edit mode only) */}
-              {appMode !== 'broadcast' && showBones && (
-                <SkeletalBones
-                  characterParts={characterParts}
-                  selectedPartId={selectedPartId}
-                  currentFrame={currentFrame}
-                  zScale={zScale}
-                  getComputedTransform={getComputedTransform}
-                />
-              )}
 
               {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden) */}
               {appMode !== 'broadcast' && selectedPart && selectedTransform && (() => {

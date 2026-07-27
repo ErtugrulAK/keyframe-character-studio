@@ -273,12 +273,6 @@ export interface CustomMotionPreset {
 
 export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan';
 
-export interface PresetPose {
-  id: string;
-  name: string;
-  transforms: Record<string, Partial<Transform>>;
-}
-
 export interface AnimationProject {
   name: string;
   templateId?: string;

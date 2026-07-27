@@ -67,6 +67,11 @@ interface AnimatorContextType {
 
   selectedPartId: string | null;
   setSelectedPartId: (id: string | null) => void;
+  selectedPartIds: string[];
+  setSelectedPartIds: (ids: string[]) => void;
+  handleSelectPart: (id: string | null, isMulti?: boolean) => void;
+  focusModeNodeId: string | null;
+  setFocusModeNodeId: (id: string | null) => void;
   selectedTrackId: string | null;
   setSelectedTrackId: (id: string | null) => void;
   selectedKeyframeId: string | null;
@@ -105,7 +110,7 @@ interface AnimatorContextType {
   updateKeyframeFrame: (trackId: string, keyframeId: string, newFrame: number) => void;
   updateKeyframeEasing: (trackId: string, keyframeId: string, easing: EasingType) => void;
   updateKeyframeBezierPoints: (trackId: string, keyframeId: string, points: [number, number, number, number]) => void;
-  updateCurrentTransform: (newTransform: Partial<Transform>) => void;
+  updateCurrentTransform: (newTransform: Partial<Transform>, partIdOverride?: string) => void;
   toggleTrackVisibility: (trackId: string) => void;
   toggleTrackEditVisibility: (trackId: string) => void;
   toggleTrackLock: (trackId: string) => void;
@@ -115,6 +120,7 @@ interface AnimatorContextType {
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
+  updateCharacterPart: (partId: string, updates: Partial<CharacterPart>) => void;
   sceneTitle: string;
   setSceneTitle: (title: string) => void;
   projectTemplates: ProjectTemplate[];
@@ -447,6 +453,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [appMode, setAppMode] = useState<AppMode>('edit');
   const [broadcastState, setBroadcastState] = useState<Record<string, BroadcastObjectState>>({});
 
+  useEffect(() => {
+    if (appMode === 'broadcast') {
+      setIsPlaying(false);
+      setCurrentFrame(0);
+      setBroadcastState({});
+    }
+  }, [appMode]);
+
   const resetBroadcastState = useCallback(() => {
     setBroadcastState({});
   }, []);
@@ -500,8 +514,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (customPresetId) {
       const cp = customPresetsRef.current.find(p => p.id === customPresetId);
       if (cp) {
-        const isExit = cp.type === 'out' || cp.name.toLowerCase().includes('exit') || cp.name.toLowerCase().includes('out') || cp.name.toLowerCase().includes('çıkış');
-        const isEntrance = cp.type === 'in' || cp.name.toLowerCase().includes('enter') || cp.name.toLowerCase().includes('in') || cp.name.toLowerCase().includes('giriş');
+        const isExit = cp.type === 'out' || cp.name.toLowerCase().includes('exit') || cp.name.toLowerCase().includes('out');
+        const isEntrance = cp.type === 'in' || cp.name.toLowerCase().includes('enter') || cp.name.toLowerCase().includes('in');
 
         if (isExit) {
           setBroadcastState(prev => ({
@@ -662,6 +676,33 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
 
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
+  const [selectedPartIds, setSelectedPartIds] = useState<string[]>([]);
+
+  const handleSelectPart = useCallback((id: string | null, isMulti: boolean = false) => {
+    if (!id) {
+      setSelectedPartId(null);
+      setSelectedPartIds([]);
+      return;
+    }
+    
+    if (isMulti) {
+      setSelectedPartIds(prev => {
+        if (prev.includes(id)) {
+          const newIds = prev.filter(p => p !== id);
+          setSelectedPartId(newIds.length > 0 ? newIds[newIds.length - 1] : null);
+          return newIds;
+        } else {
+          setSelectedPartId(id);
+          return [...prev, id];
+        }
+      });
+    } else {
+      setSelectedPartId(id);
+      setSelectedPartIds([id]);
+    }
+  }, []);
+
+  const [focusModeNodeId, setFocusModeNodeId] = useState<string | null>(null);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [selectedKeyframeId, setSelectedKeyframeId] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<ToolType>('select');
@@ -1289,12 +1330,48 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     );
   };
 
-  const updateCurrentTransform = (newTransform: Partial<Transform>) => {
-    if (!selectedPartId) return;
-    const track = tracks.find((t) => t.partId === selectedPartId);
-    if (!track) return;
+  const updateCurrentTransform = (newTransform: Partial<Transform>, partIdOverride?: string) => {
+    const targetPartId = partIdOverride || selectedPartId;
+    if (!targetPartId) return;
+
+    const partsToUpdate = (!partIdOverride && selectedPartIds.length > 1)
+      ? selectedPartIds
+      : [targetPartId];
 
     const activeTmpl = activeTemplateId || 'Sequence';
+
+    // If updating multiple parts via inspector delta
+    if (!partIdOverride && selectedPartIds.length > 1) {
+      const primaryPartT = getComputedTransform(targetPartId, currentFrame);
+      
+      const deltaX = newTransform.x !== undefined ? newTransform.x - primaryPartT.x : 0;
+      const deltaY = newTransform.y !== undefined ? newTransform.y - primaryPartT.y : 0;
+      const deltaRot = newTransform.rotation !== undefined ? newTransform.rotation - primaryPartT.rotation : 0;
+      const deltaScaleX = newTransform.scaleX !== undefined ? newTransform.scaleX - primaryPartT.scaleX : 0;
+      const deltaScaleY = newTransform.scaleY !== undefined ? newTransform.scaleY - primaryPartT.scaleY : 0;
+      const deltaOpacity = newTransform.opacity !== undefined ? newTransform.opacity - primaryPartT.opacity : 0;
+
+      partsToUpdate.forEach(id => {
+        const t = getComputedTransform(id, currentFrame);
+        const relativeUpdate: Partial<Transform> = {};
+        if (newTransform.x !== undefined) relativeUpdate.x = t.x + deltaX;
+        if (newTransform.y !== undefined) relativeUpdate.y = t.y + deltaY;
+        if (newTransform.rotation !== undefined) relativeUpdate.rotation = t.rotation + deltaRot;
+        if (newTransform.scaleX !== undefined) relativeUpdate.scaleX = t.scaleX + deltaScaleX;
+        if (newTransform.scaleY !== undefined) relativeUpdate.scaleY = t.scaleY + deltaScaleY;
+        if (newTransform.opacity !== undefined) relativeUpdate.opacity = t.opacity + deltaOpacity;
+        
+        applyTransformToPart(id, relativeUpdate, activeTmpl);
+      });
+      return;
+    }
+
+    applyTransformToPart(targetPartId, newTransform, activeTmpl);
+  };
+
+  const applyTransformToPart = (id: string, newTransform: Partial<Transform>, activeTmpl: string) => {
+    const track = tracks.find((t) => t.partId === id);
+    if (!track) return;
     const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
     const hasActiveKfOnFrame = activeKfs.some((k) => k.frame === currentFrame);
 
@@ -1315,14 +1392,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } else if (activeKfs.length > 0) {
       setCharacterParts((prev) =>
         prev.map((p) =>
-          p.id === selectedPartId ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
+          p.id === id ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
         )
       );
       addKeyframeToTrack(track.id, currentFrame);
     } else {
       setCharacterParts((prev) =>
         prev.map((p) =>
-          p.id === selectedPartId ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
+          p.id === id ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
         )
       );
     }
@@ -1651,6 +1728,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSelectedPartId(partId);
   };
 
+  const updateCharacterPart = (partId: string, updates: Partial<CharacterPart>) => {
+    setCharacterParts((prev) => prev.map((p) => (p.id === partId ? { ...p, ...updates } : p)));
+  };
+
   const updatePartMedia = (partId: string, url: string, type: 'image' | 'video') => {
     setCharacterParts((prev) =>
       prev.map((p) => (p.id === partId ? { ...p, innerMediaUrl: url, innerMediaType: type } : p))
@@ -1719,6 +1800,11 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setProjectResolution,
         selectedPartId,
         setSelectedPartId,
+        selectedPartIds,
+        setSelectedPartIds,
+        handleSelectPart,
+        focusModeNodeId,
+        setFocusModeNodeId,
         selectedTrackId,
         setSelectedTrackId,
         selectedKeyframeId,
@@ -1756,6 +1842,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         resetProject,
         addCustomPart,
         updatePartMedia,
+        updateCharacterPart,
         deletePart,
         copySelectedPart,
         pasteCopiedPart,

@@ -217,6 +217,10 @@ export interface CharacterPart {
   // ── Feature 8: Canva-Style Shape Masking ──
   innerMediaUrl?: string;
   innerMediaType?: 'image' | 'video';
+  maskOffsetX?: number;
+  maskOffsetY?: number;
+  maskScale?: number;
+  maskRotation?: number;
 
   fontFamily?: string;
 

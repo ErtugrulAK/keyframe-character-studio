@@ -12,6 +12,7 @@ export const LiveDirectorPanel: React.FC = () => {
     setCurrentFrame,
     setIsPlaying,
     setIsLooping,
+    triggerAllBroadcastIn,
   } = useAnimator();
 
   return (
@@ -48,6 +49,7 @@ export const LiveDirectorPanel: React.FC = () => {
                   setIsLooping(false);
                   setCurrentFrame(0);
                   setIsPlaying(true);
+                  triggerAllBroadcastIn();
                 }}
                 title={`Click to play "${tmpl.name}" animation on stage`}
                 style={{

@@ -1,1 +1,1 @@
-feat(canvas): render boundary coordinate labels on artboard limit borders  
+refactor(canvas): remove Turkish text and px suffix from boundary coordinate labels  

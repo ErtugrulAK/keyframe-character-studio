@@ -28,13 +28,17 @@ const getStrokeDashProps = (part: CharacterPart, totalPerimeter: number) => {
 };
 
 export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMedia }: ShapePartProps): React.ReactNode => {
+  const isCustomStroke = Boolean(part.strokeColor && part.strokeColor !== '#101218' && part.strokeColor !== 'none' && part.strokeColor !== 'transparent');
+  const hasStroke = (part.strokeProgress === undefined || part.strokeProgress > 0) && (!part.innerMediaUrl || isCustomStroke);
+  const strokeToUse = hasStroke ? stroke : (isSelected ? '#38bdf8' : 'none');
+
   switch (part.type) {
     case 'custom_star':
       return (
         <polygon
           points="0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10"
           fill={fill}
-          stroke={stroke}
+          stroke={strokeToUse}
           strokeWidth={isSelected ? 2 : 1.5}
           vectorEffect="non-scaling-stroke"
           {...getStrokeDashProps(part, 300)}
@@ -64,7 +68,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
             cy={0}
             r={30}
             fill="none"
-            stroke={stroke}
+            stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
             {...getStrokeDashProps(part, 188.5)}
@@ -98,7 +102,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
             height={60}
             rx={part.borderRadius ?? 0}
             fill="none"
-            stroke={stroke}
+            stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
             {...getStrokeDashProps(part, 240)}
@@ -132,7 +136,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
             height={60}
             rx={part.borderRadius ?? 0}
             fill="none"
-            stroke={stroke}
+            stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
             {...getStrokeDashProps(part, 360)}
@@ -162,7 +166,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           <polygon
             points="0,-35 35,25 -35,25"
             fill="none"
-            stroke={stroke}
+            stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
             {...getStrokeDashProps(part, 209)}

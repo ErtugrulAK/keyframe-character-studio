@@ -62,22 +62,6 @@ export interface Track {
 }
 
 export type BodyPartType = 
-  | 'head' 
-  | 'hair'
-  | 'torso' 
-  | 'upper_arm_l' 
-  | 'lower_arm_l' 
-  | 'hand_l'
-  | 'upper_arm_r' 
-  | 'lower_arm_r' 
-  | 'hand_r'
-  | 'upper_leg_l' 
-  | 'lower_leg_l' 
-  | 'foot_l'
-  | 'upper_leg_r' 
-  | 'lower_leg_r' 
-  | 'foot_r'
-  | 'accessory'
   | 'custom_star'
   | 'custom_circle'
   | 'custom_box'
@@ -91,7 +75,7 @@ export type BodyPartType =
   | 'custom_image'
   | 'custom_video'
   | 'mograph_cloner'   // MoGraph Cloner
-  | 'particle_system'; // Particle System
+  | 'particle_system'; // Particle System // Particle System
 
 // ─── Feature 1: Trim Path / Stroke Animation ────────────────────────────────
 // strokeProgress 0..1 → how much of the outline is drawn

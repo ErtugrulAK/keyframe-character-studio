@@ -75,13 +75,9 @@ export const HeaderBar: React.FC = () => {
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (text) {
-        try {
-          const success = importProject(text, fileNameWithoutExt);
-          if (success) showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
-          else showToast('Invalid project file format!', 'error');
-        } catch {
-          showToast('Failed to read JSON file or format error!', 'error');
-        }
+        const success = importProject(text, fileNameWithoutExt);
+        if (success) showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
+        else showToast('Invalid project file format!', 'error');
       }
     };
     reader.readAsText(file);

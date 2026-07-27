@@ -432,21 +432,15 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => { tracksRef.current = tracks; }, [tracks]);
 
   const [customPresets] = useState<CustomMotionPreset[]>(() => {
-    try {
-      const saved = localStorage.getItem('keyframe_custom_motion_presets');
-      return saved ? JSON.parse(saved) : DEFAULT_INITIAL_PRESETS;
-    } catch {
-      return DEFAULT_INITIAL_PRESETS;
-    }
+    const saved = localStorage.getItem('keyframe_custom_motion_presets');
+    return saved ? JSON.parse(saved) : DEFAULT_INITIAL_PRESETS;
   });
 
   const customPresetsRef = useRef(customPresets);
   useEffect(() => { customPresetsRef.current = customPresets; }, [customPresets]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('keyframe_custom_motion_presets', JSON.stringify(customPresets));
-    } catch { }
+    localStorage.setItem('keyframe_custom_motion_presets', JSON.stringify(customPresets));
   }, [customPresets]);
 
   // Broadcast Mode State
@@ -742,7 +736,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
       if (saved) {
         const parsed: AnimationProject & { lastSavedTime?: string } = JSON.parse(saved);
-        const hasLegacyStickman = parsed.characterParts?.some((p) => p.type === 'head' || p.type === 'torso');
+        const hasLegacyStickman = parsed.characterParts?.some((p) => (p.type as string) === 'head' || (p.type as string) === 'torso');
         if (parsed.tracks && parsed.characterParts && !hasLegacyStickman) {
           if (parsed.projectResolution) setProjectResolution(parsed.projectResolution);
           setTracks(parsed.tracks.map(migrateTrack));

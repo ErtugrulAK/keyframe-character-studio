@@ -360,75 +360,71 @@ export const StageCanvas: React.FC = () => {
     if (appMode === 'broadcast') return;
     setIsDropTargetHover(false);
 
-    try {
-      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
 
-      // Handle Files (Canva-style Masking or New Media)
-      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        const file = e.dataTransfer.files[0];
-        const isVideo = file.type.startsWith('video/');
-        const isImage = file.type.startsWith('image/');
+    // Handle Files (Canva-style Masking or New Media)
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      const isVideo = file.type.startsWith('video/');
+      const isImage = file.type.startsWith('image/');
+      
+      if (isVideo || isImage) {
+        const url = URL.createObjectURL(file);
         
-        if (isVideo || isImage) {
-          const url = URL.createObjectURL(file);
+        // Check if dropped over an existing shape
+        let targetShapeId = null;
+        for (let i = characterParts.length - 1; i >= 0; i--) {
+          const part = characterParts[i];
+          const transform = getComputedTransform(part.id, currentFrame);
           
-          // Check if dropped over an existing shape
-          let targetShapeId = null;
-          for (let i = characterParts.length - 1; i >= 0; i--) {
-            const part = characterParts[i];
-            const transform = getComputedTransform(part.id, currentFrame);
-            
-            const dx = svgX - (300 + transform.x);
-            const dy = svgY - (240 + transform.y);
-            const rad = -transform.rotation * Math.PI / 180;
-            const localX = dx * Math.cos(rad) - dy * Math.sin(rad);
-            const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
-            const unscaledX = localX / Math.abs(transform.scaleX || 1);
-            const unscaledY = localY / Math.abs(transform.scaleY || 1);
-            
-            const { halfW, halfH } = getPartBounds(part);
-            
-            if (Math.abs(unscaledX) <= halfW && Math.abs(unscaledY) <= halfH) {
-              // Only mask if it's a shape type
-              if (part.type === 'custom_rect' || part.type === 'custom_card' || part.type === 'custom_banner') {
-                targetShapeId = part.id;
-                break;
-              }
+          const dx = svgX - (300 + transform.x);
+          const dy = svgY - (240 + transform.y);
+          const rad = -transform.rotation * Math.PI / 180;
+          const localX = dx * Math.cos(rad) - dy * Math.sin(rad);
+          const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
+          const unscaledX = localX / Math.abs(transform.scaleX || 1);
+          const unscaledY = localY / Math.abs(transform.scaleY || 1);
+          
+          const { halfW, halfH } = getPartBounds(part);
+          
+          if (Math.abs(unscaledX) <= halfW && Math.abs(unscaledY) <= halfH) {
+            // Only mask if it's a shape type
+            if (part.type === 'custom_rect' || part.type === 'custom_card' || part.type === 'custom_banner') {
+              targetShapeId = part.id;
+              break;
             }
           }
-
-          if (targetShapeId) {
-            updatePartMedia(targetShapeId, url, isVideo ? 'video' : 'image');
-          } else {
-            // Drop in empty area -> create new media part
-            addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
-              baseTransform: { x: Math.round(svgX - 300), y: Math.round(svgY - 240), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
-              innerMediaUrl: url,
-              innerMediaType: isVideo ? 'video' : 'image'
-            });
-          }
-          return;
         }
+
+        if (targetShapeId) {
+          updatePartMedia(targetShapeId, url, isVideo ? 'video' : 'image');
+        } else {
+          // Drop in empty area -> create new media part
+          addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
+            baseTransform: { x: Math.round(svgX - 300), y: Math.round(svgY - 240), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+            innerMediaUrl: url,
+            innerMediaType: isVideo ? 'video' : 'image'
+          });
+        }
+        return;
       }
-
-      // Handle UI Panel JSON drops
-      const rawData = e.dataTransfer.getData('application/json');
-      if (!rawData) return;
-      const data = JSON.parse(rawData);
-
-      addCustomPart(data.type, data.name || 'Dropped Element', {
-        baseTransform: {
-          x: Math.round(svgX - 300),
-          y: Math.round(svgY - 240),
-          rotation: 0,
-          scaleX: 1,
-          scaleY: 1,
-          opacity: 1,
-        },
-      });
-    } catch (err) {
-      console.error('Error handling dropped object on canvas:', err);
     }
+
+    // Handle UI Panel JSON drops
+    const rawData = e.dataTransfer.getData('application/json');
+    if (!rawData) return;
+    const data = JSON.parse(rawData);
+
+    addCustomPart(data.type, data.name || 'Dropped Element', {
+      baseTransform: {
+        x: Math.round(svgX - 300),
+        y: Math.round(svgY - 240),
+        rotation: 0,
+        scaleX: 1,
+        scaleY: 1,
+        opacity: 1,
+      },
+    });
   };
 
   const sortedParts = [...characterParts].sort((a, b) => a.zIndex - b.zIndex);

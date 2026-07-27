@@ -86,9 +86,9 @@ export const renderMediaPart = ({ part, fill, isSelected, overrideMaskShape }: M
           ) : (
             <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill={fill} />
           )
-        ) : part.imageUrl ? (
+        ) : (part.imageUrl || part.innerMediaUrl) ? (
           <image
-            href={part.imageUrl}
+            href={part.imageUrl || part.innerMediaUrl}
             x={startX}
             y={startY}
             width={fullW}

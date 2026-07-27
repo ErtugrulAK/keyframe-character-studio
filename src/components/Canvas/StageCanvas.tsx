@@ -402,8 +402,7 @@ export const StageCanvas: React.FC = () => {
           // Drop in empty area -> create new media part
           addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
             baseTransform: { x: Math.round(svgX - 300), y: Math.round(svgY - 240), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
-            innerMediaUrl: url,
-            innerMediaType: isVideo ? 'video' : 'image'
+            ...(isVideo ? { videoUrl: url } : { imageUrl: url }),
           });
         }
         return;

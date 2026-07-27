@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Plus, Link, Unlink, Maximize2, Move } from 'lucide-react';
+import { Activity, Plus, Link, Unlink, Maximize2, Move, Sun } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 const getTextMetrics = (text: string, fontSize: number): { halfW: number; halfH: number } => {
@@ -188,15 +188,66 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         </div>
 
-        <div className="param-row">
-          <span className="param-label text-gold">OPACITY</span>
-          <SmartNumberInput
-            value={transform.opacity}
-            min={0}
-            max={1}
-            step={0.1}
-            onChange={(val) => updateCurrentTransform({ opacity: val })}
-          />
+      </div>
+
+      {/* ── OPACITY & TRANSPARENCY CONTROL CARD ── */}
+      <div className="panel-card" style={{ marginTop: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
+            <Sun size={13} /> OPACITY & TRANSPARENCY
+          </span>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b', background: 'rgba(245, 158, 11, 0.12)', padding: '2px 6px', borderRadius: 4, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+            {Math.round(transform.opacity * 100)}%
+          </span>
+        </div>
+
+        <div style={{ background: '#0e1118', padding: '8px 10px', borderRadius: 6, border: '1px solid #232836', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={transform.opacity}
+              onChange={(e) => updateCurrentTransform({ opacity: parseFloat(e.target.value) })}
+              style={{ flex: 1, cursor: 'pointer', accentColor: '#f59e0b' }}
+            />
+            <div style={{ width: 55 }}>
+              <SmartNumberInput
+                value={transform.opacity}
+                min={0}
+                max={1}
+                step={0.05}
+                onChange={(val) => updateCurrentTransform({ opacity: val })}
+              />
+            </div>
+          </div>
+
+          {/* Quick Presets */}
+          <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
+            {[0, 0.25, 0.50, 0.75, 1.0].map((op) => (
+              <button
+                key={`op-preset-${op}`}
+                type="button"
+                className="btn-secondary"
+                style={{
+                  flex: 1,
+                  height: 22,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: 0,
+                  textAlign: 'center',
+                  borderRadius: 4,
+                  color: Math.abs(transform.opacity - op) < 0.02 ? '#f59e0b' : undefined,
+                  borderColor: Math.abs(transform.opacity - op) < 0.02 ? 'rgba(245, 158, 11, 0.5)' : undefined,
+                  background: Math.abs(transform.opacity - op) < 0.02 ? 'rgba(245, 158, 11, 0.12)' : undefined,
+                }}
+                onClick={() => updateCurrentTransform({ opacity: op })}
+              >
+                {Math.round(op * 100)}%
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

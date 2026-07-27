@@ -10,7 +10,7 @@ interface MediaPartProps {
   overrideMaskShape?: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart';
 }
 
-export const renderMediaPart = ({ part, fill, stroke, isSelected, overrideMaskShape }: MediaPartProps): React.ReactNode => {
+export const renderMediaPart = ({ part, fill, isSelected, overrideMaskShape }: MediaPartProps): React.ReactNode => {
   const isVideo = part.type === 'custom_video';
   const fullW = isVideo ? 200 : 180;
   const fullH = isVideo ? 120 : 120;
@@ -100,17 +100,19 @@ export const renderMediaPart = ({ part, fill, stroke, isSelected, overrideMaskSh
         )}
       </g>
 
-      <rect
-        x={startX}
-        y={startY}
-        width={fullW}
-        height={fullH}
-        rx={8}
-        fill="none"
-        stroke={stroke}
-        strokeWidth={isSelected ? 2 : 1.5}
-        vectorEffect="non-scaling-stroke"
-      />
+      {isSelected && (
+        <rect
+          x={startX}
+          y={startY}
+          width={fullW}
+          height={fullH}
+          rx={8}
+          fill="none"
+          stroke="#38bdf8"
+          strokeWidth={2}
+          vectorEffect="non-scaling-stroke"
+        />
+      )}
     </g>
   );
 };

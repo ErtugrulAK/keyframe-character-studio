@@ -1,1 +1,1 @@
-feat(inspector): make all 4 control points and corners 100 percent independent with fixed opposite anchors  
+feat(inspector): allow zero-width and zero-height point collapsing for disappearing animation effects  

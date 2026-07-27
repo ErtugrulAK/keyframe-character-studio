@@ -2,7 +2,36 @@ import React, { useState } from 'react';
 import { Activity, Plus, Link, Unlink, Maximize2, Move } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
+const getTextMetrics = (text: string, fontSize: number): { halfW: number; halfH: number } => {
+  if (!text) return { halfW: 20, halfH: 12 };
+  let totalWidth = 0;
+  const fontMultiplier = 0.48;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    if (char === ' ') {
+      totalWidth += fontSize * (fontMultiplier * 0.55);
+    } else if (/[ilIjtf1!.,:;\'\|()\[\]]/.test(char)) {
+      totalWidth += fontSize * (fontMultiplier * 0.55);
+    } else if (/[WMwm@#%QGO]/.test(char)) {
+      totalWidth += fontSize * (fontMultiplier * 1.35);
+    } else if (/[A-Z]/.test(char)) {
+      totalWidth += fontSize * (fontMultiplier * 1.15);
+    } else {
+      totalWidth += fontSize * fontMultiplier;
+    }
+  }
+  const halfW = Math.max(20, (totalWidth + 24) / 2);
+  const halfH = Math.max(14, (fontSize * 0.9 + 12) / 2);
+  return { halfW, halfH };
+};
+
 const getPartBaseBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
+  if (part.width && part.height) {
+    return { halfW: part.width / 2, halfH: part.height / 2 };
+  }
+  if (part.textValue || (part.type as string) === 'text' || (part.type as string) === 'heading' || (part.type as string) === 'title') {
+    return getTextMetrics(part.textValue || part.name || 'Text', part.fontSize || 24);
+  }
   let halfW = 32;
   let halfH = 32;
 
@@ -223,7 +252,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             </div>
 
             {pointMode === 'edge' ? (
-              /* ── 4 EDGE MIDPOINTS (SUPPORT ZERO-WIDTH / ZERO-HEIGHT COLLAPSING) ── */
+              /* ── 4 EDGE MIDPOINTS (STRICT OPPOSITE ANCHOR ISOLATION) ── */
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {/* LEFT EDGE POINT */}
                 <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
@@ -241,9 +270,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetLeftX) => {
                         const fixedRightX = cx + currentHalfW;
-                        const newWidth = Math.max(0, fixedRightX - targetLeftX);
+                        const validLeftX = Math.min(fixedRightX, targetLeftX);
+                        const newWidth = fixedRightX - validLeftX;
                         const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                        const newCx = Math.round((targetLeftX + fixedRightX) / 2);
+                        const newCx = Math.round((validLeftX + fixedRightX) / 2);
                         updateCurrentTransform({ scaleX: newScaleX, x: newCx });
                       }}
                     />
@@ -276,9 +306,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetRightX) => {
                         const fixedLeftX = cx - currentHalfW;
-                        const newWidth = Math.max(0, targetRightX - fixedLeftX);
+                        const validRightX = Math.max(fixedLeftX, targetRightX);
+                        const newWidth = validRightX - fixedLeftX;
                         const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                        const newCx = Math.round((fixedLeftX + targetRightX) / 2);
+                        const newCx = Math.round((fixedLeftX + validRightX) / 2);
                         updateCurrentTransform({ scaleX: newScaleX, x: newCx });
                       }}
                     />
@@ -321,9 +352,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetTopY) => {
                         const fixedBottomY = cy - currentHalfH;
-                        const newHeight = Math.max(0, targetTopY - fixedBottomY);
+                        const validTopY = Math.max(fixedBottomY, targetTopY);
+                        const newHeight = validTopY - fixedBottomY;
                         const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                        const newCy = Math.round((targetTopY + fixedBottomY) / 2);
+                        const newCy = Math.round((validTopY + fixedBottomY) / 2);
                         updateCurrentTransform({ scaleY: newScaleY, y: -newCy });
                       }}
                     />
@@ -356,9 +388,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetBottomY) => {
                         const fixedTopY = cy + currentHalfH;
-                        const newHeight = Math.max(0, fixedTopY - targetBottomY);
+                        const validBottomY = Math.min(fixedTopY, targetBottomY);
+                        const newHeight = fixedTopY - validBottomY;
                         const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                        const newCy = Math.round((fixedTopY + targetBottomY) / 2);
+                        const newCy = Math.round((fixedTopY + validBottomY) / 2);
                         updateCurrentTransform({ scaleY: newScaleY, y: -newCy });
                       }}
                     />
@@ -366,7 +399,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                 </div>
               </div>
             ) : (
-              /* ── 4 CORNER POINTS (TL, TR, BR, BL) (SUPPORT ZERO COLLAPSING) ── */
+              /* ── 4 CORNER POINTS (TL, TR, BR, BL) (STRICT OPPOSITE ANCHOR ISOLATION) ── */
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {/* TOP-LEFT (TL) */}
                 <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
@@ -382,9 +415,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetTLX) => {
                         const fixedRightX = cx + currentHalfW;
-                        const newWidth = Math.max(0, fixedRightX - targetTLX);
+                        const validTLX = Math.min(fixedRightX, targetTLX);
+                        const newWidth = fixedRightX - validTLX;
                         const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                        const newCx = Math.round((targetTLX + fixedRightX) / 2);
+                        const newCx = Math.round((validTLX + fixedRightX) / 2);
                         updateCurrentTransform({ scaleX: newScaleX, x: newCx });
                       }}
                     />
@@ -398,9 +432,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetTLY) => {
                         const fixedBottomY = cy - currentHalfH;
-                        const newHeight = Math.max(0, targetTLY - fixedBottomY);
+                        const validTLY = Math.max(fixedBottomY, targetTLY);
+                        const newHeight = validTLY - fixedBottomY;
                         const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                        const newCy = Math.round((targetTLY + fixedBottomY) / 2);
+                        const newCy = Math.round((validTLY + fixedBottomY) / 2);
                         updateCurrentTransform({ scaleY: newScaleY, y: -newCy });
                       }}
                     />
@@ -421,9 +456,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetTRX) => {
                         const fixedLeftX = cx - currentHalfW;
-                        const newWidth = Math.max(0, targetTRX - fixedLeftX);
+                        const validTRX = Math.max(fixedLeftX, targetTRX);
+                        const newWidth = validTRX - fixedLeftX;
                         const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                        const newCx = Math.round((fixedLeftX + targetTRX) / 2);
+                        const newCx = Math.round((fixedLeftX + validTRX) / 2);
                         updateCurrentTransform({ scaleX: newScaleX, x: newCx });
                       }}
                     />
@@ -437,9 +473,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetTRY) => {
                         const fixedBottomY = cy - currentHalfH;
-                        const newHeight = Math.max(0, targetTRY - fixedBottomY);
+                        const validTRY = Math.max(fixedBottomY, targetTRY);
+                        const newHeight = validTRY - fixedBottomY;
                         const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                        const newCy = Math.round((targetTRY + fixedBottomY) / 2);
+                        const newCy = Math.round((validTRY + fixedBottomY) / 2);
                         updateCurrentTransform({ scaleY: newScaleY, y: -newCy });
                       }}
                     />
@@ -460,9 +497,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetBLX) => {
                         const fixedRightX = cx + currentHalfW;
-                        const newWidth = Math.max(0, fixedRightX - targetBLX);
+                        const validBLX = Math.min(fixedRightX, targetBLX);
+                        const newWidth = fixedRightX - validBLX;
                         const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                        const newCx = Math.round((targetBLX + fixedRightX) / 2);
+                        const newCx = Math.round((validBLX + fixedRightX) / 2);
                         updateCurrentTransform({ scaleX: newScaleX, x: newCx });
                       }}
                     />
@@ -476,9 +514,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetBLY) => {
                         const fixedTopY = cy + currentHalfH;
-                        const newHeight = Math.max(0, fixedTopY - targetBLY);
+                        const validBLY = Math.min(fixedTopY, targetBLY);
+                        const newHeight = fixedTopY - validBLY;
                         const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                        const newCy = Math.round((fixedTopY + targetBLY) / 2);
+                        const newCy = Math.round((fixedTopY + validBLY) / 2);
                         updateCurrentTransform({ scaleY: newScaleY, y: -newCy });
                       }}
                     />
@@ -499,9 +538,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetBRX) => {
                         const fixedLeftX = cx - currentHalfW;
-                        const newWidth = Math.max(0, targetBRX - fixedLeftX);
+                        const validBRX = Math.max(fixedLeftX, targetBRX);
+                        const newWidth = validBRX - fixedLeftX;
                         const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                        const newCx = Math.round((fixedLeftX + targetBRX) / 2);
+                        const newCx = Math.round((fixedLeftX + validBRX) / 2);
                         updateCurrentTransform({ scaleX: newScaleX, x: newCx });
                       }}
                     />
@@ -515,9 +555,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                       precision={2}
                       onChange={(targetBRY) => {
                         const fixedTopY = cy + currentHalfH;
-                        const newHeight = Math.max(0, fixedTopY - targetBRY);
+                        const validBRY = Math.min(fixedTopY, targetBRY);
+                        const newHeight = fixedTopY - validBRY;
                         const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                        const newCy = Math.round((fixedTopY + targetBRY) / 2);
+                        const newCy = Math.round((fixedTopY + validBRY) / 2);
                         updateCurrentTransform({ scaleY: newScaleY, y: -newCy });
                       }}
                     />

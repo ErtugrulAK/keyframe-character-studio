@@ -1,1 +1,1 @@
-feat(inspector): allow zero-width and zero-height point collapsing for disappearing animation effects  
+fix(inspector): strictly isolate control point edits so opposite points never jump or spill over for all elements including text  

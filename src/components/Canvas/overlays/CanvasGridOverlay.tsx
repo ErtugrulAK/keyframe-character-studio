@@ -88,6 +88,61 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
             strokeWidth={1.5 * zScale}
           />
         ))}
+
+        {/* Boundary Coordinate Text Labels (Top, Bottom, Left, Right) */}
+        {/* Top Edge Label */}
+        <text
+          x={300}
+          y={artY - 6 * zScale}
+          fill="#38bdf8"
+          fontSize={11 * zScale}
+          fontWeight="700"
+          textAnchor="middle"
+          style={{ userSelect: 'none', pointerEvents: 'none' }}
+        >
+          TOP / ÜST (Y: +{height / 2}px | POS Y: +{(height / 200).toFixed(2)})
+        </text>
+
+        {/* Bottom Edge Label */}
+        <text
+          x={300}
+          y={artY + height + 14 * zScale}
+          fill="#38bdf8"
+          fontSize={11 * zScale}
+          fontWeight="700"
+          textAnchor="middle"
+          style={{ userSelect: 'none', pointerEvents: 'none' }}
+        >
+          BOTTOM / ALT (Y: -{height / 2}px | POS Y: -{(height / 200).toFixed(2)})
+        </text>
+
+        {/* Left Edge Label */}
+        <text
+          x={artX - 8 * zScale}
+          y={240}
+          fill="#38bdf8"
+          fontSize={11 * zScale}
+          fontWeight="700"
+          textAnchor="end"
+          dominantBaseline="middle"
+          style={{ userSelect: 'none', pointerEvents: 'none' }}
+        >
+          LEFT / SOL (X: -{width / 2}px | POS X: -{(width / 200).toFixed(2)})
+        </text>
+
+        {/* Right Edge Label */}
+        <text
+          x={artX + width + 8 * zScale}
+          y={240}
+          fill="#38bdf8"
+          fontSize={11 * zScale}
+          fontWeight="700"
+          textAnchor="start"
+          dominantBaseline="middle"
+          style={{ userSelect: 'none', pointerEvents: 'none' }}
+        >
+          RIGHT / SAĞ (X: +{width / 2}px | POS X: +{(width / 200).toFixed(2)})
+        </text>
       </g>
 
       {/* Origin Center Grid Axes */}

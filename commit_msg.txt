@@ -1,1 +1,1 @@
-fix(canvas): smooth right-click panning with RAF and align grid pattern to artboard boundaries without half-squares  
+feat(canvas): render boundary coordinate labels on artboard limit borders  

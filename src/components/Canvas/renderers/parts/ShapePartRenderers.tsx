@@ -54,7 +54,6 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           )}
           {part.innerMediaUrl ? (
             <g clipPath={`url(#${clipId})`}>
-              <circle cx={0} cy={0} r={30} fill={fill} />
               {renderInnerMedia(60, 60, -30, -30)}
             </g>
           ) : (
@@ -87,7 +86,6 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           )}
           {part.innerMediaUrl ? (
             <g clipPath={`url(#${clipId})`}>
-              <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill={fill} />
               {renderInnerMedia(60, 60, -30, -30)}
             </g>
           ) : (
@@ -122,7 +120,6 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           )}
           {part.innerMediaUrl ? (
             <g clipPath={`url(#${clipId})`}>
-              <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill={fill} />
               {renderInnerMedia(120, 60, -60, -30)}
             </g>
           ) : (
@@ -157,7 +154,6 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           )}
           {part.innerMediaUrl ? (
             <g clipPath={`url(#${clipId})`}>
-              <polygon points="0,-35 35,25 -35,25" fill={fill} />
               {renderInnerMedia(70, 60, -35, -35)}
             </g>
           ) : (

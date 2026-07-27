@@ -1,1 +1,0 @@
-feat(inspector): add 4 Edge Control Points panel to TransformTab  

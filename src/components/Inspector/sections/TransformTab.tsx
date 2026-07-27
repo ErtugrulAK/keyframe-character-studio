@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Activity, Plus, Link, Unlink, Maximize2, Move, Sun } from 'lucide-react';
+import { Activity, Link, Unlink, Maximize2, Move, Sun } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 const getTextMetrics = (text: string, fontSize: number): { halfW: number; halfH: number } => {
@@ -124,7 +124,7 @@ interface TransformTabProps {
   selectedPart: CharacterPart;
   transform: Transform;
   currentFrame: number;
-  addKeyframeForSelected: () => void;
+  addKeyframeForSelected?: () => void;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
   handleZIndexChange?: (zIndex: number) => void;
@@ -134,7 +134,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   selectedPart,
   transform,
   currentFrame,
-  addKeyframeForSelected,
   updateCurrentTransform,
   handleZIndexChange,
 }) => {
@@ -148,13 +147,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <Activity size={13} />
           <span>TRANSFORM (FRAME {currentFrame})</span>
         </div>
-        <button
-          className="btn-secondary add-kf-prop-btn"
-          onClick={addKeyframeForSelected}
-          title="Add explicit keyframe at current frame for selected object"
-        >
-          <Plus size={12} className="text-gold" /> Keyframe
-        </button>
       </div>
 
       <div className="transform-param-grid">

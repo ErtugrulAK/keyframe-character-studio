@@ -1,6 +1,23 @@
 import React, { useState } from 'react';
-import { Activity, Zap, Plus, Link, Unlink, Maximize2 } from 'lucide-react';
+import { Activity, Zap, Plus, Link, Unlink, Maximize2, Move } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
+
+export const getPartBaseBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
+  let halfW = 32;
+  let halfH = 32;
+
+  switch (part.type) {
+    case 'custom_card': halfW = 90; halfH = 50; break;
+    case 'custom_rect': halfW = 60; halfH = 30; break;
+    case 'custom_banner': halfW = 80; halfH = 25; break;
+    case 'custom_image':
+    case 'custom_video':
+      halfW = part.type === 'custom_video' ? 100 : 90;
+      halfH = 60;
+      break;
+  }
+  return { halfW, halfH };
+};
 
 interface SmartNumberInputProps {
   value: number;
@@ -150,6 +167,116 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         </div>
       </div>
+
+      {/* ── 4 EDGE CONTROL POINTS (BOUNDING HANDLES) ── */}
+      {(() => {
+        const { halfW: baseHalfW, halfH: baseHalfH } = getPartBaseBounds(selectedPart);
+        const currentHalfW = Math.round(baseHalfW * transform.scaleX);
+        const currentHalfH = Math.round(baseHalfH * transform.scaleY);
+
+        return (
+          <div className="panel-card" style={{ marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
+                <Move size={13} /> 4 EDGE CONTROL POINTS (HANDLES)
+              </span>
+              <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>
+                {currentHalfW * 2}x{currentHalfH * 2} px
+              </span>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              {/* LEFT EDGE POINT */}
+              <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> LEFT POINT
+                  </span>
+                  <span style={{ fontSize: 9, color: '#64748b' }}>Width / X</span>
+                </div>
+                <div className="param-row">
+                  <span className="param-label" style={{ fontSize: 9 }}>OFFSET</span>
+                  <SmartNumberInput
+                    value={-currentHalfW}
+                    step={1}
+                    onChange={(val) => {
+                      const newHalfW = Math.max(1, Math.abs(val));
+                      const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
+                      updateCurrentTransform({ scaleX: newScaleX });
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* RIGHT EDGE POINT */}
+              <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> RIGHT POINT
+                  </span>
+                  <span style={{ fontSize: 9, color: '#64748b' }}>Width / X</span>
+                </div>
+                <div className="param-row">
+                  <span className="param-label" style={{ fontSize: 9 }}>OFFSET</span>
+                  <SmartNumberInput
+                    value={currentHalfW}
+                    step={1}
+                    onChange={(val) => {
+                      const newHalfW = Math.max(1, Math.abs(val));
+                      const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
+                      updateCurrentTransform({ scaleX: newScaleX });
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* TOP EDGE POINT */}
+              <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> TOP POINT
+                  </span>
+                  <span style={{ fontSize: 9, color: '#64748b' }}>Height / Y</span>
+                </div>
+                <div className="param-row">
+                  <span className="param-label" style={{ fontSize: 9 }}>OFFSET</span>
+                  <SmartNumberInput
+                    value={currentHalfH}
+                    step={1}
+                    onChange={(val) => {
+                      const newHalfH = Math.max(1, Math.abs(val));
+                      const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
+                      updateCurrentTransform({ scaleY: newScaleY });
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* BOTTOM EDGE POINT */}
+              <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> BOTTOM POINT
+                  </span>
+                  <span style={{ fontSize: 9, color: '#64748b' }}>Height / Y</span>
+                </div>
+                <div className="param-row">
+                  <span className="param-label" style={{ fontSize: 9 }}>OFFSET</span>
+                  <SmartNumberInput
+                    value={-currentHalfH}
+                    step={1}
+                    onChange={(val) => {
+                      const newHalfH = Math.max(1, Math.abs(val));
+                      const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
+                      updateCurrentTransform({ scaleY: newScaleY });
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── PROPORTIONAL SCALE & RATIO SECTION ── */}
       <div className="panel-card" style={{ marginTop: 8 }}>

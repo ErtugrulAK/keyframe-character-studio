@@ -109,6 +109,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   handlePartPropChange,
 }) => {
   const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
+  const [pointMode, setPointMode] = useState<'edge' | 'corner'>('edge');
+
   return (
     <div className="inspector-section">
       <div className="section-title-bar">
@@ -168,112 +170,338 @@ export const TransformTab: React.FC<TransformTabProps> = ({
         </div>
       </div>
 
-      {/* ── 4 EDGE CONTROL POINTS (BOUNDING HANDLES) ── */}
+      {/* ── 4 CONTROL POINTS (STAGE X & Y COORDINATES) ── */}
       {(() => {
         const { halfW: baseHalfW, halfH: baseHalfH } = getPartBaseBounds(selectedPart);
         const currentHalfW = Math.round(baseHalfW * transform.scaleX);
         const currentHalfH = Math.round(baseHalfH * transform.scaleY);
 
+        const cx = transform.x;
+        const cy = -transform.y; // Cartesian Y
+
         return (
           <div className="panel-card" style={{ marginTop: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
-                <Move size={13} /> 4 EDGE CONTROL POINTS (HANDLES)
+                <Move size={13} /> 4 CONTROL POINTS (X/Y)
               </span>
-              <span style={{ fontSize: 10, color: '#64748b', fontWeight: 600 }}>
-                {currentHalfW * 2}x{currentHalfH * 2} px
-              </span>
+              <div style={{ display: 'flex', gap: 4 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{
+                    height: 20,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    padding: '0 6px',
+                    color: pointMode === 'edge' ? '#38bdf8' : '#64748b',
+                    background: pointMode === 'edge' ? 'rgba(56, 189, 248, 0.15)' : '#0e1118',
+                    border: `1px solid ${pointMode === 'edge' ? '#38bdf8' : '#232836'}`,
+                    borderRadius: 3,
+                  }}
+                  onClick={() => setPointMode('edge')}
+                >
+                  Edge Points
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{
+                    height: 20,
+                    fontSize: 9,
+                    fontWeight: 700,
+                    padding: '0 6px',
+                    color: pointMode === 'corner' ? '#c084fc' : '#64748b',
+                    background: pointMode === 'corner' ? 'rgba(192, 132, 252, 0.15)' : '#0e1118',
+                    border: `1px solid ${pointMode === 'corner' ? '#c084fc' : '#232836'}`,
+                    borderRadius: 3,
+                  }}
+                  onClick={() => setPointMode('corner')}
+                >
+                  Corners
+                </button>
+              </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-              {/* LEFT EDGE POINT */}
-              <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> LEFT POINT
-                  </span>
-                  <span style={{ fontSize: 9, color: '#64748b' }}>Width / X</span>
+            {pointMode === 'edge' ? (
+              /* ── 4 EDGE MIDPOINTS ── */
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {/* LEFT EDGE POINT */}
+                <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> LEFT POINT
+                    </span>
+                  </div>
+                  <div className="param-row" style={{ marginBottom: 4 }}>
+                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                    <SmartNumberInput
+                      value={cx - currentHalfW}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetX) => {
+                        const newHalfW = Math.max(1, cx - targetX);
+                        const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
+                        updateCurrentTransform({ scaleX: newScaleX });
+                      }}
+                    />
+                  </div>
+                  <div className="param-row">
+                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                    <SmartNumberInput
+                      value={cy}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetY) => updateCurrentTransform({ y: -targetY })}
+                    />
+                  </div>
                 </div>
-                <div className="param-row">
-                  <span className="param-label" style={{ fontSize: 9 }}>OFFSET</span>
-                  <SmartNumberInput
-                    value={-currentHalfW}
-                    step={1}
-                    onChange={(val) => {
-                      const newHalfW = Math.max(1, Math.abs(val));
-                      const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
-                      updateCurrentTransform({ scaleX: newScaleX });
-                    }}
-                  />
-                </div>
-              </div>
 
-              {/* RIGHT EDGE POINT */}
-              <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> RIGHT POINT
-                  </span>
-                  <span style={{ fontSize: 9, color: '#64748b' }}>Width / X</span>
+                {/* RIGHT EDGE POINT */}
+                <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> RIGHT POINT
+                    </span>
+                  </div>
+                  <div className="param-row" style={{ marginBottom: 4 }}>
+                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                    <SmartNumberInput
+                      value={cx + currentHalfW}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetX) => {
+                        const newHalfW = Math.max(1, targetX - cx);
+                        const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
+                        updateCurrentTransform({ scaleX: newScaleX });
+                      }}
+                    />
+                  </div>
+                  <div className="param-row">
+                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                    <SmartNumberInput
+                      value={cy}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetY) => updateCurrentTransform({ y: -targetY })}
+                    />
+                  </div>
                 </div>
-                <div className="param-row">
-                  <span className="param-label" style={{ fontSize: 9 }}>OFFSET</span>
-                  <SmartNumberInput
-                    value={currentHalfW}
-                    step={1}
-                    onChange={(val) => {
-                      const newHalfW = Math.max(1, Math.abs(val));
-                      const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
-                      updateCurrentTransform({ scaleX: newScaleX });
-                    }}
-                  />
-                </div>
-              </div>
 
-              {/* TOP EDGE POINT */}
-              <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> TOP POINT
-                  </span>
-                  <span style={{ fontSize: 9, color: '#64748b' }}>Height / Y</span>
+                {/* TOP EDGE POINT */}
+                <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> TOP POINT
+                    </span>
+                  </div>
+                  <div className="param-row" style={{ marginBottom: 4 }}>
+                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                    <SmartNumberInput
+                      value={cx}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetX) => updateCurrentTransform({ x: targetX })}
+                    />
+                  </div>
+                  <div className="param-row">
+                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                    <SmartNumberInput
+                      value={cy + currentHalfH}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetY) => {
+                        const newHalfH = Math.max(1, targetY - cy);
+                        const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
+                        updateCurrentTransform({ scaleY: newScaleY });
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="param-row">
-                  <span className="param-label" style={{ fontSize: 9 }}>OFFSET</span>
-                  <SmartNumberInput
-                    value={currentHalfH}
-                    step={1}
-                    onChange={(val) => {
-                      const newHalfH = Math.max(1, Math.abs(val));
-                      const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
-                      updateCurrentTransform({ scaleY: newScaleY });
-                    }}
-                  />
-                </div>
-              </div>
 
-              {/* BOTTOM EDGE POINT */}
-              <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> BOTTOM POINT
-                  </span>
-                  <span style={{ fontSize: 9, color: '#64748b' }}>Height / Y</span>
-                </div>
-                <div className="param-row">
-                  <span className="param-label" style={{ fontSize: 9 }}>OFFSET</span>
-                  <SmartNumberInput
-                    value={-currentHalfH}
-                    step={1}
-                    onChange={(val) => {
-                      const newHalfH = Math.max(1, Math.abs(val));
-                      const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
-                      updateCurrentTransform({ scaleY: newScaleY });
-                    }}
-                  />
+                {/* BOTTOM EDGE POINT */}
+                <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> BOTTOM POINT
+                    </span>
+                  </div>
+                  <div className="param-row" style={{ marginBottom: 4 }}>
+                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                    <SmartNumberInput
+                      value={cx}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetX) => updateCurrentTransform({ x: targetX })}
+                    />
+                  </div>
+                  <div className="param-row">
+                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                    <SmartNumberInput
+                      value={cy - currentHalfH}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetY) => {
+                        const newHalfH = Math.max(1, cy - targetY);
+                        const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
+                        updateCurrentTransform({ scaleY: newScaleY });
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              /* ── 4 CORNER POINTS (TL, TR, BR, BL) ── */
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {/* TOP-LEFT (TL) */}
+                <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 4 }}>
+                    ↖ TOP-LEFT (TL)
+                  </span>
+                  <div className="param-row" style={{ marginBottom: 4 }}>
+                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                    <SmartNumberInput
+                      value={cx - currentHalfW}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetX) => {
+                        const newHalfW = Math.max(1, cx - targetX);
+                        const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
+                        updateCurrentTransform({ scaleX: newScaleX });
+                      }}
+                    />
+                  </div>
+                  <div className="param-row">
+                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                    <SmartNumberInput
+                      value={cy + currentHalfH}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetY) => {
+                        const newHalfH = Math.max(1, targetY - cy);
+                        const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
+                        updateCurrentTransform({ scaleY: newScaleY });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* TOP-RIGHT (TR) */}
+                <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 4 }}>
+                    ↗ TOP-RIGHT (TR)
+                  </span>
+                  <div className="param-row" style={{ marginBottom: 4 }}>
+                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                    <SmartNumberInput
+                      value={cx + currentHalfW}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetX) => {
+                        const newHalfW = Math.max(1, targetX - cx);
+                        const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
+                        updateCurrentTransform({ scaleX: newScaleX });
+                      }}
+                    />
+                  </div>
+                  <div className="param-row">
+                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                    <SmartNumberInput
+                      value={cy + currentHalfH}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetY) => {
+                        const newHalfH = Math.max(1, targetY - cy);
+                        const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
+                        updateCurrentTransform({ scaleY: newScaleY });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* BOTTOM-LEFT (BL) */}
+                <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: 4 }}>
+                    ↙ BOTTOM-LEFT (BL)
+                  </span>
+                  <div className="param-row" style={{ marginBottom: 4 }}>
+                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                    <SmartNumberInput
+                      value={cx - currentHalfW}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetX) => {
+                        const newHalfW = Math.max(1, cx - targetX);
+                        const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
+                        updateCurrentTransform({ scaleX: newScaleX });
+                      }}
+                    />
+                  </div>
+                  <div className="param-row">
+                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                    <SmartNumberInput
+                      value={cy - currentHalfH}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetY) => {
+                        const newHalfH = Math.max(1, cy - targetY);
+                        const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
+                        updateCurrentTransform({ scaleY: newScaleY });
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* BOTTOM-RIGHT (BR) */}
+                <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: 4 }}>
+                    ↘ BOTTOM-RIGHT (BR)
+                  </span>
+                  <div className="param-row" style={{ marginBottom: 4 }}>
+                    <span className="param-label text-red" style={{ fontSize: 9 }}>X</span>
+                    <SmartNumberInput
+                      value={cx + currentHalfW}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetX) => {
+                        const newHalfW = Math.max(1, targetX - cx);
+                        const newScaleX = parseFloat((newHalfW / baseHalfW).toFixed(3));
+                        updateCurrentTransform({ scaleX: newScaleX });
+                      }}
+                    />
+                  </div>
+                  <div className="param-row">
+                    <span className="param-label text-green" style={{ fontSize: 9 }}>Y</span>
+                    <SmartNumberInput
+                      value={cy - currentHalfH}
+                      step={1}
+                      displayScale={0.01}
+                      precision={2}
+                      onChange={(targetY) => {
+                        const newHalfH = Math.max(1, cy - targetY);
+                        const newScaleY = parseFloat((newHalfH / baseHalfH).toFixed(3));
+                        updateCurrentTransform({ scaleY: newScaleY });
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}

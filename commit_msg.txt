@@ -1,0 +1,1 @@
+feat(inspector): add X and Y stage coordinates for all 4 control points with Edge and Corner modes  

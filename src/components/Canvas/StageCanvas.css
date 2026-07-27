@@ -1,11 +1,31 @@
 .stage-canvas-container {
   flex: 1;
   height: 100%;
-  background: var(--bg-darkest);
+  background-color: var(--bg-darkest);
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.07) 1px, transparent 0),
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.04) 0%, rgba(18, 20, 26, 0.96) 100%);
+  background-size: 24px 24px, 100% 100%;
+  background-position: 0 0, center center;
   position: relative;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.focus-spotlight-dimmer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(
+    circle 260px at var(--focus-x, 50%) var(--focus-y, 50%),
+    rgba(15, 23, 42, 0.1) 0%,
+    rgba(9, 11, 16, 0.78) 70%,
+    rgba(9, 11, 16, 0.92) 100%
+  );
+  backdrop-filter: blur(2px);
+  transition: opacity 0.25s ease-out;
 }
 
 .canvas-header-info {

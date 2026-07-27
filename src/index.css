@@ -15,7 +15,7 @@
   --accent-teal: #14b8a6;
   --accent-teal-dark: #0d9488;
   --accent-teal-glow: rgba(20, 184, 166, 0.35);
-  --accent-cyan: #06b6d4;
+  --accent-cyan: #38bdf8;
   --accent-indigo: #6366f1;
   --accent-gold: #fbbf24;
   --accent-gold-glow: rgba(251, 191, 36, 0.35);
@@ -28,9 +28,39 @@
   --text-secondary: #cbd5e1;
   --text-muted: #94a3b8;
 
-  --font-main: 'Inter', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-main: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
 
+  /* ── Typography Scale Tokens ── */
+  --font-size-h1: 1.75rem;      /* 28px */
+  --font-size-h2: 1.375rem;     /* 22px */
+  --font-size-h3: 1.125rem;     /* 18px */
+  --font-size-h4: 0.9375rem;    /* 15px */
+  --font-size-body-lg: 0.875rem; /* 14px */
+  --font-size-body: 0.8125rem;  /* 13px */
+  --font-size-caption: 0.6875rem;/* 11px */
+  --font-size-mono: 0.75rem;    /* 12px */
+
+  --line-height-tight: 1.15;
+  --line-height-normal: 1.35;
+  --line-height-relaxed: 1.5;
+
+  --letter-spacing-h1: -0.025em;
+  --letter-spacing-h2: -0.015em;
+  --letter-spacing-uppercase: 0.05em;
+
+  /* ── 8px Spacing Grid System ── */
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 14px;
@@ -40,6 +70,65 @@
   --toolbar-width: 86px;
   --inspector-width: 480px;
   --timeline-height: 290px;
+}
+
+/* ── Typography Utility Classes ── */
+h1, .text-h1 { font-family: var(--font-main); font-size: var(--font-size-h1); line-height: var(--line-height-tight); letter-spacing: var(--letter-spacing-h1); font-weight: 800; color: var(--text-primary); }
+h2, .text-h2 { font-family: var(--font-main); font-size: var(--font-size-h2); line-height: var(--line-height-tight); letter-spacing: var(--letter-spacing-h2); font-weight: 700; color: var(--text-primary); }
+h3, .text-h3 { font-family: var(--font-main); font-size: var(--font-size-h3); line-height: var(--line-height-normal); font-weight: 700; color: var(--text-primary); }
+h4, .text-h4 { font-family: var(--font-main); font-size: var(--font-size-h4); line-height: var(--line-height-normal); font-weight: 600; color: var(--text-primary); }
+.body-lg      { font-family: var(--font-main); font-size: var(--font-size-body-lg); line-height: var(--line-height-normal); font-weight: 500; color: var(--text-primary); }
+.body-regular { font-family: var(--font-main); font-size: var(--font-size-body); line-height: var(--line-height-normal); font-weight: 400; color: var(--text-secondary); }
+.caption      { font-family: var(--font-main); font-size: var(--font-size-caption); line-height: var(--line-height-normal); letter-spacing: var(--letter-spacing-uppercase); font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+.code-mono    { font-family: var(--font-mono); font-size: var(--font-size-mono); line-height: var(--line-height-normal); font-weight: 500; }
+
+/* ── Radial Gradient Utility Classes ── */
+.canvas-viewport-radial-bg {
+  background-color: var(--bg-darkest);
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.07) 1px, transparent 0),
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.05) 0%, rgba(18, 20, 26, 0.95) 100%);
+  background-size: 24px 24px, 100% 100%;
+  background-position: 0 0, center center;
+}
+
+.focus-mode-radial-spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  background: radial-gradient(
+    circle var(--focus-radius, 250px) at var(--focus-x, 50%) var(--focus-y, 50%),
+    rgba(15, 23, 42, 0.15) 0%,
+    rgba(9, 11, 16, 0.82) 75%,
+    rgba(9, 11, 16, 0.94) 100%
+  );
+  backdrop-filter: blur(2px);
+  transition: opacity 0.25s ease-out;
+}
+
+.btn-spotlight-card {
+  position: relative;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.btn-spotlight-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: radial-gradient(
+    180px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(56, 189, 248, 0.2),
+    transparent 80%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.btn-spotlight-card:hover::before {
+  opacity: 1;
 }
 
 *, *::before, *::after {

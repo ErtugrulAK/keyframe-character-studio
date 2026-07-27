@@ -1,1 +1,1 @@
-fix(inspector): strictly isolate control point edits so opposite points never jump or spill over for all elements including text  
+feat(export): export selected template with all contained motion sequences, tracks, and elements  

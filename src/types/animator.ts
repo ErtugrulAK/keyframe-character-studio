@@ -281,9 +281,11 @@ export interface PresetPose {
 
 export interface AnimationProject {
   name: string;
+  templateId?: string;
   fps: number;
   totalFrames: number;
   projectResolution?: { width: number; height: number }; // 1920x1080 default
+  motionTemplates?: MotionTemplate[];
   tracks: Track[];
   characterParts: CharacterPart[];
 }

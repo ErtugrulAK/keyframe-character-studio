@@ -60,10 +60,10 @@ export const HeaderBar: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${sceneTitle || 'project'}_animation.json`;
+    a.download = `${sceneTitle || 'template'}_with_all_sequences.json`;
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Project exported successfully!', 'success');
+    showToast(`Template "${sceneTitle || 'Template'}" exported with all contained sequences!`, 'success');
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {

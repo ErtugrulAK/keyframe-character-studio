@@ -1539,13 +1539,16 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const exportProject = (): string => {
+    const activeTemplateName = sceneTitle || 'Template';
     const project: AnimationProject = {
-      name: 'Unreal 2D Character Sequence',
+      name: activeTemplateName,
+      templateId: activeProjectTemplateId,
       fps,
       totalFrames,
       projectResolution,
-      tracks,
-      characterParts,
+      motionTemplates, // Includes all inner sequences (In, Out, Stunts, custom sequences) for this template!
+      tracks, // Includes all tracks & keyframes across all sequences for this template!
+      characterParts, // Includes all elements (shapes, text, cards, media) in this template!
     };
     return JSON.stringify(project, null, 2);
   };
@@ -1555,10 +1558,24 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const parsed: AnimationProject = JSON.parse(jsonStr);
       if (parsed.tracks && parsed.characterParts) {
         if (parsed.projectResolution) setProjectResolution(parsed.projectResolution);
-        setTracks(parsed.tracks.map(migrateTrack));
-        setCharacterParts(parsed.characterParts);
         if (parsed.fps) setFps(parsed.fps);
         if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
+
+        // Restore all inner sequences (motionTemplates)
+        if (parsed.motionTemplates && parsed.motionTemplates.length > 0) {
+          setMotionTemplates(parsed.motionTemplates);
+          setActiveTemplateIdState(parsed.motionTemplates[0].id);
+        }
+
+        // Restore element tracks and parts
+        setTracks(parsed.tracks.map(migrateTrack));
+        setCharacterParts(parsed.characterParts);
+
+        // Restore template name
+        if (parsed.name) {
+          setSceneTitle(parsed.name);
+        }
+
         return true;
       }
       return false;

@@ -1,1 +1,1 @@
-feat(export): export selected template with all contained motion sequences, tracks, and elements  
+feat(import): import JSON file as a new Template tab named after the file without overwriting active work  

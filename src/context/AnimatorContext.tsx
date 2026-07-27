@@ -114,7 +114,7 @@ interface AnimatorContextType {
   toggleTrackLock: (trackId: string) => void;
   toggleTrackExpanded: (trackId: string) => void;
   exportProject: () => string;
-  importProject: (jsonStr: string) => boolean;
+  importProject: (jsonStr: string, defaultName?: string) => boolean;
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
@@ -1553,28 +1553,51 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return JSON.stringify(project, null, 2);
   };
 
-  const importProject = (jsonStr: string): boolean => {
+  const importProject = useCallback((jsonStr: string, defaultName?: string): boolean => {
     try {
       const parsed: AnimationProject = JSON.parse(jsonStr);
       if (parsed.tracks && parsed.characterParts) {
+        const rawName = parsed.name || defaultName || 'Imported Template';
+        const templateName = rawName.replace(/\.json$/i, '').trim() || 'Imported Template';
+        const newId = `tmpl_${Date.now()}`;
+
+        const importedMotionTemplates = (parsed.motionTemplates && parsed.motionTemplates.length > 0)
+          ? parsed.motionTemplates
+          : [{ id: 'Sequence', name: 'Sequence', type: 'in' as const, durationFrames: 60, description: 'Default Sequence Timeline' }];
+
+        const initialSeqId = importedMotionTemplates[0].id;
+        const importedTracks = parsed.tracks.map(migrateTrack);
+        const importedParts = parsed.characterParts;
+
+        // 1. Save current active template state & add new template to store
+        setTemplateCanvasStore((prev) => ({
+          ...prev,
+          [activeProjectTemplateId]: {
+            characterParts,
+            tracks,
+            motionTemplates,
+            activeTemplateId,
+          },
+          [newId]: {
+            characterParts: importedParts,
+            tracks: importedTracks,
+            motionTemplates: importedMotionTemplates,
+            activeTemplateId: initialSeqId,
+          },
+        }));
+
+        // 2. Add new Template tab and switch to it as active tab
+        setProjectTemplates((prev) => [...prev, { id: newId, name: templateName }]);
+        setCharacterParts(importedParts);
+        setTracks(importedTracks);
+        setMotionTemplates(importedMotionTemplates);
+        setActiveTemplateIdState(initialSeqId);
+        setActiveProjectTemplateIdState(newId);
+        setSceneTitleState(templateName);
+
         if (parsed.projectResolution) setProjectResolution(parsed.projectResolution);
         if (parsed.fps) setFps(parsed.fps);
         if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
-
-        // Restore all inner sequences (motionTemplates)
-        if (parsed.motionTemplates && parsed.motionTemplates.length > 0) {
-          setMotionTemplates(parsed.motionTemplates);
-          setActiveTemplateIdState(parsed.motionTemplates[0].id);
-        }
-
-        // Restore element tracks and parts
-        setTracks(parsed.tracks.map(migrateTrack));
-        setCharacterParts(parsed.characterParts);
-
-        // Restore template name
-        if (parsed.name) {
-          setSceneTitle(parsed.name);
-        }
 
         return true;
       }
@@ -1582,7 +1605,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     } catch {
       return false;
     }
-  };
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId]);
 
   const resetProject = () => {
     setTracks(DEFAULT_TRACKS);

@@ -74,8 +74,8 @@ export const HeaderBar: React.FC = () => {
       const text = ev.target?.result as string;
       if (text) {
         try {
-          const success = importProject(text);
-          if (success) showToast('Project imported successfully!', 'success');
+          const success = importProject(text, file.name);
+          if (success) showToast(`Imported "${file.name.replace(/\.json$/i, '')}" as a new Template tab!`, 'success');
           else showToast('Invalid project file format!', 'error');
         } catch {
           showToast('Failed to read JSON file or format error!', 'error');

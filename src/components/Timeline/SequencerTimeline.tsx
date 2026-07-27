@@ -57,7 +57,8 @@ export const SequencerTimeline: React.FC = () => {
     tracks,
     characterParts,
     selectedPartId,
-    setSelectedPartId,
+    selectedPartIds,
+    handleSelectPart,
     selectedKeyframeId,
     setSelectedKeyframeId,
     addKeyframeToTrack,
@@ -329,8 +330,8 @@ export const SequencerTimeline: React.FC = () => {
                 title={`Sequence: ${tmpl.name}`}
               >
                 {isEditing ? (
-                  <input
-                    type="text"
+                  <input className="input-control"
+                type="text"
                     value={editingSeqName}
                     autoFocus
                     onClick={(e) => e.stopPropagation()}
@@ -411,9 +412,9 @@ export const SequencerTimeline: React.FC = () => {
           </div>
           <div className="divider-v" />
           <div className="duration-control-box" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)' }}>DURATION:</label>
-            <input
-              type="number" step={0.5} min={0.5} max={40}
+            <label className="form-label" style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)' }}>DURATION:</label>
+            <input className="input-control"
+                type="number" step={0.5} min={0.5} max={40}
               style={{ width: 44, height: 22, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11, fontWeight: 700, textAlign: 'center' }}
               value={Number((totalFrames / fps).toFixed(1))}
               onFocus={(e) => e.target.select()}
@@ -496,7 +497,6 @@ export const SequencerTimeline: React.FC = () => {
 
           <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll}>
             {tracks.map((track) => {
-              const isSelected = selectedPartId === track.partId;
               const isTrackExpanded = track.expanded === true;
               const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
               const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
@@ -510,9 +510,9 @@ export const SequencerTimeline: React.FC = () => {
                 <div key={track.id} className="ue-track-group">
                   {/* ── LAYER ROW ── */}
                   <div
-                    className={`ue-track-row ${isSelected ? 'selected' : ''}`}
+                    className={`ue-track-row ${selectedPartIds?.includes(track.partId) ? 'selected' : ''}`}
                     style={{ height: TRACK_ROW_HEIGHT, paddingLeft: isChildLayer ? 22 : 8 }}
-                    onClick={() => setSelectedPartId(track.partId)}
+                    onClick={(e) => handleSelectPart(track.partId, e.shiftKey)}
                   >
                     {isChildLayer && (
                       <span style={{ fontSize: 10, color: 'var(--accent-cyan)', fontWeight: 800, marginRight: -2 }}>└─</span>
@@ -530,8 +530,8 @@ export const SequencerTimeline: React.FC = () => {
                     
                     {/* Double-Click Inline Renaming */}
                     {editingPartId === track.partId ? (
-                      <input
-                        type="text"
+                      <input className="input-control"
+                type="text"
                         autoFocus
                         value={editingNameValue}
                         onClick={(e) => e.stopPropagation()}
@@ -821,7 +821,7 @@ export const SequencerTimeline: React.FC = () => {
                           key={kf.id}
                           className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
                           style={{ left: `${kf.frame * FRAME_WIDTH}px`, borderColor: track.color }}
-                          onClick={(e) => { e.stopPropagation(); setSelectedKeyframeId(kf.id); setSelectedPartId(track.partId); setCurrentFrame(kf.frame); }}
+                          onClick={(e) => { e.stopPropagation(); setSelectedKeyframeId(kf.id); handleSelectPart(track.partId, e.shiftKey); setCurrentFrame(kf.frame); }}
                           onMouseDown={(e) => { e.stopPropagation(); setDraggingKf({ trackId: track.id, keyframeId: kf.id }); setSelectedKeyframeId(kf.id); }}
                           onMouseEnter={() => setHoveredKf({ frame: kf.frame, label: `${track.name} | ${kf.easing}` })}
                           onMouseLeave={() => setHoveredKf(null)}

@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "server": "node server/index.js",
     "db:setup": "node scripts/setup-db.js",
     "build": "tsc -b && vite build",

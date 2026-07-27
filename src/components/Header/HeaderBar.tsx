@@ -60,22 +60,24 @@ export const HeaderBar: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${sceneTitle || 'template'}_with_all_sequences.json`;
+    const cleanFileName = `${sceneTitle || 'Template'}.json`;
+    a.download = cleanFileName;
     a.click();
     URL.revokeObjectURL(url);
-    showToast(`Template "${sceneTitle || 'Template'}" exported with all contained sequences!`, 'success');
+    showToast(`Exported "${cleanFileName}"`, 'success');
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const fileNameWithoutExt = file.name.replace(/\.json$/i, '').trim();
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (text) {
         try {
-          const success = importProject(text, file.name);
-          if (success) showToast(`Imported "${file.name.replace(/\.json$/i, '')}" as a new Template tab!`, 'success');
+          const success = importProject(text, fileNameWithoutExt);
+          if (success) showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
           else showToast('Invalid project file format!', 'error');
         } catch {
           showToast('Failed to read JSON file or format error!', 'error');

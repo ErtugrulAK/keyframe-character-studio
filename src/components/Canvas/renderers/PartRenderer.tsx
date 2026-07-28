@@ -368,6 +368,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       }}
       onMouseDown={(e) => {
         if (!isGhost && e.button === 0) {
+          e.stopPropagation();
           onStartTranslateDrag(part.id, e);
         }
       }}

@@ -25,6 +25,8 @@ export const renderMediaPart = ({ part, fill, isSelected, overrideMaskShape }: M
 
   return (
     <g>
+      {/* Invisible hit-test base element to ensure 100% of media area receives mouse click and drag events */}
+      <rect x={startX} y={startY} width={fullW} height={fullH} rx={8} fill="rgba(0,0,0,0.001)" />
       <defs>
         {isGeometricMask && (
           <clipPath id={clipId}>

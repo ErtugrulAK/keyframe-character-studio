@@ -35,20 +35,24 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
   switch (part.type) {
     case 'custom_star':
       return (
-        <polygon
-          points="0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10"
-          fill={fill}
-          stroke={strokeToUse}
-          strokeWidth={isSelected ? 2 : 1.5}
-          vectorEffect="non-scaling-stroke"
-          {...getStrokeDashProps(part, 300)}
-        />
+        <g>
+          <polygon points="0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10" fill="rgba(0,0,0,0.001)" />
+          <polygon
+            points="0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10"
+            fill={fill}
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 300)}
+          />
+        </g>
       );
 
     case 'custom_circle': {
       const clipId = `clip-circle-${part.id}`;
       return (
         <g>
+          <circle cx={0} cy={0} r={30} fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
               <clipPath id={clipId}>
@@ -81,6 +85,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
       const clipId = `clip-box-${part.id}`;
       return (
         <g>
+          <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
               <clipPath id={clipId}>
@@ -115,6 +120,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
       const clipId = `clip-rect-${part.id}`;
       return (
         <g>
+          <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
               <clipPath id={clipId}>
@@ -149,6 +155,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
       const clipId = `clip-tri-${part.id}`;
       return (
         <g>
+          <polygon points="0,-35 35,25 -35,25" fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
               <clipPath id={clipId}>
@@ -184,7 +191,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
             width={160}
             height={50}
             rx={part.borderRadius ?? 10}
-            fill={fill}
+            fill={fill === 'none' || fill === 'transparent' ? 'rgba(0,0,0,0.001)' : fill}
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
@@ -199,6 +206,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
             fontSize={part.fontSize || 16}
             fontWeight="700"
             fontFamily={part.fontFamily || 'Outfit'}
+            style={{ pointerEvents: 'none' }}
           >
             {part.textValue || 'BANNER LABEL'}
           </text>
@@ -207,30 +215,36 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
 
     case 'custom_capsule':
       return (
-        <rect
-          x={-50}
-          y={-20}
-          width={100}
-          height={40}
-          rx={20}
-          fill={fill}
-          stroke={stroke}
-          strokeWidth={isSelected ? 2 : 1.5}
-          vectorEffect="non-scaling-stroke"
-          {...getStrokeDashProps(part, 280)}
-        />
+        <g>
+          <rect x={-50} y={-20} width={100} height={40} rx={20} fill="rgba(0,0,0,0.001)" />
+          <rect
+            x={-50}
+            y={-20}
+            width={100}
+            height={40}
+            rx={20}
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 280)}
+          />
+        </g>
       );
 
     case 'custom_diamond':
       return (
-        <polygon
-          points="0,-35 35,0 0,35 -35,0"
-          fill={fill}
-          stroke={stroke}
-          strokeWidth={isSelected ? 2 : 1.5}
-          vectorEffect="non-scaling-stroke"
-          {...getStrokeDashProps(part, 198)}
-        />
+        <g>
+          <polygon points="0,-35 35,0 0,35 -35,0" fill="rgba(0,0,0,0.001)" />
+          <polygon
+            points="0,-35 35,0 0,35 -35,0"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 198)}
+          />
+        </g>
       );
 
     case 'custom_card':
@@ -242,22 +256,22 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
             width={180}
             height={100}
             rx={part.borderRadius ?? 12}
-            fill={fill}
+            fill={fill === 'none' || fill === 'transparent' ? 'rgba(0,0,0,0.001)' : fill}
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
             {...getStrokeDashProps(part, 560)}
           />
-          <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} />
-          <circle cx={-68} cy={-29} r={4} fill="#00d2ff" />
-          <text x={-58} y={-29} dominantBaseline="middle" fill="#00d2ff" fontSize={11} fontWeight="800" fontFamily="Outfit, sans-serif">
+          <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} style={{ pointerEvents: 'none' }} />
+          <circle cx={-68} cy={-29} r={4} fill="#00d2ff" style={{ pointerEvents: 'none' }} />
+          <text x={-58} y={-29} dominantBaseline="middle" fill="#00d2ff" fontSize={11} fontWeight="800" fontFamily="Outfit, sans-serif" style={{ pointerEvents: 'none' }}>
             {part.cardCategory || part.textValue || 'STUDIO CARD'}
           </text>
-          <text x={-80} y={0} dominantBaseline="middle" fill="#f8fafc" fontSize={13} fontWeight="700" fontFamily="Outfit, sans-serif">
+          <text x={-80} y={0} dominantBaseline="middle" fill="#f8fafc" fontSize={13} fontWeight="700" fontFamily="Outfit, sans-serif" style={{ pointerEvents: 'none' }}>
             {part.cardTitle || 'MOTION GRAPHIC'}
           </text>
-          <rect x={-80} y={16} width={64} height={22} rx={11} fill="#00d2ff" />
-          <text x={-48} y={27} textAnchor="middle" dominantBaseline="middle" fill="#0f172a" fontSize={10} fontWeight="800" fontFamily="Outfit, sans-serif">
+          <rect x={-80} y={16} width={64} height={22} rx={11} fill="#00d2ff" style={{ pointerEvents: 'none' }} />
+          <text x={-48} y={27} textAnchor="middle" dominantBaseline="middle" fill="#0f172a" fontSize={10} fontWeight="800" fontFamily="Outfit, sans-serif" style={{ pointerEvents: 'none' }}>
             {part.cardButtonText || 'ACTIVE'}
           </text>
         </g>

@@ -198,6 +198,11 @@ export const StageCanvas: React.FC = () => {
     (e: MouseEvent) => {
       if (!isDragging || !dragMode) return;
 
+      if (e.buttons === 0) {
+        handleMouseUp();
+        return;
+      }
+
       if (dragMode === 'pan') {
         const clientX = e.clientX;
         const clientY = e.clientY;
@@ -482,10 +487,12 @@ export const StageCanvas: React.FC = () => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('pointerup', handleMouseUp);
     }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('pointerup', handleMouseUp);
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 

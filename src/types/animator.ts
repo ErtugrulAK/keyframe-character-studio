@@ -14,6 +14,22 @@ export interface ProjectTemplate {
   name: string;
 }
 
+export interface MaskPoint {
+  x: number;
+  y: number;
+  handleIn?: { x: number; y: number };
+  handleOut?: { x: number; y: number };
+}
+
+export interface MaskData {
+  enabled: boolean;
+  inverted: boolean;
+  feather: number;
+  opacity: number;
+  closed: boolean;
+  points: MaskPoint[];
+}
+
 export interface Transform {
   x: number;
   y: number;
@@ -21,6 +37,7 @@ export interface Transform {
   scaleX: number;
   scaleY: number;
   opacity: number;
+  mask?: MaskData;
 }
 
 export interface Keyframe {
@@ -224,6 +241,9 @@ export interface CharacterPart {
 
   fontFamily?: string;
 
+  // ── Feature 9: Advanced Masking ──
+  mask?: MaskData;
+
   // ── Feature 10: Custom Preset Animation Engine ──
   inCustomPresetId?: string;
   outCustomPresetId?: string;
@@ -259,7 +279,7 @@ export interface CustomMotionPreset {
   keyframes: CustomMotionPresetKeyframe[];
 }
 
-export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan';
+export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan' | 'mask';
 
 export interface AnimationProject {
   name: string;

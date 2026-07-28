@@ -1126,7 +1126,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const getComputedTransform = useCallback(
     (partId: string, frame: number): Transform => {
       const part = characterParts.find((p) => p.id === partId);
-      const baseTransform = part ? part.baseTransform : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+      const baseTransform = part ? { ...part.baseTransform, mask: part.baseTransform.mask || part.mask } : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
 
       const track = tracks.find((t) => t.partId === partId);
       if (!track) return baseTransform;
@@ -1171,6 +1171,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             scaleX: csx.length > 0 ? interpolateChannel(csx, frame, legacyTransform.scaleX) : legacyTransform.scaleX,
             scaleY: csy.length > 0 ? interpolateChannel(csy, frame, legacyTransform.scaleY) : legacyTransform.scaleY,
             opacity: cop.length > 0 ? interpolateChannel(cop, frame, legacyTransform.opacity) : legacyTransform.opacity,
+            mask: legacyTransform.mask,
           };
         }
 

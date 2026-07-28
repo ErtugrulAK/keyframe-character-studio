@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CharacterPart, Transform } from '../../../types/animator';
+import type { CharacterPart, Transform, MaskPoint } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
 import { sampleCustomPreset } from './utils/presetSampler';
 import { renderShapePart } from './parts/ShapePartRenderers';
@@ -350,6 +350,42 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   const isHardHidden = appMode !== 'broadcast' && targetTrack?.editVisible === false;
 
+  const activeMask = transform.mask || part.mask;
+  const hasMask = activeMask && activeMask.enabled;
+  const maskId = `mask-${part.id}`;
+  const featherId = `feather-${part.id}`;
+
+  const generateMaskPath = (points: MaskPoint[], closed: boolean) => {
+    if (!points || points.length === 0) return '';
+    let d = `M ${points[0].x} ${points[0].y}`;
+    for (let i = 1; i < points.length; i++) {
+      const prev = points[i - 1];
+      const curr = points[i];
+      if (prev.handleOut || curr.handleIn) {
+        const cp1x = prev.x + (prev.handleOut?.x || 0);
+        const cp1y = prev.y + (prev.handleOut?.y || 0);
+        const cp2x = curr.x + (curr.handleIn?.x || 0);
+        const cp2y = curr.y + (curr.handleIn?.y || 0);
+        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
+      } else {
+        d += ` L ${curr.x} ${curr.y}`;
+      }
+    }
+    if (closed && points.length > 2) {
+      const prev = points[points.length - 1];
+      const curr = points[0];
+      if (prev.handleOut || curr.handleIn) {
+        const cp1x = prev.x + (prev.handleOut?.x || 0);
+        const cp1y = prev.y + (prev.handleOut?.y || 0);
+        const cp2x = curr.x + (curr.handleIn?.x || 0);
+        const cp2y = curr.y + (curr.handleIn?.y || 0);
+        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
+      }
+      d += ' Z';
+    }
+    return d;
+  };
+
   return (
     <g
       key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
@@ -379,8 +415,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         }
       }}
     >
-      {!isGhost && part.shadowColor && (
-        <defs>
+      <defs>
+        {!isGhost && part.shadowColor && (
           <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
             <feDropShadow
               dx={part.shadowOffsetX || 0}
@@ -390,9 +426,36 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
               floodOpacity="0.85"
             />
           </filter>
-        </defs>
+        )}
+        {hasMask && activeMask && (
+          <>
+            {activeMask.feather > 0 && (
+              <filter id={featherId} x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation={activeMask.feather} />
+              </filter>
+            )}
+            <mask id={maskId}>
+              {activeMask.inverted && (
+                <rect x="-10000" y="-10000" width="20000" height="20000" fill="white" />
+              )}
+              <path 
+                 d={generateMaskPath(activeMask.points, activeMask.closed)} 
+                 fill={activeMask.inverted ? "black" : "white"} 
+                 filter={activeMask.feather > 0 ? `url(#${featherId})` : undefined}
+                 opacity={activeMask.opacity}
+              />
+            </mask>
+          </>
+        )}
+      </defs>
+
+      {hasMask ? (
+        <g mask={`url(#${maskId})`}>
+          {pathContent}
+        </g>
+      ) : (
+        pathContent
       )}
-      {pathContent}
     </g>
   );
 };

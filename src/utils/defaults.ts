@@ -118,7 +118,7 @@ export function interpolateTransform(
   controlPoints?: [number, number, number, number]
 ): Transform {
   const eased = applyEasing(progress, easing, controlPoints);
-  return {
+  const result: Transform = {
     x: lerp(t1.x, t2.x, eased),
     y: lerp(t1.y, t2.y, eased),
     rotation: lerp(t1.rotation, t2.rotation, eased),
@@ -126,4 +126,39 @@ export function interpolateTransform(
     scaleY: lerp(t1.scaleY, t2.scaleY, eased),
     opacity: lerp(t1.opacity, t2.opacity, eased),
   };
+
+  if (t1.mask && t2.mask) {
+    result.mask = {
+      ...t1.mask,
+      feather: lerp(t1.mask.feather, t2.mask.feather, eased),
+      opacity: lerp(t1.mask.opacity, t2.mask.opacity, eased),
+      points: t1.mask.points.map((p1, i) => {
+        const p2 = t2.mask!.points[i];
+        if (!p2) return p1;
+        const np: any = {
+          x: lerp(p1.x, p2.x, eased),
+          y: lerp(p1.y, p2.y, eased),
+        };
+        if (p1.handleIn && p2.handleIn) {
+          np.handleIn = {
+            x: lerp(p1.handleIn.x, p2.handleIn.x, eased),
+            y: lerp(p1.handleIn.y, p2.handleIn.y, eased),
+          };
+        }
+        if (p1.handleOut && p2.handleOut) {
+          np.handleOut = {
+            x: lerp(p1.handleOut.x, p2.handleOut.x, eased),
+            y: lerp(p1.handleOut.y, p2.handleOut.y, eased),
+          };
+        }
+        return np;
+      })
+    };
+  } else if (t1.mask) {
+    result.mask = { ...t1.mask };
+  } else if (t2.mask) {
+    result.mask = { ...t2.mask };
+  }
+
+  return result;
 }

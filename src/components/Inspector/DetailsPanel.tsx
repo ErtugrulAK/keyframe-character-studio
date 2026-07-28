@@ -3,6 +3,7 @@ import { useAnimator } from '../../context/AnimatorContext';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { KeyframesTab } from './sections/KeyframesTab';
+import { MaskTab } from './sections/MaskTab';
 import {
   Sliders,
   Copy,
@@ -10,6 +11,7 @@ import {
   Activity,
   Palette,
   Diamond,
+  Scissors,
 } from 'lucide-react';
 
 export const DetailsPanel: React.FC = () => {
@@ -25,7 +27,7 @@ export const DetailsPanel: React.FC = () => {
     duplicateSelectedPart,
   } = useAnimator();
 
-  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes'>('transform');
+  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'mask'>('transform');
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -109,6 +111,13 @@ export const DetailsPanel: React.FC = () => {
             <Diamond size={12} className="text-teal" />
             <span>Keyframes</span>
           </button>
+          <button
+            className={`tab-btn ${activeTabSection === 'mask' ? 'active' : ''}`}
+            onClick={() => setActiveTabSection('mask')}
+          >
+            <Scissors size={12} className="text-cyan" />
+            <span>Mask</span>
+          </button>
         </div>
       )}
 
@@ -139,6 +148,14 @@ export const DetailsPanel: React.FC = () => {
           {activeTabSection === 'keyframes' && (
             <KeyframesTab
               selectedPart={selectedPart}
+            />
+          )}
+
+          {activeTabSection === 'mask' && (
+            <MaskTab
+              selectedPart={selectedPart}
+              transform={transform}
+              updateCurrentTransform={updateCurrentTransform}
             />
           )}
         </div>

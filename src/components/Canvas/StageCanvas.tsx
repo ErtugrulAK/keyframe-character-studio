@@ -31,6 +31,8 @@ export const StageCanvas: React.FC = () => {
     focusModeNodeId,
     setFocusModeNodeId,
     updateCharacterPart,
+    startBatchInteraction,
+    endBatchInteraction,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -81,6 +83,7 @@ export const StageCanvas: React.FC = () => {
     const transform = getComputedTransform(partId, currentFrame);
     if (!transform) return;
 
+    startBatchInteraction();
     setIsDragging(true);
     setDragMode('translate');
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
@@ -142,6 +145,7 @@ export const StageCanvas: React.FC = () => {
   const startRotate = (e: React.MouseEvent) => {
     if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
     e.stopPropagation();
+    startBatchInteraction();
     setIsDragging(true);
     setDragMode('rotate');
 
@@ -163,6 +167,7 @@ export const StageCanvas: React.FC = () => {
   const startScale = (e: React.MouseEvent, mode: ScaleMode = 'scale_corner') => {
     if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
     e.stopPropagation();
+    startBatchInteraction();
     setIsDragging(true);
     setDragMode(mode as any);
 
@@ -464,6 +469,9 @@ export const StageCanvas: React.FC = () => {
         }
       }
 
+      if (isDragging) {
+        endBatchInteraction();
+      }
       setIsDragging(false);
       setDragMode(null);
       setMarqueeRect(null);

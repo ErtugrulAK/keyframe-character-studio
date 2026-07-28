@@ -99,6 +99,8 @@ interface AnimatorContextType {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  startBatchInteraction: () => void;
+  endBatchInteraction: () => void;
 
   // Helper getters
   getComputedTransform: (partId: string, frame: number) => Transform;
@@ -714,6 +716,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [history, setHistory] = useState<HistoryState[]>([]);
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const isUndoRedoRef = useRef<boolean>(false);
+  const isBatchInteractingRef = useRef<boolean>(false);
+  const batchStartSnapshotRef = useRef<HistoryState | null>(null);
 
   const [timelineZoom, setTimelineZoom] = useState<number>(18); // px per frame
   const [showGrid, setShowGrid] = useState<boolean>(true);
@@ -725,10 +729,61 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const historyIndexRef = useRef(historyIndex);
   useEffect(() => { historyIndexRef.current = historyIndex; }, [historyIndex]);
 
+  const startBatchInteraction = useCallback(() => {
+    if (!isBatchInteractingRef.current) {
+      isBatchInteractingRef.current = true;
+      batchStartSnapshotRef.current = {
+        tracks: JSON.parse(JSON.stringify(tracksRef.current)),
+        characterParts: JSON.parse(JSON.stringify(characterPartsRef.current)),
+      };
+    }
+  }, []);
+
+  const endBatchInteraction = useCallback(() => {
+    if (isBatchInteractingRef.current) {
+      const initialSnap = batchStartSnapshotRef.current;
+      isBatchInteractingRef.current = false;
+      batchStartSnapshotRef.current = null;
+
+      const finalSnap: HistoryState = {
+        tracks: JSON.parse(JSON.stringify(tracksRef.current)),
+        characterParts: JSON.parse(JSON.stringify(characterPartsRef.current)),
+      };
+
+      if (initialSnap && JSON.stringify(initialSnap) !== JSON.stringify(finalSnap)) {
+        setHistory((prev) => {
+          let trimmed = prev.slice(0, historyIndexRef.current + 1);
+          if (trimmed.length === 0) {
+            trimmed = [initialSnap];
+          }
+          return [...trimmed, finalSnap].slice(-50);
+        });
+        setHistoryIndex((prev) => Math.min(prev + 1, 49));
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isBatchInteractingRef.current) {
+        endBatchInteraction();
+      }
+    };
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    window.addEventListener('touchend', handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener('mouseup', handleGlobalMouseUp);
+      window.removeEventListener('touchend', handleGlobalMouseUp);
+    };
+  }, [endBatchInteraction]);
+
   // Record History Snapshot whenever tracks or characterParts change
   useEffect(() => {
     if (isUndoRedoRef.current) {
       isUndoRedoRef.current = false;
+      return;
+    }
+    if (isBatchInteractingRef.current) {
       return;
     }
     const snap: HistoryState = {
@@ -737,15 +792,24 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
     setHistory((prev) => {
       const trimmed = prev.slice(0, historyIndexRef.current + 1);
-      return [...trimmed.slice(-30), snap];
+      if (trimmed.length > 0) {
+        const last = trimmed[trimmed.length - 1];
+        if (JSON.stringify(last) === JSON.stringify(snap)) {
+          return trimmed;
+        }
+      }
+      return [...trimmed.slice(-50), snap];
     });
-    setHistoryIndex((prev) => Math.min(prev + 1, 30));
+    setHistoryIndex((prev) => Math.min(prev + 1, 49));
   }, [tracks, characterParts]);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
   const undo = useCallback(() => {
+    if (isBatchInteractingRef.current) {
+      endBatchInteraction();
+    }
     if (historyIndex > 0) {
       const prevIndex = historyIndex - 1;
       const targetState = history[prevIndex];
@@ -756,9 +820,12 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setHistoryIndex(prevIndex);
       }
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, endBatchInteraction]);
 
   const redo = useCallback(() => {
+    if (isBatchInteractingRef.current) {
+      endBatchInteraction();
+    }
     if (historyIndex < history.length - 1) {
       const nextIndex = historyIndex + 1;
       const targetState = history[nextIndex];
@@ -769,7 +836,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setHistoryIndex(nextIndex);
       }
     }
-  }, [history, historyIndex]);
+  }, [history, historyIndex, endBatchInteraction]);
 
   // 1. Initial Load: Restore from LocalStorage if available (filtering legacy stickman)
   useEffect(() => {
@@ -1825,6 +1892,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         redo,
         canUndo,
         canRedo,
+        startBatchInteraction,
+        endBatchInteraction,
         getComputedTransform,
         addKeyframeForSelected,
         addKeyframeToTrack,

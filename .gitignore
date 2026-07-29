@@ -25,3 +25,8 @@ dist-ssr
 
 # AntiGravity / Gemini brain temp files
 .gemini
+
+# Testing artifacts
+coverage/
+playwright-report/
+test-results/

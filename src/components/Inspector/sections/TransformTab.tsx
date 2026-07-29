@@ -2,52 +2,8 @@ import React, { useState } from 'react';
 import { Activity, Link, Unlink, Maximize2, Move, Sun, AlignLeft, AlignCenter, AlignRight, AlignVerticalSpaceAround } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
+import { getPartBounds } from '../../../utils/bounds';
 
-const getTextMetrics = (text: string, fontSize: number): { halfW: number; halfH: number } => {
-  if (!text) return { halfW: 20, halfH: 12 };
-  let totalWidth = 0;
-  const fontMultiplier = 0.48;
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    if (char === ' ') {
-      totalWidth += fontSize * (fontMultiplier * 0.55);
-    } else if (/[ilIjtf1!.,:;\'\|()\[\]]/.test(char)) {
-      totalWidth += fontSize * (fontMultiplier * 0.55);
-    } else if (/[WMwm@#%QGO]/.test(char)) {
-      totalWidth += fontSize * (fontMultiplier * 1.35);
-    } else if (/[A-Z]/.test(char)) {
-      totalWidth += fontSize * (fontMultiplier * 1.15);
-    } else {
-      totalWidth += fontSize * fontMultiplier;
-    }
-  }
-  const halfW = Math.max(20, (totalWidth + 24) / 2);
-  const halfH = Math.max(14, (fontSize * 0.9 + 12) / 2);
-  return { halfW, halfH };
-};
-
-const getPartBaseBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
-  if (part.width && part.height) {
-    return { halfW: part.width / 2, halfH: part.height / 2 };
-  }
-  if (part.textValue || (part.type as string) === 'text' || (part.type as string) === 'heading' || (part.type as string) === 'title') {
-    return getTextMetrics(part.textValue || part.name || 'Text', part.fontSize || 24);
-  }
-  let halfW = 32;
-  let halfH = 32;
-
-  switch (part.type) {
-    case 'custom_card': halfW = 90; halfH = 50; break;
-    case 'custom_rect': halfW = 60; halfH = 30; break;
-    case 'custom_banner': halfW = 80; halfH = 25; break;
-    case 'custom_image':
-    case 'custom_video':
-      halfW = part.type === 'custom_video' ? 100 : 90;
-      halfH = 60;
-      break;
-  }
-  return { halfW, halfH };
-};
 
 interface SmartNumberInputProps {
   value: number;
@@ -149,7 +105,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       const part = characterParts.find(p => p.id === id);
       const t = getComputedTransform(id, currentFrame);
       if (!part || !t) return null;
-      const b = getPartBaseBounds(part);
+      const b = getPartBounds(part);
       const w = b.halfW * Math.abs(t.scaleX);
       const h = b.halfH * Math.abs(t.scaleY);
       return { id, t, left: t.x - w, right: t.x + w, top: t.y - h, bottom: t.y + h, cx: t.x, cy: t.y };

@@ -146,26 +146,13 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, propName: 'imageUrl' | 'videoUrl') => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onload = (ev) => {
-        if (ev.target?.result) {
-          handlePartPropChange('imageUrl', ev.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleVideoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        if (ev.target?.result) {
-          handlePartPropChange('videoUrl', ev.target.result as string);
+        if (ev.target && ev.target.result) {
+          handlePartPropChange(propName, ev.target.result as string);
         }
       };
       reader.readAsDataURL(file);
@@ -641,7 +628,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                 type="file"
                 ref={imageFileInputRef}
                 accept="image/*"
-                onChange={handleImageFileSelect}
+                onChange={(e) => handleFileSelect(e, 'imageUrl')}
                 style={{ display: 'none' }}
               />
             </div>
@@ -672,7 +659,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                 type="file"
                 ref={videoFileInputRef}
                 accept="video/*,.mp4,.webm,.mov"
-                onChange={handleVideoFileSelect}
+                onChange={(e) => handleFileSelect(e, 'videoUrl')}
                 style={{ display: 'none' }}
               />
             </div>

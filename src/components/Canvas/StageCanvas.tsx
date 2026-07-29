@@ -1,13 +1,29 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import type { Transform } from '../../types/animator';
+import type { Transform, MaskPoint } from '../../types/animator';
 import { PartRenderer } from './renderers/PartRenderer';
-import { TransformGizmo, getPartBounds, type ScaleMode } from './overlays/TransformGizmo';
+import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
+import { getPartBounds } from '../../utils/bounds';
 import { MaskGizmo } from './overlays/MaskGizmo';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
+
+const getLocalDelta = (dx: number, dy: number, rotationDeg: number) => {
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cosR = Math.cos(rad);
+  const sinR = Math.sin(rad);
+  return {
+    dxLocal: dx * cosR + dy * sinR,
+    dyLocal: -dx * sinR + dy * cosR,
+    cosR,
+    sinR
+  };
+};
+
+const CANVAS_CENTER_X = 300;
+const CANVAS_CENTER_Y = 240;
 
 export const StageCanvas: React.FC = () => {
   const {
@@ -43,7 +59,7 @@ export const StageCanvas: React.FC = () => {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'mask_point' | 'mask_in' | 'mask_out' | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; initialMaskX?: number; initialMaskY?: number; initialMaskPoints?: any[] }>({
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; initialMaskX?: number; initialMaskY?: number; initialMaskPoints?: MaskPoint[] }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
@@ -67,11 +83,11 @@ export const StageCanvas: React.FC = () => {
       const viewBoxX = (clientX - rect.left - (rect.width - 600 * scale) / 2) / scale;
       const viewBoxY = (clientY - rect.top - (rect.height - 480 * scale) / 2) / scale;
 
-      const relX = viewBoxX - 300;
-      const relY = viewBoxY - 240;
+      const relX = viewBoxX - CANVAS_CENTER_X;
+      const relY = viewBoxY - CANVAS_CENTER_Y;
 
-      const svgX = relX / zoomLevel - panOffset.x + 300;
-      const svgY = relY / zoomLevel - panOffset.y + 240;
+      const svgX = relX / zoomLevel - panOffset.x + CANVAS_CENTER_X;
+      const svgY = relY / zoomLevel - panOffset.y + CANVAS_CENTER_Y;
       return { svgX, svgY };
     },
     [zoomLevel, panOffset]
@@ -81,7 +97,7 @@ export const StageCanvas: React.FC = () => {
     if (!selectedPartId) return;
     e.stopPropagation();
     setIsDragging(true);
-    setDragMode(`mask_${handleType}` as any);
+    setDragMode(`mask_${handleType}` as const);
     setDragMaskPointIndex(index);
     startBatchInteraction();
 
@@ -136,7 +152,7 @@ export const StageCanvas: React.FC = () => {
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.button === 2 || activeTool === 'pan') {
       setIsDragging(true);
-      setDragMode('pan' as any);
+      setDragMode('pan');
       setDragStart({
         x: e.clientX,
         y: e.clientY,
@@ -176,8 +192,8 @@ export const StageCanvas: React.FC = () => {
     setDragMode('rotate');
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const centerX = 300 + selectedTransform.x;
-    const centerY = 240 + selectedTransform.y;
+    const centerX = CANVAS_CENTER_X + selectedTransform.x;
+    const centerY = CANVAS_CENTER_Y + selectedTransform.y;
     const dx = svgX - centerX;
     const dy = svgY - centerY;
     const initialAngleRad = Math.atan2(dy, dx);
@@ -195,11 +211,11 @@ export const StageCanvas: React.FC = () => {
     e.stopPropagation();
     startBatchInteraction();
     setIsDragging(true);
-    setDragMode(mode as any);
+    setDragMode(mode);
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const centerX = 300 + selectedTransform.x;
-    const centerY = 240 + selectedTransform.y;
+    const centerX = CANVAS_CENTER_X + selectedTransform.x;
+    const centerY = CANVAS_CENTER_Y + selectedTransform.y;
     const dx = svgX - centerX;
     const dy = svgY - centerY;
     const initialDist = Math.sqrt(dx * dx + dy * dy);
@@ -294,11 +310,11 @@ export const StageCanvas: React.FC = () => {
             // Check canvas center
             if (Math.abs(movingCX - 0) < SNAP_DIST) {
               snappedX -= movingCX;
-              newSnapLines.push({ x1: 300, y1: -1000, x2: 300, y2: 1000, color: '#f472b6' }); // Canvas Center Y-Axis
+              newSnapLines.push({ x1: CANVAS_CENTER_X, y1: -1000, x2: CANVAS_CENTER_X, y2: 1000, color: '#f472b6' }); // Canvas Center Y-Axis
             }
             if (Math.abs(movingCY - 0) < SNAP_DIST) {
               snappedY -= movingCY;
-              newSnapLines.push({ x1: -1000, y1: 240, x2: 1000, y2: 240, color: '#f472b6' }); // Canvas Center X-Axis
+              newSnapLines.push({ x1: -1000, y1: CANVAS_CENTER_Y, x2: 1000, y2: CANVAS_CENTER_Y, color: '#f472b6' }); // Canvas Center X-Axis
             }
             
             // Check other parts
@@ -309,11 +325,11 @@ export const StageCanvas: React.FC = () => {
               
               if (Math.abs(movingCX - cx) < SNAP_DIST && newSnapLines.length < 5) {
                 snappedX -= (movingCX - cx);
-                newSnapLines.push({ x1: 300 + cx, y1: -1000, x2: 300 + cx, y2: 1000, color: '#38bdf8' });
+                newSnapLines.push({ x1: CANVAS_CENTER_X + cx, y1: -1000, x2: CANVAS_CENTER_X + cx, y2: 1000, color: '#38bdf8' });
               }
               if (Math.abs(movingCY - cy) < SNAP_DIST && newSnapLines.length < 5) {
                 snappedY -= (movingCY - cy);
-                newSnapLines.push({ x1: -1000, y1: 240 + cy, x2: 1000, y2: 240 + cy, color: '#38bdf8' });
+                newSnapLines.push({ x1: -1000, y1: CANVAS_CENTER_Y + cy, x2: 1000, y2: CANVAS_CENTER_Y + cy, color: '#38bdf8' });
               }
             });
           }
@@ -389,8 +405,8 @@ export const StageCanvas: React.FC = () => {
         updateCurrentTransform({ mask: { ...activeMask, points: newPoints } });
         return;
       } else if (dragMode === 'rotate') {
-        const centerX = 300 + dragStart.initialTransform.x;
-        const centerY = 240 + dragStart.initialTransform.y;
+        const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
+        const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
         const dx = svgX - centerX;
         const dy = svgY - centerY;
         const currentAngleRad = Math.atan2(dy, dx);
@@ -399,9 +415,9 @@ export const StageCanvas: React.FC = () => {
 
         const newRotation = Math.round(dragStart.initialTransform.rotation + deltaAngleDeg);
         updateCurrentTransform({ rotation: newRotation });
-      } else if (dragMode === 'scale_corner' || (dragMode as any) === 'scale') {
-        const centerX = 300 + dragStart.initialTransform.x;
-        const centerY = 240 + dragStart.initialTransform.y;
+      } else if (dragMode === 'scale_corner' || dragMode === 'scale') {
+        const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
+        const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
         const dx = svgX - centerX;
         const dy = svgY - centerY;
         const currentDist = Math.sqrt(dx * dx + dy * dy);
@@ -430,14 +446,7 @@ export const StageCanvas: React.FC = () => {
         const deltaWorldY = svgY - dragStart.y;
 
         // Convert world delta to local coordinates of the unrotated element
-        const rotDeg = dragStart.initialTransform.rotation;
-        const rad = (rotDeg * Math.PI) / 180;
-        const cosR = Math.cos(rad);
-        const sinR = Math.sin(rad);
-
-        // Local displacement along element's X and Y axes
-        const dxLocal = deltaWorldX * cosR + deltaWorldY * sinR;
-        const dyLocal = -deltaWorldX * sinR + deltaWorldY * cosR;
+        const { dxLocal, dyLocal, cosR, sinR } = getLocalDelta(deltaWorldX, deltaWorldY, dragStart.initialTransform.rotation);
 
         const initScaleX = dragStart.initialTransform.scaleX;
         const initScaleY = dragStart.initialTransform.scaleY;
@@ -486,25 +495,25 @@ export const StageCanvas: React.FC = () => {
           scaleY: newScaleY,
         });
       } else if (dragMode === 'scale_x') {
-        const centerX = 300 + dragStart.initialTransform.x;
-        const centerY = 240 + dragStart.initialTransform.y;
+        const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
+        const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
         const dx = svgX - centerX;
         const dy = svgY - centerY;
 
-        const rad = (-dragStart.initialTransform.rotation * Math.PI) / 180;
-        const currentLocalX = Math.abs(dx * Math.cos(rad) - dy * Math.sin(rad));
+        const { dxLocal } = getLocalDelta(dx, dy, dragStart.initialTransform.rotation);
+        const currentLocalX = Math.abs(dxLocal);
         const ratioX = currentLocalX / Math.max(5, dragInitialLocalX);
 
         const newScaleX = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleX * ratioX).toFixed(2));
         updateCurrentTransform({ scaleX: newScaleX });
       } else if (dragMode === 'scale_y') {
-        const centerX = 300 + dragStart.initialTransform.x;
-        const centerY = 240 + dragStart.initialTransform.y;
+        const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
+        const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
         const dx = svgX - centerX;
         const dy = svgY - centerY;
 
-        const rad = (-dragStart.initialTransform.rotation * Math.PI) / 180;
-        const currentLocalY = Math.abs(dx * Math.sin(rad) + dy * Math.cos(rad));
+        const { dyLocal } = getLocalDelta(dx, dy, dragStart.initialTransform.rotation);
+        const currentLocalY = Math.abs(dyLocal);
         const ratioY = currentLocalY / Math.max(5, dragInitialLocalY);
 
         const newScaleY = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleY * ratioY).toFixed(2));
@@ -521,8 +530,8 @@ export const StageCanvas: React.FC = () => {
         characterParts.forEach(part => {
           const t = getComputedTransform(part.id, currentFrame);
           const bounds = getPartBounds(part);
-          const cx = 300 + t.x;
-          const cy = 240 + t.y;
+          const cx = CANVAS_CENTER_X + t.x;
+          const cy = CANVAS_CENTER_Y + t.y;
           // Rough bounding box intersection
           const partLeft = cx - bounds.halfW * t.scaleX;
           const partRight = cx + bounds.halfW * t.scaleX;
@@ -620,8 +629,8 @@ export const StageCanvas: React.FC = () => {
           const part = characterParts[i];
           const transform = getComputedTransform(part.id, currentFrame);
           
-          const dx = svgX - (300 + transform.x);
-          const dy = svgY - (240 + transform.y);
+          const dx = svgX - (CANVAS_CENTER_X + transform.x);
+          const dy = svgY - (CANVAS_CENTER_Y + transform.y);
           const rad = -transform.rotation * Math.PI / 180;
           const localX = dx * Math.cos(rad) - dy * Math.sin(rad);
           const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
@@ -644,7 +653,7 @@ export const StageCanvas: React.FC = () => {
         } else {
           // Drop in empty area -> create new media part
           addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
-            baseTransform: { x: Math.round(svgX - 300), y: Math.round(svgY - 240), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+            baseTransform: { x: Math.round(svgX - CANVAS_CENTER_X), y: Math.round(svgY - CANVAS_CENTER_Y), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
             ...(isVideo ? { videoUrl: url } : { imageUrl: url }),
           });
         }
@@ -655,22 +664,26 @@ export const StageCanvas: React.FC = () => {
     // Handle UI Panel JSON drops
     const rawData = e.dataTransfer.getData('application/json');
     if (!rawData) return;
-    const data = JSON.parse(rawData);
+    try {
+      const data = JSON.parse(rawData);
 
-    addCustomPart(data.type, data.name || 'Dropped Element', {
-      baseTransform: {
-        x: Math.round(svgX - 300),
-        y: Math.round(svgY - 240),
-        rotation: 0,
-        scaleX: 1,
-        scaleY: 1,
-        opacity: 1,
-      },
-    });
+      addCustomPart(data.type, data.name || 'Dropped Element', {
+        baseTransform: {
+          x: Math.round(svgX - CANVAS_CENTER_X),
+          y: Math.round(svgY - CANVAS_CENTER_Y),
+          rotation: 0,
+          scaleX: 1,
+          scaleY: 1,
+          opacity: 1,
+        },
+      });
+    } catch {
+      console.warn("Invalid drop payload");
+    }
   };
 
   const sortedParts = [...characterParts].sort((a, b) => a.zIndex - b.zIndex);
-  const isPanning = activeTool === 'pan' || (isDragging && (dragMode as any) === 'pan');
+  const isPanning = activeTool === 'pan' || (isDragging && dragMode === 'pan');
 
   return (
     <div
@@ -716,15 +729,15 @@ export const StageCanvas: React.FC = () => {
             width="60"
             height="60"
             patternUnits="userSpaceOnUse"
-            x={300 - projectResolution.width / 2}
-            y={240 - projectResolution.height / 2}
+            x={CANVAS_CENTER_X - projectResolution.width / 2}
+            y={CANVAS_CENTER_Y - projectResolution.height / 2}
           >
             <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" strokeDasharray="3 3" />
           </pattern>
           <clipPath id="artboard-clip">
             <rect
-              x={300 - projectResolution.width / 2}
-              y={240 - projectResolution.height / 2}
+              x={CANVAS_CENTER_X - projectResolution.width / 2}
+              y={CANVAS_CENTER_Y - projectResolution.height / 2}
               width={projectResolution.width}
               height={projectResolution.height}
             />
@@ -736,8 +749,8 @@ export const StageCanvas: React.FC = () => {
 
         {(() => {
           const zScale = 1 / Math.max(0.15, zoomLevel);
-          const artX = 300 - projectResolution.width / 2;
-          const artY = 240 - projectResolution.height / 2;
+          const artX = CANVAS_CENTER_X - projectResolution.width / 2;
+          const artY = CANVAS_CENTER_Y - projectResolution.height / 2;
 
           return (
             <>
@@ -959,7 +972,7 @@ export const StageCanvas: React.FC = () => {
                         />
                       )}
                       {activeTool === 'mask' && selectedPart.mask && selectedPart.mask.enabled && (
-                        <g transform={`translate(${300 + selectedTransform.x}, ${240 + selectedTransform.y}) rotate(${selectedTransform.rotation})`}>
+                        <g transform={`translate(${CANVAS_CENTER_X + selectedTransform.x}, ${CANVAS_CENTER_Y + selectedTransform.y}) rotate(${selectedTransform.rotation})`}>
                           <MaskGizmo
                             part={selectedPart}
                             transform={selectedTransform}

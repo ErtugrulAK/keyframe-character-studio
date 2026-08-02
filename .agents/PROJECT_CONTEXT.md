@@ -1,15 +1,20 @@
 # Project Context
 
-Project Name:
-Keyframe Character Studio
+## Project
 
-Purpose:
+**Name:** Keyframe Character Studio
 
-A browser-based animation editor for creating keyframe animations, character scenes, broadcasts, templates, and motion graphics.
+**Purpose:**
+
+Keyframe Character Studio is a browser-based animation editor for creating character animations, keyframe timelines, reusable templates, motion graphics, and scene compositions.
+
+The project prioritizes maintainability, scalability, predictable behavior, and clean architecture.
 
 ---
 
-## Frontend Stack
+## Technology Stack
+
+### Frontend
 
 - React
 - TypeScript
@@ -17,16 +22,12 @@ A browser-based animation editor for creating keyframe animations, character sce
 - Context API
 - Custom Hooks
 
----
-
-## Backend
+### Backend
 
 - Express
 - PostgreSQL
 
----
-
-## Testing
+### Testing
 
 - Vitest
 - React Testing Library
@@ -34,75 +35,115 @@ A browser-based animation editor for creating keyframe animations, character sce
 
 ---
 
-## Architectural Style
+## Architecture
 
-Thin Orchestrator Pattern
+The project follows a **Thin Orchestrator Pattern**.
 
-AnimatorContext is a dependency injection layer.
+The `AnimatorContext` acts only as an orchestration and dependency injection layer.
 
-Business logic exists inside domain hooks.
+Business logic should reside inside domain hooks and pure utilities.
+
+The architecture is designed around:
+
+- Separation of Concerns
+- Domain-driven Hooks
+- Pure Utility Layer
+- Unidirectional Data Flow
+- High Testability
 
 ---
 
-## Main Domains
+## Project Domains
 
-- usePlayback
-- useSelection
-- useToolbar
-- useClipboard
-- useHistory
-- useBroadcast
-- useTimeline
-- useInspector
-- useTemplates
-- useMath
-- useSerialization
-- useToast
-- usePresets
-- useProjectState
-- useKeyboardShortcuts
+Business logic is organized into independent domain hooks.
+
+Current domains include (but are not limited to):
+
+- Playback
+- Selection
+- Toolbar
+- Clipboard
+- History
+- Broadcast
+- Timeline
+- Inspector
+- Templates
+- Math
+- Serialization
+- Toast
+- Presets
+- Project State
+- Keyboard Shortcuts
+
+The implementation of these domains may evolve over time while preserving the architectural principles.
 
 ---
 
 ## Utility Layer
 
-Examples:
+Reusable utilities should remain:
 
-- partFactory
-- motionTransitions
-- trackMutations
-- broadcastEngine
+- Pure
+- Deterministic
+- Independently testable
+- Free from React dependencies
 
-Utilities must remain pure.
+Always reuse existing utilities before creating new ones.
 
 ---
 
-## Important Rules
+## Architecture Constraints
 
-Do not:
+Never:
 
-- put logic back into AnimatorContext
-- create circular dependencies
-- duplicate utilities
+- Move business logic back into `AnimatorContext`.
+- Introduce circular dependencies.
+- Duplicate business logic.
+- Duplicate utilities.
+- Mix UI logic with business logic.
+- Mix UI logic with mathematical logic.
 
 Always preserve:
 
-- runtime behavior
-- public APIs
-- backward compatibility
+- Runtime behavior
+- Public APIs
+- Backward compatibility
+
+unless explicitly instructed otherwise.
 
 ---
 
-## Current Status
+## Development Principles
 
-Architecture:
-Complete
+The project emphasizes:
 
-Testing:
-Complete
+- Defensive programming
+- Stable public APIs
+- Predictable runtime behavior
+- Clean code
+- Maintainability
+- Incremental improvements
+- Test-driven validation whenever applicable
 
-Defensive Programming:
-Complete
+---
 
-Production Hardening:
-Partially deferred intentionally.
+## Current Project Status
+
+Current architecture:
+
+- Domain-oriented
+- Hook-driven
+- Test infrastructure established
+- Defensive programming applied
+
+Further improvements should preserve the existing architectural boundaries unless explicitly requested.
+
+---
+
+## Version Control
+
+This project follows a structured, domain-driven Git workflow.
+
+All branch creation, branch selection, merging, and cleanup decisions must follow:
+
+`.agents/BRANCH_STRATEGY.md`

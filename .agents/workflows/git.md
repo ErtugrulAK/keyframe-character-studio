@@ -6,15 +6,19 @@ description: Safely prepare commits and push changes following the project's Git
 
 ## Objective
 
-Safely prepare commits and Git operations while preserving a clean project history.
+Safely prepare branches, commits, merges, and Git operations while preserving a clean, stable, and traceable project history.
 
 Never perform Git operations automatically without explicit user approval.
+
+Always follow the project's branching strategy defined in:
+
+.agents/BRANCH_STRATEGY.md
 
 ---
 
 # Phase 1 — Repository Audit
 
-Before committing, inspect the repository.
+Before performing any Git operation, inspect the repository.
 
 Run and analyze:
 
@@ -23,27 +27,46 @@ git status
 git diff --stat
 git diff
 git branch --show-current
+git branch
 git remote -v
 ```
 
 Determine:
 
 - Which files changed
-- Whether changes belong together
+- Whether the changes belong together
 - Whether multiple commits are preferable
 - Whether generated files are accidentally staged
-- Whether .gitignore needs updates
+- Whether `.gitignore` requires updates
+- Whether the current branch is appropriate
+- Whether a new working branch should be created according to the project's branching strategy
 
 Do NOT commit yet.
 
 ---
 
-# Phase 2 — Commit Plan
+# Phase 2 — Branch Planning
+
+If the work requires a new branch:
+
+1. Analyze the affected project domain.
+2. Determine the appropriate long-lived branch according to the branch strategy.
+3. If no suitable long-lived branch exists, ask for approval before creating one.
+4. Create a short-lived working branch from the selected long-lived branch.
+5. Explain the proposed branch structure.
+
+Wait for approval before creating branches.
+
+---
+
+# Phase 3 — Commit Plan
 
 Prepare a commit plan.
 
 Include:
 
+- Current branch
+- Target branch
 - Files included in each commit
 - Commit order
 - Commit messages
@@ -53,22 +76,22 @@ Use Conventional Commits whenever possible.
 
 Examples:
 
-feat:
-fix:
-refactor:
-perf:
-test:
-docs:
-style:
-build:
-ci:
-chore:
+- feat:
+- fix:
+- refactor:
+- perf:
+- test:
+- docs:
+- style:
+- build:
+- ci:
+- chore:
 
 Wait for approval.
 
 ---
 
-# Phase 3 — Commit
+# Phase 4 — Commit
 
 After approval:
 
@@ -81,9 +104,9 @@ Requirements:
 - No history rewrite
 - No squash unless explicitly requested
 - Do not modify Git configuration
-- Do not change remote configuration
-- Do not delete branches
-- Do not create tags unless requested
+- Do not modify remote configuration
+- Do not delete long-lived branches
+- Do not create tags unless explicitly requested
 
 Verify:
 
@@ -91,17 +114,38 @@ Verify:
 git status
 ```
 
-Working tree must be clean.
+The working tree must be clean.
 
 ---
 
-# Phase 4 — Push
+# Phase 5 — Merge
+
+Never merge automatically.
+
+Before merging verify:
+
+- Source branch
+- Target branch
+- Merge strategy
+- Working tree is clean
+- Requested validations completed
+
+Wait for explicit approval.
+
+Only after approval:
+
+- Merge the working branch into its parent branch.
+- Delete the temporary working branch after a successful merge.
+
+Never merge into `main` without explicit approval.
+
+---
+
+# Phase 6 — Push
 
 Never push automatically.
 
-Before pushing:
-
-Verify:
+Before pushing verify:
 
 ```bash
 git branch --show-current
@@ -117,19 +161,23 @@ Only after approval:
 git push
 ```
 
+Never push directly to `main` unless explicitly instructed.
+
 ---
 
 # Final Report
 
 Provide:
 
-- Branch name
+- Current branch
+- Target branch (if merged)
 - Remote
 - Number of commits created
 - Commit hashes
 - Commit messages
+- Merge status
 - Push status
-- Final git status
+- Final `git status`
 
 End with:
 

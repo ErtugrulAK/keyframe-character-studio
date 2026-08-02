@@ -16,7 +16,7 @@ This project prioritizes:
 
 ---
 
-# General Rules
+## General Rules
 
 Always:
 
@@ -44,7 +44,7 @@ Never:
 
 ---
 
-# Defensive Programming
+## Defensive Programming
 
 Prefer:
 
@@ -71,7 +71,7 @@ Never wrap internal pure mathematical or deterministic logic in unnecessary try/
 
 ---
 
-# React Rules
+## React Rules
 
 Follow:
 
@@ -91,11 +91,11 @@ Avoid:
 
 ---
 
-# Architecture Rules
+## Architecture Rules
 
 Respect:
 
-- Thin Orchestrator pattern
+- Thin Orchestrator Pattern
 - Domain Hooks
 - Pure Utility Layer
 - Unidirectional Data Flow
@@ -103,15 +103,15 @@ Respect:
 
 Never:
 
-- Create circular dependencies
-- Mix UI logic with business logic
-- Mix UI logic with mathematical logic
-- Duplicate utilities
-- Duplicate business logic
+- Create circular dependencies.
+- Mix UI logic with business logic.
+- Mix UI logic with mathematical logic.
+- Duplicate utilities.
+- Duplicate business logic.
 
 ---
 
-# Utility Rules
+## Utility Rules
 
 Before creating a new utility:
 
@@ -127,7 +127,7 @@ Utilities should:
 
 ---
 
-# Code Cleanup Rules
+## Code Cleanup Rules
 
 When cleaning code:
 
@@ -149,7 +149,7 @@ Never:
 
 ---
 
-# Validation Rules
+## Validation Rules
 
 Before completing any implementation:
 
@@ -157,9 +157,6 @@ Run (when available):
 
 ```bash
 npm run build
-```
-
-```bash
 npx tsc --noEmit
 ```
 
@@ -167,15 +164,22 @@ Run all relevant tests.
 
 Verify:
 
-- Runtime behavior preserved.
-- Public APIs preserved.
-- No TypeScript errors.
-- No ESLint errors.
-- Tests still pass.
+- Runtime behavior is preserved.
+- Public APIs are preserved.
+- No TypeScript errors remain.
+- No ESLint errors remain.
+- All relevant tests pass.
+- The project builds successfully when a build script exists.
+
+Do not consider a task complete if validation fails.
 
 ---
 
-# Git Workflow
+## Git Workflow
+
+Follow the branching strategy defined in:
+
+`/.agents/BRANCH_STRATEGY.md`
 
 Always:
 
@@ -184,15 +188,18 @@ Always:
 - Group related changes into logical commits.
 - Use Conventional Commits.
 
-Examples:
+Supported commit types:
 
-- feat:
-- fix:
-- refactor:
-- perf:
-- test:
-- docs:
-- chore:
+- feat
+- fix
+- refactor
+- perf
+- test
+- docs
+- chore
+- build
+- ci
+- style
 
 Never:
 
@@ -204,65 +211,95 @@ Never:
 - Change Git remotes.
 - Delete branches without approval.
 
-Never push directly to `main` unless explicitly approved.
-
 Always wait for explicit approval before:
 
-- Creating commits
-- Pushing to remote repositories
+- Creating branches.
+- Creating commits.
+- Merging branches.
+- Deleting branches.
+- Pushing to remote repositories.
+
+Never push directly to `main` unless explicitly approved.
 
 ---
 
-# Standard Workflow
+## Standard Workflow
 
 Unless explicitly instructed otherwise, always follow this process:
 
 1. Analyze the request.
 2. Identify affected files and architectural boundaries.
-3. Produce an implementation plan.
-4. Wait for explicit approval.
-5. Implement only the approved scope.
-6. Validate the implementation.
-7. Produce a final validation report.
+3. Determine the appropriate Git branch according to `BRANCH_STRATEGY.md`.
+4. Produce an implementation plan.
+5. Wait for explicit approval.
+6. Implement only the approved scope.
+7. Validate the implementation.
+8. Produce a final validation report.
 
 Never skip the approval step unless the user explicitly requests immediate implementation.
 
 ---
 
-# Language Policy
+## Language Policy
 
-Communication:
+### Communication
 
 - Communicate with the user in Turkish unless explicitly requested otherwise.
 
-Source Code:
+### Source Code
 
 - All source code must be written in English.
-- All identifiers (variables, functions, classes, interfaces, enums, types, constants, files, folders, and modules) must use English names.
-- All comments inside source code must be written in English.
+- All identifiers must use English names, including:
+  - Variables
+  - Functions
+  - Classes
+  - Interfaces
+  - Enums
+  - Types
+  - Constants
+  - Files
+  - Folders
+  - Modules
+- All source code comments must be written in English.
 - Commit messages must be written in English using Conventional Commits.
 
-Application:
+### Application
 
-- All user-facing text must be written in English.
-- This includes UI labels, buttons, menus, dialogs, notifications, tooltips, validation messages, logs intended for users, and API response messages.
+All user-facing text must be written in English, including:
 
-Documentation:
+- UI labels
+- Buttons
+- Menus
+- Dialogs
+- Notifications
+- Tooltips
+- Validation messages
+- User-facing logs
+- API response messages
 
-- Repository documentation (README, Architecture docs, API docs, guides, Markdown files, etc.) should be written in English unless the user explicitly requests otherwise.
+### Documentation
+
+Repository documentation should be written in English unless explicitly requested otherwise, including:
+
+- README
+- Architecture documents
+- API documentation
+- Markdown guides
+- Technical documentation
 
 Never introduce Turkish text into the production codebase or application UI unless explicitly requested.
 
 ---
 
-# Rule Priority
+## Rule Priority
 
 If multiple rules appear to conflict, follow this priority order:
 
-1. Explicit user instructions.
+1. Explicit user instructions
 2. AGENTS.md
-3. Active Workflow instructions.
-4. Existing project conventions.
-5. Personal assumptions.
+3. Active Workflow instructions
+4. BRANCH_STRATEGY.md
+5. Existing project conventions
+6. Personal assumptions
 
 Never make assumptions when an existing rule or project convention already defines the expected behavior.

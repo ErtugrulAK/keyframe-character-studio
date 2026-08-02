@@ -4,28 +4,53 @@ description: Safely implement new features while preserving existing behavior.
 
 # Feature Implementation Workflow
 
-When implementing a new feature:
+## Objective
 
-## Phase 1 — Analysis
-- Understand the requested feature completely.
-- Identify all affected files.
-- Identify affected hooks, utilities, context providers and components.
-- Verify architectural boundaries.
-- Do NOT modify code yet.
+Implement a new feature while preserving architecture, stability, backward compatibility, and overall code quality.
+
+Follow all rules defined in:
+
+- .agents/AGENTS.md
+- .agents/CODING_STYLE.md
+- .agents/PROJECT_CONTEXT.md
+
+---
+
+# Phase 1 — Analysis
+
+Analyze the requested feature before writing any code.
+
+Determine:
+
+- Feature scope
+- Business requirements
+- Affected domains
+- Affected architectural boundaries
+- Dependencies
+- Runtime implications
+- Existing reusable utilities/hooks/components
+
+Identify:
+
+- Files to modify
+- Files to create
+- Files to remove (if necessary)
+
+Do NOT modify any files yet.
 
 Present:
 
 - Scope
-- Files affected
+- Architectural analysis
+- Dependency analysis
 - Risks
-- Dependency graph
 - Implementation plan
 
-Stop and wait for approval.
+Wait for explicit approval.
 
 ---
 
-## Phase 2 — Implementation
+# Phase 2 — Implementation
 
 After approval:
 
@@ -34,42 +59,56 @@ Implement only the approved scope.
 Requirements:
 
 - Preserve runtime behavior unless explicitly requested.
-- Preserve public APIs unless explicitly requested.
+- Preserve public APIs unless explicitly approved.
+- Preserve backward compatibility.
 - Respect existing architecture.
-- Follow existing naming conventions.
+- Respect coding conventions.
 - Write defensive code.
-- Avoid duplicated logic.
 - Reuse existing utilities whenever possible.
+- Avoid duplicated logic.
 - Prefer composition over duplication.
-- No unrelated refactoring.
-- No formatting-only commits.
+- Keep business logic outside UI components.
+- Keep Context Providers thin.
+- Do not perform unrelated refactoring.
+- Do not perform formatting-only changes.
 
 ---
 
-## Phase 3 — Validation
+# Phase 3 — Validation
 
-Run:
+Run whenever available:
 
 ```bash
-npm run typecheck
+npm run build
 ```
-
-If unavailable:
 
 ```bash
 npx tsc --noEmit
 ```
 
-Run tests if they exist.
+Run all relevant tests.
 
-Report:
+Verify:
+
+- Runtime behavior preserved
+- Public APIs preserved
+- TypeScript clean
+- ESLint clean
+- Tests passing
+
+---
+
+# Final Report
+
+Provide:
 
 - Files modified
-- Exact behavior added
-- Public API changes
+- Files created
+- Feature summary
 - Runtime impact
+- Public API impact
 - Validation results
-- Remaining technical debt
+- Remaining risks
 
 End with:
 

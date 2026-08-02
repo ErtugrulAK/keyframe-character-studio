@@ -6,47 +6,52 @@ description: Analyze the architecture and prepare an implementation plan without
 
 ## Objective
 
-This workflow is strictly for analysis and planning.
+Analyze the requested work and produce a complete implementation plan without modifying the codebase.
 
-Do NOT modify any code.
+Follow:
 
-Do NOT create, edit, rename or delete files.
+- .agents/AGENTS.md
+- .agents/CODING_STYLE.md
+- .agents/PROJECT_CONTEXT.md
 
 ---
 
-# Phase 1 — Understand the Request
-
-Carefully analyze the requested feature, bug, refactor or improvement.
+# Phase 1 — Request Analysis
 
 Understand:
 
-- What is being requested.
-- Why it is needed.
-- Which domains are involved.
-- Which files may be affected.
+- Requested change
+- Business objective
+- Functional requirements
+- Non-functional requirements
+
+Determine:
+
+- Affected domains
+- Existing implementation
+- Architectural constraints
 
 ---
 
 # Phase 2 — Boundary Analysis
 
-Determine:
+Identify:
 
-- Affected hooks
+- Hooks
 - Components
-- Context providers
+- Context Providers
 - Utilities
 - Types
 - Constants
 - Shared modules
+- External integrations
 
-Verify architectural boundaries.
+Verify:
 
-Detect:
-
-- Cross-domain coupling
 - Dependency direction
-- Potential circular dependencies
-- Runtime risks
+- Separation of concerns
+- Circular dependency risks
+- Runtime boundaries
 
 ---
 
@@ -54,37 +59,39 @@ Detect:
 
 Explain:
 
-- Current implementation
-- Proposed implementation
-- Why this approach is preferred
-- Possible alternatives
-
-If multiple approaches exist, compare them.
+- Current architecture
+- Proposed architecture
+- Why the proposal is preferred
+- Alternative solutions
+- Trade-offs
 
 ---
 
 # Phase 4 — Implementation Plan
 
-Produce a detailed implementation plan.
+Produce:
 
-Include:
-
-1. Files to modify
-2. Files to create
-3. Files to remove (if any)
-4. Public API impact
-5. Runtime impact
-6. Risks
-7. Validation strategy
+- Files to modify
+- Files to create
+- Files to remove
+- Public API impact
+- Runtime impact
+- Validation strategy
+- Testing strategy
+- Potential risks
+- Estimated implementation order
 
 ---
 
-# Phase 5 — Wait
+# Phase 5 — Approval
 
 Stop here.
 
-Do NOT implement anything.
+Do NOT:
 
-Explicitly wait for user approval.
+- Modify files
+- Create files
+- Delete files
+- Rename files
 
-Only after approval should implementation begin.
+Wait for explicit user approval before implementation begins.

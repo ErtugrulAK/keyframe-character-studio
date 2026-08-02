@@ -7,12 +7,14 @@ describe('usePlayback Hook', () => {
   let mockCancelRaf: any;
 
   beforeEach(() => {
-    mockRaf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+    mockRaf = vi.fn((cb: any) => {
       return setTimeout(() => cb(performance.now()), 16) as any;
     });
-    mockCancelRaf = vi.spyOn(window, 'cancelAnimationFrame').mockImplementation((id) => {
+    mockCancelRaf = vi.fn((id: any) => {
       clearTimeout(id);
     });
+    window.requestAnimationFrame = mockRaf;
+    window.cancelAnimationFrame = mockCancelRaf;
     vi.useFakeTimers();
   });
 

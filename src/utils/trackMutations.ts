@@ -1,6 +1,6 @@
 import type { Track, TrackChannel, EasingType, PropertyKeyframe } from '../types/animator';
-import type { generateId } from './idGenerator';
-import type { makeEmptyChannels } from './defaults';
+import { generateId } from './idGenerator';
+import { makeEmptyChannels } from './defaults';
 
 export const updateKeyframeBezierPointsMutator = (
   tracks: Track[],

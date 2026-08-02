@@ -1,16 +1,13 @@
-import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { ToastPortal } from '../components/Toast/ToastPortal';
 import type {
   CharacterPart,
   BodyPartType,
   Track,
-  Keyframe,
   Transform,
   ToolType,
   EasingType,
-  AnimationProject,
   TrackChannel,
-  PropertyKeyframe,
   AppMode,
   BroadcastObjectState,
   CustomMotionPreset,
@@ -18,18 +15,15 @@ import type {
   MotionTemplate,
   ProjectTemplate,
 } from '../types/animator';
-import {
-  DEFAULT_CHARACTER_PARTS,
-  DEFAULT_TRACKS,
-  interpolateTransform,
-  makeEmptyChannels,
-  interpolateChannel,
-} from '../utils/defaults';
-import { DEFAULT_INITIAL_PRESETS } from './initialStateData';
-import { generateId, initializeIdCounter } from '../utils/idGenerator';
 import { useClipboard } from '../hooks/useClipboard';
 import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
+
+export interface ToastItem {
+  id: string;
+  message: string;
+  type?: 'success' | 'error' | 'info';
+}
 import { useHistory } from '../hooks/useHistory';
 import { useBroadcast } from '../hooks/useBroadcast';
 import { useToolbar } from '../hooks/useToolbar';
@@ -184,7 +178,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { tracks, setTracks, tracksRef, characterParts, setCharacterParts, characterPartsRef } = useProjectState();
 
   const {
-    templateCanvasStore,
     setTemplateCanvasStore,
     projectTemplates,
     setProjectTemplates,
@@ -277,7 +270,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showGrid,
     setShowGrid,
     deletePart,
-    duplicateSelectedPart,
     addKeyframeToTrack,
     addKeyframeForSelected,
     deleteKeyframe,
@@ -295,7 +287,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     renamePartAndTrack,
     reorderParts,
   } = useTimeline({
-    characterParts,
     setCharacterParts,
     tracks,
     setTracks,
@@ -331,7 +322,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 
 
-  const { clipboardData, copySelectedPart, pasteCopiedPart } = useClipboard({
+  const { copySelectedPart, pasteCopiedPart, duplicateSelectedPart } = useClipboard({
     characterParts,
     tracks,
     selectedPartId,
@@ -399,14 +390,13 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     characterParts,
     setCharacterParts,
     activeProjectTemplateId,
-    setActiveProjectTemplateIdState: setActiveProjectTemplateId,
+    setActiveProjectTemplateIdState,
     motionTemplates,
     setMotionTemplates,
     activeTemplateId,
-    setActiveTemplateIdState: setActiveTemplateId,
+    setActiveTemplateIdState,
     sceneTitle,
-    setSceneTitleState: setSceneTitle,
-    projectTemplates,
+    setSceneTitleState,
     setProjectTemplates,
     setTemplateCanvasStore,
     setCurrentFrame,

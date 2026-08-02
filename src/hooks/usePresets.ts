@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { CustomMotionPreset } from '../types/animator';
+import type { CustomMotionPreset } from '../types/animator';
 import { DEFAULT_INITIAL_PRESETS } from '../context/initialStateData';
 
 export const usePresets = () => {

@@ -1,7 +1,7 @@
 import type { BodyPartType, CharacterPart, Track } from '../types/animator';
-import type { generateId } from './idGenerator';
-import type { makeEmptyChannels } from './defaults';
-import type { TOOLBAR_COLORS, DEFAULT_CLONER_CONFIG, DEFAULT_PARTICLE_CONFIG } from './constants';
+import { generateId } from './idGenerator';
+import { makeEmptyChannels } from './defaults';
+import { TOOLBAR_COLORS, DEFAULT_CLONER_CONFIG, DEFAULT_PARTICLE_CONFIG } from './constants';
 
 export const createCustomPart = (
   type: BodyPartType,

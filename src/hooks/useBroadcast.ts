@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { AppMode, BroadcastObjectState, LiveStuntType, CustomMotionPreset, CharacterPart, Track } from '../types/animator';
+import type { AppMode, BroadcastObjectState, LiveStuntType, CustomMotionPreset, CharacterPart, Track } from '../types/animator';
 import { tickLiveStuntsState, tickBroadcastState } from '../utils/broadcastEngine';
 
 interface UseBroadcastOptions {

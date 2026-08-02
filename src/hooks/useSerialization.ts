@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { AnimationProject, CharacterPart, Track, MotionTemplate } from '../types/animator';
+import type { AnimationProject, CharacterPart, Track, MotionTemplate } from '../types/animator';
 import { initializeIdCounter } from '../utils/idGenerator';
 import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
 import { AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
@@ -33,7 +33,6 @@ interface UseSerializationOptions {
   setActiveTemplateIdState: React.Dispatch<React.SetStateAction<string>>;
   sceneTitle: string;
   setSceneTitleState: React.Dispatch<React.SetStateAction<string>>;
-  projectTemplates: any[]; // Assuming any[] since ProjectTemplate isn't explicitly defined here, wait I should use the correct type if possible. Or just import ProjectTemplate.
   setProjectTemplates: React.Dispatch<React.SetStateAction<any[]>>;
   setTemplateCanvasStore: React.Dispatch<React.SetStateAction<any>>;
   setCurrentFrame: (frame: number | ((prev: number) => number)) => void;
@@ -59,7 +58,6 @@ export const useSerialization = ({
   setActiveTemplateIdState,
   sceneTitle,
   setSceneTitleState,
-  projectTemplates,
   setProjectTemplates,
   setTemplateCanvasStore,
   setCurrentFrame,
@@ -107,7 +105,7 @@ export const useSerialization = ({
   const performSave = useCallback(() => {
     try {
       const projectData = {
-        name: 'Unreal 2D Character Sequence',
+        name: sceneTitle || 'Unreal 2D Character Sequence',
         fps,
         totalFrames,
         projectResolution,
@@ -120,7 +118,7 @@ export const useSerialization = ({
     } catch (e) {
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
     }
-  }, [fps, totalFrames, projectResolution, tracks, characterParts]);
+  }, [sceneTitle, fps, totalFrames, projectResolution, tracks, characterParts]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -151,10 +149,10 @@ export const useSerialization = ({
 
   const importProject = useCallback((jsonStr: string, defaultName?: string): boolean => {
     try {
-      const parsed: AnimationProject = JSON.parse(jsonStr);
+      const parsed: AnimationProject & { sceneTitle?: string } = JSON.parse(jsonStr);
       if (!parsed) return false;
       if (parsed.tracks && parsed.characterParts) {
-        const rawName = defaultName || parsed.name || 'Imported Template';
+        const rawName = defaultName || parsed.sceneTitle || parsed.name || 'Imported Template';
         const templateName = rawName.replace(/\.json$/i, '').trim() || 'Imported Template';
         const newId = `tmpl_${Date.now()}`;
 

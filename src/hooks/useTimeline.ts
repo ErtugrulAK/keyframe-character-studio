@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
-import { CharacterPart, Track, TrackChannel, EasingType, Keyframe, PropertyKeyframe } from '../types/animator';
+import type { CharacterPart, Track, TrackChannel, EasingType, Keyframe, Transform } from '../types/animator';
 import { generateId } from '../utils/idGenerator';
-import { makeEmptyChannels } from '../utils/defaults';
 import { generateTransitionKeyframes } from '../utils/motionTransitions';
 import { 
   updateKeyframeBezierPointsMutator, 
@@ -9,10 +8,8 @@ import {
   deletePropertyKeyframeMutator, 
   updatePropertyKeyframeFrameMutator 
 } from '../utils/trackMutations';
-import { Transform } from '../types/animator';
 
 interface UseTimelineOptions {
-  characterParts: CharacterPart[];
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   tracks: Track[];
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
@@ -28,7 +25,6 @@ interface UseTimelineOptions {
 }
 
 export const useTimeline = ({
-  characterParts,
   setCharacterParts,
   tracks,
   setTracks,
@@ -48,85 +44,14 @@ export const useTimeline = ({
   // Delete part directly without confirm
   const deletePart = useCallback((partId: string) => {
     setCharacterParts((prev) => prev.filter((p) => p.id !== partId));
+    if (selectedPartIds.includes(partId)) {
+      setSelectedPartIds(selectedPartIds.filter((id) => id !== partId));
+    }
     setTracks((prev) => prev.filter((t) => t.partId !== partId));
     if (selectedPartId === partId) {
       setSelectedPartId(null);
     }
-  }, [selectedPartId]);
-
-  const duplicatePart = useCallback(() => {
-    if (!selectedPartId) return;
-    const part = characterParts.find((p) => p.id === selectedPartId);
-    if (!part) return;
-    const track = tracks.find((t) => t.partId === selectedPartId);
-    
-    try {
-      const newPartId = generateId('part');
-      const newPart: CharacterPart = {
-        ...JSON.parse(JSON.stringify(part)),
-        id: newPartId,
-        name: `${part.name} Copy`,
-        zIndex: characterParts.length + 1,
-        baseTransform: {
-          ...part.baseTransform,
-          x: part.baseTransform.x + 20,
-          y: part.baseTransform.y + 20,
-        },
-      };
-
-      let newTrack: Track = {
-        id: generateId('track'),
-        partId: newPartId,
-        name: newPart.name,
-        color: part.fillColor || '#3b82f6',
-        keyframes: [],
-        channels: { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] },
-        visible: true,
-        locked: false,
-        expanded: false,
-      };
-
-      if (track) {
-        const clonedTrack: Track = JSON.parse(JSON.stringify(track));
-        newTrack = {
-          ...clonedTrack,
-          id: generateId('track'),
-          partId: newPartId,
-          keyframes: clonedTrack.keyframes.map((k) => ({
-            ...k,
-            id: generateId('kf'),
-          })),
-        };
-        if (clonedTrack.channels) {
-          newTrack.channels = {
-            x: clonedTrack.channels.x.map((pk) => ({ ...pk, id: generateId('pkf_x') })),
-            y: clonedTrack.channels.y.map((pk) => ({ ...pk, id: generateId('pkf_y') })),
-            rotation: clonedTrack.channels.rotation.map((pk) => ({ ...pk, id: generateId('pkf_r') })),
-            scaleX: clonedTrack.channels.scaleX.map((pk) => ({ ...pk, id: generateId('pkf_sx') })),
-            scaleY: clonedTrack.channels.scaleY.map((pk) => ({ ...pk, id: generateId('pkf_sy') })),
-            opacity: clonedTrack.channels.opacity.map((pk) => ({ ...pk, id: generateId('pkf_o') })),
-          };
-        }
-      }
-
-      setTracks((prevTracks) => {
-        const nextTracks = [newTrack, ...prevTracks];
-        const total = nextTracks.length;
-        setCharacterParts((prevParts) => {
-          const updated = [newPart, ...prevParts];
-          return updated.map((p) => {
-            const idx = nextTracks.findIndex((t) => t.partId === p.id);
-            return { ...p, zIndex: idx >= 0 ? total - idx : p.zIndex };
-          });
-        });
-        return nextTracks;
-      });
-      setSelectedPartId(newPartId);
-      showToast(`Duplicated "${newPart.name}"`, 'success');
-    } catch {
-      console.warn("Failed to duplicate part");
-    }
-  }, [selectedPartId, characterParts, tracks, showToast]);
+  }, [selectedPartId, selectedPartIds]);
 
   // Keyframe & Track Actions
   const addKeyframeToTrack = (trackId: string, frame: number) => {
@@ -331,7 +256,6 @@ export const useTimeline = ({
     showGrid,
     setShowGrid,
     deletePart,
-    duplicateSelectedPart,
     addKeyframeToTrack,
     addKeyframeForSelected,
     deleteKeyframe,

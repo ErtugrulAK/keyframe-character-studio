@@ -1,4 +1,4 @@
-import { CharacterPart, Track, Transform } from '../types/animator';
+import type { CharacterPart, Track, Transform } from '../types/animator';
 
 interface UseInspectorOptions {
   selectedPartId: string | null;

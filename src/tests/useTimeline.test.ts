@@ -36,7 +36,7 @@ describe('useTimeline Hook', () => {
       showToast: mockShowToast
     }));
 
-    expect(result.current.timelineZoom).toBe(1);
+    expect(result.current.timelineZoom).toBe(18);
     expect(result.current.showGrid).toBe(true);
   });
 

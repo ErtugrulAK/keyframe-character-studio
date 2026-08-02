@@ -1,5 +1,5 @@
 import type { Transform, Keyframe, EasingType } from '../types/animator';
-import type { generateId } from './idGenerator';
+import { generateId } from './idGenerator';
 
 export const generateTransitionKeyframes = (
   baseTransform: Transform,

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { CharacterPart, Track } from '../types/animator';
+import type { CharacterPart, Track } from '../types/animator';
 
 export interface HistoryState {
   tracks: Track[];

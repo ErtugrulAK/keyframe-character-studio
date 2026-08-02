@@ -394,7 +394,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
       {/* ── 4 CONTROL POINTS (STAGE X & Y COORDINATES) ── */}
       {(() => {
-        const { halfW: baseHalfW, halfH: baseHalfH } = getPartBaseBounds(selectedPart);
+        const { halfW: baseHalfW, halfH: baseHalfH } = getPartBounds(selectedPart);
         const currentHalfW = Math.round(baseHalfW * transform.scaleX);
         const currentHalfH = Math.round(baseHalfH * transform.scaleY);
 

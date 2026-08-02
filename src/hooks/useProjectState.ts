@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Track, CharacterPart } from '../types/animator';
+import type { Track, CharacterPart } from '../types/animator';
 import { DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
 
 export const useProjectState = () => {

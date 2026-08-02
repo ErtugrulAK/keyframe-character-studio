@@ -1,5 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { CharacterPart, Track, Transform, PropertyKeyframe, TrackChannel } from '../types/animator';
+import type { CharacterPart, Track, Transform, PropertyKeyframe } from '../types/animator';
 import { interpolateTransform, interpolateChannel } from '../utils/defaults';
 import { PART_ANCHOR_OFFSETS } from '../utils/constants';
 

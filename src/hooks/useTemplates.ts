@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { CharacterPart, Track, MotionTemplate, ProjectTemplate, TrackChannel } from '../types/animator';
+import type { CharacterPart, Track, MotionTemplate, ProjectTemplate, TrackChannel } from '../types/animator';
 import { DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_CHARACTER_PARTS, DEFAULT_TRACKS } from '../utils/defaults';
 

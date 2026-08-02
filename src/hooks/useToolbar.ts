@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BodyPartType, CharacterPart, ToolType, Track } from '../types/animator';
+import type { BodyPartType, CharacterPart, ToolType, Track } from '../types/animator';
 import { createCustomPart } from '../utils/partFactory';
 
 interface UseToolbarOptions {

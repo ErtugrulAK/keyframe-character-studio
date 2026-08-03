@@ -14,8 +14,12 @@ An advanced **2D Vector Animation Studio, Motion Graphics Sequencer, & Real-Time
 ## 📸 Application Showcase
 
 ### 1. Main Studio Editor & Sequencer
-![Keyframe Character Studio Main Editor](src/assets/hero.png)
+![Keyframe Character Studio Main Editor](docs/assets/main-editor.png)
 *Figure 1: Full studio interface featuring the interactive Stage Canvas, multi-track Sequencer Timeline with Bezier Motion Curves, Template Tabs, and Property Inspector.*
+
+### 2. Live Broadcast Director Panel (Reji Mode)
+![Live Director Broadcast Panel](docs/assets/live-director.png)
+*Figure 2: Real-time broadcast control interface for triggering live graphic sequence animations, PLAY IN / PLAY OUT motion transitions, and stage stunts.*
 
 ---
 

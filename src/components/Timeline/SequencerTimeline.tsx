@@ -32,12 +32,16 @@ import './SequencerTimeline.css';
 
 // Visual metadata for each Transform channel
 const CHANNEL_META: Record<TrackChannel, { label: string; color: string; shortLabel: string }> = {
-  x:        { label: 'Location X',  shortLabel: 'X',  color: '#ef4444' },
-  y:        { label: 'Location Y',  shortLabel: 'Y',  color: '#22c55e' },
-  rotation: { label: 'Rotation',    shortLabel: 'R°', color: '#3b82f6' },
-  scaleX:   { label: 'Scale X',     shortLabel: 'SX', color: '#a855f7' },
-  scaleY:   { label: 'Scale Y',     shortLabel: 'SY', color: '#ec4899' },
-  opacity:  { label: 'Opacity',     shortLabel: 'Op', color: '#f59e0b' },
+  x:            { label: 'Location X',  shortLabel: 'X',   color: '#ef4444' },
+  y:            { label: 'Location Y',  shortLabel: 'Y',   color: '#22c55e' },
+  rotation:     { label: 'Rotation',    shortLabel: 'R°',  color: '#3b82f6' },
+  scaleX:       { label: 'Scale X',     shortLabel: 'SX',  color: '#a855f7' },
+  scaleY:       { label: 'Scale Y',     shortLabel: 'SY',  color: '#ec4899' },
+  opacity:      { label: 'Opacity',     shortLabel: 'Op',  color: '#f59e0b' },
+  maskOffsetX:  { label: 'Mask X',      shortLabel: 'MX',  color: '#14b8a6' },
+  maskOffsetY:  { label: 'Mask Y',      shortLabel: 'MY',  color: '#06b6d4' },
+  maskScale:    { label: 'Mask Scale',   shortLabel: 'MS',  color: '#8b5cf6' },
+  maskRotation: { label: 'Mask Rot',     shortLabel: 'MR°', color: '#f97316' },
 };
 
 const TRACK_ROW_HEIGHT = 34;   // parent track row
@@ -287,7 +291,8 @@ export const SequencerTimeline: React.FC = () => {
   // Add property keyframe at current frame for given channel
   const handleAddChannelKeyframe = (trackId: string, channel: TrackChannel, partId: string) => {
     const transform = getComputedTransform(partId, currentFrame);
-    addPropertyKeyframe(trackId, channel, currentFrame, transform[channel]);
+    const val = transform[channel] ?? (channel === 'maskScale' ? 1 : 0);
+    addPropertyKeyframe(trackId, channel, currentFrame, val);
   };
 
   // State for sub-group collapsing (e.g., location, rotation, scale)

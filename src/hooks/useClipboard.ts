@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import type { CharacterPart, Track } from '../types/animator';
+import type { CharacterPart, Track, TrackChannel } from '../types/animator';
 import { generateId } from '../utils/idGenerator';
+import { makeEmptyChannels } from '../utils/defaults';
 
 interface UseClipboardOptions {
   characterParts: CharacterPart[];
@@ -59,7 +60,7 @@ export const useClipboard = ({
       name: newPart.name,
       color: '#3b82f6',
       keyframes: [],
-      channels: { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] },
+      channels: makeEmptyChannels(),
       visible: true,
       locked: false,
       expanded: false,
@@ -67,6 +68,14 @@ export const useClipboard = ({
 
     if (clipboardData.track) {
       const clonedTrack: Track = structuredClone(clipboardData.track);
+      const newChannels = makeEmptyChannels();
+      if (clonedTrack.channels) {
+        (Object.keys(clonedTrack.channels) as TrackChannel[]).forEach((ch) => {
+          if (clonedTrack.channels[ch]) {
+            newChannels[ch] = clonedTrack.channels[ch].map((pk) => ({ ...pk, id: generateId(`pkf_${ch}`) }));
+          }
+        });
+      }
       newTrack = {
         ...clonedTrack,
         id: generateId('track'),
@@ -75,17 +84,8 @@ export const useClipboard = ({
           ...k,
           id: generateId('kf'),
         })),
+        channels: newChannels,
       };
-      if (clonedTrack.channels) {
-        newTrack.channels = {
-          x: (clonedTrack.channels.x || []).map((pk) => ({ ...pk, id: generateId('pkf_x') })),
-          y: (clonedTrack.channels.y || []).map((pk) => ({ ...pk, id: generateId('pkf_y') })),
-          rotation: (clonedTrack.channels.rotation || []).map((pk) => ({ ...pk, id: generateId('pkf_rot') })),
-          scaleX: (clonedTrack.channels.scaleX || []).map((pk) => ({ ...pk, id: generateId('pkf_sx') })),
-          scaleY: (clonedTrack.channels.scaleY || []).map((pk) => ({ ...pk, id: generateId('pkf_sy') })),
-          opacity: (clonedTrack.channels.opacity || []).map((pk) => ({ ...pk, id: generateId('pkf_op') })),
-        };
-      }
     }
 
     setTracks((prevTracks) => [newTrack, ...prevTracks]);
@@ -119,7 +119,7 @@ export const useClipboard = ({
       name: newPart.name,
       color: track?.color || '#3b82f6',
       keyframes: [],
-      channels: { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] },
+      channels: makeEmptyChannels(),
       visible: true,
       locked: false,
       expanded: false,
@@ -127,6 +127,14 @@ export const useClipboard = ({
 
     if (track) {
       const clonedTrack: Track = structuredClone(track);
+      const newChannels = makeEmptyChannels();
+      if (clonedTrack.channels) {
+        (Object.keys(clonedTrack.channels) as TrackChannel[]).forEach((ch) => {
+          if (clonedTrack.channels[ch]) {
+            newChannels[ch] = clonedTrack.channels[ch].map((pk) => ({ ...pk, id: generateId(`pkf_${ch}`) }));
+          }
+        });
+      }
       newTrack = {
         ...clonedTrack,
         id: generateId('track'),
@@ -135,17 +143,8 @@ export const useClipboard = ({
           ...k,
           id: generateId('kf'),
         })),
+        channels: newChannels,
       };
-      if (clonedTrack.channels) {
-        newTrack.channels = {
-          x: (clonedTrack.channels.x || []).map((pk) => ({ ...pk, id: generateId('pkf_x') })),
-          y: (clonedTrack.channels.y || []).map((pk) => ({ ...pk, id: generateId('pkf_y') })),
-          rotation: (clonedTrack.channels.rotation || []).map((pk) => ({ ...pk, id: generateId('pkf_rot') })),
-          scaleX: (clonedTrack.channels.scaleX || []).map((pk) => ({ ...pk, id: generateId('pkf_sx') })),
-          scaleY: (clonedTrack.channels.scaleY || []).map((pk) => ({ ...pk, id: generateId('pkf_sy') })),
-          opacity: (clonedTrack.channels.opacity || []).map((pk) => ({ ...pk, id: generateId('pkf_op') })),
-        };
-      }
     }
 
     setTracks((prevTracks) => [newTrack, ...prevTracks]);

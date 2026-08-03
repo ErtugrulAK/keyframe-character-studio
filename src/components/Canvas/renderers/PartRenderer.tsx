@@ -269,11 +269,11 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const renderInnerMedia = (shapeWidth: number, shapeHeight: number, xOff: number = 0, yOff: number = 0, overrideOpacity?: number) => {
     if (!part.innerMediaUrl || (isGhost && !isFocusGhost)) return null;
     
-    // Apply Mask Transforms
-    const mX = part.maskOffsetX || 0;
-    const mY = part.maskOffsetY || 0;
-    const mScale = part.maskScale ?? 1;
-    const mRot = part.maskRotation || 0;
+    // Apply Mask Transforms from computed transform (or fallback to part)
+    const mX = transform.maskOffsetX ?? part.maskOffsetX ?? 0;
+    const mY = transform.maskOffsetY ?? part.maskOffsetY ?? 0;
+    const mScale = transform.maskScale ?? part.maskScale ?? 1;
+    const mRot = transform.maskRotation ?? part.maskRotation ?? 0;
     const maskTransform = `translate(${mX}, ${mY}) scale(${mScale}) rotate(${mRot})`;
     if (part.innerMediaType === 'video') {
       const { isYouTube, embedUrl } = getYouTubeEmbedInfo(part.innerMediaUrl);

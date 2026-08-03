@@ -15,7 +15,10 @@ export const DEFAULT_TRACKS: Track[] = [];
 
 /** Create an empty channels record with no keyframes for any property */
 export function makeEmptyChannels(): Record<TrackChannel, PropertyKeyframe[]> {
-  return { x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [] };
+  return {
+    x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [],
+    maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [],
+  };
 }
 
 /** Interpolate a single numeric channel at a given frame */
@@ -125,6 +128,10 @@ export function interpolateTransform(
     scaleX: lerp(t1.scaleX, t2.scaleX, eased),
     scaleY: lerp(t1.scaleY, t2.scaleY, eased),
     opacity: lerp(t1.opacity, t2.opacity, eased),
+    maskOffsetX: lerp(t1.maskOffsetX ?? 0, t2.maskOffsetX ?? 0, eased),
+    maskOffsetY: lerp(t1.maskOffsetY ?? 0, t2.maskOffsetY ?? 0, eased),
+    maskScale: lerp(t1.maskScale ?? 1, t2.maskScale ?? 1, eased),
+    maskRotation: lerp(t1.maskRotation ?? 0, t2.maskRotation ?? 0, eased),
   };
 
   if (t1.mask && t2.mask) {

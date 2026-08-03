@@ -37,6 +37,10 @@ export interface Transform {
   scaleX: number;
   scaleY: number;
   opacity: number;
+  maskOffsetX?: number;
+  maskOffsetY?: number;
+  maskScale?: number;
+  maskRotation?: number;
   mask?: MaskData;
 }
 
@@ -60,9 +64,9 @@ export interface PropertyKeyframe {
 }
 
 // Channel keys match Transform property names
-export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity';
+export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation';
 
-export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'];
+export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation'];
 
 export interface Track {
   id: string;

@@ -27,7 +27,16 @@ export const useMath = ({ characterParts, tracks, activeTemplateId }: UseMathOpt
       }
 
       const part = characterParts.find((p) => p.id === partId);
-      const baseTransform = part ? { ...part.baseTransform, mask: part.baseTransform?.mask ?? part.mask } : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+      const baseTransform: Transform = part
+        ? {
+            maskOffsetX: part.maskOffsetX ?? 0,
+            maskOffsetY: part.maskOffsetY ?? 0,
+            maskScale: part.maskScale ?? 1,
+            maskRotation: part.maskRotation ?? 0,
+            ...part.baseTransform,
+            mask: part.baseTransform?.mask ?? part.mask,
+          }
+        : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, maskOffsetX: 0, maskOffsetY: 0, maskScale: 1, maskRotation: 0 };
 
       const track = tracks.find((t) => t.partId === partId);
       if (!track) return baseTransform;
@@ -64,6 +73,10 @@ export const useMath = ({ characterParts, tracks, activeTemplateId }: UseMathOpt
           const csx = filterCh(ch.scaleX);
           const csy = filterCh(ch.scaleY);
           const cop = filterCh(ch.opacity);
+          const cmox = filterCh(ch.maskOffsetX);
+          const cmoy = filterCh(ch.maskOffsetY);
+          const cms = filterCh(ch.maskScale);
+          const cmr = filterCh(ch.maskRotation);
 
           return {
             x: cx.length > 0 ? interpolateChannel(cx, frame, legacyTransform.x) : legacyTransform.x,
@@ -72,6 +85,10 @@ export const useMath = ({ characterParts, tracks, activeTemplateId }: UseMathOpt
             scaleX: csx.length > 0 ? interpolateChannel(csx, frame, legacyTransform.scaleX) : legacyTransform.scaleX,
             scaleY: csy.length > 0 ? interpolateChannel(csy, frame, legacyTransform.scaleY) : legacyTransform.scaleY,
             opacity: cop.length > 0 ? interpolateChannel(cop, frame, legacyTransform.opacity) : legacyTransform.opacity,
+            maskOffsetX: cmox.length > 0 ? interpolateChannel(cmox, frame, legacyTransform.maskOffsetX ?? 0) : (legacyTransform.maskOffsetX ?? baseTransform.maskOffsetX ?? 0),
+            maskOffsetY: cmoy.length > 0 ? interpolateChannel(cmoy, frame, legacyTransform.maskOffsetY ?? 0) : (legacyTransform.maskOffsetY ?? baseTransform.maskOffsetY ?? 0),
+            maskScale: cms.length > 0 ? interpolateChannel(cms, frame, legacyTransform.maskScale ?? 1) : (legacyTransform.maskScale ?? baseTransform.maskScale ?? 1),
+            maskRotation: cmr.length > 0 ? interpolateChannel(cmr, frame, legacyTransform.maskRotation ?? 0) : (legacyTransform.maskRotation ?? baseTransform.maskRotation ?? 0),
             mask: legacyTransform.mask,
           };
         }

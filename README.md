@@ -4,13 +4,21 @@
 [![TypeScript 6](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Vite 8](https://img.shields.io/badge/Vite-8.1-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Express.js](https://img.shields.io/badge/Express-5.2-000000?logo=express&logoColor=white)](https://expressjs.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-An advanced **2D Vector Animation Studio, Motion Graphics Sequencer, & Real-Time Broadcast Motion Graphics Director** built with **React 19**, **TypeScript**, **Vite**, **Express**, and **PostgreSQL**.
+An advanced **2D Vector Animation Studio, Motion Graphics Sequencer, & Real-Time Broadcast Motion Graphics Director** built with **React 19**, **TypeScript**, **Vite**, **Express**, **PostgreSQL**, and **Embedded SQLite**.
 
 ---
 
-## ✨ Key Features & Capabilities
+## 📸 Application Showcase
+
+### 1. Main Studio Editor & Sequencer
+![Keyframe Character Studio Main Editor](src/assets/hero.png)
+*Figure 1: Full studio interface featuring the interactive Stage Canvas, multi-track Sequencer Timeline with Bezier Motion Curves, Template Tabs, and Property Inspector.*
+
+---
+
+## ✨ Overview & Core Capabilities
 
 ### 1. 🎬 Unreal Engine Style Motion Design Sequencer
 - **Multi-Track Hierarchy**: Layer ordering, track lock, eye visibility, and z-index grouping.

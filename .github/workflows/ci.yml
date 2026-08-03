@@ -31,7 +31,7 @@ jobs:
         run: npx tsc --noEmit
 
       - name: Run Unit & Integration Tests (Vitest)
-        run: npx vitest run --maxWorkers=2
+        run: npx vitest run
         env:
           NODE_OPTIONS: '--max-old-space-size=4096'
 

@@ -2,6 +2,7 @@ import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 import { getPartBounds } from '../../../utils/bounds';
+import { renderShapeOutline } from '../../../utils/shapeOutlineHelper';
 
 export type ScaleMode = 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom';
 
@@ -39,18 +40,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
       transform={`translate(${300 + selectedTransform.x}, ${240 + selectedTransform.y}) rotate(${selectedTransform.rotation})`}
       style={{ pointerEvents: 'none' }}
     >
-      {/* Dashed Bounding Box Outline */}
-      <rect
-        x={-halfW}
-        y={-halfH}
-        width={halfW * 2}
-        height={halfH * 2}
-        fill="none"
-        stroke="#00d2ff"
-        strokeWidth={1.5 * zScale}
-        strokeDasharray={`${5 * zScale} ${4 * zScale}`}
-        vectorEffect="non-scaling-stroke"
-      />
+      {/* Shape-Conforming Dashed Selection Outline */}
+      {renderShapeOutline(selectedPart, halfW, halfH, zScale)}
 
       {!isGroup && (
         <>

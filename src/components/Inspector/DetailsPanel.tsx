@@ -156,6 +156,7 @@ export const DetailsPanel: React.FC = () => {
               selectedPart={selectedPart}
               transform={transform}
               updateCurrentTransform={updateCurrentTransform}
+              handlePartPropChange={handlePartPropChange}
             />
           )}
         </div>

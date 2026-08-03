@@ -4,7 +4,7 @@ import { DetailsPanel } from './DetailsPanel';
 import './PropertyInspector.css';
 
 export const PropertyInspector: React.FC = () => {
-  const [sidebarWidth, setSidebarWidth] = useState<number>(360);
+  const [sidebarWidth, setSidebarWidth] = useState<number>(400);
   const [outlinerHeight, setOutlinerHeight] = useState<number>(240);
   const isResizingWidthRef = useRef<boolean>(false);
   const isResizingHeightRef = useRef<boolean>(false);

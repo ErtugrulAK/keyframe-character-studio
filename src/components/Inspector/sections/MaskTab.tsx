@@ -1,15 +1,91 @@
 import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
-import { Scissors } from 'lucide-react';
+import { Scissors, Move, Feather, Eye, Layers } from 'lucide-react';
+
+interface SmartNumberInputProps {
+  value: number;
+  min?: number;
+  max?: number;
+  step?: number;
+  onChange: (val: number) => void;
+}
+
+const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, step = 1, onChange }) => {
+  const roundedVal = Math.round((value ?? 0) * 100) / 100;
+  const [editingValue, setEditingValue] = React.useState<string>(String(roundedVal));
+  const [isFocused, setIsFocused] = React.useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (!isFocused) {
+      setEditingValue(String(roundedVal));
+    }
+  }, [roundedVal, isFocused]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valStr = e.target.value;
+    setEditingValue(valStr);
+    const parsed = parseFloat(valStr);
+    if (!isNaN(parsed)) {
+      const rounded = Math.round(parsed * 100) / 100;
+      onChange(rounded);
+    }
+  };
+
+  const handleBlur = () => {
+    setIsFocused(false);
+    let parsed = parseFloat(editingValue);
+    if (isNaN(parsed)) {
+      setEditingValue(String(roundedVal));
+    } else {
+      if (min !== undefined) parsed = Math.max(min, parsed);
+      if (max !== undefined) parsed = Math.min(max, parsed);
+      const rounded = Math.round(parsed * 100) / 100;
+      setEditingValue(String(rounded));
+      onChange(rounded);
+    }
+  };
+
+  return (
+    <input
+      type="number"
+      className="input-control"
+      value={editingValue}
+      min={min}
+      max={max}
+      step={step}
+      onFocus={(e) => {
+        setIsFocused(true);
+        e.target.select();
+      }}
+      onBlur={handleBlur}
+      onChange={handleChange}
+      style={{
+        flex: 1,
+        width: '100%',
+        minWidth: 50,
+        height: 24,
+        textAlign: 'right',
+        fontSize: 11,
+        fontWeight: 700,
+        background: 'var(--bg-darkest)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 4,
+        color: '#38bdf8',
+        padding: '0 6px',
+      }}
+    />
+  );
+};
 
 interface MaskTabProps {
   selectedPart: CharacterPart;
   transform: Transform;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
+  handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
 }
 
-export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updateCurrentTransform }) => {
+export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updateCurrentTransform, handlePartPropChange }) => {
   const { activeTool, setActiveTool } = useAnimator();
   
   const mask = transform.mask || selectedPart.mask || {
@@ -44,91 +120,187 @@ export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updat
   };
 
   return (
-    <div className="property-group">
-      <div className="property-header">
-        <h4>Mask Properties</h4>
-      </div>
-
-      <div className="property-row">
-        <label className="property-label">Enable Mask</label>
-        <div className="property-control">
-          <label className="checkbox-container">
-            <input
-              type="checkbox"
-              checked={mask.enabled}
-              onChange={handleToggleMask}
-            />
-            <span className="checkmark"></span>
-            {mask.enabled ? 'Enabled' : 'Disabled'}
-          </label>
+    <div className="inspector-section" style={{ paddingTop: 6 }}>
+      
+      {/* ── SECTION 1: VECTOR PATH MASKING ── */}
+      <div className="section-title-bar" style={{ marginBottom: 8 }}>
+        <div className="section-title">
+          <Scissors size={13} className="text-cyan" />
+          <span>VECTOR PATH MASKING</span>
         </div>
       </div>
 
-      {mask.enabled && (
-        <>
-          <div className="property-row">
-            <label className="property-label">Edit Mode</label>
-            <div className="property-control">
+      <div className="panel-card" style={{ marginBottom: 8, padding: 10 }}>
+        {/* Toggle Enable Mask */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Layers size={13} className="text-teal" /> ENABLE VECTOR MASK
+          </span>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{
+              height: 24,
+              fontSize: 10,
+              fontWeight: 700,
+              padding: '0 10px',
+              color: mask.enabled ? '#10b981' : '#64748b',
+              background: mask.enabled ? 'rgba(16, 185, 129, 0.15)' : '#0e1118',
+              border: `1px solid ${mask.enabled ? '#10b981' : '#232836'}`,
+              borderRadius: 4,
+            }}
+            onClick={handleToggleMask}
+          >
+            {mask.enabled ? 'Enabled' : 'Disabled'}
+          </button>
+        </div>
+
+        {mask.enabled && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border-color)' }}>
+            
+            {/* Edit Points Mode Button */}
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => setActiveTool(activeTool === 'mask' ? 'select' : 'mask')}
+              style={{
+                width: '100%',
+                height: 28,
+                fontSize: 11,
+                fontWeight: 700,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 6,
+                color: activeTool === 'mask' ? '#38bdf8' : '#e2e8f0',
+                background: activeTool === 'mask' ? 'rgba(56, 189, 248, 0.15)' : 'var(--bg-panel)',
+                border: `1px solid ${activeTool === 'mask' ? '#38bdf8' : 'var(--border-color)'}`,
+                borderRadius: 4,
+              }}
+            >
+              <Scissors size={13} />
+              <span>{activeTool === 'mask' ? 'Exit Edit Mode' : 'Edit Mask Points on Canvas'}</span>
+            </button>
+
+            {/* Invert Mask Checkbox */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-panel)', padding: '6px 10px', borderRadius: 4, border: '1px solid var(--border-color)' }}>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-secondary)' }}>INVERT MASK AREA</span>
               <button
-                className={`btn-secondary ${activeTool === 'mask' ? 'active' : ''}`}
-                onClick={() => setActiveTool(activeTool === 'mask' ? 'select' : 'mask')}
-                style={{ width: '100%', display: 'flex', gap: '8px', justifyContent: 'center' }}
+                type="button"
+                className="btn-secondary"
+                style={{
+                  height: 22,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  padding: '0 8px',
+                  color: mask.inverted ? '#c084fc' : '#64748b',
+                  background: mask.inverted ? 'rgba(192, 132, 252, 0.15)' : '#0e1118',
+                  border: `1px solid ${mask.inverted ? '#c084fc' : '#232836'}`,
+                  borderRadius: 3,
+                }}
+                onClick={() => updateCurrentTransform({ mask: { ...mask, inverted: !mask.inverted } })}
               >
-                <Scissors size={14} />
-                {activeTool === 'mask' ? 'Exit Edit Mode' : 'Edit Mask Points'}
+                {mask.inverted ? 'Inverted (On)' : 'Normal (Off)'}
               </button>
             </div>
-          </div>
 
-          <div className="property-row">
-            <label className="property-label">Inverted</label>
-            <div className="property-control">
-              <label className="checkbox-container">
-                <input
-                  type="checkbox"
-                  checked={mask.inverted}
-                  onChange={(e) => updateCurrentTransform({ mask: { ...mask, inverted: e.target.checked } })}
+            {/* Feather & Mask Opacity Controls */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Feather size={11} className="text-purple" /> FEATHER
+                </span>
+                <SmartNumberInput
+                  value={mask.feather}
+                  min={0}
+                  max={100}
+                  step={1}
+                  onChange={(val) => updateCurrentTransform({ mask: { ...mask, feather: val } })}
                 />
-                <span className="checkmark"></span>
-                Invert Mask
-              </label>
+              </div>
+
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <Eye size={11} className="text-gold" /> OPACITY
+                </span>
+                <SmartNumberInput
+                  value={mask.opacity}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  onChange={(val) => updateCurrentTransform({ mask: { ...mask, opacity: val } })}
+                />
+              </div>
+            </div>
+
+          </div>
+        )}
+      </div>
+
+      {/* ── SECTION 2: SHAPE INNER MEDIA FRAMING ── */}
+      {selectedPart.innerMediaUrl && (
+        <>
+          <div className="section-title-bar" style={{ marginTop: 12, marginBottom: 8 }}>
+            <div className="section-title">
+              <Move size={13} className="text-teal" />
+              <span>INNER MEDIA MASK & FRAMING</span>
             </div>
           </div>
 
-          <div className="property-row">
-            <label className="property-label">Feather (px)</label>
-            <div className="property-control">
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="1"
-                className="input-control"
-                value={mask.feather}
-                onChange={(e) => updateCurrentTransform({ mask: { ...mask, feather: parseFloat(e.target.value) || 0 } })}
-              />
+          <div className="panel-card" style={{ padding: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%" }}>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">OFFSET X</span>
+                <SmartNumberInput
+                  value={transform?.maskOffsetX ?? selectedPart.maskOffsetX ?? 0}
+                  step={1}
+                  onChange={(val) => {
+                    if (handlePartPropChange) handlePartPropChange('maskOffsetX', val);
+                    updateCurrentTransform({ maskOffsetX: val });
+                  }}
+                />
+              </div>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">OFFSET Y</span>
+                <SmartNumberInput
+                  value={transform?.maskOffsetY ?? selectedPart.maskOffsetY ?? 0}
+                  step={1}
+                  onChange={(val) => {
+                    if (handlePartPropChange) handlePartPropChange('maskOffsetY', val);
+                    updateCurrentTransform({ maskOffsetY: val });
+                  }}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="property-row">
-            <label className="property-label">Opacity</label>
-            <div className="property-control flex-row">
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.05"
-                value={mask.opacity}
-                onChange={(e) => updateCurrentTransform({ mask: { ...mask, opacity: parseFloat(e.target.value) || 0 } })}
-                style={{ flex: 1 }}
-              />
-              <span className="value-display" style={{ width: 40, textAlign: 'right' }}>
-                {Math.round(mask.opacity * 100)}%
-              </span>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%", marginTop: 8 }}>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">MEDIA SCALE</span>
+                <SmartNumberInput
+                  value={transform?.maskScale ?? selectedPart.maskScale ?? 1}
+                  step={0.05}
+                  onChange={(val) => {
+                    if (handlePartPropChange) handlePartPropChange('maskScale', val);
+                    updateCurrentTransform({ maskScale: val });
+                  }}
+                />
+              </div>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">ROTATION</span>
+                <SmartNumberInput
+                  value={transform?.maskRotation ?? selectedPart.maskRotation ?? 0}
+                  step={1}
+                  onChange={(val) => {
+                    if (handlePartPropChange) handlePartPropChange('maskRotation', val);
+                    updateCurrentTransform({ maskRotation: val });
+                  }}
+                />
+              </div>
             </div>
           </div>
         </>
       )}
+
     </div>
   );
 };

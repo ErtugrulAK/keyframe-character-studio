@@ -10,6 +10,7 @@
     "db:setup": "node scripts/setup-db.js",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test": "vitest run",
     "preview": "vite preview",
     "test:e2e": "playwright test"
   },

@@ -8,6 +8,13 @@ export default defineConfig({
     setupFiles: ['./src/tests/setup.ts'],
     exclude: ['node_modules', 'dist', 'e2e/**'],
     globals: true,
+    teardownTimeout: 1000,
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        isolate: false,
+      },
+    },
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],

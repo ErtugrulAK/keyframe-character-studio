@@ -144,8 +144,8 @@ export const StageCanvas: React.FC = () => {
       y: svgY,
       initialTransform: { ...transform },
       initialTransforms,
-      initialMaskX: part?.maskOffsetX || 0,
-      initialMaskY: part?.maskOffsetY || 0,
+      initialMaskX: transform.maskOffsetX ?? part?.maskOffsetX ?? 0,
+      initialMaskY: transform.maskOffsetY ?? part?.maskOffsetY ?? 0,
     });
   };
 
@@ -338,9 +338,26 @@ export const StageCanvas: React.FC = () => {
         setSnapLines(newSnapLines);
         
         if (focusModeNodeId === selectedPartId) {
+          // Convert global SVG delta into shape-local coordinates
+          // to match the inner coordinate system where maskOffset is applied
+          const sX = dragStart.initialTransform.scaleX || 1;
+          const sY = dragStart.initialTransform.scaleY || 1;
+          const rotDeg = dragStart.initialTransform.rotation || 0;
+          const rotRad = (rotDeg * Math.PI) / 180;
+          const cosR = Math.cos(-rotRad);
+          const sinR = Math.sin(-rotRad);
+          // Inverse rotation then inverse scale
+          const localDx = (snappedX * cosR - snappedY * sinR) / sX;
+          const localDy = (snappedX * sinR + snappedY * cosR) / sY;
+          const newMaskX = Math.round(((dragStart.initialMaskX || 0) + localDx) * 100) / 100;
+          const newMaskY = Math.round(((dragStart.initialMaskY || 0) + localDy) * 100) / 100;
           updateCharacterPart(selectedPartId, {
-            maskOffsetX: (dragStart.initialMaskX || 0) + snappedX,
-            maskOffsetY: (dragStart.initialMaskY || 0) + snappedY,
+            maskOffsetX: newMaskX,
+            maskOffsetY: newMaskY,
+          });
+          updateCurrentTransform({
+            maskOffsetX: newMaskX,
+            maskOffsetY: newMaskY,
           });
         } else {
           // If we have multiple selections and the dragged part is in it, move all of them
@@ -567,7 +584,7 @@ export const StageCanvas: React.FC = () => {
       setMarqueeRect(null);
       setSnapLines([]);
       setDragMaskPointIndex(null);
-  }, [dragMode, marqueeRect, characterParts, currentFrame, handleSelectPart, getComputedTransform]);
+  }, [dragMode, marqueeRect, characterParts, currentFrame, handleSelectPart, getComputedTransform, isDragging, endBatchInteraction]);
 
   useEffect(() => {
     if (isDragging) {

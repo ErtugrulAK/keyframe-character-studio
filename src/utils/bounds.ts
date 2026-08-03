@@ -43,6 +43,27 @@ export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: numb
   let halfH = 32;
 
   switch (part.type as string) {
+    case 'custom_circle':
+    case 'custom_box':
+      halfW = part.width ? part.width / 2 : 30;
+      halfH = part.height ? part.height / 2 : 30;
+      break;
+    case 'custom_star':
+      halfW = part.width ? part.width / 2 : 35;
+      halfH = part.height ? part.height / 2 : 32.5;
+      break;
+    case 'custom_triangle':
+      halfW = part.width ? part.width / 2 : 35;
+      halfH = part.height ? part.height / 2 : 30;
+      break;
+    case 'custom_diamond':
+      halfW = part.width ? part.width / 2 : 35;
+      halfH = part.height ? part.height / 2 : 35;
+      break;
+    case 'custom_capsule':
+      halfW = part.width ? part.width / 2 : 50;
+      halfH = part.height ? part.height / 2 : 20;
+      break;
     case 'custom_card':
       halfW = part.width ? part.width / 2 : 90;
       halfH = part.height ? part.height / 2 : 50;

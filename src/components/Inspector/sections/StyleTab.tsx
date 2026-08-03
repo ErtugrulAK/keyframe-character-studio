@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Palette, Sun, Crop, Grid3x3, Atom } from 'lucide-react';
+import { Palette, Sun, Crop, Grid3x3, Atom, Upload } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 
 interface SmartNumberInputProps {
@@ -11,21 +11,23 @@ interface SmartNumberInputProps {
 }
 
 const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, step = 1, onChange }) => {
-  const [editingValue, setEditingValue] = React.useState<string>(String(value));
+  const roundedVal = Math.round((value ?? 0) * 100) / 100;
+  const [editingValue, setEditingValue] = React.useState<string>(String(roundedVal));
   const [isFocused, setIsFocused] = React.useState<boolean>(false);
 
   React.useEffect(() => {
     if (!isFocused) {
-      setEditingValue(String(value));
+      setEditingValue(String(roundedVal));
     }
-  }, [value, isFocused]);
+  }, [roundedVal, isFocused]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const valStr = e.target.value;
     setEditingValue(valStr);
     let parsed = parseFloat(valStr);
     if (!isNaN(parsed)) {
-      onChange(parsed);
+      const rounded = Math.round(parsed * 100) / 100;
+      onChange(rounded);
     }
   };
 
@@ -33,12 +35,13 @@ const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, st
     setIsFocused(false);
     let parsed = parseFloat(editingValue);
     if (isNaN(parsed)) {
-      setEditingValue(String(value));
+      setEditingValue(String(roundedVal));
     } else {
       if (min !== undefined) parsed = Math.max(min, parsed);
       if (max !== undefined) parsed = Math.min(max, parsed);
-      setEditingValue(String(parsed));
-      onChange(parsed);
+      const rounded = Math.round(parsed * 100) / 100;
+      setEditingValue(String(rounded));
+      onChange(rounded);
     }
   };
 
@@ -145,8 +148,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 }) => {
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
+  const innerMediaFileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, propName: 'imageUrl' | 'videoUrl') => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, propName: 'imageUrl' | 'videoUrl' | 'innerMediaUrl') => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
@@ -335,16 +339,10 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           </>
         )}
 
-        {/* TRIM PATH / STROKE PROGRESS ANIMATION */}
-        <div className="form-field-group">
-          <label className="form-label">TRIM PATH / STROKE DRAW (0-100%)</label>
-          <SmartNumberInput
-            value={Math.round((selectedPart.strokeProgress ?? 1) * 100)}
-            min={0}
-            max={100}
-            step={5}
-            onChange={(val) => handlePartPropChange('strokeProgress', val / 100)}
-          />
+        {/* SHAPE GEOMETRY & OUTLINE */}
+        <div className="section-title" style={{ marginTop: 12, marginBottom: 8 }}>
+          <Crop size={13} className="text-teal" />
+          <span>SHAPE GEOMETRY & OUTLINE</span>
         </div>
 
         {/* CORNER RADIUS CONTROL */}
@@ -367,6 +365,18 @@ export const StyleTab: React.FC<StyleTabProps> = ({
             />
           </div>
         )}
+
+        {/* TRIM PATH / STROKE PROGRESS ANIMATION */}
+        <div className="form-field-group">
+          <label className="form-label">TRIM PATH / STROKE DRAW (0-100%)</label>
+          <SmartNumberInput
+            value={Math.round((selectedPart.strokeProgress ?? 1) * 100)}
+            min={0}
+            max={100}
+            step={5}
+            onChange={(val) => handlePartPropChange('strokeProgress', val / 100)}
+          />
+        </div>
 
         {/* MOGRAPH CLONER INSPECTOR CONTROLS */}
         {selectedPart.type === 'mograph_cloner' && selectedPart.clonerConfig && (
@@ -700,7 +710,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
             </div>
 
             <div className="form-field-group">
-              <label className="form-label">MEDIA SOURCE (URL)</label>
+              <label className="form-label">MEDIA SOURCE (URL / FILE)</label>
               <div style={{ display: 'flex', gap: 6, flex: 1, width: '100%' }}>
                 <input className="input-control"
                 type="text"
@@ -710,22 +720,34 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                   onChange={(e) => handlePartPropChange('innerMediaUrl', e.target.value)}
                   style={{ flex: 1 }}
                 />
+                <button
+                  className="btn-secondary"
+                  onClick={() => innerMediaFileInputRef.current?.click()}
+                  title="Upload file from computer"
+                  style={{ fontSize: 11, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}
+                >
+                  <Upload size={12} />
+                  Upload
+                </button>
+                <input
+                  type="file"
+                  ref={innerMediaFileInputRef}
+                  accept={(selectedPart.innerMediaType || 'image') === 'video' ? 'video/*' : 'image/*'}
+                  onChange={(e) => handleFileSelect(e, 'innerMediaUrl')}
+                  style={{ display: 'none' }}
+                />
               </div>
             </div>
-            
-            <p style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 15 }}>
-              Media will be masked to perfectly fit inside this shape.
-            </p>
           </>
         )}
 
         {/* DROP SHADOW / GLOW CONTROLS */}
-        <div className="section-title" style={{ marginTop: 12 }}>
+        <div className="section-title" style={{ marginTop: 12, marginBottom: 8 }}>
           <Sun size={13} className="text-gold" />
           <span>DROP SHADOW & GLOW EFFECTS</span>
         </div>
 
-        <div className="form-field-group">
+        <div className="form-field-group" style={{ marginBottom: 8 }}>
           <label className="form-label">SHADOW / GLOW COLOR</label>
           <div className="color-picker-compact">
             <input
@@ -752,9 +774,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         </div>
 
         {selectedPart.shadowColor && (
-          <div className="input-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-            <div className="form-field-group">
-              <label className="form-label">BLUR RADIUS (PX)</label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '6px 8px', borderRadius: 'var(--radius-sm)' }}>
+              <span className="param-label" style={{ fontSize: 9 }}>BLUR RADIUS</span>
               <SmartNumberInput
                 value={selectedPart.shadowBlur ?? 8}
                 min={0}
@@ -762,8 +784,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                 onChange={(val) => handlePartPropChange('shadowBlur', val)}
               />
             </div>
-            <div className="form-field-group">
-              <label className="form-label">OFFSET X (PX)</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '6px 8px', borderRadius: 'var(--radius-sm)' }}>
+              <span className="param-label" style={{ fontSize: 9 }}>OFFSET X</span>
               <SmartNumberInput
                 value={selectedPart.shadowOffsetX ?? 0}
                 min={-50}
@@ -771,8 +793,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
                 onChange={(val) => handlePartPropChange('shadowOffsetX', val)}
               />
             </div>
-            <div className="form-field-group">
-              <label className="form-label">OFFSET Y (PX)</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '6px 8px', borderRadius: 'var(--radius-sm)' }}>
+              <span className="param-label" style={{ fontSize: 9 }}>OFFSET Y</span>
               <SmartNumberInput
                 value={selectedPart.shadowOffsetY ?? 4}
                 min={-50}

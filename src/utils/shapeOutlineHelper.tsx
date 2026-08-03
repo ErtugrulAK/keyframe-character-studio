@@ -79,19 +79,35 @@ export function renderShapeOutline(
         return <ellipse cx={0} cy={0} rx={halfW} ry={halfH} fill="none" {...commonProps} />;
 
       case 'star': {
+        const scaleX = halfW / 35;
+        const scaleY = halfH / 32.5;
         const pts = [
-          `0,${-halfH}`,
-          `${0.2857 * halfW},${-0.2857 * halfH}`,
-          `${halfW},${-0.2857 * halfH}`,
-          `${0.4286 * halfW},${0.1429 * halfH}`,
-          `${0.6571 * halfW},${0.8571 * halfH}`,
-          `0,${0.4286 * halfH}`,
-          `${-0.6571 * halfW},${0.8571 * halfH}`,
-          `${-0.4286 * halfW},${0.1429 * halfH}`,
-          `${-halfW},${-0.2857 * halfH}`,
-          `${-0.2857 * halfW},${-0.2857 * halfH}`,
+          `0,${-35 * scaleY}`,
+          `${10 * scaleX},${-10 * scaleY}`,
+          `${35 * scaleX},${-10 * scaleY}`,
+          `${15 * scaleX},${5 * scaleY}`,
+          `${23 * scaleX},${30 * scaleY}`,
+          `0,${15 * scaleY}`,
+          `${-23 * scaleX},${30 * scaleY}`,
+          `${-15 * scaleX},${5 * scaleY}`,
+          `${-35 * scaleX},${-10 * scaleY}`,
+          `${-10 * scaleX},${-10 * scaleY}`,
         ].join(' ');
         return <polygon points={pts} fill="none" {...commonProps} />;
+      }
+
+      case 'triangle': {
+        const scaleX = halfW / 35;
+        const scaleY = halfH / 30;
+        const triPts = `0,${-35 * scaleY} ${35 * scaleX},${25 * scaleY} ${-35 * scaleX},${25 * scaleY}`;
+        return <polygon points={triPts} fill="none" {...commonProps} />;
+      }
+
+      case 'diamond': {
+        const scaleX = halfW / 35;
+        const scaleY = halfH / 35;
+        const diamondPts = `0,${-35 * scaleY} ${35 * scaleX},0 0,${35 * scaleY} ${-35 * scaleX},0`;
+        return <polygon points={diamondPts} fill="none" {...commonProps} />;
       }
 
       case 'hexagon': {
@@ -149,28 +165,34 @@ export function renderShapeOutline(
       return <ellipse cx={0} cy={0} rx={halfW} ry={halfH} fill="none" {...commonProps} />;
 
     case 'custom_star': {
+      const scaleX = halfW / 35;
+      const scaleY = halfH / 32.5;
       const pts = [
-        `0,${-halfH}`,
-        `${0.2857 * halfW},${-0.2857 * halfH}`,
-        `${halfW},${-0.2857 * halfH}`,
-        `${0.4286 * halfW},${0.1429 * halfH}`,
-        `${0.6571 * halfW},${0.8571 * halfH}`,
-        `0,${0.4286 * halfH}`,
-        `${-0.6571 * halfW},${0.8571 * halfH}`,
-        `${-0.4286 * halfW},${0.1429 * halfH}`,
-        `${-halfW},${-0.2857 * halfH}`,
-        `${-0.2857 * halfW},${-0.2857 * halfH}`,
+        `0,${-35 * scaleY}`,
+        `${10 * scaleX},${-10 * scaleY}`,
+        `${35 * scaleX},${-10 * scaleY}`,
+        `${15 * scaleX},${5 * scaleY}`,
+        `${23 * scaleX},${30 * scaleY}`,
+        `0,${15 * scaleY}`,
+        `${-23 * scaleX},${30 * scaleY}`,
+        `${-15 * scaleX},${5 * scaleY}`,
+        `${-35 * scaleX},${-10 * scaleY}`,
+        `${-10 * scaleX},${-10 * scaleY}`,
       ].join(' ');
       return <polygon points={pts} fill="none" {...commonProps} />;
     }
 
     case 'custom_triangle': {
-      const triPts = `0,${-halfH} ${halfW},${halfH} ${-halfW},${halfH}`;
+      const scaleX = halfW / 35;
+      const scaleY = halfH / 30;
+      const triPts = `0,${-35 * scaleY} ${35 * scaleX},${25 * scaleY} ${-35 * scaleX},${25 * scaleY}`;
       return <polygon points={triPts} fill="none" {...commonProps} />;
     }
 
     case 'custom_diamond': {
-      const diamondPts = `0,${-halfH} ${halfW},0 0,${halfH} ${-halfW},0`;
+      const scaleX = halfW / 35;
+      const scaleY = halfH / 35;
+      const diamondPts = `0,${-35 * scaleY} ${35 * scaleX},0 0,${35 * scaleY} ${-35 * scaleX},0`;
       return <polygon points={diamondPts} fill="none" {...commonProps} />;
     }
 

@@ -244,7 +244,14 @@ Never skip the approval step unless the user explicitly requests immediate imple
 
 ### Communication
 
-- Communicate with the user in Turkish unless explicitly requested otherwise.
+Conversation Language:
+- Turkish only.
+
+Repository Language:/ag
+- English only.
+
+Never generate repository files in Turkish.
+Never explain repository changes in English.
 
 ### Source Code
 

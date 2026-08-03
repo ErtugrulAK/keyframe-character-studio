@@ -207,7 +207,11 @@ export const useSerialization = ({
     setCharacterParts(DEFAULT_CHARACTER_PARTS);
     setCurrentFrame(0);
     setIsPlaying(false);
-    localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+    try {
+      localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
+    } catch (e) {
+      console.warn('[Storage] Could not clear autosave key:', e);
+    }
     setLastSavedAt(null);
   }, [setTracks, setCharacterParts, setCurrentFrame, setIsPlaying]);
 

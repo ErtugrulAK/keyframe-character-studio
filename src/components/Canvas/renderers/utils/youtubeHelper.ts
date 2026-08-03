@@ -6,7 +6,7 @@ export interface YouTubeEmbedResult {
 export const getYouTubeEmbedInfo = (url?: string): YouTubeEmbedResult => {
   if (!url) return { isYouTube: false, embedUrl: '' };
 
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|shorts\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
 
   if (match && match[2] && match[2].length === 11) {

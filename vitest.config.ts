@@ -8,7 +8,7 @@ export default defineConfig({
     setupFiles: ['./src/tests/setup.ts'],
     exclude: ['node_modules', 'dist', 'e2e/**'],
     globals: true,
-    pool: 'threads',
+    pool: 'forks',
     fileParallelism: false,
     teardownTimeout: 1000,
     coverage: {

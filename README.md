@@ -11,6 +11,14 @@ An advanced **2D Vector Animation Studio, Motion Graphics Sequencer, & Real-Time
 
 ---
 
+## 📸 Application Showcase
+
+### 1. Main Studio Editor & Sequencer
+![Keyframe Character Studio Main Editor](src/assets/hero.png)
+*Figure 1: Full studio interface featuring the interactive Stage Canvas, multi-track Sequencer Timeline with Bezier Motion Curves, Template Tabs, and Property Inspector.*
+
+---
+
 ## ✨ Overview & Core Capabilities
 
 Keyframe Character Studio provides a browser-based timeline animation editor and live broadcast control panel designed for creating character animations, motion graphics templates, keyframe sequences, and real-time lower thirds or overlays for broadcast software (OBS Studio, vMix, NDI, etc.).

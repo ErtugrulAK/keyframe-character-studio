@@ -1,4 +1,6 @@
 import '@testing-library/jest-dom';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
 
 // Polyfill WebIDL for Undici / JSDOM compatibility in Node environments
 if (typeof (globalThis as any).webidl === 'object') {
@@ -27,3 +29,7 @@ if (typeof window !== 'undefined') {
     });
   }
 }
+
+afterEach(() => {
+  cleanup();
+});

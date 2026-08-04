@@ -223,13 +223,14 @@ export const HeaderBar: React.FC = () => {
             value={fps}
             onChange={(e) => setFps(Number(e.target.value))}
             style={{
+              width: '82px',
               background: 'var(--bg-input)',
               border: '1px solid var(--border-color)',
               borderRadius: 4,
               color: 'var(--accent-cyan)',
               fontSize: 11,
               fontWeight: 700,
-              padding: '3px 6px',
+              padding: '3px 4px',
               height: 26,
               cursor: 'pointer',
             }}

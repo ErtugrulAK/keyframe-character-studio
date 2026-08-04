@@ -150,12 +150,7 @@ export const OutlinerPanel: React.FC = () => {
                     <div className="col-label" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                       {getActorIcon(part.type)}
                       <span className="actor-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {part.name
-                          ? part.name
-                              .split(' ')
-                              .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-                              .join(' ')
-                          : part.name}
+                        {part.name}
                       </span>
                     </div>
 

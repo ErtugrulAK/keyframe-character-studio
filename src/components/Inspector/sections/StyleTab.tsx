@@ -156,7 +156,27 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       const reader = new FileReader();
       reader.onload = (ev) => {
         if (ev.target && ev.target.result) {
-          handlePartPropChange(propName, ev.target.result as string);
+          const dataUrl = ev.target.result as string;
+          handlePartPropChange(propName, dataUrl);
+
+          if (propName === 'imageUrl' && file.type.startsWith('image/')) {
+            const img = new Image();
+            img.onload = () => {
+              if (img.naturalWidth && img.naturalHeight) {
+                const maxDim = 150;
+                let w = maxDim;
+                let h = maxDim;
+                if (img.naturalWidth >= img.naturalHeight) {
+                  h = Math.round(maxDim * (img.naturalHeight / img.naturalWidth));
+                } else {
+                  w = Math.round(maxDim * (img.naturalWidth / img.naturalHeight));
+                }
+                handlePartPropChange('width', w);
+                handlePartPropChange('height', h);
+              }
+            };
+            img.src = dataUrl;
+          }
         }
       };
       reader.readAsDataURL(file);

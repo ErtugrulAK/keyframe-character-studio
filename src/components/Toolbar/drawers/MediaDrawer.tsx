@@ -14,7 +14,23 @@ export const MediaDrawer: React.FC = () => {
         const reader = new FileReader();
         reader.onload = (e) => {
           const dataUrl = e.target?.result as string;
-          addCustomPart('custom_image', cleanName, { imageUrl: dataUrl });
+          const img = new Image();
+          img.onload = () => {
+            let w = 140;
+            let h = 140;
+            if (img.naturalWidth && img.naturalHeight) {
+              const maxDim = 150;
+              if (img.naturalWidth >= img.naturalHeight) {
+                w = maxDim;
+                h = Math.round(maxDim * (img.naturalHeight / img.naturalWidth));
+              } else {
+                h = maxDim;
+                w = Math.round(maxDim * (img.naturalWidth / img.naturalHeight));
+              }
+            }
+            addCustomPart('custom_image', cleanName, { imageUrl: dataUrl, width: w, height: h });
+          };
+          img.src = dataUrl;
         };
         reader.readAsDataURL(file);
       } else if (file.type.startsWith('video/') || /\.(mp4|webm|mov|ogg)$/i.test(file.name)) {

@@ -1,0 +1,183 @@
+import React, { useRef } from 'react';
+import { Crop, Upload } from 'lucide-react';
+import type { CharacterPart } from '../../../../types/animator';
+
+interface StyleMediaSectionProps {
+  selectedPart: CharacterPart;
+  onPartPropChange: (key: keyof CharacterPart, value: any) => void;
+}
+
+/**
+ * Media source controls: image/video URL inputs with file upload, plus the
+ * shape media masking (Canva-style) section. Owns the file input refs and the
+ * FileReader handling for uploaded media.
+ */
+export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPart, onPartPropChange }) => {
+  const imageFileInputRef = useRef<HTMLInputElement>(null);
+  const videoFileInputRef = useRef<HTMLInputElement>(null);
+  const innerMediaFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, propName: 'imageUrl' | 'videoUrl' | 'innerMediaUrl') => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target && ev.target.result) {
+          const dataUrl = ev.target.result as string;
+          onPartPropChange(propName, dataUrl);
+
+          if (propName === 'imageUrl' && file.type.startsWith('image/')) {
+            const img = new Image();
+            img.onload = () => {
+              if (img.naturalWidth && img.naturalHeight) {
+                const maxDim = 150;
+                let w = maxDim;
+                let h = maxDim;
+                if (img.naturalWidth >= img.naturalHeight) {
+                  h = Math.round(maxDim * (img.naturalHeight / img.naturalWidth));
+                } else {
+                  w = Math.round(maxDim * (img.naturalWidth / img.naturalHeight));
+                }
+                onPartPropChange('width', w);
+                onPartPropChange('height', h);
+              }
+            };
+            img.src = dataUrl;
+          }
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  return (
+    <>
+      {/* Image URL Input Control if object is Custom Image */}
+      {selectedPart.type === 'custom_image' && (
+        <div className="form-field-group">
+          <label className="form-label">IMAGE SOURCE (URL / DATA URL)</label>
+          <div style={{ display: 'flex', gap: 6, flex: 1, width: '100%' }}>
+            <input className="input-control"
+              type="text"
+              value={selectedPart.imageUrl || ''}
+              placeholder="Paste image URL..."
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => onPartPropChange('imageUrl', e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button
+              className="btn-secondary"
+              onClick={() => imageFileInputRef.current?.click()}
+              style={{ fontSize: 11, whiteSpace: 'nowrap' }}
+            >
+              Upload File
+            </button>
+            <input
+              type="file"
+              ref={imageFileInputRef}
+              accept="image/*"
+              onChange={(e) => handleFileSelect(e, 'imageUrl')}
+              style={{ display: 'none' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Video URL Input Control if object is Custom Video */}
+      {selectedPart.type === 'custom_video' && (
+        <div className="form-field-group">
+          <label className="form-label">VIDEO SOURCE (URL / MP4 / WEBM)</label>
+          <div style={{ display: 'flex', gap: 6, flex: 1, width: '100%' }}>
+            <input className="input-control"
+              type="text"
+              value={selectedPart.videoUrl || ''}
+              placeholder="Paste video URL..."
+              onFocus={(e) => e.target.select()}
+              onChange={(e) => onPartPropChange('videoUrl', e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button
+              className="btn-secondary"
+              onClick={() => videoFileInputRef.current?.click()}
+              style={{ fontSize: 11, whiteSpace: 'nowrap' }}
+            >
+              Upload File
+            </button>
+            <input
+              type="file"
+              ref={videoFileInputRef}
+              accept="video/*,.mp4,.webm,.mov"
+              onChange={(e) => handleFileSelect(e, 'videoUrl')}
+              style={{ display: 'none' }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* SHAPE MASK MEDIA SETTINGS */}
+      {(selectedPart.type === 'custom_circle' ||
+        selectedPart.type === 'custom_box' ||
+        selectedPart.type === 'custom_rect' ||
+        selectedPart.type === 'custom_triangle') && (
+        <>
+          <div className="section-title" style={{ marginTop: 12 }}>
+            <Crop size={13} className="text-teal" />
+            <span>SHAPE MEDIA MASKING (CANVA STYLE)</span>
+          </div>
+
+          <div className="form-field-group">
+            <label className="form-label">MASKED MEDIA TYPE</label>
+            <select className="select-control"
+              value={selectedPart.innerMediaType || 'image'}
+              onChange={(e) => onPartPropChange('innerMediaType', e.target.value)}
+              style={{
+                width: '100%',
+                height: 28,
+                background: 'var(--bg-input)',
+                border: '1px solid var(--border-color)',
+                borderRadius: 4,
+                color: '#fff',
+                fontSize: 11,
+                fontWeight: 700,
+                padding: '0 6px',
+              }}
+            >
+              <option value="image">Image</option>
+              <option value="video">Video</option>
+            </select>
+          </div>
+
+          <div className="form-field-group">
+            <label className="form-label">MEDIA SOURCE (URL / FILE)</label>
+            <div style={{ display: 'flex', gap: 6, flex: 1, width: '100%' }}>
+              <input className="input-control"
+              type="text"
+                value={selectedPart.innerMediaUrl || ''}
+                placeholder="Paste media URL..."
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => onPartPropChange('innerMediaUrl', e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <button
+                className="btn-secondary"
+                onClick={() => innerMediaFileInputRef.current?.click()}
+                title="Upload file from computer"
+                style={{ fontSize: 11, whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}
+              >
+                <Upload size={12} />
+                Upload
+              </button>
+              <input
+                type="file"
+                ref={innerMediaFileInputRef}
+                accept={(selectedPart.innerMediaType || 'image') === 'video' ? 'video/*' : 'image/*'}
+                onChange={(e) => handleFileSelect(e, 'innerMediaUrl')}
+                style={{ display: 'none' }}
+              />
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+};

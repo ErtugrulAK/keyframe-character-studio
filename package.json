@@ -1,5 +1,5 @@
 {
-  "name": "zd-staj-proje",
+  "name": "keyframe-character-studio",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,6 +11,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "check": "npm run lint && npx tsc --noEmit && npm test && npm run build",
     "preview": "vite preview",
     "test:e2e": "playwright test"
   },

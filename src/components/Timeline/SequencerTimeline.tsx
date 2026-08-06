@@ -4,11 +4,6 @@ import { useAnimator } from '../../context/AnimatorContext';
 import type { TrackChannel } from '../../types/animator';
 import { TRACK_CHANNELS } from '../../types/animator';
 import {
-  Eye,
-  EyeOff,
-  Tv,
-  Lock,
-  Unlock,
   Plus,
   ZoomIn,
   ZoomOut,
@@ -21,31 +16,14 @@ import {
   Redo2,
   Clock,
   Scissors,
-  ChevronRight,
-  ChevronDown,
-  Diamond,
   TrendingUp,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
+import { TimeRuler } from './TimeRuler';
+import { TrackLane } from './TrackLane';
+import { TrackOutlinerRow } from './TrackOutlinerRow';
 import './SequencerTimeline.css';
-
-// Visual metadata for each Transform channel
-const CHANNEL_META: Record<TrackChannel, { label: string; color: string; shortLabel: string }> = {
-  x:            { label: 'Location X',  shortLabel: 'X',   color: '#ef4444' },
-  y:            { label: 'Location Y',  shortLabel: 'Y',   color: '#22c55e' },
-  rotation:     { label: 'Rotation',    shortLabel: 'R°',  color: '#3b82f6' },
-  scaleX:       { label: 'Scale X',     shortLabel: 'SX',  color: '#a855f7' },
-  scaleY:       { label: 'Scale Y',     shortLabel: 'SY',  color: '#ec4899' },
-  opacity:      { label: 'Opacity',     shortLabel: 'Op',  color: '#f59e0b' },
-  maskOffsetX:  { label: 'Mask X',      shortLabel: 'MX',  color: '#14b8a6' },
-  maskOffsetY:  { label: 'Mask Y',      shortLabel: 'MY',  color: '#06b6d4' },
-  maskScale:    { label: 'Mask Scale',   shortLabel: 'MS',  color: '#8b5cf6' },
-  maskRotation: { label: 'Mask Rot',     shortLabel: 'MR°', color: '#f97316' },
-};
-
-const TRACK_ROW_HEIGHT = 34;   // parent track row
-const CHANNEL_ROW_HEIGHT = 28; // sub-channel row
 
 
 
@@ -502,253 +480,34 @@ export const SequencerTimeline: React.FC = () => {
 
           <div className="ue-outliner-list" ref={outlinerRef} onScroll={handleOutlinerScroll}>
             {tracks.map((track) => {
-              const isTrackExpanded = track.expanded === true;
-              const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
-              const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
-              const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
-              const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
-
               const partItem = characterParts.find((p) => p.id === track.partId);
               const isChildLayer = Boolean(partItem?.parentId);
 
               return (
-                <div key={track.id} className="ue-track-group">
-                  {/* ── LAYER ROW ── */}
-                  <div
-                    className={`ue-track-row ${selectedPartIds?.includes(track.partId) ? 'selected' : ''}`}
-                    style={{ height: TRACK_ROW_HEIGHT, paddingLeft: isChildLayer ? 22 : 8 }}
-                    onClick={(e) => handleSelectPart(track.partId, e.shiftKey)}
-                  >
-                    {isChildLayer && (
-                      <span style={{ fontSize: 10, color: 'var(--accent-cyan)', fontWeight: 800, marginRight: -2 }}>└─</span>
-                    )}
-
-                    <button
-                      className="ue-expand-btn"
-                      onClick={(e) => { e.stopPropagation(); toggleTrackExpanded(track.id); }}
-                      title={isTrackExpanded ? 'Collapse' : 'Expand properties'}
-                    >
-                      {isTrackExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
-                    </button>
-
-                    <span className="ue-color-dot" style={{ backgroundColor: track.color }} />
-                    
-                    {/* Double-Click Inline Renaming */}
-                    {editingPartId === track.partId ? (
-                      <input className="input-control"
-                type="text"
-                        autoFocus
-                        value={editingNameValue}
-                        onClick={(e) => e.stopPropagation()}
-                        onChange={(e) => setEditingNameValue(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            renamePartAndTrack(track.partId, editingNameValue);
-                            setEditingPartId(null);
-                          } else if (e.key === 'Escape') {
-                            setEditingPartId(null);
-                          }
-                        }}
-                        onBlur={() => {
-                          renamePartAndTrack(track.partId, editingNameValue);
-                          setEditingPartId(null);
-                        }}
-                        style={{
-                          background: 'var(--bg-input)',
-                          border: '1px solid var(--accent-cyan)',
-                          color: '#fff',
-                          fontSize: 11,
-                          fontWeight: 600,
-                          padding: '1px 5px',
-                          borderRadius: 3,
-                          outline: 'none',
-                          maxWidth: 130,
-                        }}
-                      />
-                    ) : (
-                      <span
-                        className="ue-track-name"
-                        onDoubleClick={(e) => {
-                          e.stopPropagation();
-                          setEditingPartId(track.partId);
-                          setEditingNameValue(track.name);
-                        }}
-                        title="Double-click to rename layer"
-                      >
-                        {track.name}
-                      </span>
-                    )}
-
-                    <div className="ue-track-controls">
-                      {/* 1. Edit Canvas Hard-Hide Eye */}
-                      <button
-                        className={`btn-icon track-icon-btn ${track.editVisible === false ? 'muted' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); toggleTrackEditVisibility(track.id); }}
-                        title={track.editVisible !== false ? 'Edit Canvas Eye: Visible & Editable on Canvas' : 'Edit Canvas Eye: HARD HIDDEN from Canvas (Completely Non-interactive & Non-clickable)'}
-                      >
-                        {track.editVisible !== false ? <Eye size={12} className="text-teal" /> : <EyeOff size={12} style={{ color: '#ef4444' }} />}
-                      </button>
-
-                      {/* 2. Broadcast Live Mute TV */}
-                      <button
-                        className={`btn-icon track-icon-btn ${!track.visible ? 'muted' : ''}`}
-                        onClick={(e) => { e.stopPropagation(); toggleTrackVisibility(track.id); }}
-                        title={track.visible ? 'Broadcast Live Eye: Included in Live Director Reji' : 'Broadcast Live Eye: MUTED from Live Director Reji'}
-                      >
-                        {track.visible ? <Tv size={12} style={{ color: '#10b981' }} /> : <Tv size={12} style={{ color: '#ef4444', opacity: 0.5 }} />}
-                      </button>
-
-                      {/* 3. Lock Button */}
-                      <button className="btn-icon track-icon-btn" onClick={(e) => { e.stopPropagation(); toggleTrackLock(track.id); }} title={track.locked ? 'Unlock' : 'Lock Layer'}>
-                        {track.locked ? <Lock size={12} className="text-gold" /> : <Unlock size={12} />}
-                      </button>
-
-                      {/* 4. Add Keyframe Button */}
-                      <button className="btn-icon track-add-kf-btn" onClick={(e) => { e.stopPropagation(); addKeyframeToTrack(track.id, currentFrame); }} title="Add Composite Keyframe">
-                        <Plus size={12} />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* ── TRANSFORM & SUB-GROUPS (when expanded) ── */}
-                  {isTrackExpanded && (
-                    <div className="ue-channel-group">
-                      {/* Transform Category Header */}
-                      <div
-                        className="ue-transform-header"
-                        style={{ height: CHANNEL_ROW_HEIGHT }}
-                        onClick={() => toggleSubGroup(`${track.id}_transform`, true)}
-                      >
-                        <span className="ue-sub-chevron">{isTransformExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
-                        <span className="ue-transform-label">Transform</span>
-                      </div>
-
-                      {isTransformExpanded && (
-                        <>
-                          {/* 1. Location Sub-Group */}
-                          <div
-                            className="ue-subgroup-header"
-                            style={{ height: CHANNEL_ROW_HEIGHT }}
-                            onClick={() => toggleSubGroup(`${track.id}_location`, true)}
-                          >
-                            <span className="ue-sub-chevron">{isLocationExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
-                            <span className="ue-subgroup-label">Location</span>
-                          </div>
-
-                          {isLocationExpanded && ['x', 'y'].map((chKey) => {
-                            const ch = chKey as TrackChannel;
-                            const meta = CHANNEL_META[ch];
-                            const chKfs = track.channels?.[ch] ?? [];
-                            return (
-                              <div key={ch} className="ue-channel-row" style={{ height: CHANNEL_ROW_HEIGHT }}>
-                                <span className="ue-channel-indent" />
-                                <span className="ue-channel-color-bar" style={{ backgroundColor: meta.color }} />
-                                <span className="ue-channel-label" style={{ color: meta.color }}>{meta.label}</span>
-                                <span className="ue-kf-count" style={{ color: meta.color }}>{chKfs.length}</span>
-                                <button
-                                  className="btn-icon track-add-kf-btn"
-                                  style={{ color: meta.color }}
-                                  onClick={() => handleAddChannelKeyframe(track.id, ch, track.partId)}
-                                  title={`Add ${meta.label} keyframe`}
-                                >
-                                  <Diamond size={11} />
-                                </button>
-                              </div>
-                            );
-                          })}
-
-                          {/* 2. Rotation Sub-Group */}
-                          <div
-                            className="ue-subgroup-header"
-                            style={{ height: CHANNEL_ROW_HEIGHT }}
-                            onClick={() => toggleSubGroup(`${track.id}_rotation`, false)}
-                          >
-                            <span className="ue-sub-chevron">{isRotationExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
-                            <span className="ue-subgroup-label">Rotation</span>
-                          </div>
-
-                          {isRotationExpanded && ['rotation'].map((chKey) => {
-                            const ch = chKey as TrackChannel;
-                            const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'Sequence';
-                            const chKfs = (track.channels?.[ch] ?? []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
-                            return (
-                              <div key={ch} className="ue-channel-row" style={{ height: CHANNEL_ROW_HEIGHT }}>
-                                <span className="ue-channel-indent" />
-                                <span className="ue-channel-color-bar" style={{ backgroundColor: meta.color }} />
-                                <span className="ue-channel-label" style={{ color: meta.color }}>{meta.label}</span>
-                                <span className="ue-kf-count" style={{ color: meta.color }}>{chKfs.length}</span>
-                                <button
-                                  className="btn-icon track-add-kf-btn"
-                                  style={{ color: meta.color }}
-                                  onClick={() => handleAddChannelKeyframe(track.id, ch, track.partId)}
-                                  title={`Add ${meta.label} keyframe`}
-                                >
-                                  <Diamond size={11} />
-                                </button>
-                              </div>
-                            );
-                          })}
-
-                          {/* 3. Scale Sub-Group */}
-                          <div
-                            className="ue-subgroup-header"
-                            style={{ height: CHANNEL_ROW_HEIGHT }}
-                            onClick={() => toggleSubGroup(`${track.id}_scale`, false)}
-                          >
-                            <span className="ue-sub-chevron">{isScaleExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
-                            <span className="ue-subgroup-label">Scale</span>
-                          </div>
-
-                          {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => {
-                            const ch = chKey as TrackChannel;
-                            const meta = CHANNEL_META[ch];
-                            const chKfs = track.channels?.[ch] ?? [];
-                            return (
-                              <div key={ch} className="ue-channel-row" style={{ height: CHANNEL_ROW_HEIGHT }}>
-                                <span className="ue-channel-indent" />
-                                <span className="ue-channel-color-bar" style={{ backgroundColor: meta.color }} />
-                                <span className="ue-channel-label" style={{ color: meta.color }}>{meta.label}</span>
-                                <span className="ue-kf-count" style={{ color: meta.color }}>{chKfs.length}</span>
-                                <button
-                                  className="btn-icon track-add-kf-btn"
-                                  style={{ color: meta.color }}
-                                  onClick={() => handleAddChannelKeyframe(track.id, ch, track.partId)}
-                                  title={`Add ${meta.label} keyframe`}
-                                >
-                                  <Diamond size={11} />
-                                </button>
-                              </div>
-                            );
-                          })}
-
-                          {/* 4. Opacity Row */}
-                          {['opacity'].map((chKey) => {
-                            const ch = chKey as TrackChannel;
-                            const meta = CHANNEL_META[ch];
-                            const chKfs = track.channels?.[ch] ?? [];
-                            return (
-                              <div key={ch} className="ue-channel-row" style={{ height: CHANNEL_ROW_HEIGHT }}>
-                                <span className="ue-channel-indent-sm" />
-                                <span className="ue-channel-color-bar" style={{ backgroundColor: meta.color }} />
-                                <span className="ue-channel-label" style={{ color: meta.color }}>{meta.label}</span>
-                                <span className="ue-kf-count" style={{ color: meta.color }}>{chKfs.length}</span>
-                                <button
-                                  className="btn-icon track-add-kf-btn"
-                                  style={{ color: meta.color }}
-                                  onClick={() => handleAddChannelKeyframe(track.id, ch, track.partId)}
-                                  title={`Add ${meta.label} keyframe`}
-                                >
-                                  <Diamond size={11} />
-                                </button>
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
+                <TrackOutlinerRow
+                  key={track.id}
+                  track={track}
+                  isChildLayer={isChildLayer}
+                  isSelected={selectedPartIds?.includes(track.partId)}
+                  editingPartId={editingPartId}
+                  editingNameValue={editingNameValue}
+                  currentFrame={currentFrame}
+                  activeTemplateId={activeTemplateId}
+                  onSelect={handleSelectPart}
+                  onStartEdit={(partId, name) => { setEditingPartId(partId); setEditingNameValue(name); }}
+                  onChangeEditValue={setEditingNameValue}
+                  onEnterCommit={(partId, name) => { if (name.trim()) renamePartAndTrack(partId, name.trim()); setEditingPartId(null); }}
+                  onBlurCommit={(partId, name) => { renamePartAndTrack(partId, name); setEditingPartId(null); }}
+                  onCancelEdit={() => setEditingPartId(null)}
+                  onToggleExpand={toggleTrackExpanded}
+                  onToggleEditVisible={toggleTrackEditVisibility}
+                  onToggleVisible={toggleTrackVisibility}
+                  onToggleLock={toggleTrackLock}
+                  onAddKeyframe={addKeyframeToTrack}
+                  onAddChannelKeyframe={handleAddChannelKeyframe}
+                  isGroupExpanded={isGroupExpanded}
+                  onToggleSubGroup={toggleSubGroup}
+                />
               );
             })}
           </div>
@@ -757,23 +516,12 @@ export const SequencerTimeline: React.FC = () => {
         {/* ── RIGHT SCROLLABLE GRID ── */}
         <div className="timeline-grid-container" ref={timelineGridRef} onScroll={handleGridScroll}>
           {/* Time Ruler */}
-          <div className="time-ruler" onMouseDown={handleRulerMouseDown} style={{ width: `${(totalFrames + 30) * FRAME_WIDTH}px`, minWidth: '100%' }}>
-            {frameNumbers.map((frame) => {
-              const labelStep =
-                FRAME_WIDTH >= 20 ? 5 :
-                FRAME_WIDTH >= 10 ? 10 :
-                FRAME_WIDTH >= 5  ? 20 : 50;
-
-              const isLabel = frame % labelStep === 0;
-              const isTen = frame % 10 === 0;
-              const isFive = frame % 5 === 0;
-              return (
-                <div key={frame} className={`ruler-mark ${isTen ? 'ten' : isFive ? 'major' : 'minor'}`} style={{ left: `${frame * FRAME_WIDTH}px` }}>
-                  {isLabel && <span className="ruler-label">{frame}</span>}
-                </div>
-              );
-            })}
-          </div>
+          <TimeRuler
+            frameNumbers={frameNumbers}
+            frameWidth={FRAME_WIDTH}
+            totalFrames={totalFrames}
+            onMouseDown={handleRulerMouseDown}
+          />
 
           {/* Playhead */}
           <div className="playhead-line" style={{ left: `${currentFrame * FRAME_WIDTH}px` }}>
@@ -784,223 +532,26 @@ export const SequencerTimeline: React.FC = () => {
 
           {/* Track Lanes */}
           <div className="ue-track-lanes">
-            {tracks.map((track) => {
-              const isSelected = selectedPartId === track.partId;
-              const isTrackExpanded = track.expanded === true;
-              const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
-              const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
-              const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
-              const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
-
-              const activeTmpl = activeTemplateId || 'Sequence';
-              const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
-              const sortedKfs = [...activeKfs].sort((a, b) => a.frame - b.frame);
-
-              return (
-                <div key={track.id} className="ue-lane-group">
-                  {/* ── PARENT LANE (composite keyframes) ── */}
-                  <div
-                    className={`ue-track-lane ${isSelected ? 'selected' : ''}`}
-                    style={{ height: TRACK_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%`, position: 'relative' }}
-                  >
-                    {/* Span bars between composite keyframes */}
-                    {sortedKfs.map((kf, idx) => {
-                      if (idx === sortedKfs.length - 1) return null;
-                      const nextKf = sortedKfs[idx + 1];
-                      return (
-                        <div
-                          key={`span-${kf.id}`}
-                          className="keyframe-span-bar"
-                          style={{ left: `${kf.frame * FRAME_WIDTH}px`, width: `${(nextKf.frame - kf.frame) * FRAME_WIDTH}px`, borderColor: track.color }}
-                          title={`${kf.easing} (${kf.frame}→${nextKf.frame})`}
-                        >
-                          <span className="span-easing-tag">{kf.easing}</span>
-                        </div>
-                      );
-                    })}
-                    {/* Composite keyframe diamonds */}
-                    {activeKfs.map((kf) => {
-                      const isKfSelected = selectedKeyframeId === kf.id;
-                      return (
-                        <div
-                          key={kf.id}
-                          className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
-                          style={{ left: `${kf.frame * FRAME_WIDTH}px`, borderColor: track.color }}
-                          onClick={(e) => { e.stopPropagation(); setSelectedKeyframeId(kf.id); handleSelectPart(track.partId, e.shiftKey); setCurrentFrame(kf.frame); }}
-                          onMouseDown={(e) => { e.stopPropagation(); setDraggingKf({ trackId: track.id, keyframeId: kf.id }); setSelectedKeyframeId(kf.id); }}
-                          onMouseEnter={() => setHoveredKf({ frame: kf.frame, label: `${track.name} | ${kf.easing}` })}
-                          onMouseLeave={() => setHoveredKf(null)}
-                          onContextMenu={(e) => { e.preventDefault(); deleteKeyframe(track.id, kf.id); }}
-                          title={`[${track.name}] Frame: ${kf.frame} | ${kf.easing} (Right-click: Delete)`}
-                        >
-                          <div className="diamond-inner" style={{ backgroundColor: track.color }} />
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* ── CHANNEL LANES MATCHING SUB-GROUPS ── */}
-                  {isTrackExpanded && (
-                    <div className="ue-channel-lanes">
-                      {/* Transform Header Lane Spacer */}
-                      <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }} />
-
-                      {isTransformExpanded && (
-                        <>
-                          {/* Location Header Lane Spacer */}
-                          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }} />
-                          {isLocationExpanded && ['x', 'y'].map((chKey) => {
-                            const ch = chKey as TrackChannel;
-                            const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'Sequence';
-                            const chKfs = [...(track.channels?.[ch] ?? [])]
-                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
-                              .sort((a, b) => a.frame - b.frame);
-                            return (
-                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
-                                {/* Horizontal connecting trajectory line for keyframes (Unreal Engine style) */}
-                                {chKfs.length > 0 && (
-                                  <div
-                                    className="ue-trajectory-line"
-                                    style={{
-                                      left: `${chKfs[0].frame * FRAME_WIDTH}px`,
-                                      width: `${(chKfs[chKfs.length - 1].frame - chKfs[0].frame) * FRAME_WIDTH}px`,
-                                      backgroundColor: meta.color,
-                                    }}
-                                  />
-                                )}
-                                {chKfs.map((pkf) => (
-                                  <div
-                                    key={pkf.id}
-                                    className="ue-prop-diamond"
-                                    style={{ left: `${pkf.frame * FRAME_WIDTH}px`, '--diamond-color': meta.color } as React.CSSProperties}
-                                    onMouseDown={(e) => { e.stopPropagation(); setDraggingPKf({ trackId: track.id, channel: ch, keyframeId: pkf.id }); setCurrentFrame(pkf.frame); }}
-                                    onMouseEnter={() => setHoveredKf({ frame: pkf.frame, label: `${meta.label}: ${pkf.value.toFixed(2)}` })}
-                                    onMouseLeave={() => setHoveredKf(null)}
-                                    onContextMenu={(e) => { e.preventDefault(); deletePropertyKeyframe(track.id, ch, pkf.id); }}
-                                    title={`${meta.label} = ${pkf.value.toFixed(2)} @ F${pkf.frame}`}
-                                  />
-                                ))}
-                              </div>
-                            );
-                          })}
-
-                          {/* Rotation Header Lane Spacer */}
-                          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }} />
-                          {isRotationExpanded && ['rotation'].map((chKey) => {
-                            const ch = chKey as TrackChannel;
-                            const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'Sequence';
-                            const chKfs = [...(track.channels?.[ch] ?? [])]
-                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
-                              .sort((a, b) => a.frame - b.frame);
-                            return (
-                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
-                                {chKfs.length > 0 && (
-                                  <div
-                                    className="ue-trajectory-line"
-                                    style={{
-                                      left: `${chKfs[0].frame * FRAME_WIDTH}px`,
-                                      width: `${(chKfs[chKfs.length - 1].frame - chKfs[0].frame) * FRAME_WIDTH}px`,
-                                      backgroundColor: meta.color,
-                                    }}
-                                  />
-                                )}
-                                {chKfs.map((pkf) => (
-                                  <div
-                                    key={pkf.id}
-                                    className="ue-prop-diamond"
-                                    style={{ left: `${pkf.frame * FRAME_WIDTH}px`, '--diamond-color': meta.color } as React.CSSProperties}
-                                    onMouseDown={(e) => { e.stopPropagation(); setDraggingPKf({ trackId: track.id, channel: ch, keyframeId: pkf.id }); setCurrentFrame(pkf.frame); }}
-                                    onMouseEnter={() => setHoveredKf({ frame: pkf.frame, label: `${meta.label}: ${pkf.value.toFixed(2)}` })}
-                                    onMouseLeave={() => setHoveredKf(null)}
-                                    onContextMenu={(e) => { e.preventDefault(); deletePropertyKeyframe(track.id, ch, pkf.id); }}
-                                    title={`${meta.label} = ${pkf.value.toFixed(2)} @ F${pkf.frame}`}
-                                  />
-                                ))}
-                              </div>
-                            );
-                          })}
-
-                          {/* Scale Header Lane Spacer */}
-                          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }} />
-                          {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => {
-                            const ch = chKey as TrackChannel;
-                            const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'Sequence';
-                            const chKfs = [...(track.channels?.[ch] ?? [])]
-                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
-                              .sort((a, b) => a.frame - b.frame);
-                            return (
-                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
-                                {chKfs.length > 0 && (
-                                  <div
-                                    className="ue-trajectory-line"
-                                    style={{
-                                      left: `${chKfs[0].frame * FRAME_WIDTH}px`,
-                                      width: `${(chKfs[chKfs.length - 1].frame - chKfs[0].frame) * FRAME_WIDTH}px`,
-                                      backgroundColor: meta.color,
-                                    }}
-                                  />
-                                )}
-                                {chKfs.map((pkf) => (
-                                  <div
-                                    key={pkf.id}
-                                    className="ue-prop-diamond"
-                                    style={{ left: `${pkf.frame * FRAME_WIDTH}px`, '--diamond-color': meta.color } as React.CSSProperties}
-                                    onMouseDown={(e) => { e.stopPropagation(); setDraggingPKf({ trackId: track.id, channel: ch, keyframeId: pkf.id }); setCurrentFrame(pkf.frame); }}
-                                    onMouseEnter={() => setHoveredKf({ frame: pkf.frame, label: `${meta.label}: ${pkf.value.toFixed(2)}` })}
-                                    onMouseLeave={() => setHoveredKf(null)}
-                                    onContextMenu={(e) => { e.preventDefault(); deletePropertyKeyframe(track.id, ch, pkf.id); }}
-                                    title={`${meta.label} = ${pkf.value.toFixed(2)} @ F${pkf.frame}`}
-                                  />
-                                ))}
-                              </div>
-                            );
-                          })}
-
-                          {/* Opacity Channel Lane */}
-                          {['opacity'].map((chKey) => {
-                            const ch = chKey as TrackChannel;
-                            const meta = CHANNEL_META[ch];
-                            const activeTmpl = activeTemplateId || 'Sequence';
-                            const chKfs = [...(track.channels?.[ch] ?? [])]
-                              .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
-                              .sort((a, b) => a.frame - b.frame);
-                            return (
-                              <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * FRAME_WIDTH}px`, backgroundSize: `${FRAME_WIDTH}px 100%` }}>
-                                {chKfs.length > 0 && (
-                                  <div
-                                    className="ue-trajectory-line"
-                                    style={{
-                                      left: `${chKfs[0].frame * FRAME_WIDTH}px`,
-                                      width: `${(chKfs[chKfs.length - 1].frame - chKfs[0].frame) * FRAME_WIDTH}px`,
-                                      backgroundColor: meta.color,
-                                    }}
-                                  />
-                                )}
-                                {chKfs.map((pkf) => (
-                                  <div
-                                    key={pkf.id}
-                                    className="ue-prop-diamond"
-                                    style={{ left: `${pkf.frame * FRAME_WIDTH}px`, '--diamond-color': meta.color } as React.CSSProperties}
-                                    onMouseDown={(e) => { e.stopPropagation(); setDraggingPKf({ trackId: track.id, channel: ch, keyframeId: pkf.id }); setCurrentFrame(pkf.frame); }}
-                                    onMouseEnter={() => setHoveredKf({ frame: pkf.frame, label: `${meta.label}: ${pkf.value.toFixed(2)}` })}
-                                    onMouseLeave={() => setHoveredKf(null)}
-                                    onContextMenu={(e) => { e.preventDefault(); deletePropertyKeyframe(track.id, ch, pkf.id); }}
-                                    title={`${meta.label} = ${pkf.value.toFixed(2)} @ F${pkf.frame}`}
-                                  />
-                                ))}
-                              </div>
-                            );
-                          })}
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {tracks.map((track) => (
+              <TrackLane
+                key={track.id}
+                track={track}
+                isSelected={selectedPartId === track.partId}
+                selectedKeyframeId={selectedKeyframeId}
+                frameWidth={FRAME_WIDTH}
+                totalFrames={totalFrames}
+                activeTemplateId={activeTemplateId}
+                isGroupExpanded={isGroupExpanded}
+                onSelectKeyframe={setSelectedKeyframeId}
+                onSelectPart={handleSelectPart}
+                onSetFrame={setCurrentFrame}
+                onStartDragKf={setDraggingKf}
+                onStartDragPKf={setDraggingPKf}
+                onHoverKf={setHoveredKf}
+                onDeleteKeyframe={deleteKeyframe}
+                onDeletePropertyKeyframe={deletePropertyKeyframe}
+              />
+            ))}
           </div>
         </div>
       </div>

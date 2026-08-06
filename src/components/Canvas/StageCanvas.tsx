@@ -1,29 +1,15 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { Transform, MaskPoint } from '../../types/animator';
-import { PartRenderer } from './renderers/PartRenderer';
-import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
+import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
-import { MaskGizmo } from './overlays/MaskGizmo';
+import { CANVAS_CENTER_X, CANVAS_CENTER_Y, computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
+import { SelectionGizmo } from './SelectionGizmo';
+import { StagePartLayers } from './StagePartLayers';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
-
-const getLocalDelta = (dx: number, dy: number, rotationDeg: number) => {
-  const rad = (rotationDeg * Math.PI) / 180;
-  const cosR = Math.cos(rad);
-  const sinR = Math.sin(rad);
-  return {
-    dxLocal: dx * cosR + dy * sinR,
-    dyLocal: -dx * sinR + dy * cosR,
-    cosR,
-    sinR
-  };
-};
-
-const CANVAS_CENTER_X = 300;
-const CANVAS_CENTER_Y = 240;
 
 export const StageCanvas: React.FC = () => {
   const {
@@ -455,62 +441,21 @@ export const StageCanvas: React.FC = () => {
         if (!part) return;
 
         const bounds = getPartBounds(part);
-        const halfW0 = bounds.halfW;
-        const halfH0 = bounds.halfH;
 
-        // World displacement vector from drag start
-        const deltaWorldX = svgX - dragStart.x;
-        const deltaWorldY = svgY - dragStart.y;
-
-        // Convert world delta to local coordinates of the unrotated element
-        const { dxLocal, dyLocal, cosR, sinR } = getLocalDelta(deltaWorldX, deltaWorldY, dragStart.initialTransform.rotation);
-
-        const initScaleX = dragStart.initialTransform.scaleX;
-        const initScaleY = dragStart.initialTransform.scaleY;
-        const initX = dragStart.initialTransform.x;
-        const initY = dragStart.initialTransform.y;
-
-        let newScaleX = initScaleX;
-        let newScaleY = initScaleY;
-        let newX = initX;
-        let newY = initY;
-
-        if (dragMode === 'scale_right') {
-          // Keep Left edge fixed, stretch ONLY Right
-          const newScaleXVal = Math.max(0.05, initScaleX + dxLocal / (2 * halfW0));
-          const deltaScaleX = newScaleXVal - initScaleX;
-          newScaleX = parseFloat(newScaleXVal.toFixed(2));
-          newX = Math.round(initX + deltaScaleX * halfW0 * cosR);
-          newY = Math.round(initY + deltaScaleX * halfW0 * sinR);
-        } else if (dragMode === 'scale_left') {
-          // Keep Right edge fixed, stretch ONLY Left
-          const newScaleXVal = Math.max(0.05, initScaleX - dxLocal / (2 * halfW0));
-          const deltaScaleX = newScaleXVal - initScaleX;
-          newScaleX = parseFloat(newScaleXVal.toFixed(2));
-          newX = Math.round(initX - deltaScaleX * halfW0 * cosR);
-          newY = Math.round(initY - deltaScaleX * halfW0 * sinR);
-        } else if (dragMode === 'scale_bottom') {
-          // Keep Top edge fixed, stretch ONLY Bottom
-          const newScaleYVal = Math.max(0.05, initScaleY + dyLocal / (2 * halfH0));
-          const deltaScaleY = newScaleYVal - initScaleY;
-          newScaleY = parseFloat(newScaleYVal.toFixed(2));
-          newX = Math.round(initX - deltaScaleY * halfH0 * sinR);
-          newY = Math.round(initY + deltaScaleY * halfH0 * cosR);
-        } else if (dragMode === 'scale_top') {
-          // Keep Bottom edge fixed, stretch ONLY Top
-          const newScaleYVal = Math.max(0.05, initScaleY - dyLocal / (2 * halfH0));
-          const deltaScaleY = newScaleYVal - initScaleY;
-          newScaleY = parseFloat(newScaleYVal.toFixed(2));
-          newX = Math.round(initX + deltaScaleY * halfH0 * sinR);
-          newY = Math.round(initY - deltaScaleY * halfH0 * cosR);
-        }
-
-        updateCurrentTransform({
-          x: newX,
-          y: newY,
-          scaleX: newScaleX,
-          scaleY: newScaleY,
-        });
+        updateCurrentTransform(
+          computeEdgeScale({
+            dragMode,
+            halfW: bounds.halfW,
+            halfH: bounds.halfH,
+            deltaWorldX: svgX - dragStart.x,
+            deltaWorldY: svgY - dragStart.y,
+            rotation: dragStart.initialTransform.rotation,
+            initScaleX: dragStart.initialTransform.scaleX,
+            initScaleY: dragStart.initialTransform.scaleY,
+            initX: dragStart.initialTransform.x,
+            initY: dragStart.initialTransform.y,
+          })
+        );
       } else if (dragMode === 'scale_x') {
         const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
         const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
@@ -542,29 +487,12 @@ export const StageCanvas: React.FC = () => {
 
   const handleMouseUp = useCallback(() => {
       if (dragMode === 'marquee' && marqueeRect) {
-        // Calculate collisions with all parts
-        const selected: string[] = [];
-        characterParts.forEach(part => {
-          const t = getComputedTransform(part.id, currentFrame);
-          const bounds = getPartBounds(part);
-          const cx = CANVAS_CENTER_X + t.x;
-          const cy = CANVAS_CENTER_Y + t.y;
-          // Rough bounding box intersection
-          const partLeft = cx - bounds.halfW * t.scaleX;
-          const partRight = cx + bounds.halfW * t.scaleX;
-          const partTop = cy - bounds.halfH * t.scaleY;
-          const partBottom = cy + bounds.halfH * t.scaleY;
-          
-          if (
-            partRight > marqueeRect.x &&
-            partLeft < marqueeRect.x + marqueeRect.w &&
-            partBottom > marqueeRect.y &&
-            partTop < marqueeRect.y + marqueeRect.h
-          ) {
-            selected.push(part.id);
-          }
-        });
-        
+        const selected = getPartsInMarquee(
+          characterParts,
+          (id) => getComputedTransform(id, currentFrame),
+          marqueeRect
+        );
+
         if (selected.length > 0) {
           handleSelectPart(selected[selected.length - 1], false);
           // Manually update all selections
@@ -794,83 +722,18 @@ export const StageCanvas: React.FC = () => {
               />
 
               {/* Character Parts Active Render (Clipped in Broadcast mode, unclipped & visible in Edit mode) */}
-              <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
-                {sortedParts.map((part) => {
-                  if (focusModeNodeId && part.id === focusModeNodeId) return null; // Render later
-                  
-                  let frameToEvaluate = currentFrame;
-
-                  if (appMode === 'broadcast') {
-                    const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
-                    if (bState.state === 'animating_in' && part.inAnimPreset === 'custom_timeline') {
-                      const st = part.inAnimTimelineStart || 0;
-                      const en = part.inAnimTimelineEnd || 30;
-                      frameToEvaluate = st + bState.progress * (en - st);
-                    } else if (bState.state === 'visible' && part.inAnimPreset === 'custom_timeline') {
-                      frameToEvaluate = part.inAnimTimelineEnd || 30;
-                    } else if (bState.state === 'animating_out' && part.outAnimPreset === 'custom_timeline') {
-                      const st = part.outAnimTimelineStart || 0;
-                      const en = part.outAnimTimelineEnd || 30;
-                      frameToEvaluate = st + bState.progress * (en - st);
-                    }
-                  }
-
-                  const transform = getComputedTransform(part.id, frameToEvaluate);
-                  return (
-                    <PartRenderer
-                      key={part.id}
-                      part={part}
-                      transform={transform}
-                      isSelected={selectedPartId === part.id}
-                      currentFrame={frameToEvaluate}
-                      totalFrames={totalFrames}
-                      onSelect={setSelectedPartId}
-                      onStartTranslateDrag={startTranslateDragForPart}
-                    />
-                  );
-                })}
-                
-                {/* Focus Mode Overlay and Focused Part */}
-                {focusModeNodeId && (
-                  <>
-                    <rect
-                      className="focus-spotlight-dimmer"
-                      x={-300000}
-                      y={-300000}
-                      width={600000}
-                      height={600000}
-                      fill="rgba(0, 0, 0, 0.7)"
-                    />
-                    {sortedParts.filter(p => p.id === focusModeNodeId).map((part) => {
-                      const transform = getComputedTransform(part.id, currentFrame);
-                      return (
-                        <g key={`focus-${part.id}`}>
-                          <PartRenderer
-                            part={part}
-                            transform={transform}
-                            isSelected={true}
-                            currentFrame={currentFrame}
-                            totalFrames={totalFrames}
-                            onSelect={setSelectedPartId}
-                            onStartTranslateDrag={startTranslateDragForPart}
-                            isGhost={true}
-                            isFocusGhost={true}
-                          />
-                          <PartRenderer
-                            part={part}
-                            transform={transform}
-                            isSelected={true}
-                            currentFrame={currentFrame}
-                            totalFrames={totalFrames}
-                            onSelect={setSelectedPartId}
-                            onStartTranslateDrag={startTranslateDragForPart}
-                          />
-                        </g>
-                      );
-                    })}
-                  </>
-                )}
-              </g>
+              <StagePartLayers
+                sortedParts={sortedParts}
+                focusModeNodeId={focusModeNodeId}
+                appMode={appMode}
+                broadcastState={broadcastState}
+                currentFrame={currentFrame}
+                getComputedTransform={getComputedTransform}
+                selectedPartId={selectedPartId}
+                totalFrames={totalFrames}
+                onSelect={setSelectedPartId}
+                onStartTranslateDrag={startTranslateDragForPart}
+              />
 
               {/* Snap Lines */}
               {snapLines.map((line, i) => (
@@ -926,83 +789,22 @@ export const StageCanvas: React.FC = () => {
               />
 
               {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden) */}
-              {appMode !== 'broadcast' && (() => {
-                if (selectedPartIds.length > 1) {
-                  let minX = Infinity;
-                  let minY = Infinity;
-                  let maxX = -Infinity;
-                  let maxY = -Infinity;
-                  
-                  selectedPartIds.forEach(id => {
-                    const part = characterParts.find(p => p.id === id);
-                    if (!part) return;
-                    const t = getComputedTransform(id, currentFrame);
-                    const b = getPartBounds(part);
-                    const left = t.x - b.halfW * Math.abs(t.scaleX);
-                    const right = t.x + b.halfW * Math.abs(t.scaleX);
-                    const top = t.y - b.halfH * Math.abs(t.scaleY);
-                    const bottom = t.y + b.halfH * Math.abs(t.scaleY);
-                    if (left < minX) minX = left;
-                    if (right > maxX) maxX = right;
-                    if (top < minY) minY = top;
-                    if (bottom > maxY) maxY = bottom;
-                  });
-
-                  if (minX === Infinity) return null;
-                  
-                  const groupTransform: Transform = {
-                    x: (minX + maxX) / 2,
-                    y: (minY + maxY) / 2,
-                    rotation: 0,
-                    scaleX: 1,
-                    scaleY: 1,
-                    opacity: 1
-                  };
-                  
-                  const halfW = (maxX - minX) / 2;
-                  const halfH = (maxY - minY) / 2;
-
-                  return (
-                    <TransformGizmo
-                      selectedPart={characterParts[0]} // dummy
-                      selectedTransform={groupTransform}
-                      zScale={zScale}
-                      onRotateMouseDown={() => {}} // disabled for groups
-                      onScaleMouseDown={() => {}} // disabled for groups
-                      isGroup={true}
-                      overrideHalfW={halfW}
-                      overrideHalfH={halfH}
-                    />
-                  );
-                } else if (selectedPart && selectedTransform) {
-                  const selTrack = tracks.find(t => t.partId === selectedPart.id);
-                  if (selTrack && selTrack.editVisible === false) return null;
-                  return (
-                    <>
-                      {activeTool !== 'mask' && (
-                        <TransformGizmo
-                          selectedPart={selectedPart}
-                          selectedTransform={selectedTransform}
-                          zScale={zScale}
-                          onRotateMouseDown={startRotate}
-                          onScaleMouseDown={startScale}
-                        />
-                      )}
-                      {activeTool === 'mask' && selectedPart.mask && selectedPart.mask.enabled && (
-                        <g transform={`translate(${CANVAS_CENTER_X + selectedTransform.x}, ${CANVAS_CENTER_Y + selectedTransform.y}) rotate(${selectedTransform.rotation})`}>
-                          <MaskGizmo
-                            part={selectedPart}
-                            transform={selectedTransform}
-                            zoomLevel={zScale}
-                            onPointDragStart={startMaskPointDrag}
-                          />
-                        </g>
-                      )}
-                    </>
-                  );
-                }
-                return null;
-              })()}
+              {appMode !== 'broadcast' && (
+                <SelectionGizmo
+                  selectedPartIds={selectedPartIds}
+                  characterParts={characterParts}
+                  getComputedTransform={getComputedTransform}
+                  currentFrame={currentFrame}
+                  selectedPart={selectedPart}
+                  selectedTransform={selectedTransform}
+                  tracks={tracks}
+                  activeTool={activeTool}
+                  zScale={zScale}
+                  onRotateStart={startRotate}
+                  onScaleStart={startScale}
+                  onMaskPointDragStart={startMaskPointDrag}
+                />
+              )}
             </>
           );
         })()}

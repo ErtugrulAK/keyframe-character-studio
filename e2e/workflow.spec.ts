@@ -16,31 +16,19 @@ test.describe('Phase 6.4 E2E Workflows', () => {
 
     // Add a Rectangle
     await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
-    
+
     // Add a Circle
     await page.getByRole('button', { name: 'Circle', exact: true }).click();
 
-    // Verify elements are on timeline
-    await expect(page.getByText('Rectangle')).toBeVisible();
-    await expect(page.getByText('Circle')).toBeVisible();
+    // Verify elements appear in the timeline outliner (scoped to the outliner
+    // because 'Rectangle'/'Circle' also appear in the toolbar and on the canvas)
+    await expect(page.locator('.ue-outliner').getByText('Rectangle').first()).toBeVisible();
+    await expect(page.locator('.ue-outliner').getByText('Circle').first()).toBeVisible();
 
-    // Move/Rotate/Scale parts via Inspector
-    // We assume the inspector has an X, Y input
-    const xInput = page.getByLabel('Position X', { exact: false }).first();
-    if (await xInput.isVisible()) {
-      await xInput.fill('150');
-      await xInput.press('Enter');
-    }
-
-    // Create keyframes - moving to a different frame on the timeline
-    // The timeline might have a timeline ruler or a playhead. We just click Play.
-    await page.getByTitle('Play Animation').click();
-    
-    // Let it play for a bit
+    // Play the sequence, then pause it (the transport button toggles its title)
+    await page.getByTitle('Play', { exact: true }).click();
     await page.waitForTimeout(1000);
-    
-    // Stop playback
-    await page.getByTitle('Stop Animation').click();
+    await page.getByTitle('Pause', { exact: true }).click();
 
     // Undo / Redo
     await page.keyboard.press('Control+Z');
@@ -49,15 +37,13 @@ test.describe('Phase 6.4 E2E Workflows', () => {
     // Copy / Paste parts
     await page.keyboard.press('Control+C');
     await page.keyboard.press('Control+V');
-    
-    // The clipboard might be restricted by browser security policies, but the internal event should fire.
-    
+
     // Delete part
     await page.keyboard.press('Delete');
 
     // Switch Project Templates
     await page.getByTitle('Project Workspace').click();
-    
+
     // Switch Motion Templates
     await page.getByTitle('Motion Transitions').click();
   });

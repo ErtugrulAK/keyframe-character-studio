@@ -7,7 +7,7 @@ license: MIT
 metadata:
   hermes:
     tags: [keyframe-studio, constitution, rules, approval-first, defensive-programming]
-    related_skills: [kcs-branch-strategy, kcs-coding-style, kcs-project-context]
+    related_skills: [kcs-git-workflow, kcs-workflows, kcs-coding-style, kcs-project-context]
 ---
 
 # Keyframe Character Studio AI Constitution
@@ -191,7 +191,7 @@ Do not consider a task complete if validation fails.
 
 ## Git Workflow
 
-Follow the branching strategy defined in the `kcs-branch-strategy` skill (port of `/.agents/BRANCH_STRATEGY.md`).
+Follow the branching strategy defined in the `kcs-git-workflow` skill (Branch Strategy section; port of `.agents/BRANCH_STRATEGY.md`).
 
 Always:
 
@@ -241,7 +241,7 @@ Unless explicitly instructed otherwise, always follow this process:
 
 1. Analyze the request.
 2. Identify affected files and architectural boundaries.
-3. Determine the appropriate Git branch according to `kcs-branch-strategy`.
+3. Determine the appropriate Git branch according to `kcs-git-workflow` (Branch Strategy).
 4. Produce an implementation plan.
 5. Wait for explicit approval.
 6. Implement only the approved scope.
@@ -316,8 +316,7 @@ If multiple rules appear to conflict, follow this priority order:
 
 1. Explicit user instructions
 2. This constitution (kcs-constitution, port of AGENTS.md)
-3. Active workflow skill instructions (kcs-architecture-workflow, kcs-bugfix-workflow, kcs-feature-workflow, kcs-git-workflow, etc.)
-4. kcs-branch-strategy
+3. Active workflow skill instructions (`kcs-workflows` — architecture/feature/bugfix/refactor/cleanup/performance/review/testing; `kcs-git-workflow` — branching, commits, merges)
 5. Existing project conventions
 6. Personal assumptions
 

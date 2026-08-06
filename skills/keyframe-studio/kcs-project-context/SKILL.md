@@ -7,7 +7,7 @@ license: MIT
 metadata:
   hermes:
     tags: [keyframe-studio, project-context, architecture, stack]
-    related_skills: [kcs-constitution, kcs-coding-style, kcs-architecture-workflow]
+    related_skills: [kcs-constitution, kcs-coding-style, kcs-workflows]
 ---
 
 # Project Context
@@ -158,4 +158,4 @@ Further improvements should preserve the existing architectural boundaries unles
 
 This project follows a structured, domain-driven Git workflow.
 
-All branch creation, branch selection, merging, and cleanup decisions must follow the `kcs-branch-strategy` skill (port of `.agents/BRANCH_STRATEGY.md`).
+All branch creation, branch selection, merging, and cleanup decisions must follow the `kcs-git-workflow` skill (Branch Strategy section; port of `.agents/BRANCH_STRATEGY.md`).

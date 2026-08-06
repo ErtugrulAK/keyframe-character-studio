@@ -7,8 +7,9 @@ This repository is developed with AI agents (Hermes Agent, Antigravity, etc.). F
 1. **Load the project skills first** (Hermes skills under `skills/keyframe-studio/`):
    - `kcs-constitution` — constitution: analyze → plan → approval → implement → validate
    - `kcs-project-context` — architecture (Thin Orchestrator Pattern), stack, constraints
-   - `kcs-branch-strategy` + `kcs-git-workflow` — domain-driven branching, commit rules
-   - Task workflow skills as applicable: `kcs-feature-workflow`, `kcs-bugfix-workflow`, `kcs-refactor-workflow`, `kcs-cleanup-workflow`, `kcs-performance-workflow`, `kcs-review-workflow`, `kcs-testing-workflow`, `kcs-architecture-workflow`, `kcs-coding-style`
+   - `kcs-git-workflow` — domain-driven branching (branch strategy included), commit rules
+   - `kcs-workflows` — task workflows: architecture, feature, bugfix, refactor, cleanup, performance, review, testing
+   - `kcs-coding-style` — coding conventions
 2. **Approval-first**: never modify files, create branches, commit, merge, or push without explicit user approval.
 3. **Preserve**: runtime behavior, public APIs, backward compatibility.
 4. **Language**: conversation in Turkish; all repo files, code, comments, and commit messages in English.

@@ -10,22 +10,14 @@ ayarı üzerinden doğrudan tarar. Git'e commit'lenen her değişiklik aynı and
 | Skill | Kaynak dosya |
 |---|---|
 | `kcs-constitution` | `.agents/AGENTS.md` |
-| `kcs-branch-strategy` | `.agents/BRANCH_STRATEGY.md` |
 | `kcs-coding-style` | `.agents/CODING_STYLE.md` |
 | `kcs-project-context` | `.agents/PROJECT_CONTEXT.md` |
 
 ### Workflow'lar (`.agents/workflows/` → `keyframe-studio/`)
 | Skill | Kaynak dosya |
 |---|---|
-| `kcs-architecture-workflow` | `.agents/workflows/architecture.md` |
-| `kcs-bugfix-workflow` | `.agents/workflows/bugfix.md` |
-| `kcs-cleanup-workflow` | `.agents/workflows/cleanup.md` |
-| `kcs-feature-workflow` | `.agents/workflows/feature.md` |
-| `kcs-git-workflow` | `.agents/workflows/git.md` |
-| `kcs-performance-workflow` | `.agents/workflows/performance.md` |
-| `kcs-refactor-workflow` | `.agents/workflows/refactor.md` |
-| `kcs-review-workflow` | `.agents/workflows/review.md` |
-| `kcs-testing-workflow` | `.agents/workflows/testing.md` |
+| `kcs-git-workflow` | `.agents/workflows/git.md` + `.agents/BRANCH_STRATEGY.md` (birleşik) |
+| `kcs-workflows` | `.agents/workflows/` → architecture, feature, bugfix, refactor, cleanup, performance, review, testing (birleşik, bölüm bazlı dağıtım) |
 
 ## Kurulum (yeni makine / yeni profil)
 
@@ -40,7 +32,7 @@ ayarı üzerinden doğrudan tarar. Git'e commit'lenen her değişiklik aynı and
    - Değer **çıplak yol** olmalı; JSON köşeli parantezli değer string olarak kaydedilir ve çalışmaz.
    - Dizin yoksa sessizce atlanır (skill'ler kaybolmaz, sadece yüklenmez).
 
-3. Doğrula: `hermes skills list | grep kcs` → 13 skill görünmeli.
+3. Doğrula: `hermes skills list | grep kcs` → 5 skill görünmeli.
 
 ## Notlar
 

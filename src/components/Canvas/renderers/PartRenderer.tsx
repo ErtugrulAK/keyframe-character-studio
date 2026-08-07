@@ -7,6 +7,35 @@ import { renderMediaPart } from './parts/MediaPartRenderer';
 import { getContainerOutlineElement } from '../../../utils/containerOutline';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
 import { getYouTubeEmbedInfo } from './utils/youtubeHelper';
+import { getFreeformExtents } from '../../../utils/freeform';
+
+/**
+ * Per-type framing (size + local origin + clip id) of the media masked inside
+ * a shape. Mirrors ShapePartRenderers so the sibling media layer lines up with
+ * the shape's own inner-media clip.
+ */
+const getInnerMediaFrame = (
+  part: CharacterPart
+): { w: number; h: number; x: number; y: number; clipId: string } | null => {
+  switch (part.type) {
+    case 'custom_circle':
+      return { w: 60, h: 60, x: -30, y: -30, clipId: `clip-circle-${part.id}` };
+    case 'custom_box':
+      return { w: 60, h: 60, x: -30, y: -30, clipId: `clip-box-${part.id}` };
+    case 'custom_rect':
+      return { w: 120, h: 60, x: -60, y: -30, clipId: `clip-rect-${part.id}` };
+    case 'custom_triangle':
+      return { w: 70, h: 60, x: -35, y: -35, clipId: `clip-tri-${part.id}` };
+    case 'custom_freeform': {
+      const ext = getFreeformExtents(part.points || []);
+      const w = ext ? ext.maxX - ext.minX : 100;
+      const h = ext ? ext.maxY - ext.minY : 100;
+      return { w, h, x: ext ? ext.minX : -50, y: ext ? ext.minY : -50, clipId: `clip-freeform-${part.id}` };
+    }
+    default:
+      return null;
+  }
+};
 
 interface PartRendererProps {
   part: CharacterPart;
@@ -335,6 +364,9 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   // Delegate Rendering to Sub-Renderers based on part type
   let pathContent: React.ReactNode = null;
 
+  // Inner media framing (per shape type) — rendered as a sibling layer below.
+  const mediaFrame = !isGhost && part.innerMediaUrl ? getInnerMediaFrame(part) : null;
+
   if (isFocusGhost) {
     // Only render unclipped media for focus ghost
     pathContent = renderInnerMedia(
@@ -349,7 +381,9 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   } else if (part.type === 'custom_text' || part.type === 'mograph_cloner') {
     pathContent = renderTextOrClonerPart({ part, fill, stroke, isSelected, currentFrame });
   } else {
-    pathContent = renderShapePart({ part, fill, stroke, isSelected, isGhost, renderInnerMedia });
+    // The inner media is rendered as a SIBLING layer (below) so it gets its own
+    // opacity instead of inheriting the shape's; the shape keeps only its clip defs.
+    pathContent = renderShapePart({ part, fill, stroke, isSelected, isGhost, renderInnerMedia: mediaFrame ? () => null : renderInnerMedia });
   }
 
   const filterId = !isGhost && part.shadowColor ? `drop-shadow-${part.id}` : undefined;
@@ -360,6 +394,23 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const hasMask = activeMask && activeMask.enabled;
   const maskId = `mask-${part.id}`;
   const featherId = `feather-${part.id}`;
+
+  // Inner media rendered outside the shape's opacity scope: independent opacity,
+  // still clipped to the shape outline and moving with the shape.
+  const mediaLayer =
+    !isGhost && mediaFrame ? (
+      <g clipPath={part.parentId ? `url(#containerClip-${part.parentId})` : undefined}>
+        <g
+          transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}
+          clipPath={`url(#${mediaFrame.clipId})`}
+          opacity={part.innerMediaOpacity ?? 1}
+          mask={hasMask ? `url(#${maskId})` : undefined}
+          style={{ pointerEvents: 'none' }}
+        >
+          {renderInnerMedia(mediaFrame.w, mediaFrame.h, mediaFrame.x, mediaFrame.y)}
+        </g>
+      </g>
+    ) : null;
 
   const generateMaskPath = (points: MaskPoint[], closed: boolean) => {
     if (!points || points.length === 0) return '';
@@ -403,6 +454,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           </clipPath>
         </defs>
       )}
+      {mediaLayer}
       <g
         key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
         transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}

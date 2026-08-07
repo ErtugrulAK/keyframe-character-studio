@@ -95,11 +95,15 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         )}
 
-        <TransformControlPoints
-          selectedPart={selectedPart}
-          transform={transform}
-          onUpdate={wrappedUpdate}
-        />
+        {/* 4 control points only make sense for regular shapes — hand-drawn
+            freeform polygons use the per-vertex editor below instead */}
+        {selectedPart.type !== 'custom_freeform' && (
+          <TransformControlPoints
+            selectedPart={selectedPart}
+            transform={transform}
+            onUpdate={wrappedUpdate}
+          />
+        )}
 
         {/* Freeform shapes get a per-vertex coordinate editor */}
         {selectedPart.type === 'custom_freeform' && handlePartPropChange && (

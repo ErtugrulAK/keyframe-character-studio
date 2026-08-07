@@ -171,6 +171,21 @@ export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updat
                 />
               </div>
               <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">OPACITY (%)</span>
+                <SmartNumberInput
+                  value={Math.round((selectedPart.innerMediaOpacity ?? 1) * 100)}
+                  min={0}
+                  max={100}
+                  step={10}
+                  onChange={(val) => {
+                    if (handlePartPropChange) handlePartPropChange('innerMediaOpacity', val / 100);
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%", marginTop: 8 }}>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
                 <span className="param-label">ROTATION (°)</span>
                 <SmartNumberInput
                   value={transform?.maskRotation ?? selectedPart.maskRotation ?? 0}
@@ -181,24 +196,24 @@ export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updat
                   }}
                 />
               </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ height: 28, fontSize: 10, fontWeight: 700, padding: '0 10px', color: '#f59e0b', background: '#0e1118', border: '1px solid #232836', borderRadius: 4 }}
+                onClick={() => {
+                  if (handlePartPropChange) {
+                    handlePartPropChange('maskOffsetX', 0);
+                    handlePartPropChange('maskOffsetY', 0);
+                    handlePartPropChange('maskScale', 1);
+                    handlePartPropChange('maskRotation', 0);
+                    handlePartPropChange('innerMediaOpacity', 1);
+                  }
+                  updateCurrentTransform({ maskOffsetX: 0, maskOffsetY: 0, maskScale: 1, maskRotation: 0 });
+                }}
+              >
+                RESET FRAME
+              </button>
             </div>
-
-            <button
-              type="button"
-              className="btn-secondary"
-              style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 10px', marginTop: 8, color: '#f59e0b', background: '#0e1118', border: '1px solid #232836', borderRadius: 4 }}
-              onClick={() => {
-                if (handlePartPropChange) {
-                  handlePartPropChange('maskOffsetX', 0);
-                  handlePartPropChange('maskOffsetY', 0);
-                  handlePartPropChange('maskScale', 1);
-                  handlePartPropChange('maskRotation', 0);
-                }
-                updateCurrentTransform({ maskOffsetX: 0, maskOffsetY: 0, maskScale: 1, maskRotation: 0 });
-              }}
-            >
-              RESET FRAME
-            </button>
           </div>
         </>
       )}

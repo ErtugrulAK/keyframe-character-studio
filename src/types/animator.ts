@@ -247,6 +247,8 @@ export interface CharacterPart {
   // ── Feature 8: Canva-Style Shape Masking ──
   innerMediaUrl?: string;
   innerMediaType?: 'image' | 'video';
+  /** Opacity (0-1) of the media masked inside a shape — independent of the shape's own opacity */
+  innerMediaOpacity?: number;
   maskOffsetX?: number;
   maskOffsetY?: number;
   maskScale?: number;

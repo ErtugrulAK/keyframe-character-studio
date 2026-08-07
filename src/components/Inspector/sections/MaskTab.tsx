@@ -1,6 +1,7 @@
 import React from 'react';
-import type { CharacterPart, Transform } from '../../../types/animator';
+import type { CharacterPart, Transform, MaskPoint } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
+import { getPartBounds } from '../../../utils/bounds';
 import { Scissors, Move, Feather, Eye, Layers } from 'lucide-react';
 
 interface SmartNumberInputProps {
@@ -99,14 +100,23 @@ export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updat
 
   const handleToggleMask = () => {
     if (!mask.enabled && mask.points.length === 0) {
-      const w = selectedPart.width || 100;
-      const h = selectedPart.height || 100;
-      const defaultPoints = [
-        { x: -w/2, y: -h/2 },
-        { x: w/2, y: -h/2 },
-        { x: w/2, y: h/2 },
-        { x: -w/2, y: h/2 }
-      ];
+      // The default mask should MEAN something for the shape it is applied to:
+      // freeform polygons start with the mask on their own vertices; other
+      // shapes get a rectangle that matches their actual bounds.
+      let defaultPoints: MaskPoint[];
+      if (selectedPart.type === 'custom_freeform' && selectedPart.points && selectedPart.points.length >= 3) {
+        defaultPoints = selectedPart.points.map((p) => ({ x: p.x, y: p.y }));
+      } else {
+        const bounds = getPartBounds(selectedPart);
+        const w = bounds.halfW * 2;
+        const h = bounds.halfH * 2;
+        defaultPoints = [
+          { x: -w / 2, y: -h / 2 },
+          { x: w / 2, y: -h / 2 },
+          { x: w / 2, y: h / 2 },
+          { x: -w / 2, y: h / 2 },
+        ];
+      }
       updateCurrentTransform({ mask: { ...mask, enabled: true, points: defaultPoints } });
       setActiveTool('mask');
     } else {

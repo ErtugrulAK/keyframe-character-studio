@@ -33,6 +33,10 @@ export const OutlinerPanel: React.FC = () => {
     toggleTrackEditVisibility,
     sceneTitle,
     reorderParts,
+    activeTool,
+    setActiveTool,
+    focusModeNodeId,
+    setFocusModeNodeId,
   } = useAnimator();
 
   const [isGroupExpanded, setIsGroupExpanded] = useState(true);
@@ -116,7 +120,15 @@ export const OutlinerPanel: React.FC = () => {
                   <div
                     key={part.id}
                     className={`tree-node actor-node ${selectedPartIds?.includes(part.id) ? 'selected' : ''} ${selectedPartId === part.id ? 'primary-selected' : ''} ${draggedIdx === index ? 'dragging' : ''} ${dragOverIdx === index ? 'drag-over' : ''}`}
-                    onClick={(e) => handleSelectPart(part.id, e.shiftKey)}
+                    onClick={(e) => {
+                      // Selecting a part from the outliner exits the mask tool
+                      // + focus mode so the normal gizmo comes back.
+                      if ((activeTool === 'mask' || focusModeNodeId) && focusModeNodeId !== part.id) {
+                        setActiveTool('select');
+                        setFocusModeNodeId(null);
+                      }
+                      handleSelectPart(part.id, e.shiftKey);
+                    }}
                     draggable={true}
                     onDragStart={(e) => {
                       setDraggedIdx(index);

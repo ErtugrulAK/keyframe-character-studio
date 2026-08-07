@@ -319,6 +319,7 @@ export const StageCanvas: React.FC = () => {
     ) {
       handleSelectPart(null);
       setFocusModeNodeId(null);
+      setActiveTool('select');
       
       const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
       setIsDragging(true);
@@ -1006,7 +1007,17 @@ export const StageCanvas: React.FC = () => {
                 getComputedTransform={getComputedTransform}
                 selectedPartId={selectedPartId}
                 totalFrames={totalFrames}
-                onSelect={setSelectedPartId}
+                onSelect={(id) => {
+                  // Clicking a DIFFERENT element exits the mask tool + focus
+                  // mode so the normal selection gizmo (corner + edge handles)
+                  // comes back — the mask tool only stays while editing the
+                  // focused part's mask.
+                  if ((activeTool === 'mask' || focusModeNodeId) && focusModeNodeId !== id) {
+                    setActiveTool('select');
+                    setFocusModeNodeId(null);
+                  }
+                  setSelectedPartId(id);
+                }}
                 onStartTranslateDrag={startTranslateDragForPart}
                 onStartInnerMediaDrag={startInnerMediaDragForPart}
                 onStartInnerMediaScale={startInnerMediaScaleForPart}

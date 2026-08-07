@@ -110,3 +110,34 @@ export const simplifyFreeformPoints = (points: FreeformPoint[], minDist: number 
   }
   return result;
 };
+
+export interface FreeformVertexWorld {
+  x: number;
+  y: number;
+}
+
+/**
+ * Map center-relative local points to their world (stage) positions, applying
+ * the same transform the shape renderer uses: translate -> rotate -> scale.
+ * Used to draw numbered markers at the visible vertices on the canvas.
+ */
+export const getFreeformVertexWorldPositions = (
+  points: FreeformPoint[],
+  centerX: number,
+  centerY: number,
+  scaleX: number,
+  scaleY: number,
+  rotationDeg: number
+): FreeformVertexWorld[] => {
+  const rad = (rotationDeg * Math.PI) / 180;
+  const cosR = Math.cos(rad);
+  const sinR = Math.sin(rad);
+  return (points || []).map((p) => {
+    const lx = p.x * scaleX;
+    const ly = p.y * scaleY;
+    return {
+      x: centerX + lx * cosR - ly * sinR,
+      y: centerY + lx * sinR + ly * cosR,
+    };
+  });
+};

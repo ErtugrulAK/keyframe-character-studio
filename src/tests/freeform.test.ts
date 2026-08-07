@@ -4,6 +4,7 @@ import {
   getFreeformBounds,
   getFreeformExtents,
   getFreeformPerimeter,
+  getFreeformVertexWorldPositions,
   hasValidFreeformPoints,
   normalizeFreeformPoints,
   simplifyFreeformPoints,
@@ -134,6 +135,37 @@ describe('freeform utils', () => {
     it('returns empty array for empty input and keeps single points', () => {
       expect(simplifyFreeformPoints([])).toEqual([]);
       expect(simplifyFreeformPoints([{ x: 1, y: 1 }])).toEqual([{ x: 1, y: 1 }]);
+    });
+  });
+
+  describe('getFreeformVertexWorldPositions', () => {
+    it('maps local points through scale and translation (no rotation)', () => {
+      const world = getFreeformVertexWorldPositions(
+        [
+          { x: -10, y: -10 },
+          { x: 10, y: 10 },
+        ],
+        100,
+        200,
+        2,
+        2,
+        0
+      );
+      expect(world).toEqual([
+        { x: 80, y: 180 },
+        { x: 120, y: 220 },
+      ]);
+    });
+
+    it('applies rotation after scaling (SVG order)', () => {
+      const world = getFreeformVertexWorldPositions([{ x: 10, y: 0 }], 0, 0, 1, 1, 90);
+      // (10, 0) rotated 90° -> (0, 10)
+      expect(world[0].x).toBeCloseTo(0, 5);
+      expect(world[0].y).toBeCloseTo(10, 5);
+    });
+
+    it('returns empty array for no points', () => {
+      expect(getFreeformVertexWorldPositions([], 0, 0, 1, 1, 0)).toEqual([]);
     });
   });
 });

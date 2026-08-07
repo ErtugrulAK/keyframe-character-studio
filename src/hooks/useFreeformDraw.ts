@@ -76,11 +76,27 @@ export const useFreeformDraw = ({ enabled, getStagePoint, onComplete, onCancel }
     onCompleteRef.current(simplified);
   }, [reset]);
 
-  const cancel = useCallback(() => {
-    const hadPoints = pointsRef.current.length > 0;
+  const cancel = useCallback((notify: boolean = true) => {
     reset();
-    if (hadPoints) onCancelRef.current?.();
+    // Esc always notifies (exits the tool); tool-switch cancels silently.
+    if (notify) onCancelRef.current?.();
   }, [reset]);
+
+  // Enter commits / Escape exits while the tool is active (even before drawing).
+  useEffect(() => {
+    if (!enabled) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        finish();
+      } else if (e.key === 'Escape') {
+        cancel(true); // Esc exits the drawing tool entirely (notifies the caller)
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => {
+      window.removeEventListener('keydown', handleKey);
+    };
+  }, [enabled, finish, cancel]);
 
   // Window-level gesture handlers while drawing.
   useEffect(() => {
@@ -120,28 +136,18 @@ export const useFreeformDraw = ({ enabled, getStagePoint, onComplete, onCancel }
       // The shape stays open: commit with double-click or Enter.
     };
 
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        finish();
-      } else if (e.key === 'Escape') {
-        cancel();
-      }
-    };
-
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
-    window.addEventListener('keydown', handleKey);
     return () => {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
-      window.removeEventListener('keydown', handleKey);
     };
-  }, [enabled, isDrawing, appendPoint, finish, cancel]);
+  }, [enabled, isDrawing, appendPoint]);
 
-  // Deactivating the tool mid-draw cancels the session.
+  // Deactivating the tool mid-draw silently discards the session (no notification).
   useEffect(() => {
     if (!enabled) {
-      cancel();
+      cancel(false);
     }
   }, [enabled, cancel]);
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, Maximize2, Unlink } from 'lucide-react';
+import { Link, Unlink } from 'lucide-react';
 import type { Transform } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
@@ -8,14 +8,21 @@ interface TransformScaleCardProps {
   onUpdate: (partial: Partial<Transform>) => void;
 }
 
+/**
+ * Scale control card. The main control is a single percentage input:
+ * typing 50 halves the size, 200 doubles it (uniform scale). The lock toggle
+ * and the per-axis SCALE X / SCALE Y inputs remain for fine, non-uniform work.
+ */
 export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transform, onUpdate }) => {
   const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
+
+  const avgScale = (transform.scaleX + transform.scaleY) / 2;
 
   return (
     <div className="panel-card" style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
-          <Maximize2 size={13} /> PROPORTIONAL SCALE & RATIO
+          SCALE
         </span>
         <div style={{ display: 'flex', gap: 4 }}>
           <button
@@ -48,36 +55,29 @@ export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transfor
         </div>
       </div>
 
-      {/* Master Uniform Scale Control */}
-      <div style={{ background: '#0e1118', padding: '8px 10px', borderRadius: 6, border: '1px solid #232836', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <label style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.4px' }}>UNIFORM SCALE MULTIPLIER</label>
+      {/* Percentage scale input: 50 = half size, 200 = double size */}
+      <div className="form-field-group" style={{ background: '#0e1118', border: '1px solid #232836', padding: '8px 10px', borderRadius: 6, margin: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+          <label style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.4px' }}>SIZE (%)</label>
           <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8' }}>
-            {((transform.scaleX + transform.scaleY) / 2).toFixed(2)}x ({(Math.round(((transform.scaleX + transform.scaleY) / 2) * 100))}% )
+            {Math.round(avgScale * 100)}%
           </span>
         </div>
-        <input
-          type="range" min="0.1" max="15" step="0.1"
-          value={(transform.scaleX + transform.scaleY) / 2}
-          onChange={(e) => {
-            const val = parseFloat(e.target.value);
-            onUpdate({ scaleX: val, scaleY: val });
-          }}
-          style={{ width: '100%', cursor: 'pointer', accentColor: '#38bdf8' }}
-        />
-        {/* Quick Presets */}
-        <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-          {[0.5, 1.0, 1.5, 2.0, 5.0, 6.42].map((s) => (
-            <button
-              key={`scale-preset-${s}`}
-              type="button"
-              className="btn-secondary"
-              style={{ flex: 1, height: 22, fontSize: 10, fontWeight: 700, padding: 0, textAlign: 'center', borderRadius: 4 }}
-              onClick={() => onUpdate({ scaleX: s, scaleY: s })}
-            >
-              {s}x
-            </button>
-          ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <SmartNumberInput
+              value={Math.round(avgScale * 100)}
+              min={5}
+              max={2000}
+              step={1}
+              precision={0}
+              onChange={(val) => {
+                const factor = val / 100;
+                onUpdate({ scaleX: factor, scaleY: factor });
+              }}
+            />
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#38bdf8' }}>%</span>
+          </div>
         </div>
       </div>
 

@@ -49,7 +49,8 @@ export const ElementsDrawer: React.FC = () => {
               onDragStart={(e) => handleDragStart(e, item.type, item.label)}
               onClick={() => {
                 if (item.type === 'custom_freeform') {
-                  setActiveTool('freeform_draw');
+                  // Toggle: clicking again deactivates the tool
+                  setActiveTool(activeTool === 'freeform_draw' ? 'select' : 'freeform_draw');
                 } else {
                   addCustomPart(item.type, item.label);
                 }

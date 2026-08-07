@@ -6,6 +6,7 @@ import { TransformScaleCard } from './transform/TransformScaleCard';
 import { TransformOpacityCard } from './transform/TransformOpacityCard';
 import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
+import { TransformVertexEditor } from './transform/TransformVertexEditor';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -27,6 +28,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   transform,
   currentFrame,
   updateCurrentTransform,
+  handlePartPropChange,
   handleZIndexChange,
 }) => {
   return (
@@ -62,6 +64,14 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           transform={transform}
           onUpdate={updateCurrentTransform}
         />
+
+        {/* Freeform shapes get a per-vertex coordinate editor (numbered markers on canvas) */}
+        {selectedPart.type === 'custom_freeform' && handlePartPropChange && (
+          <TransformVertexEditor
+            selectedPart={selectedPart}
+            onPartPropChange={handlePartPropChange}
+          />
+        )}
       </div>
     </>
   );

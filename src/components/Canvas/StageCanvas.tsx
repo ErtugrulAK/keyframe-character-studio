@@ -4,7 +4,7 @@ import type { Transform, MaskPoint } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { CANVAS_CENTER_X, CANVAS_CENTER_Y, computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
-import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
+import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeFreeformPoints } from '../../utils/freeform';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
@@ -58,7 +58,6 @@ export const StageCanvas: React.FC = () => {
   const [snapLines, setSnapLines] = useState<{x1: number, y1: number, x2: number, y2: number, color?: string}[]>([]);
 
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
-  const [dragInitialDist, setDragInitialDist] = useState<number>(1);
   const [dragInitialLocalX, setDragInitialLocalX] = useState<number>(1);
   const [dragInitialLocalY, setDragInitialLocalY] = useState<number>(1);
 
@@ -106,8 +105,10 @@ export const StageCanvas: React.FC = () => {
       [addCustomPart, setActiveTool, showToast]
     ),
     onCancel: useCallback(() => {
+      // Esc pressed while drawing: exit the tool so clicks work normally again.
+      setActiveTool('select');
       showToast('Drawing cancelled', 'info');
-    }, [showToast]),
+    }, [setActiveTool, showToast]),
   });
 
   const startMaskPointDrag = useCallback((e: React.MouseEvent, index: number, handleType: 'point' | 'in' | 'out') => {
@@ -244,13 +245,11 @@ export const StageCanvas: React.FC = () => {
     const centerY = CANVAS_CENTER_Y + selectedTransform.y;
     const dx = svgX - centerX;
     const dy = svgY - centerY;
-    const initialDist = Math.sqrt(dx * dx + dy * dy);
 
     const rad = (-selectedTransform.rotation * Math.PI) / 180;
     const localX = Math.abs(dx * Math.cos(rad) - dy * Math.sin(rad));
     const localY = Math.abs(dx * Math.sin(rad) + dy * Math.cos(rad));
 
-    setDragInitialDist(initialDist || 1);
     setDragInitialLocalX(localX || 1);
     setDragInitialLocalY(localY || 1);
     setDragStart({
@@ -461,14 +460,30 @@ export const StageCanvas: React.FC = () => {
       } else if (dragMode === 'scale_corner' || dragMode === 'scale') {
         const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
         const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
-        const dx = svgX - centerX;
-        const dy = svgY - centerY;
-        const currentDist = Math.sqrt(dx * dx + dy * dy);
 
-        const ratio = currentDist / Math.max(10, dragInitialDist);
+        // Anchor scaling: the corner opposite the grab point stays fixed.
+        // The grabbed corner is derived from the initial click position.
+        const grabSignX = dragStart.x >= centerX ? 1 : -1;
+        const grabSignY = dragStart.y >= centerY ? 1 : -1;
+
+        // Initial half-extents at drag start (world units, already include scale).
+        const initHalfW = Math.max(0.001, dragInitialLocalX);
+        const initHalfH = Math.max(0.001, dragInitialLocalY);
+
+        // Fixed opposite corner (anchor) in world coordinates.
+        const anchorX = centerX - grabSignX * initHalfW;
+        const anchorY = centerY - grabSignY * initHalfH;
+
+        // New half-extents are the pointer distance from the anchor.
+        const newHalfW = Math.abs(svgX - anchorX);
+        const newHalfH = Math.abs(svgY - anchorY);
+
+        const initScaleX = Math.abs(dragStart.initialTransform.scaleX);
+        const initScaleY = Math.abs(dragStart.initialTransform.scaleY);
+
         const precision = e.shiftKey ? 3 : 2;
-        const newScaleX = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleX * ratio).toFixed(precision));
-        const newScaleY = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleY * ratio).toFixed(precision));
+        const newScaleX = parseFloat(Math.max(0.05, (newHalfW / initHalfW) * initScaleX).toFixed(precision));
+        const newScaleY = parseFloat(Math.max(0.05, (newHalfH / initHalfH) * initScaleY).toFixed(precision));
 
         updateCurrentTransform({ scaleX: newScaleX, scaleY: newScaleY });
       } else if (
@@ -504,7 +519,7 @@ export const StageCanvas: React.FC = () => {
 
         const { dxLocal } = getLocalDelta(dx, dy, dragStart.initialTransform.rotation);
         const currentLocalX = Math.abs(dxLocal);
-        const ratioX = currentLocalX / Math.max(5, dragInitialLocalX);
+        const ratioX = currentLocalX / Math.max(0.001, dragInitialLocalX);
 
         const newScaleX = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleX * ratioX).toFixed(2));
         updateCurrentTransform({ scaleX: newScaleX });
@@ -516,13 +531,13 @@ export const StageCanvas: React.FC = () => {
 
         const { dyLocal } = getLocalDelta(dx, dy, dragStart.initialTransform.rotation);
         const currentLocalY = Math.abs(dyLocal);
-        const ratioY = currentLocalY / Math.max(5, dragInitialLocalY);
+        const ratioY = currentLocalY / Math.max(0.001, dragInitialLocalY);
 
         const newScaleY = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleY * ratioY).toFixed(2));
         updateCurrentTransform({ scaleY: newScaleY });
       }
     },
-    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialDist, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, zoomLevel]
+    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, zoomLevel]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -855,6 +870,31 @@ export const StageCanvas: React.FC = () => {
                 vectorEffect="non-scaling-stroke"
                 pointerEvents="none"
               />
+
+              {/* Freeform vertex markers (numbered, matching the inspector vertex list) */}
+              {selectedPart?.type === 'custom_freeform' &&
+                selectedTransform &&
+                appMode !== 'broadcast' &&
+                selectedPart.points &&
+                selectedPart.points.length > 0 && (
+                  <g pointerEvents="none">
+                    {getFreeformVertexWorldPositions(
+                      selectedPart.points,
+                      CANVAS_CENTER_X + selectedTransform.x,
+                      CANVAS_CENTER_Y + selectedTransform.y,
+                      selectedTransform.scaleX,
+                      selectedTransform.scaleY,
+                      selectedTransform.rotation
+                    ).map((v, i) => (
+                      <g key={`vm-${i}`} transform={`translate(${v.x}, ${v.y})`}>
+                        <circle r={7 * zScale} fill="#0f172a" stroke="#38bdf8" strokeWidth={1.2 * zScale} />
+                        <text y={3 * zScale} fontSize={8.5 * zScale} fontWeight={700} textAnchor="middle" fill="#7dd3fc" style={{ userSelect: 'none' }}>
+                          {i + 1}
+                        </text>
+                      </g>
+                    ))}
+                  </g>
+                )}
 
               {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden) */}
               {appMode !== 'broadcast' && (

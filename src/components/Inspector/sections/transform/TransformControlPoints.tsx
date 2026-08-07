@@ -16,7 +16,7 @@ interface TransformControlPointsProps {
  * strict opposite anchor so dragging one point only stretches one side.
  */
 export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ selectedPart, transform, onUpdate }) => {
-  const [pointMode, setPointMode] = useState<'edge' | 'corner'>('edge');
+  const [pointMode, setPointMode] = useState<'edge' | 'corner'>('corner');
 
   const { halfW: baseHalfW, halfH: baseHalfH } = getPartBounds(selectedPart);
   const currentHalfW = Math.round(baseHalfW * transform.scaleX);
@@ -262,7 +262,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
 
           {/* TOP-RIGHT (TR) */}
           <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981', display: 'block', marginBottom: 4 }}>
               ↗ TOP-RIGHT (TR)
             </span>
             <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
@@ -344,7 +344,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
 
           {/* BOTTOM-RIGHT (BR) */}
           <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: 4 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', display: 'block', marginBottom: 4 }}>
               ↘ BOTTOM-RIGHT (BR)
             </span>
             <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>

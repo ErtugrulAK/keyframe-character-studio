@@ -129,6 +129,7 @@ interface AnimatorContextType {
   copySelectedPart: () => void;
   pasteCopiedPart: () => void;
   duplicateSelectedPart: () => void;
+  duplicateMirrored: (axis: 'y' | 'x' | 'origin') => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   isScaleLocked: boolean;
@@ -328,7 +329,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 
 
-  const { copySelectedPart, pasteCopiedPart, duplicateSelectedPart } = useClipboard({
+  const { copySelectedPart, pasteCopiedPart, duplicateSelectedPart, duplicateMirrored } = useClipboard({
     characterParts,
     tracks,
     selectedPartId,
@@ -481,6 +482,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         copySelectedPart,
         pasteCopiedPart,
         duplicateSelectedPart,
+        duplicateMirrored,
         applyMotionTransition,
         showToast,
         addPropertyKeyframe,

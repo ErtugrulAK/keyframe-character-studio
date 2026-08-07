@@ -1,4 +1,5 @@
 import React from 'react';
+import { Activity } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 import { TransformAlignmentBar } from './transform/TransformAlignmentBar';
 import { TransformPositionRotationCard } from './transform/TransformPositionRotationCard';
@@ -35,20 +36,30 @@ export const TransformTab: React.FC<TransformTabProps> = ({
       <div className="inspector-section" style={{ paddingTop: 8 }}>
         <TransformAlignmentBar />
 
-        <TransformPositionRotationCard
-          transform={transform}
-          onUpdate={updateCurrentTransform}
-        />
+        {/* Unified TRANSFORM block: position, rotation, scale, opacity rows */}
+        <div className="panel-card" style={{ marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
+              <Activity size={13} /> TRANSFORM
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <TransformPositionRotationCard
+              transform={transform}
+              onUpdate={updateCurrentTransform}
+            />
 
-        <TransformScaleCard
-          transform={transform}
-          onUpdate={updateCurrentTransform}
-        />
+            <TransformScaleCard
+              transform={transform}
+              onUpdate={updateCurrentTransform}
+            />
 
-        <TransformOpacityCard
-          transform={transform}
-          onUpdate={updateCurrentTransform}
-        />
+            <TransformOpacityCard
+              transform={transform}
+              onUpdate={updateCurrentTransform}
+            />
+          </div>
+        </div>
 
         {handleZIndexChange && (
           <TransformZIndexCard

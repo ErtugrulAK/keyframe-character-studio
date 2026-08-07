@@ -95,7 +95,7 @@ export const TextsDrawer: React.FC = () => {
           <button
             key={preset.label}
             className="drawer-item-card"
-            style={{ justifyContent: 'flex-start', alignItems: 'center', padding: '12px 14px' }}
+            style={{ justifyContent: 'flex-start', alignItems: 'center', padding: '14px 16px' }}
             draggable={true}
             onDragStart={(e) =>
               handleDragStart(e, 'custom_text', preset.label, { fontFamily: preset.fontFamily, fontSize: preset.fontSize })
@@ -104,13 +104,13 @@ export const TextsDrawer: React.FC = () => {
               addCustomPart('custom_text', preset.label, { fontFamily: preset.fontFamily, fontSize: preset.fontSize })
             }
           >
-            <Type size={18} className={preset.colorClass} />
+            <Type size={20} className={preset.colorClass} />
             <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
               <span
                 className="item-label"
                 style={{
                   fontFamily: preset.previewFamily,
-                  fontSize: 17,
+                  fontSize: 18,
                   fontWeight: preset.fontWeight,
                   fontStyle: preset.fontStyle,
                   letterSpacing: preset.label === 'Button Label' ? 0.5 : undefined,
@@ -118,7 +118,7 @@ export const TextsDrawer: React.FC = () => {
               >
                 {preset.label}
               </span>
-              <span style={{ fontSize: 10, color: 'var(--text-muted)', letterSpacing: '0.4px' }}>{preset.description}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-muted)', letterSpacing: '0.4px' }}>{preset.description}</span>
             </span>
           </button>
         ))}

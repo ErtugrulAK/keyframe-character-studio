@@ -54,15 +54,17 @@ export const TransformPositionRotationCard: React.FC<TransformPositionRotationCa
         <div style={sectionLabel}>ROTATION</div>
         <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
           <span className="form-label text-blue" style={{ fontSize: 9 }}>ROT (°)</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <SmartNumberInput
-              value={transform.rotation}
-              onChange={(val) => onUpdate({ rotation: val })}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <SmartNumberInput
+                value={transform.rotation}
+                onChange={(val) => onUpdate({ rotation: val })}
+              />
+            </div>
             <button
               type="button"
               className="btn-secondary"
-              style={{ height: 20, fontSize: 9, padding: '0 6px', whiteSpace: 'nowrap' }}
+              style={{ height: 24, fontSize: 10, padding: '0 8px', whiteSpace: 'nowrap', flexShrink: 0 }}
               onClick={() => onUpdate({ rotation: 0 })}
               title="Reset rotation angle to 0°"
             >

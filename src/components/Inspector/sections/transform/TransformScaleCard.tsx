@@ -24,8 +24,8 @@ export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transfor
       <div style={{ fontSize: 9, fontWeight: 700, color: '#64748b', letterSpacing: '0.6px', marginBottom: 4 }}>SCALE</div>
       <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
         <span className="form-label text-blue" style={{ fontSize: 9 }}>SIZE (%)</span>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <SmartNumberInput
               value={Math.round(avgScale * 100)}
               min={5}
@@ -37,15 +37,15 @@ export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transfor
                 onUpdate({ scaleX: factor, scaleY: factor });
               }}
             />
-            <span style={{ fontSize: 12, fontWeight: 700, color: '#38bdf8' }}>%</span>
           </div>
+          <span style={{ fontSize: 12, fontWeight: 700, color: '#38bdf8', flexShrink: 0 }}>%</span>
           <button
             type="button"
             className="btn-secondary"
             style={{
-              height: 20,
-              fontSize: 9,
-              padding: '0 6px',
+              height: 24,
+              fontSize: 10,
+              padding: '0 8px',
               display: 'flex',
               alignItems: 'center',
               gap: 3,
@@ -54,6 +54,7 @@ export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transfor
               border: `1px solid ${isScaleLocked ? 'rgba(16, 185, 129, 0.4)' : '#232836'}`,
               borderRadius: 4,
               whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
             onClick={() => setIsScaleLocked(!isScaleLocked)}
             title={isScaleLocked ? 'Aspect Ratio Locked (Uniform Scale)' : 'Aspect Ratio Unlocked (Free Scale)'}

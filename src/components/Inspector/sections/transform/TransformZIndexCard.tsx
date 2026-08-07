@@ -23,7 +23,7 @@ export const TransformZIndexCard: React.FC<TransformZIndexCardProps> = ({ zIndex
         <button
           type="button"
           className="btn-secondary"
-          style={{ height: 22, fontSize: 10, fontWeight: 700, padding: '0 6px', borderRadius: 4 }}
+          style={{ height: 28, fontSize: 11, fontWeight: 700, padding: '0 10px', borderRadius: 4 }}
           onClick={() => onZIndexChange(zIndex + 1)}
         >
           Bring Forward (+1)
@@ -31,7 +31,7 @@ export const TransformZIndexCard: React.FC<TransformZIndexCardProps> = ({ zIndex
         <button
           type="button"
           className="btn-secondary"
-          style={{ height: 22, fontSize: 10, fontWeight: 700, padding: '0 6px', borderRadius: 4 }}
+          style={{ height: 28, fontSize: 11, fontWeight: 700, padding: '0 10px', borderRadius: 4 }}
           onClick={() => onZIndexChange(Math.max(1, zIndex - 1))}
         >
           Send Backward (-1)

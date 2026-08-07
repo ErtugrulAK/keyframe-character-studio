@@ -109,25 +109,42 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
           />
 
           {/* 4 Corner Scale Handles (Proportional / Uniform Scale) */}
-          {[
-            { x: -halfW, y: -halfH, cursor: 'nwse-resize' },
-            { x: halfW, y: -halfH, cursor: 'nesw-resize' },
-            { x: halfW, y: halfH, cursor: 'nwse-resize' },
-            { x: -halfW, y: halfH, cursor: 'nesw-resize' },
-          ].map((corner, i) => (
-            <rect
-              key={`corner-${i}`}
-              x={corner.x - 5 * zScale}
-              y={corner.y - 5 * zScale}
-              width={10 * zScale}
-              height={10 * zScale}
-              fill="#00d2ff"
-              stroke="#ffffff"
-              strokeWidth={1.5 * zScale}
-              style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
-              onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
-            />
-          ))}
+          {(() => {
+            // For the parallelogram the handles sit on the shape's actual
+            // vertices (the slanted corners), not the bounding-box corners.
+            const isParallelogram = selectedPart.type === 'custom_parallelogram';
+            const corners = isParallelogram
+              ? (() => {
+                  const sx = halfW / 60;
+                  const sy = halfH / 30;
+                  return [
+                    { x: -35 * sx, y: -30 * sy, cursor: 'nwse-resize' },
+                    { x: 85 * sx, y: -30 * sy, cursor: 'nesw-resize' },
+                    { x: 35 * sx, y: 30 * sy, cursor: 'nwse-resize' },
+                    { x: -85 * sx, y: 30 * sy, cursor: 'nesw-resize' },
+                  ];
+                })()
+              : [
+                  { x: -halfW, y: -halfH, cursor: 'nwse-resize' },
+                  { x: halfW, y: -halfH, cursor: 'nesw-resize' },
+                  { x: halfW, y: halfH, cursor: 'nwse-resize' },
+                  { x: -halfW, y: halfH, cursor: 'nesw-resize' },
+                ];
+            return corners.map((corner, i) => (
+              <rect
+                key={`corner-${i}`}
+                x={corner.x - 5 * zScale}
+                y={corner.y - 5 * zScale}
+                width={10 * zScale}
+                height={10 * zScale}
+                fill="#00d2ff"
+                stroke="#ffffff"
+                strokeWidth={1.5 * zScale}
+                style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
+                onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
+              />
+            ));
+          })()}
         </>
       )}
 

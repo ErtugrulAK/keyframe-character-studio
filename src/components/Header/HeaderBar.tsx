@@ -6,11 +6,6 @@ import {
   RotateCcw,
   CheckCircle2,
   Plus,
-  CopyPlus,
-  FlipHorizontal2,
-  FlipVertical2,
-  RotateCw,
-  ChevronDown,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import './HeaderBar.css';
@@ -34,32 +29,11 @@ export const HeaderBar: React.FC = () => {
     deleteProjectTemplate,
     fps,
     setFps,
-    selectedPartId,
-    duplicateSelectedPart,
-    duplicateMirrored,
   } = useAnimator();
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
   const [editingTmplName, setEditingTmplName] = useState<string>('');
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
-  const [isDuplicateMenuOpen, setIsDuplicateMenuOpen] = useState<boolean>(false);
-  const duplicateMenuRef = useRef<HTMLDivElement>(null);
-
-  // Close the duplicate menu when clicking anywhere outside of it
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (duplicateMenuRef.current && !duplicateMenuRef.current.contains(e.target as Node)) {
-        setIsDuplicateMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const runDuplicate = (fn: () => void) => {
-    setIsDuplicateMenuOpen(false);
-    fn();
-  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [timeAgoStr, setTimeAgoStr] = useState<string>('Not saved yet');
@@ -280,81 +254,6 @@ export const HeaderBar: React.FC = () => {
             <Download size={14} />
             <span>Export Video</span>
           </button>
-
-          {/* Duplicate dropdown: normal copy + mirrored copies */}
-          <div ref={duplicateMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <button
-              className="header-action-btn export-btn"
-              onClick={() => {
-                if (!selectedPartId) {
-                  showToast('Select a part first to duplicate it', 'info');
-                  return;
-                }
-                setIsDuplicateMenuOpen((v) => !v);
-              }}
-              title="Duplicate selected part (normal, or mirrored across Y axis / X axis / origin)"
-            >
-              <CopyPlus size={14} />
-              <span>Duplicate</span>
-              <ChevronDown size={12} />
-            </button>
-
-            {isDuplicateMenuOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  right: 0,
-                  zIndex: 1000,
-                  minWidth: 190,
-                  background: '#10141d',
-                  border: '1px solid #283044',
-                  borderRadius: 8,
-                  boxShadow: '0 12px 32px rgba(0,0,0,0.55)',
-                  padding: 4,
-                  display: 'flex',
-                  flexDirection: 'column',
-                }}
-              >
-                <button
-                  className="btn-secondary"
-                  style={{ justifyContent: 'flex-start', gap: 8, padding: '7px 10px', fontSize: 12, fontWeight: 600, borderRadius: 6 }}
-                  onClick={() => runDuplicate(duplicateSelectedPart)}
-                  title="Same shape copy, offset by 20px (Ctrl+D)"
-                >
-                  <CopyPlus size={14} className="text-cyan" />
-                  <span>Duplicate (Ctrl+D)</span>
-                </button>
-                <button
-                  className="btn-secondary"
-                  style={{ justifyContent: 'flex-start', gap: 8, padding: '7px 10px', fontSize: 12, fontWeight: 600, borderRadius: 6 }}
-                  onClick={() => runDuplicate(() => duplicateMirrored('y'))}
-                  title="Mirror copy across the Y axis (horizontal flip)"
-                >
-                  <FlipHorizontal2 size={14} className="text-cyan" />
-                  <span>Mirror Y (Horizontal Flip)</span>
-                </button>
-                <button
-                  className="btn-secondary"
-                  style={{ justifyContent: 'flex-start', gap: 8, padding: '7px 10px', fontSize: 12, fontWeight: 600, borderRadius: 6 }}
-                  onClick={() => runDuplicate(() => duplicateMirrored('x'))}
-                  title="Mirror copy across the X axis (vertical flip)"
-                >
-                  <FlipVertical2 size={14} className="text-cyan" />
-                  <span>Mirror X (Vertical Flip)</span>
-                </button>
-                <button
-                  className="btn-secondary"
-                  style={{ justifyContent: 'flex-start', gap: 8, padding: '7px 10px', fontSize: 12, fontWeight: 600, borderRadius: 6 }}
-                  onClick={() => runDuplicate(() => duplicateMirrored('origin'))}
-                  title="Mirror copy through the origin (180° point reflection)"
-                >
-                  <RotateCw size={14} className="text-cyan" />
-                  <span>Mirror Origin (180°)</span>
-                </button>
-              </div>
-            )}
-          </div>
 
           <button className="btn-icon reset-btn" onClick={resetProject} title="Reset Canvas Project">
             <RotateCcw size={15} />

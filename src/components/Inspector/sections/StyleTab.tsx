@@ -1,5 +1,4 @@
 import React from 'react';
-import { Palette } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleTextFields } from './style/StyleTextFields';
@@ -16,9 +15,18 @@ interface StyleTabProps {
   handleZIndexChange?: (zIndex: number) => void;
 }
 
+const sectionLabel: React.CSSProperties = {
+  fontSize: 9,
+  fontWeight: 700,
+  color: '#64748b',
+  letterSpacing: '0.6px',
+  marginBottom: 4,
+  marginTop: 12,
+};
+
 /**
- * Style inspector tab. Thin composition of focused section components:
- * colors, text fields, geometry, cloner, particles, media and effects.
+ * Style inspector tab. Thin composition of focused section components, grouped
+ * under muted section labels (same visual language as the Transform tab).
  */
 export const StyleTab: React.FC<StyleTabProps> = ({
   selectedPart,
@@ -26,48 +34,48 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   handlePartColorChange,
 }) => {
   return (
-    <div className="inspector-section">
-      <div className="section-title">
-        <Palette size={13} className="text-cyan" />
-        <span>SURFACE & MATERIAL DESIGN</span>
-      </div>
+    <div className="inspector-section" style={{ paddingTop: 8 }}>
+      <div style={{ ...sectionLabel, marginTop: 0 }}>COLOR</div>
+      <StyleColorSection
+        selectedPart={selectedPart}
+        onPartColorChange={handlePartColorChange}
+      />
 
-      <div className="style-controls-list">
-        <StyleColorSection
-          selectedPart={selectedPart}
-          onPartColorChange={handlePartColorChange}
-        />
+      <div style={sectionLabel}>TEXT</div>
+      <StyleTextFields
+        selectedPart={selectedPart}
+        onPartPropChange={handlePartPropChange}
+      />
 
-        <StyleTextFields
-          selectedPart={selectedPart}
-          onPartPropChange={handlePartPropChange}
-        />
+      <div style={sectionLabel}>GEOMETRY</div>
+      <StyleGeometrySection
+        selectedPart={selectedPart}
+        onPartPropChange={handlePartPropChange}
+      />
 
-        <StyleGeometrySection
-          selectedPart={selectedPart}
-          onPartPropChange={handlePartPropChange}
-        />
+      <div style={sectionLabel}>CLONER</div>
+      <StyleClonerSection
+        selectedPart={selectedPart}
+        onPartPropChange={handlePartPropChange}
+      />
 
-        <StyleClonerSection
-          selectedPart={selectedPart}
-          onPartPropChange={handlePartPropChange}
-        />
+      <div style={sectionLabel}>PARTICLES</div>
+      <StyleParticleSection
+        selectedPart={selectedPart}
+        onPartPropChange={handlePartPropChange}
+      />
 
-        <StyleParticleSection
-          selectedPart={selectedPart}
-          onPartPropChange={handlePartPropChange}
-        />
+      <div style={sectionLabel}>MEDIA & MASKING</div>
+      <StyleMediaSection
+        selectedPart={selectedPart}
+        onPartPropChange={handlePartPropChange}
+      />
 
-        <StyleMediaSection
-          selectedPart={selectedPart}
-          onPartPropChange={handlePartPropChange}
-        />
-
-        <StyleEffectsSection
-          selectedPart={selectedPart}
-          onPartPropChange={handlePartPropChange}
-        />
-      </div>
+      <div style={sectionLabel}>EFFECTS</div>
+      <StyleEffectsSection
+        selectedPart={selectedPart}
+        onPartPropChange={handlePartPropChange}
+      />
     </div>
   );
 };

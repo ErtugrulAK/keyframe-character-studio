@@ -4,6 +4,7 @@ import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { KeyframesTab } from './sections/KeyframesTab';
 import { MaskTab } from './sections/MaskTab';
+import { DuplicateTab } from './sections/DuplicateTab';
 import {
   Sliders,
   Copy,
@@ -12,6 +13,7 @@ import {
   Palette,
   Diamond,
   Scissors,
+  CopyPlus,
 } from 'lucide-react';
 
 export const DetailsPanel: React.FC = () => {
@@ -27,7 +29,7 @@ export const DetailsPanel: React.FC = () => {
     duplicateSelectedPart,
   } = useAnimator();
 
-  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'mask'>('transform');
+  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'mask' | 'duplicate'>('transform');
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -118,6 +120,13 @@ export const DetailsPanel: React.FC = () => {
             <Scissors size={12} className="text-cyan" />
             <span>Mask</span>
           </button>
+          <button
+            className={`tab-btn ${activeTabSection === 'duplicate' ? 'active' : ''}`}
+            onClick={() => setActiveTabSection('duplicate')}
+          >
+            <CopyPlus size={12} className="text-teal" />
+            <span>Duplicate</span>
+          </button>
         </div>
       )}
 
@@ -158,6 +167,10 @@ export const DetailsPanel: React.FC = () => {
               updateCurrentTransform={updateCurrentTransform}
               handlePartPropChange={handlePartPropChange}
             />
+          )}
+
+          {activeTabSection === 'duplicate' && (
+            <DuplicateTab />
           )}
         </div>
       )}

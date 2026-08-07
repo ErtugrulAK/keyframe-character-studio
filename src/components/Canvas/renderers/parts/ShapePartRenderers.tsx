@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
-import { buildFreeformPath, getFreeformPerimeter } from '../../../../utils/freeform';
+import { buildFreeformPath, getFreeformExtents, getFreeformPerimeter } from '../../../../utils/freeform';
 
 interface ShapePartProps {
   part: CharacterPart;
@@ -252,18 +252,46 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
       const points = part.points && part.points.length >= 2 ? part.points : undefined;
       const d = points ? buildFreeformPath(points) : '';
       if (!d) return null;
+      const clipId = `clip-freeform-${part.id}`;
+      const extents = points ? getFreeformExtents(points) : null;
+      const mediaW = extents ? extents.maxX - extents.minX : 100;
+      const mediaH = extents ? extents.maxY - extents.minY : 100;
       return (
         <g>
           <path d={d} fill="rgba(0,0,0,0.001)" />
-          <path
-            d={d}
-            fill={fill}
-            stroke={strokeToUse}
-            strokeWidth={isSelected ? 2 : 1.5}
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, points ? getFreeformPerimeter(points) : 0)}
-          />
+          {part.innerMediaUrl && (
+            <defs>
+              <clipPath id={clipId}>
+                <path d={d} />
+              </clipPath>
+            </defs>
+          )}
+          {part.innerMediaUrl ? (
+            <g clipPath={`url(#${clipId})`}>
+              {renderInnerMedia(mediaW, mediaH, extents ? extents.minX : -mediaW / 2, extents ? extents.minY : -mediaH / 2)}
+            </g>
+          ) : (
+            <path
+              d={d}
+              fill={fill}
+              stroke={strokeToUse}
+              strokeWidth={isSelected ? 2 : 1.5}
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              {...getStrokeDashProps(part, points ? getFreeformPerimeter(points) : 0)}
+            />
+          )}
+          {part.innerMediaUrl && (
+            <path
+              d={d}
+              fill="none"
+              stroke={strokeToUse}
+              strokeWidth={isSelected ? 2 : 1.5}
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+              {...getStrokeDashProps(part, points ? getFreeformPerimeter(points) : 0)}
+            />
+          )}
         </g>
       );
     }

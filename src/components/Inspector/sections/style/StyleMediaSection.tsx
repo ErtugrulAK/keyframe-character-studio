@@ -118,33 +118,12 @@ export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPa
       {(selectedPart.type === 'custom_circle' ||
         selectedPart.type === 'custom_box' ||
         selectedPart.type === 'custom_rect' ||
-        selectedPart.type === 'custom_triangle') && (
+        selectedPart.type === 'custom_triangle' ||
+        selectedPart.type === 'custom_freeform') && (
         <>
           <div className="section-title" style={{ marginTop: 12 }}>
             <Crop size={13} className="text-teal" />
             <span>SHAPE MEDIA MASKING (CANVA STYLE)</span>
-          </div>
-
-          <div className="form-field-group">
-            <label className="form-label">MASKED MEDIA TYPE</label>
-            <select className="select-control"
-              value={selectedPart.innerMediaType || 'image'}
-              onChange={(e) => onPartPropChange('innerMediaType', e.target.value)}
-              style={{
-                width: '100%',
-                height: 28,
-                background: 'var(--bg-input)',
-                border: '1px solid var(--border-color)',
-                borderRadius: 4,
-                color: '#fff',
-                fontSize: 11,
-                fontWeight: 700,
-                padding: '0 6px',
-              }}
-            >
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-            </select>
           </div>
 
           <div className="form-field-group">

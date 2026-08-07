@@ -151,7 +151,9 @@ export const useMath = ({ characterParts, tracks, activeTemplateId }: UseMathOpt
             rotation: parentTransform.rotation + finalComputed.rotation,
             scaleX: parentTransform.scaleX * finalComputed.scaleX,
             scaleY: parentTransform.scaleY * finalComputed.scaleY,
-            opacity: parentTransform.opacity * finalComputed.opacity,
+            // Container children keep their OWN opacity (like masked inner
+            // media) — the container's opacity must NOT cascade into them.
+            opacity: finalComputed.opacity,
           };
         }
       }

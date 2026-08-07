@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
@@ -27,9 +27,17 @@ export const DetailsPanel: React.FC = () => {
     updateCurrentTransform,
     deletePart,
     duplicateSelectedPart,
+    focusModeNodeId,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'mask' | 'duplicate'>('transform');
+
+  // Double-clicking an element opens the mask mode: surface the Mask tab too.
+  useEffect(() => {
+    if (focusModeNodeId) {
+      setActiveTabSection('mask');
+    }
+  }, [focusModeNodeId]);
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;

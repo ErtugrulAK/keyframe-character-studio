@@ -75,7 +75,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   let overrideMaskShape: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart' | undefined = undefined;
 
-  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts, activeTool } = useAnimator();
+  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts, activeTool, setActiveTool } = useAnimator();
   const targetTrack = tracks.find(t => t.partId === part.id);
 
   if (!isGhost) {
@@ -510,9 +510,12 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           }
         }}
       onDoubleClick={(e) => {
-        if (!isGhost && part.innerMediaUrl && e.button === 0) {
+        if (!isGhost && e.button === 0) {
           e.stopPropagation();
+          // Double-click opens the mask mode for ANY part (mask tool + focus):
+          // vector mask editing + inner-media framing when media exists.
           setFocusModeNodeId(part.id);
+          setActiveTool('mask');
         }
       }}
     >

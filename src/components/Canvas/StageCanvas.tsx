@@ -4,6 +4,8 @@ import type { Transform, MaskPoint } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { CANVAS_CENTER_X, CANVAS_CENTER_Y, computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
+import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
+import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { SelectionGizmo } from './SelectionGizmo';
@@ -36,6 +38,8 @@ export const StageCanvas: React.FC = () => {
     updateCharacterPart,
     startBatchInteraction,
     endBatchInteraction,
+    setActiveTool,
+    showToast,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -79,6 +83,33 @@ export const StageCanvas: React.FC = () => {
     [zoomLevel, panOffset]
   );
 
+  // Freeform drawing state machine (active only while the tool is selected).
+  const freeform = useFreeformDraw({
+    enabled: activeTool === 'freeform_draw',
+    getStagePoint: useCallback(
+      (clientX: number, clientY: number) => {
+        const { svgX, svgY } = clientToSVG(clientX, clientY);
+        return { x: svgX - CANVAS_CENTER_X, y: svgY - CANVAS_CENTER_Y };
+      },
+      [clientToSVG]
+    ),
+    onComplete: useCallback(
+      (stagePoints) => {
+        const { points, centerX, centerY } = normalizeFreeformPoints(stagePoints);
+        addCustomPart('custom_freeform', 'Freeform Shape', {
+          points,
+          baseTransform: { x: centerX, y: centerY, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+        });
+        setActiveTool('select');
+        showToast('Freeform shape created', 'success');
+      },
+      [addCustomPart, setActiveTool, showToast]
+    ),
+    onCancel: useCallback(() => {
+      showToast('Drawing cancelled', 'info');
+    }, [showToast]),
+  });
+
   const startMaskPointDrag = useCallback((e: React.MouseEvent, index: number, handleType: 'point' | 'in' | 'out') => {
     if (!selectedPartId) return;
     e.stopPropagation();
@@ -105,6 +136,7 @@ export const StageCanvas: React.FC = () => {
 
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
     if (appMode === 'broadcast' || e.button !== 0) return;
+    if (activeTool === 'freeform_draw') return; // drawing tool: do not move parts
     e.stopPropagation();
     setSelectedPartId(partId);
 
@@ -136,6 +168,14 @@ export const StageCanvas: React.FC = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Freeform draw tool: left click/drag starts a drawing gesture.
+    if (activeTool === 'freeform_draw' && appMode !== 'broadcast' && e.button === 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      freeform.beginDraw(e.clientX, e.clientY);
+      return;
+    }
+
     if (e.button === 2 || activeTool === 'pan') {
       setIsDragging(true);
       setDragMode('pan');
@@ -666,7 +706,13 @@ export const StageCanvas: React.FC = () => {
         height="100%"
         viewBox="0 0 600 480"
         preserveAspectRatio="xMidYMid meet"
-        style={{ transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`, transformOrigin: 'center center' }}
+        onDoubleClick={(e) => {
+          if (activeTool === 'freeform_draw') {
+            e.preventDefault();
+            freeform.finishDraw();
+          }
+        }}
+        style={{ transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`, transformOrigin: 'center center', cursor: activeTool === 'freeform_draw' ? 'crosshair' : undefined }}
       >
         <defs>
           <pattern
@@ -734,6 +780,28 @@ export const StageCanvas: React.FC = () => {
                 onSelect={setSelectedPartId}
                 onStartTranslateDrag={startTranslateDragForPart}
               />
+
+              {/* Freeform Drawing Preview (active draw tool) */}
+              {freeform.isDrawing && freeform.points.length > 0 && (
+                <g transform={`translate(${CANVAS_CENTER_X}, ${CANVAS_CENTER_Y})`} pointerEvents="none">
+                  <path
+                    d={buildFreeformPath([...freeform.points, ...(freeform.cursorPoint ? [freeform.cursorPoint] : [])])}
+                    fill="rgba(56, 189, 248, 0.10)"
+                    stroke="var(--accent-cyan)"
+                    strokeWidth={1.5 * zScale}
+                    strokeDasharray="5 3"
+                    strokeLinejoin="round"
+                  />
+                  {freeform.points.map((p, i) => (
+                    <circle key={`vf-${i}`} cx={p.x} cy={p.y} r={2.5 * zScale} fill="#38bdf8" />
+                  ))}
+                  {freeform.points.length > 0 && freeform.cursorPoint && (
+                    <text x={freeform.cursorPoint.x} y={freeform.cursorPoint.y - 10 * zScale} fontSize={10 * zScale} fill="#7dd3fc" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                      {freeform.points.length < 3 ? 'Click to add corners • Drag to draw freely' : 'Double-click or Enter to finish • Esc to cancel'}
+                    </text>
+                  )}
+                </g>
+              )}
 
               {/* Snap Lines */}
               {snapLines.map((line, i) => (

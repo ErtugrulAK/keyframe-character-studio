@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
+import { buildFreeformPath, getFreeformPerimeter } from '../../../../utils/freeform';
 
 interface ShapePartProps {
   part: CharacterPart;
@@ -246,6 +247,26 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           />
         </g>
       );
+
+    case 'custom_freeform': {
+      const points = part.points && part.points.length >= 2 ? part.points : undefined;
+      const d = points ? buildFreeformPath(points) : '';
+      if (!d) return null;
+      return (
+        <g>
+          <path d={d} fill="rgba(0,0,0,0.001)" />
+          <path
+            d={d}
+            fill={fill}
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, points ? getFreeformPerimeter(points) : 0)}
+          />
+        </g>
+      );
+    }
 
     case 'custom_card':
       return (

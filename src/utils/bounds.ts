@@ -1,4 +1,5 @@
 import type { CharacterPart } from '../types/animator';
+import { getFreeformBounds } from './freeform';
 
 export const getTextMetrics = (text: string, fontSize: number, fontFamily?: string): { halfW: number; halfH: number } => {
   if (!text) return { halfW: 20, halfH: 12 };
@@ -43,6 +44,12 @@ export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: numb
   let halfH = 32;
 
   switch (part.type as string) {
+    case 'custom_freeform': {
+      const b = getFreeformBounds(part.points || []);
+      halfW = b.halfW;
+      halfH = b.halfH;
+      break;
+    }
     case 'custom_circle':
     case 'custom_box':
       halfW = part.width ? part.width / 2 : 30;

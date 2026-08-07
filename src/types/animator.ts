@@ -92,6 +92,7 @@ export type BodyPartType =
   | 'custom_banner'
   | 'custom_capsule'
   | 'custom_diamond'
+  | 'custom_freeform'
   | 'custom_card'
   | 'custom_image'
   | 'custom_video'
@@ -161,6 +162,12 @@ export interface ParticleConfig {
   randomSeed: number;
 }
 
+// ─── Freeform Drawing ─────────────────────────────────────────────────────────
+export interface FreeformPoint {
+  x: number;
+  y: number;
+}
+
 // ─── CharacterPart ────────────────────────────────────────────────────────────
 export interface CharacterPart {
   id: string;
@@ -186,6 +193,8 @@ export interface CharacterPart {
   borderRadius?: number;
   width?: number;
   height?: number;
+  // Freeform drawn shape: vertices relative to the part center (stage units)
+  points?: FreeformPoint[];
 
   // Media Overlay Text Caption
   overlayText?: string;
@@ -283,7 +292,7 @@ export interface CustomMotionPreset {
   keyframes: CustomMotionPresetKeyframe[];
 }
 
-export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan' | 'mask';
+export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan' | 'mask' | 'freeform_draw';
 
 export interface AnimationProject {
   name: string;

@@ -128,11 +128,11 @@ export const HeaderBar: React.FC = () => {
                         border: '1px solid #38bdf8',
                         color: '#fff',
                         borderRadius: 4,
-                        padding: '1px 6px',
-                        fontSize: 12,
+                        padding: '2px 8px',
+                        fontSize: 15,
                         fontWeight: 700,
                         outline: 'none',
-                        width: 90,
+                        width: 110,
                       }}
                     />
                   ) : (
@@ -168,7 +168,7 @@ export const HeaderBar: React.FC = () => {
               onClick={() => setIsAddModalOpen(true)}
               title="Create New Template"
             >
-              <Plus size={13} />
+              <Plus size={17} />
             </button>
           </div>
         </div>

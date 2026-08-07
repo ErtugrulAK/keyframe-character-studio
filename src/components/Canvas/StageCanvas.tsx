@@ -70,9 +70,9 @@ export const StageCanvas: React.FC = () => {
   }, [appMode]);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'mask_point' | 'mask_in' | 'mask_out' | 'mask_media' | 'mask_media_scale' | 'mask_media_rotate' | null>(null);
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'mask_point' | 'mask_in' | 'mask_out' | 'mask_media' | 'mask_media_scale' | 'mask_media_rotate' | 'child_frame_scale' | 'child_frame_rotate' | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; initialMaskX?: number; initialMaskY?: number; initialMaskPoints?: MaskPoint[]; initialMaskScale?: number; initialMaskRot?: number; mediaCenter?: { x: number; y: number } }>({
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; initialMaskX?: number; initialMaskY?: number; initialMaskPoints?: MaskPoint[]; initialMaskScale?: number; initialMaskRot?: number; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
@@ -288,6 +288,55 @@ export const StageCanvas: React.FC = () => {
     });
   };
 
+  // Scale a shape child inside its container from a corner handle (uniform,
+  // around the child's center) — the shape analog of the inner-media scale.
+  // The child's stored transform is container-relative, so the computed WORLD
+  // scale is converted back into container space via worldToContainerLocal.
+  const startChildScaleForPart = (partId: string, e: React.MouseEvent) => {
+    if (appMode === 'broadcast' || e.button !== 0) return;
+    e.stopPropagation();
+    setSelectedPartId(partId);
+    const transform = getComputedTransform(partId, currentFrame);
+    if (!transform) return;
+    startBatchInteraction();
+    setIsDragging(true);
+    setDragMode('child_frame_scale');
+    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+    setDragStart({
+      x: svgX,
+      y: svgY,
+      initialTransform: { ...transform },
+      initialTransforms: {},
+      partId,
+      initialChildScaleX: transform.scaleX || 1,
+      initialChildScaleY: transform.scaleY || 1,
+      mediaCenter: { x: CANVAS_CENTER_X + transform.x, y: CANVAS_CENTER_Y + transform.y },
+    });
+  };
+
+  // Rotate a shape child inside its container from the rotation handle
+  // (around the child's center) — the shape analog of the inner-media rotate.
+  const startChildRotateForPart = (partId: string, e: React.MouseEvent) => {
+    if (appMode === 'broadcast' || e.button !== 0) return;
+    e.stopPropagation();
+    setSelectedPartId(partId);
+    const transform = getComputedTransform(partId, currentFrame);
+    if (!transform) return;
+    startBatchInteraction();
+    setIsDragging(true);
+    setDragMode('child_frame_rotate');
+    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+    setDragStart({
+      x: svgX,
+      y: svgY,
+      initialTransform: { ...transform },
+      initialTransforms: {},
+      partId,
+      initialChildRot: transform.rotation || 0,
+      mediaCenter: { x: CANVAS_CENTER_X + transform.x, y: CANVAS_CENTER_Y + transform.y },
+    });
+  };
+
   const handleMouseDown = (e: React.MouseEvent) => {
     // Freeform draw tool: left click/drag starts a drawing gesture.
     if (activeTool === 'freeform_draw' && appMode !== 'broadcast' && e.button === 0) {
@@ -466,6 +515,50 @@ export const StageCanvas: React.FC = () => {
         const newRot = Math.round(((dragStart.initialMaskRot || 0) + delta) * 100) / 100;
         updateCharacterPart(selectedPartId, { maskRotation: newRot });
         updateCurrentTransform({ maskRotation: newRot });
+        return;
+      }
+
+      if (dragMode === 'child_frame_scale') {
+        // Uniform scale of a shape child around its center (world space),
+        // then convert the new world scale back into container-local space.
+        const c = dragStart.mediaCenter!;
+        const initDist = Math.hypot(dragStart.x - c.x, dragStart.y - c.y);
+        const curDist = Math.hypot(svgX - c.x, svgY - c.y);
+        const factor = initDist > 0.001 ? curDist / initDist : 1;
+        const newWorldScale = Math.max(0.05, Math.round((dragStart.initialChildScaleX || 1) * factor * 100) / 100);
+        const targetId = dragStart.partId ?? selectedPartId;
+        if (!targetId) return;
+        const part = characterParts.find((p) => p.id === targetId);
+        const parentT = part?.parentId ? getComputedTransform(part.parentId, currentFrame) : null;
+        if (parentT) {
+          const worldT = { ...dragStart.initialTransform, scaleX: newWorldScale, scaleY: newWorldScale };
+          const local = worldToContainerLocal(worldT, parentT);
+          updateCurrentTransform({ scaleX: local.scaleX, scaleY: local.scaleY }, targetId);
+        } else {
+          updateCurrentTransform({ scaleX: newWorldScale, scaleY: newWorldScale });
+        }
+        return;
+      }
+
+      if (dragMode === 'child_frame_rotate') {
+        // Rotate a shape child around its center (world space), then convert
+        // the new world rotation into container-local space.
+        const c = dragStart.mediaCenter!;
+        const initAngle = (Math.atan2(dragStart.y - c.y, dragStart.x - c.x) * 180) / Math.PI;
+        const curAngle = (Math.atan2(svgX - c.y, svgY - c.x) * 180) / Math.PI;
+        const delta = ((curAngle - initAngle + 540) % 360) - 180;
+        const newWorldRot = Math.round(((dragStart.initialChildRot || 0) + delta) * 100) / 100;
+        const targetId = dragStart.partId ?? selectedPartId;
+        if (!targetId) return;
+        const part = characterParts.find((p) => p.id === targetId);
+        const parentT = part?.parentId ? getComputedTransform(part.parentId, currentFrame) : null;
+        if (parentT) {
+          const worldT = { ...dragStart.initialTransform, rotation: newWorldRot };
+          const local = worldToContainerLocal(worldT, parentT);
+          updateCurrentTransform({ rotation: local.rotation }, targetId);
+        } else {
+          updateCurrentTransform({ rotation: newWorldRot });
+        }
         return;
       }
 
@@ -1022,6 +1115,8 @@ export const StageCanvas: React.FC = () => {
                 onStartInnerMediaDrag={startInnerMediaDragForPart}
                 onStartInnerMediaScale={startInnerMediaScaleForPart}
                 onStartInnerMediaRotate={startInnerMediaRotateForPart}
+                onStartChildScale={startChildScaleForPart}
+                onStartChildRotate={startChildRotateForPart}
               />
 
               {/* Freeform Drawing Preview (active draw tool) */}

@@ -57,6 +57,8 @@ interface PartRendererProps {
   onStartInnerMediaDrag?: (partId: string, e: React.MouseEvent) => void;
   onStartInnerMediaScale?: (partId: string, e: React.MouseEvent) => void;
   onStartInnerMediaRotate?: (partId: string, e: React.MouseEvent) => void;
+  onStartChildScale?: (partId: string, e: React.MouseEvent) => void;
+  onStartChildRotate?: (partId: string, e: React.MouseEvent) => void;
 }
 
 export const PartRenderer: React.FC<PartRendererProps> = ({
@@ -74,6 +76,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   onStartInnerMediaDrag,
   onStartInnerMediaScale,
   onStartInnerMediaRotate,
+  onStartChildScale,
+  onStartChildRotate,
 }) => {
   let animScaleX = 1;
   let animScaleY = 1;
@@ -84,7 +88,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   let overrideMaskShape: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart' | undefined = undefined;
 
-  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts, activeTool, setActiveTool, handleSelectPart } = useAnimator();
+  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts, activeTool, setActiveTool } = useAnimator();
   const targetTrack = tracks.find(t => t.partId === part.id);
 
   if (!isGhost) {
@@ -515,6 +519,84 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       </g>
     ) : null;
 
+  // Mask-tool gizmo for a SHAPE CHILD inside a container: dashed frame +
+  // move/scale/rotate handles — the exact analog of the inner-media frame,
+  // so a polygon put inside a shape is editable on canvas like a photo.
+  const childBounds = part.parentId ? getPartBounds(part) : null;
+  const childFrameGizmo =
+    !isGhost && isMaskTool && part.parentId && childBounds && onStartChildScale && onStartChildRotate ? (
+      <g transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}>
+        <g>
+          {/* Move: dashed frame */}
+          <rect
+            x={-childBounds.halfW}
+            y={-childBounds.halfH}
+            width={childBounds.halfW * 2}
+            height={childBounds.halfH * 2}
+            fill="transparent"
+            stroke="#38bdf8"
+            strokeWidth={1}
+            strokeDasharray="5 4"
+            vectorEffect="non-scaling-stroke"
+            style={{ cursor: 'grab' }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onStartTranslateDrag(part.id, e);
+            }}
+          />
+          {/* Scale: 4 corner handles */}
+          {[
+            { x: -childBounds.halfW, y: -childBounds.halfH },
+            { x: childBounds.halfW, y: -childBounds.halfH },
+            { x: childBounds.halfW, y: childBounds.halfH },
+            { x: -childBounds.halfW, y: childBounds.halfH },
+          ].map((c, i) => (
+            <rect
+              key={`child-corner-${i}`}
+              x={c.x - 5}
+              y={c.y - 5}
+              width={10}
+              height={10}
+              fill="#38bdf8"
+              stroke="#ffffff"
+              strokeWidth={1.5}
+              vectorEffect="non-scaling-stroke"
+              style={{ cursor: 'nwse-resize' }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                onStartChildScale(part.id, e);
+              }}
+            />
+          ))}
+          {/* Rotate: handle above the frame's top-center */}
+          <line
+            x1={0}
+            y1={-childBounds.halfH}
+            x2={0}
+            y2={-childBounds.halfH - 26}
+            stroke="#38bdf8"
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
+            style={{ pointerEvents: 'none' }}
+          />
+          <circle
+            cx={0}
+            cy={-childBounds.halfH - 26}
+            r={6}
+            fill="#ffb700"
+            stroke="#ffffff"
+            strokeWidth={1.5}
+            vectorEffect="non-scaling-stroke"
+            style={{ cursor: 'grab' }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onStartChildRotate(part.id, e);
+            }}
+          />
+        </g>
+      </g>
+    ) : null;
+
   const generateMaskPath = (points: MaskPoint[], closed: boolean) => {
     if (!points || points.length === 0) return '';
     let d = `M ${points[0].x} ${points[0].y}`;
@@ -583,21 +665,12 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       onDoubleClick={(e) => {
         if (!isGhost && e.button === 0) {
           e.stopPropagation();
-          if (childParts.length > 0 || part.parentId) {
-            // Double-click on a container (or on anything inside it) selects the
-            // CONTAINER itself — even when a child covers the shape, the user
-            // always lands in "what's inside this shape?" mode: children get
-            // their dashed outlines and the Mask tab lists them for editing.
-            // handleSelectPart replaces the WHOLE selection (no stale multi-select).
-            handleSelectPart(part.parentId || part.id);
-            setFocusModeNodeId(null);
-            setActiveTool('select');
-          } else {
-            // Double-click opens the mask mode for ANY part (mask tool + focus):
-            // vector mask editing + inner-media framing when media exists.
-            setFocusModeNodeId(part.id);
-            setActiveTool('mask');
-          }
+          // Double-click opens the mask layer for ANY part (mask tool + focus):
+          // vector mask editing + inner-media framing when media exists. For a
+          // child inside a container the mask layer shows its frame + handles
+          // so it can be moved/scaled/rotated like a masked photo.
+          setFocusModeNodeId(part.id);
+          setActiveTool('mask');
         }
       }}
     >
@@ -654,6 +727,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       })()}
       </g>
       {mediaDragHandle}
+      {childFrameGizmo}
     </React.Fragment>
   );
 };

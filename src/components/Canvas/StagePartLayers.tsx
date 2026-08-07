@@ -16,6 +16,8 @@ interface StagePartLayersProps {
   onStartInnerMediaDrag?: (partId: string, e: React.MouseEvent) => void;
   onStartInnerMediaScale?: (partId: string, e: React.MouseEvent) => void;
   onStartInnerMediaRotate?: (partId: string, e: React.MouseEvent) => void;
+  onStartChildScale?: (partId: string, e: React.MouseEvent) => void;
+  onStartChildRotate?: (partId: string, e: React.MouseEvent) => void;
 }
 
 /**
@@ -37,6 +39,8 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   onStartInnerMediaDrag,
   onStartInnerMediaScale,
   onStartInnerMediaRotate,
+  onStartChildScale,
+  onStartChildRotate,
 }) => {
   // Render order: every container renders before its children (so the child's
   // clip path def exists and the child draws on top of its container).
@@ -59,7 +63,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   return (
     <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
       {orderedParts.map((part) => {
-        if (focusModeNodeId && part.id === focusModeNodeId) return null; // Render later
+        if (focusModeNodeId && (part.id === focusModeNodeId || part.parentId === focusModeNodeId)) return null; // Render in the focus overlay
 
         let frameToEvaluate = currentFrame;
 
@@ -93,6 +97,8 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             onStartInnerMediaDrag={onStartInnerMediaDrag}
             onStartInnerMediaScale={onStartInnerMediaScale}
             onStartInnerMediaRotate={onStartInnerMediaRotate}
+            onStartChildScale={onStartChildScale}
+            onStartChildRotate={onStartChildRotate}
           />
         );
       })}
@@ -108,25 +114,33 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             height={600000}
             fill="rgba(0, 0, 0, 0.7)"
           />
-          {sortedParts.filter((p) => p.id === focusModeNodeId).map((part) => {
+          {/* Focus overlay renders the focused part AND its children (the
+              container's clip defs exist because the container still renders
+              in the dimmed layer) — so shapes inside a shape are visible and
+              editable (dashed frame + handles) while in the mask layer. */}
+          {sortedParts.filter((p) => p.id === focusModeNodeId || p.parentId === focusModeNodeId).map((part) => {
             const transform = getComputedTransform(part.id, currentFrame);
+            const isFocused = part.id === focusModeNodeId;
             return (
               <g key={`focus-${part.id}`}>
+                {isFocused && (
+                  <PartRenderer
+                    part={part}
+                    transform={transform}
+                    isSelected={true}
+                    currentFrame={currentFrame}
+                    totalFrames={totalFrames}
+                    onSelect={onSelect}
+                    onStartTranslateDrag={onStartTranslateDrag}
+                    isGhost={true}
+                    isFocusGhost={true}
+                  />
+                )}
                 <PartRenderer
                   part={part}
                   transform={transform}
-                  isSelected={true}
-                  currentFrame={currentFrame}
-                  totalFrames={totalFrames}
-                  onSelect={onSelect}
-                  onStartTranslateDrag={onStartTranslateDrag}
-                  isGhost={true}
-                  isFocusGhost={true}
-                />
-                <PartRenderer
-                  part={part}
-                  transform={transform}
-                  isSelected={true}
+                  isSelected={isFocused}
+                  isChildOfSelected={false}
                   currentFrame={currentFrame}
                   totalFrames={totalFrames}
                   onSelect={onSelect}
@@ -134,6 +148,8 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
                   onStartInnerMediaDrag={onStartInnerMediaDrag}
                   onStartInnerMediaScale={onStartInnerMediaScale}
                   onStartInnerMediaRotate={onStartInnerMediaRotate}
+                  onStartChildScale={onStartChildScale}
+                  onStartChildRotate={onStartChildRotate}
                 />
               </g>
             );

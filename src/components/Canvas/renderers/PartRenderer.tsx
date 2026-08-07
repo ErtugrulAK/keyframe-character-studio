@@ -84,7 +84,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   let overrideMaskShape: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart' | undefined = undefined;
 
-  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts, activeTool, setActiveTool } = useAnimator();
+  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts, activeTool, setActiveTool, handleSelectPart } = useAnimator();
   const targetTrack = tracks.find(t => t.partId === part.id);
 
   if (!isGhost) {
@@ -584,11 +584,13 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         if (!isGhost && e.button === 0) {
           e.stopPropagation();
           if (childParts.length > 0 || part.parentId) {
-            // Container / child: stay in edit view and highlight the elements
-            // inside the shape instead of entering focus mode — the user can
-            // then grab the child directly (dashed outline) or edit it in
-            // the Mask tab's "SHAPES INSIDE" section.
-            onSelect(part.id);
+            // Double-click on a container (or on anything inside it) selects the
+            // CONTAINER itself — even when a child covers the shape, the user
+            // always lands in "what's inside this shape?" mode: children get
+            // their dashed outlines and the Mask tab lists them for editing.
+            // handleSelectPart replaces the WHOLE selection (no stale multi-select).
+            handleSelectPart(part.parentId || part.id);
+            setFocusModeNodeId(null);
             setActiveTool('select');
           } else {
             // Double-click opens the mask mode for ANY part (mask tool + focus):

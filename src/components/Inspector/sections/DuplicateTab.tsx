@@ -13,25 +13,25 @@ export const DuplicateTab: React.FC = () => {
     {
       icon: <CopyPlus size={16} className="text-cyan" />,
       label: 'Duplicate',
-      hint: 'Same shape copy, offset by 20px (Ctrl+D)',
+      title: 'Same shape copy, offset by 20px (Ctrl+D)',
       run: () => duplicateSelectedPart(),
     },
     {
       icon: <FlipHorizontal2 size={16} className="text-cyan" />,
       label: 'Mirror Y',
-      hint: 'Horizontal flip — mirrored across the Y axis',
+      title: 'Horizontal flip — mirrored across the Y axis',
       run: () => duplicateMirrored('y'),
     },
     {
       icon: <FlipVertical2 size={16} className="text-cyan" />,
       label: 'Mirror X',
-      hint: 'Vertical flip — mirrored across the X axis',
+      title: 'Vertical flip — mirrored across the X axis',
       run: () => duplicateMirrored('x'),
     },
     {
       icon: <RotateCw size={16} className="text-cyan" />,
       label: 'Mirror Origin',
-      hint: '180° point reflection through the origin',
+      title: '180° point reflection through the origin',
       run: () => duplicateMirrored('origin'),
     },
   ];
@@ -46,9 +46,9 @@ export const DuplicateTab: React.FC = () => {
               type="button"
               className="btn-secondary"
               style={{
-                justifyContent: 'flex-start',
+                justifyContent: 'center',
                 gap: 10,
-                padding: '10px 12px',
+                padding: '11px 12px',
                 fontSize: 13,
                 fontWeight: 700,
                 borderRadius: 6,
@@ -56,13 +56,10 @@ export const DuplicateTab: React.FC = () => {
                 border: '1px solid var(--border-color)',
               }}
               onClick={opt.run}
-              title={opt.hint}
+              title={opt.title}
             >
               {opt.icon}
-              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 1 }}>
-                <span>{opt.label}</span>
-                <span style={{ fontSize: 10, fontWeight: 500, color: 'var(--text-muted)' }}>{opt.hint}</span>
-              </span>
+              <span>{opt.label}</span>
             </button>
           ))}
         </div>

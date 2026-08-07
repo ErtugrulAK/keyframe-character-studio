@@ -49,6 +49,26 @@ export const StageCanvas: React.FC = () => {
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
+  // Broadcast shows the FULL artboard, centered — never inherit the edit-mode
+  // pan/zoom (that would leave the stage off-center with dark 'curtain' bands).
+  // The edit viewport is remembered and restored when switching back.
+  const editViewportRef = useRef({ zoom: 1, pan: { x: 0, y: 0 } });
+  const zoomRef = useRef(zoomLevel);
+  const panRef = useRef(panOffset);
+  zoomRef.current = zoomLevel;
+  panRef.current = panOffset;
+  useEffect(() => {
+    if (appMode === 'broadcast') {
+      editViewportRef.current = { zoom: zoomRef.current, pan: panRef.current };
+      setZoomLevel(1);
+      setPanOffset({ x: 0, y: 0 });
+    } else {
+      setZoomLevel(editViewportRef.current.zoom);
+      setPanOffset(editViewportRef.current.pan);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appMode]);
+
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'mask_point' | 'mask_in' | 'mask_out' | 'mask_media' | 'mask_media_scale' | 'mask_media_rotate' | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null);

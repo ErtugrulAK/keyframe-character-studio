@@ -403,27 +403,45 @@
   display: flex;
   background: var(--bg-dark);
   border-bottom: 1px solid var(--border-color);
-  padding: 0 var(--space-2xs);
-  gap: var(--space-3xs);
+  padding: 0 4px;
+  gap: 3px;
   flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #2a3348 transparent;
+}
+
+.details-tabs-bar::-webkit-scrollbar {
+  height: 6px;
+}
+
+.details-tabs-bar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.details-tabs-bar::-webkit-scrollbar-thumb {
+  background: #2a3348;
+  border-radius: 3px;
 }
 
 .details-tabs-bar .tab-btn {
   display: flex;
   align-items: center;
-  gap: var(--space-2xs);
+  gap: 3px;
   height: 28px;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
-  padding: 0 var(--space-xs);
+  padding: 0 5px;
   color: var(--text-muted);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   cursor: pointer;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 

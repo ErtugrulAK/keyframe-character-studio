@@ -4,6 +4,7 @@ import { useAnimator } from '../../../context/AnimatorContext';
 import { sampleCustomPreset } from './utils/presetSampler';
 import { renderShapePart } from './parts/ShapePartRenderers';
 import { renderMediaPart } from './parts/MediaPartRenderer';
+import { getContainerOutlineElement } from '../../../utils/containerOutline';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
 import { getYouTubeEmbedInfo } from './utils/youtubeHelper';
 
@@ -41,7 +42,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   let overrideMaskShape: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart' | undefined = undefined;
 
-  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId } = useAnimator();
+  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts } = useAnimator();
   const targetTrack = tracks.find(t => t.partId === part.id);
 
   if (!isGhost) {
@@ -262,6 +263,11 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const finalScaleY = transform.scaleY * animScaleY;
   const finalRot = transform.rotation + animRot;
 
+  // Container feature: if this part has children, expose a clip path of its
+  // outline (in world space) so children can be clipped to this shape.
+  const childParts = characterParts.filter((c) => c.parentId === part.id);
+  const containerOutline = childParts.length > 0 ? getContainerOutlineElement(part) : null;
+
   const fill = (isGhost && ghostColor ? ghostColor : part.fillColor) || '#ffffff';
   const stroke = (isGhost && ghostColor ? ghostColor : isSelected ? '#00d2ff' : part.strokeColor) || '#101218';
 
@@ -387,27 +393,38 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   };
 
   return (
-    <g
-      key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
-      transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}
-      style={{
-        opacity: finalOpacity,
-        cursor: isGhost ? 'default' : 'pointer',
-        filter: filterId ? `url(#${filterId})` : undefined,
-        pointerEvents: isHardHidden ? 'none' : 'auto',
-      }}
-      onClick={(e) => {
-        if (!isGhost && e.button === 0) {
-          e.stopPropagation();
-          onSelect(part.id);
-        }
-      }}
-      onMouseDown={(e) => {
-        if (!isGhost && e.button === 0) {
-          e.stopPropagation();
-          onStartTranslateDrag(part.id, e);
-        }
-      }}
+    <React.Fragment>
+      {containerOutline && (
+        <defs>
+          <clipPath id={`containerClip-${part.id}`}>
+            <g transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}>
+              {containerOutline}
+            </g>
+          </clipPath>
+        </defs>
+      )}
+      <g
+        key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
+        transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}
+        clipPath={part.parentId ? `url(#containerClip-${part.parentId})` : undefined}
+        style={{
+          opacity: finalOpacity,
+          cursor: isGhost ? 'default' : 'pointer',
+          filter: filterId ? `url(#${filterId})` : undefined,
+          pointerEvents: isHardHidden ? 'none' : 'auto',
+        }}
+        onClick={(e) => {
+          if (!isGhost && e.button === 0) {
+            e.stopPropagation();
+            onSelect(part.id);
+          }
+        }}
+        onMouseDown={(e) => {
+          if (!isGhost && e.button === 0) {
+            e.stopPropagation();
+            onStartTranslateDrag(part.id, e);
+          }
+        }}
       onDoubleClick={(e) => {
         if (!isGhost && part.innerMediaUrl && e.button === 0) {
           e.stopPropagation();
@@ -456,6 +473,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       ) : (
         pathContent
       )}
-    </g>
+      </g>
+    </React.Fragment>
   );
 };

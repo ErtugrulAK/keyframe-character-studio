@@ -32,9 +32,27 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   onSelect,
   onStartTranslateDrag,
 }) => {
+  // Render order: every container renders before its children (so the child's
+  // clip path def exists and the child draws on top of its container).
+  const orderedParts: CharacterPart[] = [];
+  const placed = new Set<string>();
+  for (const p of sortedParts) {
+    if (placed.has(p.id)) continue;
+    orderedParts.push(p);
+    placed.add(p.id);
+    if (!p.parentId) {
+      for (const c of sortedParts) {
+        if (c.parentId === p.id && !placed.has(c.id)) {
+          orderedParts.push(c);
+          placed.add(c.id);
+        }
+      }
+    }
+  }
+
   return (
     <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
-      {sortedParts.map((part) => {
+      {orderedParts.map((part) => {
         if (focusModeNodeId && part.id === focusModeNodeId) return null; // Render later
 
         let frameToEvaluate = currentFrame;

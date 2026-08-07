@@ -121,7 +121,88 @@ export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updat
 
   return (
     <div className="inspector-section" style={{ paddingTop: 6 }}>
-      
+      {/* ── SECTION 0: INNER MEDIA FRAMING (top — the image inside the shape) ── */}
+      {selectedPart.innerMediaUrl && (
+        <>
+          <div className="section-title-bar" style={{ marginBottom: 8 }}>
+            <div className="section-title">
+              <Move size={13} className="text-teal" />
+              <span>INNER MEDIA FRAMING</span>
+            </div>
+          </div>
+
+          <div className="panel-card" style={{ marginBottom: 8, padding: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%" }}>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">OFFSET X</span>
+                <SmartNumberInput
+                  value={transform?.maskOffsetX ?? selectedPart.maskOffsetX ?? 0}
+                  step={1}
+                  onChange={(val) => {
+                    if (handlePartPropChange) handlePartPropChange('maskOffsetX', val);
+                    updateCurrentTransform({ maskOffsetX: val });
+                  }}
+                />
+              </div>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">OFFSET Y</span>
+                <SmartNumberInput
+                  value={transform?.maskOffsetY ?? selectedPart.maskOffsetY ?? 0}
+                  step={1}
+                  onChange={(val) => {
+                    if (handlePartPropChange) handlePartPropChange('maskOffsetY', val);
+                    updateCurrentTransform({ maskOffsetY: val });
+                  }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%", marginTop: 8 }}>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">SCALE (%)</span>
+                <SmartNumberInput
+                  value={Math.round((transform?.maskScale ?? selectedPart.maskScale ?? 1) * 100)}
+                  min={1}
+                  step={10}
+                  onChange={(val) => {
+                    if (handlePartPropChange) handlePartPropChange('maskScale', val / 100);
+                    updateCurrentTransform({ maskScale: val / 100 });
+                  }}
+                />
+              </div>
+              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+                <span className="param-label">ROTATION (°)</span>
+                <SmartNumberInput
+                  value={transform?.maskRotation ?? selectedPart.maskRotation ?? 0}
+                  step={1}
+                  onChange={(val) => {
+                    if (handlePartPropChange) handlePartPropChange('maskRotation', val);
+                    updateCurrentTransform({ maskRotation: val });
+                  }}
+                />
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 10px', marginTop: 8, color: '#f59e0b', background: '#0e1118', border: '1px solid #232836', borderRadius: 4 }}
+              onClick={() => {
+                if (handlePartPropChange) {
+                  handlePartPropChange('maskOffsetX', 0);
+                  handlePartPropChange('maskOffsetY', 0);
+                  handlePartPropChange('maskScale', 1);
+                  handlePartPropChange('maskRotation', 0);
+                }
+                updateCurrentTransform({ maskOffsetX: 0, maskOffsetY: 0, maskScale: 1, maskRotation: 0 });
+              }}
+            >
+              RESET FRAME
+            </button>
+          </div>
+        </>
+      )}
+
       {/* ── SECTION 1: VECTOR PATH MASKING ── */}
       <div className="section-title-bar" style={{ marginBottom: 8 }}>
         <div className="section-title">
@@ -236,70 +317,6 @@ export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updat
           </div>
         )}
       </div>
-
-      {/* ── SECTION 2: SHAPE INNER MEDIA FRAMING ── */}
-      {selectedPart.innerMediaUrl && (
-        <>
-          <div className="section-title-bar" style={{ marginTop: 12, marginBottom: 8 }}>
-            <div className="section-title">
-              <Move size={13} className="text-teal" />
-              <span>INNER MEDIA MASK & FRAMING</span>
-            </div>
-          </div>
-
-          <div className="panel-card" style={{ padding: 10 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%" }}>
-              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-                <span className="param-label">OFFSET X</span>
-                <SmartNumberInput
-                  value={transform?.maskOffsetX ?? selectedPart.maskOffsetX ?? 0}
-                  step={1}
-                  onChange={(val) => {
-                    if (handlePartPropChange) handlePartPropChange('maskOffsetX', val);
-                    updateCurrentTransform({ maskOffsetX: val });
-                  }}
-                />
-              </div>
-              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-                <span className="param-label">OFFSET Y</span>
-                <SmartNumberInput
-                  value={transform?.maskOffsetY ?? selectedPart.maskOffsetY ?? 0}
-                  step={1}
-                  onChange={(val) => {
-                    if (handlePartPropChange) handlePartPropChange('maskOffsetY', val);
-                    updateCurrentTransform({ maskOffsetY: val });
-                  }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, width: "100%", marginTop: 8 }}>
-              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-                <span className="param-label">MEDIA SCALE</span>
-                <SmartNumberInput
-                  value={transform?.maskScale ?? selectedPart.maskScale ?? 1}
-                  step={0.05}
-                  onChange={(val) => {
-                    if (handlePartPropChange) handlePartPropChange('maskScale', val);
-                    updateCurrentTransform({ maskScale: val });
-                  }}
-                />
-              </div>
-              <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-                <span className="param-label">ROTATION</span>
-                <SmartNumberInput
-                  value={transform?.maskRotation ?? selectedPart.maskRotation ?? 0}
-                  step={1}
-                  onChange={(val) => {
-                    if (handlePartPropChange) handlePartPropChange('maskRotation', val);
-                    updateCurrentTransform({ maskRotation: val });
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-        </>
-      )}
 
     </div>
   );

@@ -142,6 +142,7 @@ export const DetailsPanel: React.FC = () => {
               updateCurrentTransform={updateCurrentTransform}
               handlePartPropChange={handlePartPropChange}
               handleZIndexChange={handleZIndexChange}
+              containerTransform={selectedPart.parentId ? getComputedTransform(selectedPart.parentId, currentFrame) : null}
             />
           )}
 

@@ -84,4 +84,66 @@ test.describe('Phase 6.4 E2E Workflows', () => {
     // The tool automatically returns to the select tool after committing
     await expect(page.getByTitle('Vector Shapes & Graphic Elements')).toBeVisible();
   });
+
+  test('Put a freeform shape inside a rectangle container (clipped + moves together)', async ({ page }) => {
+    test.setTimeout(60000);
+    await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+
+    // Add a Rectangle (the container)
+    await page.getByTitle('Vector Shapes & Graphic Elements').click();
+    await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+
+    // Draw a small freeform INSIDE the rectangle's area (rect sits at center 300,240)
+    await page.getByRole('button', { name: 'Free Draw', exact: true }).click();
+    const svg = page.locator('.stage-svg');
+    await svg.click({ position: { x: 275, y: 220 } });
+    await svg.click({ position: { x: 325, y: 225 } });
+    await svg.click({ position: { x: 300, y: 255 } });
+    await svg.dblclick({ position: { x: 300, y: 255 } });
+    await expect(page.locator('.ue-outliner').getByText('Freeform Shape').first()).toBeVisible();
+
+    // Open the Transform tab and put the freeform into the rectangle via CONTAINER
+    await page.getByRole('button', { name: 'Transform', exact: true }).click();
+    const containerSelect = page.locator('.details-body select').first();
+    await containerSelect.selectOption({ label: 'Rectangle' });
+    await page.waitForTimeout(400);
+
+    // The child's <g> must now carry the container clip path, and the def must exist
+    const clipCheck = await page.evaluate(() => {
+      const clipped = [...document.querySelectorAll('g')].filter((g) => (g.getAttribute('clip-path') || '').startsWith('url(#containerClip-'));
+      const clipIds = [...document.querySelectorAll('clipPath')].map((c) => c.id);
+      return { clippedCount: clipped.length, hasDef: clipped.length > 0 && clipIds.includes(clipped[0].getAttribute('clip-path')!.slice(5, -1)) };
+    });
+    expect(clipCheck.clippedCount).toBe(1);
+    expect(clipCheck.hasDef).toBe(true);
+
+    // Drag the rectangle; the child must move with it
+    const childTranslateBefore = await page.evaluate(() => {
+      const g = [...document.querySelectorAll('g')].find((el) => (el.getAttribute('clip-path') || '').startsWith('url(#containerClip-'));
+      return g ? g.getAttribute('transform') : null;
+    });
+    // Find the rectangle's rendered position: the clipPath def sits right before
+    // the container's <g> (defs + g are siblings inside the PartRenderer fragment)
+    const rectCenter = await page.evaluate(() => {
+      const clipPath = document.querySelector('clipPath[id^="containerClip-"]');
+      if (!clipPath) return null;
+      const defs = clipPath.closest('defs');
+      const g = defs ? (defs.nextElementSibling as SVGGElement | null) : null;
+      if (!g) return null;
+      const r = g.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+    });
+    expect(rectCenter).not.toBeNull();
+    await page.mouse.move(rectCenter!.x, rectCenter!.y);
+    await page.mouse.down();
+    await page.mouse.move(rectCenter!.x + 80, rectCenter!.y + 50, { steps: 6 });
+    await page.mouse.up();
+    await page.waitForTimeout(400);
+
+    const childTranslateAfter = await page.evaluate(() => {
+      const g = [...document.querySelectorAll('g')].find((el) => (el.getAttribute('clip-path') || '').startsWith('url(#containerClip-'));
+      return g ? g.getAttribute('transform') : null;
+    });
+    expect(childTranslateAfter).not.toBe(childTranslateBefore);
+  });
 });

@@ -7,6 +7,8 @@ import { TransformOpacityCard } from './transform/TransformOpacityCard';
 import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
+import { TransformContainerCard } from './transform/TransformContainerCard';
+import { worldToContainerLocal } from '../../../utils/containerMath';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -16,12 +18,14 @@ interface TransformTabProps {
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
   handleZIndexChange?: (zIndex: number) => void;
+  /** Composed transform of the part's container (when selectedPart.parentId is set) */
+  containerTransform?: Transform | null;
 }
 
 /**
  * Transform inspector tab. Thin composition of focused section components:
  * alignment bar (multi-select), position/rotation, scale, opacity, z-index,
- * and the 4 control points editor.
+ * container assignment, and the 4 control points editor.
  */
 export const TransformTab: React.FC<TransformTabProps> = ({
   selectedPart,
@@ -29,7 +33,28 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   updateCurrentTransform,
   handlePartPropChange,
   handleZIndexChange,
+  containerTransform,
 }) => {
+  // When the part lives inside a container, the inspector edits WORLD values
+  // (as displayed) but they must be stored container-relative. Convert every
+  // transform update through the container's inverse transform.
+  const wrappedUpdate = (patch: Partial<Transform>) => {
+    if (!containerTransform) {
+      updateCurrentTransform(patch);
+      return;
+    }
+    const world = { ...transform, ...patch };
+    const local = worldToContainerLocal(world, containerTransform);
+    updateCurrentTransform({
+      x: local.x,
+      y: local.y,
+      rotation: local.rotation,
+      scaleX: local.scaleX,
+      scaleY: local.scaleY,
+      opacity: local.opacity,
+    });
+  };
+
   return (
     <>
       <div className="inspector-section" style={{ paddingTop: 8 }}>
@@ -40,17 +65,17 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <TransformPositionRotationCard
               transform={transform}
-              onUpdate={updateCurrentTransform}
+              onUpdate={wrappedUpdate}
             />
 
             <TransformScaleCard
               transform={transform}
-              onUpdate={updateCurrentTransform}
+              onUpdate={wrappedUpdate}
             />
 
             <TransformOpacityCard
               transform={transform}
-              onUpdate={updateCurrentTransform}
+              onUpdate={wrappedUpdate}
             />
           </div>
         </div>
@@ -62,10 +87,18 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         )}
 
+        {handlePartPropChange && (
+          <TransformContainerCard
+            selectedPart={selectedPart}
+            transform={transform}
+            onPartPropChange={handlePartPropChange}
+          />
+        )}
+
         <TransformControlPoints
           selectedPart={selectedPart}
           transform={transform}
-          onUpdate={updateCurrentTransform}
+          onUpdate={wrappedUpdate}
         />
 
         {/* Freeform shapes get a per-vertex coordinate editor */}

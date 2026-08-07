@@ -5,6 +5,7 @@ import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { CANVAS_CENTER_X, CANVAS_CENTER_Y, computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
 import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeFreeformPoints } from '../../utils/freeform';
+import { worldToContainerLocal } from '../../utils/containerMath';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
@@ -390,10 +391,29 @@ export const StageCanvas: React.FC = () => {
           if (dragStart.initialTransforms) {
             Object.keys(dragStart.initialTransforms).forEach(id => {
               const initT = dragStart.initialTransforms![id];
-              updateCurrentTransform({ x: initT.x + snappedX, y: initT.y + snappedY }, id);
+              const movedPart = characterParts.find((x) => x.id === id);
+              if (movedPart?.parentId) {
+                // Child of a container: the stored position is container-relative,
+                // so convert the moved WORLD position back into container space.
+                const pt = getComputedTransform(movedPart.parentId, currentFrame);
+                const local = worldToContainerLocal({ ...initT, x: initT.x + snappedX, y: initT.y + snappedY }, pt);
+                updateCurrentTransform({ x: local.x, y: local.y }, id);
+              } else {
+                updateCurrentTransform({ x: initT.x + snappedX, y: initT.y + snappedY }, id);
+              }
             });
           } else {
-            updateCurrentTransform({ x: dragStart.initialTransform.x + snappedX, y: dragStart.initialTransform.y + snappedY });
+            const draggedPart = characterParts.find((x) => x.id === selectedPartId);
+            if (draggedPart?.parentId) {
+              const pt = getComputedTransform(draggedPart.parentId, currentFrame);
+              const local = worldToContainerLocal(
+                { ...dragStart.initialTransform, x: dragStart.initialTransform.x + snappedX, y: dragStart.initialTransform.y + snappedY },
+                pt
+              );
+              updateCurrentTransform({ x: local.x, y: local.y });
+            } else {
+              updateCurrentTransform({ x: dragStart.initialTransform.x + snappedX, y: dragStart.initialTransform.y + snappedY });
+            }
           }
         }
         return;

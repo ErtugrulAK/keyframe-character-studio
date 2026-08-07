@@ -11,6 +11,12 @@ import {
   PenTool,
 } from 'lucide-react';
 
+const ParallelogramIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" className={className}>
+    <polygon points="3,4.5 12.5,4.5 13,11.5 3.5,11.5" fill="currentColor" />
+  </svg>
+);
+
 const SHAPE_ITEMS: { type: BodyPartType; label: string; icon: React.ReactNode }[] = [
   { type: 'custom_rect', label: 'Rectangle', icon: <RectangleHorizontal size={16} className="text-teal" /> },
   { type: 'custom_box', label: 'Square', icon: <Square size={16} className="text-cyan" /> },
@@ -18,6 +24,7 @@ const SHAPE_ITEMS: { type: BodyPartType; label: string; icon: React.ReactNode }[
   { type: 'custom_triangle', label: 'Triangle', icon: <Triangle size={16} className="text-red" /> },
   { type: 'custom_star', label: 'Star', icon: <Star size={16} className="text-purple" /> },
   { type: 'custom_diamond', label: 'Rhombus', icon: <Diamond size={16} className="text-gold" /> },
+  { type: 'custom_parallelogram', label: 'Parallelogram', icon: <ParallelogramIcon size={16} className="text-gold" /> },
   { type: 'custom_freeform', label: 'Free Draw', icon: <PenTool size={16} className="text-cyan" /> },
 ];
 

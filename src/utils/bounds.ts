@@ -67,6 +67,10 @@ export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: numb
       halfW = part.width ? part.width / 2 : 35;
       halfH = part.height ? part.height / 2 : 35;
       break;
+    case 'custom_parallelogram':
+      halfW = part.width ? part.width / 2 : 60;
+      halfH = part.height ? part.height / 2 : 30;
+      break;
     case 'custom_capsule':
       halfW = part.width ? part.width / 2 : 50;
       halfH = part.height ? part.height / 2 : 20;

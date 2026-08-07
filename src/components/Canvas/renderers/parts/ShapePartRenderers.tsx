@@ -183,6 +183,37 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
       );
     }
 
+    case 'custom_parallelogram': {
+      const clipId = `clip-para-${part.id}`;
+      return (
+        <g>
+          <polygon points="-35,-30 85,-30 35,30 -85,30" fill="rgba(0,0,0,0.001)" />
+          {part.innerMediaUrl && (
+            <defs>
+              <clipPath id={clipId}>
+                <polygon points="-35,-30 85,-30 35,30 -85,30" />
+              </clipPath>
+            </defs>
+          )}
+          {part.innerMediaUrl ? (
+            <g clipPath={`url(#${clipId})`}>
+              {renderInnerMedia(170, 60, -85, -30)}
+            </g>
+          ) : (
+            <polygon points="-35,-30 85,-30 35,30 -85,30" fill={fill} />
+          )}
+          <polygon
+            points="-35,-30 85,-30 35,30 -85,30"
+            fill="none"
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 340)}
+          />
+        </g>
+      );
+    }
+
     case 'custom_banner':
       return (
         <g>

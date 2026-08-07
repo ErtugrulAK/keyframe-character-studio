@@ -14,6 +14,7 @@ export const CONTAINER_SHAPE_TYPES = [
   'custom_banner',
   'custom_capsule',
   'custom_diamond',
+  'custom_parallelogram',
   'custom_star',
   'custom_freeform',
   'custom_card',
@@ -40,6 +41,8 @@ export const getContainerOutlineElement = (part: CharacterPart): React.ReactElem
       return <rect x={-50} y={-20} width={100} height={40} rx={20} />;
     case 'custom_diamond':
       return <polygon points="0,-35 35,0 0,35 -35,0" />;
+    case 'custom_parallelogram':
+      return <polygon points="-35,-30 85,-30 35,30 -85,30" />;
     case 'custom_star':
       return <polygon points="0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10" />;
     case 'custom_freeform': {

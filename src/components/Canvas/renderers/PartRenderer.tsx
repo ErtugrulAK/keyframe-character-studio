@@ -26,6 +26,8 @@ const getInnerMediaFrame = (
       return { w: 120, h: 60, x: -60, y: -30, clipId: `clip-rect-${part.id}` };
     case 'custom_triangle':
       return { w: 70, h: 60, x: -35, y: -35, clipId: `clip-tri-${part.id}` };
+    case 'custom_parallelogram':
+      return { w: 170, h: 60, x: -85, y: -30, clipId: `clip-para-${part.id}` };
     case 'custom_freeform': {
       const ext = getFreeformExtents(part.points || []);
       const w = ext ? ext.maxX - ext.minX : 100;

@@ -92,6 +92,7 @@ export type BodyPartType =
   | 'custom_banner'
   | 'custom_capsule'
   | 'custom_diamond'
+  | 'custom_parallelogram'
   | 'custom_freeform'
   | 'custom_card'
   | 'custom_image'

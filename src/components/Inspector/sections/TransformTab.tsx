@@ -26,7 +26,6 @@ interface TransformTabProps {
 export const TransformTab: React.FC<TransformTabProps> = ({
   selectedPart,
   transform,
-  currentFrame,
   updateCurrentTransform,
   handlePartPropChange,
   handleZIndexChange,
@@ -38,7 +37,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
         <TransformPositionRotationCard
           transform={transform}
-          currentFrame={currentFrame}
           onUpdate={updateCurrentTransform}
         />
 

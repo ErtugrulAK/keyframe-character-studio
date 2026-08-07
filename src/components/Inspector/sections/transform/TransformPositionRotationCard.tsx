@@ -5,16 +5,15 @@ import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformPositionRotationCardProps {
   transform: Transform;
-  currentFrame: number;
   onUpdate: (partial: Partial<Transform>) => void;
 }
 
-export const TransformPositionRotationCard: React.FC<TransformPositionRotationCardProps> = ({ transform, currentFrame, onUpdate }) => {
+export const TransformPositionRotationCard: React.FC<TransformPositionRotationCardProps> = ({ transform, onUpdate }) => {
   return (
     <div className="panel-card" style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
         <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
-          <Activity size={13} /> POSITION & ROTATION (FRAME {currentFrame})
+          <Activity size={13} /> POSITION & ROTATION
         </span>
         <button
           type="button"

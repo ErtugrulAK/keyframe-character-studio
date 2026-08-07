@@ -23,7 +23,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
 
   return (
     <>
-      {/* Solid Grid Pattern (Minor 50px + Major 100px, aligned to the artboard top-left corner) */}
+      {/* Solid Grid Pattern (Minor 50px + Major 100px, anchored at the origin so lines pass through the axes) */}
       {showGrid && (
         <>
           <rect className="canvas-bg" x={artX} y={artY} width={width} height={height} fill="url(#svg-grid-minor)" />

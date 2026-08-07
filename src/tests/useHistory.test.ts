@@ -91,4 +91,71 @@ describe('useHistory Hook', () => {
 
     expect(result.current.canUndo).toBe(true);
   });
+
+  it('dedupes identical states without moving the index (StrictMode safety)', () => {
+    const tracksRef = { current: emptyTracks };
+    const { result, rerender } = renderHook(
+      (props: { tracks: Track[] }) =>
+        useHistory({
+          tracks: props.tracks,
+          setTracks: mockSetTracks,
+          tracksRef,
+          characterParts: emptyParts,
+          setCharacterParts: mockSetCharacterParts,
+          characterPartsRef: emptyPartsRef,
+        }),
+      { initialProps: { tracks: emptyTracks } }
+    );
+
+    // Mount seeds the initial state: history = [S0], index = 0 -> nothing to undo.
+    expect(result.current.canUndo).toBe(false);
+
+    // A fresh array with identical content (StrictMode re-runs the effect)
+    // must NOT advance the index.
+    rerender({ tracks: [] });
+    expect(result.current.canUndo).toBe(false);
+    expect(result.current.canRedo).toBe(false);
+
+    // A real change still records and enables undo.
+    const changed = [{ id: 't1', partId: 'p1', name: 'T1', keyframes: [] }];
+    tracksRef.current = changed;
+    rerender({ tracks: changed });
+    expect(result.current.canUndo).toBe(true);
+  });
+
+  it('undo restores the initial state on the first press', () => {
+    let currentTracks: Track[] = emptyTracks;
+    const tracksRef = { current: currentTracks };
+    const setTracks: React.Dispatch<React.SetStateAction<Track[]>> = (value) => {
+      currentTracks = typeof value === 'function' ? (value as (prev: Track[]) => Track[])(currentTracks) : value;
+      tracksRef.current = currentTracks;
+    };
+
+    const { result, rerender } = renderHook(
+      (props: { tracks: Track[] }) =>
+        useHistory({
+          tracks: props.tracks,
+          setTracks,
+          tracksRef,
+          characterParts: emptyParts,
+          setCharacterParts: mockSetCharacterParts,
+          characterPartsRef: emptyPartsRef,
+        }),
+      { initialProps: { tracks: currentTracks } }
+    );
+
+    // First action: add a track.
+    const changed = [{ id: 't1', partId: 'p1', name: 'T1', keyframes: [] }];
+    currentTracks = changed;
+    tracksRef.current = changed;
+    rerender({ tracks: changed });
+    expect(result.current.canUndo).toBe(true);
+
+    // A single undo press must restore the pre-action (initial) state.
+    act(() => {
+      result.current.undo();
+    });
+    expect(result.current.canUndo).toBe(false);
+    expect(tracksRef.current).toEqual([]);
+  });
 });

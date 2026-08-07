@@ -25,14 +25,23 @@ test.describe('Phase 6.4 E2E Workflows', () => {
     await expect(page.locator('.ue-outliner').getByText('Rectangle').first()).toBeVisible();
     await expect(page.locator('.ue-outliner').getByText('Circle').first()).toBeVisible();
 
+    // Undo removes parts one at a time — the FIRST press must work (regression
+    // guard for the history index drift under StrictMode)
+    await page.keyboard.press('Control+Z');
+    await expect(page.locator('.ue-outliner').getByText('Circle').first()).not.toBeVisible();
+    await page.keyboard.press('Control+Z');
+    await expect(page.locator('.ue-outliner').getByText('Rectangle').first()).not.toBeVisible();
+
+    // Redo restores them in order
+    await page.keyboard.press('Control+Y');
+    await expect(page.locator('.ue-outliner').getByText('Rectangle').first()).toBeVisible();
+    await page.keyboard.press('Control+Y');
+    await expect(page.locator('.ue-outliner').getByText('Circle').first()).toBeVisible();
+
     // Play the sequence, then pause it (the transport button toggles its title)
     await page.getByTitle('Play', { exact: true }).click();
     await page.waitForTimeout(1000);
     await page.getByTitle('Pause', { exact: true }).click();
-
-    // Undo / Redo
-    await page.keyboard.press('Control+Z');
-    await page.keyboard.press('Control+Y');
 
     // Copy / Paste parts
     await page.keyboard.press('Control+C');

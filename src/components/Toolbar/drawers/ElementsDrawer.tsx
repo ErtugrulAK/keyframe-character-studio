@@ -12,8 +12,18 @@ import {
 } from 'lucide-react';
 
 const ParallelogramIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 16 16" className={className}>
-    <polygon points="3,4.5 12.5,4.5 13,11.5 3.5,11.5" fill="currentColor" />
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={2}
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    className={className}
+  >
+    <path d="M5 6h14l-3 12H2z" />
   </svg>
 );
 

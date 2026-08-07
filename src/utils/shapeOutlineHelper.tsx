@@ -196,6 +196,13 @@ export function renderShapeOutline(
       return <polygon points={diamondPts} fill="none" {...commonProps} />;
     }
 
+    case 'custom_parallelogram': {
+      const scaleX = halfW / 60;
+      const scaleY = halfH / 30;
+      const paraPts = `${-35 * scaleX},${-30 * scaleY} ${85 * scaleX},${-30 * scaleY} ${35 * scaleX},${30 * scaleY} ${-85 * scaleX},${30 * scaleY}`;
+      return <polygon points={paraPts} fill="none" {...commonProps} />;
+    }
+
     case 'custom_capsule': {
       const rx = Math.min(halfW, halfH);
       return (

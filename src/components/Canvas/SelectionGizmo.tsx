@@ -91,9 +91,12 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
   if (selectedPart && selectedTransform) {
     const selTrack = tracks.find((t) => t.partId === selectedPart.id);
     if (selTrack && selTrack.editVisible === false) return null;
+    // Freeform shapes use the numbered vertex markers instead of the transform
+    // gizmo (no dashed outline, no corner squares, no edge midpoint circles).
+    const isFreeform = selectedPart.type === 'custom_freeform';
     return (
       <>
-        {activeTool !== 'mask' && (
+        {!isFreeform && activeTool !== 'mask' && (
           <TransformGizmo
             selectedPart={selectedPart}
             selectedTransform={selectedTransform}

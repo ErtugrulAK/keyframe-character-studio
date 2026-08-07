@@ -21,8 +21,11 @@ export const freeformVertexToDisplay = (
   const rad = (rotation * Math.PI) / 180;
   const cosR = Math.cos(rad);
   const sinR = Math.sin(rad);
-  const sx = Math.max(0.001, scaleX);
-  const sy = Math.max(0.001, scaleY);
+  // Sign-preserving epsilon: Math.max would collapse negative scales to 0.001,
+  // breaking mirrored copies (scaleX = -1). Keep the sign; only guard against
+  // an exact zero (used by the inverse division).
+  const sx = scaleX !== 0 ? scaleX : 0.001;
+  const sy = scaleY !== 0 ? scaleY : 0.001;
   const dx = p.x * sx * cosR - p.y * sy * sinR;
   const dy = p.x * sx * sinR + p.y * sy * cosR;
   return { x: tx + dx, y: -(ty + dy) };
@@ -41,8 +44,9 @@ export const freeformVertexToLocal = (
   const rad = (rotation * Math.PI) / 180;
   const cosR = Math.cos(rad);
   const sinR = Math.sin(rad);
-  const sx = Math.max(0.001, scaleX);
-  const sy = Math.max(0.001, scaleY);
+  // Sign-preserving epsilon (see freeformVertexToDisplay)
+  const sx = scaleX !== 0 ? scaleX : 0.001;
+  const sy = scaleY !== 0 ? scaleY : 0.001;
   const dx = dispX - tx;
   const dy = -dispY - ty;
   return { x: (dx * cosR + dy * sinR) / sx, y: (-dx * sinR + dy * cosR) / sy };

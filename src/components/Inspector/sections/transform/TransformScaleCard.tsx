@@ -17,7 +17,7 @@ interface TransformScaleCardProps {
 export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transform, onUpdate }) => {
   const { isScaleLocked, setIsScaleLocked } = useAnimator();
 
-  const avgScale = (transform.scaleX + transform.scaleY) / 2;
+  const avgScale = (Math.abs(transform.scaleX) + Math.abs(transform.scaleY)) / 2;
 
   return (
     <div>

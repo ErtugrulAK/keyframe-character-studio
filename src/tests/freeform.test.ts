@@ -176,6 +176,21 @@ describe('freeform utils', () => {
       expect(back.x).toBeCloseTo(local.x, 5);
       expect(back.y).toBeCloseTo(local.y, 5);
     });
+
+    it('mirrors vertex coordinates for a Mirror Y copy (negative scaleX)', () => {
+      // Mirror Y duplicate: x -> -x, scaleX -> -scaleX, rotation -> -rotation
+      const mirrored = { x: -109.16, y: 148.79, scaleX: -1, scaleY: 1, rotation: 0 };
+      const local = { x: -44.86, y: -59.81 };
+      const disp = freeformVertexToDisplay(local, mirrored);
+      // x must flip: tx + p.x * (-1) — NOT collapsed to tx (regression guard)
+      expect(disp.x).toBeCloseTo(-109.16 + 44.86, 3);
+      expect(disp.x).not.toBeCloseTo(-109.16, 1);
+      expect(disp.y).toBeCloseTo(-(148.79 - 59.81), 3);
+      // Editing back must restore the original local point
+      const back = freeformVertexToLocal(disp.x, disp.y, mirrored);
+      expect(back.x).toBeCloseTo(local.x, 5);
+      expect(back.y).toBeCloseTo(local.y, 5);
+    });
   });
 
   describe('getFreeformVertexWorldPositions', () => {

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, Unlink } from 'lucide-react';
 import type { Transform } from '../../../../types/animator';
+import { useAnimator } from '../../../../context/AnimatorContext';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformScaleCardProps {
@@ -11,10 +12,11 @@ interface TransformScaleCardProps {
 /**
  * Scale control card. The main control is a single percentage input:
  * typing 50 halves the size, 200 doubles it (uniform scale). The lock toggle
- * and the per-axis SCALE X / SCALE Y inputs remain for fine, non-uniform work.
+ * (shared with the canvas corner-drag scaling) and the per-axis SCALE X /
+ * SCALE Y inputs remain for fine, non-uniform work.
  */
 export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transform, onUpdate }) => {
-  const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
+  const { isScaleLocked, setIsScaleLocked } = useAnimator();
 
   const avgScale = (transform.scaleX + transform.scaleY) / 2;
 
@@ -24,15 +26,15 @@ export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transfor
         <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
           SCALE
         </span>
-        <div style={{ display: 'flex', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
           <button
             type="button"
             className="btn-secondary"
-            style={{ height: 20, fontSize: 9, padding: '0 6px' }}
+            style={{ height: 20, fontSize: 9, padding: '0 6px', display: 'flex', alignItems: 'center', gap: 3 }}
             onClick={() => onUpdate({ scaleX: 1, scaleY: 1 })}
             title="Reset scale multiplier to 1.0"
           >
-            Reset Scale
+            Reset
           </button>
           <button
             type="button"
@@ -41,6 +43,9 @@ export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transfor
               height: 20,
               fontSize: 9,
               padding: '0 6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 3,
               color: isScaleLocked ? '#10b981' : '#64748b',
               background: isScaleLocked ? 'rgba(16, 185, 129, 0.12)' : '#101218',
               border: `1px solid ${isScaleLocked ? 'rgba(16, 185, 129, 0.4)' : '#232836'}`,

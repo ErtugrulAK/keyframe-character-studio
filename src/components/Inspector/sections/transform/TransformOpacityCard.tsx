@@ -8,6 +8,11 @@ interface TransformOpacityCardProps {
   onUpdate: (partial: Partial<Transform>) => void;
 }
 
+/**
+ * Compact opacity control (same style as the rotation input): a single small
+ * number input with a 0-1 range. Values above 1 are clamped to 1 immediately,
+ * values below 0 to 0.
+ */
 export const TransformOpacityCard: React.FC<TransformOpacityCardProps> = ({ transform, onUpdate }) => {
   return (
     <div className="panel-card" style={{ marginBottom: 10 }}>
@@ -20,54 +25,16 @@ export const TransformOpacityCard: React.FC<TransformOpacityCardProps> = ({ tran
         </span>
       </div>
 
-      <div style={{ background: '#0e1118', padding: '8px 10px', borderRadius: 6, border: '1px solid #232836', display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', boxSizing: 'border-box', width: '100%' }}>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={transform.opacity}
-            onChange={(e) => onUpdate({ opacity: parseFloat(e.target.value) })}
-            style={{ flex: 1, minWidth: 0, cursor: 'pointer', accentColor: '#f59e0b' }}
-          />
-          <div style={{ width: 60, minWidth: 60, flexShrink: 0 }}>
-            <SmartNumberInput
-              value={transform.opacity}
-              min={0}
-              max={1}
-              step={0.05}
-              onChange={(val) => onUpdate({ opacity: val })}
-            />
-          </div>
-        </div>
-
-        {/* Quick Presets */}
-        <div style={{ display: 'flex', gap: 4, marginTop: 2 }}>
-          {[0, 0.25, 0.50, 0.75, 1.0].map((op) => (
-            <button
-              key={`op-preset-${op}`}
-              type="button"
-              className="btn-secondary"
-              style={{
-                flex: 1,
-                height: 24,
-                fontSize: 'var(--font-size-caption)',
-                fontWeight: 700,
-                padding: 0,
-                textAlign: 'center',
-                borderRadius: 'var(--radius-xs)',
-                boxSizing: 'border-box',
-                color: Math.abs(transform.opacity - op) < 0.02 ? '#f59e0b' : undefined,
-                borderColor: Math.abs(transform.opacity - op) < 0.02 ? 'rgba(245, 158, 11, 0.5)' : undefined,
-                background: Math.abs(transform.opacity - op) < 0.02 ? 'rgba(245, 158, 11, 0.12)' : undefined,
-              }}
-              onClick={() => onUpdate({ opacity: op })}
-            >
-              {Math.round(op * 100)}%
-            </button>
-          ))}
-        </div>
+      <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
+        <span className="form-label text-gold" style={{ fontSize: 9 }}>OPACITY (0-1)</span>
+        <SmartNumberInput
+          value={transform.opacity}
+          min={0}
+          max={1}
+          step={0.01}
+          precision={2}
+          onChange={(val) => onUpdate({ opacity: val })}
+        />
       </div>
     </div>
   );

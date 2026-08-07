@@ -131,6 +131,8 @@ interface AnimatorContextType {
   duplicateSelectedPart: () => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  isScaleLocked: boolean;
+  setIsScaleLocked: (locked: boolean) => void;
   addPropertyKeyframe: (trackId: string, channel: TrackChannel, frame: number, value: number, easing?: EasingType) => void;
   deletePropertyKeyframe: (trackId: string, channel: TrackChannel, keyframeId: string) => void;
   updatePropertyKeyframeFrame: (trackId: string, channel: TrackChannel, keyframeId: string, newFrame: number) => void;
@@ -160,6 +162,10 @@ const AnimatorContext = createContext<AnimatorContextType | null>(null);
 
 export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { toasts, showToast, removeToast } = useToast();
+
+  // Shared scale-lock state: used by the inspector scale card AND the canvas
+  // corner-drag scaling so both respect the same setting.
+  const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
 
   const {
     currentFrame,
@@ -435,6 +441,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setSelectedKeyframeId,
         activeTool,
         setActiveTool,
+        isScaleLocked,
+        setIsScaleLocked,
         tracks,
         setTracks,
         characterParts,

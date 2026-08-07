@@ -36,6 +36,10 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
     let parsed = parseFloat(valStr);
     if (!isNaN(parsed)) {
       let internal = Math.round((parsed / scale) * 100) / 100;
+      // Clamp while typing too, so out-of-range values (e.g. opacity > 1)
+      // take effect immediately instead of only after blur.
+      if (min !== undefined) internal = Math.max(min, internal);
+      if (max !== undefined) internal = Math.min(max, internal);
       onChange(internal);
     }
   };

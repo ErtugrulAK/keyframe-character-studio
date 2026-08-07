@@ -40,6 +40,7 @@ export const StageCanvas: React.FC = () => {
     endBatchInteraction,
     setActiveTool,
     showToast,
+    isScaleLocked,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -470,22 +471,35 @@ export const StageCanvas: React.FC = () => {
         const initHalfW = Math.max(0.001, dragInitialLocalX);
         const initHalfH = Math.max(0.001, dragInitialLocalY);
 
-        // Fixed opposite corner (anchor) in world coordinates.
-        const anchorX = centerX - grabSignX * initHalfW;
-        const anchorY = centerY - grabSignY * initHalfH;
-
-        // New half-extents are the pointer distance from the anchor.
-        const newHalfW = Math.abs(svgX - anchorX);
-        const newHalfH = Math.abs(svgY - anchorY);
-
         const initScaleX = Math.abs(dragStart.initialTransform.scaleX);
         const initScaleY = Math.abs(dragStart.initialTransform.scaleY);
 
         const precision = e.shiftKey ? 3 : 2;
-        const newScaleX = parseFloat(Math.max(0.05, (newHalfW / initHalfW) * initScaleX).toFixed(precision));
-        const newScaleY = parseFloat(Math.max(0.05, (newHalfH / initHalfH) * initScaleY).toFixed(precision));
 
-        updateCurrentTransform({ scaleX: newScaleX, scaleY: newScaleY });
+        if (isScaleLocked) {
+          // Locked: uniform scale around the center (radial factor), so the
+          // aspect ratio is preserved and there is no initial jump.
+          const dx = svgX - centerX;
+          const dy = svgY - centerY;
+          const currentDist = Math.sqrt(dx * dx + dy * dy);
+          const initDist = Math.hypot(initHalfW, initHalfH);
+          const factor = currentDist / Math.max(0.001, initDist);
+          updateCurrentTransform({
+            scaleX: parseFloat(Math.max(0.05, initScaleX * factor).toFixed(precision)),
+            scaleY: parseFloat(Math.max(0.05, initScaleY * factor).toFixed(precision)),
+          });
+        } else {
+          // Unlocked: per-axis scaling anchored to the opposite corner.
+          // The pointer distance from the anchor spans TWO half-extents.
+          const anchorX = centerX - grabSignX * initHalfW;
+          const anchorY = centerY - grabSignY * initHalfH;
+          const newHalfW = Math.abs(svgX - anchorX);
+          const newHalfH = Math.abs(svgY - anchorY);
+          updateCurrentTransform({
+            scaleX: parseFloat(Math.max(0.05, (newHalfW / (2 * initHalfW)) * initScaleX).toFixed(precision)),
+            scaleY: parseFloat(Math.max(0.05, (newHalfH / (2 * initHalfH)) * initScaleY).toFixed(precision)),
+          });
+        }
       } else if (
         dragMode === 'scale_right' ||
         dragMode === 'scale_left' ||

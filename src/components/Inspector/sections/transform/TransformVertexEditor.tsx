@@ -1,22 +1,27 @@
 import React from 'react';
 import { PenTool } from 'lucide-react';
-import type { CharacterPart, FreeformPoint } from '../../../../types/animator';
+import type { CharacterPart, FreeformPoint, Transform } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
+import { freeformVertexToDisplay, freeformVertexToLocal } from '../../../../utils/freeform';
 
 interface TransformVertexEditorProps {
   selectedPart: CharacterPart;
+  transform: Transform;
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
 }
 
-/** Colors cycling for the vertex markers, matching the canvas markers. */
 const VERTEX_COLORS = ['#38bdf8', '#10b981', '#f59e0b', '#c084fc', '#f43f5e', '#22d3ee', '#a3e635', '#fb7185'];
 
 /**
- * Editable coordinate list for freeform shape vertices. Only rendered when a
- * freeform (Free Draw) part is selected. Numbered rows match the numbered
- * markers drawn on the canvas so each corner is identifiable.
+ * Per-vertex coordinate editor for freeform shapes.
+ *
+ * Displays vertex positions in the same space as the POS X / POS Y fields
+ * (canvas-center-relative, Y-up): X = worldX - canvasCenterX, Y = -(worldY -
+ * canvasCenterY). Editing converts back into local (center-relative, Y-down)
+ * points that the renderer and the canvas markers consume, so typing 0 into
+ * X puts the vertex exactly on the canvas center line.
  */
-export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ selectedPart, onPartPropChange }) => {
+export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ selectedPart, transform, onPartPropChange }) => {
   const points = selectedPart.points || [];
   if (points.length === 0) return null;
 
@@ -33,17 +38,14 @@ export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ se
         </span>
       </div>
       <div style={{ fontSize: 9, color: 'var(--text-muted)', marginBottom: 6 }}>
-        Coordinates relative to the shape center. The numbered dots on the canvas show which vertex is which.
+        Same coordinates as POS X / POS Y (canvas center = 0). Numbered markers on the canvas show which vertex is which.
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
         {points.map((p, i) => {
           const color = VERTEX_COLORS[i % VERTEX_COLORS.length];
+          const disp = freeformVertexToDisplay(p, transform);
           return (
-            <div
-              key={`vertex-${i}`}
-              className="form-field-group"
-              style={{ background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', justifyContent: 'space-between', margin: 0 }}
-            >
+            <div key={i} className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, fontWeight: 700, color, width: 54, flexShrink: 0 }}>
                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: color, display: 'inline-block' }} />#{i + 1}
               </span>
@@ -51,19 +53,21 @@ export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ se
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, flex: 1 }}>
                   <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
                   <SmartNumberInput
-                    value={p.x}
+                    value={disp.x}
                     step={1}
-                    precision={1}
-                    onChange={(val) => updateVertex(i, { x: val })}
+                    displayScale={0.01}
+                    precision={2}
+                    onChange={(val) => updateVertex(i, { x: freeformVertexToLocal(val, disp.y, transform).x })}
                   />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3, flex: 1 }}>
                   <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
                   <SmartNumberInput
-                    value={p.y}
+                    value={disp.y}
                     step={1}
-                    precision={1}
-                    onChange={(val) => updateVertex(i, { y: val })}
+                    displayScale={0.01}
+                    precision={2}
+                    onChange={(val) => updateVertex(i, { y: freeformVertexToLocal(disp.x, val, transform).y })}
                   />
                 </div>
               </div>

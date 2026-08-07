@@ -7,6 +7,47 @@ import type { FreeformPoint } from '../types/animator';
 
 export const MIN_FREEFORM_POINTS = 3;
 
+/**
+ * Convert a local vertex point into canvas-center-relative display
+ * coordinates (Y-up), matching the POS X / POS Y fields in the inspector.
+ * Applies the part's scale and rotation (same math as the SVG renderer:
+ * translate -> rotate -> scale).
+ */
+export const freeformVertexToDisplay = (
+  p: FreeformPoint,
+  transform: { x: number; y: number; scaleX: number; scaleY: number; rotation: number }
+): { x: number; y: number } => {
+  const { x: tx, y: ty, scaleX, scaleY, rotation } = transform;
+  const rad = (rotation * Math.PI) / 180;
+  const cosR = Math.cos(rad);
+  const sinR = Math.sin(rad);
+  const sx = Math.max(0.001, scaleX);
+  const sy = Math.max(0.001, scaleY);
+  const dx = p.x * sx * cosR - p.y * sy * sinR;
+  const dy = p.x * sx * sinR + p.y * sy * cosR;
+  return { x: tx + dx, y: -(ty + dy) };
+};
+
+/**
+ * Inverse of freeformVertexToDisplay: display coords (canvas-center-relative,
+ * Y-up) -> local point (center-relative, Y-down) that the renderer consumes.
+ */
+export const freeformVertexToLocal = (
+  dispX: number,
+  dispY: number,
+  transform: { x: number; y: number; scaleX: number; scaleY: number; rotation: number }
+): FreeformPoint => {
+  const { x: tx, y: ty, scaleX, scaleY, rotation } = transform;
+  const rad = (rotation * Math.PI) / 180;
+  const cosR = Math.cos(rad);
+  const sinR = Math.sin(rad);
+  const sx = Math.max(0.001, scaleX);
+  const sy = Math.max(0.001, scaleY);
+  const dx = dispX - tx;
+  const dy = -dispY - ty;
+  return { x: (dx * cosR + dy * sinR) / sx, y: (-dx * sinR + dy * cosR) / sy };
+};
+
 export interface FreeformExtents {
   minX: number;
   minY: number;

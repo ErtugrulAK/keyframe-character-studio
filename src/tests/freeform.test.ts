@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildFreeformPath,
+  freeformVertexToDisplay,
+  freeformVertexToLocal,
   getFreeformBounds,
   getFreeformExtents,
   getFreeformPerimeter,
@@ -135,6 +137,44 @@ describe('freeform utils', () => {
     it('returns empty array for empty input and keeps single points', () => {
       expect(simplifyFreeformPoints([])).toEqual([]);
       expect(simplifyFreeformPoints([{ x: 1, y: 1 }])).toEqual([{ x: 1, y: 1 }]);
+    });
+  });
+
+  describe('freeformVertexToDisplay / freeformVertexToLocal', () => {
+    const baseTransform = { x: 120, y: 80, scaleX: 1, scaleY: 1, rotation: 0 };
+
+    it('converts local points to canvas-center-relative display coords (Y-up)', () => {
+      // Local (45, 30) with shape center (120, 80): display = (165, -110)
+      expect(freeformVertexToDisplay({ x: 45, y: 30 }, baseTransform)).toEqual({ x: 165, y: -110 });
+    });
+
+    it('typing X=0 moves the vertex onto the canvas center line (round-trip)', () => {
+      const local = { x: 45, y: 30 };
+      const disp = freeformVertexToDisplay(local, baseTransform);
+      // User types X = 0, keeping the displayed Y
+      const edited = freeformVertexToLocal(0, disp.y, baseTransform);
+      // New display X must be exactly 0
+      expect(freeformVertexToDisplay(edited, baseTransform).x).toBeCloseTo(0, 5);
+      // The marker world x lands on the canvas center (300 + t.x + localX = 300)
+      expect(300 + baseTransform.x + edited.x).toBeCloseTo(300, 5);
+    });
+
+    it('round-trips local -> display -> local for scaled shapes', () => {
+      const scaled = { x: 40, y: -55, scaleX: 1.5, scaleY: 0.5, rotation: 0 };
+      const local = { x: 10, y: 20 };
+      const disp = freeformVertexToDisplay(local, scaled);
+      const back = freeformVertexToLocal(disp.x, disp.y, scaled);
+      expect(back.x).toBeCloseTo(local.x, 5);
+      expect(back.y).toBeCloseTo(local.y, 5);
+    });
+
+    it('round-trips for rotated shapes', () => {
+      const rotated = { x: 200, y: -100, scaleX: 1, scaleY: 1, rotation: 90 };
+      const local = { x: 10, y: -25 };
+      const disp = freeformVertexToDisplay(local, rotated);
+      const back = freeformVertexToLocal(disp.x, disp.y, rotated);
+      expect(back.x).toBeCloseTo(local.x, 5);
+      expect(back.y).toBeCloseTo(local.y, 5);
     });
   });
 

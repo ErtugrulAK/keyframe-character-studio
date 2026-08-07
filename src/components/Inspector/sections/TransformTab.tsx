@@ -68,10 +68,11 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           onUpdate={updateCurrentTransform}
         />
 
-        {/* Freeform shapes get a per-vertex coordinate editor (numbered markers on canvas) */}
+        {/* Freeform shapes get a per-vertex coordinate editor */}
         {selectedPart.type === 'custom_freeform' && handlePartPropChange && (
           <TransformVertexEditor
             selectedPart={selectedPart}
+            transform={transform}
             onPartPropChange={handlePartPropChange}
           />
         )}

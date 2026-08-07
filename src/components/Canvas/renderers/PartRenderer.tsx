@@ -14,7 +14,7 @@ import { getFreeformExtents } from '../../../utils/freeform';
  * a shape. Mirrors ShapePartRenderers so the sibling media layer lines up with
  * the shape's own inner-media clip.
  */
-const getInnerMediaFrame = (
+export const getInnerMediaFrame = (
   part: CharacterPart
 ): { w: number; h: number; x: number; y: number; clipId: string } | null => {
   switch (part.type) {
@@ -51,6 +51,8 @@ interface PartRendererProps {
   onSelect: (partId: string) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
   onStartInnerMediaDrag?: (partId: string, e: React.MouseEvent) => void;
+  onStartInnerMediaScale?: (partId: string, e: React.MouseEvent) => void;
+  onStartInnerMediaRotate?: (partId: string, e: React.MouseEvent) => void;
 }
 
 export const PartRenderer: React.FC<PartRendererProps> = ({
@@ -65,6 +67,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   onSelect,
   onStartTranslateDrag,
   onStartInnerMediaDrag,
+  onStartInnerMediaScale,
+  onStartInnerMediaRotate,
 }) => {
   let animScaleX = 1;
   let animScaleY = 1;
@@ -406,12 +410,17 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const isMaskTool = activeTool === 'mask';
   const mediaLayer =
     !isGhost && mediaFrame ? (
-      <g clipPath={part.parentId ? `url(#containerClip-${part.parentId})` : undefined}>
+      <g
+        clipPath={part.parentId ? `url(#containerClip-${part.parentId})` : undefined}
+        mask={hasMask ? `url(#${maskId})` : undefined}
+      >
         <g
           transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}
-          clipPath={`url(#${mediaFrame.clipId})`}
+          // A <mask> instead of a clipPath: Chromium rasterizes mask edges with
+          // proper antialiasing, so the photo's clipped edges stay smooth
+          // (no serrated/jagged lines along the shape outline).
+          mask={`url(#${mediaFrame.clipId})`}
           opacity={part.innerMediaOpacity ?? 1}
-          mask={hasMask ? `url(#${maskId})` : undefined}
           style={{ pointerEvents: 'none' }}
         >
           {renderInnerMedia(mediaFrame.w, mediaFrame.h, mediaFrame.x, mediaFrame.y)}
@@ -419,28 +428,85 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       </g>
     ) : null;
 
-  // Mask-tool grab handle for the inner media: dashed frame rendered ON TOP of
-  // the shape (like a gizmo) so the user can drag the photo back into view even
-  // when it is mostly clipped out.
+  // Mask-tool gizmo for the inner media: dashed frame rendered ON TOP of the
+  // shape (like a gizmo) so the user can move/scale/rotate the photo directly —
+  // the same edits edit mode offers. The frame sits inside the same
+  // maskTransform chain the media renders with (offset/scale/rotation).
+  const mOffX = transform.maskOffsetX ?? part.maskOffsetX ?? 0;
+  const mOffY = transform.maskOffsetY ?? part.maskOffsetY ?? 0;
+  const mScale = transform.maskScale ?? part.maskScale ?? 1;
+  const mRot = transform.maskRotation ?? part.maskRotation ?? 0;
   const mediaDragHandle =
     !isGhost && mediaFrame && isMaskTool && onStartInnerMediaDrag ? (
       <g transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}>
-        <rect
-          x={mediaFrame.x}
-          y={mediaFrame.y}
-          width={mediaFrame.w}
-          height={mediaFrame.h}
-          fill="transparent"
-          stroke="#38bdf8"
-          strokeWidth={1}
-          strokeDasharray="5 4"
-          vectorEffect="non-scaling-stroke"
-          style={{ cursor: 'grab' }}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            onStartInnerMediaDrag(part.id, e);
-          }}
-        />
+        <g transform={`translate(${mOffX}, ${mOffY}) scale(${mScale}) rotate(${mRot})`}>
+          {/* Move: dashed frame */}
+          <rect
+            x={mediaFrame.x}
+            y={mediaFrame.y}
+            width={mediaFrame.w}
+            height={mediaFrame.h}
+            fill="transparent"
+            stroke="#38bdf8"
+            strokeWidth={1}
+            strokeDasharray="5 4"
+            vectorEffect="non-scaling-stroke"
+            style={{ cursor: 'grab' }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onStartInnerMediaDrag(part.id, e);
+            }}
+          />
+          {/* Scale: 4 corner handles */}
+          {[
+            { x: mediaFrame.x, y: mediaFrame.y },
+            { x: mediaFrame.x + mediaFrame.w, y: mediaFrame.y },
+            { x: mediaFrame.x + mediaFrame.w, y: mediaFrame.y + mediaFrame.h },
+            { x: mediaFrame.x, y: mediaFrame.y + mediaFrame.h },
+          ].map((c, i) => (
+            <rect
+              key={`mcorner-${i}`}
+              x={c.x - 5}
+              y={c.y - 5}
+              width={10}
+              height={10}
+              fill="#38bdf8"
+              stroke="#ffffff"
+              strokeWidth={1.5}
+              vectorEffect="non-scaling-stroke"
+              style={{ cursor: 'nwse-resize' }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                onStartInnerMediaScale?.(part.id, e);
+              }}
+            />
+          ))}
+          {/* Rotate: handle above the frame's top-center */}
+          <line
+            x1={mediaFrame.x + mediaFrame.w / 2}
+            y1={mediaFrame.y}
+            x2={mediaFrame.x + mediaFrame.w / 2}
+            y2={mediaFrame.y - 26}
+            stroke="#38bdf8"
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
+            style={{ pointerEvents: 'none' }}
+          />
+          <circle
+            cx={mediaFrame.x + mediaFrame.w / 2}
+            cy={mediaFrame.y - 26}
+            r={6}
+            fill="#ffb700"
+            stroke="#ffffff"
+            strokeWidth={1.5}
+            vectorEffect="non-scaling-stroke"
+            style={{ cursor: 'grab' }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onStartInnerMediaRotate?.(part.id, e);
+            }}
+          />
+        </g>
       </g>
     ) : null;
 

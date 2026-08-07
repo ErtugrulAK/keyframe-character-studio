@@ -56,13 +56,13 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           <circle cx={0} cy={0} r={30} fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
-              <clipPath id={clipId}>
-                <circle cx={0} cy={0} r={30} />
-              </clipPath>
+              <mask id={clipId}>
+                <circle cx={0} cy={0} r={30} fill="white" />
+              </mask>
             </defs>
           )}
           {part.innerMediaUrl ? (
-            <g clipPath={`url(#${clipId})`}>
+            <g mask={`url(#${clipId})`}>
               {renderInnerMedia(60, 60, -30, -30)}
             </g>
           ) : (
@@ -89,13 +89,13 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
-              <clipPath id={clipId}>
-                <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} />
-              </clipPath>
+              <mask id={clipId}>
+                <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill="white" />
+              </mask>
             </defs>
           )}
           {part.innerMediaUrl ? (
-            <g clipPath={`url(#${clipId})`}>
+            <g mask={`url(#${clipId})`}>
               {renderInnerMedia(60, 60, -30, -30)}
             </g>
           ) : (
@@ -124,13 +124,13 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
-              <clipPath id={clipId}>
-                <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} />
-              </clipPath>
+              <mask id={clipId}>
+                <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill="white" />
+              </mask>
             </defs>
           )}
           {part.innerMediaUrl ? (
-            <g clipPath={`url(#${clipId})`}>
+            <g mask={`url(#${clipId})`}>
               {renderInnerMedia(120, 60, -60, -30)}
             </g>
           ) : (
@@ -159,13 +159,13 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           <polygon points="0,-35 35,25 -35,25" fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
-              <clipPath id={clipId}>
-                <polygon points="0,-35 35,25 -35,25" />
-              </clipPath>
+              <mask id={clipId}>
+                <polygon points="0,-35 35,25 -35,25" fill="white" />
+              </mask>
             </defs>
           )}
           {part.innerMediaUrl ? (
-            <g clipPath={`url(#${clipId})`}>
+            <g mask={`url(#${clipId})`}>
               {renderInnerMedia(70, 60, -35, -35)}
             </g>
           ) : (
@@ -190,13 +190,13 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           <polygon points="-35,-30 85,-30 35,30 -85,30" fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
-              <clipPath id={clipId}>
-                <polygon points="-35,-30 85,-30 35,30 -85,30" />
-              </clipPath>
+              <mask id={clipId}>
+                <polygon points="-35,-30 85,-30 35,30 -85,30" fill="white" />
+              </mask>
             </defs>
           )}
           {part.innerMediaUrl ? (
-            <g clipPath={`url(#${clipId})`}>
+            <g mask={`url(#${clipId})`}>
               {renderInnerMedia(170, 60, -85, -30)}
             </g>
           ) : (
@@ -292,13 +292,13 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           <path d={d} fill="rgba(0,0,0,0.001)" />
           {part.innerMediaUrl && (
             <defs>
-              <clipPath id={clipId}>
-                <path d={d} />
-              </clipPath>
+              <mask id={clipId}>
+                <path d={d} fill="white" />
+              </mask>
             </defs>
           )}
           {part.innerMediaUrl ? (
-            <g clipPath={`url(#${clipId})`}>
+            <g mask={`url(#${clipId})`}>
               {renderInnerMedia(mediaW, mediaH, extents ? extents.minX : -mediaW / 2, extents ? extents.minY : -mediaH / 2)}
             </g>
           ) : (

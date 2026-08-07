@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import type { Transform, MaskPoint } from '../../types/animator';
+import type { Transform, MaskPoint, CharacterPart } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { CANVAS_CENTER_X, CANVAS_CENTER_Y, computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
 import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeFreeformPoints } from '../../utils/freeform';
 import { worldToContainerLocal } from '../../utils/containerMath';
+import { getInnerMediaFrame } from './renderers/PartRenderer';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
@@ -49,9 +50,9 @@ export const StageCanvas: React.FC = () => {
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'mask_point' | 'mask_in' | 'mask_out' | 'mask_media' | null>(null);
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'mask_point' | 'mask_in' | 'mask_out' | 'mask_media' | 'mask_media_scale' | 'mask_media_rotate' | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; initialMaskX?: number; initialMaskY?: number; initialMaskPoints?: MaskPoint[] }>({
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; initialMaskX?: number; initialMaskY?: number; initialMaskPoints?: MaskPoint[]; initialMaskScale?: number; initialMaskRot?: number; mediaCenter?: { x: number; y: number } }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
@@ -190,6 +191,80 @@ export const StageCanvas: React.FC = () => {
       initialTransforms: {},
       initialMaskX: transform.maskOffsetX ?? part.maskOffsetX ?? 0,
       initialMaskY: transform.maskOffsetY ?? part.maskOffsetY ?? 0,
+    });
+  };
+
+  // Convert an inner-media local point through the mask transform chain
+  // (mask offset/scale/rotation, then the shape's world transform) into
+  // canvas coordinates — used to anchor the scale/rotate handles.
+  const mediaToScreen = (lx: number, ly: number, part: CharacterPart, t: Transform) => {
+    const offX = t.maskOffsetX ?? part.maskOffsetX ?? 0;
+    const offY = t.maskOffsetY ?? part.maskOffsetY ?? 0;
+    const ms = t.maskScale ?? part.maskScale ?? 1;
+    const mr = ((t.maskRotation ?? part.maskRotation ?? 0) * Math.PI) / 180;
+    const cr = Math.cos(mr);
+    const sr = Math.sin(mr);
+    // maskTransform: rotate -> scale -> translate
+    const p1x = lx * cr - ly * sr;
+    const p1y = lx * sr + ly * cr;
+    const p2x = p1x * ms + offX;
+    const p2y = p1y * ms + offY;
+    // world: scale -> rotate -> translate
+    const rr = ((t.rotation ?? 0) * Math.PI) / 180;
+    const crr = Math.cos(rr);
+    const srr = Math.sin(rr);
+    const p3x = p2x * (t.scaleX || 1);
+    const p3y = p2y * (t.scaleY || 1);
+    const p4x = p3x * crr - p3y * srr;
+    const p4y = p3x * srr + p3y * crr;
+    return { x: CANVAS_CENTER_X + (t.x || 0) + p4x, y: CANVAS_CENTER_Y + (t.y || 0) + p4y };
+  };
+
+  // Scale the masked inner media from a corner handle (uniform, around the media center).
+  const startInnerMediaScaleForPart = (partId: string, e: React.MouseEvent) => {
+    if (appMode === 'broadcast' || e.button !== 0) return;
+    e.stopPropagation();
+    setSelectedPartId(partId);
+    const transform = getComputedTransform(partId, currentFrame);
+    const part = characterParts.find((p) => p.id === partId);
+    const frame = part ? getInnerMediaFrame(part) : null;
+    if (!transform || !part || !frame) return;
+    startBatchInteraction();
+    setIsDragging(true);
+    setDragMode('mask_media_scale');
+    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+    const center = mediaToScreen(frame.x + frame.w / 2, frame.y + frame.h / 2, part, transform);
+    setDragStart({
+      x: svgX,
+      y: svgY,
+      initialTransform: { ...transform },
+      initialTransforms: {},
+      initialMaskScale: transform.maskScale ?? part.maskScale ?? 1,
+      mediaCenter: center,
+    });
+  };
+
+  // Rotate the masked inner media from the rotation handle (around the media center).
+  const startInnerMediaRotateForPart = (partId: string, e: React.MouseEvent) => {
+    if (appMode === 'broadcast' || e.button !== 0) return;
+    e.stopPropagation();
+    setSelectedPartId(partId);
+    const transform = getComputedTransform(partId, currentFrame);
+    const part = characterParts.find((p) => p.id === partId);
+    const frame = part ? getInnerMediaFrame(part) : null;
+    if (!transform || !part || !frame) return;
+    startBatchInteraction();
+    setIsDragging(true);
+    setDragMode('mask_media_rotate');
+    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+    const center = mediaToScreen(frame.x + frame.w / 2, frame.y + frame.h / 2, part, transform);
+    setDragStart({
+      x: svgX,
+      y: svgY,
+      initialTransform: { ...transform },
+      initialTransforms: {},
+      initialMaskRot: transform.maskRotation ?? part.maskRotation ?? 0,
+      mediaCenter: center,
     });
   };
 
@@ -346,6 +421,30 @@ export const StageCanvas: React.FC = () => {
           maskOffsetX: newMaskX,
           maskOffsetY: newMaskY,
         });
+        return;
+      }
+
+      if (dragMode === 'mask_media_scale') {
+        // Uniform scale of the inner media around its center (like edit mode).
+        const c = dragStart.mediaCenter!;
+        const initDist = Math.hypot(dragStart.x - c.x, dragStart.y - c.y);
+        const curDist = Math.hypot(svgX - c.x, svgY - c.y);
+        const factor = initDist > 0.001 ? curDist / initDist : 1;
+        const newScale = Math.max(0.05, Math.round((dragStart.initialMaskScale || 1) * factor * 100) / 100);
+        updateCharacterPart(selectedPartId, { maskScale: newScale });
+        updateCurrentTransform({ maskScale: newScale });
+        return;
+      }
+
+      if (dragMode === 'mask_media_rotate') {
+        // Rotate the inner media around its center (like edit mode).
+        const c = dragStart.mediaCenter!;
+        const initAngle = (Math.atan2(dragStart.y - c.y, dragStart.x - c.x) * 180) / Math.PI;
+        const curAngle = (Math.atan2(svgY - c.y, svgX - c.x) * 180) / Math.PI;
+        const delta = ((curAngle - initAngle + 540) % 360) - 180;
+        const newRot = Math.round(((dragStart.initialMaskRot || 0) + delta) * 100) / 100;
+        updateCharacterPart(selectedPartId, { maskRotation: newRot });
+        updateCurrentTransform({ maskRotation: newRot });
         return;
       }
 
@@ -890,6 +989,8 @@ export const StageCanvas: React.FC = () => {
                 onSelect={setSelectedPartId}
                 onStartTranslateDrag={startTranslateDragForPart}
                 onStartInnerMediaDrag={startInnerMediaDragForPart}
+                onStartInnerMediaScale={startInnerMediaScaleForPart}
+                onStartInnerMediaRotate={startInnerMediaRotateForPart}
               />
 
               {/* Freeform Drawing Preview (active draw tool) */}

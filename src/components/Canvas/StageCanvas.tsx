@@ -744,15 +744,27 @@ export const StageCanvas: React.FC = () => {
         style={{ transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`, transformOrigin: 'center center', cursor: activeTool === 'freeform_draw' ? 'crosshair' : undefined }}
       >
         <defs>
+          {/* Minor grid: 50px cells (2 cells = 100px = 1 unit) */}
           <pattern
-            id="svg-dashed-grid"
-            width="60"
-            height="60"
+            id="svg-grid-minor"
+            width="50"
+            height="50"
             patternUnits="userSpaceOnUse"
             x={CANVAS_CENTER_X - projectResolution.width / 2}
             y={CANVAS_CENTER_Y - projectResolution.height / 2}
           >
-            <path d="M 60 0 L 0 0 0 60" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" strokeDasharray="3 3" />
+            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(56, 189, 248, 0.10)" strokeWidth="1" />
+          </pattern>
+          {/* Major grid: 100px lines (1 cell = 100px = 1 unit, aligned with boundary labels) */}
+          <pattern
+            id="svg-grid-major"
+            width="100"
+            height="100"
+            patternUnits="userSpaceOnUse"
+            x={CANVAS_CENTER_X - projectResolution.width / 2}
+            y={CANVAS_CENTER_Y - projectResolution.height / 2}
+          >
+            <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" />
           </pattern>
           <clipPath id="artboard-clip">
             <rect

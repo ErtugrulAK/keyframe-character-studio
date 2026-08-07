@@ -23,9 +23,12 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
 
   return (
     <>
-      {/* Dashed Grid Pattern (Aligned to Top-Left Corner, NO HALF SQUARES) */}
+      {/* Solid Grid Pattern (Minor 50px + Major 100px, aligned to the artboard top-left corner) */}
       {showGrid && (
-        <rect className="canvas-bg" x={artX} y={artY} width={width} height={height} fill="url(#svg-dashed-grid)" />
+        <>
+          <rect className="canvas-bg" x={artX} y={artY} width={width} height={height} fill="url(#svg-grid-minor)" />
+          <rect className="canvas-bg" x={artX} y={artY} width={width} height={height} fill="url(#svg-grid-major)" />
+        </>
       )}
 
       {/* 4 Outer Artboard Boundary Limit Borders (Top, Bottom, Left, Right) */}

@@ -285,10 +285,14 @@ export const HeaderBar: React.FC = () => {
           <div ref={duplicateMenuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <button
               className="header-action-btn export-btn"
-              onClick={() => setIsDuplicateMenuOpen((v) => !v)}
+              onClick={() => {
+                if (!selectedPartId) {
+                  showToast('Select a part first to duplicate it', 'info');
+                  return;
+                }
+                setIsDuplicateMenuOpen((v) => !v);
+              }}
               title="Duplicate selected part (normal, or mirrored across Y axis / X axis / origin)"
-              disabled={!selectedPartId}
-              style={{ opacity: selectedPartId ? 1 : 0.45, cursor: selectedPartId ? 'pointer' : 'not-allowed' }}
             >
               <CopyPlus size={14} />
               <span>Duplicate</span>

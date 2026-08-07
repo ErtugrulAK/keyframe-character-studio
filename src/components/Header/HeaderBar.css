@@ -1,12 +1,14 @@
 .header-bar {
-  height: var(--header-height);
+  min-height: var(--header-height);
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border-color);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-md);
   gap: var(--space-md);
+  row-gap: 6px;
   z-index: 100;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
@@ -286,6 +288,8 @@
   justify-content: flex-end;
   gap: var(--space-sm);
   flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .add-kf-btn {

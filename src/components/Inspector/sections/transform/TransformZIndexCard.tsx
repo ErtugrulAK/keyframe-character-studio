@@ -5,22 +5,25 @@ interface TransformZIndexCardProps {
   onZIndexChange: (zIndex: number) => void;
 }
 
+/**
+ * Layer stacking order controls: bring forward / send backward.
+ */
 export const TransformZIndexCard: React.FC<TransformZIndexCardProps> = ({ zIndex, onZIndexChange }) => {
   return (
     <div className="panel-card" style={{ marginBottom: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-        <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.4px' }}>
-          LAYER Z-INDEX ORDER
-        </label>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
+          LAYER ORDER
+        </span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', background: 'rgba(56, 189, 248, 0.12)', padding: '2px 6px', borderRadius: 4, border: '1px solid rgba(56, 189, 248, 0.3)' }}>
           Index {zIndex}
         </span>
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
         <button
           type="button"
           className="btn-secondary"
-          style={{ flex: 1, padding: '5px 8px', fontSize: 11, fontWeight: 700 }}
+          style={{ height: 22, fontSize: 10, fontWeight: 700, padding: '0 6px', borderRadius: 4 }}
           onClick={() => onZIndexChange(zIndex + 1)}
         >
           Bring Forward (+1)
@@ -28,7 +31,7 @@ export const TransformZIndexCard: React.FC<TransformZIndexCardProps> = ({ zIndex
         <button
           type="button"
           className="btn-secondary"
-          style={{ flex: 1, padding: '5px 8px', fontSize: 11, fontWeight: 700 }}
+          style={{ height: 22, fontSize: 10, fontWeight: 700, padding: '0 6px', borderRadius: 4 }}
           onClick={() => onZIndexChange(Math.max(1, zIndex - 1))}
         >
           Send Backward (-1)

@@ -19,6 +19,7 @@ export const StyleGeometrySection: React.FC<StyleGeometrySectionProps> = ({ sele
     selectedPart.type === 'custom_circle' ||
     selectedPart.type === 'custom_star' ||
     selectedPart.type === 'custom_diamond' ||
+    selectedPart.type === 'custom_parallelogram' ||
     selectedPart.type === 'custom_freeform';
   if (!applies) return null;
 

@@ -28,10 +28,13 @@ export const ContainerAssignControl: React.FC<ContainerAssignControlProps> = ({ 
     if (!containerId || containerId === selectedPart.parentId) return;
     const containerT = getComputedTransform(containerId, currentFrame);
     const local = worldToContainerLocal(transform, containerT);
+    // Land the element in the MIDDLE of the shape (like a photo fills a shape):
+    // centering guarantees it overlaps the container, so it is never clipped
+    // into invisibility right after assigning.
     onPartPropChange('parentId', containerId);
     updateCurrentTransform({
-      x: local.x,
-      y: local.y,
+      x: 0,
+      y: 0,
       rotation: local.rotation,
       scaleX: local.scaleX,
       scaleY: local.scaleY,

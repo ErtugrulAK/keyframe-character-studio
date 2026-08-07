@@ -2,7 +2,7 @@ import React from 'react';
 import type { CharacterPart, Transform, MaskPoint } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
 import { getPartBounds } from '../../../utils/bounds';
-import { Scissors, Move, Feather, Eye, Layers } from 'lucide-react';
+import { Scissors, Move, Feather, Eye, Layers, Box, MousePointerClick } from 'lucide-react';
 
 interface SmartNumberInputProps {
   value: number;
@@ -82,12 +82,88 @@ const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, st
 interface MaskTabProps {
   selectedPart: CharacterPart;
   transform: Transform;
-  updateCurrentTransform: (newTransform: Partial<Transform>) => void;
+  updateCurrentTransform: (newTransform: Partial<Transform>, partIdOverride?: string) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
 }
 
+/**
+ * Framing card for an element that lives inside a container shape — mirrors the
+ * INNER MEDIA FRAMING controls (offset / scale / rotation) but edits the child's
+ * container-local transform so the user can move & resize shapes inside a shape.
+ */
+const ChildFrameCard: React.FC<{
+  child: CharacterPart;
+  parentName: string;
+  transform: Transform;
+  onUpdate: (partial: Partial<Transform>) => void;
+  onSelect?: () => void;
+}> = ({ child, parentName, transform, onUpdate, onSelect }) => {
+  const avgScale = (Math.abs(transform.scaleX) + Math.abs(transform.scaleY)) / 2;
+  const labelStyle: React.CSSProperties = {
+    fontSize: 10,
+    fontWeight: 700,
+    color: '#14b8a6',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+  };
+  return (
+    <div
+      style={{
+        background: 'var(--bg-panel)',
+        border: '1px solid var(--border-color)',
+        borderRadius: 6,
+        padding: 8,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 6,
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+        <span style={labelStyle}>
+          <Box size={11} /> {child.name}
+          <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>· inside {parentName}</span>
+        </span>
+        {onSelect && (
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ height: 20, fontSize: 9, fontWeight: 700, padding: '0 8px', display: 'flex', alignItems: 'center', gap: 4 }}
+            onClick={onSelect}
+          >
+            <MousePointerClick size={10} /> SELECT
+          </button>
+        )}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+        <div className="form-field-group" style={{ background: 'var(--bg-darkest)', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', justifyContent: 'space-between', margin: 0 }}>
+          <span className="param-label">OFFSET X</span>
+          <SmartNumberInput value={transform.x} step={1} onChange={(val) => onUpdate({ x: val })} />
+        </div>
+        <div className="form-field-group" style={{ background: 'var(--bg-darkest)', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', justifyContent: 'space-between', margin: 0 }}>
+          <span className="param-label">OFFSET Y</span>
+          <SmartNumberInput value={transform.y} step={1} onChange={(val) => onUpdate({ y: val })} />
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+        <div className="form-field-group" style={{ background: 'var(--bg-darkest)', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', justifyContent: 'space-between', margin: 0 }}>
+          <span className="param-label">SCALE (%)</span>
+          <SmartNumberInput value={Math.round(avgScale * 100)} min={1} step={10} onChange={(val) => onUpdate({ scaleX: val / 100, scaleY: val / 100 })} />
+        </div>
+        <div className="form-field-group" style={{ background: 'var(--bg-darkest)', border: '1px solid var(--border-color)', padding: '4px 8px', borderRadius: 'var(--radius-sm)', justifyContent: 'space-between', margin: 0 }}>
+          <span className="param-label">ROTATION (°)</span>
+          <SmartNumberInput value={transform.rotation} step={1} onChange={(val) => onUpdate({ rotation: val })} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updateCurrentTransform, handlePartPropChange }) => {
-  const { activeTool, setActiveTool } = useAnimator();
+  const { activeTool, setActiveTool, characterParts, getComputedTransform, currentFrame, handleSelectPart } = useAnimator();
+
+  const children = characterParts.filter((c) => c.parentId === selectedPart.id);
+  const parent = selectedPart.parentId ? characterParts.find((p) => p.id === selectedPart.parentId) : null;
   
   const mask = transform.mask || selectedPart.mask || {
     enabled: false,
@@ -224,6 +300,41 @@ export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updat
                 RESET FRAME
               </button>
             </div>
+          </div>
+        </>
+      )}
+
+      {/* ── SECTION 0.5: SHAPES INSIDE (container children framing) ── */}
+      {(selectedPart.parentId || children.length > 0) && (
+        <>
+          <div className="section-title-bar" style={{ marginBottom: 8 }}>
+            <div className="section-title">
+              <Box size={13} className="text-teal" />
+              <span>{selectedPart.parentId ? 'ELEMENT INSIDE SHAPE' : 'SHAPES INSIDE THIS SHAPE'}</span>
+            </div>
+          </div>
+          <div className="panel-card" style={{ marginBottom: 8, padding: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {selectedPart.parentId && (
+              <ChildFrameCard
+                child={selectedPart}
+                parentName={parent?.name ?? 'shape'}
+                transform={transform}
+                onUpdate={(p) => updateCurrentTransform(p, selectedPart.id)}
+              />
+            )}
+            {children.map((child) => {
+              const childT = getComputedTransform(child.id, currentFrame);
+              return (
+                <ChildFrameCard
+                  key={child.id}
+                  child={child}
+                  parentName={selectedPart.name}
+                  transform={childT}
+                  onUpdate={(p) => updateCurrentTransform(p, child.id)}
+                  onSelect={() => handleSelectPart(child.id)}
+                />
+              );
+            })}
           </div>
         </>
       )}

@@ -85,6 +85,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             part={part}
             transform={transform}
             isSelected={selectedPartId === part.id}
+            isChildOfSelected={!!part.parentId && selectedPartId === part.parentId}
             currentFrame={frameToEvaluate}
             totalFrames={totalFrames}
             onSelect={onSelect}

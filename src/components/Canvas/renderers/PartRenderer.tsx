@@ -8,6 +8,8 @@ import { getContainerOutlineElement } from '../../../utils/containerOutline';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
 import { getYouTubeEmbedInfo } from './utils/youtubeHelper';
 import { getFreeformExtents } from '../../../utils/freeform';
+import { renderShapeOutline } from '../../../utils/shapeOutlineHelper';
+import { getPartBounds } from '../../../utils/bounds';
 
 /**
  * Per-type framing (size + local origin + clip id) of the media masked inside
@@ -46,6 +48,8 @@ interface PartRendererProps {
   ghostColor?: string;
   isFocusGhost?: boolean;
   isSelected?: boolean;
+  /** This part lives inside the currently selected container — draw its dashed outline */
+  isChildOfSelected?: boolean;
   currentFrame: number;
   totalFrames: number;
   onSelect: (partId: string) => void;
@@ -62,6 +66,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   ghostColor,
   isFocusGhost = false,
   isSelected = false,
+  isChildOfSelected = false,
   currentFrame,
   totalFrames,
   onSelect,
@@ -578,10 +583,19 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       onDoubleClick={(e) => {
         if (!isGhost && e.button === 0) {
           e.stopPropagation();
-          // Double-click opens the mask mode for ANY part (mask tool + focus):
-          // vector mask editing + inner-media framing when media exists.
-          setFocusModeNodeId(part.id);
-          setActiveTool('mask');
+          if (childParts.length > 0 || part.parentId) {
+            // Container / child: stay in edit view and highlight the elements
+            // inside the shape instead of entering focus mode — the user can
+            // then grab the child directly (dashed outline) or edit it in
+            // the Mask tab's "SHAPES INSIDE" section.
+            onSelect(part.id);
+            setActiveTool('select');
+          } else {
+            // Double-click opens the mask mode for ANY part (mask tool + focus):
+            // vector mask editing + inner-media framing when media exists.
+            setFocusModeNodeId(part.id);
+            setActiveTool('mask');
+          }
         }
       }}
     >
@@ -626,6 +640,16 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       ) : (
         pathContent
       )}
+      {/* Child-of-selected-container: dashed outline so the user can see and
+          grab the element living inside the highlighted container */}
+      {!isGhost && isChildOfSelected && (() => {
+        const childBounds = getPartBounds(part);
+        return (
+          <g style={{ pointerEvents: 'none' }}>
+            {renderShapeOutline(part, childBounds.halfW, childBounds.halfH, 1)}
+          </g>
+        );
+      })()}
       </g>
       {mediaDragHandle}
     </React.Fragment>

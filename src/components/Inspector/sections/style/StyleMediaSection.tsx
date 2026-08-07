@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { Crop, Upload } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
+import { StyleCard } from './StyleCard';
 
 interface StyleMediaSectionProps {
   selectedPart: CharacterPart;
@@ -16,6 +17,16 @@ export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPa
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
   const innerMediaFileInputRef = useRef<HTMLInputElement>(null);
+
+  const applies =
+    selectedPart.type === 'custom_image' ||
+    selectedPart.type === 'custom_video' ||
+    selectedPart.type === 'custom_circle' ||
+    selectedPart.type === 'custom_box' ||
+    selectedPart.type === 'custom_rect' ||
+    selectedPart.type === 'custom_triangle' ||
+    selectedPart.type === 'custom_freeform';
+  if (!applies) return null;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, propName: 'imageUrl' | 'videoUrl' | 'innerMediaUrl') => {
     if (e.target.files && e.target.files[0]) {
@@ -51,7 +62,7 @@ export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPa
   };
 
   return (
-    <>
+    <StyleCard title="MEDIA & MASKING" icon={<Crop size={13} />} color="#14b8a6">
       {/* Image URL Input Control if object is Custom Image */}
       {selectedPart.type === 'custom_image' && (
         <div className="form-field-group">
@@ -121,11 +132,6 @@ export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPa
         selectedPart.type === 'custom_triangle' ||
         selectedPart.type === 'custom_freeform') && (
         <>
-          <div className="section-title" style={{ marginTop: 12 }}>
-            <Crop size={13} className="text-teal" />
-            <span>SHAPE MEDIA MASKING (CANVA STYLE)</span>
-          </div>
-
           <div className="form-field-group">
             <label className="form-label">MEDIA SOURCE (URL / FILE)</label>
             <div style={{ display: 'flex', gap: 6, flex: 1, width: '100%' }}>
@@ -157,6 +163,6 @@ export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPa
           </div>
         </>
       )}
-    </>
+    </StyleCard>
   );
 };

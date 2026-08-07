@@ -3,6 +3,7 @@ import { Sun } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartHexInput } from '../../inputs/SmartHexInput';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
+import { StyleCard } from './StyleCard';
 
 interface StyleEffectsSectionProps {
   selectedPart: CharacterPart;
@@ -11,13 +12,8 @@ interface StyleEffectsSectionProps {
 
 export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({ selectedPart, onPartPropChange }) => {
   return (
-    <>
+    <StyleCard title="EFFECTS" icon={<Sun size={13} />} color="#f59e0b">
       {/* DROP SHADOW / GLOW CONTROLS */}
-      <div className="section-title" style={{ marginTop: 12, marginBottom: 8 }}>
-        <Sun size={13} className="text-gold" />
-        <span>DROP SHADOW & GLOW EFFECTS</span>
-      </div>
-
       <div className="form-field-group" style={{ marginBottom: 8 }}>
         <label className="form-label">SHADOW / GLOW COLOR</label>
         <div className="color-picker-compact">
@@ -75,6 +71,6 @@ export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({ select
           </div>
         </div>
       )}
-    </>
+    </StyleCard>
   );
 };

@@ -15,18 +15,11 @@ interface StyleTabProps {
   handleZIndexChange?: (zIndex: number) => void;
 }
 
-const sectionLabel: React.CSSProperties = {
-  fontSize: 9,
-  fontWeight: 700,
-  color: '#64748b',
-  letterSpacing: '0.6px',
-  marginBottom: 4,
-  marginTop: 12,
-};
-
 /**
- * Style inspector tab. Thin composition of focused section components, grouped
- * under muted section labels (same visual language as the Transform tab).
+ * Style inspector tab. Thin composition of focused section components; every
+ * section renders itself as a titled rectangle card (same visual language as
+ * the LAYER ORDER card) and skips itself when it does not apply to the
+ * selected part type — so no empty blocks appear.
  */
 export const StyleTab: React.FC<StyleTabProps> = ({
   selectedPart,
@@ -35,43 +28,36 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 }) => {
   return (
     <div className="inspector-section" style={{ paddingTop: 8 }}>
-      <div style={{ ...sectionLabel, marginTop: 0 }}>COLOR</div>
       <StyleColorSection
         selectedPart={selectedPart}
         onPartColorChange={handlePartColorChange}
       />
 
-      <div style={sectionLabel}>TEXT</div>
       <StyleTextFields
         selectedPart={selectedPart}
         onPartPropChange={handlePartPropChange}
       />
 
-      <div style={sectionLabel}>GEOMETRY</div>
       <StyleGeometrySection
         selectedPart={selectedPart}
         onPartPropChange={handlePartPropChange}
       />
 
-      <div style={sectionLabel}>CLONER</div>
       <StyleClonerSection
         selectedPart={selectedPart}
         onPartPropChange={handlePartPropChange}
       />
 
-      <div style={sectionLabel}>PARTICLES</div>
       <StyleParticleSection
         selectedPart={selectedPart}
         onPartPropChange={handlePartPropChange}
       />
 
-      <div style={sectionLabel}>MEDIA & MASKING</div>
       <StyleMediaSection
         selectedPart={selectedPart}
         onPartPropChange={handlePartPropChange}
       />
 
-      <div style={sectionLabel}>EFFECTS</div>
       <StyleEffectsSection
         selectedPart={selectedPart}
         onPartPropChange={handlePartPropChange}

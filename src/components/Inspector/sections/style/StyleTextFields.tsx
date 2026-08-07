@@ -1,6 +1,8 @@
 import React from 'react';
+import { Type } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
+import { StyleCard } from './StyleCard';
 
 interface StyleTextFieldsProps {
   selectedPart: CharacterPart;
@@ -8,8 +10,14 @@ interface StyleTextFieldsProps {
 }
 
 export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, onPartPropChange }) => {
+  const applies =
+    selectedPart.type === 'custom_card' ||
+    selectedPart.type === 'custom_text' ||
+    selectedPart.type === 'custom_banner';
+  if (!applies) return null;
+
   return (
-    <>
+    <StyleCard title="TEXT" icon={<Type size={13} />}>
       {/* UI CARD CUSTOMIZATION FIELDS */}
       {selectedPart.type === 'custom_card' && (
         <>
@@ -120,6 +128,6 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
           )}
         </>
       )}
-    </>
+    </StyleCard>
   );
 };

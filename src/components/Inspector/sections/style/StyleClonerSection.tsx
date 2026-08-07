@@ -2,6 +2,7 @@ import React from 'react';
 import { Grid3x3 } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
+import { StyleCard } from './StyleCard';
 
 interface StyleClonerSectionProps {
   selectedPart: CharacterPart;
@@ -17,12 +18,7 @@ export const StyleClonerSection: React.FC<StyleClonerSectionProps> = ({ selected
   };
 
   return (
-    <>
-      <div className="section-title" style={{ marginTop: 12 }}>
-        <Grid3x3 size={13} className="text-purple" />
-        <span>MOGRAPH CLONER CONFIG</span>
-      </div>
-
+    <StyleCard title="CLONER" icon={<Grid3x3 size={13} />} color="#a855f7">
       <div className="form-field-group">
         <label className="form-label">CLONER LAYOUT MODE</label>
         <select className="select-control"
@@ -138,6 +134,6 @@ export const StyleClonerSection: React.FC<StyleClonerSectionProps> = ({ selected
           </div>
         </div>
       )}
-    </>
+    </StyleCard>
   );
 };

@@ -1,6 +1,8 @@
 import React from 'react';
+import { Palette } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartHexInput } from '../../inputs/SmartHexInput';
+import { StyleCard } from './StyleCard';
 
 const COLOR_SWATCHES = [
   '#00d2ff', '#38bdf8', '#6366f1', '#a855f7', '#ec4899', '#f43f5e',
@@ -14,7 +16,7 @@ interface StyleColorSectionProps {
 
 export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPart, onPartColorChange }) => {
   return (
-    <>
+    <StyleCard title="COLOR" icon={<Palette size={13} />}>
       {/* FILL & STROKE COLOR GRID */}
       <div className="color-grid-two-col">
         <div className="color-picker-card">
@@ -68,6 +70,6 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPa
           ))}
         </div>
       </div>
-    </>
+    </StyleCard>
   );
 };

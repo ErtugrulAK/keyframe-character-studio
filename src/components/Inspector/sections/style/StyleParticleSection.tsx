@@ -2,6 +2,7 @@ import React from 'react';
 import { Atom } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
+import { StyleCard } from './StyleCard';
 
 interface StyleParticleSectionProps {
   selectedPart: CharacterPart;
@@ -17,12 +18,7 @@ export const StyleParticleSection: React.FC<StyleParticleSectionProps> = ({ sele
   };
 
   return (
-    <>
-      <div className="section-title" style={{ marginTop: 12 }}>
-        <Atom size={13} className="text-teal" />
-        <span>PARTICLE SYSTEM CONFIG</span>
-      </div>
-
+    <StyleCard title="PARTICLES" icon={<Atom size={13} />} color="#14b8a6">
       <div className="input-grid">
         <div className="form-field-group">
           <label className="form-label">PARTICLE COUNT</label>
@@ -67,6 +63,6 @@ export const StyleParticleSection: React.FC<StyleParticleSectionProps> = ({ sele
           <option value="circle_outline">Circle Ring (○)</option>
         </select>
       </div>
-    </>
+    </StyleCard>
   );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { Crop } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
+import { StyleCard } from './StyleCard';
 
 interface StyleGeometrySectionProps {
   selectedPart: CharacterPart;
@@ -9,14 +10,20 @@ interface StyleGeometrySectionProps {
 }
 
 export const StyleGeometrySection: React.FC<StyleGeometrySectionProps> = ({ selectedPart, onPartPropChange }) => {
-  return (
-    <>
-      {/* SHAPE GEOMETRY & OUTLINE */}
-      <div className="section-title" style={{ marginTop: 12, marginBottom: 8 }}>
-        <Crop size={13} className="text-teal" />
-        <span>SHAPE GEOMETRY & OUTLINE</span>
-      </div>
+  const applies =
+    selectedPart.type === 'custom_rect' ||
+    selectedPart.type === 'custom_box' ||
+    selectedPart.type === 'custom_card' ||
+    selectedPart.type === 'custom_banner' ||
+    selectedPart.type === 'custom_triangle' ||
+    selectedPart.type === 'custom_circle' ||
+    selectedPart.type === 'custom_star' ||
+    selectedPart.type === 'custom_diamond' ||
+    selectedPart.type === 'custom_freeform';
+  if (!applies) return null;
 
+  return (
+    <StyleCard title="GEOMETRY" icon={<Crop size={13} />} color="#14b8a6">
       {/* CORNER RADIUS CONTROL */}
       {(selectedPart.type === 'custom_rect' ||
         selectedPart.type === 'custom_box' ||
@@ -49,6 +56,6 @@ export const StyleGeometrySection: React.FC<StyleGeometrySectionProps> = ({ sele
           onChange={(val) => onPartPropChange('strokeProgress', val / 100)}
         />
       </div>
-    </>
+    </StyleCard>
   );
 };

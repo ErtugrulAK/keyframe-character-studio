@@ -13,6 +13,7 @@ interface StagePartLayersProps {
   totalFrames: number;
   onSelect: (id: string) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
+  onStartInnerMediaDrag?: (partId: string, e: React.MouseEvent) => void;
 }
 
 /**
@@ -31,6 +32,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   totalFrames,
   onSelect,
   onStartTranslateDrag,
+  onStartInnerMediaDrag,
 }) => {
   // Render order: every container renders before its children (so the child's
   // clip path def exists and the child draws on top of its container).
@@ -83,6 +85,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             totalFrames={totalFrames}
             onSelect={onSelect}
             onStartTranslateDrag={onStartTranslateDrag}
+            onStartInnerMediaDrag={onStartInnerMediaDrag}
           />
         );
       })}

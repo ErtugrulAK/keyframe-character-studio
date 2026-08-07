@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CharacterPart } from '../../../types/animator';
+import type { CharacterPart, Transform } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleTextFields } from './style/StyleTextFields';
 import { StyleGeometrySection } from './style/StyleGeometrySection';
@@ -10,6 +10,7 @@ import { StyleEffectsSection } from './style/StyleEffectsSection';
 
 interface StyleTabProps {
   selectedPart: CharacterPart;
+  transform: Transform;
   handlePartPropChange: (key: keyof CharacterPart, value: any) => void;
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
   handleZIndexChange?: (zIndex: number) => void;
@@ -23,6 +24,7 @@ interface StyleTabProps {
  */
 export const StyleTab: React.FC<StyleTabProps> = ({
   selectedPart,
+  transform,
   handlePartPropChange,
   handlePartColorChange,
 }) => {
@@ -55,6 +57,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
       <StyleMediaSection
         selectedPart={selectedPart}
+        transform={transform}
         onPartPropChange={handlePartPropChange}
       />
 

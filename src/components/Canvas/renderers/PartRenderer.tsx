@@ -50,6 +50,7 @@ interface PartRendererProps {
   totalFrames: number;
   onSelect: (partId: string) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
+  onStartInnerMediaDrag?: (partId: string, e: React.MouseEvent) => void;
 }
 
 export const PartRenderer: React.FC<PartRendererProps> = ({
@@ -63,6 +64,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   totalFrames,
   onSelect,
   onStartTranslateDrag,
+  onStartInnerMediaDrag,
 }) => {
   let animScaleX = 1;
   let animScaleY = 1;
@@ -73,7 +75,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
   let overrideMaskShape: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart' | undefined = undefined;
 
-  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts } = useAnimator();
+  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts, activeTool } = useAnimator();
   const targetTrack = tracks.find(t => t.partId === part.id);
 
   if (!isGhost) {
@@ -398,7 +400,10 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const featherId = `feather-${part.id}`;
 
   // Inner media rendered outside the shape's opacity scope: independent opacity,
-  // still clipped to the shape outline and moving with the shape.
+  // still clipped to the shape outline and moving with the shape. In mask tool
+  // mode the media frame gets a dashed outline + a grab handle so the user can
+  // drag the photo directly (even when it is mostly clipped out of view).
+  const isMaskTool = activeTool === 'mask';
   const mediaLayer =
     !isGhost && mediaFrame ? (
       <g clipPath={part.parentId ? `url(#containerClip-${part.parentId})` : undefined}>
@@ -411,6 +416,31 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         >
           {renderInnerMedia(mediaFrame.w, mediaFrame.h, mediaFrame.x, mediaFrame.y)}
         </g>
+      </g>
+    ) : null;
+
+  // Mask-tool grab handle for the inner media: dashed frame rendered ON TOP of
+  // the shape (like a gizmo) so the user can drag the photo back into view even
+  // when it is mostly clipped out.
+  const mediaDragHandle =
+    !isGhost && mediaFrame && isMaskTool && onStartInnerMediaDrag ? (
+      <g transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}>
+        <rect
+          x={mediaFrame.x}
+          y={mediaFrame.y}
+          width={mediaFrame.w}
+          height={mediaFrame.h}
+          fill="transparent"
+          stroke="#38bdf8"
+          strokeWidth={1}
+          strokeDasharray="5 4"
+          vectorEffect="non-scaling-stroke"
+          style={{ cursor: 'grab' }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            onStartInnerMediaDrag(part.id, e);
+          }}
+        />
       </g>
     ) : null;
 
@@ -528,6 +558,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
         pathContent
       )}
       </g>
+      {mediaDragHandle}
     </React.Fragment>
   );
 };

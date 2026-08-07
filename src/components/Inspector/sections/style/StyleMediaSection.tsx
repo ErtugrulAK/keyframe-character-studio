@@ -1,10 +1,12 @@
 import React, { useRef } from 'react';
 import { Crop, Upload } from 'lucide-react';
-import type { CharacterPart } from '../../../../types/animator';
+import type { CharacterPart, Transform } from '../../../../types/animator';
 import { StyleCard } from './StyleCard';
+import { ContainerAssignControl } from '../../shared/ContainerAssignControl';
 
 interface StyleMediaSectionProps {
   selectedPart: CharacterPart;
+  transform: Transform;
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
 }
 
@@ -13,7 +15,7 @@ interface StyleMediaSectionProps {
  * shape media masking (Canva-style) section. Owns the file input refs and the
  * FileReader handling for uploaded media.
  */
-export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPart, onPartPropChange }) => {
+export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPart, transform, onPartPropChange }) => {
   const imageFileInputRef = useRef<HTMLInputElement>(null);
   const videoFileInputRef = useRef<HTMLInputElement>(null);
   const innerMediaFileInputRef = useRef<HTMLInputElement>(null);
@@ -130,6 +132,7 @@ export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPa
         selectedPart.type === 'custom_box' ||
         selectedPart.type === 'custom_rect' ||
         selectedPart.type === 'custom_triangle' ||
+        selectedPart.type === 'custom_parallelogram' ||
         selectedPart.type === 'custom_freeform') && (
         <>
           <div className="form-field-group">
@@ -160,6 +163,13 @@ export const StyleMediaSection: React.FC<StyleMediaSectionProps> = ({ selectedPa
                 style={{ display: 'none' }}
               />
             </div>
+          </div>
+
+          {/* Element inside (container): put another element into this shape,
+              just like a photo — clipped to the outline and moving together */}
+          <div className="form-field-group" style={{ marginTop: 8 }}>
+            <label className="form-label">ELEMENT INSIDE (CONTAINER)</label>
+            <ContainerAssignControl selectedPart={selectedPart} transform={transform} onPartPropChange={onPartPropChange} />
           </div>
         </>
       )}

@@ -49,7 +49,7 @@ export const StageCanvas: React.FC = () => {
   const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'mask_point' | 'mask_in' | 'mask_out' | null>(null);
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'mask_point' | 'mask_in' | 'mask_out' | 'mask_media' | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; initialMaskX?: number; initialMaskY?: number; initialMaskPoints?: MaskPoint[] }>({
     x: 0,
@@ -142,7 +142,6 @@ export const StageCanvas: React.FC = () => {
     if (activeTool === 'freeform_draw') return; // drawing tool: do not move parts
     e.stopPropagation();
     setSelectedPartId(partId);
-
     const transform = getComputedTransform(partId, currentFrame);
     if (!transform) return;
 
@@ -152,7 +151,6 @@ export const StageCanvas: React.FC = () => {
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
     
     const part = characterParts.find(p => p.id === partId);
-    
     const initialTransforms: Record<string, Transform> = {};
     const relevantIds = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
     relevantIds.forEach(id => {
@@ -167,6 +165,31 @@ export const StageCanvas: React.FC = () => {
       initialTransforms,
       initialMaskX: transform.maskOffsetX ?? part?.maskOffsetX ?? 0,
       initialMaskY: transform.maskOffsetY ?? part?.maskOffsetY ?? 0,
+    });
+  };
+
+  // Drag the masked inner media directly (mask tool active): updates
+  // maskOffsetX/Y in the shape's local space so the photo moves with the cursor.
+  const startInnerMediaDragForPart = (partId: string, e: React.MouseEvent) => {
+    if (appMode === 'broadcast' || e.button !== 0) return;
+    e.stopPropagation();
+    setSelectedPartId(partId);
+
+    const transform = getComputedTransform(partId, currentFrame);
+    const part = characterParts.find((p) => p.id === partId);
+    if (!transform || !part) return;
+
+    startBatchInteraction();
+    setIsDragging(true);
+    setDragMode('mask_media');
+    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+    setDragStart({
+      x: svgX,
+      y: svgY,
+      initialTransform: { ...transform },
+      initialTransforms: {},
+      initialMaskX: transform.maskOffsetX ?? part.maskOffsetX ?? 0,
+      initialMaskY: transform.maskOffsetY ?? part.maskOffsetY ?? 0,
     });
   };
 
@@ -297,6 +320,32 @@ export const StageCanvas: React.FC = () => {
         const w = Math.abs(svgX - dragStart.x);
         const h = Math.abs(svgY - dragStart.y);
         setMarqueeRect({ x: minX, y: minY, w, h });
+        return;
+      }
+
+      if (dragMode === 'mask_media') {
+        // Drag the masked inner media: convert the world delta into the shape's
+        // local space (inverse rotation, then inverse scale) and update the mask offsets.
+        const dx = svgX - dragStart.x;
+        const dy = svgY - dragStart.y;
+        const sX = dragStart.initialTransform.scaleX || 1;
+        const sY = dragStart.initialTransform.scaleY || 1;
+        const rotDeg = dragStart.initialTransform.rotation || 0;
+        const rotRad = (rotDeg * Math.PI) / 180;
+        const cosR = Math.cos(-rotRad);
+        const sinR = Math.sin(-rotRad);
+        const localDx = (dx * cosR - dy * sinR) / sX;
+        const localDy = (dx * sinR + dy * cosR) / sY;
+        const newMaskX = Math.round(((dragStart.initialMaskX || 0) + localDx) * 100) / 100;
+        const newMaskY = Math.round(((dragStart.initialMaskY || 0) + localDy) * 100) / 100;
+        updateCharacterPart(selectedPartId, {
+          maskOffsetX: newMaskX,
+          maskOffsetY: newMaskY,
+        });
+        updateCurrentTransform({
+          maskOffsetX: newMaskX,
+          maskOffsetY: newMaskY,
+        });
         return;
       }
 
@@ -840,6 +889,7 @@ export const StageCanvas: React.FC = () => {
                 totalFrames={totalFrames}
                 onSelect={setSelectedPartId}
                 onStartTranslateDrag={startTranslateDragForPart}
+                onStartInnerMediaDrag={startInnerMediaDragForPart}
               />
 
               {/* Freeform Drawing Preview (active draw tool) */}

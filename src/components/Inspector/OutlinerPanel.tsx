@@ -12,7 +12,16 @@ import {
   ChevronRight,
   ChevronUp,
   GripVertical,
+  RectangleHorizontal,
+  Square,
+  Triangle,
+  Star,
+  Diamond,
+  PenTool,
+  Pill,
+  Flag,
 } from 'lucide-react';
+import { ParallelogramIcon } from '../Toolbar/drawers/ElementsDrawer';
 
 export const OutlinerPanel: React.FC = () => {
   const {
@@ -40,6 +49,26 @@ export const OutlinerPanel: React.FC = () => {
         return <VideoIcon size={12} className="text-purple" />;
       case 'custom_card':
         return <Layers size={12} className="text-gold" />;
+      case 'custom_rect':
+      case 'custom_box':
+        return <RectangleHorizontal size={12} className="text-teal" />;
+      case 'custom_square':
+      case 'custom_circle':
+        return <Square size={12} className="text-teal" />;
+      case 'custom_triangle':
+        return <Triangle size={12} className="text-teal" />;
+      case 'custom_star':
+        return <Star size={12} className="text-gold" />;
+      case 'custom_diamond':
+        return <Diamond size={12} className="text-gold" />;
+      case 'custom_parallelogram':
+        return <ParallelogramIcon size={12} className="text-gold" />;
+      case 'custom_freeform':
+        return <PenTool size={12} className="text-cyan" />;
+      case 'custom_capsule':
+        return <Pill size={12} className="text-blue" />;
+      case 'custom_banner':
+        return <Flag size={12} className="text-blue" />;
       default:
         return <Box size={12} className="text-blue" />;
     }

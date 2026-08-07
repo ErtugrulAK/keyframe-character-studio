@@ -11,7 +11,7 @@ import {
   PenTool,
 } from 'lucide-react';
 
-const ParallelogramIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
+export const ParallelogramIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
   <svg
     width={size}
     height={size}

@@ -2,7 +2,7 @@ import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 import { getPartBounds } from '../../../utils/bounds';
-import { renderShapeOutline } from '../../../utils/shapeOutlineHelper';
+import { renderShapeOutline, getPartCornerPoints } from '../../../utils/shapeOutlineHelper';
 
 export type ScaleMode = 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom';
 
@@ -42,6 +42,20 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
     >
       {/* Shape-Conforming Dashed Selection Outline */}
       {renderShapeOutline(selectedPart, halfW, halfH, zScale)}
+
+      {/* Shape corner points on the borders (like the freeform's vertex dots) */}
+      {getPartCornerPoints(selectedPart, halfW, halfH).map((c, i) => (
+        <circle
+          key={`corner-pt-${i}`}
+          cx={c.x}
+          cy={c.y}
+          r={3.5 * zScale}
+          fill="#ffffff"
+          stroke="#00d2ff"
+          strokeWidth={1.5 * zScale}
+          style={{ pointerEvents: 'none' }}
+        />
+      ))}
 
       {!isGroup && (
         <>

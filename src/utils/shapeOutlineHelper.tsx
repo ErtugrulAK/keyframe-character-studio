@@ -9,6 +9,71 @@ interface OutlineStyleProps {
 }
 
 /**
+ * Actual corner/vertex points of a shape in its local space (scaled to the
+ * current bounds) — used to render small corner markers on the selection gizmo,
+ * mirroring the freeform's numbered vertex dots for every polygon type.
+ * Circles get the 4 bounding-box points ("use it like a square").
+ */
+export function getPartCornerPoints(
+  part: CharacterPart,
+  halfW: number,
+  halfH: number
+): { x: number; y: number }[] {
+  switch (part.type) {
+    case 'custom_triangle': {
+      const sx = halfW / 35;
+      const sy = halfH / 30;
+      return [
+        { x: 0, y: -35 * sy },
+        { x: 35 * sx, y: 25 * sy },
+        { x: -35 * sx, y: 25 * sy },
+      ];
+    }
+    case 'custom_diamond': {
+      const sx = halfW / 35;
+      const sy = halfH / 35;
+      return [
+        { x: 0, y: -35 * sy },
+        { x: 35 * sx, y: 0 },
+        { x: 0, y: 35 * sy },
+        { x: -35 * sx, y: 0 },
+      ];
+    }
+    case 'custom_parallelogram': {
+      const sx = halfW / 60;
+      const sy = halfH / 30;
+      return [
+        { x: -35 * sx, y: -30 * sy },
+        { x: 85 * sx, y: -30 * sy },
+        { x: 35 * sx, y: 30 * sy },
+        { x: -85 * sx, y: 30 * sy },
+      ];
+    }
+    case 'custom_star': {
+      const sx = halfW / 35;
+      const sy = halfH / 32.5;
+      return [
+        [0, -35], [10, -10], [35, -10], [15, 5], [23, 30],
+        [0, 15], [-23, 30], [-15, 5], [-35, -10], [-10, -10],
+      ].map(([px, py]) => ({ x: px * sx, y: py * sy }));
+    }
+    case 'custom_circle':
+    case 'custom_rect':
+    case 'custom_box':
+    case 'custom_card':
+    case 'custom_banner':
+    case 'custom_capsule':
+    default:
+      return [
+        { x: -halfW, y: -halfH },
+        { x: halfW, y: -halfH },
+        { x: halfW, y: halfH },
+        { x: -halfW, y: halfH },
+      ];
+  }
+}
+
+/**
  * Calculates scaling factors and SVG path/element for a given CharacterPart's
  * actual shape (e.g. circle, star, triangle, diamond, maskShape, or Bezier mask).
  */

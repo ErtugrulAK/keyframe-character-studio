@@ -7,8 +7,6 @@ import { TransformOpacityCard } from './transform/TransformOpacityCard';
 import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
-import { TransformContainerCard } from './transform/TransformContainerCard';
-import { worldToContainerLocal } from '../../../utils/containerMath';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -18,8 +16,6 @@ interface TransformTabProps {
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
   handleZIndexChange?: (zIndex: number) => void;
-  /** Composed transform of the part's container (when selectedPart.parentId is set) */
-  containerTransform?: Transform | null;
 }
 
 /**
@@ -33,27 +29,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   updateCurrentTransform,
   handlePartPropChange,
   handleZIndexChange,
-  containerTransform,
 }) => {
-  // When the part lives inside a container, the inspector edits WORLD values
-  // (as displayed) but they must be stored container-relative. Convert every
-  // transform update through the container's inverse transform.
-  const wrappedUpdate = (patch: Partial<Transform>) => {
-    if (!containerTransform) {
-      updateCurrentTransform(patch);
-      return;
-    }
-    const world = { ...transform, ...patch };
-    const local = worldToContainerLocal(world, containerTransform);
-    updateCurrentTransform({
-      x: local.x,
-      y: local.y,
-      rotation: local.rotation,
-      scaleX: local.scaleX,
-      scaleY: local.scaleY,
-      opacity: local.opacity,
-    });
-  };
 
   return (
     <>
@@ -65,17 +41,17 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <TransformPositionRotationCard
               transform={transform}
-              onUpdate={wrappedUpdate}
+              onUpdate={updateCurrentTransform}
             />
 
             <TransformScaleCard
               transform={transform}
-              onUpdate={wrappedUpdate}
+              onUpdate={updateCurrentTransform}
             />
 
             <TransformOpacityCard
               transform={transform}
-              onUpdate={wrappedUpdate}
+              onUpdate={updateCurrentTransform}
             />
           </div>
         </div>
@@ -87,21 +63,13 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         )}
 
-        {handlePartPropChange && (
-          <TransformContainerCard
-            selectedPart={selectedPart}
-            transform={transform}
-            onPartPropChange={handlePartPropChange}
-          />
-        )}
-
         {/* 4 control points only make sense for regular shapes — hand-drawn
             freeform polygons use the per-vertex editor below instead */}
         {selectedPart.type !== 'custom_freeform' && (
           <TransformControlPoints
             selectedPart={selectedPart}
             transform={transform}
-            onUpdate={wrappedUpdate}
+            onUpdate={updateCurrentTransform}
           />
         )}
 

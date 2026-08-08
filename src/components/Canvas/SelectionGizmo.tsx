@@ -1,9 +1,7 @@
 import React from 'react';
 import type { CharacterPart, Track, Transform } from '../../types/animator';
 import { getPartBounds } from '../../utils/bounds';
-import { CANVAS_CENTER_X, CANVAS_CENTER_Y } from '../../utils/viewportMath';
 import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
-import { MaskGizmo } from './overlays/MaskGizmo';
 
 interface SelectionGizmoProps {
   selectedPartIds: string[];
@@ -13,17 +11,14 @@ interface SelectionGizmoProps {
   selectedPart: CharacterPart | undefined;
   selectedTransform: Transform | null;
   tracks: Track[];
-  activeTool: string | null;
   zScale: number;
   onRotateStart: (e: React.MouseEvent) => void;
   onScaleStart: (e: React.MouseEvent, mode?: ScaleMode) => void;
-  onMaskPointDragStart: (e: React.MouseEvent, index: number, handleType: 'point' | 'in' | 'out') => void;
 }
 
 /**
  * Interactive transform gizmo layer for the stage canvas.
- * Renders a group gizmo for multi-selection, a transform gizmo for a single
- * part, or the mask gizmo when the mask tool is active.
+ * Renders a group gizmo for multi-selection or a single-part transform gizmo.
  */
 export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
   selectedPartIds,
@@ -33,11 +28,9 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
   selectedPart,
   selectedTransform,
   tracks,
-  activeTool,
   zScale,
   onRotateStart,
   onScaleStart,
-  onMaskPointDragStart,
 }) => {
   if (selectedPartIds.length > 1) {
     let minX = Infinity;
@@ -76,11 +69,11 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
 
     return (
       <TransformGizmo
-        selectedPart={characterParts[0]} // dummy
+        selectedPart={characterParts[0]}
         selectedTransform={groupTransform}
         zScale={zScale}
-        onRotateMouseDown={() => {}} // disabled for groups
-        onScaleMouseDown={() => {}} // disabled for groups
+        onRotateMouseDown={() => {}}
+        onScaleMouseDown={() => {}}
         isGroup={true}
         overrideHalfW={halfW}
         overrideHalfH={halfH}
@@ -91,31 +84,18 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
   if (selectedPart && selectedTransform) {
     const selTrack = tracks.find((t) => t.partId === selectedPart.id);
     if (selTrack && selTrack.editVisible === false) return null;
-    // Freeform shapes use the numbered vertex markers instead of the transform
-    // gizmo (no dashed outline, no corner squares, no edge midpoint circles).
+
     const isFreeform = selectedPart.type === 'custom_freeform';
+    if (isFreeform) return null;
+
     return (
-      <>
-        {!isFreeform && activeTool !== 'mask' && (
-          <TransformGizmo
-            selectedPart={selectedPart}
-            selectedTransform={selectedTransform}
-            zScale={zScale}
-            onRotateMouseDown={onRotateStart}
-            onScaleMouseDown={onScaleStart}
-          />
-        )}
-        {activeTool === 'mask' && selectedPart.mask && selectedPart.mask.enabled && (
-          <g transform={`translate(${CANVAS_CENTER_X + selectedTransform.x}, ${CANVAS_CENTER_Y + selectedTransform.y}) rotate(${selectedTransform.rotation})`}>
-            <MaskGizmo
-              part={selectedPart}
-              transform={selectedTransform}
-              zoomLevel={zScale}
-              onPointDragStart={onMaskPointDragStart}
-            />
-          </g>
-        )}
-      </>
+      <TransformGizmo
+        selectedPart={selectedPart}
+        selectedTransform={selectedTransform}
+        zScale={zScale}
+        onRotateMouseDown={onRotateStart}
+        onScaleMouseDown={onScaleStart}
+      />
     );
   }
 

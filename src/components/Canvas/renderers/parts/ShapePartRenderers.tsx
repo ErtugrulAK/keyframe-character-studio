@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
-import { buildFreeformPath, getFreeformExtents, getFreeformPerimeter } from '../../../../utils/freeform';
+import { buildFreeformPath, getFreeformPerimeter } from '../../../../utils/freeform';
 
 interface ShapePartProps {
   part: CharacterPart;
@@ -8,7 +8,6 @@ interface ShapePartProps {
   stroke: string;
   isSelected: boolean;
   isGhost: boolean;
-  renderInnerMedia: (shapeWidth: number, shapeHeight: number, xOff?: number, yOff?: number) => React.ReactNode;
 }
 
 const getStrokeDashProps = (part: CharacterPart, totalPerimeter: number) => {
@@ -28,9 +27,9 @@ const getStrokeDashProps = (part: CharacterPart, totalPerimeter: number) => {
   };
 };
 
-export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMedia }: ShapePartProps): React.ReactNode => {
+export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartProps): React.ReactNode => {
   const isCustomStroke = Boolean(part.strokeColor && part.strokeColor !== '#101218' && part.strokeColor !== 'none' && part.strokeColor !== 'transparent');
-  const hasStroke = (part.strokeProgress === undefined || part.strokeProgress > 0) && (!part.innerMediaUrl || isCustomStroke);
+  const hasStroke = (part.strokeProgress === undefined || part.strokeProgress > 0) && !isCustomStroke;
   const strokeToUse = hasStroke ? stroke : (isSelected ? '#38bdf8' : 'none');
 
   switch (part.type) {
@@ -49,25 +48,11 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
         </g>
       );
 
-    case 'custom_circle': {
-      const clipId = `clip-circle-${part.id}`;
+    case 'custom_circle':
       return (
         <g>
           <circle cx={0} cy={0} r={30} fill="rgba(0,0,0,0.001)" />
-          {part.innerMediaUrl && (
-            <defs>
-              <mask id={clipId}>
-                <circle cx={0} cy={0} r={30} fill="white" />
-              </mask>
-            </defs>
-          )}
-          {part.innerMediaUrl ? (
-            <g mask={`url(#${clipId})`}>
-              {renderInnerMedia(60, 60, -30, -30)}
-            </g>
-          ) : (
-            <circle cx={0} cy={0} r={30} fill={fill} />
-          )}
+          <circle cx={0} cy={0} r={30} fill={fill} />
           <circle
             cx={0}
             cy={0}
@@ -80,27 +65,12 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           />
         </g>
       );
-    }
 
-    case 'custom_box': {
-      const clipId = `clip-box-${part.id}`;
+    case 'custom_box':
       return (
         <g>
           <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
-          {part.innerMediaUrl && (
-            <defs>
-              <mask id={clipId}>
-                <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill="white" />
-              </mask>
-            </defs>
-          )}
-          {part.innerMediaUrl ? (
-            <g mask={`url(#${clipId})`}>
-              {renderInnerMedia(60, 60, -30, -30)}
-            </g>
-          ) : (
-            <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill={fill} />
-          )}
+          <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill={fill} />
           <rect
             x={-30}
             y={-30}
@@ -115,27 +85,12 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           />
         </g>
       );
-    }
 
-    case 'custom_rect': {
-      const clipId = `clip-rect-${part.id}`;
+    case 'custom_rect':
       return (
         <g>
           <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
-          {part.innerMediaUrl && (
-            <defs>
-              <mask id={clipId}>
-                <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill="white" />
-              </mask>
-            </defs>
-          )}
-          {part.innerMediaUrl ? (
-            <g mask={`url(#${clipId})`}>
-              {renderInnerMedia(120, 60, -60, -30)}
-            </g>
-          ) : (
-            <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill={fill} />
-          )}
+          <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill={fill} />
           <rect
             x={-60}
             y={-30}
@@ -150,27 +105,12 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           />
         </g>
       );
-    }
 
-    case 'custom_triangle': {
-      const clipId = `clip-tri-${part.id}`;
+    case 'custom_triangle':
       return (
         <g>
           <polygon points="0,-35 35,25 -35,25" fill="rgba(0,0,0,0.001)" />
-          {part.innerMediaUrl && (
-            <defs>
-              <mask id={clipId}>
-                <polygon points="0,-35 35,25 -35,25" fill="white" />
-              </mask>
-            </defs>
-          )}
-          {part.innerMediaUrl ? (
-            <g mask={`url(#${clipId})`}>
-              {renderInnerMedia(70, 60, -35, -35)}
-            </g>
-          ) : (
-            <polygon points="0,-35 35,25 -35,25" fill={fill} />
-          )}
+          <polygon points="0,-35 35,25 -35,25" fill={fill} />
           <polygon
             points="0,-35 35,25 -35,25"
             fill="none"
@@ -181,27 +121,12 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           />
         </g>
       );
-    }
 
-    case 'custom_parallelogram': {
-      const clipId = `clip-para-${part.id}`;
+    case 'custom_parallelogram':
       return (
         <g>
           <polygon points="-35,-30 85,-30 35,30 -85,30" fill="rgba(0,0,0,0.001)" />
-          {part.innerMediaUrl && (
-            <defs>
-              <mask id={clipId}>
-                <polygon points="-35,-30 85,-30 35,30 -85,30" fill="white" />
-              </mask>
-            </defs>
-          )}
-          {part.innerMediaUrl ? (
-            <g mask={`url(#${clipId})`}>
-              {renderInnerMedia(170, 60, -85, -30)}
-            </g>
-          ) : (
-            <polygon points="-35,-30 85,-30 35,30 -85,30" fill={fill} />
-          )}
+          <polygon points="-35,-30 85,-30 35,30 -85,30" fill={fill} />
           <polygon
             points="-35,-30 85,-30 35,30 -85,30"
             fill="none"
@@ -212,7 +137,6 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
           />
         </g>
       );
-    }
 
     case 'custom_banner':
       return (
@@ -283,46 +207,18 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, renderInnerMed
       const points = part.points && part.points.length >= 2 ? part.points : undefined;
       const d = points ? buildFreeformPath(points) : '';
       if (!d) return null;
-      const clipId = `clip-freeform-${part.id}`;
-      const extents = points ? getFreeformExtents(points) : null;
-      const mediaW = extents ? extents.maxX - extents.minX : 100;
-      const mediaH = extents ? extents.maxY - extents.minY : 100;
       return (
         <g>
           <path d={d} fill="rgba(0,0,0,0.001)" />
-          {part.innerMediaUrl && (
-            <defs>
-              <mask id={clipId}>
-                <path d={d} fill="white" />
-              </mask>
-            </defs>
-          )}
-          {part.innerMediaUrl ? (
-            <g mask={`url(#${clipId})`}>
-              {renderInnerMedia(mediaW, mediaH, extents ? extents.minX : -mediaW / 2, extents ? extents.minY : -mediaH / 2)}
-            </g>
-          ) : (
-            <path
-              d={d}
-              fill={fill}
-              stroke={strokeToUse}
-              strokeWidth={isSelected ? 2 : 1.5}
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-              {...getStrokeDashProps(part, points ? getFreeformPerimeter(points) : 0)}
-            />
-          )}
-          {part.innerMediaUrl && (
-            <path
-              d={d}
-              fill="none"
-              stroke={strokeToUse}
-              strokeWidth={isSelected ? 2 : 1.5}
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-              {...getStrokeDashProps(part, points ? getFreeformPerimeter(points) : 0)}
-            />
-          )}
+          <path
+            d={d}
+            fill={fill}
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, points ? getFreeformPerimeter(points) : 0)}
+          />
         </g>
       );
     }

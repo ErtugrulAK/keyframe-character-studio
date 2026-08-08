@@ -4,7 +4,6 @@ import { PartRenderer } from './renderers/PartRenderer';
 
 interface StagePartLayersProps {
   sortedParts: CharacterPart[];
-  focusModeNodeId: string | null;
   appMode: AppMode;
   broadcastState: Record<string, BroadcastObjectState>;
   currentFrame: number;
@@ -13,23 +12,14 @@ interface StagePartLayersProps {
   totalFrames: number;
   onSelect: (id: string) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
-  onStartInnerMediaDrag?: (partId: string, e: React.MouseEvent) => void;
-  onStartInnerMediaScale?: (partId: string, e: React.MouseEvent) => void;
-  onStartInnerMediaRotate?: (partId: string, e: React.MouseEvent) => void;
-  onStartChildScale?: (partId: string, e: React.MouseEvent) => void;
-  onStartChildRotate?: (partId: string, e: React.MouseEvent) => void;
-  /** Inverse camera zoom — forwarded to PartRenderer for screen-constant gizmo sizes. */
-  zScale?: number;
 }
 
 /**
  * Renders the character part layers inside the stage <g>.
- * Handles the active parts map, the broadcast-mode frame evaluation, and the
- * focus-mode dimmer + focused part overlay.
+ * Sorted by zIndex; each part gets its own PartRenderer.
  */
 export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   sortedParts,
-  focusModeNodeId,
   appMode,
   broadcastState,
   currentFrame,
@@ -38,46 +28,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   totalFrames,
   onSelect,
   onStartTranslateDrag,
-  onStartInnerMediaDrag,
-  onStartInnerMediaScale,
-  onStartInnerMediaRotate,
-  onStartChildScale,
-  onStartChildRotate,
-  zScale = 1,
 }) => {
-  // Render order: every container renders before its children (so the child's
-  // clip path def exists and the child draws on top of its container).
-  const orderedParts: CharacterPart[] = [];
-  const placed = new Set<string>();
-  for (const p of sortedParts) {
-    if (placed.has(p.id)) continue;
-    // Children are NOT pushed here: sortedParts is zIndex-ordered and a child
-    // usually sits BELOW its container in zIndex, so pushing it directly would
-    // render it UNDER the container's opaque fill (invisible inside the shape).
-    // Children join right after their parent below.
-    if (p.parentId) continue;
-    orderedParts.push(p);
-    placed.add(p.id);
-    for (const c of sortedParts) {
-      if (c.parentId === p.id && !placed.has(c.id)) {
-        orderedParts.push(c);
-        placed.add(c.id);
-      }
-    }
-  }
-  // Safety net: anything never placed (e.g. orphaned child) still renders.
-  for (const p of sortedParts) {
-    if (!placed.has(p.id)) {
-      orderedParts.push(p);
-      placed.add(p.id);
-    }
-  }
-
   return (
     <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
-      {orderedParts.map((part) => {
-        if (focusModeNodeId && (part.id === focusModeNodeId || part.parentId === focusModeNodeId)) return null; // Render in the focus overlay
-
+      {sortedParts.map((part) => {
         let frameToEvaluate = currentFrame;
 
         if (appMode === 'broadcast') {
@@ -102,75 +56,13 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             part={part}
             transform={transform}
             isSelected={selectedPartId === part.id}
-            isChildOfSelected={!!part.parentId && selectedPartId === part.parentId}
             currentFrame={frameToEvaluate}
             totalFrames={totalFrames}
             onSelect={onSelect}
             onStartTranslateDrag={onStartTranslateDrag}
-            onStartInnerMediaDrag={onStartInnerMediaDrag}
-            onStartInnerMediaScale={onStartInnerMediaScale}
-            onStartInnerMediaRotate={onStartInnerMediaRotate}
-            onStartChildScale={onStartChildScale}
-            onStartChildRotate={onStartChildRotate}
-            zScale={zScale}
           />
         );
       })}
-
-      {/* Focus Mode Overlay and Focused Part */}
-      {focusModeNodeId && (
-        <>
-          <rect
-            className="focus-spotlight-dimmer"
-            x={-300000}
-            y={-300000}
-            width={600000}
-            height={600000}
-            fill="rgba(0, 0, 0, 0.7)"
-          />
-          {/* Focus overlay renders the focused part AND its children (the
-              container's clip defs exist because the container still renders
-              in the dimmed layer) — so shapes inside a shape are visible and
-              editable (dashed frame + handles) while in the mask layer. */}
-          {sortedParts.filter((p) => p.id === focusModeNodeId || p.parentId === focusModeNodeId).map((part) => {
-            const transform = getComputedTransform(part.id, currentFrame);
-            const isFocused = part.id === focusModeNodeId;
-            return (
-              <g key={`focus-${part.id}`}>
-                {isFocused && (
-                  <PartRenderer
-                    part={part}
-                    transform={transform}
-                    isSelected={true}
-                    currentFrame={currentFrame}
-                    totalFrames={totalFrames}
-                    onSelect={onSelect}
-                    onStartTranslateDrag={onStartTranslateDrag}
-                    isGhost={true}
-                    isFocusGhost={true}
-                  />
-                )}
-                <PartRenderer
-                  part={part}
-                  transform={transform}
-                  isSelected={isFocused}
-                  isChildOfSelected={false}
-                  currentFrame={currentFrame}
-                  totalFrames={totalFrames}
-                  onSelect={onSelect}
-                  onStartTranslateDrag={onStartTranslateDrag}
-                  onStartInnerMediaDrag={onStartInnerMediaDrag}
-                  onStartInnerMediaScale={onStartInnerMediaScale}
-                  onStartInnerMediaRotate={onStartInnerMediaRotate}
-                  onStartChildScale={onStartChildScale}
-                  onStartChildRotate={onStartChildRotate}
-                  zScale={zScale}
-                />
-              </g>
-            );
-          })}
-        </>
-      )}
     </g>
   );
 };

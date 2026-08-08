@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { KeyframesTab } from './sections/KeyframesTab';
-import { MaskTab } from './sections/MaskTab';
 import { DuplicateTab } from './sections/DuplicateTab';
 import {
   Sliders,
@@ -12,7 +11,6 @@ import {
   Activity,
   Palette,
   Diamond,
-  Scissors,
   CopyPlus,
 } from 'lucide-react';
 
@@ -27,17 +25,9 @@ export const DetailsPanel: React.FC = () => {
     updateCurrentTransform,
     deletePart,
     duplicateSelectedPart,
-    focusModeNodeId,
   } = useAnimator();
 
-  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'mask' | 'duplicate'>('transform');
-
-  // Double-clicking an element opens the mask mode: surface the Mask tab too.
-  useEffect(() => {
-    if (focusModeNodeId) {
-      setActiveTabSection('mask');
-    }
-  }, [focusModeNodeId]);
+  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'duplicate'>('transform');
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -122,13 +112,6 @@ export const DetailsPanel: React.FC = () => {
             <span>Keyframes</span>
           </button>
           <button
-            className={`tab-btn ${activeTabSection === 'mask' ? 'active' : ''}`}
-            onClick={() => setActiveTabSection('mask')}
-          >
-            <Scissors size={12} className="text-cyan" />
-            <span>Mask</span>
-          </button>
-          <button
             className={`tab-btn ${activeTabSection === 'duplicate' ? 'active' : ''}`}
             onClick={() => setActiveTabSection('duplicate')}
           >
@@ -150,14 +133,12 @@ export const DetailsPanel: React.FC = () => {
               updateCurrentTransform={updateCurrentTransform}
               handlePartPropChange={handlePartPropChange}
               handleZIndexChange={handleZIndexChange}
-              containerTransform={selectedPart.parentId ? getComputedTransform(selectedPart.parentId, currentFrame) : null}
             />
           )}
 
           {activeTabSection === 'style' && (
             <StyleTab
               selectedPart={selectedPart}
-              transform={transform}
               handlePartPropChange={handlePartPropChange}
               handlePartColorChange={handlePartColorChange}
               handleZIndexChange={handleZIndexChange}
@@ -167,15 +148,6 @@ export const DetailsPanel: React.FC = () => {
           {activeTabSection === 'keyframes' && (
             <KeyframesTab
               selectedPart={selectedPart}
-            />
-          )}
-
-          {activeTabSection === 'mask' && (
-            <MaskTab
-              selectedPart={selectedPart}
-              transform={transform}
-              updateCurrentTransform={updateCurrentTransform}
-              handlePartPropChange={handlePartPropChange}
             />
           )}
 

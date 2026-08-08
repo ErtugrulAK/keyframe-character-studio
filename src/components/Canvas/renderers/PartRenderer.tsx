@@ -1,44 +1,14 @@
 import React from 'react';
-import type { CharacterPart, Transform, MaskPoint } from '../../../types/animator';
+import type { CharacterPart, Transform } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
 import { sampleCustomPreset } from './utils/presetSampler';
 import { renderShapePart } from './parts/ShapePartRenderers';
 import { renderMediaPart } from './parts/MediaPartRenderer';
-import { getContainerOutlineElement } from '../../../utils/containerOutline';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
-import { getYouTubeEmbedInfo } from './utils/youtubeHelper';
-import { getFreeformExtents } from '../../../utils/freeform';
-import { renderShapeOutline } from '../../../utils/shapeOutlineHelper';
-import { getPartBounds } from '../../../utils/bounds';
 
-/**
- * Per-type framing (size + local origin + clip id) of the media masked inside
- * a shape. Mirrors ShapePartRenderers so the sibling media layer lines up with
- * the shape's own inner-media clip.
- */
-export const getInnerMediaFrame = (
-  part: CharacterPart
-): { w: number; h: number; x: number; y: number; clipId: string } | null => {
-  switch (part.type) {
-    case 'custom_circle':
-      return { w: 60, h: 60, x: -30, y: -30, clipId: `clip-circle-${part.id}` };
-    case 'custom_box':
-      return { w: 60, h: 60, x: -30, y: -30, clipId: `clip-box-${part.id}` };
-    case 'custom_rect':
-      return { w: 120, h: 60, x: -60, y: -30, clipId: `clip-rect-${part.id}` };
-    case 'custom_triangle':
-      return { w: 70, h: 60, x: -35, y: -35, clipId: `clip-tri-${part.id}` };
-    case 'custom_parallelogram':
-      return { w: 170, h: 60, x: -85, y: -30, clipId: `clip-para-${part.id}` };
-    case 'custom_freeform': {
-      const ext = getFreeformExtents(part.points || []);
-      const w = ext ? ext.maxX - ext.minX : 100;
-      const h = ext ? ext.maxY - ext.minY : 100;
-      return { w, h, x: ext ? ext.minX : -50, y: ext ? ext.minY : -50, clipId: `clip-freeform-${part.id}` };
-    }
-    default:
-      return null;
-  }
+/** Stub — removed with mask system */
+export const getInnerMediaFrame = (_part: CharacterPart): { w: number; h: number; x: number; y: number; clipId: string } | null => {
+  return { w: 60, h: 60, x: -30, y: -30, clipId: 'stub' };
 };
 
 interface PartRendererProps {
@@ -48,20 +18,11 @@ interface PartRendererProps {
   ghostColor?: string;
   isFocusGhost?: boolean;
   isSelected?: boolean;
-  /** This part lives inside the currently selected container — draw its dashed outline */
   isChildOfSelected?: boolean;
   currentFrame: number;
   totalFrames: number;
   onSelect: (partId: string) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
-  onStartInnerMediaDrag?: (partId: string, e: React.MouseEvent) => void;
-  onStartInnerMediaScale?: (partId: string, e: React.MouseEvent) => void;
-  onStartInnerMediaRotate?: (partId: string, e: React.MouseEvent) => void;
-  onStartChildScale?: (partId: string, e: React.MouseEvent) => void;
-  onStartChildRotate?: (partId: string, e: React.MouseEvent) => void;
-  /** Inverse camera zoom (1 / zoomLevel) so gizmo handles stay a constant
-      pixel size on screen regardless of pan/zoom (see StageCanvas zScale). */
-  zScale?: number;
 }
 
 export const PartRenderer: React.FC<PartRendererProps> = ({
@@ -71,17 +32,10 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   ghostColor,
   isFocusGhost = false,
   isSelected = false,
-  isChildOfSelected = false,
   currentFrame,
   totalFrames,
   onSelect,
   onStartTranslateDrag,
-  onStartInnerMediaDrag,
-  onStartInnerMediaScale,
-  onStartInnerMediaRotate,
-  onStartChildScale,
-  onStartChildRotate,
-  zScale = 1,
 }) => {
   let animScaleX = 1;
   let animScaleY = 1;
@@ -90,9 +44,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   let animX = 0;
   let animY = 0;
 
-  let overrideMaskShape: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart' | undefined = undefined;
-
-  const { appMode, broadcastState, customPresets, tracks, liveStuntsState, setFocusModeNodeId, characterParts, activeTool, setActiveTool } = useAnimator();
+  const { appMode, broadcastState, customPresets, tracks, liveStuntsState } = useAnimator();
   const targetTrack = tracks.find(t => t.partId === part.id);
 
   if (!isGhost) {
@@ -123,20 +75,10 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           if (scope === 'both' || scope === 'shape_only') {
             let sScaleX = sample.scaleX;
             let sScaleY = sample.scaleY;
-            if (sScaleX > 2.5) {
-              sScaleX = sScaleX / 6.42;
-            }
-            if (sScaleY > 2.5) {
-              sScaleY = sScaleY / 6.42;
-            }
+            if (sScaleX > 2.5) sScaleX = sScaleX / 6.42;
+            if (sScaleY > 2.5) sScaleY = sScaleY / 6.42;
             animScaleX = sScaleX;
             animScaleY = sScaleY;
-
-            if (cp.maskShape) {
-              overrideMaskShape = cp.maskShape;
-            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle')) {
-              overrideMaskShape = 'circle';
-            }
           }
           animOpacity = sample.opacity;
         } else if (inPreset !== 'none' && inPreset !== 'custom_timeline') {
@@ -169,20 +111,10 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           if (scope === 'both' || scope === 'shape_only') {
             let sScaleX = sample.scaleX;
             let sScaleY = sample.scaleY;
-            if (sScaleX > 2.5) {
-              sScaleX = sScaleX / 6.42;
-            }
-            if (sScaleY > 2.5) {
-              sScaleY = sScaleY / 6.42;
-            }
+            if (sScaleX > 2.5) sScaleX = sScaleX / 6.42;
+            if (sScaleY > 2.5) sScaleY = sScaleY / 6.42;
             animScaleX = sScaleX;
             animScaleY = sScaleY;
-
-            if (cp.maskShape) {
-              overrideMaskShape = cp.maskShape;
-            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle')) {
-              overrideMaskShape = 'circle';
-            }
           }
           animOpacity = sample.opacity;
         } else if (outPreset !== 'none' && outPreset !== 'custom_timeline') {
@@ -207,10 +139,10 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     } else {
       // Linear Edit Mode timeline logic
       if (targetTrack && targetTrack.editVisible === false) {
-        animOpacity = 0; // Hard hidden from Edit Canvas
+        animOpacity = 0;
       } else if (allowMotion && inPreset !== 'none' && currentFrame < inDur) {
         const progress = currentFrame / inDur; 
-        const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
+        const easeProgress = 1 - Math.pow(1 - progress, 3);
 
         if (inPreset === 'fade') animOpacity = easeProgress;
         else if (inPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
@@ -227,7 +159,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
 
       if (allowMotion && outPreset !== 'none' && totalFrames - currentFrame <= outDur) {
         const progress = Math.max(0, (totalFrames - currentFrame) / outDur); 
-        const easeProgress = Math.pow(progress, 3); // easeInCubic
+        const easeProgress = Math.pow(progress, 3);
 
         if (outPreset === 'fade') animOpacity = easeProgress;
         else if (outPreset === 'pop') { animScaleX = easeProgress; animScaleY = easeProgress; animOpacity = easeProgress; }
@@ -260,32 +192,17 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             animY += sample.deltaY;
             animRot += sample.rotation;
           }
-
           if (scope === 'both' || scope === 'shape_only') {
-            // Safe scale multiplier normalization (prevents 40x mega zoom)
             let sScaleX = sample.scaleX;
             let sScaleY = sample.scaleY;
-            if (sScaleX > 2.5) {
-              sScaleX = sScaleX / 6.42;
-            }
-            if (sScaleY > 2.5) {
-              sScaleY = sScaleY / 6.42;
-            }
-
+            if (sScaleX > 2.5) sScaleX = sScaleX / 6.42;
+            if (sScaleY > 2.5) sScaleY = sScaleY / 6.42;
             animScaleX *= sScaleX;
             animScaleY *= sScaleY;
-
-            if (cp.maskShape) {
-              overrideMaskShape = cp.maskShape;
-            } else if (cp.name.toLowerCase().includes('ball') || cp.name.toLowerCase().includes('circle') || cp.name.toLowerCase().includes('top') || cp.name.toLowerCase().includes('yuvarla')) {
-              overrideMaskShape = 'circle';
-            }
           }
-
           animOpacity *= sample.opacity;
         }
       } else if (sType === 'bounce' || sType.toLowerCase().includes('ball')) {
-        overrideMaskShape = 'circle';
         const bounceY = Math.sin(p * Math.PI) * -80;
         animY += bounceY;
       } else if (sType === 'pulse') {
@@ -313,395 +230,45 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const finalScaleY = transform.scaleY * animScaleY;
   const finalRot = transform.rotation + animRot;
 
-  // Screen-constant gizmo sizing. The canvas is rendered inside a zoomed
-  // group, and these gizmos additionally sit inside the part's own
-  // translate/rotate/scale chain — so a fixed local size shrinks/grows with
-  // camera zoom AND the part's scale. zScale is the inverse camera zoom
-  // (1 / zoom); dividing by the part's scale keeps handles at a constant
-  // pixel size on screen (mirrors TransformGizmo's zScale trick).
-  const gzX = zScale / Math.max(0.001, Math.abs(finalScaleX));
-  const gzY = zScale / Math.max(0.001, Math.abs(finalScaleY));
-  const gzMin = Math.min(gzX, gzY);
-
-  // Container feature: if this part has children, expose a clip path of its
-  // outline (in world space) so children can be clipped to this shape.
-  const childParts = characterParts.filter((c) => c.parentId === part.id);
-  const containerOutline = childParts.length > 0 ? getContainerOutlineElement(part) : null;
-
   const fill = (isGhost && ghostColor ? ghostColor : part.fillColor) || '#ffffff';
   const stroke = (isGhost && ghostColor ? ghostColor : isSelected ? '#00d2ff' : part.strokeColor) || '#101218';
 
-  // Inner Media Helper (Supports Direct MP4/WebM & YouTube Embed URLs)
-  const renderInnerMedia = (shapeWidth: number, shapeHeight: number, xOff: number = 0, yOff: number = 0, overrideOpacity?: number) => {
-    if (!part.innerMediaUrl || (isGhost && !isFocusGhost)) return null;
-    
-    // Apply Mask Transforms from computed transform (or fallback to part)
-    const mX = transform.maskOffsetX ?? part.maskOffsetX ?? 0;
-    const mY = transform.maskOffsetY ?? part.maskOffsetY ?? 0;
-    const mScale = transform.maskScale ?? part.maskScale ?? 1;
-    const mRot = transform.maskRotation ?? part.maskRotation ?? 0;
-    const maskTransform = `translate(${mX}, ${mY}) scale(${mScale}) rotate(${mRot})`;
-    if (part.innerMediaType === 'video') {
-      const { isYouTube, embedUrl } = getYouTubeEmbedInfo(part.innerMediaUrl);
-      return (
-        <g transform={maskTransform} opacity={overrideOpacity ?? 1}>
-          <foreignObject x={xOff} y={yOff} width={shapeWidth} height={shapeHeight} style={{ pointerEvents: 'none' }}>
-            {isYouTube ? (
-            <div style={{ width: '100%', height: '100%', overflow: 'hidden', pointerEvents: 'none', position: 'relative' }}>
-              <iframe
-                src={embedUrl}
-                title="YouTube Masked Video"
-                allow="autoplay; encrypted-media"
-                style={{
-                  position: 'absolute',
-                  top: '-15%',
-                  left: '-15%',
-                  width: '130%',
-                  height: '130%',
-                  border: 'none',
-                  pointerEvents: 'none',
-                }}
-              />
-            </div>
-          ) : (
-            <video
-              src={part.innerMediaUrl}
-              autoPlay
-              muted
-              loop
-              playsInline
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-            />
-          )}
-        </foreignObject>
-      </g>
-      );
-    }
-    return (
-      <g transform={maskTransform} opacity={overrideOpacity ?? 1}>
-        <image
-          href={part.innerMediaUrl}
-          x={xOff}
-          y={yOff}
-          width={shapeWidth}
-          height={shapeHeight}
-          preserveAspectRatio="xMidYMid slice"
-          style={{ pointerEvents: 'none' }}
-        />
-      </g>
-    );
-  };
-
-  // Delegate Rendering to Sub-Renderers based on part type
+  // Delegate rendering to sub-renderers based on part type
   let pathContent: React.ReactNode = null;
 
-  // Inner media framing (per shape type) — rendered as a sibling layer below.
-  const mediaFrame = !isGhost && part.innerMediaUrl ? getInnerMediaFrame(part) : null;
-
   if (isFocusGhost) {
-    // Only render unclipped media for focus ghost
-    pathContent = renderInnerMedia(
-      part.type === 'custom_box' ? 80 : 120,
-      part.type === 'custom_box' ? 80 : 60,
-      part.type === 'custom_box' ? -40 : -60,
-      part.type === 'custom_box' ? -40 : -30,
-      0.4
-    );
+    return null;
   } else if (part.type === 'custom_video' || part.type === 'custom_image') {
-    pathContent = renderMediaPart({ part, fill, stroke, isSelected, overrideMaskShape });
+    pathContent = renderMediaPart({ part, fill, stroke, isSelected });
   } else if (part.type === 'custom_text' || part.type === 'mograph_cloner') {
     pathContent = renderTextOrClonerPart({ part, fill, stroke, isSelected, currentFrame });
   } else {
-    // The inner media is rendered as a SIBLING layer (below) so it gets its own
-    // opacity instead of inheriting the shape's; the shape keeps only its clip defs.
-    pathContent = renderShapePart({ part, fill, stroke, isSelected, isGhost, renderInnerMedia: mediaFrame ? () => null : renderInnerMedia });
+    pathContent = renderShapePart({ part, fill, stroke, isSelected, isGhost });
   }
 
   const filterId = !isGhost && part.shadowColor ? `drop-shadow-${part.id}` : undefined;
-
   const isHardHidden = appMode !== 'broadcast' && targetTrack?.editVisible === false;
 
-  const activeMask = transform.mask || part.mask;
-  const hasMask = activeMask && activeMask.enabled;
-  const maskId = `mask-${part.id}`;
-  const featherId = `feather-${part.id}`;
-
-  // Inner media rendered outside the shape's opacity scope: independent opacity,
-  // still clipped to the shape outline and moving with the shape. In mask tool
-  // mode the media frame gets a dashed outline + a grab handle so the user can
-  // drag the photo directly (even when it is mostly clipped out of view).
-  const isMaskTool = activeTool === 'mask';
-  const mediaLayer =
-    !isGhost && mediaFrame ? (
-      <g
-        clipPath={part.parentId ? `url(#containerClip-${part.parentId})` : undefined}
-        mask={hasMask ? `url(#${maskId})` : undefined}
-      >
-        <g
-          transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}
-          // A <mask> instead of a clipPath: Chromium rasterizes mask edges with
-          // proper antialiasing, so the photo's clipped edges stay smooth
-          // (no serrated/jagged lines along the shape outline).
-          mask={`url(#${mediaFrame.clipId})`}
-          style={{ pointerEvents: 'none' }}
-        >
-          {/* Shape fill UNDER the masked media (same outline geometry as the
-              mask). Gaps between the photo and the shape outline keep the
-              shape's own fill color instead of showing the canvas through;
-              the shape stroke (main render group) still paints on top of the
-              photo's edge. The fill follows the SHAPE's opacity (transform +
-              animation): when the shape opacity is 0, its own fill vanishes
-              while the photo (independent inner-media opacity) stays. */}
-          <g fill={fill} opacity={finalOpacity}>
-            {getContainerOutlineElement(part)}
-          </g>
-          <g opacity={part.innerMediaOpacity ?? 1}>
-            {renderInnerMedia(mediaFrame.w, mediaFrame.h, mediaFrame.x, mediaFrame.y)}
-          </g>
-        </g>
-      </g>
-    ) : null;
-
-  // Mask-tool gizmo for the inner media: dashed frame rendered ON TOP of the
-  // shape (like a gizmo) so the user can move/scale/rotate the photo directly —
-  // the same edits edit mode offers. The frame sits inside the same
-  // maskTransform chain the media renders with (offset/scale/rotation).
-  const mOffX = transform.maskOffsetX ?? part.maskOffsetX ?? 0;
-  const mOffY = transform.maskOffsetY ?? part.maskOffsetY ?? 0;
-  const mScale = transform.maskScale ?? part.maskScale ?? 1;
-  const mRot = transform.maskRotation ?? part.maskRotation ?? 0;
-  const mediaDragHandle =
-    !isGhost && mediaFrame && isMaskTool && onStartInnerMediaDrag ? (
-      <g transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}>
-        <g transform={`translate(${mOffX}, ${mOffY}) scale(${mScale}) rotate(${mRot})`}>
-          {/* Move: dashed frame — the IMAGE's frame (mediaFrame rect), the same
-              box the photo renders in. Always a rect (also for freeforms): the
-              photo is a rectangle, so its drag frame must be its rectangle —
-              not the freeform path (which would sit in a different space than
-              the photo's offset/scale/rotation transform). */}
-          <rect
-            x={mediaFrame.x}
-            y={mediaFrame.y}
-            width={mediaFrame.w}
-            height={mediaFrame.h}
-            fill="transparent"
-            stroke="#38bdf8"
-            strokeWidth={1}
-            strokeDasharray="5 4"
-            vectorEffect="non-scaling-stroke"
-            style={{ cursor: 'grab' }}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              onStartInnerMediaDrag(part.id, e);
-            }}
-          />
-          {/* Scale: 4 corner handles (screen-constant size; cursor follows the
-              resize diagonal: TL/BR \ nwse, TR/BL / nesw) */}
-          {[
-            { x: mediaFrame.x, y: mediaFrame.y },
-            { x: mediaFrame.x + mediaFrame.w, y: mediaFrame.y },
-            { x: mediaFrame.x + mediaFrame.w, y: mediaFrame.y + mediaFrame.h },
-            { x: mediaFrame.x, y: mediaFrame.y + mediaFrame.h },
-          ].map((c, i) => (
-            <rect
-              key={`mcorner-${i}`}
-              x={c.x - 6 * gzX}
-              y={c.y - 6 * gzY}
-              width={12 * gzX}
-              height={12 * gzY}
-              fill="#38bdf8"
-              stroke="#ffffff"
-              strokeWidth={1.5}
-              vectorEffect="non-scaling-stroke"
-              style={{ cursor: i % 2 === 0 ? 'nwse-resize' : 'nesw-resize' }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                onStartInnerMediaScale?.(part.id, e);
-              }}
-            />
-          ))}
-          {/* Rotate: handle above the frame's top-center */}
-          <line
-            x1={mediaFrame.x + mediaFrame.w / 2}
-            y1={mediaFrame.y}
-            x2={mediaFrame.x + mediaFrame.w / 2}
-            y2={mediaFrame.y - 26 * gzY}
-            stroke="#38bdf8"
-            strokeWidth={2}
-            vectorEffect="non-scaling-stroke"
-            style={{ pointerEvents: 'none' }}
-          />
-          <circle
-            cx={mediaFrame.x + mediaFrame.w / 2}
-            cy={mediaFrame.y - 26 * gzY}
-            r={6 * gzMin}
-            fill="#ffb700"
-            stroke="#ffffff"
-            strokeWidth={1.5}
-            vectorEffect="non-scaling-stroke"
-            style={{ cursor: 'grab' }}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              onStartInnerMediaRotate?.(part.id, e);
-            }}
-          />
-        </g>
-      </g>
-    ) : null;
-
-  // Mask-tool gizmo for a SHAPE CHILD inside a container: dashed frame +
-  // move/scale/rotate handles — the exact analog of the inner-media frame,
-  // so a polygon put inside a shape is editable on canvas like a photo.
-  const childBounds = part.parentId ? getPartBounds(part) : null;
-  const childFrameGizmo =
-    !isGhost && isMaskTool && part.parentId && childBounds && onStartChildScale && onStartChildRotate ? (
-      <g transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}>
-        <g>
-          {/* Move: dashed frame */}
-          <rect
-            x={-childBounds.halfW}
-            y={-childBounds.halfH}
-            width={childBounds.halfW * 2}
-            height={childBounds.halfH * 2}
-            fill="transparent"
-            stroke="#38bdf8"
-            strokeWidth={1}
-            strokeDasharray="5 4"
-            vectorEffect="non-scaling-stroke"
-            style={{ cursor: 'grab' }}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              onStartTranslateDrag(part.id, e);
-            }}
-          />
-          {/* Scale: 4 corner handles (screen-constant size; cursor follows the
-              resize diagonal: TL/BR \ nwse, TR/BL / nesw) */}
-          {[
-            { x: -childBounds.halfW, y: -childBounds.halfH },
-            { x: childBounds.halfW, y: -childBounds.halfH },
-            { x: childBounds.halfW, y: childBounds.halfH },
-            { x: -childBounds.halfW, y: childBounds.halfH },
-          ].map((c, i) => (
-            <rect
-              key={`child-corner-${i}`}
-              x={c.x - 6 * gzX}
-              y={c.y - 6 * gzY}
-              width={12 * gzX}
-              height={12 * gzY}
-              fill="#38bdf8"
-              stroke="#ffffff"
-              strokeWidth={1.5}
-              vectorEffect="non-scaling-stroke"
-              style={{ cursor: i % 2 === 0 ? 'nwse-resize' : 'nesw-resize' }}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                onStartChildScale(part.id, e);
-              }}
-            />
-          ))}
-          {/* Rotate: handle above the frame's top-center */}
-          <line
-            x1={0}
-            y1={-childBounds.halfH}
-            x2={0}
-            y2={-childBounds.halfH - 26 * gzY}
-            stroke="#38bdf8"
-            strokeWidth={2}
-            vectorEffect="non-scaling-stroke"
-            style={{ pointerEvents: 'none' }}
-          />
-          <circle
-            cx={0}
-            cy={-childBounds.halfH - 26 * gzY}
-            r={6 * gzMin}
-            fill="#ffb700"
-            stroke="#ffffff"
-            strokeWidth={1.5}
-            vectorEffect="non-scaling-stroke"
-            style={{ cursor: 'grab' }}
-            onMouseDown={(e) => {
-              e.stopPropagation();
-              onStartChildRotate(part.id, e);
-            }}
-          />
-        </g>
-      </g>
-    ) : null;
-
-  const generateMaskPath = (points: MaskPoint[], closed: boolean) => {
-    if (!points || points.length === 0) return '';
-    let d = `M ${points[0].x} ${points[0].y}`;
-    for (let i = 1; i < points.length; i++) {
-      const prev = points[i - 1];
-      const curr = points[i];
-      if (prev.handleOut || curr.handleIn) {
-        const cp1x = prev.x + (prev.handleOut?.x || 0);
-        const cp1y = prev.y + (prev.handleOut?.y || 0);
-        const cp2x = curr.x + (curr.handleIn?.x || 0);
-        const cp2y = curr.y + (curr.handleIn?.y || 0);
-        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
-      } else {
-        d += ` L ${curr.x} ${curr.y}`;
-      }
-    }
-    if (closed && points.length > 2) {
-      const prev = points[points.length - 1];
-      const curr = points[0];
-      if (prev.handleOut || curr.handleIn) {
-        const cp1x = prev.x + (prev.handleOut?.x || 0);
-        const cp1y = prev.y + (prev.handleOut?.y || 0);
-        const cp2x = curr.x + (curr.handleIn?.x || 0);
-        const cp2y = curr.y + (curr.handleIn?.y || 0);
-        d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
-      }
-      d += ' Z';
-    }
-    return d;
-  };
-
   return (
-    <React.Fragment>
-      {containerOutline && (
-        <defs>
-          <clipPath id={`containerClip-${part.id}`}>
-            <g transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}>
-              {containerOutline}
-            </g>
-          </clipPath>
-        </defs>
-      )}
-      {mediaLayer}
-      <g
-        key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
-        transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}
-        clipPath={part.parentId ? `url(#containerClip-${part.parentId})` : undefined}
-        style={{
-          opacity: finalOpacity,
-          cursor: isGhost ? 'default' : 'pointer',
-          filter: filterId ? `url(#${filterId})` : undefined,
-          pointerEvents: isHardHidden ? 'none' : 'auto',
-        }}
-        onClick={(e) => {
-          if (!isGhost && e.button === 0) {
-            e.stopPropagation();
-            onSelect(part.id);
-          }
-        }}
-        onMouseDown={(e) => {
-          if (!isGhost && e.button === 0) {
-            e.stopPropagation();
-            onStartTranslateDrag(part.id, e);
-          }
-        }}
-      onDoubleClick={(e) => {
+    <g
+      key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
+      transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}
+      style={{
+        opacity: finalOpacity,
+        cursor: isGhost ? 'default' : 'pointer',
+        filter: filterId ? `url(#${filterId})` : undefined,
+        pointerEvents: isHardHidden ? 'none' : 'auto',
+      }}
+      onClick={(e) => {
         if (!isGhost && e.button === 0) {
           e.stopPropagation();
-          // Double-click opens the mask layer for ANY part (mask tool + focus):
-          // vector mask editing + inner-media framing when media exists. For a
-          // child inside a container the mask layer shows its frame + handles
-          // so it can be moved/scaled/rotated like a masked photo.
-          setFocusModeNodeId(part.id);
-          setActiveTool('mask');
+          onSelect(part.id);
+        }
+      }}
+      onMouseDown={(e) => {
+        if (!isGhost && e.button === 0) {
+          e.stopPropagation();
+          onStartTranslateDrag(part.id, e);
         }
       }}
     >
@@ -717,48 +284,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             />
           </filter>
         )}
-        {hasMask && activeMask && (
-          <>
-            {activeMask.feather > 0 && (
-              <filter id={featherId} x="-50%" y="-50%" width="200%" height="200%">
-                <feGaussianBlur stdDeviation={activeMask.feather} />
-              </filter>
-            )}
-            <mask id={maskId}>
-              {activeMask.inverted && (
-                <rect x="-10000" y="-10000" width="20000" height="20000" fill="white" />
-              )}
-              <path 
-                 d={generateMaskPath(activeMask.points, activeMask.closed)} 
-                 fill={activeMask.inverted ? "black" : "white"} 
-                 filter={activeMask.feather > 0 ? `url(#${featherId})` : undefined}
-                 opacity={activeMask.opacity}
-              />
-            </mask>
-          </>
-        )}
       </defs>
-
-      {hasMask ? (
-        <g mask={`url(#${maskId})`}>
-          {pathContent}
-        </g>
-      ) : (
-        pathContent
-      )}
-      {/* Child-of-selected-container: dashed outline so the user can see and
-          grab the element living inside the highlighted container */}
-      {!isGhost && isChildOfSelected && (() => {
-        const childBounds = getPartBounds(part);
-        return (
-          <g style={{ pointerEvents: 'none' }}>
-            {renderShapeOutline(part, childBounds.halfW, childBounds.halfH, 1)}
-          </g>
-        );
-      })()}
-      </g>
-      {mediaDragHandle}
-      {childFrameGizmo}
-    </React.Fragment>
+      {pathContent}
+    </g>
   );
 };

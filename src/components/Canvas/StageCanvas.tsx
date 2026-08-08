@@ -1,12 +1,11 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import type { Transform, MaskPoint, CharacterPart } from '../../types/animator';
+import type { Transform, MaskPoint } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { CANVAS_CENTER_X, CANVAS_CENTER_Y, computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
 import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeFreeformPoints } from '../../utils/freeform';
 import { worldToContainerLocal } from '../../utils/containerMath';
-import { getInnerMediaFrame } from './renderers/PartRenderer';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
@@ -134,30 +133,6 @@ export const StageCanvas: React.FC = () => {
     }, [setActiveTool, showToast]),
   });
 
-  const startMaskPointDrag = useCallback((e: React.MouseEvent, index: number, handleType: 'point' | 'in' | 'out') => {
-    if (!selectedPartId) return;
-    e.stopPropagation();
-    setIsDragging(true);
-    setDragMode(`mask_${handleType}` as const);
-    setDragMaskPointIndex(index);
-    startBatchInteraction();
-
-    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const transform = getComputedTransform(selectedPartId, currentFrame);
-    
-    const part = characterParts.find(p => p.id === selectedPartId);
-    if (!part) return;
-    const activeMask = transform.mask || part.mask;
-    if (!activeMask) return;
-
-    setDragStart({
-      x: svgX,
-      y: svgY,
-      initialTransform: { ...transform },
-      initialMaskPoints: JSON.parse(JSON.stringify(activeMask.points))
-    });
-  }, [selectedPartId, clientToSVG, getComputedTransform, currentFrame, characterParts, startBatchInteraction]);
-
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
     if (appMode === 'broadcast' || e.button !== 0) return;
     if (activeTool === 'freeform_draw') return; // drawing tool: do not move parts
@@ -171,7 +146,6 @@ export const StageCanvas: React.FC = () => {
     setDragMode('translate');
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
     
-    const part = characterParts.find(p => p.id === partId);
     const initialTransforms: Record<string, Transform> = {};
     const relevantIds = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
     relevantIds.forEach(id => {
@@ -184,156 +158,6 @@ export const StageCanvas: React.FC = () => {
       y: svgY,
       initialTransform: { ...transform },
       initialTransforms,
-      initialMaskX: transform.maskOffsetX ?? part?.maskOffsetX ?? 0,
-      initialMaskY: transform.maskOffsetY ?? part?.maskOffsetY ?? 0,
-    });
-  };
-
-  // Drag the masked inner media directly (mask tool active): updates
-  // maskOffsetX/Y in the shape's local space so the photo moves with the cursor.
-  const startInnerMediaDragForPart = (partId: string, e: React.MouseEvent) => {
-    if (appMode === 'broadcast' || e.button !== 0) return;
-    e.stopPropagation();
-    setSelectedPartId(partId);
-
-    const transform = getComputedTransform(partId, currentFrame);
-    const part = characterParts.find((p) => p.id === partId);
-    if (!transform || !part) return;
-
-    startBatchInteraction();
-    setIsDragging(true);
-    setDragMode('mask_media');
-    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    setDragStart({
-      x: svgX,
-      y: svgY,
-      initialTransform: { ...transform },
-      initialTransforms: {},
-      initialMaskX: transform.maskOffsetX ?? part.maskOffsetX ?? 0,
-      initialMaskY: transform.maskOffsetY ?? part.maskOffsetY ?? 0,
-    });
-  };
-
-  // Convert an inner-media local point through the mask transform chain
-  // (mask offset/scale/rotation, then the shape's world transform) into
-  // canvas coordinates — used to anchor the scale/rotate handles.
-  const mediaToScreen = (lx: number, ly: number, part: CharacterPart, t: Transform) => {
-    const offX = t.maskOffsetX ?? part.maskOffsetX ?? 0;
-    const offY = t.maskOffsetY ?? part.maskOffsetY ?? 0;
-    const ms = t.maskScale ?? part.maskScale ?? 1;
-    const mr = ((t.maskRotation ?? part.maskRotation ?? 0) * Math.PI) / 180;
-    const cr = Math.cos(mr);
-    const sr = Math.sin(mr);
-    // maskTransform: rotate -> scale -> translate
-    const p1x = lx * cr - ly * sr;
-    const p1y = lx * sr + ly * cr;
-    const p2x = p1x * ms + offX;
-    const p2y = p1y * ms + offY;
-    // world: scale -> rotate -> translate
-    const rr = ((t.rotation ?? 0) * Math.PI) / 180;
-    const crr = Math.cos(rr);
-    const srr = Math.sin(rr);
-    const p3x = p2x * (t.scaleX || 1);
-    const p3y = p2y * (t.scaleY || 1);
-    const p4x = p3x * crr - p3y * srr;
-    const p4y = p3x * srr + p3y * crr;
-    return { x: CANVAS_CENTER_X + (t.x || 0) + p4x, y: CANVAS_CENTER_Y + (t.y || 0) + p4y };
-  };
-
-  // Scale the masked inner media from a corner handle (uniform, around the media center).
-  const startInnerMediaScaleForPart = (partId: string, e: React.MouseEvent) => {
-    if (appMode === 'broadcast' || e.button !== 0) return;
-    e.stopPropagation();
-    setSelectedPartId(partId);
-    const transform = getComputedTransform(partId, currentFrame);
-    const part = characterParts.find((p) => p.id === partId);
-    const frame = part ? getInnerMediaFrame(part) : null;
-    if (!transform || !part || !frame) return;
-    startBatchInteraction();
-    setIsDragging(true);
-    setDragMode('mask_media_scale');
-    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const center = mediaToScreen(frame.x + frame.w / 2, frame.y + frame.h / 2, part, transform);
-    setDragStart({
-      x: svgX,
-      y: svgY,
-      initialTransform: { ...transform },
-      initialTransforms: {},
-      initialMaskScale: transform.maskScale ?? part.maskScale ?? 1,
-      mediaCenter: center,
-    });
-  };
-
-  // Rotate the masked inner media from the rotation handle (around the media center).
-  const startInnerMediaRotateForPart = (partId: string, e: React.MouseEvent) => {
-    if (appMode === 'broadcast' || e.button !== 0) return;
-    e.stopPropagation();
-    setSelectedPartId(partId);
-    const transform = getComputedTransform(partId, currentFrame);
-    const part = characterParts.find((p) => p.id === partId);
-    const frame = part ? getInnerMediaFrame(part) : null;
-    if (!transform || !part || !frame) return;
-    startBatchInteraction();
-    setIsDragging(true);
-    setDragMode('mask_media_rotate');
-    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const center = mediaToScreen(frame.x + frame.w / 2, frame.y + frame.h / 2, part, transform);
-    setDragStart({
-      x: svgX,
-      y: svgY,
-      initialTransform: { ...transform },
-      initialTransforms: {},
-      initialMaskRot: transform.maskRotation ?? part.maskRotation ?? 0,
-      mediaCenter: center,
-    });
-  };
-
-  // Scale a shape child inside its container from a corner handle (uniform,
-  // around the child's center) — the shape analog of the inner-media scale.
-  // The child's stored transform is container-relative, so the computed WORLD
-  // scale is converted back into container space via worldToContainerLocal.
-  const startChildScaleForPart = (partId: string, e: React.MouseEvent) => {
-    if (appMode === 'broadcast' || e.button !== 0) return;
-    e.stopPropagation();
-    setSelectedPartId(partId);
-    const transform = getComputedTransform(partId, currentFrame);
-    if (!transform) return;
-    startBatchInteraction();
-    setIsDragging(true);
-    setDragMode('child_frame_scale');
-    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    setDragStart({
-      x: svgX,
-      y: svgY,
-      initialTransform: { ...transform },
-      initialTransforms: {},
-      partId,
-      initialChildScaleX: transform.scaleX || 1,
-      initialChildScaleY: transform.scaleY || 1,
-      mediaCenter: { x: CANVAS_CENTER_X + transform.x, y: CANVAS_CENTER_Y + transform.y },
-    });
-  };
-
-  // Rotate a shape child inside its container from the rotation handle
-  // (around the child's center) — the shape analog of the inner-media rotate.
-  const startChildRotateForPart = (partId: string, e: React.MouseEvent) => {
-    if (appMode === 'broadcast' || e.button !== 0) return;
-    e.stopPropagation();
-    setSelectedPartId(partId);
-    const transform = getComputedTransform(partId, currentFrame);
-    if (!transform) return;
-    startBatchInteraction();
-    setIsDragging(true);
-    setDragMode('child_frame_rotate');
-    const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    setDragStart({
-      x: svgX,
-      y: svgY,
-      initialTransform: { ...transform },
-      initialTransforms: {},
-      partId,
-      initialChildRot: transform.rotation || 0,
-      mediaCenter: { x: CANVAS_CENTER_X + transform.x, y: CANVAS_CENTER_Y + transform.y },
     });
   };
 
@@ -1093,31 +917,16 @@ export const StageCanvas: React.FC = () => {
               {/* Character Parts Active Render (Clipped in Broadcast mode, unclipped & visible in Edit mode) */}
               <StagePartLayers
                 sortedParts={sortedParts}
-                focusModeNodeId={focusModeNodeId}
                 appMode={appMode}
                 broadcastState={broadcastState}
                 currentFrame={currentFrame}
                 getComputedTransform={getComputedTransform}
                 selectedPartId={selectedPartId}
                 totalFrames={totalFrames}
-                zScale={zScale}
                 onSelect={(id) => {
-                  // Clicking a DIFFERENT element exits the mask tool + focus
-                  // mode so the normal selection gizmo (corner + edge handles)
-                  // comes back — the mask tool only stays while editing the
-                  // focused part's mask.
-                  if ((activeTool === 'mask' || focusModeNodeId) && focusModeNodeId !== id) {
-                    setActiveTool('select');
-                    setFocusModeNodeId(null);
-                  }
                   setSelectedPartId(id);
                 }}
                 onStartTranslateDrag={startTranslateDragForPart}
-                onStartInnerMediaDrag={startInnerMediaDragForPart}
-                onStartInnerMediaScale={startInnerMediaScaleForPart}
-                onStartInnerMediaRotate={startInnerMediaRotateForPart}
-                onStartChildScale={startChildScaleForPart}
-                onStartChildRotate={startChildRotateForPart}
               />
 
               {/* Freeform Drawing Preview (active draw tool) */}
@@ -1230,11 +1039,9 @@ export const StageCanvas: React.FC = () => {
                   selectedPart={selectedPart}
                   selectedTransform={selectedTransform}
                   tracks={tracks}
-                  activeTool={activeTool}
                   zScale={zScale}
                   onRotateStart={startRotate}
                   onScaleStart={startScale}
-                  onMaskPointDragStart={startMaskPointDrag}
                 />
               )}
             </>

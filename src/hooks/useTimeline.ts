@@ -1,12 +1,16 @@
 import { useState, useCallback } from 'react';
 import type { CharacterPart, Track, TrackChannel, EasingType, Keyframe, Transform } from '../types/animator';
 import { generateId } from '../utils/idGenerator';
-import { generateTransitionKeyframes } from '../utils/motionTransitions';
+import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
+import { hasChannelDataForTemplate } from '../utils/timelineMetrics';
 import { 
   updateKeyframeBezierPointsMutator, 
   addPropertyKeyframeMutator, 
   deletePropertyKeyframeMutator, 
-  updatePropertyKeyframeFrameMutator 
+  updatePropertyKeyframeFrameMutator,
+  updatePropertyKeyframeEasingMutator,
+  applyTransitionChannelsMutator,
+  applyTransitionToTrackCanonicalMutator
 } from '../utils/trackMutations';
 
 interface UseTimelineOptions {
@@ -60,7 +64,7 @@ export const useTimeline = ({
         if (tr.id !== trackId) return tr;
         const currentTransform = getComputedTransform(tr.partId, frame);
         const activeTmpl = activeTemplateId || 'Sequence';
-        const existingIdx = tr.keyframes.findIndex((k) => k.frame === frame && (k.templateId || 'Sequence') === activeTmpl);
+        const existingIdx = (tr.keyframes || []).findIndex((k) => k.frame === frame && (k.templateId || 'Sequence') === activeTmpl);
 
         const newKf: Keyframe = {
           id: generateId('kf'),
@@ -70,7 +74,7 @@ export const useTimeline = ({
           templateId: activeTemplateId || 'Sequence',
         };
 
-        let newKfs = [...tr.keyframes];
+        let newKfs = [...(tr.keyframes || [])];
         if (existingIdx >= 0) {
           newKfs[existingIdx] = newKf;
         } else {
@@ -82,21 +86,13 @@ export const useTimeline = ({
     );
   };
 
-  const addKeyframeForSelected = () => {
-    if (!selectedPartId) return;
-    const track = tracks.find((t) => t.partId === selectedPartId);
-    if (track) {
-      addKeyframeToTrack(track.id, currentFrame);
-    }
-  };
-
   const deleteKeyframe = (trackId: string, keyframeId: string) => {
     setTracks((prev) =>
       prev.map((tr) => {
         if (tr.id !== trackId) return tr;
         return {
           ...tr,
-          keyframes: tr.keyframes.filter((k) => k.id !== keyframeId),
+          keyframes: (tr.keyframes || []).filter((k) => k.id !== keyframeId),
         };
       })
     );
@@ -106,24 +102,12 @@ export const useTimeline = ({
     setTracks((prev) =>
       prev.map((tr) => {
         if (tr.id !== trackId) return tr;
-        const targetKf = tr.keyframes.find((k) => k.id === keyframeId);
+        const targetKf = (tr.keyframes || []).find((k) => k.id === keyframeId);
         if (!targetKf) return tr;
 
-        const updatedKfs = tr.keyframes.map((k) => (k.id === keyframeId ? { ...k, frame: newFrame } : k));
+        const updatedKfs = (tr.keyframes || []).map((k) => (k.id === keyframeId ? { ...k, frame: newFrame } : k));
         updatedKfs.sort((a, b) => a.frame - b.frame);
         return { ...tr, keyframes: updatedKfs };
-      })
-    );
-  };
-
-  const updateKeyframeEasing = (trackId: string, keyframeId: string, easing: EasingType) => {
-    setTracks((prev) =>
-      prev.map((tr) => {
-        if (tr.id !== trackId) return tr;
-        return {
-          ...tr,
-          keyframes: tr.keyframes.map((k) => (k.id === keyframeId ? { ...k, easing } : k)),
-        };
       })
     );
   };
@@ -171,6 +155,11 @@ export const useTimeline = ({
     setTracks((prev) => updatePropertyKeyframeFrameMutator(prev, trackId, channel, keyframeId, newFrame));
   };
 
+  // M1: change easing of a single channel keyframe
+  const updatePropertyKeyframeEasing = (trackId: string, channel: TrackChannel, keyframeId: string, easing: EasingType) => {
+    setTracks((prev) => updatePropertyKeyframeEasingMutator(prev, trackId, channel, keyframeId, easing));
+  };
+
   const applyMotionTransition = (partId: string, transitionType: string) => {
     const track = tracks.find((t) => t.partId === partId);
     if (!track) return;
@@ -179,28 +168,23 @@ export const useTimeline = ({
     const duration = 15;
     const endFrame = Math.min(totalFrames, startFrame + duration);
     const baseTransform = getComputedTransform(partId, startFrame);
+    const activeTmpl = activeTemplateId || 'Sequence';
 
-    const result = generateTransitionKeyframes(baseTransform, transitionType, startFrame, endFrame);
-    
-    if (!result) {
-      setTracks((prev) =>
-        prev.map((t) => (t.id === track.id ? { ...t, keyframes: [] } : t))
-      );
+    // M8a: canonical transition for channel-data tracks — writes the 6
+    // channels, never touches legacy keyframes[].
+    if (hasChannelDataForTemplate(track, activeTmpl)) {
+      const transition = generateTransitionChannelKeyframes(baseTransform, transitionType, startFrame, endFrame);
+      setTracks((prev) => applyTransitionChannelsMutator(prev, track.id, transition, activeTmpl));
       return;
     }
 
-    const { kfStart, kfEnd } = result;
-
-    setTracks((prev) =>
-      prev.map((t) => {
-        if (t.id !== track.id) return t;
-        const filtered = t.keyframes.filter(
-          (k) => k.frame < startFrame || k.frame > endFrame
-        );
-        const newKfs = [...filtered, kfStart, kfEnd].sort((a, b) => a.frame - b.frame);
-        return { ...t, keyframes: newKfs };
-      })
-    );
+    // M8e-prep A: legacy-only tracks (empty channels but populated legacy
+    // keyframes[]) get a canonical transition too — existing legacy keyframes
+    // are converted into channels first, then the transition applies. The
+    // legacy keyframes[] array stays untouched for import compatibility.
+    const transition = generateTransitionChannelKeyframes(baseTransform, transitionType, startFrame, endFrame);
+    setTracks((prev) => applyTransitionToTrackCanonicalMutator(prev, track.id, transition, activeTmpl));
+    return;
   };
 
   const renamePartAndTrack = useCallback((partId: string, newName: string) => {
@@ -257,10 +241,8 @@ export const useTimeline = ({
     setShowGrid,
     deletePart,
     addKeyframeToTrack,
-    addKeyframeForSelected,
     deleteKeyframe,
     updateKeyframeFrame,
-    updateKeyframeEasing,
     updateKeyframeBezierPoints,
     toggleTrackVisibility,
     toggleTrackEditVisibility,
@@ -269,6 +251,7 @@ export const useTimeline = ({
     addPropertyKeyframe,
     deletePropertyKeyframe,
     updatePropertyKeyframeFrame,
+    updatePropertyKeyframeEasing,
     applyMotionTransition,
     renamePartAndTrack,
     reorderParts,

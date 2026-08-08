@@ -1,6 +1,8 @@
 import React from 'react';
 import type { Track, TrackChannel } from '../../types/animator';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
+import { groupChannelKeyframesByFrame } from '../../utils/channelKeyframeGroups';
+import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
 
 interface TrackLaneProps {
   track: Track;
@@ -49,8 +51,25 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
 
   const activeTmpl = activeTemplateId || 'Sequence';
+  // M6: canonical frame-group model — one timeline point per frame.
+  // Legacy composite keyframes are only rendered for tracks that have NO
+  // channel data (imported old projects), keeping legacy compatibility.
+  const useCanonical = hasChannelDataForTemplate(track, activeTmpl);
+  const groups = groupChannelKeyframesByFrame(track.channels, activeTmpl);
   const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
   const sortedKfs = [...activeKfs].sort((a, b) => a.frame - b.frame);
+
+  // Delete every channel keyframe at a frame (frame-group delete, same as
+  // KeyframesTab handleDelete).
+  const handleDeleteGroup = (e: React.MouseEvent, frame: number) => {
+    e.preventDefault();
+    const group = groups.find((g) => g.frame === frame);
+    if (!group) return;
+    for (const ch of group.channels) {
+      const kf = group.keyframes[ch];
+      if (kf) onDeletePropertyKeyframe(track.id, ch, kf.id);
+    }
+  };
 
   const renderChannelLane = (ch: TrackChannel) => {
     const meta = CHANNEL_META[ch];
@@ -93,8 +112,8 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
         className={`ue-track-lane ${isSelected ? 'selected' : ''}`}
         style={{ height: TRACK_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%`, position: 'relative' }}
       >
-        {/* Span bars between composite keyframes */}
-        {sortedKfs.map((kf, idx) => {
+        {/* Span bars between composite keyframes (legacy-only track view) */}
+        {!useCanonical && sortedKfs.map((kf, idx) => {
           if (idx === sortedKfs.length - 1) return null;
           const nextKf = sortedKfs[idx + 1];
           return (
@@ -108,8 +127,26 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
             </div>
           );
         })}
-        {/* Composite keyframe diamonds */}
-        {activeKfs.map((kf) => {
+        {/* M6: canonical frame-group diamonds (one per frame, channel info in hover/title) */}
+        {useCanonical ? groups.map((group) => {
+          const representativeId = group.keyframes[group.channels[0]].id;
+          const isKfSelected = selectedKeyframeId === representativeId;
+          return (
+            <div
+              key={representativeId}
+              className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
+              style={{ left: `${group.frame * frameWidth}px`, borderColor: track.color }}
+              onClick={(e) => { e.stopPropagation(); onSelectKeyframe(representativeId); onSelectPart(track.partId, e.shiftKey); onSetFrame(group.frame); }}
+              onMouseDown={(e) => e.stopPropagation()}
+              onMouseEnter={() => onHoverKf({ frame: group.frame, label: `${track.name} | ${group.channels.join(',')} | ${group.easing}` })}
+              onMouseLeave={() => onHoverKf(null)}
+              onContextMenu={(e) => handleDeleteGroup(e, group.frame)}
+              title={`[${track.name}] Frame: ${group.frame} | ${group.channels.join(', ')} | ${group.easing} (Right-click: Delete)`}
+            >
+              <div className="diamond-inner" style={{ backgroundColor: track.color }} />
+            </div>
+          );
+        }) : activeKfs.map((kf) => {
           const isKfSelected = selectedKeyframeId === kf.id;
           return (
             <div

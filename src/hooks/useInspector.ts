@@ -1,4 +1,5 @@
-import type { CharacterPart, Track, Transform } from '../types/animator';
+import type { CharacterPart, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
+import { generateId } from '../utils/idGenerator';
 
 interface UseInspectorOptions {
   selectedPartId: string | null;
@@ -11,6 +12,16 @@ interface UseInspectorOptions {
   getComputedTransform: (partId: string, frame: number) => Transform;
   addKeyframeToTrack: (trackId: string, frame: number) => void;
 }
+
+// Transform fields → canonical channel names (6 animated properties)
+const TRANSFORM_TO_CHANNEL: [keyof Transform, TrackChannel][] = [
+  ['x', 'x'],
+  ['y', 'y'],
+  ['rotation', 'rotation'],
+  ['scaleX', 'scaleX'],
+  ['scaleY', 'scaleY'],
+  ['opacity', 'opacity'],
+];
 
 export const useInspector = ({
   selectedPartId,
@@ -26,6 +37,17 @@ export const useInspector = ({
   const applyTransformToPart = (id: string, newTransform: Partial<Transform>, activeTmpl: string) => {
     const track = tracks.find((t) => t.partId === id);
     if (!track) return;
+
+    // M4: channel-aware path — if this track carries canonical channel data
+    // for the active template, Inspector edits write to channels.
+    const hasChannelData = !!(track.channels && (Object.values(track.channels) as PropertyKeyframe[][])
+      .some((arr) => arr.some((k) => (k.templateId || 'Sequence') === activeTmpl)));
+
+    if (hasChannelData) {
+      applyTransformToChannels(id, track, newTransform, activeTmpl);
+      return;
+    }
+
     const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
     const hasActiveKfOnFrame = activeKfs.some((k) => k.frame === currentFrame);
 
@@ -35,7 +57,7 @@ export const useInspector = ({
           if (tr.id !== track.id) return tr;
           return {
             ...tr,
-            keyframes: tr.keyframes.map((k) =>
+            keyframes: (tr.keyframes || []).map((k) =>
               k.frame === currentFrame && (k.templateId || 'Sequence') === activeTmpl
                 ? { ...k, transform: { ...k.transform, ...newTransform } }
                 : k
@@ -54,6 +76,73 @@ export const useInspector = ({
       setCharacterParts((prev) =>
         prev.map((p) =>
           p.id === id ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
+        )
+      );
+    }
+  };
+
+  /**
+   * M4: write Inspector transform edits into canonical channels.
+   * - Channel has keyframes for this template → update value at current frame
+   *   (or add a new keyframe there if the frame is empty), keeping easing/bezier.
+   * - Channel is completely empty for this template → fall back to baseTransform
+   *   (same defensive behavior as legacy no-keyframe path).
+   */
+  const applyTransformToChannels = (
+    id: string,
+    track: Track,
+    newTransform: Partial<Transform>,
+    activeTmpl: string,
+  ) => {
+    const channelUpdates: { channel: TrackChannel; value: number }[] = [];
+    const baseUpdates: Record<string, number> = {};
+
+    for (const [prop, channel] of TRANSFORM_TO_CHANNEL) {
+      const newVal = newTransform[prop];
+      if (typeof newVal !== 'number') continue; // skip undefined + non-numeric (e.g. mask)
+      const tmplKfs = (track.channels?.[channel] || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
+      if (tmplKfs.length === 0) {
+        baseUpdates[prop] = newVal;
+      } else {
+        channelUpdates.push({ channel, value: newVal });
+      }
+    }
+
+    if (channelUpdates.length > 0) {
+      setTracks((prev) =>
+        prev.map((tr) => {
+          if (tr.id !== track.id) return tr;
+          const channels = { ...tr.channels };
+          for (const u of channelUpdates) {
+            const list = [...(channels[u.channel] || [])];
+            const frameKf = list.find((k) => k.frame === currentFrame && (k.templateId || 'Sequence') === activeTmpl);
+            if (frameKf) {
+              // update value only — easing/bezier/templateId preserved
+              channels[u.channel] = list.map((k) => (k.id === frameKf.id ? { ...k, value: u.value } : k));
+            } else {
+              // add a new keyframe at current frame, reusing the template's easing
+              const templateEasing = list.find((k) => (k.templateId || 'Sequence') === activeTmpl)?.easing || 'easeInOut';
+              channels[u.channel] = [
+                ...list,
+                {
+                  id: generateId(`pkf_${u.channel}`),
+                  frame: currentFrame,
+                  value: u.value,
+                  easing: templateEasing,
+                  templateId: activeTmpl,
+                },
+              ].sort((a, b) => a.frame - b.frame);
+            }
+          }
+          return { ...tr, channels };
+        })
+      );
+    }
+
+    if (Object.keys(baseUpdates).length > 0) {
+      setCharacterParts((prev) =>
+        prev.map((p) =>
+          p.id === id ? { ...p, baseTransform: { ...p.baseTransform, ...baseUpdates } } : p
         )
       );
     }
@@ -98,10 +187,6 @@ export const useInspector = ({
     applyTransformToPart(targetPartId, newTransform, activeTmpl);
   };
 
-  const updateCharacterPart = (partId: string, updates: Partial<CharacterPart>) => {
-    setCharacterParts((prev) => prev.map((p) => (p.id === partId ? { ...p, ...updates } : p)));
-  };
-
   const updatePartMedia = (partId: string, url: string, type: 'image' | 'video') => {
     setCharacterParts((prev) =>
       prev.map((p) => (p.id === partId ? { ...p, innerMediaUrl: url, innerMediaType: type } : p))
@@ -110,7 +195,6 @@ export const useInspector = ({
 
   return {
     updateCurrentTransform,
-    updateCharacterPart,
     updatePartMedia,
   };
 };

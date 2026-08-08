@@ -12,7 +12,6 @@ interface TransformTabProps {
   selectedPart: CharacterPart;
   transform: Transform;
   currentFrame: number;
-  addKeyframeForSelected?: () => void;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
   handleZIndexChange?: (zIndex: number) => void;

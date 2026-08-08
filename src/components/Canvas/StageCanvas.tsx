@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import type { Transform, MaskPoint } from '../../types/animator';
+import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { CANVAS_CENTER_X, CANVAS_CENTER_Y, computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
@@ -36,12 +36,13 @@ export const StageCanvas: React.FC = () => {
     tracks,
     focusModeNodeId,
     setFocusModeNodeId,
-    updateCharacterPart,
     startBatchInteraction,
     endBatchInteraction,
     setActiveTool,
     showToast,
     isScaleLocked,
+    customPresets,
+    liveStuntsState,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,14 +70,13 @@ export const StageCanvas: React.FC = () => {
   }, [appMode]);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'mask_point' | 'mask_in' | 'mask_out' | 'mask_media' | 'mask_media_scale' | 'mask_media_rotate' | 'child_frame_scale' | 'child_frame_rotate' | null>(null);
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'child_frame_scale' | 'child_frame_rotate' | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; initialMaskX?: number; initialMaskY?: number; initialMaskPoints?: MaskPoint[]; initialMaskScale?: number; initialMaskRot?: number; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number }>({
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
   });
-  const [dragMaskPointIndex, setDragMaskPointIndex] = useState<number | null>(null);
   const [snapLines, setSnapLines] = useState<{x1: number, y1: number, x2: number, y2: number, color?: string}[]>([]);
 
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
@@ -292,56 +292,6 @@ export const StageCanvas: React.FC = () => {
         return;
       }
 
-      if (dragMode === 'mask_media') {
-        // Drag the masked inner media: convert the world delta into the shape's
-        // local space (inverse rotation, then inverse scale) and update the mask offsets.
-        const dx = svgX - dragStart.x;
-        const dy = svgY - dragStart.y;
-        const sX = dragStart.initialTransform.scaleX || 1;
-        const sY = dragStart.initialTransform.scaleY || 1;
-        const rotDeg = dragStart.initialTransform.rotation || 0;
-        const rotRad = (rotDeg * Math.PI) / 180;
-        const cosR = Math.cos(-rotRad);
-        const sinR = Math.sin(-rotRad);
-        const localDx = (dx * cosR - dy * sinR) / sX;
-        const localDy = (dx * sinR + dy * cosR) / sY;
-        const newMaskX = Math.round(((dragStart.initialMaskX || 0) + localDx) * 100) / 100;
-        const newMaskY = Math.round(((dragStart.initialMaskY || 0) + localDy) * 100) / 100;
-        updateCharacterPart(selectedPartId, {
-          maskOffsetX: newMaskX,
-          maskOffsetY: newMaskY,
-        });
-        updateCurrentTransform({
-          maskOffsetX: newMaskX,
-          maskOffsetY: newMaskY,
-        });
-        return;
-      }
-
-      if (dragMode === 'mask_media_scale') {
-        // Uniform scale of the inner media around its center (like edit mode).
-        const c = dragStart.mediaCenter!;
-        const initDist = Math.hypot(dragStart.x - c.x, dragStart.y - c.y);
-        const curDist = Math.hypot(svgX - c.x, svgY - c.y);
-        const factor = initDist > 0.001 ? curDist / initDist : 1;
-        const newScale = Math.max(0.05, Math.round((dragStart.initialMaskScale || 1) * factor * 100) / 100);
-        updateCharacterPart(selectedPartId, { maskScale: newScale });
-        updateCurrentTransform({ maskScale: newScale });
-        return;
-      }
-
-      if (dragMode === 'mask_media_rotate') {
-        // Rotate the inner media around its center (like edit mode).
-        const c = dragStart.mediaCenter!;
-        const initAngle = (Math.atan2(dragStart.y - c.y, dragStart.x - c.x) * 180) / Math.PI;
-        const curAngle = (Math.atan2(svgY - c.y, svgX - c.x) * 180) / Math.PI;
-        const delta = ((curAngle - initAngle + 540) % 360) - 180;
-        const newRot = Math.round(((dragStart.initialMaskRot || 0) + delta) * 100) / 100;
-        updateCharacterPart(selectedPartId, { maskRotation: newRot });
-        updateCurrentTransform({ maskRotation: newRot });
-        return;
-      }
-
       if (dragMode === 'child_frame_scale') {
         // Uniform scale of a shape child around its center (world space),
         // then convert the new world scale back into container-local space.
@@ -450,31 +400,8 @@ export const StageCanvas: React.FC = () => {
         
         setSnapLines(newSnapLines);
         
-        if (focusModeNodeId === selectedPartId) {
-          // Convert global SVG delta into shape-local coordinates
-          // to match the inner coordinate system where maskOffset is applied
-          const sX = dragStart.initialTransform.scaleX || 1;
-          const sY = dragStart.initialTransform.scaleY || 1;
-          const rotDeg = dragStart.initialTransform.rotation || 0;
-          const rotRad = (rotDeg * Math.PI) / 180;
-          const cosR = Math.cos(-rotRad);
-          const sinR = Math.sin(-rotRad);
-          // Inverse rotation then inverse scale
-          const localDx = (snappedX * cosR - snappedY * sinR) / sX;
-          const localDy = (snappedX * sinR + snappedY * cosR) / sY;
-          const newMaskX = Math.round(((dragStart.initialMaskX || 0) + localDx) * 100) / 100;
-          const newMaskY = Math.round(((dragStart.initialMaskY || 0) + localDy) * 100) / 100;
-          updateCharacterPart(selectedPartId, {
-            maskOffsetX: newMaskX,
-            maskOffsetY: newMaskY,
-          });
-          updateCurrentTransform({
-            maskOffsetX: newMaskX,
-            maskOffsetY: newMaskY,
-          });
-        } else {
-          // If we have multiple selections and the dragged part is in it, move all of them
-          if (dragStart.initialTransforms) {
+        // If we have multiple selections and the dragged part is in it, move all of them
+        if (dragStart.initialTransforms) {
             Object.keys(dragStart.initialTransforms).forEach(id => {
               const initT = dragStart.initialTransforms![id];
               const movedPart = characterParts.find((x) => x.id === id);
@@ -501,57 +428,6 @@ export const StageCanvas: React.FC = () => {
               updateCurrentTransform({ x: dragStart.initialTransform.x + snappedX, y: dragStart.initialTransform.y + snappedY });
             }
           }
-        }
-        return;
-      } else if (dragMode && dragMode.startsWith('mask_') && dragMaskPointIndex !== null && dragStart.initialMaskPoints) {
-        const part = characterParts.find((p) => p.id === selectedPartId);
-        if (!part || !part.mask) return;
-
-        const deltaWorldX = svgX - dragStart.x;
-        const deltaWorldY = svgY - dragStart.y;
-
-        const rotDeg = dragStart.initialTransform.rotation;
-        const rad = (rotDeg * Math.PI) / 180;
-        const cosR = Math.cos(rad);
-        const sinR = Math.sin(rad);
-
-        const sX = dragStart.initialTransform.scaleX;
-        const sY = dragStart.initialTransform.scaleY;
-        const dxLocal = (deltaWorldX * cosR + deltaWorldY * sinR) / sX;
-        const dyLocal = (-deltaWorldX * sinR + deltaWorldY * cosR) / sY;
-
-        const initialPoint = dragStart.initialMaskPoints[dragMaskPointIndex];
-        const currentT = getComputedTransform(part.id, currentFrame);
-        const activeMask = currentT.mask || part.mask;
-        if (!activeMask) return;
-        
-        const newPoints = [...activeMask.points];
-
-        if (dragMode === 'mask_point') {
-          newPoints[dragMaskPointIndex] = {
-            ...newPoints[dragMaskPointIndex],
-            x: initialPoint.x + dxLocal,
-            y: initialPoint.y + dyLocal
-          };
-        } else if (dragMode === 'mask_in' && initialPoint.handleIn) {
-          newPoints[dragMaskPointIndex] = {
-            ...newPoints[dragMaskPointIndex],
-            handleIn: {
-              x: initialPoint.handleIn.x + dxLocal,
-              y: initialPoint.handleIn.y + dyLocal
-            }
-          };
-        } else if (dragMode === 'mask_out' && initialPoint.handleOut) {
-          newPoints[dragMaskPointIndex] = {
-            ...newPoints[dragMaskPointIndex],
-            handleOut: {
-              x: initialPoint.handleOut.x + dxLocal,
-              y: initialPoint.handleOut.y + dyLocal
-            }
-          };
-        }
-
-        updateCurrentTransform({ mask: { ...activeMask, points: newPoints } });
         return;
       } else if (dragMode === 'rotate') {
         const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
@@ -686,7 +562,6 @@ export const StageCanvas: React.FC = () => {
       setDragMode(null);
       setMarqueeRect(null);
       setSnapLines([]);
-      setDragMaskPointIndex(null);
   }, [dragMode, marqueeRect, characterParts, currentFrame, handleSelectPart, getComputedTransform, isDragging, endBatchInteraction]);
 
   useEffect(() => {
@@ -920,9 +795,11 @@ export const StageCanvas: React.FC = () => {
                 appMode={appMode}
                 broadcastState={broadcastState}
                 currentFrame={currentFrame}
-                getComputedTransform={getComputedTransform}
                 selectedPartId={selectedPartId}
                 totalFrames={totalFrames}
+                tracks={tracks}
+                customPresets={customPresets}
+                liveStuntsState={liveStuntsState}
                 onSelect={(id) => {
                   setSelectedPartId(id);
                 }}

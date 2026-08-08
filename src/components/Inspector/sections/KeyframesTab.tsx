@@ -2,19 +2,26 @@ import React from 'react';
 import { useAnimator } from '../../../context/AnimatorContext';
 import { Diamond, Plus, Trash2, Play } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
+import { groupChannelKeyframesByFrame, DISPLAY_CHANNELS } from '../../../utils/channelKeyframeGroups';
 
 interface KeyframesTabProps {
   selectedPart: CharacterPart;
 }
 
+/**
+ * M3: Editor keyframe panel now reads/writes the canonical `track.channels`
+ * model. "A keyframe" is a frame holding one property keyframe per channel
+ * (same UX as the legacy composite keyframe — one row per frame).
+ */
 export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
   const {
     tracks,
     currentFrame,
     setCurrentFrame,
-    addKeyframeToTrack,
-    deleteKeyframe,
-    updateKeyframeFrame,
+    getComputedTransform,
+    addPropertyKeyframe,
+    deletePropertyKeyframe,
+    updatePropertyKeyframeFrame,
     activeTemplateId,
     fps,
   } = useAnimator();
@@ -22,13 +29,50 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
   const track = tracks.find((t) => t.partId === selectedPart.id);
   const activeTmpl = activeTemplateId || 'Sequence';
 
-  const keyframes = (track?.keyframes || [])
-    .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
-    .sort((a, b) => a.frame - b.frame);
+  const groups = groupChannelKeyframesByFrame(track?.channels, activeTmpl);
 
   const formatTime = (frame: number) => {
     const totalSec = frame / fps;
     return `${totalSec.toFixed(2)}s`;
+  };
+
+  // M3: "Add keyframe" = snapshot the current evaluated transform into the
+  // six canonical channels at the current frame (same semantics as the old
+  // composite keyframe add).
+  const handleAdd = () => {
+    if (!track) return;
+    const t = getComputedTransform(selectedPart.id, currentFrame);
+    const snapshot: Record<string, number> = {
+      x: t.x,
+      y: t.y,
+      rotation: t.rotation,
+      scaleX: t.scaleX,
+      scaleY: t.scaleY,
+      opacity: t.opacity,
+    };
+    for (const ch of DISPLAY_CHANNELS) {
+      addPropertyKeyframe(track.id, ch, currentFrame, snapshot[ch], 'easeInOut');
+    }
+  };
+
+  const handleDelete = (frame: number) => {
+    if (!track) return;
+    const group = groups.find((g) => g.frame === frame);
+    if (!group) return;
+    for (const ch of group.channels) {
+      const kf = group.keyframes[ch];
+      if (kf) deletePropertyKeyframe(track.id, ch, kf.id);
+    }
+  };
+
+  const handleFrameChange = (oldFrame: number, newFrame: number) => {
+    if (!track) return;
+    const group = groups.find((g) => g.frame === oldFrame);
+    if (!group) return;
+    for (const ch of group.channels) {
+      const kf = group.keyframes[ch];
+      if (kf) updatePropertyKeyframeFrame(track.id, ch, kf.id, newFrame);
+    }
   };
 
   return (
@@ -38,13 +82,13 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Diamond size={14} className="text-teal" />
           <span style={{ fontSize: 11, fontWeight: 800, color: '#f8fafc', letterSpacing: '0.4px' }}>
-            LAYER KEYFRAMES ({keyframes.length})
+            LAYER KEYFRAMES ({groups.length})
           </span>
         </div>
 
         <button
           className="fit-pill-btn"
-          onClick={() => track && addKeyframeToTrack(track.id, currentFrame)}
+          onClick={handleAdd}
           style={{
             background: 'linear-gradient(135deg, #0d9488, #14b8a6)',
             color: '#fff',
@@ -65,8 +109,8 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
         </button>
       </div>
 
-      {/* Keyframe List */}
-      {keyframes.length === 0 ? (
+      {/* Keyframe List (frame-grouped channels) */}
+      {groups.length === 0 ? (
         <div
           style={{
             background: '#0b0d10',
@@ -79,7 +123,7 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
         >
           <Diamond size={24} style={{ opacity: 0.3, marginBottom: 8 }} />
           <p style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8', margin: '0 0 4px 0' }}>
-            No keyframes on "{selectedPart.name}"
+            No keyframes on &quot;{selectedPart.name}&quot;
           </p>
           <p style={{ fontSize: 10, color: '#64748b', margin: 0 }}>
             Click <strong>+ Add at F{currentFrame}</strong> to create a keyframe.
@@ -87,12 +131,12 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 400, overflowY: 'auto' }}>
-          {keyframes.map((kf) => {
-            const isCurrent = kf.frame === currentFrame;
+          {groups.map((group) => {
+            const isCurrent = group.frame === currentFrame;
 
             return (
               <div
-                key={kf.id}
+                key={group.frame}
                 style={{
                   background: isCurrent ? 'rgba(20, 184, 166, 0.15)' : '#10131a',
                   border: `1px solid ${isCurrent ? 'var(--accent-teal)' : '#1e2433'}`,
@@ -119,21 +163,21 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                   >
                     <button
                       className="btn-icon"
-                      onClick={() => setCurrentFrame(kf.frame)}
-                      title={`Jump playhead to Frame ${kf.frame}`}
+                      onClick={() => setCurrentFrame(group.frame)}
+                      title={`Jump playhead to Frame ${group.frame}`}
                       style={{ width: 18, height: 18, padding: 0, color: isCurrent ? '#14b8a6' : '#94a3b8' }}
                     >
                       <Play size={10} fill="currentColor" />
                     </button>
                     <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8' }}>F</span>
                     <input className="input-control"
-                type="number"
+                      type="number"
                       min={0}
-                      value={kf.frame}
+                      value={group.frame}
                       onChange={(e) => {
                         const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val >= 0 && track) {
-                          updateKeyframeFrame(track.id, kf.id, val);
+                        if (!isNaN(val) && val >= 0) {
+                          handleFrameChange(group.frame, val);
                         }
                       }}
                       onFocus={(e) => e.target.select()}
@@ -155,12 +199,15 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
 
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: '#cbd5e1' }}>
-                      {formatTime(kf.frame)}
+                      {formatTime(group.frame)}
                     </span>
+                    {/* Channel tags + representative easing */}
                     <span style={{ fontSize: 9, color: '#64748b', fontFamily: 'monospace' }}>
-                      {kf.easing === 'cubic_bezier' && kf.bezierControlPoints
-                        ? `bezier(${kf.bezierControlPoints.join(', ')})`
-                        : kf.easing || 'ease'}
+                      {group.channels.join(', ')}
+                      {' · '}
+                      {group.easing === 'cubic_bezier' && group.bezierControlPoints
+                        ? `bezier(${group.bezierControlPoints.join(', ')})`
+                        : group.easing || 'ease'}
                     </span>
                   </div>
                 </div>
@@ -169,8 +216,8 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   <button
                     className="btn-icon danger"
-                    onClick={() => track && deleteKeyframe(track.id, kf.id)}
-                    title="Delete Keyframe"
+                    onClick={() => handleDelete(group.frame)}
+                    title="Delete Keyframe (all properties at this frame)"
                     style={{ width: 22, height: 22, padding: 0 }}
                   >
                     <Trash2 size={12} />

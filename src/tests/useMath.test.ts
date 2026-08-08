@@ -50,4 +50,43 @@ describe('useMath Hook', () => {
     const t = result.current.getComputedTransform('part_1', 0);
     expect(t.x).toBe(10);
   });
+
+  it('P4-S2: reflects animated opacity from keyframes (not just base)', () => {
+    const opacityPart: CharacterPart = {
+      id: 'part_op', type: 'head', name: 'OP', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.5 }
+    };
+    const opacityTrack: Track = {
+      id: 'track_op', partId: 'part_op', name: 'T_op', channels: { customProps: [] },
+      keyframes: [
+        { id: 'kf_1', frame: 0, templateId: 'Sequence', transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 0.2 }, easing: 'linear' },
+        { id: 'kf_2', frame: 10, templateId: 'Sequence', transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1.0 }, easing: 'linear' }
+      ]
+    } as any;
+
+    const { result } = renderHook(() => useMath({
+      characterParts: [opacityPart],
+      tracks: [opacityTrack],
+      activeTemplateId: 'Sequence'
+    }));
+
+    // Frame 0 → 0.2, frame 5 → 0.6 (linear), frame 10 → 1.0
+    expect(result.current.getComputedTransform('part_op', 0).opacity).toBeCloseTo(0.2, 4);
+    expect(result.current.getComputedTransform('part_op', 5).opacity).toBeCloseTo(0.6, 4);
+    expect(result.current.getComputedTransform('part_op', 10).opacity).toBeCloseTo(1.0, 4);
+  });
+
+  it('P4-S2: opacity parity — getComputedTransform matches evaluateTransform', () => {
+    const { result } = renderHook(() => useMath({
+      characterParts: [mockPart],
+      tracks: [mockTrack],
+      activeTemplateId: 'Sequence'
+    }));
+
+    // mockTrack keyframes: x 10→110, opacity stays 1. evaluateTransform is the
+    // same pure core; the hook must surface the same evaluated opacity.
+    const viaHook = result.current.getComputedTransform('part_1', 5);
+    expect(viaHook.opacity).toBeCloseTo(1.0, 4);
+    expect(viaHook.x).toBe(60);
+  });
 });

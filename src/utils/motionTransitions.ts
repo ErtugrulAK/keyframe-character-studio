@@ -1,5 +1,6 @@
 import type { Transform, Keyframe, EasingType } from '../types/animator';
 import { generateId } from './idGenerator';
+import { buildTransformSnapshot, type SnapshotTransform } from './channelKeyframeGroups';
 
 export const generateTransitionKeyframes = (
   baseTransform: Transform,
@@ -75,4 +76,37 @@ export const generateTransitionKeyframes = (
   };
 
   return { kfStart, kfEnd };
+};
+
+// ─── M8a: canonical channels transition ─────────────────────────────────
+
+export interface TransitionChannelResult {
+  start: SnapshotTransform;
+  end: SnapshotTransform;
+  easing: EasingType;
+  startFrame: number;
+  endFrame: number;
+}
+
+/**
+ * M8a: same transition semantics as generateTransitionKeyframes, but exposed
+ * as the 6 canonical channel start/end values so applyMotionTransition can
+ * write channels instead of legacy keyframes[]. Reuses the legacy generator
+ * (single source of truth for transition math); null = 'none' (clear).
+ */
+export const generateTransitionChannelKeyframes = (
+  baseTransform: Transform,
+  transitionType: string,
+  startFrame: number,
+  endFrame: number
+): TransitionChannelResult | null => {
+  const result = generateTransitionKeyframes(baseTransform, transitionType, startFrame, endFrame);
+  if (!result) return null;
+  return {
+    start: buildTransformSnapshot(result.kfStart.transform),
+    end: buildTransformSnapshot(result.kfEnd.transform),
+    easing: result.kfStart.easing,
+    startFrame,
+    endFrame,
+  };
 };

@@ -84,7 +84,7 @@ export const useTemplates = ({
 
     setTracks((prevTracks) =>
       prevTracks.map((tr) => {
-        const updatedKfs = tr.keyframes.map((k) =>
+        const updatedKfs = (tr.keyframes || []).map((k) =>
           (k.templateId || 'Sequence') === oldId ? { ...k, templateId: cleanName } : k
         );
 
@@ -121,7 +121,7 @@ export const useTemplates = ({
 
     setTracks((prevTracks) =>
       prevTracks.map((tr) => {
-        const updatedKfs = tr.keyframes.filter((k) => (k.templateId || 'Sequence') !== idToDelete);
+        const updatedKfs = (tr.keyframes || []).filter((k) => (k.templateId || 'Sequence') !== idToDelete);
         let updatedChannels = { ...tr.channels };
         if (tr.channels) {
           Object.keys(tr.channels).forEach((chKey) => {

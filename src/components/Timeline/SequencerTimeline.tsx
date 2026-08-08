@@ -3,6 +3,8 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import type { TrackChannel } from '../../types/animator';
 import { TRACK_CHANNELS } from '../../types/animator';
+import { computeMaxFrame, findChannelKeyframeAtFrame, hasChannelDataForTemplate } from '../../utils/timelineMetrics';
+import { DISPLAY_CHANNELS, buildTransformSnapshot } from '../../utils/channelKeyframeGroups';
 import {
   Plus,
   ZoomIn,
@@ -122,13 +124,10 @@ export const SequencerTimeline: React.FC = () => {
   );
 
   const handleCropToContent = () => {
-    let maxFrame = 0;
-    tracks.forEach((track) => {
-      track.keyframes.forEach((kf) => { if (kf.frame > maxFrame) maxFrame = kf.frame; });
-      TRACK_CHANNELS.forEach((ch) => {
-        (track.channels?.[ch] ?? []).forEach((pkf) => { if (pkf.frame > maxFrame) maxFrame = pkf.frame; });
-      });
-    });
+    // M5: timeline length accounts for BOTH legacy keyframes and canonical
+    // channel keyframes (max across all templates — same behavior as before,
+    // now via the pure, tested computeMaxFrame helper).
+    const maxFrame = computeMaxFrame(tracks);
     setTotalFrames(maxFrame > 0 ? maxFrame : 30);
   };
 
@@ -271,6 +270,25 @@ export const SequencerTimeline: React.FC = () => {
     const transform = getComputedTransform(partId, currentFrame);
     const val = transform[channel] ?? (channel === 'maskScale' ? 1 : 0);
     addPropertyKeyframe(trackId, channel, currentFrame, val);
+  };
+
+  // M7: Outliner "Add Composite Keyframe" → canonical 6-channel snapshot at
+  // the current frame (same behavior as KeyframesTab handleAdd).
+  // Legacy-only tracks (imported old projects, no channel data) keep the
+  // legacy composite keyframe path.
+  const handleAddKeyframeSnapshot = (trackId: string, frame: number) => {
+    const track = tracks.find((t) => t.id === trackId);
+    if (!track) return;
+    const activeTmpl = activeTemplateId || 'Sequence';
+    if (!hasChannelDataForTemplate(track, activeTmpl)) {
+      addKeyframeToTrack(trackId, frame);
+      return;
+    }
+    const t = getComputedTransform(track.partId, frame);
+    const snapshot = buildTransformSnapshot(t);
+    for (const ch of DISPLAY_CHANNELS) {
+      addPropertyKeyframe(trackId, ch, frame, snapshot[ch], 'easeInOut');
+    }
   };
 
   // State for sub-group collapsing (e.g., location, rotation, scale)
@@ -503,7 +521,7 @@ export const SequencerTimeline: React.FC = () => {
                   onToggleEditVisible={toggleTrackEditVisibility}
                   onToggleVisible={toggleTrackVisibility}
                   onToggleLock={toggleTrackLock}
-                  onAddKeyframe={addKeyframeToTrack}
+                  onAddKeyframe={handleAddKeyframeSnapshot}
                   onAddChannelKeyframe={handleAddChannelKeyframe}
                   isGroupExpanded={isGroupExpanded}
                   onToggleSubGroup={toggleSubGroup}
@@ -603,11 +621,22 @@ export const SequencerTimeline: React.FC = () => {
               targetKf = pastKfs[0] || tmplKfs[0];
             }
 
+            if (!targetKf) {
+              // M5: canonical fallback — channel-only tracks have no legacy
+              // keyframes; resolve the channel keyframe at this frame so bezier
+              // edits land on channels (updateKeyframeBezierPointsMutator is
+              // dual — it updates both keyframes[] and channels[] by id).
+              targetKf = findChannelKeyframeAtFrame(track, activeTmpl, currentFrame) as any;
+            }
+
             if (targetKf) {
               updateKeyframeBezierPoints(track.id, targetKf.id, points);
-            } else {
+            } else if (!hasChannelDataForTemplate(track, activeTmpl)) {
+              // Legacy-only track with no keyframe: keep the old snapshot behavior.
               addKeyframeToTrack(track.id, currentFrame);
             }
+            // Channel track with no keyframe at this frame: nothing to attach
+            // bezier to — do not pollute channels with a legacy snapshot.
           }}
           initialModalOpen={true}
           onCloseModal={() => setIsCurveModalOpen(false)}

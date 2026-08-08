@@ -1,4 +1,4 @@
-import type { CustomMotionPresetKeyframe } from '../../../../types/animator';
+import type { CustomMotionPresetKeyframe } from '../types/animator';
 
 export const sampleCustomPreset = (keyframes: CustomMotionPresetKeyframe[], progress: number) => {
   if (!keyframes || keyframes.length === 0) return { deltaX: 0, deltaY: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };

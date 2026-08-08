@@ -29,7 +29,6 @@ export const useSelection = () => {
   }, []);
 
   const [focusModeNodeId, setFocusModeNodeId] = useState<string | null>(null);
-  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [selectedKeyframeId, setSelectedKeyframeId] = useState<string | null>(null);
 
   return {
@@ -40,8 +39,6 @@ export const useSelection = () => {
     handleSelectPart,
     focusModeNodeId,
     setFocusModeNodeId,
-    selectedTrackId,
-    setSelectedTrackId,
     selectedKeyframeId,
     setSelectedKeyframeId,
   };

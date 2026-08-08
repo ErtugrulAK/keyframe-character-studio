@@ -202,7 +202,10 @@ describe('AnimatorContext Integration Tests', () => {
       context.importProject(exportedData);
     });
 
+    // BUG #5: verify the imported templates were actually restored (content,
+    // not just count — count would pass even if import left state untouched).
     expect(context.motionTemplates.length).toBe(2);
+    expect(context.motionTemplates.some((t: any) => t.name === 'Outro')).toBe(true);
   });
 
   it('Broadcast: state transitions and animation tick interactions', () => {

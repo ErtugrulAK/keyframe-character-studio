@@ -68,19 +68,51 @@ export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opaci
 
 export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation'];
 
-export interface Track {
-  id: string;
+/**
+ * Track data model (Phase 3 Step 5).
+ *
+ * Split into two orthogonal concerns:
+ *   - AnimationTrackData: everything the animation/composition engine needs
+ *   - EditorTrackState:    everything the editor/UI needs (no animation logic)
+ *
+ * `Track` is the union of both — structurally identical to the previous
+ * single interface, so no consumer changes are required.
+ */
+
+/** Animation/composition-domain track fields */
+export interface AnimationTrackData {
+  /** Which layer this track animates */
   partId: string;
-  name: string;
-  color: string;
-  keyframes: Keyframe[]; // legacy composite keyframes kept for backward compatibility
-  channels: Record<TrackChannel, PropertyKeyframe[]>; // per-property keyframe channels
-  visible: boolean; // Broadcast Mute State
-  editVisible?: boolean; // Edit Canvas Hard Hide State
-  locked: boolean;
-  expanded?: boolean; // Unreal-style collapse/expand state
-  sequencerTemplateId?: string; // Motion Design template ID (e.g. In_V1, Out_V1)
+  /** Legacy composite keyframes — kept ONLY for legacy import compatibility.
+   *  M8e: no longer exported (channels-only policy); may be absent on modern
+   *  tracks. */
+  keyframes?: Keyframe[];
+  /** Per-property keyframe channels (canonical animation format) */
+  channels: Record<TrackChannel, PropertyKeyframe[]>;
+  /** Motion Design template ID (e.g. In_V1, Out_V1) — which sequence's keyframes are active */
+  sequencerTemplateId?: string;
 }
+
+/** Editor/UI-domain track fields (no animation logic) */
+export interface EditorTrackState {
+  /** Editor track identity */
+  id: string;
+  /** Display name in the timeline */
+  name: string;
+  /** Timeline lane color */
+  color: string;
+  /** Broadcast mute state */
+  visible: boolean;
+  /** Edit canvas hard-hide state */
+  editVisible?: boolean;
+  /** Prevent editing this track */
+  locked: boolean;
+  /** Unreal-style collapse/expand state */
+  expanded?: boolean;
+}
+
+/** Full track = animation data + editor state */
+export type Track = AnimationTrackData & EditorTrackState;
 
 export type BodyPartType = 
   | 'custom_star'

@@ -58,8 +58,6 @@ interface AnimatorContextType {
   handleSelectPart: (id: string | null, isMulti?: boolean) => void;
   focusModeNodeId: string | null;
   setFocusModeNodeId: (id: string | null) => void;
-  selectedTrackId: string | null;
-  setSelectedTrackId: (id: string | null) => void;
   selectedKeyframeId: string | null;
   setSelectedKeyframeId: (id: string | null) => void;
   activeTool: ToolType;
@@ -92,11 +90,9 @@ interface AnimatorContextType {
   getComputedTransform: (partId: string, frame: number) => Transform;
 
   // Actions
-  addKeyframeForSelected: () => void;
   addKeyframeToTrack: (trackId: string, frame: number) => void;
   deleteKeyframe: (trackId: string, keyframeId: string) => void;
   updateKeyframeFrame: (trackId: string, keyframeId: string, newFrame: number) => void;
-  updateKeyframeEasing: (trackId: string, keyframeId: string, easing: EasingType) => void;
   updateKeyframeBezierPoints: (trackId: string, keyframeId: string, points: [number, number, number, number]) => void;
   updateCurrentTransform: (newTransform: Partial<Transform>, partIdOverride?: string) => void;
   toggleTrackVisibility: (trackId: string) => void;
@@ -108,7 +104,6 @@ interface AnimatorContextType {
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
-  updateCharacterPart: (partId: string, updates: Partial<CharacterPart>) => void;
   sceneTitle: string;
   setSceneTitle: (title: string) => void;
   projectTemplates: ProjectTemplate[];
@@ -252,8 +247,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     handleSelectPart,
     focusModeNodeId,
     setFocusModeNodeId,
-    selectedTrackId,
-    setSelectedTrackId,
     selectedKeyframeId,
     setSelectedKeyframeId,
   } = useSelection();
@@ -278,10 +271,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setShowGrid,
     deletePart,
     addKeyframeToTrack,
-    addKeyframeForSelected,
     deleteKeyframe,
     updateKeyframeFrame,
-    updateKeyframeEasing,
     updateKeyframeBezierPoints,
     toggleTrackVisibility,
     toggleTrackEditVisibility,
@@ -363,7 +354,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const {
     updateCurrentTransform,
-    updateCharacterPart,
     updatePartMedia,
   } = useInspector({
     selectedPartId,
@@ -436,8 +426,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         handleSelectPart,
         focusModeNodeId,
         setFocusModeNodeId,
-        selectedTrackId,
-        setSelectedTrackId,
         selectedKeyframeId,
         setSelectedKeyframeId,
         activeTool,
@@ -461,11 +449,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         startBatchInteraction,
         endBatchInteraction,
         getComputedTransform,
-        addKeyframeForSelected,
         addKeyframeToTrack,
         deleteKeyframe,
         updateKeyframeFrame,
-        updateKeyframeEasing,
         updateKeyframeBezierPoints,
         updateCurrentTransform,
         toggleTrackVisibility,
@@ -477,7 +463,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         resetProject,
         addCustomPart,
         updatePartMedia,
-        updateCharacterPart,
         deletePart,
         copySelectedPart,
         pasteCopiedPart,

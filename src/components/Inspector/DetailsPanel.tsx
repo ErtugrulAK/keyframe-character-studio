@@ -21,7 +21,6 @@ export const DetailsPanel: React.FC = () => {
     characterParts,
     setCharacterParts,
     getComputedTransform,
-    addKeyframeForSelected,
     updateCurrentTransform,
     deletePart,
     duplicateSelectedPart,
@@ -129,7 +128,6 @@ export const DetailsPanel: React.FC = () => {
               selectedPart={selectedPart}
               transform={transform}
               currentFrame={currentFrame}
-              addKeyframeForSelected={addKeyframeForSelected}
               updateCurrentTransform={updateCurrentTransform}
               handlePartPropChange={handlePartPropChange}
               handleZIndexChange={handleZIndexChange}

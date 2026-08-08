@@ -17,7 +17,7 @@ interface ContainerAssignControlProps {
  * back to world space. Rendering/clipping lives in PartRenderer (parentId).
  */
 export const ContainerAssignControl: React.FC<ContainerAssignControlProps> = ({ selectedPart, transform, onPartPropChange }) => {
-  const { characterParts, getComputedTransform, currentFrame, updateCurrentTransform } = useAnimator();
+  const { characterParts, getComputedTransform, currentFrame, updateCurrentTransform, tracks, toggleTrackEditVisibility } = useAnimator();
 
   const container = selectedPart.parentId ? characterParts.find((p) => p.id === selectedPart.parentId) : null;
   const containers = characterParts.filter(
@@ -28,9 +28,13 @@ export const ContainerAssignControl: React.FC<ContainerAssignControlProps> = ({ 
     if (!containerId || containerId === selectedPart.parentId) return;
     const containerT = getComputedTransform(containerId, currentFrame);
     const local = worldToContainerLocal(transform, containerT);
-    // Land the element in the MIDDLE of the shape (like a photo fills a shape):
-    // centering guarantees it overlaps the container, so it is never clipped
-    // into invisibility right after assigning.
+    // Keep the element at its OWN size and color — no auto "cover" scaling.
+    // Just center it in the container's local space so it always overlaps the
+    // shape's outline and is never clipped into invisibility, while the user
+    // can still move/scale it afterwards like a masked photo (mask tool).
+    // NOTE: for CONCAVE freeforms whose bbox center falls outside the shape,
+    // a small centered child can still be clipped away — acceptable trade-off
+    // for keeping the element's original size.
     onPartPropChange('parentId', containerId);
     updateCurrentTransform({
       x: 0,
@@ -40,6 +44,13 @@ export const ContainerAssignControl: React.FC<ContainerAssignControlProps> = ({ 
       scaleY: local.scaleY,
       opacity: local.opacity,
     });
+    // The element must stay VISIBLE after assignment: if its Edit Canvas Eye
+    // is off (track.editVisible === false), the canvas renders it at opacity 0
+    // inside the shape and it looks "transparent" while the gizmo still works.
+    const childTrack = tracks.find((t) => t.partId === selectedPart.id);
+    if (childTrack && childTrack.editVisible === false) {
+      toggleTrackEditVisibility(childTrack.id);
+    }
   };
 
   const removeContainer = () => {

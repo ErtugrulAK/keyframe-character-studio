@@ -1100,6 +1100,7 @@ export const StageCanvas: React.FC = () => {
                 getComputedTransform={getComputedTransform}
                 selectedPartId={selectedPartId}
                 totalFrames={totalFrames}
+                zScale={zScale}
                 onSelect={(id) => {
                   // Clicking a DIFFERENT element exits the mask tool + focus
                   // mode so the normal selection gizmo (corner + edge handles)

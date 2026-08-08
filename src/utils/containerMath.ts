@@ -70,3 +70,23 @@ export const worldDeltaToContainerLocal = (dx: number, dy: number, containerT: T
     y: (dx * sinR + dy * cosR) / (containerT.scaleY || 1),
   };
 };
+
+/**
+ * Uniform scale factor that makes a child of the given world size COVER the
+ * container's bounding box (preserving the child's aspect ratio). A child
+ * covering the bbox always overlaps the container's outline — even for
+ * concave freeforms, where the bbox center alone can fall outside the shape
+ * and a child centered there would be clipped into invisibility.
+ */
+export const computeContainerCoverScale = (
+  containerW: number,
+  containerH: number,
+  childW: number,
+  childH: number
+): number => {
+  const cw = Math.max(1, containerW);
+  const ch = Math.max(1, containerH);
+  const cw2 = Math.max(1, childW);
+  const ch2 = Math.max(1, childH);
+  return Math.max(cw / cw2, ch / ch2);
+};

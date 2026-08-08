@@ -18,6 +18,8 @@ interface StagePartLayersProps {
   onStartInnerMediaRotate?: (partId: string, e: React.MouseEvent) => void;
   onStartChildScale?: (partId: string, e: React.MouseEvent) => void;
   onStartChildRotate?: (partId: string, e: React.MouseEvent) => void;
+  /** Inverse camera zoom — forwarded to PartRenderer for screen-constant gizmo sizes. */
+  zScale?: number;
 }
 
 /**
@@ -41,6 +43,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   onStartInnerMediaRotate,
   onStartChildScale,
   onStartChildRotate,
+  zScale = 1,
 }) => {
   // Render order: every container renders before its children (so the child's
   // clip path def exists and the child draws on top of its container).
@@ -48,15 +51,25 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   const placed = new Set<string>();
   for (const p of sortedParts) {
     if (placed.has(p.id)) continue;
+    // Children are NOT pushed here: sortedParts is zIndex-ordered and a child
+    // usually sits BELOW its container in zIndex, so pushing it directly would
+    // render it UNDER the container's opaque fill (invisible inside the shape).
+    // Children join right after their parent below.
+    if (p.parentId) continue;
     orderedParts.push(p);
     placed.add(p.id);
-    if (!p.parentId) {
-      for (const c of sortedParts) {
-        if (c.parentId === p.id && !placed.has(c.id)) {
-          orderedParts.push(c);
-          placed.add(c.id);
-        }
+    for (const c of sortedParts) {
+      if (c.parentId === p.id && !placed.has(c.id)) {
+        orderedParts.push(c);
+        placed.add(c.id);
       }
+    }
+  }
+  // Safety net: anything never placed (e.g. orphaned child) still renders.
+  for (const p of sortedParts) {
+    if (!placed.has(p.id)) {
+      orderedParts.push(p);
+      placed.add(p.id);
     }
   }
 
@@ -99,6 +112,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             onStartInnerMediaRotate={onStartInnerMediaRotate}
             onStartChildScale={onStartChildScale}
             onStartChildRotate={onStartChildRotate}
+            zScale={zScale}
           />
         );
       })}
@@ -150,6 +164,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
                   onStartInnerMediaRotate={onStartInnerMediaRotate}
                   onStartChildScale={onStartChildScale}
                   onStartChildRotate={onStartChildRotate}
+                  zScale={zScale}
                 />
               </g>
             );

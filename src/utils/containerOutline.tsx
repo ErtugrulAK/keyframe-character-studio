@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../types/animator';
-import { buildFreeformPath } from './freeform';
+import { buildFreeformPath, getFreeformExtents } from './freeform';
 
 /**
  * Shape types that can act as containers (they have a closed outline we can
@@ -51,6 +51,44 @@ export const getContainerOutlineElement = (part: CharacterPart): React.ReactElem
     }
     case 'custom_card':
       return <rect x={-90} y={-50} width={180} height={100} rx={part.borderRadius ?? 12} />;
+    default:
+      return null;
+  }
+};
+
+/**
+ * Local-space bounding box { w, h } of a container shape. Mirrors the geometry
+ * in getContainerOutlineElement / getInnerMediaFrame so a child can be framed
+ * to COVER the container (like an uploaded photo fills a shape). A child that
+ * covers the bbox always overlaps the outline — even for concave freeforms.
+ */
+export const getContainerBBox = (part: CharacterPart): { w: number; h: number } | null => {
+  switch (part.type) {
+    case 'custom_circle':
+      return { w: 60, h: 60 };
+    case 'custom_box':
+      return { w: 60, h: 60 };
+    case 'custom_rect':
+      return { w: 120, h: 60 };
+    case 'custom_triangle':
+      return { w: 70, h: 60 };
+    case 'custom_banner':
+      return { w: 160, h: 50 };
+    case 'custom_capsule':
+      return { w: 100, h: 40 };
+    case 'custom_diamond':
+      return { w: 70, h: 70 };
+    case 'custom_parallelogram':
+      return { w: 170, h: 60 };
+    case 'custom_star':
+      return { w: 70, h: 70 };
+    case 'custom_freeform': {
+      const ext = getFreeformExtents(part.points || []);
+      if (!isFinite(ext.maxX) || !isFinite(ext.maxY)) return null;
+      return { w: ext.maxX - ext.minX, h: ext.maxY - ext.minY };
+    }
+    case 'custom_card':
+      return { w: 180, h: 100 };
     default:
       return null;
   }

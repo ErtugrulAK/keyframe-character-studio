@@ -1,7 +1,7 @@
 import React from 'react';
-import type { CharacterPart, Transform, MaskPoint } from '../../../types/animator';
+import type { CharacterPart, Transform } from '../../../types/animator';
 import { useAnimator } from '../../../context/AnimatorContext';
-import { getPartBounds } from '../../../utils/bounds';
+import { getDefaultMaskPoints } from '../../../utils/maskDefaults';
 import { Scissors, Move, Feather, Eye, Layers, Box, MousePointerClick } from 'lucide-react';
 
 interface SmartNumberInputProps {
@@ -177,23 +177,10 @@ export const MaskTab: React.FC<MaskTabProps> = ({ selectedPart, transform, updat
   const handleToggleMask = () => {
     if (!mask.enabled && mask.points.length === 0) {
       // The default mask should MEAN something for the shape it is applied to:
-      // freeform polygons start with the mask on their own vertices; other
-      // shapes get a rectangle that matches their actual bounds.
-      let defaultPoints: MaskPoint[];
-      if (selectedPart.type === 'custom_freeform' && selectedPart.points && selectedPart.points.length >= 3) {
-        defaultPoints = selectedPart.points.map((p) => ({ x: p.x, y: p.y }));
-      } else {
-        const bounds = getPartBounds(selectedPart);
-        const w = bounds.halfW * 2;
-        const h = bounds.halfH * 2;
-        defaultPoints = [
-          { x: -w / 2, y: -h / 2 },
-          { x: w / 2, y: -h / 2 },
-          { x: w / 2, y: h / 2 },
-          { x: -w / 2, y: h / 2 },
-        ];
-      }
-      updateCurrentTransform({ mask: { ...mask, enabled: true, points: defaultPoints } });
+      // it follows the shape's own outline (freeform -> its vertices, rhombus
+      // -> its 4 corners, circle -> sampled points on the circle, ...) so the
+      // mask gizmo hugs the visible shape instead of a bounding-box square.
+      updateCurrentTransform({ mask: { ...mask, enabled: true, points: getDefaultMaskPoints(selectedPart) } });
       setActiveTool('mask');
     } else {
       updateCurrentTransform({ mask: { ...mask, enabled: !mask.enabled } });

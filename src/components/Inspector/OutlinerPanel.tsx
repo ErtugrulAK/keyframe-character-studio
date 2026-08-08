@@ -178,7 +178,7 @@ export const OutlinerPanel: React.FC = () => {
                         if (track) toggleTrackEditVisibility(track.id);
                       }}
                       title={isVisible ? 'Visible on stage' : 'Hidden from stage'}
-                      style={{ cursor: 'pointer', marginRight: 6 }}
+                      style={{ cursor: 'pointer', marginRight: 6, padding: '2px 6px', marginLeft: 2 }}
                     >
                       {isVisible ? (
                         <Eye size={12} className="text-teal" />

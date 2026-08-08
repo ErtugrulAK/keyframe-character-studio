@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { worldToContainerLocal, containerLocalToWorld, worldDeltaToContainerLocal } from '../utils/containerMath';
+import {
+  worldToContainerLocal,
+  containerLocalToWorld,
+  worldDeltaToContainerLocal,
+  computeContainerCoverScale,
+} from '../utils/containerMath';
 import type { Transform } from '../types/animator';
 
 const makeT = (over: Partial<Transform>): Transform => ({
@@ -52,5 +57,29 @@ describe('containerMath', () => {
     // Rotating the delta by -90° then dividing by 2: (10,0) -> (0,-10) -> (0,-5)
     expect(delta.x).toBeCloseTo(0, 5);
     expect(delta.y).toBeCloseTo(-5, 5);
+  });
+
+  describe('computeContainerCoverScale', () => {
+    it('scales a smaller child UP to cover the container bbox', () => {
+      // 120x60 child into a 200x120 bbox: width needs 200/120, height 120/60
+      const cover = computeContainerCoverScale(200, 120, 120, 60);
+      expect(cover).toBeCloseTo(2, 6);
+    });
+
+    it('scales a larger child DOWN to cover a smaller bbox', () => {
+      const cover = computeContainerCoverScale(60, 60, 120, 60);
+      expect(cover).toBeCloseTo(1, 6); // width needs 0.5, height needs 1 -> cover uses max
+    });
+
+    it('preserves aspect ratio (uniform factor from the max axis)', () => {
+      // Very wide bbox, tall child: height ratio dominates
+      const cover = computeContainerCoverScale(400, 50, 50, 100);
+      expect(cover).toBeCloseTo(8, 6); // 400/50
+    });
+
+    it('never returns a zero/NaN factor for degenerate input', () => {
+      expect(computeContainerCoverScale(0, 0, 0, 0)).toBe(1);
+      expect(Number.isFinite(computeContainerCoverScale(-5, 10, 3, 0))).toBe(true);
+    });
   });
 });

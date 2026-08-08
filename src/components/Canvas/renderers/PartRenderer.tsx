@@ -59,6 +59,9 @@ interface PartRendererProps {
   onStartInnerMediaRotate?: (partId: string, e: React.MouseEvent) => void;
   onStartChildScale?: (partId: string, e: React.MouseEvent) => void;
   onStartChildRotate?: (partId: string, e: React.MouseEvent) => void;
+  /** Inverse camera zoom (1 / zoomLevel) so gizmo handles stay a constant
+      pixel size on screen regardless of pan/zoom (see StageCanvas zScale). */
+  zScale?: number;
 }
 
 export const PartRenderer: React.FC<PartRendererProps> = ({
@@ -78,6 +81,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   onStartInnerMediaRotate,
   onStartChildScale,
   onStartChildRotate,
+  zScale = 1,
 }) => {
   let animScaleX = 1;
   let animScaleY = 1;
@@ -309,6 +313,16 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const finalScaleY = transform.scaleY * animScaleY;
   const finalRot = transform.rotation + animRot;
 
+  // Screen-constant gizmo sizing. The canvas is rendered inside a zoomed
+  // group, and these gizmos additionally sit inside the part's own
+  // translate/rotate/scale chain — so a fixed local size shrinks/grows with
+  // camera zoom AND the part's scale. zScale is the inverse camera zoom
+  // (1 / zoom); dividing by the part's scale keeps handles at a constant
+  // pixel size on screen (mirrors TransformGizmo's zScale trick).
+  const gzX = zScale / Math.max(0.001, Math.abs(finalScaleX));
+  const gzY = zScale / Math.max(0.001, Math.abs(finalScaleY));
+  const gzMin = Math.min(gzX, gzY);
+
   // Container feature: if this part has children, expose a clip path of its
   // outline (in world space) so children can be clipped to this shape.
   const childParts = characterParts.filter((c) => c.parentId === part.id);
@@ -429,10 +443,21 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           // proper antialiasing, so the photo's clipped edges stay smooth
           // (no serrated/jagged lines along the shape outline).
           mask={`url(#${mediaFrame.clipId})`}
-          opacity={part.innerMediaOpacity ?? 1}
           style={{ pointerEvents: 'none' }}
         >
-          {renderInnerMedia(mediaFrame.w, mediaFrame.h, mediaFrame.x, mediaFrame.y)}
+          {/* Shape fill UNDER the masked media (same outline geometry as the
+              mask). Gaps between the photo and the shape outline keep the
+              shape's own fill color instead of showing the canvas through;
+              the shape stroke (main render group) still paints on top of the
+              photo's edge. The fill follows the SHAPE's opacity (transform +
+              animation): when the shape opacity is 0, its own fill vanishes
+              while the photo (independent inner-media opacity) stays. */}
+          <g fill={fill} opacity={finalOpacity}>
+            {getContainerOutlineElement(part)}
+          </g>
+          <g opacity={part.innerMediaOpacity ?? 1}>
+            {renderInnerMedia(mediaFrame.w, mediaFrame.h, mediaFrame.x, mediaFrame.y)}
+          </g>
         </g>
       </g>
     ) : null;
@@ -449,7 +474,11 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     !isGhost && mediaFrame && isMaskTool && onStartInnerMediaDrag ? (
       <g transform={`translate(${finalX}, ${finalY}) rotate(${finalRot}) scale(${finalScaleX}, ${finalScaleY})`}>
         <g transform={`translate(${mOffX}, ${mOffY}) scale(${mScale}) rotate(${mRot})`}>
-          {/* Move: dashed frame */}
+          {/* Move: dashed frame — the IMAGE's frame (mediaFrame rect), the same
+              box the photo renders in. Always a rect (also for freeforms): the
+              photo is a rectangle, so its drag frame must be its rectangle —
+              not the freeform path (which would sit in a different space than
+              the photo's offset/scale/rotation transform). */}
           <rect
             x={mediaFrame.x}
             y={mediaFrame.y}
@@ -466,7 +495,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
               onStartInnerMediaDrag(part.id, e);
             }}
           />
-          {/* Scale: 4 corner handles */}
+          {/* Scale: 4 corner handles (screen-constant size; cursor follows the
+              resize diagonal: TL/BR \ nwse, TR/BL / nesw) */}
           {[
             { x: mediaFrame.x, y: mediaFrame.y },
             { x: mediaFrame.x + mediaFrame.w, y: mediaFrame.y },
@@ -475,15 +505,15 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           ].map((c, i) => (
             <rect
               key={`mcorner-${i}`}
-              x={c.x - 5}
-              y={c.y - 5}
-              width={10}
-              height={10}
+              x={c.x - 6 * gzX}
+              y={c.y - 6 * gzY}
+              width={12 * gzX}
+              height={12 * gzY}
               fill="#38bdf8"
               stroke="#ffffff"
               strokeWidth={1.5}
               vectorEffect="non-scaling-stroke"
-              style={{ cursor: 'nwse-resize' }}
+              style={{ cursor: i % 2 === 0 ? 'nwse-resize' : 'nesw-resize' }}
               onMouseDown={(e) => {
                 e.stopPropagation();
                 onStartInnerMediaScale?.(part.id, e);
@@ -495,7 +525,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             x1={mediaFrame.x + mediaFrame.w / 2}
             y1={mediaFrame.y}
             x2={mediaFrame.x + mediaFrame.w / 2}
-            y2={mediaFrame.y - 26}
+            y2={mediaFrame.y - 26 * gzY}
             stroke="#38bdf8"
             strokeWidth={2}
             vectorEffect="non-scaling-stroke"
@@ -503,8 +533,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           />
           <circle
             cx={mediaFrame.x + mediaFrame.w / 2}
-            cy={mediaFrame.y - 26}
-            r={6}
+            cy={mediaFrame.y - 26 * gzY}
+            r={6 * gzMin}
             fill="#ffb700"
             stroke="#ffffff"
             strokeWidth={1.5}
@@ -544,7 +574,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
               onStartTranslateDrag(part.id, e);
             }}
           />
-          {/* Scale: 4 corner handles */}
+          {/* Scale: 4 corner handles (screen-constant size; cursor follows the
+              resize diagonal: TL/BR \ nwse, TR/BL / nesw) */}
           {[
             { x: -childBounds.halfW, y: -childBounds.halfH },
             { x: childBounds.halfW, y: -childBounds.halfH },
@@ -553,15 +584,15 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           ].map((c, i) => (
             <rect
               key={`child-corner-${i}`}
-              x={c.x - 5}
-              y={c.y - 5}
-              width={10}
-              height={10}
+              x={c.x - 6 * gzX}
+              y={c.y - 6 * gzY}
+              width={12 * gzX}
+              height={12 * gzY}
               fill="#38bdf8"
               stroke="#ffffff"
               strokeWidth={1.5}
               vectorEffect="non-scaling-stroke"
-              style={{ cursor: 'nwse-resize' }}
+              style={{ cursor: i % 2 === 0 ? 'nwse-resize' : 'nesw-resize' }}
               onMouseDown={(e) => {
                 e.stopPropagation();
                 onStartChildScale(part.id, e);
@@ -573,7 +604,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
             x1={0}
             y1={-childBounds.halfH}
             x2={0}
-            y2={-childBounds.halfH - 26}
+            y2={-childBounds.halfH - 26 * gzY}
             stroke="#38bdf8"
             strokeWidth={2}
             vectorEffect="non-scaling-stroke"
@@ -581,8 +612,8 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
           />
           <circle
             cx={0}
-            cy={-childBounds.halfH - 26}
-            r={6}
+            cy={-childBounds.halfH - 26 * gzY}
+            r={6 * gzMin}
             fill="#ffb700"
             stroke="#ffffff"
             strokeWidth={1.5}

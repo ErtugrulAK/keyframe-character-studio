@@ -36,10 +36,3 @@ export function initializeIdCounter(existingIds: string[]): void {
   }
   globalCounter = maxNum;
 }
-
-/**
- * Get the current counter value (useful for debugging).
- */
-export function getCurrentCounter(): number {
-  return globalCounter;
-}

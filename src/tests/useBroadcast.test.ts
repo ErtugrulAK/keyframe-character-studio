@@ -84,4 +84,39 @@ describe('useBroadcast Hook', () => {
     expect(result.current.broadcastState['p1'].state).toBe('animating_in');
     expect(result.current.broadcastState['p1'].progress).toBe(0);
   });
+
+  it('triggerAllBroadcastIn animates visible parts and skips hidden tracks', () => {
+    const mockParts: CharacterPart[] = [
+      { id: 'p1', type: 'head', name: 'Head', zIndex: 1, baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } },
+      { id: 'p2', type: 'torso', name: 'Torso', zIndex: 2, baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } },
+    ];
+    const mockTracks = [
+      { id: 't1', partId: 'p1', name: 'T1', color: '#f00', visible: true, keyframes: [], channels: {} },
+      { id: 't2', partId: 'p2', name: 'T2', color: '#0f0', visible: false, keyframes: [], channels: {} },
+    ] as any[];
+
+    const { result } = renderHook(() => useBroadcast({
+      setIsPlaying: mockSetIsPlaying,
+      setCurrentFrame: mockSetCurrentFrame,
+      tracksRef: { current: mockTracks },
+      characterPartsRef: { current: mockParts },
+      customPresetsRef: { current: [] },
+      fpsRef: { current: 30 }
+    }));
+
+    act(() => {
+      result.current.setAppMode('broadcast');
+    });
+
+    act(() => {
+      result.current.triggerAllBroadcastIn();
+    });
+
+    // visible part animates in
+    expect(result.current.broadcastState['p1']).toBeDefined();
+    expect(result.current.broadcastState['p1'].state).toBe('animating_in');
+    expect(result.current.broadcastState['p1'].progress).toBe(0);
+    // hidden-track part is skipped entirely
+    expect(result.current.broadcastState['p2']).toBeUndefined();
+  });
 });

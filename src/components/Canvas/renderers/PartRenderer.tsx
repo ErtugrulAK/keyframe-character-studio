@@ -18,6 +18,10 @@ interface PartRendererProps {
   evaluatedLayer: EvaluatedLayer;
   /** M11: track matte — id of the world-space clipPath clipping this part */
   matteClipPathId?: string;
+  /** M13: track matte — id of the world-space <mask> masking this part
+   *  (alpha/luminance/inverted). Never combined with matteClipPathId —
+   *  a part's matte mode selects exactly one of clip / mask. */
+  matteMaskId?: string;
 }
 
 const CANVAS_CX = CANVAS_CENTER.x;
@@ -33,6 +37,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   onStartTranslateDrag,
   evaluatedLayer,
   matteClipPathId,
+  matteMaskId,
 }) => {
   const el = evaluatedLayer;
   if (!el.visible) return null;
@@ -75,26 +80,39 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   return (
     <g
       key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
-      transform={`translate(${CANVAS_CX + el.transform.x}, ${CANVAS_CY + el.transform.y}) rotate(${el.transform.rotation}) scale(${el.transform.scaleX}, ${el.transform.scaleY})`}
+      // M13 Step 2E fix — coordinate-space bug: clipPath/mask with
+      // clipPathUnits/maskUnits="userSpaceOnUse" resolve in the "user
+      // coordinate system in place at the time the def is REFERENCED", which
+      // for a transformed target <g> is the target's LOCAL space. Our matte
+      // paths are WORLD-space, so they must live on a TRANSFORM-LESS outer
+      // <g> — then the referenced system is the viewBox/world space and the
+      // world-space geometry lands exactly on the target. All interactive /
+      // visual behavior (transform, opacity, cursor, filter, events) stays on
+      // the inner <g>, unchanged.
       clipPath={matteClipPathId ? `url(#${matteClipPathId})` : undefined}
-      style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined }}
-      onClick={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onSelect(part.id); } }}
-      onMouseDown={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onStartTranslateDrag(part.id, e); } }}
+      mask={matteMaskId ? `url(#${matteMaskId})` : undefined}
     >
-      <defs>
-        {!isGhost && el.content.shadowColor && (
-          <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow
-              dx={el.content.shadowOffsetX || 0}
-              dy={el.content.shadowOffsetY || 4}
-              stdDeviation={el.content.shadowBlur || 8}
-              floodColor={el.content.shadowColor || 'rgba(0,0,0,0.5)'}
-              floodOpacity="0.85"
-            />
-          </filter>
-        )}
-      </defs>
-      {pathContent}
+      <g
+        transform={`translate(${CANVAS_CX + el.transform.x}, ${CANVAS_CY + el.transform.y}) rotate(${el.transform.rotation}) scale(${el.transform.scaleX}, ${el.transform.scaleY})`}
+        style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined }}
+        onClick={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onSelect(part.id); } }}
+        onMouseDown={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onStartTranslateDrag(part.id, e); } }}
+      >
+        <defs>
+          {!isGhost && el.content.shadowColor && (
+            <filter id={filterId} x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow
+                dx={el.content.shadowOffsetX || 0}
+                dy={el.content.shadowOffsetY || 4}
+                stdDeviation={el.content.shadowBlur || 8}
+                floodColor={el.content.shadowColor || 'rgba(0,0,0,0.5)'}
+                floodOpacity="0.85"
+              />
+            </filter>
+          )}
+        </defs>
+        {pathContent}
+      </g>
     </g>
   );
 };

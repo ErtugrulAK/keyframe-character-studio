@@ -74,7 +74,8 @@ describe('StyleMatteSection — track matte editor UI', () => {
   it('enabled toggle flips enabled without losing the source relationship', () => {
     const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', enabled: true });
     const { onPartPropChange, container } = renderMatte(target, [STAR, target]);
-    const checkbox = container.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    // checkboxes: [0] inverted, [1] enabled
+    const checkbox = container.querySelectorAll('input[type="checkbox"]')[1] as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
 
     fireEvent.click(checkbox);
@@ -83,8 +84,8 @@ describe('StyleMatteSection — track matte editor UI', () => {
     // re-render with disabled matte → checkbox unchecked, relationship intact
     const disabled = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', enabled: false });
     const { onPartPropChange: cb2, container: c2 } = renderMatte(disabled, [STAR, disabled]);
-    expect((c2.querySelector('input[type="checkbox"]') as HTMLInputElement).checked).toBe(false);
-    fireEvent.click(c2.querySelector('input[type="checkbox"]') as HTMLInputElement);
+    expect((c2.querySelectorAll('input[type="checkbox"]')[1] as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(c2.querySelectorAll('input[type="checkbox"]')[1] as HTMLInputElement);
     expect(cb2).toHaveBeenCalledWith('matte', { sourcePartId: 'src', mode: 'clip', enabled: true });
   });
 
@@ -103,5 +104,73 @@ describe('StyleMatteSection — track matte editor UI', () => {
     expect(select.value).toBe('');
     // No automatic mutation — onPartPropChange was never called by render
     expect(onPartPropChange).not.toHaveBeenCalled();
+  });
+
+  // ─── M13 Step 2D: mode + inverted controls ──────────────────────────
+
+  it('M13: mode select offers Clip / Alpha / Luminance', () => {
+    const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip' });
+    const { container } = renderMatte(target, [STAR, target]);
+    const selects = container.querySelectorAll('select');
+    // selects[0] = source, selects[1] = mode
+    const options = Array.from(selects[1].querySelectorAll('option')).map((o) => o.textContent);
+    expect(options).toEqual(['Clip', 'Alpha', 'Luminance']);
+  });
+
+  it('M13: changing mode Clip → Alpha preserves sourcePartId/enabled/inverted', () => {
+    const target = makePart('tgt', 'custom_box', 'Box Part', {
+      sourcePartId: 'src', mode: 'clip', inverted: true, enabled: true,
+    });
+    const { onPartPropChange, container } = renderMatte(target, [STAR, target]);
+    const modeSelect = container.querySelectorAll('select')[1] as HTMLSelectElement;
+    fireEvent.change(modeSelect, { target: { value: 'alpha' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true,
+    });
+  });
+
+  it('M13: changing mode Alpha → Luminance preserves all fields', () => {
+    const target = makePart('tgt', 'custom_box', 'Box Part', {
+      sourcePartId: 'src', mode: 'alpha', enabled: false,
+    });
+    const { onPartPropChange, container } = renderMatte(target, [STAR, target]);
+    const modeSelect = container.querySelectorAll('select')[1] as HTMLSelectElement;
+    fireEvent.change(modeSelect, { target: { value: 'luminance' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'luminance', enabled: false,
+    });
+  });
+
+  it('M13: inverted OFF → ON', () => {
+    const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip' });
+    const { onPartPropChange, container } = renderMatte(target, [STAR, target]);
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    // checkboxes[0] = inverted, checkboxes[1] = enabled
+    expect((checkboxes[0] as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(checkboxes[0]);
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', { sourcePartId: 'src', mode: 'clip', inverted: true });
+  });
+
+  it('M13: inverted ON → OFF', () => {
+    const target = makePart('tgt', 'custom_box', 'Box Part', {
+      sourcePartId: 'src', mode: 'alpha', inverted: true,
+    });
+    const { onPartPropChange, container } = renderMatte(target, [STAR, target]);
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    expect((checkboxes[0] as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(checkboxes[0]);
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', inverted: false,
+    });
+  });
+
+  it('M13: legacy matte (no mode/inverted) displays Clip + OFF', () => {
+    const legacy = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src' });
+    const { container } = renderMatte(legacy, [STAR, legacy]);
+    const modeSelect = container.querySelectorAll('select')[1] as HTMLSelectElement;
+    expect(modeSelect.value).toBe('clip'); // resolveMatteMode fallback
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    expect((checkboxes[0] as HTMLInputElement).checked).toBe(false); // inverted OFF
+    expect((checkboxes[1] as HTMLInputElement).checked).toBe(true);  // enabled (undefined → active)
   });
 });

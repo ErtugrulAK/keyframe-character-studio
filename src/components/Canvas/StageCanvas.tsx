@@ -798,6 +798,7 @@ export const StageCanvas: React.FC = () => {
                 selectedPartId={selectedPartId}
                 totalFrames={totalFrames}
                 tracks={tracks}
+                projectResolution={projectResolution}
                 customPresets={customPresets}
                 liveStuntsState={liveStuntsState}
                 onSelect={(id) => {

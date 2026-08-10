@@ -1,7 +1,8 @@
 import React from 'react';
 import { Scissors, X } from 'lucide-react';
-import type { CharacterPart, PartMatte } from '../../../../types/animator';
+import type { CharacterPart, MatteMode, PartMatte } from '../../../../types/animator';
 import { getShapeGeometry } from '../../../../utils/shapeGeometry';
+import { resolveMatteMode } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
 
 interface StyleMatteSectionProps {
@@ -64,9 +65,23 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     setMatte({ ...matte, enabled: matte.enabled === false ? true : false });
   };
 
+  const onChangeMode = (mode: MatteMode) => {
+    if (!matte) return;
+    // Preserve sourcePartId / enabled / inverted — only mode changes
+    setMatte({ ...matte, mode });
+  };
+
+  const onToggleInverted = () => {
+    if (!matte) return;
+    setMatte({ ...matte, inverted: matte.inverted === true ? false : true });
+  };
+
   const onRemove = () => setMatte(undefined);
 
   const selectValue = matte && !sourceMissing ? matte.sourcePartId : '';
+  // Runtime-resolved values — legacy data without mode/inverted shows Clip / OFF
+  const modeValue = matte ? resolveMatteMode(matte) ?? 'clip' : 'clip';
+  const invertedValue = matte?.inverted === true;
 
   return (
     <StyleCard title="TRACK MATTE" icon={<Scissors size={13} />} color="#00d2ff">
@@ -88,15 +103,41 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
         )}
 
         {matte && !sourceMissing && (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 11, color: '#cbd5e1', cursor: 'pointer' }}>
-            <input
-              type="checkbox"
-              checked={matte.enabled !== false}
-              onChange={onToggleEnabled}
-              style={{ accentColor: '#00d2ff' }}
-            />
-            Enabled
-          </label>
+          <>
+            <div style={{ marginTop: 10 }}>
+              <label className="form-label">MODE</label>
+              <select
+                className="select-control"
+                style={selectStyle}
+                value={modeValue}
+                onChange={(e) => onChangeMode(e.target.value as MatteMode)}
+              >
+                <option value="clip">Clip</option>
+                <option value="alpha">Alpha</option>
+                <option value="luminance">Luminance</option>
+              </select>
+            </div>
+
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label className="form-label" style={{ margin: 0 }}>INVERTED</label>
+              <input
+                type="checkbox"
+                checked={invertedValue}
+                onChange={onToggleInverted}
+                style={{ accentColor: '#00d2ff' }}
+              />
+            </div>
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 11, color: '#cbd5e1', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={matte.enabled !== false}
+                onChange={onToggleEnabled}
+                style={{ accentColor: '#00d2ff' }}
+              />
+              Enabled
+            </label>
+          </>
         )}
       </div>
 

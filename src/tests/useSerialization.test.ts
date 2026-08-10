@@ -1396,4 +1396,90 @@ describe('useSerialization Hook', () => {
     const restored = (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === 'part_l')!;
     expect(restored.matte).toBeUndefined();
   });
+
+  // ─── M13 Step 2E: matte mode/inverted serialization round-trip ──────
+
+  function renderSerializationWithPart(part: any) {
+    return renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 120, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 1920, height: 1080 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [], setTracks: mockSetTracks,
+      characterParts: [part], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'Matte', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying
+    }));
+  }
+
+  function roundTripMatte(matte: any) {
+    const part = {
+      id: 'part_m', type: 'custom_box', name: 'M', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+      matte,
+    } as any;
+    const { result } = renderSerializationWithPart(part);
+    const exported = result.current.exportProject();
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported)).toBe(true);
+    return (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === 'part_m')!;
+  }
+
+  it('M13: alpha matte survives export → import round-trip', () => {
+    const restored = roundTripMatte({ sourcePartId: 'source', mode: 'alpha', enabled: true });
+    expect(restored.matte).toEqual({ sourcePartId: 'source', mode: 'alpha', enabled: true });
+  });
+
+  it('M13: luminance matte survives export → import round-trip', () => {
+    const restored = roundTripMatte({ sourcePartId: 'source', mode: 'luminance' });
+    expect(restored.matte).toEqual({ sourcePartId: 'source', mode: 'luminance' });
+  });
+
+  it('M13: inverted matte survives export → import round-trip', () => {
+    const restored = roundTripMatte({ sourcePartId: 'source', mode: 'clip', inverted: true });
+    expect(restored.matte).toEqual({ sourcePartId: 'source', mode: 'clip', inverted: true });
+  });
+
+  it('M13: combined state (luminance + inverted + enabled) survives round-trip', () => {
+    const restored = roundTripMatte({ sourcePartId: 'source', mode: 'luminance', inverted: true, enabled: true });
+    expect(restored.matte).toEqual({ sourcePartId: 'source', mode: 'luminance', inverted: true, enabled: true });
+  });
+
+  it('M13: legacy matte (mode absent) is NOT rewritten on import (no serialization migration)', () => {
+    const restored = roundTripMatte({ sourcePartId: 'source' });
+    // mode stays absent — runtime resolveMatteMode handles the 'clip' default
+    expect(restored.matte).toEqual({ sourcePartId: 'source' });
+    expect((restored.matte as any).mode).toBeUndefined();
+  });
+
+  it('M13: enabled=false survives round-trip', () => {
+    const restored = roundTripMatte({ sourcePartId: 'source', mode: 'alpha', inverted: true, enabled: false });
+    expect(restored.matte).toEqual({ sourcePartId: 'source', mode: 'alpha', inverted: true, enabled: false });
+  });
+
+  it('M13: channels-only policy — matte lives ONLY in layers, never in tracks/channels/keyframes', () => {
+    const part = {
+      id: 'part_m', type: 'custom_box', name: 'M', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+      matte: { sourcePartId: 'source', mode: 'luminance', inverted: true, enabled: true },
+    } as any;
+    const { result } = renderSerializationWithPart(part);
+    const parsed = JSON.parse(result.current.exportProject());
+    expect(parsed.layers.find((l: any) => l.id === 'part_m').matte).toEqual({
+      sourcePartId: 'source', mode: 'luminance', inverted: true, enabled: true,
+    });
+    expect(parsed.tracks).toEqual([]);
+    const json = JSON.stringify(parsed);
+    // No matte payload leaked into track data (channels/keyframes)
+    expect(json.includes('"mode":"luminance"')).toBe(true); // only from the layer
+    expect(parsed.tracks[0]?.keyframes).toBeUndefined();
+    expect(parsed.tracks[0]?.channels).toBeUndefined();
+  });
 });

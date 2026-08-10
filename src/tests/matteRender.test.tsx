@@ -121,4 +121,110 @@ describe('StagePartLayers — track matte render', () => {
     expect(html).not.toContain('<clipPath');
     expect(html).not.toContain('clip-path=');
   });
+
+  // ─── M13 Step 2C: alpha / luminance / inverted masks ────────────────
+
+  it('M13: mode=alpha renders an alpha mask with white fill (no clipPath)', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'alpha' });
+    const html = renderStage([source, target]);
+
+    expect(html).toContain(`<mask id="kcs-mask-src-alpha"`);
+    expect(html).toContain('mask-type="alpha"');
+    expect(html).toContain('maskUnits="userSpaceOnUse"');
+    expect(html).toContain('fill="white"');
+    expect(html).toContain(`mask="url(#kcs-mask-src-alpha)"`);
+    expect(html).not.toContain('clip-path=');
+    expect(html).not.toContain('<clipPath');
+  });
+
+  it('M13: mode=luminance renders a luminance mask with the source fillColor', () => {
+    const source = makePart('src', 'custom_box'); // fillColor #ff0000
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'luminance' });
+    const html = renderStage([source, target]);
+
+    expect(html).toContain(`<mask id="kcs-mask-src-luminance"`);
+    expect(html).toContain('mask-type="luminance"');
+    expect(html).toContain('fill="#ff0000"');
+    expect(html).toContain(`mask="url(#kcs-mask-src-luminance)"`);
+  });
+
+  it('M13: inverted luminance → explicit region + white background + black geometry', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'luminance', inverted: true });
+    const html = renderStage([source, target]);
+
+    expect(html).toContain(`<mask id="kcs-mask-src-luminance-inv"`);
+    expect(html).toContain('mask-type="luminance"');
+    // Explicit world-space artboard region (default 1920×1080 → 300±960, 240±540)
+    expect(html).toContain('x="-660"');
+    expect(html).toContain('y="-300"');
+    expect(html).toContain('width="1920"');
+    expect(html).toContain('height="1080"');
+    expect(html).toContain('fill="white"'); // background rect
+    expect(html).toContain('fill="black"'); // geometry path
+    expect(html).toContain(`mask="url(#kcs-mask-src-luminance-inv)"`);
+  });
+
+  it('M13: inverted alpha → alpha mask + SINGLE evenodd path (region contour + geometry) — real hole', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', inverted: true });
+    const html = renderStage([source, target]);
+
+    expect(html).toContain(`<mask id="kcs-mask-src-alpha-inv"`);
+    expect(html).toContain('mask-type="alpha"');
+    // H fix: one evenodd path = outer region contour + matte contour
+    // (Chromium alpha masks ignore a second element — pixel-verified).
+    expect(html).toContain('fill-rule="evenodd"');
+    expect(html).toContain('fill="white"'); // region contour: full alpha
+    // Region contour (default 1920×1080 → 300±960, 240±540) + matte pathD
+    expect(html).toContain('M -660 -300 H 1260 V 780 H -660 Z');
+    expect(html).toContain(`mask="url(#kcs-mask-src-alpha-inv)"`);
+  });
+
+  it('M13: one source → N targets with alpha = one mask def, N mask refs', () => {
+    const source = makePart('src', 'custom_box');
+    const tA = makePart('tA', 'custom_circle', { sourcePartId: 'src', mode: 'alpha' });
+    const tB = makePart('tB', 'custom_rect', { sourcePartId: 'src', mode: 'alpha' });
+    const tC = makePart('tC', 'custom_triangle', { sourcePartId: 'src', mode: 'alpha' });
+    const html = renderStage([source, tA, tB, tC]);
+
+    const defs = html.match(/<mask id="kcs-mask-src-alpha"/g);
+    expect(defs).toHaveLength(1);
+    const refs = html.match(/mask="url\(#kcs-mask-src-alpha\)"/g);
+    expect(refs).toHaveLength(3);
+  });
+
+  it('M13: mixed modes on the same source → distinct deterministic ids, shared geometry', () => {
+    const source = makePart('src', 'custom_box');
+    const tAlpha = makePart('tA', 'custom_circle', { sourcePartId: 'src', mode: 'alpha' });
+    const tLum = makePart('tB', 'custom_rect', { sourcePartId: 'src', mode: 'luminance' });
+    const tInv = makePart('tC', 'custom_triangle', { sourcePartId: 'src', mode: 'alpha', inverted: true });
+    const html = renderStage([source, tAlpha, tLum, tInv]);
+
+    expect(html).toContain('id="kcs-mask-src-alpha"');
+    expect(html).toContain('id="kcs-mask-src-luminance"');
+    expect(html).toContain('id="kcs-mask-src-alpha-inv"');
+    // No id collisions: exactly one of each
+    expect(html.match(/id="kcs-mask-src-alpha"/g)).toHaveLength(1);
+    expect(html.match(/id="kcs-mask-src-luminance"/g)).toHaveLength(1);
+    expect(html.match(/id="kcs-mask-src-alpha-inv"/g)).toHaveLength(1);
+    // Geometry parity: every mask's path carries the SAME matte world-space
+    // pathD (alpha-inv additionally prepends the region contour — allowed).
+    const matteSubPath = 'M 270 210 L 330 210 L 330 270 L 270 270 Z';
+    const pathDs = html.match(/<path d="([^"]+)"/g)?.map((m) => m) ?? [];
+    expect(pathDs.length).toBeGreaterThanOrEqual(3);
+    for (const p of pathDs) {
+      expect(p).toContain(matteSubPath);
+    }
+  });
+
+  it('M13: mode=undefined (legacy data) still resolves to clipPath', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src' } as any); // no mode
+    const html = renderStage([source, target]);
+
+    expect(html).toContain(`clip-path="url(#kcs-clip-src)"`);
+    expect(html).not.toContain('<mask');
+  });
 });

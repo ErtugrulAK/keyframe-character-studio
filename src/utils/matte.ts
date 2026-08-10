@@ -118,6 +118,29 @@ export function buildMatteMask(
   };
 }
 
+/**
+ * M13 Step 2C — build a MatteMask from an ALREADY computed world-space pathD.
+ * Used by the renderer so the same source's geometry is computed ONCE even
+ * when it is consumed by several mask modes (alpha + luminance + inverted
+ * on the same source share one buildMattePath call). Matches buildMatteMask
+ * field-for-field for the same inputs.
+ */
+export function buildMatteMaskFromPath(
+  sourcePartId: string,
+  pathD: string,
+  mode: Exclude<MatteMode, 'clip'>,
+  inverted: boolean,
+  fillColor: string,
+): MatteMask {
+  return {
+    id: matteMaskId(sourcePartId, mode, inverted),
+    mode,
+    inverted,
+    pathD,
+    fill: mode === 'alpha' ? 'white' : fillColor,
+  };
+}
+
 // ─── World transform (mirrors PartRenderer's SVG transform order) ────────
 
 const deg2rad = (d: number) => (d * Math.PI) / 180;

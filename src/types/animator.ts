@@ -21,14 +21,23 @@ export interface MaskPoint {
   handleOut?: { x: number; y: number };
 }
 
+/** M11/M13 — Track matte modes. `'clip'` (MVP) clips the target with the
+ *  source's world-space geometry via SVG clipPath; `'alpha'` and `'luminance'`
+ *  use an SVG <mask> (alpha channel / luminance of the source's fill). */
+export type MatteMode = 'clip' | 'alpha' | 'luminance';
+
 /** M11 — Track matte: this part is clipped by another part's (the source's)
- *  evaluated world-space shape geometry. `mode: 'clip'` is the only mode in
- *  the MVP (hard geometric clip via SVG clipPath). */
+ *  evaluated world-space shape geometry. Legacy data may omit `mode` (treated
+ *  as 'clip' at runtime — see `resolveMatteMode`) and `inverted`. */
 export interface PartMatte {
   /** The part whose shape clips this part */
   sourcePartId: string;
-  /** MVP: 'clip' only. Alpha/luminance mask modes are future scope. */
-  mode: 'clip';
+  /** 'clip' (clipPath) | 'alpha' | 'luminance' (SVG <mask>). Absent in
+   *  legacy data → resolved as 'clip'. */
+  mode: MatteMode;
+  /** Invert the matte (hide INSIDE the source geometry). Requires the
+   *  <mask> pipeline — clipPath cannot express negative area. */
+  inverted?: boolean;
   /** When false the matte is not applied. Undefined defaults to active
    *  (backward-compatible: absent/partial matte data must not hide content). */
   enabled?: boolean;

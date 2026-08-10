@@ -7,7 +7,8 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, matteClipPathId, isMatteActive } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMattePath, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
+import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
 import { evaluateTransform } from '../utils/evaluateTransform';
 import { makeEmptyChannels } from '../utils/defaults';
@@ -191,5 +192,138 @@ describe('matte — animated source', () => {
     const clip60 = buildMatteClipPath(source, w60)!;
     expect(clip0.pathD).not.toBe(clip60.pathD);
     expect(clip0.id).toBe(clip60.id); // same id, updated geometry
+  });
+});
+
+describe('matte — M13 resolveMatteMode (legacy mode → clip)', () => {
+  it('absent matte → undefined', () => {
+    expect(resolveMatteMode(undefined)).toBeUndefined();
+    expect(resolveMatteMode(null as unknown as { mode?: 'clip' })).toBeUndefined();
+  });
+
+  it('legacy matte without mode → clip', () => {
+    expect(resolveMatteMode({ sourcePartId: 'part_2' })).toBe('clip');
+    expect(resolveMatteMode({ sourcePartId: 'part_2', mode: undefined })).toBe('clip');
+  });
+
+  it('passes explicit modes through unchanged', () => {
+    expect(resolveMatteMode({ sourcePartId: 'p', mode: 'clip' })).toBe('clip');
+    expect(resolveMatteMode({ sourcePartId: 'p', mode: 'alpha' })).toBe('alpha');
+    expect(resolveMatteMode({ sourcePartId: 'p', mode: 'luminance' })).toBe('luminance');
+  });
+
+  it('inverted defaults to undefined (absent) — not forced to false', () => {
+    const legacy: PartMatte = { sourcePartId: 'part_2' };
+    expect(legacy.inverted).toBeUndefined();
+    expect(legacy.mode).toBeUndefined(); // runtime resolves via resolveMatteMode
+    expect(resolveMatteMode(legacy)).toBe('clip');
+  });
+});
+
+describe('matte — M13 deterministic mask id', () => {
+  it('encodes source + mode', () => {
+    expect(matteMaskId('part_2', 'alpha', false)).toBe('kcs-mask-part_2-alpha');
+    expect(matteMaskId('part_2', 'luminance', false)).toBe('kcs-mask-part_2-luminance');
+  });
+
+  it('appends -inv for inverted (no collision with non-inverted)', () => {
+    expect(matteMaskId('part_2', 'alpha', true)).toBe('kcs-mask-part_2-alpha-inv');
+    expect(matteMaskId('part_2', 'alpha', false)).not.toBe(matteMaskId('part_2', 'alpha', true));
+  });
+
+  it('is deterministic — stable across calls', () => {
+    expect(matteMaskId('part_2', 'luminance', true)).toBe(matteMaskId('part_2', 'luminance', true));
+  });
+
+  it('never collides with the clip id namespace', () => {
+    expect(matteMaskId('part_2', 'clip', false)).toContain('kcs-mask-');
+    expect(matteClipPathId('part_2')).toBe('kcs-clip-part_2');
+    expect(matteMaskId('part_2', 'clip', false)).not.toBe(matteClipPathId('part_2'));
+  });
+});
+
+describe('matte — M13 buildMattePath (shared geometry core)', () => {
+  it('is deterministic — same input yields identical pathD', () => {
+    const source = makeSourcePart('custom_star');
+    const world: WorldTransform = { x: 12, y: 34, rotation: 15, scaleX: 1.5, scaleY: 1, opacity: 1 };
+    expect(buildMattePath(source, world)).toBe(buildMattePath(source, world));
+  });
+
+  it('produces geometry for static shapes and null for deferred types', () => {
+    const world: WorldTransform = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+    for (const type of ['custom_star', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle', 'custom_parallelogram', 'custom_banner', 'custom_capsule', 'custom_diamond']) {
+      expect(buildMattePath(makeSourcePart(type), world), type).not.toBeNull();
+    }
+    for (const type of ['custom_freeform', 'custom_text', 'custom_image', 'custom_video']) {
+      expect(buildMattePath(makeSourcePart(type), world), type).toBeNull();
+    }
+  });
+
+  it('applies the world transform (rotated + scaled) — mirrors PartRenderer order', () => {
+    const source = makeSourcePart('custom_rect');
+    const world: WorldTransform = { x: 100, y: 50, rotation: 45, scaleX: 2, scaleY: 1, opacity: 1 };
+    const pathD = buildMattePath(source, world)!;
+    // same math as the clip pipeline (TEST B) — starts at the world-transformed corner
+    expect(pathD).toMatch(/^M [\d.]+ [\d.]+ L /);
+    expect(buildMatteClipPath(source, world)!.pathD).toBe(pathD);
+  });
+});
+
+describe('matte — M13 geometry parity (clip ≡ mask, ONE computation)', () => {
+  it('mask pathD equals clip pathD for the same source + world', () => {
+    const source = makeSourcePart('custom_box');
+    const world: WorldTransform = { x: -40, y: 25, rotation: 30, scaleX: 1.5, scaleY: 0.8, opacity: 1 };
+    const clip = buildMatteClipPath(source, world)!;
+    const mask = buildMatteMask(source, world, 'alpha', false, '#ffffff')!;
+    const lum = buildMatteMask(source, world, 'luminance', false, '#ff0000')!;
+    expect(mask.pathD).toBe(clip.pathD);
+    expect(lum.pathD).toBe(clip.pathD);
+  });
+});
+
+describe('matte — M13 buildMatteMask (alpha / luminance / inverted)', () => {
+  const world: WorldTransform = { x: 10, y: -20, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+
+  it('alpha mask: mode alpha, white geometry, id kcs-mask-{src}-alpha', () => {
+    const m = buildMatteMask(makeSourcePart('custom_circle'), world, 'alpha', false, '#ff0000')!;
+    expect(m.mode).toBe('alpha');
+    expect(m.fill).toBe('white');
+    expect(m.inverted).toBe(false);
+    expect(m.id).toBe('kcs-mask-src_1-alpha');
+    expect(m.pathD).toBeTruthy();
+  });
+
+  it('luminance mask: mode luminance, uses the SOURCE fillColor, mask id -luminance', () => {
+    const m = buildMatteMask(makeSourcePart('custom_rect'), world, 'luminance', false, '#ff8800')!;
+    expect(m.mode).toBe('luminance');
+    expect(m.fill).toBe('#ff8800'); // evaluated fillColor passes through
+    expect(m.id).toBe('kcs-mask-src_1-luminance');
+    expect(m.pathD).toBeTruthy();
+  });
+
+  it('inverted: flag true + -inv id suffix for both modes', () => {
+    const a = buildMatteMask(makeSourcePart('custom_box'), world, 'alpha', true, '#ffffff')!;
+    const l = buildMatteMask(makeSourcePart('custom_box'), world, 'luminance', true, '#ffffff')!;
+    expect(a.inverted).toBe(true);
+    expect(a.id).toBe('kcs-mask-src_1-alpha-inv');
+    expect(l.inverted).toBe(true);
+    expect(l.id).toBe('kcs-mask-src_1-luminance-inv');
+  });
+
+  it('is deterministic — identical args yield identical masks', () => {
+    const source = makeSourcePart('custom_star');
+    const m1 = buildMatteMask(source, world, 'luminance', true, '#00ff00')!;
+    const m2 = buildMatteMask(source, world, 'luminance', true, '#00ff00')!;
+    expect(m1).toEqual(m2);
+  });
+
+  it('returns null for deferred geometry (freeform etc.)', () => {
+    expect(buildMatteMask(makeSourcePart('custom_freeform'), world, 'alpha', false, '#fff')).toBeNull();
+    expect(buildMatteMask(makeSourcePart('custom_text'), world, 'luminance', false, '#fff')).toBeNull();
+  });
+
+  it('does NOT bind source opacity — fill is unconditional white/color', () => {
+    const m = buildMatteMask(makeSourcePart('custom_box'), { ...world, opacity: 0.2 }, 'alpha', false, '#ffffff')!;
+    expect(m.fill).toBe('white'); // opacity 0.2 source still masks at full strength
   });
 });

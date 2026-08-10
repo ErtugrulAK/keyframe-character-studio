@@ -55,4 +55,35 @@ describe('useClipboard Hook', () => {
 
     expect(mockShowToast).toHaveBeenCalledWith('Clipboard is empty', 'error');
   });
+
+  it('M11: duplicate preserves the matte reference (structuredClone spread)', () => {
+    const mattePart = {
+      id: 'p1', type: 'custom_box' as const, name: 'Head', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      matte: { sourcePartId: 'src', mode: 'clip' },
+    };
+    const mockParts = [mattePart];
+    const mockTracks = [{ id: 't1', partId: 'p1', name: 'T1', channels: { customProps: [] }, keyframes: [] }];
+
+    const { result } = renderHook(() => useClipboard({
+      characterParts: mockParts,
+      tracks: mockTracks as any,
+      selectedPartId: 'p1',
+      showToast: mockShowToast,
+      setTracks: mockSetTracks,
+      setCharacterParts: mockSetCharacterParts,
+      setSelectedPartId: mockSetSelectedPartId
+    }));
+
+    act(() => {
+      result.current.duplicateSelectedPart();
+    });
+
+    // The duplicate keeps the SAME sourcePartId (no automatic remapping)
+    const updater = mockSetCharacterParts.mock.calls.at(-1)?.[0] as (prev: typeof mockParts) => typeof mockParts;
+    const updated = updater(mockParts);
+    const dup = updated.find((p: any) => p.id !== 'p1');
+    expect(dup).toBeDefined();
+    expect(dup!.matte).toEqual({ sourcePartId: 'src', mode: 'clip' });
+  });
 });

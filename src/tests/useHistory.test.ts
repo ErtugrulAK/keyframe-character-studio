@@ -59,6 +59,94 @@ describe('useHistory Hook', () => {
     expect(result.current.canUndo).toBe(true);
   });
 
+  it('M11: matte (on CharacterPart) is included in undo/redo snapshots', () => {
+    // characterParts are structuredClone'd in history snapshots — a matte
+    // field on the part must be captured automatically (no production change).
+    let currentParts: CharacterPart[] = [{ id: 'p1', name: 'P', type: 'custom_box', zIndex: 1, baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }];
+    const partsRef = { current: currentParts };
+    const { result, rerender } = renderHook(
+      (props: { parts: CharacterPart[] }) =>
+        useHistory({
+          tracks: emptyTracks,
+          setTracks: mockSetTracks,
+          tracksRef: emptyTracksRef,
+          characterParts: props.parts,
+          setCharacterParts: mockSetCharacterParts,
+          characterPartsRef: partsRef,
+        }),
+      { initialProps: { parts: currentParts } }
+    );
+
+    // Matte added to the part
+    currentParts = [{ ...currentParts[0], matte: { sourcePartId: 'src', mode: 'clip' } }];
+    partsRef.current = currentParts;
+    rerender({ parts: currentParts });
+    expect(result.current.canUndo).toBe(true);
+
+    // Undo → matte removed (snapshot restore)
+    mockSetCharacterParts.mockClear();
+    act(() => {
+      result.current.undo();
+    });
+    const afterUndo = mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[];
+    expect(afterUndo[0].matte).toBeUndefined();
+
+    // Redo → matte restored
+    mockSetCharacterParts.mockClear();
+    act(() => {
+      result.current.redo();
+    });
+    const afterRedo = mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[];
+    expect(afterRedo[0].matte).toEqual({ sourcePartId: 'src', mode: 'clip' });
+  });
+
+  it('M11: matte source A → B and enabled toggle are undoable/redoable', () => {
+    let currentParts: CharacterPart[] = [{
+      id: 'p1', name: 'P', type: 'custom_box', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      matte: { sourcePartId: 'A', mode: 'clip' },
+    }];
+    const partsRef = { current: currentParts };
+    const { result, rerender } = renderHook(
+      (props: { parts: CharacterPart[] }) =>
+        useHistory({
+          tracks: emptyTracks,
+          setTracks: mockSetTracks,
+          tracksRef: emptyTracksRef,
+          characterParts: props.parts,
+          setCharacterParts: mockSetCharacterParts,
+          characterPartsRef: partsRef,
+        }),
+      { initialProps: { parts: currentParts } }
+    );
+
+    // Source A → B
+    currentParts = [{ ...currentParts[0], matte: { sourcePartId: 'B', mode: 'clip' } }];
+    partsRef.current = currentParts;
+    rerender({ parts: currentParts });
+
+    // Enabled true → false
+    currentParts = [{ ...currentParts[0], matte: { sourcePartId: 'B', mode: 'clip', enabled: false } }];
+    partsRef.current = currentParts;
+    rerender({ parts: currentParts });
+
+    // Undo 1 → enabled restored to undefined(active)
+    act(() => { result.current.undo(); });
+    expect((mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'B', mode: 'clip' });
+
+    // Undo 2 → source back to A
+    act(() => { result.current.undo(); });
+    expect((mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'A', mode: 'clip' });
+
+    // Redo 1 → source B again
+    act(() => { result.current.redo(); });
+    expect((mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'B', mode: 'clip' });
+
+    // Redo 2 → enabled false again
+    act(() => { result.current.redo(); });
+    expect((mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'B', mode: 'clip', enabled: false });
+  });
+
   it('handles batch interaction correctly', () => {
     let currentTracks: Track[] = emptyTracks;
     const tracksRef = { current: currentTracks };

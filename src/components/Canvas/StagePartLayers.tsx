@@ -10,6 +10,8 @@ import type { RuntimeData, BroadcastRuntime, RuntimeTrackState } from '../../typ
 import { PartRenderer } from './renderers/PartRenderer';
 import { evaluateFrame } from '../../utils/evaluateFrame';
 import { validateCritical, hasCriticalErrors } from '../../utils/validateScene';
+import { buildMatteClipPath, matteClipPathId, isMatteActive } from '../../utils/matte';
+import type { MatteClipPath } from '../../utils/matte';
 
 interface StagePartLayersProps {
   sortedParts: CharacterPart[];
@@ -103,8 +105,41 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     frameOverrides,
   );
 
+  // M11 Step 2B — Track matte: build ONE world-space clipPath per matte
+  // source (deduped by sourcePartId) from the source's evaluated world
+  // transform. Non-shape sources (freeform/text/image/video) yield null and
+  // produce no clip.
+  const matteClips = new Map<string, MatteClipPath>();
+  for (const layer of sortedParts) {
+    if (!layer.matte || !isMatteActive(layer.matte)) continue;
+    const source = sortedParts.find((p) => p.id === layer.matte!.sourcePartId);
+    if (!source) continue; // missing source → no clip (recoverable validation warns)
+    const clipId = matteClipPathId(source.id);
+    if (matteClips.has(clipId)) continue; // already built for this source (1 source → N targets)
+    const sourceEl = evaluatedFrame.layers.find((el) => el.id === source.id);
+    if (!sourceEl) continue;
+    const clip = buildMatteClipPath(source, sourceEl.transform);
+    if (clip && !matteClips.has(clip.id)) {
+      matteClips.set(clip.id, clip);
+    }
+  }
+
+  const clipIdFor = (part: CharacterPart): string | undefined => {
+    if (!part.matte || !isMatteActive(part.matte)) return undefined;
+    if (!sortedParts.some((p) => p.id === part.matte!.sourcePartId)) return undefined;
+    const id = matteClipPathId(part.matte!.sourcePartId);
+    return matteClips.has(id) ? id : undefined;
+  };
+
   return (
     <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
+      <defs>
+        {[...matteClips.values()].map((clip) => (
+          <clipPath key={clip.id} id={clip.id} clipPathUnits="userSpaceOnUse">
+            <path d={clip.pathD} />
+          </clipPath>
+        ))}
+      </defs>
       {evaluatedFrame.layers.map((el) => {
         const part = sortedParts.find(p => p.id === el.id);
         if (!part) return null;
@@ -118,6 +153,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             onSelect={onSelect}
             onStartTranslateDrag={onStartTranslateDrag}
             evaluatedLayer={el}
+            matteClipPathId={clipIdFor(part)}
           />
         );
       })}

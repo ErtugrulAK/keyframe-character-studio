@@ -21,6 +21,19 @@ export interface MaskPoint {
   handleOut?: { x: number; y: number };
 }
 
+/** M11 — Track matte: this part is clipped by another part's (the source's)
+ *  evaluated world-space shape geometry. `mode: 'clip'` is the only mode in
+ *  the MVP (hard geometric clip via SVG clipPath). */
+export interface PartMatte {
+  /** The part whose shape clips this part */
+  sourcePartId: string;
+  /** MVP: 'clip' only. Alpha/luminance mask modes are future scope. */
+  mode: 'clip';
+  /** When false the matte is not applied. Undefined defaults to active
+   *  (backward-compatible: absent/partial matte data must not hide content). */
+  enabled?: boolean;
+}
+
 export interface MaskData {
   enabled: boolean;
   inverted: boolean;
@@ -291,6 +304,10 @@ export interface CharacterPart {
 
   // ── Feature 9: Advanced Masking ──
   mask?: MaskData;
+
+  // ── M11: Track Matte (SVG clipPath) ──
+  /** Track matte reference — this part is clipped by another part's shape. */
+  matte?: PartMatte;
 
   // ── Feature 10: Custom Preset Animation Engine ──
   inCustomPresetId?: string;

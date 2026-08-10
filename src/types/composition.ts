@@ -16,7 +16,7 @@
 // Animation track model is defined once in `animator.ts` as `AnimationTrackData`
 // (partId-based, canonical). `SceneData.tracks` references it directly —
 // there is no separate AnimationTrack type (P4-S3).
-import type { AnimationTrackData } from './animator';
+import type { AnimationTrackData, PartMatte } from './animator';
 
 // ─── Scene Data (persistent, serializable) ───────────────────────────────
 
@@ -57,6 +57,9 @@ export interface SceneLayer {
 
   // Hierarchy
   parentId?: string;
+
+  // M11 — Track matte (clipped by another layer's shape)
+  matte?: PartMatte;
 
   // Visibility (editor toggle)
   visible: boolean;

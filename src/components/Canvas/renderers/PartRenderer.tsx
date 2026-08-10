@@ -4,6 +4,7 @@ import type { EvaluatedLayer } from '../../../types/composition';
 import { renderShapePart } from './parts/ShapePartRenderers';
 import { renderMediaPart } from './parts/MediaPartRenderer';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
+import { CANVAS_CENTER } from '../../../utils/constants';
 
 interface PartRendererProps {
   part: CharacterPart;
@@ -15,10 +16,12 @@ interface PartRendererProps {
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
   /** Pre-evaluated layer data from the composition engine */
   evaluatedLayer: EvaluatedLayer;
+  /** M11: track matte — id of the world-space clipPath clipping this part */
+  matteClipPathId?: string;
 }
 
-const CANVAS_CX = 300;
-const CANVAS_CY = 240;
+const CANVAS_CX = CANVAS_CENTER.x;
+const CANVAS_CY = CANVAS_CENTER.y;
 
 export const PartRenderer: React.FC<PartRendererProps> = ({
   part,
@@ -29,6 +32,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   onSelect,
   onStartTranslateDrag,
   evaluatedLayer,
+  matteClipPathId,
 }) => {
   const el = evaluatedLayer;
   if (!el.visible) return null;
@@ -72,6 +76,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     <g
       key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
       transform={`translate(${CANVAS_CX + el.transform.x}, ${CANVAS_CY + el.transform.y}) rotate(${el.transform.rotation}) scale(${el.transform.scaleX}, ${el.transform.scaleY})`}
+      clipPath={matteClipPathId ? `url(#${matteClipPathId})` : undefined}
       style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined }}
       onClick={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onSelect(part.id); } }}
       onMouseDown={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onStartTranslateDrag(part.id, e); } }}

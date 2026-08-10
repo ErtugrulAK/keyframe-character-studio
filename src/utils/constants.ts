@@ -6,6 +6,14 @@ import type { MotionTemplate, ClonerConfig, ParticleConfig } from '../types/anim
 export const AUTOSAVE_STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
 // ---------------------------------------------------------
+// 1b. Stage / Artboard
+// ---------------------------------------------------------
+/** Center of the SVG viewBox in stage coordinates. World transforms are
+ *  center-relative (x=0 = center); renderers translate by this offset.
+ *  Single source — matte world-path generation uses the same values. */
+export const CANVAS_CENTER = { x: 300, y: 240 } as const;
+
+// ---------------------------------------------------------
 // 2. Default Project / Template Configurations
 // ---------------------------------------------------------
 export const DEFAULT_MOTION_TEMPLATES: MotionTemplate[] = [

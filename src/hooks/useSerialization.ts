@@ -40,6 +40,7 @@ function toSceneData(
     scaleY: p.baseTransform.scaleY,
     opacity: p.baseTransform.opacity,
     parentId: p.parentId,
+    matte: p.matte,
     visible: true,
     zIndex: p.zIndex,
     fillColor: p.fillColor,
@@ -119,6 +120,7 @@ function fromSceneData(
     strokeColor: l.strokeColor,
     pivot: { x: 0, y: 0 },
     parentId: l.parentId,
+    matte: l.matte,
     baseTransform: {
       x: l.x,
       y: l.y,

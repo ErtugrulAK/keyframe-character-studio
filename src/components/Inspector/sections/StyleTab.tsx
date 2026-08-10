@@ -6,9 +6,11 @@ import { StyleGeometrySection } from './style/StyleGeometrySection';
 import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { StyleEffectsSection } from './style/StyleEffectsSection';
+import { StyleMatteSection } from './style/StyleMatteSection';
 
 interface StyleTabProps {
   selectedPart: CharacterPart;
+  characterParts: CharacterPart[];
   handlePartPropChange: (key: keyof CharacterPart, value: any) => void;
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
   handleZIndexChange?: (zIndex: number) => void;
@@ -16,6 +18,7 @@ interface StyleTabProps {
 
 export const StyleTab: React.FC<StyleTabProps> = ({
   selectedPart,
+  characterParts,
   handlePartPropChange,
   handlePartColorChange,
 }) => {
@@ -48,6 +51,12 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
       <StyleEffectsSection
         selectedPart={selectedPart}
+        onPartPropChange={handlePartPropChange}
+      />
+
+      <StyleMatteSection
+        selectedPart={selectedPart}
+        characterParts={characterParts}
         onPartPropChange={handlePartPropChange}
       />
     </div>

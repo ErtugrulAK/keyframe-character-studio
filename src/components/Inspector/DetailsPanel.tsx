@@ -137,6 +137,7 @@ export const DetailsPanel: React.FC = () => {
           {activeTabSection === 'style' && (
             <StyleTab
               selectedPart={selectedPart}
+              characterParts={characterParts}
               handlePartPropChange={handlePartPropChange}
               handlePartColorChange={handlePartColorChange}
               handleZIndexChange={handleZIndexChange}

@@ -1301,4 +1301,99 @@ describe('useSerialization Hook', () => {
     expect(restored.channels.opacity.filter((k) => (k.templateId || 'Sequence') === 'Sequence')).toHaveLength(0);
     expect(restored.channels.x.filter((k) => (k.templateId || 'Sequence') === 'Outro')).toHaveLength(1);
   });
+
+  // ─── M11 Step 2B: track matte serialization ────────────────────────
+
+  function makeMattePart() {
+    return {
+      id: 'part_m', type: 'custom_box', name: 'M', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+      matte: { sourcePartId: 'part_s', mode: 'clip', enabled: true },
+    } as any;
+  }
+
+  it('M11: matte is exported in SceneData', () => {
+    const { result } = renderSerialization([]);
+    // Use a part-bearing scene: exportProject serializes characterParts via layers
+    // (renderSerialization passes tracks only; build a full hook instance below)
+    const part = makeMattePart();
+    const { result: r2 } = renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 120, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 1920, height: 1080 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [], setTracks: mockSetTracks,
+      characterParts: [part], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'Matte', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying
+    }));
+
+    const parsed = JSON.parse(r2.current.exportProject());
+    const layer = parsed.layers.find((l: any) => l.id === 'part_m');
+    expect(layer.matte).toEqual({ sourcePartId: 'part_s', mode: 'clip', enabled: true });
+    expect(parsed.tracks).toEqual([]);
+    expect(parsed.tracks[0]?.keyframes).toBeUndefined(); // channels-only intact
+  });
+
+  it('M11: matte survives export → import round-trip', () => {
+    const part = makeMattePart();
+    const { result } = renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 120, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 1920, height: 1080 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [], setTracks: mockSetTracks,
+      characterParts: [part], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'Matte', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying
+    }));
+
+    const exported = result.current.exportProject();
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported)).toBe(true);
+    const restored = (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === 'part_m')!;
+    expect(restored.matte).toEqual({ sourcePartId: 'part_s', mode: 'clip', enabled: true });
+  });
+
+  it('M11: legacy project without matte imports with matte undefined', () => {
+    const legacyPart = {
+      id: 'part_l', type: 'custom_box', name: 'L', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+    } as any;
+
+    const { result } = renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 120, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 1920, height: 1080 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [], setTracks: mockSetTracks,
+      characterParts: [legacyPart], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'Leg', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying
+    }));
+
+    const exported = result.current.exportProject();
+    expect(JSON.parse(exported).layers[0].matte).toBeUndefined();
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported)).toBe(true);
+    const restored = (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === 'part_l')!;
+    expect(restored.matte).toBeUndefined();
+  });
 });

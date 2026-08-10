@@ -1,6 +1,7 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import { buildFreeformPath, getFreeformPerimeter } from '../../../../utils/freeform';
+import { getShapeGeometry, polygonPointsToString } from '../../../../utils/shapeGeometry';
 
 interface ShapePartProps {
   part: CharacterPart;
@@ -32,13 +33,17 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
   const hasStroke = (part.strokeProgress === undefined || part.strokeProgress > 0) && !isCustomStroke;
   const strokeToUse = hasStroke ? stroke : (isSelected ? '#38bdf8' : 'none');
 
+  // M11 Step 2A: single source of truth for local-space shape geometry.
+  const geo = getShapeGeometry(part.type);
+
   switch (part.type) {
-    case 'custom_star':
+    case 'custom_star': {
+      const pts = geo && geo.kind === 'polygon' ? polygonPointsToString(geo.points) : '';
       return (
         <g>
-          <polygon points="0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10" fill="rgba(0,0,0,0.001)" />
+          <polygon points={pts} fill="rgba(0,0,0,0.001)" />
           <polygon
-            points="0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10"
+            points={pts}
             fill={fill}
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -47,16 +52,18 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           />
         </g>
       );
+    }
 
-    case 'custom_circle':
+    case 'custom_circle': {
+      const r = geo && geo.kind === 'circle' ? geo.r : 30;
       return (
         <g>
-          <circle cx={0} cy={0} r={30} fill="rgba(0,0,0,0.001)" />
-          <circle cx={0} cy={0} r={30} fill={fill} />
+          <circle cx={0} cy={0} r={r} fill="rgba(0,0,0,0.001)" />
+          <circle cx={0} cy={0} r={r} fill={fill} />
           <circle
             cx={0}
             cy={0}
-            r={30}
+            r={r}
             fill="none"
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -65,18 +72,21 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           />
         </g>
       );
+    }
 
-    case 'custom_box':
+    case 'custom_box': {
+      const g = geo && geo.kind === 'rect' ? geo : { kind: 'rect' as const, x: -30, y: -30, width: 60, height: 60, rx: 0 };
+      const rx = part.borderRadius ?? g.rx;
       return (
         <g>
-          <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
-          <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill={fill} />
+          <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} fill="rgba(0,0,0,0.001)" />
+          <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} fill={fill} />
           <rect
-            x={-30}
-            y={-30}
-            width={60}
-            height={60}
-            rx={part.borderRadius ?? 0}
+            x={g.x}
+            y={g.y}
+            width={g.width}
+            height={g.height}
+            rx={rx}
             fill="none"
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -85,18 +95,21 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           />
         </g>
       );
+    }
 
-    case 'custom_rect':
+    case 'custom_rect': {
+      const g = geo && geo.kind === 'rect' ? geo : { kind: 'rect' as const, x: -60, y: -30, width: 120, height: 60, rx: 0 };
+      const rx = part.borderRadius ?? g.rx;
       return (
         <g>
-          <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
-          <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill={fill} />
+          <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} fill="rgba(0,0,0,0.001)" />
+          <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} fill={fill} />
           <rect
-            x={-60}
-            y={-30}
-            width={120}
-            height={60}
-            rx={part.borderRadius ?? 0}
+            x={g.x}
+            y={g.y}
+            width={g.width}
+            height={g.height}
+            rx={rx}
             fill="none"
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -105,14 +118,16 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           />
         </g>
       );
+    }
 
-    case 'custom_triangle':
+    case 'custom_triangle': {
+      const pts = geo && geo.kind === 'polygon' ? polygonPointsToString(geo.points) : '';
       return (
         <g>
-          <polygon points="0,-35 35,25 -35,25" fill="rgba(0,0,0,0.001)" />
-          <polygon points="0,-35 35,25 -35,25" fill={fill} />
+          <polygon points={pts} fill="rgba(0,0,0,0.001)" />
+          <polygon points={pts} fill={fill} />
           <polygon
-            points="0,-35 35,25 -35,25"
+            points={pts}
             fill="none"
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -121,14 +136,16 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           />
         </g>
       );
+    }
 
-    case 'custom_parallelogram':
+    case 'custom_parallelogram': {
+      const pts = geo && geo.kind === 'polygon' ? polygonPointsToString(geo.points) : '';
       return (
         <g>
-          <polygon points="-35,-30 85,-30 35,30 -85,30" fill="rgba(0,0,0,0.001)" />
-          <polygon points="-35,-30 85,-30 35,30 -85,30" fill={fill} />
+          <polygon points={pts} fill="rgba(0,0,0,0.001)" />
+          <polygon points={pts} fill={fill} />
           <polygon
-            points="-35,-30 85,-30 35,30 -85,30"
+            points={pts}
             fill="none"
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -137,16 +154,18 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           />
         </g>
       );
+    }
 
-    case 'custom_banner':
+    case 'custom_banner': {
+      const g = geo && geo.kind === 'rect' ? geo : { kind: 'rect' as const, x: -80, y: -25, width: 160, height: 50, rx: 10 };
       return (
         <g>
           <rect
-            x={-80}
-            y={-25}
-            width={160}
-            height={50}
-            rx={part.borderRadius ?? 10}
+            x={g.x}
+            y={g.y}
+            width={g.width}
+            height={g.height}
+            rx={part.borderRadius ?? g.rx}
             fill={fill === 'none' || fill === 'transparent' ? 'rgba(0,0,0,0.001)' : fill}
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -168,17 +187,19 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           </text>
         </g>
       );
+    }
 
-    case 'custom_capsule':
+    case 'custom_capsule': {
+      const g = geo && geo.kind === 'rect' ? geo : { kind: 'rect' as const, x: -50, y: -20, width: 100, height: 40, rx: 20 };
       return (
         <g>
-          <rect x={-50} y={-20} width={100} height={40} rx={20} fill="rgba(0,0,0,0.001)" />
+          <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={g.rx} fill="rgba(0,0,0,0.001)" />
           <rect
-            x={-50}
-            y={-20}
-            width={100}
-            height={40}
-            rx={20}
+            x={g.x}
+            y={g.y}
+            width={g.width}
+            height={g.height}
+            rx={g.rx}
             fill={fill}
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -187,13 +208,15 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           />
         </g>
       );
+    }
 
-    case 'custom_diamond':
+    case 'custom_diamond': {
+      const pts = geo && geo.kind === 'polygon' ? polygonPointsToString(geo.points) : '';
       return (
         <g>
-          <polygon points="0,-35 35,0 0,35 -35,0" fill="rgba(0,0,0,0.001)" />
+          <polygon points={pts} fill="rgba(0,0,0,0.001)" />
           <polygon
-            points="0,-35 35,0 0,35 -35,0"
+            points={pts}
             fill={fill}
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -202,6 +225,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           />
         </g>
       );
+    }
 
     case 'custom_freeform': {
       const points = part.points && part.points.length >= 2 ? part.points : undefined;
@@ -223,15 +247,16 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
       );
     }
 
-    case 'custom_card':
+    case 'custom_card': {
+      const g = geo && geo.kind === 'rect' ? geo : { kind: 'rect' as const, x: -90, y: -50, width: 180, height: 100, rx: 12 };
       return (
         <g>
           <rect
-            x={-90}
-            y={-50}
-            width={180}
-            height={100}
-            rx={part.borderRadius ?? 12}
+            x={g.x}
+            y={g.y}
+            width={g.width}
+            height={g.height}
+            rx={part.borderRadius ?? g.rx}
             fill={fill === 'none' || fill === 'transparent' ? 'rgba(0,0,0,0.001)' : fill}
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
@@ -252,6 +277,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
           </text>
         </g>
       );
+    }
 
     default:
       return null;

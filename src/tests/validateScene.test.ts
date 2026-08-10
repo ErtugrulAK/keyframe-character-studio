@@ -144,4 +144,26 @@ describe('validateCritical — production shape (CharacterPart[])', () => {
     const errors = validateCritical({ layers: runtimeLayers });
     expect(errors.some(e => e.type === 'PARENT_CYCLE')).toBe(true);
   });
+
+  test('M11: missing matte source is a recoverable error', () => {
+    const layers = [
+      { id: 'A' },
+      { id: 'B', matte: { sourcePartId: 'ghost' } },
+    ];
+    const errors = validateCritical({ layers });
+    const matteErr = errors.find(e => e.type === 'MATTE_MISSING_SOURCE');
+    expect(matteErr).toBeDefined();
+    expect(matteErr!.severity).toBe('recoverable');
+    expect(matteErr!.layerId).toBe('B');
+    expect(errors.some(e => e.severity === 'critical')).toBe(false);
+  });
+
+  test('M11: valid matte source produces no matte error', () => {
+    const layers = [
+      { id: 'A' },
+      { id: 'B', matte: { sourcePartId: 'A' } },
+    ];
+    const errors = validateCritical({ layers });
+    expect(errors.some(e => e.type === 'MATTE_MISSING_SOURCE')).toBe(false);
+  });
 });

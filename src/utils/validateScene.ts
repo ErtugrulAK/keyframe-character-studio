@@ -18,6 +18,8 @@ import type { ValidationError } from '../types/composition';
 export interface LayerRef {
   id: string;
   parentId?: string;
+  /** M11: track matte reference (source part id) */
+  matte?: { sourcePartId?: string };
 }
 
 /**
@@ -80,6 +82,19 @@ export function validateCritical(scene: { layers: LayerRef[] }): ValidationError
       visited.add(current);
       const parent = layerMap.get(current);
       current = parent?.parentId;
+    }
+  }
+
+  // ── Matte source references (recoverable) ─────────────────────────
+  for (const layer of scene.layers) {
+    if (!layer.matte?.sourcePartId) continue;
+    if (!layerMap.has(layer.matte.sourcePartId)) {
+      errors.push({
+        type: 'MATTE_MISSING_SOURCE',
+        layerId: layer.id,
+        message: `Matte source "${layer.matte.sourcePartId}" not found for layer "${layer.id}"`,
+        severity: 'recoverable',
+      });
     }
   }
 

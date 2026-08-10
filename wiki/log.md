@@ -18,3 +18,8 @@
 - Sources: raw/assets/bookmarks-edge.json, raw/assets/vidfeo card.xlsx, raw/assets/test-checklist.xlsx, raw/assets/screenshots/ (59 files)
 - Updated: index.md (7 pages), log.md
 - Total pages after ingest: 7 (4 entities, 3 concepts)
+
+## [2026-08-09] update | Keyframe Character Studio — M11/M12 durum güncellemesi
+- Updated: entities/keyframe-character-studio.md (eski 106-test/mask sistemi bilgisi → güncel 316 test, canonical channels, Track Matte)
+- İçerik: M1-M10 RELEASE READY, M11 Track Matte MVP COMPLETE, M12 audit "kapatılabilir"
+- Not: M11 track matte değişiklikleri push edildi (feat commit) — iş PC'sinden pull ile erişilebilir

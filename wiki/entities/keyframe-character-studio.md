@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 454 test — 35 dosya** (M16 durumu) |
+| Test | **Vitest, 518 test — 35 dosya** (M17 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -36,10 +36,10 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - M13 2E coordinate fix: clip/mask, **transform'suz OUTER `<g>`** üzerinde (userSpaceOnUse defs'i transform'lu g'de referans edilince target'ın local uzayında çözülüyordu — world path yanlış konumlanıyordu)
   - Tek `<defs>` + 1 source → N target (Map dedupe + maskPathCache: aynı source'un modları 1 geometry paylaşır); missing source → recoverable (`MATTE_MISSING_SOURCE`)
   - Editor UI: `StyleMatteSection` (source seçici + Mode + Inverted toggle + FEATHER slider 0-100 + Enabled + Remove); history/clipboard otomatik (structuredClone)
-  - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 19 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 27/27 PASS
+  - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M16)
+## Proje durumu (M17)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -73,8 +73,16 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 2C: Inspector STRENGTH slider (0-100%, clip disabled, field preservation, local state yok, undefined→100%)
   - 2E: serialization round-trip (strength 0/0.5/1/undefined/malformed; 0 falsy kaybolmaz; M8 kanıtı) + V-S6..V-S8 (import→reload: strength+feather+inverted korunur, fill-opacity DOM, pixel parity exact)
   - Baseline: 454/454 vitest + 35/35 track-matte playwright
+- **M17 ✅ COMPLETE — Gradient Track Matte**
+  - 3A: browser spike — userSpaceOnUse linearGradient + mask content fill Chromium'da kanıtlandı (12/12 pixel: alpha/evenodd/luminance/inv-lum/feather/strength/freeform/rotation/scale/neg-scale/animasyon/dedupe)
+  - 3B: `PartMatte.gradient?: {angle}` + `normalizeGradientAngle` (undefined→undefined; NaN/±Inf→0; mod 360) + `gradientId` (kcs-mg-{src}-{angle}-{mode}) + default stops (alpha white→transparent; luminance white→black); geometry parity testli
+  - 3C: StagePartLayers — `<linearGradient userSpaceOnUse>` defs (world-space endpoints: lokal bbox → 2 nokta → applyWorld — source'la taşınır/döner/ölçeklenir/flip; animasyonda stale yok) + mask content fill=url + mask id `-g{angle}` suffixi; V-G1..V-G10 pixel (alpha/180°/strength/feather/freeform/rot+scale/animated/import-reload parity/luminance/inv-luminance); 496/496 + 45/45
+  - 3D: Inspector GRADIENT toggle + ANGLE slider (0-360, clip disabled, field preservation, local state yok); 510/510
+  - 3E: serialization round-trip (gradient 0/45/90/360-raw/malformed/full matte/freeform/channels-only/legacy) + V-G11 (neg scale) + V-G12 (dedupe); 518/518 + 47/47 ×2 deterministik
+  - 3F: docs (SKILL v5.0.0, wiki, README) — radial/custom-stop/gradient-animation deferred
+  - Baseline: 518/518 vitest + 47/47 track-matte playwright
 - M12 ✅ audit — "kapatılabilir"; 2 LOW OPTIONAL (clipIdFor O(N²), MATTE_CYCLE validation)
-- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14 kapanış) → `4e50cf1` (M15 kapanış) → M16 2A-2E iş PC (push bekliyor)
+- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → M17 3A-3F iş PC (push bekliyor)
 
 ## Önemli kararlar
 

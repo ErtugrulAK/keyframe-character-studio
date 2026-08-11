@@ -75,3 +75,21 @@
 - Baseline: 454/454 vitest + 35/35 track-matte playwright; full suite tek fail:
   workflow.spec.ts:88 ölü container testi (M16 dışı)
 - Updated: entities/keyframe-character-studio.md, skills/keyframe-studio/kcs-track-matte (v4.0.0), README.md
+
+## [2026-08-11] update | KCS — M17 Gradient Track Matte (iş PC)
+- M17 ✅ COMPLETE: matte source'a linear gradient (userSpaceOnUse, world-space endpoints)
+- 3A: spike — gradient-in-mask Chromium kanıtı (12/12 pixel: alpha/evenodd/luminance/
+  inv-lum/feather/strength/freeform/rotation/scale/neg-scale/animasyon/dedupe)
+- 3B: PartMatte.gradient?{angle} + normalizeGradientAngle (undefined→undefined;
+  NaN/±Inf→0; mod 360 — 360≡0, -315≡45) + gradientId kcs-mg-{src}-{angle}-{mode}
+  + default stops (alpha white→transparent; luminance white→black); 486/486
+- 3C: StagePartLayers — linearGradient defs (lokal bbox → 2 nokta → applyWorld;
+  source'la taşınır/döner/ölçeklenir/flip; animasyonda stale yok) + mask fill=url +
+  -g{angle} mask suffixi; V-G1..V-G10 pixel; 496/496 + 45/45
+- 3D: Inspector GRADIENT toggle + ANGLE slider (0-360, clip disabled, field
+  preservation, local state yok); 510/510
+- 3E: serialization (0/45/90/360-raw/malformed/full/freeform/channels-only/legacy)
+  + V-G11 (neg scale) + V-G12 (dedupe); 518/518 + 47/47 ×2 deterministik
+- Baseline: 518/518 vitest + 47/47 track-matte playwright; full suite tek fail:
+  workflow.spec.ts:88 ölü container testi (M17 dışı)
+- Updated: entities/keyframe-character-studio.md, skills/keyframe-studio/kcs-track-matte (v5.0.0), README.md

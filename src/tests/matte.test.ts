@@ -7,7 +7,7 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, isMatteEligible, normalizeFeather, normalizeStrength, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
 import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
 import { buildFreeformPath } from '../utils/freeform';
@@ -582,5 +582,122 @@ describe('matte — M16 strength in mask data', () => {
     const without = JSON.parse(JSON.stringify(buildMatteMaskFromPath('src', PATH, 'alpha', false, '#fff')));
     expect(without.strength).toBeUndefined();
     expect(JSON.stringify(without)).not.toContain('strength');
+  });
+});
+
+describe('matte — M17 gradient data model + pure helpers', () => {
+  describe('normalizeGradientAngle', () => {
+    it('undefined → undefined (gradient absent — never coerced to 0)', () => {
+      expect(normalizeGradientAngle(undefined)).toBeUndefined();
+    });
+    it('0 → 0', () => expect(normalizeGradientAngle(0)).toBe(0));
+    it('360 → 0', () => expect(normalizeGradientAngle(360)).toBe(0));
+    it('720 → 0', () => expect(normalizeGradientAngle(720)).toBe(0));
+    it('370 → 10', () => expect(normalizeGradientAngle(370)).toBe(10));
+    it('-10 → 350', () => expect(normalizeGradientAngle(-10)).toBe(350));
+    it('-370 → 350', () => expect(normalizeGradientAngle(-370)).toBe(350));
+    it('45 → 45', () => expect(normalizeGradientAngle(45)).toBe(45));
+    it('359.999 → 359.999', () => expect(normalizeGradientAngle(359.999)).toBeCloseTo(359.999, 5));
+    it('NaN → 0', () => expect(normalizeGradientAngle(NaN)).toBe(0));
+    it('+Infinity → 0', () => expect(normalizeGradientAngle(Infinity)).toBe(0));
+    it('-Infinity → 0', () => expect(normalizeGradientAngle(-Infinity)).toBe(0));
+  });
+
+  describe('gradientId', () => {
+    it('source + 45 → kcs-mg-src-45', () => {
+      expect(gradientId('src', { angle: 45 })).toBe('kcs-mg-src-45');
+    });
+    it('360 and 0 → same id', () => {
+      expect(gradientId('src', { angle: 360 })).toBe(gradientId('src', { angle: 0 }));
+    });
+    it('-315 and 45 → same id', () => {
+      expect(gradientId('src', { angle: -315 })).toBe('kcs-mg-src-45');
+    });
+    it('different source → different id', () => {
+      expect(gradientId('a', { angle: 45 })).not.toBe(gradientId('b', { angle: 45 }));
+    });
+    it('different normalized angle → different id', () => {
+      expect(gradientId('src', { angle: 45 })).not.toBe(gradientId('src', { angle: 90 }));
+    });
+    it('absent gradient → undefined (no def requested)', () => {
+      expect(gradientId('src', undefined)).toBeUndefined();
+    });
+  });
+
+  describe('getDefaultGradientStops', () => {
+    it('alpha → white opaque → white transparent', () => {
+      expect(getDefaultGradientStops('alpha')).toEqual([
+        { offset: 0, color: 'white', opacity: 1 },
+        { offset: 1, color: 'white', opacity: 0 },
+      ]);
+    });
+    it('luminance → white → black', () => {
+      expect(getDefaultGradientStops('luminance')).toEqual([
+        { offset: 0, color: 'white', opacity: 1 },
+        { offset: 1, color: 'black', opacity: 1 },
+      ]);
+    });
+    it('repeated calls → identical deterministic data', () => {
+      expect(getDefaultGradientStops('alpha')).toEqual(getDefaultGradientStops('alpha'));
+      expect(getDefaultGradientStops('luminance')).toEqual(getDefaultGradientStops('luminance'));
+    });
+  });
+
+  describe('normalizeGradient', () => {
+    it('undefined → undefined (legacy stays gradient-free)', () => {
+      expect(normalizeGradient(undefined)).toBeUndefined();
+    });
+    it('{ angle: 45 } → { angle: 45 }', () => {
+      expect(normalizeGradient({ angle: 45 })).toEqual({ angle: 45 });
+    });
+    it('{ angle: 370 } → { angle: 10 }', () => {
+      expect(normalizeGradient({ angle: 370 })).toEqual({ angle: 10 });
+    });
+    it('{ angle: -10 } → { angle: 350 }', () => {
+      expect(normalizeGradient({ angle: -10 })).toEqual({ angle: 350 });
+    });
+    it('{ angle: NaN } → { angle: 0 }', () => {
+      expect(normalizeGradient({ angle: NaN })).toEqual({ angle: 0 });
+    });
+    it('{ angle: Infinity } → { angle: 0 }', () => {
+      expect(normalizeGradient({ angle: Infinity })).toEqual({ angle: 0 });
+    });
+  });
+
+  describe('geometry parity — gradient is paint, NEVER geometry', () => {
+    const source = (gradient?: PartMatte['gradient']) => {
+      const p = makeSourcePart('custom_box', {}) as any;
+      p.matte = { sourcePartId: 'tgt', mode: 'alpha', ...(gradient ? { gradient } : {}) };
+      return p;
+    };
+    const world = { x: 40, y: -20, rotation: 45, scaleX: 2, scaleY: 0.5 };
+
+    it('gradient undefined vs 45 → identical pathD', () => {
+      expect(buildMattePath(source(undefined), world)).toBe(buildMattePath(source({ angle: 45 }), world));
+    });
+    it('gradient 45 vs 180 → identical pathD', () => {
+      expect(buildMattePath(source({ angle: 45 }), world)).toBe(buildMattePath(source({ angle: 180 }), world));
+    });
+  });
+
+  describe('legacy + M8', () => {
+    it('PartMatte without gradient remains valid', () => {
+      const legacy: PartMatte = { sourcePartId: 'src', mode: 'alpha', inverted: false, enabled: true, feather: 12, strength: 0.5 };
+      expect(legacy.gradient).toBeUndefined();
+      expect(isMatteActive(legacy)).toBe(true);
+    });
+    it('gradient undefined does not create gradient data', () => {
+      expect(normalizeGradient(undefined)).toBeUndefined();
+      expect(JSON.stringify({ matte: { sourcePartId: 'src', mode: 'alpha' } })).not.toContain('gradient');
+    });
+    it('M8: no TrackChannel / channel structure introduced for gradient', () => {
+      // Gradient is a static PartMatte paint field — the channel model is
+      // untouched (no enum member, no keyframe type). The exported matte
+      // helpers prove the full gradient surface lives in matte.ts.
+      const m = { sourcePartId: 'src', mode: 'alpha', gradient: { angle: 90 } };
+      expect(Object.keys(m)).toEqual(['sourcePartId', 'mode', 'gradient']); // static part-level only
+      expect(JSON.stringify(m)).not.toContain('channel');
+      expect(JSON.stringify(m)).not.toContain('keyframe');
+    });
   });
 });

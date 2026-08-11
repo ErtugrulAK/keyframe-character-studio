@@ -429,3 +429,96 @@ describe('StagePartLayers — M16 matte strength (fill-opacity)', () => {
     expect(html.match(/mask="url\(#kcs-mask-src-alpha-s0\.5\)"/g)).toHaveLength(2); // 2 targets share it
   });
 });
+
+describe('StagePartLayers — M17 gradient matte (linearGradient render)', () => {
+  const src = () => makePart('src', 'custom_box');
+  const target = (matte: CharacterPart['matte']) => makePart('tgt', 'custom_circle', matte);
+
+  it('alpha gradient → one userSpaceOnUse linearGradient, two stops, mask path fill=url(...)', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } })]);
+    expect(html).toContain('<linearGradient');
+    expect(html).toContain('gradientUnits="userSpaceOnUse"');
+    expect(html).toContain('id="kcs-mg-src-45-alpha"');
+    expect(html.match(/<stop /g)).toHaveLength(2);
+    expect(html).toContain('stop-color="white" stop-opacity="1"');
+    expect(html).toContain('stop-color="white" stop-opacity="0"');
+    expect(html).toContain('<mask id="kcs-mask-src-alpha-g45"');
+    expect(html).toContain('fill="url(#kcs-mg-src-45-alpha)"');
+  });
+
+  it('luminance gradient → white→black stops, mask-type luminance preserved', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'luminance', gradient: { angle: 45 } })]);
+    expect(html).toContain('id="kcs-mg-src-45-luminance"');
+    expect(html).toContain('stop-color="white" stop-opacity="1"');
+    expect(html).toContain('stop-color="black" stop-opacity="1"');
+    expect(html).toContain('mask-type="luminance"');
+    expect(html).toContain('fill="url(#kcs-mg-src-45-luminance)"');
+  });
+
+  it('inverted alpha + gradient → ONE evenodd path with gradient fill', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', inverted: true, gradient: { angle: 45 } })]);
+    expect(html).toContain('id="kcs-mask-src-alpha-inv-g45"');
+    expect(html.match(/fill-rule="evenodd"/g)).toHaveLength(1); // single path
+    expect(html).toContain('fill="url(#kcs-mg-src-45-alpha)"');
+  });
+
+  it('inverted luminance + gradient → gradient rect + black contour preserved', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'luminance', inverted: true, gradient: { angle: 45 } })]);
+    expect(html).toContain('id="kcs-mask-src-luminance-inv-g45"');
+    expect(html).toContain('<rect'); // white-region rect keeps its role
+    expect(html).toContain('fill="url(#kcs-mg-src-45-luminance)"');
+    expect(html).toContain('fill="black"'); // contour path unchanged
+  });
+
+  it('clip mode → NO gradient, NO fill=url (clipPath is geometric only)', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'clip', gradient: { angle: 45 } })]);
+    expect(html).toContain('<clipPath id="kcs-clip-src"');
+    expect(html).not.toContain('linearGradient');
+    expect(html).not.toContain('fill="url(');
+  });
+
+  it('feather + gradient → filter + stdDeviation unchanged + gradient fill', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', feather: 12, gradient: { angle: 45 } })]);
+    expect(html).toContain('id="kcs-mask-src-alpha-f12-g45"');
+    expect(html).toContain('feGaussianBlur');
+    expect(html).toContain('stdDeviation="6"'); // feather math untouched by gradient
+    expect(html).toContain('fill="url(#kcs-mg-src-45-alpha)"');
+  });
+
+  it('strength + gradient → fill-opacity independent + gradient fill + -s suffix', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', strength: 0.5, gradient: { angle: 45 } })]);
+    expect(html).toContain('id="kcs-mask-src-alpha-s0.5-g45"');
+    expect(html).toContain('fill-opacity="0.5"');
+    expect(html).toContain('fill="url(#kcs-mg-src-45-alpha)"');
+  });
+
+  it('freeform + gradient → pathD unchanged (same as clip geometry), gradient fill', () => {
+    const source = makePart('src', 'custom_freeform');
+    source.points = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }];
+    const html = renderStage([source, target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } })]);
+    // The freeform world pathD is the SAME one the clip produces — gradient is paint only
+    const maskD = html.match(/<mask id="kcs-mask-src-alpha-g0"[\s\S]*?<path d="([^"]+)"/)?.[1];
+    expect(maskD).toBe('M 300 240 L 360 240 L 300 270 Z');
+    expect(html).toContain('fill="url(#kcs-mg-src-0-alpha)"');
+  });
+
+  it('dedupe: same source+angle → ONE gradient def; different angle → separate defs', () => {
+    const html = renderStage([
+      src(),
+      makePart('tA', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } }),
+      makePart('tB', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } }),
+      makePart('tC', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', gradient: { angle: 90 } }),
+    ]);
+    expect(html.match(/<linearGradient id="kcs-mg-src-45-alpha"/g)).toHaveLength(1); // shared
+    expect(html.match(/<linearGradient id="kcs-mg-src-90-alpha"/g)).toHaveLength(1); // separate
+    expect(html.match(/mask="url\(#kcs-mask-src-alpha-g45\)"/g)).toHaveLength(2);    // 2 targets share the mask
+  });
+
+  it('legacy: gradient undefined → NO gradient def, NO fill=url, canonical mask id', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha' })]);
+    expect(html).not.toContain('linearGradient');
+    expect(html).not.toContain('fill="url(');
+    expect(html).toContain('<mask id="kcs-mask-src-alpha"'); // byte-for-byte legacy
+    expect(html).toContain('fill="white"'); // solid mask fill unchanged
+  });
+});

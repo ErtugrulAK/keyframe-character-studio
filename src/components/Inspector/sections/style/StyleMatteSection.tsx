@@ -1,7 +1,7 @@
 import React from 'react';
 import { Scissors, X } from 'lucide-react';
 import type { CharacterPart, MatteMode, PartMatte } from '../../../../types/animator';
-import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength } from '../../../../utils/matte';
+import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
 
 interface StyleMatteSectionProps {
@@ -95,6 +95,26 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     setMatte({ ...matte, strength: value });
   };
 
+  // M17 gradient: matte.gradient is the ONLY source of truth (no local state).
+  // Toggle OFF → gradient: undefined; ON → fresh { angle: 0 } (the angle is
+  // stored ON the gradient object, so re-enabling starts at 0 — no local
+  // memory by design).
+  const onToggleGradient = () => {
+    if (!matte) return;
+    if (matte.gradient) {
+      setMatte({ ...matte, gradient: undefined });
+    } else {
+      setMatte({ ...matte, gradient: { angle: 0 } });
+    }
+  };
+
+  const onChangeGradientAngle = (value: number) => {
+    if (!matte) return;
+    // Preserve every other matte field — only the angle changes; the slider
+    // writes the NORMALIZED angle (360 ≡ 0) via the shared pure helper.
+    setMatte({ ...matte, gradient: { ...matte.gradient, angle: normalizeGradientAngle(value) ?? 0 } });
+  };
+
   const onRemove = () => setMatte(undefined);
 
   const selectValue = matte && !sourceMissing ? matte.sourcePartId : '';
@@ -115,6 +135,11 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   // Same clip-mode rule: clipPath cannot express opacity → disabled in Clip.
   const strengthValue = Math.round(normalizeStrength(matte?.strength) * 100);
   const strengthDisabled = modeValue === 'clip';
+  // M17 gradient: matte.gradient is the ONLY source of truth. Displayed angle
+  // is the normalized value (undefined/absent → 0 for the control readout).
+  const gradientEnabled = matte?.gradient !== undefined;
+  const gradientDisabled = modeValue === 'clip';
+  const angleValue = Math.round(normalizeGradientAngle(matte?.gradient?.angle) ?? 0);
 
   return (
     <StyleCard title="TRACK MATTE" icon={<Scissors size={13} />} color="#00d2ff">
@@ -155,6 +180,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               <label className="form-label" style={{ margin: 0 }}>INVERTED</label>
               <input
                 type="checkbox"
+                aria-label="Inverted"
                 checked={invertedValue}
                 onChange={onToggleInverted}
                 style={{ accentColor: '#00d2ff' }}
@@ -197,9 +223,42 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               />
             </div>
 
+            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <label className="form-label" style={{ margin: 0 }}>GRADIENT</label>
+              <input
+                type="checkbox"
+                aria-label="Gradient"
+                checked={gradientEnabled}
+                disabled={gradientDisabled}
+                onChange={onToggleGradient}
+                style={{ accentColor: '#00d2ff' }}
+              />
+            </div>
+
+            {gradientEnabled && (
+              <div className="form-field-group" style={{ marginTop: 8 }}>
+                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>ANGLE</span>
+                  <span style={{ color: '#00d2ff', fontWeight: 800, opacity: gradientDisabled ? 0.45 : 1 }}>{angleValue}°</span>
+                </label>
+                <input
+                  type="range"
+                  aria-label="Gradient angle"
+                  min={0}
+                  max={360}
+                  step={1}
+                  value={angleValue}
+                  disabled={gradientDisabled}
+                  onChange={(e) => onChangeGradientAngle(parseInt(e.target.value, 10))}
+                  style={{ width: '100%', cursor: gradientDisabled ? 'not-allowed' : 'pointer', opacity: gradientDisabled ? 0.45 : 1 }}
+                />
+              </div>
+            )}
+
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 11, color: '#cbd5e1', cursor: 'pointer' }}>
               <input
                 type="checkbox"
+                aria-label="Enabled"
                 checked={matte.enabled !== false}
                 onChange={onToggleEnabled}
                 style={{ accentColor: '#00d2ff' }}

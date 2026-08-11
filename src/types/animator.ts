@@ -49,6 +49,12 @@ export interface PartMatte {
    *  channel). undefined = legacy behavior = full strength (1). Malformed
    *  values normalize to 1 via normalizeStrength. */
   strength?: number;
+  /** M17: linear gradient matte (render parameter only — paint definition,
+   *  NEVER geometry). undefined = legacy behavior (no gradient).
+   *  Angle is source-local degrees; 0 = left→right, 90 = top→bottom. */
+  gradient?: {
+    angle: number;
+  };
 }
 
 export interface MaskData {

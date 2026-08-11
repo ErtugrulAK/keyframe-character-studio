@@ -132,6 +132,10 @@ export interface MatteMask {
    *  normalizeStrength). Absent = full strength (legacy). Render only —
    *  geometry is NEVER affected. */
   strength?: number;
+  /** M17: optional world-space <linearGradient> def id referenced by the
+   *  mask content fill (url(#id)). Absent = legacy solid fill. Render only —
+   *  NEVER geometry. */
+  gradientId?: string;
 }
 
 /**
@@ -154,6 +158,146 @@ export function normalizeStrength(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 1;
   if (value < 0 || value > 1) return 1;
   return value;
+}
+
+/** M17 — one default gradient stop. */
+export interface MatteGradientStop {
+  offset: number;   // 0..1
+  color: string;
+  opacity: number;  // 0..1
+}
+
+/**
+ * M17 — Normalize a source-local gradient angle (degrees) into [0, 360).
+ * undefined → undefined (SEMANTIC: gradient absent — never coerce to 0);
+ * NaN/±Infinity (malformed numeric) → 0; finite → ((v % 360) + 360) % 360.
+ * Pure; NEVER touches geometry (a paint parameter only).
+ */
+export function normalizeGradientAngle(value: number | undefined): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+  return ((value % 360) + 360) % 360;
+}
+
+/**
+ * M17 — Deterministic <linearGradient> id for a matte source.
+ * kcs-mg-{sourcePartId}-{normalizedAngle} (360 ≡ 0, -315 ≡ 45 — the id uses
+ * the NORMALIZED angle, so equivalent angles share the def). Absent gradient
+ * → undefined (no gradient def requested). Pure, no cache.
+ */
+export function gradientId(sourcePartId: string, gradient: { angle: number } | undefined): string | undefined {
+  if (!gradient) return undefined;
+  const angle = normalizeGradientAngle(gradient.angle) ?? 0;
+  return `kcs-mg-${sourcePartId}-${angle}`;
+}
+
+/**
+ * M17 — Normalize a gradient object: undefined stays undefined (legacy
+ * projects remain gradient-free); a present object gets a safe angle
+ * (NaN/±Infinity/undefined angle → 0). No defaults create a gradient where
+ * none existed.
+ */
+export function normalizeGradient(gradient: { angle: number } | undefined): { angle: number } | undefined {
+  if (!gradient || typeof gradient !== 'object') return undefined;
+  return { angle: normalizeGradientAngle(gradient.angle) ?? 0 };
+}
+
+/**
+ * M17 — Default two-stop gradient paint for the MVP (no user stops yet).
+ * ALPHA: white opaque → white transparent (spatial alpha fade).
+ * LUMINANCE: white → black (spatial luminance fade, grayscale rule).
+ * Pure + deterministic — repeated calls return identical data.
+ */
+export function getDefaultGradientStops(mode: Exclude<MatteMode, 'clip'>): MatteGradientStop[] {
+  if (mode === 'luminance') {
+    return [
+      { offset: 0, color: 'white', opacity: 1 },
+      { offset: 1, color: 'black', opacity: 1 },
+    ];
+  }
+  return [
+    { offset: 0, color: 'white', opacity: 1 },
+    { offset: 1, color: 'white', opacity: 0 },
+  ];
+}
+
+/** M17 — world-space gradient endpoints (linearGradient x1/y1/x2/y2). */
+export interface MatteGradientEndpoints {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+/**
+ * M17 — World-space endpoints for the source-local gradient angle.
+ *
+ * 1. The source's LOCAL bbox is derived from the SAME points buildMattePath
+ *    uses (shapeGeometry for static shapes, CharacterPart.points for
+ *    freeform) — never a second geometry system.
+ * 2. The four bbox corners are projected onto the angle direction
+ *    (dx=cos θ, dy=sin θ); the min/max projection defines the extent.
+ * 3. Two LOCAL points are reconstructed through the bbox center along the
+ *    direction, then transformed with applyWorld — the EXACT world transform
+ *    math the matte path uses — so the gradient moves/rotates/scales/flips
+ *    WITH the source (rotation 0 = left→right, 90 = top→bottom).
+ *
+ * Only TWO points are ever transformed. Pure; no cache.
+ */
+export function gradientEndpoints(
+  sourcePart: Pick<CharacterPart, 'type' | 'points'>,
+  world: WorldTransform,
+  angle: number,
+): MatteGradientEndpoints | undefined {
+  // Local bounds from the SAME geometry the matte path uses — shapeGeometry
+  // for static shapes, CharacterPart.points for freeform. Never a second
+  // geometry system: only the bbox (2 endpoint points) is derived.
+  const geo = sourcePart.type === 'custom_freeform' ? undefined : getShapeGeometry(sourcePart.type as BodyPartType);
+  const pts = sourcePart.type === 'custom_freeform'
+    ? sourcePart.points
+    : geo
+      ? geo.kind === 'polygon'
+        ? geo.points
+        : geo.kind === 'rect'
+          ? [
+              { x: geo.x, y: geo.y },
+              { x: geo.x + geo.width, y: geo.y },
+              { x: geo.x, y: geo.y + geo.height },
+              { x: geo.x + geo.width, y: geo.y + geo.height },
+            ]
+          : // circle — local center (0,0), radius r
+            [
+              { x: -geo.r, y: -geo.r },
+              { x: geo.r, y: -geo.r },
+              { x: -geo.r, y: geo.r },
+              { x: geo.r, y: geo.r },
+            ]
+      : undefined;
+  if (!pts || pts.length === 0) return undefined;
+  const a = (normalizeGradientAngle(angle) ?? 0) * (Math.PI / 180);
+  const dx = Math.cos(a);
+  const dy = Math.sin(a);
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of pts) {
+    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+  }
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  // Project the four corners onto the direction; the min/max projection is
+  // the extent of the bbox along the angle (unit direction → t in px).
+  let minP = Infinity, maxP = -Infinity;
+  for (const [x, y] of [[minX, minY], [maxX, minY], [minX, maxY], [maxX, maxY]] as const) {
+    const p = x * dx + y * dy;
+    minP = Math.min(minP, p);
+    maxP = Math.max(maxP, p);
+  }
+  const half = (maxP - minP) / 2;
+  const p1 = { x: cx - dx * half, y: cy - dy * half };
+  const p2 = { x: cx + dx * half, y: cy + dy * half };
+  const w1 = applyWorld(p1, world);
+  const w2 = applyWorld(p2, world);
+  return { x1: w1.x, y1: w1.y, x2: w2.x, y2: w2.y };
 }
 
 export function buildMatteMask(

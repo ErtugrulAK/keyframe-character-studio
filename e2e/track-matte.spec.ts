@@ -914,3 +914,168 @@ test.describe('M16 matte strength — real browser pixel assertions', () => {
     expect(outside).toBeLessThan(200);
   });
 });
+
+test.describe('M17 gradient matte — real browser pixel assertions', () => {
+  // Freeform-triangle fixture (same as M15/M16): polygon (300,240)-(360,240)-(300,270)
+  const TRI = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }];
+  const source = (overrides: Record<string, unknown> = {}) =>
+    makeLayer('src', 'Source', 'custom_freeform', { zIndex: 1, fillColor: '#ff0000', points: TRI, ...overrides });
+  const greenTarget = (matte: Record<string, unknown>) =>
+    makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte });
+
+  async function greenAt(page: Page, worldX: number, worldY: number): Promise<number> {
+    const buf = await page.screenshot();
+    const png = decodePng(buf);
+    const { x, y } = await page.evaluate(([wx, wy]: [number, number]) => {
+      const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
+      const pt = svg.createSVGPoint(); pt.x = wx; pt.y = wy;
+      const s = pt.matrixTransform(svg.getScreenCTM()!);
+      return { x: Math.round(s.x), y: Math.round(s.y) };
+    }, [worldX, worldY]);
+    return png.data[(y * png.width + x) * png.bpp + 1];
+  }
+
+  test('V-G1 — alpha gradient L→R: monotonic ramp inside the matte path', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } })]);
+    // Triangle at y=255 spans x∈(300,330); bright at x1 (~296), fading right
+    const g305 = await greenAt(page, 305, 255);
+    const g315 = await greenAt(page, 315, 255);
+    const g325 = await greenAt(page, 325, 255);
+    expect(g305).toBeGreaterThan(150);
+    expect(g305).toBeGreaterThan(g315);
+    expect(g315).toBeGreaterThan(g325);
+    expect(g325).toBeLessThan(200);
+    // DOM evidence
+    const units = await page.evaluate(() => document.querySelector('linearGradient')?.getAttribute('gradientUnits'));
+    const stops = await page.evaluate(() => document.querySelectorAll('linearGradient stop').length);
+    expect(units).toBe('userSpaceOnUse');
+    expect(stops).toBe(2);
+  });
+
+  test('V-G2 — angle 180: ramp direction reversed', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 180 } })]);
+    const g305 = await greenAt(page, 305, 255);
+    const g315 = await greenAt(page, 315, 255);
+    const g325 = await greenAt(page, 325, 255);
+    expect(g325).toBeGreaterThan(g315);
+    expect(g315).toBeGreaterThan(g305); // bright end moved to the right (x2 side)
+    expect(g325).toBeGreaterThan(80);   // in-triangle max ≈ 110 for a 180° span
+  });
+
+  test('V-G3 — gradient + strength 0.5: ramp amplitude halved', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', strength: 0.5, gradient: { angle: 0 } })]);
+    const g315 = await greenAt(page, 315, 255);
+    expect(g315).toBeGreaterThan(40);  // partial visibility
+    expect(g315).toBeLessThan(130);    // NOT full strength (≈188/2 ≈ 94)
+    expect(await page.evaluate(() => document.querySelector('mask path')?.getAttribute('fill-opacity'))).toBe('0.5');
+  });
+
+  test('V-G4 — gradient + feather 12: ramp monotonic + feGaussianBlur present', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', feather: 12, gradient: { angle: 0 } })]);
+    const g305 = await greenAt(page, 305, 255);
+    const g315 = await greenAt(page, 315, 255);
+    const g325 = await greenAt(page, 325, 255);
+    expect(g305).toBeGreaterThan(g315);
+    expect(g315).toBeGreaterThan(g325);
+    const std = await page.evaluate(() => document.querySelector('feGaussianBlur')?.getAttribute('stdDeviation'));
+    expect(std).toBe('6'); // feather math untouched by gradient
+  });
+
+  test('V-G5 — freeform source: pathD unchanged + gradient ramp on the same path', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } })]);
+    const d = await page.evaluate(() => document.querySelector('mask[id="kcs-mask-src-alpha-g0"] path')?.getAttribute('d'));
+    expect(d).toBe('M 300 240 L 360 240 L 300 270 Z'); // byte-for-byte M15 freeform world path
+    expect(await greenAt(page, 310, 255)).toBeGreaterThan(150);
+  });
+
+  test('V-G6 — rotated + scaled source: gradient follows the source transform', async ({ page }) => {
+    // rotation 90 + scaleX 2 → matte path (300,240),(300,360),(270,240);
+    // gradient angle 0 (source-local) becomes DOWNWARD in world: (285,232)→(285,368)
+    await seed(page, [source({ rotation: 90, scaleX: 2 }), greenTarget({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } })]);
+    // Rotated triangle at x=285 spans y∈(240,270)... verify direction: same x, brightness drops with y
+    const gTop = await greenAt(page, 285, 245);
+    const gBottom = await greenAt(page, 285, 255);
+    expect(gTop).toBeGreaterThan(gBottom);
+  });
+
+  test('V-G7 — animated source: gradient endpoints follow the movement (no stale coordinates)', async ({ page }) => {
+    const tracks = [
+      {
+        id: 't_src', partId: 'src', name: 'Source',
+        channels: {
+          x: [
+            { id: 'k1', frame: 0, value: 0, easing: 'linear' },
+            { id: 'k2', frame: 60, value: 120, easing: 'linear' },
+          ],
+        },
+      },
+    ];
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } })], tracks);
+    const x1Before = await page.evaluate(() => document.querySelector('linearGradient')?.getAttribute('x1'));
+    await page.getByTitle('Play', { exact: true }).click();
+    await page.waitForTimeout(1800);
+    await page.getByTitle('Pause', { exact: true }).click();
+    const x1After = await page.evaluate(() => document.querySelector('linearGradient')?.getAttribute('x1'));
+    expect(parseFloat(x1After!) - parseFloat(x1Before!)).toBeGreaterThan(40); // endpoints followed the +120 move
+  });
+
+  test('V-G8 — import/reload: gradient survives serialization, pixels identical', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } })]);
+    const before = [await greenAt(page, 305, 255), await greenAt(page, 315, 255)];
+    await page.waitForFunction(() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+        return (s.layers ?? []).find((x: any) => x.id === 'tgt')?.matte?.gradient?.angle === 0;
+      } catch { return false; }
+    }, undefined, { timeout: 10000 });
+    const autosaved = await page.evaluate(() => JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!));
+    expect(autosaved.layers.find((l: any) => l.id === 'tgt').matte.gradient).toEqual({ angle: 0 });
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
+    const after = [await greenAt(page, 305, 255), await greenAt(page, 315, 255)];
+    expect(after[0]).toBe(before[0]); // exact pixel parity through the real import
+    expect(after[1]).toBe(before[1]);
+  });
+
+  test('V-G9 — luminance gradient white→black: monotonic mask ramp', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'luminance', gradient: { angle: 0 } })]);
+    const g305 = await greenAt(page, 305, 255);
+    const g315 = await greenAt(page, 315, 255);
+    const g325 = await greenAt(page, 325, 255);
+    expect(g305).toBeGreaterThan(g315);
+    expect(g315).toBeGreaterThan(g325); // white(lum 1) → black(lum 0)
+    expect(g305).toBeGreaterThan(120);
+  });
+
+  test('V-G10 — inverted luminance + gradient: hole preserved + outer ramp', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'luminance', inverted: true, gradient: { angle: 0 } })]);
+    expect(await greenAt(page, 320, 255)).toBeLessThan(45);          // hole (black contour)
+    const gLeft = await greenAt(page, 250, 255);                    // outside-left of triangle, inside target
+    const gRight = await greenAt(page, 400, 255);                   // outside-right
+    expect(gLeft).toBeGreaterThan(120);
+    expect(gLeft).toBeGreaterThan(gRight);
+  });
+
+  test('V-G11 — negative scale: gradient direction flips WITH the source', async ({ page }) => {
+    await seed(page, [source({ scaleX: -1 }), greenTarget({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } })]);
+    // Flipped triangle (300,240),(180,240),(300,270) at y=255 spans x∈(240,300);
+    // the flipped source keeps its LOCAL left→right → bright end at world RIGHT
+    const gLeft = await greenAt(page, 250, 255);
+    const gRight = await greenAt(page, 290, 255);
+    expect(gRight).toBeGreaterThan(gLeft); // flip followed — bright end at the shape's local left
+    expect(gRight).toBeGreaterThan(80);
+  });
+
+  test('V-G12 — dedupe: same source+angle → ONE gradient def; different angle → separate', async ({ page }) => {
+    await seed(page, [
+      source(),
+      greenTarget({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } }),
+      makeLayer('tgt2', 'Target2', 'custom_circle', { zIndex: 3, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte: { sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } } }),
+      makeLayer('tgt3', 'Target3', 'custom_circle', { zIndex: 4, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte: { sourcePartId: 'src', mode: 'alpha', gradient: { angle: 90 } } }),
+    ]);
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id="kcs-mg-src-45-alpha"]').length)).toBe(1);
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id="kcs-mg-src-90-alpha"]').length)).toBe(1);
+    expect(await page.evaluate(() => document.querySelectorAll('mask[id="kcs-mask-src-alpha-g45"]').length)).toBe(1);
+    expect(await page.evaluate(() => document.querySelectorAll('[mask="url(#kcs-mask-src-alpha-g45)"]').length)).toBe(2); // shared by 2 targets
+  });
+});

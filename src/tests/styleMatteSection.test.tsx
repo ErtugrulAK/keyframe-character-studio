@@ -74,8 +74,7 @@ describe('StyleMatteSection — track matte editor UI', () => {
   it('enabled toggle flips enabled without losing the source relationship', () => {
     const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', enabled: true });
     const { onPartPropChange, container } = renderMatte(target, [STAR, target]);
-    // checkboxes: [0] inverted, [1] enabled
-    const checkbox = container.querySelectorAll('input[type="checkbox"]')[1] as HTMLInputElement;
+    const checkbox = container.querySelector('input[aria-label="Enabled"]') as HTMLInputElement;
     expect(checkbox.checked).toBe(true);
 
     fireEvent.click(checkbox);
@@ -84,8 +83,8 @@ describe('StyleMatteSection — track matte editor UI', () => {
     // re-render with disabled matte → checkbox unchecked, relationship intact
     const disabled = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', enabled: false });
     const { onPartPropChange: cb2, container: c2 } = renderMatte(disabled, [STAR, disabled]);
-    expect((c2.querySelectorAll('input[type="checkbox"]')[1] as HTMLInputElement).checked).toBe(false);
-    fireEvent.click(c2.querySelectorAll('input[type="checkbox"]')[1] as HTMLInputElement);
+    expect((c2.querySelector('input[aria-label="Enabled"]') as HTMLInputElement).checked).toBe(false);
+    fireEvent.click(c2.querySelector('input[aria-label="Enabled"]') as HTMLInputElement);
     expect(cb2).toHaveBeenCalledWith('matte', { sourcePartId: 'src', mode: 'clip', enabled: true });
   });
 
@@ -144,10 +143,9 @@ describe('StyleMatteSection — track matte editor UI', () => {
   it('M13: inverted OFF → ON', () => {
     const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip' });
     const { onPartPropChange, container } = renderMatte(target, [STAR, target]);
-    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-    // checkboxes[0] = inverted, checkboxes[1] = enabled
-    expect((checkboxes[0] as HTMLInputElement).checked).toBe(false);
-    fireEvent.click(checkboxes[0]);
+    const invertedCheckbox = container.querySelector('input[aria-label="Inverted"]') as HTMLInputElement;
+    expect(invertedCheckbox.checked).toBe(false);
+    fireEvent.click(invertedCheckbox);
     expect(onPartPropChange).toHaveBeenCalledWith('matte', { sourcePartId: 'src', mode: 'clip', inverted: true });
   });
 
@@ -169,9 +167,8 @@ describe('StyleMatteSection — track matte editor UI', () => {
     const { container } = renderMatte(legacy, [STAR, legacy]);
     const modeSelect = container.querySelectorAll('select')[1] as HTMLSelectElement;
     expect(modeSelect.value).toBe('clip'); // resolveMatteMode fallback
-    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-    expect((checkboxes[0] as HTMLInputElement).checked).toBe(false); // inverted OFF
-    expect((checkboxes[1] as HTMLInputElement).checked).toBe(true);  // enabled (undefined → active)
+    expect((container.querySelector('input[aria-label="Inverted"]') as HTMLInputElement).checked).toBe(false); // inverted OFF
+    expect((container.querySelector('input[aria-label="Enabled"]') as HTMLInputElement).checked).toBe(true);  // enabled (undefined → active)
   });
 });
 
@@ -402,5 +399,137 @@ describe('StyleMatteSection — M16 strength slider', () => {
   it('no matte → no strength slider', () => {
     const { container } = renderMatte(target(), [star(), target()]);
     expect(strength(container)).toBeNull();
+  });
+});
+
+describe('StyleMatteSection — M17 gradient controls', () => {
+  const star = () => makePart('src', 'custom_star', 'Star Part');
+  const freeform = () => makePart('ff', 'custom_freeform', 'Free Part');
+  const target = (matte?: CharacterPart['matte']) => makePart('tgt', 'custom_box', 'Box Part', matte);
+  const gradientToggle = (container: HTMLElement) =>
+    container.querySelector('input[aria-label="Gradient"]') as HTMLInputElement;
+  const angle = (container: HTMLElement) =>
+    container.querySelector('input[aria-label="Gradient angle"]') as HTMLInputElement;
+  const angleLabel = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll('.form-label span')).map((s) => s.textContent);
+
+  const render = (matte: CharacterPart['matte'], parts: CharacterPart[] = [star()]) =>
+    renderMatte(target(matte), [...parts, target(matte)]);
+
+  it('gradient controls visible for alpha matte', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } });
+    expect(gradientToggle(container)).toBeTruthy();
+    expect(angle(container)).toBeTruthy();
+  });
+
+  it('gradient controls visible for luminance / inverted alpha / inverted luminance', () => {
+    for (const m of [
+      { sourcePartId: 'src', mode: 'luminance', gradient: { angle: 0 } },
+      { sourcePartId: 'src', mode: 'alpha', inverted: true, gradient: { angle: 0 } },
+      { sourcePartId: 'src', mode: 'luminance', inverted: true, gradient: { angle: 0 } },
+    ] as CharacterPart['matte'][]) {
+      const { container } = render(m);
+      expect(gradientToggle(container), JSON.stringify(m)).toBeTruthy();
+      expect(gradientToggle(container).disabled).toBe(false);
+    }
+  });
+
+  it('gradient controls work with a freeform matte source', () => {
+    const { container } = render({ sourcePartId: 'ff', mode: 'alpha', gradient: { angle: 90 } }, [freeform()]);
+    expect(gradientToggle(container).checked).toBe(true);
+    expect(angle(container).value).toBe('90');
+  });
+
+  it('clip mode → gradient toggle + angle disabled', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'clip', gradient: { angle: 45 } });
+    expect(gradientToggle(container).disabled).toBe(true);
+    expect(angle(container).disabled).toBe(true);
+  });
+
+  it('gradient absent → toggle OFF, no angle slider', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha' });
+    expect(gradientToggle(container).checked).toBe(false);
+    expect(angle(container)).toBeNull();
+  });
+
+  it('gradient present → toggle ON + existing angle displayed', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } });
+    expect(gradientToggle(container).checked).toBe(true);
+    expect(angle(container).value).toBe('45');
+    expect(angleLabel(container)).toContain('45°');
+  });
+
+  it('angle range 0-360, step 1', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } });
+    expect(angle(container).min).toBe('0');
+    expect(angle(container).max).toBe('360');
+    expect(angle(container).step).toBe('1');
+  });
+
+  it('changing angle writes the NORMALIZED value (360 → 0, 45 → 45, 180 → 180)', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } });
+    // NOTE: the range input clamps to [0, 360] before the change event, so
+    // out-of-range values (370) never reach the handler — the pure
+    // normalizeGradientAngle tests in matte.test.ts cover those. Here we
+    // verify the slider path: 360 (≡ 0) normalizes on write.
+    fireEvent.change(angle(container), { target: { value: '360' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 },
+    });
+    fireEvent.change(angle(container), { target: { value: '45' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 },
+    });
+    fireEvent.change(angle(container), { target: { value: '180' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', gradient: { angle: 180 },
+    });
+  });
+
+  it('malformed existing angle is safely normalized for display (-10 → 350, NaN → 0)', () => {
+    const a = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: -10 } });
+    expect(angle(a.container).value).toBe('350');
+    const b = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: NaN } });
+    expect(angle(b.container).value).toBe('0');
+  });
+
+  it('toggling gradient ON writes { angle: 0 }; toggling OFF removes it', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha' });
+    fireEvent.click(gradientToggle(container));
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 },
+    });
+    const { onPartPropChange: off, container: c2 } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } });
+    fireEvent.click(gradientToggle(c2));
+    expect(off).toHaveBeenCalledWith('matte', { sourcePartId: 'src', mode: 'alpha' });
+  });
+
+  it('toggle preserves all existing matte fields (only gradient changes)', () => {
+    const full = target({ sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 45 } });
+    const { onPartPropChange, container } = renderMatte(full, [star(), full]);
+    fireEvent.click(gradientToggle(container));
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+    });
+  });
+
+  it('angle change preserves all existing matte fields (only angle changes)', () => {
+    const full = target({ sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 45 } });
+    const { onPartPropChange, container } = renderMatte(full, [star(), full]);
+    fireEvent.change(angle(container), { target: { value: '90' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 90 },
+    });
+  });
+
+  it('missing source → gradient controls hidden (no crash)', () => {
+    const { container } = render({ sourcePartId: 'ghost', mode: 'alpha', gradient: { angle: 45 } }, [star()]);
+    expect(gradientToggle(container)).toBeNull();
+  });
+
+  it('no matte → gradient controls absent', () => {
+    const { container } = renderMatte(target(), [star(), target()]);
+    expect(gradientToggle(container)).toBeNull();
+    expect(angle(container)).toBeNull();
   });
 });

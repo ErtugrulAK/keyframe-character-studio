@@ -5,7 +5,7 @@ import { AnimationProject, Track, Transform, TrackChannel, PropertyKeyframe } fr
 import { makeEmptyChannels } from '../utils/defaults';
 import { applyTransitionToTrackCanonicalMutator } from '../utils/trackMutations';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
-import { normalizeFeather } from '../utils/matte';
+import { normalizeFeather, normalizeGradientAngle } from '../utils/matte';
 
 describe('useSerialization Hook', () => {
   const mockSetFps = vi.fn();
@@ -1673,5 +1673,87 @@ describe('useSerialization Hook', () => {
     expect(JSON.stringify(parsed)).not.toContain('maskOffsetStrength'); // no legacy-style channel
     // channels (if any tracks exist) never reference strength
     expect(parsed.tracks ?? []).not.toContain('strength');
+  });
+
+  // ─── M17 Step 3E: gradient serialization round-trip ─────────────────
+
+  const gradPart = (matte: any) => ({
+    id: 'tgt', type: 'custom_box', name: 'T', zIndex: 2,
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    fillColor: '#00ff00', strokeColor: '#101218',
+    matte,
+  });
+
+  it('M17: gradient undefined → JSON has NO gradient key (legacy byte-compatible)', () => {
+    const restored = roundTripPart(gradPart({ sourcePartId: 'src', mode: 'alpha' }));
+    expect('gradient' in restored.matte).toBe(false);
+    expect(JSON.stringify(restored.matte)).not.toContain('gradient');
+  });
+
+  it('M17: gradient angle 0 / 45 / 90 survive round-trip exactly', () => {
+    for (const a of [0, 45, 90]) {
+      const restored = roundTripPart(gradPart({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: a } }));
+      expect(restored.matte.gradient).toEqual({ angle: a });
+    }
+  });
+
+  it('M17: angle 360 round-trips RAW (pass-through) — normalization happens at render', () => {
+    // Serialization never rewrites values; normalizeGradientAngle(360) → 0 is
+    // the RENDER layer's contract (pure helper tests cover it).
+    const restored = roundTripPart(gradPart({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 360 } }));
+    expect(restored.matte.gradient).toEqual({ angle: 360 });
+    expect(normalizeGradientAngle(360)).toBe(0);
+  });
+
+  it('M17: malformed angle (NaN/±Infinity → JSON null) imports without breaking, render normalizes', () => {
+    for (const bad of [NaN, Infinity, -Infinity]) {
+      const part = gradPart({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: bad } });
+      const { result } = renderSerializationWithPart(part);
+      const exported = result.current.exportProject();
+      mockSetCharacterParts.mockClear();
+      expect(result.current.importProject(exported)).toBe(true); // never throws
+      const restored = (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === 'tgt')!;
+      expect(restored.matte.sourcePartId).toBe('src'); // matte survives
+      expect(normalizeGradientAngle(restored.matte.gradient?.angle)).toBe(0); // render-side guard
+    }
+  });
+
+  it('M17: full matte — all seven fields survive round-trip intact', () => {
+    const restored = roundTripPart(gradPart({
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+      gradient: { angle: 45 },
+    }));
+    expect(restored.matte).toEqual({
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+      gradient: { angle: 45 },
+    });
+  });
+
+  it('M17: freeform source + gradient — points AND gradient survive', () => {
+    const source = {
+      id: 'ff', type: 'custom_freeform', name: 'FF', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+      points: [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }],
+      matte: { sourcePartId: 'tgt', mode: 'luminance', gradient: { angle: 90 } },
+    } as any;
+    const restored = roundTripPart(source);
+    expect(restored.points).toEqual([{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }]);
+    expect(restored.matte.gradient).toEqual({ angle: 90 });
+  });
+
+  it('M17: channels-only — gradient stays in layers[].matte, NEVER in Track.channels', () => {
+    const part = gradPart({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } });
+    const { result } = renderSerializationWithPart(part);
+    const parsed = JSON.parse(result.current.exportProject());
+    expect(parsed.layers.find((l: any) => l.id === 'tgt').matte.gradient).toEqual({ angle: 45 });
+    expect(JSON.stringify(parsed.tracks ?? [])).not.toContain('gradient');
+    expect(JSON.stringify(parsed)).not.toContain('gradientChannel');
+  });
+
+  it('M17: legacy project without gradient imports unchanged (no gradient introduced)', () => {
+    const restored = roundTripPart(gradPart({ sourcePartId: 'src', mode: 'alpha', inverted: false, enabled: true, feather: 0, strength: 0.5 }));
+    expect(restored.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', inverted: false, enabled: true, feather: 0, strength: 0.5 });
+    expect('gradient' in restored.matte).toBe(false);
   });
 });

@@ -7,9 +7,10 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, normalizeFeather, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, isMatteEligible, normalizeFeather, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
 import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
+import { buildFreeformPath } from '../utils/freeform';
 import { evaluateTransform } from '../utils/evaluateTransform';
 import { makeEmptyChannels } from '../utils/defaults';
 import type { CharacterPart, Track } from '../types/animator';
@@ -148,10 +149,12 @@ describe('matte — shape coverage & determinism', () => {
     }
   });
 
-  it('returns null for freeform (DEFERRED — no clip produced)', () => {
-    const source = makeSourcePart('custom_freeform', { points: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 0, y: 10 }] } as any);
-    expect(getShapeGeometry('custom_freeform')).toBeNull();
-    expect(buildMatteClipPath(source, { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 })).toBeNull();
+  it('M15: freeform source now produces a world-space clip from its points', () => {
+    const source = makeSourcePart('custom_freeform', { points: [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }] } as any);
+    expect(getShapeGeometry('custom_freeform')).toBeNull(); // still no STATIC geometry
+    const clip = buildMatteClipPath(source, { x: 100, y: 50, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 });
+    expect(clip).not.toBeNull();
+    expect(clip!.pathD).toBe('M 400 290 L 460 290 L 400 320 Z'); // center + transform applied
   });
 
   it('returns null for text/image/video sources (DEFERRED)', () => {
@@ -389,5 +392,113 @@ describe('matte — M14 feather (normalize + propagation + geometry parity)', ()
     const legacyRestored = JSON.parse(JSON.stringify(legacy)) as PartMatte;
     expect(legacyRestored.feather).toBeUndefined(); // legacy data → no feather key
     expect(JSON.stringify(legacyRestored)).not.toContain('feather');
+  });
+});
+
+describe('matte — M15 freeform source (custom_freeform → CharacterPart.points)', () => {
+  const TRI = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }];
+  const STATIC_WORLD: WorldTransform = { x: 100, y: 50, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+
+  const freeformSource = (points: unknown) =>
+    makeSourcePart('custom_freeform', { points } as any);
+
+  it('is deterministic — same points + world → identical pathD', () => {
+    const source = freeformSource(TRI);
+    const d1 = buildMattePath(source, STATIC_WORLD)!;
+    const d2 = buildMattePath(source, STATIC_WORLD)!;
+    expect(d1).toBe(d2);
+  });
+
+  it('geometry parity: matte world path uses the SAME points the renderer draws', () => {
+    const source = freeformSource(TRI);
+    const local = buildFreeformPath(TRI as any);          // renderer'ın çizdiği lokal path
+    const world = buildMattePath(source, STATIC_WORLD)!;  // matte'in world path'i
+    expect(local).toBe('M 0 0 L 60 0 L 0 30 Z');
+    // world = aynı noktalar + CANVAS_CENTER + transform (elle doğrulanmış)
+    expect(world).toBe('M 400 290 L 460 290 L 400 320 Z');
+  });
+
+  it('rotated freeform: 90° → (60,0) dünya (400,350)', () => {
+    const source = freeformSource(TRI);
+    const d = buildMattePath(source, { ...STATIC_WORLD, rotation: 90 })!;
+    expect(d).toContain(' L 400 350'); // (60,0) rot90 → x=300+100+0, y=240+50+60
+  });
+
+  it('scaled freeform: scaleX=2 → (60,0) dünya (520,290)', () => {
+    const source = freeformSource(TRI);
+    const d = buildMattePath(source, { ...STATIC_WORLD, scaleX: 2 })!;
+    expect(d).toContain(' L 520 290');
+  });
+
+  it('negative scale: scaleX=-1 → (60,0) dünya (340,290) — güvenli', () => {
+    const source = freeformSource(TRI);
+    const d = buildMattePath(source, { ...STATIC_WORLD, scaleX: -1 })!;
+    expect(d).toContain(' L 340 290');
+  });
+
+  it('parented freeform: evaluateTransform world compose → doğru dünya konumu', () => {
+    const parent = makeSourcePart('custom_box', { id: 'par' } as any);
+    parent.baseTransform = { x: 50, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+    const child = makeSourcePart('custom_freeform', { id: 'child', parentId: 'par', points: TRI } as any);
+    const track = {
+      id: 't_child', partId: 'child', name: 'T', color: '#f00', visible: true,
+      keyframes: [], channels: makeEmptyChannels(),
+    } as Track;
+    const w = evaluateTransform([parent, child], [track], ACTIVE, 'child', 0);
+    expect(w.x).toBe(50); // parent compose çalışıyor
+    const d = buildMattePath(child, w)!;
+    expect(d).toContain('M 350 240'); // 300 + 50, 240 + 0
+  });
+
+  it('empty points → null', () => {
+    expect(buildMattePath(freeformSource([]), STATIC_WORLD)).toBeNull();
+  });
+
+  it('undefined points → null', () => {
+    expect(buildMattePath(freeformSource(undefined), STATIC_WORLD)).toBeNull();
+  });
+
+  it('<2 points → null', () => {
+    expect(buildMattePath(freeformSource([{ x: 1, y: 1 }]), STATIC_WORLD)).toBeNull();
+  });
+
+  it('malformed points (not an array) → null, no crash', () => {
+    expect(buildMattePath(freeformSource('oops'), STATIC_WORLD)).toBeNull();
+    expect(buildMattePath(freeformSource(null), STATIC_WORLD)).toBeNull();
+  });
+
+  it('self-intersecting polygon → builds without crash', () => {
+    const source = freeformSource([{ x: 0, y: 0 }, { x: 20, y: 20 }, { x: 20, y: 0 }, { x: 0, y: 20 }]);
+    const d = buildMattePath(source, STATIC_WORLD)!;
+    expect(d.length).toBeGreaterThan(0);
+  });
+
+  it('freeform flows through the MASK builder too (same geometry core)', () => {
+    const source = freeformSource(TRI);
+    const mask = buildMatteMask(source, STATIC_WORLD, 'alpha', false, '#ffffff')!;
+    expect(mask.pathD).toBe('M 400 290 L 460 290 L 400 320 Z');
+    expect(mask.id).toBe('kcs-mask-src_1-alpha');
+  });
+});
+
+describe('matte — M15 isMatteEligible', () => {
+  it('static shapes are eligible', () => {
+    for (const type of ['custom_star', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle', 'custom_parallelogram', 'custom_banner', 'custom_capsule', 'custom_diamond']) {
+      expect(isMatteEligible({ type }), type).toBe(true);
+    }
+  });
+
+  it('custom_freeform is eligible', () => {
+    expect(isMatteEligible({ type: 'custom_freeform' })).toBe(true);
+  });
+
+  it('text/image/video are NOT eligible', () => {
+    for (const type of ['custom_text', 'custom_image', 'custom_video']) {
+      expect(isMatteEligible({ type }), type).toBe(false);
+    }
+  });
+
+  it('undefined part is not eligible', () => {
+    expect(isMatteEligible(undefined)).toBe(false);
   });
 });

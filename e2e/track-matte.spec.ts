@@ -575,3 +575,202 @@ test.describe('M14 track matte — FEATHER (real browser pixel assertions)', () 
     expect(mt).toBe('luminance');
   });
 });
+
+test.describe('M15 freeform matte — real browser pixel assertions', () => {
+  // Freeform triangle (CENTER-RELATIVE local points — same source the
+  // renderer draws via buildFreeformPath): (0,0),(60,0),(0,30) at world
+  // (300,240) → spans (300,240)-(360,240)-(300,270). At y=255 the interior
+  // is x ∈ (300, 330).
+  const TRI = [
+    { x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 },
+  ];
+  const freeformSource = (overrides: Record<string, unknown> = {}) =>
+    makeLayer('src', 'Source', 'custom_freeform', { zIndex: 1, fillColor: '#ff0000', points: TRI, ...overrides });
+  const greenTarget = (matte: Record<string, unknown>) =>
+    makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte });
+
+  /** Raw green channel at a world point (for feather ramp monotonicity —
+   *  classify() would collapse partial visibility into 'green'). */
+  async function greenAt(page: Page, worldX: number, worldY: number): Promise<number> {
+    const buf = await page.screenshot();
+    const png = decodePng(buf);
+    const { x, y } = await page.evaluate(([wx, wy]: [number, number]) => {
+      const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
+      const pt = svg.createSVGPoint(); pt.x = wx; pt.y = wy;
+      const s = pt.matrixTransform(svg.getScreenCTM()!);
+      return { x: Math.round(s.x), y: Math.round(s.y) };
+    }, [worldX, worldY]);
+    return png.data[(y * png.width + x) * png.bpp + 1];
+  }
+
+  test('V-M1 — freeform triangle → clip matte: target visible ONLY inside the polygon', async ({ page }) => {
+    await seed(page, [freeformSource(), greenTarget({ sourcePartId: 'src', mode: 'clip' })]);
+
+    // DOM: clipPath def carries the freeform world path
+    const clipD = await page.evaluate(() => document.querySelector('clipPath[id="kcs-clip-src"] path')?.getAttribute('d'));
+    expect(clipD).toBe('M 300 240 L 360 240 L 300 270 Z');
+    expect(await page.evaluate(() => document.querySelectorAll('clipPath[id="kcs-clip-src"]').length)).toBe(1); // dedupe
+
+    // PIXEL: inside triangle → green; outside triangle (inside target) → hidden
+    expect(await pixelAt(page, 320, 255)).toBe('green');
+    expect(await pixelAt(page, 340, 255)).toBe('dark');
+  });
+
+  test('V-M2 — freeform polygon → alpha matte: mask follows the polygon', async ({ page }) => {
+    await seed(page, [freeformSource(), greenTarget({ sourcePartId: 'src', mode: 'alpha' })]);
+
+    const m = await page.evaluate(() => {
+      const mask = document.querySelector('mask[id="kcs-mask-src-alpha"]');
+      return { type: mask?.getAttribute('mask-type'), d: mask?.querySelector('path')?.getAttribute('d') ?? null };
+    });
+    expect(m.type).toBe('alpha');
+    expect(m.d).toBe('M 300 240 L 360 240 L 300 270 Z');
+
+    expect(await pixelAt(page, 320, 255)).toBe('green');
+    expect(await pixelAt(page, 340, 255)).toBe('dark');
+  });
+
+  test('V-M3 — freeform + inverted alpha: polygon interior hidden, outside visible', async ({ page }) => {
+    await seed(page, [freeformSource(), greenTarget({ sourcePartId: 'src', mode: 'alpha', inverted: true })]);
+
+    const maskDom = await page.evaluate(() => {
+      const p = document.querySelector('mask[id="kcs-mask-src-alpha-inv"] path');
+      return { rule: p?.getAttribute('fill-rule') ?? null, d: p?.getAttribute('d') ?? null };
+    });
+    expect(maskDom.rule).toBe('evenodd'); // M13 inverted-alpha structure preserved
+    expect(maskDom.d).toContain('M 300 240 L 360 240 L 300 270 Z'); // freeform contour inside the region path
+
+    expect(await pixelAt(page, 320, 255)).toBe('red');      // inside polygon → target masked out → source red
+    expect(await pixelAt(page, 345, 250)).toBe('green');    // outside polygon (inside target) → visible
+  });
+
+  test('V-M4 — freeform + feather: soft ramp at the polygon edge (feGaussianBlur)', async ({ page }) => {
+    await seed(page, [freeformSource(), greenTarget({ sourcePartId: 'src', mode: 'alpha', feather: 12 })]);
+
+    // DOM: feathered mask + filter exist
+    expect(await page.evaluate(() => !!document.querySelector('mask[id="kcs-mask-src-alpha-f12"]'))).toBe(true);
+    expect(await page.evaluate(() => !!document.querySelector('filter[id="kcs-matte-feather-src-alpha-f12"] feGaussianBlur'))).toBe(true);
+
+    // PIXEL: left edge x=300 (vertical) — probes 6/4/2px OUTSIDE + inside
+    const a = await greenAt(page, 294, 255); // 6px outside
+    const b = await greenAt(page, 296, 255); // 4px outside
+    const c = await greenAt(page, 298, 255); // 2px outside
+    const inside = await greenAt(page, 310, 255);
+    expect(a).toBeGreaterThan(45);    // ramp already visible
+    expect(a).toBeLessThan(200);      // not full
+    expect(a).toBeLessThan(b);        // monotonic toward the edge
+    expect(b).toBeLessThan(c);
+    expect(inside).toBeGreaterThan(200);
+  });
+
+  test('V-M5 — rotated + scaled freeform source: matte follows the SOURCE transform', async ({ page }) => {
+    // rotation 90 + scaleX 2 → vertices (300,240),(300,360),(270,240);
+    // at y=255 interior x ∈ (273.75, 300)
+    await seed(page, [
+      freeformSource({ rotation: 90, scaleX: 2 }),
+      greenTarget({ sourcePartId: 'src', mode: 'clip' }),
+    ]);
+
+    expect(await pixelAt(page, 285, 255)).toBe('green'); // inside rotated triangle
+    expect(await pixelAt(page, 310, 255)).toBe('dark');  // outside → hidden
+  });
+
+  test('V-M6 — animated freeform source: matte path follows the animation (no stale cache)', async ({ page }) => {
+    const tracks = [
+      {
+        id: 't_src', partId: 'src', name: 'Source',
+        channels: {
+          x: [
+            { id: 'k1', frame: 0, value: 0, easing: 'linear' },
+            { id: 'k2', frame: 60, value: 120, easing: 'linear' },
+          ],
+        },
+      },
+    ];
+    await seed(page, [freeformSource(), greenTarget({ sourcePartId: 'src', mode: 'clip' })], tracks);
+
+    const d0 = await page.evaluate(() => document.querySelector('clipPath[id="kcs-clip-src"] path')?.getAttribute('d'));
+    expect(d0).toBe('M 300 240 L 360 240 L 300 270 Z');
+
+    await page.getByTitle('Play', { exact: true }).click();
+    await page.waitForTimeout(1800);
+    await page.getByTitle('Pause', { exact: true }).click();
+
+    const d1 = await page.evaluate(() => document.querySelector('clipPath[id="kcs-clip-src"] path')?.getAttribute('d'));
+    expect(d1).not.toBe(d0);                    // geometry followed the animated source
+    expect(d1).toMatch(/^M 4\d\d 240 L 4\d\d 240/); // moved right (x grew) — cache rebuilt from evaluated transform
+    expect(await page.evaluate(() => document.querySelectorAll('clipPath[id="kcs-clip-src"]').length)).toBe(1); // still deduped
+  });
+
+  test('V-M7 — IMPORT → RENDER round-trip: freeform points + matte survive the app serialization, pixels identical', async ({ page }) => {
+    await seed(page, [freeformSource(), greenTarget({ sourcePartId: 'src', mode: 'clip' })]);
+
+    // Pixel BEFORE the round-trip
+    expect(await pixelAt(page, 320, 255)).toBe('green');
+    expect(await pixelAt(page, 340, 255)).toBe('dark');
+
+    // The app's OWN autosave serializes the current scene back to localStorage —
+    // wait for it, then verify freeform points + matte survived the export path.
+    await page.waitForFunction(() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+        const l = (s.layers ?? []).find((x: any) => x.id === 'src');
+        return Array.isArray(l?.points) && l.points.length >= 3;
+      } catch { return false; }
+    }, undefined, { timeout: 10000 });
+    const autosaved = await page.evaluate(() => JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!));
+    expect(autosaved.layers.find((l: any) => l.id === 'src').points).toEqual([
+      { x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 },
+    ]);
+    expect(autosaved.layers.find((l: any) => l.id === 'tgt').matte).toEqual({ sourcePartId: 'src', mode: 'clip' });
+
+    // IMPORT path: reload → the app restores the scene from the autosaved JSON
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
+
+    // Pixel AFTER the round-trip — identical (serialization changed nothing)
+    expect(await pixelAt(page, 320, 255)).toBe('green');
+    expect(await pixelAt(page, 340, 255)).toBe('dark');
+    // No duplicate defs after re-import
+    expect(await page.evaluate(() => document.querySelectorAll('clipPath[id="kcs-clip-src"]').length)).toBe(1);
+  });
+
+  test('V-M8 — IMPORT → RENDER round-trip: alpha + feather survive, feathered ramp identical after reload', async ({ page }) => {
+    await seed(page, [freeformSource(), greenTarget({ sourcePartId: 'src', mode: 'alpha', feather: 12 })]);
+
+    const rampBefore = [
+      await greenAt(page, 294, 255),
+      await greenAt(page, 298, 255),
+      await greenAt(page, 310, 255),
+    ];
+
+    await page.waitForFunction(() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+        const l = (s.layers ?? []).find((x: any) => x.id === 'tgt');
+        return l?.matte?.feather === 12;
+      } catch { return false; }
+    }, undefined, { timeout: 10000 });
+    const autosaved = await page.evaluate(() => JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!));
+    expect(autosaved.layers.find((l: any) => l.id === 'tgt').matte).toEqual({
+      sourcePartId: 'src', mode: 'alpha', feather: 12,
+    });
+    expect(autosaved.layers.find((l: any) => l.id === 'src').points).toEqual([
+      { x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 },
+    ]);
+
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
+
+    const rampAfter = [
+      await greenAt(page, 294, 255),
+      await greenAt(page, 298, 255),
+      await greenAt(page, 310, 255),
+    ];
+    // Pixel parity: the feathered ramp is identical after the real import
+    expect(rampAfter[0]).toBe(rampBefore[0]);
+    expect(rampAfter[1]).toBe(rampBefore[1]);
+    expect(rampAfter[2]).toBe(rampBefore[2]);
+    expect(await page.evaluate(() => document.querySelectorAll('mask[id="kcs-mask-src-alpha-f12"]').length)).toBe(1);
+  });
+});

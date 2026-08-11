@@ -12,7 +12,7 @@
  * Geometry comes exclusively from `shapeGeometry.ts` — nothing is hardcoded
  * here. `custom_freeform` (and non-shape types) return null → no clip.
  */
-import type { CharacterPart, MatteMode } from '../types/animator';
+import type { BodyPartType, CharacterPart, MatteMode } from '../types/animator';
 import type { WorldTransform } from '../types/composition';
 import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
 import { CANVAS_CENTER } from './constants';
@@ -56,16 +56,43 @@ export function isMatteActive(matte: { enabled?: boolean } | undefined): boolean
  * Shared world-space geometry for a matte source — the SINGLE geometry
  * computation used by both the clipPath and the <mask> pipelines, so the
  * same source is never computed twice with different math.
- * Returns null when the source has no static shape geometry (freeform,
- * text, image, video — all DEFERRED for the MVP).
+ * - static shapes → shapeGeometry (single source)
+ * - custom_freeform → CharacterPart.points (the SAME source the freeform
+ *   renderer draws via buildFreeformPath — no second geometry system)
+ * Returns null when the source has no usable geometry (text, image, video,
+ * degenerate freeform points — DEFERRED for the MVP).
  */
 export function buildMattePath(
   sourcePart: CharacterPart,
   world: WorldTransform,
 ): string | null {
+  if (sourcePart.type === 'custom_freeform') {
+    return freeformWorldPathD(sourcePart.points, world);
+  }
   const geo = getShapeGeometry(sourcePart.type);
   if (!geo) return null;
   return geometryToWorldPathD(geo, world);
+}
+
+/** M15 — world-space polygon path from LOCAL freeform points. Identical math
+ *  to the static polygon branch (applyWorld per point), fed by
+ *  `CharacterPart.points` — the renderer's buildFreeformPath source. */
+function freeformWorldPathD(
+  points: { x: number; y: number }[] | undefined,
+  w: WorldTransform,
+): string | null {
+  if (!Array.isArray(points) || points.length < 2) return null;
+  const pts = points.map((p) => applyWorld(p, w));
+  return `M ${fmtPt(pts[0])}` + pts.slice(1).map((p) => ` L ${fmtPt(p)}`).join('') + ' Z';
+}
+
+/** M15 — whether a part can be a matte source: static shape geometry OR a
+ *  freeform polygon (custom_freeform → CharacterPart.points). Text/image/
+ *  video and other non-geometric types are not eligible. */
+export function isMatteEligible(part: { type: string } | undefined): boolean {
+  if (!part) return false;
+  if (part.type === 'custom_freeform') return true;
+  return getShapeGeometry(part.type as BodyPartType) !== null;
 }
 
 /**

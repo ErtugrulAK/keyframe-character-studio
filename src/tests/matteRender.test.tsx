@@ -105,8 +105,20 @@ describe('StagePartLayers — track matte render', () => {
     expect(html).not.toContain('clip-path=');
   });
 
-  it('freeform source → no clip (deferred), target renders normally', () => {
+  it('M15: freeform source with points → clip produced, target clipped', () => {
     const source = makePart('src', 'custom_freeform');
+    source.points = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }];
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'clip' });
+    const html = renderStage([source, target]);
+
+    expect(html).toContain('r="30"');
+    expect(html).toContain('<clipPath id="kcs-clip-src"');
+    expect(html).toContain('clip-path="url(#kcs-clip-src)"');
+    expect(html).toContain('M 300 240 L 360 240 L 300 270 Z'); // freeform world path in the def
+  });
+
+  it('freeform source WITHOUT points → no clip (degenerate, safe)', () => {
+    const source = makePart('src', 'custom_freeform'); // no points
     const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'clip' });
     const html = renderStage([source, target]);
 

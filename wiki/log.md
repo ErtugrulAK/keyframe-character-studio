@@ -43,3 +43,18 @@
 - Baseline: 382/382 vitest + 19/19 track-matte playwright; full suite'te workflow.spec.ts:88
   ölü container testi fail (b60f1ca sonrası, M14 dışı)
 - Updated: entities/keyframe-character-studio.md, skills/keyframe-studio/kcs-track-matte (v2.1.0)
+
+## [2026-08-10] update | KCS — M15 Freeform Track Matte (iş PC)
+- M15 ✅ COMPLETE: Free Draw (custom_freeform) artık matte source
+- 3A: spike — freeform points → world polygon math kanıtı (12/12)
+- 3B: buildMattePath freeform dalı (CharacterPart.points — renderer'ın buildFreeformPath
+  ile AYNI kaynak; ikinci geometry sistemi yok) + isMatteEligible; 403/403
+- 3C: StagePartLayers'a DOKUNMADAN Chromium pixel kanıtı (V-M1..V-M6: clip/alpha/
+  inverted/feather/rotated+scaled/animated) — 25/25
+- 3D: StyleMatteSection isMatteEligible filtresi + source swap field preservation
+  ({...matte, sourcePartId} — mode/inverted/enabled/feather korunur); 408/408
+- 3E: serialization round-trip (points + matte kayıpsız) + gerçek import→render pixel
+  parity (V-M7/V-M8 — autosave/export + reload/import); 411/411 + 27/27
+- Baseline: 411/411 vitest + 27/27 track-matte playwright; full suite tek fail:
+  workflow.spec.ts:88 ölü container testi (M15 dışı)
+- Updated: entities/keyframe-character-studio.md, skills/keyframe-studio/kcs-track-matte (v3.0.0), README.md

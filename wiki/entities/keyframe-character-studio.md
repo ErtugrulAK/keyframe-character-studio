@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 382 test — 35 dosya** (M14 durumu) |
+| Test | **Vitest, 411 test — 35 dosya** (M15 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -36,10 +36,10 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - M13 2E coordinate fix: clip/mask, **transform'suz OUTER `<g>`** üzerinde (userSpaceOnUse defs'i transform'lu g'de referans edilince target'ın local uzayında çözülüyordu — world path yanlış konumlanıyordu)
   - Tek `<defs>` + 1 source → N target (Map dedupe + maskPathCache: aynı source'un modları 1 geometry paylaşır); missing source → recoverable (`MATTE_MISSING_SOURCE`)
   - Editor UI: `StyleMatteSection` (source seçici + Mode + Inverted toggle + FEATHER slider 0-100 + Enabled + Remove); history/clipboard otomatik (structuredClone)
-  - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 10 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 19/19 PASS
+  - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 19 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 27/27 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M14)
+## Proje durumu (M15)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -61,8 +61,14 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 2D: StyleMatteSection FEATHER slider (0-100, clip modunda disabled)
   - 2E: serialization round-trip (feather 0/12/100, undefined-key yok, negative/NaN guard) + V-K (inverted alpha feather pixel) + V-L (luminance feather pixel) + docs
   - Baseline: 382/382 vitest + 19/19 track-matte playwright (full suite: workflow.spec.ts:88 ölü container testi fail — M14 dışı, b60f1ca sonrası)
+- **M15 ✅ COMPLETE — Freeform Track Matte**
+  - Free Draw (`custom_freeform`) artık matte source: `buildMattePath` freeform dalı = `CharacterPart.points` → world-space polygon pathD (renderer'ın `buildFreeformPath` ile AYNI points kaynağı — ikinci geometry sistemi YOK; static shape zinciri değişmedi)
+  - clip/alpha/luminance/inverted/feather + rotated/scaled + animated freeform source — hepsi çalışıyor (V-M1..V-M6 pixel-verified)
+  - 3D: `StyleMatteSection` `isMatteEligible` filtresi (freeform listede); source swap `{...matte, sourcePartId}` — mode/inverted/enabled/feather korunur
+  - 3E: serialization round-trip (points + matte kayıpsız) + gerçek import→render pixel parity (V-M7/V-M8)
+  - Baseline: 411/411 vitest + 27/27 track-matte playwright
 - M12 ✅ audit — "kapatılabilir"; 2 LOW OPTIONAL (clipIdFor O(N²), MATTE_CYCLE validation)
-- Son push: `dff30d2` (M13 2A-2B, iş PC) → `e4ddc68` (M14 2A-2C, ev PC) → M14 2D-2E iş PC (push bekliyor)
+- Son push: `dff30d2` (M13 2A-2B, iş PC) → `e4ddc68` (M14 2A-2C, ev PC) → M14 2D-2E + M15 3A-3F iş PC (push bekliyor)
 
 ## Önemli kararlar
 

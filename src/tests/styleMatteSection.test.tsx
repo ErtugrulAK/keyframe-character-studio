@@ -42,12 +42,12 @@ describe('StyleMatteSection — track matte editor UI', () => {
     expect(screen.getByText('None')).toBeTruthy();
   });
 
-  it('lists eligible shape sources; excludes self and unsupported types', () => {
+  it('lists eligible sources (static shapes + M15 freeform); excludes self and text/image/video', () => {
     const { container } = renderMatte(BOX, [STAR, BOX, FREEFORM, TEXT]);
     const options = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
     expect(options).toContain('Star Part');           // shape source eligible
+    expect(options).toContain('Free Part');           // M15: freeform eligible
     expect(options).not.toContain('Box Part');        // self excluded
-    expect(options).not.toContain('Free Part');       // freeform excluded (MVP)
     expect(options).not.toContain('Text Part');       // text excluded (MVP)
   });
 
@@ -263,5 +263,53 @@ describe('StyleMatteSection — M14 feather control', () => {
   it('M14: alpha mode → feather control enabled', () => {
     const { container } = renderMatte(ALPHA(8), [STAR, ALPHA(8)]);
     expect(getSlider(container).disabled).toBe(false);
+  });
+});
+
+describe('StyleMatteSection — M15 freeform source UI', () => {
+  const FREEFORM_PART = makePart('ff', 'custom_freeform', 'Freeform Part');
+  const IMAGE = makePart('img', 'custom_image', 'Image Part');
+  const VIDEO = makePart('vid', 'custom_video', 'Video Part');
+  const target = (matte?: CharacterPart['matte']) => makePart('tgt', 'custom_box', 'Box Part', matte);
+
+  const options = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
+
+  it('freeform source is visible in the list', () => {
+    const { container } = renderMatte(target(), [FREEFORM_PART, target()]);
+    expect(options(container)).toContain('Freeform Part');
+  });
+
+  it('freeform source is selectable → sourcePartId becomes the freeform id', () => {
+    const { onPartPropChange, container } = renderMatte(target(), [FREEFORM_PART, target()]);
+    const select = container.querySelector('select') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'ff' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'ff', mode: 'clip', enabled: true,
+    });
+  });
+
+  it('image and video are NOT eligible sources', () => {
+    const { container } = renderMatte(target(), [IMAGE, VIDEO, STAR, target()]);
+    const list = options(container);
+    expect(list).not.toContain('Image Part');
+    expect(list).not.toContain('Video Part');
+    expect(list).toContain('Star Part');
+  });
+
+  it('self reference still excluded (freeform target cannot select itself)', () => {
+    const selfFreeform = makePart('self', 'custom_freeform', 'Self Freeform');
+    const { container } = renderMatte(selfFreeform, [selfFreeform, STAR]);
+    expect(options(container)).not.toContain('Self Freeform');
+  });
+
+  it('M15 field preservation: source swap keeps mode/inverted/enabled/feather', () => {
+    const withMatte = target({ sourcePartId: 'star', mode: 'alpha', inverted: true, enabled: true, feather: 12 });
+    const { onPartPropChange, container } = renderMatte(withMatte, [FREEFORM_PART, STAR, withMatte]);
+    const select = container.querySelector('select') as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: 'ff' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'ff', mode: 'alpha', inverted: true, enabled: true, feather: 12,
+    });
   });
 });

@@ -1,8 +1,7 @@
 import React from 'react';
 import { Scissors, X } from 'lucide-react';
 import type { CharacterPart, MatteMode, PartMatte } from '../../../../types/animator';
-import { getShapeGeometry } from '../../../../utils/shapeGeometry';
-import { resolveMatteMode, normalizeFeather } from '../../../../utils/matte';
+import { resolveMatteMode, normalizeFeather, isMatteEligible } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
 
 interface StyleMatteSectionProps {
@@ -41,8 +40,10 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
 }) => {
   const matte = selectedPart.matte;
 
+  // M15 3D: eligible = static shape geometry OR custom_freeform (points-based).
+  // Self-reference still excluded. Text/image/video stay ineligible.
   const eligibleSources = characterParts.filter(
-    (p) => p.id !== selectedPart.id && getShapeGeometry(p.type) !== null,
+    (p) => p.id !== selectedPart.id && isMatteEligible(p),
   );
 
   const sourceMissing = !!matte && !characterParts.some((p) => p.id === matte.sourcePartId);
@@ -57,7 +58,13 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
       setMatte(undefined);
       return;
     }
-    setMatte({ sourcePartId, mode: 'clip', enabled: true });
+    if (matte) {
+      // M15 3D — field preservation: only sourcePartId changes; mode /
+      // inverted / enabled / feather are kept (source swap must not reset).
+      setMatte({ ...matte, sourcePartId });
+    } else {
+      setMatte({ sourcePartId, mode: 'clip', enabled: true });
+    }
   };
 
   const onToggleEnabled = () => {

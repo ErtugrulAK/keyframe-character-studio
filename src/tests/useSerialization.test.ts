@@ -1518,4 +1518,91 @@ describe('useSerialization Hook', () => {
     expect(normalizeFeather(-1)).toBe(0);
     expect(normalizeFeather(null as unknown as number)).toBe(0);
   });
+
+  // ─── M15 Step 3E: freeform matte serialization round-trip ────────────
+
+  function roundTripPart(part: any) {
+    const { result } = renderSerializationWithPart(part);
+    const exported = result.current.exportProject();
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported)).toBe(true);
+    return (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === part.id)!;
+  }
+
+  const FREEFORM_POINTS = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }];
+
+  it('M15: freeform points round-trip — coordinates, order and count preserved exactly', () => {
+    const freeform = {
+      id: 'freeform-source', type: 'custom_freeform', name: 'FF', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+      points: FREEFORM_POINTS,
+    } as any;
+    const restored = roundTripPart(freeform);
+    expect(restored.points).toEqual(FREEFORM_POINTS); // deep equality: coords + order
+    expect(restored.type).toBe('custom_freeform');
+  });
+
+  it('M15: freeform source + full matte (alpha, inverted, enabled, feather 12) round-trip intact', () => {
+    const source = {
+      id: 'freeform-source', type: 'custom_freeform', name: 'FF', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+      points: FREEFORM_POINTS,
+    } as any;
+    const target = {
+      id: 'target', type: 'custom_box', name: 'T', zIndex: 2,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#00ff00', strokeColor: '#101218',
+      matte: { sourcePartId: 'freeform-source', mode: 'alpha', inverted: true, enabled: true, feather: 12 },
+    } as any;
+    const { result } = renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 120, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 1920, height: 1080 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [], setTracks: mockSetTracks,
+      characterParts: [source, target], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'Matte', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying
+    }));
+    mockSetCharacterParts.mockClear();
+    const exported = result.current.exportProject();
+    // Export side: both layers carry their data
+    const parsed = JSON.parse(exported);
+    expect(parsed.layers.find((l: any) => l.id === 'freeform-source').points).toEqual(FREEFORM_POINTS);
+    expect(parsed.layers.find((l: any) => l.id === 'target').matte).toEqual({
+      sourcePartId: 'freeform-source', mode: 'alpha', inverted: true, enabled: true, feather: 12,
+    });
+    // Import side: restore BOTH parts then round-trip the full scene
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported)).toBe(true);
+    const restoredParts = mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[];
+    const restoredSource = restoredParts.find((p) => p.id === 'freeform-source')!;
+    const restoredTarget = restoredParts.find((p) => p.id === 'target')!;
+    expect(restoredSource.points).toEqual(FREEFORM_POINTS);
+    expect(restoredTarget.matte).toEqual({
+      sourcePartId: 'freeform-source', mode: 'alpha', inverted: true, enabled: true, feather: 12,
+    });
+  });
+
+  it('M15: feather 0 / 12 / 100 with a freeform source survive round-trip', () => {
+    for (const f of [0, 12, 100]) {
+      const source = {
+        id: 'freeform-source', type: 'custom_freeform', name: 'FF', zIndex: 1,
+        baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+        fillColor: '#ff0000', strokeColor: '#101218',
+        points: FREEFORM_POINTS,
+        matte: { sourcePartId: 'tgt', mode: 'alpha', feather: f },
+      } as any;
+      const restored = roundTripPart(source);
+      expect(restored.matte).toEqual({ sourcePartId: 'tgt', mode: 'alpha', feather: f });
+      expect(restored.points).toEqual(FREEFORM_POINTS);
+    }
+  });
 });

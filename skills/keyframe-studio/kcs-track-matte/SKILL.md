@@ -1,19 +1,19 @@
 ---
 name: kcs-track-matte
 description: Use when working on KCS Track Matte (SVG clipPath + mask) — architecture, data model, browser-verified semantics, rules, tests.
-version: 2.1.0
+version: 3.0.0
 author: senmu
 license: MIT
 metadata:
   hermes:
-    tags: [keyframe-studio, track-matte, svg, clipPath, mask, alpha, luminance, inverted]
+    tags: [keyframe-studio, track-matte, svg, clipPath, mask, alpha, luminance, inverted, freeform]
     related_skills: [kcs-project-context, kcs-constitution, kcs-workflows]
 ---
 
 # Track Matte (SVG clipPath + mask) — KCS
 
-M11 + M13 sistemi: bir CharacterPart (target), başka bir part'ın (source)
-evaluated world geometrisiyle kırpılır. Canvas 2D / PixiJS / Fabric.js YOK —
+M11 + M13 + M14 + M15 sistemi: bir CharacterPart (target), başka bir part'ın
+(source) evaluated world geometrisiyle kırpılır. Canvas 2D / PixiJS / Fabric.js YOK —
 yalnızca SVG.
 
 ## Data model
@@ -102,30 +102,53 @@ StageCanvas'tan prop gelir, default 1920×1080). Pan/zoom path'e GİRMEZ.
 - Matte ≠ parent-child: parentId sistemine DOKUNMAZ; source normal render edilir
   (opacity/visible/zIndex clip geometrisini etkilemez)
 - Missing source → clip/mask yok + recoverable uyarı; asla crash
-- Geometry ASLA hardcode etme — hep shapeGeometry → buildMattePath
+- Geometry ASLA hardcode etme — statik shape'ler hep shapeGeometry → buildMattePath;
+  freeform (M15) aynı kurala tabi: `CharacterPart.points` renderer'ın
+  `buildFreeformPath` kaynağıyla AYNIDIR (ikinci geometry sistemi yok)
 - CANVAS_CENTER constants.ts'ten (tek sabit); viewport pan/zoom path'e GİRMEZ
-- Freeform/text/image/video matte: DEFER (getShapeGeometry null → clip/mask yok)
+- Text/image/video matte: DEFER (geometry yok → buildMattePath null → clip/mask yok)
+- `isMatteEligible(part)` — source aday filtresi: statik shape VEYA custom_freeform;
+  text/image/video/unknown → false
+
+## M15 — Freeform Track Matte
+
+- `custom_freeform` artık matte source OLABİLİR (3B): `buildMattePath` freeform dalı =
+  `CharacterPart.points` → `applyWorld` per nokta → world-space polygon pathD
+  (static polygon branch ile birebir math — geometry parity testli)
+- Renderer'ın çizdiği `buildFreeformPath(points)` ile matte'in kullandığı points
+  AYNI dizidir (tek kaynak); static shape zinciri değişmedi
+- clip / alpha / luminance / inverted / feather — hepsi freeform source ile çalışır
+  (V-M1..V-M6 pixel-verified); rotated/scaled + animated source destekli (V-M5/V-M6)
+- Edge: points yok/boş/<2/non-array → null (güvenli); self-intersecting → crash yok
+- Serialization: points + matte pass-through ile kayıpsız round-trip (V-M7/V-M8:
+  gerçek import→render sonrası pixel birebir)
+- UI (3D): `StyleMatteSection` `isMatteEligible` kullanır → freeform listede;
+  source swap `{ ...matte, sourcePartId }` — mode/inverted/enabled/feather korunur
 
 ## Test'ler
 
 - `matte.test.ts` — world-space A/B/C (static/rotated+scaled/parented), animated frame,
   shape kapsamı, deterministic, pure helper'lar (buildMattePath/buildMatteMask/resolve/
-  normalizeFeather/matteMaskId)
+  normalizeFeather/matteMaskId/isMatteEligible), M15 freeform (parity/edge/transform)
 - `matteRender.test.tsx` — render: tek clip/mask def, N target, enabled=false,
-  missing source, freeform, mixed modes geometry parity, evenodd alpha-inv,
-  feather (filter + stdDeviation + region, dedupe, id collision yok, rotated parity)
+  missing source, freeform (M15: points'li → clip üretilir; points'siz → güvenli yok),
+  mixed modes geometry parity, evenodd alpha-inv, feather (filter + stdDeviation +
+  region, dedupe, id collision yok, rotated parity)
 - `styleMatteSection.test.tsx` — UI: source/mode/inverted/enabled/remove, legacy display,
-  FEATHER slider (0-100, malformed→0, clip-disabled, field preservation)
+  FEATHER slider (0-100, malformed→0, clip-disabled, field preservation),
+  M15: freeform listede/seçilebilir, source swap field preservation
 - `useSerialization.test.ts` — matte round-trip (alpha/luminance/inverted/combined/
-  enabled=false/legacy/feather 0-12-100/undefined-key), channels-only policy
-- `e2e/track-matte.spec.ts` — REAL Chromium: 8 DOM testleri (T1-T8) + 10 gerçek PIXEL
-  compositing testleri (V-A..V-L — world→screen CTM + PNG decode ile)
-- Baseline: 382/382 vitest + 19/19 track-matte playwright (M14 kapanışı; full suite'te
-  workflow.spec.ts:88 bilinen ÖLÜ container testi fail — b60f1ca sonrası, M14 dışı)
+  enabled=false/legacy/feather 0-12-100/undefined-key), channels-only policy,
+  M15: freeform points + matte round-trip
+- `e2e/track-matte.spec.ts` — REAL Chromium: 8 DOM testleri (T1-T8) + 19 gerçek PIXEL
+  compositing testleri (V-A..V-L, V-M1..V-M8 — world→screen CTM + PNG decode ile;
+  V-M7/V-M8 = import→render round-trip pixel parity)
+- Baseline: 411/411 vitest + 27/27 track-matte playwright (M15 kapanışı; full suite'te
+  workflow.spec.ts:88 bilinen ÖLÜ container testi fail — b60f1ca sonrası, M15 dışı)
 
-## Deferred (yeni feature kararı gerektirir — M13/M14'te YAPILMADI)
+## Deferred (yeni feature kararı gerektirir — M13/M14/M15'te YAPILMADI)
 
-gradient matte · freeform matte · text/image/video matte · nested matte ·
+gradient matte · text/image/video matte · nested matte ·
 multi-matte (tip migration gerekir) · matte gizmo / geometry editor · outliner matte
 icon / relationship visualization · timeline matte indicator · drag/drop matte
 assignment · matte strength/opacity

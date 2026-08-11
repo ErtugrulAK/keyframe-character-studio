@@ -433,3 +433,97 @@ test.describe('M13 track matte — real browser COMPOSITING (pixel assertions)',
     expect(await pixelAt(page, 400, 240)).toBe('red');  // source at new spot (outside circle)
   });
 });
+
+test.describe('M14 track matte — FEATHER (real browser pixel assertions)', () => {
+  // Box edge at world x=270 (source box 270–330). Points 264/266/268 are
+  // OUTSIDE the box (6/4/2 px). feather=0 → all dark (sharp). feather>0 →
+  // gradual ramp (264 < 266 < 268, intermediate values).
+
+  async function greenStrengthAt(page: Page, worldX: number, worldY: number): Promise<number> {
+    const buf = await page.screenshot();
+    const png = decodePng(buf);
+    const { x, y } = await page.evaluate(([wx, wy]: [number, number]) => {
+      const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
+      const pt = svg.createSVGPoint(); pt.x = wx; pt.y = wy;
+      const s = pt.matrixTransform(svg.getScreenCTM()!);
+      return { x: Math.round(s.x), y: Math.round(s.y) };
+    }, [worldX, worldY]);
+    const i = (y * png.width + x) * png.bpp;
+    return png.data[i + 1]; // green channel → target visibility strength
+  }
+
+  async function edgeProbe(page: Page): Promise<number[]> {
+    return Promise.all([264, 266, 268, 310].map((x) => greenStrengthAt(page, x, 240)));
+  }
+
+  test('V-H — feather 0 = sharp edge, feather 12 = gradual ramp (same fixture)', async ({ page }) => {
+    // feather 0: outside edge fully hidden (sharp)
+    const s0 = makeLayer('src', 'Source', 'custom_box', { zIndex: 1, fillColor: '#ff0000' });
+    const t0 = makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte: { sourcePartId: 'src', mode: 'alpha', feather: 0 } });
+    await seed(page, [s0, t0]);
+    const sharp = await edgeProbe(page);
+    expect(sharp[0]).toBeLessThan(45); // 264 outside → hidden
+    expect(sharp[1]).toBeLessThan(45); // 266 outside → hidden
+    expect(sharp[2]).toBeLessThan(45); // 268 outside → hidden
+    expect(sharp[3]).toBeGreaterThan(200); // 310 inside → fully visible
+
+    // feather 12: gradual ramp across the same points
+    const s1 = makeLayer('src', 'Source', 'custom_box', { zIndex: 1, fillColor: '#ff0000' });
+    const t1 = makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte: { sourcePartId: 'src', mode: 'alpha', feather: 12 } });
+    await seed(page, [s1, t1]);
+    const soft = await edgeProbe(page);
+    // Monotonic ramp: 264 < 266 < 268 (approaching the edge)
+    expect(soft[0]).toBeGreaterThan(45);          // already partially visible 6px out
+    expect(soft[0]).toBeLessThan(soft[1]);
+    expect(soft[1]).toBeLessThan(soft[2]);
+    expect(soft[2]).toBeGreaterThan(soft[0] + 30); // meaningful gradient
+    expect(soft[3]).toBeGreaterThan(200);          // inside still fully visible
+  });
+
+  test('V-I — feather stays world-aligned with a ROTATED target', async ({ page }) => {
+    const source = makeLayer('src', 'Source', 'custom_box', { zIndex: 1, fillColor: '#ff0000' });
+    const target = makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2, rotation: 45, matte: { sourcePartId: 'src', mode: 'alpha', feather: 12 } });
+    await seed(page, [source, target]);
+
+    const soft = await edgeProbe(page);
+    expect(soft[0]).toBeGreaterThan(45);
+    expect(soft[0]).toBeLessThan(soft[1]);
+    expect(soft[1]).toBeLessThan(soft[2]);
+    expect(soft[3]).toBeGreaterThan(200);
+  });
+
+  test('V-J — animated feathered source: mask geometry follows, filter stays stable', async ({ page }) => {
+    const source = makeLayer('src', 'Source', 'custom_box', { zIndex: 1, fillColor: '#ff0000' });
+    const target = makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte: { sourcePartId: 'src', mode: 'alpha', feather: 12 } });
+    const tracks = [
+      {
+        id: 't_src', partId: 'src', name: 'Source',
+        channels: {
+          x: [
+            { id: 'k1', frame: 0, value: 0, easing: 'linear' },
+            { id: 'k2', frame: 60, value: 120, easing: 'linear' },
+          ],
+        },
+      },
+    ];
+    await seed(page, [source, target], tracks);
+
+    const d0 = await page.evaluate(() => {
+      const m = document.querySelector('mask[id="kcs-mask-src-alpha-f12"] path');
+      return m?.getAttribute('d');
+    });
+    expect(d0).toBeTruthy();
+    expect(await page.evaluate(() => document.querySelectorAll('filter[id^="kcs-matte-feather-"]').length)).toBe(1);
+
+    await page.getByTitle('Play', { exact: true }).click();
+    await page.waitForTimeout(1800);
+    await page.getByTitle('Pause', { exact: true }).click();
+
+    const d1 = await page.evaluate(() => {
+      const m = document.querySelector('mask[id="kcs-mask-src-alpha-f12"] path');
+      return m?.getAttribute('d');
+    });
+    expect(d1).not.toBe(d0); // geometry followed the animated source
+    expect(await page.evaluate(() => document.querySelectorAll('filter[id^="kcs-matte-feather-"]').length)).toBe(1); // filter stable
+  });
+});

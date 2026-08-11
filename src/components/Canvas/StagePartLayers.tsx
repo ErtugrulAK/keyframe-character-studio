@@ -14,6 +14,7 @@ import {
   buildMattePath,
   buildMatteClipPath,
   buildMatteMaskFromPath,
+  normalizeFeather,
   matteClipPathId,
   matteMaskId,
   isMatteActive,
@@ -148,8 +149,14 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     // alpha | luminance
     if (mode !== 'alpha' && mode !== 'luminance') continue; // TS narrowing (unreachable)
     const inverted = layer.matte.inverted === true;
-    const maskId = matteMaskId(source.id, mode, inverted);
-    if (matteMasks.has(maskId)) continue; // same (source, mode, inverted) already built
+    const feather = normalizeFeather(layer.matte.feather);
+    // M14: when feathered, the mask id gets a deterministic -f{feather} suffix
+    // so the same (source, mode, inverted) with DIFFERENT feather values never
+    // collides (each target's mask keeps its own blur). feather 0/undefined →
+    // M13 id, byte-for-byte.
+    const baseMaskId = matteMaskId(source.id, mode, inverted);
+    const maskId = feather > 0 ? `${baseMaskId}-f${feather}` : baseMaskId;
+    if (matteMasks.has(maskId)) continue; // same (source, mode, inverted, feather) already built
 
     let pathD = maskPathCache.get(source.id);
     if (pathD === undefined) {
@@ -158,8 +165,8 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       maskPathCache.set(source.id, pathD);
     }
     const fillColor = sourceEl.content.fillColor ?? source.fillColor ?? '#ffffff';
-    const mask = buildMatteMaskFromPath(source.id, pathD, mode, inverted, fillColor);
-    if (mask) matteMasks.set(mask.id, mask);
+    const mask = buildMatteMaskFromPath(source.id, pathD, mode, inverted, fillColor, feather > 0 ? feather : undefined);
+    if (mask) matteMasks.set(maskId, { ...mask, id: maskId });
   }
 
   const matteAttrFor = (part: CharacterPart): { clipId?: string; maskId?: string } => {
@@ -171,7 +178,9 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       return matteClips.has(id) ? { clipId: id } : {};
     }
     if (mode === undefined) return {}; // unreachable when matte exists; TS narrowing
-    const id = matteMaskId(part.matte.sourcePartId, mode, part.matte.inverted === true);
+    const feather = normalizeFeather(part.matte.feather);
+    const base = matteMaskId(part.matte.sourcePartId, mode, part.matte.inverted === true);
+    const id = feather > 0 ? `${base}-f${feather}` : base;
     return matteMasks.has(id) ? { maskId: id } : {};
   };
 
@@ -185,9 +194,36 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     height: projectResolution?.height ?? 1080,
   };
 
+  // M14 feather: deterministic filter id derived from the mask id (which
+  // already encodes source + mode + inverted + feather). Wide explicit
+  // userSpaceOnUse region = artboard bounds inflated by the feather, so the
+  // Gaussian blur is never clipped (spike-verified: tight regions cut it).
+  const featherFilterId = (maskId: string) => `kcs-matte-feather-${maskId.slice('kcs-mask-'.length)}`;
+  const featherUrl = (mask: MatteMask): string | undefined =>
+    (mask.feather ?? 0) > 0 ? `url(#${featherFilterId(mask.id)})` : undefined;
+
   return (
     <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
       <defs>
+        {[...matteMasks.values()]
+          .filter((m) => (m.feather ?? 0) > 0)
+          .map((mask) => {
+            const f = normalizeFeather(mask.feather);
+            return (
+              <filter
+                key={featherFilterId(mask.id)}
+                id={featherFilterId(mask.id)}
+                filterUnits="userSpaceOnUse"
+                x={region.x - f}
+                y={region.y - f}
+                width={region.width + f * 2}
+                height={region.height + f * 2}
+              >
+                {/* stdDeviation = feather/2 → visible transition ≈ feather world px */}
+                <feGaussianBlur stdDeviation={f / 2} />
+              </filter>
+            );
+          })}
         {[...matteClips.values()].map((clip) => (
           <clipPath key={clip.id} id={clip.id} clipPathUnits="userSpaceOnUse">
             <path d={clip.pathD} />
@@ -214,15 +250,16 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
                   d={`M ${region.x} ${region.y} H ${region.x + region.width} V ${region.y + region.height} H ${region.x} Z ${mask.pathD}`}
                   fillRule="evenodd"
                   fill="white"
+                  filter={featherUrl(mask)}
                 />
               ) : (
                 <>
                   <rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" />
-                  <path d={mask.pathD} fill="black" />
+                  <path d={mask.pathD} fill="black" filter={featherUrl(mask)} />
                 </>
               )
             ) : (
-              <path d={mask.pathD} fill={mask.fill} />
+              <path d={mask.pathD} fill={mask.fill} filter={featherUrl(mask)} />
             )}
           </mask>
         ))}

@@ -227,4 +227,106 @@ describe('StagePartLayers — track matte render', () => {
     expect(html).toContain(`clip-path="url(#kcs-clip-src)"`);
     expect(html).not.toContain('<mask');
   });
+
+  // ─── M14 Step 2C: feather (feGaussianBlur) ───────────────────────────
+
+  it('M14: feather undefined → no filter (M13 structure byte-for-byte)', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'alpha' });
+    const html = renderStage([source, target]);
+
+    expect(html).not.toContain('feGaussianBlur');
+    expect(html).not.toContain('kcs-matte-feather-');
+    expect(html).toContain(`<mask id="kcs-mask-src-alpha"`); // M13 id unchanged
+  });
+
+  it('M14: feather 0 → no filter, M13 id unchanged', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', feather: 0 });
+    const html = renderStage([source, target]);
+
+    expect(html).not.toContain('feGaussianBlur');
+    expect(html).toContain(`<mask id="kcs-mask-src-alpha"`);
+  });
+
+  it('M14: feather 12 → mask gets feGaussianBlur filter with wide region', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', feather: 12 });
+    const html = renderStage([source, target]);
+
+    expect(html).toContain(`<mask id="kcs-mask-src-alpha-f12"`); // deterministic feathered id
+    expect(html).toContain(`mask="url(#kcs-mask-src-alpha-f12)"`);
+    expect(html).toContain('feGaussianBlur');
+    expect(html).toContain('stdDeviation="6"'); // feather/2
+    // Wide explicit region: artboard (-660,-300,1920×1080) inflated by feather
+    expect(html).toContain('kcs-matte-feather-src-alpha-f12');
+    expect(html).toContain('x="-672"'); // -660 - 12
+    expect(html).toContain('y="-312"'); // -300 - 12
+    expect(html).toContain('width="1944"'); // 1920 + 24
+    expect(html).toContain('height="1104"'); // 1080 + 24
+    // The mask path references the filter
+    expect(html).toContain(`filter="url(#kcs-matte-feather-src-alpha-f12)"`);
+  });
+
+  it('M14: pathD parity — feather 0 and feather 12 share identical geometry', () => {
+    const source = makePart('src', 'custom_box');
+    const t0 = makePart('tA', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', feather: 0 });
+    const t12 = makePart('tB', 'custom_rect', { sourcePartId: 'src', mode: 'alpha', feather: 12 });
+    const html = renderStage([source, t0, t12]);
+
+    const ds = [...html.matchAll(/<path d="(M 270 210[^"]*)"/g)].map((m) => m[1]);
+    expect(ds.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(ds).size).toBe(1); // identical world-space geometry
+  });
+
+  it('M14: inverted alpha keeps the evenodd single-path structure + filter on it', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', inverted: true, feather: 12 });
+    const html = renderStage([source, target]);
+
+    expect(html).toContain(`<mask id="kcs-mask-src-alpha-inv-f12"`);
+    expect(html).toContain('fill-rule="evenodd"');
+    expect(html).toContain('fill="white"');
+    expect(html).toContain('M -660 -300 H 1260 V 780 H -660 Z'); // region contour preserved
+    expect(html).toContain(`filter="url(#kcs-matte-feather-src-alpha-inv-f12)"`);
+  });
+
+  it('M14: inverted luminance — region rect NOT filtered, black matte path filtered', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'luminance', inverted: true, feather: 12 });
+    const html = renderStage([source, target]);
+
+    expect(html).toContain(`<mask id="kcs-mask-src-luminance-inv-f12"`);
+    expect(html).toContain('<rect'); // white region rect still present
+    expect(html).toContain('fill="black"'); // matte path
+    expect(html).toContain(`filter="url(#kcs-matte-feather-src-luminance-inv-f12)"`);
+    // Exactly ONE filter for this mask (region rect is never filtered):
+    // the <filter id> def + the path's filter ref = 2 occurrences
+    expect(html.match(/kcs-matte-feather-src-luminance-inv-f12/g)?.length).toBe(2);
+  });
+
+  it('M14: dedupe — same (source, mode, inverted, feather) across N targets → 1 mask + 1 filter', () => {
+    const source = makePart('src', 'custom_box');
+    const tA = makePart('tA', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', feather: 12 });
+    const tB = makePart('tB', 'custom_rect', { sourcePartId: 'src', mode: 'alpha', feather: 12 });
+    const tC = makePart('tC', 'custom_triangle', { sourcePartId: 'src', mode: 'alpha', feather: 12 });
+    const html = renderStage([source, tA, tB, tC]);
+
+    expect(html.match(/<mask id="kcs-mask-src-alpha-f12"/g)).toHaveLength(1);
+    expect(html.match(/<filter id="kcs-matte-feather-src-alpha-f12"/g)).toHaveLength(1);
+    expect(html.match(/mask="url\(#kcs-mask-src-alpha-f12\)"/g)).toHaveLength(3);
+  });
+
+  it('M14: different feather values on the same source → distinct masks/filters (no id collision)', () => {
+    const source = makePart('src', 'custom_box');
+    const tA = makePart('tA', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', feather: 6 });
+    const tB = makePart('tB', 'custom_rect', { sourcePartId: 'src', mode: 'alpha', feather: 12 });
+    const html = renderStage([source, tA, tB]);
+
+    expect(html).toContain('id="kcs-mask-src-alpha-f6"');
+    expect(html).toContain('id="kcs-mask-src-alpha-f12"');
+    expect(html.match(/<mask id="kcs-mask-src-alpha-f6"/g)).toHaveLength(1);
+    expect(html.match(/<mask id="kcs-mask-src-alpha-f12"/g)).toHaveLength(1);
+    expect(html.match(/<filter id=/g)).toHaveLength(2);
+  });
 });

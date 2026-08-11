@@ -7,7 +7,7 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, isMatteEligible, normalizeFeather, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, isMatteEligible, normalizeFeather, normalizeStrength, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
 import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
 import { buildFreeformPath } from '../utils/freeform';
@@ -500,5 +500,87 @@ describe('matte — M15 isMatteEligible', () => {
 
   it('undefined part is not eligible', () => {
     expect(isMatteEligible(undefined)).toBe(false);
+  });
+});
+
+describe('matte — M16 normalizeStrength', () => {
+  it('undefined → 1 (legacy full strength)', () => {
+    expect(normalizeStrength(undefined)).toBe(1);
+  });
+
+  it('0 is a VALID value → 0 (matte disabled)', () => {
+    expect(normalizeStrength(0)).toBe(0);
+  });
+
+  it('0.5 → 0.5', () => {
+    expect(normalizeStrength(0.5)).toBe(0.5);
+  });
+
+  it('1 → 1', () => {
+    expect(normalizeStrength(1)).toBe(1);
+  });
+
+  it('>1 clamps to 1', () => {
+    expect(normalizeStrength(1.5)).toBe(1);
+    expect(normalizeStrength(2)).toBe(1);
+  });
+
+  it('negative → 1 (malformed → legacy default)', () => {
+    expect(normalizeStrength(-0.5)).toBe(1);
+    expect(normalizeStrength(-1)).toBe(1);
+  });
+
+  it('NaN → 1', () => {
+    expect(normalizeStrength(NaN)).toBe(1);
+  });
+
+  it('+Infinity → 1', () => {
+    expect(normalizeStrength(Infinity)).toBe(1);
+  });
+
+  it('-Infinity → 1', () => {
+    expect(normalizeStrength(-Infinity)).toBe(1);
+  });
+});
+
+describe('matte — M16 strength in mask data', () => {
+  const PATH = 'M 300 240 L 360 240 L 300 270 Z';
+
+  it('strength 0.5 → mask data carries it', () => {
+    const m = buildMatteMaskFromPath('src', PATH, 'alpha', false, '#fff', undefined, 0.5);
+    expect(m.strength).toBe(0.5);
+  });
+
+  it('strength 0 → mask data carries it (valid)', () => {
+    const m = buildMatteMaskFromPath('src', PATH, 'alpha', false, '#fff', undefined, 0);
+    expect(m.strength).toBe(0);
+  });
+
+  it('strength 1 → mask data carries it', () => {
+    const m = buildMatteMaskFromPath('src', PATH, 'luminance', true, '#fff', 12, 1);
+    expect(m.strength).toBe(1);
+    expect(m.feather).toBe(12); // coexists with feather
+  });
+
+  it('strength undefined → legacy behavior (field absent)', () => {
+    const m = buildMatteMaskFromPath('src', PATH, 'alpha', false, '#fff');
+    expect(m.strength).toBeUndefined();
+    expect('strength' in m).toBe(false);
+  });
+
+  it('geometry parity: pathD identical for strength undefined/0/0.5/1', () => {
+    const s = [undefined, 0, 0.5, 1].map((v) =>
+      buildMatteMaskFromPath('src', PATH, 'alpha', false, '#fff', undefined, v).pathD,
+    );
+    expect(new Set(s).size).toBe(1);
+    expect(s[0]).toBe(PATH);
+  });
+
+  it('serialization-compatible: strength survives JSON; undefined writes NO key', () => {
+    const withS = JSON.parse(JSON.stringify(buildMatteMaskFromPath('src', PATH, 'alpha', false, '#fff', undefined, 0.5)));
+    expect(withS.strength).toBe(0.5);
+    const without = JSON.parse(JSON.stringify(buildMatteMaskFromPath('src', PATH, 'alpha', false, '#fff')));
+    expect(without.strength).toBeUndefined();
+    expect(JSON.stringify(without)).not.toContain('strength');
   });
 });

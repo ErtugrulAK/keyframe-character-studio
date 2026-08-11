@@ -128,6 +128,10 @@ export interface MatteMask {
   /** M14: optional soft-edge feather (world-space px, raw value — the
    *  renderer normalizes via normalizeFeather). Absent/0 → sharp edge. */
   feather?: number;
+  /** M16: optional matte strength (raw value — renderer normalizes via
+   *  normalizeStrength). Absent = full strength (legacy). Render only —
+   *  geometry is NEVER affected. */
+  strength?: number;
 }
 
 /**
@@ -138,6 +142,18 @@ export interface MatteMask {
 export function normalizeFeather(value: number | undefined): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
   return Math.max(0, value);
+}
+
+/**
+ * M16 — Normalize a matte strength value to a safe 0-1 number.
+ * undefined/NaN/±Infinity/negative/>1 → 1 (full strength = legacy behavior).
+ * 0 is a VALID value (matte disabled) — never collapse it with `|| 1`.
+ * Pure; NEVER touches geometry (strength is a render parameter only).
+ */
+export function normalizeStrength(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 1;
+  if (value < 0 || value > 1) return 1;
+  return value;
 }
 
 export function buildMatteMask(
@@ -172,6 +188,7 @@ export function buildMatteMaskFromPath(
   inverted: boolean,
   fillColor: string,
   feather?: number,
+  strength?: number,
 ): MatteMask {
   return {
     id: matteMaskId(sourcePartId, mode, inverted),
@@ -180,6 +197,7 @@ export function buildMatteMaskFromPath(
     pathD,
     fill: mode === 'alpha' ? 'white' : fillColor,
     ...(feather !== undefined ? { feather } : {}),
+    ...(strength !== undefined ? { strength } : {}),
   };
 }
 

@@ -774,3 +774,143 @@ test.describe('M15 freeform matte — real browser pixel assertions', () => {
     expect(await page.evaluate(() => document.querySelectorAll('mask[id="kcs-mask-src-alpha-f12"]').length)).toBe(1);
   });
 });
+
+test.describe('M16 matte strength — real browser pixel assertions', () => {
+  // Same freeform-triangle fixture as M15: polygon (300,240)-(360,240)-(300,270);
+  // inside probe (320,255), outside (340,255), inverted-outside (345,250).
+  const TRI = [
+    { x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 },
+  ];
+  const source = (overrides: Record<string, unknown> = {}) =>
+    makeLayer('src', 'Source', 'custom_freeform', { zIndex: 1, fillColor: '#ff0000', points: TRI, ...overrides });
+  const greenTarget = (matte: Record<string, unknown>) =>
+    makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte });
+
+  async function greenAt(page: Page, worldX: number, worldY: number): Promise<number> {
+    const buf = await page.screenshot();
+    const png = decodePng(buf);
+    const { x, y } = await page.evaluate(([wx, wy]: [number, number]) => {
+      const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
+      const pt = svg.createSVGPoint(); pt.x = wx; pt.y = wy;
+      const s = pt.matrixTransform(svg.getScreenCTM()!);
+      return { x: Math.round(s.x), y: Math.round(s.y) };
+    }, [worldX, worldY]);
+    return png.data[(y * png.width + x) * png.bpp + 1];
+  }
+
+  test('V-S1 — alpha strength=1: full matte (legacy pixel behavior)', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', strength: 1 })]);
+    expect(await greenAt(page, 320, 255)).toBeGreaterThan(200); // inside fully visible
+    expect(await greenAt(page, 340, 255)).toBeLessThan(45);     // outside hidden
+  });
+
+  test('V-S2 — alpha strength=0.5: pixel opacity ~half of full strength', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', strength: 0.5 })]);
+    const inside = await greenAt(page, 320, 255);
+    expect(inside).toBeGreaterThan(45);   // partially visible
+    expect(inside).toBeLessThan(200);     // NOT full strength
+    expect(inside).toBeGreaterThan(80);   // meaningful half-strength signal (≈128)
+    expect(await greenAt(page, 340, 255)).toBeLessThan(45); // outside still hidden
+  });
+
+  test('V-S3 — alpha strength=0: matte content opacity 0 → target invisible inside', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', strength: 0 })]);
+    expect(await greenAt(page, 320, 255)).toBeLessThan(45); // source red shows, no green
+    expect(await greenAt(page, 340, 255)).toBeLessThan(45);
+  });
+
+  test('V-S4 — inverted alpha + strength=0.5: hole preserved, outside at half strength', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', inverted: true, strength: 0.5 })]);
+    expect(await greenAt(page, 320, 255)).toBeLessThan(45);              // inside hole → target masked out
+    const outside = await greenAt(page, 345, 250);                      // outside polygon, inside target
+    expect(outside).toBeGreaterThan(45);
+    expect(outside).toBeLessThan(200);                                  // half strength (≈128)
+  });
+
+  test('V-S5 — feather=12 + strength=0.5: ramp preserved, total strength halved', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', feather: 12, strength: 0.5 })]);
+    const a = await greenAt(page, 294, 255);
+    const b = await greenAt(page, 296, 255);
+    const c = await greenAt(page, 298, 255);
+    const inside = await greenAt(page, 310, 255);
+    expect(a).toBeGreaterThan(20);        // ramp visible
+    expect(a).toBeLessThan(b);            // monotonic (feather preserved)
+    expect(b).toBeLessThan(c);
+    expect(inside).toBeGreaterThan(45);   // half-strength inside
+    expect(inside).toBeLessThan(200);     // NOT full
+  });
+
+  test('V-S6 — strength import/reload: alpha + feather 12 + strength 0.5 survive, DOM fill-opacity visible', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', feather: 12, strength: 0.5 })]);
+
+    // App's own autosave (export path) carries the full matte
+    await page.waitForFunction(() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+        const l = (s.layers ?? []).find((x: any) => x.id === 'tgt');
+        return l?.matte?.strength === 0.5 && l?.matte?.feather === 12;
+      } catch { return false; }
+    }, undefined, { timeout: 10000 });
+    const autosaved = await page.evaluate(() => JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!));
+    expect(autosaved.layers.find((l: any) => l.id === 'tgt').matte).toEqual({
+      sourcePartId: 'src', mode: 'alpha', feather: 12, strength: 0.5,
+    });
+
+    // Reload → real import path
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
+    expect(await page.evaluate(() => document.querySelectorAll('mask[id="kcs-mask-src-alpha-f12-s0.5"]').length)).toBe(1);
+    expect(await page.evaluate(() =>
+      document.querySelector('mask[id="kcs-mask-src-alpha-f12-s0.5"] path')?.getAttribute('fill-opacity'))).toBe('0.5');
+  });
+
+  test('V-S7 — pixel parity after reload: strength 0.5 + feather ramp identical pre/post import', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', feather: 12, strength: 0.5 })]);
+
+    const before = [
+      await greenAt(page, 294, 255),
+      await greenAt(page, 298, 255),
+      await greenAt(page, 310, 255),
+    ];
+    expect(before[2]).toBeGreaterThan(45); // half-strength signal present
+
+    await page.waitForFunction(() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+        return (s.layers ?? []).find((x: any) => x.id === 'tgt')?.matte?.strength === 0.5;
+      } catch { return false; }
+    }, undefined, { timeout: 10000 });
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
+
+    const after = [
+      await greenAt(page, 294, 255),
+      await greenAt(page, 298, 255),
+      await greenAt(page, 310, 255),
+    ];
+    expect(after[0]).toBe(before[0]); // exact pixel parity (same fixture, same viewport)
+    expect(after[1]).toBe(before[1]);
+    expect(after[2]).toBe(before[2]);
+  });
+
+  test('V-S8 — inverted alpha + strength 0.5 survives reload (evenodd + fill-opacity)', async ({ page }) => {
+    await seed(page, [source(), greenTarget({ sourcePartId: 'src', mode: 'alpha', inverted: true, strength: 0.5 })]);
+    await page.waitForFunction(() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+        return (s.layers ?? []).find((x: any) => x.id === 'tgt')?.matte?.inverted === true;
+      } catch { return false; }
+    }, undefined, { timeout: 10000 });
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
+    // evenodd hole + strength preserved after the real import
+    expect(await page.evaluate(() =>
+      document.querySelector('mask[id="kcs-mask-src-alpha-inv-s0.5"] path')?.getAttribute('fill-rule'))).toBe('evenodd');
+    expect(await page.evaluate(() =>
+      document.querySelector('mask[id="kcs-mask-src-alpha-inv-s0.5"] path')?.getAttribute('fill-opacity'))).toBe('0.5');
+    expect(await greenAt(page, 320, 255)).toBeLessThan(45);  // hole preserved (pixel)
+    const outside = await greenAt(page, 345, 250);
+    expect(outside).toBeGreaterThan(45);                     // half-strength outside
+    expect(outside).toBeLessThan(200);
+  });
+});

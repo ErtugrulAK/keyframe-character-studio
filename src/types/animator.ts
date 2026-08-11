@@ -45,6 +45,10 @@ export interface PartMatte {
    * Applied via feGaussianBlur on the mask content (browser-verified).
    * Geometry is NOT affected — this is a render parameter only. */
   feather?: number;
+  /** M16: matte strength 0-1 (render parameter only — NOT geometry, NOT a
+   *  channel). undefined = legacy behavior = full strength (1). Malformed
+   *  values normalize to 1 via normalizeStrength. */
+  strength?: number;
 }
 
 export interface MaskData {

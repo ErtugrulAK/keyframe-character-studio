@@ -15,6 +15,7 @@ import {
   buildMatteClipPath,
   buildMatteMaskFromPath,
   normalizeFeather,
+  normalizeStrength,
   matteClipPathId,
   matteMaskId,
   isMatteActive,
@@ -150,13 +151,17 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     if (mode !== 'alpha' && mode !== 'luminance') continue; // TS narrowing (unreachable)
     const inverted = layer.matte.inverted === true;
     const feather = normalizeFeather(layer.matte.feather);
+    // M16: strength < 1 gets a deterministic -s{strength} suffix so the same
+    // (source, mode, inverted, feather) with DIFFERENT strengths never
+    // collides. strength undefined/1 = canonical (legacy id, byte-for-byte).
+    const strength = normalizeStrength(layer.matte.strength);
     // M14: when feathered, the mask id gets a deterministic -f{feather} suffix
     // so the same (source, mode, inverted) with DIFFERENT feather values never
     // collides (each target's mask keeps its own blur). feather 0/undefined →
     // M13 id, byte-for-byte.
     const baseMaskId = matteMaskId(source.id, mode, inverted);
-    const maskId = feather > 0 ? `${baseMaskId}-f${feather}` : baseMaskId;
-    if (matteMasks.has(maskId)) continue; // same (source, mode, inverted, feather) already built
+    const maskId = `${baseMaskId}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}`;
+    if (matteMasks.has(maskId)) continue; // same (source, mode, inverted, feather, strength) already built
 
     let pathD = maskPathCache.get(source.id);
     if (pathD === undefined) {
@@ -165,7 +170,11 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       maskPathCache.set(source.id, pathD);
     }
     const fillColor = sourceEl.content.fillColor ?? source.fillColor ?? '#ffffff';
-    const mask = buildMatteMaskFromPath(source.id, pathD, mode, inverted, fillColor, feather > 0 ? feather : undefined);
+    const mask = buildMatteMaskFromPath(
+      source.id, pathD, mode, inverted, fillColor,
+      feather > 0 ? feather : undefined,
+      strength < 1 ? strength : undefined,
+    );
     if (mask) matteMasks.set(maskId, { ...mask, id: maskId });
   }
 
@@ -179,8 +188,9 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     }
     if (mode === undefined) return {}; // unreachable when matte exists; TS narrowing
     const feather = normalizeFeather(part.matte.feather);
+    const strength = normalizeStrength(part.matte.strength);
     const base = matteMaskId(part.matte.sourcePartId, mode, part.matte.inverted === true);
-    const id = feather > 0 ? `${base}-f${feather}` : base;
+    const id = `${base}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}`;
     return matteMasks.has(id) ? { maskId: id } : {};
   };
 
@@ -250,16 +260,17 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
                   d={`M ${region.x} ${region.y} H ${region.x + region.width} V ${region.y + region.height} H ${region.x} Z ${mask.pathD}`}
                   fillRule="evenodd"
                   fill="white"
+                  fillOpacity={mask.strength}
                   filter={featherUrl(mask)}
                 />
               ) : (
                 <>
-                  <rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" />
-                  <path d={mask.pathD} fill="black" filter={featherUrl(mask)} />
+                  <rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" fillOpacity={mask.strength} />
+                  <path d={mask.pathD} fill="black" fillOpacity={mask.strength} filter={featherUrl(mask)} />
                 </>
               )
             ) : (
-              <path d={mask.pathD} fill={mask.fill} filter={featherUrl(mask)} />
+              <path d={mask.pathD} fill={mask.fill} fillOpacity={mask.strength} filter={featherUrl(mask)} />
             )}
           </mask>
         ))}

@@ -360,3 +360,72 @@ describe('StagePartLayers — track matte render', () => {
     expect(maskD).toBe(expectedClipPath);
   });
 });
+
+describe('StagePartLayers — M16 matte strength (fill-opacity)', () => {
+  const src = () => makePart('src', 'custom_box');
+  const target = (matte: CharacterPart['matte']) => makePart('tgt', 'custom_circle', matte);
+
+  it('strength undefined → NO fill-opacity attribute (legacy DOM byte-for-byte)', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha' })]);
+    expect(html).toContain('<mask id="kcs-mask-src-alpha"');
+    expect(html).not.toContain('fill-opacity');
+  });
+
+  it('strength 1 → canonical: NO fill-opacity attribute, legacy mask id', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', strength: 1 })]);
+    expect(html).toContain('<mask id="kcs-mask-src-alpha"');
+    expect(html).not.toContain('fill-opacity');
+  });
+
+  it('strength 0.5 → mask path carries fill-opacity="0.5" + -s0.5 id', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', strength: 0.5 })]);
+    expect(html).toContain('<mask id="kcs-mask-src-alpha-s0.5"');
+    expect(html).toContain('fill-opacity="0.5"');
+  });
+
+  it('strength 0 → fill-opacity="0" + -s0 id (valid: matte disabled)', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', strength: 0 })]);
+    expect(html).toContain('<mask id="kcs-mask-src-alpha-s0"');
+    expect(html).toContain('fill-opacity="0"');
+  });
+
+  it('inverted alpha + strength 0.5 → evenodd structure preserved + fill-opacity', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', inverted: true, strength: 0.5 })]);
+    expect(html).toContain('id="kcs-mask-src-alpha-inv-s0.5"');
+    expect(html).toContain('fill-rule="evenodd"');
+    expect(html).toContain('fill-opacity="0.5"');
+  });
+
+  it('luminance inverted + strength 0.5 → white region + black path both carry fill-opacity', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'luminance', inverted: true, strength: 0.5 })]);
+    expect(html).toContain('id="kcs-mask-src-luminance-inv-s0.5"');
+    expect(html).toContain('<rect');
+    expect(html.match(/fill-opacity="0\.5"/g)).toHaveLength(2); // rect + black path
+  });
+
+  it('feather 12 + strength 0.5 → filter preserved + fill-opacity + -f12-s0.5 id', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', feather: 12, strength: 0.5 })]);
+    expect(html).toContain('id="kcs-mask-src-alpha-f12-s0.5"');
+    expect(html).toContain('feGaussianBlur');
+    expect(html).toContain('stdDeviation="6"'); // feather NOT multiplied by strength
+    expect(html).toContain('fill-opacity="0.5"');
+  });
+
+  it('clip mode + strength 0.5 → strength NOT applied to clipPath (no fill-opacity)', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'clip', strength: 0.5 })]);
+    expect(html).toContain('<clipPath id="kcs-clip-src"');
+    expect(html).not.toContain('fill-opacity');
+  });
+
+  it('dedupe: same (source, mode, strength) across targets → ONE mask; different strengths → distinct ids', () => {
+    const html = renderStage([
+      src(),
+      makePart('tA', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', strength: 0.5 }),
+      makePart('tB', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', strength: 0.5 }),
+      makePart('tC', 'custom_circle', { sourcePartId: 'src', mode: 'alpha' }),
+    ]);
+    expect(html.match(/<mask id="kcs-mask-src-alpha-s0.5"/g)).toHaveLength(1); // deduped
+    expect(html.match(/<mask id="kcs-mask-src-alpha"/g)).toHaveLength(1);      // canonical separate
+    expect(html.match(/mask="url\(#kcs-mask-src-alpha-s0\.5\)"/g)).toHaveLength(2); // 2 targets share it
+  });
+});

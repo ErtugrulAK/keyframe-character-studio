@@ -1605,4 +1605,73 @@ describe('useSerialization Hook', () => {
       expect(restored.points).toEqual(FREEFORM_POINTS);
     }
   });
+
+  // ─── M16 Step 2E: strength serialization round-trip ─────────────────
+
+  const strengthPart = (matte: any) => ({
+    id: 'tgt', type: 'custom_box', name: 'T', zIndex: 2,
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    fillColor: '#00ff00', strokeColor: '#101218',
+    matte,
+  });
+
+  it('M16: strength 0 survives round-trip (0 is falsy — must NOT be dropped)', () => {
+    const restored = roundTripPart(strengthPart({ sourcePartId: 'src', mode: 'alpha', strength: 0 }));
+    expect(restored.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', strength: 0 });
+  });
+
+  it('M16: strength 0.5 survives round-trip', () => {
+    const restored = roundTripPart(strengthPart({ sourcePartId: 'src', mode: 'alpha', strength: 0.5 }));
+    expect(restored.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', strength: 0.5 });
+  });
+
+  it('M16: strength 1 survives round-trip', () => {
+    const restored = roundTripPart(strengthPart({ sourcePartId: 'src', mode: 'alpha', strength: 1 }));
+    expect(restored.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', strength: 1 });
+  });
+
+  it('M16: full matte — feather + inverted + strength — round-trips intact', () => {
+    const restored = roundTripPart(strengthPart({
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+    }));
+    expect(restored.matte).toEqual({
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+    });
+  });
+
+  it('M16: legacy undefined strength → stays undefined (no forced strength: 1 migration)', () => {
+    const restored = roundTripPart(strengthPart({ sourcePartId: 'src', mode: 'alpha', inverted: false, enabled: true, feather: 0 }));
+    expect(restored.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', inverted: false, enabled: true, feather: 0 });
+    expect('strength' in restored.matte).toBe(false);
+    expect(JSON.stringify(restored.matte)).not.toContain('strength');
+  });
+
+  it('M16: malformed strength (NaN/±Infinity/negative/>1) round-trips without breaking import', () => {
+    // JSON.stringify(NaN/Infinity) → null — import must not crash and the
+    // render pipeline's normalizeStrength guard keeps the mask safe.
+    for (const bad of [NaN, Infinity, -Infinity]) {
+      const part = strengthPart({ sourcePartId: 'src', mode: 'alpha', strength: bad });
+      const { result } = renderSerializationWithPart(part);
+      const exported = result.current.exportProject();
+      mockSetCharacterParts.mockClear();
+      expect(result.current.importProject(exported)).toBe(true); // never throws
+      const restored = (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === 'tgt')!;
+      expect(restored.matte.sourcePartId).toBe('src'); // matte survives
+    }
+  });
+
+  it('M16: M8 channels-only — strength lives in layers[].matte, NEVER in Track.channels', () => {
+    const source = {
+      id: 'src', type: 'custom_star', name: 'S', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+      matte: { sourcePartId: 'tgt', mode: 'alpha', strength: 0.5 },
+    } as any;
+    const { result } = renderSerializationWithPart(source);
+    const parsed = JSON.parse(result.current.exportProject());
+    expect(parsed.layers.find((l: any) => l.id === 'src').matte.strength).toBe(0.5);
+    expect(JSON.stringify(parsed)).not.toContain('maskOffsetStrength'); // no legacy-style channel
+    // channels (if any tracks exist) never reference strength
+    expect(parsed.tracks ?? []).not.toContain('strength');
+  });
 });

@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 411 test — 35 dosya** (M15 durumu) |
+| Test | **Vitest, 454 test — 35 dosya** (M16 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 19 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 27/27 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M15)
+## Proje durumu (M16)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -67,8 +67,14 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 3D: `StyleMatteSection` `isMatteEligible` filtresi (freeform listede); source swap `{...matte, sourcePartId}` — mode/inverted/enabled/feather korunur
   - 3E: serialization round-trip (points + matte kayıpsız) + gerçek import→render pixel parity (V-M7/V-M8)
   - Baseline: 411/411 vitest + 27/27 track-matte playwright
+- **M16 ✅ COMPLETE — Matte Strength / Opacity**
+  - 2A: `PartMatte.strength?` (0-1) + `normalizeStrength` (undefined/NaN/±Inf/negatif/>1 → 1; **0 geçerli**) + `MatteMask.strength`; geometry parity kanıtlı
+  - 2B: mask content'e `fill-opacity` (yalnızca strength<1; undefined/1 = canonical — DOM byte-for-byte) + `-s{strength}` mask id suffixi (dedupe farklı strength'e duyarlı); clip etkisiz; evenodd/luminance korundu; V-S1..V-S5 pixel kanıtı (0/0.5/1 + inverted + feather ramp)
+  - 2C: Inspector STRENGTH slider (0-100%, clip disabled, field preservation, local state yok, undefined→100%)
+  - 2E: serialization round-trip (strength 0/0.5/1/undefined/malformed; 0 falsy kaybolmaz; M8 kanıtı) + V-S6..V-S8 (import→reload: strength+feather+inverted korunur, fill-opacity DOM, pixel parity exact)
+  - Baseline: 454/454 vitest + 35/35 track-matte playwright
 - M12 ✅ audit — "kapatılabilir"; 2 LOW OPTIONAL (clipIdFor O(N²), MATTE_CYCLE validation)
-- Son push: `dff30d2` (M13 2A-2B, iş PC) → `e4ddc68` (M14 2A-2C, ev PC) → M14 2D-2E + M15 3A-3F iş PC (push bekliyor)
+- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14 kapanış) → `4e50cf1` (M15 kapanış) → M16 2A-2E iş PC (push bekliyor)
 
 ## Önemli kararlar
 

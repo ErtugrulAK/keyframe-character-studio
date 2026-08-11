@@ -313,3 +313,94 @@ describe('StyleMatteSection — M15 freeform source UI', () => {
     });
   });
 });
+
+describe('StyleMatteSection — M16 strength slider', () => {
+  const star = () => makePart('src', 'custom_star', 'Star Part');
+  const target = (matte?: CharacterPart['matte']) => makePart('tgt', 'custom_box', 'Box Part', matte);
+  const strength = (container: HTMLElement) =>
+    container.querySelector('input[aria-label="Strength"]') as HTMLInputElement;
+  const strengthLabel = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll('.form-label span')).map((s) => s.textContent);
+
+  it('strength slider is visible when a matte exists (alpha mode)', () => {
+    const { container } = renderMatte(target({ sourcePartId: 'src', mode: 'alpha' }), [star(), target({ sourcePartId: 'src', mode: 'alpha' })]);
+    expect(strength(container)).toBeTruthy();
+    expect(strength(container).min).toBe('0');
+    expect(strength(container).max).toBe('100');
+    expect(strength(container).step).toBe('1');
+  });
+
+  it('undefined strength → shows 100% (legacy full strength)', () => {
+    const { container } = renderMatte(target({ sourcePartId: 'src', mode: 'alpha' }), [star(), target({ sourcePartId: 'src', mode: 'alpha' })]);
+    expect(strength(container).value).toBe('100');
+    expect(strengthLabel(container)).toContain('100%');
+  });
+
+  it('strength 0 → shows 0% (valid, NOT 100)', () => {
+    const { container } = renderMatte(target({ sourcePartId: 'src', mode: 'alpha', strength: 0 }), [star(), target({ sourcePartId: 'src', mode: 'alpha', strength: 0 })]);
+    expect(strength(container).value).toBe('0');
+    expect(strengthLabel(container)).toContain('0%');
+  });
+
+  it('strength 0.5 → shows 50%', () => {
+    const { container } = renderMatte(target({ sourcePartId: 'src', mode: 'alpha', strength: 0.5 }), [star(), target({ sourcePartId: 'src', mode: 'alpha', strength: 0.5 })]);
+    expect(strength(container).value).toBe('50');
+    expect(strengthLabel(container)).toContain('50%');
+  });
+
+  it('strength 1 → shows 100%', () => {
+    const { container } = renderMatte(target({ sourcePartId: 'src', mode: 'alpha', strength: 1 }), [star(), target({ sourcePartId: 'src', mode: 'alpha', strength: 1 })]);
+    expect(strength(container).value).toBe('100');
+  });
+
+  it('slider change → writes strength as 0-1 number (50 → 0.5)', () => {
+    const { onPartPropChange, container } = renderMatte(target({ sourcePartId: 'src', mode: 'alpha' }), [star(), target({ sourcePartId: 'src', mode: 'alpha' })]);
+    fireEvent.change(strength(container), { target: { value: '50' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', strength: 0.5,
+    });
+  });
+
+  it('field preservation: only strength changes; source/mode/inverted/enabled/feather kept', () => {
+    const full = target({ sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.8 });
+    const { onPartPropChange, container } = renderMatte(full, [star(), full]);
+    fireEvent.change(strength(container), { target: { value: '50' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+    });
+  });
+
+  it('clip mode → strength slider disabled', () => {
+    const { container } = renderMatte(target({ sourcePartId: 'src', mode: 'clip', strength: 0.5 }), [star(), target({ sourcePartId: 'src', mode: 'clip', strength: 0.5 })]);
+    expect(strength(container).disabled).toBe(true);
+  });
+
+  it('alpha / luminance / inverted alpha / inverted luminance → strength enabled', () => {
+    for (const matte of [
+      { sourcePartId: 'src', mode: 'alpha' },
+      { sourcePartId: 'src', mode: 'luminance' },
+      { sourcePartId: 'src', mode: 'alpha', inverted: true },
+      { sourcePartId: 'src', mode: 'luminance', inverted: true },
+    ] as CharacterPart['matte'][]) {
+      const { container } = renderMatte(target(matte), [star(), target(matte)]);
+      expect(strength(container).disabled, JSON.stringify(matte)).toBe(false);
+    }
+  });
+
+  it('missing source → strength control hidden (no crash)', () => {
+    const { container } = renderMatte(target({ sourcePartId: 'ghost', mode: 'alpha', strength: 0.5 }), [star()]);
+    expect(strength(container)).toBeNull();
+  });
+
+  it('malformed strength (NaN / negative / >1 / Infinity) → shows 100%', () => {
+    for (const bad of [NaN, -1, 2, Infinity, -Infinity] as number[]) {
+      const { container } = renderMatte(target({ sourcePartId: 'src', mode: 'alpha', strength: bad }), [star(), target({ sourcePartId: 'src', mode: 'alpha', strength: bad })]);
+      expect(strength(container).value, String(bad)).toBe('100');
+    }
+  });
+
+  it('no matte → no strength slider', () => {
+    const { container } = renderMatte(target(), [star(), target()]);
+    expect(strength(container)).toBeNull();
+  });
+});

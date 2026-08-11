@@ -58,3 +58,20 @@
 - Baseline: 411/411 vitest + 27/27 track-matte playwright; full suite tek fail:
   workflow.spec.ts:88 ölü container testi (M15 dışı)
 - Updated: entities/keyframe-character-studio.md, skills/keyframe-studio/kcs-track-matte (v3.0.0), README.md
+
+## [2026-08-10] update | KCS — M16 Matte Strength / Opacity (iş PC)
+- M16 ✅ COMPLETE: matte etkisi 0-100% arasında ayarlanabilir (mask content fill-opacity)
+- 2A: PartMatte.strength? (0-1) + normalizeStrength (undefined/NaN/±Inf/negatif/>1 → 1;
+  0 geçerli — `|| 1` yasak) + MatteMask.strength; geometry parity; 426/426
+- 2B: StagePartLayers mask content'e fillOpacity (yalnızca strength<1; undefined/1 =
+  canonical DOM) + `-s{strength}` id suffixi (farklı strength → ayrı mask, çakışma yok);
+  clip etkisiz; evenodd/luminance korundu; V-S1..V-S5 pixel (0/0.5/1 + inverted + feather
+  ramp); 435/435 + 32/32
+- 2C: StyleMatteSection STRENGTH slider (0-100%, clip disabled, field preservation,
+  local state yok, undefined→100%); 447/447
+- 2E: serialization round-trip (strength 0/0.5/1/undefined/malformed; 0 falsy kaybolmaz;
+  M8: strength sadece layers[].matte) + V-S6..V-S8 (import→reload: strength+feather+
+  inverted korunur, fill-opacity DOM, pixel parity EXACT); 454/454 + 35/35 ×2 deterministik
+- Baseline: 454/454 vitest + 35/35 track-matte playwright; full suite tek fail:
+  workflow.spec.ts:88 ölü container testi (M16 dışı)
+- Updated: entities/keyframe-character-studio.md, skills/keyframe-studio/kcs-track-matte (v4.0.0), README.md

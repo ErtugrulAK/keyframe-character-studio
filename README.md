@@ -47,6 +47,7 @@ Keyframe Character Studio provides a browser-based timeline animation editor and
 - **Inverted matte**: hide INSIDE the source geometry (mask-based; single evenodd path for alpha, white region + black geometry for luminance).
 - **Matte Feather**: soft edges via `feGaussianBlur` (`stdDeviation = feather / 2`), applied in world-space pixels; sharp edge when `0`/unset.
 - **Freeform sources (M15)**: shapes drawn with the Free Draw tool (`custom_freeform`) can be matte sources too — their polygon is built from the same `CharacterPart.points` the renderer draws, and works with Clip / Alpha / Luminance / Inverted / Feather, including animated sources.
+- **Matte Strength (M16)**: control the matte's intensity from the Inspector (0–100% slider; 50% = half-strength soft mask). Applies to Alpha/Luminance/Inverted modes; inactive in Clip mode. Optional — legacy mattes render at full strength.
 - Geometry comes from the single `shapeGeometry → buildMattePath` chain (world-space; animated with the source's own keyframes/channels; no matte animation channels).
 - Browser behavior is **Chromium pixel-verified** (real compositing tests); Firefox/Safari not yet verified.
 - Architecture details: `skills/keyframe-studio/kcs-track-matte/SKILL.md` · wiki: `wiki/entities/keyframe-character-studio.md`.

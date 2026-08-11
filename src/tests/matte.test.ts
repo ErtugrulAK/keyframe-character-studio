@@ -7,7 +7,7 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMattePath, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, normalizeFeather, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
 import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
 import { evaluateTransform } from '../utils/evaluateTransform';
@@ -325,5 +325,69 @@ describe('matte — M13 buildMatteMask (alpha / luminance / inverted)', () => {
   it('does NOT bind source opacity — fill is unconditional white/color', () => {
     const m = buildMatteMask(makeSourcePart('custom_box'), { ...world, opacity: 0.2 }, 'alpha', false, '#ffffff')!;
     expect(m.fill).toBe('white'); // opacity 0.2 source still masks at full strength
+  });
+});
+
+// ─── M14 Step 2B: feather (data model + pure) ──────────────────────────
+
+describe('matte — M14 feather (normalize + propagation + geometry parity)', () => {
+  it('normalizeFeather: undefined → 0 (sharp M13 edge)', () => {
+    expect(normalizeFeather(undefined)).toBe(0);
+  });
+
+  it('normalizeFeather: 0 → 0', () => {
+    expect(normalizeFeather(0)).toBe(0);
+  });
+
+  it('normalizeFeather: positive value passes through unchanged', () => {
+    expect(normalizeFeather(12)).toBe(12);
+    expect(normalizeFeather(0.5)).toBe(0.5);
+  });
+
+  it('normalizeFeather: negative → 0', () => {
+    expect(normalizeFeather(-5)).toBe(0);
+  });
+
+  it('normalizeFeather: NaN / Infinity / -Infinity → 0', () => {
+    expect(normalizeFeather(NaN)).toBe(0);
+    expect(normalizeFeather(Infinity)).toBe(0);
+    expect(normalizeFeather(-Infinity)).toBe(0);
+  });
+
+  it('buildMatteMaskFromPath: feather 12 propagates to the mask', () => {
+    const mask = buildMatteMaskFromPath('src', 'M 0 0 Z', 'alpha', false, 'white', 12);
+    expect(mask.feather).toBe(12);
+  });
+
+  it('buildMatteMaskFromPath: no feather argument → undefined (M13 behavior preserved)', () => {
+    const mask = buildMatteMaskFromPath('src', 'M 0 0 Z', 'alpha', false, 'white');
+    expect(mask.feather).toBeUndefined();
+  });
+
+  it('geometry parity: pathD(feather=undefined) === pathD(feather=0) === pathD(feather=12)', () => {
+    const source = makeSourcePart('custom_box');
+    const localWorld = { x: 100, y: 50, rotation: 30, scaleX: 2, scaleY: 1, opacity: 1 };
+    const pathD = buildMattePath(source, localWorld)!;
+    const a = buildMatteMaskFromPath(source.id, pathD, 'alpha', false, 'white');
+    const b = buildMatteMaskFromPath(source.id, pathD, 'alpha', false, 'white', 0);
+    const c = buildMatteMaskFromPath(source.id, pathD, 'alpha', false, 'white', 12);
+    expect(b.pathD).toBe(a.pathD);
+    expect(c.pathD).toBe(a.pathD);
+    // And the pathD is the same world-space geometry as the clip path
+    expect(a.pathD).toBe(buildMatteClipPath(source, localWorld)!.pathD);
+  });
+
+  it('serialization-compatible object: feather survives JSON round-trip; undefined stays absent', () => {
+    const matte: PartMatte = {
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12,
+    };
+    const restored = JSON.parse(JSON.stringify(matte)) as PartMatte;
+    expect(restored.feather).toBe(12);
+    expect(restored).toEqual(matte);
+
+    const legacy: PartMatte = { sourcePartId: 'src', mode: 'clip' };
+    const legacyRestored = JSON.parse(JSON.stringify(legacy)) as PartMatte;
+    expect(legacyRestored.feather).toBeUndefined(); // legacy data → no feather key
+    expect(JSON.stringify(legacyRestored)).not.toContain('feather');
   });
 });

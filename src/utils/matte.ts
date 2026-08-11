@@ -98,6 +98,19 @@ export interface MatteMask {
   /** Fill for the geometry path: 'white' for alpha masks, the source's
    *  evaluated fillColor for luminance masks. */
   fill: string;
+  /** M14: optional soft-edge feather (world-space px, raw value — the
+   *  renderer normalizes via normalizeFeather). Absent/0 → sharp edge. */
+  feather?: number;
+}
+
+/**
+ * M14 — Normalize a feather value to a safe non-negative number.
+ * undefined/0 → 0 (sharp M13 edge); negative/NaN/±Infinity → 0.
+ * Pure; NEVER touches geometry (feather is a render parameter only).
+ */
+export function normalizeFeather(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+  return Math.max(0, value);
 }
 
 export function buildMatteMask(
@@ -131,6 +144,7 @@ export function buildMatteMaskFromPath(
   mode: Exclude<MatteMode, 'clip'>,
   inverted: boolean,
   fillColor: string,
+  feather?: number,
 ): MatteMask {
   return {
     id: matteMaskId(sourcePartId, mode, inverted),
@@ -138,6 +152,7 @@ export function buildMatteMaskFromPath(
     inverted,
     pathD,
     fill: mode === 'alpha' ? 'white' : fillColor,
+    ...(feather !== undefined ? { feather } : {}),
   };
 }
 

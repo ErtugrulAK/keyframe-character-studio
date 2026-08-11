@@ -41,6 +41,10 @@ export interface PartMatte {
   /** When false the matte is not applied. Undefined defaults to active
    *  (backward-compatible: absent/partial matte data must not hide content). */
   enabled?: boolean;
+  /** Soft-edge feather in world-space pixels. Absent/0 = sharp M13 edge.
+   * Applied via feGaussianBlur on the mask content (browser-verified).
+   * Geometry is NOT affected — this is a render parameter only. */
+  feather?: number;
 }
 
 export interface MaskData {

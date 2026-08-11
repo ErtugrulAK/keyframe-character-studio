@@ -14,7 +14,8 @@ import { renderToString } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
 import { StagePartLayers } from '../components/Canvas/StagePartLayers';
 import { makeEmptyChannels } from '../utils/defaults';
-import { matteClipPathId } from '../utils/matte';
+import { matteClipPathId, buildMatteClipPath } from '../utils/matte';
+import { evaluateTransform } from '../utils/evaluateTransform';
 import type { CharacterPart, Track } from '../types/animator';
 
 function makePart(id: string, type: string, matte?: CharacterPart['matte']): CharacterPart {
@@ -328,5 +329,22 @@ describe('StagePartLayers — track matte render', () => {
     expect(html.match(/<mask id="kcs-mask-src-alpha-f6"/g)).toHaveLength(1);
     expect(html.match(/<mask id="kcs-mask-src-alpha-f12"/g)).toHaveLength(1);
     expect(html.match(/<filter id=/g)).toHaveLength(2);
+  });
+
+  it('M14: rotated+scaled feathered source — mask pathD identical to the clip geometry (feather never touches transform math)', () => {
+    const source = makePart('src', 'custom_box');
+    source.baseTransform = { x: 40, y: -20, rotation: 45, scaleX: 2, scaleY: 0.5, opacity: 1 };
+    const tClip = makePart('tA', 'custom_circle', { sourcePartId: 'src', mode: 'clip' });
+    const tMask = makePart('tB', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', feather: 12 });
+    const html = renderStage([source, tClip, tMask]);
+
+    const world = evaluateTransform([source], [makeTrack('src')], 'Sequence', 'src', 0);
+    const expectedClipPath = buildMatteClipPath(source, world)!.pathD;
+
+    const maskD = html.match(/<mask id="kcs-mask-src-alpha-f12"[\s\S]*?<path d="([^"]+)"/)?.[1];
+    expect(maskD).toBeTruthy();
+    // Same evaluated world transform (rotate 45 + scale 2×0.5) → identical
+    // geometry whether consumed by clipPath or by a feathered mask.
+    expect(maskD).toBe(expectedClipPath);
   });
 });

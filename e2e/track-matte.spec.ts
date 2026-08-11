@@ -526,4 +526,52 @@ test.describe('M14 track matte — FEATHER (real browser pixel assertions)', () 
     expect(d1).not.toBe(d0); // geometry followed the animated source
     expect(await page.evaluate(() => document.querySelectorAll('filter[id^="kcs-matte-feather-"]').length)).toBe(1); // filter stable
   });
+
+  test('V-K — INVERTED alpha + feather: evenodd hole stays a real hole with a soft transition', async ({ page }) => {
+    // Source box 270–330. Inverted alpha: OUTSIDE the box visible, INSIDE hidden.
+    // Feather 12 → a gradual ramp at the boundary instead of a hard edge.
+    const source = makeLayer('src', 'Source', 'custom_box', { zIndex: 1, fillColor: '#ff0000' });
+    const target = makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte: { sourcePartId: 'src', mode: 'alpha', inverted: true, feather: 12 } });
+    await seed(page, [source, target]);
+
+    const inv = await Promise.all([254, 260, 264, 268, 300].map((x) => greenStrengthAt(page, x, 240)));
+    expect(inv[0]).toBeGreaterThan(200); // 16px outside box → target fully visible
+    expect(inv[1]).toBeGreaterThan(45);  // 10px out → ramp region
+    expect(inv[1]).toBeLessThan(inv[0]); // less visible approaching the hole
+    expect(inv[1]).toBeGreaterThan(inv[2]); // monotonic decrease
+    expect(inv[2]).toBeGreaterThan(inv[3]);
+    expect(inv[4]).toBeLessThan(45);     // inside the box → genuinely hidden (real hole)
+
+    // DOM: the feathered evenodd single-path structure (region contour + geometry)
+    // NOTE: <mask> lives inside <defs> — never "visible" to Playwright; assert
+    // existence + structure via evaluate.
+    const maskDom = await page.evaluate(() => {
+      const m = document.querySelector('mask[id="kcs-mask-src-alpha-inv-f12"]');
+      const p = m?.querySelector('path');
+      return { exists: !!m, evenodd: p?.getAttribute('fill-rule') ?? null, hasFilter: !!p?.getAttribute('filter') };
+    });
+    expect(maskDom.exists).toBe(true);
+    expect(maskDom.evenodd).toBe('evenodd');
+    expect(maskDom.hasFilter).toBe(true);
+  });
+
+  test('V-L — luminance + feather: white source = full-strength soft edge (source hidden)', async ({ page }) => {
+    // Luminance uses the source FILL color: white → full strength. The source
+    // itself is hidden (opacity 0) so its own pixels cannot pollute the probe.
+    const source = makeLayer('src', 'Source', 'custom_box', { zIndex: 1, fillColor: '#ffffff', opacity: 0 });
+    const target = makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 2, scaleY: 2, matte: { sourcePartId: 'src', mode: 'luminance', feather: 12 } });
+    await seed(page, [source, target]);
+
+    const soft = await edgeProbe(page); // [264, 266, 268, 310] at y=240
+    expect(soft[0]).toBeGreaterThan(45);      // ramp begins 6px outside the edge
+    expect(soft[0]).toBeLessThan(200);        // partial, not full
+    expect(soft[0]).toBeLessThan(soft[1]);    // monotonic increase toward the edge
+    expect(soft[1]).toBeLessThan(soft[2]);
+    expect(soft[2]).toBeLessThan(soft[3]);
+    expect(soft[3]).toBeGreaterThan(200);     // inside → full strength (white luminance)
+
+    // mask-type must be explicit luminance (never the browser default)
+    const mt = await page.evaluate(() => document.querySelector('mask[id="kcs-mask-src-luminance-f12"]')?.getAttribute('mask-type'));
+    expect(mt).toBe('luminance');
+  });
 });

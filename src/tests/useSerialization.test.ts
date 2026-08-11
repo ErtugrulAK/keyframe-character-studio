@@ -5,6 +5,7 @@ import { AnimationProject, Track, Transform, TrackChannel, PropertyKeyframe } fr
 import { makeEmptyChannels } from '../utils/defaults';
 import { applyTransitionToTrackCanonicalMutator } from '../utils/trackMutations';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
+import { normalizeFeather } from '../utils/matte';
 
 describe('useSerialization Hook', () => {
   const mockSetFps = vi.fn();
@@ -1481,5 +1482,40 @@ describe('useSerialization Hook', () => {
     expect(json.includes('"mode":"luminance"')).toBe(true); // only from the layer
     expect(parsed.tracks[0]?.keyframes).toBeUndefined();
     expect(parsed.tracks[0]?.channels).toBeUndefined();
+  });
+
+  // ─── M14 Step 2E: matte feather serialization round-trip ────────────
+
+  it('M14: feather undefined → export has NO feather key (M13 data untouched)', () => {
+    const part = {
+      id: 'part_m', type: 'custom_box', name: 'M', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+      matte: { sourcePartId: 'source', mode: 'alpha', enabled: true },
+    } as any;
+    const { result } = renderSerializationWithPart(part);
+    const layer = JSON.parse(result.current.exportProject()).layers.find((l: any) => l.id === 'part_m');
+    expect(layer.matte).toEqual({ sourcePartId: 'source', mode: 'alpha', enabled: true });
+    expect('feather' in layer.matte).toBe(false); // JSON.stringify drops undefined
+  });
+
+  it('M14: feather 0 / 12 / 100 survive round-trip with all other fields', () => {
+    for (const f of [0, 12, 100]) {
+      const restored = roundTripMatte({ sourcePartId: 'source', mode: 'luminance', inverted: true, enabled: true, feather: f });
+      expect(restored.matte).toEqual({ sourcePartId: 'source', mode: 'luminance', inverted: true, enabled: true, feather: f });
+    }
+  });
+
+  it('M14: negative feather survives round-trip as data; normalizeFeather guards NaN/Infinity/null', () => {
+    const restored = roundTripMatte({ sourcePartId: 'source', mode: 'alpha', feather: -5 });
+    expect(restored.matte).toEqual({ sourcePartId: 'source', mode: 'alpha', feather: -5 });
+    // JSON cannot represent NaN/±Infinity → they serialize as null; the pure
+    // normalizeFeather guard turns any non-finite input into 0 (render-safe).
+    expect(JSON.parse(JSON.stringify({ feather: NaN })).feather).toBeNull();
+    expect(JSON.parse(JSON.stringify({ feather: Infinity })).feather).toBeNull();
+    expect(normalizeFeather(NaN)).toBe(0);
+    expect(normalizeFeather(Infinity)).toBe(0);
+    expect(normalizeFeather(-1)).toBe(0);
+    expect(normalizeFeather(null as unknown as number)).toBe(0);
   });
 });

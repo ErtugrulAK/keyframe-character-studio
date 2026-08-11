@@ -33,3 +33,13 @@
   3. Luminance inverted (white region rect + black path) DOĞRU — değişmedi
 - E2E: e2e/track-matte.spec.ts — 7 DOM + 7 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 14/14 PASS
 - Not: M13 2A-2B iş PC'den (dff30d2), 2C-2F ev PC'de (push bekliyor)
+
+## [2026-08-10] update | KCS — M14 Feather (iş PC — 2D/2E)
+- M14 ✅ COMPLETE: Feather — PartMatte.feather (world-space px), normalizeFeather (negatif/NaN/Inf → 0),
+  mask id -f{feather} suffixi (çakışma yok), feGaussianBlur stdDeviation=feather/2, geniş filter region
+- 2D: StyleMatteSection FEATHER slider (0-100, clip modunda disabled — renderer clip feather desteklemez)
+- 2E: serialization round-trip (feather 0/12/100, undefined-key yok, negative/NaN guard) +
+  V-K (inverted alpha feather — evenodd delik + yumuşak geçiş) + V-L (luminance feather — white fill tam güç)
+- Baseline: 382/382 vitest + 19/19 track-matte playwright; full suite'te workflow.spec.ts:88
+  ölü container testi fail (b60f1ca sonrası, M14 dışı)
+- Updated: entities/keyframe-character-studio.md, skills/keyframe-studio/kcs-track-matte (v2.1.0)

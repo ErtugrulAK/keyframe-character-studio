@@ -1,7 +1,7 @@
 ---
 title: Keyframe Character Studio
 created: 2026-08-08
-updated: 2026-08-09
+updated: 2026-08-10
 type: entity
 tags: [kcs, react, typescript, svg, track-matte]
 sources: [raw/notes/hermes-kb/projeler.md]
@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 316 test — 35 dosya** (M12 durumu) |
+| Test | **Vitest, 382 test — 35 dosya** (M14 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -28,17 +28,18 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 - **Thin Orchestrator Pattern** — `AnimatorContext` yalnızca orkestrasyon; iş mantığı domain hook'lar + pure utils
 - Render zinciri: `StageCanvas` (`<svg>` + defs) → `StagePartLayers` → `evaluateFrame` (pure) → `PartRenderer` (world-space `<g transform>`)
 - **Canonical channels modeli**: per-property keyframe'ler (`Track.channels` — x/y/rotation/scaleX/scaleY/opacity + maskOffset×4); legacy `keyframes[]` yalnızca **import compatibility** (M8e: **channels-only export**)
-- **Track Matte (M11 + M13)**: `CharacterPart.matte = { sourcePartId, mode?: 'clip'|'alpha'|'luminance', inverted?, enabled? }` — hedef part, başka bir part'ın (source) evaluated world geometrisiyle kırpılır
-  - Pure helper: `src/utils/matte.ts` (`buildMattePath` — TEK world-space geometry çekirdeği; `kcs-clip-{src}` / `kcs-mask-{src}-{mode}{-inv}` deterministik id'ler)
+- **Track Matte (M11 + M13 + M14)**: `CharacterPart.matte = { sourcePartId, mode?: 'clip'|'alpha'|'luminance', inverted?, enabled?, feather? }` — hedef part, başka bir part'ın (source) evaluated world geometrisiyle kırpılır
+  - Pure helper: `src/utils/matte.ts` (`buildMattePath` — TEK world-space geometry çekirdeği; `kcs-clip-{src}` / `kcs-mask-{src}-{mode}{-inv}{-f{feather}}` deterministik id'ler)
   - Geometry tek kaynak: `src/utils/shapeGeometry.ts` (10 statik shape; renderer + matte aynı kaynak)
   - Rendering: clip → `clipPath`; alpha/luminance → `<mask mask-type>` (maskUnits + maskContentUnits userSpaceOnUse); inverted alpha → **tek `fill-rule="evenodd"` path** (region konturu + matte konturu — Chromium alpha mask'ta ikinci eleman yok sayıldığı için, pixel-verified); inverted luminance → white region rect + black path
+  - **Feather (M14)**: world-space px soft edge; `feGaussianBlur stdDeviation=feather/2`, geniş userSpaceOnUse filter region (artboard ± feather); yalnızca mask modlarında (clip → clipPath, blur yok → UI slider clip modunda disabled); aynı source farklı feather → `-f{feather}` suffix'li ayrı deterministik id
   - M13 2E coordinate fix: clip/mask, **transform'suz OUTER `<g>`** üzerinde (userSpaceOnUse defs'i transform'lu g'de referans edilince target'ın local uzayında çözülüyordu — world path yanlış konumlanıyordu)
   - Tek `<defs>` + 1 source → N target (Map dedupe + maskPathCache: aynı source'un modları 1 geometry paylaşır); missing source → recoverable (`MATTE_MISSING_SOURCE`)
-  - Editor UI: `StyleMatteSection` (source seçici + Mode + Inverted toggle + Enabled + Remove); history/clipboard otomatik (structuredClone)
-  - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 7 DOM + 7 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 14/14 PASS
+  - Editor UI: `StyleMatteSection` (source seçici + Mode + Inverted toggle + FEATHER slider 0-100 + Enabled + Remove); history/clipboard otomatik (structuredClone)
+  - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 10 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 19/19 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M13)
+## Proje durumu (M14)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -53,8 +54,15 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
     (2) Chromium alpha mask'ta region rect + ikinci eleman yok sayılıyor → tek evenodd path
   - 2F: final audit + dokümantasyon
   - Baseline: 354/354 vitest + 14/14 playwright
+- **M14 ✅ COMPLETE — Feather (soft edge)**
+  - 2A: browser spike — mask + feGaussianBlur mimarisi doğrulandı
+  - 2B: `PartMatte.feather?` + `normalizeFeather` + mask id `-f{feather}` suffixi (pathD DEĞİŞMEDİ — testli)
+  - 2C: StagePartLayers feGaussianBlur pipeline (stdDeviation=feather/2, geniş userSpaceOnUse region — blur kırpılmaz); alpha-inverted evenodd + luminance-inverted korundu
+  - 2D: StyleMatteSection FEATHER slider (0-100, clip modunda disabled)
+  - 2E: serialization round-trip (feather 0/12/100, undefined-key yok, negative/NaN guard) + V-K (inverted alpha feather pixel) + V-L (luminance feather pixel) + docs
+  - Baseline: 382/382 vitest + 19/19 track-matte playwright (full suite: workflow.spec.ts:88 ölü container testi fail — M14 dışı, b60f1ca sonrası)
 - M12 ✅ audit — "kapatılabilir"; 2 LOW OPTIONAL (clipIdFor O(N²), MATTE_CYCLE validation)
-- Son push: `dff30d2` (M13 2A-2B, iş PC) → M13 2C-2F ev PC (push bekliyor)
+- Son push: `dff30d2` (M13 2A-2B, iş PC) → `e4ddc68` (M14 2A-2C, ev PC) → M14 2D-2E iş PC (push bekliyor)
 
 ## Önemli kararlar
 

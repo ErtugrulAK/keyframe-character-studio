@@ -38,15 +38,17 @@ Keyframe Character Studio provides a browser-based timeline animation editor and
 - **Directional Edge Resizing**: Dragging top, bottom, left, or right handles expands elements strictly along that direction while keeping opposite edges fixed in world coordinates (trigonometric matrix math).
 - **Interactive Rotation**: Top bar knob for intuitive 360° rotation.
 
-### 3. 🖼️ Dynamic Geometric Media Masking & Vector Shapes
-- Clip `.mp4` video or `.png/.jpg` image layers into 6 geometric vector frames:
-  - 🟡 **Circle** - Circular clip frame
-  - 💊 **Pill / Capsule** - Rounded capsule geometry
-  - ⭐ **Star** - 5-pointed star clip frame
-  - 🔷 **Hexagon** - 6-sided polygon frame
-  - 💖 **Heart** - Heart-shaped clip mask
-  - 🟩 **Rectangle / Box** - Standard rect frame with adjustable corner radius
-- **Media Crop & Overlay Captions**: Interactive crop positioning and custom text caption overlays.
+### 3. 🎭 Track Matte — SVG Clip / Alpha / Luminance / Feather
+- **SVG-based matte system**: Clip a layer by another layer's (the source's) world-space shape geometry — pure SVG (`clipPath` / `<mask>`); **no Canvas 2D / PixiJS / Fabric.js**.
+- **Matte modes**:
+  - ✂️ **Clip** — hard geometric clip via SVG `clipPath`
+  - 🩸 **Alpha** — alpha-channel mask: inside the geometry visible, outside hidden
+  - 💡 **Luminance** — luminance-based mask: white = visible, black = hidden, gray = partial
+- **Inverted matte**: hide INSIDE the source geometry (mask-based; single evenodd path for alpha, white region + black geometry for luminance).
+- **Matte Feather**: soft edges via `feGaussianBlur` (`stdDeviation = feather / 2`), applied in world-space pixels; sharp edge when `0`/unset.
+- Geometry comes from the single `shapeGeometry → buildMattePath` chain (world-space; animated with the source's own keyframes/channels; no matte animation channels).
+- Browser behavior is **Chromium pixel-verified** (real compositing tests); Firefox/Safari not yet verified.
+- Architecture details: `skills/keyframe-studio/kcs-track-matte/SKILL.md` · wiki: `wiki/entities/keyframe-character-studio.md`.
 
 ### 4. 🎨 Unified Graphic Template & Sequence Management
 - **Dual Tab Architecture**: Unified top Header bar (Graphic Templates) and bottom Timeline (Sequence Tabs) sharing identical styling, heights, hover states, and close icons.
@@ -143,8 +145,8 @@ keyframe-character-studio/
 │   ├── ARCHITECTURE.md         # In-depth architectural guide
 │   └── postgres-setup-guide.md # PostgreSQL setup instructions
 ├── e2e/                        # Playwright end-to-end test suite
-│   └── workflow.spec.ts
-├── mask/                       # Geometric mask asset files
+│   ├── workflow.spec.ts
+│   └── track-matte.spec.ts     # Track Matte browser/pixel verification
 ├── public/                     # Static public assets
 ├── scripts/                    # Database setup scripts
 │   └── setup-db.js

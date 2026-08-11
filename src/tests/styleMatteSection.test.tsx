@@ -174,3 +174,94 @@ describe('StyleMatteSection — track matte editor UI', () => {
     expect((checkboxes[1] as HTMLInputElement).checked).toBe(true);  // enabled (undefined → active)
   });
 });
+
+describe('StyleMatteSection — M14 feather control', () => {
+  const ALPHA = (feather?: number) =>
+    makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'alpha', feather });
+
+  const getSlider = (container: HTMLElement) =>
+    container.querySelector('input[type="range"][aria-label="Feather"]') as HTMLInputElement;
+
+  it('feather control visible with a valid matte + valid source', () => {
+    const { container } = renderMatte(ALPHA(), [STAR, ALPHA()]);
+    expect(getSlider(container)).toBeTruthy();
+    expect(screen.getByText('FEATHER')).toBeTruthy();
+  });
+
+  it('default: feather undefined → slider 0, "0px" shown', () => {
+    const { container } = renderMatte(ALPHA(), [STAR, ALPHA()]);
+    expect(getSlider(container).value).toBe('0');
+    expect(screen.getByText('0px')).toBeTruthy();
+  });
+
+  it('existing value: feather 12 → slider 12, "12px" shown', () => {
+    const { container } = renderMatte(ALPHA(12), [STAR, ALPHA(12)]);
+    expect(getSlider(container).value).toBe('12');
+    expect(screen.getByText('12px')).toBeTruthy();
+  });
+
+  it('change 12 → 20 updates matte.feather', () => {
+    const { onPartPropChange, container } = renderMatte(ALPHA(12), [STAR, ALPHA(12)]);
+    fireEvent.change(getSlider(container), { target: { value: '20' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', feather: 20,
+    });
+  });
+
+  it('field preservation: feather change keeps sourcePartId/mode/inverted/enabled', () => {
+    const target = makePart('tgt', 'custom_box', 'Box Part', {
+      sourcePartId: 'src', mode: 'luminance', inverted: true, enabled: true, feather: 12,
+    });
+    const { onPartPropChange, container } = renderMatte(target, [STAR, target]);
+    fireEvent.change(getSlider(container), { target: { value: '20' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'luminance', inverted: true, enabled: true, feather: 20,
+    });
+  });
+
+  it('malformed values normalize to 0 (negative / NaN / Infinity)', () => {
+    for (const bad of [-5, NaN, Infinity]) {
+      const target = makePart('tgt', 'custom_box', 'Box Part', {
+        sourcePartId: 'src', mode: 'alpha', feather: bad,
+      });
+      const { container, unmount } = renderMatte(target, [STAR, target]);
+      expect(getSlider(container).value).toBe('0');
+      expect(screen.getByText('0px')).toBeTruthy();
+      unmount();
+    }
+  });
+
+  it('slider range: min 0, max 100, step 1', () => {
+    const { container } = renderMatte(ALPHA(50), [STAR, ALPHA(50)]);
+    const slider = getSlider(container);
+    expect(slider.min).toBe('0');
+    expect(slider.max).toBe('100');
+    expect(slider.step).toBe('1');
+  });
+
+  it('no matte → no feather control', () => {
+    const { container } = renderMatte(makePart('tgt', 'custom_box', 'Box Part'), [STAR]);
+    expect(getSlider(container)).toBeNull();
+  });
+
+  it('missing source → no feather control', () => {
+    const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'ghost', mode: 'alpha', feather: 8 });
+    const { container } = renderMatte(target, [STAR, target]);
+    expect(getSlider(container)).toBeNull();
+  });
+
+  it('M14: clip mode → feather control DISABLED (feather only on mask modes)', () => {
+    const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', feather: 12 });
+    const { container } = renderMatte(target, [STAR, target]);
+    const slider = getSlider(container);
+    expect(slider).toBeTruthy();
+    expect(slider.disabled).toBe(true);
+    // value still shown so the user sees their preserved setting
+    expect(screen.getByText('12px')).toBeTruthy();
+  });
+
+  it('M14: alpha mode → feather control enabled', () => {
+    const { container } = renderMatte(ALPHA(8), [STAR, ALPHA(8)]);
+    expect(getSlider(container).disabled).toBe(false);
+  });
+});

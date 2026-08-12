@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 518 test — 35 dosya** (M17 durumu) |
+| Test | **Vitest, 558 test — 35 dosya** (M18 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M17)
+## Proje durumu (M18)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -81,8 +81,34 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 3E: serialization round-trip (gradient 0/45/90/360-raw/malformed/full matte/freeform/channels-only/legacy) + V-G11 (neg scale) + V-G12 (dedupe); 518/518 + 47/47 ×2 deterministik
   - 3F: docs (SKILL v5.0.0, wiki, README) — radial/custom-stop/gradient-animation deferred
   - Baseline: 518/518 vitest + 47/47 track-matte playwright
+- **M18 ✅ COMPLETE — Text Track Matte** (commit/push PENDING — onay bekliyor)
+  - 4A: browser spike — text part matte source olabilir; mask content `<text>` Chromium'da
+    kanıtlı (13/13 ×2 deterministik); KRİTİK BULGULAR: (1) inverted alpha + text → alpha mask
+    ikinci elementi ignore ediyor → inverted text HER DURUMDA luminance yapısı (mask-type=luminance
+    + white rect + siyah text); (2) userSpaceOnUse gradient transform'lu g içinde text'in LOKAL
+    uzayında çözülüyor → text gradient endpoint'leri lokal (worldToLocal inverse); font determinizm
+    (fonts.ready + fonts.check + HHH/80px solid crossbar modeli)
+  - 4B: data/pure — `isMatteEligible(custom_text)===true`; `MatteMask.text?` render-data
+    (pathD null; content/font'lar source'tan runtime — PartMatte'e YENİ alan YOK);
+    `textMaskContent` + `buildMatteTextMask` + `worldToLocal` (applyWorld inverse; negatif scale;
+    zero-scale→1) + `gradientEndpointsLocal`; buildMattePath text→null KALIR; 533/533 + 47/47 ×2
+  - 4C: render — StagePartLayers text content branch: `<g transform=translate(CX+tx,CY+ty)
+    rotate(r) scale(sx,sy)><text x=0 y=0 anchor=middle baseline=middle>` (evaluated world her frame —
+    stale yok); inverted → luminance yapısı; gradient lokal endpoint + inverted-text structure key;
+    feather/strength aynen; dedupe; clip → clip oluşmaz; 543/543 + 51/51 ×2
+  - 4D: UI — text listede (isMatteEligible tek authority); text+clip → Clip option disabled +
+    non-blocking not; inverted/gradient/feather/strength normal çalışır; source switching text↔shape
+    field preservation; local state YOK; 552/552 + 51/51 ×2
+  - 4E: serialization + full e2e/pixel — text matte round-trip (7 alan; runtime text data matte
+    JSON'una GİRMEZ; sourcePartId tek persistent bağlantı; useSerialization DEĞİŞMEDİ) +
+    V-T1..V-T17 (alpha/luminance/inv-lum/inv-alpha-fallback/gradient/feather/strength/combo/rotation/
+    scale/neg-scale/animasyon/dedupe/clip-policy/gradient+rot/gradient+scale/import-reload EXACT
+    parity); 558/558 + 64/64 ×2 deterministik
+  - 4F: docs (SKILL v6.0.0, wiki, README) + final audit
+  - Baseline: 558/558 vitest + 64/64 track-matte playwright; full suite 66/1 (tek fail
+    workflow.spec.ts:88 ölü container — M18 dışı)
 - M12 ✅ audit — "kapatılabilir"; 2 LOW OPTIONAL (clipIdFor O(N²), MATTE_CYCLE validation)
-- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → M17 3A-3F iş PC (push bekliyor)
+- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17, push edildi) → M18 4A-4F iş PC (commit/push PENDING — onay bekliyor)
 
 ## Önemli kararlar
 

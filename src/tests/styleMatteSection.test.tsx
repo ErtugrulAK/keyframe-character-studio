@@ -42,13 +42,13 @@ describe('StyleMatteSection — track matte editor UI', () => {
     expect(screen.getByText('None')).toBeTruthy();
   });
 
-  it('lists eligible sources (static shapes + M15 freeform); excludes self and text/image/video', () => {
+  it('lists eligible sources (static shapes + M15 freeform + M18 text); excludes self and image/video', () => {
     const { container } = renderMatte(BOX, [STAR, BOX, FREEFORM, TEXT]);
     const options = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
     expect(options).toContain('Star Part');           // shape source eligible
     expect(options).toContain('Free Part');           // M15: freeform eligible
+    expect(options).toContain('Text Part');           // M18: text eligible (mask content element)
     expect(options).not.toContain('Box Part');        // self excluded
-    expect(options).not.toContain('Text Part');       // text excluded (MVP)
   });
 
   it('selecting a source creates the canonical PartMatte', () => {
@@ -531,5 +531,103 @@ describe('StyleMatteSection — M17 gradient controls', () => {
     const { container } = renderMatte(target(), [star(), target()]);
     expect(gradientToggle(container)).toBeNull();
     expect(angle(container)).toBeNull();
+  });
+});
+
+describe('StyleMatteSection — M18 text source UI policy', () => {
+  const star = () => makePart('src', 'custom_star', 'Star Part');
+  const text = () => makePart('txt', 'custom_text', 'Text Part');
+  const target = (matte?: CharacterPart['matte']) => makePart('tgt', 'custom_box', 'Box Part', matte);
+  const render = (matte: CharacterPart['matte'], parts: CharacterPart[]) => renderMatte(target(matte), [...parts, target(matte)]);
+  const gradientToggle = (container: HTMLElement) => container.querySelector('input[aria-label="Gradient"]') as HTMLInputElement;
+  const angle = (container: HTMLElement) => container.querySelector('input[aria-label="Gradient angle"]') as HTMLInputElement;
+  const feather = (container: HTMLElement) => container.querySelector('input[aria-label="Feather"]') as HTMLInputElement;
+  const strength = (container: HTMLElement) => container.querySelector('input[aria-label="Strength"]') as HTMLInputElement;
+  const inverted = (container: HTMLElement) => container.querySelector('input[aria-label="Inverted"]') as HTMLInputElement;
+
+  it('1. text source is selectable from the source list (isMatteEligible authority)', () => {
+    const { container } = render({ sourcePartId: 'txt', mode: 'alpha' }, [star(), text()]);
+    const options = Array.from(container.querySelectorAll('option')).map((o) => o.textContent);
+    expect(options).toContain('Text Part');
+    expect((container.querySelector('select') as HTMLSelectElement).value).toBe('txt');
+  });
+
+  it('2. text + clip → Clip OPTION disabled (no dead combination)', () => {
+    const { container } = render({ sourcePartId: 'txt', mode: 'alpha' }, [text()]);
+    const clipOption = Array.from(container.querySelectorAll('option')).find((o) => o.textContent === 'Clip') as HTMLOptionElement;
+    expect(clipOption.disabled).toBe(true);
+    // shape source → Clip stays enabled
+    const shape = render({ sourcePartId: 'src', mode: 'clip' }, [star()]);
+    const clipOptionShape = Array.from(shape.container.querySelectorAll('option')).find((o) => o.textContent === 'Clip') as HTMLOptionElement;
+    expect(clipOptionShape.disabled).toBe(false);
+  });
+
+  it('3. text + clip ACTIVE → non-blocking note shown (matte inert otherwise)', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'txt', mode: 'clip' }, [text()]);
+    expect(screen.getByText(/Text sources require Alpha or Luminance/)).toBeTruthy();
+    // switching to alpha (via the real callback channel) clears the note
+    const modeSelect = container.querySelectorAll('select')[1] as HTMLSelectElement;
+    fireEvent.change(modeSelect, { target: { value: 'alpha' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', { sourcePartId: 'txt', mode: 'alpha' });
+  });
+
+  it('4. text + alpha → inverted / feather / strength / gradient ALL enabled', () => {
+    const { container } = render({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 45 } }, [text()]);
+    expect(inverted(container).disabled).toBe(false);
+    expect(feather(container).disabled).toBe(false);
+    expect(strength(container).disabled).toBe(false);
+    expect(gradientToggle(container).disabled).toBe(false);
+    expect(angle(container).disabled).toBe(false);
+  });
+
+  it('5. text + inverted → normal inverted checkbox (no extra luminance-fallback UI)', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'txt', mode: 'alpha' }, [text()]);
+    fireEvent.click(inverted(container));
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', { sourcePartId: 'txt', mode: 'alpha', inverted: true });
+    // no internal-renderer detail surfaced (mode select options are the normal ones)
+    expect(screen.queryByText(/fallback/i)).toBeNull();
+  });
+
+  it('6. text + gradient toggle/angle work with field preservation', () => {
+    const full = target({ sourcePartId: 'txt', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 45 } });
+    const { onPartPropChange, container } = renderMatte(full, [text(), full]);
+    fireEvent.change(angle(container), { target: { value: '90' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'txt', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 90 },
+    });
+    fireEvent.click(gradientToggle(container));
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', {
+      sourcePartId: 'txt', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+    });
+  });
+
+  it('7. text + feather + strength work (existing controls, no text-specific state)', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'txt', mode: 'luminance' }, [text()]);
+    fireEvent.change(feather(container), { target: { value: '10' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', { sourcePartId: 'txt', mode: 'luminance', feather: 10 });
+    fireEvent.change(strength(container), { target: { value: '30' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', { sourcePartId: 'txt', mode: 'luminance', strength: 0.3 });
+  });
+
+  it('8. source switching shape ↔ text preserves all matte fields', () => {
+    const full = target({ sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 45 } });
+    const { onPartPropChange, container } = renderMatte(full, [star(), text(), full]);
+    const sourceSelect = container.querySelector('select') as HTMLSelectElement;
+    // shape → text: only sourcePartId changes
+    fireEvent.change(sourceSelect, { target: { value: 'txt' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'txt', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 45 },
+    });
+    // text → shape: only sourcePartId changes back
+    fireEvent.change(sourceSelect, { target: { value: 'src' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 45 },
+    });
+  });
+
+  it('9. missing text source → controls hidden (no crash), same as shape', () => {
+    const { container } = render({ sourcePartId: 'ghost', mode: 'alpha' }, [star()]);
+    expect(gradientToggle(container)).toBeNull();
+    expect(feather(container)).toBeNull();
   });
 });

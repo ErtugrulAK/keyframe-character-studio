@@ -7,7 +7,7 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, textMaskContent, worldToLocal } from '../utils/matte';
 import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
 import { buildFreeformPath } from '../utils/freeform';
@@ -493,9 +493,13 @@ describe('matte — M15 isMatteEligible', () => {
   });
 
   it('text/image/video are NOT eligible', () => {
-    for (const type of ['custom_text', 'custom_image', 'custom_video']) {
+    for (const type of ['custom_image', 'custom_video']) {
       expect(isMatteEligible({ type }), type).toBe(false);
     }
+  });
+
+  it('M18: custom_text IS eligible (text matte — mask content element)', () => {
+    expect(isMatteEligible({ type: 'custom_text' })).toBe(true);
   });
 
   it('undefined part is not eligible', () => {
@@ -699,5 +703,142 @@ describe('matte — M17 gradient data model + pure helpers', () => {
       expect(JSON.stringify(m)).not.toContain('channel');
       expect(JSON.stringify(m)).not.toContain('keyframe');
     });
+  });
+});
+
+describe('matte — M18 text matte (data/pure)', () => {
+  const IDENTITY: WorldTransform = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+  const textPart = (overrides: Record<string, unknown> = {}) => ({
+    id: 'txt', type: 'custom_text', name: 'T', zIndex: 1,
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    fillColor: '#ff0000', strokeColor: '#101218',
+    textValue: 'HELLO', fontSize: 48, fontFamily: 'Arial',
+    ...overrides,
+  });
+
+  it('isMatteEligible: custom_text → true (new); shapes/freeform stay eligible; media stays ineligible', () => {
+    expect(isMatteEligible({ type: 'custom_text' })).toBe(true);
+    expect(isMatteEligible({ type: 'custom_star' })).toBe(true);
+    expect(isMatteEligible({ type: 'custom_freeform' })).toBe(true);
+    for (const t of ['custom_image', 'custom_video', 'mograph_cloner', 'particle_system']) {
+      expect(isMatteEligible({ type: t }), t).toBe(false);
+    }
+    expect(isMatteEligible(undefined)).toBe(false);
+  });
+
+  it('textMaskContent: maps source runtime fields with renderer defaults', () => {
+    const d = textMaskContent(textPart())!;
+    expect(d.content).toBe('HELLO');
+    expect(d.fontSize).toBe(48);
+    expect(d.fontFamily).toBe('Arial');
+    expect(d.fontWeight).toBe('bold'); // renderer hardcodes bold
+    expect(d.textAnchor).toBe('middle');
+    expect(d.dominantBaseline).toBe('middle');
+    expect(d.x).toBe(0);
+    expect(d.y).toBe(0);
+    // renderer fallbacks: textValue || "TEXT", fontSize || 24, fontFamily || "Outfit"
+    const fallback = textMaskContent(textPart({ textValue: '', fontSize: undefined, fontFamily: undefined }))!;
+    expect(fallback.content).toBe('TEXT');
+    expect(fallback.fontSize).toBe(24);
+    expect(fallback.fontFamily).toBe('Outfit');
+    expect(textMaskContent(undefined)).toBeUndefined();
+  });
+
+  it('buildMatteTextMask: render-only mask — pathD null, text content, white/black fill', () => {
+    const m = buildMatteTextMask('txt', textMaskContent(textPart())!, 'alpha', false);
+    expect(m.id).toBe('kcs-mask-txt-alpha');
+    expect(m.mode).toBe('alpha');
+    expect(m.inverted).toBe(false);
+    expect(m.pathD).toBeNull(); // NO path geometry — buildMattePath stays null for text
+    expect(m.text!.content).toBe('HELLO');
+    expect(m.fill).toBe('white');
+    expect(m.feather).toBeUndefined();
+    const inv = buildMatteTextMask('txt', textMaskContent(textPart())!, 'luminance', true, 12, 0.5);
+    expect(inv.fill).toBe('black'); // 4A: inverted text → black text + white rect (luminance structure)
+    expect(inv.feather).toBe(12);
+    expect(inv.strength).toBe(0.5);
+  });
+
+  it('worldToLocal: identity — world point maps back to the same local point', () => {
+    // forward: applyWorld((10,-20), identity) = (310, 220); inverse round-trips
+    expect(worldToLocal({ x: 310, y: 220 }, IDENTITY)).toEqual({ x: 10, y: -20 });
+  });
+
+  it('worldToLocal: translation — subtracts the world offset', () => {
+    const w = { ...IDENTITY, x: 40, y: -15 };
+    expect(worldToLocal({ x: 350, y: 230 }, w)).toEqual({ x: 10, y: 5 }); // CX=300, CY=240
+  });
+
+  it('worldToLocal: rotation 90° — inverse rotation applied', () => {
+    const w = { ...IDENTITY, rotation: 90 };
+    // forward: (10,0) → (300-0, 240+10) = (300,250); inverse: back to (10,0)
+    expect(worldToLocal({ x: 300, y: 250 }, w).x).toBeCloseTo(10, 9);
+    expect(worldToLocal({ x: 300, y: 250 }, w).y).toBeCloseTo(0, 9);
+  });
+
+  it('worldToLocal: uniform scale — divides by scale', () => {
+    const w = { ...IDENTITY, scaleX: 2, scaleY: 2 };
+    expect(worldToLocal({ x: 320, y: 250 }, w)).toEqual({ x: 10, y: 5 });
+  });
+
+  it('worldToLocal: non-uniform scale — per-axis division', () => {
+    const w = { ...IDENTITY, scaleX: 2, scaleY: 4 };
+    expect(worldToLocal({ x: 320, y: 250 }, w)).toEqual({ x: 10, y: 2.5 });
+  });
+
+  it('worldToLocal: negative scale — flips the axis', () => {
+    const w = { ...IDENTITY, scaleX: -1 };
+    // forward: (10,0) → (300-10, 240) = (290,240); inverse → (10,0)
+    expect(worldToLocal({ x: 290, y: 240 }, w)).toEqual({ x: 10, y: 0 });
+  });
+
+  it('worldToLocal: zero scale → deterministic (treated as 1, no NaN/Infinity)', () => {
+    const w = { ...IDENTITY, scaleX: 0 };
+    const r = worldToLocal({ x: 320, y: 240 }, w);
+    expect(Number.isFinite(r.x)).toBe(true);
+    expect(Number.isFinite(r.y)).toBe(true);
+    expect(r.x).toBe(20); // (320-300)/1 — scale treated as 1
+    expect(r.y).toBe(0);
+  });
+
+  it('worldToLocal: round-trip for rotate+scale+translate (forward math replicated)', () => {
+    const w = { x: 35, y: -20, rotation: 90, scaleX: 2, scaleY: 3, opacity: 1 };
+    const p = { x: 12, y: -7 };
+    const rad = Math.PI / 2;
+    const world = {
+      x: 300 + 35 + (12 * 2 * Math.cos(rad) - (-7 * 3 * Math.sin(rad))),
+      y: 240 - 20 + (12 * 2 * Math.sin(rad) + (-7 * 3 * Math.cos(rad))),
+    };
+    expect(worldToLocal(world, w).x).toBeCloseTo(12, 9);
+    expect(worldToLocal(world, w).y).toBeCloseTo(-7, 9);
+  });
+
+  it('gradientEndpointsLocal: text uses the canonical default box; local endpoints match the world def inverted', () => {
+    const w = { x: 40, y: 10, rotation: 90, scaleX: 2, scaleY: 1.5, opacity: 1 };
+    const local = gradientEndpointsLocal(textPart() as any, w, 0)!;
+    // Default box 200×60 → half-extent along angle 0 = 100 → local x1/x2 = ±100
+    expect(local.x1).toBeCloseTo(-100, 6);
+    expect(local.x2).toBeCloseTo(100, 6);
+    expect(local.y1).toBeCloseTo(0, 6);
+    expect(local.y2).toBeCloseTo(0, 6);
+    // The WORLD def (M17 gradientEndpoints) is the forward transform of the same box
+    const world = gradientEndpoints(textPart() as any, w, 0)!;
+    expect(worldToLocal({ x: world.x1, y: world.y1 }, w).x).toBeCloseTo(-100, 6);
+    expect(worldToLocal({ x: world.x2, y: world.y2 }, w).x).toBeCloseTo(100, 6);
+  });
+
+  it('geometry integrity: buildMattePath STILL returns null for custom_text (unchanged)', () => {
+    expect(buildMattePath(textPart() as any, IDENTITY)).toBeNull();
+    expect(buildMatteClipPath(textPart() as any, IDENTITY)).toBeNull();
+    // shape sources unchanged — regression guard
+    expect(buildMattePath({ ...textPart({ type: 'custom_star' }) } as any, IDENTITY)).not.toBeNull();
+  });
+
+  it('M8 integrity: text matte introduces NO channels/keyframes (mask data only)', () => {
+    const m = buildMatteTextMask('txt', textMaskContent(textPart())!, 'alpha', false);
+    const json = JSON.stringify(m);
+    expect(json).not.toContain('channel');
+    expect(json).not.toContain('keyframe');
+    expect(json).not.toContain('TrackChannel');
   });
 });

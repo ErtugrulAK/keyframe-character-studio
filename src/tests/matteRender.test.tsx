@@ -522,3 +522,104 @@ describe('StagePartLayers — M17 gradient matte (linearGradient render)', () =>
     expect(html).toContain('fill="white"'); // solid mask fill unchanged
   });
 });
+
+describe('StagePartLayers — M18 text matte render (mask content <text>)', () => {
+  const textSource = (overrides: Record<string, unknown> = {}) => {
+    const p = makePart('txt', 'custom_text');
+    return { ...p, textValue: 'HELLO', fontSize: 48, fontFamily: 'Arial', ...overrides } as CharacterPart;
+  };
+  const target = (matte: CharacterPart['matte']) => makePart('tgt', 'custom_circle', matte);
+
+  it('A. basic text alpha: <text> mask content with renderer-parity attrs + transform bake', () => {
+    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'alpha' })]);
+    expect(html).toContain('<mask id="kcs-mask-txt-alpha"');
+    expect(html).toContain('mask-type="alpha"');
+    expect(html).toContain('>HELLO</text>');                    // content from source at runtime
+    expect(html).toContain('font-size="48"');
+    expect(html).toContain('font-weight="bold"');
+    expect(html).toContain('font-family="Arial"');
+    expect(html).toContain('x="0"');
+    expect(html).toContain('y="0"');
+    expect(html).toContain('text-anchor="middle"');
+    expect(html).toContain('dominant-baseline="middle"');
+    expect(html).toContain('fill="white"');
+    // transform bake = renderer inner-g math (identity world → canvas center)
+    expect(html).toContain('translate(300, 240) rotate(0) scale(1, 1)');
+    // NO path geometry — the mask content is the text element only
+    expect(html).not.toContain('<path d="M 270');
+  });
+
+  it('B. text luminance: mask-type luminance + white text', () => {
+    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'luminance' })]);
+    expect(html).toContain('<mask id="kcs-mask-txt-luminance"');
+    expect(html).toContain('mask-type="luminance"');
+    expect(html).toContain('fill="white"');
+    expect(html).toContain('>HELLO</text>');
+  });
+
+  it('C. inverted text → luminance structure: mask-type luminance + white rect + black text (4A decision)', () => {
+    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'alpha', inverted: true })]);
+    expect(html).toContain('<mask id="kcs-mask-txt-alpha-inv"');
+    expect(html).toContain('mask-type="luminance"'); // alpha mode falls back to luminance structure
+    expect(html).toContain('<rect ');                // white region rect
+    expect(html).toContain('fill="black"');          // black text punches the hole
+    expect(html).toContain('>HELLO</text>');
+  });
+
+  it('D. gradient: text fill=url(#kcs-mg-...) with LOCAL endpoints (default box ±100)', () => {
+    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0 } })]);
+    expect(html).toContain('<linearGradient id="kcs-mg-txt-0-alpha"');
+    expect(html).toContain('gradientUnits="userSpaceOnUse"');
+    expect(html).toContain('fill="url(#kcs-mg-txt-0-alpha)"');
+    // LOCAL endpoints: identity world → default text box ±100 (4A: text-local space)
+    expect(html).toContain('x1="-100"');
+    expect(html).toContain('x2="100"');
+    expect(html).toContain('y1="0"');
+  });
+
+  it('E. feather: existing M14 filter bound to the text content', () => {
+    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'alpha', feather: 12 })]);
+    expect(html).toContain('<mask id="kcs-mask-txt-alpha-f12"');
+    expect(html).toContain('filter="url(#kcs-matte-feather-txt-alpha-f12)"');
+    expect(html).toContain('stdDeviation="6"'); // M14 math untouched
+  });
+
+  it('F. strength: fill-opacity on the text (independent render param)', () => {
+    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'alpha', strength: 0.5 })]);
+    expect(html).toContain('<mask id="kcs-mask-txt-alpha-s0.5"');
+    expect(html).toContain('fill-opacity="0.5"');
+  });
+
+  it('G. transform bake: evaluated world (translate/rotate/scale) lands in the <g>', () => {
+    const src = textSource({ baseTransform: { x: 40, y: -10, rotation: 90, scaleX: 2, scaleY: 3, opacity: 1 } });
+    const html = renderStage([src, target({ sourcePartId: 'txt', mode: 'alpha' })]);
+    expect(html).toContain('translate(340, 230) rotate(90) scale(2, 3)');
+  });
+
+  it('H. dedupe: two targets + same text source → ONE mask def, two references', () => {
+    const html = renderStage([
+      textSource(),
+      makePart('tA', 'custom_circle', { sourcePartId: 'txt', mode: 'alpha' }),
+      makePart('tB', 'custom_circle', { sourcePartId: 'txt', mode: 'alpha' }),
+    ]);
+    expect(html.match(/<mask id="kcs-mask-txt-alpha"/g)).toHaveLength(1);
+    expect(html.match(/mask="url\(#kcs-mask-txt-alpha\)"/g)).toHaveLength(2);
+    expect(html).toContain('>HELLO</text>'); // single content, still read from source
+  });
+
+  it('I. clip + text source → NO clipPath, NO mask (buildMattePath stays null)', () => {
+    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'clip' })]);
+    expect(html).not.toContain('<clipPath');
+    expect(html).not.toContain('clip-path=');
+    expect(html).not.toContain('<mask id="kcs-mask'); // text clip unsupported → nothing applied
+  });
+
+  it('J. textValue change re-renders the mask content (no stale copy in the mask model)', () => {
+    const a = renderStage([textSource({ textValue: 'ALPHA' }), target({ sourcePartId: 'txt', mode: 'alpha' })]);
+    const b = renderStage([textSource({ textValue: 'BETA' }), target({ sourcePartId: 'txt', mode: 'alpha' })]);
+    expect(a).toContain('>ALPHA</text>');
+    expect(b).toContain('>BETA</text>');
+    expect(a).not.toContain('>BETA</text>');
+    expect(b).not.toContain('>ALPHA</text>');
+  });
+});

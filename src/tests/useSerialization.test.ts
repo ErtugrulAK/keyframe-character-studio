@@ -1756,4 +1756,81 @@ describe('useSerialization Hook', () => {
     expect(restored.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', inverted: false, enabled: true, feather: 0, strength: 0.5 });
     expect('gradient' in restored.matte).toBe(false);
   });
+
+  describe('M18 — text matte round-trip', () => {
+  const textTarget = (matte: any) => ({
+    id: 'tgt', type: 'custom_box', name: 'T', zIndex: 2,
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    fillColor: '#00ff00', strokeColor: '#101218',
+    matte,
+  });
+
+  function roundTripPart(part: any) {
+    const { result } = renderSerializationWithPart(part);
+    const exported = result.current.exportProject();
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported)).toBe(true);
+    return (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === part.id)!;
+  }
+
+  it('text matte round-trips: sourcePartId/mode/inverted/enabled/feather/strength/gradient all preserved', () => {
+    const restored = roundTripPart(textTarget({
+      sourcePartId: 'txt', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+      gradient: { angle: 45 },
+    }));
+    expect(restored.matte).toEqual({
+      sourcePartId: 'txt', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+      gradient: { angle: 45 },
+    });
+  });
+
+  it('NO text content / font render-data is serialized into the matte (runtime-only)', () => {
+    const restored = roundTripPart(textTarget({ sourcePartId: 'txt', mode: 'alpha' }));
+    const matteJson = JSON.stringify(restored.matte);
+    expect(matteJson).not.toContain('HELLO');
+    expect(matteJson).not.toContain('fontSize');
+    expect(matteJson).not.toContain('fontFamily');
+    expect(matteJson).not.toContain('textAnchor');
+    expect(matteJson).not.toContain('content');
+    // sourcePartId is the ONLY persistent link to the text source
+    expect(restored.matte.sourcePartId).toBe('txt');
+  });
+
+  it('gradient absent before → absent after; angle 360 canonical normalization stable', () => {
+    const plain = roundTripPart(textTarget({ sourcePartId: 'txt', mode: 'alpha' }));
+    expect('gradient' in plain.matte).toBe(false);
+    const canonical = roundTripPart(textTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 360 } }));
+    expect(canonical.matte.gradient).toEqual({ angle: 360 }); // pass-through raw
+    expect(normalizeGradientAngle(360)).toBe(0);              // render-side canonical (helper contract)
+  });
+
+  it('malformed gradient angle (NaN → JSON null) imports safely; render normalizes to 0', () => {
+    const part = textTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: NaN } });
+    const { result } = renderSerializationWithPart(part);
+    const exported = result.current.exportProject();
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported)).toBe(true);
+    const restored = (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === 'tgt')!;
+    expect(restored.matte.sourcePartId).toBe('txt');
+    expect(normalizeGradientAngle(restored.matte.gradient?.angle)).toBe(0);
+  });
+
+  it('M8: no TrackChannel/keyframe/runtime render-data enters serialization', () => {
+    const restored = roundTripPart(textTarget({ sourcePartId: 'txt', mode: 'luminance', inverted: true, gradient: { angle: 90 } }));
+    const json = JSON.stringify(restored);
+    expect(json).not.toContain('channel');
+    expect(json).not.toContain('keyframe');
+  });
+
+  it('backward compat: shape-source matte JSON imports unchanged (regression)', () => {
+    const shape = {
+      id: 'src', type: 'custom_star', name: 'S', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#ff0000', strokeColor: '#101218',
+      matte: { sourcePartId: 'tgt', mode: 'alpha', feather: 8, strength: 0.7 },
+    } as any;
+    const restored = roundTripPart(shape);
+    expect(restored.matte).toEqual({ sourcePartId: 'tgt', mode: 'alpha', feather: 8, strength: 0.7 });
+  });
+  });
 });

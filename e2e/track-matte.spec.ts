@@ -1079,3 +1079,267 @@ test.describe('M17 gradient matte — real browser pixel assertions', () => {
     expect(await page.evaluate(() => document.querySelectorAll('[mask="url(#kcs-mask-src-alpha-g45)"]').length)).toBe(2); // shared by 2 targets
   });
 });
+
+test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)', () => {
+  // Text source: HHH @80px bold Arial — solid crossbar band at y≈240 (4A
+  // fixture); explicit Arial keeps the pixel tests font-deterministic.
+  const textSource = (overrides: Record<string, unknown> = {}) =>
+    makeLayer('txt', 'Source', 'custom_text', { zIndex: 1, fillColor: '#ff0000', textValue: 'HHH', fontSize: 80, fontFamily: 'Arial', ...overrides });
+  // WIDE green target (scaleX 5 → world x∈(150,450)) so "outside the ink but
+  // inside the target" probes exist (ink band ≈ x∈(225,415) at y=240).
+  const wideTarget = (matte: Record<string, unknown>) =>
+    makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 5, scaleY: 3, matte });
+
+  const INK = { x0: 250, x1: 350, y0: 215, y1: 265 };
+
+  async function ready(page: Page) {
+    await page.evaluate(async () => { await (document as any).fonts.ready; });
+  }
+
+  async function maxGreen(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
+    let m = 0;
+    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) {
+      const px = await greenAtWorld(page, x, y);
+      if (px > m) m = px;
+    }
+    return m;
+  }
+
+  /** Min green over the box — the inverted text hole (black strokes exist). */
+  async function minGreen(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
+    let m = 255;
+    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) {
+      const px = await greenAtWorld(page, x, y);
+      if (px < m) m = px;
+    }
+    return m;
+  }
+
+  async function avgGreenWorld(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
+    let sum = 0, n = 0;
+    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) { sum += await greenAtWorld(page, x, y); n++; }
+    return sum / n;
+  }
+
+  async function greenAtWorld(page: Page, wx: number, wy: number): Promise<number> {
+    const buf = await page.screenshot();
+    const png = decodePng(buf);
+    const { x, y } = await page.evaluate(([a, b]: [number, number]) => {
+      const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
+      const pt = svg.createSVGPoint(); pt.x = a; pt.y = b;
+      const s = pt.matrixTransform(svg.getScreenCTM()!);
+      return { x: Math.round(s.x), y: Math.round(s.y) };
+    }, [wx, wy]);
+    return png.data[(y * png.width + x) * png.bpp + 1];
+  }
+
+  test('V-T1 — text alpha: glyph ink visible, outside-ink (inside target) dark', async ({ page }) => {
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha' })]);
+    await page.evaluate(async () => { await (document as any).fonts.ready; });
+    const ink = await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1);
+    expect(ink).toBeGreaterThan(150);           // crossbar ink
+    expect(await greenAtWorld(page, 165, 240)).toBeLessThan(45); // outside ink, inside target → hidden
+    expect(await greenAtWorld(page, 435, 240)).toBeLessThan(45);
+    // DOM: the mask content is a <text>, no path
+    expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha"] text')?.textContent)).toBe('HHH');
+    expect(await page.evaluate(() => document.querySelectorAll('mask[id="kcs-mask-txt-alpha"] path').length)).toBe(0);
+  });
+
+  test('V-T2 — text luminance: white text → luminance mask, outside masked', async ({ page }) => {
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'luminance' })]);
+    await ready(page);
+    expect(await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1)).toBeGreaterThan(150);
+    expect(await greenAtWorld(page, 165, 240)).toBeLessThan(45);
+    expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-luminance"]')?.getAttribute('mask-type'))).toBe('luminance');
+  });
+
+  test('V-T3 — inverted LUMINANCE text: white rect + black text → deterministic hole', async ({ page }) => {
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'luminance', inverted: true })]);
+    await ready(page);
+    const hole = await minGreen(page, INK.x0, INK.x1, INK.y0, INK.y1);
+    expect(hole).toBeLessThan(45); // black strokes punch the hole
+    expect(await greenAtWorld(page, 165, 240)).toBeGreaterThan(150); // rect visible outside ink
+    expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-luminance-inv"]')?.getAttribute('mask-type'))).toBe('luminance');
+  });
+
+  test('V-T3b — inverted ALPHA text falls back to the luminance structure (4A decision)', async ({ page }) => {
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', inverted: true })]);
+    await ready(page);
+    const hole = await minGreen(page, INK.x0, INK.x1, INK.y0, INK.y1);
+    expect(hole).toBeLessThan(45); // hole exists
+    expect(await greenAtWorld(page, 165, 240)).toBeGreaterThan(150); // rect visible outside ink
+    expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha-inv"]')?.getAttribute('mask-type'))).toBe('luminance');
+  });
+
+  test('V-T4 — text gradient: text fill=url with LOCAL endpoints → spatial ramp over the ink', async ({ page }) => {
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0 } })]);
+    await ready(page);
+    // Identity world → local endpoints ±100; ramp bright LEFT (x1=-100) → dark RIGHT
+    const left = await avgGreenWorld(page, 250, 280, 225, 255);
+    const right = await avgGreenWorld(page, 350, 380, 225, 255);
+    expect(left).toBeGreaterThan(right + 25);
+    expect(await page.evaluate(() => document.querySelector('linearGradient[id="kcs-mg-txt-0-alpha"]')?.getAttribute('x1'))).toBe('-100');
+  });
+
+  test('V-T5 — text + feather: filter bound, stdDeviation intact, ink preserved', async ({ page }) => {
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', feather: 12 })]);
+    await ready(page);
+    expect(await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1)).toBeGreaterThan(120);
+    expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha-f12"] text')?.getAttribute('filter'))).toContain('kcs-matte-feather-txt-alpha-f12');
+    expect(await page.evaluate(() => document.querySelector('feGaussianBlur')?.getAttribute('stdDeviation'))).toBe('6');
+  });
+
+  test('V-T6 — text + strength 0.5: ink strength approximately halved', async ({ page }) => {
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', strength: 0.5 })]);
+    await ready(page);
+    // NOTE: the app draws a cyan (#00d2ff) edit-mode center marker at the
+    // part's pivot (300,240) — probe the crossbar band BELOW it (y 243-258)
+    // for a clean 0.5-strength reading (crossbars ≈ 127).
+    const half = await maxGreen(page, 235, 278, 243, 258); // H1 crossbar — AWAY from the center marker (300,240)
+    const fo = await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha-s0.5"] text')?.getAttribute('fill-opacity'));
+    expect(half).toBeGreaterThan(45);
+    expect(half).toBeLessThan(160); // ≈127 not 255
+    expect(fo).toBe('0.5');
+  });
+
+  test('V-T7 — text + gradient + feather + strength combo: ramp survives, defs clean', async ({ page }) => {
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', feather: 12, strength: 0.5, gradient: { angle: 0 } })]);
+    await ready(page);
+    const left = await avgGreenWorld(page, 250, 280, 225, 255);
+    const right = await avgGreenWorld(page, 350, 380, 225, 255);
+    expect(left).toBeGreaterThan(right + 15); // ramp survives feather
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id^="kcs-mg-txt-"]').length)).toBe(1);
+    expect(await page.evaluate(() => document.querySelectorAll('feGaussianBlur').length)).toBe(1);
+  });
+
+  test('V-T8 — text rotation 90°: ink band rotates with the source', async ({ page }) => {
+    await seed(page, [textSource({ rotation: 90 }), wideTarget({ sourcePartId: 'txt', mode: 'alpha' })]);
+    await ready(page);
+    // Vertical scan at x=320 hits the rotated crossbar band
+    let m = 0;
+    for (let y = 170; y <= 310; y += 5) m = Math.max(m, await greenAtWorld(page, 320, y));
+    expect(m).toBeGreaterThan(150);
+    expect(await greenAtWorld(page, 320, 110)).toBeLessThan(45);
+    expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha"] g')?.getAttribute('transform'))).toContain('rotate(90)');
+  });
+
+  test('V-T9 — text scale 2×: ink stretches consistently (no stale bounds)', async ({ page }) => {
+    await seed(page, [textSource({ scaleX: 2 }), wideTarget({ sourcePartId: 'txt', mode: 'alpha' })]);
+    await ready(page);
+    // H crossbars at local centers ±64 → scaled to world 320±128 → 192/320/448;
+    // crossbar boxes around 192 and 448 must be inked
+    expect(await maxGreen(page, 185, 235, INK.y0, INK.y1)).toBeGreaterThan(120);
+    expect(await maxGreen(page, 405, 455, INK.y0, INK.y1)).toBeGreaterThan(120);
+  });
+
+  test('V-T10 — negative scale (scaleX -1): text mirrors, no NaN/Inf, ink present', async ({ page }) => {
+    await seed(page, [textSource({ scaleX: -1 }), wideTarget({ sourcePartId: 'txt', mode: 'alpha' })]);
+    await ready(page);
+    expect(await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1)).toBeGreaterThan(150); // H2 at center
+    const t = await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha"] g')?.getAttribute('transform'));
+    expect(t).toContain('scale(-1, 1)');
+    expect(t).not.toContain('NaN');
+    expect(t).not.toContain('Infinity');
+  });
+
+  test('V-T11 — animated text source: the mask <g> transform follows (no stale position)', async ({ page }) => {
+    const tracks = [
+      {
+        id: 't_txt', partId: 'txt', name: 'Source',
+        channels: {
+          x: [
+            { id: 'k1', frame: 0, value: 0, easing: 'linear' },
+            { id: 'k2', frame: 60, value: 120, easing: 'linear' },
+          ],
+        },
+      },
+    ];
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha' })], tracks);
+    await ready(page);
+    const g0 = await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha"] g')?.getAttribute('transform'));
+    await page.getByTitle('Play', { exact: true }).click();
+    await page.waitForTimeout(1800);
+    await page.getByTitle('Pause', { exact: true }).click();
+    const g1 = await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha"] g')?.getAttribute('transform'));
+    expect(g0).toContain('translate(300, 240)');
+    expect(g1).not.toBe(g0); // transform recomputed per frame — no stale bake
+    expect(parseFloat(g1!.match(/translate\(([\d.]+)/)![1])).toBeGreaterThan(390); // moved right (+120)
+  });
+
+  test('V-T12 — dedupe: two targets + same text source → ONE mask def, two references', async ({ page }) => {
+    await seed(page, [
+      textSource(),
+      wideTarget({ sourcePartId: 'txt', mode: 'alpha' }),
+      makeLayer('tgt2', 'Target2', 'custom_circle', { zIndex: 3, fillColor: '#00ff00', scaleX: 5, scaleY: 3, matte: { sourcePartId: 'txt', mode: 'alpha' } }),
+    ]);
+    await ready(page);
+    expect(await page.evaluate(() => document.querySelectorAll('mask[id="kcs-mask-txt-alpha"]').length)).toBe(1);
+    expect(await page.evaluate(() => document.querySelectorAll('[mask="url(#kcs-mask-txt-alpha)"]').length)).toBe(2);
+  });
+
+  test('V-T13 — text + clip policy: no clipPath ever created for a text source', async ({ page }) => {
+    // legacy invalid state: mode clip + text source — renderer must NOT emit a
+    // clip. A shape-matte pair rides along so the seed readiness (kcs- defs)
+    // resolves — the text+clip part itself produces NOTHING.
+    await seed(page, [
+      textSource(),
+      makeLayer('shp', 'Shape', 'custom_star', { zIndex: 1, fillColor: '#ff0000' }),
+      makeLayer('shapeTarget', 'ShapeTarget', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', matte: { sourcePartId: 'shp', mode: 'alpha' } }),
+      wideTarget({ sourcePartId: 'txt', mode: 'clip' }),
+    ]);
+    await ready(page);
+    // NO MATTE clipPath (kcs-clip-*) for a text source — the app's own
+    // artboard clip (broadcast mode) may exist and must not count.
+    expect(await page.evaluate(() => document.querySelectorAll('clipPath[id^="kcs-clip-"]').length)).toBe(0);
+    expect(await page.evaluate(() => document.querySelectorAll('mask[id^="kcs-mask-txt"]').length)).toBe(0);
+    // UI-level: the Clip OPTION is disabled — covered by styleMatteSection tests (4D)
+  });
+
+  test('V-T15 — text gradient + rotation: local endpoints recompute with the rotated transform', async ({ page }) => {
+    await seed(page, [textSource({ rotation: 90 }), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0 } })]);
+    await ready(page);
+    // Ramp must be VISIBLE (ink strong on the bright side) and the def endpoints
+    // reflect the rotated local space (y-axis aligned: y1/y2 differ from 0)
+    expect(await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1)).toBeGreaterThan(60);
+    const eps = await page.evaluate(() => {
+      const g = document.querySelector('linearGradient[id="kcs-mg-txt-0-alpha"]');
+      return { y1: g?.getAttribute('y1'), y2: g?.getAttribute('y2') };
+    });
+    expect(parseFloat(eps.y1!) - parseFloat(eps.y2!)).not.toBe(0); // rotated: vertical span ≠ 0
+  });
+
+  test('V-T16 — text gradient + scale 2×: ramp stretches with the scaled ink (local endpoints stay canonical)', async ({ page }) => {
+    await seed(page, [textSource({ scaleX: 2 }), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0 } })]);
+    await ready(page);
+    // Local endpoints stay ±100 (the def is expressed in the source's local
+    // space; the g scale stretches the visual ramp) — bright LEFT, dark RIGHT
+    const left = await avgGreenWorld(page, 170, 215, 225, 255);
+    const right = await avgGreenWorld(page, 425, 470, 225, 255);
+    expect(left).toBeGreaterThan(right + 20);
+    expect(await page.evaluate(() => document.querySelector('linearGradient[id="kcs-mg-txt-0-alpha"]')?.getAttribute('x1'))).toBe('-100');
+  });
+
+  test('V-T17 — import/reload parity: text matte pixels identical after the real autosave/reload path', async ({ page }) => {
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', feather: 6, strength: 0.7, gradient: { angle: 0 } })]);
+    await ready(page);
+    const before = [await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1), await greenAtWorld(page, 165, 240)];
+    await page.waitForFunction(() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+        return (s.layers ?? []).find((x: any) => x.id === 'tgt')?.matte?.sourcePartId === 'txt';
+      } catch { return false; }
+    }, undefined, { timeout: 10000 });
+    const autosaved = await page.evaluate(() => JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!));
+    expect(autosaved.layers.find((l: any) => l.id === 'tgt').matte).toMatchObject({
+      sourcePartId: 'txt', mode: 'alpha', feather: 6, strength: 0.7, gradient: { angle: 0 },
+    });
+    expect(JSON.stringify(autosaved.layers.find((l: any) => l.id === 'tgt').matte)).not.toContain('fontSize'); // runtime data NOT persisted
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
+    await ready(page);
+    const after = [await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1), await greenAtWorld(page, 165, 240)];
+    expect(after[0]).toBe(before[0]); // exact pixel parity through the real import
+    expect(after[1]).toBe(before[1]);
+    expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha-f6-s0.7-g0"] text')?.textContent)).toBe('HHH');
+  });
+});

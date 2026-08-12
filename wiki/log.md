@@ -93,3 +93,24 @@
 - Baseline: 518/518 vitest + 47/47 track-matte playwright; full suite tek fail:
   workflow.spec.ts:88 ölü container testi (M17 dışı)
 - Updated: entities/keyframe-character-studio.md, skills/keyframe-studio/kcs-track-matte (v5.0.0), README.md
+
+## [2026-08-12] update | KCS — M18 Text Track Matte (iş PC)
+- M18 ✅ COMPLETE (4A-4F) — **COMMIT/PUSH YAPILMADI** (onay bekliyor)
+- 4A: browser spike — text part matte source; mask content `<text>` Chromium kanıtı; kritik
+  bulgular: inverted alpha+text → luminance yapısı zorunlu (alpha mask 2. elemanı ignore);
+  gradient text lokal uzayda çözülüyor → lokal endpoint kararı; font determinizm
+  (fonts.ready + HHH/80px) — **13/13 ×2 spike** (17.5s/17.1s)
+- 4B: data/pure — isMatteEligible(custom_text), MatteMask.text render-data (pathD null),
+  textMaskContent/buildMatteTextMask/worldToLocal/gradientEndpointsLocal;
+  buildMattePath text→null korundu; **533/533 + 47/47 ×2**
+- 4C: render — StagePartLayers text content branch (transform bake her frame; inverted→luminance;
+  gradient lokal; feather/strength; dedupe; clip yok); **543/543 + 51/51 ×2**
+- 4D: UI — text listede; text+clip option disabled + not; field preservation; local state yok;
+  **552/552 + 51/51 ×2**
+- 4E: serialization (runtime text data persist edilmez; sourcePartId tek bağlantı;
+  useSerialization değişmedi) + V-T1..V-T17 tam pixel matrisi (import-reload EXACT parity);
+  **558/558 + 64/64 ×2 deterministik**
+- 4F: docs — SKILL v6.0.0 (M18 bölümü + deferred güncellemesi), wiki entity/log, README;
+  final audit: 8 korumalı dosya untouched, ikinci geometry sistemi yok, M8 korundu
+- Full suite: **66 passed / 1 failed** — tek fail workflow.spec.ts:88 ölü container (M18 dışı)
+- Commit/push: YOK (HEAD hâlâ `1f6c7ba` — M17)

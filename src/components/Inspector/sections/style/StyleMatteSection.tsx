@@ -48,6 +48,16 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
 
   const sourceMissing = !!matte && !characterParts.some((p) => p.id === matte.sourcePartId);
 
+  // M18 — text sources have NO path geometry, so Clip is not a valid mode for
+  // them (buildMattePath → null; the renderer ignores text+clip). The Clip
+  // option is disabled at the UI level while a text source is selected — no
+  // renderer fallback, no new eligibility logic (isMatteEligible stays the
+  // single authority for the source LIST).
+  const selectedSourceType = matte && !sourceMissing
+    ? characterParts.find((p) => p.id === matte.sourcePartId)?.type
+    : undefined;
+  const sourceIsText = selectedSourceType === 'custom_text';
+
   const setMatte = (next: PartMatte | undefined) => {
     onPartPropChange('matte', next);
   };
@@ -170,10 +180,15 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 value={modeValue}
                 onChange={(e) => onChangeMode(e.target.value as MatteMode)}
               >
-                <option value="clip">Clip</option>
+                <option value="clip" disabled={sourceIsText}>Clip</option>
                 <option value="alpha">Alpha</option>
                 <option value="luminance">Luminance</option>
               </select>
+              {sourceIsText && modeValue === 'clip' && (
+                <div style={{ marginTop: 6, fontSize: 11, color: '#f59e0b' }}>
+                  Text sources require Alpha or Luminance mode — Clip is not supported.
+                </div>
+              )}
             </div>
 
             <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>

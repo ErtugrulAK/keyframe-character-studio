@@ -14,18 +14,22 @@ import {
   buildMattePath,
   buildMatteClipPath,
   buildMatteMaskFromPath,
+  buildMatteTextMask,
   normalizeFeather,
   normalizeStrength,
   normalizeGradientAngle,
   gradientId,
   gradientEndpoints,
+  gradientEndpointsLocal,
   getDefaultGradientStops,
+  textMaskContent,
   matteClipPathId,
   matteMaskId,
   isMatteActive,
   resolveMatteMode,
 } from '../../utils/matte';
 import type { MatteClipPath, MatteMask, MatteGradientStop } from '../../utils/matte';
+import type { WorldTransform } from '../../types/composition';
 import { CANVAS_CENTER } from '../../utils/constants';
 
 interface StagePartLayersProps {
@@ -139,6 +143,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   // kcs-mg-{sourceId}-{normalizedAngle}-{mode} (mode is part of the identity:
   // alpha/luminance use different default stops).
   const matteGradients = new Map<string, { id: string; x1: number; y1: number; x2: number; y2: number; stops: MatteGradientStop[] }>();
+  // M18 — text masks carry NO path geometry; the mask content is a
+  // transform-baked <text>. The source's evaluated world transform is stored
+  // per mask id (render-only, recomputed every frame — never stale).
+  const textTransforms = new Map<string, WorldTransform>();
   for (const layer of sortedParts) {
     if (!layer.matte || !isMatteActive(layer.matte)) continue;
     const source = sortedParts.find((p) => p.id === layer.matte!.sourcePartId);
@@ -176,31 +184,54 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     const maskId = `${baseMaskId}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${gradientAngle !== undefined ? `-g${gradientAngle}` : ''}`;
     if (matteMasks.has(maskId)) continue; // same (source, mode, inverted, feather, strength, gradient) already built
 
-    let pathD = maskPathCache.get(source.id);
-    if (pathD === undefined) {
-      pathD = buildMattePath(source, sourceEl.transform) ?? undefined;
-      if (pathD === undefined) continue;
-      maskPathCache.set(source.id, pathD);
+    // M18 — TEXT source: buildMattePath stays null (text has NO path
+    // geometry). The glyphs become the mask CONTENT element; content/fonts
+    // are read from the source at runtime (never persisted — sourcePartId is
+    // the only persistent link).
+    let mask: MatteMask;
+    if (source.type === 'custom_text') {
+      const content = textMaskContent(source);
+      if (!content) continue;
+      mask = buildMatteTextMask(
+        source.id, content, mode, inverted,
+        feather > 0 ? feather : undefined,
+        strength < 1 ? strength : undefined,
+      );
+    } else {
+      let pathD = maskPathCache.get(source.id);
+      if (pathD === undefined) {
+        pathD = buildMattePath(source, sourceEl.transform) ?? undefined;
+        if (pathD === undefined) continue;
+        maskPathCache.set(source.id, pathD);
+      }
+      const fillColor = sourceEl.content.fillColor ?? source.fillColor ?? '#ffffff';
+      mask = buildMatteMaskFromPath(
+        source.id, pathD, mode, inverted, fillColor,
+        feather > 0 ? feather : undefined,
+        strength < 1 ? strength : undefined,
+      );
     }
-    const fillColor = sourceEl.content.fillColor ?? source.fillColor ?? '#ffffff';
-    const mask = buildMatteMaskFromPath(
-      source.id, pathD, mode, inverted, fillColor,
-      feather > 0 ? feather : undefined,
-      strength < 1 ? strength : undefined,
-    );
-    if (!mask) continue;
 
     // M17 — build (or reuse) the world-space <linearGradient> def. The mode is
     // part of the def identity: alpha and luminance masks use DIFFERENT
     // default stops, so the same (source, angle) across modes must NOT share
     // one def. Endpoints follow the source's evaluated world transform.
+    // M18 — TEXT sources: (a) inverted text always renders the LUMINANCE
+    // structure (4A: alpha masks ignore a second element — white rect + black
+    // text, mask-type luminance), so the def key/stops follow that structure;
+    // (b) the def coords are the source-LOCAL endpoints (a gradient referenced
+    // from a <text> inside a transformed <g> resolves in the text's local
+    // space — 4A pixel-verified) via gradientEndpointsLocal.
     let maskGradientId: string | undefined;
     if (gradientAngle !== undefined) {
-      const gradId = `${gradientId(source.id, { angle: gradientAngle })!}-${mode}`;
+      const structure = source.type === 'custom_text' && inverted ? 'luminance' : mode;
+      const gradId = `${gradientId(source.id, { angle: gradientAngle })!}-${structure}`;
       if (!matteGradients.has(gradId)) {
-        const eps = gradientEndpoints(source, sourceEl.transform, gradientAngle);
+        const eps = source.type === 'custom_text'
+          ? gradientEndpointsLocal(source, sourceEl.transform, gradientAngle)
+          : gradientEndpoints(source, sourceEl.transform, gradientAngle);
         if (eps) {
-          matteGradients.set(gradId, { id: gradId, ...eps, stops: getDefaultGradientStops(mode) });
+          matteGradients.set(gradId, { id: gradId, ...eps, stops: getDefaultGradientStops(structure) });
           maskGradientId = gradId;
         }
       } else {
@@ -213,6 +244,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       id: maskId,
       ...(maskGradientId ? { gradientId: maskGradientId } : {}),
     });
+    if (mask.text) textTransforms.set(maskId, sourceEl.transform);
   }
 
   const matteAttrFor = (part: CharacterPart): { clipId?: string; maskId?: string } => {
@@ -251,6 +283,35 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   const featherFilterId = (maskId: string) => `kcs-matte-feather-${maskId.slice('kcs-mask-'.length)}`;
   const featherUrl = (mask: MatteMask): string | undefined =>
     (mask.feather ?? 0) > 0 ? `url(#${featherFilterId(mask.id)})` : undefined;
+
+  // M18 — the TEXT mask content: a <text> element baked through the SAME
+  // transform math the app's text renderer uses (PartRenderer inner <g>:
+  // translate(CX+tx, CY+ty) rotate(r) scale(sx,sy); x=0/y=0 middle/middle
+  // anchor). The evaluated world transform comes from evaluatedFrame — the
+  // same pipeline that drives the geometry sources, so parent composition /
+  // animation / negative scale are all preserved. Content/fonts live on the
+  // source part (read at runtime via textMaskContent — never duplicated here).
+  const renderTextMaskContent = (mask: MatteMask, t: WorldTransform): React.ReactNode => {
+    if (!mask.text) return null;
+    return (
+      <g transform={`translate(${CANVAS_CENTER.x + t.x}, ${CANVAS_CENTER.y + t.y}) rotate(${t.rotation}) scale(${t.scaleX}, ${t.scaleY})`}>
+        <text
+          x={0}
+          y={0}
+          textAnchor={mask.text.textAnchor}
+          dominantBaseline={mask.text.dominantBaseline}
+          fontSize={mask.text.fontSize}
+          fontWeight={mask.text.fontWeight}
+          fontFamily={mask.text.fontFamily}
+          fill={mask.gradientId ? `url(#${mask.gradientId})` : mask.fill}
+          fillOpacity={mask.strength}
+          filter={featherUrl(mask)}
+        >
+          {mask.text.content}
+        </text>
+      </g>
+    );
+  };
 
   return (
     <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
@@ -300,9 +361,21 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             id={mask.id}
             maskUnits="userSpaceOnUse"
             maskContentUnits="userSpaceOnUse"
-            mask-type={mask.mode}
+            // M18 — inverted TEXT always renders the luminance structure
+            // (4A decision: alpha masks ignore a second element — a white
+            // rect + black text hole only works as a luminance mask).
+            mask-type={mask.text && mask.inverted ? 'luminance' : mask.mode}
           >
-            {mask.inverted ? (
+            {mask.text ? (
+              mask.inverted ? (
+                <>
+                  <rect x={region.x} y={region.y} width={region.width} height={region.height} fill={mask.gradientId ? `url(#${mask.gradientId})` : 'white'} fillOpacity={mask.strength} />
+                  {renderTextMaskContent(mask, textTransforms.get(mask.id)!)}
+                </>
+              ) : (
+                renderTextMaskContent(mask, textTransforms.get(mask.id)!)
+              )
+            ) : mask.inverted ? (
               mask.mode === 'alpha' ? (
                 // H fix (pixel-verified): in Chromium, an ALPHA mask that
                 // combines a region rect with a second geometry element never
@@ -321,11 +394,11 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
               ) : (
                 <>
                   <rect x={region.x} y={region.y} width={region.width} height={region.height} fill={mask.gradientId ? `url(#${mask.gradientId})` : 'white'} fillOpacity={mask.strength} />
-                  <path d={mask.pathD} fill="black" fillOpacity={mask.strength} filter={featherUrl(mask)} />
+                  <path d={mask.pathD ?? undefined} fill="black" fillOpacity={mask.strength} filter={featherUrl(mask)} />
                 </>
               )
             ) : (
-              <path d={mask.pathD} fill={mask.gradientId ? `url(#${mask.gradientId})` : mask.fill} fillOpacity={mask.strength} filter={featherUrl(mask)} />
+              <path d={mask.pathD ?? undefined} fill={mask.gradientId ? `url(#${mask.gradientId})` : mask.fill} fillOpacity={mask.strength} filter={featherUrl(mask)} />
             )}
           </mask>
         ))}

@@ -87,11 +87,13 @@ function freeformWorldPathD(
 }
 
 /** M15 — whether a part can be a matte source: static shape geometry OR a
- *  freeform polygon (custom_freeform → CharacterPart.points). Text/image/
- *  video and other non-geometric types are not eligible. */
+ *  freeform polygon (custom_freeform → CharacterPart.points) OR a text part
+ *  (M18 — the glyphs become the mask CONTENT element, no path geometry).
+ *  Text/image/video and other non-geometric types are not eligible. */
 export function isMatteEligible(part: { type: string } | undefined): boolean {
   if (!part) return false;
   if (part.type === 'custom_freeform') return true;
+  if (part.type === 'custom_text') return true;
   return getShapeGeometry(part.type as BodyPartType) !== null;
 }
 
@@ -121,7 +123,10 @@ export interface MatteMask {
   id: string;
   mode: Exclude<MatteMode, 'clip'>;
   inverted: boolean;
-  pathD: string;
+  /** World-space matte contour. NULL only for M18 text masks (text has NO
+   *  path geometry — buildMattePath stays null; the glyphs are the mask
+   *  content via `text`). */
+  pathD: string | null;
   /** Fill for the geometry path: 'white' for alpha masks, the source's
    *  evaluated fillColor for luminance masks. */
   fill: string;
@@ -136,6 +141,12 @@ export interface MatteMask {
    *  mask content fill (url(#id)). Absent = legacy solid fill. Render only —
    *  NEVER geometry. */
   gradientId?: string;
+  /** M18: text mask content — present ONLY for custom_text sources (pathD is
+   *  then null). The glyphs are rendered as a transform-baked <text> element
+   *  inside the mask (the app's text renderer semantics). Render-only data —
+   *  NEVER serialized into PartMatte (content/fonts live on the source part
+   *  and are read at runtime). */
+  text?: MatteTextContent | null;
 }
 
 /**
@@ -191,6 +202,106 @@ export function gradientId(sourcePartId: string, gradient: { angle: number } | u
   return `kcs-mg-${sourcePartId}-${angle}`;
 }
 
+// ─── M18: text matte — pure data (mask content element, NOT geometry) ──────
+
+/** M18 — render-only text mask content, mapped from the SOURCE part's runtime
+ *  fields (mirrors TextAndClonerRenderers exactly: `textValue || 'TEXT'`,
+ *  `fontSize || 24`, hardcoded bold, `fontFamily || 'Outfit'`, centered at the
+ *  local origin with middle/middle anchor). No new persistent fields — the
+ *  source part stays the single source of truth. */
+export interface MatteTextContent {
+  content: string;
+  fontSize: number;
+  fontWeight: string;
+  fontFamily: string;
+  textAnchor: 'middle';
+  dominantBaseline: 'middle';
+  x: 0;
+  y: 0;
+}
+
+export function textMaskContent(
+  sourcePart: Pick<CharacterPart, 'textValue' | 'fontSize' | 'fontFamily'> | undefined,
+): MatteTextContent | undefined {
+  if (!sourcePart) return undefined;
+  return {
+    content: sourcePart.textValue || 'TEXT',
+    fontSize: sourcePart.fontSize || 24,
+    fontWeight: 'bold',
+    fontFamily: sourcePart.fontFamily || 'Outfit',
+    textAnchor: 'middle',
+    dominantBaseline: 'middle',
+    x: 0,
+    y: 0,
+  };
+}
+
+/** M18 — build the render-data MatteMask for a TEXT source. pathD is null
+ *  (text has no path geometry — buildMattePath stays untouched); the glyphs
+ *  are the mask content via `text`. `fill` carries the TEXT fill: 'white'
+ *  (normal) or 'black' (inverted — 4A decision: inverted text ALWAYS uses the
+ *  luminance structure: white region rect + black text, mask-type luminance). */
+export function buildMatteTextMask(
+  sourcePartId: string,
+  content: MatteTextContent,
+  mode: Exclude<MatteMode, 'clip'>,
+  inverted: boolean,
+  feather?: number,
+  strength?: number,
+): MatteMask {
+  return {
+    id: matteMaskId(sourcePartId, mode, inverted),
+    mode,
+    inverted,
+    pathD: null,
+    fill: inverted ? 'black' : 'white',
+    text: content,
+    ...(feather !== undefined ? { feather } : {}),
+    ...(strength !== undefined ? { strength } : {}),
+  };
+}
+
+/** M18 — inverse of the matte world transform (applyWorld). Pure point
+ *  conversion for the TEXT mask branch: the gradient def endpoints are
+ *  produced in world space by the M17 helper, then converted to the text
+ *  source's LOCAL space because a gradient referenced from a <text> inside a
+ *  transformed <g> resolves in that local space (4A pixel-verified). This is
+ *  a two-point coordinate conversion — NEVER a geometry system. Zero scale
+ *  (degenerate/collapsed source) → treated as 1 (deterministic, NaN-free —
+ *  the source is invisible anyway). */
+export function worldToLocal(
+  p: { x: number; y: number },
+  w: WorldTransform,
+): { x: number; y: number } {
+  const rad = ((w.rotation ?? 0) * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const sx = w.scaleX === 0 ? 1 : (w.scaleX ?? 1);
+  const sy = w.scaleY === 0 ? 1 : (w.scaleY ?? 1);
+  const dx = p.x - (CANVAS_CENTER.x + (w.x ?? 0));
+  const dy = p.y - (CANVAS_CENTER.y + (w.y ?? 0));
+  return {
+    x: (dx * cos + dy * sin) / sx,
+    y: (-dx * sin + dy * cos) / sy,
+  };
+}
+
+/** M18 — local-space gradient endpoints for a TEXT source: the M17
+ *  world-space endpoints (source local bbox + angle → applyWorld) converted
+ *  through the inverse transform. The renderer feeds these into the def the
+ *  text branch references (the reference resolves in the text's local space). */
+export function gradientEndpointsLocal(
+  sourcePart: Pick<CharacterPart, 'type' | 'points'>,
+  world: WorldTransform,
+  angle: number,
+): MatteGradientEndpoints | undefined {
+  const worldEps = gradientEndpoints(sourcePart, world, angle);
+  if (!worldEps) return undefined;
+  const p1 = worldToLocal({ x: worldEps.x1, y: worldEps.y1 }, world);
+  const p2 = worldToLocal({ x: worldEps.x2, y: worldEps.y2 }, world);
+  return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
+}
+
 /**
  * M17 — Normalize a gradient object: undefined stays undefined (legacy
  * projects remain gradient-free); a present object gets a safe angle
@@ -244,6 +355,16 @@ export interface MatteGradientEndpoints {
  *
  * Only TWO points are ever transformed. Pure; no cache.
  */
+/** M18 — canonical LOCAL bounds for a text source's gradient span (a typical
+ *  text line: 200×60, centered at the local origin). Text has no geometry
+ *  bbox — this deterministic default keeps the M17 endpoint math uniform. */
+const TEXT_GRADIENT_BOX_POINTS: { x: number; y: number }[] = [
+  { x: -100, y: -30 },
+  { x: 100, y: -30 },
+  { x: -100, y: 30 },
+  { x: 100, y: 30 },
+];
+
 export function gradientEndpoints(
   sourcePart: Pick<CharacterPart, 'type' | 'points'>,
   world: WorldTransform,
@@ -252,10 +373,15 @@ export function gradientEndpoints(
   // Local bounds from the SAME geometry the matte path uses — shapeGeometry
   // for static shapes, CharacterPart.points for freeform. Never a second
   // geometry system: only the bbox (2 endpoint points) is derived.
+  // M18: custom_text has NO geometry (buildMattePath → null) — the gradient
+  // span falls back to a canonical default local box (a typical text line),
+  // so the paint effect is well-defined for text sources too.
   const geo = sourcePart.type === 'custom_freeform' ? undefined : getShapeGeometry(sourcePart.type as BodyPartType);
   const pts = sourcePart.type === 'custom_freeform'
     ? sourcePart.points
-    : geo
+    : sourcePart.type === 'custom_text'
+      ? TEXT_GRADIENT_BOX_POINTS
+      : geo
       ? geo.kind === 'polygon'
         ? geo.points
         : geo.kind === 'rect'

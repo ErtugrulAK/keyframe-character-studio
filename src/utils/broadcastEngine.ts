@@ -1,5 +1,36 @@
 import type { CharacterPart, CustomMotionPreset, LiveStuntType, BroadcastObjectState } from '../types/animator';
 
+/**
+ * BUGFIX (broadcast sequence switching): reconcile broadcastState with the
+ * current part list. Parts that no longer exist are dropped (no playback
+ * state leaks from a previously selected sequence) and NEW parts start
+ * animating in. Parts that keep their id keep their state (visible /
+ * animating_in progress continues). Pure + deterministic; returns the SAME
+ * reference when nothing changed (stable for React state).
+ */
+export const syncBroadcastParts = (
+  prev: Record<string, BroadcastObjectState>,
+  parts: CharacterPart[],
+): Record<string, BroadcastObjectState> => {
+  const existing = new Set(Object.keys(prev));
+  const next: Record<string, BroadcastObjectState> = {};
+  let changed = false;
+  for (const [id, st] of Object.entries(prev)) {
+    if (parts.some((p) => p.id === id)) {
+      next[id] = st;
+    } else {
+      changed = true; // stale state from a previous sequence
+    }
+  }
+  for (const p of parts) {
+    if (!existing.has(p.id)) {
+      next[p.id] = { state: 'animating_in', progress: 0 };
+      changed = true;
+    }
+  }
+  return changed ? next : prev;
+};
+
 export const tickLiveStuntsState = (
   prevState: Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>,
   dtMs: number,

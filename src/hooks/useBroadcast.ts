@@ -1,10 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { AppMode, BroadcastObjectState, LiveStuntType, CustomMotionPreset, CharacterPart, Track } from '../types/animator';
-import { tickLiveStuntsState, tickBroadcastState } from '../utils/broadcastEngine';
+import { tickLiveStuntsState, tickBroadcastState, syncBroadcastParts } from '../utils/broadcastEngine';
 
 interface UseBroadcastOptions {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   setCurrentFrame: React.Dispatch<React.SetStateAction<number>> | ((frame: number | ((prev: number) => number)) => void);
+  characterParts: CharacterPart[];
   tracksRef: React.MutableRefObject<Track[]>;
   characterPartsRef: React.MutableRefObject<CharacterPart[]>;
   customPresetsRef: React.MutableRefObject<CustomMotionPreset[]>;
@@ -15,6 +16,7 @@ interface UseBroadcastOptions {
 export const useBroadcast = ({
   setIsPlaying,
   setCurrentFrame,
+  characterParts,
   tracksRef,
   characterPartsRef,
   customPresetsRef,
@@ -32,6 +34,18 @@ export const useBroadcast = ({
       setBroadcastState({});
     }
   }, [appMode]);
+
+  // BUGFIX: broadcast sequence switching is driven by broadcastState, NOT by
+  // the edit-timeline playback. When the part list changes while in broadcast
+  // mode (e.g. selecting another sequence/template), (a) parts that no longer
+  // exist are dropped from the state (no state leak from the previous
+  // sequence) and (b) NEW parts start animating in. The edit playback state
+  // (currentFrame/isPlaying) is left untouched — selecting a sequence never
+  // behaves like pressing Play in the edit timeline.
+  useEffect(() => {
+    if (appMode !== 'broadcast') return;
+    setBroadcastState((prev) => syncBroadcastParts(prev, characterParts));
+  }, [appMode, characterParts]);
 
   const resetBroadcastState = useCallback(() => {
     setBroadcastState({});

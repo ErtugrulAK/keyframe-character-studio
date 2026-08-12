@@ -230,6 +230,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   } = useBroadcast({
     setIsPlaying,
     setCurrentFrame,
+    characterParts,
     tracksRef,
     characterPartsRef,
     customPresetsRef,

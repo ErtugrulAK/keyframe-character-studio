@@ -32,6 +32,7 @@ describe('useBroadcast Hook', () => {
       setIsPlaying: mockSetIsPlaying,
       setCurrentFrame: mockSetCurrentFrame,
       tracksRef: { current: [] },
+      characterParts: [],
       characterPartsRef: { current: [] },
       customPresetsRef: { current: [] },
       fpsRef: { current: 30 }
@@ -47,6 +48,7 @@ describe('useBroadcast Hook', () => {
       setIsPlaying: mockSetIsPlaying,
       setCurrentFrame: mockSetCurrentFrame,
       tracksRef: { current: [] },
+      characterParts: [],
       characterPartsRef: { current: [] },
       customPresetsRef: { current: [] },
       fpsRef: { current: 30 }
@@ -67,6 +69,7 @@ describe('useBroadcast Hook', () => {
       setIsPlaying: mockSetIsPlaying,
       setCurrentFrame: mockSetCurrentFrame,
       tracksRef: { current: [] },
+      characterParts: mockParts,
       characterPartsRef: { current: mockParts },
       customPresetsRef: { current: [] },
       fpsRef: { current: 30 }
@@ -99,6 +102,7 @@ describe('useBroadcast Hook', () => {
       setIsPlaying: mockSetIsPlaying,
       setCurrentFrame: mockSetCurrentFrame,
       tracksRef: { current: mockTracks },
+      characterParts: mockParts,
       characterPartsRef: { current: mockParts },
       customPresetsRef: { current: [] },
       fpsRef: { current: 30 }

@@ -127,6 +127,21 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
             </div>
           );
         })}
+        {/* BUGFIX: canonical (channel-based) tracks show the SAME horizontal
+            connecting trajectory line on the parent lane as the channel lanes
+            do — frame-group diamonds at different frames now display the
+            interpolation connection that actually exists at runtime (M6
+            frame-group model; legacy tracks keep the span bars above). */}
+        {useCanonical && groups.length > 1 && (
+          <div
+            className="ue-trajectory-line"
+            style={{
+              left: `${groups[0].frame * frameWidth}px`,
+              width: `${(groups[groups.length - 1].frame - groups[0].frame) * frameWidth}px`,
+              backgroundColor: track.color,
+            }}
+          />
+        )}
         {/* M6: canonical frame-group diamonds (one per frame, channel info in hover/title) */}
         {useCanonical ? groups.map((group) => {
           const representativeId = group.keyframes[group.channels[0]].id;

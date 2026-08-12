@@ -46,15 +46,20 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
 
   const handleBlur = () => {
     setIsFocused(false);
+    // BUGFIX: every keystroke already commits via handleChange, so blur must
+    // NOT re-commit `editingValue`. Re-committing here leaked the OLD
+    // selection's value into the NEW selection: when the user typed a value,
+    // then clicked another object, the browser fires mousedown (selection
+    // change, React re-renders with the new selectedPartId) BEFORE the input
+    // blur event — handleBlur then wrote the old editingValue into the NEW
+    // object's transform (e.g. object A y=6 leaked into object B's y).
+    // Blur only re-syncs the local display string to the committed prop.
     let parsed = parseFloat(editingValue);
     if (isNaN(parsed)) {
       setEditingValue(String(displayVal));
     } else {
-      if (min !== undefined) parsed = Math.max(min, parsed);
-      if (max !== undefined) parsed = Math.min(max, parsed);
       const rounded = Math.round(parsed * Math.pow(10, decimals)) / Math.pow(10, decimals);
       setEditingValue(String(rounded));
-      onChange(rounded / scale);
     }
   };
 

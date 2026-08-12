@@ -505,6 +505,7 @@ export const SequencerTimeline: React.FC = () => {
                 <TrackOutlinerRow
                   key={track.id}
                   track={track}
+                  parts={characterParts}
                   isChildLayer={isChildLayer}
                   isSelected={selectedPartIds?.includes(track.partId)}
                   editingPartId={editingPartId}

@@ -1,10 +1,14 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, Diamond, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
-import type { Track, TrackChannel } from '../../types/animator';
+import type { CharacterPart, Track, TrackChannel } from '../../types/animator';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 
 interface TrackOutlinerRowProps {
   track: Track;
+  /** BUGFIX: parts resolve the real element name — the track only carries
+   *  partId (track.name may be a generated "Track part_x" placeholder after
+   *  import, since the name field is not serialized). */
+  parts: CharacterPart[];
   isChildLayer: boolean;
   isSelected: boolean;
   editingPartId: string | null;
@@ -33,6 +37,7 @@ interface TrackOutlinerRowProps {
  */
 export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   track,
+  parts,
   isChildLayer,
   isSelected,
   editingPartId,
@@ -54,6 +59,11 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   isGroupExpanded,
   onToggleSubGroup,
 }) => {
+  // BUGFIX: the timeline label must reflect the REAL element name. The track
+  // only carries partId (track.name is not serialized — after import it is a
+  // generated "Track part_x" placeholder). Resolve from the part; fall back
+  // to the track name only when the part is missing.
+  const displayName = parts.find((p) => p.id === track.partId)?.name ?? track.name;
   const isTrackExpanded = track.expanded === true;
   const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
   const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
@@ -147,7 +157,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
             }}
             title="Double-click to rename layer"
           >
-            {track.name}
+            {displayName}
           </span>
         )}
 

@@ -194,12 +194,114 @@ export function normalizeGradientAngle(value: number | undefined): number | unde
  * M17 — Deterministic <linearGradient> id for a matte source.
  * kcs-mg-{sourcePartId}-{normalizedAngle} (360 ≡ 0, -315 ≡ 45 — the id uses
  * the NORMALIZED angle, so equivalent angles share the def). Absent gradient
- * → undefined (no gradient def requested). Pure, no cache.
+ * → undefined (no gradient def requested).
+ * M19 — when `stops` is present (custom multi-stop paint), the id gains a
+ * deterministic `-s{stopsHash}` suffix so two mattes with the SAME
+ * source+angle but DIFFERENT stops never share a def (5A spike: duplicate ids
+ * make Chromium resolve url() to the FIRST def — the second matte's stops are
+ * silently ignored). LEGACY data without stops keeps the byte-for-byte id.
+ * Pure, no cache.
  */
-export function gradientId(sourcePartId: string, gradient: { angle: number } | undefined): string | undefined {
+export function gradientId(
+  sourcePartId: string,
+  gradient: { angle: number; stops?: MatteGradientStop[] } | undefined,
+): string | undefined {
   if (!gradient) return undefined;
   const angle = normalizeGradientAngle(gradient.angle) ?? 0;
-  return `kcs-mg-${sourcePartId}-${angle}`;
+  const base = `kcs-mg-${sourcePartId}-${angle}`;
+  if (!Array.isArray(gradient.stops)) return base; // legacy — byte-for-byte
+  // The hash is computed over the NORMALIZED stops (sorted/clamped) so equal
+  // stop sets always produce the same id. The fallback mode only affects
+  // malformed input (which renders the mode defaults anyway) — for valid
+  // arrays the normalization is mode-independent.
+  const normalized = normalizeGradientStops(gradient.stops, 'alpha');
+  return `${base}-s${gradientStopsHash(normalized)}`;
+}
+
+/**
+ * M19 — Deterministic normalization of user gradient stops (paint data only,
+ * NEVER geometry, NEVER a channel — M8 untouched). Pure + Node-compatible.
+ *
+ * Policy (documented contract):
+ * - `stops` absent / not an array / empty / fewer than 2 VALID stops →
+ *   `getDefaultGradientStops(mode)` (legacy 2-stop behavior, byte-for-byte).
+ * - Per-stop field salvage: offset → finite number clamped to [0,1]
+ *   (malformed → 0); opacity → finite number clamped to [0,1] (missing /
+ *   malformed → 1); color → non-empty string (malformed → 'white'). No color
+ *   parsing is performed (no case folding / rgb() normalization — colors are
+ *   opaque strings, matching the existing paint model).
+ * - Non-object entries are DROPPED (e.g. numbers).
+ * - Result is sorted by offset ASCENDING with a STABLE sort — equal offsets
+ *   keep their input order (5A spike: Chromium processes stops in document
+ *   order, so the later stop at a duplicated offset wins — stable order makes
+ *   that deterministic).
+ * - The returned array is the canonical form: identical normalized stop sets
+ *   produce identical arrays (used by the id hash).
+ */
+export function normalizeGradientStops(
+  stops: MatteGradientStop[] | undefined,
+  mode: Exclude<MatteMode, 'clip'>,
+): MatteGradientStop[] {
+  if (!Array.isArray(stops) || stops.length === 0) return getDefaultGradientStops(mode);
+  const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+  const out: MatteGradientStop[] = [];
+  for (const raw of stops) {
+    if (typeof raw !== 'object' || raw === null) continue;
+    const offset = typeof raw.offset === 'number' && Number.isFinite(raw.offset)
+      ? clamp(raw.offset, 0, 1)
+      : 0;
+    const opacity = typeof raw.opacity === 'number' && Number.isFinite(raw.opacity)
+      ? clamp(raw.opacity, 0, 1)
+      : 1;
+    const color = typeof raw.color === 'string' && raw.color.length > 0
+      ? raw.color
+      : 'white';
+    out.push({ offset, color, opacity });
+  }
+  if (out.length < 2) return getDefaultGradientStops(mode);
+  // Stable sort by offset — equal offsets keep input (document) order.
+  return out
+    .map((s, i) => ({ s, i }))
+    .sort((a, b) => a.s.offset - b.s.offset || a.i - b.i)
+    .map((x) => x.s);
+}
+
+/** M19 — canonical serialization of NORMALIZED stops: a deterministic string
+ *  where equal stop sets (after normalization) produce equal keys, independent
+ *  of the original insertion order. Colors are NOT parsed (opaque strings). */
+export function canonicalStopsKey(stops: MatteGradientStop[]): string {
+  return stops.map((s) => `${s.offset};${s.color};${s.opacity}`).join('|');
+}
+
+/** M19 — deterministic 32-bit FNV-1a hash (hex) over the canonical stops key.
+ *  Stable across runs, serialization and JS object insertion order (the key
+ *  is built from the sorted normalized array). Collision space 2^32 — ample
+ *  for the local SVG def namespace. No crypto, no randomness. */
+export function gradientStopsHash(stops: MatteGradientStop[]): string {
+  const key = canonicalStopsKey(stops);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, '0');
+}
+
+/** M19 — deterministic MASK-id suffix for a gradient: `-g{angle}` (legacy,
+ *  byte-for-byte) or `-g{angle}-s{stopsHash}` when custom stops are present.
+ *  The stops identity MUST survive the mask id: two targets with the same
+ *  source+mode+inverted+feather+strength+angle but DIFFERENT stops would
+ *  otherwise share one mask (the dedupe Map key) and silently overwrite each
+ *  other's paint (5A spike). The hash matches the def-id hash (same normalized
+ *  stops → same suffix). Pure. */
+export function matteMaskGradientSuffix(
+  gradient: { angle: number; stops?: MatteGradientStop[] } | undefined,
+): string {
+  if (!gradient) return '';
+  const angle = normalizeGradientAngle(gradient.angle) ?? 0;
+  const base = `-g${angle}`;
+  if (!Array.isArray(gradient.stops)) return base; // legacy — byte-for-byte
+  return `${base}-s${gradientStopsHash(normalizeGradientStops(gradient.stops, 'alpha'))}`;
 }
 
 // ─── M18: text matte — pure data (mask content element, NOT geometry) ──────

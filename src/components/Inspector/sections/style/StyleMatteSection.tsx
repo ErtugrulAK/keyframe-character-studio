@@ -1,7 +1,8 @@
 import React from 'react';
 import { Scissors, X } from 'lucide-react';
 import type { CharacterPart, MatteMode, PartMatte } from '../../../../types/animator';
-import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle } from '../../../../utils/matte';
+import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops } from '../../../../utils/matte';
+import type { MatteGradientStop } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
 
 interface StyleMatteSectionProps {
@@ -151,6 +152,54 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   const gradientDisabled = modeValue === 'clip';
   const angleValue = Math.round(normalizeGradientAngle(matte?.gradient?.angle) ?? 0);
 
+  // ─── M19: multi-stop gradient editor — static paint data ─────────────────
+  // The displayed stop list is ALWAYS the 5B-normalized form (legacy {angle}
+  // without stops shows the mode defaults — the user never sees a raw/empty
+  // list). Editing ANY stop materializes `gradient.stops` explicitly (the
+  // first edit writes the defaults + the edit); a legacy {angle} gradient
+  // stays byte-for-byte untouched until the user actually edits a stop.
+  // No local state — everything derives from matte.gradient.
+  const stopsDisplayMode: 'alpha' | 'luminance' = modeValue === 'luminance' ? 'luminance' : 'alpha';
+  const displayStops = matte?.gradient
+    ? normalizeGradientStops(matte.gradient.stops, stopsDisplayMode)
+    : [];
+
+  /** Write a new explicit stops array, preserving every other matte field. */
+  const writeStops = (stops: MatteGradientStop[]) => {
+    if (!matte?.gradient) return;
+    setMatte({ ...matte, gradient: { angle: matte.gradient.angle, stops } });
+  };
+
+  // Add: largest offset gap's deterministic midpoint; inherits the left
+  // stop's color/opacity (the paint character stays continuous). Max 4.
+  const onAddStop = () => {
+    if (!matte?.gradient || displayStops.length >= 4) return;
+    let bestGap = -1, bestIdx = 0;
+    for (let i = 0; i < displayStops.length - 1; i++) {
+      const gap = displayStops[i + 1].offset - displayStops[i].offset;
+      if (gap > bestGap) { bestGap = gap; bestIdx = i; }
+    }
+    const left = displayStops[bestIdx];
+    const next = displayStops[bestIdx + 1];
+    const offset = bestGap >= 0 ? (left.offset + next.offset) / 2 : 0.5;
+    const fresh = [
+      ...displayStops.slice(0, bestIdx + 1),
+      { offset, color: left.color, opacity: left.opacity },
+      ...displayStops.slice(bestIdx + 1),
+    ];
+    writeStops(fresh);
+  };
+
+  const onRemoveStop = (index: number) => {
+    if (!matte?.gradient || displayStops.length <= 2) return;
+    writeStops(displayStops.filter((_, i) => i !== index));
+  };
+
+  const onChangeStop = (index: number, patch: Partial<{ offset: number; color: string; opacity: number }>) => {
+    if (!matte?.gradient) return;
+    writeStops(displayStops.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+  };
+
   return (
     <StyleCard title="TRACK MATTE" icon={<Scissors size={13} />} color="#00d2ff">
       <div className="form-field-group">
@@ -267,6 +316,66 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                   onChange={(e) => onChangeGradientAngle(parseInt(e.target.value, 10))}
                   style={{ width: '100%', cursor: gradientDisabled ? 'not-allowed' : 'pointer', opacity: gradientDisabled ? 0.45 : 1 }}
                 />
+              </div>
+            )}
+
+            {gradientEnabled && displayStops.length > 0 && (
+              <div className="form-field-group" style={{ marginTop: 8 }}>
+                <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>STOPS ({displayStops.length}/4)</span>
+                  <button
+                    className="btn-icon-small"
+                    aria-label="Add gradient stop"
+                    disabled={gradientDisabled || displayStops.length >= 4}
+                    onClick={onAddStop}
+                    style={{ fontSize: 11, padding: '1px 8px', opacity: gradientDisabled || displayStops.length >= 4 ? 0.45 : 1 }}
+                  >
+                    + Add
+                  </button>
+                </label>
+                {displayStops.map((stop, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                    <input
+                      type="color"
+                      aria-label={`Gradient stop ${i} color`}
+                      value={stop.color.startsWith('#') ? stop.color : '#ffffff'}
+                      disabled={gradientDisabled}
+                      onChange={(e) => onChangeStop(i, { color: e.target.value })}
+                      style={{ width: 26, height: 22, padding: 0, border: '1px solid var(--border-color)', background: 'transparent', cursor: gradientDisabled ? 'not-allowed' : 'pointer' }}
+                    />
+                    <input
+                      type="number"
+                      aria-label={`Gradient stop ${i} offset`}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={Math.round(stop.offset * 100) / 100}
+                      disabled={gradientDisabled}
+                      onChange={(e) => onChangeStop(i, { offset: parseFloat(e.target.value) })}
+                      style={{ width: 52, height: 22, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '0 4px' }}
+                    />
+                    <input
+                      type="number"
+                      aria-label={`Gradient stop ${i} opacity`}
+                      min={0}
+                      max={1}
+                      step={0.05}
+                      value={stop.opacity}
+                      disabled={gradientDisabled}
+                      onChange={(e) => onChangeStop(i, { opacity: parseFloat(e.target.value) })}
+                      style={{ width: 52, height: 22, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11, padding: '0 4px' }}
+                    />
+                    <button
+                      className="btn-icon-small"
+                      aria-label={`Remove gradient stop ${i}`}
+                      disabled={gradientDisabled || displayStops.length <= 2}
+                      onClick={() => onRemoveStop(i)}
+                      style={{ fontSize: 11, padding: '1px 6px', opacity: gradientDisabled || displayStops.length <= 2 ? 0.45 : 1 }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
               </div>
             )}
 

@@ -1,3 +1,5 @@
+import type { MatteGradientStop } from '../utils/matte';
+
 export type EasingType = 
   | 'linear' 
   | 'easeIn' 
@@ -51,9 +53,13 @@ export interface PartMatte {
   strength?: number;
   /** M17: linear gradient matte (render parameter only — paint definition,
    *  NEVER geometry). undefined = legacy behavior (no gradient).
-   *  Angle is source-local degrees; 0 = left→right, 90 = top→bottom. */
+   *  Angle is source-local degrees; 0 = left→right, 90 = top→bottom.
+   *  M19: optional custom stops (2-4 MVP, render-only paint data — NEVER
+   *  animated, NEVER a channel). Absent stops = legacy default 2-stop ramp
+   *  (byte-for-byte). */
   gradient?: {
     angle: number;
+    stops?: MatteGradientStop[];
   };
 }
 

@@ -518,8 +518,158 @@ describe('StagePartLayers — M17 gradient matte (linearGradient render)', () =>
     const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha' })]);
     expect(html).not.toContain('linearGradient');
     expect(html).not.toContain('fill="url(');
-    expect(html).toContain('<mask id="kcs-mask-src-alpha"'); // byte-for-byte legacy
-    expect(html).toContain('fill="white"'); // solid mask fill unchanged
+    expect(html).toContain('<mask id="kcs-mask-src-alpha"');
+  });
+
+  it('M19: 3-stop render — def carries normalized offsets/colors/opacities in order', () => {
+    const stops = [
+      { offset: 0, color: '#ff0000', opacity: 1 },
+      { offset: 0.5, color: '#00ff00', opacity: 0.5 },
+      { offset: 1, color: '#0000ff', opacity: 1 },
+    ];
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops } })]);
+    const grad = html.match(/<linearGradient id="([^"]+)"[^>]*>([\s\S]*?)<\/linearGradient>/);
+    expect(grad).not.toBeNull();
+    expect(grad![1]).toMatch(/^kcs-mg-src-45-s[0-9a-f]{8}-alpha$/);
+    const stopsHtml = grad![2].match(/<stop[^>]*>/g) ?? [];
+    expect(stopsHtml).toHaveLength(3);
+    expect(stopsHtml[0]).toContain('offset="0%"');
+    expect(stopsHtml[0]).toContain('stop-color="#ff0000"');
+    expect(stopsHtml[0]).toContain('stop-opacity="1"');
+    expect(stopsHtml[1]).toContain('offset="50%"');
+    expect(stopsHtml[1]).toContain('stop-color="#00ff00"');
+    expect(stopsHtml[1]).toContain('stop-opacity="0.5"');
+    expect(stopsHtml[2]).toContain('offset="100%"');
+    expect(stopsHtml[2]).toContain('stop-color="#0000ff"');
+  });
+
+  it('M19: 4-stop render + normalized ordering (unsorted input → sorted output)', () => {
+    const stops = [
+      { offset: 1, color: 'black', opacity: 1 },
+      { offset: 0, color: 'white', opacity: 1 },
+      { offset: 0.66, color: 'gray', opacity: 0.4 },
+      { offset: 0.33, color: 'silver', opacity: 0.8 },
+    ];
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'luminance', gradient: { angle: 0, stops } })]);
+    const grad = html.match(/<linearGradient id="([^"]+)"[^>]*>([\s\S]*?)<\/linearGradient>/);
+    const offsets = (grad![2].match(/offset="([^"]+)"/g) ?? []).map((s) => s);
+    expect(offsets).toEqual(['offset="0%"', 'offset="33%"', 'offset="66%"', 'offset="100%"']);
+    expect(grad![1]).toMatch(/^kcs-mg-src-0-s[0-9a-f]{8}-luminance$/);
+  });
+
+  it('M19: same source+angle+normalized stops → ONE def (dedupe)', () => {
+    const stops = [
+      { offset: 0.5, color: 'white', opacity: 1 },
+      { offset: 0, color: 'white', opacity: 1 },
+      { offset: 1, color: 'white', opacity: 0 },
+    ];
+    const html = renderStage([
+      src(),
+      target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops } }),
+      makePart('t2', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: [...stops].reverse() } }),
+    ]);
+    expect(html.match(/<linearGradient id="kcs-mg-src-45/g) ?? []).toHaveLength(1);
+    expect(html.match(/<mask id="kcs-mask-src-alpha-g45/g) ?? []).toHaveLength(1);
+  });
+
+  it('M19: DIFFERENT stops on the same source+angle → DIFFERENT defs + DIFFERENT masks (no collision)', () => {
+    const a = [
+      { offset: 0, color: 'white', opacity: 1 },
+      { offset: 1, color: 'white', opacity: 0 },
+    ];
+    const b = [
+      { offset: 0, color: 'red', opacity: 1 },
+      { offset: 1, color: 'blue', opacity: 1 },
+    ];
+    const html = renderStage([
+      src(),
+      target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: a } }),
+      makePart('t2', 'custom_circle', { sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: b } }),
+    ]);
+    const grads = html.match(/<linearGradient id="(kcs-mg-src-45-s[0-9a-f]{8}-alpha)"/g) ?? [];
+    expect(grads).toHaveLength(2);
+    expect(grads[0]).not.toBe(grads[1]);
+    const masks = html.match(/<mask id="(kcs-mask-src-alpha-g45-s[0-9a-f]{8})"/g) ?? [];
+    expect(masks).toHaveLength(2);
+    expect(masks[0]).not.toBe(masks[1]);
+    // each mask references its OWN def
+    expect(html).toContain(`fill="url(#${grads[0].match(/id="([^"]+)"/)![1]})"`);
+    expect(html).toContain(`fill="url(#${grads[1].match(/id="([^"]+)"/)![1]})"`);
+  });
+
+  it('M19: legacy gradient id unchanged — NO -s suffix, 2 default stops', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } })]);
+    expect(html).toContain('<linearGradient id="kcs-mg-src-45-alpha"');
+    expect(html).toContain('<mask id="kcs-mask-src-alpha-g45"');
+    const grad = html.match(/<linearGradient id="kcs-mg-src-45-alpha"[^>]*>([\s\S]*?)<\/linearGradient>/);
+    const stopsHtml = grad![1].match(/<stop[^>]*>/g) ?? [];
+    expect(stopsHtml).toHaveLength(2);
+    expect(stopsHtml[0]).toContain('offset="0%"');
+    expect(stopsHtml[1]).toContain('offset="100%"');
+  });
+
+  it('M19: text matte + multi-stop — hashed def id + text fill=url (local endpoints intact)', () => {
+    const stops = [
+      { offset: 0, color: 'white', opacity: 1 },
+      { offset: 0.5, color: 'white', opacity: 0.5 },
+      { offset: 1, color: 'white', opacity: 0 },
+    ];
+    const text = makePart('txt', 'custom_text', { textValue: 'HHH', fontSize: 80, fontFamily: 'Arial' });
+    const html = renderStage([text, target({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops } })]);
+    const grad = html.match(/<linearGradient id="([^"]+)"[^>]*>([\s\S]*?)<\/linearGradient>/);
+    expect(grad![1]).toMatch(/^kcs-mg-txt-0-s[0-9a-f]{8}-alpha$/);
+    expect(html).toContain(`fill="url(#${grad![1]})"`);
+    expect(html).toContain(`x1="-100"`); // M18 local endpoints preserved
+  });
+
+  it('M19: inverted TEXT + multi-stop → luminance structure def (structure key -luminance-inv, WORLD endpoints)', () => {
+    const stops = [
+      { offset: 0, color: 'white', opacity: 1 },
+      { offset: 1, color: 'black', opacity: 1 },
+    ];
+    const text = makePart('txt', 'custom_text', { textValue: 'HHH', fontSize: 80, fontFamily: 'Arial' });
+    const html = renderStage([text, target({ sourcePartId: 'txt', mode: 'alpha', inverted: true, gradient: { angle: 0, stops } })]);
+    expect(html).toContain('mask-type="luminance"'); // 4A inverted-text structure
+    expect(html).toContain('<linearGradient id="kcs-mg-txt-0-s'); // hashed
+    // 5E blocker fix: inverted-text def uses WORLD endpoints (the region rect
+    // is world-space; the black text never references the def) + a distinct
+    // -luminance-inv identity (never collides with a local non-inverted def).
+    expect(html).toMatch(/<linearGradient id="kcs-mg-txt-0-s[0-9a-f]{8}-luminance-inv"/);
+    expect(html).toContain('x1="200"'); // WORLD endpoints: text box ±100 → applyWorld (identity) → 200..400
+    expect(html).toContain('x2="400"');
+    expect(html).toContain('fill="black"'); // the text stays PLAIN BLACK (never url()) — 4A contract
+  });
+
+  it('M19: feather + multi-stop → mask id carries -f AND -g+s suffixes; filter bound', () => {
+    const stops = [
+      { offset: 0, color: 'white', opacity: 1 },
+      { offset: 1, color: 'white', opacity: 0 },
+    ];
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', feather: 12, gradient: { angle: 45, stops } })]);
+    expect(html).toMatch(/<mask id="kcs-mask-src-alpha-f12-g45-s[0-9a-f]{8}"/);
+    expect(html).toContain('kcs-matte-feather-src-alpha-f12-g45-s');
+    expect(html).toContain('stdDeviation="6"');
+  });
+
+  it('M19: strength + multi-stop → mask id carries -s{strength} AND -g…-s{stopsHash}; fill-opacity applied', () => {
+    const stops = [
+      { offset: 0, color: 'white', opacity: 1 },
+      { offset: 1, color: 'white', opacity: 0 },
+    ];
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', strength: 0.5, gradient: { angle: 45, stops } })]);
+    expect(html).toMatch(/<mask id="kcs-mask-src-alpha-s0\.5-g45-s[0-9a-f]{8}"/);
+    expect(html).toContain('fill-opacity="0.5"');
+  });
+
+  it('M19: malformed stops → deterministic default stops (id stable, def has 2 default stops)', () => {
+    const html = renderStage([src(), target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: [] as never } })]);
+    const grad = html.match(/<linearGradient id="([^"]+)"[^>]*>([\s\S]*?)<\/linearGradient>/);
+    expect(grad![1]).toMatch(/^kcs-mg-src-45-s[0-9a-f]{8}-alpha$/);
+    const stopsHtml = grad![2].match(/<stop[^>]*>/g) ?? [];
+    expect(stopsHtml).toHaveLength(2);
+    expect(stopsHtml[0]).toContain('stop-color="white"');
+    expect(stopsHtml[0]).toContain('stop-opacity="1"');
+    expect(stopsHtml[1]).toContain('stop-opacity="0"');
   });
 });
 

@@ -21,7 +21,8 @@ import {
   gradientId,
   gradientEndpoints,
   gradientEndpointsLocal,
-  getDefaultGradientStops,
+  normalizeGradientStops,
+  matteMaskGradientSuffix,
   textMaskContent,
   matteClipPathId,
   matteMaskId,
@@ -180,8 +181,12 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     // so the same (source, mode, inverted) with DIFFERENT feather values never
     // collides (each target's mask keeps its own blur). feather 0/undefined →
     // M13 id, byte-for-byte.
+    // M19 — the -g suffix carries the STOPS identity too (matteMaskGradientSuffix):
+    // two targets with the same source+mode+inverted+feather+strength+angle but
+    // DIFFERENT stops must never share one mask (dedupe Map key). Legacy
+    // gradients (no stops) keep the byte-for-byte `-g{angle}` suffix.
     const baseMaskId = matteMaskId(source.id, mode, inverted);
-    const maskId = `${baseMaskId}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${gradientAngle !== undefined ? `-g${gradientAngle}` : ''}`;
+    const maskId = `${baseMaskId}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${matteMaskGradientSuffix(layer.matte.gradient)}`;
     if (matteMasks.has(maskId)) continue; // same (source, mode, inverted, feather, strength, gradient) already built
 
     // M18 — TEXT source: buildMattePath stays null (text has NO path
@@ -225,13 +230,30 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     let maskGradientId: string | undefined;
     if (gradientAngle !== undefined) {
       const structure = source.type === 'custom_text' && inverted ? 'luminance' : mode;
-      const gradId = `${gradientId(source.id, { angle: gradientAngle })!}-${structure}`;
+      // M19 5E BLOCKER FIX — coordinate-space mismatch: in the inverted TEXT
+      // structure the ONLY gradient consumer is the WORLD-space region rect
+      // (the text itself is BLACK — it never references the def). A LOCAL
+      // endpoint def (correct for the non-inverted text element) resolves
+      // against the rect at world coordinates → clamps → transparent outer
+      // region (V-H8 pixel-proven). Inverted text therefore uses WORLD
+      // endpoints (gradientEndpoints — the same text-box→applyWorld math as
+      // shapes), and its def identity gets a distinct `-luminance-inv`
+      // structure key so it can never collide with a non-inverted luminance
+      // TEXT def (which stays LOCAL).
+      const isInvertedText = source.type === 'custom_text' && inverted;
+      const gradId = `${gradientId(source.id, layer.matte.gradient)!}-${structure}${isInvertedText ? '-inv' : ''}`;
       if (!matteGradients.has(gradId)) {
-        const eps = source.type === 'custom_text'
-          ? gradientEndpointsLocal(source, sourceEl.transform, gradientAngle)
-          : gradientEndpoints(source, sourceEl.transform, gradientAngle);
+        const eps = isInvertedText
+          ? gradientEndpoints(source, sourceEl.transform, gradientAngle)      // WORLD (rect)
+          : source.type === 'custom_text'
+            ? gradientEndpointsLocal(source, sourceEl.transform, gradientAngle) // LOCAL (text element)
+            : gradientEndpoints(source, sourceEl.transform, gradientAngle);
         if (eps) {
-          matteGradients.set(gradId, { id: gradId, ...eps, stops: getDefaultGradientStops(structure) });
+          matteGradients.set(gradId, {
+            id: gradId,
+            ...eps,
+            stops: normalizeGradientStops(layer.matte.gradient?.stops, structure),
+          });
           maskGradientId = gradId;
         }
       } else {
@@ -258,11 +280,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     if (mode === undefined) return {}; // unreachable when matte exists; TS narrowing
     const feather = normalizeFeather(part.matte.feather);
     const strength = normalizeStrength(part.matte.strength);
-    const gradientAngle = part.matte.gradient
-      ? normalizeGradientAngle(part.matte.gradient.angle) ?? 0
-      : undefined;
+    // M19 — matteMaskGradientSuffix carries the stops identity into the lookup
+    // id, keeping it byte-for-byte aligned with the def-building loop.
     const base = matteMaskId(part.matte.sourcePartId, mode, part.matte.inverted === true);
-    const id = `${base}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${gradientAngle !== undefined ? `-g${gradientAngle}` : ''}`;
+    const id = `${base}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${matteMaskGradientSuffix(part.matte.gradient)}`;
     return matteMasks.has(id) ? { maskId: id } : {};
   };
 
@@ -303,7 +324,12 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
           fontSize={mask.text.fontSize}
           fontWeight={mask.text.fontWeight}
           fontFamily={mask.text.fontFamily}
-          fill={mask.gradientId ? `url(#${mask.gradientId})` : mask.fill}
+          // M19 5E BLOCKER FIX — inverted text is ALWAYS plain black (4A
+          // decision: white region rect + black text hole). The gradient
+          // belongs to the WORLD-space region rect only — the text element
+          // must never reference it (it would punch a BRIGHT hole instead of
+          // a dark one). Non-inverted text keeps the gradient fill.
+          fill={mask.inverted ? mask.fill : mask.gradientId ? `url(#${mask.gradientId})` : mask.fill}
           fillOpacity={mask.strength}
           filter={featherUrl(mask)}
         >

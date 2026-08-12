@@ -114,3 +114,25 @@
   final audit: 8 korumalı dosya untouched, ikinci geometry sistemi yok, M8 korundu
 - Full suite: **66 passed / 1 failed** — tek fail workflow.spec.ts:88 ölü container (M18 dışı)
 - Commit/push: YOK (HEAD hâlâ `1f6c7ba` — M17)
+
+## [2026-08-12] update | KCS — M19 Custom / Multi-stop Gradient (iş PC)
+- M19 ✅ COMPLETE (5A-5F) — **COMMIT/PUSH YAPILMADI** (onay bekliyor)
+- 5A: spike — N-stop linearGradient-in-mask Chromium kanıtı **15/15 ×2** (unsorted doc order
+  farklı ramp → sıralama şart; duplicate offset sonraki stop kazanır; aynı id + farklı stops →
+  COLLISION — id stops hash taşımalı; determinizm byte-identical)
+- 5B: data/pure — gradient.stops? (additive), normalizeGradientStops (clamp/stabil sort/salvage/
+  drop/<2→default), canonicalStopsKey + gradientStopsHash (FNV-1a), gradientId -s{hash};
+  legacy {angle} id byte-for-byte; **572/572**
+- 5C: render — def'e normalize stops (mevcut stops.map), gerçek gradient nesnesi id'ye,
+  mask id -g{angle}-s{hash} (matteMaskGradientSuffix); farklı stops ayrı def+mask, aynı set dedupe;
+  **582/582 + 66/66**
+- 5D: UI — STOPS editörü (2-4: Add midpoint+sol miras, Remove min 2, color/offset/opacity,
+  field preservation, local state yok, legacy {angle} dokunulmaz); **594/594 + 66/66**
+- 5E: serialization (4-stop EXACT, legacy stops uydurmaz, malformed pass-through, runtime veri yok)
+  + V-H1..V-H12; **BLOCKER bulundu**: inverted TEXT + multi-stop → dış alan transparan
+  (local endpoint'ler world rect'e uygulanıyor) — onaylı fix: def WORLD endpoint + `-luminance-inv`
+  identity + text düz siyah (fill="black", url() yok); V-H8 pixel-kanıtlı; **599/599 + 76/76 ×2**
+- 5F: docs — SKILL v7.0.0 (M19 bölümü + inverted-text koordinat kontratı + deferred güncellemesi),
+  wiki entity/log, README; final audit: korumalı dosyalar untouched, M8 korundu, hash deterministik
+- Full suite: **78 passed / 1 failed** — tek fail workflow.spec.ts:88 ölü container (M19 dışı)
+- Commit/push: YOK (HEAD hâlâ `e88517f` — M18)

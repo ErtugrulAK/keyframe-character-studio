@@ -1319,6 +1319,66 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
     expect(await page.evaluate(() => document.querySelector('linearGradient[id="kcs-mg-txt-0-alpha"]')?.getAttribute('x1'))).toBe('-100');
   });
 
+  test('V-H1 — M19 smoke: 3-stop colored gradient paints a real ramp (not legacy defaults)', async ({ page }) => {
+    // red → (white, 0.5 alpha) → blue-ish: mid stop opacity 0.4 → mid band dimmer
+    const stops = [
+      { offset: 0, color: '#ffffff', opacity: 1 },
+      { offset: 0.5, color: '#ffffff', opacity: 0.4 },
+      { offset: 1, color: '#ffffff', opacity: 0 },
+    ];
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops } })]);
+    await ready(page);
+    // Text gradient spans local ±100 → world 200..400 (frac = (x-200)/200).
+    // MAX over the solid crossbar band (glyph gaps would dilute an average);
+    // the mid box avoids x=300 (the app's cyan edit-mode center marker).
+    const left = await maxGreen(page, 250, 280, 240, 252);   // frac 0.25-0.4 → alpha ≈0.7 → ≈178
+    const mid = await maxGreen(page, 315, 340, 240, 252);    // frac 0.575-0.7 → alpha ≈0.37 → ≈94
+    const right = await maxGreen(page, 350, 380, 240, 252);  // frac 0.75-0.9 → max alpha 0.25 → ≈64
+    expect(left).toBeGreaterThan(150);
+    expect(mid).toBeGreaterThan(80);
+    expect(mid).toBeLessThan(130);
+    expect(right).toBeLessThan(80);
+    expect(right).toBeGreaterThan(30);
+    expect(left).toBeGreaterThan(right + 50); // real ramp direction
+    // DOM: hashed def id + 3 stops
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"]').length)).toBe(1);
+    expect(await page.evaluate(() => document.querySelector('linearGradient[id^="kcs-mg-txt-0-s"]')?.querySelectorAll('stop').length)).toBe(3);
+  });
+
+  test('V-H2 — M19 smoke: same source+angle DIFFERENT stops → different defs AND different visible result', async ({ page }) => {
+    const rampA = [
+      { offset: 0, color: '#ffffff', opacity: 1 },
+      { offset: 1, color: '#ffffff', opacity: 0 },
+    ];
+    const rampB = [
+      { offset: 0, color: '#ffffff', opacity: 0.2 },
+      { offset: 1, color: '#ffffff', opacity: 1 },
+    ];
+    // DOM: same source+angle+DIFFERENT stops in ONE scene → 2 defs + 2 masks.
+    await seed(page, [
+      textSource(),
+      wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: rampA } }),
+      makeLayer('tgt2', 'Target2', 'custom_circle', {
+        zIndex: 3, fillColor: '#00ff00', scaleX: 5, scaleY: 3,
+        matte: { sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: rampB } },
+      }),
+    ]);
+    await ready(page);
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"]').length)).toBe(2);
+    expect(await page.evaluate(() => document.querySelectorAll('mask[id^="kcs-mask-txt-alpha-g0-s"]').length)).toBe(2);
+    // Visible difference: probe the SAME left-ink box (frac ≈0.15) under EACH
+    // ramp via sequential seeds — rampA (1→0) bright, rampB (0.2→1) dim.
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: rampA } })]);
+    await ready(page);
+    const aLeft = await maxGreen(page, 230, 250, 240, 252); // frac 0.15-0.25 → alpha ≈0.85 → ≈217
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: rampB } })]);
+    await ready(page);
+    const bLeft = await maxGreen(page, 230, 250, 240, 252); // frac 0.15-0.25 → alpha ≈0.32 → ≈82
+    console.log(`SPIKE-H aLeft=${aLeft} bLeft=${bLeft}`);
+    expect(aLeft).toBeGreaterThan(150); // rampA: near-white left
+    expect(bLeft).toBeLessThan(110);    // rampB: dim left
+  });
+
   test('V-T17 — import/reload parity: text matte pixels identical after the real autosave/reload path', async ({ page }) => {
     await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', feather: 6, strength: 0.7, gradient: { angle: 0 } })]);
     await ready(page);
@@ -1341,5 +1401,215 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
     expect(after[0]).toBe(before[0]); // exact pixel parity through the real import
     expect(after[1]).toBe(before[1]);
     expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha-f6-s0.7-g0"] text')?.textContent)).toBe('HHH');
+  });
+});
+
+test.describe('M19 multi-stop gradient — real browser pixel assertions (5E matrix)', () => {
+  // Self-contained fixtures (same HHH/80px Arial determinism as M18).
+  const textSource = (overrides: Record<string, unknown> = {}) =>
+    makeLayer('txt', 'Source', 'custom_text', { zIndex: 1, fillColor: '#ff0000', textValue: 'HHH', fontSize: 80, fontFamily: 'Arial', ...overrides });
+  const shapeSource = (overrides: Record<string, unknown> = {}) =>
+    makeLayer('shp', 'Shape', 'custom_circle', { zIndex: 1, fillColor: '#ff0000', scaleX: 2, scaleY: 2, ...overrides });
+  const wideTarget = (matte: Record<string, unknown>) =>
+    makeLayer('tgt', 'Target', 'custom_circle', { zIndex: 2, fillColor: '#00ff00', scaleX: 5, scaleY: 3, matte });
+
+  const INK = { x0: 250, x1: 350, y0: 215, y1: 265 };
+  const RAMP = (o: number, op: number) => ({ offset: o, color: '#ffffff', opacity: op });
+
+  async function ready(page: Page) {
+    await page.evaluate(async () => { await (document as any).fonts.ready; });
+  }
+  async function greenAtWorld(page: Page, wx: number, wy: number): Promise<number> {
+    const buf = await page.screenshot();
+    const png = decodePng(buf);
+    const { x, y } = await page.evaluate(([a, b]: [number, number]) => {
+      const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
+      const pt = svg.createSVGPoint(); pt.x = a; pt.y = b;
+      const s = pt.matrixTransform(svg.getScreenCTM()!);
+      return { x: Math.round(s.x), y: Math.round(s.y) };
+    }, [wx, wy]);
+    return png.data[(y * png.width + x) * png.bpp + 1];
+  }
+  async function maxGreen(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
+    let m = 0;
+    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) {
+      const px = await greenAtWorld(page, x, y);
+      if (px > m) m = px;
+    }
+    return m;
+  }
+  async function minGreen(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
+    let m = 255;
+    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) {
+      const px = await greenAtWorld(page, x, y);
+      if (px < m) m = px;
+    }
+    return m;
+  }
+
+  test('V-H3 — 4-stop gradient: 4 <stop> + monotonic 4-step ramp', async ({ page }) => {
+    const stops = [RAMP(0, 1), RAMP(0.33, 0.8), RAMP(0.66, 0.4), RAMP(1, 0)];
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops } })]);
+    await ready(page);
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"] stop').length)).toBe(4);
+    const offsets = await page.evaluate(() => [...document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"] stop')].map((s) => s.getAttribute('offset')));
+    expect(offsets).toEqual(['0%', '33%', '66%', '100%']);
+    // Text ramp spans world 200..400: 4-segment monotonic descent
+    const s1 = await maxGreen(page, 220, 240, 240, 252); // frac 0.1-0.2 → ≈0.88 → ≈224
+    const s2 = await maxGreen(page, 270, 290, 240, 252); // frac 0.35-0.45 → ≈0.72 → ≈184
+    const s3 = await maxGreen(page, 320, 340, 240, 252); // frac 0.6-0.7 → ≈0.48 → ≈122
+    const s4 = await maxGreen(page, 370, 390, 240, 252); // frac 0.85-0.95 → ≈0.2 → ≈51
+    expect(s1).toBeGreaterThan(190);
+    expect(s2).toBeGreaterThan(150);
+    expect(s3).toBeGreaterThan(90);
+    expect(s3).toBeLessThan(150);
+    expect(s4).toBeLessThan(80);
+    expect(s4).toBeGreaterThan(25);
+    expect(s1).toBeGreaterThan(s2);
+    expect(s2).toBeGreaterThan(s3);
+    expect(s3).toBeGreaterThan(s4); // monotonic ordering
+  });
+
+  test('V-H4 — mid-stop opacity: lower opacity visibly dims the mid band', async ({ page }) => {
+    const bright = [RAMP(0, 1), RAMP(0.5, 0.8), RAMP(1, 0)];
+    const dim = [RAMP(0, 1), RAMP(0.5, 0.2), RAMP(1, 0)];
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: bright } })]);
+    await ready(page);
+    const bMid = await maxGreen(page, 320, 340, 240, 252); // frac 0.6-0.7 → alpha ≈0.62 → ≈158
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: dim } })]);
+    await ready(page);
+    const dMid = await maxGreen(page, 320, 340, 240, 252); // frac 0.6-0.7 → alpha ≈0.42 → ≈107
+    console.log(`SPIKE-5E V-H4 bright=${bMid} dim=${dMid}`);
+    expect(bMid).toBeGreaterThan(130);
+    expect(dMid).toBeLessThan(130);
+    expect(bMid - dMid).toBeGreaterThan(30); // deterministic intensity drop
+  });
+
+  test('V-H5 — multi-stop + feather: ramp survives, filter + stdDeviation bound', async ({ page }) => {
+    const stops = [RAMP(0, 1), RAMP(0.5, 0.5), RAMP(1, 0)];
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', feather: 12, gradient: { angle: 0, stops } })]);
+    await ready(page);
+    const left = await maxGreen(page, 250, 280, 240, 252);
+    const right = await maxGreen(page, 350, 380, 240, 252);
+    expect(left).toBeGreaterThan(right + 40); // ramp direction survives feather
+    expect(await page.evaluate(() => document.querySelector('feGaussianBlur')?.getAttribute('stdDeviation'))).toBe('6');
+    expect(await page.evaluate(() => document.querySelector('mask[id*="-f12-g0-s"] text')?.getAttribute('filter'))).toContain('kcs-matte-feather');
+  });
+
+  test('V-H6 — multi-stop + strength 0.5: fill-opacity 0.5, intensity halved', async ({ page }) => {
+    const stops = [RAMP(0, 1), RAMP(1, 0)];
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops } })]);
+    await ready(page);
+    const full = await maxGreen(page, 235, 278, 243, 258); // H1 crossbar, away from center marker
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', strength: 0.5, gradient: { angle: 0, stops } })]);
+    await ready(page);
+    const half = await maxGreen(page, 235, 278, 243, 258);
+    console.log(`SPIKE-5E V-H6 full=${full} half=${half}`);
+    expect(full).toBeGreaterThan(150);
+    expect(half).toBeGreaterThan(45);
+    expect(half).toBeLessThan(160); // ≈full/2
+    expect(await page.evaluate(() => document.querySelector('mask[id*="-s0.5-g0-s"] text')?.getAttribute('fill-opacity'))).toBe('0.5');
+  });
+
+  test('V-H7 — SHAPE source + inverted luminance + multi-stop: hole + outer gradient visible', async ({ page }) => {
+    const stops = [RAMP(0, 1), RAMP(0.5, 0.6), RAMP(1, 0)];
+    await seed(page, [shapeSource(), wideTarget({ sourcePartId: 'shp', mode: 'luminance', inverted: true, gradient: { angle: 0, stops } })]);
+    await ready(page);
+    // circle r=30×2 → world rect 240..360 × 180..300 — the black contour = hole
+    expect(await minGreen(page, 275, 325, 225, 255)).toBeLessThan(45); // hole inside the matte
+    expect(await greenAtWorld(page, 165, 240)).toBeGreaterThan(150);   // outer region visible
+    expect(await page.evaluate(() => document.querySelector('mask[id^="kcs-mask-shp-luminance-inv-g0-s"]')?.getAttribute('mask-type'))).toBe('luminance');
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id*="-luminance"] stop').length)).toBe(3);
+  });
+
+  test('V-H8 — inverted TEXT + multi-stop: luminance structure + hole + black text', async ({ page }) => {
+    const stops = [RAMP(0, 1), RAMP(0.5, 0.5), RAMP(1, 0)];
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', inverted: true, gradient: { angle: 0, stops } })]);
+    await ready(page);
+    expect(await minGreen(page, INK.x0, INK.x1, INK.y0, INK.y1)).toBeLessThan(45); // hole
+    expect(await greenAtWorld(page, 165, 240)).toBeGreaterThan(150); // white region visible
+    expect(await page.evaluate(() => document.querySelector('mask[id^="kcs-mask-txt-alpha-inv-g0-s"]')?.getAttribute('mask-type'))).toBe('luminance');
+    expect(await page.evaluate(() => document.querySelector('mask[id^="kcs-mask-txt-alpha-inv-g0-s"] text')?.getAttribute('fill'))).toBe('black');
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id*="-luminance"]').length)).toBe(1); // structure key luminance
+  });
+
+  test('V-H9 — multi-stop + rotation 90°: vertical ink band + baked transform', async ({ page }) => {
+    const stops = [RAMP(0, 1), RAMP(0.5, 0.5), RAMP(1, 0)];
+    await seed(page, [textSource({ rotation: 90 }), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops } })]);
+    await ready(page);
+    let m = 0;
+    for (let y = 170; y <= 310; y += 5) m = Math.max(m, await greenAtWorld(page, 320, y));
+    expect(m).toBeGreaterThan(150); // rotated crossbar band
+    expect(await page.evaluate(() => document.querySelector('mask[id*="-g0-s"] g')?.getAttribute('transform'))).toContain('rotate(90)');
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"] stop').length)).toBe(3);
+  });
+
+  test('V-H10 — multi-stop + scale 2×: ink stretches, ramp direction preserved', async ({ page }) => {
+    const stops = [RAMP(0, 1), RAMP(1, 0)];
+    await seed(page, [textSource({ scaleX: 2 }), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops } })]);
+    await ready(page);
+    // crossbars at world 192 / 448 (V-T9 pattern)
+    // crossbars at world ~172 / 300 / 428 (scaleX 2). NOTE: the ramp's dark
+    // end (alpha ≈0.1-0.24 at frac 0.76-0.89) dims the RIGHT crossbar by
+    // design — assert ink presence, not full brightness.
+    expect(await maxGreen(page, 185, 235, INK.y0, INK.y1)).toBeGreaterThan(120); // frac 0.21-0.34 → bright
+    expect(await maxGreen(page, 405, 455, INK.y0, INK.y1)).toBeGreaterThan(30);  // dimmed by the ramp
+    // ramp across the stretched span: bright LEFT (world 100..), dim right (world ~500)
+    const left = await maxGreen(page, 170, 215, 240, 252);  // frac ≈0.18-0.29 → alpha ≈0.8
+    const right = await maxGreen(page, 425, 470, 240, 252); // frac ≈0.81-0.93 → alpha ≈0.15
+    expect(left).toBeGreaterThan(right + 40);
+  });
+
+  test('V-H11 — dedupe: DIFFERENT stops → 2 defs + 2 masks; SAME normalized set reversed → 1 def + 1 mask', async ({ page }) => {
+    const stopsA = [RAMP(0, 1), RAMP(1, 0)];
+    const stopsB = [RAMP(0, 0.2), RAMP(1, 1)];
+    await seed(page, [
+      textSource(),
+      wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: stopsA } }),
+      makeLayer('tgt2', 'Target2', 'custom_circle', { zIndex: 3, fillColor: '#00ff00', scaleX: 5, scaleY: 3, matte: { sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: stopsB } } }),
+    ]);
+    await ready(page);
+    const defIds = await page.evaluate(() => [...document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"]')].map((g) => g.id));
+    const maskIds = await page.evaluate(() => [...document.querySelectorAll('mask[id^="kcs-mask-txt-alpha-g0-s"]')].map((m) => m.id));
+    expect(defIds).toHaveLength(2);
+    expect(maskIds).toHaveLength(2);
+    expect(defIds[0]).not.toBe(defIds[1]);
+    expect(maskIds[0]).not.toBe(maskIds[1]);
+    // each mask references its OWN def (no collision)
+    const refs = await page.evaluate(() => [...document.querySelectorAll('mask[id^="kcs-mask-txt-alpha-g0-s"] rect, mask[id^="kcs-mask-txt-alpha-g0-s"] text')].map((el) => el.getAttribute('fill')));
+    expect(refs).toContain(`url(#${defIds[0]})`);
+    expect(refs).toContain(`url(#${defIds[1]})`);
+    // same normalized set with reversed input order → ONE def + ONE mask
+    await seed(page, [
+      textSource(),
+      wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: [RAMP(1, 0), RAMP(0, 1)] } }),
+      makeLayer('tgt2', 'Target2', 'custom_circle', { zIndex: 3, fillColor: '#00ff00', scaleX: 5, scaleY: 3, matte: { sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: [RAMP(0, 1), RAMP(1, 0)] } } }),
+    ]);
+    await ready(page);
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"]').length)).toBe(1);
+    expect(await page.evaluate(() => document.querySelectorAll('mask[id^="kcs-mask-txt-alpha-g0-s"]').length)).toBe(1);
+  });
+
+  test('V-H12 — import/reload parity: stops preserved, DOM + pixel EXACT after reload', async ({ page }) => {
+    const stops = [RAMP(0, 1), RAMP(0.5, 0.6), RAMP(1, 0)];
+    await seed(page, [textSource(), wideTarget({ sourcePartId: 'txt', mode: 'alpha', feather: 6, strength: 0.7, gradient: { angle: 0, stops } })]);
+    await ready(page);
+    const before = [await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1), await greenAtWorld(page, 165, 240)];
+    await page.waitForFunction(() => {
+      try {
+        const s = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+        return (s.layers ?? []).find((x: any) => x.id === 'tgt')?.matte?.gradient?.stops?.length === 3;
+      } catch { return false; }
+    }, undefined, { timeout: 10000 });
+    const autosaved = await page.evaluate(() => JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!));
+    expect(autosaved.layers.find((l: any) => l.id === 'tgt').matte.gradient).toEqual({ angle: 0, stops });
+    expect(JSON.stringify(autosaved.layers.find((l: any) => l.id === 'tgt').matte)).not.toContain('fontSize');
+    await page.reload();
+    await page.waitForFunction(() => document.querySelectorAll('[id^="kcs-"]').length > 0, undefined, { timeout: 15000 });
+    await ready(page);
+    const after = [await maxGreen(page, INK.x0, INK.x1, INK.y0, INK.y1), await greenAtWorld(page, 165, 240)];
+    expect(after[0]).toBe(before[0]); // exact pixel parity
+    expect(after[1]).toBe(before[1]);
+    expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"] stop').length)).toBe(3);
   });
 });

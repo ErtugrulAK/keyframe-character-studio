@@ -5,7 +5,7 @@ import { AnimationProject, Track, Transform, TrackChannel, PropertyKeyframe } fr
 import { makeEmptyChannels } from '../utils/defaults';
 import { applyTransitionToTrackCanonicalMutator } from '../utils/trackMutations';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
-import { normalizeFeather, normalizeGradientAngle } from '../utils/matte';
+import { normalizeFeather, normalizeGradientAngle, normalizeGradientStops } from '../utils/matte';
 
 describe('useSerialization Hook', () => {
   const mockSetFps = vi.fn();
@@ -1831,6 +1831,82 @@ describe('useSerialization Hook', () => {
     } as any;
     const restored = roundTripPart(shape);
     expect(restored.matte).toEqual({ sourcePartId: 'tgt', mode: 'alpha', feather: 8, strength: 0.7 });
+  });
+
+  describe('M19 — multi-stop gradient round-trip', () => {
+    const textTarget = (matte: any) => ({
+      id: 'tgt', type: 'custom_box', name: 'T', zIndex: 2,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#00ff00', strokeColor: '#101218',
+      matte,
+    });
+
+    function roundTripPart(part: any) {
+      const { result } = renderSerializationWithPart(part);
+      const exported = result.current.exportProject();
+      mockSetCharacterParts.mockClear();
+      expect(result.current.importProject(exported)).toBe(true);
+      return (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === part.id)!;
+    }
+
+    const fullMatte = {
+      sourcePartId: 'txt', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+      gradient: {
+        angle: 45,
+        stops: [
+          { offset: 0, color: '#ffffff', opacity: 1 },
+          { offset: 0.35, color: '#00ff00', opacity: 0.7 },
+          { offset: 0.7, color: '#0000ff', opacity: 0.45 },
+          { offset: 1, color: '#000000', opacity: 0.1 },
+        ],
+      },
+    };
+
+    it('explicit 4-stop gradient round-trips EXACTLY (angle + stops + every matte field)', () => {
+      const restored = roundTripPart(textTarget(fullMatte));
+      expect(restored.matte).toEqual(fullMatte);
+      expect(JSON.stringify(restored.matte.gradient)).toContain('0.35');
+      expect(restored.matte.gradient.stops).toHaveLength(4);
+    });
+
+    it('legacy {angle} stays legacy — stops are NOT invented by serialization', () => {
+      const restored = roundTripPart(textTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 45 } }));
+      expect(restored.matte.gradient).toEqual({ angle: 45 });
+      expect('stops' in restored.matte.gradient).toBe(false);
+    });
+
+    it('malformed stops persist as-is (pass-through); render-side normalization is the contract', () => {
+      // The serializer must NOT silently mutate persistent data — a malformed
+      // stops array survives byte-for-byte and normalizeGradientStops (5B)
+      // handles it deterministically at render time.
+      const malformed = {
+        sourcePartId: 'txt', mode: 'alpha',
+        gradient: { angle: 45, stops: [{ offset: 9, color: '#ffffff', opacity: 2 }, { offset: 1, color: 'white', opacity: 0 }] },
+      };
+      const restored = roundTripPart(textTarget(malformed));
+      expect(restored.matte.gradient.stops).toEqual([{ offset: 9, color: '#ffffff', opacity: 2 }, { offset: 1, color: 'white', opacity: 0 }]);
+      const normalized = normalizeGradientStops(restored.matte.gradient.stops, 'alpha');
+      expect(normalized[0]).toEqual({ offset: 1, color: '#ffffff', opacity: 1 }); // clamped 9→1, 2→1
+    });
+
+    it('runtime text data is NOT serialized (M18 contract holds with stops present)', () => {
+      const restored = roundTripPart(textTarget(fullMatte));
+      const json = JSON.stringify(restored);
+      expect(json).not.toContain('fontSize');
+      expect(json).not.toContain('fontFamily');
+      expect(json).not.toContain('textAnchor');
+      expect(json).not.toContain('content');
+      expect(json).not.toContain('keyframe');
+      expect(json).not.toContain('channel');
+    });
+
+    it('M8: stops are static paint — no TrackChannel/keyframe enters the JSON', () => {
+      const restored = roundTripPart(textTarget(fullMatte));
+      const json = JSON.stringify(restored);
+      expect(json).not.toContain('TrackChannel');
+      expect(json).not.toContain('keyframe');
+      expect(json).not.toContain('animation');
+    });
   });
   });
 });

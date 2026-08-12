@@ -7,7 +7,7 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, textMaskContent, worldToLocal } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, normalizeGradientStops, canonicalStopsKey, gradientStopsHash, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, textMaskContent, worldToLocal } from '../utils/matte';
 import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
 import { buildFreeformPath } from '../utils/freeform';
@@ -840,5 +840,113 @@ describe('matte — M18 text matte (data/pure)', () => {
     expect(json).not.toContain('channel');
     expect(json).not.toContain('keyframe');
     expect(json).not.toContain('TrackChannel');
+  });
+});
+
+describe('matte — M19 multi-stop gradient (data/pure)', () => {
+  const S = (offset: number, color = 'white', opacity = 1) => ({ offset, color, opacity });
+  const DEFAULTS_ALPHA = () => getDefaultGradientStops('alpha');
+  const DEFAULTS_LUM = () => getDefaultGradientStops('luminance');
+
+  it('defaults: alpha = white/1 → white/0; luminance = white → black', () => {
+    expect(DEFAULTS_ALPHA()).toEqual([S(0, 'white', 1), S(1, 'white', 0)]);
+    expect(DEFAULTS_LUM()).toEqual([S(0, 'white', 1), S(1, 'black', 1)]);
+  });
+
+  it('normalization: undefined / null / non-array / empty → mode defaults (legacy behavior)', () => {
+    expect(normalizeGradientStops(undefined, 'alpha')).toEqual(DEFAULTS_ALPHA());
+    expect(normalizeGradientStops(null as never, 'alpha')).toEqual(DEFAULTS_ALPHA());
+    expect(normalizeGradientStops([] as never, 'alpha')).toEqual(DEFAULTS_ALPHA());
+    expect(normalizeGradientStops('nope' as never, 'luminance')).toEqual(DEFAULTS_LUM());
+  });
+
+  it('sorting: unsorted input → offset-ascending output', () => {
+    const out = normalizeGradientStops([S(0.8), S(0.2), S(0.5)], 'alpha');
+    expect(out.map((s) => s.offset)).toEqual([0.2, 0.5, 0.8]);
+  });
+
+  it('clamping: offsets <0 → 0, >1 → 1; opacity <0 → 0, >1 → 1 (then sorted)', () => {
+    const out = normalizeGradientStops([S(-0.5), S(1.5, 'white', 2), S(0.5, 'white', -1)], 'alpha');
+    expect(out).toEqual([S(0), S(0.5, 'white', 0), S(1)]);
+  });
+
+  it('duplicate offsets: stable sort preserves input order (later doc-order stop wins per 5A)', () => {
+    const out = normalizeGradientStops([S(0), S(0.5, 'white', 0.8), S(0.5, 'white', 0.2), S(1)], 'alpha');
+    const dup = out.filter((s) => s.offset === 0.5);
+    expect(dup).toEqual([S(0.5, 'white', 0.8), S(0.5, 'white', 0.2)]);
+  });
+
+  it('field salvage: missing/NaN offset → 0; missing/NaN opacity → 1; bad color → white', () => {
+    const out = normalizeGradientStops(
+      [{ offset: NaN, opacity: NaN, color: '' }, { offset: 1, color: '#ff0000' }] as never,
+      'alpha',
+    );
+    expect(out).toEqual([S(0, 'white', 1), S(1, '#ff0000', 1)]);
+  });
+
+  it('non-object entries are dropped; <2 valid stops → defaults', () => {
+    expect(normalizeGradientStops([42, S(0), S(1)] as never, 'alpha')).toEqual([S(0), S(1)]);
+    expect(normalizeGradientStops([42, 'x'] as never, 'alpha')).toEqual(DEFAULTS_ALPHA());
+    expect(normalizeGradientStops([S(0.5)], 'alpha')).toEqual(DEFAULTS_ALPHA()); // one-stop
+  });
+
+  it('canonical key: equal normalized sets → equal key (insertion order independent)', () => {
+    const a = normalizeGradientStops([S(0.5), S(0), S(1)], 'alpha');
+    const b = normalizeGradientStops([S(0), S(1), S(0.5)], 'alpha');
+    expect(a).toEqual(b);
+    expect(canonicalStopsKey(a)).toBe(canonicalStopsKey(b));
+  });
+
+  it('hash: same normalized stops → same hash; different stops → different hash; stable across calls', () => {
+    const h1 = gradientStopsHash(normalizeGradientStops([S(0), S(0.5), S(1)], 'alpha'));
+    const h2 = gradientStopsHash(normalizeGradientStops([S(0), S(0.5), S(1)], 'alpha'));
+    const h3 = gradientStopsHash(normalizeGradientStops([S(0), S(0.5, 'white', 0.5), S(1)], 'alpha'));
+    expect(h1).toBe(h2);
+    expect(h1).not.toBe(h3);
+    expect(h1).toMatch(/^[0-9a-f]{8}$/);
+    // insertion-order independence: unsorted input hashes to the sorted key
+    const hUnsorted = gradientStopsHash(normalizeGradientStops([S(1), S(0.5), S(0)], 'alpha'));
+    expect(hUnsorted).toBe(h1);
+  });
+
+  it('legacy: gradient WITHOUT stops keeps the byte-for-byte id', () => {
+    expect(gradientId('src', { angle: 45 })).toBe('kcs-mg-src-45');
+    expect(gradientId('src', { angle: 360 })).toBe('kcs-mg-src-0');
+    expect(gradientId('src', undefined)).toBeUndefined();
+    expect(gradientId('src', { angle: 45, stops: undefined })).toBe('kcs-mg-src-45');
+  });
+
+  it('M19 id: stops present → deterministic -s{hash} suffix (same stops → same id)', () => {
+    const stops = [S(0, '#ff0000'), S(0.5, 'white', 0.5), S(1, '#0000ff')];
+    const id1 = gradientId('src', { angle: 45, stops });
+    const id2 = gradientId('src', { angle: 45, stops: [...stops].reverse() }); // same SET, other order
+    expect(id1).toBe(`kcs-mg-src-45-s${gradientStopsHash(normalizeGradientStops(stops, 'alpha'))}`);
+    expect(id2).toBe(id1); // normalized equality → same id
+  });
+
+  it('M19 id: DIFFERENT stops on the same source+angle → DIFFERENT ids (no def collision)', () => {
+    const a = gradientId('src', { angle: 45, stops: [S(0), S(1)] });
+    const b = gradientId('src', { angle: 45, stops: [S(0), S(0.5), S(1)] });
+    const c = gradientId('src', { angle: 45, stops: [S(0), S(1, 'white', 0.5)] });
+    expect(a).not.toBe(b);
+    expect(a).not.toBe(c);
+    expect(b).not.toBe(c);
+    // different source with identical stops → different ids
+    expect(gradientId('src2', { angle: 45, stops: [S(0), S(1)] })).not.toBe(a);
+  });
+
+  it('M19 id: malformed stops (fall to defaults) still produce a STABLE id', () => {
+    const id1 = gradientId('src', { angle: 45, stops: [] as never });
+    const id2 = gradientId('src', { angle: 45, stops: [] as never });
+    expect(id1).toBe(id2);
+    expect(id1).toContain('-s'); // hashed (array present) but stable
+  });
+
+  it('M8 integrity: stops are paint data — no channel/keyframe/TrackChannel introduced', () => {
+    const json = JSON.stringify({ angle: 45, stops: [S(0), S(1)] });
+    expect(json).not.toContain('channel');
+    expect(json).not.toContain('keyframe');
+    expect(json).not.toContain('TrackChannel');
+    expect(normalizeGradientStops([S(0), S(1)], 'alpha')).toEqual([S(0), S(1)]); // idempotent
   });
 });

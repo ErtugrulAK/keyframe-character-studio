@@ -631,3 +631,157 @@ describe('StyleMatteSection — M18 text source UI policy', () => {
     expect(feather(container)).toBeNull();
   });
 });
+
+describe('StyleMatteSection — M19 multi-stop gradient editor', () => {
+  const star = () => makePart('src', 'custom_star', 'Star Part');
+  const text = () => makePart('txt', 'custom_text', 'Text Part');
+  const target = (matte?: CharacterPart['matte']) => makePart('tgt', 'custom_box', 'Box Part', matte);
+  const render = (matte: CharacterPart['matte'], parts: CharacterPart[]) => renderMatte(target(matte), [...parts, target(matte)]);
+  const addBtn = (container: HTMLElement) => container.querySelector('button[aria-label="Add gradient stop"]') as HTMLButtonElement;
+  const removeBtn = (container: HTMLElement, i: number) => container.querySelector(`button[aria-label="Remove gradient stop ${i}"]`) as HTMLButtonElement;
+  const color = (container: HTMLElement, i: number) => container.querySelector(`input[aria-label="Gradient stop ${i} color"]`) as HTMLInputElement;
+  const offset = (container: HTMLElement, i: number) => container.querySelector(`input[aria-label="Gradient stop ${i} offset"]`) as HTMLInputElement;
+  const opacity = (container: HTMLElement, i: number) => container.querySelector(`input[aria-label="Gradient stop ${i} opacity"]`) as HTMLInputElement;
+
+  it('1. legacy {angle} → editor shows the normalized DEFAULT stops (2), legacy NOT rewritten', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } }, [star()]);
+    expect(color(container, 0)).not.toBeNull();
+    expect(color(container, 1)).not.toBeNull();
+    expect(color(container, 2)).toBeNull(); // exactly 2 defaults
+    expect(offset(container, 0).value).toBe('0');
+    expect(offset(container, 1).value).toBe('1');
+    expect(opacity(container, 0).value).toBe('1');
+    expect(opacity(container, 1).value).toBe('0'); // alpha default: white→transparent
+    expect(onPartPropChange).not.toHaveBeenCalled(); // display only — no rewrite
+  });
+
+  it('2. min 2: remove disabled at 2 stops', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 1, color: '#ffffff', opacity: 0 }] } }, [star()]);
+    expect(removeBtn(container, 0).disabled).toBe(true);
+    expect(removeBtn(container, 1).disabled).toBe(true);
+    expect(addBtn(container).disabled).toBe(false);
+  });
+
+  it('3. max 4: add disabled at 4 stops', () => {
+    const stops = [0, 0.33, 0.66, 1].map((offset, i) => ({ offset, color: '#ffffff', opacity: 1 - i * 0.2 }));
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops } }, [star()]);
+    expect(addBtn(container).disabled).toBe(true);
+    expect(removeBtn(container, 0).disabled).toBe(false);
+  });
+
+  it('4. add stop → deterministic midpoint in the LARGEST gap, inheriting the left stop', () => {
+    const stops = [
+      { offset: 0, color: '#ff0000', opacity: 1 },
+      { offset: 0.2, color: '#00ff00', opacity: 0.8 },
+      { offset: 1, color: '#0000ff', opacity: 0.5 },
+    ];
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops } }, [star()]);
+    fireEvent.click(addBtn(container));
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', gradient: {
+        angle: 45,
+        stops: [
+          { offset: 0, color: '#ff0000', opacity: 1 },
+          { offset: 0.2, color: '#00ff00', opacity: 0.8 },
+          { offset: 0.6, color: '#00ff00', opacity: 0.8 }, // midpoint of 0.2→1 gap, inherits left
+          { offset: 1, color: '#0000ff', opacity: 0.5 },
+        ],
+      },
+    });
+  });
+
+  it('5. remove stop → filtered; keeps angle + other fields', () => {
+    const stops = [
+      { offset: 0, color: '#ffffff', opacity: 1 },
+      { offset: 0.5, color: '#ffffff', opacity: 0.5 },
+      { offset: 1, color: '#ffffff', opacity: 0 },
+    ];
+    const full = target({ sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 90, stops } });
+    const { onPartPropChange, container } = renderMatte(full, [star(), full]);
+    fireEvent.click(removeBtn(container, 1));
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+      gradient: { angle: 90, stops: [stops[0], stops[2]] },
+    });
+  });
+
+  it('6. color update → explicit stops materialized; every other field preserved', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } }, [star()]);
+    fireEvent.change(color(container, 0), { target: { value: '#ff0000' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', gradient: {
+        angle: 45,
+        stops: [
+          { offset: 0, color: '#ff0000', opacity: 1 },
+          { offset: 1, color: 'white', opacity: 0 }, // 5B defaults: 'white' (not hex)
+        ],
+      },
+    });
+  });
+
+  it('7. offset update → single-stop patch (normalization happens on render)', () => {
+    const stops = [
+      { offset: 0, color: '#ffffff', opacity: 1 },
+      { offset: 1, color: '#ffffff', opacity: 0 },
+    ];
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops } }, [star()]);
+    fireEvent.change(offset(container, 1), { target: { value: '0.7' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 0.7, color: '#ffffff', opacity: 0 }] },
+    });
+  });
+
+  it('8. opacity update → clamped 0..1 written', () => {
+    const stops = [
+      { offset: 0, color: '#ffffff', opacity: 1 },
+      { offset: 1, color: '#ffffff', opacity: 0 },
+    ];
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops } }, [star()]);
+    fireEvent.change(opacity(container, 1), { target: { value: '0.35' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 1, color: '#ffffff', opacity: 0.35 }] },
+    });
+  });
+
+  it('9. display is normalized (unsorted stored stops shown sorted)', () => {
+    const stops = [
+      { offset: 1, color: '#ffffff', opacity: 0 },
+      { offset: 0, color: '#ff0000', opacity: 1 },
+      { offset: 0.5, color: '#00ff00', opacity: 0.5 },
+    ];
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops } }, [star()]);
+    expect(color(container, 0).value).toBe('#ff0000'); // sorted by offset: 0 first
+    expect(offset(container, 0).value).toBe('0');
+    expect(offset(container, 1).value).toBe('0.5');
+    expect(offset(container, 2).value).toBe('1');
+  });
+
+  it('10. field preservation: shape ↔ text source swap keeps angle + stops', () => {
+    const full = target({ sourcePartId: 'src', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5, gradient: { angle: 45, stops: [{ offset: 0, color: '#ff0000', opacity: 1 }, { offset: 1, color: '#0000ff', opacity: 1 }] } });
+    const { onPartPropChange, container } = renderMatte(full, [star(), text(), full]);
+    const sourceSelect = container.querySelector('select') as HTMLSelectElement;
+    fireEvent.change(sourceSelect, { target: { value: 'txt' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      sourcePartId: 'txt', mode: 'alpha', inverted: true, enabled: true, feather: 12, strength: 0.5,
+      gradient: { angle: 45, stops: [{ offset: 0, color: '#ff0000', opacity: 1 }, { offset: 1, color: '#0000ff', opacity: 1 }] },
+    });
+    // text → shape: stops survive
+    fireEvent.change(sourceSelect, { target: { value: 'src' } });
+    const last = onPartPropChange.mock.calls.at(-1)?.[1] as PartMatte;
+    expect(last.sourcePartId).toBe('src');
+    expect(last.gradient).toEqual({ angle: 45, stops: [{ offset: 0, color: '#ff0000', opacity: 1 }, { offset: 1, color: '#0000ff', opacity: 1 }] });
+  });
+
+  it('11. text source: stop editor works (no text-specific gradient system)', () => {
+    const { container } = render({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 0.5, color: '#ffffff', opacity: 0.5 }, { offset: 1, color: '#ffffff', opacity: 0 }] } }, [text()]);
+    expect(color(container, 0)).not.toBeNull();
+    expect(color(container, 2)).not.toBeNull();
+    expect(addBtn(container).disabled).toBe(false);
+  });
+
+  it('12. no local state: matte untouched → zero callbacks fired after render', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 1, color: '#ffffff', opacity: 0 }] } }, [star()]);
+    expect(color(container, 0).value).toBe('#ffffff');
+    expect(onPartPropChange).not.toHaveBeenCalled();
+  });
+});

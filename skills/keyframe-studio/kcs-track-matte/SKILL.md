@@ -1,18 +1,18 @@
 ---
 name: kcs-track-matte
 description: Use when working on KCS Track Matte (SVG clipPath + mask) — architecture, data model, browser-verified semantics, rules, tests.
-version: 6.0.0
+version: 7.0.0
 author: senmu
 license: MIT
 metadata:
   hermes:
-    tags: [keyframe-studio, track-matte, svg, clipPath, mask, alpha, luminance, inverted, freeform, strength, gradient, text-matte]
+    tags: [keyframe-studio, track-matte, svg, clipPath, mask, alpha, luminance, inverted, freeform, strength, gradient, text-matte, multi-stop]
     related_skills: [kcs-project-context, kcs-constitution, kcs-workflows]
 ---
 
 # Track Matte (SVG clipPath + mask) — KCS
 
-M11 + M13 + M14 + M15 + M16 + M17 + M18 sistemi: bir CharacterPart (target), başka bir part'ın
+M11 + M13 + M14 + M15 + M16 + M17 + M18 + M19 sistemi: bir CharacterPart (target), başka bir part'ın
 (source) evaluated world geometrisiyle kırpılır. Canvas 2D / PixiJS / Fabric.js YOK —
 yalnızca SVG.
 
@@ -27,11 +27,14 @@ interface PartMatte {
   enabled?: boolean;
   feather?: number;   // M14: world-space px soft edge; undefined/0 → keskin
   strength?: number;  // M16: 0-1 matte gücü; undefined/1 = tam (legacy); 0 GEÇERLİ
-  gradient?: { angle: number };  // M17: linear gradient (paint — ASLA geometry); undefined = yok
+  gradient?: { angle: number; stops?: MatteGradientStop[] };  // M17+M19: linear gradient (paint — ASLA geometry); stops yok = legacy 2-stop; undefined = yok
 }
 // CharacterPart.matte?: PartMatte   (SceneLayer.matte?: PartMatte — serialization)
 ```
 
+- M19: `stops` = STATIC PAINT verisi (asla channel/keyframe/animation — M8 korunur);
+  yoksa → legacy default 2-stop (byte-for-byte); malformed → `normalizeGradientStops`
+  deterministic fallback (sıralama/clamp/default)
 - M18: text source için `PartMatte`'e YENİ alan EKLEMEZ — text content/font bilgileri
   runtime'da source CharacterPart'tan okunur (`sourcePartId` tek persistent bağlantı)
 - `enabled !== false` → aktif; `mode` yok → `resolveMatteMode` ile 'clip'
@@ -55,6 +58,9 @@ matte.ts         → buildMattePath(source, worldTransform) → world-space path
                    gradientId: kcs-mg-{sourceId}-{normalizedAngle}-{mode} / gradientEndpoints (bbox → 2 nokta → applyWorld)
                    M18: textMaskContent (source → render descriptor), buildMatteTextMask (pathD null + text),
                    worldToLocal (applyWorld inverse), gradientEndpointsLocal (world→local — text gradient def'leri)
+                   M19: normalizeGradientStops (tek normalization authority — sort/clamp/default),
+                   canonicalStopsKey + gradientStopsHash (deterministic FNV-1a),
+                   matteMaskGradientSuffix (-g{angle}[-s{hash}] — stops identity mask id'sinde)
                    resolveMatteMode / isMatteEligible / normalizeFeather / normalizeStrength / normalizeGradientAngle
 StagePartLayers  → evaluateFrame sonrası: matteClips + matteMasks Map dedupe → tek <defs>
                    maskPathCache: aynı source'un farklı mask modları 1 buildMattePath paylaşır
@@ -176,8 +182,8 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
 
 ## M17 — Gradient Track Matte
 
-- `PartMatte.gradient?: { angle: number }` — LINEAR gradient (MVP: yalnızca
-  angle; stops/colors/radial/multi-stop YOK). undefined = legacy (DOM birebir)
+- `PartMatte.gradient?: { angle: number }` — LINEAR gradient (M17 MVP: yalnızca
+  angle; M19 ile `stops` eklendi). undefined = legacy (DOM birebir)
 - `normalizeGradientAngle`: undefined → undefined (gradient yok — 0'a çevrilmez);
   NaN/±Inf → 0; finite → `((v % 360) + 360) % 360` (360 ≡ 0, -315 ≡ 45)
 - PAINT'tir, ASLA geometry değildir: `buildMattePath` tek geometry kaynağı;
@@ -234,6 +240,40 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   ("HHH") — glif delikleri/kenar yumuşatmasına bağımlı probe YOK.
 - Text stagger/tspan animasyonu MVP DIŞIDIR (deferred).
 
+## M19 — Custom / Multi-stop Gradient
+
+- `gradient.stops?: MatteGradientStop[]` ({ offset 0-1, color, opacity 0-1 }) — custom
+  multi-stop LINEAR gradient (UI MVP: 2-4 stop). STATIC PAINT verisi: asla channel /
+  keyframe / animation (M8 korunur — stops animasyonlu DEĞİLDİR).
+- `normalizeGradientStops(stops, mode)` — TEK normalization authority: offset/opacity
+  clamp [0,1] (malformed → 0/1), color non-empty string (malformed → 'white'), non-object
+  entry'ler DROPPED, **stabil sıralama** (eşit offset'ler girdi sırasını korur — Chromium
+  document order işler), <2 geçerli stop → `getDefaultGradientStops(mode)` (legacy parity).
+- `canonicalStopsKey` + `gradientStopsHash` — deterministic FNV-1a (32-bit hex, 8 karakter);
+  aynı normalize set → aynı hash; farklı set → farklı hash; insertion-order bağımsız;
+  random/time/address YOK.
+- Identity: def `kcs-mg-{src}-{angle}-s{hash}-{structure}`; mask `-g{angle}-s{hash}`
+  (`matteMaskGradientSuffix`) — aynı source+angle FARKLI stops → farklı def + farklı mask
+  (collision YOK — 5A spike kanıtı: duplicate id'lerde Chromium İLK def'i kullanır);
+  aynı normalize set (farklı girdi sırası) → TEK def + TEK mask (dedupe).
+- Legacy: `{angle}` stops'suz → byte-for-byte legacy id + default 2-stop render;
+  serialization stops UYDURMAZ; ilk UI stop edit'inde stops materialize olur.
+- Render: mevcut `g.stops.map` — normalize stops `stop offset/color/opacity` olarak def'e;
+  feather/strength/inverted/rotation/scale hepsi multi-stop ile çalışır (V-H3..V-H12).
+- UI (StyleMatteSection): STOPS editörü — Add (en büyük boşluğun midpoint'i, sol stop'tan
+  miras; max 4), Remove (min 2'de disabled), color (native), offset (0-1), opacity (0-1);
+  local state YOK; legacy `{angle}` dokunulmadan gösterilir.
+- **INVERTED TEXT koordinat kontratı (5E blocker fix — pixel kanıtlı)**: inverted text'te
+  gradient'in TEK tüketicisi WORLD-space region rect'tir (text SİYAH — 4A kararı). Bu yüzden:
+  - inverted text def endpoint'leri **WORLD** (`gradientEndpoints` — text box ±100 → applyWorld)
+  - inverted text def identity: `-luminance-inv` (non-inverted luminance TEXT def'i LOKAL —
+    `-luminance` — asla çakışmaz)
+  - inverted text content: **düz siyah** (fill="black", asla url())
+  - non-inverted text: **LOKAL** endpoint'ler + text fill=url (4A kararı korunur)
+- Serialization: `gradient.stops` pass-through (exact round-trip); malformed stops
+  serializer tarafından DEĞİŞTİRİLMEZ (persistent data korunur, normalize render'da);
+  runtime veri persist edilmez; import/reload pixel parity EXACT (V-H12).
+
 ## Test'ler
 
 - `matte.test.ts` — world-space A/B/C (static/rotated+scaled/parented), animated frame,
@@ -243,7 +283,10 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   (normalize/id/stops/geometry parity — gradient paint'tir), M18 text
   (isMatteEligible(custom_text), textMaskContent descriptor, buildMatteTextMask,
   worldToLocal inverse — identity/rotation/scale/neg-scale/zero-scale/round-trip,
-  gradientEndpointsLocal, buildMattePath(text) → null, M8: channel yok)
+  gradientEndpointsLocal, buildMattePath(text) → null, M8: channel yok),
+  M19 stops (defaults, normalization/sort/clamp/duplicate-offset/salvage/drop,
+  canonical key, FNV-1a determinizm, legacy id byte-for-byte, stops-aware id,
+  farklı stops farklı id, malformed stabil, M8)
 - `matteRender.test.tsx` — render: tek clip/mask def, N target, enabled=false,
   missing source, freeform (M15), mixed modes geometry parity, evenodd alpha-inv,
   feather (filter + stdDeviation + region, dedupe, id collision yok, rotated parity),
@@ -268,14 +311,15 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   data matte JSON'una GİRMEZ, gradient absent→absent, 360 canonical, malformed safe,
   M8: channel/keyframe yok, shape backward-compat)
 - `e2e/track-matte.spec.ts` — REAL Chromium: DOM + gerçek PIXEL compositing testleri
-  (V-A..V-L, V-M1..V-M8, V-S1..V-S8, V-G1..V-G12, M18 V-T1..V-T17 — world→screen CTM +
-  PNG decode; import→render round-trip pixel parity: V-M7/V-M8, V-S6..V-S8, V-G8, V-T17)
-- Baseline: 558/558 vitest + 64/64 track-matte playwright (M18 kapanışı; full suite'te
-  workflow.spec.ts:88 bilinen ÖLÜ container testi fail — b60f1ca sonrası, M18 dışı)
+  (V-A..V-L, V-M1..V-M8, V-S1..V-S8, V-G1..V-G12, M18 V-T1..V-T17, M19 V-H1..V-H12 —
+  world→screen CTM + PNG decode; import→render round-trip pixel parity: V-M7/V-M8,
+  V-S6..V-S8, V-G8, V-T17, V-H12)
+- Baseline: 599/599 vitest + 76/76 track-matte playwright (M19 kapanışı; full suite'te
+  workflow.spec.ts:88 bilinen ÖLÜ container testi fail — b60f1ca sonrası, M19 dışı)
 
-## Deferred (yeni feature kararı gerektirir — M13..M18'de YAPILMADI)
+## Deferred (yeni feature kararı gerektirir — M13..M19'da YAPILMADI)
 
-**radial gradient** · custom/multi-stop gradient · **gradient animation** ·
+**radial gradient** · **gradient presets** · **gradient animation** ·
 image/video matte · nested matte · multi-matte (tip migration gerekir) ·
 matte gizmo / geometry editor · outliner matte icon / relationship visualization ·
 timeline matte indicator · drag/drop matte assignment ·

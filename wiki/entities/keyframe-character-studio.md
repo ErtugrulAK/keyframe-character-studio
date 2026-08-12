@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 558 test — 35 dosya** (M18 durumu) |
+| Test | **Vitest, 599 test — 35 dosya** (M19 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M18)
+## Proje durumu (M19)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -107,8 +107,33 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 4F: docs (SKILL v6.0.0, wiki, README) + final audit
   - Baseline: 558/558 vitest + 64/64 track-matte playwright; full suite 66/1 (tek fail
     workflow.spec.ts:88 ölü container — M18 dışı)
+- **M19 ✅ COMPLETE — Custom / Multi-stop Gradient** (commit/push PENDING — onay bekliyor)
+  - 5A: spike — N-stop linearGradient-in-mask Chromium kanıtı (15/15 ×2): unsorted doc order
+    farklı ramp üretiyor (sıralama şart), duplicate offset'te sonraki stop kazanıyor, aynı id +
+    farklı stops → COLLISION (ilk def kazanıyor — id stops hash taşımalı), determinizm byte-identical
+  - 5B: data/pure — `gradient.stops?` (additive; PartMatte'e ek alan YOK), `normalizeGradientStops`
+    (tek authority: clamp/sort-stabil/salvage/drop/<2→default), `canonicalStopsKey` + `gradientStopsHash`
+    (deterministic FNV-1a), `gradientId` stops hash suffix'i (`kcs-mg-{src}-{angle}-s{hash}`);
+    legacy `{angle}` id byte-for-byte; 572/572
+  - 5C: render — def'lere normalize stops (mevcut stops.map), gerçek gradient nesnesi id'ye
+    (rekonstrüksiyon stops'u düşürüyordu), mask id `-g{angle}-s{hash}` (`matteMaskGradientSuffix`);
+    farklı stops → farklı def+mask; aynı normalize set → dedupe; legacy parity; 582/582 + 66/66
+  - 5D: UI — STOPS editörü (2-4: Add en büyük boşluk midpoint'i + sol miras, Remove min 2,
+    color/offset/opacity, field preservation, local state YOK, legacy {angle} dokunulmaz);
+    594/594 + 66/66
+  - 5E: serialization (4-stop EXACT round-trip, legacy stops uydurmaz, malformed pass-through +
+    render-side normalize, runtime veri yok) + V-H1..V-H12 (4-stop ramp, opacity, feather,
+    strength, inverted luminance, **inverted TEXT + multi-stop — BLOCKER: dış alan transparan**,
+    rotation, scale, dedupe, import-reload EXACT parity); 599/599 + 75/76
+  - 5E BLOCKER FIX (onaylı): inverted text gradient koordinat kontratı — def endpoint'leri
+    WORLD (rect world-space; text siyah — def'i kullanmaz), identity `-luminance-inv`
+    (non-inverted luminance TEXT lokal `-luminance` ile çakışmaz), text her zaman düz siyah
+    (fill="black" — url() ALMAZ); V-H8 pixel-kanıtlı; 599/599 + 76/76 ×2 + full 78/1
+  - 5F: docs (SKILL v7.0.0, wiki, README) + final audit
+  - Baseline: 599/599 vitest + 76/76 track-matte playwright; full suite 78/1 (tek fail
+    workflow.spec.ts:88 ölü container — M19 dışı)
 - M12 ✅ audit — "kapatılabilir"; 2 LOW OPTIONAL (clipIdFor O(N²), MATTE_CYCLE validation)
-- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17, push edildi) → M18 4A-4F iş PC (commit/push PENDING — onay bekliyor)
+- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17, push edildi) → `e88517f` (M18, push edildi) → M19 5A-5F iş PC (commit/push PENDING — onay bekliyor)
 
 ## Önemli kararlar
 

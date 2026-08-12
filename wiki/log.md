@@ -136,3 +136,21 @@
   wiki entity/log, README; final audit: korumalı dosyalar untouched, M8 korundu, hash deterministik
 - Full suite: **78 passed / 1 failed** — tek fail workflow.spec.ts:88 ölü container (M19 dışı)
 - Commit/push: YOK (HEAD hâlâ `e88517f` — M18)
+
+## [2026-08-12] update | KCS — M20 DISCOVERY (radial gradient, audit only)
+- M20 discovery iş PC'de TAMAMLANDI — **KOD YAZILMADI, commit YOK** (onay bekliyor)
+- Baseline: HEAD=origin=`28d0e94` (M19), tree CLEAN, 599/599 + 76/76 ×2 + full 78/1
+- Bulgular: stops modeli / normalizeGradientStops / canonicalStopsKey + gradientStopsHash /
+  dedupe / serialization → radial için %100 REUSE; yeni data yalnızca `gradient.type?:
+  'linear' | 'radial'` + fraction centerX/centerY/radius (0-1, default 0.5'ler)
+- Önerilen identity: `kcs-mg-{src}-radial[-c{cx}-cy{cy}-r{radius}]-s{hash}-{structure}`
+  (`-radial` discriminator — linear `-g{angle}` ile collision YOK); mask suffix benzer
+- Koordinat kontratı: shape/freeform + inverted text → WORLD center (applyWorld), non-inverted
+  text → LOCAL (0,0 + bbox yarı-boyutu); inverted-text `-luminance-inv` + düz siyah text (5E fix) AYNEN
+- Kritik SVG gerçeği: radialGradient'te rX/rY YOK (SVG1.1 daire + gradientTransform) —
+  world def = gerçek dünya dairesi; non-uniform scale spike'ın birincil kanıt noktası
+- M8 SAFE (paint-only), geometry SAFE (center/radius bbox noktalarından — M17 math),
+  serialization additive (legacy {angle} byte-for-byte, migration YOK)
+- Öneri: Option 2 (type + fraction center/radius) — 6A spike → 6B data → 6C render →
+  6D UI → 6E serialization + V-R pixel matrisi → 6F docs (SKILL v8.0.0)
+- Karar: M20 BAŞLATILMADI — kullanıcı onayı bekliyor

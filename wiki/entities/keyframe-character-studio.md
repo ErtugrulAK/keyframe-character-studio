@@ -133,7 +133,20 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - Baseline: 599/599 vitest + 76/76 track-matte playwright; full suite 78/1 (tek fail
     workflow.spec.ts:88 ölü container — M19 dışı)
 - M12 ✅ audit — "kapatılabilir"; 2 LOW OPTIONAL (clipIdFor O(N²), MATTE_CYCLE validation)
-- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17, push edildi) → `e88517f` (M18, push edildi) → M19 5A-5F iş PC (commit/push PENDING — onay bekliyor)
+- **M20 (radial gradient) — DISCOVERY ✅, implementation YOK (onay bekliyor)**
+  - Önerilen model: `gradient.type?: 'linear' | 'radial'` (yok = linear, legacy byte-for-byte) +
+    fraction `centerX?/centerY?/radius?` (0-1, default 0.5'ler = otomatik merkez/yarıçap)
+  - Reuse: stops / normalizeGradientStops / FNV-1a hash / dedupe / serialization %100
+  - Identity: `kcs-mg-{src}-radial[-c{cx}-cy{cy}-r{radius}]-s{hash}-{structure}`;
+    mask suffix `-radial[...]`; linear id'ler DEĞİŞMEZ
+  - Koordinat: shape/freeform + inverted text WORLD (applyWorld), non-inverted text LOCAL
+    (0,0 + ±100×±30 kutu); inverted text `-luminance-inv` + siyah text korunur
+  - SVG riski: radialGradient rX/rY YOK — world def = dünya dairesi; non-uniform scale
+    semantiği 6A spike'ın birincil kanıtı
+  - M8 SAFE · geometry SAFE · serialization additive (migration YOK)
+  - Plan: 6A spike → 6B data → 6C render → 6D UI → 6E serialization + V-R matrisi →
+    6F docs (SKILL v8.0.0)
+- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17, push edildi) → `e88517f` (M18, push edildi) → `28d0e94` (M19, push edildi) → M20 discovery wiki'ye işlendi (commit/push PENDING)
 
 ## Önemli kararlar
 

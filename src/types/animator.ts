@@ -56,9 +56,14 @@ export interface PartMatte {
    *  Angle is source-local degrees; 0 = left→right, 90 = top→bottom.
    *  M19: optional custom stops (2-4 MVP, render-only paint data — NEVER
    *  animated, NEVER a channel). Absent stops = legacy default 2-stop ramp
-   *  (byte-for-byte). */
+   *  (byte-for-byte).
+   *  M20: optional type discriminator. Absent/undefined = LINEAR (legacy
+   *  angle-only projects stay byte-for-byte). 'radial' = center/radius are
+   *  DERIVED deterministically from the source bounds (never persisted);
+   *  angle is ignored for radial (harmless when present). */
   gradient?: {
-    angle: number;
+    type?: 'linear' | 'radial';
+    angle?: number;
     stops?: MatteGradientStop[];
   };
 }

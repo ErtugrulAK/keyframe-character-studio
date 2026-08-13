@@ -7,7 +7,7 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, normalizeGradientStops, canonicalStopsKey, gradientStopsHash, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, textMaskContent, worldToLocal } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, normalizeGradientStops, canonicalStopsKey, gradientStopsHash, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, textMaskContent, worldToLocal, normalizeGradientType, radialGradientGeometry, matteMaskGradientSuffix } from '../utils/matte';
 import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
 import { buildFreeformPath } from '../utils/freeform';
@@ -948,5 +948,151 @@ describe('matte — M19 multi-stop gradient (data/pure)', () => {
     expect(json).not.toContain('keyframe');
     expect(json).not.toContain('TrackChannel');
     expect(normalizeGradientStops([S(0), S(1)], 'alpha')).toEqual([S(0), S(1)]); // idempotent
+  });
+});
+
+describe('M20 — radial gradient data/pure helpers', () => {
+  // Helper factories
+  const ID = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+  const shape = (type = 'custom_circle') => ({ id: 'src', type, name: 'S', zIndex: 1, points: undefined } as any);
+  const freeform = (points: { x: number; y: number }[]) => ({ id: 'src', type: 'custom_freeform', name: 'S', zIndex: 1, points } as any);
+  const textPart = () => ({ id: 'txt', type: 'custom_text', name: 'T', zIndex: 1, textValue: 'HHH', fontSize: 80, fontFamily: 'Arial', points: undefined } as any);
+  const R = (o: number, op: number) => ({ offset: o, color: 'white', opacity: op });
+
+  // ─── Type normalization ────────────────────────────────────────────────
+  it('normalizeGradientType: undefined/linear/malformed → linear; radial → radial', () => {
+    expect(normalizeGradientType(undefined)).toBe('linear');
+    expect(normalizeGradientType('linear')).toBe('linear');
+    expect(normalizeGradientType('radial')).toBe('radial');
+    expect(normalizeGradientType(null)).toBe('linear');
+    expect(normalizeGradientType(42)).toBe('linear');
+    expect(normalizeGradientType('foo')).toBe('linear');
+    expect(normalizeGradientType({})).toBe('linear');
+    expect(normalizeGradientType('RADIAL')).toBe('linear'); // case-sensitive deterministic
+    expect(normalizeGradientType(normalizeGradientType('radial'))).toBe('radial'); // idempotent
+  });
+
+  // ─── Legacy compatibility ──────────────────────────────────────────────
+  it('legacy: { angle: 45 } and { angle: 45, stops: undefined } stay LINEAR with the EXACT legacy id', () => {
+    expect(gradientId('src', { angle: 45 })).toBe('kcs-mg-src-45'); // byte-for-byte
+    expect(gradientId('src', { angle: 45, stops: undefined })).toBe('kcs-mg-src-45');
+    expect(gradientId('src', { type: 'linear', angle: 45 })).toBe('kcs-mg-src-45'); // explicit linear ≡ legacy
+    expect(matteMaskGradientSuffix({ angle: 45 })).toBe('-g45');
+    expect(matteMaskGradientSuffix({ angle: 45, stops: [R(0, 1), R(1, 0)] })).toBe('-g45-s' + gradientStopsHash(normalizeGradientStops([R(0, 1), R(1, 0)], 'alpha')));
+  });
+
+  // ─── Radial geometry — shapes ──────────────────────────────────────────
+  it('radial geometry: circle source (local 60×60, r=30) → center local (0,0), bounding radius sqrt(7200)/2', () => {
+    // shapeGeometry custom_circle r=30 → local bbox 60×60 → width²+height² = 7200
+    const g = radialGradientGeometry(shape('custom_circle'), ID, false)!;
+    expect(g.cx).toBeCloseTo(300, 6); // applyWorld identity → canvas center
+    expect(g.cy).toBeCloseTo(240, 6);
+    expect(g.r).toBeCloseTo(Math.sqrt(60 * 60 + 60 * 60) / 2, 6); // ≈42.426
+  });
+
+  it('radial geometry: non-uniform scale (2,1) → r × max(scale) covers the transformed source', () => {
+    const g = radialGradientGeometry(shape('custom_circle'), { ...ID, scaleX: 2, scaleY: 1 }, false)!;
+    expect(g.r).toBeCloseTo((Math.sqrt(7200) / 2) * 2, 6); // 84.85
+    // world source spans 120×60 → bounding circle sqrt(60²+30²) ≈ 67.1 < 84.85 ✓ covered
+    expect(g.r).toBeGreaterThan(Math.sqrt(60 * 60 + 30 * 30));
+  });
+
+  it('radial geometry: negative (flip) scale uses |scale|; zero scale treated as 1', () => {
+    const neg = radialGradientGeometry(shape('custom_circle'), { ...ID, scaleX: -2, scaleY: 1 }, false)!;
+    expect(neg.r).toBeCloseTo((Math.sqrt(7200) / 2) * 2, 6);
+    const zero = radialGradientGeometry(shape('custom_circle'), { ...ID, scaleX: 0, scaleY: 1 }, false)!;
+    expect(zero.r).toBeCloseTo(Math.sqrt(7200) / 2, 6); // 0 → 1 (worldToLocal rule)
+  });
+
+  it('radial geometry: rotation moves the center through applyWorld, radius unchanged', () => {
+    const base = radialGradientGeometry(shape('custom_circle'), ID, false)!;
+    const rot = radialGradientGeometry(shape('custom_circle'), { ...ID, x: 100, rotation: 90 }, false)!;
+    expect(rot.cx).toBeCloseTo(base.cx + 100, 6); // translated
+    expect(rot.r).toBeCloseTo(base.r, 6); // rotation does not scale the radius
+  });
+
+  it('radial geometry: rect source uses its bbox; freeform uses CharacterPart.points', () => {
+    const rect = radialGradientGeometry(shape('custom_rect'), ID, false)!;
+    // custom_rect geo (e.g. 100×60 local) → deterministic center (300,240), r = sqrt(w²+h²)/2
+    expect(rect.cx).toBeCloseTo(300, 6);
+    expect(rect.cy).toBeCloseTo(240, 6);
+    expect(rect.r).toBeGreaterThan(0);
+    const ff = radialGradientGeometry(freeform([{ x: -50, y: -30 }, { x: 50, y: -30 }, { x: 0, y: 60 }]), ID, false)!;
+    expect(ff.cx).toBeCloseTo(300, 6); // local bbox center (0, 15) → applyWorld identity → (300, 255)
+    expect(ff.cy).toBeCloseTo(255, 6);
+    expect(ff.r).toBeCloseTo(Math.sqrt(100 * 100 + 90 * 90) / 2, 6); // w=100 h=90
+  });
+
+  // ─── Radial geometry — text coordinate spaces ─────────────────────────
+  it('radial geometry: non-inverted TEXT → LOCAL center/radius (canonical ±100×±30 box)', () => {
+    const g = radialGradientGeometry(textPart(), ID, true)!;
+    expect(g.cx).toBe(0);
+    expect(g.cy).toBe(0);
+    expect(g.r).toBeCloseTo(Math.sqrt(200 * 200 + 60 * 60) / 2, 6); // ≈104.4
+  });
+
+  it('radial geometry: inverted TEXT → WORLD center/radius (region rect consumes the def)', () => {
+    const g = radialGradientGeometry(textPart(), { ...ID, scaleX: 2 }, false)!;
+    expect(g.cx).toBeCloseTo(300, 6); // local (0,0) → applyWorld
+    expect(g.cy).toBeCloseTo(240, 6);
+    expect(g.r).toBeCloseTo((Math.sqrt(200 * 200 + 60 * 60) / 2) * 2, 6); // × max scale
+  });
+
+  it('radial geometry: deterministic across repeated calls; missing geometry → undefined', () => {
+    const a = radialGradientGeometry(shape('custom_circle'), ID, false)!;
+    const b = radialGradientGeometry(shape('custom_circle'), ID, false)!;
+    expect(a).toEqual(b);
+    expect(radialGradientGeometry({ id: 'x', type: 'custom_image', name: 'I', zIndex: 1 } as any, ID, false)).toBeUndefined();
+  });
+
+  // ─── Identity ──────────────────────────────────────────────────────────
+  it('radial identity: unambiguous -radial discriminator; linear ≠ radial', () => {
+    expect(gradientId('src', { type: 'radial' })).toBe('kcs-mg-src-radial');
+    expect(gradientId('src', { type: 'radial', angle: 45 })).toBe('kcs-mg-src-radial'); // angle harmless/ignored
+    expect(gradientId('src', { angle: 45 })).not.toBe(gradientId('src', { type: 'radial' }));
+    expect(matteMaskGradientSuffix({ type: 'radial' })).toBe('-radial');
+    expect(matteMaskGradientSuffix({ angle: 45 })).not.toBe(matteMaskGradientSuffix({ type: 'radial' }));
+  });
+
+  it('radial identity: same normalized stops → same id; different stops → different id; deterministic', () => {
+    const a = gradientId('src', { type: 'radial', stops: [R(0, 1), R(0.5, 0.5), R(1, 0)] });
+    const b = gradientId('src', { type: 'radial', stops: [R(1, 0), R(0.5, 0.5), R(0, 1)] }); // reversed input — same normalized set
+    expect(b).toBe(a);
+    expect(gradientId('src', { type: 'radial', stops: [R(0, 1), R(1, 0)] })).not.toBe(a);
+    expect(gradientId('src', { type: 'radial', stops: [R(0, 1), R(1, 0)] })).toBe(gradientId('src', { type: 'radial', stops: [R(0, 1), R(1, 0)] })); // deterministic
+    expect(a).toMatch(/^kcs-mg-src-radial-s[0-9a-f]{8}$/);
+  });
+
+  it('mask suffix: radial discriminator with stops; feather/strength remain orthogonal (suffix is gradient-only)', () => {
+    expect(matteMaskGradientSuffix({ type: 'radial', stops: [R(0, 1), R(1, 0)] })).toBe('-radial-s' + gradientStopsHash(normalizeGradientStops([R(0, 1), R(1, 0)], 'alpha')));
+    // the suffix is the gradient segment only — feather/strength segments are appended by the renderer
+    // (6C); here we verify the linear legacy byte-for-byte guarantee still holds:
+    expect(matteMaskGradientSuffix({ angle: 0 })).toBe('-g0');
+    expect(matteMaskGradientSuffix({ type: 'linear', angle: 0 })).toBe('-g0');
+  });
+
+  // ─── Stops reuse (M19 machinery, no second system) ────────────────────
+  it('stops: radial consumes the exact M19 normalization + hash', () => {
+    const raw = [{ offset: 2, color: 'white', opacity: 0.2 }, { offset: -1, color: 'white', opacity: 3 }];
+    const norm = normalizeGradientStops(raw, 'alpha');
+    expect(norm).toEqual([{ offset: 0, color: 'white', opacity: 1 }, { offset: 1, color: 'white', opacity: 0.2 }]);
+    expect(gradientStopsHash(norm)).toBe(gradientStopsHash(normalizeGradientStops([{ offset: -1, color: 'white', opacity: 3 }, { offset: 2, color: 'white', opacity: 0.2 }], 'alpha')));
+    // radial outside r uses the LAST stop (6A contract) — the last normalized stop is deterministic:
+    expect(norm[norm.length - 1]).toEqual({ offset: 1, color: 'white', opacity: 0.2 });
+  });
+
+  // ─── M8 ────────────────────────────────────────────────────────────────
+  it('M8: radial data is paint — no channel/keyframe/TrackChannel enters serialized form', () => {
+    const radialMatte = {
+      sourcePartId: 'src', mode: 'alpha',
+      gradient: { type: 'radial', angle: 45, stops: [R(0, 1), R(0.5, 0.5), R(1, 0)] },
+    };
+    const json = JSON.stringify(radialMatte);
+    expect(json).toContain('"type":"radial"');
+    expect(json).not.toContain('keyframe');
+    expect(json).not.toContain('TrackChannel');
+    expect(json).not.toContain('cx');
+    expect(json).not.toContain('cy');
+    expect(json).not.toContain('radius'); // derived geometry is NEVER persisted
   });
 });

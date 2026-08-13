@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
 description: Use when working on KCS Track Matte (SVG clipPath + mask) — architecture, data model, browser-verified semantics, rules, tests.
-version: 7.0.0
+version: 8.0.0
 author: senmu
 license: MIT
 metadata:
@@ -274,6 +274,55 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   serializer tarafından DEĞİŞTİRİLMEZ (persistent data korunur, normalize render'da);
   runtime veri persist edilmez; import/reload pixel parity EXACT (V-H12).
 
+## M20 — Radial Gradient
+
+- `gradient.type?: 'linear' | 'radial'` — additive discriminator. **Missing/undefined type =
+  LINEAR** (legacy `{ angle: 45 }` byte-for-byte geçerli — migration/rewrite YOK; render
+  normalize edebilir ama serialization legacy veriyi DEĞİŞTİRMEZ). `normalizeGradientType`
+  TEK authority: undefined/'linear'/malformed → linear, 'radial' → radial, idempotent.
+- **Derived geometry — asla persist edilmez**: center/radius source bounds + evaluated
+  transform'dan türetilir (`radialGradientGeometry(sourcePart, world, local)`). Persisted
+  data'da cx/cy/radius/rX/rY YOK (serialization testli). "Gradient geometry is derived from
+  source bounds/transform; only paint parameters are persisted."
+- **Radius kuralı (6A/6B)**: TEK scalar r = bbox bounding circle `sqrt(w²+h²)/2`
+  (`sourceLocalPoints` — gradientEndpoints ile AYNI nokta kaynağı; ikinci bbox sistemi YOK).
+  WORLD'de `× max(|scaleX|, |scaleY|)` — non-uniform scale rX/rY GEREKTİRMEZ (6A pixel
+  kanıtı: world daire elips olmaz, source'u sufficient-covers). Rotation center'ı taşır
+  (applyWorld), scalar radius'u DEĞİŞTİRMEZ. Negatif scale → |magnitude|; zero scale → 1
+  (worldToLocal konvansiyonu).
+- **Koordinat kontratı (4A/5E/6A — ayrı kurallar, genelleştirme YOK)**:
+  - shape/freeform: **WORLD** (center applyWorld + max-scale radius)
+  - non-inverted text: **LOCAL** (0,0 + kanonik ±100×±30 kutu radius 104.4 — text elemanı
+    def'i kendi uzayında çözer)
+  - inverted text: **WORLD** (white region rect tüketir) + text düz SİYAH + `-luminance-inv`
+    identity (non-inverted text def'i ile asla çakışmaz)
+- Render: `<radialGradient id gradientUnits="userSpaceOnUse" cx cy r>` — mevcut M19 tek-pass
+  Map-dedupe sistemine minimal branch (discriminated union def değeri; linear birebir korunur).
+  Stops %100 M19 reuse (normalizeGradientStops/canonicalStopsKey/gradientStopsHash — ikinci
+  sistem YOK). Radial dışı (r ötesi) = SON stop (6A kontratı — linear before-start = İLK
+  stop'tan farklıdır).
+- Identity: def `kcs-mg-{src}-radial[-s{hash}]-{structure}`; mask suffix `-radial[-s{hash}]`
+  (`matteMaskGradientSuffix` — TEK kaynak, def+mask aynı identity). Linear `kcs-mg-{src}-{angle}`
+  DEĞİŞMEDİ. `-radial` discriminator → linear/radial asla collision (aynı source+stops'ta
+  ayrı def'ler — R-V21). Aynı normalize stops → TEK def (dedupe); farklı stops → ayrı def.
+- Feather/strength: DEĞİŞMEDİ — stdDeviation formülü, filter identity, fill-opacity;
+  radial radius feather ile ÇARPILMAZ, stops strength ile renormalize EDİLMEZ.
+- **Animasyonlu source**: radial geometry her frame'de EVALUATED transform'dan yeniden
+  hesaplanır (translate → center takip; scale → radius takip; stale def/geometri YOK —
+  R-V17/R-V18). Yeni RAF/state YOK.
+- UI (StyleMatteSection): TYPE [Linear | Radial] select — radial'de ANGLE GİZLİ (otomatik
+  geometri — redundant radial angle UI yok; stored angle inert kalır, Linear'a dönüşte
+  korunur). Linear'a dönüş type alanını OMIT eder (canonical legacy form). M19 stop editörü
+  birebir (ikinci editör YOK). Field preservation: type switch'te sourcePartId/mode/inverted/
+  enabled/feather/strength/stops korunur. Local state YOK.
+- Serialization: `gradient.type` + `stops` pass-through (EXACT round-trip); derived geometry
+  serialize edilmez; malformed type pass-through (render normalize — kontrat).
+- **Bilinen parity limitation (M19/M20 ortak — M20 kaynaklı regression DEĞİL)**: gradient'li
+  INVERTED TEXT'te (linear'de de, radial'de de) siyah text DELİK üretmez (gradient'siz
+  inverted text delik üretir — V-T3). Doğrulanmış davranış: text siyah + world region rect
+  gradient tüketir + dış alan görünür/ramp'li. V-H8 (M19) yalnızca dış alanı test etti.
+  R-V10 bu gerçek davranışı pin'ler (hole iddia ETMEZ).
+
 ## Test'ler
 
 - `matte.test.ts` — world-space A/B/C (static/rotated+scaled/parented), animated frame,
@@ -314,14 +363,20 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   (V-A..V-L, V-M1..V-M8, V-S1..V-S8, V-G1..V-G12, M18 V-T1..V-T17, M19 V-H1..V-H12 —
   world→screen CTM + PNG decode; import→render round-trip pixel parity: V-M7/V-M8,
   V-S6..V-S8, V-G8, V-T17, V-H12)
-- Baseline: 599/599 vitest + 76/76 track-matte playwright (M19 kapanışı; full suite'te
-  workflow.spec.ts:88 bilinen ÖLÜ container testi fail — b60f1ca sonrası, M19 dışı)
+- `e2e/m20-radial.spec.ts` — M20 R-V1..R-V23 (KALICI matrix): radial alpha ramp
+  (center>mid>edge), 4-stop stepped, mid-opacity, feather/strength, luminance,
+  inverted luminance, freeform pathD parity, text LOCAL/WORLD, text feather/strength,
+  rotation, uniform/non-uniform/neg scale (scalar r), animasyonlu center/radius,
+  dedupe/collision, legacy linear parity, import/reload EXACT parity (R-V22)
+- Baseline: 678/678 vitest + M20 R-V matrix 23/23 ×2 + track-matte 76/76 (full suite'te
+  V-T17 bilinen timing flake — M18 import/reload yolu, makine yükünde; izole PASS;
+  M20 değiştirmedi; workflow.spec.ts:88 ölü container testi fail M19 dışı)
 
-## Deferred (yeni feature kararı gerektirir — M13..M19'da YAPILMADI)
+## Deferred (yeni feature kararı gerektirir — M13..M20'de YAPILMADI)
 
-**radial gradient** · **gradient presets** · **gradient animation** ·
-image/video matte · nested matte · multi-matte (tip migration gerekir) ·
+**gradient presets** · **gradient animation** · **radial custom geometry controls
+(center/radius UI, gizmo, presets)** · **animated strength** (strength channel/animasyon
+M16 MVP dışı) · image/video matte · nested matte · multi-matte (tip migration gerekir) ·
 matte gizmo / geometry editor · outliner matte icon / relationship visualization ·
 timeline matte indicator · drag/drop matte assignment ·
-**animated strength** (strength channel/animasyon M16 MVP dışı) ·
 **text stagger / tspan animasyonu** (M18 MVP dışı)

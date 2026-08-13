@@ -154,3 +154,29 @@
 - Öneri: Option 2 (type + fraction center/radius) — 6A spike → 6B data → 6C render →
   6D UI → 6E serialization + V-R pixel matrisi → 6F docs (SKILL v8.0.0)
 - Karar: M20 BAŞLATILMADI — kullanıcı onayı bekliyor
+
+## [2026-08-13] update | KCS — M20 RADIAL GRADIENT COMPLETE (iş PC, 6A-6F)
+- M20 ✅ 6A-6F tamamlandı — **COMMIT/PUSH PENDING (onay bekliyor)** — HEAD=origin=`d7324ad`
+- 6A spike 17/17 ×2 (geçici, silindi): radial mask'te çalışır; **r ötesi = SON stop** (linear
+  before-start = ilk stop'tan farklı); world daire elips olmaz → rX/rY gerekmez; mask+transform
+  content LOCAL space'te çözülür (OUTER/INNER deseni doğru); text+url fill mask'ta çalışır
+- 6B data/pure (644/644): `gradient.type?: 'linear'|'radial'` (yok = linear — legacy byte-for-byte)
+  + `normalizeGradientType` + `radialGradientGeometry` (bbox merkezi applyWorld; r = sqrt(w²+h²)/2
+  × max(|sx|,|sy|); rotation r'yi değiştirmez; neg |abs|; zero → 1) + `sourceLocalPoints`
+  (gradientEndpoints ile aynı kaynak); identity `kcs-mg-{src}-radial[-s{hash}]` / `-radial[-s{hash}]`
+- 6C render (657/657): StagePartLayers minimal branch `<radialGradient userSpaceOnUse cx cy r>`;
+  shape/freeform WORLD · non-inverted text LOCAL (0,0/104.4) · inverted text WORLD + siyah +
+  `-luminance-inv`; feather/strength/dedupe/collision korundu; animasyonlu source her frame
+  EVALUATED transform'dan (stale yok)
+- 6D UI (671/671): TYPE [Linear|Radial] — radial'de ANGLE gizli; Linear'a dönüş type OMIT
+  (canonical legacy); field preservation; local state YOK; M19 stop editörü birebir
+- 6E (678/678): serialization 80/80 EXACT (derived cx/cy/radius/rX/rY ASLA serialize edilmez,
+  legacy korunur); **R-V1..R-V23 23/23 ×2** (`e2e/m20-radial.spec.ts` kalıcı matrix);
+  import/reload EXACT parity 3/3 (R-V22)
+- 6F: SKILL **v8.0.0** (M20 bölümü + deferred — radial çıkarıldı, presets/geometry controls
+  eklendi), wiki, README
+- Bilinen parity limitation (M19/M20 ortak — M20 regression DEĞİL): gradient'li inverted TEXT
+  delik üretmez (linear'de de; gradient'siz delik üretir — V-T3); text siyah + world rect +
+  dış alan ramp doğrulandı (R-V10 pin'ler)
+- Baseline: 678/678 vitest · R-V 23/23 ×2 · track-matte 76/76 (full'da V-T17 timing flake —
+  M18 import/reload yolu, makine yükünde; izole PASS; M20 değiştirmedi) · tsc/build/oxlint PASS

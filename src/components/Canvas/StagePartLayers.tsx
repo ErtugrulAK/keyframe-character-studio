@@ -24,6 +24,8 @@ import {
   normalizeGradientStops,
   matteMaskGradientSuffix,
   textMaskContent,
+  normalizeGradientType,
+  radialGradientGeometry,
   matteClipPathId,
   matteMaskId,
   isMatteActive,
@@ -143,7 +145,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   // M17 — world-space <linearGradient> defs, deduped by deterministic id
   // kcs-mg-{sourceId}-{normalizedAngle}-{mode} (mode is part of the identity:
   // alpha/luminance use different default stops).
-  const matteGradients = new Map<string, { id: string; x1: number; y1: number; x2: number; y2: number; stops: MatteGradientStop[] }>();
+  // M20 — radial gradients share the same Map/dedupe; the def value is a
+  // discriminated union (kind: 'linear' → x1/y1/x2/y2, kind: 'radial' →
+  // cx/cy/r) so linear and radial variants of the same source never collide.
+  const matteGradients = new Map<string, { id: string; kind: 'linear' | 'radial'; stops: MatteGradientStop[]; x1?: number; y1?: number; x2?: number; y2?: number; cx?: number; cy?: number; r?: number }>();
   // M18 — text masks carry NO path geometry; the mask content is a
   // transform-baked <text>. The source's evaluated world transform is stored
   // per mask id (render-only, recomputed every frame — never stale).
@@ -227,8 +232,12 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     // (b) the def coords are the source-LOCAL endpoints (a gradient referenced
     // from a <text> inside a transformed <g> resolves in the text's local
     // space — 4A pixel-verified) via gradientEndpointsLocal.
+    // M20 — radial gradients plug into the SAME pass: <radialGradient> with
+    // the 6B-derived geometry (WORLD for shape/freeform/inverted text, LOCAL
+    // for non-inverted text). Geometry is recomputed from the EVALUATED
+    // transform every frame — animated sources never go stale.
     let maskGradientId: string | undefined;
-    if (gradientAngle !== undefined) {
+    if (layer.matte.gradient) {
       const structure = source.type === 'custom_text' && inverted ? 'luminance' : mode;
       // M19 5E BLOCKER FIX — coordinate-space mismatch: in the inverted TEXT
       // structure the ONLY gradient consumer is the WORLD-space region rect
@@ -239,22 +248,43 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       // endpoints (gradientEndpoints — the same text-box→applyWorld math as
       // shapes), and its def identity gets a distinct `-luminance-inv`
       // structure key so it can never collide with a non-inverted luminance
-      // TEXT def (which stays LOCAL).
+      // TEXT def (which stays LOCAL). The same rule applies to radial.
       const isInvertedText = source.type === 'custom_text' && inverted;
       const gradId = `${gradientId(source.id, layer.matte.gradient)!}-${structure}${isInvertedText ? '-inv' : ''}`;
       if (!matteGradients.has(gradId)) {
-        const eps = isInvertedText
-          ? gradientEndpoints(source, sourceEl.transform, gradientAngle)      // WORLD (rect)
-          : source.type === 'custom_text'
-            ? gradientEndpointsLocal(source, sourceEl.transform, gradientAngle) // LOCAL (text element)
-            : gradientEndpoints(source, sourceEl.transform, gradientAngle);
-        if (eps) {
-          matteGradients.set(gradId, {
-            id: gradId,
-            ...eps,
-            stops: normalizeGradientStops(layer.matte.gradient?.stops, structure),
-          });
-          maskGradientId = gradId;
+        const isRadial = normalizeGradientType(layer.matte.gradient.type) === 'radial';
+        if (isRadial) {
+          // WORLD for shape/freeform AND inverted text (region rect consumes
+          // the def); LOCAL only for the non-inverted text element (4A).
+          const geo = isInvertedText || source.type !== 'custom_text'
+            ? radialGradientGeometry(source, sourceEl.transform, false)
+            : radialGradientGeometry(source, sourceEl.transform, true);
+          if (geo) {
+            matteGradients.set(gradId, {
+              id: gradId,
+              kind: 'radial',
+              cx: geo.cx,
+              cy: geo.cy,
+              r: geo.r,
+              stops: normalizeGradientStops(layer.matte.gradient?.stops, structure),
+            });
+            maskGradientId = gradId;
+          }
+        } else {
+          const eps = isInvertedText
+            ? gradientEndpoints(source, sourceEl.transform, gradientAngle!)      // WORLD (rect)
+            : source.type === 'custom_text'
+              ? gradientEndpointsLocal(source, sourceEl.transform, gradientAngle!) // LOCAL (text element)
+              : gradientEndpoints(source, sourceEl.transform, gradientAngle!);
+          if (eps) {
+            matteGradients.set(gradId, {
+              id: gradId,
+              kind: 'linear',
+              ...eps,
+              stops: normalizeGradientStops(layer.matte.gradient?.stops, structure),
+            });
+            maskGradientId = gradId;
+          }
         }
       } else {
         maskGradientId = gradId;
@@ -366,21 +396,36 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             <path d={clip.pathD} />
           </clipPath>
         ))}
-        {[...matteGradients.values()].map((g) => (
-          <linearGradient
-            key={g.id}
-            id={g.id}
-            gradientUnits="userSpaceOnUse"
-            x1={g.x1}
-            y1={g.y1}
-            x2={g.x2}
-            y2={g.y2}
-          >
-            {g.stops.map((s, i) => (
-              <stop key={i} offset={`${s.offset * 100}%`} stop-color={s.color} stop-opacity={s.opacity} />
-            ))}
-          </linearGradient>
-        ))}
+        {[...matteGradients.values()].map((g) =>
+          g.kind === 'radial' ? (
+            <radialGradient
+              key={g.id}
+              id={g.id}
+              gradientUnits="userSpaceOnUse"
+              cx={g.cx}
+              cy={g.cy}
+              r={g.r}
+            >
+              {g.stops.map((s, i) => (
+                <stop key={i} offset={`${s.offset * 100}%`} stop-color={s.color} stop-opacity={s.opacity} />
+              ))}
+            </radialGradient>
+          ) : (
+            <linearGradient
+              key={g.id}
+              id={g.id}
+              gradientUnits="userSpaceOnUse"
+              x1={g.x1}
+              y1={g.y1}
+              x2={g.x2}
+              y2={g.y2}
+            >
+              {g.stops.map((s, i) => (
+                <stop key={i} offset={`${s.offset * 100}%`} stop-color={s.color} stop-opacity={s.opacity} />
+              ))}
+            </linearGradient>
+          ),
+        )}
         {[...matteMasks.values()].map((mask) => (
           <mask
             key={mask.id}

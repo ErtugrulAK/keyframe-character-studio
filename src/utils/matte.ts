@@ -190,23 +190,85 @@ export function normalizeGradientAngle(value: number | undefined): number | unde
   return ((value % 360) + 360) % 360;
 }
 
-/**
- * M17 — Deterministic <linearGradient> id for a matte source.
- * kcs-mg-{sourcePartId}-{normalizedAngle} (360 ≡ 0, -315 ≡ 45 — the id uses
- * the NORMALIZED angle, so equivalent angles share the def). Absent gradient
- * → undefined (no gradient def requested).
- * M19 — when `stops` is present (custom multi-stop paint), the id gains a
- * deterministic `-s{stopsHash}` suffix so two mattes with the SAME
- * source+angle but DIFFERENT stops never share a def (5A spike: duplicate ids
- * make Chromium resolve url() to the FIRST def — the second matte's stops are
- * silently ignored). LEGACY data without stops keeps the byte-for-byte id.
- * Pure, no cache.
+/** M20 — Deterministic gradient type normalization: THE single authority.
+ *  Absent/undefined/'linear' → 'linear' (legacy byte-for-byte); 'radial' →
+ *  'radial'; any malformed value → 'linear'. Pure, idempotent, Node-safe. */
+export function normalizeGradientType(value: unknown): 'linear' | 'radial' {
+  return value === 'radial' ? 'radial' : 'linear';
+}
+
+/** M20 — Derived RADIAL gradient geometry (paint parameter — NEVER geometry,
+ *  NEVER persisted). Center = source local bounds center; radius = the local
+ *  bounds' bounding circle (sqrt(w²+h²)/2) — the same sourceLocalPoints used
+ *  by gradientEndpoints (never a second geometry system).
+ *
+ *  Coordinate spaces (6A pixel-verified):
+ *  - `local: false` (shape/freeform/INVERTED text) → WORLD: center through
+ *    applyWorld, radius × max(|scaleX|,|scaleY|) so the world-space circle
+ *    SUFFICIENTLY COVERS the transformed source (non-uniform scale stays a
+ *    circle — rX/rY unnecessary; zero scale treated as 1 like worldToLocal).
+ *  - `local: true` (non-inverted TEXT) → LOCAL: center/radius in the text's
+ *    own space (the def is consumed by the transformed text element; 4A).
+ *
+ *  Pure + deterministic; no cache, no random/time. */
+export interface MatteRadialGeometry {
+  cx: number;
+  cy: number;
+  r: number;
+}
+
+export function radialGradientGeometry(
+  sourcePart: Pick<CharacterPart, 'type' | 'points'>,
+  world: WorldTransform,
+  local: boolean,
+): MatteRadialGeometry | undefined {
+  const pts = sourceLocalPoints(sourcePart);
+  if (!pts) return undefined;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const p of pts) {
+    minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x);
+    minY = Math.min(minY, p.y); maxY = Math.max(maxY, p.y);
+  }
+  const cx = (minX + maxX) / 2;
+  const cy = (minY + maxY) / 2;
+  const w = maxX - minX;
+  const h = maxY - minY;
+  const localRadius = Math.sqrt(w * w + h * h) / 2;
+  if (local) {
+    return { cx, cy, r: localRadius }; // LOCAL (text element space)
+  }
+  const wc = applyWorld({ x: cx, y: cy }, world);
+  // Zero scale → 1 (mirrors worldToLocal); abs for negative (flip) scales.
+  const sx = world.scaleX === 0 ? 1 : Math.abs(world.scaleX ?? 1);
+  const sy = world.scaleY === 0 ? 1 : Math.abs(world.scaleY ?? 1);
+  return { cx: wc.x, cy: wc.y, r: localRadius * Math.max(sx, sy) };
+}
+
+/** M20 — Deterministic <linearGradient|radialGradient> id for a matte source.
+ *  kcs-mg-{sourcePartId}-{normalizedAngle} (360 ≡ 0, -315 ≡ 45 — the id uses
+ *  the NORMALIZED angle, so equivalent angles share the def). Absent gradient
+ *  → undefined (no gradient def requested).
+ *  M19 — when `stops` is present (custom multi-stop paint), the id gains a
+ *  deterministic `-s{stopsHash}` suffix so two mattes with the SAME
+ *  source+angle but DIFFERENT stops never share a def (5A spike: duplicate ids
+ *  make Chromium resolve url() to the FIRST def — the second matte's stops are
+ *  silently ignored). LEGACY data without stops keeps the byte-for-byte id.
+ *  M20 — radial gets an unambiguous `-radial` discriminator (never collides
+ *  with the numeric linear angle segment); radial geometry is source-derived,
+ *  so the id carries type + stops only. Pure, no cache.
  */
 export function gradientId(
   sourcePartId: string,
-  gradient: { angle: number; stops?: MatteGradientStop[] } | undefined,
+  gradient: { type?: 'linear' | 'radial'; angle?: number; stops?: MatteGradientStop[] } | undefined,
 ): string | undefined {
   if (!gradient) return undefined;
+  if (normalizeGradientType(gradient.type) === 'radial') {
+    const base = `kcs-mg-${sourcePartId}-radial`;
+    if (!Array.isArray(gradient.stops)) return base;
+    // The hash is computed over the NORMALIZED stops (sorted/clamped) so
+    // equal stop sets always produce the same id (same FNV-1a as M19).
+    return `${base}-s${gradientStopsHash(normalizeGradientStops(gradient.stops, 'alpha'))}`;
+  }
   const angle = normalizeGradientAngle(gradient.angle) ?? 0;
   const base = `kcs-mg-${sourcePartId}-${angle}`;
   if (!Array.isArray(gradient.stops)) return base; // legacy — byte-for-byte
@@ -293,11 +355,18 @@ export function gradientStopsHash(stops: MatteGradientStop[]): string {
  *  source+mode+inverted+feather+strength+angle but DIFFERENT stops would
  *  otherwise share one mask (the dedupe Map key) and silently overwrite each
  *  other's paint (5A spike). The hash matches the def-id hash (same normalized
- *  stops → same suffix). Pure. */
+ *  stops → same suffix).
+ *  M20 — radial masks get an unambiguous `-radial[-s{hash}]` discriminator so
+ *  linear and radial variants of the same source never collide. Pure. */
 export function matteMaskGradientSuffix(
-  gradient: { angle: number; stops?: MatteGradientStop[] } | undefined,
+  gradient: { type?: 'linear' | 'radial'; angle?: number; stops?: MatteGradientStop[] } | undefined,
 ): string {
   if (!gradient) return '';
+  if (normalizeGradientType(gradient.type) === 'radial') {
+    const base = '-radial';
+    if (!Array.isArray(gradient.stops)) return base; // radial default stops
+    return `${base}-s${gradientStopsHash(normalizeGradientStops(gradient.stops, 'alpha'))}`;
+  }
   const angle = normalizeGradientAngle(gradient.angle) ?? 0;
   const base = `-g${angle}`;
   if (!Array.isArray(gradient.stops)) return base; // legacy — byte-for-byte
@@ -467,17 +536,11 @@ const TEXT_GRADIENT_BOX_POINTS: { x: number; y: number }[] = [
   { x: 100, y: 30 },
 ];
 
-export function gradientEndpoints(
-  sourcePart: Pick<CharacterPart, 'type' | 'points'>,
-  world: WorldTransform,
-  angle: number,
-): MatteGradientEndpoints | undefined {
-  // Local bounds from the SAME geometry the matte path uses — shapeGeometry
-  // for static shapes, CharacterPart.points for freeform. Never a second
-  // geometry system: only the bbox (2 endpoint points) is derived.
-  // M18: custom_text has NO geometry (buildMattePath → null) — the gradient
-  // span falls back to a canonical default local box (a typical text line),
-  // so the paint effect is well-defined for text sources too.
+/** M17/M20 — THE single local-bounds source for gradient geometry: the same
+ *  points buildMattePath's shape geometry uses (shapeGeometry for static
+ *  shapes, CharacterPart.points for freeform) plus the canonical M18 text box.
+ *  Never a second geometry system — only the bounds/extent are derived. */
+function sourceLocalPoints(sourcePart: Pick<CharacterPart, 'type' | 'points'>): { x: number; y: number }[] | undefined {
   const geo = sourcePart.type === 'custom_freeform' ? undefined : getShapeGeometry(sourcePart.type as BodyPartType);
   const pts = sourcePart.type === 'custom_freeform'
     ? sourcePart.points
@@ -501,7 +564,22 @@ export function gradientEndpoints(
               { x: geo.r, y: geo.r },
             ]
       : undefined;
-  if (!pts || pts.length === 0) return undefined;
+  return pts && pts.length > 0 ? pts : undefined;
+}
+
+export function gradientEndpoints(
+  sourcePart: Pick<CharacterPart, 'type' | 'points'>,
+  world: WorldTransform,
+  angle: number,
+): MatteGradientEndpoints | undefined {
+  // Local bounds from the SAME geometry the matte path uses — shapeGeometry
+  // for static shapes, CharacterPart.points for freeform. Never a second
+  // geometry system: only the bbox (2 endpoint points) is derived.
+  // M18: custom_text has NO geometry (buildMattePath → null) — the gradient
+  // span falls back to a canonical default local box (a typical text line),
+  // so the paint effect is well-defined for text sources too.
+  const pts = sourceLocalPoints(sourcePart);
+  if (!pts) return undefined;
   const a = (normalizeGradientAngle(angle) ?? 0) * (Math.PI / 180);
   const dx = Math.cos(a);
   const dy = Math.sin(a);

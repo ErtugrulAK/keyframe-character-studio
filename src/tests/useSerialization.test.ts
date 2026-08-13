@@ -5,7 +5,7 @@ import { AnimationProject, Track, Transform, TrackChannel, PropertyKeyframe } fr
 import { makeEmptyChannels } from '../utils/defaults';
 import { applyTransitionToTrackCanonicalMutator } from '../utils/trackMutations';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
-import { normalizeFeather, normalizeGradientAngle, normalizeGradientStops } from '../utils/matte';
+import { normalizeFeather, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../utils/matte';
 
 describe('useSerialization Hook', () => {
   const mockSetFps = vi.fn();
@@ -1908,5 +1908,90 @@ describe('useSerialization Hook', () => {
       expect(json).not.toContain('animation');
     });
   });
+
+  describe('M20 — radial gradient serialization round-trip', () => {
+    const part = (matte: any, type = 'custom_box') => ({
+      id: 'tgt', type, name: 'T', zIndex: 2,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#00ff00', strokeColor: '#101218',
+      points: type === 'custom_freeform' ? [{ x: -60, y: -40 }, { x: 60, y: -40 }, { x: 0, y: 70 }] : undefined,
+      matte,
+    });
+
+    function roundTripPart(part: any) {
+      const { result } = renderSerializationWithPart(part);
+      const exported = result.current.exportProject();
+      mockSetCharacterParts.mockClear();
+      expect(result.current.importProject(exported)).toBe(true);
+      return (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === part.id)!;
+    }
+
+    const radialStops = [
+      { offset: 0, color: '#ffffff', opacity: 1 },
+      { offset: 0.35, color: '#00ff00', opacity: 0.7 },
+      { offset: 0.7, color: '#0000ff', opacity: 0.45 },
+      { offset: 1, color: '#000000', opacity: 0.1 },
+    ];
+
+    it('1-6. radial 4-stop + alpha/luminance/inverted/feather/strength round-trip EXACTLY', () => {
+      const fullMatte = {
+        sourcePartId: 'src', mode: 'luminance', inverted: true, enabled: true, feather: 12, strength: 0.5,
+        gradient: { type: 'radial', angle: 45, stops: radialStops },
+      };
+      const restored = roundTripPart(part(fullMatte));
+      expect(restored.matte).toEqual(fullMatte);
+      expect(restored.matte.gradient.type).toBe('radial');
+      expect(restored.matte.gradient.stops).toEqual(radialStops);
+      expect(restored.matte.feather).toBe(12);
+      expect(restored.matte.strength).toBe(0.5);
+      expect(restored.matte.inverted).toBe(true);
+      expect(restored.matte.mode).toBe('luminance');
+      expect(restored.matte.sourcePartId).toBe('src');
+      expect(restored.matte.enabled).toBe(true);
+    });
+
+    it('7. radial + TEXT source round-trip (sourcePartId type preserved)', () => {
+      const restored = roundTripPart(part({ sourcePartId: 'txt', mode: 'alpha', gradient: { type: 'radial', stops: radialStops } }));
+      expect(restored.matte.gradient).toEqual({ type: 'radial', stops: radialStops });
+    });
+
+    it('8. radial + FREEFORM source round-trip (points survive)', () => {
+      const restored = roundTripPart(part({ sourcePartId: 'ff', mode: 'alpha', gradient: { type: 'radial', stops: radialStops } }, 'custom_freeform'));
+      expect(restored.matte.gradient.type).toBe('radial');
+      expect(restored.points).toEqual([{ x: -60, y: -40 }, { x: 60, y: -40 }, { x: 0, y: 70 }]);
+    });
+
+    it('9. legacy linear { angle: 45 } stays legacy after round-trip (no rewrite)', () => {
+      const restored = roundTripPart(part({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } }));
+      expect(restored.matte.gradient).toEqual({ angle: 45 });
+      expect('type' in restored.matte.gradient).toBe(false);
+      expect('stops' in restored.matte.gradient).toBe(false);
+    });
+
+    it('10. derived radial geometry is NEVER serialized (no cx/cy/radius/rX/rY)', () => {
+      const restored = roundTripPart(part({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: radialStops } }));
+      const json = JSON.stringify(restored);
+      expect(json).not.toContain('cx');
+      expect(json).not.toContain('cy');
+      expect(json).not.toContain('radius');
+      expect(json).not.toContain('rX');
+      expect(json).not.toContain('rY');
+    });
+
+    it('11. malformed radial type persists pass-through; render-side normalization is the contract', () => {
+      const restored = roundTripPart(part({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'foo', stops: radialStops } }));
+      // serializer must not silently mutate persistent data (same M19 contract)
+      expect(restored.matte.gradient.type).toBe('foo');
+      expect(normalizeGradientType(restored.matte.gradient.type)).toBe('linear'); // 6B authority
+    });
+
+    it('12. import does NOT invent stops into a type-less/stop-less radial', () => {
+      // { type: 'radial' } with no stops round-trips as-is; default stops are
+      // a RENDER-time concept (M19 compatibility — no invention in data).
+      const restored = roundTripPart(part({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial' } }));
+      expect(restored.matte.gradient).toEqual({ type: 'radial' });
+      expect('stops' in restored.matte.gradient).toBe(false);
+    });
   });
+});
 });

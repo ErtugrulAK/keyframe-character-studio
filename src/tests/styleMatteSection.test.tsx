@@ -10,6 +10,7 @@ import React from 'react';
 import { render, fireEvent, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { StyleMatteSection } from '../components/Inspector/sections/style/StyleMatteSection';
+import { normalizeGradientType, normalizeGradientStops, gradientId, gradientStopsHash } from '../utils/matte';
 import type { CharacterPart } from '../types/animator';
 
 function makePart(id: string, type: string, name: string, matte?: CharacterPart['matte']): CharacterPart {
@@ -783,5 +784,132 @@ describe('StyleMatteSection — M19 multi-stop gradient editor', () => {
     const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 1, color: '#ffffff', opacity: 0 }] } }, [star()]);
     expect(color(container, 0).value).toBe('#ffffff');
     expect(onPartPropChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('StyleMatteSection — M20 radial gradient type UI', () => {
+  const star = () => makePart('src', 'custom_star', 'Star Part');
+  const text = () => makePart('txt', 'custom_text', 'Text Part');
+  const target = (matte?: CharacterPart['matte']) => makePart('tgt', 'custom_box', 'Box Part', matte);
+  const render = (matte: CharacterPart['matte'], parts: CharacterPart[] = [star()]) =>
+    renderMatte(target(matte), [...parts, target(matte)]);
+  const gradientToggle = (container: HTMLElement) =>
+    container.querySelector('input[aria-label="Gradient"]') as HTMLInputElement;
+  const typeSelect = (container: HTMLElement) =>
+    container.querySelector('select[aria-label="Gradient type"]') as HTMLSelectElement;
+  const angle = (container: HTMLElement) =>
+    container.querySelector('input[aria-label="Gradient angle"]') as HTMLInputElement;
+  const addBtn = (container: HTMLElement) =>
+    container.querySelector('button[aria-label="Add gradient stop"]') as HTMLButtonElement;
+
+  it('1. type control visible when gradient is active', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } });
+    expect(gradientToggle(container).checked).toBe(true);
+    expect(typeSelect(container)).toBeTruthy();
+  });
+
+  it('2-3. legacy { angle: 45 } displays Linear; rendering does NOT rewrite the data', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } });
+    expect(typeSelect(container).value).toBe('linear');
+    expect(angle(container).value).toBe('45');
+    expect(onPartPropChange).not.toHaveBeenCalled(); // no automatic {type:'linear'} rewrite
+  });
+
+  it('4. Linear → Radial persists type, keeps angle inert + stops', () => {
+    const matte: CharacterPart['matte'] = { sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45, stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 1, color: '#ffffff', opacity: 0 }] } };
+    const { onPartPropChange, container } = render(matte);
+    fireEvent.change(typeSelect(container), { target: { value: 'radial' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      ...matte,
+      gradient: { angle: 45, type: 'radial', stops: matte.gradient!.stops },
+    });
+  });
+
+  it('5. Radial → Linear: type is OMITTED (canonical legacy form), stops/angle survive', () => {
+    const matte: CharacterPart['matte'] = { sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', angle: 30, stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 1, color: '#ffffff', opacity: 0 }] } };
+    const { onPartPropChange, container } = render(matte);
+    fireEvent.change(typeSelect(container), { target: { value: 'linear' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('matte', {
+      ...matte,
+      gradient: { angle: 30, stops: matte.gradient!.stops }, // type removed — missing ≡ linear
+    });
+  });
+
+  it('6-12. type switch preserves sourcePartId/mode/inverted/enabled/feather/strength/stops', () => {
+    const matte: CharacterPart['matte'] = {
+      sourcePartId: 'src', mode: 'luminance', inverted: true, enabled: true, feather: 12, strength: 0.5,
+      gradient: { angle: 90, stops: [{ offset: 0, color: '#ff0000', opacity: 1 }, { offset: 1, color: '#0000ff', opacity: 0.5 }] },
+    };
+    const { onPartPropChange, container } = render(matte);
+    fireEvent.change(typeSelect(container), { target: { value: 'radial' } });
+    const next = onPartPropChange.mock.calls.at(-1)?.[1] as CharacterPart['matte'];
+    expect(next.sourcePartId).toBe('src');
+    expect(next.mode).toBe('luminance');
+    expect(next.inverted).toBe(true);
+    expect(next.enabled).toBe(true);
+    expect(next.feather).toBe(12);
+    expect(next.strength).toBe(0.5);
+    expect(next.gradient).toEqual({ angle: 90, type: 'radial', stops: [{ offset: 0, color: '#ff0000', opacity: 1 }, { offset: 1, color: '#0000ff', opacity: 0.5 }] });
+  });
+
+  it('13. Linear shows the ANGLE control', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } });
+    expect(angle(container)).toBeTruthy();
+  });
+
+  it('14. Radial hides the ANGLE control (automatic geometry — no redundant radial angle UI)', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial' } });
+    expect(angle(container)).toBeNull();
+  });
+
+  it('15. Radial shows the SAME stop editor (M19 reuse — no second editor)', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 1, color: '#ffffff', opacity: 0 }] } });
+    expect(addBtn(container)).toBeTruthy();
+    expect(container.querySelector('input[aria-label="Gradient stop 0 offset"]')).toBeTruthy();
+    expect(container.querySelector('input[aria-label="Gradient stop 1 opacity"]')).toBeTruthy();
+    expect(addBtn(container).disabled).toBe(false);
+  });
+
+  it('16. text source supports radial (no text-specific state)', () => {
+    const { container } = render({ sourcePartId: 'txt', mode: 'alpha', gradient: { type: 'radial' } }, [text()]);
+    expect(typeSelect(container).value).toBe('radial');
+    expect(typeSelect(container).disabled).toBe(false);
+    expect(angle(container)).toBeNull();
+  });
+
+  it('17. clip mode disables the type select (existing gradient clip policy)', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'clip', gradient: { type: 'radial' } });
+    expect(typeSelect(container).disabled).toBe(true);
+    expect(container.querySelector('button[aria-label="Add gradient stop"]')?.hasAttribute('disabled')).toBe(true);
+  });
+
+  it('18. missing source → gradient controls not rendered (no crash, no mutation)', () => {
+    const ghost = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'ghost', mode: 'alpha', gradient: { type: 'radial' } });
+    const { onPartPropChange, container } = renderMatte(ghost, [ghost]);
+    expect(container.textContent).toContain('Missing source');
+    expect(typeSelect(container)).toBeNull();
+    expect(onPartPropChange).not.toHaveBeenCalled();
+  });
+
+  it('19. no local state mirror: render + type read fires zero callbacks', () => {
+    const { onPartPropChange, container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial' } });
+    expect(typeSelect(container).value).toBe('radial');
+    expect(onPartPropChange).not.toHaveBeenCalled();
+  });
+
+  it('20. malformed gradient type normalizes to Linear in the UI', () => {
+    const { container } = render({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'foo' as any, angle: 10 } });
+    expect(typeSelect(container).value).toBe('linear');
+    expect(angle(container).value).toBe('10');
+  });
+
+  it('renderer integration: UI-produced radial matte is consumed by the 6C renderer contract', () => {
+    // The UI mutation writes { angle, type: 'radial', stops } — assert the
+    // exact structure the StagePartLayers radial branch consumes normalizes
+    // to radial (same normalizeGradientType authority, no extra rewrite).
+    const produced = { angle: 45, type: 'radial', stops: [{ offset: 0, color: '#ffffff', opacity: 1 }, { offset: 1, color: '#ffffff', opacity: 0 }] };
+    expect(normalizeGradientType(produced.type)).toBe('radial');
+    expect(gradientId('src', produced)).toBe('kcs-mg-src-radial-s' + gradientStopsHash(normalizeGradientStops(produced.stops, 'alpha')));
+    expect(gradientId('src', produced)).toMatch(/^kcs-mg-src-radial-/);
   });
 });

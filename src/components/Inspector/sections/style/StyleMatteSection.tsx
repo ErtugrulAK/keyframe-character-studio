@@ -1,7 +1,7 @@
 import React from 'react';
 import { Scissors, X } from 'lucide-react';
 import type { CharacterPart, MatteMode, PartMatte } from '../../../../types/animator';
-import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops } from '../../../../utils/matte';
+import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
 import type { MatteGradientStop } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
 
@@ -126,6 +126,26 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     setMatte({ ...matte, gradient: { ...matte.gradient, angle: normalizeGradientAngle(value) ?? 0 } });
   };
 
+  // M20 — gradient TYPE (linear | radial) is derived from matte.gradient via
+  // the shared pure normalizeGradientType authority (no local state; a
+  // malformed/missing type always displays as Linear). Radial geometry is
+  // automatic (center/radius derived from source bounds) — the MVP exposes
+  // only the type switch; the angle control is hidden for radial (the
+  // renderer ignores angle for radial; a stored angle stays inert and is
+  // preserved for a Linear switch-back — no redundant radial angle UI).
+  const gradientTypeValue = normalizeGradientType(matte?.gradient?.type);
+
+  const onChangeGradientType = (value: string) => {
+    if (!matte?.gradient) return;
+    const type = normalizeGradientType(value);
+    const { type: _oldType, ...legacy } = matte.gradient;
+    // Radial → persist type: 'radial' (discriminator — stops/angle preserved).
+    // Linear → canonical LEGACY form: `type` is OMITTED (missing type ≡ linear,
+    // byte-for-byte M17/M19; explicit 'linear' would only trigger a needless
+    // schema rewrite). Every other field stays untouched.
+    setMatte({ ...matte, gradient: type === 'radial' ? { ...legacy, type: 'radial' } : legacy });
+  };
+
   const onRemove = () => setMatte(undefined);
 
   const selectValue = matte && !sourceMissing ? matte.sourcePartId : '';
@@ -164,10 +184,12 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     ? normalizeGradientStops(matte.gradient.stops, stopsDisplayMode)
     : [];
 
-  /** Write a new explicit stops array, preserving every other matte field. */
+  /** Write a new explicit stops array, preserving every other matte field.
+   *  M20: the full gradient is spread (type/angle survive — a radial gradient
+   *  must keep its discriminator when the user edits stops). */
   const writeStops = (stops: MatteGradientStop[]) => {
     if (!matte?.gradient) return;
-    setMatte({ ...matte, gradient: { angle: matte.gradient.angle, stops } });
+    setMatte({ ...matte, gradient: { ...matte.gradient, stops } });
   };
 
   // Add: largest offset gap's deterministic midpoint; inherits the left
@@ -300,6 +322,23 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             </div>
 
             {gradientEnabled && (
+              <div className="form-field-group" style={{ marginTop: 8 }}>
+                <label className="form-label">TYPE</label>
+                <select
+                  className="select-control"
+                  aria-label="Gradient type"
+                  style={selectStyle}
+                  value={gradientTypeValue}
+                  disabled={gradientDisabled}
+                  onChange={(e) => onChangeGradientType(e.target.value)}
+                >
+                  <option value="linear">Linear</option>
+                  <option value="radial">Radial</option>
+                </select>
+              </div>
+            )}
+
+            {gradientEnabled && gradientTypeValue === 'linear' && (
               <div className="form-field-group" style={{ marginTop: 8 }}>
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>ANGLE</span>

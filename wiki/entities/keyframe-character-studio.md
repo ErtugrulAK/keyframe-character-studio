@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 599 test — 35 dosya** (M19 durumu) |
+| Test | **Vitest, 678 test — 38 dosya** (M20 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -133,20 +133,34 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - Baseline: 599/599 vitest + 76/76 track-matte playwright; full suite 78/1 (tek fail
     workflow.spec.ts:88 ölü container — M19 dışı)
 - M12 ✅ audit — "kapatılabilir"; 2 LOW OPTIONAL (clipIdFor O(N²), MATTE_CYCLE validation)
-- **M20 (radial gradient) — DISCOVERY ✅, implementation YOK (onay bekliyor)**
-  - Önerilen model: `gradient.type?: 'linear' | 'radial'` (yok = linear, legacy byte-for-byte) +
-    fraction `centerX?/centerY?/radius?` (0-1, default 0.5'ler = otomatik merkez/yarıçap)
-  - Reuse: stops / normalizeGradientStops / FNV-1a hash / dedupe / serialization %100
-  - Identity: `kcs-mg-{src}-radial[-c{cx}-cy{cy}-r{radius}]-s{hash}-{structure}`;
-    mask suffix `-radial[...]`; linear id'ler DEĞİŞMEZ
-  - Koordinat: shape/freeform + inverted text WORLD (applyWorld), non-inverted text LOCAL
-    (0,0 + ±100×±30 kutu); inverted text `-luminance-inv` + siyah text korunur
-  - SVG riski: radialGradient rX/rY YOK — world def = dünya dairesi; non-uniform scale
-    semantiği 6A spike'ın birincil kanıtı
-  - M8 SAFE · geometry SAFE · serialization additive (migration YOK)
-  - Plan: 6A spike → 6B data → 6C render → 6D UI → 6E serialization + V-R matrisi →
-    6F docs (SKILL v8.0.0)
-- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17, push edildi) → `e88517f` (M18, push edildi) → `28d0e94` (M19, push edildi) → M20 discovery wiki'ye işlendi (commit/push PENDING)
+- **M20 ✅ COMPLETE — Radial Gradient** (6A-6F iş PC'de tamamlandı; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 6A spike: 17/17 ×2 pixel/DOM deterministik (geçici, silindi) — kontratlar: radial mask'te
+    çalışır, r ötesi = SON stop (linear before-start = ilk stop'tan farklı), world daire elips
+    olmaz (rX/rY gerekmez), mask+transform: content transform'lu g'nin LOCAL space'inde çözülür
+    (production OUTER/INNER deseni doğru), text+url fill mask'ta çalışır (LOCAL/WORLD ayrımı)
+  - 6B data/pure: `gradient.type?: 'linear'|'radial'` (yok = linear — legacy byte-for-byte) +
+    `normalizeGradientType` (TEK authority) + `radialGradientGeometry` (center = bbox merkezi
+    applyWorld; r = sqrt(w²+h²)/2 × max(|sx|,|sy|); rotation r'yi değiştirmez; neg scale |abs|;
+    zero → 1) + `sourceLocalPoints` (gradientEndpoints ile AYNI kaynak — ikinci bbox sistemi YOK);
+    identity `kcs-mg-{src}-radial[-s{hash}]` / mask `-radial[-s{hash}]` (linear DEĞİŞMEDİ);
+    M19 stops/hash %100 reuse; derived geometry ASLA persist edilmez
+  - 6C render: StagePartLayers'a minimal branch — `<radialGradient userSpaceOnUse cx cy r>`;
+    shape/freeform WORLD, non-inverted text LOCAL (0,0/104.4), inverted text WORLD + siyah text +
+    `-luminance-inv`; feather/strength/dedupe/collision korundu; animasyonlu source center/radius
+    her frame EVALUATED transform'dan (stale yok)
+  - 6D UI: TYPE [Linear|Radial] select — radial'de ANGLE gizli; Linear'a dönüş type OMIT
+    (canonical legacy); field preservation (sourcePartId/mode/inverted/enabled/feather/strength/
+    stops); local state YOK; M19 stop editörü birebir
+  - 6E: serialization 80/80 (EXACT round-trip, derived geometry serialize edilmez, legacy
+    korunur); R-V1..R-V23 pixel/DOM matrisi 23/23 ×2 (`e2e/m20-radial.spec.ts` KALICI);
+    import/reload EXACT parity 3/3
+  - 6F: docs — SKILL v8.0.0 (M20 bölümü + deferred güncellemesi), wiki, README
+  - Bilinen parity limitation (M19/M20 ortak — M20 regression DEĞİL): gradient'li inverted
+    TEXT delik üretmez (linear'de de; gradient'siz delik üretir — V-T3); doğrulanan: text siyah +
+    world region rect gradient + dış alan ramp
+  - Baseline: 678/678 vitest + R-V 23/23 ×2 + track-matte 76/76 (full'da V-T17 timing flake —
+    M18 import/reload, izole PASS)
+- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → **M20 6B-6F implementasyonu PENDING (commit/push YOK)**
 
 ## Önemli kararlar
 

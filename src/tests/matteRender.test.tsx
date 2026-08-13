@@ -38,14 +38,14 @@ function makeTrack(partId: string): Track {
   } as Track;
 }
 
-function renderStage(parts: CharacterPart[]) {
-  const tracks = parts.map((p) => makeTrack(p.id));
+function renderStage(parts: CharacterPart[], frame = 0, tracksOverride?: Track[]) {
+  const tracks = tracksOverride ?? parts.map((p) => makeTrack(p.id));
   return renderToString(
     <StagePartLayers
       sortedParts={parts}
       appMode="edit"
       broadcastState={{}}
-      currentFrame={0}
+      currentFrame={frame}
       selectedPartId={null}
       totalFrames={60}
       onSelect={() => {}}
@@ -771,5 +771,150 @@ describe('StagePartLayers — M18 text matte render (mask content <text>)', () =
     expect(b).toContain('>BETA</text>');
     expect(a).not.toContain('>BETA</text>');
     expect(b).not.toContain('>ALPHA</text>');
+  });
+});
+
+describe('StagePartLayers — M20 radial gradient render', () => {
+  const star = () => makePart('src', 'custom_star');
+  const target = (matte: CharacterPart['matte']) => makePart('tgt', 'custom_circle', matte);
+  const textSource = () => ({ ...makePart('txt', 'custom_text'), textValue: 'HHH', fontSize: 80, fontFamily: 'Arial' } as CharacterPart);
+  const stopStr = (s: { offset: number; color: string; opacity: number }) =>
+    `<stop offset="${s.offset * 100}%" stop-color="${s.color}" stop-opacity="${s.opacity}"></stop>`;
+  const stops2 = [
+    { offset: 0, color: 'white', opacity: 1 },
+    { offset: 1, color: 'white', opacity: 0 },
+  ];
+
+  it('1-4. radial shape: <radialGradient> with userSpaceOnUse + world cx/cy/r + stops', () => {
+    const html = renderStage([star(), target({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } })]);
+    expect(html).toContain('<radialGradient');
+    expect(html).toContain('gradientUnits="userSpaceOnUse"');
+    expect(html).toContain('cx="300"'); // star local bounds center → world (identity)
+    expect(html).toContain('cy="237.5"'); // star bbox y: -35..30 → center -2.5 → world 237.5
+    expect(html).toMatch(/r="[0-9.]+"/); // deterministic radius
+    expect(html).toContain(stopStr(stops2[0]));
+    expect(html).toContain(stopStr(stops2[1]));
+    expect(html).not.toContain('x1='); // no linear fields on a radial def
+  });
+
+  it('5-6. legacy linear unchanged: <linearGradient> + byte-for-byte id', () => {
+    const html = renderStage([star(), target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } })]);
+    expect(html).toContain('<linearGradient');
+    expect(html).toContain('id="kcs-mg-src-45-alpha"');
+    expect(html).not.toContain('<radialGradient');
+    expect(html).toContain('x1=');
+  });
+
+  it('7. radial id carries the -radial discriminator + stops hash', () => {
+    const html = renderStage([star(), target({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } })]);
+    expect(html).toMatch(/id="kcs-mg-src-radial-s[0-9a-f]{8}-alpha"/);
+  });
+
+  it('8-9. dedupe: same radial def once; different stops → different defs', () => {
+    const a = renderStage([
+      star(),
+      target({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } }),
+      makePart('tgt2', 'custom_rect', { sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } }),
+    ]);
+    expect((a.match(/<radialGradient/g) ?? []).length).toBe(1); // same identity → 1 def
+    const b = renderStage([
+      star(),
+      target({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } }),
+      makePart('tgt2', 'custom_rect', { sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: [{ offset: 0, color: 'white', opacity: 0.2 }, { offset: 1, color: 'white', opacity: 1 }] } }),
+    ]);
+    expect((b.match(/<radialGradient/g) ?? []).length).toBe(2); // different stops → 2 defs
+  });
+
+  it('10. linear vs radial on the same source never collide', () => {
+    const html = renderStage([
+      star(),
+      target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } }),
+      makePart('tgt2', 'custom_rect', { sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } }),
+    ]);
+    expect(html).toContain('<linearGradient');
+    expect(html).toContain('<radialGradient');
+    expect((html.match(/<linearGradient/g) ?? []).length).toBe(1);
+    expect((html.match(/<radialGradient/g) ?? []).length).toBe(1);
+  });
+
+  it('11. radial + feather: mask id carries -radial + -f; filter bound', () => {
+    const html = renderStage([star(), target({ sourcePartId: 'src', mode: 'alpha', feather: 12, gradient: { type: 'radial', stops: stops2 } })]);
+    expect(html).toMatch(/id="kcs-mask-src-alpha-f12-radial-s[0-9a-f]{8}"/);
+    expect(html).toContain('stdDeviation="6"');
+    expect(html).toContain('filter="url(#kcs-matte-feather');
+  });
+
+  it('12. radial + strength: fill-opacity preserved', () => {
+    const html = renderStage([star(), target({ sourcePartId: 'src', mode: 'alpha', strength: 0.5, gradient: { type: 'radial', stops: stops2 } })]);
+    expect(html).toMatch(/id="kcs-mask-src-alpha-s0.5-radial-s[0-9a-f]{8}"/);
+    expect(html).toContain('fill-opacity="0.5"');
+  });
+
+  it('13. radial + inverted luminance: rect consumes the world radial; black contour stays', () => {
+    const html = renderStage([star(), target({ sourcePartId: 'src', mode: 'luminance', inverted: true, gradient: { type: 'radial', stops: stops2 } })]);
+    expect(html).toMatch(/id="kcs-mg-src-radial-s[0-9a-f]{8}-luminance"/);
+    expect(html).toContain('mask-type="luminance"');
+    expect(html).toContain('fill="black"'); // contour stays black
+    expect(html).toContain('cx="300"'); // WORLD geometry on the region rect
+  });
+
+  it('14. radial + freeform: pathD untouched, radial paint only', () => {
+    const points = [{ x: -60, y: -40 }, { x: 60, y: -40 }, { x: 0, y: 70 }];
+    const ff = { ...makePart('ff', 'custom_freeform'), points } as CharacterPart;
+    const withGrad = renderStage([ff, target({ sourcePartId: 'ff', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } })]);
+    const noGrad = renderStage([ff, target({ sourcePartId: 'ff', mode: 'alpha' })]);
+    // buildMattePath output is byte-for-byte identical with/without the gradient
+    const dWith = withGrad.match(/<path d="([^"]+)"/)?.[1];
+    const dNo = noGrad.match(/<path d="([^"]+)"/)?.[1];
+    expect(dWith).toBe(dNo);
+    expect(withGrad).toContain('<radialGradient');
+  });
+
+  it('15. non-inverted TEXT → LOCAL radial geometry (cx=0 cy=0, local box radius)', () => {
+    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } })]);
+    expect(html).toMatch(/id="kcs-mg-txt-radial-s[0-9a-f]{8}-alpha"/);
+    expect(html).toContain('cx="0"'); // LOCAL center
+    expect(html).toContain('cy="0"');
+    expect(html).toMatch(/r="104\.40[0-9]*"/); // sqrt(200²+60²)/2
+    // the text element consumes the def
+    expect(html).toContain('fill="url(#kcs-mg-txt-radial');
+  });
+
+  it('16-17. inverted TEXT → WORLD radial on the region rect; text stays BLACK', () => {
+    const html = renderStage([textSource(), target({ sourcePartId: 'txt', mode: 'alpha', inverted: true, gradient: { type: 'radial', stops: stops2 } })]);
+    expect(html).toMatch(/id="kcs-mg-txt-radial-s[0-9a-f]{8}-luminance-inv"/);
+    expect(html).toContain('cx="300"'); // WORLD center
+    expect(html).toContain('cy="240"');
+    expect(html).toContain('fill="black"'); // text NEVER consumes the gradient
+  });
+
+  it('18. animated source: radial center follows the evaluated transform (frame 0 vs frame 40)', () => {
+    const src = star();
+    const tgt = target({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } });
+    const animTrack = {
+      id: 't_src', partId: 'src', name: 'T', color: '#f00', visible: true,
+      keyframes: [],
+      channels: { ...makeEmptyChannels(), x: [
+        { id: 'x0', frame: 0, value: 0, easing: 'linear' },
+        { id: 'x40', frame: 40, value: 200, easing: 'linear' },
+      ] },
+    } as unknown as Track;
+    const f0 = renderStage([src, tgt], 0, [animTrack]);
+    const f40 = renderStage([src, tgt], 40, [animTrack]);
+    const cx0 = f0.match(/<radialGradient[\s\S]*?cx="([\d.-]+)"/)?.[1];
+    const cx40 = f40.match(/<radialGradient[\s\S]*?cx="([\d.-]+)"/)?.[1];
+    expect(cx0).toBe('300');
+    expect(cx40).not.toBe(cx0); // center moved with the animated source
+  });
+
+  it('19-20. mask suffix matches the gradient identity; no duplicate defs', () => {
+    const html = renderStage([star(), target({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } })]);
+    const defId = html.match(/<radialGradient id="([^"]+)"/)?.[1]!;
+    const maskId = html.match(/<mask id="([^"]+)"/)?.[1]!;
+    expect(maskId).toBe('kcs-mask-src-alpha-radial-s37c8dd2b'); // radial mask discriminator
+    expect(html).toContain(`fill="url(#${defId})"`); // the MASK CONTENT consumes the radial def
+    expect(html).toContain(`mask="url(#${maskId})"`); // the TARGET consumes the mask
+    expect((html.match(/<radialGradient/g) ?? []).length).toBe(1);
+    expect((html.match(new RegExp(defId, 'g')) ?? []).length).toBe(2); // def + 1 fill reference (no duplicates)
   });
 });

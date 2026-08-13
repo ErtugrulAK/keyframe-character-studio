@@ -2,6 +2,51 @@
   display: flex;
   height: 100%;
   z-index: 90;
+  /* Smooth collapse/expand: width animates as the drawer narrows */
+  transition: width 0.2s ease;
+}
+
+/* Collapse toggle — pinned to the bottom of the nav rail, always visible */
+.left-toolbar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 34px;
+  margin-top: auto;
+  margin-bottom: 4px;
+  border-radius: var(--radius-md);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.left-toolbar-toggle:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+  border-color: var(--border-light);
+}
+
+/* Collapsed state: only the icon rail remains, the drawer narrows to 0 so
+   the canvas/stage really gains the horizontal space (flex layout). */
+.left-toolbar-container.collapsed .left-sidebar-nav {
+  width: 52px;
+  padding: var(--space-xs) 4px;
+}
+
+.left-toolbar-container.collapsed .sidebar-nav-item {
+  width: 44px;
+  height: 48px;
+}
+
+.left-toolbar-container.collapsed .nav-label {
+  display: none;
+}
+
+.left-toolbar-container.collapsed .left-toolbar-toggle {
+  width: 44px;
 }
 
 .left-sidebar-nav {
@@ -71,6 +116,15 @@
   flex-direction: column;
   overflow-y: auto;
   flex-shrink: 0;
+  /* Collapse/expand animation: width + opacity transition together */
+  transition: width 0.2s ease, opacity 0.15s ease;
+}
+
+.left-toolbar-container.collapsed .left-drawer-panel {
+  width: 0;
+  opacity: 0;
+  overflow: hidden;
+  border-right: none;
 }
 
 .drawer-content {

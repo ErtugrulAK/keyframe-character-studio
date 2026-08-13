@@ -152,7 +152,15 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
               style={{ left: `${group.frame * frameWidth}px`, borderColor: track.color }}
               onClick={(e) => { e.stopPropagation(); onSelectKeyframe(representativeId); onSelectPart(track.partId, e.shiftKey); onSetFrame(group.frame); }}
-              onMouseDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => {
+                // BUGFIX: canonical frame-group diamonds are draggable too —
+                // the drag moves the WHOLE frame group (all channel keyframes
+                // at this frame stay together). Legacy tracks already dragged
+                // composite keyframes; canonical tracks had no drag at all.
+                e.stopPropagation();
+                onStartDragKf({ trackId: track.id, keyframeId: representativeId });
+                onSelectKeyframe(representativeId);
+              }}
               onMouseEnter={() => onHoverKf({ frame: group.frame, label: `${track.name} | ${group.channels.join(',')} | ${group.easing}` })}
               onMouseLeave={() => onHoverKf(null)}
               onContextMenu={(e) => handleDeleteGroup(e, group.frame)}

@@ -7,6 +7,11 @@ export interface SmartNumberInputProps {
   step?: number;
   displayScale?: number; // Display value = internal value * displayScale (e.g. 0.01 shows px/100)
   precision?: number;    // Decimal places for display
+  /** BUGFIX: when true, keystrokes only update the local edit buffer —
+   *  onChange fires ONCE on Enter/blur (parsed + clamped). Used by inputs
+   *  whose value must not be committed mid-typing (e.g. keyframe frame
+   *  numbers: typing "4" must not commit 4 before "40" is complete). */
+  deferCommit?: boolean;
   onChange: (val: number) => void;
 }
 
@@ -15,7 +20,7 @@ export interface SmartNumberInputProps {
  * focused, commits (clamped + rounded) on blur or Enter, and supports an
  * optional display scale/precision (internal value vs. displayed value).
  */
-export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, step = 1, displayScale, precision, onChange }) => {
+export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, step = 1, displayScale, precision, deferCommit = false, onChange }) => {
   const scale = displayScale ?? 1;
   const decimals = precision ?? 2;
   const rawVal = (value ?? 0) * scale;
@@ -33,6 +38,9 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const valStr = e.target.value;
     setEditingValue(valStr);
+    // Deferred mode: keep the raw intermediate string in the buffer (e.g. "4"
+    // while the user intends "40"); commit happens on Enter/blur only.
+    if (deferCommit) return;
     let parsed = parseFloat(valStr);
     if (!isNaN(parsed)) {
       let internal = Math.round((parsed / scale) * 100) / 100;
@@ -46,21 +54,29 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
 
   const handleBlur = () => {
     setIsFocused(false);
-    // BUGFIX: every keystroke already commits via handleChange, so blur must
-    // NOT re-commit `editingValue`. Re-committing here leaked the OLD
-    // selection's value into the NEW selection: when the user typed a value,
-    // then clicked another object, the browser fires mousedown (selection
-    // change, React re-renders with the new selectedPartId) BEFORE the input
-    // blur event — handleBlur then wrote the old editingValue into the NEW
-    // object's transform (e.g. object A y=6 leaked into object B's y).
-    // Blur only re-syncs the local display string to the committed prop.
     let parsed = parseFloat(editingValue);
     if (isNaN(parsed)) {
       setEditingValue(String(displayVal));
-    } else {
-      const rounded = Math.round(parsed * Math.pow(10, decimals)) / Math.pow(10, decimals);
-      setEditingValue(String(rounded));
+      return;
     }
+    if (deferCommit) {
+      // Commit the parsed + clamped value ONCE (Enter/blur). Only fire when
+      // the value actually changed — this also guards the selection-change
+      // race: when the user clicks another object while focused, the blur
+      // that follows the re-render must not re-commit the old buffer value
+      // onto a different target.
+      let clamped = parsed;
+      if (min !== undefined) clamped = Math.max(min, clamped);
+      if (max !== undefined) clamped = Math.min(max, clamped);
+      const rounded = Math.round(clamped * Math.pow(10, decimals)) / Math.pow(10, decimals);
+      setEditingValue(String(rounded));
+      if (rounded / scale !== value) {
+        onChange(rounded / scale);
+      }
+      return;
+    }
+    const rounded = Math.round(parsed * Math.pow(10, decimals)) / Math.pow(10, decimals);
+    setEditingValue(String(rounded));
   };
 
   const displayStep = step !== undefined ? step * Math.abs(scale) : undefined;

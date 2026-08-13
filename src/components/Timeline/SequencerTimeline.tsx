@@ -1,7 +1,7 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import type { TrackChannel } from '../../types/animator';
+import type { PropertyKeyframe, TrackChannel } from '../../types/animator';
 import { TRACK_CHANNELS } from '../../types/animator';
 import { computeMaxFrame, findChannelKeyframeAtFrame, hasChannelDataForTemplate } from '../../utils/timelineMetrics';
 import { DISPLAY_CHANNELS, buildTransformSnapshot } from '../../utils/channelKeyframeGroups';
@@ -196,12 +196,37 @@ export const SequencerTimeline: React.FC = () => {
       if (isScrubbing) {
         setCurrentFrame(getFrameFromMouse(e.clientX));
       } else if (draggingKf) {
-        updateKeyframeFrame(draggingKf.trackId, draggingKf.keyframeId, getFrameFromMouse(e.clientX));
+        // BUGFIX: drag a keyframe (or a whole canonical frame group) to a new
+        // frame. getFrameFromMouse clamps to [0, totalFrames]. Legacy
+        // composite keyframes move individually; canonical (M6 channel)
+        // frame-group diamonds move EVERY channel keyframe at their original
+        // frame together — the x/y/rotation/scale group never splits.
+        const targetFrame = getFrameFromMouse(e.clientX);
+        const tr = tracks.find((t) => t.id === draggingKf.trackId);
+        if (tr) {
+          const legacyKf = (tr.keyframes || []).find((k) => k.id === draggingKf.keyframeId);
+          if (legacyKf) {
+            updateKeyframeFrame(tr.id, draggingKf.keyframeId, targetFrame);
+          } else {
+            const activeTmpl = activeTemplateId || 'Sequence';
+            const origFrame = Object.values(tr.channels ?? {})
+              .flat()
+              .find((k) => k.id === draggingKf.keyframeId)?.frame;
+            if (origFrame !== undefined) {
+              for (const [ch, arr] of Object.entries(tr.channels ?? {})) {
+                const kf = (arr as PropertyKeyframe[]).find(
+                  (k) => (k.templateId || 'Sequence') === activeTmpl && k.frame === origFrame,
+                );
+                if (kf) updatePropertyKeyframeFrame(tr.id, ch as TrackChannel, kf.id, targetFrame);
+              }
+            }
+          }
+        }
       } else if (draggingPKf) {
         updatePropertyKeyframeFrame(draggingPKf.trackId, draggingPKf.channel, draggingPKf.keyframeId, getFrameFromMouse(e.clientX));
       }
     },
-    [isScrubbing, draggingKf, draggingPKf, getFrameFromMouse, setCurrentFrame, updateKeyframeFrame, updatePropertyKeyframeFrame]
+    [isScrubbing, draggingKf, draggingPKf, getFrameFromMouse, setCurrentFrame, updateKeyframeFrame, updatePropertyKeyframeFrame, tracks, activeTemplateId]
   );
 
   const handleMouseUp = useCallback(() => {

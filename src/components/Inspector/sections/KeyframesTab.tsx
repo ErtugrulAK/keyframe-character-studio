@@ -3,6 +3,7 @@ import { useAnimator } from '../../../context/AnimatorContext';
 import { Diamond, Plus, Trash2, Play } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 import { groupChannelKeyframesByFrame, DISPLAY_CHANNELS } from '../../../utils/channelKeyframeGroups';
+import { SmartNumberInput } from '../inputs/SmartNumberInput';
 
 interface KeyframesTabProps {
   selectedPart: CharacterPart;
@@ -24,6 +25,7 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
     updatePropertyKeyframeFrame,
     activeTemplateId,
     fps,
+    totalFrames,
   } = useAnimator();
 
   const track = tracks.find((t) => t.partId === selectedPart.id);
@@ -170,30 +172,14 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
                       <Play size={10} fill="currentColor" />
                     </button>
                     <span style={{ fontSize: 10, fontWeight: 800, color: '#94a3b8' }}>F</span>
-                    <input className="input-control"
-                      type="number"
-                      min={0}
+                    <SmartNumberInput
                       value={group.frame}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val >= 0) {
-                          handleFrameChange(group.frame, val);
-                        }
-                      }}
-                      onFocus={(e) => e.target.select()}
-                      style={{
-                        width: 48,
-                        height: 20,
-                        background: 'rgba(255, 255, 255, 0.08)',
-                        border: '1px solid #2d374d',
-                        color: '#fff',
-                        borderRadius: 4,
-                        fontSize: 11,
-                        fontWeight: 800,
-                        textAlign: 'center',
-                        outline: 'none',
-                      }}
-                      title="Type to edit keyframe frame position manually"
+                      min={0}
+                      max={totalFrames}
+                      step={1}
+                      precision={0}
+                      deferCommit
+                      onChange={(v) => handleFrameChange(group.frame, v)}
                     />
                   </div>
 

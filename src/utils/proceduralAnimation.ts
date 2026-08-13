@@ -124,7 +124,11 @@ function applyPreset(
       opacity: s.opacity,
     };
   }
-  if (id === 'none' || id === 'custom_timeline') {
+  // BUGFIX: a part WITHOUT an in/out preset (undefined) must stay fully
+  // visible while animating_in — applyBuiltin(undefined) would fall through
+  // to the default; being explicit keeps the contract deterministic:
+  // no preset = no motion, full opacity.
+  if (!id || id === 'none' || id === 'custom_timeline') {
     return { x: 0, y: 0, rot: 0, sx: 1, sy: 1, opacity: 1 };
   }
   // Builtin preset: apply cubic easing (matches PartRenderer broadcast behavior)

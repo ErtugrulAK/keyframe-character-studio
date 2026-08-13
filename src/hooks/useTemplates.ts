@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { CharacterPart, Track, MotionTemplate, ProjectTemplate, TrackChannel } from '../types/animator';
+import type { CharacterPart, Track, MotionTemplate, ProjectTemplate, TrackChannel, AppMode } from '../types/animator';
 import { DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_CHARACTER_PARTS, DEFAULT_TRACKS } from '../utils/defaults';
 
@@ -18,6 +18,10 @@ interface UseTemplatesOptions {
   setFps: React.Dispatch<React.SetStateAction<number>>;
   setCurrentFrame: (frame: number | ((prev: number) => number)) => void;
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
+  /** BUGFIX (broadcast isolation): sequence selection in broadcast mode must
+   *  NOT touch the edit-timeline playback state (currentFrame/isPlaying) —
+   *  broadcast playback is driven by broadcastState only. */
+  appMode: AppMode;
 }
 
 export const useTemplates = ({
@@ -28,6 +32,7 @@ export const useTemplates = ({
   setFps,
   setCurrentFrame,
   setIsPlaying,
+  appMode,
 }: UseTemplatesOptions) => {
   const [templateCanvasStore, setTemplateCanvasStore] = useState<Record<string, TemplateCanvas>>({
     tmpl_1: {
@@ -57,9 +62,14 @@ export const useTemplates = ({
 
   const setActiveTemplateId = useCallback((id: string) => {
     setActiveTemplateIdState(id);
-    setCurrentFrame(0);
-    setIsPlaying(false);
-  }, []);
+    // BUGFIX (broadcast isolation): in broadcast mode the sequence selection
+    // must not reset the EDIT timeline (currentFrame/isPlaying) — broadcast
+    // playback is driven by broadcastState, not by the edit timeline.
+    if (appMode !== 'broadcast') {
+      setCurrentFrame(0);
+      setIsPlaying(false);
+    }
+  }, [appMode]);
 
   const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
     const cleanName = name.trim() || 'New Sequence';

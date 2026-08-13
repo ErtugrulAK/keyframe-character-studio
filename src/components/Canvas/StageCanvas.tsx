@@ -714,7 +714,9 @@ export const StageCanvas: React.FC = () => {
         className="stage-svg"
         width="100%"
         height="100%"
-        viewBox="0 0 600 480"
+        viewBox={appMode === 'broadcast'
+          ? `${CANVAS_CENTER_X - projectResolution.width / 2} ${CANVAS_CENTER_Y - projectResolution.height / 2} ${projectResolution.width} ${projectResolution.height}`
+          : '0 0 600 480'}
         preserveAspectRatio="xMidYMid meet"
         onDoubleClick={(e) => {
           if (activeTool === 'freeform_draw') {

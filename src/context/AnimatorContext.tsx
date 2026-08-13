@@ -179,6 +179,34 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   
   const { tracks, setTracks, tracksRef, characterParts, setCharacterParts, characterPartsRef } = useProjectState();
 
+  const { customPresets, customPresetsRef } = usePresets();
+
+  const {
+    appMode,
+    setAppMode,
+    broadcastState,
+    triggerBroadcastIn,
+    triggerBroadcastOut,
+    triggerAllBroadcastIn,
+    triggerAllBroadcastOut,
+    resetBroadcastState,
+    liveStuntsState,
+    triggerLiveStunt,
+    stopLiveStunt,
+    setStuntLoopState,
+    stopAllLiveStunts,
+  } = useBroadcast({
+    setIsPlaying,
+    setCurrentFrame,
+    characterParts,
+    tracksRef,
+    characterPartsRef,
+    customPresetsRef,
+    fpsRef,
+    showToast,
+  });
+
+
   const {
     setTemplateCanvasStore,
     projectTemplates,
@@ -208,34 +236,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setFps,
     setCurrentFrame,
     setIsPlaying,
-  });
-
-
-  const { customPresets, customPresetsRef } = usePresets();
-
-  const {
     appMode,
-    setAppMode,
-    broadcastState,
-    triggerBroadcastIn,
-    triggerBroadcastOut,
-    triggerAllBroadcastIn,
-    triggerAllBroadcastOut,
-    resetBroadcastState,
-    liveStuntsState,
-    triggerLiveStunt,
-    stopLiveStunt,
-    setStuntLoopState,
-    stopAllLiveStunts,
-  } = useBroadcast({
-    setIsPlaying,
-    setCurrentFrame,
-    characterParts,
-    tracksRef,
-    characterPartsRef,
-    customPresetsRef,
-    fpsRef,
-    showToast,
   });
 
   const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });

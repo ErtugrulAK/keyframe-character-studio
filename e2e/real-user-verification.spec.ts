@@ -138,22 +138,45 @@ test('BUG 4 — broadcast sequence: scene visible, edit playback untouched (real
       }),
     );
 
+  // BUGFIX hardening: real visibility = opacity > 0 AND an on-screen
+  // bounding box (opacity alone is not enough — a cropped/off-screen stage
+  // would still report opacity 1 while looking empty to the user).
+  const partVisibility = () =>
+    page.evaluate(() =>
+      [...document.querySelectorAll<SVGGElement>('g[transform^="translate"]')].map((g) => {
+        const r = g.getBoundingClientRect();
+        const s = g.getAttribute('style') ?? '';
+        const o = parseFloat(s.match(/opacity:([\d.]+)/)?.[1] ?? '1');
+        return {
+          opacity: o,
+          onScreen: r.right > 0 && r.left < window.innerWidth && r.bottom > 0 && r.top < window.innerHeight,
+          w: r.width, h: r.height,
+        };
+      }),
+    );
+
   // 2. BROADCAST
   await page.getByText('BROADCAST', { exact: true }).click();
   await page.waitForTimeout(600);
   const op1 = await partOpacities();
   expect(op1.every((o) => parseFloat(o) > 0)).toBe(true); // not hidden
+  const vis1 = await partVisibility();
+  expect(vis1.every((v) => v.onScreen && v.w > 0 && v.h > 0)).toBe(true); // REAL render on stage
 
   // 3. Sequence click (Live Director Panel)
   await page.getByText('Sequence', { exact: true }).first().click();
   await page.waitForTimeout(400);
   const op2 = await partOpacities();
   expect(op2.every((o) => parseFloat(o) > 0)).toBe(true); // visible during animating_in
+  const vis2 = await partVisibility();
+  expect(vis2.every((v) => v.onScreen && v.w > 0 && v.h > 0)).toBe(true);
 
   // 4. After animation completes (animating_in → visible): still visible
   await page.waitForTimeout(1500);
   const op3 = await partOpacities();
   expect(op3.every((o) => parseFloat(o) > 0)).toBe(true);
+  const vis3 = await partVisibility();
+  expect(vis3.every((v) => v.onScreen && v.w > 0 && v.h > 0)).toBe(true);
 
   // 5. Edit playback untouched: part transforms stayed identical to EDIT state
   //    (currentFrame never advanced — no edit-timeline loop was triggered)

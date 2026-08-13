@@ -1,6 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useTemplates } from '../hooks/useTemplates';
+import type { Track } from '../types/animator';
 
 describe('useTemplates Hook', () => {
   const mockSetCharacterParts = vi.fn();
@@ -9,16 +10,20 @@ describe('useTemplates Hook', () => {
   const mockSetCurrentFrame = vi.fn();
   const mockSetIsPlaying = vi.fn();
 
-  it('initializes with default sequence templates', () => {
-    const { result } = renderHook(() => useTemplates({
+  const render = (appMode: 'edit' | 'broadcast' = 'edit') =>
+    renderHook(() => useTemplates({
       characterParts: [],
       setCharacterParts: mockSetCharacterParts,
       tracks: [],
       setTracks: mockSetTracks,
       setFps: mockSetFps,
       setCurrentFrame: mockSetCurrentFrame,
-      setIsPlaying: mockSetIsPlaying
+      setIsPlaying: mockSetIsPlaying,
+      appMode,
     }));
+
+  it('initializes with default sequence templates', () => {
+    const { result } = render();
 
     expect(result.current.motionTemplates.length).toBeGreaterThan(0);
     expect(result.current.motionTemplates[0].id).toBe('Sequence');
@@ -26,15 +31,7 @@ describe('useTemplates Hook', () => {
   });
 
   it('adds and deletes a motion template', () => {
-    const { result } = renderHook(() => useTemplates({
-      characterParts: [],
-      setCharacterParts: mockSetCharacterParts,
-      tracks: [],
-      setTracks: mockSetTracks,
-      setFps: mockSetFps,
-      setCurrentFrame: mockSetCurrentFrame,
-      setIsPlaying: mockSetIsPlaying
-    }));
+    const { result } = render();
 
     act(() => {
       result.current.addMotionTemplate('My Animation', 'in');
@@ -54,15 +51,7 @@ describe('useTemplates Hook', () => {
   });
 
   it('deleteMotionTemplate removes its channel/keyframe data but keeps other templates', () => {
-    const { result } = renderHook(() => useTemplates({
-      characterParts: [],
-      setCharacterParts: mockSetCharacterParts,
-      tracks: [],
-      setTracks: mockSetTracks,
-      setFps: mockSetFps,
-      setCurrentFrame: mockSetCurrentFrame,
-      setIsPlaying: mockSetIsPlaying
-    }));
+    const { result } = render();
 
     // Create a template and capture its id
     act(() => {
@@ -104,5 +93,31 @@ describe('useTemplates Hook', () => {
     expect(updated[0].keyframes.map((k) => k.id)).toEqual(['kf_seq']);
     expect(updated[0].channels.x.map((pk) => pk.id)).toEqual(['cx_seq']);
     expect(updated[0].channels.opacity.map((pk) => pk.id)).toEqual(['co_seq']);
+  });
+
+  // BUGFIX (broadcast isolation): selecting a sequence in broadcast mode must
+  // NOT touch the edit timeline playback state (currentFrame/isPlaying).
+  it('edit mode: selecting a sequence resets frame 0 and stops playback (legacy behavior)', () => {
+    mockSetCurrentFrame.mockClear();
+    mockSetIsPlaying.mockClear();
+    const { result } = render('edit');
+    act(() => {
+      result.current.setActiveTemplateId('Sequence');
+    });
+    expect(mockSetCurrentFrame).toHaveBeenCalledWith(0);
+    expect(mockSetIsPlaying).toHaveBeenCalledWith(false);
+  });
+
+  it('broadcast mode: selecting a sequence does NOT touch edit timeline playback state (BUGFIX isolation)', () => {
+    mockSetCurrentFrame.mockClear();
+    mockSetIsPlaying.mockClear();
+    const { result } = render('broadcast');
+    act(() => {
+      result.current.setActiveTemplateId('Sequence');
+    });
+    expect(mockSetCurrentFrame).not.toHaveBeenCalled();
+    expect(mockSetIsPlaying).not.toHaveBeenCalled();
+    // the active template id still changes (keyframe filtering depends on it)
+    expect(result.current.activeTemplateId).toBe('Sequence');
   });
 });

@@ -88,12 +88,14 @@ function freeformWorldPathD(
 
 /** M15 — whether a part can be a matte source: static shape geometry OR a
  *  freeform polygon (custom_freeform → CharacterPart.points) OR a text part
- *  (M18 — the glyphs become the mask CONTENT element, no path geometry).
- *  Text/image/video and other non-geometric types are not eligible. */
+ *  (M18 — the glyphs become the mask CONTENT element, no path geometry) OR an
+ *  image part (M21 — the <image> becomes the mask CONTENT element, no path
+ *  geometry — 7A pixel-verified). Video/cloner/particle stay ineligible. */
 export function isMatteEligible(part: { type: string } | undefined): boolean {
   if (!part) return false;
   if (part.type === 'custom_freeform') return true;
   if (part.type === 'custom_text') return true;
+  if (part.type === 'custom_image') return true;
   return getShapeGeometry(part.type as BodyPartType) !== null;
 }
 
@@ -147,6 +149,20 @@ export interface MatteMask {
    *  NEVER serialized into PartMatte (content/fonts live on the source part
    *  and are read at runtime). */
   text?: MatteTextContent | null;
+  /** M21: image mask content — present ONLY for custom_image sources (pathD
+   *  is then null). The image is rendered as a transform-baked <image>
+   *  element inside the mask (7A spike: SVG <image> works as mask content;
+   *  alpha flows into alpha masks, luminance is deterministic). Render-only
+   *  data — NEVER serialized into PartMatte (href/dimensions live on the
+   *  source part and are read at runtime). */
+  image?: MatteImageContent | null;
+  /** M21: nested content-mask id for the image × gradient composition
+   *  (7A pixel-verified — <image> cannot consume fill; the final mask wraps
+   *  the gradient rect with a mask that carries the image alpha). Present
+   *  ONLY when an image source has a gradient AND is not inverted. The
+   *  content mask def (kcs-mask-{src}-img) lives in the renderer's
+   *  imageContentMasks Map — same dedupe as every other def. */
+  imageContentMaskId?: string;
 }
 
 /**
@@ -432,6 +448,75 @@ export function buildMatteTextMask(
   };
 }
 
+/** M21 — deterministic media dimension normalization for image layout bounds.
+ *  Positive finite number → as-is; anything else (undefined/0/negative/NaN/
+ *  Infinity) → the MediaPartRenderer default (180×120). Never reads pixels. */
+export function normalizeMediaDimension(value: number | undefined, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return fallback;
+  return value;
+}
+
+/** M21 — runtime image mask content descriptor (the <image> element data the
+ *  mask content needs). href resolution follows MediaPartRenderer's SINGLE
+ *  authority: `imageUrl || innerMediaUrl` — no third URL field is invented.
+ *  PreserveAspectRatio matches the app image renderer ('xMidYMid slice').
+ *  Pure + deterministic; NEVER persisted into PartMatte (the source part's
+ *  own fields are the persistent source of truth). */
+export interface MatteImageContent {
+  href: string;
+  width: number;
+  height: number;
+  preserveAspectRatio: 'xMidYMid slice';
+}
+
+export function imageMaskContent(
+  sourcePart: Pick<CharacterPart, 'imageUrl' | 'innerMediaUrl' | 'width' | 'height'> | undefined,
+): MatteImageContent | undefined {
+  if (!sourcePart) return undefined;
+  const href = sourcePart.imageUrl || sourcePart.innerMediaUrl;
+  if (!href) return undefined;
+  return {
+    href,
+    width: normalizeMediaDimension(sourcePart.width, 180),
+    height: normalizeMediaDimension(sourcePart.height, 120),
+    preserveAspectRatio: 'xMidYMid slice',
+  };
+}
+
+/** M21 — build the render-data MatteMask for an IMAGE source. pathD is null
+ *  (image has no path geometry — buildMattePath stays untouched); the <image>
+ *  is the mask content via `image`.
+ *  INVERTED CONTRACT (7A pixel-verified): an <image> CANNOT be repainted
+ *  black like text — `fill` stays 'white' and inverted semantics come from
+ *  the LUMINANCE structure: dark image pixels punch holes, bright image
+ *  pixels stay visible. The renderer must use mask-type luminance for
+ *  inverted image (never a black repaint).
+ *  GRADIENT CONTRACT (7A): <image> cannot consume fill — when a gradient is
+ *  present AND the mask is not inverted, the renderer composes image alpha ×
+ *  gradient paint via a nested content mask (imageContentMaskId). */
+export function buildMatteImageMask(
+  sourcePartId: string,
+  content: MatteImageContent,
+  mode: Exclude<MatteMode, 'clip'>,
+  inverted: boolean,
+  feather?: number,
+  strength?: number,
+): MatteMask {
+  return {
+    id: matteMaskId(sourcePartId, mode, inverted),
+    mode,
+    inverted,
+    pathD: null,
+    fill: 'white',
+    image: content,
+    // Nested content mask is only meaningful for the non-inverted
+    // gradient composition; the renderer uses it iff gradientId exists too.
+    imageContentMaskId: `kcs-mask-${sourcePartId}-img`,
+    ...(feather !== undefined ? { feather } : {}),
+    ...(strength !== undefined ? { strength } : {}),
+  };
+}
+
 /** M18 — inverse of the matte world transform (applyWorld). Pure point
  *  conversion for the TEXT mask branch: the gradient def endpoints are
  *  produced in world space by the M17 helper, then converted to the text
@@ -540,30 +625,45 @@ const TEXT_GRADIENT_BOX_POINTS: { x: number; y: number }[] = [
  *  points buildMattePath's shape geometry uses (shapeGeometry for static
  *  shapes, CharacterPart.points for freeform) plus the canonical M18 text box.
  *  Never a second geometry system — only the bounds/extent are derived. */
-function sourceLocalPoints(sourcePart: Pick<CharacterPart, 'type' | 'points'>): { x: number; y: number }[] | undefined {
+function sourceLocalPoints(sourcePart: Pick<CharacterPart, 'type' | 'points'> & Partial<Pick<CharacterPart, 'width' | 'height'>>): { x: number; y: number }[] | undefined {
   const geo = sourcePart.type === 'custom_freeform' ? undefined : getShapeGeometry(sourcePart.type as BodyPartType);
   const pts = sourcePart.type === 'custom_freeform'
     ? sourcePart.points
     : sourcePart.type === 'custom_text'
       ? TEXT_GRADIENT_BOX_POINTS
-      : geo
-      ? geo.kind === 'polygon'
-        ? geo.points
-        : geo.kind === 'rect'
-          ? [
-              { x: geo.x, y: geo.y },
-              { x: geo.x + geo.width, y: geo.y },
-              { x: geo.x, y: geo.y + geo.height },
-              { x: geo.x + geo.width, y: geo.y + geo.height },
-            ]
-          : // circle — local center (0,0), radius r
-            [
-              { x: -geo.r, y: -geo.r },
-              { x: geo.r, y: -geo.r },
-              { x: -geo.r, y: geo.r },
-              { x: geo.r, y: geo.r },
-            ]
-      : undefined;
+      : sourcePart.type === 'custom_image'
+        ? (() => {
+            // M21 — image has no geometry: the deterministic local bounds are the
+            // image element's layout box (width × height, centered at the local
+            // origin — the same convention MediaPartRenderer draws with). Never
+            // reads image pixels; malformed dims fall back to the renderer defaults.
+            const w = normalizeMediaDimension(sourcePart.width, 180);
+            const h = normalizeMediaDimension(sourcePart.height, 120);
+            return [
+              { x: -w / 2, y: -h / 2 },
+              { x: w / 2, y: -h / 2 },
+              { x: -w / 2, y: h / 2 },
+              { x: w / 2, y: h / 2 },
+            ];
+          })()
+        : geo
+          ? geo.kind === 'polygon'
+            ? geo.points
+            : geo.kind === 'rect'
+              ? [
+                  { x: geo.x, y: geo.y },
+                  { x: geo.x + geo.width, y: geo.y },
+                  { x: geo.x, y: geo.y + geo.height },
+                  { x: geo.x + geo.width, y: geo.y + geo.height },
+                ]
+              : // circle — local center (0,0), radius r
+                [
+                  { x: -geo.r, y: -geo.r },
+                  { x: geo.r, y: -geo.r },
+                  { x: -geo.r, y: geo.r },
+                  { x: geo.r, y: geo.r },
+                ]
+          : undefined;
   return pts && pts.length > 0 ? pts : undefined;
 }
 

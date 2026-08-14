@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 678 test — 38 dosya** (M20 durumu) |
+| Test | **Vitest, 738 test — 38 dosya** (M21 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M19)
+## Proje durumu (M21)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -160,7 +160,32 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
     world region rect gradient + dış alan ramp
   - Baseline: 678/678 vitest + R-V 23/23 ×2 + track-matte 76/76 (full'da V-T17 timing flake —
     M18 import/reload, izole PASS)
-- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → **M20 6B-6F implementasyonu PENDING (commit/push YOK)**
+- **M21 ✅ COMPLETE — Image Matte** (7A-7F iş PC'de tamamlandı; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 7A spike: 17/17 ×2 (geçici, silindi) — SVG `<image>` mask CONTENT olarak çalışır:
+    alpha mask'a alpha akar, luminance deterministik; `<image>` fill kullanamaz →
+    **nested-mask multiplication** (image alpha/luminance × gradient mask); `fill-opacity`
+    image'da INERT (strength → `opacity`); inverted image SİYAH repaint edilemez (luminance
+    semantiği: parlak görünür, koyu delik); Canvas/foreignObject/ikinci-geometry/yeni-filter YOK
+  - 7B data/pure: `isMatteEligible(custom_image) → true` (tek authority); `imageMaskContent`
+    (href = imageUrl || innerMediaUrl tek authority; width×height layout box — piksel okuma yok);
+    `MatteMask.image` runtime-only (PartMatte'e alan YOK — sourcePartId tek ilişki);
+    buildMattePath(image) → null; image+clip semantik olarak kapalı
+  - 7C render: StagePartLayers image content branch — transform-baked `<image>` mask içinde;
+    inverted image → mask-type luminance (mask-type koşulu text||image'e genişletildi — 7A);
+    strength → `opacity` (fill-opacity asla); gradient → `kcs-mask-{src}-img` content mask ×
+    gradient rect (nested); feather mevcut filter; M18/M19/M20 byte-compatible
+  - 7D UI: image source listede; Clip UI'da disabled + uyarı (text deseni genişletildi);
+    alpha/luminance/inverted/feather/strength/gradient/stops tam destekli; field preservation
+    birebir; local state yok
+  - 7E: serialization 91/91 (EXACT; runtime descriptor asla persist edilmez; legacy linear
+    structurally legacy kalır); V-M1..V-M26 pixel/DOM matrisi **26/26 ×2** (`e2e/m21-image-matte.spec.ts`
+    KALICI — dedupe, coexist, Inspector real-user flow V-M20, clip güvenli, import/reload EXACT
+    parity V-M24, animated radial takip V-M22/23); inverted image semantiği + strength=opacity +
+    nested composition açıkça kanıtlı
+  - 7F: docs — SKILL v9.0.0 (M21 bölümü + mimari + baseline + deferred), wiki, README
+  - Baseline: **738/738 vitest** (91/91 serialization dahil) + R-V 23/23 ×2 + V-M **26/26 ×2** +
+    track-matte 76/76 (full'da V-T17 timing flake — M18 import/reload, izole PASS; M20/M21 değiştirmedi)
+- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → `668a3b3` (M20 radial gradient) → **M21 7B-7F implementasyonu PENDING (commit/push YOK)**
 
 ## Önemli kararlar
 

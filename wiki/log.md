@@ -180,3 +180,26 @@
   dış alan ramp doğrulandı (R-V10 pin'ler)
 - Baseline: 678/678 vitest · R-V 23/23 ×2 · track-matte 76/76 (full'da V-T17 timing flake —
   M18 import/reload yolu, makine yükünde; izole PASS; M20 değiştirmedi) · tsc/build/oxlint PASS
+
+## [2026-08-13] update | KCS — M21 IMAGE MATTE COMPLETE (iş PC, 7A-7F)
+- M21 ✅ 7A-7F tamamlandı — **COMMIT/PUSH PENDING (onay bekliyor)** — HEAD `668a3b3`, working tree 8 dosya dirty (7B-7F)
+- 7A spike (17/17 ×2, geçici, silindi): SVG `<image>` mask CONTENT olarak pixel-kanıtlı —
+  alpha/luminance deterministik; **nested-mask multiplication** (image × gradient);
+  **image strength = `opacity`** (fill-opacity INERT); **inverted image = luminance semantiği**
+  (parlak görünür / koyu delik — siyah repaint YOK); Canvas/foreignObject/ikinci-geometry yok
+- 7B data/pure: isMatteEligible(custom_image) → true (tek authority); imageMaskContent
+  (imageUrl || innerMediaUrl tek URL authority; layout box bounds); MatteMask.image runtime-only
+  (PartMatte'e alan yok); buildMattePath(image) → null; image+clip kapalı
+- 7C render: StagePartLayers image content branch; inverted image → mask-type luminance
+  (koşul text||image'e genişletildi); strength → opacity; gradient → `kcs-mask-{src}-img`
+  nested composition; feather reuse; M18/M19/M20 byte-compatible
+- 7D UI: image listede; Clip disabled + uyarı (text deseni); tüm kontroller destekli;
+  field preservation; local state yok
+- 7E: serialization **91/91** (runtime descriptor asla persist edilmez); V-M1..V-M26
+  **26/26 ×2** (dedupe, coexist, Inspector real-user V-M20, clip güvenli, import/reload EXACT
+  V-M24, animated radial V-M22/23, legacy linear/text regression)
+- 7F: docs — SKILL **v9.0.0** (M21 bölümü + mimari + baseline + deferred'den image matte çıkarıldı),
+  wiki entity, README
+- Baseline: **738/738 vitest** (91/91 serialization dahil) + R-V 23/23 ×2 + V-M 26/26 ×2 +
+  track-matte 76/76 (V-T17 bilinen M18 timing flake — izole PASS, M20/M21 değiştirmedi)
+- Commit/push YOK — hash icat edilmedi

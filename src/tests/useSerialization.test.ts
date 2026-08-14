@@ -1994,4 +1994,128 @@ describe('useSerialization Hook', () => {
     });
   });
 });
+
+describe('useSerialization — M21 image matte serialization contract', () => {
+  function roundTripPart(part: any) {
+    const { result } = renderSerializationWithPart(part);
+    const exported = result.current.exportProject();
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported)).toBe(true);
+    return (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === part.id)!;
+  }
+  const imgPart = (matte: any) => ({
+    id: 'img', type: 'custom_image', name: 'Img', zIndex: 1,
+    width: 200, height: 150, imageUrl: 'https://example.com/logo.png',
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    matte,
+  } as any);
+  const STOPS2 = [
+    { offset: 0, color: 'white', opacity: 1 },
+    { offset: 1, color: 'white', opacity: 0 },
+  ];
+
+  it('1-5. image + alpha/luminance/inverted/feather/strength round-trip EXACT', () => {
+    const a = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha', enabled: true }));
+    expect(a.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', enabled: true });
+    const l = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'luminance' }));
+    expect(l.matte).toEqual({ sourcePartId: 'src', mode: 'luminance' });
+    const inv = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha', inverted: true }));
+    expect(inv.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', inverted: true });
+    const f = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha', feather: 12 }));
+    expect(f.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', feather: 12 });
+    const s = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha', strength: 0.5 }));
+    expect(s.matte).toEqual({ sourcePartId: 'src', mode: 'alpha', strength: 0.5 });
+  });
+
+  it('6-8. image + linear/radial/4-stop gradient round-trip EXACT', () => {
+    const lin = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } }));
+    expect(lin.matte.gradient).toEqual({ angle: 45 });
+    const rad = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: STOPS2 } }));
+    expect(rad.matte.gradient).toEqual({ type: 'radial', stops: STOPS2 });
+    const stops4 = [
+      { offset: 0, color: '#ff0000', opacity: 1 },
+      { offset: 0.33, color: '#00ff00', opacity: 0.8 },
+      { offset: 0.66, color: '#0000ff', opacity: 0.5 },
+      { offset: 1, color: '#ffffff', opacity: 0 },
+    ];
+    const four = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops4 } }));
+    expect(four.matte.gradient).toEqual({ type: 'radial', stops: stops4 });
+  });
+
+  it('9. image matte sourcePartId preserved (the ONLY persistent relationship)', () => {
+    const restored = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha', enabled: true }));
+    expect(restored.matte.sourcePartId).toBe('src');
+    expect(Object.keys(restored.matte).sort()).toEqual(['enabled', 'mode', 'sourcePartId']);
+  });
+
+  it('10-12. image runtime descriptor NEVER persisted: no href/width/height/image fields in matte JSON', () => {
+    const { result } = renderSerializationWithPart(imgPart({ sourcePartId: 'src', mode: 'alpha' }));
+    const exported = result.current.exportProject();
+    const matteJson = JSON.parse(exported).layers.find((p: any) => p.id === 'img').matte;
+    expect(JSON.stringify(matteJson)).not.toContain('href');
+    expect(JSON.stringify(matteJson)).not.toContain('imageUrl');
+    expect(JSON.stringify(matteJson)).not.toContain('width');
+    expect(JSON.stringify(matteJson)).not.toContain('height');
+    expect(JSON.stringify(matteJson)).not.toContain('image');
+    expect(JSON.stringify(matteJson)).not.toContain('preserveAspectRatio');
+    expect(JSON.stringify(matteJson)).not.toContain('cx');
+    expect(JSON.stringify(matteJson)).not.toContain('radius');
+  });
+
+  it('13. legacy image + clip state remains safely importable (no crash, state kept)', () => {
+    const restored = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'clip', enabled: true }));
+    expect(restored.matte).toEqual({ sourcePartId: 'src', mode: 'clip', enabled: true });
+  });
+
+  it('14. switching source shape ↔ image preserves matte fields (only sourcePartId changes)', () => {
+    const restored = roundTripPart(imgPart({
+      sourcePartId: 'shape_src', mode: 'luminance', enabled: true, inverted: true,
+      feather: 6, strength: 0.75, gradient: { type: 'radial', stops: STOPS2 },
+    }));
+    // the user action is a pure sourcePartId swap (UI contract — serialization
+    // never rewrites it): every field rides along untouched
+    expect(restored.matte).toEqual({
+      sourcePartId: 'shape_src', mode: 'luminance', enabled: true, inverted: true,
+      feather: 6, strength: 0.75, gradient: { type: 'radial', stops: STOPS2 },
+    });
+  });
+
+  it('15. imported image source reconstructs the runtime descriptor (imageMaskContent parity)', () => {
+    const restored = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha' }));
+    // source part keeps its imageUrl/width/height — the runtime mask content
+    // (imageMaskContent) is derived from THOSE at render time, never persisted
+    expect(restored.imageUrl).toBe('https://example.com/logo.png');
+    expect(restored.width).toBe(200);
+    expect(restored.height).toBe(150);
+    expect(restored.matte).toEqual({ sourcePartId: 'src', mode: 'alpha' });
+  });
+
+  it('16. malformed/missing source remains recoverable (matte survives with dangling id)', () => {
+    const restored = roundTripPart(imgPart({ sourcePartId: 'ghost', mode: 'alpha' }));
+    expect(restored.matte).toEqual({ sourcePartId: 'ghost', mode: 'alpha' });
+  });
+
+  it('17. legacy shape/text matte import unchanged', () => {
+    const shape = roundTripPart({ id: 'sh', type: 'custom_star', name: 'S', zIndex: 1, baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, matte: { sourcePartId: 'src', mode: 'alpha' } } as any);
+    expect(shape.matte).toEqual({ sourcePartId: 'src', mode: 'alpha' });
+    const text = roundTripPart({ id: 'tx', type: 'custom_text', name: 'T', zIndex: 1, baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, matte: { sourcePartId: 'src', mode: 'luminance', inverted: true } } as any);
+    expect(text.matte).toEqual({ sourcePartId: 'src', mode: 'luminance', inverted: true });
+  });
+
+  it('18. legacy linear gradient remains legacy (no type/stops rewrite)', () => {
+    const restored = roundTripPart(imgPart({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } }));
+    expect(restored.matte.gradient).toEqual({ angle: 45 });
+    expect('type' in restored.matte.gradient).toBe(false);
+    expect('stops' in restored.matte.gradient).toBe(false);
+  });
+
+  it('19. radial derived center/radius absent from JSON', () => {
+    const { result } = renderSerializationWithPart(imgPart({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: STOPS2 } }));
+    const exported = result.current.exportProject();
+    const matteJson = JSON.parse(exported).layers.find((p: any) => p.id === 'img').matte;
+    expect(JSON.stringify(matteJson)).not.toContain('cx');
+    expect(JSON.stringify(matteJson)).not.toContain('cy');
+    expect(JSON.stringify(matteJson)).not.toContain('radius');
+  });
+});
 });

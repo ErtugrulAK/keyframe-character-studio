@@ -26,12 +26,14 @@ import {
   textMaskContent,
   normalizeGradientType,
   radialGradientGeometry,
+  imageMaskContent,
+  buildMatteImageMask,
   matteClipPathId,
   matteMaskId,
   isMatteActive,
   resolveMatteMode,
 } from '../../utils/matte';
-import type { MatteClipPath, MatteMask, MatteGradientStop } from '../../utils/matte';
+import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } from '../../utils/matte';
 import type { WorldTransform } from '../../types/composition';
 import { CANVAS_CENTER } from '../../utils/constants';
 
@@ -149,10 +151,15 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   // discriminated union (kind: 'linear' → x1/y1/x2/y2, kind: 'radial' →
   // cx/cy/r) so linear and radial variants of the same source never collide.
   const matteGradients = new Map<string, { id: string; kind: 'linear' | 'radial'; stops: MatteGradientStop[]; x1?: number; y1?: number; x2?: number; y2?: number; cx?: number; cy?: number; r?: number }>();
-  // M18 — text masks carry NO path geometry; the mask content is a
-  // transform-baked <text>. The source's evaluated world transform is stored
-  // per mask id (render-only, recomputed every frame — never stale).
-  const textTransforms = new Map<string, WorldTransform>();
+  // M18/M21 — TEXT/IMAGE masks carry NO path geometry; the mask content is a
+  // transform-baked <text> or <image> element. The source's evaluated world
+  // transform is stored per mask id (render-only, recomputed every frame —
+  // never stale).
+  const contentTransforms = new Map<string, WorldTransform>();
+  // M21 — nested content masks for image × gradient composition (7A): the
+  // image alpha rides its own <mask> def (kcs-mask-{src}-img) that the final
+  // mask wraps around the gradient rect — pure SVG multiplication, no canvas.
+  const imageContentMasks = new Map<string, { id: string; content: MatteImageContent; transform: WorldTransform; opacity?: number }>();
   for (const layer of sortedParts) {
     if (!layer.matte || !isMatteActive(layer.matte)) continue;
     const source = sortedParts.find((p) => p.id === layer.matte!.sourcePartId);
@@ -203,6 +210,18 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       const content = textMaskContent(source);
       if (!content) continue;
       mask = buildMatteTextMask(
+        source.id, content, mode, inverted,
+        feather > 0 ? feather : undefined,
+        strength < 1 ? strength : undefined,
+      );
+    } else if (source.type === 'custom_image') {
+      // M21 — IMAGE source: buildMattePath stays null (no path geometry); the
+      // <image> is the mask CONTENT element (7A pixel-verified). href/dims are
+      // read from the source at runtime (never persisted — sourcePartId is the
+      // only persistent link).
+      const content = imageMaskContent(source);
+      if (!content) continue;
+      mask = buildMatteImageMask(
         source.id, content, mode, inverted,
         feather > 0 ? feather : undefined,
         strength < 1 ? strength : undefined,
@@ -296,7 +315,20 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       id: maskId,
       ...(maskGradientId ? { gradientId: maskGradientId } : {}),
     });
-    if (mask.text) textTransforms.set(maskId, sourceEl.transform);
+    if (mask.text || mask.image) contentTransforms.set(maskId, sourceEl.transform);
+    // M21 — nested content mask (image alpha) for the image × gradient
+    // composition: only non-inverted image + gradient needs the separate def.
+    // Deduped by the deterministic kcs-mask-{src}-img id (one def per source).
+    if (mask.image && maskGradientId && !mask.inverted && mask.imageContentMaskId) {
+      if (!imageContentMasks.has(mask.imageContentMaskId)) {
+        imageContentMasks.set(mask.imageContentMaskId, {
+          id: mask.imageContentMaskId,
+          content: mask.image,
+          transform: sourceEl.transform,
+          opacity: strength < 1 ? strength : undefined,
+        });
+      }
+    }
   }
 
   const matteAttrFor = (part: CharacterPart): { clipId?: string; maskId?: string } => {
@@ -369,6 +401,30 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     );
   };
 
+  // M21 — the IMAGE mask content: an <image> element baked through the SAME
+  // transform math as text (translate(CX+tx, CY+ty) rotate(r) scale(sx,sy))
+  // and the app's MediaPartRenderer layout convention (width×height centered
+  // at the local origin, preserveAspectRatio xMidYMid slice). STRENGTH
+  // CONTRACT (7A pixel-verified): fill-opacity is INERT on <image> — strength
+  // renders as `opacity` (never fillOpacity). Feather reuses the same filter.
+  const renderImageMaskContent = (mask: MatteMask, t: WorldTransform): React.ReactNode => {
+    if (!mask.image) return null;
+    return (
+      <g transform={`translate(${CANVAS_CENTER.x + t.x}, ${CANVAS_CENTER.y + t.y}) rotate(${t.rotation}) scale(${t.scaleX}, ${t.scaleY})`}>
+        <image
+          href={mask.image.href}
+          x={-mask.image.width / 2}
+          y={-mask.image.height / 2}
+          width={mask.image.width}
+          height={mask.image.height}
+          preserveAspectRatio={mask.image.preserveAspectRatio}
+          opacity={mask.strength}
+          filter={featherUrl(mask)}
+        />
+      </g>
+    );
+  };
+
   return (
     <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
       <defs>
@@ -426,25 +482,68 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             </linearGradient>
           ),
         )}
+        {[...imageContentMasks.values()].map((c) => (
+          <mask
+            key={c.id}
+            id={c.id}
+            maskUnits="userSpaceOnUse"
+            maskContentUnits="userSpaceOnUse"
+            mask-type="alpha"
+          >
+            <g transform={`translate(${CANVAS_CENTER.x + c.transform.x}, ${CANVAS_CENTER.y + c.transform.y}) rotate(${c.transform.rotation}) scale(${c.transform.scaleX}, ${c.transform.scaleY})`}>
+              <image
+                href={c.content.href}
+                x={-c.content.width / 2}
+                y={-c.content.height / 2}
+                width={c.content.width}
+                height={c.content.height}
+                preserveAspectRatio={c.content.preserveAspectRatio}
+                opacity={c.opacity}
+              />
+            </g>
+          </mask>
+        ))}
         {[...matteMasks.values()].map((mask) => (
           <mask
             key={mask.id}
             id={mask.id}
             maskUnits="userSpaceOnUse"
             maskContentUnits="userSpaceOnUse"
-            // M18 — inverted TEXT always renders the luminance structure
-            // (4A decision: alpha masks ignore a second element — a white
-            // rect + black text hole only works as a luminance mask).
-            mask-type={mask.text && mask.inverted ? 'luminance' : mask.mode}
+            // M18/M21 — inverted TEXT/IMAGE always render the luminance
+            // structure (4A decision: alpha masks ignore a second element —
+            // a white rect + black text hole only works as a luminance mask;
+            // 7A: an inverted IMAGE cannot be repainted black — the luminance
+            // structure makes dark image pixels punch the hole).
+            mask-type={(mask.text || mask.image) && mask.inverted ? 'luminance' : mask.mode}
           >
             {mask.text ? (
               mask.inverted ? (
                 <>
                   <rect x={region.x} y={region.y} width={region.width} height={region.height} fill={mask.gradientId ? `url(#${mask.gradientId})` : 'white'} fillOpacity={mask.strength} />
-                  {renderTextMaskContent(mask, textTransforms.get(mask.id)!)}
+                  {renderTextMaskContent(mask, contentTransforms.get(mask.id)!)}
                 </>
               ) : (
-                renderTextMaskContent(mask, textTransforms.get(mask.id)!)
+                renderTextMaskContent(mask, contentTransforms.get(mask.id)!)
+              )
+            ) : mask.image ? (
+              // M21 — IMAGE mask content (7A pixel-verified semantics):
+              // inverted → luminance structure: white/graduated region rect
+              // BELOW the real image (dark image pixels punch the hole —
+              // the image is NEVER repainted black).
+              // non-inverted + gradient → nested-mask multiplication: the
+              // image alpha mask wraps the gradient rect (image × gradient).
+              // non-inverted plain → the transform-baked <image> is the mask.
+              mask.inverted ? (
+                <>
+                  <rect x={region.x} y={region.y} width={region.width} height={region.height} fill={mask.gradientId ? `url(#${mask.gradientId})` : 'white'} fillOpacity={mask.strength} />
+                  {renderImageMaskContent(mask, contentTransforms.get(mask.id)!)}
+                </>
+              ) : mask.gradientId && mask.imageContentMaskId ? (
+                <g mask={`url(#${mask.imageContentMaskId})`}>
+                  <rect x={region.x} y={region.y} width={region.width} height={region.height} fill={`url(#${mask.gradientId})`} />
+                </g>
+              ) : (
+                renderImageMaskContent(mask, contentTransforms.get(mask.id)!)
               )
             ) : mask.inverted ? (
               mask.mode === 'alpha' ? (

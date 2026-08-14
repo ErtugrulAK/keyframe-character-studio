@@ -34,6 +34,8 @@ const STAR = makePart('src', 'custom_star', 'Star Part');
 const BOX = makePart('tgt', 'custom_box', 'Box Part');
 const FREEFORM = makePart('free', 'custom_freeform', 'Free Part');
 const TEXT = makePart('txt', 'custom_text', 'Text Part');
+const IMAGE = makePart('img', 'custom_image', 'Image Part');
+const VIDEO = makePart('vid', 'custom_video', 'Video Part');
 
 describe('StyleMatteSection — track matte editor UI', () => {
   it('starts with None when no matte is set', () => {
@@ -287,10 +289,10 @@ describe('StyleMatteSection — M15 freeform source UI', () => {
     });
   });
 
-  it('image and video are NOT eligible sources', () => {
+  it('image IS an eligible source (M21); video is NOT', () => {
     const { container } = renderMatte(target(), [IMAGE, VIDEO, STAR, target()]);
     const list = options(container);
-    expect(list).not.toContain('Image Part');
+    expect(list).toContain('Image Part'); // M21: image → mask content element
     expect(list).not.toContain('Video Part');
     expect(list).toContain('Star Part');
   });
@@ -911,5 +913,239 @@ describe('StyleMatteSection — M20 radial gradient type UI', () => {
     expect(normalizeGradientType(produced.type)).toBe('radial');
     expect(gradientId('src', produced)).toBe('kcs-mg-src-radial-s' + gradientStopsHash(normalizeGradientStops(produced.stops, 'alpha')));
     expect(gradientId('src', produced)).toMatch(/^kcs-mg-src-radial-/);
+  });
+});
+
+describe('StyleMatteSection — M21 image matte UI', () => {
+  const imgTarget = (matte?: CharacterPart['matte']) => makePart('tgt', 'custom_box', 'Box Part', matte);
+  const STOPS2 = [
+    { offset: 0, color: 'white', opacity: 1 },
+    { offset: 1, color: 'white', opacity: 0 },
+  ];
+
+  const options = (container: HTMLElement): string[] =>
+    [...container.querySelectorAll('select option')].map((o) => (o as HTMLOptionElement).textContent ?? '');
+
+  it('1. image source appears in the eligible source list', () => {
+    const { container } = renderMatte(imgTarget(), [IMAGE, STAR, BOX, TEXT, VIDEO, imgTarget()]);
+    const list = options(container);
+    expect(list).toContain('Image Part');
+    expect(list).toContain('Star Part');
+    expect(list).toContain('Text Part');
+  });
+
+  it('2. video remains ineligible', () => {
+    const { container } = renderMatte(imgTarget(), [IMAGE, VIDEO, STAR, imgTarget()]);
+    expect(options(container)).not.toContain('Video Part');
+  });
+
+  it('3-4. shape and text remain eligible', () => {
+    const { container } = renderMatte(imgTarget(), [STAR, TEXT, FREEFORM, IMAGE, imgTarget()]);
+    const list = options(container);
+    expect(list).toContain('Star Part');
+    expect(list).toContain('Text Part');
+    expect(list).toContain('Free Part');
+  });
+
+  it('5-6. image + alpha / luminance are selectable modes', () => {
+    const { onPartPropChange } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true }),
+      [IMAGE, imgTarget()],
+    );
+    const mode = screen.getAllByRole('combobox')[1] as HTMLSelectElement;
+    fireEvent.change(mode, { target: { value: 'luminance' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({ sourcePartId: 'img', mode: 'luminance', enabled: true }));
+  });
+
+  it('7. image + inverted toggle works', () => {
+    const { onPartPropChange } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true }),
+      [IMAGE, imgTarget()],
+    );
+    fireEvent.click(screen.getByLabelText('Inverted'));
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({ inverted: true }));
+  });
+
+  it('8. image + clip is DISABLED in the mode select', () => {
+    const { container } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true }),
+      [IMAGE, imgTarget()],
+    );
+    const clipOpt = [...container.querySelectorAll('option')].find((o) => o.textContent === 'Clip') as HTMLOptionElement;
+    expect(clipOpt.disabled).toBe(true);
+  });
+
+  it('9. legacy image + clip does not crash and shows the unsupported hint', () => {
+    const { container, onPartPropChange } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'clip', enabled: true }),
+      [IMAGE, imgTarget()],
+    );
+    expect(container.textContent).toContain('Image sources require Alpha or Luminance mode');
+    // still fully interactive — switching to Alpha works and preserves fields
+    const mode = screen.getAllByRole('combobox')[1] as HTMLSelectElement;
+    fireEvent.change(mode, { target: { value: 'alpha' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({ sourcePartId: 'img', mode: 'alpha', enabled: true }));
+  });
+
+  it('10-11. image + feather / strength controls stay enabled', () => {
+    const { container } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true }),
+      [IMAGE, imgTarget()],
+    );
+    expect((container.querySelector('input[aria-label="Feather"]') as HTMLInputElement).disabled).toBe(false);
+    expect((container.querySelector('input[aria-label="Strength"]') as HTMLInputElement).disabled).toBe(false);
+  });
+
+  it('12. image + gradient toggle works', () => {
+    const { onPartPropChange } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true }),
+      [IMAGE, imgTarget()],
+    );
+    fireEvent.click(screen.getByLabelText(/Gradient/i));
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({ gradient: { angle: 0 } }));
+  });
+
+  it('13. image + Linear gradient shows the angle control', () => {
+    const { container } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { angle: 45 } }),
+      [IMAGE, imgTarget()],
+    );
+    expect(container.querySelector('input[aria-label="Gradient Angle"]')).toBeTruthy();
+  });
+
+  it('14. image + Radial gradient hides the angle control', () => {
+    const { container } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { type: 'radial', stops: STOPS2 } }),
+      [IMAGE, imgTarget()],
+    );
+    expect(container.querySelector('input[aria-label="Gradient Angle"]')).toBeNull();
+    const type = screen.getByLabelText(/Gradient Type/i) as HTMLSelectElement;
+    expect(type.value).toBe('radial');
+  });
+
+  it('15. image + radial supports the stops editor (2–4)', () => {
+    const { container } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { type: 'radial', stops: STOPS2 } }),
+      [IMAGE, imgTarget()],
+    );
+    const stops = container.querySelectorAll('input[aria-label^="Gradient stop"]');
+    expect(stops.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('16. switching shape → image preserves matte fields (only sourcePartId changes)', () => {
+    const { onPartPropChange } = renderMatte(
+      imgTarget({ sourcePartId: 'src', mode: 'luminance', enabled: true, inverted: true, feather: 12, strength: 0.5, gradient: { type: 'radial', stops: STOPS2 } }),
+      [STAR, IMAGE, imgTarget()],
+    );
+    const src = screen.getAllByRole('combobox')[0] as HTMLSelectElement;
+    fireEvent.change(src, { target: { value: 'img' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({
+      sourcePartId: 'img', mode: 'luminance', enabled: true, inverted: true, feather: 12, strength: 0.5,
+      gradient: { type: 'radial', stops: STOPS2 },
+    }));
+  });
+
+  it('17. switching image → text preserves matte fields', () => {
+    const { onPartPropChange } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, feather: 6, strength: 0.75, gradient: { angle: 90 } }),
+      [IMAGE, TEXT, imgTarget()],
+    );
+    const src = screen.getAllByRole('combobox')[0] as HTMLSelectElement;
+    fireEvent.change(src, { target: { value: 'txt' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({
+      sourcePartId: 'txt', mode: 'alpha', enabled: true, feather: 6, strength: 0.75, gradient: { angle: 90 },
+    }));
+  });
+
+  it('18. switching image → shape preserves matte fields', () => {
+    const { onPartPropChange } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'luminance', enabled: true, inverted: true }),
+      [IMAGE, STAR, imgTarget()],
+    );
+    const src = screen.getAllByRole('combobox')[0] as HTMLSelectElement;
+    fireEvent.change(src, { target: { value: 'src' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({ sourcePartId: 'src', mode: 'luminance', enabled: true, inverted: true }));
+  });
+
+  it('19. missing source remains safe (no crash, no image-specific controls leak)', () => {
+    const { container } = renderMatte(
+      imgTarget({ sourcePartId: 'ghost', mode: 'clip', enabled: true }),
+      [IMAGE, imgTarget()],
+    );
+    expect(container.textContent).toContain('Missing source');
+    // no mode/inverted/gradient controls are rendered for a missing source
+    expect(screen.queryAllByRole('combobox').length).toBe(1); // source select only
+    expect(screen.queryByLabelText('Inverted')).toBeNull();
+  });
+
+  it('20. no local state mirror: gradient type/angle/stops all derive from matte', () => {
+    const { container, rerender } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { type: 'radial', stops: STOPS2 } }),
+      [IMAGE, imgTarget()],
+    );
+    expect(container.querySelector('input[aria-label="Gradient Angle"]')).toBeNull();
+    // re-render with a Linear gradient — the SAME component instance derives
+    // the new display (no stale local state survives)
+    rerender(<StyleMatteSection
+      selectedPart={imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { angle: 45 } })}
+      characterParts={[IMAGE, imgTarget()]}
+      onPartPropChange={vi.fn()}
+    />);
+    expect(container.querySelector('input[aria-label="Gradient Angle"]')).toBeTruthy();
+  });
+
+  it('21. legacy linear {angle:45} displays Linear without rewrite (no callback)', () => {
+    const { onPartPropChange, container } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { angle: 45 } }),
+      [IMAGE, imgTarget()],
+    );
+    expect(container.textContent).toContain('45'); // angle readout derived
+    const type = screen.getByLabelText(/Gradient Type/i) as HTMLSelectElement;
+    expect(type.value).toBe('linear'); // missing type ≡ linear
+    fireEvent.change(screen.getAllByRole('combobox')[1], { target: { value: 'luminance' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({ gradient: { angle: 45 } })); // gradient untouched
+  });
+
+  it('22. image radial → linear switch preserves stops (type omitted, legacy canonical)', () => {
+    const { onPartPropChange } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { type: 'radial', stops: STOPS2 } }),
+      [IMAGE, imgTarget()],
+    );
+    const type = screen.getByLabelText(/Gradient type/i) as HTMLSelectElement;
+    fireEvent.change(type, { target: { value: 'linear' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({
+      gradient: { stops: STOPS2 }, // no type key → legacy linear
+    }));
+    const last = onPartPropChange.mock.calls.at(-1)![1] as { gradient: { type?: string; stops: typeof STOPS2 } };
+    expect(last.gradient.type).toBeUndefined();
+    expect(last.gradient.stops).toEqual(STOPS2);
+  });
+
+  it('23-24. image linear → radial switch preserves stops + angle (type discriminator added)', () => {
+    const { onPartPropChange } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { angle: 30, stops: STOPS2 } }),
+      [IMAGE, imgTarget()],
+    );
+    const type = screen.getByLabelText(/Gradient type/i) as HTMLSelectElement;
+    fireEvent.change(type, { target: { value: 'radial' } });
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', expect.objectContaining({
+      gradient: { angle: 30, type: 'radial', stops: STOPS2 },
+    }));
+  });
+
+  it('25. image clip mode cannot reach a valid render path (Clip option disabled)', () => {
+    const { container } = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true }),
+      [IMAGE, imgTarget()],
+    );
+    const clipOpt = [...container.querySelectorAll('option')].find((o) => o.textContent === 'Clip') as HTMLOptionElement;
+    expect(clipOpt.disabled).toBe(true);
+    // legacy clip data is visible but cannot be re-selected once the user
+    // switches away (renderer never emits a clipPath for image — 7C test 12)
+    const legacy = renderMatte(
+      imgTarget({ sourcePartId: 'img', mode: 'clip', enabled: true }),
+      [IMAGE, imgTarget()],
+    );
+    expect(legacy.container.textContent).toContain('Image sources require Alpha or Luminance mode');
   });
 });

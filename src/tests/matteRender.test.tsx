@@ -918,3 +918,136 @@ describe('StagePartLayers — M20 radial gradient render', () => {
     expect((html.match(new RegExp(defId, 'g')) ?? []).length).toBe(2); // def + 1 fill reference (no duplicates)
   });
 });
+
+describe('StagePartLayers — M21 image matte render', () => {
+  const imageSource = (overrides: Record<string, unknown> = {}) =>
+    ({ ...makePart('img', 'custom_image'), imageUrl: 'https://example.com/logo.png', width: 200, height: 150, ...overrides }) as CharacterPart;
+  const imageTarget = (matte: CharacterPart['matte']) =>
+    makePart('tgt', 'custom_box', matte);
+  const stops2 = [
+    { offset: 0, color: 'white', opacity: 1 },
+    { offset: 1, color: 'white', opacity: 0 },
+  ];
+
+  it('1. image + alpha: <image> in the mask, no pathD, real href', () => {
+    const html = renderStage([imageSource(), imageTarget({ sourcePartId: 'img', mode: 'alpha' })]);
+    expect(html).toContain('<image');
+    expect(html).toContain('href="https://example.com/logo.png"');
+    expect(html).not.toContain('<path'); // no geometry path for image
+    expect(html).toContain('mask="url(#kcs-mask-img-alpha)"');
+  });
+
+  it('2. image + luminance: mask-type luminance', () => {
+    const html = renderStage([imageSource(), imageTarget({ sourcePartId: 'img', mode: 'luminance' })]);
+    expect(html).toContain('mask-type="luminance"');
+    expect(html).toContain('<image');
+  });
+
+  it('3. image + inverted: luminance structure + real image, fill NEVER black', () => {
+    const html = renderStage([imageSource(), imageTarget({ sourcePartId: 'img', mode: 'alpha', inverted: true })]);
+    expect(html).toContain('mask-type="luminance"'); // inverted image → luminance semantics (7A)
+    expect(html).toContain('<image'); // the real image IS the content
+    expect(html).not.toContain('fill="black"'); // image is NEVER repainted black
+    const img = html.match(/<image[^>]*fill="black"/);
+    expect(img).toBeNull();
+  });
+
+  it('4. image + strength 0.5: opacity attr (NOT fill-opacity) — 7A contract', () => {
+    const html = renderStage([imageSource(), imageTarget({ sourcePartId: 'img', mode: 'alpha', strength: 0.5 })]);
+    expect(html).toContain('opacity="0.5"');
+    expect(html).not.toContain('fill-opacity="0.5"'); // fill-opacity is INERT on <image>
+  });
+
+  it('5. image + feather: same filter pipeline', () => {
+    const html = renderStage([imageSource(), imageTarget({ sourcePartId: 'img', mode: 'alpha', feather: 12 })]);
+    expect(html).toContain('stdDeviation="6"');
+    expect(html).toContain('filter="url(#kcs-matte-feather-img-alpha-f12)"');
+  });
+
+  it('6. image + LINEAR gradient: nested-mask multiplication (image mask wraps the gradient rect)', () => {
+    const html = renderStage([imageSource(), imageTarget({ sourcePartId: 'img', mode: 'alpha', gradient: { angle: 0, stops: stops2 } })]);
+    // nested content mask def exists and carries the image
+    expect(html).toContain('id="kcs-mask-img-img"');
+    expect(html).toContain('mask-type="alpha"'); // content mask = image alpha
+    // the final mask wraps the gradient rect with the image alpha mask
+    expect(html).toContain('mask="url(#kcs-mask-img-img)"');
+    expect(html).toMatch(/fill="url\(#kcs-mg-img-0-s[0-9a-f]{8}-alpha\)"/);
+    // the IMAGE element itself never consumes the gradient
+    expect(html).not.toMatch(/<image[^>]*fill="url\(/);
+  });
+
+  it('7. image + RADIAL gradient: same nested composition with the radial def', () => {
+    const html = renderStage([imageSource(), imageTarget({ sourcePartId: 'img', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } })]);
+    expect(html).toContain('<radialGradient');
+    expect(html).toContain('id="kcs-mask-img-img"');
+    expect(html).toMatch(/fill="url\(#kcs-mg-img-radial-s[0-9a-f]{8}-alpha\)"/);
+  });
+
+  it('8. image transform: content baked through the evaluated world transform', () => {
+    const src = imageSource();
+    src.baseTransform = { x: 100, y: 0, rotation: 45, scaleX: 2, scaleY: 1, opacity: 1 };
+    const html = renderStage([src, imageTarget({ sourcePartId: 'img', mode: 'alpha' })]);
+    expect(html).toContain('translate(400, 240) rotate(45) scale(2, 1)');
+  });
+
+  it('9. animated image source: content follows the evaluated transform (frame 0 vs frame 40)', () => {
+    const src = imageSource();
+    const tgt = imageTarget({ sourcePartId: 'img', mode: 'alpha' });
+    const animTrack = {
+      id: 't_img', partId: 'img', name: 'T', color: '#f00', visible: true,
+      keyframes: [],
+      channels: { ...makeEmptyChannels(), x: [
+        { id: 'x0', frame: 0, value: 0, easing: 'linear' },
+        { id: 'x40', frame: 40, value: 200, easing: 'linear' },
+      ] },
+    } as unknown as Track;
+    const f0 = renderStage([src, tgt], 0, [animTrack]);
+    const f40 = renderStage([src, tgt], 40, [animTrack]);
+    expect(f0).toContain('translate(300, 240)');
+    expect(f40).toContain('translate(500, 240)'); // moved with the animated source
+  });
+
+  it('10. dedupe: same image source + settings → ONE mask + ONE nested content mask', () => {
+    const matte = { sourcePartId: 'img', mode: 'alpha', gradient: { angle: 0, stops: stops2 } };
+    const html = renderStage([
+      imageSource(),
+      imageTarget(matte),
+      makePart('tgt2', 'custom_box', matte),
+    ]);
+    expect((html.match(/id="kcs-mask-img-img"/g) ?? []).length).toBe(1); // one content mask
+    expect((html.match(/id="kcs-mask-img-alpha-g0-s/g) ?? []).length).toBe(1); // one final mask
+  });
+
+  it('11. different image sources → separate mask identities', () => {
+    const html = renderStage([
+      imageSource(),
+      imageTarget({ sourcePartId: 'img', mode: 'alpha' }),
+      makePart('tgt2', 'custom_box', { sourcePartId: 'img2', mode: 'alpha' }),
+      { ...makePart('img2', 'custom_image'), imageUrl: 'https://other.com/pic.png', width: 100, height: 80 } as CharacterPart,
+    ]);
+    expect(html).toContain('id="kcs-mask-img-alpha"');
+    expect(html).toContain('id="kcs-mask-img2-alpha"');
+    expect(html).toContain('href="https://other.com/pic.png"');
+  });
+
+  it('12. image + clip: NO clipPath generated (semantically unsupported)', () => {
+    const html = renderStage([imageSource(), imageTarget({ sourcePartId: 'img', mode: 'clip' })]);
+    expect(html).not.toContain('<clipPath'); // buildMatteClipPath(image) → null
+    expect(html).not.toContain('clip-path=');
+  });
+
+  it('13. text regression: text mask content unchanged (local gradient + black inverted)', () => {
+    const textSource = () => ({ ...makePart('txt', 'custom_text'), textValue: 'HHH', fontSize: 80, fontFamily: 'Arial' } as CharacterPart);
+    const html = renderStage([textSource(), imageTarget({ sourcePartId: 'txt', mode: 'alpha', inverted: true, gradient: { type: 'radial', stops: stops2 } })]);
+    expect(html).toContain('<text'); // text still renders as glyphs
+    expect(html).toContain('fill="black"'); // inverted text keeps its black repaint (image does NOT)
+  });
+
+  it('14. freeform regression: freeform path mask unchanged', () => {
+    const ff = { ...makePart('ff', 'custom_freeform'), points: [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }] } as CharacterPart;
+    const html = renderStage([ff, imageTarget({ sourcePartId: 'ff', mode: 'alpha' })]);
+    expect(html).toContain('id="kcs-mask-ff-alpha"');
+    expect(html).toContain('d="M 300 240 L 360 240 L 300 270 Z"');
+    expect(html).not.toContain('<image');
+  });
+});

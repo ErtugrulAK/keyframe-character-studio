@@ -54,10 +54,14 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   // option is disabled at the UI level while a text source is selected — no
   // renderer fallback, no new eligibility logic (isMatteEligible stays the
   // single authority for the source LIST).
+  // M21 — IMAGE sources are the same: buildMattePath(image) → null (the
+  // <image> is mask CONTENT, never a clip contour — 7B/7C contract). Same
+  // UI-level disabled-Clip pattern; alpha/luminance/inverted/feather/
+  // strength/gradient all stay enabled.
   const selectedSourceType = matte && !sourceMissing
     ? characterParts.find((p) => p.id === matte.sourcePartId)?.type
     : undefined;
-  const sourceIsText = selectedSourceType === 'custom_text';
+  const noClipSource = selectedSourceType === 'custom_text' || selectedSourceType === 'custom_image';
 
   const setMatte = (next: PartMatte | undefined) => {
     onPartPropChange('matte', next);
@@ -251,13 +255,15 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 value={modeValue}
                 onChange={(e) => onChangeMode(e.target.value as MatteMode)}
               >
-                <option value="clip" disabled={sourceIsText}>Clip</option>
+                <option value="clip" disabled={noClipSource}>Clip</option>
                 <option value="alpha">Alpha</option>
                 <option value="luminance">Luminance</option>
               </select>
-              {sourceIsText && modeValue === 'clip' && (
+              {noClipSource && modeValue === 'clip' && (
                 <div style={{ marginTop: 6, fontSize: 11, color: '#f59e0b' }}>
-                  Text sources require Alpha or Luminance mode — Clip is not supported.
+                  {selectedSourceType === 'custom_text'
+                    ? 'Text sources require Alpha or Luminance mode — Clip is not supported.'
+                    : 'Image sources require Alpha or Luminance mode — Clip is not supported.'}
                 </div>
               )}
             </div>

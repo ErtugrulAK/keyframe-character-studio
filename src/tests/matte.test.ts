@@ -7,7 +7,7 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, normalizeGradientStops, canonicalStopsKey, gradientStopsHash, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, textMaskContent, worldToLocal, normalizeGradientType, radialGradientGeometry, matteMaskGradientSuffix } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, normalizeGradientStops, canonicalStopsKey, gradientStopsHash, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, textMaskContent, worldToLocal, normalizeGradientType, radialGradientGeometry, matteMaskGradientSuffix, imageMaskContent, buildMatteImageMask, normalizeMediaDimension } from '../utils/matte';
 import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
 import { buildFreeformPath } from '../utils/freeform';
@@ -492,10 +492,8 @@ describe('matte — M15 isMatteEligible', () => {
     expect(isMatteEligible({ type: 'custom_freeform' })).toBe(true);
   });
 
-  it('text/image/video are NOT eligible', () => {
-    for (const type of ['custom_image', 'custom_video']) {
-      expect(isMatteEligible({ type }), type).toBe(false);
-    }
+  it('video is NOT eligible (image became eligible in M21)', () => {
+    expect(isMatteEligible({ type: 'custom_video' })).toBe(false);
   });
 
   it('M18: custom_text IS eligible (text matte — mask content element)', () => {
@@ -716,11 +714,12 @@ describe('matte — M18 text matte (data/pure)', () => {
     ...overrides,
   });
 
-  it('isMatteEligible: custom_text → true (new); shapes/freeform stay eligible; media stays ineligible', () => {
+  it('isMatteEligible: custom_text + custom_image → true (M18/M21 content elements); video/cloner/particle stay ineligible', () => {
     expect(isMatteEligible({ type: 'custom_text' })).toBe(true);
+    expect(isMatteEligible({ type: 'custom_image' })).toBe(true);
     expect(isMatteEligible({ type: 'custom_star' })).toBe(true);
     expect(isMatteEligible({ type: 'custom_freeform' })).toBe(true);
-    for (const t of ['custom_image', 'custom_video', 'mograph_cloner', 'particle_system']) {
+    for (const t of ['custom_video', 'mograph_cloner', 'particle_system']) {
       expect(isMatteEligible({ type: t }), t).toBe(false);
     }
     expect(isMatteEligible(undefined)).toBe(false);
@@ -1038,11 +1037,14 @@ describe('M20 — radial gradient data/pure helpers', () => {
     expect(g.r).toBeCloseTo((Math.sqrt(200 * 200 + 60 * 60) / 2) * 2, 6); // × max scale
   });
 
-  it('radial geometry: deterministic across repeated calls; missing geometry → undefined', () => {
+  it('radial geometry: deterministic across repeated calls; missing geometry → undefined (video — image now has a box, M21)', () => {
     const a = radialGradientGeometry(shape('custom_circle'), ID, false)!;
     const b = radialGradientGeometry(shape('custom_circle'), ID, false)!;
     expect(a).toEqual(b);
-    expect(radialGradientGeometry({ id: 'x', type: 'custom_image', name: 'I', zIndex: 1 } as any, ID, false)).toBeUndefined();
+    // M21: custom_image derives an image-box (width×height) → geometry EXISTS
+    expect(radialGradientGeometry({ id: 'x', type: 'custom_image', name: 'I', zIndex: 1, width: 200, height: 150 } as any, ID, false)).toBeDefined();
+    // custom_video has no geometry and is not eligible → undefined
+    expect(radialGradientGeometry({ id: 'v', type: 'custom_video', name: 'V', zIndex: 1 } as any, ID, false)).toBeUndefined();
   });
 
   // ─── Identity ──────────────────────────────────────────────────────────
@@ -1094,5 +1096,141 @@ describe('M20 — radial gradient data/pure helpers', () => {
     expect(json).not.toContain('cx');
     expect(json).not.toContain('cy');
     expect(json).not.toContain('radius'); // derived geometry is NEVER persisted
-  });
-});
+      });
+    });
+
+    describe('M21 — image matte data/pure helpers', () => {
+      const ID = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+      const imgPart = (overrides: Record<string, unknown> = {}) => ({
+        id: 'img', type: 'custom_image', name: 'Img', zIndex: 1,
+        width: 200, height: 150, imageUrl: 'https://example.com/logo.png',
+        ...overrides,
+      } as any);
+
+      // ─── Eligibility ───────────────────────────────────────────────────────
+      it('1-2. isMatteEligible(custom_image) = true; remains true with normal fields', () => {
+        expect(isMatteEligible({ type: 'custom_image' })).toBe(true);
+        expect(isMatteEligible(imgPart())).toBe(true);
+      });
+
+      it('15-16. shape/freeform/text unchanged; video still ineligible (image/video distinction)', () => {
+        expect(isMatteEligible({ type: 'custom_box' })).toBe(true);
+        expect(isMatteEligible({ type: 'custom_freeform' })).toBe(true);
+        expect(isMatteEligible({ type: 'custom_text' })).toBe(true);
+        expect(isMatteEligible({ type: 'custom_video' })).toBe(false);
+        expect(isMatteEligible(undefined)).toBe(false);
+      });
+
+      // ─── URL resolution (single authority — no third field) ───────────────
+      it('3. imageMaskContent resolves imageUrl || innerMediaUrl (MediaPartRenderer parity)', () => {
+        expect(imageMaskContent(imgPart({ imageUrl: 'https://a.png', innerMediaUrl: 'https://b.png' }))!.href).toBe('https://a.png');
+        expect(imageMaskContent(imgPart({ imageUrl: undefined, innerMediaUrl: 'https://b.png' }))!.href).toBe('https://b.png');
+        expect(imageMaskContent(imgPart({ imageUrl: undefined, innerMediaUrl: undefined }))).toBeUndefined();
+        expect(imageMaskContent(undefined)).toBeUndefined();
+      });
+
+      // ─── Bounds / gradient geometry ────────────────────────────────────────
+      it('4-6. image bounds are the layout box (width×height, center 0,0) and feed gradient geometry', () => {
+        const c = imageMaskContent(imgPart({ width: 200, height: 150 }))!;
+        expect(c.width).toBe(200);
+        expect(c.height).toBe(150);
+        // local bounds → world gradient geometry (M20 pipeline, image box source)
+        const radial = radialGradientGeometry(imgPart({ width: 200, height: 150 }), ID, false)!;
+        expect(radial.cx).toBe(300); // local (0,0) → canvas center
+        expect(radial.cy).toBe(240);
+        expect(radial.r).toBeCloseTo(Math.sqrt(200 * 200 + 150 * 150) / 2, 6); // bounding circle
+        const eps = gradientEndpoints(imgPart({ width: 200, height: 150 }), ID, 0)!;
+        expect(eps.x1).toBeLessThan(eps.x2); // linear geometry derives from the box
+      });
+
+      it('20. malformed image dimensions normalize to the renderer defaults (180×120)', () => {
+        expect(normalizeMediaDimension(undefined, 180)).toBe(180);
+        expect(normalizeMediaDimension(0, 180)).toBe(180);
+        expect(normalizeMediaDimension(-5, 180)).toBe(180);
+        expect(normalizeMediaDimension(NaN, 180)).toBe(180);
+        expect(normalizeMediaDimension(Infinity, 180)).toBe(180);
+        expect(normalizeMediaDimension(200, 180)).toBe(200);
+        const c = imageMaskContent(imgPart({ width: -3, height: 0 }))!;
+        expect(c.width).toBe(180);
+        expect(c.height).toBe(120);
+      });
+
+      // ─── buildMattePath / clip ─────────────────────────────────────────────
+      it('7. buildMattePath(image) stays null (content element — no path geometry)', () => {
+        expect(buildMattePath(imgPart(), ID)).toBeNull();
+      });
+
+      it('13. image + clip is semantically unsupported: buildMatteClipPath(image) → null', () => {
+        expect(buildMatteClipPath(imgPart(), ID)).toBeNull();
+      });
+
+      // ─── Runtime descriptor / persistence ──────────────────────────────────
+      it('8-9. descriptor is runtime-only: no persistent PartMatte fields invented', () => {
+        const mask = buildMatteImageMask('img', imageMaskContent(imgPart())!, 'alpha', false);
+        expect(mask.image).toEqual({
+          href: 'https://example.com/logo.png',
+          width: 200, height: 150,
+          preserveAspectRatio: 'xMidYMid slice',
+        });
+        expect(mask.pathD).toBeNull();
+        expect(mask.mode).toBe('alpha');
+        // PartMatte gains nothing: matte = { sourcePartId } only
+        const json = JSON.stringify({ sourcePartId: 'img', mode: 'alpha' });
+        expect(json).not.toContain('image');
+        expect(json).not.toContain('href');
+      });
+
+      it('10. transform contract: descriptor carries content only — the transform stays in the evaluated pipeline (text parity)', () => {
+        const c = imageMaskContent(imgPart())!;
+        expect(Object.keys(c).sort()).toEqual(['height', 'href', 'preserveAspectRatio', 'width']);
+        // the renderer bakes the source's evaluated transform (translate/rotate/scale)
+        // into the mask-content <g> — exactly the M18 text pattern; no transform math here
+        expect(c).not.toHaveProperty('transform');
+      });
+
+      // ─── Strength / inverted contracts ─────────────────────────────────────
+      it('11. image strength contract: opacity (NOT fill-opacity) — 7A finding; MatteMask carries the shared strength', () => {
+        const mask = buildMatteImageMask('img', imageMaskContent(imgPart())!, 'alpha', false, undefined, 0.5);
+        expect(mask.strength).toBe(0.5);
+        // 7A pixel proof: fill-opacity is INERT on <image>; opacity works → 7C renders
+        // image strength as opacity={mask.strength}. The descriptor carries no paint attr.
+        expect(mask.image).not.toHaveProperty('fillOpacity');
+        expect(mask.image).not.toHaveProperty('opacity');
+      });
+
+      it('12. inverted image contract: luminance semantics — fill stays WHITE (no black repaint)', () => {
+        const mask = buildMatteImageMask('img', imageMaskContent(imgPart())!, 'alpha', true);
+        expect(mask.inverted).toBe(true);
+        expect(mask.fill).toBe('white'); // image CANNOT be repainted black (7A) — unlike text
+        // the 7C renderer must use mask-type luminance: dark pixels → holes, bright → visible
+        expect(mask.pathD).toBeNull();
+      });
+
+      // ─── Gradient composition data ─────────────────────────────────────────
+      it('17-18. image + linear/radial gradient data contract: nested-mask multiplication is a RENDER concern; defs derive from the image box', () => {
+        const grad = { type: 'radial' as const, stops: [{ offset: 0, color: 'white', opacity: 1 }, { offset: 1, color: 'white', opacity: 0 }] };
+        expect(gradientId('img', grad)).toMatch(/^kcs-mg-img-radial-s[0-9a-f]{8}$/);
+        const lin = { angle: 0, stops: [{ offset: 0, color: 'white', opacity: 1 }, { offset: 1, color: 'white', opacity: 0 }] };
+        expect(gradientId('img', lin)).toMatch(/^kcs-mg-img-0-s[0-9a-f]{8}$/);
+        // 7A: <image> cannot consume fill → 7C composes image mask × gradient mask via
+        // nested masks; the pure layer only guarantees the defs/geometry exist for images.
+      });
+
+      it('19. deterministic: repeated descriptor calls are identical', () => {
+        const a = imageMaskContent(imgPart())!;
+        const b = imageMaskContent(imgPart())!;
+        expect(a).toEqual(b);
+        const m1 = buildMatteImageMask('img', a, 'luminance', true, 12, 0.5);
+        const m2 = buildMatteImageMask('img', b, 'luminance', true, 12, 0.5);
+        expect(m1).toEqual(m2);
+      });
+
+      // ─── M8 ────────────────────────────────────────────────────────────────
+      it('14. M8: image matte data is static paint — no channel/keyframe introduced', () => {
+        const json = JSON.stringify({ sourcePartId: 'img', mode: 'alpha', gradient: { type: 'radial' } });
+        expect(json).not.toContain('channel');
+        expect(json).not.toContain('keyframe');
+        expect(json).not.toContain('TrackChannel');
+        expect(buildMatteImageMask('img', imageMaskContent(imgPart())!, 'alpha', false)).not.toHaveProperty('channel');
+      });
+    });

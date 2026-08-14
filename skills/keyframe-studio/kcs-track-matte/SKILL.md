@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
 description: Use when working on KCS Track Matte (SVG clipPath + mask) — architecture, data model, browser-verified semantics, rules, tests.
-version: 8.0.0
+version: 9.0.0
 author: senmu
 license: MIT
 metadata:
@@ -323,6 +323,34 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   gradient tüketir + dış alan görünür/ramp'li. V-H8 (M19) yalnızca dış alanı test etti.
   R-V10 bu gerçek davranışı pin'ler (hole iddia ETMEZ).
 
+## M21 — Image Matte
+
+- `custom_image` part'ları matte source olabilir (`isMatteEligible(custom_image) → true` —
+  tek authority; video/cloner/particle hâlâ ineligible). Persistent model DEĞİŞMEDİ:
+  `matte.sourcePartId` tek kalıcı ilişki; image href/boyutlar source part'tan runtime'da
+  okunur (`imageMaskContent` — `imageUrl || innerMediaUrl` tek URL authority, MediaPartRenderer parity).
+- Image = **content element** (M18 text gibi): mask içinde transform-baked `<image>`
+  (`<g transform><image href .../></g>`); buildMattePath(image) → **null** — path geometry
+  ÜRETİLMEZ; ikinci geometry sistemi yok. Bounds: layout box (width×height, merkez 0,0 —
+  `normalizeMediaDimension` malformed → 180×120 default) → M20 gradient geometrisinin kaynağı.
+- **Image inverted KONTRATI (7A pixel kanıtlı):** image text gibi SİYAH repaint edilemez —
+  `fill="black"` ASLA; inverted image = luminance yapısı (white region rect + gerçek image,
+  mask-type luminance): **parlak image pikselleri görünür kalır, koyu pikseller delik açar.**
+- **Image strength KONTRATI (7A):** `<image>` üzerinde `fill-opacity` INERT — strength
+  `opacity={mask.strength}` olarak render edilir (shape/freeform/text fill-opacity yolu
+  DEĞİŞMEDİ — "tüm strength fill-opacity'dir" diye genelleme YAPILMAZ).
+- **Image + gradient = NESTED-MASK MULTIPLICATION (7A kanıtlı):** `<image>` fill tüketmez —
+  `<image fill="url(...)">` ASLA. Final mask: `<g mask="url(#kcs-mask-{src}-img)"><rect fill="url(#grad)"/></g>`
+  (imageContentMasks Map — deterministic `kcs-mask-{src}-img` content mask; final mask × content
+  mask = image_alpha/luminance × gradient_alpha). Linear/radial/multi-stop sistemi M19/M20'den
+  birebir reuse. Image gradient geometry WORLD (rect consumer).
+- Feather/strength/dedupe/identity: mevcut sistemler birebir; transform animasyonu mevcut
+  evaluated source transform pipeline'ından (yeni motor yok, M8 SAFE).
+- Image + Clip: **UNSUPPORTED** (path geometry yok) — UI'da Clip disabled + uyarı; legacy
+  image+clip güvenli (renderer clipPath ÜRETMEZ); buildMatteClipPath(image) → null.
+- Runtime descriptor (href/width/height/preserveAspectRatio) ASLA persist edilmez —
+  useSerialization.ts değişmedi; cx/cy/radius/rX/rY asla persist edilmez.
+
 ## Test'ler
 
 - `matte.test.ts` — world-space A/B/C (static/rotated+scaled/parented), animated frame,
@@ -368,15 +396,27 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   inverted luminance, freeform pathD parity, text LOCAL/WORLD, text feather/strength,
   rotation, uniform/non-uniform/neg scale (scalar r), animasyonlu center/radius,
   dedupe/collision, legacy linear parity, import/reload EXACT parity (R-V22)
-- Baseline: 678/678 vitest + M20 R-V matrix 23/23 ×2 + track-matte 76/76 (full suite'te
-  V-T17 bilinen timing flake — M18 import/reload yolu, makine yükünde; izole PASS;
-  M20 değiştirmedi; workflow.spec.ts:88 ölü container testi fail M19 dışı)
+- `e2e/m21-image-matte.spec.ts` — M21 V-M1..V-M26 (KALICI matrix): image alpha/luminance/
+  inverted (luminance semantiği — parlak görünür/koyu delik), strength→opacity (fill-opacity
+  YOK), feather, linear/radial/4-stop nested-mask multiplication, transform/animasyon
+  (translation+radial cx takip, rotation/scale → r × max|scale|), dedupe (1 content mask),
+  farklı source'lar collision'suz, shape+text+image coexist, gerçek Inspector source-switch
+  (V-M20 — Style tab + selectOption, field preservation), clip → kcs-clipPath YOK, import/
+  reload EXACT parity (V-M24), legacy linear/text regression
+- Baseline: **738/738 vitest** (91/91 useSerialization dahil) + M20 R-V matrix 23/23 ×2 +
+  M21 image matrix **26/26 ×2** + track-matte 76/76 (full suite'te V-T17 bilinen timing
+  flake — M18 import/reload yolu, makine yükünde; izole PASS; M20/M21 değiştirmedi;
+  workflow.spec.ts:88 ölü container testi fail M19 dışı)
 
-## Deferred (yeni feature kararı gerektirir — M13..M20'de YAPILMADI)
+## Deferred (yeni feature kararı gerektirir — M13..M21'de YAPILMADI)
 
 **gradient presets** · **gradient animation** · **radial custom geometry controls
 (center/radius UI, gizmo, presets)** · **animated strength** (strength channel/animasyon
-M16 MVP dışı) · image/video matte · nested matte · multi-matte (tip migration gerekir) ·
+M16 MVP dışı) · video matte (MİMARİ ENGELLİ: SVG mask + HTML `<video>`/foreignObject uyumsuz) ·
+nested matte · multi-matte (tip migration gerekir) ·
 matte gizmo / geometry editor · outliner matte icon / relationship visualization ·
 timeline matte indicator · drag/drop matte assignment ·
 **text stagger / tspan animasyonu** (M18 MVP dışı)
+
+> M21 ile image matte TAMAMLANDI — "image/video matte" maddesinden image ÇIKARILDI
+> (video kaldı); deferred'den image matte için kalan hiçbir öğe yoktur.

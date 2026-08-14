@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
 description: Use when working on KCS Track Matte (SVG clipPath + mask) — architecture, data model, browser-verified semantics, rules, tests.
-version: 11.0.0
+version: 12.0.0
 author: senmu
 license: MIT
 metadata:
@@ -399,6 +399,27 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   ölçer; DOM transform attr'ı yerine runtime state/UI derive doğrulanır.
 - E2E: `e2e/m23-in-out-presets.spec.ts` (E2E-1..E2E-15, 15/15 ×2 deterministik).
 
+## M24 — Builtin Combination Presets
+
+- **Mevcut `applyBuiltin` switch'ine 3 YENİ case** (Option A — string ID modeli; production'daki tek
+  animasyon değişikliği): `slide-scale-left`, `slide-scale-right`, `soft-pop`. Zincir: preset →
+  `computeProceduralDelta` → `applyEditPreset`/`applyPreset` → `applyBuiltin` → DeltaResult →
+  evaluateFrame merge → SVG render. evaluateFrame/playback/broadcast/serialization/renderer/geometry
+  **DEĞİŞMEDİ**.
+- **Bilinçli duplicate yok (discovery bulgusu):** mevcut builtin'lerin HEPSİ opacity=eased içerir —
+  Fade+Slide ≡ slide, Fade+Scale ≡ pop, Pop+Fade ≡ pop → bu ID'ler KASITLI eklenmedi (eksik feature
+  değil, scope kararı). UI'da `fade-slide-left`/`fade-scale`/`pop-fade` YOK (E2E-14 kanıtı).
+- **Semantics:** slide-scale-* mevcut slide yön konvansiyonunu reuse eder (x=±300·(1-eased)·sign) +
+  scaleX/Y=eased + opacity=eased; soft-pop scale 0.85+0.15·eased (fizik simülasyonu DEĞİL — aynı
+  cubic easing); aynı ID hem IN hem OUT (mode yalnızca sign + eased seçer — ayrı "-out" ID YOK).
+- **Kontratlar:** keyframe ÜRETMEZ (E2E-9: channel count 0→0) — Option A (preset → runtime delta);
+  serialization schema yok (ID mevcut inAnimPreset/outAnimPreset string alanında — useSerialization
+  değişmedi); broadcast aynı alanlar üzerinden otomatik (applyPreset → applyBuiltin); undo mevcut
+  onPartPropChange/atomic history; custom_timeline gizli + render'da rewrite edilmez.
+- **UI:** M23 kartında option listesi `<optgroup label="Basic">` (8 builtin aynı) + `<optgroup
+  label="Combinations">` (Slide + Scale Left/Right, Soft Pop) — yeni panel/editor/builder YOK.
+- E2E: `e2e/m24-combination-presets.spec.ts` (E2E-1..E2E-17, 17/17 ×2 deterministik).
+
 ## Test'ler
 
 - `matte.test.ts` — world-space A/B/C (static/rotated+scaled/parented), animated frame,
@@ -470,13 +491,23 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   undo, field preservation (matte+transform), part switch leak'siz, save/reload parity,
   broadcast uyumu, multi-part, keyframe'siz (Option B kanıtı), custom_timeline, clear,
   no-selection
-- Baseline: **786/786 vitest** (91/91 useSerialization dahil) + M20 R-V matrix 23/23 ×2 +
+- `proceduralAnimationCombos.test.ts` (10B) — combination pure unit (12 test: eased 0/0.5/1 ×3
+  preset IN + OUT, yön konvansiyonu, soft-pop eğrisi, existing regression, pure delta, determinizm)
+- `transformInOutPreset.test.tsx` M24 describe (10C) — combination UI unit (+12: optgroup render,
+  3 option, field yazımı, IN/OUT bağımsızlık, field preservation, custom_timeline, None, undo
+  tekliği, derive-only, a11y, builtin koruması, sahte combo yok)
+- `e2e/m24-combination-presets.spec.ts` (10D) — E2E-1..E2E-17 (KALICI, gerçek UI): slide-scale
+  L/R IN (frame 1'de x yönü + scale<1 → frame 15'te normal), soft-pop eğrisi (0.925@frame3),
+  OUT ters yönler, IN/OUT bağımsızlık, duration reuse, undo, field preservation (matte),
+  keyframe'siz (Option A kanıtı), save/reload parity, broadcast uyumu, multi-part,
+  custom_timeline, sahte preset yok, clear, basic regression, a11y/optgroup
+- Baseline: **810/810 vitest** (91/91 useSerialization dahil) + M20 R-V matrix 23/23 ×2 +
   M21 image matrix **26/26 ×2** + M22 relationship **10/10 ×2** + M23 presets **15/15 ×2** +
-  track-matte 76/76 (full suite'te V-T17 bilinen timing flake — M18 import/reload yolu,
-  makine yükünde; izole PASS; M20..M23 değiştirmedi; workflow.spec.ts:88 ölü container
-  testi fail M19 dışı)
+  M24 combos **17/17 ×2** + track-matte 76/76 (full suite'te V-T17 bilinen timing flake — M18
+  import/reload yolu, makine yükünde; izole PASS; M20..M24 değiştirmedi; workflow.spec.ts:88
+  ölü container testi fail M19 dışı)
 
-## Deferred (yeni feature kararı gerektirir — M13..M23'te YAPILMADI)
+## Deferred (yeni feature kararı gerektirir — M13..M24'te YAPILMADI)
 
 **gradient presets** · **gradient animation** · **radial custom geometry controls
 (center/radius UI, gizmo, presets)** · **animated strength** (strength channel/animasyon

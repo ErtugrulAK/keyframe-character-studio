@@ -158,6 +158,15 @@ function applyBuiltin(id: string, eased: number, mode: 'in' | 'out'): DeltaResul
     case 'slide-right': return { x: -300 * (1 - eased) * sign, y: 0, rot: 0, sx: 1, sy: 1, opacity: eased };
     case 'slide-up':    return { x: 0, y: 300 * (1 - eased) * sign, rot: 0, sx: 1, sy: 1, opacity: eased };
     case 'slide-down':  return { x: 0, y: -300 * (1 - eased) * sign, rot: 0, sx: 1, sy: 1, opacity: eased };
+    // M24 — builtin COMBINATION presets (Option A: new IDs, same switch).
+    // Genuinely NEW behavior only: every existing builtin already carries
+    // opacity=eased, so "fade+slide" ≡ slide and "fade+scale" ≡ pop — those
+    // are intentionally NOT added (discovery finding). Combinations combine
+    // the existing atomic deltas in one DeltaResult: x/y additive, scale/
+    // opacity multiplicative (evaluateFrame merge rules).
+    case 'slide-scale-left':  return { x: 300 * (1 - eased) * sign, y: 0, rot: 0, sx: eased, sy: eased, opacity: eased };
+    case 'slide-scale-right': return { x: -300 * (1 - eased) * sign, y: 0, rot: 0, sx: eased, sy: eased, opacity: eased };
+    case 'soft-pop':          return { x: 0, y: 0, rot: 0, sx: 0.85 + 0.15 * eased, sy: 0.85 + 0.15 * eased, opacity: eased };
     default:            return { x: 0, y: 0, rot: 0, sx: 1, sy: 1, opacity: 1 };
   }
 }

@@ -213,7 +213,10 @@ describe('TransformTab — M23 IN/OUT animation presets', () => {
     const select = screen.getByLabelText('Animation In Preset') as HTMLSelectElement;
     const values = [...select.options].map((o) => o.value);
     expect(values).not.toContain('custom_timeline');
-    expect(values).toEqual(['none', 'fade', 'slide-left', 'slide-right', 'slide-up', 'slide-down', 'pop', 'spin']);
+    expect(values).toEqual([
+      'none', 'fade', 'slide-left', 'slide-right', 'slide-up', 'slide-down', 'pop', 'spin',
+      'slide-scale-left', 'slide-scale-right', 'soft-pop',
+    ]);
   });
 
   it('22b. part with internal custom_timeline keeps its value (select shows safe fallback)', () => {
@@ -255,5 +258,117 @@ describe('TransformTab — M23 IN/OUT animation presets', () => {
     expect(screen.getByLabelText('Animation In Duration')).toBeTruthy();
     expect(screen.getByLabelText('Animation Out Preset')).toBeTruthy();
     expect(screen.getByLabelText('Animation Out Duration')).toBeTruthy();
+  });
+});
+
+describe('TransformTab — M24 combination presets', () => {
+  it('1. Combinations optgroup renders', () => {
+    renderTab(makePart());
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    expect(selects.length).toBeGreaterThanOrEqual(1);
+    const groups = [...selects[0].querySelectorAll('optgroup')].map((g) => g.label);
+    expect(groups).toEqual(['Basic', 'Combinations']);
+  });
+
+  it('2-4. combination options exist (slide-scale-left/right, soft-pop)', () => {
+    renderTab(makePart());
+    const select = screen.getByLabelText('Animation In Preset') as HTMLSelectElement;
+    const values = [...select.options].map((o) => o.value);
+    expect(values).toContain('slide-scale-left');
+    expect(values).toContain('slide-scale-right');
+    expect(values).toContain('soft-pop');
+  });
+
+  it('5-7. selecting a combination writes the correct field', () => {
+    const onProp = vi.fn();
+    renderTab(makePart(), onProp);
+    fireEvent.change(screen.getByLabelText('Animation In Preset'), { target: { value: 'slide-scale-left' } });
+    fireEvent.change(screen.getByLabelText('Animation Out Preset'), { target: { value: 'slide-scale-right' } });
+    const calls = changedProps(onProp);
+    expect(calls).toContainEqual({ key: 'inAnimPreset', value: 'slide-scale-left' });
+    expect(calls).toContainEqual({ key: 'outAnimPreset', value: 'slide-scale-right' });
+  });
+
+  it('8-9. IN combination does not modify OUT and vice versa', () => {
+    const onProp = vi.fn();
+    renderTab(makePart(), onProp);
+    fireEvent.change(screen.getByLabelText('Animation In Preset'), { target: { value: 'soft-pop' } });
+    expect(changedProps(onProp).map((c) => c.key)).toEqual(['inAnimPreset']);
+    fireEvent.change(screen.getByLabelText('Animation Out Preset'), { target: { value: 'soft-pop' } });
+    expect(changedProps(onProp).map((c) => c.key)).toEqual(['inAnimPreset', 'outAnimPreset']);
+  });
+
+  it('10-13. duration / transform / matte unchanged when selecting a combination', () => {
+    const onProp = vi.fn();
+    renderTab(
+      makePart({
+        inAnimDuration: 24,
+        matte: { sourcePartId: 'src', mode: 'alpha', enabled: true },
+        x: 90, rotation: 12,
+      }),
+      onProp,
+    );
+    fireEvent.change(screen.getByLabelText('Animation In Preset'), { target: { value: 'slide-scale-left' } });
+    expect(changedProps(onProp)).toEqual([{ key: 'inAnimPreset', value: 'slide-scale-left' }]);
+  });
+
+  it('14-15. custom_timeline stays hidden and unrewritten', () => {
+    const onProp = vi.fn();
+    renderTab(makePart({ inAnimPreset: 'custom_timeline' }), onProp);
+    const select = screen.getByLabelText('Animation In Preset') as HTMLSelectElement;
+    expect([...select.options].map((o) => o.value)).not.toContain('custom_timeline');
+    expect(select.value).toBe('none'); // safe display fallback
+    expect(onProp).not.toHaveBeenCalled(); // render does not rewrite
+  });
+
+  it('16. None still works after adding combinations', () => {
+    const onProp = vi.fn();
+    renderTab(makePart({ inAnimPreset: 'slide-scale-left' }), onProp);
+    fireEvent.change(screen.getByLabelText('Animation In Preset'), { target: { value: 'none' } });
+    expect(changedProps(onProp)).toEqual([{ key: 'inAnimPreset', value: 'none' }]);
+  });
+
+  it('17. undo path: one logical call per combination selection', () => {
+    const onProp = vi.fn();
+    renderTab(makePart(), onProp);
+    fireEvent.change(screen.getByLabelText('Animation Out Preset'), { target: { value: 'soft-pop' } });
+    expect(changedProps(onProp)).toHaveLength(1);
+    expect(changedProps(onProp)[0]).toEqual({ key: 'outAnimPreset', value: 'soft-pop' });
+  });
+
+  it('18. no local state mirror (combination values derive per render)', () => {
+    const onProp = vi.fn();
+    const first = renderTab(makePart(), onProp);
+    first.unmount();
+    renderTab(makePart({ inAnimPreset: 'soft-pop' }), onProp);
+    expect((screen.getByLabelText('Animation In Preset') as HTMLSelectElement).value).toBe('soft-pop');
+    expect(onProp).not.toHaveBeenCalled();
+  });
+
+  it('19. accessible labels remain on the preset selects', () => {
+    renderTab(makePart());
+    expect(screen.getByLabelText('Animation In Preset')).toBeTruthy();
+    expect(screen.getByLabelText('Animation Out Preset')).toBeTruthy();
+  });
+
+  it('20. M23 builtin options remain unchanged', () => {
+    renderTab(makePart());
+    const select = screen.getByLabelText('Animation In Preset') as HTMLSelectElement;
+    const basicGroup = [...select.querySelectorAll('optgroup')].find((g) => g.label === 'Basic')!;
+    const basicValues = [...basicGroup.querySelectorAll('option')].map((o) => o.value);
+    expect(basicValues).toEqual(['none', 'fade', 'slide-left', 'slide-right', 'slide-up', 'slide-down', 'pop', 'spin']);
+  });
+
+  it('21-22. fake duplicate combos (Fade+Slide / Fade+Scale / Pop+Fade) do NOT exist', () => {
+    renderTab(makePart());
+    const select = screen.getByLabelText('Animation In Preset') as HTMLSelectElement;
+    const values = [...select.options].map((o) => o.value);
+    expect(values).not.toContain('fade-slide-left');
+    expect(values).not.toContain('fade-scale');
+    expect(values).not.toContain('pop-fade');
+    // exactly the three real combinations
+    const comboGroup = [...select.querySelectorAll('optgroup')].find((g) => g.label === 'Combinations')!;
+    expect([...comboGroup.querySelectorAll('option')].map((o) => o.value))
+      .toEqual(['slide-scale-left', 'slide-scale-right', 'soft-pop']);
   });
 });

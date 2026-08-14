@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 786 test — 40 dosya** (M23 durumu) |
+| Test | **Vitest, 810 test — 41 dosya** (M24 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M23)
+## Proje durumu (M24)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -227,7 +227,31 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
     DEĞİŞMEDİ; M8 SAFE; yeni engine/keyframe/channel YOK
   - Baseline: **786/786 vitest** (91/91 serialization dahil) + R-V 23/23 ×2 + V-M 26/26 ×2 +
     M22 **10/10 ×2** + M23 **15/15 ×2** + track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
-- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → `668a3b3` (M20 radial gradient) → `64eb14c` (M21 image matte) → `6a0c767` (M22 relationship) → **M23 9B-9C implementasyonu PENDING (commit/push YOK)**
+- **M24 ✅ COMPLETE — Builtin Combination Presets** (10A-10D iş PC'de tamamlandı; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 10A discovery: mevcut builtin'lerin HEPSİ opacity=eased içeriyor → Fade+Slide ≡ slide,
+    Fade+Scale ≡ pop, Pop+Fade ≡ pop → **duplicate'ler KASITLI eklenmedi** (eksik feature değil);
+    gerçek yeni davranış: slide+scale ailesi + soft-pop; **Option A: yeni builtin ID'ler**
+    (applyBuiltin case'leri) — en küçük yüzey
+  - 10B pure: `applyBuiltin`'e 3 case (slide-scale-left/right: x=±300·(1-eased)·sign +
+    sx=sy=opacity=eased; soft-pop: sx=sy=0.85+0.15·eased + opacity=eased) — atomic'lar byte-for-byte;
+    `proceduralAnimationCombos.test.ts` 12 test (eased 0/0.5/1 IN + OUT, yön konvansiyonu,
+    existing regression, pure delta, determinizm)
+  - 10C UI: M23 kartında `<optgroup label="Basic">` (8 builtin aynı) + `<optgroup
+    label="Combinations">` (Slide + Scale Left/Right, Soft Pop) — yeni panel/editor yok;
+    transformInOutPreset.test +12 (optgroup, 3 option, IN/OUT bağımsızlık, field preservation,
+    custom_timeline, sahte combo yok)
+  - 10D E2E: `e2e/m24-combination-presets.spec.ts` E2E-1..E2E-17 **17/17 ×2** — slide-scale L/R
+    IN (frame 1 yön + scale<1 → frame 15 normal), soft-pop eğrisi (≈0.925@frame3), OUT ters
+    yönler (ayrı "-out" ID yok), IN/OUT bağımsızlık, duration reuse, undo, field preservation
+    (matte), **keyframe'siz kanıtı** (channel 0→0 — Option A), save/reload parity, broadcast
+    uyumu, multi-part, custom_timeline korunur, sahte preset yok, clear, basic regression,
+    a11y/optgroup; production değişikliği 0
+  - Kapsam: production'daki TEK animasyon değişikliği `applyBuiltin`; evaluateFrame/playback/
+    broadcast/serialization/renderer/geometry DEĞİŞMEDİ; M8 SAFE; yeni engine/keyframe/channel YOK
+  - Baseline: **810/810 vitest** (91/91 serialization dahil) + R-V 23/23 ×2 + V-M 26/26 ×2 +
+    M22 **10/10 ×2** + M23 **15/15 ×2** + M24 **17/17 ×2** + track-matte 76/76 (V-T17 bilinen
+    M18 flake — izole PASS)
+- Son push: `dff30d2` (M13) → `e4ddc68`/`37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → `668a3b3` (M20) → `64eb14c` (M21) → `6a0c767` (M22) → `47f7dce` (M23) → **M24 10B-10E implementasyonu PENDING (commit/push YOK)**
 
 ## Önemli kararlar
 

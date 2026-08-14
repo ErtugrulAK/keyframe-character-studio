@@ -23,7 +23,7 @@ interface TransformInOutPresetCardProps {
  * displays the closest safe option until the user changes it.
  */
 
-const IN_OUT_PRESETS: { value: string; label: string }[] = [
+const BASIC_PRESETS: { value: string; label: string }[] = [
   { value: 'none', label: 'None' },
   { value: 'fade', label: 'Fade' },
   { value: 'slide-left', label: 'Slide Left' },
@@ -33,6 +33,17 @@ const IN_OUT_PRESETS: { value: string; label: string }[] = [
   { value: 'pop', label: 'Pop' },
   { value: 'spin', label: 'Spin' },
 ];
+
+// M24 — builtin COMBINATION presets (Option A IDs from proceduralAnimation).
+// Only genuinely NEW behavior: fade+slide ≡ slide and fade+scale ≡ pop
+// (every builtin already carries opacity=eased), so those are NOT offered.
+const COMBO_PRESETS: { value: string; label: string }[] = [
+  { value: 'slide-scale-left', label: 'Slide + Scale Left' },
+  { value: 'slide-scale-right', label: 'Slide + Scale Right' },
+  { value: 'soft-pop', label: 'Soft Pop' },
+];
+
+const ALL_PRESETS = [...BASIC_PRESETS, ...COMBO_PRESETS];
 
 const MAX_DURATION = 1000;
 
@@ -59,8 +70,23 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
 
   // internal values (custom_timeline) are not in the option list — display the
   // safe fallback without mutating the part
-  const inDisplay = IN_OUT_PRESETS.some((p) => p.value === inPreset) ? inPreset : 'none';
-  const outDisplay = IN_OUT_PRESETS.some((p) => p.value === outPreset) ? outPreset : 'none';
+  const inDisplay = ALL_PRESETS.some((p) => p.value === inPreset) ? inPreset : 'none';
+  const outDisplay = ALL_PRESETS.some((p) => p.value === outPreset) ? outPreset : 'none';
+
+  const presetOptions = (
+    <>
+      <optgroup label="Basic">
+        {BASIC_PRESETS.map((p) => (
+          <option key={p.value} value={p.value}>{p.label}</option>
+        ))}
+      </optgroup>
+      <optgroup label="Combinations">
+        {COMBO_PRESETS.map((p) => (
+          <option key={p.value} value={p.value}>{p.label}</option>
+        ))}
+      </optgroup>
+    </>
+  );
 
   return (
     <div className="panel-card" style={{ marginBottom: 10 }}>
@@ -80,9 +106,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
               onChange={(e) => onPartPropChange('inAnimPreset', e.target.value)}
               style={{ maxWidth: 150 }}
             >
-              {IN_OUT_PRESETS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
+              {presetOptions}
             </select>
           </div>
           <div className="form-field-group" style={rowStyle}>
@@ -113,9 +137,7 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
               onChange={(e) => onPartPropChange('outAnimPreset', e.target.value)}
               style={{ maxWidth: 150 }}
             >
-              {IN_OUT_PRESETS.map((p) => (
-                <option key={p.value} value={p.value}>{p.label}</option>
-              ))}
+              {presetOptions}
             </select>
           </div>
           <div className="form-field-group" style={rowStyle}>

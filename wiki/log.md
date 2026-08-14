@@ -240,3 +240,24 @@
 - Baseline: **786/786 vitest** + R-V 23/23 ×2 + V-M 26/26 ×2 + M22 10/10 ×2 + M23 **15/15 ×2** +
   track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
 - Commit/push YOK — hash icat edilmedi
+
+## [2026-08-14] update | KCS — M24 BUILTIN COMBINATION PRESETS COMPLETE (iş PC, 10A-10E)
+- M24 ✅ 10A-10E tamamlandı — **COMMIT/PUSH PENDING (onay bekliyor)** — HEAD `47f7dce`, working tree 5+ dosya dirty (10B-10E)
+- 10A discovery: tüm mevcut builtin'ler opacity=eased içeriyor → **Fade+Slide ≡ slide, Fade+Scale ≡
+  pop, Pop+Fade ≡ pop — duplicate'ler KASITLI eklenmedi** (eksik feature değil); gerçek yeni:
+  slide+scale ailesi + soft-pop; **Option A (yeni builtin ID'ler)** seçildi
+- 10B pure: `applyBuiltin`'e 3 case (slide-scale-left/right: x=±300·(1-eased)·sign + sx=sy=opacity=
+  eased; soft-pop: sx=sy=0.85+0.15·eased + opacity=eased) — atomic'lar byte-for-byte;
+  **12 pure test** (proceduralAnimationCombos.test.ts)
+- 10C UI: M23 kartında `<optgroup label="Basic">` (8 builtin aynı) + `<optgroup
+  label="Combinations">` (Slide + Scale Left/Right, Soft Pop); **+12 UI test**
+  (transformInOutPreset.test.tsx M24 describe)
+- 10D E2E: E2E-1..E2E-17 **17/17 ×2** — IN/OUT ters yönler, soft-pop eğrisi, keyframe'siz kanıtı
+  (channel 0→0), save/reload parity, broadcast uyumu, field preservation, sahte preset yok,
+  basic regression; production değişikliği 0
+- 10E docs: SKILL v12, wiki, README
+- Kapsam: production'daki tek animasyon değişikliği `applyBuiltin`; M8 SAFE; yeni engine/keyframe/
+  channel/schema/broadcast state YOK
+- Baseline: **810/810 vitest** + R-V 23/23 ×2 + V-M 26/26 ×2 + M22 10/10 ×2 + M23 15/15 ×2 +
+  M24 **17/17 ×2** + track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
+- Commit/push YOK — hash icat edilmedi

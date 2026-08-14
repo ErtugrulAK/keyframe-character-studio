@@ -7,6 +7,7 @@ import { TransformOpacityCard } from './transform/TransformOpacityCard';
 import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
+import { TransformInOutPresetCard } from './transform/TransformInOutPresetCard';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -77,6 +78,15 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <TransformVertexEditor
             selectedPart={selectedPart}
             transform={transform}
+            onPartPropChange={handlePartPropChange}
+          />
+        )}
+
+        {/* M23 — IN/OUT animation presets (existing procedural engine,
+            exposed via the same onPartPropChange history path) */}
+        {handlePartPropChange && (
+          <TransformInOutPresetCard
+            selectedPart={selectedPart}
             onPartPropChange={handlePartPropChange}
           />
         )}

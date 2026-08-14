@@ -222,3 +222,21 @@
 - Baseline: **766/766 vitest** + R-V 23/23 ×2 + V-M 26/26 ×2 + M22 E2E **10/10 ×2** +
   track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
 - Commit/push YOK — hash icat edilmedi
+
+## [2026-08-14] update | KCS — M23 BASIC IN/OUT PRESET UX COMPLETE (iş PC, 9A-9C)
+- M23 ✅ 9A-9C tamamlandı — **COMMIT/PUSH PENDING (onay bekliyor)** — HEAD `6a0c767`, working tree 5 dosya dirty (9B-9C)
+- 9A discovery: preset engine ZATEN VAR (inAnimPreset/outAnimPreset/inAnimDuration/outAnimDuration +
+  computeProceduralDelta/applyEditPreset — broadcast state makinesi + edit timeline preview) ama
+  kullanıcıya KAPALI (hiçbir UI yok); **Option B: mevcut engine'e UI bağlama** — keyframe üretimi YOK
+- 9B UI: Transform tab'ında ANIMATION IN / OUT kartı — IN/OUT preset (None/Fade/Slide L/R/U/D/Pop/
+  Spin) + duration (SmartNumberInput deferCommit, 0-1000, default 30); derive-only; tek
+  onPartPropChange → atomic history; custom_timeline GİZLİ (korunur); a11y (ariaLabel);
+  **20 unit test** (transformInOutPreset.test.tsx)
+- 9C E2E: E2E-1..E2E-15 **15/15 ×2** — IN/OUT preview (frame 0'da IN opacity 0 → part invisible —
+  renderer skip — **test dersi, bug değil**; frame 1'de ölçüm), duration BUG 2 regression, undo,
+  field preservation, save/reload parity (mevcut schema — useSerialization değişmedi), broadcast
+  uyumu, keyframe'siz kanıtı (channel count 0→0), custom_timeline, clear, no-selection;
+  production değişikliği 0 (geçici debug kaldırıldı)
+- Baseline: **786/786 vitest** + R-V 23/23 ×2 + V-M 26/26 ×2 + M22 10/10 ×2 + M23 **15/15 ×2** +
+  track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
+- Commit/push YOK — hash icat edilmedi

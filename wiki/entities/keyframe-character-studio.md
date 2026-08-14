@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 766 test — 39 dosya** (M22 durumu) |
+| Test | **Vitest, 786 test — 40 dosya** (M23 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M22)
+## Proje durumu (M23)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -205,7 +205,29 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - Kapsam: renderer/geometry/serialization DEĞİŞMEDİ; M8 SAFE; UI + validation hardening
   - Baseline: **766/766 vitest** (91/91 serialization dahil) + R-V 23/23 ×2 + V-M 26/26 ×2 +
     E2E **10/10 ×2** + track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
-- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → `668a3b3` (M20 radial gradient) → `64eb14c` (M21 image matte) → **M22 8A-8C implementasyonu PENDING (commit/push YOK)**
+- **M23 ✅ COMPLETE — Basic IN/OUT Preset UX** (9A-9C iş PC'de tamamlandı; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 9A discovery: preset engine ZATEN VAR (inAnimPreset/outAnimPreset/durations +
+    computeProceduralDelta/applyEditPreset — broadcast + edit preview) ama kullanıcıya KAPALI
+    (hiçbir UI yok); **Option B kararı: mevcut procedural engine'e UI bağlama** (keyframe
+    üretimi YOK — Option A reddedildi: ikinci paralel sistem + overwrite riski)
+  - 9B UI: Inspector Transform tab'ında ANIMATION IN / OUT kartı (TransformInOutPresetCard) —
+    IN/OUT preset select (None/Fade/Slide L/R/U/D/Pop/Spin — builtin'ler, yeni id yok) +
+    duration (SmartNumberInput + deferCommit — BUG 2 güvenliği; min 0 max 1000; default 30);
+    derive-only (local state YOK); tek onPartPropChange → atomic history; custom_timeline
+    GİZLİ (internal — değerler korunur); SmartNumberInput'a ariaLabel eklendi;
+    `transformInOutPreset.test.tsx` 20 test
+  - 9C E2E: `e2e/m23-in-out-presets.spec.ts` E2E-1..E2E-15 **15/15 ×2** — gerçek UI: IN
+    preview (slide/fade/pop — frame 1'de ölçüm: frame 0'da IN opacity 0 → part invisible —
+    renderer skip — test dersi, bug değil), OUT bölgesi, IN+OUT birlikte, duration BUG 2
+    regression, undo (UI derive), field preservation (matte+transform), part switch leak'siz,
+    save/reload parity (mevcut schema), broadcast uyumu, multi-part, **keyframe'siz kanıtı**
+    (channel count 0→0), custom_timeline korunur, clear, no-selection; **production bug
+    bulunmadı** (StagePartLayers geçici debug kaldırıldı)
+  - Kapsam: evaluateFrame/proceduralAnimation/usePlayback/useBroadcast/useSerialization
+    DEĞİŞMEDİ; M8 SAFE; yeni engine/keyframe/channel YOK
+  - Baseline: **786/786 vitest** (91/91 serialization dahil) + R-V 23/23 ×2 + V-M 26/26 ×2 +
+    M22 **10/10 ×2** + M23 **15/15 ×2** + track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
+- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → `668a3b3` (M20 radial gradient) → `64eb14c` (M21 image matte) → `6a0c767` (M22 relationship) → **M23 9B-9C implementasyonu PENDING (commit/push YOK)**
 
 ## Önemli kararlar
 

@@ -12,6 +12,8 @@ export interface SmartNumberInputProps {
    *  whose value must not be committed mid-typing (e.g. keyframe frame
    *  numbers: typing "4" must not commit 4 before "40" is complete). */
   deferCommit?: boolean;
+  /** Accessible label for the underlying input (M23 animation durations). */
+  ariaLabel?: string;
   onChange: (val: number) => void;
 }
 
@@ -20,7 +22,7 @@ export interface SmartNumberInputProps {
  * focused, commits (clamped + rounded) on blur or Enter, and supports an
  * optional display scale/precision (internal value vs. displayed value).
  */
-export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, step = 1, displayScale, precision, deferCommit = false, onChange }) => {
+export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, max, step = 1, displayScale, precision, deferCommit = false, ariaLabel, onChange }) => {
   const scale = displayScale ?? 1;
   const decimals = precision ?? 2;
   const rawVal = (value ?? 0) * scale;
@@ -85,6 +87,7 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
     <input
       className="input-control"
       type="number"
+      aria-label={ariaLabel}
       value={isFocused ? editingValue : displayVal}
       min={min !== undefined ? min * scale : undefined}
       max={max !== undefined ? max * scale : undefined}

@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
 description: Use when working on KCS Track Matte (SVG clipPath + mask) — architecture, data model, browser-verified semantics, rules, tests.
-version: 10.0.0
+version: 11.0.0
 author: senmu
 license: MIT
 metadata:
@@ -376,6 +376,29 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   M8 SAFE (TrackChannel/keyframe/playback/animasyon parametresi yok). E2E:
   `e2e/m22-matte-relationship.spec.ts` (E2E-1..E2E-10, 10/10 ×2 deterministik).
 
+## M23 — Basic IN/OUT Preset UX
+
+- **Mevcut procedural engine'i kullanıcıya açar** (YENİ engine YOK, keyframe üretimi YOK, ikinci
+  animation sistemi YOK — Option B): Inspector Transform tab'ında kompakt **ANIMATION IN / OUT**
+  kartı (`TransformInOutPresetCard`) — IN/OUT preset select (None/Fade/Slide Left/Right/Up/Down/
+  Pop/Spin) + duration (frame, SmartNumberInput + deferCommit — BUG 2 güvenliği miras).
+  Seçim → `CharacterPart.inAnimPreset/outAnimPreset/inAnimDuration/outAnimDuration` →
+  mevcut `computeProceduralDelta`/`applyEditPreset` → SVG renderer.
+- **Kontratlar:** duration frame cinsinden, IN/OUT bağımsız (cross-field leak yok); blank/invalid
+  ara girdi part verisini bozmaz; değerler doğrudan part'tan derive (local state mirror YOK);
+  her kontrol tek `onPartPropChange` → mevcut history (Ctrl+Z geri getirir — yeni history yok).
+- **Serialization DEĞİŞMEDİ:** inAnimPreset/outAnimPreset/inAnimDuration/outAnimDuration zaten
+  persist — save/reload parity E2E kanıtlı. **Broadcast uyumu:** aynı alanlar broadcast state
+  makinesi tarafından tüketilir; Inspector setCurrentFrame/setIsPlaying ÇAĞIRMAZ (d7324ad
+  edit/broadcast ayrımı korunur).
+- **custom_timeline:** internal/advanced — builtin seçicide GÖSTERİLMEZ; mevcut değerler korunur
+  (UI render'ı rewrite etmez). M8 SAFE: TrackChannel/keyframe/playback değişmedi; evaluateFrame/
+  proceduralAnimation/usePlayback/useBroadcast/useSerialization **dokunulmadı**.
+- **Test dersi (bug değil):** frame 0'daki IN preset bilinçli olarak part'ı görünmez yapabilir
+  (opacity 0 → renderer invisible part'ı atlar) — browser testleri aktif frame'de (örn. frame 1)
+  ölçer; DOM transform attr'ı yerine runtime state/UI derive doğrulanır.
+- E2E: `e2e/m23-in-out-presets.spec.ts` (E2E-1..E2E-15, 15/15 ×2 deterministik).
+
 ## Test'ler
 
 - `matte.test.ts` — world-space A/B/C (static/rotated+scaled/parented), animated frame,
@@ -439,12 +462,21 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
 - `validateScene.test.ts` (8B) — MATTE_CYCLE unit (15 test: self-ref, 2/3/4+ cycle, valid
   zincirler, missing/cycle ayrımı, çoklu cycle, determinizm, disabled semantiği, parent
   cycle regresyonu)
-- Baseline: **766/766 vitest** (91/91 useSerialization dahil) + M20 R-V matrix 23/23 ×2 +
-  M21 image matrix **26/26 ×2** + M22 relationship **10/10 ×2** + track-matte 76/76 (full
-  suite'te V-T17 bilinen timing flake — M18 import/reload yolu, makine yükünde; izole PASS;
-  M20/M21/M22 değiştirmedi; workflow.spec.ts:88 ölü container testi fail M19 dışı)
+- `transformInOutPreset.test.tsx` (9B) — IN/OUT preset UI unit (20 test: select render/display,
+  IN/OUT bağımsızlık, duration commit/clamp/deferCommit, leak yok, None güvenli, field
+  preservation, atomic undo, custom_timeline policy, a11y)
+- `e2e/m23-in-out-presets.spec.ts` (9C) — E2E-1..E2E-15 (KALICI, gerçek UI): IN preview
+  (slide/fade/pop — invisible frame 0 dersi), OUT bölgesi, IN+OUT birlikte, duration BUG 2,
+  undo, field preservation (matte+transform), part switch leak'siz, save/reload parity,
+  broadcast uyumu, multi-part, keyframe'siz (Option B kanıtı), custom_timeline, clear,
+  no-selection
+- Baseline: **786/786 vitest** (91/91 useSerialization dahil) + M20 R-V matrix 23/23 ×2 +
+  M21 image matrix **26/26 ×2** + M22 relationship **10/10 ×2** + M23 presets **15/15 ×2** +
+  track-matte 76/76 (full suite'te V-T17 bilinen timing flake — M18 import/reload yolu,
+  makine yükünde; izole PASS; M20..M23 değiştirmedi; workflow.spec.ts:88 ölü container
+  testi fail M19 dışı)
 
-## Deferred (yeni feature kararı gerektirir — M13..M22'de YAPILMADI)
+## Deferred (yeni feature kararı gerektirir — M13..M23'te YAPILMADI)
 
 **gradient presets** · **gradient animation** · **radial custom geometry controls
 (center/radius UI, gizmo, presets)** · **animated strength** (strength channel/animasyon

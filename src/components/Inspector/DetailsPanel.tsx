@@ -24,6 +24,9 @@ export const DetailsPanel: React.FC = () => {
     updateCurrentTransform,
     deletePart,
     duplicateSelectedPart,
+    customPresets,
+    savePreset,
+    deletePreset,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'duplicate'>('transform');
@@ -131,6 +134,9 @@ export const DetailsPanel: React.FC = () => {
               updateCurrentTransform={updateCurrentTransform}
               handlePartPropChange={handlePartPropChange}
               handleZIndexChange={handleZIndexChange}
+              customPresets={customPresets}
+              onSavePreset={savePreset}
+              onDeletePreset={deletePreset}
             />
           )}
 

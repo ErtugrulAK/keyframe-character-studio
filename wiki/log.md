@@ -261,3 +261,14 @@
 - Baseline: **810/810 vitest** + R-V 23/23 ×2 + V-M 26/26 ×2 + M22 10/10 ×2 + M23 15/15 ×2 +
   M24 **17/17 ×2** + track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
 - Commit/push YOK — hash icat edilmedi
+
+## [2026-08-14] update | KCS — M25 USER-SAVED ANIMATION PRESETS COMPLETE (ev PC, 25A-25F)
+- M25 ✅ 25A-25F tamamlandı — **COMMIT/PUSH PENDING (onay bekliyor)** — HEAD `4a77ba4`, working tree M25 kapsamı dirty (hash icat edilmedi)
+- 25A data: `usePresets.savePreset/deletePreset` — mevcut `CustomMotionPreset` modeli + `keyframe_custom_motion_presets` key; deterministic `generateId('preset')` + collision guard (builtin id çakışması yok); name trim + boş reject; keyframes deep-clone; malformed storage fallback (invalid JSON + non-array); **23 test**
+- 25B runtime proof + **gerçek bugfix**: `applyEditPreset` customPresets almıyordu → custom preset broadcast'te çalışıp **edit-mode preview'da çalışmıyordu** (kanıt: x=0, beklenen -150); fix: `applyEditPreset(id, progress, mode, presets)` → `applyPreset` delegasyonu (aynı lookup/scope/clamp/sampler) — yeni engine YOK; **18 test**
+- 25C UI: Custom optgroup (IN/OUT type filtreli, value=id/label=name) + Save Current as Preset dialog (name validation) + Delete (yalnızca custom — builtin korunur); `presetConversion.ts` builtin→custom (deterministik 0/0.25/0.5/0.75/1 örnekleme, builtin id'den bağımsız); runtime equivalence test'leri (slide-scale-left/soft-pop 0/0.5/1 exact); **27 UI + 5 conversion test**
+- 25D E2E: `e2e/m25-user-saved-presets.spec.ts` **18/18 ×2** — save≠apply, apply IN/OUT, equivalence, reload, delete, referenced-delete, type filtering, multi-part isolation, undo, broadcast, schema pollution; production değişikliği 0
+- 25E regression + fix: **DEFAULT_INITIAL_PRESETS Custom optgroup'ta görünüyordu** (M24 E2E-17 deterministik kırıldı — timing değil) → kartta id-eşitliğiyle user-only filtre (default'lar runtime/broadcast'te aynen korunur, seed mekanizması değişmedi); **+4 test**, M24 **17/17** geri yeşil
+- 25F docs: SKILL v13, wiki entity + log, README
+- Baseline: **879/879 vitest** + M25 18/18 ×2 + M24 17/17 + M23 15/15 + M22 10/10 + M20 23/23 + M21 26/26 + tsc/build/oxlint PASS; track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/H12 — izole PASS, testlere dokunulmadı)
+- Mimari: ikinci engine YOK; save/delete = library (history dışı), apply = normal part edit (history/undo); custom kütüphane AnimationProject'ta DEĞİL; M8 SAFE; geometry/matte/serialization/broadcast değişmedi

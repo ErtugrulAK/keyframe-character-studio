@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
-description: Use when working on KCS Track Matte (SVG clipPath + mask) — architecture, data model, browser-verified semantics, rules, tests.
-version: 12.0.0
+description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets (M23-25) — architecture, data model, browser-verified semantics, rules, tests.
+version: 13.0.0
 author: senmu
 license: MIT
 metadata:
@@ -419,6 +419,85 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
 - **UI:** M23 kartında option listesi `<optgroup label="Basic">` (8 builtin aynı) + `<optgroup
   label="Combinations">` (Slide + Scale Left/Right, Soft Pop) — yeni panel/editor/builder YOK.
 - E2E: `e2e/m24-combination-presets.spec.ts` (E2E-1..E2E-17, 17/17 ×2 deterministik).
+
+## M25 — User-Saved Animation Presets (25A-25F)
+
+Kullanıcı artık bir IN/OUT animasyonunu kaydedip (`Save Current as Preset`), Custom optgroup'tan
+başka part'a uygulayıp, reload sonrası kullanıp silebilir.
+
+### Pipeline (mevcut altyapı — İKİNCİ ENGINE YOK)
+
+- SAVE: Inspector kartı → `usePresets.savePreset(...)` → `keyframe_custom_motion_presets` (localStorage)
+- APPLY: custom preset ID → `CharacterPart.inAnimPreset/outAnimPreset` → `computeProceduralDelta` →
+  `applyEditPreset`/`applyPreset` → custom lookup → `sampleCustomPreset` → DeltaResult → mevcut render
+
+### 25B gerçek bugfix
+
+- Önce: `applyPreset` custom preset çözüyordu; `applyEditPreset` customPresets ALMIYORDU → custom
+  preset broadcast'te çalışıyor, **edit-mode preview'da çalışmıyordu** (delta yok; kanıt: x=0 beklenen -150).
+- Fix: `applyEditPreset(id, progress, mode, presets)` → `applyPreset`'e delege eder (aynı
+  lookup/scope/clamp/sampler zinciri); call site'lar mevcut `customPresets`'i geçirir. Yeni engine
+  değil — mevcut runtime hattının eksik bağlantısı.
+
+### CustomMotionPreset model (kodda doğrulanmış)
+
+`id, name, type: 'in'|'out'|'stunt', durationFrames, keyframes[]` (+ opsiyonel `scope`/`maskShape`/
+`showInDirector` — mevcut alanlar). Keyframe: `progress, deltaX, deltaY, rotation, scaleX, scaleY,
+opacity, easing?` — `sampleCustomPreset` linear interpoler (easing veri olarak korunur).
+
+### Builtin → Custom dönüşümü
+
+`src/utils/presetConversion.ts`: builtin animasyon mevcut public runtime üzerinden deterministik
+noktalarda (0/0.25/0.5/0.75/1) örneklenir → `CustomMotionPresetKeyframe[]`. Kaydedilen preset
+builtin ID'den BAĞIMSIZ (runtime'ta id referansı yok); sonra builtin/part değişse bile kayıtlı
+custom mutasyona uğramaz. Representative builtin-vs-custom eşleşmesi test'li (progress 0/0.5/1 exact).
+
+### Custom filtering kontratı (M25 regression dersi)
+
+Custom optgroup **YALNIZCA user-created preset'leri** içerir. `DEFAULT_INITIAL_PRESETS` (localStorage
+boşken seed — `preset_1` "Pink Slide Down" vb.) user preset DEĞİLDİR: Custom'da gösterilmez, Delete
+kontrolü almaz, select'te safe 'none' fallback gösterir; runtime/broadcast için mevcut davranış
+aynen korunur (seed mekanizmasına dokunulmadı). Kart: `customPresets.filter(p => p.type === 'in' &&
+!DEFAULT_INITIAL_PRESETS.some(d => d.id === p.id))` — 25A collision guard kullanıcı id ≠ default id
+garantisi verir, id eşitliğiyle dışlama güvenlidir. (Bu ayrım unutulursa M24 E2E-17 kırılır.)
+
+### IN/OUT
+
+IN select → `type:'in'` custom'lar; OUT select → `type:'out'`; mevcut type modeli — yeni tip sistemi
+yok. `custom_timeline` gizli/internal kalır (M23 politikası).
+
+### Save/Delete — history ayrımı
+
+- SAVE/DELETE = **library yönetimi** → useHistory YOK, character edit değil; delete missing id
+  güvenli; builtin/default'lar korunur.
+- APPLY = **normal character edit** → mevcut `onPartPropChange` → history/undo (Ctrl+Z geri alır).
+
+### Delete referenced preset (doğrulanmış davranış)
+
+Part silinmiş custom id'yi referans ediyorsa: stored part referansı korunur, UI display-only 'none'
+fallback gösterir, runtime bilinmeyen id'yi güvenli ele alır (opacity 1), crash yok. Part sessizce
+yeniden yazılmaz.
+
+### Persistence / serialization
+
+Custom kütüphane `keyframe_custom_motion_presets`'te — **AnimationProject'ta DEĞİL**;
+`useSerialization.ts` değişmedi; scene JSON preset kütüphanesi içermez.
+
+### Broadcast
+
+Custom IN/OUT ID'leri broadcast'te çalışır çünkü mevcut `applyPreset` zaten `customPresets`
+çözüyor — yeni broadcast state machine yok; edit/broadcast ayrımı korunur.
+
+### M8
+
+M25: yeni TrackChannel YOK, yeni timeline keyframe YOK, playback sistemi YOK, evaluateFrame redesign
+YOK. Custom preset keyframe'leri `Track.channels` ile KARIŞTIRILMAMALI — preset-kütüphane verisi,
+mevcut procedural sampler tüketir.
+
+### Geometry / Matte
+
+M25: buildMattePath/shapeGeometry/matte/StagePartLayers/PartRenderer DEĞİŞMEDİ; geometry sistemi
+eklenmedi.
 
 ## Test'ler
 

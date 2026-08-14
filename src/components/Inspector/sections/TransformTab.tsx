@@ -1,5 +1,6 @@
 import React from 'react';
-import type { CharacterPart, Transform } from '../../../types/animator';
+import type { CharacterPart, CustomMotionPreset, Transform } from '../../../types/animator';
+import type { SavePresetInput } from '../../../hooks/usePresets';
 import { TransformAlignmentBar } from './transform/TransformAlignmentBar';
 import { TransformPositionRotationCard } from './transform/TransformPositionRotationCard';
 import { TransformScaleCard } from './transform/TransformScaleCard';
@@ -16,6 +17,10 @@ interface TransformTabProps {
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
   handleZIndexChange?: (zIndex: number) => void;
+  // M25 — user-saved custom preset library (passed through to the card)
+  customPresets: CustomMotionPreset[];
+  onSavePreset: (input: SavePresetInput) => CustomMotionPreset | null;
+  onDeletePreset: (id: string) => void;
 }
 
 /**
@@ -29,6 +34,9 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   updateCurrentTransform,
   handlePartPropChange,
   handleZIndexChange,
+  customPresets,
+  onSavePreset,
+  onDeletePreset,
 }) => {
 
   return (
@@ -88,6 +96,9 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <TransformInOutPresetCard
             selectedPart={selectedPart}
             onPartPropChange={handlePartPropChange}
+            customPresets={customPresets}
+            onSavePreset={onSavePreset}
+            onDeletePreset={onDeletePreset}
           />
         )}
       </div>

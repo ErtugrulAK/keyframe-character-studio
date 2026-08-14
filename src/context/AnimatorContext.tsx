@@ -33,7 +33,7 @@ import { useTemplates } from '../hooks/useTemplates';
 import { useMath } from '../hooks/useMath';
 import { useSerialization } from '../hooks/useSerialization';
 import { useToast } from '../hooks/useToast';
-import { usePresets } from '../hooks/usePresets';
+import { usePresets, type SavePresetInput } from '../hooks/usePresets';
 import { useProjectState } from '../hooks/useProjectState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
@@ -145,6 +145,9 @@ interface AnimatorContextType {
 
   // Custom Motion Preset Engine
   customPresets: CustomMotionPreset[];
+  // M25 — user-saved custom preset library management (25A data layer)
+  savePreset: (input: SavePresetInput) => CustomMotionPreset | null;
+  deletePreset: (id: string) => void;
 
   // Realtime Live Stunts Engine
   liveStuntsState: Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>;
@@ -179,7 +182,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   
   const { tracks, setTracks, tracksRef, characterParts, setCharacterParts, characterPartsRef } = useProjectState();
 
-  const { customPresets, customPresetsRef } = usePresets();
+  const { customPresets, customPresetsRef, savePreset, deletePreset } = usePresets();
 
   const {
     appMode,
@@ -484,6 +487,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         triggerAllBroadcastOut,
         resetBroadcastState,
         customPresets,
+        savePreset,
+        deletePreset,
         liveStuntsState,
         triggerLiveStunt,
         stopLiveStunt,

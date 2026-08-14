@@ -45,6 +45,9 @@ function renderTab(part: CharacterPart, onProp: ReturnType<typeof vi.fn> = vi.fn
       updateCurrentTransform={vi.fn()}
       handlePartPropChange={onProp}
       handleZIndexChange={vi.fn()}
+      customPresets={[]}
+      onSavePreset={vi.fn()}
+      onDeletePreset={vi.fn()}
     />,
   );
 }
@@ -246,6 +249,9 @@ describe('TransformTab — M23 IN/OUT animation presets', () => {
         updateCurrentTransform={vi.fn()}
         handlePartPropChange={onProp}
         handleZIndexChange={vi.fn()}
+        customPresets={[]}
+        onSavePreset={vi.fn()}
+        onDeletePreset={vi.fn()}
       />,
     );
     expect((screen.getByLabelText('Animation In Preset') as HTMLSelectElement).value).toBe('spin');

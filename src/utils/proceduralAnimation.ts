@@ -80,12 +80,12 @@ export function computeProceduralDelta(
     } else {
       if (allowMotion && inPreset !== 'none' && currentFrame < inDur) {
         const p = currentFrame / inDur;
-        const r = applyEditPreset(inPreset, p, 'in');
+        const r = applyEditPreset(inPreset, p, 'in', customPresets);
         x = r.x; y = r.y; rot = r.rot; sx = r.sx; sy = r.sy; opacityMul = r.opacity;
       }
       if (allowMotion && outPreset !== 'none' && totalFrames - currentFrame <= outDur) {
         const p = Math.max(0, (totalFrames - currentFrame) / outDur);
-        const r = applyEditPreset(outPreset, p, 'out');
+        const r = applyEditPreset(outPreset, p, 'out', customPresets);
         x = r.x; y = r.y; rot = r.rot; sx = r.sx; sy = r.sy; opacityMul = r.opacity;
       }
     }
@@ -138,14 +138,13 @@ function applyPreset(
   return applyBuiltin(id, eased, mode);
 }
 
-function applyEditPreset(id: string, progress: number, mode: 'in' | 'out'): DeltaResult {
-  if (id === 'none' || id === 'custom_timeline') {
-    return { x: 0, y: 0, rot: 0, sx: 1, sy: 1, opacity: 1 };
-  }
-  const eased = mode === 'in'
-    ? 1 - Math.pow(1 - progress, 3)
-    : Math.pow(progress, 3);
-  return applyBuiltin(id, eased, mode);
+function applyEditPreset(id: string, progress: number, mode: 'in' | 'out', presets: CustomMotionPreset[]): DeltaResult {
+  // M25 25B-fix: edit mode resolves CUSTOM presets through the exact same
+  // chain as broadcast mode (lookup → scope handling → scale clamp →
+  // sampleCustomPreset → DeltaResult). Builtin/fallback behavior is
+  // identical to applyPreset (same default when id is missing/unknown), so
+  // delegating keeps one source of truth instead of a second copy.
+  return applyPreset(id, progress, presets, mode);
 }
 
 function applyBuiltin(id: string, eased: number, mode: 'in' | 'out'): DeltaResult {

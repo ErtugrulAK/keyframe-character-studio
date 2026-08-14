@@ -6,12 +6,13 @@ import { describe, test, expect } from 'vitest';
 import { validateCritical, hasCriticalErrors } from '../utils/validateScene';
 import type { SceneData } from '../types/composition';
 
-function makeLayer(id: string, parentId?: string): any {
+function makeLayer(id: string, parentId?: string, matte?: { sourcePartId?: string; enabled?: boolean }): any {
   return {
     id, name: id, type: 'custom_box',
     x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
     visible: true, zIndex: 1, fillColor: '#fff', strokeColor: '#000',
     parentId,
+    ...(matte ? { matte } : {}),
   };
 }
 
@@ -165,5 +166,159 @@ describe('validateCritical — production shape (CharacterPart[])', () => {
     ];
     const errors = validateCritical({ layers });
     expect(errors.some(e => e.type === 'MATTE_MISSING_SOURCE')).toBe(false);
+  });
+});
+
+describe('validateCritical — M22 8B matte cycle / self-reference', () => {
+  const matteTypes = (errors: { type: string }[]) => errors.map(e => e.type);
+
+  test('1. self-reference (A → A) is invalid', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A', undefined, { sourcePartId: 'A' }),
+    ] });
+    const cycles = errors.filter(e => e.type === 'MATTE_CYCLE');
+    expect(cycles.length).toBeGreaterThanOrEqual(1);
+    expect(cycles[0].layerId).toBe('A');
+    expect(cycles[0].severity).toBe('recoverable');
+  });
+
+  test('2. direct 2-node cycle (A → B, B → A) is invalid', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A', undefined, { sourcePartId: 'B' }),
+      makeLayer('B', undefined, { sourcePartId: 'A' }),
+    ] });
+    const cycles = errors.filter(e => e.type === 'MATTE_CYCLE');
+    expect(cycles.length).toBeGreaterThanOrEqual(2); // both members report the cycle (chain-walk per layer)
+    expect(cycles.map(c => c.layerId).sort()).toEqual(['A', 'B']);
+  });
+
+  test('3. 3-node cycle (A→B, B→C, C→A) is invalid', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A', undefined, { sourcePartId: 'B' }),
+      makeLayer('B', undefined, { sourcePartId: 'C' }),
+      makeLayer('C', undefined, { sourcePartId: 'A' }),
+    ] });
+    const cycles = errors.filter(e => e.type === 'MATTE_CYCLE');
+    expect(cycles.length).toBe(3); // every member reports it
+    expect(cycles.map(c => c.layerId).sort()).toEqual(['A', 'B', 'C']);
+  });
+
+  test('4. 4+ node cycle (A→B, B→C, C→D, D→A) is invalid', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A', undefined, { sourcePartId: 'B' }),
+      makeLayer('B', undefined, { sourcePartId: 'C' }),
+      makeLayer('C', undefined, { sourcePartId: 'D' }),
+      makeLayer('D', undefined, { sourcePartId: 'A' }),
+    ] });
+    const cycles = errors.filter(e => e.type === 'MATTE_CYCLE');
+    expect(cycles.length).toBe(4);
+  });
+
+  test('5. valid one-way matte chain is VALID', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A'),
+      makeLayer('B', undefined, { sourcePartId: 'A' }),
+    ] });
+    expect(errors.filter(e => e.type === 'MATTE_CYCLE')).toHaveLength(0);
+    expect(errors).toHaveLength(0); // fully clean
+  });
+
+  test('6. valid long acyclic chain (A→B→C→D, D→nothing) is VALID', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A'),
+      makeLayer('B', undefined, { sourcePartId: 'A' }),
+      makeLayer('C', undefined, { sourcePartId: 'B' }),
+      makeLayer('D', undefined, { sourcePartId: 'C' }),
+    ] });
+    expect(errors.filter(e => e.type === 'MATTE_CYCLE')).toHaveLength(0);
+    expect(errors).toHaveLength(0);
+  });
+
+  test('7. no matte at all is VALID', () => {
+    const errors = validateCritical({ layers: [makeLayer('A'), makeLayer('B')] });
+    expect(errors).toHaveLength(0);
+  });
+
+  test('8-9. missing source stays MATTE_MISSING_SOURCE and is NOT a cycle', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A', undefined, { sourcePartId: 'ghost' }),
+    ] });
+    expect(errors.filter(e => e.type === 'MATTE_MISSING_SOURCE')).toHaveLength(1);
+    expect(errors.filter(e => e.type === 'MATTE_CYCLE')).toHaveLength(0);
+  });
+
+  test('10. cycle never becomes a missing-source error', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A', undefined, { sourcePartId: 'B' }),
+      makeLayer('B', undefined, { sourcePartId: 'A' }),
+    ] });
+    expect(errors.filter(e => e.type === 'MATTE_MISSING_SOURCE')).toHaveLength(0);
+    expect(errors.filter(e => e.type === 'MATTE_CYCLE')).toHaveLength(2);
+  });
+
+  test('11. multiple independent cycles detect correctly', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A', undefined, { sourcePartId: 'B' }),
+      makeLayer('B', undefined, { sourcePartId: 'A' }),
+      makeLayer('X', undefined, { sourcePartId: 'Y' }),
+      makeLayer('Y', undefined, { sourcePartId: 'X' }),
+      makeLayer('Solo'),
+    ] });
+    const cycles = errors.filter(e => e.type === 'MATTE_CYCLE');
+    expect(cycles.length).toBe(4); // 2 cycles × 2 members
+    expect(cycles.map(c => c.layerId).sort()).toEqual(['A', 'B', 'X', 'Y']);
+  });
+
+  test('12-13. cycle detection is deterministic (same scene → same issue list, repeated)', () => {
+    const layers = [
+      makeLayer('A', undefined, { sourcePartId: 'B' }),
+      makeLayer('B', undefined, { sourcePartId: 'A' }),
+    ];
+    const first = validateCritical({ layers });
+    const second = validateCritical({ layers });
+    expect(matteTypes(first)).toEqual(matteTypes(second));
+    expect(first.map(e => e.layerId)).toEqual(second.map(e => e.layerId));
+    expect(first).toEqual(second);
+  });
+
+  test('14. disabled matte (enabled:false) is NOT part of the cycle graph', () => {
+    // A's matte is disabled → the A→B→A relationship is inactive at runtime
+    const errors = validateCritical({ layers: [
+      makeLayer('A', undefined, { sourcePartId: 'B', enabled: false }),
+      makeLayer('B', undefined, { sourcePartId: 'A' }),
+    ] });
+    const cycles = errors.filter(e => e.type === 'MATTE_CYCLE');
+    // B is still active and reaches A — but A's link is disabled, so the walk
+    // from B ends at A (A has no active matte) → no cycle
+    expect(cycles).toHaveLength(0);
+  });
+
+  test('14b. disabled matte in a fully-disabled pair is VALID', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A', undefined, { sourcePartId: 'B', enabled: false }),
+      makeLayer('B', undefined, { sourcePartId: 'A', enabled: false }),
+    ] });
+    expect(errors.filter(e => e.type === 'MATTE_CYCLE')).toHaveLength(0);
+    expect(errors).toHaveLength(0);
+  });
+
+  test('15. parent cycle behavior remains unchanged', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A', 'B'),
+      makeLayer('B', 'A'),
+    ] });
+    expect(errors.filter(e => e.type === 'PARENT_CYCLE').length).toBeGreaterThanOrEqual(2);
+    expect(errors.filter(e => e.type === 'MATTE_CYCLE')).toHaveLength(0);
+  });
+
+  test('16. existing validation issues remain unchanged (duplicate id + missing source still detected)', () => {
+    const errors = validateCritical({ layers: [
+      makeLayer('A'),
+      makeLayer('A'),
+      makeLayer('B', undefined, { sourcePartId: 'ghost' }),
+    ] });
+    expect(errors.filter(e => e.type === 'DUPLICATE_ID').length).toBeGreaterThanOrEqual(1);
+    expect(errors.filter(e => e.type === 'MATTE_MISSING_SOURCE')).toHaveLength(1);
+    expect(errors.filter(e => e.type === 'MATTE_CYCLE')).toHaveLength(0);
   });
 });

@@ -18,8 +18,9 @@ import type { ValidationError } from '../types/composition';
 export interface LayerRef {
   id: string;
   parentId?: string;
-  /** M11: track matte reference (source part id) */
-  matte?: { sourcePartId?: string };
+  /** M11: track matte reference (source part id); M22 8B: enabled flag — a
+   *  disabled matte is NOT an active relationship (excluded from cycle graph) */
+  matte?: { sourcePartId?: string; enabled?: boolean };
 }
 
 /**
@@ -95,6 +96,38 @@ export function validateCritical(scene: { layers: LayerRef[] }): ValidationError
         message: `Matte source "${layer.matte.sourcePartId}" not found for layer "${layer.id}"`,
         severity: 'recoverable',
       });
+    }
+  }
+
+  // ── M22 8B: Matte cycles / self-reference (recoverable) ───────────
+  // Chain-walk (same pattern as the parent-cycle walk above): from each layer,
+  // follow matte.sourcePartId links; revisiting an id = cycle. A self
+  // reference (A → A) is the 1-node cycle and is reported here as well.
+  // DISABLED mattes (matte.enabled === false) are NOT active relationships
+  // (runtime: StagePartLayers skips them) → excluded from the graph.
+  // MISSING sources are NEVER classified as cycles: the walk simply ends at
+  // the dangling id (that case is MATTE_MISSING_SOURCE, reported above).
+  for (const layer of scene.layers) {
+    if (!layer.matte?.sourcePartId) continue;
+    if (layer.matte.enabled === false) continue;
+    const visited = new Set<string>();
+    let current: string | undefined = layer.id;
+    while (current) {
+      if (visited.has(current)) {
+        errors.push({
+          type: 'MATTE_CYCLE',
+          layerId: layer.id,
+          message: `Matte cycle detected starting from layer "${layer.id}"`,
+          severity: 'recoverable',
+        });
+        break;
+      }
+      visited.add(current);
+      const next = layerMap.get(current);
+      // disabled matte = inactive edge → the walk stops here (no cycle
+      // through a disabled relationship)
+      if (!next?.matte?.sourcePartId || next.matte.enabled === false) break;
+      current = next.matte.sourcePartId;
     }
   }
 

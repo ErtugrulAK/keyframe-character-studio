@@ -203,3 +203,22 @@
 - Baseline: **738/738 vitest** (91/91 serialization dahil) + R-V 23/23 ×2 + V-M 26/26 ×2 +
   track-matte 76/76 (V-T17 bilinen M18 timing flake — izole PASS, M20/M21 değiştirmedi)
 - Commit/push YOK — hash icat edilmedi
+
+## [2026-08-13] update | KCS — M22 MATTE RELATIONSHIP UX + INTEGRITY COMPLETE (iş PC, 8A-8C)
+- M22 ✅ 8A-8C tamamlandı — **COMMIT/PUSH PENDING (onay bekliyor)** — HEAD `64eb14c`, working tree 5 dosya dirty (8A-8C)
+- 8A UI: Outliner matte relationship indicator — VALID: Scissors + source CharacterPart.name
+  (track.name ASLA); MISSING: AlertTriangle + "Missing" + aria-label/title; render anında
+  derive (sourcePartId + characterParts; state/cache/mirror YOK); selection/eye/reorder/drag
+  etkilenmez; 13 unit test (outlinerPanel.test.tsx)
+- 8B validation: `MATTE_CYCLE` (recoverable) — parent-cycle chain-walk deseni; self-ref
+  (A→A) dahil uzun cycle'lar; **disabled matte (enabled:false) cycle graph'da YOK**
+  (runtime inactive semantiği); missing ≠ cycle (MATTE_MISSING_SOURCE korunur); asiklik
+  zincirler VALID; deterministik; 15 unit test (validateScene.test.ts)
+- 8C E2E: `e2e/m22-matte-relationship.spec.ts` E2E-1..E2E-10 **10/10 ×2** — gerçek Chromium
+  + gerçek UI akışları (outliner row tıklama, Style tab, matte select, Delete butonu,
+  eye/reorder): valid/missing/self-ref/direct-cycle/valid-chain/tip-agnostik/source-switch/
+  delete-restore/outliner regresyonu/cycle-vs-missing; production değişikliği 0
+- Kapsam: renderer/geometry/serialization DEĞİŞMEDİ; M8 SAFE; UI + validation hardening
+- Baseline: **766/766 vitest** + R-V 23/23 ×2 + V-M 26/26 ×2 + M22 E2E **10/10 ×2** +
+  track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
+- Commit/push YOK — hash icat edilmedi

@@ -20,7 +20,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
 | Repo (iş) | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | Branch | `main` (doğrudan main üzerinde çalışılır) |
 | Build | `npm run build` (tsc -b + Vite) |
-| Test | **Vitest, 738 test — 38 dosya** (M21 durumu) |
+| Test | **Vitest, 766 test — 39 dosya** (M22 durumu) |
 | Doğrulama | `npx tsc --noEmit` + `npm run build` + `npx vitest run` |
 
 ## Mimari (M12 güncel)
@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M21)
+## Proje durumu (M22)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -185,7 +185,27 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 7F: docs — SKILL v9.0.0 (M21 bölümü + mimari + baseline + deferred), wiki, README
   - Baseline: **738/738 vitest** (91/91 serialization dahil) + R-V 23/23 ×2 + V-M **26/26 ×2** +
     track-matte 76/76 (full'da V-T17 timing flake — M18 import/reload, izole PASS; M20/M21 değiştirmedi)
-- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → `668a3b3` (M20 radial gradient) → **M21 7B-7F implementasyonu PENDING (commit/push YOK)**
+- **M22 ✅ COMPLETE — Matte Relationship UX + Integrity** (8A-8C iş PC'de tamamlandı; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 8A UI: Outliner'da matte relationship indicator — VALID: Scissors + source
+    **CharacterPart.name** (track.name asla — cross-machine import düzeltmesi korunur);
+    MISSING: AlertTriangle + "Missing" + aria-label/title; render anında derive (sourcePartId +
+    characterParts — yerel state/cache/mirror YOK); selection/eye/reorder/drag etkilenmez;
+    `outlinerPanel.test.tsx` 13 test
+  - 8B validation: validateCritical'e `MATTE_CYCLE` (recoverable) — parent-cycle chain-walk
+    deseni birebir; self-reference (A→A) dahil, uzun cycle'lar; **disabled matte
+    (enabled:false) cycle graph'a DAHİL DEĞİL** (StagePartLayers semantiği); missing
+    (MATTE_MISSING_SOURCE) asla cycle sayılmaz, cycle asla missing'e dönüşmez; asiklik
+    zincirler VALID; deterministik issue sıralaması; `validateScene.test.ts` 15 test
+  - 8C E2E: `e2e/m22-matte-relationship.spec.ts` E2E-1..E2E-10 **10/10 ×2** — gerçek UI
+    (outliner row tıklama + Style tab + matte select + Delete butonu + eye/reorder):
+    valid relationship, gerçek delete → missing, self-ref UI guard (kendini hariç tutar) +
+    import sağlığı, direct cycle (clip-mode defs), valid chain, tip-agnostik source'lar,
+    source switch (ayarlar + selection korunur), delete/restore, outliner regresyonu,
+    cycle vs missing ayrımı; production değişikliği 0
+  - Kapsam: renderer/geometry/serialization DEĞİŞMEDİ; M8 SAFE; UI + validation hardening
+  - Baseline: **766/766 vitest** (91/91 serialization dahil) + R-V 23/23 ×2 + V-M 26/26 ×2 +
+    E2E **10/10 ×2** + track-matte 76/76 (V-T17 bilinen M18 flake — izole PASS)
+- Son push: `dff30d2` (M13 2A-2B) → `e4ddc68` (M14 2A-2C) → `37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → `668a3b3` (M20 radial gradient) → `64eb14c` (M21 image matte) → **M22 8A-8C implementasyonu PENDING (commit/push YOK)**
 
 ## Önemli kararlar
 

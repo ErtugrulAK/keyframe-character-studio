@@ -20,6 +20,8 @@ import {
   PenTool,
   Pill,
   Flag,
+  Scissors,
+  AlertTriangle,
 } from 'lucide-react';
 import { ParallelogramIcon } from '../Toolbar/drawers/ElementsDrawer';
 
@@ -42,6 +44,12 @@ export const OutlinerPanel: React.FC = () => {
   const [isGroupExpanded, setIsGroupExpanded] = useState(true);
   const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+
+  // M22 8A — matte source lookup for the outliner indicator. Derived directly
+  // from part.matte.sourcePartId + characterParts (single relationship
+  // authority — no cached/duplicated source state). Returns undefined when
+  // the source part is missing → the row shows the warning state.
+  const matteSourcePart = (sourcePartId: string) => characterParts.find((p) => p.id === sourcePartId);
 
   const getActorIcon = (type: string) => {
     switch (type) {
@@ -193,6 +201,32 @@ export const OutlinerPanel: React.FC = () => {
                       <span className="actor-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {part.name}
                       </span>
+                      {/* M22 8A — matte relationship indicator (derived, no state):
+                          sourcePartId → characterParts lookup → source name.
+                          Missing source → warning state. Never blank, never crashes. */}
+                      {part.matte?.sourcePartId && (
+                        <span
+                          title={matteSourcePart(part.matte.sourcePartId)
+                            ? `Matte source: ${matteSourcePart(part.matte.sourcePartId)!.name}`
+                            : `Missing matte source (${part.matte.sourcePartId})`}
+                          aria-label={matteSourcePart(part.matte.sourcePartId)
+                            ? `Matte source: ${matteSourcePart(part.matte.sourcePartId)!.name}`
+                            : 'Missing matte source'}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 3,
+                            flexShrink: 0,
+                            color: matteSourcePart(part.matte.sourcePartId) ? '#00d2ff' : '#f59e0b',
+                            fontSize: 10,
+                          }}
+                        >
+                          {matteSourcePart(part.matte.sourcePartId) ? <Scissors size={10} /> : <AlertTriangle size={10} />}
+                          <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {matteSourcePart(part.matte.sourcePartId) ? matteSourcePart(part.matte.sourcePartId)!.name : 'Missing'}
+                          </span>
+                        </span>
+                      )}
                     </div>
 
                     {/* Up / Down Move Action Buttons */}

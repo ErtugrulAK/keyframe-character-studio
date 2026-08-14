@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
 description: Use when working on KCS Track Matte (SVG clipPath + mask) — architecture, data model, browser-verified semantics, rules, tests.
-version: 9.0.0
+version: 10.0.0
 author: senmu
 license: MIT
 metadata:
@@ -351,6 +351,31 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
 - Runtime descriptor (href/width/height/preserveAspectRatio) ASLA persist edilmez —
   useSerialization.ts değişmedi; cx/cy/radius/rX/rY asla persist edilmez.
 
+## M22 — Matte Relationship UX + Integrity
+
+- **Outliner relationship visibility (8A):** katman listesinde her matte'li part'ın row'u
+  küçük bir indicator taşır — VALID: Scissors ikonu + **source CharacterPart.name**
+  (track.name ASLA — cross-machine import isim düzeltmesi korunur); MISSING: AlertTriangle
+  + "Missing" + `aria-label/title` ("Matte source: X" / "Missing matte source (id)").
+  UI-ONLY: sourcePartId + characterParts'tan render anında derive — yerel relationship
+  state/cache/mirror YOK, ikinci relationship modeli YOK.
+- **Matte cycle / self-reference validation (8B):** validateCritical'e `MATTE_CYCLE`
+  (recoverable) eklendi — parent-cycle chain-walk deseni birebir. Self-reference (A→A,
+  1 düğümlü cycle) dahil: A→B/B→A, A→B→C→A ve daha uzun cycle'lar tespit edilir.
+  **Disabled matte kontratı:** `matte.enabled === false` → runtime ilişki İNACTIVE →
+  cycle graph'a DAHİL EDİLMEZ (StagePartLayers semantiği). **Missing vs cycle ayrımı:**
+  A→ghost `MATTE_MISSING_SOURCE` olarak kalır, cycle SAYILMAZ; cycle de missing'e
+  dönüşmez. Asiklik zincirler (A→B→C→nothing) VALID — false positive YOK.
+- **Self-reference savunması:** UI source selector zaten kendini hariç tutuyor (normal
+  kullanıcı UI'dan self-ref oluşturamaz — E2E kanıtlı); 8B validation imported/malformed
+  scene'ler için defense-in-depth. Issue sıralaması deterministik (layer sırası).
+- **UI/validation ayrımı:** Outliner = görünürlük (edit yok); Inspector = düzenleme.
+  Drag/drop ve timeline matte indicator EKLENMEDİ (deferred).
+- **Kapsam:** M22 renderer/geometry/serialization DEĞİŞTİRMEZ — SVG rendering, matte/
+  gradient rendering, animasyon evaluation, serialization schema byte-for-byte korunur.
+  M8 SAFE (TrackChannel/keyframe/playback/animasyon parametresi yok). E2E:
+  `e2e/m22-matte-relationship.spec.ts` (E2E-1..E2E-10, 10/10 ×2 deterministik).
+
 ## Test'ler
 
 - `matte.test.ts` — world-space A/B/C (static/rotated+scaled/parented), animated frame,
@@ -403,12 +428,23 @@ world transform her frame (stale YOK); text mask'te pathD YOK (path elemanı ÜR
   farklı source'lar collision'suz, shape+text+image coexist, gerçek Inspector source-switch
   (V-M20 — Style tab + selectOption, field preservation), clip → kcs-clipPath YOK, import/
   reload EXACT parity (V-M24), legacy linear/text regression
-- Baseline: **738/738 vitest** (91/91 useSerialization dahil) + M20 R-V matrix 23/23 ×2 +
-  M21 image matrix **26/26 ×2** + track-matte 76/76 (full suite'te V-T17 bilinen timing
-  flake — M18 import/reload yolu, makine yükünde; izole PASS; M20/M21 değiştirmedi;
-  workflow.spec.ts:88 ölü container testi fail M19 dışı)
+- `e2e/m22-matte-relationship.spec.ts` — M22 E2E-1..E2E-10 (KALICI, gerçek UI): valid
+  relationship (indicator + CharacterPart.name), gerçek Delete ile missing source, self-ref
+  UI guard + import sağlığı, direct cycle (clip-mode defs), valid chain false-positive'siz,
+  shape/text/image tip-agnostik, source switch (ayarlar + selection korunur), delete/restore,
+  outliner interaction regresyonu (eye/reorder), cycle vs missing ayrımı
+- `outlinerPanel.test.tsx` (8A) — matte indicator unit (13 test: no-matte/valid/missing,
+  CharacterPart.name authority, accessibility, selection/eye etkilenmez, source switch/delete,
+  no-drag/drop, timeline dokunulmaz)
+- `validateScene.test.ts` (8B) — MATTE_CYCLE unit (15 test: self-ref, 2/3/4+ cycle, valid
+  zincirler, missing/cycle ayrımı, çoklu cycle, determinizm, disabled semantiği, parent
+  cycle regresyonu)
+- Baseline: **766/766 vitest** (91/91 useSerialization dahil) + M20 R-V matrix 23/23 ×2 +
+  M21 image matrix **26/26 ×2** + M22 relationship **10/10 ×2** + track-matte 76/76 (full
+  suite'te V-T17 bilinen timing flake — M18 import/reload yolu, makine yükünde; izole PASS;
+  M20/M21/M22 değiştirmedi; workflow.spec.ts:88 ölü container testi fail M19 dışı)
 
-## Deferred (yeni feature kararı gerektirir — M13..M21'de YAPILMADI)
+## Deferred (yeni feature kararı gerektirir — M13..M22'de YAPILMADI)
 
 **gradient presets** · **gradient animation** · **radial custom geometry controls
 (center/radius UI, gizmo, presets)** · **animated strength** (strength channel/animasyon

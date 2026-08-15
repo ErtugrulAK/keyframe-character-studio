@@ -157,6 +157,7 @@ interface AnimatorContextType {
   // M25 — user-saved custom preset library management (25A data layer)
   savePreset: (input: SavePresetInput) => CustomMotionPreset | null;
   deletePreset: (id: string) => void;
+  importPresets: (presets: CustomMotionPreset[]) => void;
 
   // Realtime Live Stunts Engine
   liveStuntsState: Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>;
@@ -191,7 +192,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   
   const { tracks, setTracks, tracksRef, characterParts, setCharacterParts, characterPartsRef } = useProjectState();
 
-  const { customPresets, customPresetsRef, savePreset, deletePreset } = usePresets();
+  const { customPresets, customPresetsRef, savePreset, deletePreset, importPresets } = usePresets();
 
   const {
     appMode,
@@ -529,6 +530,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         customPresets,
         savePreset,
         deletePreset,
+        importPresets,
         liveStuntsState,
         triggerLiveStunt,
         stopLiveStunt,

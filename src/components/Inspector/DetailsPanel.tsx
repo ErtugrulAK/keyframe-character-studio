@@ -29,6 +29,7 @@ export const DetailsPanel: React.FC = () => {
     customPresets,
     savePreset,
     deletePreset,
+    importPresets,
     copySelectedPart,
     pasteAnimationOntoSelected,
     clipboardData,
@@ -184,6 +185,8 @@ export const DetailsPanel: React.FC = () => {
               customPresets={customPresets}
               onSavePreset={savePreset}
               onDeletePreset={deletePreset}
+              onImportPresets={importPresets}
+              showToast={showToast}
               onCopyAnimation={handleCopyAnimation}
               onPasteAnimation={handlePasteAnimation}
               onClearAnimation={handleClearAnimation}

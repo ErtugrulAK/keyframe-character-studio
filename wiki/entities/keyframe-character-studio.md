@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M29)
+## Proje durumu (M30)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -286,6 +286,14 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 29C regression: Vitest **990/990** · full e2e **230 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+M27 11+M28 12+M29 12+drag 1+track 72); track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/V-H12 — pre-existing)
   - 29D docs: SKILL v17 + wiki + README
   - Push zinciri `9269cf0`'da biter — **M29 commit hash icat edilmedi**
+- **M30 ✅ COMPLETE — Custom Preset Export / Import** (30A-30E; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 30A pure: `src/utils/presetExportImport.ts` — `buildPresetExportPayload` (user-only versioned `{version:1, presets}`) + `validatePresetImportPayload` (atomik tam dosya doğrulama — version/alan/keyframe/progress/500 limit) + `mergeImportedPresets` (existing+imported, ID preserve-safe, collision+default remap — generateId('preset') döngüsünde isDefaultPresetId kontrolü 30A test 28'de yakalanan fix); **38 pure test**
+  - 30B UI: TransformInOutPresetCard — **Export Presets** (Blob → `kcs-custom-presets.json` download) + **Import Presets** (gizli file input → validate → merge → `importPresets` usePresets API → toast); prop zinciri AnimatorContext→DetailsPanel→TransformTab; **17 UI test**; bulunan gerçek bug düzeltildi (DetailsPanel duplicate `showToast` destructure — Vite transform 500)
+  - 30C E2E: `e2e/m30-preset-export-import.spec.ts` **12/12 ×2 + fresh** — gerçek download + gerçek file chooser, clean-context import (id korunur), apply+runtime, cross-machine reconnect, merge/collision/default/duplicate-name, malformed/version atomik, reload persist, export-after-import, M25 regression, scene izolasyon, history'siz
+  - 30D regression: Vitest **1045/1045** · full e2e **242 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+M27 11+M28 12+M29 12+M30 12+drag 1+track 72); track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/V-H12 — pre-existing)
+  - 30E docs: SKILL v18 + wiki + README
+  - Push zinciri `d37ed69`'da biter — **M30 commit hash icat edilmedi**
+  - **A GROUP COMPLETE** (M28+M29+M30) — M31 otomatik oluşturulmaz; sonraki iş yeni product discovery
 
 ## Önemli kararlar
 

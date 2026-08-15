@@ -311,3 +311,13 @@
 - 29C: Vitest **990/990** · full e2e **230 passed**; track-matte V-T15/T17/V-H12 bilinen ev-PC timing (pre-existing)
 - 29D: SKILL v17 + wiki + README
 - Roadmap: A aktif (M28 ✅ M29 ✅ → M30 preset export/import başlamadı); B beklemede; C park
+
+## [2026-08-15] update | KCS — M30 CUSTOM PRESET EXPORT/IMPORT COMPLETE (ev PC, 30A-30E)
+- M30 ✅ 30A-30E tamamlandı — **COMMIT/PUSH PENDING** (HEAD d37ed69)
+- Discovery (A grubu son maddesi): versioned export + merge import (replace destructive); ID preserve-safe (silinen referans reimport ile canlanır)
+- 30A pure: `presetExportImport.ts` — `buildPresetExportPayload` (user-only — M25 isDefaultPresetId authority) + `validatePresetImportPayload` (atomik; version/alan/kf/progress/500 limit) + `mergeImportedPresets` (collision+default remap) — **38 test** (test 28 gerçek bug: generateId('preset') = preset_N default id'leriyle çakışıyordu → döngüye isDefaultPresetId eklendi)
+- 30B UI: Export (Blob download `kcs-custom-presets.json`) + Import (gizli file input → validate → merge → importPresets → toast); usePresets importPresets API; gerçek bug: DetailsPanel duplicate showToast destructure (Vite 500) düzeltildi — **17 UI test**
+- 30C E2E: **12/12 ×2 + fresh** — gerçek download + file chooser; clean context id korunur; reconnect (custom_known); merge/collision/default/duplicate; malformed/version atomik; reload persist; export-after-import; M25 Save/Delete regression; scene izolasyon; Ctrl+Z import'u geri almaz
+- 30D: Vitest **1045/1045** · full e2e **242 passed**; track-matte V-T15/T17/V-H12 bilinen ev-PC timing (pre-existing)
+- 30E: SKILL v18 + wiki + README
+- **A GROUP COMPLETE** (M28+M29+M30) — M31 otomatik yok; yeni product discovery gerekiyor; B beklemede; C park

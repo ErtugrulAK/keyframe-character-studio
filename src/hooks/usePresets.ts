@@ -97,5 +97,15 @@ export const usePresets = () => {
     });
   }, []);
 
-  return { customPresets, customPresetsRef, savePreset, deletePreset };
+  /**
+   * M30 — import already validated + merged presets (30A pure helpers own
+   * validation/collision logic; this API only replaces the collection and
+   * lets the existing useEffect persist to keyframe_custom_motion_presets).
+   * Library operation: no history, no scene mutation.
+   */
+  const importPresets = useCallback((presets: CustomMotionPreset[]): void => {
+    setCustomPresets(presets);
+  }, []);
+
+  return { customPresets, customPresetsRef, savePreset, deletePreset, importPresets };
 };

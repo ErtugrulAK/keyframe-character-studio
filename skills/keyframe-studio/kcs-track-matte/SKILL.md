@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
-description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer/timeline (M23-29) — architecture, data model, browser-verified semantics, rules, tests.
-version: 17.0.0
+description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer/timeline (M23-30) — architecture, data model, browser-verified semantics, rules, tests.
+version: 18.0.0
 author: senmu
 license: MIT
 metadata:
@@ -709,6 +709,54 @@ Kf değer düzenleme: inAnimPreset/outAnimPreset/durations/custom preset library
 - **A — AKTİF:** M28 ✅ · M29 ✅ · **M30 Custom Preset Export/Import** (başlamadı)
 - **B — BEKLEMEDE:** repeat/offset · easing quick · mirror/reverse
 - **C — PARK:** (M27 listesi aynen)
+
+## M30 — Custom Preset Export / Import (30A-30E)
+
+M25 user preset library (`keyframe_custom_motion_presets`) artık PC'ler/browser'lar arasında taşınabilir: versioned JSON export + atomic-validated merge import. **AnimationProject/serialization DEĞİŞMEZ** (library ayrı localStorage key'inde kalır).
+
+### Export Formatı
+
+```
+{ "version": 1, "presets": CustomMotionPreset[] }
+```
+
+- `buildPresetExportPayload(customPresets)` — **user-only** (M25 authority: `isDefaultPresetId` — DEFAULT_INITIAL_PRESETS asla export edilmez; preset_N pattern'li user id'leri default DEĞİL — id-eşitlik tek kural)
+- UI: Export Presets → Blob → `<a download="kcs-custom-presets.json">` → toast "Exported N presets"
+
+### Import / Merge Kontratı
+
+- `validatePresetImportPayload(raw)` — **tam dosya doğrulama** (kök obje/version===1/presets array · her preset: id/name/type ∈ {in,out,stunt}/durationFrames≥0 · her kf: 7 sayısal alan + progress∈[0,1] + easing string · optional scope/maskShape/showInDirector · 500 preset limit) — **herhangi bir hata → hiçbir şey import edilmez** (atomik, kısmi yok)
+- `mergeImportedPresets(existing, imported)` — existing korunur (replace YOK) + imported dosya sırasıyla eklenir
+- **ID:** çakışma yoksa import edilen id AYNEN korunur → silinen `custom_X` referansı reimport ile **otomatik yeniden bağlanır**; çakışma (mevcut custom + DEFAULT_INITIAL_PRESETS + diğer imported) → `generateId('preset')` (default id'leri preset_N pattern'li olduğundan döngüde `isDefaultPresetId` de kontrol edilir — 30A test 28)
+- **Name:** duplicate allowed (id identity, name display — M25 konvansiyonu)
+- Derin klon: export + merge çıktıları source/payload ile referans paylaşmaz
+
+### UI / Dosya Akışı
+
+TransformInOutPresetCard Custom alanı: **Export Presets · Import Presets** butonları. Import: gizli `<input type="file" accept=".json,application/json">` → `file.text()` → JSON.parse → validate → merge → `importPresets` (usePresets — mevcut key'e persist) → toast ("Imported N presets" / "Could not import presets: …"). Aynı dosya tekrar seçilebilir (value reset). Yeni settings paneli/manager YOK.
+
+### Kontrat Özeti
+
+- **History:** export/import = library op (history YOK — Ctrl+Z import'u geri almaz); apply = mevcut part edit (history'li); delete = mevcut M25
+- **Persistence:** tek key `keyframe_custom_motion_presets` (ikinci key yok); reload persist (E2E kanıtı)
+- **Runtime:** imported preset'ler Custom IN/OUT'da görünür + applyPreset/applyEditPreset/broadcast ile çalışır (proceduralAnimation değişmez)
+- **M25 uyumluluğu:** Save/Delete/user-default classification/duplicate names/custom_timeline hidden/Basic+Combinations — hepsi korunur
+- **Cross-machine:** PC A export → PC B import → merge; ID korunumu sayesinde backup'tan geri yüklenen referanslar canlanır; collision'da eski referanslar remap'lenen id'ye OTOMATİK bağlanmaz (dürüst not)
+- **M8 SAFE** (yeni TrackChannel/evaluateFrame/playback yok); broadcast/matte/geometry/renderer dokunulmaz
+
+### Test'ler (M30)
+
+- Pure: `src/tests/presetExportImport.test.ts` (38 — format/user-only/validasyon matrisi/atomik/merge/collision/default/name/derin klon/determinizm/pure)
+- UI: `src/tests/presetExportImportUi.test.tsx` (17 — butonlar/export dosya akışı/import valid-invalid/merge/collision/default/toast/re-selection/aria)
+- E2E: `e2e/m30-preset-export-import.spec.ts` (12 ×2 + fresh — gerçek download, gerçek file chooser, clean context import, apply+runtime, reconnect, merge/collision/default/duplicate, malformed/version atomik, reload persist, export-after-import, M25 regression, scene izolasyon, history'siz)
+- Vitest: 1045/1045 (M30 sonrası)
+
+### Roadmap (M30 sonrası)
+
+- **A — TAMAMLANDI:** M28 ✅ · M29 ✅ · M30 ✅ — **A GROUP COMPLETE**
+- **B — BEKLEMEDE:** repeat/offset · easing quick · mirror/reverse
+- **C — PARK:** (M27 listesi aynen)
+- **M31 OTOMATİK OLUŞTURULMAZ** — sonraki iş yeni product discovery gerektirir
 
 ## Test'ler
 

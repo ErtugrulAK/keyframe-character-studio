@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { CharacterPart, CustomMotionPreset } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { builtinPresetToCustomKeyframes } from '../../../../utils/presetConversion';
 import type { SavePresetInput } from '../../../../hooks/usePresets';
 import { DEFAULT_INITIAL_PRESETS } from '../../../../context/initialStateData';
+import {
+  buildPresetExportPayload,
+  validatePresetImportPayload,
+  mergeImportedPresets,
+} from '../../../../utils/presetExportImport';
 
 interface TransformInOutPresetCardProps {
   selectedPart: CharacterPart;
@@ -17,6 +22,9 @@ interface TransformInOutPresetCardProps {
   onPasteAnimation?: () => void;
   onClearAnimation?: () => void;
   clipboardSourceId?: string | null;
+  // M30 — custom preset library export/import (30A pure helpers + 30B UI)
+  onImportPresets?: (presets: CustomMotionPreset[]) => void;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 /**
@@ -83,6 +91,8 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
   onPasteAnimation,
   onClearAnimation,
   clipboardSourceId,
+  onImportPresets,
+  showToast,
 }) => {
   // derive directly from the selected part — no local state mirror
   const inPreset = selectedPart.inAnimPreset ?? 'none';
@@ -163,6 +173,42 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
     });
     setSaveTarget(null);
     setSaveName('');
+  };
+
+  // M30 — export the user custom preset library as a versioned JSON file.
+  // 30A pure helper owns user/default filtering; no history, no scene change.
+  const handleExport = () => {
+    const payload = buildPresetExportPayload(customPresets);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'kcs-custom-presets.json';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    if (showToast) showToast(`Exported ${payload.presets.length} presets`, 'success');
+  };
+
+  // M30 — import: hidden file input → whole-file validation (30A) → merge
+  // (30A) → existing usePresets persistence. Invalid → import NOTHING.
+  const importFileRef = useRef<HTMLInputElement | null>(null);
+
+  const handleImportFile = async (file: File) => {
+    try {
+      const raw: unknown = JSON.parse(await file.text());
+      const validated = validatePresetImportPayload(raw);
+      if (!validated.ok) {
+        if (showToast) showToast(`Could not import presets: ${validated.error}`, 'error');
+        return;
+      }
+      const merged = mergeImportedPresets(customPresets, validated.presets);
+      if (onImportPresets) onImportPresets(merged);
+      if (showToast) showToast(`Imported ${validated.presets.length} presets`, 'success');
+    } catch {
+      if (showToast) showToast('Could not import presets: invalid JSON file', 'error');
+    }
   };
 
   const renderPresetRow = (which: 'in' | 'out') => {
@@ -278,6 +324,45 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
 
         {renderPresetRow('in')}
         {renderPresetRow('out')}
+
+        {/* M30 — export / import the user custom preset library (30A pure
+            helpers own filtering/validation/collision; library ops — no
+            history, no scene mutation). */}
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+            title="Export custom animation presets"
+            aria-label="Export Animation Presets"
+            onClick={handleExport}
+          >
+            Export Presets
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+            title="Import custom animation presets"
+            aria-label="Import Animation Presets"
+            onClick={() => importFileRef.current?.click()}
+          >
+            Import Presets
+          </button>
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: 'none' }}
+            aria-label="Import custom animation presets file"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void handleImportFile(file);
+              // allow re-selecting the SAME file to trigger change again
+              e.target.value = '';
+            }}
+          />
+        </div>
 
         {/* M26 — copy / paste / clear animation (26A data layer + 26B UI).
             Paste is disabled without a clipboard payload or when the target

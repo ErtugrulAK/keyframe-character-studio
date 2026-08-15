@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
-description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer/timeline (M23-28) — architecture, data model, browser-verified semantics, rules, tests.
-version: 16.0.0
+description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer/timeline (M23-29) — architecture, data model, browser-verified semantics, rules, tests.
+version: 17.0.0
 author: senmu
 license: MIT
 metadata:
@@ -663,6 +663,50 @@ Mevcut import/reload path'leri legacy composite keyframe'leri normalize edip dü
 ### Roadmap (M28 sonrası)
 
 - **A — AKTİF:** M28 ✅ · **M29 Keyframe Value Editing UX** (başlamadı) · **M30 Custom Preset Export/Import** (başlamadı)
+- **B — BEKLEMEDE:** repeat/offset · easing quick · mirror/reverse
+- **C — PARK:** (M27 listesi aynen)
+
+## M29 — Selected Keyframe Value Editing UX (29A-29D)
+
+Bir keyframe seçildiğinde TransformTab içinde kompakt **"SELECTED KEYFRAME @ FRAME F"** bölümü görünür: yalnızca o frame'de GERÇEKTEN saklı channel'ların RAW değerleri (x/y/rotation/scaleX/scaleY/opacity subset — computed non-keyframed değerler gösterilmez). Düzenleme **mevcut pipeline** üzerinden yapılır — YENİ mutator yok.
+
+### Akış
+
+```
+kf click → currentFrame = kf.frame (mevcut onSetFrame senkronu)
+  → SelectedKeyframeSection (TransformTab içinde, derived/presentational)
+  → SmartNumberInput (deferCommit) → onUpdate = updateCurrentTransform
+  → applyTransformToChannels → currentFrame'deki kf güncellenir (value only)
+```
+
+### Kontrat
+
+- **Channel filtering:** yalnızca `groupChannelKeyframesByFrame`'de o frame'de kf'si olan channel'lar gösterilir (örn. x@20 + rotation@20 varsa sadece X + Rotation) — computed değerlerle "kf'li" iması yok
+- **Çözümleme:** `selectedKeyframeId` → gruplarda id araması; `currentFrame === kf.frame` koşulu — stale (silinen kf / part değişimi / playhead ayrıldı) → bölüm güvenle gizlenir (yanlış kf düzenlenmez)
+- **Multi-channel safety:** edit yalnızca düzenlenen property'nin channel'ına gider (mevcut `typeof newVal === 'number'` + per-channel pipeline) — y/rotation etkilenmez
+- **Metadata:** kf değer güncellemesi easing/bezierControlPoints/templateId'yi KORUR (useInspector value-only); M29 easing editörü DEĞİL
+- **Scale lock:** mevcut `isScaleLocked` (context → DetailsPanel prop) — lock varken scaleX edit scaleY'yi oranlı günceller (TransformScaleCard davranışı); ikinci lock state yok
+- **History:** deferCommit — typing ara değerler commit etmez; Enter/blur tek commit = tek logical undo; yeni history yok
+- **Base transform:** kf seçili değilken bölüm gizli; Transform kontrolleri normal base/current transform düzenlemeye devam eder (M29 tüm edit'leri kf edit'ine ÇEVİRMEZ)
+- **Legacy:** channel'sız (legacy-only) track'te bölüm bilinçli GİZLİ (üçüncü temsil yok; mevcut legacy edit path korunur) — eksik feature değil, kontrat
+
+### M28 / M27 Kompozisyonu
+
+Paste edilmiş (M28) ve duplicate edilmiş (M27) keyframe'ler M29 bölümünden normal şekilde düzenlenebilir — copy/paste → seç → değer düzenle doğal kompozisyon.
+
+### Bağımsızlık
+
+Kf değer düzenleme: inAnimPreset/outAnimPreset/durations/custom preset library/matte/parent/geometry'ye DOKUNMAZ (E2E kanıtı). Serialization değişmez (kf değerleri Track'te doğal persist olur); broadcast/matte/geometry/renderer dokunulmaz.
+
+### Test'ler (M29)
+
+- UI: `src/tests/selectedKeyframeSection.test.tsx` (19 — visibility/stale/part-switch/deletion, channel filtering, edit paths, scale lock, deferCommit tek commit, metadata dokunulmaz, rerender derive, legacy güvenli, aria)
+- E2E: `e2e/m29-selected-keyframe.spec.ts` (12 ×2 + fresh — section, frame sync, X/rotation/opacity edit, metadata, scale lock, typing, undo, base transform, stale/delete, part switch, M28+M27 kompozisyon, preset/matte bağımsızlığı, save/reload, legacy)
+- Vitest: 990/990 (M29 sonrası)
+
+### Roadmap (M29 sonrası)
+
+- **A — AKTİF:** M28 ✅ · M29 ✅ · **M30 Custom Preset Export/Import** (başlamadı)
 - **B — BEKLEMEDE:** repeat/offset · easing quick · mirror/reverse
 - **C — PARK:** (M27 listesi aynen)
 

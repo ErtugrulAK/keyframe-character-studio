@@ -302,3 +302,12 @@
 - 28D: Vitest **971/971** · full e2e **218 passed**; track-matte V-T15/T17/V-H12 bilinen ev-PC timing (pre-existing)
 - 28E: SKILL v16 + wiki + README
 - Roadmap: A aktif (M29 value editing UX, M30 preset export/import — başlamadı); B beklemede; C park
+
+## [2026-08-15] update | KCS — M29 SELECTED KEYFRAME VALUE EDITING UX COMPLETE (ev PC, 29A-29D)
+- M29 ✅ 29A-29D tamamlandı — **COMMIT/PUSH PENDING** (HEAD 9269cf0)
+- Discovery (A grubu): mevcut akış çalışıyor (kf click → playhead → Transform tab → edit); gap = kf değerlerinin vurgusu + channel filtreleme; mevcut mutasyon API'si currentFrame-based → kf-id-tabanlı yeni mutator GEREKMEZ
+- 29A: `SelectedKeyframeSection.tsx` (TransformTab içinde) — "SELECTED KEYFRAME @ F" + yalnızca kf'li channel'ların raw değerleri (computed non-keyframed gösterilmez); edit = mevcut updateCurrentTransform; stale güvenli gizlenir; scale lock mevcut (DetailsPanel prop); **19 UI test**
+- 29B E2E: **12/12 ×2 + fresh** — metadata birebir (easing/bezier/template), multi-channel safety (y boş kalır), deferCommit tek commit, tek undo, M28 paste + M27 duplicate kf'leri section'dan düzenlenebilir, preset/matte bağımsızlığı, save/reload
+- 29C: Vitest **990/990** · full e2e **230 passed**; track-matte V-T15/T17/V-H12 bilinen ev-PC timing (pre-existing)
+- 29D: SKILL v17 + wiki + README
+- Roadmap: A aktif (M28 ✅ M29 ✅ → M30 preset export/import başlamadı); B beklemede; C park

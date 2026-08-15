@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CharacterPart, CustomMotionPreset, Transform } from '../../../types/animator';
+import type { CharacterPart, CustomMotionPreset, Track, Transform } from '../../../types/animator';
 import type { SavePresetInput } from '../../../hooks/usePresets';
 import { TransformAlignmentBar } from './transform/TransformAlignmentBar';
 import { TransformPositionRotationCard } from './transform/TransformPositionRotationCard';
@@ -9,6 +9,7 @@ import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
 import { TransformInOutPresetCard } from './transform/TransformInOutPresetCard';
+import { SelectedKeyframeSection } from './transform/SelectedKeyframeSection';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -26,6 +27,11 @@ interface TransformTabProps {
   onPasteAnimation?: () => void;
   onClearAnimation?: () => void;
   clipboardSourceId?: string | null;
+  // M29 — selected keyframe section (raw keyframe values on the existing pipeline)
+  track?: Track | null;
+  selectedKeyframeId?: string | null;
+  activeTemplateId?: string | null;
+  isScaleLocked?: boolean;
 }
 
 /**
@@ -36,6 +42,7 @@ interface TransformTabProps {
 export const TransformTab: React.FC<TransformTabProps> = ({
   selectedPart,
   transform,
+  currentFrame,
   updateCurrentTransform,
   handlePartPropChange,
   handleZIndexChange,
@@ -46,12 +53,27 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   onPasteAnimation,
   onClearAnimation,
   clipboardSourceId,
+  track,
+  selectedKeyframeId,
+  activeTemplateId,
+  isScaleLocked = false,
 }) => {
 
   return (
     <>
       <div className="inspector-section" style={{ paddingTop: 8 }}>
         <TransformAlignmentBar />
+
+        {/* M29 — selected keyframe raw values (hidden without selection) */}
+        <SelectedKeyframeSection
+          track={track ?? null}
+          selectedKeyframeId={selectedKeyframeId ?? null}
+          currentFrame={currentFrame}
+          transform={transform}
+          activeTemplateId={activeTemplateId ?? null}
+          isScaleLocked={isScaleLocked}
+          onUpdate={updateCurrentTransform}
+        />
 
         {/* Unified transform block: position, rotation, scale, opacity rows */}
         <div className="panel-card" style={{ marginBottom: 10 }}>

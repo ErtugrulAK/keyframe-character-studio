@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M28)
+## Proje durumu (M29)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -280,6 +280,12 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 28D regression: Vitest **971/971** · full e2e **218 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+M27 11+M28 12+drag 1+track 72); track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/V-H12 — pre-existing)
   - 28E docs: SKILL v16 + wiki + README
   - Push zinciri `b216239`'da biter — **M28 commit hash icat edilmedi**
+- **M29 ✅ COMPLETE — Selected Keyframe Value Editing UX** (29A-29D; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 29A: `SelectedKeyframeSection.tsx` (TransformTab içinde, presentational/derived) — seçili kf → `groupChannelKeyframesByFrame` çözümleme + yalnızca kf'li channel'ların RAW değerleri; düzenleme **mevcut `updateCurrentTransform`** (yeni mutator YOK); stale (kf silindi/part değişti/playhead ayrıldı) → güvenle gizli; **19 UI test**
+  - 29B E2E: `e2e/m29-selected-keyframe.spec.ts` **12/12 ×2 + fresh** — section, frame sync, X/rotation/opacity edit, metadata (easing/bezier/template) korunumu, multi-channel safety, scale lock, deferCommit, tek undo, base transform regression, stale/delete, part switch, M28+M27 kompozisyon, preset/matte bağımsızlığı, save/reload, legacy güvenli
+  - 29C regression: Vitest **990/990** · full e2e **230 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+M27 11+M28 12+M29 12+drag 1+track 72); track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/V-H12 — pre-existing)
+  - 29D docs: SKILL v17 + wiki + README
+  - Push zinciri `9269cf0`'da biter — **M29 commit hash icat edilmedi**
 
 ## Önemli kararlar
 

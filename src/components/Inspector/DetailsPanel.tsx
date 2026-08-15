@@ -35,6 +35,10 @@ export const DetailsPanel: React.FC = () => {
     startBatchInteraction,
     endBatchInteraction,
     showToast,
+    tracks,
+    selectedKeyframeId,
+    activeTemplateId,
+    isScaleLocked,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'duplicate'>('transform');
@@ -184,6 +188,10 @@ export const DetailsPanel: React.FC = () => {
               onPasteAnimation={handlePasteAnimation}
               onClearAnimation={handleClearAnimation}
               clipboardSourceId={clipboardData?.part.id ?? null}
+              track={tracks.find((t) => t.partId === selectedPartId) ?? null}
+              selectedKeyframeId={selectedKeyframeId}
+              activeTemplateId={activeTemplateId}
+              isScaleLocked={isScaleLocked}
             />
           )}
 

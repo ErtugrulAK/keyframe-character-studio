@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
-description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer/timeline (M23-27) — architecture, data model, browser-verified semantics, rules, tests.
-version: 15.0.0
+description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer/timeline (M23-28) — architecture, data model, browser-verified semantics, rules, tests.
+version: 16.0.0
 author: senmu
 license: MIT
 metadata:
@@ -610,6 +610,61 @@ Mevcut import/reload path'leri legacy composite keyframe'leri normalize edip dü
 - **A — NEXT/ACTIVE:** keyframe copy/paste (duplicate ≠ copy/paste — ayrı özellik) · keyframe değer düzenleme UX · custom preset export/import
 - **B — NICE TO HAVE:** repeat/pattern offset · easing quick controls · mirror/reverse iyileştirmeleri
 - **C — PARK:** multi-select apply · delay/stagger · preset preview · easing editörü · broadcast sequence dup · matte drag/drop · timeline matte indicator · Wipe/Matte Reveal · multi/nested/video matte · gradient animation · animated strength · text stagger · matte gizmo · radial gizmo · spring · 3D · motion blur · compositor
+
+## M28 — Timeline Keyframe Copy / Paste (28A-28E)
+
+Kullanıcı bir keyframe frame-group'unu kopyalayıp aynı ya da BAŞKA bir track'in boş bir frame'ine yapıştırabilir (hedef frame = sağ tıklanan konum).
+
+### Akış
+
+```
+Keyframe sağ-tık → Copy Keyframes
+  → copyKeyframeGroupData(track, frame)      (28A pure — id'siz, track-independent payload)
+  → timeline-LOCAL clipboard (SequencerTimeline useState — persist edilmez)
+
+Boş lane konumu sağ-tık → Paste Keyframes
+  → pasteKeyframeGroupData(track, frame, payload, totalFrames)  (28A pure)
+  → AnimatorContext.pasteKeyframeClipboard (batch → TEK undo)
+```
+
+### Kontrat
+
+- **Frame-group:** kopya TÜM frame-group'u yakalar (o frame'deki her channel kf'si + varsa legacy composite kf) — yalnızca tıklanan channel değil
+- **Hedef frame:** EXPLICIT — sağ tıklanan timeline konumu (playhead/`source+1`/gizli offset DEĞİL). M27 Duplicate = `source+1`; M28 Paste = explicit hedef — semantikler ayrı
+- **Same/cross-track:** aynı helper her ikisini destekler; hedef track id/partId/name/color/visible/locked/expanded korunur; otomatik track oluşturma YOK
+- **Collision:** hedef frame'de HERHANGİ kf (herhangi channel + legacy) varsa → safe no-op (M27 non-destructive politika). UI'da kf'li frame'e sağ-tık = kf menüsü (Paste sunulmaz) — overwrite yolu yok
+- **Boundary:** `targetFrame > totalFrames` → no-op; `== totalFrames` geçerli; uzama yok
+- **ID:** copy payload'da id YOK; paste'te fresh `generateId('pkf_${ch}')`/`generateId('kf')` — source id'ler asla reuse edilmez; tekrarlı paste'ler disjoint
+- **Deep clone:** değer/easing/templateId/bezier birebir; bezier/legacy-transform hem copy'de hem paste'te deep-clone — source + payload immutabl
+- **History:** Copy = HİÇ history (yalnızca state); Paste = batch → TEK logical undo; collision no-op → entry yok
+- **Clipboard:** timeline-local state — persist edilmez (reload → animasyon kalır, clipboard boş); part-level `useClipboard`'dan AYRI (ikinci sistem değil — timeline kf state'i)
+
+### UI
+
+TrackLane kf menüsü: **Copy Keyframes · Duplicate Keyframes · Delete Keyframe**; boş lane sağ-tık: **Paste Keyframes** (yalnızca clipboard doluyken). Yeni panel/modal/toolbar/kısayol YOK — **Ctrl+D hâlâ duplicateSelectedPart**. Mouse→frame dönüşümü mevcut `getFrameFromMouse` (yeniden yazılmadı; clamp [0,totalFrames]).
+
+### M27 / M26 Ayrımı
+
+- **M27 Duplicate:** seçili frame-group → `source+1` (sabit)
+- **M28 Paste:** kopyalanmış frame-group → explicit hedef frame
+- **M26 Copy Animation:** part-level (channels + legacy + IN/OUT + durations, matte/preset/transform hariç) — M28 timeline-keyframe-only: IN/OUT/durations/preset-library/matte/transform/parent/geometry/media KOPYALANMAZ
+
+### Test'ler (M28)
+
+- Pure: `src/tests/keyframeCopyPaste.test.ts` (20 — payload/izolasyon/same+cross-track/collision/boundary/determinizm)
+- UI: `src/tests/trackLane.test.tsx` (+12 — copy item, paste menüsü clipboard'lu/boş, lane hedefleme, aria, click-outside, selection/drag korunumu)
+- E2E: `e2e/m28-keyframe-copy-paste.spec.ts` (12 ×2 + fresh — copy, same/cross paste, explicit frame, fresh id, collision UI-safe, undo, boundary, clipboard non-persistence, delete/duplicate/drag regression, multi-part, matte/preset independence, save/reload, accessibility)
+- Vitest: 971/971 (M28 sonrası)
+
+### Legacy Import Note (dürüst)
+
+Mevcut import/reload path'leri legacy composite keyframe'leri normalize edip düşürebilir (M26'dan beri — M28 regression DEĞİL). M28 legacy copy/paste 28A unit'te kanıtlı.
+
+### Roadmap (M28 sonrası)
+
+- **A — AKTİF:** M28 ✅ · **M29 Keyframe Value Editing UX** (başlamadı) · **M30 Custom Preset Export/Import** (başlamadı)
+- **B — BEKLEMEDE:** repeat/offset · easing quick · mirror/reverse
+- **C — PARK:** (M27 listesi aynen)
 
 ## Test'ler
 

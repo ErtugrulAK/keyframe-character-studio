@@ -59,6 +59,10 @@ function renderLane(track: Track) {
     onDeleteKeyframe: vi.fn(),
     onDeletePropertyKeyframe: vi.fn(),
     onDuplicateKeyframeGroup: vi.fn(),
+    kfClipboard: null,
+    onCopyKeyframes: vi.fn(),
+    onPasteKeyframes: vi.fn(),
+    onFrameFromClientX: vi.fn(() => 30),
   };
   const utils = render(<TrackLane {...props} track={{ ...track, expanded: true }} />);
   return { ...utils, props };
@@ -265,3 +269,177 @@ describe('M27 27B — keyframe context menu (Duplicate Keyframes)', () => {
     fireEvent.click(screen.getByLabelText('Duplicate Keyframes'));
   });
 });
+
+describe('M28 28B — keyframe copy / paste UI', () => {
+  test('1+2+3. Copy Keyframes joins Duplicate + Delete on the keyframe menu', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    expect(screen.getByLabelText('Copy Keyframes')).toBeTruthy();
+    expect(screen.getByLabelText('Duplicate Keyframes')).toBeTruthy();
+    expect(screen.getByLabelText('Delete Keyframe')).toBeTruthy();
+  });
+
+  test('4+5. Copy calls onCopyKeyframes with trackId+frame; no history callback invoked', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container, props } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    fireEvent.click(screen.getByLabelText('Copy Keyframes'));
+    expect(props.onCopyKeyframes).toHaveBeenCalledWith('trk_1', 25);
+    // copy itself never touches delete/duplicate/paste paths
+    expect(props.onDuplicateKeyframeGroup).not.toHaveBeenCalled();
+    expect(props.onDeletePropertyKeyframe).not.toHaveBeenCalled();
+  });
+
+  test('6. copy menu closes after the action', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    fireEvent.click(screen.getByLabelText('Copy Keyframes'));
+    expect(screen.queryByLabelText('Copy Keyframes')).toBeNull();
+  });
+
+  test('7. empty lane right-click opens Paste menu when clipboard exists', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const props = {
+      ...trackLaneBaseProps(track),
+      kfClipboard: { channels: { x: [{ frame: 25, value: 1, easing: 'linear' }] }, legacy: [] },
+    };
+    const { container } = render(<TrackLane {...props} />);
+    fireEvent.contextMenu(container.querySelector('.ue-track-lane')!);
+    expect(screen.getByLabelText('Paste Keyframes')).toBeTruthy();
+  });
+
+  test('8. empty lane right-click offers NO paste when clipboard is empty', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container } = renderLane(track); // kfClipboard null
+    fireEvent.contextMenu(container.querySelector('.ue-track-lane')!);
+    expect(screen.queryByLabelText('Paste Keyframes')).toBeNull();
+  });
+
+  test('9+10+11. Paste calls onPasteKeyframes with target track + clicked frame', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const props = {
+      ...trackLaneBaseProps(track),
+      kfClipboard: { channels: { x: [{ frame: 25, value: 1, easing: 'linear' }] }, legacy: [] },
+    };
+    const { container } = render(<TrackLane {...props} />);
+    fireEvent.contextMenu(container.querySelector('.ue-track-lane')!);
+    fireEvent.click(screen.getByLabelText('Paste Keyframes'));
+    expect(props.onPasteKeyframes).toHaveBeenCalledWith('trk_1', 30); // frame from onFrameFromClientX mock
+  });
+
+  test('12. cross-track paste uses the CLICKED lane track (per-lane prop wiring)', () => {
+    const trackA = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const trackB = makeTrack({ channels: { y: [pk('y0', 5, 1)] } });
+    const props = {
+      ...trackLaneBaseProps(trackB),
+      kfClipboard: { channels: { x: [{ frame: 25, value: 1, easing: 'linear' }] }, legacy: [] },
+    };
+    const { container } = render(<TrackLane {...props} />);
+    fireEvent.contextMenu(container.querySelector('.ue-track-lane')!);
+    fireEvent.click(screen.getByLabelText('Paste Keyframes'));
+    expect(props.onPasteKeyframes).toHaveBeenCalledWith('trk_1', 30); // track B id
+  });
+
+  test('14+15. paste is a safe no-op path (bridge handles collision/invalid frame — UI still closes cleanly)', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const props = {
+      ...trackLaneBaseProps(track),
+      kfClipboard: { channels: { x: [{ frame: 25, value: 1, easing: 'linear' }] }, legacy: [] },
+    };
+    const { container } = render(<TrackLane {...props} />);
+    fireEvent.contextMenu(container.querySelector('.ue-track-lane')!);
+    fireEvent.click(screen.getByLabelText('Paste Keyframes'));
+    expect(screen.queryByLabelText('Paste Keyframes')).toBeNull(); // menu closes
+    expect(props.onPasteKeyframes).toHaveBeenCalledTimes(1); // no crash
+  });
+
+  test('16. no automatic track creation path in UI (paste only targets existing lane)', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const props = {
+      ...trackLaneBaseProps(track),
+      kfClipboard: { channels: { x: [{ frame: 25, value: 1, easing: 'linear' }] }, legacy: [] },
+    };
+    const { container } = render(<TrackLane {...props} />);
+    fireEvent.contextMenu(container.querySelector('.ue-track-lane')!);
+    fireEvent.click(screen.getByLabelText('Paste Keyframes'));
+    // only onPasteKeyframes fired — no create-track style callback exists
+    expect(props.onPasteKeyframes).toHaveBeenCalledTimes(1);
+  });
+
+  test('22+23. accessibility + click-outside for both menus', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const props = {
+      ...trackLaneBaseProps(track),
+      kfClipboard: { channels: { x: [{ frame: 25, value: 1, easing: 'linear' }] }, legacy: [] },
+    };
+    const { container } = render(<TrackLane {...props} />);
+    // keyframe menu roles/labels
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    expect(screen.getByRole('menu', { name: 'Keyframe actions' })).toBeTruthy();
+    expect(screen.getByTitle('Copy the whole keyframe group at this frame to the timeline clipboard')).toBeTruthy();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByLabelText('Copy Keyframes')).toBeNull();
+    // paste menu roles/labels
+    fireEvent.contextMenu(container.querySelector('.ue-track-lane')!);
+    expect(screen.getByRole('menu', { name: 'Timeline actions' })).toBeTruthy();
+    expect(screen.getByTitle('Paste the copied keyframe group at this frame')).toBeTruthy();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByLabelText('Paste Keyframes')).toBeNull();
+  });
+
+  test('24+25. no second copy model: paste menu is the only extra surface; no localStorage clipboard key', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const props = {
+      ...trackLaneBaseProps(track),
+      kfClipboard: { channels: { x: [{ frame: 25, value: 1, easing: 'linear' }] }, legacy: [] },
+    };
+    const { container } = render(<TrackLane {...props} />);
+    // nothing pre-rendered before right-click
+    expect(screen.queryByLabelText('Paste Keyframes')).toBeNull();
+    expect(screen.queryByLabelText('Copy Keyframes')).toBeNull();
+    fireEvent.contextMenu(container.querySelector('.ue-track-lane')!);
+    expect(screen.getByLabelText('Paste Keyframes')).toBeTruthy();
+  });
+
+  test('28+29+30. drag/selection surface unchanged; paste still works after switching track (new render)', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const props = {
+      ...trackLaneBaseProps(track),
+      kfClipboard: { channels: { x: [{ frame: 25, value: 1, easing: 'linear' }] }, legacy: [] },
+    };
+    const { container } = render(<TrackLane {...props} />);
+    // keyframe diamond still clickable (selection path intact)
+    fireEvent.click(container.querySelector('.keyframe-diamond')!);
+    expect(props.onSelectKeyframe).toHaveBeenCalledWith('x0');
+    // and the paste menu still opens on the lane afterwards
+    fireEvent.contextMenu(container.querySelector('.ue-track-lane')!);
+    expect(screen.getByLabelText('Paste Keyframes')).toBeTruthy();
+  });
+});
+
+function trackLaneBaseProps(track: Track) {
+  return {
+    track,
+    isSelected: false,
+    selectedKeyframeId: null,
+    frameWidth: 10,
+    totalFrames: 120,
+    activeTemplateId: 'Sequence',
+    isGroupExpanded: () => true,
+    onSelectKeyframe: vi.fn(),
+    onSelectPart: vi.fn(),
+    onSetFrame: vi.fn(),
+    onStartDragKf: vi.fn(),
+    onStartDragPKf: vi.fn(),
+    onHoverKf: vi.fn(),
+    onDeleteKeyframe: vi.fn(),
+    onDeletePropertyKeyframe: vi.fn(),
+    onDuplicateKeyframeGroup: vi.fn(),
+    kfClipboard: null,
+    onCopyKeyframes: vi.fn(),
+    onPasteKeyframes: vi.fn(),
+    onFrameFromClientX: vi.fn(() => 30),
+  };
+}

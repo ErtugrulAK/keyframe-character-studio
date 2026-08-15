@@ -19,6 +19,7 @@ import { useClipboard } from '../hooks/useClipboard';
 import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
 import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/keyframeDuplicate';
+import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/keyframeCopyPaste';
 
 export interface ToastItem {
   id: string;
@@ -131,6 +132,8 @@ interface AnimatorContextType {
   pasteAnimationOntoSelected: (targetPartId: string) => void;
   // M27 — duplicate the keyframe frame-group at `frame` of `trackId` (27A pure helper)
   duplicateKeyframeGroup: (trackId: string, frame: number) => void;
+  // M28 — paste a copied keyframe frame-group onto `trackId` at `frame` (28A pure helper)
+  pasteKeyframeClipboard: (trackId: string, frame: number, payload: KeyframeCopyPayload) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   isScaleLocked: boolean;
@@ -428,6 +431,20 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [setTracks, startBatchInteraction, endBatchInteraction, totalFrames]
   );
 
+  // M28 — paste copied keyframe frame-group (28A pure helper) as ONE logical
+  // undo entry (existing batch pattern). Collision/invalid frames → helper
+  // no-op → setTracks returns identical state → no history entry.
+  const pasteKeyframeClipboard = useCallback(
+    (trackId: string, frame: number, payload: KeyframeCopyPayload) => {
+      startBatchInteraction();
+      setTracks((prev) =>
+        prev.map((t) => (t.id === trackId ? pasteKeyframeGroupData(t, frame, payload, totalFrames).track : t)),
+      );
+      endBatchInteraction();
+    },
+    [setTracks, startBatchInteraction, endBatchInteraction, totalFrames]
+  );
+
   return (
     <AnimatorContext.Provider
       value={{
@@ -495,6 +512,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         pasteAnimationOntoSelected,
         clipboardData,
         duplicateKeyframeGroup,
+        pasteKeyframeClipboard,
         applyMotionTransition,
         showToast,
         addPropertyKeyframe,

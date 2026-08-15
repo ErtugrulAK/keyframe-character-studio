@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Track, TrackChannel } from '../../types/animator';
+import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame } from '../../utils/channelKeyframeGroups';
 import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
@@ -22,6 +23,11 @@ interface TrackLaneProps {
   onDeletePropertyKeyframe: (trackId: string, channel: TrackChannel, keyframeId: string) => void;
   // M27 — duplicate the whole keyframe frame-group at `frame` (27A helper)
   onDuplicateKeyframeGroup: (trackId: string, frame: number) => void;
+  // M28 — copy / paste keyframe frame-groups (28A helpers)
+  kfClipboard: KeyframeCopyPayload | null;
+  onCopyKeyframes: (trackId: string, frame: number) => void;
+  onPasteKeyframes: (trackId: string, frame: number) => void;
+  onFrameFromClientX: (clientX: number) => number;
 }
 
 /**
@@ -46,6 +52,10 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   onDeleteKeyframe,
   onDeletePropertyKeyframe,
   onDuplicateKeyframeGroup,
+  kfClipboard,
+  onCopyKeyframes,
+  onPasteKeyframes,
+  onFrameFromClientX,
 }) => {
   const isTrackExpanded = track.expanded === true;
   const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
@@ -78,6 +88,29 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
     e.preventDefault();
     e.stopPropagation();
     setKfMenu({ trackId: track.id, frame, x: e.clientX, y: e.clientY, onDelete });
+  };
+
+  // M28 — paste menu on an EMPTY timeline location of this lane (no
+  // keyframe): target frame = the exact right-clicked frame (28B passes the
+  // existing mouse→frame conversion from SequencerTimeline; no reimplemented
+  // math here). Only offered when the timeline keyframe clipboard holds data.
+  const [pasteMenu, setPasteMenu] = useState<{ frame: number; x: number; y: number } | null>(null);
+  const pasteMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!pasteMenu) return;
+    const handleGlobalClick = (e: MouseEvent) => {
+      if (pasteMenuRef.current && !pasteMenuRef.current.contains(e.target as Node)) {
+        setPasteMenu(null);
+      }
+    };
+    window.addEventListener('mousedown', handleGlobalClick);
+    return () => window.removeEventListener('mousedown', handleGlobalClick);
+  }, [pasteMenu]);
+  const openPasteMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!kfClipboard) return; // no clipboard → no paste action offered
+    setPasteMenu({ frame: onFrameFromClientX(e.clientX), x: e.clientX, y: e.clientY });
   };
 
   const activeTmpl = activeTemplateId || 'Sequence';
@@ -141,6 +174,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
       <div
         className={`ue-track-lane ${isSelected ? 'selected' : ''}`}
         style={{ height: TRACK_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%`, position: 'relative' }}
+        onContextMenu={openPasteMenu}
       >
         {/* Span bars between composite keyframes (legacy-only track view) */}
         {!useCanonical && sortedKfs.map((kf, idx) => {
@@ -268,6 +302,23 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
           <button
             type="button"
             role="menuitem"
+            aria-label="Copy Keyframes"
+            title="Copy the whole keyframe group at this frame to the timeline clipboard"
+            className="timeline-menu-item"
+            style={{
+              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
+              color: '#dbe3f0', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
+            }}
+            onClick={() => {
+              onCopyKeyframes(kfMenu.trackId, kfMenu.frame);
+              setKfMenu(null);
+            }}
+          >
+            Copy Keyframes
+          </button>
+          <button
+            type="button"
+            role="menuitem"
             aria-label="Duplicate Keyframes"
             title="Duplicate the whole keyframe group at this frame (frame + 1)"
             className="timeline-menu-item"
@@ -298,6 +349,45 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
             }}
           >
             Delete Keyframe
+          </button>
+        </div>
+      )}
+
+      {/* M28 — paste menu on an empty timeline location (only with clipboard) */}
+      {pasteMenu && (
+        <div
+          ref={pasteMenuRef}
+          role="menu"
+          aria-label="Timeline actions"
+          style={{
+            position: 'fixed',
+            left: pasteMenu.x,
+            top: pasteMenu.y,
+            zIndex: 1000,
+            minWidth: 160,
+            background: '#1e2430',
+            border: '1px solid #39415a',
+            borderRadius: 6,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            padding: '4px 0',
+          }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            aria-label="Paste Keyframes"
+            title="Paste the copied keyframe group at this frame"
+            className="timeline-menu-item"
+            style={{
+              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
+              color: '#dbe3f0', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
+            }}
+            onClick={() => {
+              onPasteKeyframes(track.id, pasteMenu.frame);
+              setPasteMenu(null);
+            }}
+          >
+            Paste Keyframes
           </button>
         </div>
       )}

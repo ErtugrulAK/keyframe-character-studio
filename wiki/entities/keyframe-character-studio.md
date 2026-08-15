@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M27)
+## Proje durumu (M28)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -273,6 +273,13 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 27D regression: Vitest **939/939** · full e2e **207 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+M27 11+drag 1+track 73); track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/V-H12 — pre-existing)
   - 27E docs: SKILL v15 + wiki + README
   - Push zinciri `b0cf9ea`'da biter — **M27 commit hash icat edilmedi**
+- **M28 ✅ COMPLETE — Timeline Keyframe Copy / Paste** (28A-28E; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 28A pure: `src/utils/keyframeCopyPaste.ts` — `copyKeyframeGroupData` (id'siz, track-independent payload) + `pasteKeyframeGroupData` (explicit hedef frame; collision/boundary no-op; fresh id; deep clone); **20 pure test**
+  - 28B UI: TrackLane kf menüsüne **Copy Keyframes** + boş lane sağ-tık **Paste Keyframes** (yalnızca clipboard doluyken); timeline-LOCAL clipboard (SequencerTimeline state — persist yok); AnimatorContext `pasteKeyframeClipboard` bridge (batch → tek undo); **+12 UI test**
+  - 28C E2E: `e2e/m28-keyframe-copy-paste.spec.ts` **12/12 ×2 + fresh** — copy, same/cross paste, explicit frame, fresh id, collision UI-safe, undo (copy history'siz kanıtı), boundary, clipboard non-persistence, delete/duplicate/drag regression, multi-part, matte/preset independence, save/reload, accessibility
+  - 28D regression: Vitest **971/971** · full e2e **218 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+M27 11+M28 12+drag 1+track 72); track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/V-H12 — pre-existing)
+  - 28E docs: SKILL v16 + wiki + README
+  - Push zinciri `b216239`'da biter — **M28 commit hash icat edilmedi**
 
 ## Önemli kararlar
 

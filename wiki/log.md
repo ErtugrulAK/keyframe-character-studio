@@ -292,3 +292,13 @@
 - 27D: Vitest **939/939** · full e2e **207 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+M27 11+drag 1+track 73); track-matte V-T15/T17/V-H12 bilinen ev-PC timing (pre-existing, dokunulmadı)
 - 27E: SKILL v15 + wiki + README; legacy import-notu belgelendi (import legacy'leri normalize edebilir — M27 regression değil)
 - M27 deferred roadmap: A = keyframe copy/paste (duplicate ≠ copy/paste), değer edit UX, preset export/import; B = repeat/offset, easing quick, mirror/reverse; C = park listesi
+
+## [2026-08-15] update | KCS — M28 TIMELINE KEYFRAME COPY/PASTE COMPLETE (ev PC, 28A-28E)
+- M28 ✅ 28A-28E tamamlandı — **COMMIT/PUSH PENDING** (HEAD b216239)
+- Discovery (A grubu): copy/paste M27'nin doğal uzantısı (menü + clone altyapısı hazır); en yüksek günlük değer (pattern'i hedef frame'e/part'a taşıma)
+- 28A pure: `keyframeCopyPaste.ts` — `copyKeyframeGroupData` (id'siz payload, track-independent, deep-clone) + `pasteKeyframeGroupData` (explicit frame; ANY-kf collision no-op; fresh id; boundary) — **20 test** (2 hata yakalandı+düzeltildi: collision tüm channel'lara genişletildi, legacy collision payload'dan bağımsız; paste'te bezier/transform yeniden deep-clone — payload immutabl)
+- 28B UI: kf menüsüne Copy; boş lane sağ-tık Paste (clipboard'lı); timeline-local clipboard (persist yok); `getFrameFromMouse` reuse; paste batch → tek undo — **+12 UI test**
+- 28C E2E: **12/12 ×2 + fresh** — explicit hedef frame (mouse round düzeltmesi: frame*W+1), cross-track, fresh id disjoint, collision UI-safe (kf'li frame → kf menüsü kazanır — overwrite yolu yok), tek-undo + copy history'siz, clipboard non-persistence, boundary, delete/duplicate/drag regression, matte/preset independence; serialization minimal format notu (`{partId, channels}` — M28 değil)
+- 28D: Vitest **971/971** · full e2e **218 passed**; track-matte V-T15/T17/V-H12 bilinen ev-PC timing (pre-existing)
+- 28E: SKILL v16 + wiki + README
+- Roadmap: A aktif (M29 value editing UX, M30 preset export/import — başlamadı); B beklemede; C park

@@ -24,6 +24,7 @@ import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezie
 import { NewItemModal } from '../Modal/NewItemModal';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane } from './TrackLane';
+import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
 import './SequencerTimeline.css';
 
@@ -65,6 +66,7 @@ export const SequencerTimeline: React.FC = () => {
     deletePropertyKeyframe,
     updatePropertyKeyframeFrame,
     duplicateKeyframeGroup,
+    pasteKeyframeClipboard,
     updateKeyframeBezierPoints,
     getComputedTransform,
     motionTemplates,
@@ -102,6 +104,25 @@ export const SequencerTimeline: React.FC = () => {
   const timelineGridRef = useRef<HTMLDivElement>(null);
   const timelineBodyRef = useRef<HTMLDivElement>(null);
   const outlinerRef = useRef<HTMLDivElement>(null);
+
+  // M28 — timeline-LOCAL keyframe clipboard (not persisted; not the part
+  // clipboard; survives track/part/frame changes until replaced).
+  const [kfClipboard, setKfClipboard] = useState<KeyframeCopyPayload | null>(null);
+  const handleCopyKeyframes = useCallback(
+    (trackId: string, frame: number) => {
+      const track = tracks.find((t) => t.id === trackId);
+      if (!track) return;
+      setKfClipboard(copyKeyframeGroupData(track, frame)); // copy: NO history
+    },
+    [tracks]
+  );
+  const handlePasteKeyframes = useCallback(
+    (trackId: string, frame: number) => {
+      if (!kfClipboard) return;
+      pasteKeyframeClipboard(trackId, frame, kfClipboard);
+    },
+    [kfClipboard, pasteKeyframeClipboard]
+  );
 
   const [draggingKf, setDraggingKf] = useState<{ trackId: string; keyframeId: string } | null>(null);
   const [draggingPKf, setDraggingPKf] = useState<{ trackId: string; channel: TrackChannel; keyframeId: string } | null>(null);
@@ -596,6 +617,10 @@ export const SequencerTimeline: React.FC = () => {
                 onDeleteKeyframe={deleteKeyframe}
                 onDeletePropertyKeyframe={deletePropertyKeyframe}
                 onDuplicateKeyframeGroup={duplicateKeyframeGroup}
+                kfClipboard={kfClipboard}
+                onCopyKeyframes={handleCopyKeyframes}
+                onPasteKeyframes={handlePasteKeyframes}
+                onFrameFromClientX={getFrameFromMouse}
               />
             ))}
           </div>

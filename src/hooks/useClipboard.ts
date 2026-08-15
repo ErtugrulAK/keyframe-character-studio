@@ -3,6 +3,7 @@ import type { CharacterPart, Track, TrackChannel } from '../types/animator';
 import { generateId } from '../utils/idGenerator';
 import { makeEmptyChannels } from '../utils/defaults';
 import { mirrorChannelValue, mirrorTransform, type MirrorAxis } from '../utils/mirror';
+import { cloneAnimationOntoTarget } from '../utils/animationTransfer';
 
 interface UseClipboardOptions {
   characterParts: CharacterPart[];
@@ -237,5 +238,49 @@ export const useClipboard = ({
     [selectedPartId, characterParts, tracks, setTracks, setCharacterParts, setSelectedPartId, showToast]
   );
 
-  return { clipboardData, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, duplicateMirrored };
+  /**
+   * M26 — paste the copied ANIMATION onto an EXISTING selected part.
+   * The target part is NOT replaced: only animation data is transferred
+   * (Track.channels + legacy keyframes + IN/OUT presets + durations). The
+   * target keeps its id/name/transform/matte/parent/geometry/media and its
+   * track keeps its id + visible/locked metadata. Fresh keyframe ids are
+   * generated; custom preset IDs are referenced, never duplicated.
+   *
+   * setTracks + setCharacterParts are the two halves of ONE logical
+   * transaction — the UI layer (26B) wraps both in a single history entry.
+   */
+  const pasteAnimationOntoSelected = useCallback(
+    (targetPartId: string) => {
+      if (!clipboardData) {
+        showToast('Clipboard is empty', 'error');
+        return;
+      }
+      const targetPart = characterParts.find((p) => p.id === targetPartId);
+      if (!targetPart) {
+        showToast('Target part not found', 'error');
+        return;
+      }
+      const targetTrack = tracks.find((t) => t.partId === targetPartId);
+      const result = cloneAnimationOntoTarget(
+        clipboardData.track,
+        clipboardData.part,
+        targetPartId,
+        targetTrack,
+      );
+
+      setTracks((prevTracks) => {
+        const exists = prevTracks.some((t) => t.id === result.track.id);
+        return exists
+          ? prevTracks.map((t) => (t.id === result.track.id ? result.track : t))
+          : [result.track, ...prevTracks];
+      });
+      setCharacterParts((prevParts) =>
+        prevParts.map((p) => (p.id === targetPartId ? { ...p, ...result.animationFields } : p)),
+      );
+      showToast(`Pasted animation onto "${targetPart.name}"`, 'success');
+    },
+    [clipboardData, characterParts, tracks, setTracks, setCharacterParts, showToast]
+  );
+
+  return { clipboardData, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, duplicateMirrored, pasteAnimationOntoSelected };
 };

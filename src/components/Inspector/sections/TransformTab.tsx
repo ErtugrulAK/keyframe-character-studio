@@ -21,6 +21,11 @@ interface TransformTabProps {
   customPresets: CustomMotionPreset[];
   onSavePreset: (input: SavePresetInput) => CustomMotionPreset | null;
   onDeletePreset: (id: string) => void;
+  // M26 — copy/paste/clear animation (passed through to the card)
+  onCopyAnimation?: () => void;
+  onPasteAnimation?: () => void;
+  onClearAnimation?: () => void;
+  clipboardSourceId?: string | null;
 }
 
 /**
@@ -37,6 +42,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   customPresets,
   onSavePreset,
   onDeletePreset,
+  onCopyAnimation,
+  onPasteAnimation,
+  onClearAnimation,
+  clipboardSourceId,
 }) => {
 
   return (
@@ -99,6 +108,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             customPresets={customPresets}
             onSavePreset={onSavePreset}
             onDeletePreset={onDeletePreset}
+            onCopyAnimation={onCopyAnimation}
+            onPasteAnimation={onPasteAnimation}
+            onClearAnimation={onClearAnimation}
+            clipboardSourceId={clipboardSourceId}
           />
         )}
       </div>

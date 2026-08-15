@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M25)
+## Proje durumu (M26)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -258,7 +258,14 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 25D E2E: `e2e/m25-user-saved-presets.spec.ts` **18/18 ×2** (save≠apply, apply IN/OUT, equivalence, reload, delete, referenced-delete, type filtering, state isolation, undo, broadcast, schema pollution)
   - 25E regression fix: **DEFAULT_INITIAL_PRESETS Custom optgroup'ta görünüyordu** (M24 E2E-17 kırıldı) → id-eşitliğiyle user-only filtre (default'lar runtime'da aynen korunur); M24 **17/17** geri yeşil
   - Baseline: **879/879 vitest** + M25 18/18 ×2 + M24 17/17 + M23 15/15 + M22 10/10 + M20 23/23 + M21 26/26; track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/H12 — izole PASS)
-- Son push: `dff30d2` (M13) → `e4ddc68`/`37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → `668a3b3` (M20) → `64eb14c` (M21) → `6a0c767` (M22) → `47f7dce` (M23) → `4a77ba4` (M24) → **M25 implementasyonu PENDING (commit/push YOK — hash icat edilmedi)**
+- Son push: `dff30d2` (M13) → `e4ddc68`/`37e4db9` (M14) → `4e50cf1` (M15) → `20c3a81` (M16) → `1f6c7ba` (M17) → `e88517f` (M18) → `28d0e94` (M19) → `b711f83` (M20 discovery wiki) → `766326a`/`6487760`/`733d878` (ev PC bugfix+toolbar) → `d7324ad` (broadcast bugfix) → `668a3b3` (M20) → `64eb14c` (M21) → `6a0c767` (M22) → `47f7dce` (M23) → `4a77ba4` (M24) → `147ba8a` (M25) → **M26 implementasyonu PENDING (commit/push YOK — hash icat edilmedi)**
+- **M26 ✅ COMPLETE — Copy/Paste Animation onto Existing Part + Clear Animation** (26A-26E; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 26A data: `cloneAnimationOntoTarget` (`src/utils/animationTransfer.ts` — saf transfer: channels + legacy keyframes + IN/OUT/durations; fresh id remap; hedef track reuse/oluşturma; nested deep-clone) + `useClipboard.pasteAnimationOntoSelected(targetPartId)`
+  - 26B UI: TransformInOutPresetCard'a `Copy Animation` / `Paste Animation` (disabled: clipboard yok veya source===target) / `Clear Animation` (IN/OUT → none, duration policy A → 30, channels/keyframes temizlenir; matte/identity korunur); paste+clear `startBatchInteraction/endBatchInteraction` → tek logical undo
+  - 26C E2E: `e2e/m26-copy-paste-animation.spec.ts` **13/13 ×2 deterministik** — identity preservation, keyframe/fresh-id transfer, custom preset referans (library çoğalmaz), matte/parent korunumu, tek-Ctrl+Z undo, clear, Copy Part regression, multi-select (yalnızca primary), broadcast, save/reload
+  - 26D regression: Vitest **906/906** · M20 23 · M21 26 · M22 10 · M23 15 · M24 17 · M25 18 · M26 13 — full koşu **194 passed**; track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/V-H12 — M26'sız koşularda da vardı, pre-existing)
+  - 26E docs: SKILL v14 + wiki + README
+  - Push zinciri `147ba8a`'da biter — **M26 commit hash icat edilmedi**
 
 ## Önemli kararlar
 

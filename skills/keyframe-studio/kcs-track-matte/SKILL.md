@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
-description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets (M23-25) — architecture, data model, browser-verified semantics, rules, tests.
-version: 13.0.0
+description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer (M23-26) — architecture, data model, browser-verified semantics, rules, tests.
+version: 14.0.0
 author: senmu
 license: MIT
 metadata:
@@ -498,6 +498,73 @@ mevcut procedural sampler tüketir.
 
 M25: buildMattePath/shapeGeometry/matte/StagePartLayers/PartRenderer DEĞİŞMEDİ; geometry sistemi
 eklenmedi.
+
+## M26 — Copy / Paste Animation onto Existing Part + Clear Animation (26A-26E)
+
+Kullanıcı bir part'ın tam animasyonunu (timeline channel keyframe'leri + legacy keyframes + IN/OUT preset'leri + duration'lar) başka bir MEVCUT part'a aktarabilir ve tüm animation ayarlarını tek tıkla temizleyebilir.
+
+### Pipeline
+
+```
+SOURCE PART
+  → Copy Animation (mevcut copySelectedPart — clipboard payload part+track)
+TARGET PART
+  → Paste Animation → pasteAnimationOntoSelected(targetPartId)
+  → cloneAnimationOntoTarget(sourceTrack, sourcePart, targetPartId, targetTrack)
+  → fresh keyframe IDs + hedef track / animation fields
+  → mevcut scene state (setTracks + setCharacterParts)
+```
+
+İKİNCİ clipboard sistemi YOKTUR. Mevcut `Copy Part → Paste Part` (yeni part) AYNEN korunur.
+
+### Aktarılanlar (yalnızca)
+
+- `Track.channels` (PropertyKeyframe[] — frame/value/easing/templateId/bezierControlPoints birebir)
+- legacy `Track.keyframes`
+- `CharacterPart.inAnimPreset` / `outAnimPreset` / `inAnimDuration` / `outAnimDuration`
+
+### Korunanlar (hedef)
+
+id · name · baseTransform · parentId · zIndex · visibility · locked · matte (M22 ilişkisi) · geometry/media/text. **Paste = Copy Part DEĞİL.** Hedef track varSA: track id + metadata korunur (yalnızca animation data değişir); hedef track YOKSA: mevcut track factory convention'larıyla oluşturulur (`partId = targetPartId`).
+
+### ID Remapping
+
+Kaynak keyframe id'leri ASLA yeniden kullanılmaz — PropertyKeyframe (`pkf_<ch>`) ve legacy Keyframe (`kf`) için fresh id üretilir; tekrarlı paste'ler disjoint id'ler üretir (E2E kanıtlı). Nested veri (transform objesi, bezier array) deep-clone edilir — hedef kaynakla referans paylaşmaz.
+
+### History
+
+Paste + Clear: `startBatchInteraction()` → `setTracks` + `setCharacterParts` → `endBatchInteraction()` — mevcut batch pattern (useHistory) → **TEK logical undo** (Ctrl+Z hepsini geri alır). Yeni history sistemi yok.
+
+### Clear Animation
+
+IN/OUT preset = `none` · **duration policy A: 30'a reset** (M23 duration default'uyla tutarlı — yeni default icat edilmez) · channels = `makeEmptyChannels()` + keyframes `[]` (track kimliği korunur, boş track kaldırılmaz). matte/transform/identity korunur; custom preset kütüphanesi SİLİNMEZ.
+
+### Custom Preset References
+
+Kaynak bir M25 custom preset id'sine referans veriyorsa hedef AYNI id'yi referans eder — kütüphane nesnesi çoğaltılmaz (library count değişmez — E2E). Silinen id → M25 safe-fallback geçerli.
+
+### Broadcast / Serialization / M8
+
+Broadcast değişmedi (aktarılan alanlar zaten mevcut pipeline'ın tükettiği alanlar — E2E: pasted animation Sequence'te oynar). Serialization değişmedi (animation data zaten Track/CharacterPart scene state'inde; custom preset kütüphanesi AnimationProject'ta DEĞİL). M8 SAFE: yeni TrackChannel/evaluateFrame/playback/engine YOK — mevcut Track.channels/keyframes kopyalanır.
+
+### Multi-select Policy
+
+Inspector paste YALNIZCA primary `selectedPartId`'yi hedefler — multi-select paste DEĞİL (26B'de bilinçli MVP).
+
+### UI (Inspector — ANIMATION IN/OUT kartı)
+
+`Copy Animation` (title: "Copy animation from this element") · `Paste Animation` (title: "Paste animation onto selected element"; disabled: clipboard yok VEYA source===target) · `Clear Animation` (title: "Clear animation (IN/OUT presets, durations and keyframes)"). Yeni panel yok; timeline copy/paste UI yok (deferred).
+
+### Test'ler (M26)
+
+- Pure: `src/tests/animationTransfer.test.ts` (16 — clone/fresh id/izolasyon/schema)
+- UI: `src/tests/transformAnimationActions.test.tsx` (11 — buton render/disable/callback/aria)
+- E2E: `e2e/m26-copy-paste-animation.spec.ts` (13 ×2 deterministik — identity, transfer, undo, clear, copy-part regression, multi-select, broadcast, reload)
+- Vitest: 906/906 (M26 sonrası)
+
+### Deferred (M26 sonrası)
+
+Timeline keyframe copy/paste/duplicate · multi-select paste · preset export/import/rename/categories/search/preview · animation delay/offset · wipe/matte reveal/multi-matte/nested/video matte · gradient animation · animated strength · text stagger · matte gizmo · spring physics · 3D · motion blur · advanced compositor.
 
 ## Test'ler
 

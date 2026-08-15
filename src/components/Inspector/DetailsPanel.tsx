@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
+import { makeEmptyChannels } from '../../utils/defaults';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { KeyframesTab } from './sections/KeyframesTab';
@@ -20,6 +21,7 @@ export const DetailsPanel: React.FC = () => {
     selectedPartId,
     characterParts,
     setCharacterParts,
+    setTracks,
     getComputedTransform,
     updateCurrentTransform,
     deletePart,
@@ -27,6 +29,12 @@ export const DetailsPanel: React.FC = () => {
     customPresets,
     savePreset,
     deletePreset,
+    copySelectedPart,
+    pasteAnimationOntoSelected,
+    clipboardData,
+    startBatchInteraction,
+    endBatchInteraction,
+    showToast,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'duplicate'>('transform');
@@ -47,6 +55,41 @@ export const DetailsPanel: React.FC = () => {
 
   const handleZIndexChange = (zIndex: number) => {
     handlePartPropChange('zIndex', zIndex);
+  };
+
+  // M26 — copy/paste/clear ANIMATION (26A data layer + 26B UI).
+  // Paste + Clear wrap the two setState halves in ONE batch interaction so
+  // Ctrl+Z reverts the whole transfer as a single logical undo entry.
+  const handleCopyAnimation = () => {
+    copySelectedPart();
+  };
+
+  const handlePasteAnimation = () => {
+    if (!selectedPartId) return;
+    startBatchInteraction();
+    pasteAnimationOntoSelected(selectedPartId);
+    endBatchInteraction();
+  };
+
+  const handleClearAnimation = () => {
+    if (!selectedPartId) return;
+    startBatchInteraction();
+    setCharacterParts((prev) =>
+      prev.map((p) =>
+        p.id === selectedPartId
+          ? { ...p, inAnimPreset: 'none', outAnimPreset: 'none', inAnimDuration: 30, outAnimDuration: 30 }
+          : p,
+      ),
+    );
+    setTracks((prev) =>
+      prev.map((t) =>
+        t.partId === selectedPartId
+          ? { ...t, keyframes: [], channels: makeEmptyChannels() }
+          : t,
+      ),
+    );
+    endBatchInteraction();
+    showToast('Animation cleared', 'success');
   };
 
   return (
@@ -137,6 +180,10 @@ export const DetailsPanel: React.FC = () => {
               customPresets={customPresets}
               onSavePreset={savePreset}
               onDeletePreset={deletePreset}
+              onCopyAnimation={handleCopyAnimation}
+              onPasteAnimation={handlePasteAnimation}
+              onClearAnimation={handleClearAnimation}
+              clipboardSourceId={clipboardData?.part.id ?? null}
             />
           )}
 

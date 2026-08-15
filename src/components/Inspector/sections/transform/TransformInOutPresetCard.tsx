@@ -12,6 +12,11 @@ interface TransformInOutPresetCardProps {
   customPresets: CustomMotionPreset[];
   onSavePreset: (input: SavePresetInput) => CustomMotionPreset | null;
   onDeletePreset: (id: string) => void;
+  // M26 — copy/paste/clear ANIMATION (26A data layer + 26B UI)
+  onCopyAnimation?: () => void;
+  onPasteAnimation?: () => void;
+  onClearAnimation?: () => void;
+  clipboardSourceId?: string | null;
 }
 
 /**
@@ -74,6 +79,10 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
   customPresets,
   onSavePreset,
   onDeletePreset,
+  onCopyAnimation,
+  onPasteAnimation,
+  onClearAnimation,
+  clipboardSourceId,
 }) => {
   // derive directly from the selected part — no local state mirror
   const inPreset = selectedPart.inAnimPreset ?? 'none';
@@ -269,6 +278,47 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
 
         {renderPresetRow('in')}
         {renderPresetRow('out')}
+
+        {/* M26 — copy / paste / clear animation (26A data layer + 26B UI).
+            Paste is disabled without a clipboard payload or when the target
+            IS the clipboard source (no meaningless self-paste). */}
+        {onCopyAnimation && (
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+              title="Copy animation from this element"
+              aria-label="Copy Animation"
+              onClick={onCopyAnimation}
+            >
+              Copy Animation
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4 }}
+              title="Paste animation onto selected element"
+              aria-label="Paste Animation"
+              disabled={!clipboardSourceId || clipboardSourceId === selectedPart.id}
+              onClick={onPasteAnimation}
+            >
+              Paste Animation
+            </button>
+            {onClearAnimation && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ height: 24, fontSize: 10, fontWeight: 700, padding: '0 8px', borderRadius: 4, color: '#f87171' }}
+                title="Clear animation (IN/OUT presets, durations and keyframes)"
+                aria-label="Clear Animation"
+                onClick={onClearAnimation}
+              >
+                Clear Animation
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

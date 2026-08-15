@@ -125,6 +125,9 @@ interface AnimatorContextType {
   pasteCopiedPart: () => void;
   duplicateSelectedPart: () => void;
   duplicateMirrored: (axis: 'y' | 'x' | 'origin') => void;
+  // M26 — copy/paste ANIMATION onto an existing selected part (26A data layer)
+  clipboardData: { part: CharacterPart; track?: Track } | null;
+  pasteAnimationOntoSelected: (targetPartId: string) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   isScaleLocked: boolean;
@@ -325,7 +328,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 
 
-  const { copySelectedPart, pasteCopiedPart, duplicateSelectedPart, duplicateMirrored } = useClipboard({
+  const { copySelectedPart, pasteCopiedPart, duplicateSelectedPart, duplicateMirrored, pasteAnimationOntoSelected, clipboardData } = useClipboard({
     characterParts,
     tracks,
     selectedPartId,
@@ -473,6 +476,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         pasteCopiedPart,
         duplicateSelectedPart,
         duplicateMirrored,
+        pasteAnimationOntoSelected,
+        clipboardData,
         applyMotionTransition,
         showToast,
         addPropertyKeyframe,

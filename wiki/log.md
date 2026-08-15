@@ -272,3 +272,13 @@
 - 25F docs: SKILL v13, wiki entity + log, README
 - Baseline: **879/879 vitest** + M25 18/18 ×2 + M24 17/17 + M23 15/15 + M22 10/10 + M20 23/23 + M21 26/26 + tsc/build/oxlint PASS; track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/H12 — izole PASS, testlere dokunulmadı)
 - Mimari: ikinci engine YOK; save/delete = library (history dışı), apply = normal part edit (history/undo); custom kütüphane AnimationProject'ta DEĞİL; M8 SAFE; geometry/matte/serialization/broadcast değişmedi
+
+## [2026-08-15] update | KCS — M26 COPY/PASTE ANIMATION ONTO SELECTED PART + CLEAR COMPLETE (ev PC, 26A-26E)
+- M26 ✅ 26A-26E tamamlandı — **COMMIT/PUSH PENDING** (HEAD 147ba8a)
+- Discovery: en büyük tekrarlı iş = mevcut karakterin tam animasyonunu (channel keyframe'leri dahil — M25 preset yalnızca IN/OUT davranışını kapsıyordu) başka karaktere aktarma; clipboard %70 hazırdı
+- 26A data: `animationTransfer.ts` `cloneAnimationOntoTarget` (saf; fresh id remap; track reuse/oluşturma; nested deep-clone) + `useClipboard.pasteAnimationOntoSelected` — **16 pure test**
+- 26B UI: kartta Copy/Paste/Clear butonları (aria-label+title; paste disabled: clipboard yok/source===target); paste+clear tek batch undo; **Clear duration policy A: 30** (M23 default'u); **11 UI test**
+- 26C E2E: `e2e/m26-copy-paste-animation.spec.ts` **13/13 ×2** — identity/transfer/fresh-id/undo/clear/copy-part regression/multi-select(primary-only)/broadcast/reload
+- 26D: Vitest **906/906** · full e2e **194 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+track 72); track-matte V-T15/T17/V-H12 bilinen ev-PC timing (M26'sız koşularda da vardı — pre-existing, testlere dokunulmadı)
+- 26E: SKILL v14 + wiki + README
+- M26 deferred: timeline keyframe copy/paste/duplicate, multi-select paste, preset export/import/rename, delay/offset, wipe, multi/nested/video matte, gradient anim, text stagger, gizmo'lar, spring/3D/motion blur

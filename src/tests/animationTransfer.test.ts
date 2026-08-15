@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { cloneAnimationOntoTarget } from '../utils/animationTransfer';
-import type { CharacterPart, Keyframe, PropertyKeyframe, Track } from '../types/animator';
+import type { CharacterPart, Track } from '../types/animator';
 import { makeEmptyChannels } from '../utils/defaults';
 
 /**

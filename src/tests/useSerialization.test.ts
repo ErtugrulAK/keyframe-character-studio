@@ -211,7 +211,6 @@ describe('useSerialization Hook', () => {
     }));
 
     const exported = result.current.exportProject();
-    const parsed = JSON.parse(exported);
 
     // Round-trip: import the exported data back
     const success = result.current.importProject(exported);
@@ -1315,7 +1314,7 @@ describe('useSerialization Hook', () => {
   }
 
   it('M11: matte is exported in SceneData', () => {
-    const { result } = renderSerialization([]);
+    renderSerialization([]);
     // Use a part-bearing scene: exportProject serializes characterParts via layers
     // (renderSerialization passes tracks only; build a full hook instance below)
     const part = makeMattePart();

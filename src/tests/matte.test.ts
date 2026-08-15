@@ -30,7 +30,6 @@ function makeSourcePart(type: string, overrides: Partial<CharacterPart> = {}): C
   } as CharacterPart;
 }
 
-const noTracks: Track[] = [];
 const ACTIVE = 'Sequence';
 
 describe('matte — data model & id', () => {
@@ -802,7 +801,6 @@ describe('matte — M18 text matte (data/pure)', () => {
 
   it('worldToLocal: round-trip for rotate+scale+translate (forward math replicated)', () => {
     const w = { x: 35, y: -20, rotation: 90, scaleX: 2, scaleY: 3, opacity: 1 };
-    const p = { x: 12, y: -7 };
     const rad = Math.PI / 2;
     const world = {
       x: 300 + 35 + (12 * 2 * Math.cos(rad) - (-7 * 3 * Math.sin(rad))),

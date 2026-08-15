@@ -10,7 +10,6 @@
  */
 import { describe, it, expect } from 'vitest';
 import { renderToString } from 'react-dom/server';
-import React from 'react';
 import { getShapeGeometry, polygonPointsToString, ShapeGeometry } from '../utils/shapeGeometry';
 import { renderShapePart } from '../components/Canvas/renderers/parts/ShapePartRenderers';
 import type { CharacterPart } from '../types/animator';

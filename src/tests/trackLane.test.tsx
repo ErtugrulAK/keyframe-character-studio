@@ -330,7 +330,6 @@ describe('M28 28B — keyframe copy / paste UI', () => {
   });
 
   test('12. cross-track paste uses the CLICKED lane track (per-lane prop wiring)', () => {
-    const trackA = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
     const trackB = makeTrack({ channels: { y: [pk('y0', 5, 1)] } });
     const props = {
       ...trackLaneBaseProps(trackB),

@@ -3,12 +3,7 @@ import type { CharacterPart, CustomMotionPreset } from '../../../../types/animat
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { builtinPresetToCustomKeyframes } from '../../../../utils/presetConversion';
 import type { SavePresetInput } from '../../../../hooks/usePresets';
-import { DEFAULT_INITIAL_PRESETS } from '../../../../context/initialStateData';
-import {
-  buildPresetExportPayload,
-  validatePresetImportPayload,
-  mergeImportedPresets,
-} from '../../../../utils/presetExportImport';
+import { buildPresetExportPayload, validatePresetImportPayload, mergeImportedPresets, isDefaultPresetId } from '../../../../utils/presetExportImport';
 
 interface TransformInOutPresetCardProps {
   selectedPart: CharacterPart;
@@ -110,9 +105,8 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
   // the runtime/broadcast) — those are NOT user-owned and must not appear as
   // "Custom" (nor get the Delete control). 25A's collision guard guarantees
   // user ids never equal default ids, so id-based exclusion is safe and the
-  // default list stays the single authority.
-  const isUserPreset = (p: CustomMotionPreset) =>
-    !DEFAULT_INITIAL_PRESETS.some((d) => d.id === p.id);
+  // default list stays the single authority (shared isDefaultPresetId — M30).
+  const isUserPreset = (p: CustomMotionPreset) => !isDefaultPresetId(p.id);
   const customIn = customPresets.filter((p) => p.type === 'in' && isUserPreset(p));
   const customOut = customPresets.filter((p) => p.type === 'out' && isUserPreset(p));
 

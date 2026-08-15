@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AnimatorProvider, useAnimator } from '../context/AnimatorContext';
-import userEvent from '@testing-library/user-event';
 
 // Dummy consumer to access and manipulate context
 const ContextConsumer = ({ callback }: { callback: (ctx: any) => void }) => {
@@ -114,7 +113,6 @@ describe('AnimatorContext Integration Tests', () => {
 
     // History should record creation
     expect(context.canUndo).toBe(true);
-    const partId = context.characterParts[0].id;
     const track = context.tracks[0];
 
     // Add keyframe

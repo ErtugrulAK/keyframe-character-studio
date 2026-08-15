@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useBroadcast } from '../hooks/useBroadcast';
-import { CharacterPart, Track, CustomMotionPreset } from '../types/animator';
+import { CharacterPart } from '../types/animator';
 
 describe('useBroadcast Hook', () => {
   const mockSetIsPlaying = vi.fn();

@@ -79,7 +79,7 @@ describe('M29 29A — visibility', () => {
   });
 
   it('17. deleting the keyframe hides the section (id no longer resolvable)', () => {
-    const { container } = renderSection({ track: xRotTrack(), selectedKeyframeId: 'x_20', currentFrame: 20 });
+    renderSection({ track: xRotTrack(), selectedKeyframeId: 'x_20', currentFrame: 20 });
     expect(screen.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeTruthy();
     // simulate deletion: re-render with the keyframe removed from the track
     const ch = makeEmptyChannels();

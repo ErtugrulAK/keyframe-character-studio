@@ -1,7 +1,7 @@
-import { renderHook, act } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
 import { useMath } from '../hooks/useMath';
-import { Track, CharacterPart, Transform } from '../types/animator';
+import { Track, CharacterPart } from '../types/animator';
 
 describe('useMath Hook', () => {
   const mockPart: CharacterPart = {

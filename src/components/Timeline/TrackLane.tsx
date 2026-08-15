@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Track, TrackChannel } from '../../types/animator';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame } from '../../utils/channelKeyframeGroups';
@@ -20,6 +20,8 @@ interface TrackLaneProps {
   onHoverKf: (hover: { frame: number; label: string } | null) => void;
   onDeleteKeyframe: (trackId: string, keyframeId: string) => void;
   onDeletePropertyKeyframe: (trackId: string, channel: TrackChannel, keyframeId: string) => void;
+  // M27 — duplicate the whole keyframe frame-group at `frame` (27A helper)
+  onDuplicateKeyframeGroup: (trackId: string, frame: number) => void;
 }
 
 /**
@@ -43,12 +45,40 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   onHoverKf,
   onDeleteKeyframe,
   onDeletePropertyKeyframe,
+  onDuplicateKeyframeGroup,
 }) => {
   const isTrackExpanded = track.expanded === true;
   const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
   const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
   const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
   const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
+
+  // M27 — minimal keyframe context menu (right-click on any keyframe).
+  // The menu exposes "Duplicate Keyframes" (whole frame-group, 27A helper)
+  // next to the existing Delete action. Clicking outside closes it.
+  const [kfMenu, setKfMenu] = useState<{
+    trackId: string;
+    frame: number;
+    x: number;
+    y: number;
+    onDelete: () => void;
+  } | null>(null);
+  const kfMenuRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!kfMenu) return;
+    const handleGlobalClick = (e: MouseEvent) => {
+      if (kfMenuRef.current && !kfMenuRef.current.contains(e.target as Node)) {
+        setKfMenu(null);
+      }
+    };
+    window.addEventListener('mousedown', handleGlobalClick);
+    return () => window.removeEventListener('mousedown', handleGlobalClick);
+  }, [kfMenu]);
+  const openKfMenu = (e: React.MouseEvent, frame: number, onDelete: () => void) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setKfMenu({ trackId: track.id, frame, x: e.clientX, y: e.clientY, onDelete });
+  };
 
   const activeTmpl = activeTemplateId || 'Sequence';
   // M6: canonical frame-group model — one timeline point per frame.
@@ -97,8 +127,8 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
             onMouseDown={(e) => { e.stopPropagation(); onStartDragPKf({ trackId: track.id, channel: ch, keyframeId: pkf.id }); onSetFrame(pkf.frame); }}
             onMouseEnter={() => onHoverKf({ frame: pkf.frame, label: `${meta.label}: ${pkf.value.toFixed(2)}` })}
             onMouseLeave={() => onHoverKf(null)}
-            onContextMenu={(e) => { e.preventDefault(); onDeletePropertyKeyframe(track.id, ch, pkf.id); }}
-            title={`${meta.label} = ${pkf.value.toFixed(2)} @ F${pkf.frame}`}
+            onContextMenu={(e) => openKfMenu(e, pkf.frame, () => onDeletePropertyKeyframe(track.id, ch, pkf.id))}
+            title={`${meta.label} = ${pkf.value.toFixed(2)} @ F${pkf.frame} (Right-click: menu)`}
           />
         ))}
       </div>
@@ -163,8 +193,8 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               }}
               onMouseEnter={() => onHoverKf({ frame: group.frame, label: `${track.name} | ${group.channels.join(',')} | ${group.easing}` })}
               onMouseLeave={() => onHoverKf(null)}
-              onContextMenu={(e) => handleDeleteGroup(e, group.frame)}
-              title={`[${track.name}] Frame: ${group.frame} | ${group.channels.join(', ')} | ${group.easing} (Right-click: Delete)`}
+              onContextMenu={(e) => openKfMenu(e, group.frame, () => handleDeleteGroup(e, group.frame))}
+              title={`[${track.name}] Frame: ${group.frame} | ${group.channels.join(', ')} | ${group.easing} (Right-click: menu)`}
             >
               <div className="diamond-inner" style={{ backgroundColor: track.color }} />
             </div>
@@ -180,8 +210,8 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               onMouseDown={(e) => { e.stopPropagation(); onStartDragKf({ trackId: track.id, keyframeId: kf.id }); onSelectKeyframe(kf.id); }}
               onMouseEnter={() => onHoverKf({ frame: kf.frame, label: `${track.name} | ${kf.easing}` })}
               onMouseLeave={() => onHoverKf(null)}
-              onContextMenu={(e) => { e.preventDefault(); onDeleteKeyframe(track.id, kf.id); }}
-              title={`[${track.name}] Frame: ${kf.frame} | ${kf.easing} (Right-click: Delete)`}
+              onContextMenu={(e) => openKfMenu(e, kf.frame, () => onDeleteKeyframe(track.id, kf.id))}
+              title={`[${track.name}] Frame: ${kf.frame} | ${kf.easing} (Right-click: menu)`}
             >
               <div className="diamond-inner" style={{ backgroundColor: track.color }} />
             </div>
@@ -213,6 +243,62 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               {['opacity'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
             </>
           )}
+        </div>
+      )}
+
+      {/* M27 — keyframe context menu (Duplicate frame-group / Delete) */}
+      {kfMenu && (
+        <div
+          ref={kfMenuRef}
+          role="menu"
+          aria-label="Keyframe actions"
+          style={{
+            position: 'fixed',
+            left: kfMenu.x,
+            top: kfMenu.y,
+            zIndex: 1000,
+            minWidth: 160,
+            background: '#1e2430',
+            border: '1px solid #39415a',
+            borderRadius: 6,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+            padding: '4px 0',
+          }}
+        >
+          <button
+            type="button"
+            role="menuitem"
+            aria-label="Duplicate Keyframes"
+            title="Duplicate the whole keyframe group at this frame (frame + 1)"
+            className="timeline-menu-item"
+            style={{
+              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
+              color: '#dbe3f0', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
+            }}
+            onClick={() => {
+              onDuplicateKeyframeGroup(kfMenu.trackId, kfMenu.frame);
+              setKfMenu(null);
+            }}
+          >
+            Duplicate Keyframes
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            aria-label="Delete Keyframe"
+            title="Delete the keyframe(s) at this frame"
+            className="timeline-menu-item"
+            style={{
+              display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none',
+              color: '#f87171', fontSize: 11, fontWeight: 600, padding: '6px 12px', cursor: 'pointer',
+            }}
+            onClick={() => {
+              kfMenu.onDelete();
+              setKfMenu(null);
+            }}
+          >
+            Delete Keyframe
+          </button>
         </div>
       )}
     </div>

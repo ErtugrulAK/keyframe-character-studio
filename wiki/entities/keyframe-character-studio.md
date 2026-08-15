@@ -39,7 +39,7 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - **Gerçek browser doğrulaması**: `e2e/track-matte.spec.ts` — 8 DOM + 39 gerçek pixel compositing testi (world→screen CTM + PNG decode) — 47/47 PASS
 - Eski Mask/Container sistemi **KALDIRILDI** (b60f1ca): MaskTab, MaskGizmo, inner-media, container local-space transform — geri getirilmedi; `MaskData`/`maskOffset*` tipleri bilinçli backward-compat olarak duruyor (track matte bunlara bağlı değil)
 
-## Proje durumu (M26)
+## Proje durumu (M27)
 
 - Phase 2-4 ✅ CLOSED — pure evaluation pipeline, serialization fix'leri (BUG #1-6)
 - M1-M10 ✅ RELEASE READY — canonical channels, channels-only export, dead code temizliği
@@ -266,6 +266,13 @@ Staj projesi — karakter animasyon editörü. React + TypeScript + **SVG** uygu
   - 26D regression: Vitest **906/906** · M20 23 · M21 26 · M22 10 · M23 15 · M24 17 · M25 18 · M26 13 — full koşu **194 passed**; track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/V-H12 — M26'sız koşularda da vardı, pre-existing)
   - 26E docs: SKILL v14 + wiki + README
   - Push zinciri `147ba8a`'da biter — **M26 commit hash icat edilmedi**
+- **M27 ✅ COMPLETE — Timeline Keyframe Frame-Group Duplicate** (27A-27E; **COMMIT/PUSH PENDING — onay bekliyor**)
+  - 27A pure: `src/utils/keyframeDuplicate.ts` — `duplicateKeyframeGroup(track, frame, offset=1, totalFrames?)` — frame-group (tüm channel'lar + legacy) klonu; fresh id'ler; deep clone; collision/boundary safe no-op; **22 pure test**
+  - 27B UI: TrackLane keyframe context menu (**Duplicate Keyframes** + Delete Keyframe — delete semantiği korundu, menüye taşındı); AnimatorContext `duplicateKeyframeGroup` minimal bridge (batch → tek undo); Ctrl+D değişmedi (part duplicate); **+11 UI test** (trackLane.test.tsx)
+  - 27C E2E: `e2e/m27-keyframe-duplicate.spec.ts` **11/11 ×3 + fresh** — tek kf, frame-group, değer/easing/template/bezier, legacy (import-notu), fresh id, collision no-op, boundary, tek-undo, delete/drag regression, repeated, metadata, multi-select, accessibility
+  - 27D regression: Vitest **939/939** · full e2e **207 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+M27 11+drag 1+track 73); track-matte bilinen ev-PC timing-flake'leri (V-T15/T17/V-H12 — pre-existing)
+  - 27E docs: SKILL v15 + wiki + README
+  - Push zinciri `b0cf9ea`'da biter — **M27 commit hash icat edilmedi**
 
 ## Önemli kararlar
 

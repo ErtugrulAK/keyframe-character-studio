@@ -1,7 +1,7 @@
 ---
 name: kcs-track-matte
-description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer (M23-26) — architecture, data model, browser-verified semantics, rules, tests.
-version: 14.0.0
+description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer/timeline (M23-27) — architecture, data model, browser-verified semantics, rules, tests.
+version: 15.0.0
 author: senmu
 license: MIT
 metadata:
@@ -565,6 +565,51 @@ Inspector paste YALNIZCA primary `selectedPartId`'yi hedefler — multi-select p
 ### Deferred (M26 sonrası)
 
 Timeline keyframe copy/paste/duplicate · multi-select paste · preset export/import/rename/categories/search/preview · animation delay/offset · wipe/matte reveal/multi-matte/nested/video matte · gradient animation · animated strength · text stagger · matte gizmo · spring physics · 3D · motion blur · advanced compositor.
+
+## M27 — Timeline Keyframe Frame-Group Duplicate (27A-27E)
+
+Kullanıcı timeline'da bir keyframe'e sağ tıklayıp **Duplicate Keyframes** seçince, o frame'deki TÜM frame-group (aynı frame'deki tüm channel PropertyKeyframe'leri + varsa legacy composite keyframe) **frame+1**'e kopyalanır. Kaynak frame aynen kalır.
+
+### Kontrat
+
+- **Frame-group:** yalnızca tıklanan channel değil — aynı frame'deki TÜM channel'lar + legacy kf birlikte klonlanır (M6/BUG 1 frame-group semantiği)
+- **Offset:** sabit `+1` — custom offset/playhead paste/repeat/timeline uzatma YOK
+- **Collision:** hedef frame'de HERHANGİ bir ilgili kf varsa → **safe no-op** (kısmi overwrite/merge/destroy yok; gerekçe: `addPropertyKeyframeMutator` frame-collision semantiği — M27 en güvenli davranışı seçer)
+- **Boundary:** `sourceFrame == totalFrames` → no-op (wrapping/timeline uzatma yok)
+- **ID:** fresh `generateId('pkf_${ch}')` / `generateId('kf')` — kaynak id'ler asla reuse edilmez; tekrarlı duplicate'ler disjoint
+- **Deep clone:** value/easing/templateId/bezierControlPoints birebir; nested (bezier, legacy transform) deep-clone; kaynak track MUTASYONSUZ
+- **History:** başarılı duplicate = `startBatchInteraction/endBatchInteraction` ile TEK logical undo (tek Ctrl+Z tüm frame-group'u geri alır)
+- **Track/metadata:** yalnızca seçili track değişir; id/partId/name/color/visible/locked/expanded korunur; diğer track'ler dokunulmaz
+
+### Mimari
+
+```
+TrackLane context menu (sağ-tık → Duplicate Keyframes / Delete Keyframe)
+  → AnimatorContext.duplicateKeyframeGroup(trackId, frame)  (minimal bridge)
+  → duplicateKeyframeGroup(track, frame, 1, totalFrames)    (27A pure helper — TEK clone mantığı)
+  → setTracks + batch history (tek undo)
+```
+
+### UI
+
+Mevcut TrackLane keyframe context menu: **Duplicate Keyframes** + **Delete Keyframe** (mevcut direkt sağ-tık delete, menü yüzeyine taşındı — delete semantiği DEĞİŞMEDİ; click-outside kapatma; `role="menu"`/`role="menuitem"` + aria-label + title). Yeni panel/toolbar/modal/klavye kısayolu YOK — **Ctrl+D hâlâ duplicateSelectedPart** (part düzeyi). Drag/seçim davranışı değişmedi.
+
+### Test'ler (M27)
+
+- Pure: `src/tests/keyframeDuplicate.test.ts` (22 — clone/fresh id/collision/boundary/izolasyon/determinizm)
+- UI: `src/tests/trackLane.test.tsx` (+11 — menü aç/kapat/aria/targets/tek track/selection korunumu; mevcut 9 test menü akışına güncellendi, delete davranışı korundu)
+- E2E: `e2e/m27-keyframe-duplicate.spec.ts` (11 ×3 + fresh — tek kf, frame-group, değer/easing/template/bezier, legacy, fresh id, collision, boundary, undo, delete regression, repeated, metadata, multi-select, drag, accessibility, Ctrl+D)
+- Vitest: 939/939 (M27 sonrası) · keyframe-drag 1/1
+
+### Legacy Import Note (dürüst)
+
+Mevcut import/reload path'leri legacy composite keyframe'leri normalize edip düşürebilir (M26'dan beri gözlemlenen davranış — M27 regression DEĞİL). M27 legacy duplicate pure unit'te kanıtlı (27A test 8-10); E2E imported legacy verisi, app import'u normalize ediyorsa otoriter değildir.
+
+### Deferred Roadmap (M27 sonrası)
+
+- **A — NEXT/ACTIVE:** keyframe copy/paste (duplicate ≠ copy/paste — ayrı özellik) · keyframe değer düzenleme UX · custom preset export/import
+- **B — NICE TO HAVE:** repeat/pattern offset · easing quick controls · mirror/reverse iyileştirmeleri
+- **C — PARK:** multi-select apply · delay/stagger · preset preview · easing editörü · broadcast sequence dup · matte drag/drop · timeline matte indicator · Wipe/Matte Reveal · multi/nested/video matte · gradient animation · animated strength · text stagger · matte gizmo · radial gizmo · spring · 3D · motion blur · compositor
 
 ## Test'ler
 

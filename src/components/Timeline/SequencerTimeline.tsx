@@ -64,6 +64,7 @@ export const SequencerTimeline: React.FC = () => {
     addPropertyKeyframe,
     deletePropertyKeyframe,
     updatePropertyKeyframeFrame,
+    duplicateKeyframeGroup,
     updateKeyframeBezierPoints,
     getComputedTransform,
     motionTemplates,
@@ -594,6 +595,7 @@ export const SequencerTimeline: React.FC = () => {
                 onHoverKf={setHoveredKf}
                 onDeleteKeyframe={deleteKeyframe}
                 onDeletePropertyKeyframe={deletePropertyKeyframe}
+                onDuplicateKeyframeGroup={duplicateKeyframeGroup}
               />
             ))}
           </div>

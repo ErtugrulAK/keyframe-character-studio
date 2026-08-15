@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 import { ToastPortal } from '../components/Toast/ToastPortal';
 import type {
   CharacterPart,
@@ -18,6 +18,7 @@ import type {
 import { useClipboard } from '../hooks/useClipboard';
 import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
+import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/keyframeDuplicate';
 
 export interface ToastItem {
   id: string;
@@ -128,6 +129,8 @@ interface AnimatorContextType {
   // M26 — copy/paste ANIMATION onto an existing selected part (26A data layer)
   clipboardData: { part: CharacterPart; track?: Track } | null;
   pasteAnimationOntoSelected: (targetPartId: string) => void;
+  // M27 — duplicate the keyframe frame-group at `frame` of `trackId` (27A pure helper)
+  duplicateKeyframeGroup: (trackId: string, frame: number) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   isScaleLocked: boolean;
@@ -412,6 +415,19 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 
 
+  // M27 — duplicate keyframe frame-group (27A pure helper) as ONE logical
+  // undo entry (existing batch pattern — no new history system).
+  const duplicateKeyframeGroup = useCallback(
+    (trackId: string, frame: number) => {
+      startBatchInteraction();
+      setTracks((prev) =>
+        prev.map((t) => (t.id === trackId ? duplicateKeyframeGroupTrack(t, frame, 1, totalFrames).track : t)),
+      );
+      endBatchInteraction();
+    },
+    [setTracks, startBatchInteraction, endBatchInteraction, totalFrames]
+  );
+
   return (
     <AnimatorContext.Provider
       value={{
@@ -478,6 +494,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         duplicateMirrored,
         pasteAnimationOntoSelected,
         clipboardData,
+        duplicateKeyframeGroup,
         applyMotionTransition,
         showToast,
         addPropertyKeyframe,

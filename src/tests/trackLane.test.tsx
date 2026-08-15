@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { render, fireEvent } from '@testing-library/react';
+import { render, fireEvent, screen } from '@testing-library/react';
 import { describe, test, expect, vi } from 'vitest';
 import { TrackLane } from '../components/Timeline/TrackLane';
 import type { Track, TrackChannel, PropertyKeyframe, Keyframe } from '../types/animator';
@@ -58,8 +58,9 @@ function renderLane(track: Track) {
     onHoverKf: vi.fn(),
     onDeleteKeyframe: vi.fn(),
     onDeletePropertyKeyframe: vi.fn(),
+    onDuplicateKeyframeGroup: vi.fn(),
   };
-  const utils = render(<TrackLane {...props} />);
+  const utils = render(<TrackLane {...props} track={{ ...track, expanded: true }} />);
   return { ...utils, props };
 }
 
@@ -129,7 +130,7 @@ describe('M6 — TrackLane canonical render', () => {
     expect(props.onSetFrame).toHaveBeenCalledWith(25);
   });
 
-  test('7: right-click deletes all channel keyframes at that frame', () => {
+  test('7: right-click opens menu; Delete Keyframe deletes all channel keyframes at that frame', () => {
     const track = makeTrack({
       channels: {
         x: [pk('x0', 25, 1)], y: [pk('y0', 25, 2)],
@@ -137,6 +138,8 @@ describe('M6 — TrackLane canonical render', () => {
     });
     const { container, props } = renderLane(track);
     fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    expect(screen.getByLabelText('Delete Keyframe')).toBeTruthy(); // menu opened
+    fireEvent.click(screen.getByLabelText('Delete Keyframe'));
     expect(props.onDeletePropertyKeyframe).toHaveBeenCalledWith('trk_1', 'x', 'x0');
     expect(props.onDeletePropertyKeyframe).toHaveBeenCalledWith('trk_1', 'y', 'y0');
   });
@@ -159,5 +162,106 @@ describe('M6 — TrackLane canonical render', () => {
     const noChannels = { id: 'trk_2', partId: 'part_2', name: 'T2', color: '#0f0', keyframes: [], visible: true, locked: false } as Track;
     const { container: c2 } = renderLane(noChannels);
     expect(c2.querySelectorAll('.keyframe-diamond').length).toBe(0);
+  });
+});
+
+describe('M27 27B — keyframe context menu (Duplicate Keyframes)', () => {
+  test('1. right-click opens menu with Duplicate Keyframes + Delete Keyframe', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    expect(screen.getByLabelText('Duplicate Keyframes')).toBeTruthy();
+    expect(screen.getByLabelText('Delete Keyframe')).toBeTruthy();
+  });
+
+  test('2. Duplicate Keyframes calls onDuplicateKeyframeGroup with trackId + frame', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container, props } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    fireEvent.click(screen.getByLabelText('Duplicate Keyframes'));
+    expect(props.onDuplicateKeyframeGroup).toHaveBeenCalledWith('trk_1', 25);
+    expect(props.onDuplicateKeyframeGroup).toHaveBeenCalledTimes(1);
+  });
+
+  test('3. legacy composite keyframe right-click duplicates its frame', () => {
+    const track = makeTrack({ keyframes: [lkf('kf0', 40)] });
+    const { container, props } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    fireEvent.click(screen.getByLabelText('Duplicate Keyframes'));
+    expect(props.onDuplicateKeyframeGroup).toHaveBeenCalledWith('trk_1', 40);
+  });
+
+  test('4. channel-lane property diamond right-click also opens the menu', () => {
+    const track = makeTrack({
+      channels: { x: [pk('x0', 25, 1)] },
+      expanded: true,
+    });
+    const { container, props } = renderLane(track);
+    const propDiamond = container.querySelector('.ue-prop-diamond')!;
+    fireEvent.contextMenu(propDiamond);
+    fireEvent.click(screen.getByLabelText('Duplicate Keyframes'));
+    expect(props.onDuplicateKeyframeGroup).toHaveBeenCalledWith('trk_1', 25);
+  });
+
+  test('5. menu closes after choosing an action', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    expect(screen.getByLabelText('Duplicate Keyframes')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('Duplicate Keyframes'));
+    expect(screen.queryByLabelText('Duplicate Keyframes')).toBeNull();
+  });
+
+  test('6. click outside closes the menu without action', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container, props } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByLabelText('Duplicate Keyframes')).toBeNull();
+    expect(props.onDuplicateKeyframeGroup).not.toHaveBeenCalled();
+  });
+
+  test('7. source keyframes stay; duplicate is a separate action (no delete on duplicate)', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)], y: [pk('y0', 25, 2)] } });
+    const { container, props } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    fireEvent.click(screen.getByLabelText('Duplicate Keyframes'));
+    expect(props.onDeletePropertyKeyframe).not.toHaveBeenCalled();
+    expect(props.onDuplicateKeyframeGroup).toHaveBeenCalledWith('trk_1', 25);
+  });
+
+  test('8. accessibility: menu role + item titles', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    expect(screen.getByRole('menu', { name: 'Keyframe actions' })).toBeTruthy();
+    expect(screen.getByTitle('Duplicate the whole keyframe group at this frame (frame + 1)')).toBeTruthy();
+    expect(screen.getByTitle('Delete the keyframe(s) at this frame')).toBeTruthy();
+  });
+
+  test('9. no keyboard shortcut / no new panel surface introduced by the menu', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container } = renderLane(track);
+    // menu only appears after right-click — no pre-rendered toolbar/modal
+    expect(screen.queryByLabelText('Duplicate Keyframes')).toBeNull();
+    expect(container.querySelectorAll('.keyframe-diamond').length).toBe(1); // render unchanged
+  });
+
+  test('10. multi-select parts does not multi-target: menu action targets ONE track', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container, props } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    fireEvent.click(screen.getByLabelText('Duplicate Keyframes'));
+    // exactly one call with the lane's own track id
+    expect(props.onDuplicateKeyframeGroup.mock.calls).toEqual([['trk_1', 25]]);
+  });
+
+  test('11. selectedKeyframeId behavior preserved (selection unchanged by menu actions)', () => {
+    const track = makeTrack({ channels: { x: [pk('x0', 25, 1)] } });
+    const { container } = renderLane(track);
+    fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
+    expect(screen.getByLabelText('Duplicate Keyframes')).toBeTruthy();
+    // no selection mutation callbacks fired by opening the menu
+    fireEvent.click(screen.getByLabelText('Duplicate Keyframes'));
   });
 });

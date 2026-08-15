@@ -282,3 +282,13 @@
 - 26D: Vitest **906/906** · full e2e **194 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+track 72); track-matte V-T15/T17/V-H12 bilinen ev-PC timing (M26'sız koşularda da vardı — pre-existing, testlere dokunulmadı)
 - 26E: SKILL v14 + wiki + README
 - M26 deferred: timeline keyframe copy/paste/duplicate, multi-select paste, preset export/import/rename, delay/offset, wipe, multi/nested/video matte, gradient anim, text stagger, gizmo'lar, spring/3D/motion blur
+
+## [2026-08-15] update | KCS — M27 TIMELINE KEYFRAME FRAME-GROUP DUPLICATE COMPLETE (ev PC, 27A-27E)
+- M27 ✅ 27A-27E tamamlandı — **COMMIT/PUSH PENDING** (HEAD b0cf9ea)
+- Discovery: en büyük tekrarlı iş = aynı keyframe pattern'ini aynı part'ta ileri taşıma (M26 part→part transferi sonrası timeline içi gap)
+- 27A pure: `keyframeDuplicate.ts` `duplicateKeyframeGroup(track, frame, offset=1, totalFrames?)` — frame-group (tüm channel'lar + legacy) clone; fresh id; deep clone; collision/boundary safe no-op — **22 test**
+- 27B UI: TrackLane context menu (Duplicate Keyframes + Delete Keyframe; delete menüye taşındı — semantik korundu); AnimatorContext minimal bridge (batch → tek undo); Ctrl+D değişmedi — **+11 UI test**
+- 27C E2E: `e2e/m27-keyframe-duplicate.spec.ts` **11/11 ×3 + fresh** — frame-group, +1 offset, collision no-op, boundary, tek-undo, delete/drag regression, repeated, metadata, multi-select, accessibility, Ctrl+D
+- 27D: Vitest **939/939** · full e2e **207 passed** (M20 23+M21 26+M22 10+M23 15+M24 17+M25 18+M26 13+M27 11+drag 1+track 73); track-matte V-T15/T17/V-H12 bilinen ev-PC timing (pre-existing, dokunulmadı)
+- 27E: SKILL v15 + wiki + README; legacy import-notu belgelendi (import legacy'leri normalize edebilir — M27 regression değil)
+- M27 deferred roadmap: A = keyframe copy/paste (duplicate ≠ copy/paste), değer edit UX, preset export/import; B = repeat/offset, easing quick, mirror/reverse; C = park listesi

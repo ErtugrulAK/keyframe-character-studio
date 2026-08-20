@@ -79,6 +79,58 @@ export const deletePropertyKeyframeMutator = (
   });
 };
 
+export interface DeleteSelectedKeyframeResult {
+  tracks: Track[];
+  deleted: boolean;
+}
+
+/**
+ * Delete the logical keyframe selection used by the timeline. Canonical
+ * selections represent every display-channel keyframe at the selected frame;
+ * legacy selections represent one composite keyframe.
+ */
+export const deleteSelectedKeyframeGroupMutator = (
+  tracks: Track[],
+  selectedKeyframeId: string,
+  activeTemplateId: string,
+): DeleteSelectedKeyframeResult => {
+  for (const track of tracks) {
+    const legacyMatch = (track.keyframes || []).find(
+      (keyframe) => keyframe.id === selectedKeyframeId
+        && (keyframe.templateId || 'Sequence') === activeTemplateId,
+    );
+    if (legacyMatch) {
+      return {
+        deleted: true,
+        tracks: tracks.map((candidate) => candidate.id === track.id
+          ? { ...candidate, keyframes: (candidate.keyframes || []).filter((keyframe) => keyframe.id !== selectedKeyframeId) }
+          : candidate),
+      };
+    }
+
+    const selectedPropertyKeyframe = DISPLAY_CHANNELS
+      .flatMap((channel) => track.channels?.[channel] || [])
+      .find((keyframe) => keyframe.id === selectedKeyframeId
+        && (keyframe.templateId || 'Sequence') === activeTemplateId);
+    if (!selectedPropertyKeyframe) continue;
+
+    const channels = { ...track.channels };
+    for (const channel of DISPLAY_CHANNELS) {
+      channels[channel] = (channels[channel] || []).filter(
+        (keyframe) => keyframe.frame !== selectedPropertyKeyframe.frame
+          || (keyframe.templateId || 'Sequence') !== activeTemplateId,
+      );
+    }
+
+    return {
+      deleted: true,
+      tracks: tracks.map((candidate) => candidate.id === track.id ? { ...candidate, channels } : candidate),
+    };
+  }
+
+  return { tracks, deleted: false };
+};
+
 export const updatePropertyKeyframeFrameMutator = (
   tracks: Track[],
   trackId: string,

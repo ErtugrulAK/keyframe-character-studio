@@ -926,6 +926,7 @@ export const StageCanvas: React.FC = () => {
                   zScale={zScale}
                   onRotateStart={startRotate}
                   onScaleStart={startScale}
+                  onTranslateStart={startTranslateDragForPart}
                 />
               )}
             </>

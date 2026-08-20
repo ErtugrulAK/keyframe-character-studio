@@ -7,6 +7,7 @@ interface UseKeyboardShortcutsOptions {
   copySelectedPart: () => void;
   pasteCopiedPart: () => void;
   duplicateSelectedPart: () => void;
+  deleteSelectedKeyframe: () => boolean;
   deletePart: (partId: string) => void;
 }
 
@@ -17,6 +18,7 @@ export const useKeyboardShortcuts = ({
   copySelectedPart,
   pasteCopiedPart,
   duplicateSelectedPart,
+  deleteSelectedKeyframe,
   deletePart,
 }: UseKeyboardShortcutsOptions) => {
   useEffect(() => {
@@ -65,6 +67,10 @@ export const useKeyboardShortcuts = ({
       }
       // Instant Delete without alert modal on Backspace or Delete
       else if (e.key === 'Backspace' || e.key === 'Delete') {
+        if (deleteSelectedKeyframe()) {
+          e.preventDefault();
+          return;
+        }
         if (selectedPartId) {
           e.preventDefault();
           deletePart(selectedPartId);
@@ -74,5 +80,5 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPartId, deletePart, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart]);
+  }, [selectedPartId, deletePart, deleteSelectedKeyframe, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart]);
 };

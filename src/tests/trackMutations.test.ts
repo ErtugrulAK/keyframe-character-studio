@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { 
   addPropertyKeyframeMutator, 
+  deleteSelectedKeyframeGroupMutator,
   deletePropertyKeyframeMutator, 
   updatePropertyKeyframeFrameMutator,
   updateKeyframeBezierPointsMutator 
@@ -60,5 +61,34 @@ describe('TrackMutations Utility', () => {
     // Because it changed from 30 to 15, and the other is 20, it should now be the first item.
     expect(final[0].channels?.opacity?.[0].id).toBe(kf30!.id);
     expect(final[0].channels?.opacity?.[0].frame).toBe(15);
+  });
+
+  it('deletes only the selected canonical frame group in the active template', () => {
+    const track: Track = {
+      ...mockTrack,
+      keyframes: [],
+      channels: {
+        x: [
+          { id: 'sequence-x', frame: 10, value: 10, easing: 'linear', templateId: 'Sequence' },
+          { id: 'other-x', frame: 10, value: 20, easing: 'linear', templateId: 'Other' },
+        ],
+        y: [{ id: 'sequence-y', frame: 10, value: 30, easing: 'linear', templateId: 'Sequence' }],
+        rotation: [], scaleX: [], scaleY: [], opacity: [],
+      },
+    };
+
+    const result = deleteSelectedKeyframeGroupMutator([track], 'sequence-x', 'Sequence');
+
+    expect(result.deleted).toBe(true);
+    expect(result.tracks[0].channels?.x.map((keyframe) => keyframe.id)).toEqual(['other-x']);
+    expect(result.tracks[0].channels?.y).toEqual([]);
+  });
+
+  it('preserves legacy composite-keyframe deletion compatibility', () => {
+    const result = deleteSelectedKeyframeGroupMutator([mockTrack], 'kf_1', 'Sequence');
+
+    expect(result.deleted).toBe(true);
+    expect(result.tracks[0].keyframes).toEqual([]);
+    expect(result.tracks[0].channels).toEqual(mockTrack.channels);
   });
 });

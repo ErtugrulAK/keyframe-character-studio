@@ -302,6 +302,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     toggleTrackExpanded,
     addPropertyKeyframe,
     deletePropertyKeyframe,
+    deleteSelectedKeyframe,
     updatePropertyKeyframeFrame,
     applyMotionTransition,
     renamePartAndTrack,
@@ -314,6 +315,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setSelectedPartId,
     selectedPartIds,
     setSelectedPartIds,
+    selectedKeyframeId,
+    setSelectedKeyframeId,
     currentFrame,
     totalFrames,
     activeTemplateId,
@@ -361,6 +364,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     copySelectedPart,
     pasteCopiedPart,
     duplicateSelectedPart,
+    deleteSelectedKeyframe,
     deletePart,
   });
 

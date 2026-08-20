@@ -14,6 +14,7 @@ interface SelectionGizmoProps {
   zScale: number;
   onRotateStart: (e: React.MouseEvent) => void;
   onScaleStart: (e: React.MouseEvent, mode?: ScaleMode) => void;
+  onTranslateStart: (partId: string, e: React.MouseEvent) => void;
 }
 
 /**
@@ -31,6 +32,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
   zScale,
   onRotateStart,
   onScaleStart,
+  onTranslateStart,
 }) => {
   if (selectedPartIds.length > 1) {
     let minX = Infinity;
@@ -85,17 +87,42 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     const selTrack = tracks.find((t) => t.partId === selectedPart.id);
     if (selTrack && selTrack.editVisible === false) return null;
 
+    const hasActiveMatte = Boolean(selectedPart.matte?.sourcePartId && selectedPart.matte.enabled !== false);
+    const bounds = getPartBounds(selectedPart);
+    const matteHitArea = hasActiveMatte ? (
+      <g
+        transform={`translate(${300 + selectedTransform.x}, ${240 + selectedTransform.y}) rotate(${selectedTransform.rotation}) scale(${selectedTransform.scaleX}, ${selectedTransform.scaleY})`}
+      >
+        <rect
+          data-testid="matte-editor-hit-area"
+          data-part-id={selectedPart.id}
+          x={-bounds.halfW}
+          y={-bounds.halfH}
+          width={bounds.halfW * 2}
+          height={bounds.halfH * 2}
+          fill="transparent"
+          pointerEvents="all"
+          style={{ cursor: 'move' }}
+          onMouseDown={(event) => onTranslateStart(selectedPart.id, event)}
+        />
+      </g>
+    ) : null;
+
     const isFreeform = selectedPart.type === 'custom_freeform';
-    if (isFreeform) return null;
 
     return (
-      <TransformGizmo
-        selectedPart={selectedPart}
-        selectedTransform={selectedTransform}
-        zScale={zScale}
-        onRotateMouseDown={onRotateStart}
-        onScaleMouseDown={onScaleStart}
-      />
+      <>
+        {matteHitArea}
+        {!isFreeform && (
+          <TransformGizmo
+            selectedPart={selectedPart}
+            selectedTransform={selectedTransform}
+            zScale={zScale}
+            onRotateMouseDown={onRotateStart}
+            onScaleMouseDown={onScaleStart}
+          />
+        )}
+      </>
     );
   }
 

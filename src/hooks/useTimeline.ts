@@ -7,6 +7,7 @@ import {
   updateKeyframeBezierPointsMutator, 
   addPropertyKeyframeMutator, 
   deletePropertyKeyframeMutator, 
+  deleteSelectedKeyframeGroupMutator,
   updatePropertyKeyframeFrameMutator,
   updatePropertyKeyframeEasingMutator,
   applyTransitionChannelsMutator,
@@ -21,6 +22,8 @@ interface UseTimelineOptions {
   setSelectedPartId: (id: string | null) => void;
   selectedPartIds: string[];
   setSelectedPartIds: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedKeyframeId: string | null;
+  setSelectedKeyframeId: (id: string | null) => void;
   currentFrame: number;
   totalFrames: number;
   activeTemplateId: string;
@@ -36,6 +39,8 @@ export const useTimeline = ({
   setSelectedPartId,
   selectedPartIds,
   setSelectedPartIds,
+  selectedKeyframeId,
+  setSelectedKeyframeId,
   currentFrame,
   totalFrames,
   activeTemplateId,
@@ -151,6 +156,17 @@ export const useTimeline = ({
     setTracks((prev) => deletePropertyKeyframeMutator(prev, trackId, channel, keyframeId));
   };
 
+  const deleteSelectedKeyframe = useCallback((): boolean => {
+    if (!selectedKeyframeId) return false;
+    const templateId = activeTemplateId || 'Sequence';
+    const current = deleteSelectedKeyframeGroupMutator(tracks, selectedKeyframeId, templateId);
+    if (!current.deleted) return false;
+
+    setTracks((prev) => deleteSelectedKeyframeGroupMutator(prev, selectedKeyframeId, templateId).tracks);
+    setSelectedKeyframeId(null);
+    return true;
+  }, [activeTemplateId, selectedKeyframeId, setSelectedKeyframeId, setTracks, tracks]);
+
   const updatePropertyKeyframeFrame = (trackId: string, channel: TrackChannel, keyframeId: string, newFrame: number) => {
     setTracks((prev) => updatePropertyKeyframeFrameMutator(prev, trackId, channel, keyframeId, newFrame));
   };
@@ -250,6 +266,7 @@ export const useTimeline = ({
     toggleTrackExpanded,
     addPropertyKeyframe,
     deletePropertyKeyframe,
+    deleteSelectedKeyframe,
     updatePropertyKeyframeFrame,
     updatePropertyKeyframeEasing,
     applyMotionTransition,

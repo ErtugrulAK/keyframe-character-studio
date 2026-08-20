@@ -1,0 +1,480 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Keyframes Studio Adult Professional Dark Theme */
+  --bg-darkest: #12141a;
+  --bg-dark: #171922;
+  --bg-panel: #1d202c;
+  --bg-panel-hover: #272b3c;
+  --bg-input: #0f1118;
+  --border-color: #2b3044;
+  --border-light: #3e4560;
+  --border-accent: rgba(20, 184, 166, 0.4);
+  
+  /* Keyframes Studio Signature Teal & Cyan Accents */
+  --accent-teal: #14b8a6;
+  --accent-teal-dark: #0d9488;
+  --accent-teal-glow: rgba(20, 184, 166, 0.35);
+  --accent-cyan: #38bdf8;
+  --accent-indigo: #6366f1;
+  --accent-gold: #fbbf24;
+  --accent-gold-glow: rgba(251, 191, 36, 0.35);
+  --accent-red: #f43f5e;
+  --accent-purple: #a855f7;
+  --accent-green: #10b981;
+
+  /* Typography Colors */
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  --font-main: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* ── Typography Scale Tokens ── */
+  --font-size-h1: 1.75rem;      /* 28px */
+  --font-size-h2: 1.375rem;     /* 22px */
+  --font-size-h3: 1.125rem;     /* 18px */
+  --font-size-h4: 0.9375rem;    /* 15px */
+  --font-size-body-lg: 0.875rem; /* 14px */
+  --font-size-body: 0.8125rem;  /* 13px */
+  --font-size-caption: 0.6875rem;/* 11px */
+  --font-size-mono: 0.75rem;    /* 12px */
+
+  --line-height-tight: 1.15;
+  --line-height-normal: 1.35;
+  --line-height-relaxed: 1.5;
+
+  --letter-spacing-h1: -0.025em;
+  --letter-spacing-h2: -0.015em;
+  --letter-spacing-uppercase: 0.05em;
+
+  /* ── 8px Spacing Grid System ── */
+  --space-3xs: 2px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
+
+  --header-height: 56px;
+  --toolbar-width: 86px;
+  --inspector-width: 400px;
+  --timeline-height: 290px;
+}
+
+/* ── Typography Utility Classes ── */
+h1, .text-h1 { font-family: var(--font-main); font-size: var(--font-size-h1); line-height: var(--line-height-tight); letter-spacing: var(--letter-spacing-h1); font-weight: 800; color: var(--text-primary); }
+h2, .text-h2 { font-family: var(--font-main); font-size: var(--font-size-h2); line-height: var(--line-height-tight); letter-spacing: var(--letter-spacing-h2); font-weight: 700; color: var(--text-primary); }
+h3, .text-h3 { font-family: var(--font-main); font-size: var(--font-size-h3); line-height: var(--line-height-normal); font-weight: 700; color: var(--text-primary); }
+h4, .text-h4 { font-family: var(--font-main); font-size: var(--font-size-h4); line-height: var(--line-height-normal); font-weight: 600; color: var(--text-primary); }
+.body-lg      { font-family: var(--font-main); font-size: var(--font-size-body-lg); line-height: var(--line-height-normal); font-weight: 500; color: var(--text-primary); }
+.body-regular { font-family: var(--font-main); font-size: var(--font-size-body); line-height: var(--line-height-normal); font-weight: 400; color: var(--text-secondary); }
+.caption      { font-family: var(--font-main); font-size: var(--font-size-caption); line-height: var(--line-height-normal); letter-spacing: var(--letter-spacing-uppercase); font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+.code-mono    { font-family: var(--font-mono); font-size: var(--font-size-mono); line-height: var(--line-height-normal); font-weight: 500; }
+
+/* ── Radial Gradient Utility Classes ── */
+.canvas-viewport-radial-bg {
+  background-color: var(--bg-darkest);
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.07) 1px, transparent 0),
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.05) 0%, rgba(18, 20, 26, 0.95) 100%);
+  background-size: 24px 24px, 100% 100%;
+  background-position: 0 0, center center;
+}
+
+.focus-mode-radial-spotlight {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  background: radial-gradient(
+    circle var(--focus-radius, 250px) at var(--focus-x, 50%) var(--focus-y, 50%),
+    rgba(15, 23, 42, 0.15) 0%,
+    rgba(9, 11, 16, 0.82) 75%,
+    rgba(9, 11, 16, 0.94) 100%
+  );
+  backdrop-filter: blur(2px);
+  transition: opacity 0.25s ease-out;
+}
+
+.btn-spotlight-card {
+  position: relative;
+  background-color: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.btn-spotlight-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  background: radial-gradient(
+    180px circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(56, 189, 248, 0.2),
+    transparent 80%
+  );
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+.btn-spotlight-card:hover::before {
+  opacity: 1;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body, html, #root {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: var(--bg-darkest);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: var(--font-size-body-lg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* App Container Layout */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg-darkest);
+}
+
+.main-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Typography standardization across app UI */
+button, input, select, textarea, label, span {
+  font-family: var(--font-main);
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: var(--radius-sm);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-light);
+}
+
+/* Buttons and Inputs */
+button {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-main);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2xs);
+  border-radius: var(--radius-md);
+  white-space: nowrap;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-icon {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+}
+
+.btn-icon:hover:not(:disabled) {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+
+.btn-icon.active {
+  background: var(--accent-teal-dark);
+  color: #ffffff;
+  box-shadow: 0 0 14px var(--accent-teal-glow);
+}
+
+.btn-secondary {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  padding: var(--space-2xs) var(--space-md);
+  color: var(--text-primary);
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-panel-hover);
+  border-color: var(--border-light);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%);
+  color: #ffffff;
+  font-weight: 700;
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 4px 14px var(--accent-teal-glow);
+}
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #14b8a6 0%, #2dd4bf 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px var(--accent-teal-glow);
+}
+
+/* Input Fields */
+input[type="text"] {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-md);
+  font-family: var(--font-main);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  outline: none;
+  transition: all 0.15s ease;
+  user-select: text;
+}
+
+input[type="number"] {
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: var(--space-2xs) var(--space-xs);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  outline: none;
+  transition: all 0.15s ease;
+  user-select: text;
+}
+
+/* Custom Sleek Dark Select Dropdown */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: var(--bg-input);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  padding: var(--space-2xs) var(--space-lg) var(--space-2xs) var(--space-xs) !important;
+  font-family: var(--font-main) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: var(--radius-sm) !important;
+  height: 32px !important;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.18s ease;
+}
+
+select:hover {
+  border-color: var(--border-light) !important;
+}
+
+select:focus {
+  border-color: var(--accent-cyan) !important;
+  box-shadow: 0 0 0 2px var(--accent-teal-glow) !important;
+}
+
+/* Custom Sleek Dark Color Picker Swatch */
+input[type="color"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  width: 44px;
+  height: 32px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: var(--space-3xs);
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.18s ease;
+}
+
+input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: var(--radius-xs);
+}
+
+input[type="color"]::-moz-color-swatch {
+  border: none;
+  border-radius: var(--radius-xs);
+}
+
+input[type="color"]:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 8px var(--accent-teal-glow);
+}
+
+/* Custom Dark Checkbox */
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--bg-input);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--accent-teal);
+  border-color: var(--accent-teal);
+  box-shadow: 0 0 10px var(--accent-teal-glow);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  margin-bottom: var(--space-3xs);
+}
+
+/* Hide Spinners in Number Inputs for clean typing */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+input[type=number] {
+  -moz-appearance: textfield;
+}
+
+input[type="number"]:focus, input[type="text"]:focus, select:focus {
+  border-color: var(--accent-indigo);
+  background: #090c12;
+  box-shadow: 0 0 0 2px var(--accent-indigo-glow);
+}
+
+/* Grid overlay pattern */
+.bg-grid {
+  background-image: 
+    linear-gradient(to right, rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ── UNIFIED FORM CONTROL CSS SPECIFICATION ── */
+
+.input-group, .form-field-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input-label, .form-label {
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.input-field, .input-control, .select-control, .textarea-control {
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  padding: 0 var(--space-xs);
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  outline: none;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+  text-align: left;
+}
+
+/* Number inputs should usually be centered if small */
+input[type="number"].input-control, .input-control.center-text {
+  text-align: center;
+}
+
+.input-control:hover, .select-control:hover, .textarea-control:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  background-color: #12151e;
+}
+
+.input-control:focus, .select-control:focus, .textarea-control:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.15);
+  background-color: #0b0d12;
+}
+
+/* Hide Webkit Spinners globally */
+input[type="number"]::-webkit-inner-spin-button, 
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+}
+input[type="number"] {
+  -moz-appearance: textfield !important;
+}

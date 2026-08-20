@@ -1,0 +1,259 @@
+import React from 'react';
+import type { CharacterPart } from '../../../../types/animator';
+import { buildFreeformPath, getFreeformPerimeter } from '../../../../utils/freeform';
+
+interface ShapePartProps {
+  part: CharacterPart;
+  fill: string;
+  stroke: string;
+  isSelected: boolean;
+  isGhost: boolean;
+}
+
+const getStrokeDashProps = (part: CharacterPart, totalPerimeter: number) => {
+  const progress = part.strokeProgress !== undefined ? Math.max(0, Math.min(1, part.strokeProgress)) : 1;
+  if (progress <= 0) {
+    return {
+      strokeDasharray: `0 ${totalPerimeter * 2}`,
+      strokeDashoffset: totalPerimeter,
+    };
+  }
+  if (progress >= 1) {
+    return {};
+  }
+  return {
+    strokeDasharray: totalPerimeter,
+    strokeDashoffset: totalPerimeter * (1 - progress),
+  };
+};
+
+export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartProps): React.ReactNode => {
+  const isCustomStroke = Boolean(part.strokeColor && part.strokeColor !== '#101218' && part.strokeColor !== 'none' && part.strokeColor !== 'transparent');
+  const hasStroke = (part.strokeProgress === undefined || part.strokeProgress > 0) && !isCustomStroke;
+  const strokeToUse = hasStroke ? stroke : (isSelected ? '#38bdf8' : 'none');
+
+  switch (part.type) {
+    case 'custom_star':
+      return (
+        <g>
+          <polygon points="0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10" fill="rgba(0,0,0,0.001)" />
+          <polygon
+            points="0,-35 10,-10 35,-10 15,5 23,30 0,15 -23,30 -15,5 -35,-10 -10,-10"
+            fill={fill}
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 300)}
+          />
+        </g>
+      );
+
+    case 'custom_circle':
+      return (
+        <g>
+          <circle cx={0} cy={0} r={30} fill="rgba(0,0,0,0.001)" />
+          <circle cx={0} cy={0} r={30} fill={fill} />
+          <circle
+            cx={0}
+            cy={0}
+            r={30}
+            fill="none"
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 188.5)}
+          />
+        </g>
+      );
+
+    case 'custom_box':
+      return (
+        <g>
+          <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
+          <rect x={-30} y={-30} width={60} height={60} rx={part.borderRadius ?? 0} fill={fill} />
+          <rect
+            x={-30}
+            y={-30}
+            width={60}
+            height={60}
+            rx={part.borderRadius ?? 0}
+            fill="none"
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 240)}
+          />
+        </g>
+      );
+
+    case 'custom_rect':
+      return (
+        <g>
+          <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill="rgba(0,0,0,0.001)" />
+          <rect x={-60} y={-30} width={120} height={60} rx={part.borderRadius ?? 0} fill={fill} />
+          <rect
+            x={-60}
+            y={-30}
+            width={120}
+            height={60}
+            rx={part.borderRadius ?? 0}
+            fill="none"
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 360)}
+          />
+        </g>
+      );
+
+    case 'custom_triangle':
+      return (
+        <g>
+          <polygon points="0,-35 35,25 -35,25" fill="rgba(0,0,0,0.001)" />
+          <polygon points="0,-35 35,25 -35,25" fill={fill} />
+          <polygon
+            points="0,-35 35,25 -35,25"
+            fill="none"
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 209)}
+          />
+        </g>
+      );
+
+    case 'custom_parallelogram':
+      return (
+        <g>
+          <polygon points="-35,-30 85,-30 35,30 -85,30" fill="rgba(0,0,0,0.001)" />
+          <polygon points="-35,-30 85,-30 35,30 -85,30" fill={fill} />
+          <polygon
+            points="-35,-30 85,-30 35,30 -85,30"
+            fill="none"
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 340)}
+          />
+        </g>
+      );
+
+    case 'custom_banner':
+      return (
+        <g>
+          <rect
+            x={-80}
+            y={-25}
+            width={160}
+            height={50}
+            rx={part.borderRadius ?? 10}
+            fill={fill === 'none' || fill === 'transparent' ? 'rgba(0,0,0,0.001)' : fill}
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 420)}
+          />
+          <text
+            x={0}
+            y={0}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill={part.strokeColor || '#ffffff'}
+            fontSize={part.fontSize || 16}
+            fontWeight="700"
+            fontFamily={part.fontFamily || 'Outfit'}
+            style={{ pointerEvents: 'none' }}
+          >
+            {part.textValue || 'BANNER LABEL'}
+          </text>
+        </g>
+      );
+
+    case 'custom_capsule':
+      return (
+        <g>
+          <rect x={-50} y={-20} width={100} height={40} rx={20} fill="rgba(0,0,0,0.001)" />
+          <rect
+            x={-50}
+            y={-20}
+            width={100}
+            height={40}
+            rx={20}
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 280)}
+          />
+        </g>
+      );
+
+    case 'custom_diamond':
+      return (
+        <g>
+          <polygon points="0,-35 35,0 0,35 -35,0" fill="rgba(0,0,0,0.001)" />
+          <polygon
+            points="0,-35 35,0 0,35 -35,0"
+            fill={fill}
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 198)}
+          />
+        </g>
+      );
+
+    case 'custom_freeform': {
+      const points = part.points && part.points.length >= 2 ? part.points : undefined;
+      const d = points ? buildFreeformPath(points) : '';
+      if (!d) return null;
+      return (
+        <g>
+          <path d={d} fill="rgba(0,0,0,0.001)" />
+          <path
+            d={d}
+            fill={fill}
+            stroke={strokeToUse}
+            strokeWidth={isSelected ? 2 : 1.5}
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, points ? getFreeformPerimeter(points) : 0)}
+          />
+        </g>
+      );
+    }
+
+    case 'custom_card':
+      return (
+        <g>
+          <rect
+            x={-90}
+            y={-50}
+            width={180}
+            height={100}
+            rx={part.borderRadius ?? 12}
+            fill={fill === 'none' || fill === 'transparent' ? 'rgba(0,0,0,0.001)' : fill}
+            stroke={stroke}
+            strokeWidth={isSelected ? 2 : 1.5}
+            vectorEffect="non-scaling-stroke"
+            {...getStrokeDashProps(part, 560)}
+          />
+          <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} style={{ pointerEvents: 'none' }} />
+          <circle cx={-68} cy={-29} r={4} fill="#00d2ff" style={{ pointerEvents: 'none' }} />
+          <text x={-58} y={-29} dominantBaseline="middle" fill="#00d2ff" fontSize={11} fontWeight="800" fontFamily="Outfit, sans-serif" style={{ pointerEvents: 'none' }}>
+            {part.cardCategory || part.textValue || 'STUDIO CARD'}
+          </text>
+          <text x={-80} y={0} dominantBaseline="middle" fill="#f8fafc" fontSize={13} fontWeight="700" fontFamily="Outfit, sans-serif" style={{ pointerEvents: 'none' }}>
+            {part.cardTitle || 'MOTION GRAPHIC'}
+          </text>
+          <rect x={-80} y={16} width={64} height={22} rx={11} fill="#00d2ff" style={{ pointerEvents: 'none' }} />
+          <text x={-48} y={27} textAnchor="middle" dominantBaseline="middle" fill="#0f172a" fontSize={10} fontWeight="800" fontFamily="Outfit, sans-serif" style={{ pointerEvents: 'none' }}>
+            {part.cardButtonText || 'ACTIVE'}
+          </text>
+        </g>
+      );
+
+    default:
+      return null;
+  }
+};

@@ -1,0 +1,164 @@
+.stage-canvas-container {
+  flex: 1;
+  height: 100%;
+  background-color: var(--bg-darkest);
+  background-image: 
+    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.07) 1px, transparent 0),
+    radial-gradient(circle at 50% 50%, rgba(56, 189, 248, 0.04) 0%, rgba(18, 20, 26, 0.96) 100%);
+  background-size: 24px 24px, 100% 100%;
+  background-position: 0 0, center center;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.focus-spotlight-dimmer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  background: radial-gradient(
+    circle 260px at var(--focus-x, 50%) var(--focus-y, 50%),
+    rgba(15, 23, 42, 0.1) 0%,
+    rgba(9, 11, 16, 0.78) 70%,
+    rgba(9, 11, 16, 0.92) 100%
+  );
+  backdrop-filter: blur(2px);
+  transition: opacity 0.25s ease-out;
+}
+
+.canvas-header-info {
+  position: absolute;
+  top: 14px;
+  left: 18px;
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--font-size-caption);
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  color: var(--text-muted);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.stage-title {
+  color: var(--text-secondary);
+}
+
+.info-tool {
+  color: var(--accent-cyan);
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: var(--space-3xs) var(--space-xs);
+  border-radius: var(--radius-xs);
+}
+
+/* Viewport Tools Overlay (Floating Glass Pill Toolbar) */
+.viewport-tools-overlay {
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  height: 38px;
+  background: rgba(13, 16, 23, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0 var(--space-xs);
+  border-radius: var(--radius-lg);
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(0, 0, 0, 0.4);
+}
+
+.viewport-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewport-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.viewport-btn.active {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.zoom-badge {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  color: var(--accent-cyan);
+  min-width: 44px;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-3xs) var(--space-2xs);
+  user-select: none;
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+  transition: background 0.15s ease;
+}
+
+.zoom-badge:hover {
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.stage-svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible !important;
+  user-select: none;
+  transition: transform 0.1s ease-out;
+}
+
+.gizmo-handle {
+  cursor: grab;
+  transition: transform 0.1s;
+}
+.gizmo-handle:active {
+  cursor: grabbing;
+  transform: scale(1.25);
+}
+
+.gizmo-ring {
+  pointer-events: none;
+}
+
+.canvas-footer-legend {
+  position: absolute;
+  bottom: 14px;
+  left: 18px;
+  background: rgba(14, 17, 25, 0.88);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-mono);
+  color: var(--text-secondary);
+  display: flex;
+  gap: var(--space-xs);
+  z-index: 10;
+  pointer-events: none;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+}
+.canvas-footer-legend strong {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}

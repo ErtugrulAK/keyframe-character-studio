@@ -1,0 +1,35 @@
+name: Feature Request
+description: Suggest an idea or feature for Keyframe Character Studio
+title: "[FEAT]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for suggesting a feature! Please fill out the sections below.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: Provide a clear description of the problem (e.g. I am frustrated when...).
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution or feature you would like to see added.
+    validations:
+      required: true
+  - type: dropdown
+    id: domain
+    attributes:
+      label: Affected Project Domain
+      options:
+        - UI (Toolbar, Inspector, Modals)
+        - Timeline (Sequencer, Keyframes)
+        - Renderer (Canvas, SVG, Shapes, Masks)
+        - Animation (Playback, Interpolation, Broadcast)
+        - Backend (REST API, PostgreSQL, SQLite)
+        - Infrastructure (Build, Tests, Docs)
+    validations:
+      required: true

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import { makeEmptyChannels } from '../../utils/defaults';
+import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../../utils/shapeAppearance';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { KeyframesTab } from './sections/KeyframesTab';
@@ -50,7 +51,15 @@ export const DetailsPanel: React.FC = () => {
   const handlePartPropChange = (key: any, value: any) => {
     if (!selectedPartId) return;
     setCharacterParts((prev) =>
-      prev.map((p) => (p.id === selectedPartId ? { ...p, [key]: value } : p))
+      prev.map((p) => {
+        if (p.id !== selectedPartId) return p;
+        if (isShapeAppearanceEligible(p.type) && [
+          'fillEnabled', 'fillColor', 'fillOpacity', 'strokeEnabled', 'strokeColor', 'strokeWidth', 'strokeOpacity',
+        ].includes(key)) {
+          return updateShapeAppearance(p, { [key]: value } as ShapeAppearancePatch);
+        }
+        return { ...p, [key]: value };
+      })
     );
   };
 

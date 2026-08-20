@@ -2,6 +2,7 @@ import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import { buildFreeformPath, getFreeformPerimeter } from '../../../../utils/freeform';
 import { getShapeGeometry, polygonPointsToString } from '../../../../utils/shapeGeometry';
+import { isShapeAppearanceEligible, resolveShapeAppearance, type ResolvedShapeAppearance } from '../../../../utils/shapeAppearance';
 
 interface ShapePartProps {
   part: CharacterPart;
@@ -28,13 +29,72 @@ const getStrokeDashProps = (part: CharacterPart, totalPerimeter: number) => {
   };
 };
 
+const renderModernShape = (
+  part: CharacterPart,
+  appearance: ResolvedShapeAppearance,
+  geo: ReturnType<typeof getShapeGeometry>,
+): React.ReactNode => {
+  const fill = appearance.fillEnabled ? appearance.fillColor : 'none';
+  const stroke = appearance.strokeEnabled ? appearance.strokeColor : 'none';
+  const common = {
+    fill,
+    fillOpacity: appearance.fillOpacity,
+    stroke,
+    strokeOpacity: appearance.strokeOpacity,
+    strokeWidth: appearance.strokeWidth,
+    vectorEffect: 'non-scaling-stroke' as const,
+  };
+
+  switch (part.type) {
+    case 'custom_circle': {
+      const r = geo && geo.kind === 'circle' ? geo.r : 30;
+      return <circle cx={0} cy={0} r={r} {...common} {...getStrokeDashProps(part, 188.5)} />;
+    }
+    case 'custom_box':
+    case 'custom_rect':
+    case 'custom_capsule': {
+      const fallback = part.type === 'custom_capsule'
+        ? { kind: 'rect' as const, x: -50, y: -20, width: 100, height: 40, rx: 20 }
+        : part.type === 'custom_box'
+          ? { kind: 'rect' as const, x: -30, y: -30, width: 60, height: 60, rx: 0 }
+          : { kind: 'rect' as const, x: -60, y: -30, width: 120, height: 60, rx: 0 };
+      const g = geo && geo.kind === 'rect' ? geo : fallback;
+      const rx = part.type === 'custom_capsule' ? g.rx : part.borderRadius ?? g.rx;
+      const perimeter = part.type === 'custom_capsule' ? 280 : part.type === 'custom_box' ? 240 : 360;
+      return <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} {...common} {...getStrokeDashProps(part, perimeter)} />;
+    }
+    case 'custom_star':
+    case 'custom_triangle':
+    case 'custom_diamond':
+    case 'custom_parallelogram': {
+      const points = geo && geo.kind === 'polygon' ? polygonPointsToString(geo.points) : '';
+      const perimeter = part.type === 'custom_star' ? 300
+        : part.type === 'custom_triangle' ? 209
+          : part.type === 'custom_diamond' ? 198 : 340;
+      return <polygon points={points} {...common} {...getStrokeDashProps(part, perimeter)} />;
+    }
+    case 'custom_freeform': {
+      const points = part.points && part.points.length >= 2 ? part.points : undefined;
+      const d = points ? buildFreeformPath(points) : '';
+      if (!d) return null;
+      return <path d={d} strokeLinejoin="round" {...common} {...getStrokeDashProps(part, getFreeformPerimeter(points))} />;
+    }
+    default:
+      return null;
+  }
+};
+
 export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartProps): React.ReactNode => {
+  const appearance = resolveShapeAppearance(part);
+  const useModernAppearance = isShapeAppearanceEligible(part.type) && appearance.isModernAppearance;
   const isCustomStroke = Boolean(part.strokeColor && part.strokeColor !== '#101218' && part.strokeColor !== 'none' && part.strokeColor !== 'transparent');
   const hasStroke = (part.strokeProgress === undefined || part.strokeProgress > 0) && !isCustomStroke;
   const strokeToUse = hasStroke ? stroke : (isSelected ? '#38bdf8' : 'none');
 
   // M11 Step 2A: single source of truth for local-space shape geometry.
   const geo = getShapeGeometry(part.type);
+
+  if (useModernAppearance) return renderModernShape(part, appearance, geo);
 
   switch (part.type) {
     case 'custom_star': {

@@ -256,6 +256,11 @@ export interface CharacterPart {
   zIndex: number;
   fillColor: string;
   strokeColor: string;
+  /** Optional V1 static shape appearance controls. */
+  fillEnabled?: boolean;
+  fillOpacity?: number;
+  strokeEnabled?: boolean;
+  strokeOpacity?: number;
   pivot: { x: number; y: number };
   parentId?: string;
   baseTransform: Transform;

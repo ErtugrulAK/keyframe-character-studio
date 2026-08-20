@@ -27,7 +27,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   overrideHalfW,
   overrideHalfH,
 }) => {
-  const baseBounds = getPartBounds(selectedPart);
+  const baseBounds = getPartBounds(selectedPart, selectedTransform);
   
   // Multiply bounds by absolute scale so handles don't get warped or flipped visually
   const halfW = overrideHalfW ?? (baseBounds.halfW * Math.abs(selectedTransform.scaleX));

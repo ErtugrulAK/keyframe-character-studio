@@ -1,5 +1,6 @@
-import type { CharacterPart } from '../types/animator';
+import type { CharacterPart, Transform } from '../types/animator';
 import { getFreeformBounds } from './freeform';
+import { resolveShapeAppearance } from './shapeAppearance';
 
 export const getTextMetrics = (text: string, fontSize: number, fontFamily?: string): { halfW: number; halfH: number } => {
   if (!text) return { halfW: 20, halfH: 12 };
@@ -39,7 +40,14 @@ export const getTextMetrics = (text: string, fontSize: number, fontFamily?: stri
   return { halfW, halfH };
 };
 
-export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: number } => {
+/**
+ * Return geometric bounds, optionally including modern non-scaling stroke.
+ * The transform is required for stroke-aware bounds because SVG
+ * vectorEffect="non-scaling-stroke" keeps the authored width in stage/viewBox
+ * units after the part transform. Dividing by each scale before the existing
+ * scale multiplication keeps the final visible extent constant.
+ */
+export const getPartBounds = (part: CharacterPart, transform?: Pick<Transform, 'scaleX' | 'scaleY'>): { halfW: number; halfH: number } => {
   let halfW = 32;
   let halfH = 32;
 
@@ -121,6 +129,14 @@ export const getPartBounds = (part: CharacterPart): { halfW: number; halfH: numb
         halfH = 40;
       }
       break;
+    }
+  }
+
+  if (transform) {
+    const appearance = resolveShapeAppearance(part);
+    if (appearance.isModernAppearance && appearance.strokeEnabled && appearance.strokeOpacity > 0 && appearance.strokeWidth > 0) {
+      halfW += appearance.strokeWidth / (2 * Math.max(0.001, Math.abs(transform.scaleX)));
+      halfH += appearance.strokeWidth / (2 * Math.max(0.001, Math.abs(transform.scaleY)));
     }
   }
 

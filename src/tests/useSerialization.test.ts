@@ -1528,6 +1528,52 @@ describe('useSerialization Hook', () => {
     return (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[]).find((p) => p.id === part.id)!;
   }
 
+  it('M30+: modern shape appearance fields round-trip, including explicit zero values', () => {
+    const part = {
+      id: 'appearance-part', type: 'custom_rect', name: 'Appearance', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#123456', strokeColor: '#654321',
+      fillEnabled: false, fillOpacity: 0,
+      strokeEnabled: false, strokeWidth: 0, strokeOpacity: 0,
+    };
+    const { result } = renderSerializationWithPart(part);
+    const exported = JSON.parse(result.current.exportProject());
+    expect(exported.layers[0]).toMatchObject({
+      fillEnabled: false, fillOpacity: 0, strokeEnabled: false, strokeWidth: 0, strokeOpacity: 0,
+      fillColor: '#123456', strokeColor: '#654321',
+    });
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(JSON.stringify(exported))).toBe(true);
+    const restored = (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0];
+    expect(restored).toMatchObject({
+      fillEnabled: false, fillOpacity: 0, strokeEnabled: false, strokeWidth: 0, strokeOpacity: 0,
+      fillColor: '#123456', strokeColor: '#654321',
+    });
+  });
+
+  it('M30+: legacy shape import/export does not materialize modern appearance fields', () => {
+    const legacy = {
+      id: 'legacy-appearance', type: 'custom_box', name: 'Legacy', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#123456', strokeColor: '#101218', strokeWidth: 8,
+    };
+    const { result } = renderSerializationWithPart(legacy);
+    const exported = JSON.parse(result.current.exportProject());
+    expect(exported.layers[0].fillEnabled).toBeUndefined();
+    expect(exported.layers[0].fillOpacity).toBeUndefined();
+    expect(exported.layers[0].strokeEnabled).toBeUndefined();
+    expect(exported.layers[0].strokeOpacity).toBeUndefined();
+    expect(exported.layers[0].strokeWidth).toBe(8);
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(JSON.stringify(exported))).toBe(true);
+    const restored = (mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0];
+    expect(restored.fillEnabled).toBeUndefined();
+    expect(restored.fillOpacity).toBeUndefined();
+    expect(restored.strokeEnabled).toBeUndefined();
+    expect(restored.strokeOpacity).toBeUndefined();
+    expect(restored.strokeWidth).toBe(8);
+  });
+
   const FREEFORM_POINTS = [{ x: 0, y: 0 }, { x: 60, y: 0 }, { x: 0, y: 30 }];
 
   it('M15: freeform points round-trip — coordinates, order and count preserved exactly', () => {

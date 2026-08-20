@@ -18,8 +18,21 @@ describe('PartFactory Utility', () => {
   });
 
   it('creates custom configurations for specific types', () => {
+    for (const type of ['custom_rect', 'custom_box', 'custom_circle', 'custom_triangle', 'custom_star', 'custom_diamond', 'custom_parallelogram', 'custom_capsule', 'custom_freeform'] as const) {
+      const { newPart } = createCustomPart(type, type, 1);
+      expect(newPart).toMatchObject({
+        fillEnabled: true,
+        fillOpacity: 1,
+        strokeEnabled: true,
+        strokeWidth: 1.5,
+        strokeOpacity: 1,
+      });
+    }
+
     const textRes = createCustomPart('custom_text', 'Text Layer', 1);
     expect(textRes.newPart.textValue).toBe('NEW TEXT');
+    expect(textRes.newPart.fillEnabled).toBeUndefined();
+    expect(textRes.newPart.strokeOpacity).toBeUndefined();
 
     const mographRes = createCustomPart('mograph_cloner', 'Cloner', 2);
     expect(mographRes.newPart.clonerConfig).toBeDefined();
@@ -27,6 +40,8 @@ describe('PartFactory Utility', () => {
 
     const particleRes = createCustomPart('particle_system', 'Particles', 3);
     expect(particleRes.newPart.particleConfig).toBeDefined();
+    expect(mographRes.newPart.fillEnabled).toBeUndefined();
+    expect(particleRes.newPart.fillEnabled).toBeUndefined();
   });
 
   it('applies extra props safely', () => {

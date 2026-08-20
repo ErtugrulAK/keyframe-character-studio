@@ -2,6 +2,7 @@ import type { BodyPartType, CharacterPart, Track } from '../types/animator';
 import { generateId } from './idGenerator';
 import { makeEmptyChannels } from './defaults';
 import { TOOLBAR_COLORS, DEFAULT_CLONER_CONFIG, DEFAULT_PARTICLE_CONFIG } from './constants';
+import { isShapeAppearanceEligible } from './shapeAppearance';
 
 export const createCustomPart = (
   type: BodyPartType,
@@ -12,6 +13,15 @@ export const createCustomPart = (
   const partId = generateId('part');
   const colors = TOOLBAR_COLORS;
   const randomColor = colors[Math.floor(Math.random() * colors.length)];
+  const modernAppearanceDefaults = isShapeAppearanceEligible(type)
+    ? {
+      fillEnabled: true,
+      fillOpacity: 1,
+      strokeEnabled: true,
+      strokeWidth: 1.5,
+      strokeOpacity: 1,
+    }
+    : {};
 
   const newPart: CharacterPart = {
     id: partId,
@@ -20,6 +30,7 @@ export const createCustomPart = (
     zIndex,
     fillColor: randomColor,
     strokeColor: '#101218',
+    ...modernAppearanceDefaults,
     pivot: { x: 0.5, y: 0.5 },
     parentId: extraProps?.parentId !== undefined ? extraProps.parentId : undefined,
     baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },

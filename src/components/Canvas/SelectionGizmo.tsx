@@ -44,7 +44,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
       const part = characterParts.find((p) => p.id === id);
       if (!part) return;
       const t = getComputedTransform(id, currentFrame);
-      const b = getPartBounds(part);
+      const b = getPartBounds(part, t);
       const left = t.x - b.halfW * Math.abs(t.scaleX);
       const right = t.x + b.halfW * Math.abs(t.scaleX);
       const top = t.y - b.halfH * Math.abs(t.scaleY);
@@ -88,7 +88,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     if (selTrack && selTrack.editVisible === false) return null;
 
     const hasActiveMatte = Boolean(selectedPart.matte?.sourcePartId && selectedPart.matte.enabled !== false);
-    const bounds = getPartBounds(selectedPart);
+    const bounds = getPartBounds(selectedPart, selectedTransform);
     const matteHitArea = hasActiveMatte ? (
       <g
         transform={`translate(${300 + selectedTransform.x}, ${240 + selectedTransform.y}) rotate(${selectedTransform.rotation}) scale(${selectedTransform.scaleX}, ${selectedTransform.scaleY})`}

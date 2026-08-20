@@ -51,7 +51,14 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   const rp: CharacterPart = {
     ...part,
     fillColor: fill,
-    strokeColor: stroke,
+    // Keep authored stroke color on the synthetic part. Modern eligible
+    // shapes must not receive the legacy selection-color override.
+    strokeColor: isGhost && ghostColor ? ghostColor : (el.content.strokeColor ?? part.strokeColor),
+    fillEnabled: el.content.fillEnabled ?? part.fillEnabled,
+    fillOpacity: el.content.fillOpacity ?? part.fillOpacity,
+    strokeEnabled: el.content.strokeEnabled ?? part.strokeEnabled,
+    strokeWidth: el.content.strokeWidth ?? part.strokeWidth,
+    strokeOpacity: el.content.strokeOpacity ?? part.strokeOpacity,
     imageUrl: el.content.imageUrl ?? part.imageUrl,
     videoUrl: el.content.videoUrl ?? part.videoUrl,
     textValue: el.content.textValue ?? part.textValue,

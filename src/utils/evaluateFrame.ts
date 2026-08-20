@@ -118,7 +118,11 @@ function extractContent(layer: CharacterPart): LayerContent {
   return {
     fillColor: layer.fillColor,
     strokeColor: layer.strokeColor,
+    fillEnabled: layer.fillEnabled,
+    fillOpacity: layer.fillOpacity,
+    strokeEnabled: layer.strokeEnabled,
     strokeWidth: layer.strokeWidth,
+    strokeOpacity: layer.strokeOpacity,
     textValue: layer.textValue,
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,

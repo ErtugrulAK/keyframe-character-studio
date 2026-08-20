@@ -104,7 +104,7 @@ export const getPartsInMarquee = (
   characterParts.forEach((part) => {
     const t = getTransform(part.id);
     if (!t) return;
-    const bounds = getPartBounds(part);
+    const bounds = getPartBounds(part, t);
     const cx = canvasCenterX + t.x;
     const cy = canvasCenterY + t.y;
     // Rough bounding box intersection

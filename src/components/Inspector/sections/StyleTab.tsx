@@ -1,6 +1,8 @@
 import React from 'react';
 import type { CharacterPart } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
+import { StyleAppearanceSection } from './style/StyleAppearanceSection';
+import { isShapeAppearanceEligible } from '../../../utils/shapeAppearance';
 import { StyleTextFields } from './style/StyleTextFields';
 import { StyleGeometrySection } from './style/StyleGeometrySection';
 import { StyleClonerSection } from './style/StyleClonerSection';
@@ -28,6 +30,13 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         selectedPart={selectedPart}
         onPartColorChange={handlePartColorChange}
       />
+
+      {isShapeAppearanceEligible(selectedPart.type) && (
+        <StyleAppearanceSection
+          selectedPart={selectedPart}
+          onPartPropChange={handlePartPropChange}
+        />
+      )}
 
       <StyleTextFields
         selectedPart={selectedPart}

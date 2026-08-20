@@ -70,7 +70,11 @@ export interface SceneLayer {
   // Style — all fields verified against current CharacterPart usage in renderers
   fillColor: string;
   strokeColor: string;
+  fillEnabled?: boolean;
+  fillOpacity?: number;
+  strokeEnabled?: boolean;
   strokeWidth?: number;
+  strokeOpacity?: number;
   shadowColor?: string;
   shadowBlur?: number;
   shadowOffsetX?: number;
@@ -177,7 +181,11 @@ export type WorldTransform = {
 export interface LayerContent {
   fillColor?: string;
   strokeColor?: string;
+  fillEnabled?: boolean;
+  fillOpacity?: number;
+  strokeEnabled?: boolean;
   strokeWidth?: number;
+  strokeOpacity?: number;
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;

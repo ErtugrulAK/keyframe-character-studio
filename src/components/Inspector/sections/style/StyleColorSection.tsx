@@ -3,6 +3,7 @@ import { Palette } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartHexInput } from '../../inputs/SmartHexInput';
 import { StyleCard } from './StyleCard';
+import { isShapeAppearanceEligible } from '../../../../utils/shapeAppearance';
 
 const COLOR_SWATCHES = [
   '#00d2ff', '#38bdf8', '#6366f1', '#a855f7', '#ec4899', '#f43f5e',
@@ -15,6 +16,7 @@ interface StyleColorSectionProps {
 }
 
 export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPart, onPartColorChange }) => {
+  if (isShapeAppearanceEligible(selectedPart.type)) return null;
   return (
     <StyleCard title="COLOR" icon={<Palette size={13} />}>
       {/* FILL & STROKE COLOR GRID */}

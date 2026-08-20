@@ -359,7 +359,7 @@ export const StageCanvas: React.FC = () => {
             const part = characterParts.find(p => p.id === id);
             if (!part) return;
             const initT = dragStart.initialTransforms?.[id] || dragStart.initialTransform;
-            const b = getPartBounds(part);
+            const b = getPartBounds(part, initT);
             const left = initT.x + dx - b.halfW * Math.abs(initT.scaleX);
             const right = initT.x + dx + b.halfW * Math.abs(initT.scaleX);
             const top = initT.y + dy - b.halfH * Math.abs(initT.scaleY);
@@ -634,7 +634,7 @@ export const StageCanvas: React.FC = () => {
           const unscaledX = localX / Math.abs(transform.scaleX || 1);
           const unscaledY = localY / Math.abs(transform.scaleY || 1);
           
-          const { halfW, halfH } = getPartBounds(part);
+          const { halfW, halfH } = getPartBounds(part, transform);
           
           if (Math.abs(unscaledX) <= halfW && Math.abs(unscaledY) <= halfH) {
             // Only mask if it's a shape type

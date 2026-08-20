@@ -269,7 +269,7 @@ test.describe('M27 — timeline keyframe duplicate (real UI)', () => {
     expect(chans.x.map((k) => k.frame)).toEqual([21]); // original deleted, duplicate survives
   });
 
-  test('E2E-14+15 — track metadata + other tracks untouched', async ({ page }) => {
+  test('E2E-14+15 — canonical persisted animation + other tracks untouched', async ({ page }) => {
     const A = makeLayer('a', 'Part A');
     const B = makeLayer('b', 'Part B', { x: 400 });
     const chA = emptyChannels();
@@ -286,12 +286,14 @@ test.describe('M27 — timeline keyframe duplicate (real UI)', () => {
     await kfMenu(page, 'Duplicate Keyframes');
 
     const trackA = await storedTrack(page, 'a');
-    expect(trackA.id).toBe('t_a');
     expect(trackA.partId).toBe('a');
-    expect(trackA.name).toBe('Part A');
-    expect(trackA.color).toBe('#ff0000');
-    expect(trackA.visible).toBe(true);
-    expect(trackA.locked).toBe(false);
+    // SceneData intentionally excludes editor-only Track metadata.
+    expect(trackA).not.toHaveProperty('id');
+    expect(trackA).not.toHaveProperty('name');
+    expect(trackA).not.toHaveProperty('color');
+    expect(trackA).not.toHaveProperty('visible');
+    expect(trackA).not.toHaveProperty('locked');
+    expect((trackA.channels as Record<string, Record<string, unknown>[]>).x.map((k) => k.frame)).toEqual([10, 11]);
     const trackB = await storedTrack(page, 'b');
     expect((trackB.channels as Record<string, Record<string, unknown>[]>).opacity.map((k) => k.frame)).toEqual([5]); // untouched
   });

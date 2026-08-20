@@ -79,10 +79,14 @@ test('BROADCAST-1 — first entry fits the FULL artboard (no crop) at any edit z
   expect(bcViewBox).toBe('-660 -300 1920 1080'); // full artboard bounds
 });
 
-test('BROADCAST-2 — edge parts are ON SCREEN after entry (crop pushed them off before)', async ({ page }) => {
+test('BROADCAST-2 — clean entry is empty, then triggered edge parts are ON SCREEN', async ({ page }) => {
   await seed(page, scene());
   await page.getByText('BROADCAST', { exact: true }).click();
-  await page.waitForTimeout(700);
+  await expect.poll(() => page.locator('g[transform^="translate"]').count()).toBe(0);
+
+  await page.getByText('Sequence', { exact: true }).first().click();
+  await expect.poll(() => page.locator('g[transform^="translate"]').count()).toBe(2);
+
   const parts = await page.evaluate(() => {
     const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
     return [...svg.querySelectorAll('g[transform^="translate"]')].map((g) => {

@@ -8,7 +8,6 @@ import { TransformOpacityCard } from './transform/TransformOpacityCard';
 import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
-import { TransformInOutPresetCard } from './transform/TransformInOutPresetCard';
 import { SelectedKeyframeSection } from './transform/SelectedKeyframeSection';
 
 interface TransformTabProps {
@@ -49,11 +48,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   updateCurrentTransform,
   handlePartPropChange,
   handleZIndexChange,
-  customPresets,
-  onSavePreset,
-  onDeletePreset,
-  onImportPresets,
-  showToast,
   onCopyAnimation,
   onPasteAnimation,
   onClearAnimation,
@@ -126,22 +120,46 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         )}
 
-        {/* M23 — IN/OUT animation presets (existing procedural engine,
-            exposed via the same onPartPropChange history path) */}
-        {handlePartPropChange && (
-          <TransformInOutPresetCard
-            selectedPart={selectedPart}
-            onPartPropChange={handlePartPropChange}
-            customPresets={customPresets}
-            onSavePreset={onSavePreset}
-            onDeletePreset={onDeletePreset}
-            onImportPresets={onImportPresets}
-            showToast={showToast}
-            onCopyAnimation={onCopyAnimation}
-            onPasteAnimation={onPasteAnimation}
-            onClearAnimation={onClearAnimation}
-            clipboardSourceId={clipboardSourceId}
-          />
+        {/* Canonical animation-data actions remain useful for named sequences.
+            The legacy procedural IN/OUT editor is intentionally de-emphasized
+            without removing its data model or runtime support. */}
+        {onCopyAnimation && (
+          <div className="panel-card" style={{ marginBottom: 10 }}>
+            <div className="section-title" style={{ fontSize: 10 }}>ANIMATION DATA</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+              <button
+                type="button"
+                className="btn-secondary"
+                title="Copy animation from this element"
+                aria-label="Copy Animation"
+                onClick={onCopyAnimation}
+              >
+                Copy Animation
+              </button>
+              <button
+                type="button"
+                className="btn-secondary"
+                title="Paste animation onto selected element"
+                aria-label="Paste Animation"
+                disabled={!clipboardSourceId || clipboardSourceId === selectedPart.id}
+                onClick={onPasteAnimation}
+              >
+                Paste Animation
+              </button>
+              {onClearAnimation && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ color: '#f87171' }}
+                  title="Clear animation (IN/OUT presets, durations and keyframes)"
+                  aria-label="Clear Animation"
+                  onClick={onClearAnimation}
+                >
+                  Clear Animation
+                </button>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </>

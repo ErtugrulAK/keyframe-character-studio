@@ -219,13 +219,13 @@ test('BUG 5 — broadcast starts FIT, does not inherit edit zoom/pan (real UI)',
   });
   expect(broadcastZoom.style).toContain('scale(1)');          // no inherited zoom
   expect(broadcastZoom.style).toContain('translate(0px, 0px)'); // no inherited pan
-  expect(broadcastZoom.viewBox).toBe('0 0 600 480');
+  expect(broadcastZoom.viewBox).toBe('-660 -300 1920 1080');
 
   // 3. Whole artboard fits the viewport (no crop): world corners map inside
   const corners = await page.evaluate(() => {
     const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
     const out: Record<string, { x: number; y: number }> = {};
-    for (const [key, wx, wy] of [['tl', 0, 0], ['br', 600, 480]] as const) {
+    for (const [key, wx, wy] of [['tl', -660, -300], ['br', 1260, 780]] as const) {
       const pt = svg.createSVGPoint(); pt.x = wx as number; pt.y = wy as number;
       const s = pt.matrixTransform(svg.getScreenCTM()!);
       out[key] = { x: Math.round(s.x), y: Math.round(s.y) };

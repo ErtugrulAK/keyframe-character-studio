@@ -70,7 +70,7 @@ test('BROADCAST-SEQ-1 — sequence play renders parts for real (bounding-box + o
 
   // BROADCAST → Sequence click (Live Director Panel)
   await page.getByText('BROADCAST', { exact: true }).click();
-  await page.waitForTimeout(700);
+  await expect.poll(() => partVisibility(page)).toHaveLength(0);
   await page.getByText('Sequence', { exact: true }).first().click();
 
   // during animation (mid progress): ALL parts ON SCREEN with real size
@@ -84,6 +84,11 @@ test('BROADCAST-SEQ-1 — sequence play renders parts for real (bounding-box + o
   const final = await partVisibility(page);
   expect(final.length).toBe(3);
   expect(final.every((p) => p.onScreen && p.w > 0 && p.h > 0 && p.opacity > 0.5)).toBe(true);
+
+  await page.getByText('EDIT MODE', { exact: true }).click();
+  await expect.poll(() => partVisibility(page)).not.toHaveLength(0);
+  await page.getByText('BROADCAST', { exact: true }).click();
+  await expect.poll(() => partVisibility(page)).toHaveLength(0);
 });
 
 test('BROADCAST-SEQ-2 — pressing the same Sequence again re-plays (parts stay visible)', async ({ page }) => {

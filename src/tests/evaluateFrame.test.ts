@@ -137,6 +137,155 @@ describe('evaluateFrame — keyframes', () => {
   });
 });
 
+// ─── Named Sequence Evaluation Tests ────────────────────────────────
+
+describe('evaluateFrame — named sequence authority', () => {
+  const BASE = { x: 10, y: 20, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+
+  function makeSequenceTrack(
+    layerId: string,
+    sequenceId: string,
+    property: 'x' | 'y' | 'opacity',
+    startValue: number,
+    endValue: number,
+    easing: Keyframe['easing'] = 'linear',
+  ): Track {
+    const track = makeTrack(layerId);
+    track.channels[property] = [
+      { id: `${sequenceId}-${property}-0`, frame: 0, value: startValue, easing, templateId: sequenceId },
+      { id: `${sequenceId}-${property}-100`, frame: 100, value: endValue, easing: 'linear', templateId: sequenceId },
+    ];
+    return track;
+  }
+
+  test('keeps the omitted sequence ID backward-compatible with Sequence', () => {
+    const layer = makeLayer({ id: 'A', baseTransform: BASE });
+    const track = makeSequenceTrack('A', 'Sequence', 'x', 0, 100);
+
+    const implicit = evaluateFrame([layer], [track], 100, 50, makeRuntime(), NO_PRESETS);
+    const explicit = evaluateFrame([layer], [track], 100, 50, makeRuntime(), NO_PRESETS, undefined, 'Sequence');
+
+    expect(implicit.layers[0].transform.x).toBe(50);
+    expect(implicit).toEqual(explicit);
+  });
+
+  test('evaluates only the selected non-default canonical channel at frame 0, intermediate, and final', () => {
+    const layer = makeLayer({ id: 'A', baseTransform: BASE });
+    const special = makeSequenceTrack('A', 'SPECIAL', 'x', 200, 400);
+    special.channels.x.push(
+      { id: 'other-x-0', frame: 0, value: 900, easing: 'linear', templateId: 'OTHER' },
+      { id: 'other-x-100', frame: 100, value: 1000, easing: 'linear', templateId: 'OTHER' },
+    );
+
+    const atStart = evaluateFrame([layer], [special], 100, 0, makeRuntime(), NO_PRESETS, undefined, 'SPECIAL');
+    const atMiddle = evaluateFrame([layer], [special], 100, 50, makeRuntime(), NO_PRESETS, undefined, 'SPECIAL');
+    const atEnd = evaluateFrame([layer], [special], 100, 100, makeRuntime(), NO_PRESETS, undefined, 'SPECIAL');
+
+    expect(atStart.layers[0].transform.x).toBe(200);
+    expect(atMiddle.layers[0].transform.x).toBe(300);
+    expect(atEnd.layers[0].transform.x).toBe(400);
+  });
+
+  test('falls back to the base transform when the selected sequence has no keyframes', () => {
+    const layer = makeLayer({ id: 'A', baseTransform: BASE });
+    const track = makeSequenceTrack('A', 'OTHER', 'x', 200, 400);
+
+    const result = evaluateFrame([layer], [track], 100, 50, makeRuntime(), NO_PRESETS, undefined, 'MISSING');
+
+    expect(result.layers[0].transform.x).toBe(BASE.x);
+    expect(result.layers[0].transform.y).toBe(BASE.y);
+  });
+
+  test('filters legacy composite keyframes by the selected sequence', () => {
+    const layer = makeLayer({ id: 'A', baseTransform: BASE });
+    const track = makeTrack('A', [
+      { id: 'special-0', frame: 0, transform: { ...BASE, x: 100 }, easing: 'linear', templateId: 'SPECIAL' },
+      { id: 'special-100', frame: 100, transform: { ...BASE, x: 300 }, easing: 'linear', templateId: 'SPECIAL' },
+      { id: 'other-0', frame: 0, transform: { ...BASE, x: 800 }, easing: 'linear', templateId: 'OTHER' },
+      { id: 'other-100', frame: 100, transform: { ...BASE, x: 900 }, easing: 'linear', templateId: 'OTHER' },
+    ]);
+
+    const result = evaluateFrame([layer], [track], 100, 50, makeRuntime(), NO_PRESETS, undefined, 'SPECIAL');
+
+    expect(result.layers[0].transform.x).toBe(200);
+  });
+
+  test('preserves parent transform composition for a non-default sequence', () => {
+    const parent = makeLayer({ id: 'P', baseTransform: { ...BASE, x: 0, y: 0 } });
+    const child = makeLayer({ id: 'C', parentId: 'P', baseTransform: { ...BASE, x: 10, y: 0 } });
+    const parentTrack = makeSequenceTrack('P', 'SPECIAL', 'x', 100, 200);
+
+    const result = evaluateFrame(
+      [parent, child],
+      [parentTrack, makeTrack('C')],
+      100,
+      50,
+      makeRuntime(),
+      NO_PRESETS,
+      undefined,
+      'SPECIAL',
+    );
+
+    expect(result.layers.find((candidate) => candidate.id === 'C')?.transform.x).toBe(160);
+  });
+
+  test('preserves opacity easing for a non-default sequence', () => {
+    const layer = makeLayer({ id: 'A', baseTransform: BASE });
+    const track = makeSequenceTrack('A', 'SPECIAL', 'opacity', 0, 1, 'easeIn');
+    const expected = evaluateTransform([layer], [track], 'SPECIAL', 'A', 50).opacity;
+
+    const result = evaluateFrame([layer], [track], 100, 50, makeRuntime(), NO_PRESETS, undefined, 'SPECIAL');
+
+    expect(result.layers[0].opacity).toBeCloseTo(expected, 5);
+    expect(result.layers[0].opacity).toBeGreaterThan(0);
+    expect(result.layers[0].opacity).toBeLessThan(0.5);
+  });
+
+  test('preserves procedural delta composition with a non-default sequence', () => {
+    const layer = makeLayer({
+      id: 'A',
+      baseTransform: { ...BASE, x: 0 },
+      inAnimPreset: 'slide-left',
+      inAnimDuration: 30,
+    });
+    const track = makeSequenceTrack('A', 'SPECIAL', 'x', 100, 200);
+    const runtime = makeRuntime({
+      appMode: 'broadcast',
+      broadcast: { A: { state: 'animating_in', progress: 0.5 } },
+    });
+
+    const result = evaluateFrame([layer], [track], 100, 50, runtime, NO_PRESETS, undefined, 'SPECIAL');
+
+    expect(result.layers[0].transform.x).toBeCloseTo(187.5, 5);
+    expect(result.layers[0].opacity).toBeCloseTo(0.875, 5);
+  });
+
+  test('evaluates matte source and target transforms through the same non-default sequence', () => {
+    const source = makeLayer({ id: 'SOURCE', baseTransform: BASE });
+    const target = makeLayer({
+      id: 'TARGET',
+      baseTransform: BASE,
+      matte: { sourcePartId: 'SOURCE', mode: 'alpha', enabled: true },
+    });
+    const sourceTrack = makeSequenceTrack('SOURCE', 'SPECIAL', 'x', 100, 300);
+    const targetTrack = makeSequenceTrack('TARGET', 'SPECIAL', 'y', 200, 400);
+
+    const result = evaluateFrame(
+      [source, target],
+      [sourceTrack, targetTrack],
+      100,
+      50,
+      makeRuntime(),
+      NO_PRESETS,
+      undefined,
+      'SPECIAL',
+    );
+
+    expect(result.layers.find((candidate) => candidate.id === 'SOURCE')?.transform.x).toBe(200);
+    expect(result.layers.find((candidate) => candidate.id === 'TARGET')?.transform.y).toBe(300);
+  });
+});
+
 // ─── Hierarchy Tests ──────────────────────────────────────────────────
 
 describe('evaluateFrame — hierarchy', () => {

@@ -35,12 +35,15 @@ import {
 } from '../../utils/matte';
 import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } from '../../utils/matte';
 import type { WorldTransform } from '../../types/composition';
+import type { NamedSequenceRuntimeState } from '../../utils/broadcastEngine';
 import { CANVAS_CENTER } from '../../utils/constants';
 
 interface StagePartLayersProps {
   sortedParts: CharacterPart[];
   appMode: AppMode;
   broadcastState: Record<string, BroadcastObjectState>;
+  broadcastSessionActivated?: boolean;
+  namedSequenceRuntime?: NamedSequenceRuntimeState;
   currentFrame: number;
   selectedPartId: string | null;
   totalFrames: number;
@@ -76,6 +79,8 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   sortedParts,
   appMode,
   broadcastState,
+  broadcastSessionActivated = true,
+  namedSequenceRuntime,
   currentFrame,
   selectedPartId,
   totalFrames,
@@ -123,14 +128,26 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     return null;
   }
 
+  // Broadcast is a runtime-controlled output surface. Entering the mode must
+  // not leak the authored Edit pose before the first explicit sequence,
+  // procedural transition, or live-stunt trigger of this session.
+  if (appMode === 'broadcast' && !broadcastSessionActivated) {
+    return null;
+  }
+
+  const activeNamedSequence = appMode === 'broadcast' && namedSequenceRuntime?.sequenceId
+    ? namedSequenceRuntime
+    : null;
+
   const evaluatedFrame = evaluateFrame(
     sortedParts,
     tracks,
     totalFrames,
-    currentFrame,
+    activeNamedSequence?.frame ?? currentFrame,
     runtime,
     customPresets,
-    frameOverrides,
+    activeNamedSequence ? undefined : frameOverrides,
+    activeNamedSequence?.sequenceId ?? 'Sequence',
   );
 
   // M11 Step 2B / M13 Step 2C — Track matte: build ONE world-space clipPath

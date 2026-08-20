@@ -28,6 +28,7 @@ export interface ToastItem {
 }
 import { useHistory } from '../hooks/useHistory';
 import { useBroadcast } from '../hooks/useBroadcast';
+import type { NamedSequenceRuntimeState } from '../utils/broadcastEngine';
 import { useToolbar } from '../hooks/useToolbar';
 import { useInspector } from '../hooks/useInspector';
 import { useTimeline } from '../hooks/useTimeline';
@@ -146,6 +147,9 @@ interface AnimatorContextType {
   appMode: AppMode;
   setAppMode: (mode: AppMode) => void;
   broadcastState: Record<string, BroadcastObjectState>;
+  broadcastSessionActivated: boolean;
+  namedSequenceRuntime: NamedSequenceRuntimeState;
+  playNamedSequence: (sequenceId: string, durationFrames: number) => void;
   triggerBroadcastIn: (partId: string) => void;
   triggerBroadcastOut: (partId: string) => void;
   triggerAllBroadcastIn: () => void;
@@ -198,6 +202,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     appMode,
     setAppMode,
     broadcastState,
+    broadcastSessionActivated,
+    namedSequenceRuntime,
+    playNamedSequence,
     triggerBroadcastIn,
     triggerBroadcastOut,
     triggerAllBroadcastIn,
@@ -522,6 +529,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         appMode,
         setAppMode,
         broadcastState,
+        broadcastSessionActivated,
+        namedSequenceRuntime,
+        playNamedSequence,
         triggerBroadcastIn,
         triggerBroadcastOut,
         triggerAllBroadcastIn,

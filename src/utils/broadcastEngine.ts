@@ -1,5 +1,59 @@
 import type { CharacterPart, CustomMotionPreset, LiveStuntType, BroadcastObjectState } from '../types/animator';
 
+export type NamedSequencePlaybackStatus = 'idle' | 'playing' | 'holding';
+
+export interface NamedSequenceRuntimeState {
+  sequenceId: string | null;
+  status: NamedSequencePlaybackStatus;
+  frame: number;
+  durationFrames: number;
+}
+
+export const createIdleNamedSequenceRuntime = (): NamedSequenceRuntimeState => ({
+  sequenceId: null,
+  status: 'idle',
+  frame: 0,
+  durationFrames: 0,
+});
+
+const normalizeSequenceDuration = (durationFrames: number): number =>
+  Number.isFinite(durationFrames) ? Math.max(0, Math.floor(durationFrames)) : 0;
+
+/**
+ * Start, replay, or interrupt named-sequence playback. Sequence display names
+ * are intentionally absent: runtime semantics depend only on stable identity
+ * and authored duration.
+ */
+export const startNamedSequence = (
+  sequenceId: string,
+  durationFrames: number,
+): NamedSequenceRuntimeState => {
+  const normalizedDuration = normalizeSequenceDuration(durationFrames);
+  return {
+    sequenceId,
+    status: normalizedDuration === 0 ? 'holding' : 'playing',
+    frame: 0,
+    durationFrames: normalizedDuration,
+  };
+};
+
+/** Advance named-sequence playback using the existing broadcast RAF delta. */
+export const tickNamedSequenceRuntime = (
+  state: NamedSequenceRuntimeState,
+  dtMs: number,
+  fps: number,
+): NamedSequenceRuntimeState => {
+  if (state.status !== 'playing') return state;
+  if (!Number.isFinite(dtMs) || dtMs <= 0) return state;
+  if (!Number.isFinite(fps) || fps <= 0) return state;
+
+  const frame = Math.min(state.durationFrames, state.frame + (dtMs / 1000) * fps);
+  if (frame >= state.durationFrames) {
+    return { ...state, status: 'holding', frame: state.durationFrames };
+  }
+  return { ...state, frame };
+};
+
 /**
  * BUGFIX (broadcast sequence switching): reconcile broadcastState with the
  * current part list. Parts that no longer exist are dropped (no playback

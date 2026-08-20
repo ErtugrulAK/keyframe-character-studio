@@ -208,7 +208,10 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await clickFirstKeyframe(page);
     await openTransformTab(page);
 
-    // lock is OFF by default → scaleX edit touches only scaleX
+    // The shared scale lock defaults ON. Explicitly unlock through the real UI
+    // before asserting the free-axis editing contract.
+    await page.getByRole('button', { name: 'Locked', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Free', exact: true })).toBeVisible();
     const sxInput = page.locator('input[aria-label="Keyframe Scale X"]');
     await sxInput.click();
     await sxInput.fill('4');
@@ -268,7 +271,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await openTransformTab(page); // no keyframe clicked
     expect(await page.getByText('SELECTED KEYFRAME @ FRAME', { exact: false }).count()).toBe(0);
     // base transform controls still present and usable
-    const baseX = page.locator('input[aria-label="Location X"]').first();
+    const baseX = page.locator('.form-field-group', { hasText: 'POS X' }).locator('input').first();
     expect(await baseX.count()).toBeGreaterThan(0);
   });
 
@@ -439,8 +442,10 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     if (diamondCount > 0) {
       await clickFirstKeyframe(page);
       await openTransformTab(page);
-      // 29A contract: channel-less (legacy-only) data → section hidden, safe
-      expect(await page.getByText('SELECTED KEYFRAME @ FRAME 20').count()).toBe(0);
+      // Import migrates legacy composite keyframes into canonical channels, so
+      // the current M8/channel authority intentionally exposes the section.
+      await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeVisible();
+      await expect(page.locator('input[aria-label="Keyframe Location X"]')).toHaveValue('55');
     } else {
       // import may drop legacy-only keyframes (pre-existing behavior) — safe either way
       await openTransformTab(page);

@@ -37,6 +37,7 @@ import { computeProceduralDelta } from './proceduralAnimation';
  * @param runtime        — RuntimeData (broadcast, liveStunts, appMode)
  * @param customPresets  — CustomMotionPreset[] (procedural animation assets)
  * @param frameOverrides — per-layer frame overrides for custom_timeline presets
+ * @param sequenceId     — timeline sequence/template ID (defaults to legacy "Sequence")
  */
 export function evaluateFrame(
   layers: CharacterPart[],
@@ -46,6 +47,7 @@ export function evaluateFrame(
   runtime: RuntimeData,
   customPresets: CustomMotionPreset[],
   frameOverrides?: Record<string, number>,
+  sequenceId: string = 'Sequence',
 ): EvaluatedFrame {
   // ── Stage 1 & 2: Animation + Hierarchy ────────────────────────────
   // evaluateTransform handles keyframe interpolation + parent-child.
@@ -60,7 +62,7 @@ export function evaluateFrame(
   for (const layer of layers) {
     // Use per-layer frame override for custom_timeline presets
     const evalFrame = frameOverrides?.[layer.id] ?? frame;
-    const world = evaluateTransform(layers, tracks, 'Sequence', layer.id, evalFrame);
+    const world = evaluateTransform(layers, tracks, sequenceId, layer.id, evalFrame);
     // Procedural deltas always use the global frame (broadcast progress doesn't change per-layer)
     const delta = computeProceduralDelta(layer, tracks, totalFrames, frame, runtime, customPresets);
     computed.set(layer.id, { world, delta });

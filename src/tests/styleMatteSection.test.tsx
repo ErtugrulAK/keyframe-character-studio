@@ -38,6 +38,21 @@ const IMAGE = makePart('img', 'custom_image', 'Image Part');
 const VIDEO = makePart('vid', 'custom_video', 'Video Part');
 
 describe('StyleMatteSection — track matte editor UI', () => {
+  it('uses a compact grid with source and mode in independent fields', () => {
+    const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', enabled: true });
+    const { container } = renderMatte(target, [STAR, target]);
+    const grid = container.querySelector('.matte-control-grid');
+    const source = screen.getByText('MATTE SOURCE').closest('.matte-field');
+    const mode = screen.getByText('MODE').closest('.matte-field');
+
+    expect(grid).toBeTruthy();
+    expect(source).toBeTruthy();
+    expect(mode).toBeTruthy();
+    expect(source).not.toBe(mode);
+    expect(grid?.contains(source)).toBe(true);
+    expect(grid?.contains(mode)).toBe(true);
+  });
+
   it('starts with None when no matte is set', () => {
     const { container } = renderMatte(BOX, [STAR, BOX, FREEFORM, TEXT]);
     const select = container.querySelector('select') as HTMLSelectElement;

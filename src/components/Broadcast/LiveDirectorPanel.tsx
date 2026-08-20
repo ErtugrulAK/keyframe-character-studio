@@ -9,7 +9,7 @@ export const LiveDirectorPanel: React.FC = () => {
     motionTemplates,
     activeTemplateId,
     setActiveTemplateId,
-    triggerAllBroadcastIn,
+    playNamedSequence,
   } = useAnimator();
 
   return (
@@ -42,15 +42,8 @@ export const LiveDirectorPanel: React.FC = () => {
                 key={tmpl.id}
                 type="button"
                 onClick={() => {
-                  // BUGFIX: selecting a sequence must NOT touch the edit
-                  // timeline playback state (setIsPlaying/setCurrentFrame).
-                  // Broadcast playback is driven by broadcastState: the
-                  // useBroadcast part-sync effect resets the state to the new
-                  // scene's parts (animating_in) whenever the part list
-                  // changes — so the new sequence plays on its own without
-                  // coupling to the edit timeline's Play button.
                   setActiveTemplateId(tmpl.id);
-                  triggerAllBroadcastIn();
+                  playNamedSequence(tmpl.id, tmpl.durationFrames);
                 }}
                 title={`Click to play "${tmpl.name}" animation on stage`}
                 style={{

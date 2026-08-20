@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TransformTab } from '../components/Inspector/sections/TransformTab';
+import { TransformInOutPresetCard } from '../components/Inspector/sections/transform/TransformInOutPresetCard';
 import type { CharacterPart, Transform } from '../types/animator';
 
 // TransformAlignmentBar (rendered inside TransformTab) reads the animator
@@ -38,13 +39,9 @@ const transform: Transform = {
 
 function renderTab(part: CharacterPart, onProp: ReturnType<typeof vi.fn> = vi.fn()) {
   return render(
-    <TransformTab
+    <TransformInOutPresetCard
       selectedPart={part}
-      transform={transform}
-      currentFrame={0}
-      updateCurrentTransform={vi.fn()}
-      handlePartPropChange={onProp}
-      handleZIndexChange={vi.fn()}
+      onPartPropChange={onProp}
       customPresets={[]}
       onSavePreset={vi.fn()}
       onDeletePreset={vi.fn()}
@@ -242,13 +239,9 @@ describe('TransformTab — M23 IN/OUT animation presets', () => {
     const onProp = vi.fn();
     const { rerender } = renderTab(makePart(), onProp);
     rerender(
-      <TransformTab
+      <TransformInOutPresetCard
         selectedPart={makePart({ inAnimPreset: 'spin' })}
-        transform={transform}
-        currentFrame={0}
-        updateCurrentTransform={vi.fn()}
-        handlePartPropChange={onProp}
-        handleZIndexChange={vi.fn()}
+        onPartPropChange={onProp}
         customPresets={[]}
         onSavePreset={vi.fn()}
         onDeletePreset={vi.fn()}
@@ -264,6 +257,35 @@ describe('TransformTab — M23 IN/OUT animation presets', () => {
     expect(screen.getByLabelText('Animation In Duration')).toBeTruthy();
     expect(screen.getByLabelText('Animation Out Preset')).toBeTruthy();
     expect(screen.getByLabelText('Animation Out Duration')).toBeTruthy();
+  });
+});
+
+describe('TransformTab — named-sequence primary workflow cleanup', () => {
+  it('hides the legacy procedural editor while preserving animation-data actions', () => {
+    render(
+      <TransformTab
+        selectedPart={makePart({ inAnimPreset: 'fade', outAnimPreset: 'spin' })}
+        transform={transform}
+        currentFrame={0}
+        updateCurrentTransform={vi.fn()}
+        handlePartPropChange={vi.fn()}
+        customPresets={[]}
+        onSavePreset={vi.fn()}
+        onDeletePreset={vi.fn()}
+        onCopyAnimation={vi.fn()}
+        onPasteAnimation={vi.fn()}
+        onClearAnimation={vi.fn()}
+        clipboardSourceId="another-part"
+      />,
+    );
+
+    expect(screen.queryByText('ANIMATION IN / OUT')).toBeNull();
+    expect(screen.queryByLabelText('Animation In Preset')).toBeNull();
+    expect(screen.queryByLabelText('Animation Out Preset')).toBeNull();
+    expect(screen.getByText('ANIMATION DATA')).toBeTruthy();
+    expect(screen.getByLabelText('Copy Animation')).toBeTruthy();
+    expect(screen.getByLabelText('Paste Animation')).toBeTruthy();
+    expect(screen.getByLabelText('Clear Animation')).toBeTruthy();
   });
 });
 

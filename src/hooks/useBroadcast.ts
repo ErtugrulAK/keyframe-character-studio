@@ -1,6 +1,13 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import type { AppMode, BroadcastObjectState, LiveStuntType, CustomMotionPreset, CharacterPart, Track } from '../types/animator';
-import { tickLiveStuntsState, tickBroadcastState, syncBroadcastParts } from '../utils/broadcastEngine';
+import {
+  createIdleNamedSequenceRuntime,
+  startNamedSequence,
+  syncBroadcastParts,
+  tickBroadcastState,
+  tickLiveStuntsState,
+  tickNamedSequenceRuntime,
+} from '../utils/broadcastEngine';
 
 interface UseBroadcastOptions {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
@@ -15,7 +22,6 @@ interface UseBroadcastOptions {
 
 export const useBroadcast = ({
   setIsPlaying,
-  setCurrentFrame,
   characterParts,
   tracksRef,
   characterPartsRef,
@@ -26,14 +32,23 @@ export const useBroadcast = ({
   // Broadcast Mode State
   const [appMode, setAppMode] = useState<AppMode>('edit');
   const [broadcastState, setBroadcastState] = useState<Record<string, BroadcastObjectState>>({});
+  const [namedSequenceRuntime, setNamedSequenceRuntime] = useState(createIdleNamedSequenceRuntime);
+  const [broadcastSessionActivated, setBroadcastSessionActivated] = useState(false);
 
   useEffect(() => {
     if (appMode === 'broadcast') {
       setIsPlaying(false);
-      setCurrentFrame(0);
       setBroadcastState({});
+      setBroadcastSessionActivated(false);
+    } else {
+      setNamedSequenceRuntime(createIdleNamedSequenceRuntime());
     }
   }, [appMode]);
+
+  const playNamedSequence = useCallback((sequenceId: string, durationFrames: number) => {
+    setBroadcastSessionActivated(true);
+    setNamedSequenceRuntime(startNamedSequence(sequenceId, durationFrames));
+  }, []);
 
   // BUGFIX: broadcast sequence switching is driven by broadcastState, NOT by
   // the edit-timeline playback. When the part list changes while in broadcast
@@ -49,6 +64,7 @@ export const useBroadcast = ({
 
   const resetBroadcastState = useCallback(() => {
     setBroadcastState({});
+    setBroadcastSessionActivated(false);
   }, []);
 
   const triggerBroadcastIn = useCallback((partId: string) => {
@@ -57,6 +73,7 @@ export const useBroadcast = ({
       showToast('Layer is hidden via eye icon on timeline (muted from broadcast)', 'info');
       return;
     }
+    setBroadcastSessionActivated(true);
     setBroadcastState(prev => ({
       ...prev,
       [partId]: { state: 'animating_in', progress: 0 }
@@ -64,6 +81,7 @@ export const useBroadcast = ({
   }, [showToast]);
 
   const triggerBroadcastOut = useCallback((partId: string) => {
+    setBroadcastSessionActivated(true);
     setBroadcastState(prev => ({
       ...prev,
       [partId]: { state: 'animating_out', progress: 0 }
@@ -71,6 +89,7 @@ export const useBroadcast = ({
   }, []);
 
   const triggerAllBroadcastIn = useCallback(() => {
+    setBroadcastSessionActivated(true);
     const nextState: Record<string, BroadcastObjectState> = {};
     characterPartsRef.current.forEach(p => {
       const track = tracksRef.current.find(t => t.partId === p.id);
@@ -82,6 +101,7 @@ export const useBroadcast = ({
   }, []);
 
   const triggerAllBroadcastOut = useCallback(() => {
+    setBroadcastSessionActivated(true);
     setBroadcastState(prev => {
       const nextState = { ...prev };
       characterPartsRef.current.forEach(p => {
@@ -97,6 +117,7 @@ export const useBroadcast = ({
   const [liveStuntsState, setLiveStuntsState] = useState<Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>>({});
 
   const triggerLiveStunt = useCallback((partId: string, stunt: LiveStuntType, loop?: boolean, customPresetId?: string) => {
+    setBroadcastSessionActivated(true);
     if (customPresetId) {
       const cp = customPresetsRef.current.find(p => p.id === customPresetId);
       if (cp) {
@@ -179,6 +200,10 @@ export const useBroadcast = ({
         tickBroadcastState(prev, dtMs, characterPartsRef.current, customPresetsRef.current, fpsRef.current || 30)
       );
 
+      setNamedSequenceRuntime(prev =>
+        tickNamedSequenceRuntime(prev, dtMs, fpsRef.current || 30)
+      );
+
       broadcastReqRef.current = requestAnimationFrame(loop);
     };
 
@@ -194,6 +219,9 @@ export const useBroadcast = ({
     setAppMode,
     broadcastState,
     setBroadcastState,
+    broadcastSessionActivated,
+    namedSequenceRuntime,
+    playNamedSequence,
     triggerBroadcastIn,
     triggerBroadcastOut,
     triggerAllBroadcastIn,

@@ -228,26 +228,28 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
 
   return (
     <StyleCard title="TRACK MATTE" icon={<Scissors size={13} />} color="#00d2ff">
-      <div className="form-field-group">
-        <label className="form-label">MATTE SOURCE</label>
-        <select className="select-control" style={selectStyle} value={selectValue} onChange={(e) => onSelectSource(e.target.value)}>
-          <option value="">None</option>
-          {eligibleSources.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
+      <div className="matte-control-grid">
+        <div className="matte-field">
+          <label className="form-label">MATTE SOURCE</label>
+          <select className="select-control" style={selectStyle} value={selectValue} onChange={(e) => onSelectSource(e.target.value)}>
+            <option value="">None</option>
+            {eligibleSources.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {sourceMissing && (
-          <div style={{ marginTop: 6, fontSize: 11, color: '#f59e0b' }}>
+          <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b' }}>
             Missing source ({matte!.sourcePartId}) — clip not applied
           </div>
         )}
 
         {matte && !sourceMissing && (
           <>
-            <div style={{ marginTop: 10 }}>
+            <div className="matte-field">
               <label className="form-label">MODE</label>
               <select
                 className="select-control"
@@ -268,7 +270,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               )}
             </div>
 
-            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="matte-toggle-field">
               <label className="form-label" style={{ margin: 0 }}>INVERTED</label>
               <input
                 type="checkbox"
@@ -279,7 +281,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               />
             </div>
 
-            <div className="form-field-group" style={{ marginTop: 8 }}>
+            <div className="matte-field">
               <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>FEATHER</span>
                 <span style={{ color: '#00d2ff', fontWeight: 800, opacity: featherDisabled ? 0.45 : 1 }}>{featherValue}px</span>
@@ -297,7 +299,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               />
             </div>
 
-            <div className="form-field-group" style={{ marginTop: 8 }}>
+            <div className="matte-field">
               <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>STRENGTH</span>
                 <span style={{ color: '#00d2ff', fontWeight: 800, opacity: strengthDisabled ? 0.45 : 1 }}>{strengthValue}%</span>
@@ -315,7 +317,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               />
             </div>
 
-            <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div className="matte-toggle-field">
               <label className="form-label" style={{ margin: 0 }}>GRADIENT</label>
               <input
                 type="checkbox"
@@ -328,7 +330,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             </div>
 
             {gradientEnabled && (
-              <div className="form-field-group" style={{ marginTop: 8 }}>
+              <div className="matte-field">
                 <label className="form-label">TYPE</label>
                 <select
                   className="select-control"
@@ -345,7 +347,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             )}
 
             {gradientEnabled && gradientTypeValue === 'linear' && (
-              <div className="form-field-group" style={{ marginTop: 8 }}>
+              <div className="matte-field">
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>ANGLE</span>
                   <span style={{ color: '#00d2ff', fontWeight: 800, opacity: gradientDisabled ? 0.45 : 1 }}>{angleValue}°</span>
@@ -365,7 +367,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             )}
 
             {gradientEnabled && displayStops.length > 0 && (
-              <div className="form-field-group" style={{ marginTop: 8 }}>
+              <div className="matte-field matte-span-full">
                 <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span>STOPS ({displayStops.length}/4)</span>
                   <button
@@ -424,7 +426,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               </div>
             )}
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 8, fontSize: 11, color: '#cbd5e1', cursor: 'pointer' }}>
+            <label className="matte-toggle-field matte-span-full" style={{ fontSize: 11, color: '#cbd5e1', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 aria-label="Enabled"

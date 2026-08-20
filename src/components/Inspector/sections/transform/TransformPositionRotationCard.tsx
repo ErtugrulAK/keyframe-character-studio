@@ -1,9 +1,11 @@
 import React from 'react';
 import type { Transform } from '../../../../types/animator';
+import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformPositionRotationCardProps {
   transform: Transform;
+  coordinateSystem: SceneCoordinateSystem;
   onUpdate: (partial: Partial<Transform>) => void;
 }
 
@@ -18,7 +20,10 @@ const sectionLabel: React.CSSProperties = {
 /**
  * Position (X/Y) and rotation rows used inside the unified TRANSFORM card.
  */
-export const TransformPositionRotationCard: React.FC<TransformPositionRotationCardProps> = ({ transform, onUpdate }) => {
+export const TransformPositionRotationCard: React.FC<TransformPositionRotationCardProps> = ({ transform, coordinateSystem, onUpdate }) => {
+  const usesRawProjectUnits = coordinateSystem === 'project-unit-center-v1';
+  const positionDisplayScale = usesRawProjectUnits ? undefined : 0.01;
+
   return (
     <>
       {/* Position */}
@@ -30,7 +35,7 @@ export const TransformPositionRotationCard: React.FC<TransformPositionRotationCa
             <SmartNumberInput
               value={transform.x}
               step={1}
-              displayScale={0.01}
+              displayScale={positionDisplayScale}
               precision={2}
               onChange={(val) => onUpdate({ x: val })}
             />
@@ -41,7 +46,7 @@ export const TransformPositionRotationCard: React.FC<TransformPositionRotationCa
             <SmartNumberInput
               value={-transform.y}
               step={1}
-              displayScale={0.01}
+              displayScale={positionDisplayScale}
               precision={2}
               onChange={(val) => onUpdate({ y: -val })}
             />

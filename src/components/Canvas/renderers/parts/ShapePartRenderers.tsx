@@ -76,7 +76,7 @@ const renderModernShape = (
     case 'custom_freeform': {
       const points = part.points && part.points.length >= 2 ? part.points : undefined;
       const d = points ? buildFreeformPath(points) : '';
-      if (!d) return null;
+      if (!points || !d) return null;
       return <path d={d} strokeLinejoin="round" {...common} {...getStrokeDashProps(part, getFreeformPerimeter(points))} />;
     }
     default:

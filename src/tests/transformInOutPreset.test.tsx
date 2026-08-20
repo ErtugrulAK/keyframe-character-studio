@@ -266,6 +266,7 @@ describe('TransformTab — named-sequence primary workflow cleanup', () => {
       <TransformTab
         selectedPart={makePart({ inAnimPreset: 'fade', outAnimPreset: 'spin' })}
         transform={transform}
+        coordinateSystem="project-unit-center-v1"
         currentFrame={0}
         updateCurrentTransform={vi.fn()}
         handlePartPropChange={vi.fn()}

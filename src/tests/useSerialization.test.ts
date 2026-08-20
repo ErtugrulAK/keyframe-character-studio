@@ -145,6 +145,7 @@ describe('useSerialization Hook', () => {
     const parsed = JSON.parse(exported);
 
     expect(parsed.version).toBe(1);
+    expect(parsed.coordinateSystem).toBe('legacy-unknown');
     expect(parsed.width).toBe(800);
     expect(parsed.height).toBe(600);
     expect(parsed.fps).toBe(30);

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Track, TrackChannel, Transform } from '../../../../types/animator';
+import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { groupChannelKeyframesByFrame } from '../../../../utils/channelKeyframeGroups';
 import { CHANNEL_META } from '../../../Timeline/timelineConstants';
@@ -28,6 +29,7 @@ interface SelectedKeyframeSectionProps {
   transform: Transform;
   activeTemplateId: string | null;
   isScaleLocked: boolean;
+  coordinateSystem: SceneCoordinateSystem;
   onUpdate: (newTransform: Partial<Transform>) => void;
 }
 
@@ -38,6 +40,7 @@ export const SelectedKeyframeSection: React.FC<SelectedKeyframeSectionProps> = (
   transform,
   activeTemplateId,
   isScaleLocked,
+  coordinateSystem,
   onUpdate,
 }) => {
   if (!track || !selectedKeyframeId) return null;
@@ -55,6 +58,11 @@ export const SelectedKeyframeSection: React.FC<SelectedKeyframeSectionProps> = (
     (['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as TrackChannel[]).includes(ch),
   );
   if (channels.length === 0) return null;
+
+  // Explicit legacy-centi scenes retain their historical centi-unit display.
+  // Unknown legacy scenes intentionally preserve the pre-V2 raw keyframe UI;
+  // guessing a conversion there would silently reinterpret authored data.
+  const displayScale = coordinateSystem === 'legacy-centi-unit' ? 0.01 : undefined;
 
   const handleEdit = (ch: TrackChannel, value: number) => {
     // Follow the existing TransformScaleCard scale-lock behavior: when locked,
@@ -85,6 +93,7 @@ export const SelectedKeyframeSection: React.FC<SelectedKeyframeSectionProps> = (
               value={selected.keyframes[ch].value}
               step={ch === 'opacity' ? 0.01 : 1}
               precision={ch === 'opacity' ? 2 : 1}
+              displayScale={ch === 'x' || ch === 'y' ? displayScale : undefined}
               deferCommit
               ariaLabel={`Keyframe ${CHANNEL_META[ch].label}`}
               onChange={(val) => handleEdit(ch, val)}

@@ -28,6 +28,7 @@ function renderSection(opts: {
   currentFrame?: number;
   transform?: Transform;
   isScaleLocked?: boolean;
+  coordinateSystem?: 'legacy-unknown' | 'legacy-centi-unit' | 'project-unit-center-v1';
   onUpdate?: ReturnType<typeof vi.fn>;
 }) {
   const onUpdate = opts.onUpdate ?? vi.fn();
@@ -38,6 +39,7 @@ function renderSection(opts: {
       currentFrame={opts.currentFrame ?? 0}
       transform={opts.transform ?? baseTransform}
       activeTemplateId="Sequence"
+      coordinateSystem={opts.coordinateSystem ?? 'project-unit-center-v1'}
       isScaleLocked={opts.isScaleLocked ?? false}
       onUpdate={onUpdate}
     />,
@@ -113,6 +115,10 @@ describe('M29 29A — channel display', () => {
 });
 
 describe('M29 29A — value editing via existing pipeline', () => {
+  it('legacy-centi keyframe position values use the explicit centi display contract', () => {
+    renderSection({ track: xRotTrack(), selectedKeyframeId: 'x_20', currentFrame: 20, coordinateSystem: 'legacy-centi-unit' });
+    expect(Number((screen.getByLabelText('Keyframe Location X') as HTMLInputElement).value)).toBeLessThan(1);
+  });
   it('6+11. X edit calls onUpdate({x}) — unrelated channels untouched', () => {
     const onUpdate = vi.fn();
     renderSection({ track: xRotTrack(), selectedKeyframeId: 'x_20', currentFrame: 20, onUpdate });
@@ -229,6 +235,7 @@ describe('M29 29A — metadata / safety', () => {
         currentFrame={20}
         transform={baseTransform}
         activeTemplateId="Sequence"
+        coordinateSystem="project-unit-center-v1"
         isScaleLocked={false}
         onUpdate={onUpdate}
       />,

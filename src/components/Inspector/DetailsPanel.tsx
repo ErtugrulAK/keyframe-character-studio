@@ -41,6 +41,7 @@ export const DetailsPanel: React.FC = () => {
     selectedKeyframeId,
     activeTemplateId,
     isScaleLocked,
+    coordinateSystem,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'duplicate'>('transform');
@@ -187,6 +188,7 @@ export const DetailsPanel: React.FC = () => {
             <TransformTab
               selectedPart={selectedPart}
               transform={transform}
+              coordinateSystem={coordinateSystem}
               currentFrame={currentFrame}
               updateCurrentTransform={updateCurrentTransform}
               handlePartPropChange={handlePartPropChange}

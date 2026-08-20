@@ -1,12 +1,14 @@
 import React from 'react';
 import { PenTool } from 'lucide-react';
 import type { CharacterPart, FreeformPoint, Transform } from '../../../../types/animator';
+import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { freeformVertexToDisplay, freeformVertexToLocal } from '../../../../utils/freeform';
 
 interface TransformVertexEditorProps {
   selectedPart: CharacterPart;
   transform: Transform;
+  coordinateSystem: SceneCoordinateSystem;
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
 }
 
@@ -21,9 +23,10 @@ const VERTEX_COLORS = ['#38bdf8', '#10b981', '#f59e0b', '#c084fc', '#f43f5e', '#
  * points that the renderer and the canvas markers consume, so typing 0 into
  * X puts the vertex exactly on the canvas center line.
  */
-export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ selectedPart, transform, onPartPropChange }) => {
+export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ selectedPart, transform, coordinateSystem, onPartPropChange }) => {
   const points = selectedPart.points || [];
   if (points.length === 0) return null;
+  const positionDisplayScale = coordinateSystem === 'legacy-unknown' || coordinateSystem === 'legacy-centi-unit' ? 0.01 : undefined;
 
   const updateVertex = (index: number, patch: Partial<FreeformPoint>) => {
     const next = points.map((p, i) => (i === index ? { ...p, ...patch } : p));
@@ -55,7 +58,7 @@ export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ se
                   <SmartNumberInput
                     value={disp.x}
                     step={1}
-                    displayScale={0.01}
+                    displayScale={positionDisplayScale}
                     precision={2}
                     onChange={(val) => updateVertex(i, { x: freeformVertexToLocal(val, disp.y, transform).x })}
                   />
@@ -65,7 +68,7 @@ export const TransformVertexEditor: React.FC<TransformVertexEditorProps> = ({ se
                   <SmartNumberInput
                     value={disp.y}
                     step={1}
-                    displayScale={0.01}
+                    displayScale={positionDisplayScale}
                     precision={2}
                     onChange={(val) => updateVertex(i, { y: freeformVertexToLocal(disp.x, val, transform).y })}
                   />

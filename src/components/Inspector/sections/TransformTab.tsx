@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CharacterPart, CustomMotionPreset, Track, Transform } from '../../../types/animator';
+import type { SceneCoordinateSystem } from '../../../types/composition';
 import type { SavePresetInput } from '../../../hooks/usePresets';
 import { TransformAlignmentBar } from './transform/TransformAlignmentBar';
 import { TransformPositionRotationCard } from './transform/TransformPositionRotationCard';
@@ -13,6 +14,7 @@ import { SelectedKeyframeSection } from './transform/SelectedKeyframeSection';
 interface TransformTabProps {
   selectedPart: CharacterPart;
   transform: Transform;
+  coordinateSystem: SceneCoordinateSystem;
   currentFrame: number;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
@@ -44,6 +46,7 @@ interface TransformTabProps {
 export const TransformTab: React.FC<TransformTabProps> = ({
   selectedPart,
   transform,
+  coordinateSystem,
   currentFrame,
   updateCurrentTransform,
   handlePartPropChange,
@@ -71,6 +74,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           transform={transform}
           activeTemplateId={activeTemplateId ?? null}
           isScaleLocked={isScaleLocked}
+          coordinateSystem={coordinateSystem}
           onUpdate={updateCurrentTransform}
         />
 
@@ -79,6 +83,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <TransformPositionRotationCard
               transform={transform}
+              coordinateSystem={coordinateSystem}
               onUpdate={updateCurrentTransform}
             />
 
@@ -107,6 +112,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <TransformControlPoints
             selectedPart={selectedPart}
             transform={transform}
+            coordinateSystem={coordinateSystem}
             onUpdate={updateCurrentTransform}
           />
         )}
@@ -116,6 +122,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <TransformVertexEditor
             selectedPart={selectedPart}
             transform={transform}
+            coordinateSystem={coordinateSystem}
             onPartPropChange={handlePartPropChange}
           />
         )}

@@ -15,6 +15,7 @@ import type {
   MotionTemplate,
   ProjectTemplate,
 } from '../types/animator';
+import type { SceneCoordinateSystem } from '../types/composition';
 import { useClipboard } from '../hooks/useClipboard';
 import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
@@ -104,12 +105,14 @@ interface AnimatorContextType {
   toggleTrackExpanded: (trackId: string) => void;
   exportProject: () => string;
   importProject: (jsonStr: string, defaultName?: string) => boolean;
+  migrateLegacyCoordinates: () => boolean;
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;
   updatePartMedia: (partId: string, url: string, type: 'image' | 'video') => void;
   sceneTitle: string;
   setSceneTitle: (title: string) => void;
   projectTemplates: ProjectTemplate[];
+  coordinateSystem: SceneCoordinateSystem;
   activeProjectTemplateId: string;
   setActiveProjectTemplateId: (id: string) => void;
   addProjectTemplate: (name: string) => void;
@@ -179,6 +182,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Shared scale-lock state: used by the inspector scale card AND the canvas
   // corner-drag scaling so both respect the same setting.
   const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
+
+  const [coordinateSystem, setCoordinateSystem] = useState<SceneCoordinateSystem>('project-unit-center-v1');
 
   const {
     currentFrame,
@@ -257,6 +262,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setCurrentFrame,
     setIsPlaying,
     appMode,
+    coordinateSystem,
+    setCoordinateSystem,
   });
 
   const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
@@ -401,12 +408,15 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     exportProject,
     importProject,
     resetProject,
+    migrateLegacyCoordinates,
   } = useSerialization({
     fps,
     setFps,
     totalFrames,
     setTotalFrames,
     projectResolution,
+    coordinateSystem,
+    setCoordinateSystem,
     setProjectResolution,
     tracks,
     setTracks,
@@ -513,6 +523,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         toggleTrackExpanded,
         exportProject,
         importProject,
+        migrateLegacyCoordinates,
         resetProject,
         addCustomPart,
         updatePartMedia,
@@ -555,6 +566,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         sceneTitle,
         setSceneTitle,
         projectTemplates,
+        coordinateSystem,
         activeProjectTemplateId,
         setActiveProjectTemplateId,
         addProjectTemplate,

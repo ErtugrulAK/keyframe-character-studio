@@ -1,13 +1,16 @@
 import { useState, useCallback } from 'react';
 import type { CharacterPart, Track, MotionTemplate, ProjectTemplate, TrackChannel, AppMode } from '../types/animator';
+import type { SceneCoordinateSystem } from '../types/composition';
 import { DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_CHARACTER_PARTS, DEFAULT_TRACKS } from '../utils/defaults';
+import { DEFAULT_SCENE_COORDINATE_SYSTEM } from '../utils/coordinateMigration';
 
 interface TemplateCanvas {
   characterParts: CharacterPart[];
   tracks: Track[];
   motionTemplates: MotionTemplate[];
   activeTemplateId: string;
+  coordinateSystem: SceneCoordinateSystem;
 }
 
 interface UseTemplatesOptions {
@@ -22,6 +25,8 @@ interface UseTemplatesOptions {
    *  NOT touch the edit-timeline playback state (currentFrame/isPlaying) —
    *  broadcast playback is driven by broadcastState only. */
   appMode: AppMode;
+  coordinateSystem: SceneCoordinateSystem;
+  setCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>>;
 }
 
 export const useTemplates = ({
@@ -33,6 +38,8 @@ export const useTemplates = ({
   setCurrentFrame,
   setIsPlaying,
   appMode,
+  coordinateSystem,
+  setCoordinateSystem,
 }: UseTemplatesOptions) => {
   const [templateCanvasStore, setTemplateCanvasStore] = useState<Record<string, TemplateCanvas>>({
     tmpl_1: {
@@ -40,6 +47,7 @@ export const useTemplates = ({
       tracks: DEFAULT_TRACKS,
       motionTemplates: [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }],
       activeTemplateId: 'Sequence',
+      coordinateSystem: 'project-unit-center-v1',
     },
   });
 
@@ -159,6 +167,7 @@ export const useTemplates = ({
         tracks,
         motionTemplates,
         activeTemplateId,
+        coordinateSystem,
       },
     }));
 
@@ -168,17 +177,19 @@ export const useTemplates = ({
       tracks: [],
       motionTemplates: DEFAULT_MOTION_TEMPLATES,
       activeTemplateId: 'Sequence',
+      coordinateSystem: DEFAULT_SCENE_COORDINATE_SYSTEM,
     };
 
     setCharacterParts(targetData.characterParts);
     setTracks(targetData.tracks);
     setMotionTemplates(targetData.motionTemplates);
     setActiveTemplateIdState(targetData.activeTemplateId);
+    setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
     setActiveProjectTemplateIdState(targetId);
 
     const tmpl = projectTemplates.find((t) => t.id === targetId);
     if (tmpl) setSceneTitleState(tmpl.name);
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState]);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, templateCanvasStore, projectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setCoordinateSystem]);
 
   const addProjectTemplate = useCallback((name: string) => {
     const cleanName = name.trim() || 'New Template';
@@ -196,12 +207,14 @@ export const useTemplates = ({
         tracks,
         motionTemplates,
         activeTemplateId,
+        coordinateSystem,
       },
       [newId]: {
         characterParts: [],
         tracks: [],
         motionTemplates: DEFAULT_MOTION_TEMPLATES,
         activeTemplateId: 'Sequence',
+        coordinateSystem: 'project-unit-center-v1',
       },
     }));
 
@@ -210,10 +223,11 @@ export const useTemplates = ({
     setTracks([]);
     setMotionTemplates(DEFAULT_MOTION_TEMPLATES);
     setActiveTemplateIdState('Sequence');
+    setCoordinateSystem('project-unit-center-v1');
     setActiveProjectTemplateIdState(newId);
     setSceneTitleState(cleanName);
     setFps(60); // Strictly default to 60 FPS for new templates
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, projectTemplates.length, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps]);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, projectTemplates.length, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
 
   const renameProjectTemplate = useCallback((id: string, newName: string) => {
     const cleanName = newName.trim();
@@ -240,11 +254,13 @@ export const useTemplates = ({
           tracks: [],
           motionTemplates: DEFAULT_MOTION_TEMPLATES,
           activeTemplateId: 'Sequence',
+          coordinateSystem: DEFAULT_SCENE_COORDINATE_SYSTEM,
         };
         setCharacterParts(targetData.characterParts);
         setTracks(targetData.tracks);
         setMotionTemplates(targetData.motionTemplates);
         setActiveTemplateIdState(targetData.activeTemplateId);
+        setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
         setSceneTitleState(filtered[0].name);
       }
       return filtered;
@@ -255,7 +271,7 @@ export const useTemplates = ({
       delete nextStore[idToDelete];
       return nextStore;
     });
-  }, [activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore]);
+  }, [activeProjectTemplateId, templateCanvasStore, setProjectTemplates, setActiveProjectTemplateIdState, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setSceneTitleState, setTemplateCanvasStore, setCoordinateSystem]);
 
   return {
     templateCanvasStore,

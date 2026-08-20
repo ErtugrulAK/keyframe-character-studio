@@ -55,6 +55,23 @@ describe('native SVG shape appearance rendering', () => {
     expect(html).toContain('stroke-width="8"');
   });
 
+  it('omits freeform geometry when legacy or incomplete data has no points', () => {
+    expect(render('custom_freeform', { points: undefined })).toBe('');
+    expect(renderToString(renderShapePart({
+      part: makePart('custom_freeform', {
+        points: undefined,
+        fillEnabled: undefined,
+        fillOpacity: undefined,
+        strokeEnabled: undefined,
+        strokeOpacity: undefined,
+      }),
+      fill: '#00ff00',
+      stroke: '#ffffff',
+      isSelected: false,
+      isGhost: false,
+    }))).toBe('');
+  });
+
   it('does not replace modern authored stroke when selected', () => {
     const html = render('custom_rect', { strokeColor: '#ffffff', strokeWidth: 8 }, true);
     expect(html).toContain('stroke="#ffffff"');

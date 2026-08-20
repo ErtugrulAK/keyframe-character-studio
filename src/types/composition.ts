@@ -18,11 +18,26 @@
 // there is no separate AnimationTrack type (P4-S3).
 import type { AnimationTrackData, PartMatte } from './animator';
 
+/**
+ * Coordinate-unit semantics for persisted scene data.
+ *
+ * The origin remains center-relative for all known contracts.  The legacy
+ * contract records the historical Inspector centi-unit representation, while
+ * the project-unit contract is the future raw project-space representation.
+ * `legacy-unknown` is used for untagged/mixed v1 data and must not be guessed.
+ */
+export type SceneCoordinateSystem =
+  | 'legacy-unknown'
+  | 'legacy-centi-unit'
+  | 'project-unit-center-v1';
+
 // ─── Scene Data (persistent, serializable) ───────────────────────────────
 
 export interface SceneData {
   /** Schema version for forward-compatible migration */
   version: 1;
+  /** Explicit coordinate-unit semantics; absent on historical v1 files. */
+  coordinateSystem?: SceneCoordinateSystem;
   /** Human-readable scene name */
   name?: string;
   /** Canvas dimensions (default 1920×1080) */

@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Move } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../../types/animator';
+import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { getPartBounds } from '../../../../utils/bounds';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformControlPointsProps {
   selectedPart: CharacterPart;
   transform: Transform;
+  coordinateSystem: SceneCoordinateSystem;
   onUpdate: (partial: Partial<Transform>) => void;
 }
 
@@ -15,7 +17,7 @@ interface TransformControlPointsProps {
  * Supports two modes: edge midpoints and corner points, each anchored to the
  * strict opposite anchor so dragging one point only stretches one side.
  */
-export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ selectedPart, transform, onUpdate }) => {
+export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ selectedPart, transform, coordinateSystem, onUpdate }) => {
   const [pointMode, setPointMode] = useState<'edge' | 'corner'>('corner');
 
   const { halfW: baseHalfW, halfH: baseHalfH } = getPartBounds(selectedPart);
@@ -24,6 +26,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
 
   const cx = transform.x;
   const cy = -transform.y; // Cartesian Y
+  const positionDisplayScale = coordinateSystem === 'legacy-unknown' || coordinateSystem === 'legacy-centi-unit' ? 0.01 : undefined;
 
   return (
     <div className="panel-card" style={{ marginTop: 8 }}>
@@ -84,7 +87,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cx - currentHalfW}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetLeftX) => {
                   const fixedRightX = cx + currentHalfW;
@@ -101,7 +104,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cy}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetY) => onUpdate({ y: -targetY })}
               />
@@ -120,7 +123,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cx + currentHalfW}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetRightX) => {
                   const fixedLeftX = cx - currentHalfW;
@@ -137,7 +140,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cy}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetY) => onUpdate({ y: -targetY })}
               />
@@ -156,7 +159,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cx}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetX) => onUpdate({ x: targetX })}
               />
@@ -166,7 +169,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cy + currentHalfH}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetTopY) => {
                   const fixedBottomY = cy - currentHalfH;
@@ -192,7 +195,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cx}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetX) => onUpdate({ x: targetX })}
               />
@@ -202,7 +205,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cy - currentHalfH}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetBottomY) => {
                   const fixedTopY = cy + currentHalfH;
@@ -229,7 +232,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cx - currentHalfW}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetTLX) => {
                   const fixedRightX = cx + currentHalfW;
@@ -246,7 +249,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cy + currentHalfH}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetTLY) => {
                   const fixedBottomY = cy - currentHalfH;
@@ -270,7 +273,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cx + currentHalfW}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetTRX) => {
                   const fixedLeftX = cx - currentHalfW;
@@ -287,7 +290,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cy + currentHalfH}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetTRY) => {
                   const fixedBottomY = cy - currentHalfH;
@@ -311,7 +314,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cx - currentHalfW}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetBLX) => {
                   const fixedRightX = cx + currentHalfW;
@@ -328,7 +331,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cy - currentHalfH}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetBLY) => {
                   const fixedTopY = cy + currentHalfH;
@@ -352,7 +355,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cx + currentHalfW}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetBRX) => {
                   const fixedLeftX = cx - currentHalfW;
@@ -369,7 +372,7 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
               <SmartNumberInput
                 value={cy - currentHalfH}
                 step={1}
-                displayScale={0.01}
+                displayScale={positionDisplayScale}
                 precision={2}
                 onChange={(targetBRY) => {
                   const fixedTopY = cy + currentHalfH;

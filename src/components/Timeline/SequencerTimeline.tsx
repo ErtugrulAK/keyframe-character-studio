@@ -19,6 +19,7 @@ import {
   Clock,
   Scissors,
   TrendingUp,
+  Copy,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
@@ -75,6 +76,8 @@ export const SequencerTimeline: React.FC = () => {
     addMotionTemplate,
     renameMotionTemplate,
     deleteMotionTemplate,
+    duplicateMotionTemplate,
+    updateMotionTemplateDuration,
   } = useAnimator();
 
   // Sequencer Tree Modal Toggle State & Inline Sequence Rename
@@ -83,6 +86,7 @@ export const SequencerTimeline: React.FC = () => {
   const [editingSeqId, setEditingSeqId] = useState<string | null>(null);
   const [editingSeqName, setEditingSeqName] = useState<string>('');
   const seqMenuRef = useRef<HTMLDivElement>(null);
+  const activeSequence = motionTemplates.find((template) => template.id === activeTemplateId);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -445,13 +449,27 @@ export const SequencerTimeline: React.FC = () => {
                     className="timeline-seq-tab-close"
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteMotionTemplate(tmpl.id);
+                      if (window.confirm(`Delete sequence "${tmpl.name}"? Its authored animation channels will also be removed.`)) {
+                        deleteMotionTemplate(tmpl.id);
+                      }
                     }}
                     title="Delete sequence"
                   >
                     ✕
                   </span>
                 )}
+                <button
+                  type="button"
+                  className="timeline-seq-tab-duplicate"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    duplicateMotionTemplate(tmpl.id);
+                  }}
+                  title="Duplicate sequence"
+                  aria-label={`Duplicate sequence ${tmpl.name}`}
+                >
+                  <Copy size={11} />
+                </button>
               </div>
             );
           })}
@@ -464,6 +482,36 @@ export const SequencerTimeline: React.FC = () => {
             <Plus size={13} />
           </button>
         </div>
+      </div>
+
+      <div
+        className="timeline-sequence-meta"
+        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', borderBottom: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.55)' }}
+      >
+        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.4px' }}>SEQUENCE DURATION</span>
+        <input
+          className="input-control"
+          data-testid="sequence-duration-input"
+          aria-label="Sequence duration in frames"
+          type="number"
+          min={0}
+          step={1}
+          value={activeSequence?.durationFrames ?? 0}
+          onChange={(event) => {
+            const value = Number(event.target.value);
+            if (Number.isFinite(value) && value >= 0 && activeSequence) {
+              updateMotionTemplateDuration(activeSequence.id, value);
+            }
+          }}
+          style={{ width: 64, height: 22, fontSize: 11, textAlign: 'center' }}
+        />
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>frames</span>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+          {activeSequence ? `${(activeSequence.durationFrames / Math.max(1, fps)).toFixed(2)}s @ ${fps} FPS` : '—'}
+        </span>
+        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted)' }}>
+          ID: {activeSequence?.id ?? '—'}
+        </span>
       </div>
 
       {/* Header Bar */}

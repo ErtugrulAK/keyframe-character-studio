@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import type { CharacterPart, Track } from '../types/animator';
+import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 
 export interface HistoryState {
   tracks: Track[];
   characterParts: CharacterPart[];
+  motionTemplates?: MotionTemplate[];
 }
 
 interface UseHistoryOptions {
@@ -13,6 +14,8 @@ interface UseHistoryOptions {
   characterParts: CharacterPart[];
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   characterPartsRef: React.MutableRefObject<CharacterPart[]>;
+  motionTemplates?: MotionTemplate[];
+  setMotionTemplates?: React.Dispatch<React.SetStateAction<MotionTemplate[]>>;
 }
 
 /**
@@ -31,6 +34,8 @@ export const useHistory = ({
   characterParts,
   setCharacterParts,
   characterPartsRef,
+  motionTemplates,
+  setMotionTemplates,
 }: UseHistoryOptions) => {
   // Undo / Redo Stack State
   const [history, setHistory] = useState<HistoryState[]>([]);
@@ -58,9 +63,10 @@ export const useHistory = ({
       batchStartSnapshotRef.current = {
         tracks: structuredClone(tracksRef.current),
         characterParts: structuredClone(characterPartsRef.current),
+        ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
       };
     }
-  }, []);
+  }, [motionTemplates]);
 
   const endBatchInteraction = useCallback(() => {
     if (isBatchInteractingRef.current) {
@@ -71,6 +77,7 @@ export const useHistory = ({
       const finalSnap: HistoryState = {
         tracks: structuredClone(tracksRef.current),
         characterParts: structuredClone(characterPartsRef.current),
+        ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
       };
 
       if (initialSnap && JSON.stringify(initialSnap) !== JSON.stringify(finalSnap)) {
@@ -81,7 +88,7 @@ export const useHistory = ({
         commitHistory([...base, finalSnap].slice(-50));
       }
     }
-  }, [commitHistory]);
+  }, [commitHistory, motionTemplates]);
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
@@ -112,6 +119,7 @@ export const useHistory = ({
     const snap: HistoryState = {
       tracks: structuredClone(tracks),
       characterParts: structuredClone(characterParts),
+      ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
     };
 
     const current = historyRef.current;
@@ -128,7 +136,7 @@ export const useHistory = ({
 
     const trimmed = current.slice(0, historyIndexRef.current + 1);
     commitHistory([...trimmed, snap].slice(-50));
-  }, [tracks, characterParts, commitHistory]);
+  }, [tracks, characterParts, motionTemplates, commitHistory]);
 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -144,11 +152,14 @@ export const useHistory = ({
         isUndoRedoRef.current = true;
         setTracks(structuredClone(targetState.tracks));
         setCharacterParts(structuredClone(targetState.characterParts));
+        if (setMotionTemplates && targetState.motionTemplates) {
+          setMotionTemplates(structuredClone(targetState.motionTemplates));
+        }
         setHistoryIndex(idx - 1);
         historyIndexRef.current = idx - 1;
       }
     }
-  }, [endBatchInteraction, setTracks, setCharacterParts]);
+  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates]);
 
   const redo = useCallback(() => {
     if (isBatchInteractingRef.current) {
@@ -161,11 +172,14 @@ export const useHistory = ({
         isUndoRedoRef.current = true;
         setTracks(structuredClone(targetState.tracks));
         setCharacterParts(structuredClone(targetState.characterParts));
+        if (setMotionTemplates && targetState.motionTemplates) {
+          setMotionTemplates(structuredClone(targetState.motionTemplates));
+        }
         setHistoryIndex(idx + 1);
         historyIndexRef.current = idx + 1;
       }
     }
-  }, [endBatchInteraction, setTracks, setCharacterParts]);
+  }, [endBatchInteraction, setTracks, setCharacterParts, setMotionTemplates]);
 
   return {
     undo,

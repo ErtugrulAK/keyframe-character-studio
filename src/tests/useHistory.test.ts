@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useHistory } from '../hooks/useHistory';
-import type { CharacterPart, Track } from '../types/animator';
+import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 
 describe('useHistory Hook', () => {
   const mockSetTracks = vi.fn();
@@ -245,5 +245,36 @@ describe('useHistory Hook', () => {
     });
     expect(result.current.canUndo).toBe(false);
     expect(tracksRef.current).toEqual([]);
+  });
+
+  it('includes sequence metadata in undo/redo snapshots when provided', () => {
+    let currentTemplates: MotionTemplate[] = [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60 }];
+    const setMotionTemplates: React.Dispatch<React.SetStateAction<MotionTemplate[]>> = (value) => {
+      currentTemplates = typeof value === 'function'
+        ? (value as (prev: MotionTemplate[]) => MotionTemplate[])(currentTemplates)
+        : value;
+    };
+
+    const { result, rerender } = renderHook(
+      (props: { templates: MotionTemplate[] }) => useHistory({
+        tracks: emptyTracks,
+        setTracks: mockSetTracks,
+        tracksRef: emptyTracksRef,
+        characterParts: emptyParts,
+        setCharacterParts: mockSetCharacterParts,
+        characterPartsRef: emptyPartsRef,
+        motionTemplates: props.templates,
+        setMotionTemplates,
+      }),
+      { initialProps: { templates: currentTemplates } },
+    );
+
+    currentTemplates = [{ ...currentTemplates[0], name: 'Renamed' }];
+    rerender({ templates: currentTemplates });
+    expect(result.current.canUndo).toBe(true);
+
+    act(() => result.current.undo());
+    expect(currentTemplates[0].name).toBe('Sequence');
+    expect(result.current.canRedo).toBe(true);
   });
 });

@@ -50,6 +50,52 @@ describe('useTemplates Hook', () => {
     expect(result.current.motionTemplates.length).toBe(1);
   });
 
+  it('creates a generated stable ID and disambiguates duplicate display names', () => {
+    const { result } = render();
+
+    act(() => {
+      result.current.addMotionTemplate('Sequence', 'out');
+    });
+
+    const created = result.current.motionTemplates[1];
+    expect(created.id).toMatch(/^seq_/);
+    expect(created.id).not.toBe(created.name);
+    expect(created.name).toBe('Sequence 2');
+    expect(result.current.activeTemplateId).toBe(created.id);
+  });
+
+  it('renames metadata without changing sequence identity or channel references', () => {
+    const { result } = render();
+
+    act(() => {
+      result.current.addMotionTemplate('Lower Third', 'in');
+    });
+    const id = result.current.motionTemplates[1].id;
+    mockSetTracks.mockClear();
+
+    act(() => {
+      result.current.renameMotionTemplate(id, 'Hero Lower Third');
+    });
+
+    expect(result.current.motionTemplates[1]).toMatchObject({ id, name: 'Hero Lower Third' });
+    expect(mockSetTracks).not.toHaveBeenCalled();
+  });
+
+  it('updates only sequence duration and preserves authored channel timing', () => {
+    const { result } = render();
+
+    act(() => {
+      result.current.addMotionTemplate('Short', 'in');
+    });
+    const id = result.current.motionTemplates[1].id;
+
+    act(() => {
+      result.current.updateMotionTemplateDuration(id, 12.9);
+    });
+
+    expect(result.current.motionTemplates[1].durationFrames).toBe(12);
+  });
+
   it('deleteMotionTemplate removes its channel/keyframe data but keeps other templates', () => {
     const { result } = render();
 

@@ -6,6 +6,7 @@ import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../u
 import { convertLegacyKeyframesToChannels } from '../utils/legacyKeyframeConversion';
 import { AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_SCENE_COORDINATE_SYSTEM, migrateSceneCoordinates } from '../utils/coordinateMigration';
+import { normalizeMotionTemplates } from '../utils/motionTemplates';
 
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 
@@ -32,6 +33,8 @@ function toSceneData(
   projectResolution: { width: number; height: number },
   coordinateSystem: SceneCoordinateSystem,
   _sceneTitle: string,
+  motionTemplates: MotionTemplate[] = DEFAULT_MOTION_TEMPLATES,
+  activeTemplateId = 'Sequence',
 ): SceneData {
   const layers: SceneLayer[] = characterParts.map(p => ({
     id: p.id,
@@ -108,6 +111,8 @@ function toSceneData(
     totalFrames,
     layers,
     tracks: animTracks,
+    motionTemplates: normalizeMotionTemplates(motionTemplates),
+    activeTemplateId,
   };
 }
 
@@ -127,6 +132,7 @@ function fromSceneData(
   setLastSavedAt: React.Dispatch<React.SetStateAction<Date | null>>,
   setSceneTitle: React.Dispatch<React.SetStateAction<string>>,
   setMotionTemplates: React.Dispatch<React.SetStateAction<MotionTemplate[]>>,
+  setActiveTemplateId: React.Dispatch<React.SetStateAction<string>>,
 ): boolean {
   const parts: CharacterPart[] = scene.layers.map(l => ({
     id: l.id,
@@ -231,7 +237,11 @@ function fromSceneData(
   // BUG #5 fix: restore exported motion templates (legacy path already does this).
   // Missing motionTemplates keeps current templates untouched.
   if (scene.motionTemplates && scene.motionTemplates.length > 0) {
-    setMotionTemplates(scene.motionTemplates as MotionTemplate[]);
+    const templates = normalizeMotionTemplates(scene.motionTemplates);
+    setMotionTemplates(templates);
+    setActiveTemplateId(scene.activeTemplateId && templates.some((template) => template.id === scene.activeTemplateId)
+      ? scene.activeTemplateId
+      : templates[0]?.id || 'Sequence');
   }
   setLastSavedAt(new Date());
 
@@ -241,7 +251,9 @@ function fromSceneData(
   trks.forEach(t => {
     allIds.push(t.id);
     t.keyframes?.forEach(k => allIds.push(k.id));
+    Object.values(t.channels || {}).forEach((channel) => channel.forEach((keyframe) => allIds.push(keyframe.id)));
   });
+  (scene.motionTemplates || []).forEach((template) => allIds.push(template.id));
   initializeIdCounter(allIds);
 
   return true;
@@ -320,7 +332,7 @@ export const useSerialization = ({
 
         // Phase 3: Try SceneData format first
         if (isSceneData(parsed)) {
-          fromSceneData(parsed, parsed.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates);
+          fromSceneData(parsed, parsed.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
           return;
         }
 
@@ -343,6 +355,9 @@ export const useSerialization = ({
               Object.values(t.channels).forEach((ch: any) => (ch as any[])?.forEach((pk: any) => allIds.push(pk.id)));
             }
           });
+          if (parsed.motionTemplates) {
+            parsed.motionTemplates.forEach((template: any) => allIds.push(template.id));
+          }
           initializeIdCounter(allIds);
         } else {
           localStorage.removeItem(AUTOSAVE_STORAGE_KEY);
@@ -351,19 +366,19 @@ export const useSerialization = ({
     } catch (e) {
       console.warn('[AutoSave] Failed to restore saved state', e);
     }
-  }, [setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates]);
+  }, [setTotalFrames, setProjectResolution, setTracks, setCharacterParts, setFps, setCoordinateSystem, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState]);
 
   // 2. Auto-Save: SceneData format every 10 seconds
   const performSave = useCallback(() => {
     try {
-      const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle);
+      const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
       scene.name = sceneTitle || 'Untitled';
       localStorage.setItem(AUTOSAVE_STORAGE_KEY, JSON.stringify(scene));
       setLastSavedAt(new Date());
     } catch (e) {
       console.error('[AutoSave] Failed to save project to LocalStorage', e);
     }
-  }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle]);
+  }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -378,11 +393,10 @@ export const useSerialization = ({
 
   // 3. Export: SceneData format (canonical, version 1)
   const exportProject = useCallback((): string => {
-    const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle);
+    const scene = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
     scene.name = sceneTitle || 'Template';
-    scene.motionTemplates = motionTemplates;
     return JSON.stringify(scene, null, 2);
-  }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates]);
+  }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId]);
 
   // 4. Import: SceneData or legacy AnimationProject
   const importProject = useCallback((jsonStr: string, defaultName?: string): boolean => {
@@ -393,7 +407,7 @@ export const useSerialization = ({
       // Phase 3: SceneData format
       // BUG #2: empty/missing name → '' so fromSceneData keeps the current title (no-op)
       if (isSceneData(parsed)) {
-        return fromSceneData(parsed, defaultName || parsed.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates);
+        return fromSceneData(parsed, defaultName || parsed.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
       }
 
       // Legacy AnimationProject format (backward compat)
@@ -402,9 +416,11 @@ export const useSerialization = ({
         const templateName = rawName.replace(/\.json$/i, '').trim() || 'Imported Template';
         const newId = `tmpl_${Date.now()}`;
 
-        const importedMotionTemplates = (parsed.motionTemplates && parsed.motionTemplates.length > 0)
-          ? parsed.motionTemplates
-          : DEFAULT_MOTION_TEMPLATES;
+        const importedMotionTemplates = normalizeMotionTemplates(
+          (parsed.motionTemplates && parsed.motionTemplates.length > 0)
+            ? parsed.motionTemplates
+            : DEFAULT_MOTION_TEMPLATES,
+        );
 
         const initialSeqId = importedMotionTemplates[0].id;
         const importedTracks = parsed.tracks.map(migrateTrack);
@@ -420,7 +436,9 @@ export const useSerialization = ({
         setCharacterParts(importedParts);
         setTracks(importedTracks);
         setMotionTemplates(importedMotionTemplates);
-        setActiveTemplateIdState(initialSeqId);
+        setActiveTemplateIdState(parsed.activeTemplateId && importedMotionTemplates.some((template: MotionTemplate) => template.id === parsed.activeTemplateId)
+          ? parsed.activeTemplateId
+          : initialSeqId);
         setActiveProjectTemplateIdState(newId);
         setSceneTitleState(templateName);
 
@@ -457,7 +475,7 @@ export const useSerialization = ({
    */
   const migrateLegacyCoordinates = useCallback((): boolean => {
     if (coordinateSystem !== 'legacy-centi-unit') return false;
-    const source = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle);
+    const source = toSceneData(characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId);
     const migrated = migrateSceneCoordinates(source, 'project-unit-center-v1');
     const layersById = new Map(migrated.layers.map(layer => [layer.id, layer]));
     const nextParts = characterParts.map(part => {

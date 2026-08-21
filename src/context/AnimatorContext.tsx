@@ -125,6 +125,8 @@ interface AnimatorContextType {
   addMotionTemplate: (name: string, type?: 'in' | 'out' | 'stunt') => void;
   renameMotionTemplate: (oldId: string, newName: string) => void;
   deleteMotionTemplate: (id: string) => void;
+  duplicateMotionTemplate: (id: string) => void;
+  updateMotionTemplateDuration: (id: string, durationFrames: number) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderParts: (dragIndex: number, hoverIndex: number) => void;
   deletePart: (partId: string) => void;
@@ -211,6 +213,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     broadcastSessionActivated,
     namedSequenceRuntime,
     playNamedSequence,
+    stopNamedSequence,
+    updateNamedSequenceDuration,
     triggerBroadcastIn,
     triggerBroadcastOut,
     triggerAllBroadcastIn,
@@ -250,6 +254,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addMotionTemplate,
     renameMotionTemplate,
     deleteMotionTemplate,
+    duplicateMotionTemplate,
+    updateMotionTemplateDuration,
     setActiveProjectTemplateId,
     addProjectTemplate,
     renameProjectTemplate,
@@ -265,6 +271,9 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     appMode,
     coordinateSystem,
     setCoordinateSystem,
+    showToast,
+    onSequenceDeleted: stopNamedSequence,
+    onSequenceDurationChanged: updateNamedSequenceDuration,
   });
 
   const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
@@ -347,6 +356,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     characterParts,
     setCharacterParts,
     characterPartsRef,
+    motionTemplates,
+    setMotionTemplates,
   });
 
 
@@ -581,6 +592,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addMotionTemplate,
         renameMotionTemplate,
         deleteMotionTemplate,
+        duplicateMotionTemplate,
+        updateMotionTemplateDuration,
       }}
     >
       {children}

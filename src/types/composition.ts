@@ -16,7 +16,7 @@
 // Animation track model is defined once in `animator.ts` as `AnimationTrackData`
 // (partId-based, canonical). `SceneData.tracks` references it directly —
 // there is no separate AnimationTrack type (P4-S3).
-import type { AnimationTrackData, PartMatte } from './animator';
+import type { AnimationTrackData, MotionTemplate, PartMatte } from './animator';
 
 /**
  * Coordinate-unit semantics for persisted scene data.
@@ -51,7 +51,9 @@ export interface SceneData {
   /** Animation tracks — one per animated layer (canonical: AnimationTrackData) */
   tracks: AnimationTrackData[];
   /** Motion design templates (preserved for editor use; not used by composition engine) */
-  motionTemplates?: any[];
+  motionTemplates?: MotionTemplate[];
+  /** Active authoring sequence ID; runtime playback state is never serialized. */
+  activeTemplateId?: string;
 }
 
 // ─── Layer ───────────────────────────────────────────────────────────────

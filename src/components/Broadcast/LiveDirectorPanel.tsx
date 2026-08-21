@@ -10,6 +10,7 @@ export const LiveDirectorPanel: React.FC = () => {
     activeTemplateId,
     setActiveTemplateId,
     playNamedSequence,
+    namedSequenceRuntime,
   } = useAnimator();
 
   return (
@@ -36,11 +37,20 @@ export const LiveDirectorPanel: React.FC = () => {
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           {motionTemplates.map((tmpl) => {
             const isActive = tmpl.id === activeTemplateId;
+            const runtime = namedSequenceRuntime?.sequenceId === tmpl.id ? namedSequenceRuntime : null;
+            const status = runtime?.status ?? 'idle';
+            const frame = runtime?.frame ?? 0;
+            const duration = runtime?.durationFrames ?? tmpl.durationFrames;
+            const progress = duration > 0 ? Math.min(1, frame / duration) : 1;
 
             return (
               <button
                 key={tmpl.id}
                 type="button"
+                aria-label={tmpl.name}
+                data-sequence-id={tmpl.id}
+                data-sequence-status={status}
+                data-sequence-frame={Math.floor(frame)}
                 onClick={() => {
                   setActiveTemplateId(tmpl.id);
                   playNamedSequence(tmpl.id, tmpl.durationFrames);
@@ -63,7 +73,18 @@ export const LiveDirectorPanel: React.FC = () => {
                 }}
               >
                 <Play size={13} fill={isActive ? '#000' : '#38bdf8'} style={{ color: isActive ? '#000' : '#38bdf8' }} />
-                <span>{tmpl.name}</span>
+                <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, minWidth: 110 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tmpl.name}</span>
+                    <span style={{ fontSize: 9, opacity: 0.8, textTransform: 'uppercase' }}>{status}</span>
+                  </span>
+                  <span style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 5, fontSize: 9, opacity: 0.78 }}>
+                    <span style={{ flex: 1, height: 3, borderRadius: 3, background: 'rgba(255,255,255,0.18)', overflow: 'hidden' }}>
+                      <span style={{ display: 'block', width: `${progress * 100}%`, height: '100%', background: isActive ? '#000' : '#38bdf8' }} />
+                    </span>
+                    <span>{Math.floor(frame)} / {duration}</span>
+                  </span>
+                </span>
                 {isActive && <CheckCircle2 size={13} style={{ marginLeft: 2 }} />}
               </button>
             );

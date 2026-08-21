@@ -4,6 +4,14 @@ import type { SceneCoordinateSystem } from '../types/composition';
 import { DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_CHARACTER_PARTS, DEFAULT_TRACKS } from '../utils/defaults';
 import { DEFAULT_SCENE_COORDINATE_SYSTEM } from '../utils/coordinateMigration';
+import {
+  cloneSequenceAnimation,
+  createMotionTemplate,
+  createUniqueSequenceName,
+  hasSequenceName,
+  normalizeMotionTemplates,
+  normalizeSequenceDuration,
+} from '../utils/motionTemplates';
 
 interface TemplateCanvas {
   characterParts: CharacterPart[];
@@ -25,8 +33,11 @@ interface UseTemplatesOptions {
    *  NOT touch the edit-timeline playback state (currentFrame/isPlaying) —
    *  broadcast playback is driven by broadcastState only. */
   appMode: AppMode;
-  coordinateSystem: SceneCoordinateSystem;
-  setCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>>;
+  coordinateSystem?: SceneCoordinateSystem;
+  setCoordinateSystem?: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>>;
+  showToast?: (message: string, type?: 'success' | 'error' | 'info') => void;
+  onSequenceDeleted?: (sequenceId: string) => void;
+  onSequenceDurationChanged?: (sequenceId: string, durationFrames: number) => void;
 }
 
 export const useTemplates = ({
@@ -38,14 +49,17 @@ export const useTemplates = ({
   setCurrentFrame,
   setIsPlaying,
   appMode,
-  coordinateSystem,
-  setCoordinateSystem,
+  coordinateSystem = DEFAULT_SCENE_COORDINATE_SYSTEM,
+  setCoordinateSystem = () => undefined,
+  showToast,
+  onSequenceDeleted,
+  onSequenceDurationChanged,
 }: UseTemplatesOptions) => {
   const [templateCanvasStore, setTemplateCanvasStore] = useState<Record<string, TemplateCanvas>>({
     tmpl_1: {
       characterParts: DEFAULT_CHARACTER_PARTS,
       tracks: DEFAULT_TRACKS,
-      motionTemplates: [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60, description: 'Default Sequence Timeline' }],
+      motionTemplates: normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES),
       activeTemplateId: 'Sequence',
       coordinateSystem: 'project-unit-center-v1',
     },
@@ -66,7 +80,7 @@ export const useTemplates = ({
 
   const [activeTemplateId, setActiveTemplateIdState] = useState<string>('Sequence');
 
-  const [motionTemplates, setMotionTemplates] = useState<MotionTemplate[]>(DEFAULT_MOTION_TEMPLATES);
+  const [motionTemplates, setMotionTemplates] = useState<MotionTemplate[]>(() => normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES));
 
   const setActiveTemplateId = useCallback((id: string) => {
     setActiveTemplateIdState(id);
@@ -80,54 +94,31 @@ export const useTemplates = ({
   }, [appMode]);
 
   const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
-    const cleanName = name.trim() || 'New Sequence';
-    const newTmpl: MotionTemplate = {
-      id: cleanName,
-      name: cleanName,
-      type,
-      durationFrames: 60,
-      description: 'Custom Sequence Timeline',
-    };
+    const newTmpl = createMotionTemplate(name, motionTemplates, type);
     setMotionTemplates((prev) => [...prev, newTmpl]);
-    setActiveTemplateIdState(cleanName);
+    setActiveTemplateIdState(newTmpl.id);
   }, [motionTemplates]);
 
   const renameMotionTemplate = useCallback((oldId: string, newName: string) => {
     const cleanName = newName.trim();
-    if (!cleanName || cleanName === oldId) return;
+    if (!cleanName || cleanName === motionTemplates.find((template) => template.id === oldId)?.name) return;
+    if (hasSequenceName(motionTemplates, cleanName, oldId)) {
+      showToast?.(`A sequence named "${cleanName}" already exists.`, 'error');
+      return;
+    }
 
     setMotionTemplates((prev) =>
-      prev.map((t) => (t.id === oldId ? { ...t, id: cleanName, name: cleanName } : t))
+      prev.map((t) => (t.id === oldId ? { ...t, name: cleanName } : t))
     );
 
-    setTracks((prevTracks) =>
-      prevTracks.map((tr) => {
-        const updatedKfs = (tr.keyframes || []).map((k) =>
-          (k.templateId || 'Sequence') === oldId ? { ...k, templateId: cleanName } : k
-        );
-
-        let updatedChannels = { ...tr.channels };
-        if (tr.channels) {
-          Object.keys(tr.channels).forEach((chKey) => {
-            const ch = chKey as TrackChannel;
-            if (updatedChannels[ch]) {
-              updatedChannels[ch] = updatedChannels[ch]!.map((pk) =>
-                (pk.templateId || 'Sequence') === oldId ? { ...pk, templateId: cleanName } : pk
-              );
-            }
-          });
-        }
-
-        return { ...tr, keyframes: updatedKfs, channels: updatedChannels };
-      })
-    );
-
-    if (activeTemplateId === oldId) {
-      setActiveTemplateIdState(cleanName);
-    }
-  }, [activeTemplateId]);
+    // Sequence identity is independent from display name. Existing channel
+    // templateIds remain untouched so rename cannot disconnect animation.
+  }, [motionTemplates, showToast]);
 
   const deleteMotionTemplate = useCallback((idToDelete: string) => {
+    const template = motionTemplates.find((candidate) => candidate.id === idToDelete);
+    if (!template || motionTemplates.length <= 1) return;
+
     setMotionTemplates((prev) => {
       if (prev.length <= 1) return prev;
       const filtered = prev.filter((t) => t.id !== idToDelete);
@@ -151,10 +142,41 @@ export const useTemplates = ({
             }
           });
         }
-        return { ...tr, keyframes: updatedKfs, channels: updatedChannels };
+        return {
+          ...tr,
+          keyframes: updatedKfs,
+          channels: updatedChannels,
+          ...(tr.sequencerTemplateId === idToDelete ? { sequencerTemplateId: undefined } : {}),
+        };
       })
     );
-  }, [activeTemplateId]);
+    if (activeTemplateId === idToDelete) {
+      onSequenceDeleted?.(idToDelete);
+    }
+  }, [activeTemplateId, motionTemplates, onSequenceDeleted]);
+
+  const duplicateMotionTemplate = useCallback((sourceId: string) => {
+    const source = motionTemplates.find((template) => template.id === sourceId);
+    if (!source) return;
+
+    const duplicate = createMotionTemplate(
+      createUniqueSequenceName(`${source.name} Copy`, motionTemplates),
+      motionTemplates,
+      source.type,
+      source.durationFrames,
+    );
+    setMotionTemplates((prev) => [...prev, duplicate]);
+    setTracks((prevTracks) => cloneSequenceAnimation(prevTracks, sourceId, duplicate.id));
+    setActiveTemplateIdState(duplicate.id);
+  }, [motionTemplates]);
+
+  const updateMotionTemplateDuration = useCallback((id: string, durationFrames: number) => {
+    const duration = normalizeSequenceDuration(durationFrames);
+    setMotionTemplates((prev) => prev.map((template) => (
+      template.id === id ? { ...template, durationFrames: duration } : template
+    )));
+    onSequenceDurationChanged?.(id, duration);
+  }, [onSequenceDurationChanged]);
 
   const setActiveProjectTemplateId = useCallback((targetId: string) => {
     if (targetId === activeProjectTemplateId) return;
@@ -182,7 +204,7 @@ export const useTemplates = ({
 
     setCharacterParts(targetData.characterParts);
     setTracks(targetData.tracks);
-    setMotionTemplates(targetData.motionTemplates);
+    setMotionTemplates(normalizeMotionTemplates(targetData.motionTemplates));
     setActiveTemplateIdState(targetData.activeTemplateId);
     setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
     setActiveProjectTemplateIdState(targetId);
@@ -212,7 +234,7 @@ export const useTemplates = ({
       [newId]: {
         characterParts: [],
         tracks: [],
-        motionTemplates: DEFAULT_MOTION_TEMPLATES,
+      motionTemplates: normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES),
         activeTemplateId: 'Sequence',
         coordinateSystem: 'project-unit-center-v1',
       },
@@ -221,7 +243,7 @@ export const useTemplates = ({
     setProjectTemplates((prev) => [...prev, newTmpl]);
     setCharacterParts([]); // Clean fresh canvas for new template
     setTracks([]);
-    setMotionTemplates(DEFAULT_MOTION_TEMPLATES);
+    setMotionTemplates(normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES));
     setActiveTemplateIdState('Sequence');
     setCoordinateSystem('project-unit-center-v1');
     setActiveProjectTemplateIdState(newId);
@@ -252,13 +274,13 @@ export const useTemplates = ({
         const targetData = templateCanvasStore[nextId] || {
           characterParts: [],
           tracks: [],
-          motionTemplates: DEFAULT_MOTION_TEMPLATES,
+          motionTemplates: normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES),
           activeTemplateId: 'Sequence',
           coordinateSystem: DEFAULT_SCENE_COORDINATE_SYSTEM,
         };
         setCharacterParts(targetData.characterParts);
         setTracks(targetData.tracks);
-        setMotionTemplates(targetData.motionTemplates);
+        setMotionTemplates(normalizeMotionTemplates(targetData.motionTemplates));
         setActiveTemplateIdState(targetData.activeTemplateId);
         setCoordinateSystem(targetData.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
         setSceneTitleState(filtered[0].name);
@@ -291,6 +313,8 @@ export const useTemplates = ({
     addMotionTemplate,
     renameMotionTemplate,
     deleteMotionTemplate,
+    duplicateMotionTemplate,
+    updateMotionTemplateDuration,
     setActiveProjectTemplateId,
     addProjectTemplate,
     renameProjectTemplate,

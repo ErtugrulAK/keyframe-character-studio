@@ -50,6 +50,24 @@ export const useBroadcast = ({
     setNamedSequenceRuntime(startNamedSequence(sequenceId, durationFrames));
   }, []);
 
+  const stopNamedSequence = useCallback(() => {
+    setNamedSequenceRuntime(createIdleNamedSequenceRuntime());
+  }, []);
+
+  const updateNamedSequenceDuration = useCallback((sequenceId: string, durationFrames: number) => {
+    const duration = Number.isFinite(durationFrames) ? Math.max(0, Math.floor(durationFrames)) : 0;
+    setNamedSequenceRuntime((prev) => {
+      if (prev.sequenceId !== sequenceId) return prev;
+      const frame = Math.min(prev.frame, duration);
+      return {
+        ...prev,
+        durationFrames: duration,
+        frame,
+        status: duration === 0 || frame >= duration ? 'holding' : prev.status,
+      };
+    });
+  }, []);
+
   // BUGFIX: broadcast sequence switching is driven by broadcastState, NOT by
   // the edit-timeline playback. When the part list changes while in broadcast
   // mode (e.g. selecting another sequence/template), (a) parts that no longer
@@ -222,6 +240,8 @@ export const useBroadcast = ({
     broadcastSessionActivated,
     namedSequenceRuntime,
     playNamedSequence,
+    stopNamedSequence,
+    updateNamedSequenceDuration,
     triggerBroadcastIn,
     triggerBroadcastOut,
     triggerAllBroadcastIn,

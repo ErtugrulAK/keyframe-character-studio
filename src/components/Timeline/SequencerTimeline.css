@@ -102,6 +102,10 @@
 
 .timeline-seq-tab-name {
   line-height: 1;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .timeline-seq-tab-close {
@@ -122,6 +126,21 @@
 .timeline-seq-tab-close:hover {
   background: #ef4444;
   color: var(--text-primary);
+}
+
+.timeline-seq-tab-duplicate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.timeline-seq-tab-duplicate:hover {
+  color: var(--accent-cyan);
 }
 
 .timeline-seq-tab-add {

@@ -28,6 +28,9 @@ export interface MaskPoint {
  *  use an SVG <mask> (alpha channel / luminance of the source's fill). */
 export type MatteMode = 'clip' | 'alpha' | 'luminance';
 
+/** Static placement of a modern shape stroke relative to its authored path. */
+export type StrokeAlignment = 'center' | 'outside';
+
 /** M11 — Track matte: this part is clipped by another part's (the source's)
  *  evaluated world-space shape geometry. Legacy data may omit `mode` (treated
  *  as 'clip' at runtime — see `resolveMatteMode`) and `inverted`. */
@@ -261,6 +264,8 @@ export interface CharacterPart {
   fillOpacity?: number;
   strokeEnabled?: boolean;
   strokeOpacity?: number;
+  /** V2 static stroke placement. Missing values resolve to center. */
+  strokeAlignment?: StrokeAlignment;
   pivot: { x: number; y: number };
   parentId?: string;
   baseTransform: Transform;

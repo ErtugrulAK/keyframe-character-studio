@@ -9,18 +9,12 @@ interface StyleGeometrySectionProps {
 }
 
 export const StyleGeometrySection: React.FC<StyleGeometrySectionProps> = ({ selectedPart, onPartPropChange }) => {
-  const applies =
+  const hasCornerRadiusControl =
     selectedPart.type === 'custom_rect' ||
     selectedPart.type === 'custom_box' ||
     selectedPart.type === 'custom_card' ||
-    selectedPart.type === 'custom_banner' ||
-    selectedPart.type === 'custom_triangle' ||
-    selectedPart.type === 'custom_circle' ||
-    selectedPart.type === 'custom_star' ||
-    selectedPart.type === 'custom_diamond' ||
-    selectedPart.type === 'custom_parallelogram' ||
-    selectedPart.type === 'custom_freeform';
-  if (!applies) return null;
+    selectedPart.type === 'custom_banner';
+  if (!hasCornerRadiusControl) return null;
 
   return (
     <StyleCard title="GEOMETRY" icon={<Crop size={13} />} color="#14b8a6">

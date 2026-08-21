@@ -37,11 +37,56 @@ const getShapeDashProps = (part: CharacterPart, totalPerimeter: number) => {
   return getStrokeDashProps(part, totalPerimeter);
 };
 
+type SvgShapeProps = Record<string, string | number | undefined>;
+
+const renderModernGeometry = (
+  part: CharacterPart,
+  geo: ReturnType<typeof getShapeGeometry>,
+  props: SvgShapeProps,
+): React.ReactNode => {
+  switch (part.type) {
+    case 'custom_circle': {
+      const r = geo && geo.kind === 'circle' ? geo.r : 30;
+      return <circle cx={0} cy={0} r={r} {...props} />;
+    }
+    case 'custom_box':
+    case 'custom_rect':
+    case 'custom_capsule': {
+      const fallback = part.type === 'custom_capsule'
+        ? { kind: 'rect' as const, x: -50, y: -20, width: 100, height: 40, rx: 20 }
+        : part.type === 'custom_box'
+          ? { kind: 'rect' as const, x: -30, y: -30, width: 60, height: 60, rx: 0 }
+          : { kind: 'rect' as const, x: -60, y: -30, width: 120, height: 60, rx: 0 };
+      const g = geo && geo.kind === 'rect' ? geo : fallback;
+      const rx = part.type === 'custom_capsule' ? g.rx : part.borderRadius ?? g.rx;
+      return <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} {...props} />;
+    }
+    case 'custom_star':
+    case 'custom_triangle':
+    case 'custom_diamond':
+    case 'custom_parallelogram': {
+      const points = geo && geo.kind === 'polygon' ? polygonPointsToString(geo.points) : '';
+      return <polygon points={points} {...props} />;
+    }
+    case 'custom_freeform': {
+      const points = part.points && part.points.length >= 2 ? part.points : undefined;
+      const d = points ? buildFreeformPath(points) : '';
+      return d ? <path d={d} strokeLinejoin="round" {...props} /> : null;
+    }
+    default:
+      return null;
+  }
+};
+
+const getOutsideStrokeMaskId = (part: CharacterPart, isGhost: boolean): string =>
+  `outside-stroke-${part.id.replace(/[^a-zA-Z0-9_-]/g, '_')}${isGhost ? '-ghost' : ''}`;
+
 const renderModernShape = (
   part: CharacterPart,
   appearance: ResolvedShapeAppearance,
   geo: ReturnType<typeof getShapeGeometry>,
   dashProps: Record<string, string | number | undefined>,
+  isGhost: boolean,
 ): React.ReactNode => {
   const fill = appearance.fillEnabled ? appearance.fillColor : 'none';
   const stroke = appearance.strokeEnabled ? appearance.strokeColor : 'none';
@@ -55,44 +100,35 @@ const renderModernShape = (
     ...dashProps,
   };
 
-  switch (part.type) {
-    case 'custom_circle': {
-      const r = geo && geo.kind === 'circle' ? geo.r : 30;
-      return <circle cx={0} cy={0} r={r} {...common} />;
-    }
-    case 'custom_box':
-    case 'custom_rect':
-    case 'custom_capsule': {
-      const fallback = part.type === 'custom_capsule'
-        ? { kind: 'rect' as const, x: -50, y: -20, width: 100, height: 40, rx: 20 }
-        : part.type === 'custom_box'
-          ? { kind: 'rect' as const, x: -30, y: -30, width: 60, height: 60, rx: 0 }
-          : { kind: 'rect' as const, x: -60, y: -30, width: 120, height: 60, rx: 0 };
-      const g = geo && geo.kind === 'rect' ? geo : fallback;
-      const rx = part.type === 'custom_capsule' ? g.rx : part.borderRadius ?? g.rx;
-      return <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} {...common} />;
-    }
-    case 'custom_star':
-    case 'custom_triangle':
-    case 'custom_diamond':
-    case 'custom_parallelogram': {
-      const points = geo && geo.kind === 'polygon' ? polygonPointsToString(geo.points) : '';
-      return <polygon points={points} {...common} />;
-    }
-    case 'custom_freeform': {
-      const points = part.points && part.points.length >= 2 ? part.points : undefined;
-      const d = points ? buildFreeformPath(points) : '';
-      if (!points || !d) return null;
-      return <path d={d} strokeLinejoin="round" {...common} />;
-    }
-    default:
-      return null;
+  if (appearance.strokeAlignment !== 'outside' || !appearance.strokeEnabled || appearance.strokeWidth <= 0) {
+    return renderModernGeometry(part, geo, common);
   }
+
+  // SVG has no reliable cross-browser stroke-alignment property. Clip only
+  // the stroke paint to the outside of the authored geometry. The fill and
+  // the normalized Trim Path dash semantics remain independently authored.
+  const maskId = getOutsideStrokeMaskId(part, isGhost);
+  const fillProps: SvgShapeProps = { ...common, stroke: 'none', strokeWidth: 0 };
+  const strokeProps: SvgShapeProps = { ...common, fill: 'none', mask: `url(#${maskId})` };
+  const maskGeometry = renderModernGeometry(part, geo, { fill: 'black', stroke: 'none' });
+
+  return (
+    <g>
+      <defs>
+        <mask id={maskId} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
+          <rect x={-1000000} y={-1000000} width={2000000} height={2000000} fill="white" />
+          {maskGeometry}
+        </mask>
+      </defs>
+      {renderModernGeometry(part, geo, fillProps)}
+      {renderModernGeometry(part, geo, strokeProps)}
+    </g>
+  );
 };
 
-export const renderShapePart = ({ part, fill, stroke, isSelected, trimPath }: ShapePartProps): React.ReactNode => {
+export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimPath }: ShapePartProps): React.ReactNode => {
   const renderPart = trimPath ? { ...part, ...trimPath } : part;
-  const appearance = resolveShapeAppearance(part);
+  const appearance = resolveShapeAppearance(renderPart);
   const useModernAppearance = isShapeAppearanceEligible(part.type) && appearance.isModernAppearance;
   const isCustomStroke = Boolean(part.strokeColor && part.strokeColor !== '#101218' && part.strokeColor !== 'none' && part.strokeColor !== 'transparent');
   const hasStroke = (part.strokeProgress === undefined || part.strokeProgress > 0) && !isCustomStroke;
@@ -101,7 +137,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, trimPath }: Sh
   // M11 Step 2A: single source of truth for local-space shape geometry.
   const geo = getShapeGeometry(part.type);
 
-  if (useModernAppearance) return renderModernShape(renderPart, appearance, geo, getShapeDashProps(renderPart, 0));
+  if (useModernAppearance) return renderModernShape(renderPart, appearance, geo, getShapeDashProps(renderPart, 0), isGhost);
 
   switch (part.type) {
     case 'custom_star': {

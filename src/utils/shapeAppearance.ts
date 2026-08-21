@@ -1,4 +1,4 @@
-import type { BodyPartType, CharacterPart } from '../types/animator';
+import type { BodyPartType, CharacterPart, StrokeAlignment } from '../types/animator';
 
 export interface ResolvedShapeAppearance {
   fillEnabled: boolean;
@@ -8,11 +8,12 @@ export interface ResolvedShapeAppearance {
   strokeColor: string;
   strokeWidth: number;
   strokeOpacity: number;
+  strokeAlignment: StrokeAlignment;
   isModernAppearance: boolean;
 }
 
 export type ShapeAppearancePatch = Partial<Pick<CharacterPart,
-  'fillEnabled' | 'fillColor' | 'fillOpacity' | 'strokeEnabled' | 'strokeColor' | 'strokeWidth' | 'strokeOpacity'>>;
+  'fillEnabled' | 'fillColor' | 'fillOpacity' | 'strokeEnabled' | 'strokeColor' | 'strokeWidth' | 'strokeOpacity' | 'strokeAlignment'>>;
 
 export const MODERN_SHAPE_APPEARANCE_TYPES: ReadonlySet<BodyPartType> = new Set([
   'custom_rect',
@@ -36,6 +37,9 @@ const normalizeOpacity = (value: number | undefined): number =>
 
 const normalizeStrokeWidth = (value: number | undefined): number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 1.5;
+
+const normalizeStrokeAlignment = (value: StrokeAlignment | undefined): StrokeAlignment =>
+  value === 'outside' ? 'outside' : 'center';
 
 const hasVisibleStrokeColor = (strokeColor: string): boolean =>
   strokeColor !== 'none' && strokeColor !== 'transparent';
@@ -61,12 +65,13 @@ const legacyStrokeEnabled = (part: Pick<CharacterPart, 'type' | 'strokeColor'>):
 
 /** Resolve static shape appearance without React or renderer-specific state. */
 export const resolveShapeAppearance = (
-  part: Pick<CharacterPart, 'type' | 'fillColor' | 'strokeColor' | 'fillEnabled' | 'fillOpacity' | 'strokeEnabled' | 'strokeOpacity' | 'strokeWidth'>,
+  part: Pick<CharacterPart, 'type' | 'fillColor' | 'strokeColor' | 'fillEnabled' | 'fillOpacity' | 'strokeEnabled' | 'strokeOpacity' | 'strokeWidth' | 'strokeAlignment'>,
 ): ResolvedShapeAppearance => {
   const isModernAppearance = part.fillEnabled !== undefined
     || part.fillOpacity !== undefined
     || part.strokeEnabled !== undefined
-    || part.strokeOpacity !== undefined;
+    || part.strokeOpacity !== undefined
+    || part.strokeAlignment !== undefined;
 
   if (isModernAppearance) {
     return {
@@ -77,6 +82,7 @@ export const resolveShapeAppearance = (
       strokeColor: part.strokeColor,
       strokeWidth: normalizeStrokeWidth(part.strokeWidth),
       strokeOpacity: normalizeOpacity(part.strokeOpacity),
+      strokeAlignment: normalizeStrokeAlignment(part.strokeAlignment),
       isModernAppearance: true,
     };
   }
@@ -89,6 +95,7 @@ export const resolveShapeAppearance = (
     strokeColor: part.strokeColor,
     strokeWidth: 1.5,
     strokeOpacity: 1,
+    strokeAlignment: 'center',
     isModernAppearance: false,
   };
 };
@@ -104,6 +111,7 @@ export const updateShapeAppearance = (part: CharacterPart, patch: ShapeAppearanc
     strokeEnabled: resolved.strokeEnabled,
     strokeWidth: resolved.strokeWidth,
     strokeOpacity: resolved.strokeOpacity,
+    strokeAlignment: resolved.strokeAlignment,
     ...patch,
   };
 };

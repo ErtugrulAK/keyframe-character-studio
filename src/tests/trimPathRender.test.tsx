@@ -41,4 +41,18 @@ describe('Trim Path SVG rendering', () => {
     expect(html).toContain('stroke-dasharray="360"');
     expect(html).not.toContain('pathLength="1"');
   });
+
+  it('renders outside stroke through a geometry mask while keeping fill geometry separate', () => {
+    const html = render(part({ strokeAlignment: 'outside', trimPathEnabled: true, trimPathStart: 0, trimPathEnd: 0.5 }));
+    expect(html).toContain('mask="url(#outside-stroke-trim)"');
+    expect(html).toContain('fill="#f00"');
+    expect(html).toContain('stroke-dasharray="0.5 0.5"');
+  });
+
+  it('keeps outside stroke visible when fill is disabled', () => {
+    const html = render(part({ fillEnabled: false, strokeAlignment: 'outside' }));
+    expect(html).toContain('fill="none"');
+    expect(html).toContain('stroke="#000"');
+    expect(html).toContain('mask="url(#outside-stroke-trim)"');
+  });
 });

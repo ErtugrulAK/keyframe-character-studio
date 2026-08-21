@@ -59,6 +59,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     strokeEnabled: el.content.strokeEnabled ?? part.strokeEnabled,
     strokeWidth: el.content.strokeWidth ?? part.strokeWidth,
     strokeOpacity: el.content.strokeOpacity ?? part.strokeOpacity,
+    strokeAlignment: el.content.strokeAlignment ?? part.strokeAlignment,
     imageUrl: el.content.imageUrl ?? part.imageUrl,
     videoUrl: el.content.videoUrl ?? part.videoUrl,
     textValue: el.content.textValue ?? part.textValue,

@@ -65,6 +65,19 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
           <SmartNumberInput ariaLabel="Stroke Opacity" value={selectedPart.strokeOpacity ?? 1} min={0} max={1} step={0.01} displayScale={100} precision={0} onChange={(value) => onPartPropChange('strokeOpacity', value)} />
         </div>
       </div>
+      <div className="appearance-field" style={{ marginTop: 8 }}>
+        <label className="appearance-field-label" htmlFor="stroke-alignment-select">ALIGN</label>
+        <select
+          id="stroke-alignment-select"
+          aria-label="Stroke Alignment"
+          value={selectedPart.strokeAlignment ?? 'center'}
+          onChange={(event) => onPartPropChange('strokeAlignment', event.target.value as 'center' | 'outside')}
+          style={{ width: '100%' }}
+        >
+          <option value="center">CENTER</option>
+          <option value="outside">OUTSIDE</option>
+        </select>
+      </div>
     </div>
   </StyleCard>
 );

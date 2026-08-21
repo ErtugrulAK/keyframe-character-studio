@@ -35,33 +35,41 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   // Multiply bounds by absolute scale so handles don't get warped or flipped visually
   const halfW = overrideHalfW ?? (baseBounds.halfW * Math.abs(selectedTransform.scaleX));
   const halfH = overrideHalfH ?? (baseBounds.halfH * Math.abs(selectedTransform.scaleY));
+  // The renderer applies signed scale to the authored local geometry. Keep the
+  // editor overlay in that same local orientation so mirrored asymmetric
+  // shapes (for example parallelograms and triangles) do not show a stale,
+  // unmirrored outline or handle layout.
+  const orientationScaleX = selectedTransform.scaleX < 0 ? -1 : 1;
+  const orientationScaleY = selectedTransform.scaleY < 0 ? -1 : 1;
 
   const rotBarLength = halfH + 30 * zScale;
 
   return (
     <g
       transform={`translate(${outputOrigin.x + selectedTransform.x}, ${outputOrigin.y + selectedTransform.y}) rotate(${selectedTransform.rotation})`}
+      data-testid="transform-gizmo"
       style={{ pointerEvents: 'none' }}
     >
-      {/* Shape-Conforming Dashed Selection Outline */}
-      {renderShapeOutline(selectedPart, halfW, halfH, zScale)}
+      <g transform={`scale(${orientationScaleX}, ${orientationScaleY})`}>
+        {/* Shape-Conforming Dashed Selection Outline */}
+        {renderShapeOutline(selectedPart, halfW, halfH, zScale)}
 
-      {/* Shape corner points on the borders (like the freeform's vertex dots) */}
-      {getPartCornerPoints(selectedPart, halfW, halfH).map((c, i) => (
-        <circle
-          key={`corner-pt-${i}`}
-          cx={c.x}
-          cy={c.y}
-          r={3.5 * zScale}
-          fill="#ffffff"
-          stroke="#00d2ff"
-          strokeWidth={1.5 * zScale}
-          style={{ pointerEvents: 'none' }}
-        />
-      ))}
+        {/* Shape corner points on the borders (like the freeform's vertex dots) */}
+        {getPartCornerPoints(selectedPart, halfW, halfH).map((c, i) => (
+          <circle
+            key={`corner-pt-${i}`}
+            cx={c.x}
+            cy={c.y}
+            r={3.5 * zScale}
+            fill="#ffffff"
+            stroke="#00d2ff"
+            strokeWidth={1.5 * zScale}
+            style={{ pointerEvents: 'none' }}
+          />
+        ))}
 
-      {!isGroup && (
-        <>
+        {!isGroup && (
+          <>
           {/* Rotation Handle (Top Center, extended upwards) */}
           <line
             x1={0}
@@ -162,11 +170,12 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
               />
             ));
           })()}
-        </>
-      )}
+          </>
+        )}
 
-      {/* Center Pivot Point Dot */}
-      <circle cx={0} cy={0} r={4 * zScale} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+        {/* Center Pivot Point Dot */}
+        <circle cx={0} cy={0} r={4 * zScale} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+      </g>
     </g>
   );
 };

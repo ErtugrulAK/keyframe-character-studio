@@ -20,18 +20,15 @@ export const useToolbar = ({
   const [activeTool, setActiveTool] = useState<ToolType>('select');
 
   const addCustomPart = (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => {
-    const { newPart, newTrack } = createCustomPart(type, name, characterParts.length + 1, extraProps);
+    // Preserve authored zIndex values on existing parts. New parts are placed
+    // above the current highest layer instead of rebuilding every index from
+    // the array order (which silently reset user edits after adding a part).
+    const nextZIndex = characterParts.reduce((max, part) => Math.max(max, part.zIndex), 0) + 1;
+    const { newPart, newTrack } = createCustomPart(type, name, nextZIndex, extraProps);
 
     const nextTracks = [newTrack, ...tracks];
-    const total = nextTracks.length;
     setTracks(nextTracks);
-    setCharacterParts((prev) => {
-      const updated = [newPart, ...prev];
-      return updated.map((p) => {
-        const idx = nextTracks.findIndex((t) => t.partId === p.id);
-        return { ...p, zIndex: idx >= 0 ? total - idx : p.zIndex };
-      });
-    });
+    setCharacterParts((prev) => [newPart, ...prev]);
     setSelectedPartId(newPart.id);
   };
 

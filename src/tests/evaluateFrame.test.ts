@@ -383,6 +383,20 @@ describe('evaluateFrame — visibility & opacity', () => {
     expect(result.layers[1].id).toBe('C'); // zIndex 2
     expect(result.layers[2].id).toBe('A'); // zIndex 3
   });
+
+  test('zIndex sorting preserves zero/negative values and does not mutate source order', () => {
+    const layers = [
+      makeLayer({ id: 'zero', zIndex: 0 }),
+      makeLayer({ id: 'negative', zIndex: -2 }),
+      makeLayer({ id: 'positive', zIndex: 5 }),
+    ];
+    const sourceOrder = layers.map((layer) => layer.id);
+
+    const result = evaluateFrame(layers, [], 120, 0, makeRuntime(), NO_PRESETS);
+
+    expect(result.layers.map((layer) => layer.id)).toEqual(['negative', 'zero', 'positive']);
+    expect(layers.map((layer) => layer.id)).toEqual(sourceOrder);
+  });
 });
 
 // ─── Broadcast Tests ──────────────────────────────────────────────────

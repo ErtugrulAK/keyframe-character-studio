@@ -135,8 +135,9 @@ export const getPartBounds = (part: CharacterPart, transform?: Pick<Transform, '
   if (transform) {
     const appearance = resolveShapeAppearance(part);
     if (appearance.isModernAppearance && appearance.strokeEnabled && appearance.strokeOpacity > 0 && appearance.strokeWidth > 0) {
-      halfW += appearance.strokeWidth / (2 * Math.max(0.001, Math.abs(transform.scaleX)));
-      halfH += appearance.strokeWidth / (2 * Math.max(0.001, Math.abs(transform.scaleY)));
+      const extent = appearance.strokeAlignment === 'outside' ? appearance.strokeWidth : appearance.strokeWidth / 2;
+      halfW += extent / Math.max(0.001, Math.abs(transform.scaleX));
+      halfH += extent / Math.max(0.001, Math.abs(transform.scaleY));
     }
   }
 

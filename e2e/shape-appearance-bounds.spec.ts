@@ -106,7 +106,7 @@ test.describe('modern stroke-aware editor bounds', () => {
       const box = node.getBoundingClientRect();
       return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
     }));
-    expect(boxes.length).toBe(5);
+    expect(boxes.length).toBe(6);
     for (const box of boxes) {
       expect(box.left).toBeGreaterThanOrEqual(cardBox!.x);
       expect(box.right).toBeLessThanOrEqual(cardBox!.x + cardBox!.width);

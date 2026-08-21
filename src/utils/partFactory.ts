@@ -20,6 +20,7 @@ export const createCustomPart = (
       strokeEnabled: true,
       strokeWidth: 1.5,
       strokeOpacity: 1,
+      strokeAlignment: 'center' as const,
       trimPathEnabled: false,
       trimPathStart: 0,
       trimPathEnd: 1,

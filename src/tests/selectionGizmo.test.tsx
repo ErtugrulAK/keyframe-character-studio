@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { SelectionGizmo } from '../components/Canvas/SelectionGizmo';
 import type { CharacterPart, Transform } from '../types/animator';
@@ -37,6 +37,37 @@ const renderGizmo = (part: CharacterPart, onTranslateStart = vi.fn()) => render(
 );
 
 describe('SelectionGizmo — editor-only matte interaction area', () => {
+  it('keeps the selection outline and handles in the renderer orientation for mirrored asymmetric shapes', () => {
+    const part = makePart('custom_parallelogram');
+    const { container } = renderGizmo(part);
+    const gizmo = container.querySelector('[data-testid="transform-gizmo"]');
+
+    expect(gizmo).not.toBeNull();
+    expect(gizmo?.getAttribute('transform')).toBe('translate(420, 200) rotate(15)');
+    expect(gizmo?.querySelector('g')?.getAttribute('transform')).toBe('scale(1, 1)');
+
+    cleanup();
+    const mirrored = render(
+      <svg>
+        <SelectionGizmo
+          selectedPartIds={[part.id]}
+          characterParts={[part]}
+          getComputedTransform={() => ({ ...transform, scaleX: -2 })}
+          currentFrame={0}
+          selectedPart={part}
+          selectedTransform={{ ...transform, scaleX: -2 }}
+          tracks={[]}
+          zScale={1}
+          onRotateStart={() => {}}
+          onScaleStart={() => {}}
+          onTranslateStart={() => {}}
+        />
+      </svg>,
+    );
+    const mirroredGizmo = mirrored.container.querySelector('[data-testid="transform-gizmo"]');
+    expect(mirroredGizmo?.querySelector('g')?.getAttribute('transform')).toBe('scale(-1, 1)');
+  });
+
   it.each(['custom_image', 'custom_text', 'custom_box', 'custom_freeform'] as const)(
     'exposes evaluated bounds for a selected enabled-matte %s target',
     (type) => {

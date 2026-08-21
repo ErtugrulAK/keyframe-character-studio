@@ -90,6 +90,7 @@ export interface SceneLayer {
   strokeEnabled?: boolean;
   strokeWidth?: number;
   strokeOpacity?: number;
+  strokeAlignment?: 'center' | 'outside';
   trimPathEnabled?: boolean;
   trimPathStart?: number;
   trimPathEnd?: number;
@@ -205,6 +206,7 @@ export interface LayerContent {
   strokeEnabled?: boolean;
   strokeWidth?: number;
   strokeOpacity?: number;
+  strokeAlignment?: 'center' | 'outside';
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;

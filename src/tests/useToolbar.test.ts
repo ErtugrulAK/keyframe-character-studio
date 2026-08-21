@@ -56,4 +56,32 @@ describe('useToolbar Hook', () => {
     expect(mockSetCharacterParts).toHaveBeenCalled();
     expect(mockSetSelectedPartId).toHaveBeenCalled();
   });
+
+  it('preserves authored layer indices when adding a new part', () => {
+    const parts: CharacterPart[] = [0, 5, 10].map((zIndex, index) => ({
+      id: `part-${index}`,
+      name: `Part ${index}`,
+      type: 'custom_box',
+      zIndex,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    }));
+    mockSetCharacterParts.mockClear();
+
+    const { result } = renderHook(() => useToolbar({
+      tracks: mockTracks,
+      setTracks: mockSetTracks,
+      characterParts: parts,
+      setCharacterParts: mockSetCharacterParts,
+      setSelectedPartId: mockSetSelectedPartId,
+    }));
+
+    act(() => {
+      result.current.addCustomPart('custom_box', 'New Part');
+    });
+
+    const updater = mockSetCharacterParts.mock.calls.at(-1)?.[0] as (previous: CharacterPart[]) => CharacterPart[];
+    const nextParts = updater(parts);
+    expect(nextParts.slice(1).map((part) => part.zIndex)).toEqual([0, 5, 10]);
+    expect(nextParts[0].zIndex).toBe(11);
+  });
 });

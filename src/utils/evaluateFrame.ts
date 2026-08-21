@@ -128,6 +128,7 @@ function extractContent(layer: CharacterPart, trim: ReturnType<typeof evaluateTr
     strokeEnabled: layer.strokeEnabled,
     strokeWidth: layer.strokeWidth,
     strokeOpacity: layer.strokeOpacity,
+    strokeAlignment: layer.strokeAlignment,
     textValue: layer.textValue,
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,

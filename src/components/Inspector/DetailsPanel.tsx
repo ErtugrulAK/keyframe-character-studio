@@ -58,7 +58,7 @@ export const DetailsPanel: React.FC = () => {
       prev.map((p) => {
         if (p.id !== selectedPartId) return p;
         if (isShapeAppearanceEligible(p.type) && [
-          'fillEnabled', 'fillColor', 'fillOpacity', 'strokeEnabled', 'strokeColor', 'strokeWidth', 'strokeOpacity',
+          'fillEnabled', 'fillColor', 'fillOpacity', 'strokeEnabled', 'strokeColor', 'strokeWidth', 'strokeOpacity', 'strokeAlignment',
         ].includes(key)) {
           return updateShapeAppearance(p, { [key]: value } as ShapeAppearancePatch);
         }

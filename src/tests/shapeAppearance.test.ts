@@ -29,8 +29,14 @@ describe('shape appearance resolver', () => {
       strokeEnabled: true,
       strokeWidth: 1.5,
       strokeOpacity: 1,
+      strokeAlignment: 'center',
       isModernAppearance: true,
     });
+  });
+
+  it('defaults missing alignment to center and accepts outside', () => {
+    expect(resolveShapeAppearance({ ...basePart(), fillEnabled: true })).toMatchObject({ strokeAlignment: 'center' });
+    expect(resolveShapeAppearance({ ...basePart(), fillEnabled: true, strokeAlignment: 'outside' })).toMatchObject({ strokeAlignment: 'outside' });
   });
 
   it('clamps finite opacities while preserving zero', () => {
@@ -90,6 +96,7 @@ describe('shape appearance resolver', () => {
       strokeEnabled: true,
       strokeWidth: 1.5,
       strokeOpacity: 1,
+      strokeAlignment: 'center',
       strokeColor: '#101218',
     });
     expect(next).not.toBe(legacy);

@@ -24,6 +24,13 @@ describe('stroke-aware part bounds', () => {
     expect(bounds.halfH * 4).toBe(130);
   });
 
+  it('uses the full stroke width for outside alignment bounds', () => {
+    const bounds = getPartBounds(makePart('custom_rect', {
+      fillEnabled: true, strokeEnabled: true, strokeWidth: 20, strokeOpacity: 1, strokeAlignment: 'outside',
+    }), { scaleX: 1, scaleY: 1 });
+    expect(bounds).toEqual({ halfW: 80, halfH: 50 });
+  });
+
   it.each([
     { strokeEnabled: false, strokeOpacity: 1, strokeWidth: 20 },
     { strokeEnabled: true, strokeOpacity: 0, strokeWidth: 20 },

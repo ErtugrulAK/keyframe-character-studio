@@ -71,6 +71,10 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     shadowOffsetX: el.content.shadowOffsetX ?? part.shadowOffsetX,
     shadowOffsetY: el.content.shadowOffsetY ?? part.shadowOffsetY,
     borderRadius: el.content.borderRadius ?? part.borderRadius,
+    trimPathEnabled: el.content.trimPathEnabled ?? part.trimPathEnabled,
+    trimPathStart: el.content.trimPathStart ?? part.trimPathStart,
+    trimPathEnd: el.content.trimPathEnd ?? part.trimPathEnd,
+    trimPathOffset: el.content.trimPathOffset ?? part.trimPathOffset,
     clonerConfig: el.content.clonerConfig ?? part.clonerConfig,
     particleConfig: el.content.particleConfig ?? part.particleConfig,
   };

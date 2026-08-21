@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CharacterPart, CustomMotionPreset, Track, Transform } from '../../../types/animator';
+import type { CharacterPart, CustomMotionPreset, Track, Transform, TrackChannel } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import type { SavePresetInput } from '../../../hooks/usePresets';
 import { TransformAlignmentBar } from './transform/TransformAlignmentBar';
@@ -17,6 +17,7 @@ interface TransformTabProps {
   coordinateSystem: SceneCoordinateSystem;
   currentFrame: number;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
+  updateCurrentPropertyChannel?: (channel: TrackChannel, value: number) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
   handleZIndexChange?: (zIndex: number) => void;
   // M25 — user-saved custom preset library (passed through to the card)
@@ -49,6 +50,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   coordinateSystem,
   currentFrame,
   updateCurrentTransform,
+  updateCurrentPropertyChannel,
   handlePartPropChange,
   handleZIndexChange,
   onCopyAnimation,
@@ -76,6 +78,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           isScaleLocked={isScaleLocked}
           coordinateSystem={coordinateSystem}
           onUpdate={updateCurrentTransform}
+          onUpdateChannel={updateCurrentPropertyChannel}
         />
 
         {/* Unified transform block: position, rotation, scale, opacity rows */}

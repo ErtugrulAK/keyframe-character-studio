@@ -187,6 +187,46 @@ export const useInspector = ({
     applyTransformToPart(targetPartId, newTransform, activeTmpl);
   };
 
+  const updateCurrentPropertyChannel = (channel: TrackChannel, value: number, partIdOverride?: string) => {
+    const targetPartId = partIdOverride || selectedPartId;
+    if (!targetPartId) return;
+    const track = tracks.find((candidate) => candidate.partId === targetPartId);
+    if (!track) return;
+    const activeTmpl = activeTemplateId || 'Sequence';
+    const channelKeyframes = (track.channels?.[channel] || []).filter((kf) => (kf.templateId || 'Sequence') === activeTmpl);
+
+    if (channelKeyframes.length > 0) {
+      setTracks((prev) => prev.map((candidate) => {
+        if (candidate.id !== track.id) return candidate;
+        const channels = { ...candidate.channels };
+        const list = [...(channels[channel] || [])];
+        const atFrame = list.find((kf) => kf.frame === currentFrame && (kf.templateId || 'Sequence') === activeTmpl);
+        if (atFrame) {
+          channels[channel] = list.map((kf) => kf.id === atFrame.id ? { ...kf, value } : kf);
+        } else {
+          const templateEasing = channelKeyframes[0]?.easing || 'easeInOut';
+          channels[channel] = [...list, {
+            id: generateId(`pkf_${channel}`), frame: currentFrame, value,
+            easing: templateEasing, templateId: activeTmpl,
+          }].sort((a, b) => a.frame - b.frame);
+        }
+        return { ...candidate, channels };
+      }));
+      return;
+    }
+
+    const partField = channel === 'trimPathStart'
+      ? 'trimPathStart'
+      : channel === 'trimPathEnd'
+        ? 'trimPathEnd'
+        : channel === 'trimPathOffset'
+          ? 'trimPathOffset'
+          : null;
+    if (partField) {
+      setCharacterParts((prev) => prev.map((part) => part.id === targetPartId ? { ...part, [partField]: value } : part));
+    }
+  };
+
   const updatePartMedia = (partId: string, url: string, type: 'image' | 'video') => {
     setCharacterParts((prev) =>
       prev.map((p) => (p.id === partId ? { ...p, innerMediaUrl: url, innerMediaType: type } : p))
@@ -195,6 +235,7 @@ export const useInspector = ({
 
   return {
     updateCurrentTransform,
+    updateCurrentPropertyChannel,
     updatePartMedia,
   };
 };

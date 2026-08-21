@@ -236,7 +236,7 @@ describe('M28 28A — immutability / schema / determinism', () => {
     const payload = copyKeyframeGroupData(makeTrack('t', 'p', { channels: ch }), 20);
     const res = pasteKeyframeGroupData(makeTrack('t', 'p', { channels: ch }), 30, payload);
     expect(Object.keys(res.track.channels).sort()).toEqual(
-      ['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'opacity', 'rotation', 'scaleX', 'scaleY', 'x', 'y'],
+      ['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'opacity', 'rotation', 'scaleX', 'scaleY', 'trimPathEnd', 'trimPathOffset', 'trimPathStart', 'x', 'y'],
     );
     expect(res.track.channels.y).toEqual([]);
   });

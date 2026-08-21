@@ -245,6 +245,12 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
 
               {/* 4. Opacity Row */}
               {['opacity'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-sm'))}
+
+              {/* 5. Trim Path channels */}
+              <div className="ue-subgroup-header" style={{ height: CHANNEL_ROW_HEIGHT }}>
+                <span className="ue-subgroup-label">Trim Path</span>
+              </div>
+              {['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-sm'))}
             </>
           )}
         </div>

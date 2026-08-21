@@ -9,6 +9,8 @@ import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { StyleEffectsSection } from './style/StyleEffectsSection';
 import { StyleMatteSection } from './style/StyleMatteSection';
+import { TrimPathSection } from './style/TrimPathSection';
+import { isTrimPathEligible } from '../../../utils/trimPath';
 
 interface StyleTabProps {
   selectedPart: CharacterPart;
@@ -47,6 +49,13 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         selectedPart={selectedPart}
         onPartPropChange={handlePartPropChange}
       />
+
+      {isTrimPathEligible(selectedPart.type) && (
+        <TrimPathSection
+          selectedPart={selectedPart}
+          onPartPropChange={handlePartPropChange}
+        />
+      )}
 
       <StyleClonerSection
         selectedPart={selectedPart}

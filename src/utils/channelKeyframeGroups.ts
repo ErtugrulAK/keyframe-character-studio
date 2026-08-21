@@ -23,6 +23,8 @@ export interface ChannelKeyframeGroup {
 
 /** All channels the editor can animate, in display order (6 main properties) */
 export const DISPLAY_CHANNELS = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const;
+export const TRIM_PATH_CHANNELS = ['trimPathStart', 'trimPathEnd', 'trimPathOffset'] as const;
+export const ANIMATABLE_CHANNELS: TrackChannel[] = [...DISPLAY_CHANNELS, ...TRIM_PATH_CHANNELS];
 
 /**
  * Group per-channel keyframes by frame, filtered to the active template.
@@ -36,7 +38,7 @@ export function groupChannelKeyframesByFrame(
 
   const byFrame = new Map<number, ChannelKeyframeGroup>();
 
-  for (const ch of DISPLAY_CHANNELS) {
+  for (const ch of ANIMATABLE_CHANNELS) {
     const kfs = channels[ch] || [];
     for (const kf of kfs) {
       if ((kf.templateId || 'Sequence') !== activeTemplateId) continue;

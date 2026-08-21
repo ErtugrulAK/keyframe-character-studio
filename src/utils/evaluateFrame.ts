@@ -25,6 +25,7 @@ import type {
 } from '../types/composition';
 import { evaluateTransform } from './evaluateTransform';
 import { computeProceduralDelta } from './proceduralAnimation';
+import { evaluateTrimPath } from './trimPath';
 
 /**
  * Evaluate one complete frame with full animation evaluation.
@@ -89,6 +90,10 @@ export function evaluateFrame(
     const finalOpacity = Math.max(0, Math.min(1, c.world.opacity * d.opacityMul));
     const visible = finalOpacity > 0.001;
 
+    const track = tracks.find((candidate) => candidate.partId === layer.id);
+    const layerFrame = frameOverrides?.[layer.id] ?? frame;
+    const trim = evaluateTrimPath(layer, track, layerFrame, sequenceId || 'Sequence');
+
     evaluated.push({
       id: layer.id,
       type: layer.type,
@@ -102,7 +107,7 @@ export function evaluateFrame(
       },
       opacity: finalOpacity,
       visible,
-      content: extractContent(layer),
+      content: extractContent(layer, trim),
       zIndex: layer.zIndex,
     });
   }
@@ -114,7 +119,7 @@ export function evaluateFrame(
 
 // ─── Content extraction ──────────────────────────────────────────────────
 
-function extractContent(layer: CharacterPart): LayerContent {
+function extractContent(layer: CharacterPart, trim: ReturnType<typeof evaluateTrimPath>): LayerContent {
   return {
     fillColor: layer.fillColor,
     strokeColor: layer.strokeColor,
@@ -134,6 +139,10 @@ function extractContent(layer: CharacterPart): LayerContent {
     shadowOffsetX: layer.shadowOffsetX,
     shadowOffsetY: layer.shadowOffsetY,
     borderRadius: layer.borderRadius,
+    trimPathEnabled: trim.isModern ? trim.enabled : undefined,
+    trimPathStart: trim.isModern ? trim.start : undefined,
+    trimPathEnd: trim.isModern ? trim.end : undefined,
+    trimPathOffset: trim.isModern ? trim.offset : undefined,
     width: layer.width,
     height: layer.height,
     // Cloner/particle passthrough

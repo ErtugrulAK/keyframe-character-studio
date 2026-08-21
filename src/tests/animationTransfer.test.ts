@@ -160,10 +160,10 @@ describe('M26 26A — source immutability + isolation', () => {
 });
 
 describe('M26 26A — M8 / schema', () => {
-  it('channel schema unchanged: only the 10 known TrackChannels exist', () => {
+  it('channel schema contains the canonical transform, mask, and Trim Path channels', () => {
     const res = cloneAnimationOntoTarget(makeSourceTrack(), makePart('src'), 'tgt', undefined);
     const keys = Object.keys(res.track.channels).sort();
-    expect(keys).toEqual(['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'opacity', 'rotation', 'scaleX', 'scaleY', 'x', 'y']);
+    expect(keys).toEqual(['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'opacity', 'rotation', 'scaleX', 'scaleY', 'trimPathEnd', 'trimPathOffset', 'trimPathStart', 'x', 'y']);
   });
 
   it('produces a structurally valid Track (all required fields present)', () => {

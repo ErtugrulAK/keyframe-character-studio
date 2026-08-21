@@ -23,8 +23,8 @@
 
 import type { Keyframe, PropertyKeyframe, TrackChannel, EasingType } from '../types/animator';
 
-const ANIMATED_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'];
-const MASK_CHANNELS: TrackChannel[] = ['maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation'];
+const ANIMATED_CHANNELS = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const;
+const MASK_CHANNELS = ['maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation'] as const;
 
 /**
  * Convert a legacy composite keyframe list into canonical channels.
@@ -36,6 +36,7 @@ export function convertLegacyKeyframesToChannels(
   const channels: Record<TrackChannel, PropertyKeyframe[]> = {
     x: [], y: [], rotation: [], scaleX: [], scaleY: [], opacity: [],
     maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [],
+    trimPathStart: [], trimPathEnd: [], trimPathOffset: [],
   };
 
   if (!legacyKeyframes || legacyKeyframes.length === 0) return channels;
@@ -94,7 +95,7 @@ export function convertLegacyKeyframesToChannels(
   }
 
   // Deterministic ordering per channel
-  for (const ch of [...ANIMATED_CHANNELS, ...MASK_CHANNELS]) {
+  for (const ch of [...ANIMATED_CHANNELS, ...MASK_CHANNELS, 'trimPathStart', 'trimPathEnd', 'trimPathOffset'] as TrackChannel[]) {
     channels[ch].sort((a, b) => a.frame - b.frame);
   }
 

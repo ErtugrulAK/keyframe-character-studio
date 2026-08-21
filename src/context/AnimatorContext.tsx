@@ -99,6 +99,7 @@ interface AnimatorContextType {
   updateKeyframeFrame: (trackId: string, keyframeId: string, newFrame: number) => void;
   updateKeyframeBezierPoints: (trackId: string, keyframeId: string, points: [number, number, number, number]) => void;
   updateCurrentTransform: (newTransform: Partial<Transform>, partIdOverride?: string) => void;
+  updateCurrentPropertyChannel: (channel: TrackChannel, value: number, partIdOverride?: string) => void;
   toggleTrackVisibility: (trackId: string) => void;
   toggleTrackEditVisibility: (trackId: string) => void;
   toggleTrackLock: (trackId: string) => void;
@@ -387,6 +388,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const {
     updateCurrentTransform,
+    updateCurrentPropertyChannel,
     updatePartMedia,
   } = useInspector({
     selectedPartId,
@@ -517,6 +519,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         updateKeyframeFrame,
         updateKeyframeBezierPoints,
         updateCurrentTransform,
+        updateCurrentPropertyChannel,
         toggleTrackVisibility,
         toggleTrackEditVisibility,
         toggleTrackLock,

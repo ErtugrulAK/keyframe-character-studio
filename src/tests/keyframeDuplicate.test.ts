@@ -204,7 +204,7 @@ describe('M27 27A — determinism / schema / metadata', () => {
     ch.x = [kf('x1', 10) as never];
     const res = duplicateKeyframeGroup(makeTrack({ channels: ch }), 10);
     expect(Object.keys(res.track.channels).sort()).toEqual(
-      ['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'opacity', 'rotation', 'scaleX', 'scaleY', 'x', 'y'],
+      ['maskOffsetX', 'maskOffsetY', 'maskRotation', 'maskScale', 'opacity', 'rotation', 'scaleX', 'scaleY', 'trimPathEnd', 'trimPathOffset', 'trimPathStart', 'x', 'y'],
     );
   });
 

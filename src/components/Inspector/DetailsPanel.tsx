@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import { makeEmptyChannels } from '../../utils/defaults';
 import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../../utils/shapeAppearance';
+import { isTrimPathEligible } from '../../utils/trimPath';
+import { updateTrimPath, type TrimPathAuthoringPatch } from '../../utils/trimPathAuthoring';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { KeyframesTab } from './sections/KeyframesTab';
@@ -25,6 +27,7 @@ export const DetailsPanel: React.FC = () => {
     setTracks,
     getComputedTransform,
     updateCurrentTransform,
+    updateCurrentPropertyChannel,
     deletePart,
     duplicateSelectedPart,
     customPresets,
@@ -58,6 +61,11 @@ export const DetailsPanel: React.FC = () => {
           'fillEnabled', 'fillColor', 'fillOpacity', 'strokeEnabled', 'strokeColor', 'strokeWidth', 'strokeOpacity',
         ].includes(key)) {
           return updateShapeAppearance(p, { [key]: value } as ShapeAppearancePatch);
+        }
+        if (isTrimPathEligible(p.type) && [
+          'trimPathEnabled', 'trimPathStart', 'trimPathEnd', 'trimPathOffset',
+        ].includes(key)) {
+          return updateTrimPath(p, { [key]: value } as TrimPathAuthoringPatch);
         }
         return { ...p, [key]: value };
       })
@@ -191,6 +199,7 @@ export const DetailsPanel: React.FC = () => {
               coordinateSystem={coordinateSystem}
               currentFrame={currentFrame}
               updateCurrentTransform={updateCurrentTransform}
+              updateCurrentPropertyChannel={updateCurrentPropertyChannel}
               handlePartPropChange={handlePartPropChange}
               handleZIndexChange={handleZIndexChange}
               customPresets={customPresets}

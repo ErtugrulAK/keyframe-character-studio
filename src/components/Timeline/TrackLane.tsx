@@ -275,6 +275,10 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
 
               {/* Opacity Channel Lane */}
               {['opacity'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
+
+              {/* Trim Path channel lanes */}
+              <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
+              {['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
             </>
           )}
         </div>

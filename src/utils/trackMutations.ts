@@ -2,7 +2,7 @@ import type { Track, TrackChannel, EasingType, PropertyKeyframe } from '../types
 import { TRACK_CHANNELS } from '../types/animator';
 import { generateId } from './idGenerator';
 import { makeEmptyChannels } from './defaults';
-import { DISPLAY_CHANNELS } from './channelKeyframeGroups';
+import { ANIMATABLE_CHANNELS, DISPLAY_CHANNELS } from './channelKeyframeGroups';
 import type { TransitionChannelResult } from './motionTransitions';
 import { convertLegacyKeyframesToChannels } from './legacyKeyframeConversion';
 
@@ -108,14 +108,14 @@ export const deleteSelectedKeyframeGroupMutator = (
       };
     }
 
-    const selectedPropertyKeyframe = DISPLAY_CHANNELS
+    const selectedPropertyKeyframe = ANIMATABLE_CHANNELS
       .flatMap((channel) => track.channels?.[channel] || [])
       .find((keyframe) => keyframe.id === selectedKeyframeId
         && (keyframe.templateId || 'Sequence') === activeTemplateId);
     if (!selectedPropertyKeyframe) continue;
 
     const channels = { ...track.channels };
-    for (const channel of DISPLAY_CHANNELS) {
+    for (const channel of ANIMATABLE_CHANNELS) {
       channels[channel] = (channels[channel] || []).filter(
         (keyframe) => keyframe.frame !== selectedPropertyKeyframe.frame
           || (keyframe.templateId || 'Sequence') !== activeTemplateId,

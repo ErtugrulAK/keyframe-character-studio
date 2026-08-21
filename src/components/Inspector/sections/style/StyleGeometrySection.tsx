@@ -1,7 +1,6 @@
 import React from 'react';
 import { Crop } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
-import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
 
 interface StyleGeometrySectionProps {
@@ -46,17 +45,6 @@ export const StyleGeometrySection: React.FC<StyleGeometrySectionProps> = ({ sele
         </div>
       )}
 
-      {/* TRIM PATH / STROKE PROGRESS ANIMATION */}
-      <div className="form-field-group">
-        <label className="form-label">TRIM PATH / STROKE DRAW (0-100%)</label>
-        <SmartNumberInput
-          value={Math.round((selectedPart.strokeProgress ?? 1) * 100)}
-          min={0}
-          max={100}
-          step={5}
-          onChange={(val) => onPartPropChange('strokeProgress', val / 100)}
-        />
-      </div>
     </StyleCard>
   );
 };

@@ -31,6 +31,7 @@ interface SelectedKeyframeSectionProps {
   isScaleLocked: boolean;
   coordinateSystem: SceneCoordinateSystem;
   onUpdate: (newTransform: Partial<Transform>) => void;
+  onUpdateChannel?: (channel: TrackChannel, value: number) => void;
 }
 
 export const SelectedKeyframeSection: React.FC<SelectedKeyframeSectionProps> = ({
@@ -42,6 +43,7 @@ export const SelectedKeyframeSection: React.FC<SelectedKeyframeSectionProps> = (
   isScaleLocked,
   coordinateSystem,
   onUpdate,
+  onUpdateChannel,
 }) => {
   if (!track || !selectedKeyframeId) return null;
 
@@ -54,9 +56,7 @@ export const SelectedKeyframeSection: React.FC<SelectedKeyframeSectionProps> = (
   // playhead moved off the keyframe) — never edit a wrong keyframe.
   if (!selected || selected.frame !== currentFrame) return null;
 
-  const channels = selected.channels.filter((ch) =>
-    (['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as TrackChannel[]).includes(ch),
-  );
+  const channels = selected.channels;
   if (channels.length === 0) return null;
 
   // Explicit legacy-centi scenes retain their historical centi-unit display.
@@ -73,6 +73,8 @@ export const SelectedKeyframeSection: React.FC<SelectedKeyframeSectionProps> = (
     } else if (ch === 'scaleY' && isScaleLocked) {
       const factor = transform.scaleY !== 0 ? value / transform.scaleY : 1;
       onUpdate({ scaleX: transform.scaleX * factor, scaleY: value });
+    } else if (ch === 'trimPathStart' || ch === 'trimPathEnd' || ch === 'trimPathOffset') {
+      onUpdateChannel?.(ch, value);
     } else {
       onUpdate({ [ch]: value } as Partial<Transform>);
     }
@@ -91,9 +93,11 @@ export const SelectedKeyframeSection: React.FC<SelectedKeyframeSectionProps> = (
             </span>
             <SmartNumberInput
               value={selected.keyframes[ch].value}
-              step={ch === 'opacity' ? 0.01 : 1}
-              precision={ch === 'opacity' ? 2 : 1}
-              displayScale={ch === 'x' || ch === 'y' ? displayScale : undefined}
+              min={ch === 'trimPathStart' || ch === 'trimPathEnd' ? 0 : undefined}
+              max={ch === 'trimPathStart' || ch === 'trimPathEnd' ? 1 : undefined}
+              step={ch === 'opacity' || ch === 'trimPathStart' || ch === 'trimPathEnd' ? 0.01 : 1}
+              precision={ch === 'opacity' || ch === 'trimPathStart' || ch === 'trimPathEnd' ? 2 : 1}
+              displayScale={ch === 'trimPathStart' || ch === 'trimPathEnd' ? 100 : (ch === 'x' || ch === 'y' ? displayScale : undefined)}
               deferCommit
               ariaLabel={`Keyframe ${CHANNEL_META[ch].label}`}
               onChange={(val) => handleEdit(ch, val)}

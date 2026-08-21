@@ -3,6 +3,7 @@ import type { CharacterPart } from '../../../../types/animator';
 import { buildFreeformPath, getFreeformPerimeter } from '../../../../utils/freeform';
 import { getShapeGeometry, polygonPointsToString } from '../../../../utils/shapeGeometry';
 import { isShapeAppearanceEligible, resolveShapeAppearance, type ResolvedShapeAppearance } from '../../../../utils/shapeAppearance';
+import { getTrimPathDashProps, resolveTrimPath } from '../../../../utils/trimPath';
 
 interface ShapePartProps {
   part: CharacterPart;
@@ -10,6 +11,7 @@ interface ShapePartProps {
   stroke: string;
   isSelected: boolean;
   isGhost: boolean;
+  trimPath?: Pick<CharacterPart, 'trimPathEnabled' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset'>;
 }
 
 const getStrokeDashProps = (part: CharacterPart, totalPerimeter: number) => {
@@ -29,10 +31,17 @@ const getStrokeDashProps = (part: CharacterPart, totalPerimeter: number) => {
   };
 };
 
+const getShapeDashProps = (part: CharacterPart, totalPerimeter: number) => {
+  const trim = resolveTrimPath(part);
+  if (trim.isModern) return getTrimPathDashProps(trim) ?? {};
+  return getStrokeDashProps(part, totalPerimeter);
+};
+
 const renderModernShape = (
   part: CharacterPart,
   appearance: ResolvedShapeAppearance,
   geo: ReturnType<typeof getShapeGeometry>,
+  dashProps: Record<string, string | number | undefined>,
 ): React.ReactNode => {
   const fill = appearance.fillEnabled ? appearance.fillColor : 'none';
   const stroke = appearance.strokeEnabled ? appearance.strokeColor : 'none';
@@ -43,12 +52,13 @@ const renderModernShape = (
     strokeOpacity: appearance.strokeOpacity,
     strokeWidth: appearance.strokeWidth,
     vectorEffect: 'non-scaling-stroke' as const,
+    ...dashProps,
   };
 
   switch (part.type) {
     case 'custom_circle': {
       const r = geo && geo.kind === 'circle' ? geo.r : 30;
-      return <circle cx={0} cy={0} r={r} {...common} {...getStrokeDashProps(part, 188.5)} />;
+      return <circle cx={0} cy={0} r={r} {...common} />;
     }
     case 'custom_box':
     case 'custom_rect':
@@ -60,31 +70,28 @@ const renderModernShape = (
           : { kind: 'rect' as const, x: -60, y: -30, width: 120, height: 60, rx: 0 };
       const g = geo && geo.kind === 'rect' ? geo : fallback;
       const rx = part.type === 'custom_capsule' ? g.rx : part.borderRadius ?? g.rx;
-      const perimeter = part.type === 'custom_capsule' ? 280 : part.type === 'custom_box' ? 240 : 360;
-      return <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} {...common} {...getStrokeDashProps(part, perimeter)} />;
+      return <rect x={g.x} y={g.y} width={g.width} height={g.height} rx={rx} {...common} />;
     }
     case 'custom_star':
     case 'custom_triangle':
     case 'custom_diamond':
     case 'custom_parallelogram': {
       const points = geo && geo.kind === 'polygon' ? polygonPointsToString(geo.points) : '';
-      const perimeter = part.type === 'custom_star' ? 300
-        : part.type === 'custom_triangle' ? 209
-          : part.type === 'custom_diamond' ? 198 : 340;
-      return <polygon points={points} {...common} {...getStrokeDashProps(part, perimeter)} />;
+      return <polygon points={points} {...common} />;
     }
     case 'custom_freeform': {
       const points = part.points && part.points.length >= 2 ? part.points : undefined;
       const d = points ? buildFreeformPath(points) : '';
       if (!points || !d) return null;
-      return <path d={d} strokeLinejoin="round" {...common} {...getStrokeDashProps(part, getFreeformPerimeter(points))} />;
+      return <path d={d} strokeLinejoin="round" {...common} />;
     }
     default:
       return null;
   }
 };
 
-export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartProps): React.ReactNode => {
+export const renderShapePart = ({ part, fill, stroke, isSelected, trimPath }: ShapePartProps): React.ReactNode => {
+  const renderPart = trimPath ? { ...part, ...trimPath } : part;
   const appearance = resolveShapeAppearance(part);
   const useModernAppearance = isShapeAppearanceEligible(part.type) && appearance.isModernAppearance;
   const isCustomStroke = Boolean(part.strokeColor && part.strokeColor !== '#101218' && part.strokeColor !== 'none' && part.strokeColor !== 'transparent');
@@ -94,7 +101,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
   // M11 Step 2A: single source of truth for local-space shape geometry.
   const geo = getShapeGeometry(part.type);
 
-  if (useModernAppearance) return renderModernShape(part, appearance, geo);
+  if (useModernAppearance) return renderModernShape(renderPart, appearance, geo, getShapeDashProps(renderPart, 0));
 
   switch (part.type) {
     case 'custom_star': {
@@ -108,7 +115,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 300)}
+            {...getShapeDashProps(renderPart, 300)}
           />
         </g>
       );
@@ -128,7 +135,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 188.5)}
+            {...getShapeDashProps(renderPart, 188.5)}
           />
         </g>
       );
@@ -151,7 +158,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 240)}
+            {...getShapeDashProps(renderPart, 240)}
           />
         </g>
       );
@@ -174,7 +181,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 360)}
+            {...getShapeDashProps(renderPart, 360)}
           />
         </g>
       );
@@ -192,7 +199,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 209)}
+            {...getShapeDashProps(renderPart, 209)}
           />
         </g>
       );
@@ -210,7 +217,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={strokeToUse}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 340)}
+            {...getShapeDashProps(renderPart, 340)}
           />
         </g>
       );
@@ -230,7 +237,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 420)}
+            {...getShapeDashProps(renderPart, 420)}
           />
           <text
             x={0}
@@ -264,7 +271,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 280)}
+            {...getShapeDashProps(renderPart, 280)}
           />
         </g>
       );
@@ -281,7 +288,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 198)}
+            {...getShapeDashProps(renderPart, 198)}
           />
         </g>
       );
@@ -301,7 +308,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             strokeWidth={isSelected ? 2 : 1.5}
             strokeLinejoin="round"
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, points ? getFreeformPerimeter(points) : 0)}
+            {...getShapeDashProps(renderPart, points ? getFreeformPerimeter(points) : 0)}
           />
         </g>
       );
@@ -321,7 +328,7 @@ export const renderShapePart = ({ part, fill, stroke, isSelected }: ShapePartPro
             stroke={stroke}
             strokeWidth={isSelected ? 2 : 1.5}
             vectorEffect="non-scaling-stroke"
-            {...getStrokeDashProps(part, 560)}
+            {...getShapeDashProps(renderPart, 560)}
           />
           <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} style={{ pointerEvents: 'none' }} />
           <circle cx={-68} cy={-29} r={4} fill="#00d2ff" style={{ pointerEvents: 'none' }} />

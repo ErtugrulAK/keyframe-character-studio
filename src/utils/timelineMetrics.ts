@@ -54,4 +54,4 @@ export function hasChannelDataForTemplate(track: Track, activeTemplateId: string
 }
 
 /** Channel display order (same as DISPLAY_CHANNELS in the editor panel) */
-export const TIMELINE_CHANNEL_ORDER: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'];
+export const TIMELINE_CHANNEL_ORDER: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];

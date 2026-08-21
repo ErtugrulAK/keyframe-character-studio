@@ -54,6 +54,10 @@ function toSceneData(
     ...(p.strokeEnabled !== undefined ? { strokeEnabled: p.strokeEnabled } : {}),
     ...(p.strokeWidth !== undefined ? { strokeWidth: p.strokeWidth } : {}),
     ...(p.strokeOpacity !== undefined ? { strokeOpacity: p.strokeOpacity } : {}),
+    ...(p.trimPathEnabled !== undefined ? { trimPathEnabled: p.trimPathEnabled } : {}),
+    ...(p.trimPathStart !== undefined ? { trimPathStart: p.trimPathStart } : {}),
+    ...(p.trimPathEnd !== undefined ? { trimPathEnd: p.trimPathEnd } : {}),
+    ...(p.trimPathOffset !== undefined ? { trimPathOffset: p.trimPathOffset } : {}),
     borderRadius: p.borderRadius,
     width: p.width,
     height: p.height,
@@ -158,6 +162,10 @@ function fromSceneData(
     points: l.points,
     ...(l.strokeWidth !== undefined ? { strokeWidth: l.strokeWidth } : {}),
     ...(l.strokeOpacity !== undefined ? { strokeOpacity: l.strokeOpacity } : {}),
+    ...(l.trimPathEnabled !== undefined ? { trimPathEnabled: l.trimPathEnabled } : {}),
+    ...(l.trimPathStart !== undefined ? { trimPathStart: l.trimPathStart } : {}),
+    ...(l.trimPathEnd !== undefined ? { trimPathEnd: l.trimPathEnd } : {}),
+    ...(l.trimPathOffset !== undefined ? { trimPathOffset: l.trimPathOffset } : {}),
     fontFamily: l.fontFamily,
     // BUG #3 fix: restore exported procedural animation config
     // (SceneLayer defines these; computeProceduralDelta consumes them).

@@ -2,7 +2,7 @@ import React from 'react';
 import { useAnimator } from '../../../context/AnimatorContext';
 import { Diamond, Plus, Trash2, Play } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
-import { groupChannelKeyframesByFrame, DISPLAY_CHANNELS } from '../../../utils/channelKeyframeGroups';
+import { groupChannelKeyframesByFrame, DISPLAY_CHANNELS, TRIM_PATH_CHANNELS } from '../../../utils/channelKeyframeGroups';
 import { SmartNumberInput } from '../inputs/SmartNumberInput';
 
 interface KeyframesTabProps {
@@ -51,8 +51,11 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
       scaleX: t.scaleX,
       scaleY: t.scaleY,
       opacity: t.opacity,
+      trimPathStart: selectedPart.trimPathStart ?? 0,
+      trimPathEnd: selectedPart.trimPathEnd ?? 1,
+      trimPathOffset: selectedPart.trimPathOffset ?? 0,
     };
-    for (const ch of DISPLAY_CHANNELS) {
+    for (const ch of [...DISPLAY_CHANNELS, ...TRIM_PATH_CHANNELS]) {
       addPropertyKeyframe(track.id, ch, currentFrame, snapshot[ch], 'easeInOut');
     }
   };

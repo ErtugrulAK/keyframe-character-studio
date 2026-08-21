@@ -4,7 +4,7 @@ import { useAnimator } from '../../context/AnimatorContext';
 import type { PropertyKeyframe, TrackChannel } from '../../types/animator';
 import { TRACK_CHANNELS } from '../../types/animator';
 import { computeMaxFrame, findChannelKeyframeAtFrame, hasChannelDataForTemplate } from '../../utils/timelineMetrics';
-import { DISPLAY_CHANNELS, buildTransformSnapshot } from '../../utils/channelKeyframeGroups';
+import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, buildTransformSnapshot } from '../../utils/channelKeyframeGroups';
 import {
   Plus,
   ZoomIn,
@@ -315,7 +315,14 @@ export const SequencerTimeline: React.FC = () => {
   // Add property keyframe at current frame for given channel
   const handleAddChannelKeyframe = (trackId: string, channel: TrackChannel, partId: string) => {
     const transform = getComputedTransform(partId, currentFrame);
-    const val = transform[channel] ?? (channel === 'maskScale' ? 1 : 0);
+    const part = characterParts.find((candidate) => candidate.id === partId);
+    const val = channel === 'trimPathStart'
+      ? (part?.trimPathStart ?? 0)
+      : channel === 'trimPathEnd'
+        ? (part?.trimPathEnd ?? 1)
+        : channel === 'trimPathOffset'
+          ? (part?.trimPathOffset ?? 0)
+          : transform[channel] ?? (channel === 'maskScale' ? 1 : 0);
     addPropertyKeyframe(trackId, channel, currentFrame, val);
   };
 
@@ -335,6 +342,15 @@ export const SequencerTimeline: React.FC = () => {
     const snapshot = buildTransformSnapshot(t);
     for (const ch of DISPLAY_CHANNELS) {
       addPropertyKeyframe(trackId, ch, frame, snapshot[ch], 'easeInOut');
+    }
+    const part = characterParts.find((candidate) => candidate.id === track.partId);
+    const trimValues = {
+      trimPathStart: part?.trimPathStart ?? 0,
+      trimPathEnd: part?.trimPathEnd ?? 1,
+      trimPathOffset: part?.trimPathOffset ?? 0,
+    };
+    for (const ch of TRIM_PATH_CHANNELS) {
+      addPropertyKeyframe(trackId, ch, frame, trimValues[ch], 'easeInOut');
     }
   };
 

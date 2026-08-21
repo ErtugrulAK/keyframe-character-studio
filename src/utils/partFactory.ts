@@ -20,6 +20,10 @@ export const createCustomPart = (
       strokeEnabled: true,
       strokeWidth: 1.5,
       strokeOpacity: 1,
+      trimPathEnabled: false,
+      trimPathStart: 0,
+      trimPathEnd: 1,
+      trimPathOffset: 0,
     }
     : {};
 

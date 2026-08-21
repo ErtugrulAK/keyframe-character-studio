@@ -90,6 +90,10 @@ export interface SceneLayer {
   strokeEnabled?: boolean;
   strokeWidth?: number;
   strokeOpacity?: number;
+  trimPathEnabled?: boolean;
+  trimPathStart?: number;
+  trimPathEnd?: number;
+  trimPathOffset?: number;
   shadowColor?: string;
   shadowBlur?: number;
   shadowOffsetX?: number;
@@ -212,6 +216,10 @@ export interface LayerContent {
   shadowOffsetX?: number;
   shadowOffsetY?: number;
   borderRadius?: number;
+  trimPathEnabled?: boolean;
+  trimPathStart?: number;
+  trimPathEnd?: number;
+  trimPathOffset?: number;
   width?: number;
   height?: number;
   /** MoGraph cloner / particle system config passthrough */

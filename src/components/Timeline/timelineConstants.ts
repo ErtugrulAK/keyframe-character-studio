@@ -12,6 +12,9 @@ export const CHANNEL_META: Record<TrackChannel, { label: string; color: string; 
   maskOffsetY:  { label: 'Mask Y',      shortLabel: 'MY',  color: '#06b6d4' },
   maskScale:    { label: 'Mask Scale',   shortLabel: 'MS',  color: '#8b5cf6' },
   maskRotation: { label: 'Mask Rot',     shortLabel: 'MR°', color: '#f97316' },
+  trimPathStart: { label: 'Trim Start', shortLabel: 'TS', color: '#22d3ee' },
+  trimPathEnd: { label: 'Trim End', shortLabel: 'TE', color: '#2dd4bf' },
+  trimPathOffset: { label: 'Trim Offset', shortLabel: 'TO°', color: '#a78bfa' },
 };
 
 export const TRACK_ROW_HEIGHT = 34;   // parent track row

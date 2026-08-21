@@ -111,9 +111,9 @@ export interface PropertyKeyframe {
 }
 
 // Channel keys match Transform property names
-export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation';
+export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset';
 
-export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation'];
+export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];
 
 /**
  * Track data model (Phase 3 Step 5).
@@ -299,6 +299,11 @@ export interface CharacterPart {
   strokeProgress?: number;    // 0..1 (0=hidden, 1=full outline)
   strokeWidth?: number;       // override stroke width for animated outline
   strokeAnimColor?: string;   // override color for animated stroke
+  /** V2 normalized Trim Path authoring fields. Missing fields preserve legacy strokeProgress behavior. */
+  trimPathEnabled?: boolean;
+  trimPathStart?: number;      // normalized 0..1
+  trimPathEnd?: number;        // normalized 0..1
+  trimPathOffset?: number;     // degrees, normalized at evaluation/render time
 
   // ── Feature 2: Responsive Anchor Points ──
   anchor?: AnchorPreset;

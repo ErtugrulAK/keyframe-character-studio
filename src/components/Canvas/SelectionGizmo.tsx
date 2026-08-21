@@ -2,6 +2,7 @@ import React from 'react';
 import type { CharacterPart, Track, Transform } from '../../types/animator';
 import { getPartBounds } from '../../utils/bounds';
 import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../utils/projectCoordinates';
 
 interface SelectionGizmoProps {
   selectedPartIds: string[];
@@ -15,6 +16,7 @@ interface SelectionGizmoProps {
   onRotateStart: (e: React.MouseEvent) => void;
   onScaleStart: (e: React.MouseEvent, mode?: ScaleMode) => void;
   onTranslateStart: (partId: string, e: React.MouseEvent) => void;
+  outputOrigin?: CoordinatePoint;
 }
 
 /**
@@ -33,6 +35,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
   onRotateStart,
   onScaleStart,
   onTranslateStart,
+  outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
   if (selectedPartIds.length > 1) {
     let minX = Infinity;
@@ -79,6 +82,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
         isGroup={true}
         overrideHalfW={halfW}
         overrideHalfH={halfH}
+        outputOrigin={outputOrigin}
       />
     );
   }
@@ -91,7 +95,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
     const bounds = getPartBounds(selectedPart, selectedTransform);
     const matteHitArea = hasActiveMatte ? (
       <g
-        transform={`translate(${300 + selectedTransform.x}, ${240 + selectedTransform.y}) rotate(${selectedTransform.rotation}) scale(${selectedTransform.scaleX}, ${selectedTransform.scaleY})`}
+        transform={`translate(${outputOrigin.x + selectedTransform.x}, ${outputOrigin.y + selectedTransform.y}) rotate(${selectedTransform.rotation}) scale(${selectedTransform.scaleX}, ${selectedTransform.scaleY})`}
       >
         <rect
           data-testid="matte-editor-hit-area"
@@ -120,6 +124,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
             zScale={zScale}
             onRotateMouseDown={onRotateStart}
             onScaleMouseDown={onScaleStart}
+            outputOrigin={outputOrigin}
           />
         )}
       </>

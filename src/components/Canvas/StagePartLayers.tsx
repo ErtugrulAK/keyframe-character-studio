@@ -36,7 +36,7 @@ import {
 import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } from '../../utils/matte';
 import type { WorldTransform } from '../../types/composition';
 import type { NamedSequenceRuntimeState } from '../../utils/broadcastEngine';
-import { CANVAS_CENTER } from '../../utils/constants';
+import { EDITOR_CAMERA_CENTER, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
 
 interface StagePartLayersProps {
   sortedParts: CharacterPart[];
@@ -116,6 +116,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     liveStunts: toLiveStuntsRuntime(liveStuntsState),
   };
 
+  const outputOrigin: CoordinatePoint = appMode === 'broadcast'
+    ? getProjectCenter(projectResolution ?? { width: 1920, height: 1080 })
+    : EDITOR_CAMERA_CENTER;
+
   // Phase 3 Step 7: critical validation before evaluation.
   // useMemo keeps it O(1) on re-renders when layer list reference is unchanged,
   // so valid scenes pay no repeated validation cost.
@@ -188,7 +192,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     if (mode === 'clip') {
       const clipId = matteClipPathId(source.id);
       if (matteClips.has(clipId)) continue; // already built for this source (1 source → N targets)
-      const clip = buildMatteClipPath(source, sourceEl.transform);
+      const clip = buildMatteClipPath(source, sourceEl.transform, outputOrigin);
       if (clip) matteClips.set(clip.id, clip);
       continue;
     }
@@ -246,7 +250,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     } else {
       let pathD = maskPathCache.get(source.id);
       if (pathD === undefined) {
-        pathD = buildMattePath(source, sourceEl.transform) ?? undefined;
+        pathD = buildMattePath(source, sourceEl.transform, outputOrigin) ?? undefined;
         if (pathD === undefined) continue;
         maskPathCache.set(source.id, pathD);
       }
@@ -293,8 +297,8 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
           // WORLD for shape/freeform AND inverted text (region rect consumes
           // the def); LOCAL only for the non-inverted text element (4A).
           const geo = isInvertedText || source.type !== 'custom_text'
-            ? radialGradientGeometry(source, sourceEl.transform, false)
-            : radialGradientGeometry(source, sourceEl.transform, true);
+            ? radialGradientGeometry(source, sourceEl.transform, false, outputOrigin)
+            : radialGradientGeometry(source, sourceEl.transform, true, outputOrigin);
           if (geo) {
             matteGradients.set(gradId, {
               id: gradId,
@@ -308,10 +312,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
           }
         } else {
           const eps = isInvertedText
-            ? gradientEndpoints(source, sourceEl.transform, gradientAngle!)      // WORLD (rect)
+            ? gradientEndpoints(source, sourceEl.transform, gradientAngle!, outputOrigin)      // WORLD (rect)
             : source.type === 'custom_text'
-              ? gradientEndpointsLocal(source, sourceEl.transform, gradientAngle!) // LOCAL (text element)
-              : gradientEndpoints(source, sourceEl.transform, gradientAngle!);
+              ? gradientEndpointsLocal(source, sourceEl.transform, gradientAngle!, outputOrigin) // LOCAL (text element)
+              : gradientEndpoints(source, sourceEl.transform, gradientAngle!, outputOrigin);
           if (eps) {
             matteGradients.set(gradId, {
               id: gradId,
@@ -368,10 +372,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
 
   // Inverted masks need an explicit full-artboard region (default mask bbox
   // would leave the outer area unmasked). Same computation as StageCanvas's
-  // artboard-clip: CANVAS_CENTER ± projectResolution / 2. No pan/zoom.
+  // artboard-clip: outputOrigin ± projectResolution / 2. No pan/zoom.
   const region = {
-    x: CANVAS_CENTER.x - (projectResolution?.width ?? 1920) / 2,
-    y: CANVAS_CENTER.y - (projectResolution?.height ?? 1080) / 2,
+    x: outputOrigin.x - (projectResolution?.width ?? 1920) / 2,
+    y: outputOrigin.y - (projectResolution?.height ?? 1080) / 2,
     width: projectResolution?.width ?? 1920,
     height: projectResolution?.height ?? 1080,
   };
@@ -394,7 +398,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   const renderTextMaskContent = (mask: MatteMask, t: WorldTransform): React.ReactNode => {
     if (!mask.text) return null;
     return (
-      <g transform={`translate(${CANVAS_CENTER.x + t.x}, ${CANVAS_CENTER.y + t.y}) rotate(${t.rotation}) scale(${t.scaleX}, ${t.scaleY})`}>
+      <g transform={`translate(${outputOrigin.x + t.x}, ${outputOrigin.y + t.y}) rotate(${t.rotation}) scale(${t.scaleX}, ${t.scaleY})`}>
         <text
           x={0}
           y={0}
@@ -427,7 +431,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   const renderImageMaskContent = (mask: MatteMask, t: WorldTransform): React.ReactNode => {
     if (!mask.image) return null;
     return (
-      <g transform={`translate(${CANVAS_CENTER.x + t.x}, ${CANVAS_CENTER.y + t.y}) rotate(${t.rotation}) scale(${t.scaleX}, ${t.scaleY})`}>
+      <g transform={`translate(${outputOrigin.x + t.x}, ${outputOrigin.y + t.y}) rotate(${t.rotation}) scale(${t.scaleX}, ${t.scaleY})`}>
         <image
           href={mask.image.href}
           x={-mask.image.width / 2}
@@ -507,7 +511,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             maskContentUnits="userSpaceOnUse"
             mask-type="alpha"
           >
-            <g transform={`translate(${CANVAS_CENTER.x + c.transform.x}, ${CANVAS_CENTER.y + c.transform.y}) rotate(${c.transform.rotation}) scale(${c.transform.scaleX}, ${c.transform.scaleY})`}>
+            <g transform={`translate(${outputOrigin.x + c.transform.x}, ${outputOrigin.y + c.transform.y}) rotate(${c.transform.rotation}) scale(${c.transform.scaleX}, ${c.transform.scaleY})`}>
               <image
                 href={c.content.href}
                 x={-c.content.width / 2}
@@ -606,6 +610,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             evaluatedLayer={el}
             matteClipPathId={matteAttrs.clipId}
             matteMaskId={matteAttrs.maskId}
+            outputOrigin={outputOrigin}
           />
         );
       })}

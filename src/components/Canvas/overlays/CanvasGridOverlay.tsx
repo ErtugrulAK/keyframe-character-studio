@@ -1,4 +1,5 @@
 import React from 'react';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 
 interface CanvasGridOverlayProps {
   artX: number;
@@ -8,6 +9,7 @@ interface CanvasGridOverlayProps {
   zScale: number;
   showGrid: boolean;
   appMode: 'edit' | 'broadcast';
+  origin?: CoordinatePoint;
 }
 
 export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
@@ -18,6 +20,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
   zScale,
   showGrid,
   appMode,
+  origin = EDITOR_CAMERA_CENTER,
 }) => {
   if (appMode === 'broadcast') return null;
 
@@ -95,7 +98,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
         {/* Boundary Coordinate Text Labels (Minimal X / Y values matching Inspector) */}
         {/* Top Edge Label */}
         <text
-          x={300}
+          x={origin.x}
           y={artY - 6 * zScale}
           fill="#38bdf8"
           fontSize={11 * zScale}
@@ -108,7 +111,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
 
         {/* Bottom Edge Label */}
         <text
-          x={300}
+          x={origin.x}
           y={artY + height + 14 * zScale}
           fill="#38bdf8"
           fontSize={11 * zScale}
@@ -122,7 +125,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
         {/* Left Edge Label */}
         <text
           x={artX - 8 * zScale}
-          y={240}
+          y={origin.y}
           fill="#38bdf8"
           fontSize={11 * zScale}
           fontWeight="700"
@@ -136,7 +139,7 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
         {/* Right Edge Label */}
         <text
           x={artX + width + 8 * zScale}
-          y={240}
+          y={origin.y}
           fill="#38bdf8"
           fontSize={11 * zScale}
           fontWeight="700"
@@ -152,23 +155,23 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
       <g clipPath="url(#artboard-clip)" pointerEvents="none">
         <line
           x1="-300000"
-          y1="240"
+          y1={origin.y}
           x2="300000"
-          y2="240"
+          y2={origin.y}
           stroke="rgba(239, 68, 68, 0.75)"
           strokeWidth={1.5 * zScale}
           strokeDasharray={`${6 * zScale} ${4 * zScale}`}
         />
         <line
-          x1="300"
+          x1={origin.x}
           y1="-300000"
-          x2="300"
+          x2={origin.x}
           y2="300000"
           stroke="rgba(16, 185, 129, 0.75)"
           strokeWidth={1.5 * zScale}
           strokeDasharray={`${6 * zScale} ${4 * zScale}`}
         />
-        <circle cx={300} cy={240} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+        <circle cx={origin.x} cy={origin.y} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
       </g>
     </>
   );

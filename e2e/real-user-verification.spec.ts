@@ -178,12 +178,15 @@ test('BUG 4 — broadcast sequence: scene visible, edit playback untouched (real
   const vis3 = await partVisibility();
   expect(vis3.every((v) => v.onScreen && v.w > 0 && v.h > 0)).toBe(true);
 
-  // 5. Edit playback untouched: part transforms stayed identical to EDIT state
-  //    (currentFrame never advanced — no edit-timeline loop was triggered)
+  // 5. Edit playback untouched: the authored transform remains unchanged while
+  //    Broadcast maps it through the project-space origin (currentFrame never
+  //    advanced and no edit-timeline loop was triggered).
   const broadcastTransforms = await page.evaluate(() =>
     [...document.querySelectorAll<SVGGElement>('g[transform^="translate"]')].map((g) => g.getAttribute('transform')),
   );
-  expect(broadcastTransforms).toEqual(editTransforms);
+  expect(broadcastTransforms).toEqual(
+    editTransforms.map((transform) => transform?.replace('translate(300, 240)', 'translate(960, 540)')),
+  );
 
   // 6. Exit broadcast → re-enter → sequence again: same behavior
   await page.getByText('EDIT MODE', { exact: true }).click();
@@ -219,13 +222,13 @@ test('BUG 5 — broadcast starts FIT, does not inherit edit zoom/pan (real UI)',
   });
   expect(broadcastZoom.style).toContain('scale(1)');          // no inherited zoom
   expect(broadcastZoom.style).toContain('translate(0px, 0px)'); // no inherited pan
-  expect(broadcastZoom.viewBox).toBe('-660 -300 1920 1080');
+  expect(broadcastZoom.viewBox).toBe('0 0 1920 1080');
 
   // 3. Whole artboard fits the viewport (no crop): world corners map inside
   const corners = await page.evaluate(() => {
     const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
     const out: Record<string, { x: number; y: number }> = {};
-    for (const [key, wx, wy] of [['tl', -660, -300], ['br', 1260, 780]] as const) {
+    for (const [key, wx, wy] of [['tl', 0, 0], ['br', 1920, 1080]] as const) {
       const pt = svg.createSVGPoint(); pt.x = wx as number; pt.y = wy as number;
       const s = pt.matrixTransform(svg.getScreenCTM()!);
       out[key] = { x: Math.round(s.x), y: Math.round(s.y) };

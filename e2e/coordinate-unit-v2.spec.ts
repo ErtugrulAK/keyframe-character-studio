@@ -68,3 +68,25 @@ for (const resolution of [[1920, 1080], [1280, 720], [1080, 1920]] as const) {
     expect(loaded.height).toBe(resolution[1]);
   });
 }
+
+for (const [width, height] of [[1920, 1080], [1280, 720], [3840, 2160], [1080, 1920], [1000, 1000]] as const) {
+  test(`project/output origin mapping remains canonical at ${width}x${height}`, async ({ page }) => {
+    const data = scene('project-unit-center-v1', 300, -100);
+    data.width = width;
+    data.height = height;
+    await seed(page, data);
+
+    const editTransform = await page.locator('g[transform^="translate"]').first().getAttribute('transform');
+    expect(editTransform).toContain('translate(600, 140)');
+
+    await page.getByText('BROADCAST', { exact: true }).click();
+    await expect.poll(() => page.locator('g[transform^="translate"]').count()).toBe(0);
+    await page.getByText('Sequence', { exact: true }).first().click();
+    const outputTransform = await page.locator('g[transform^="translate"]').first().getAttribute('transform');
+    expect(outputTransform).toContain(`translate(${width / 2 + 300}, ${height / 2 - 100})`);
+
+    const viewBox = await page.evaluate(() => [...document.querySelectorAll('svg')]
+      .find((svg) => !!svg.querySelector('#artboard-clip'))?.getAttribute('viewBox'));
+    expect(viewBox).toBe(`0 0 ${width} ${height}`);
+  });
+}

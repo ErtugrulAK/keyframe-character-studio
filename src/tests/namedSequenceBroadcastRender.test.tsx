@@ -96,7 +96,7 @@ describe('StagePartLayers — named sequence broadcast evaluation', () => {
       />,
     );
     expect(activeBroadcastHtml).toContain('<rect');
-    expect(activeBroadcastHtml).toContain('translate(400, 240)');
+    expect(activeBroadcastHtml).toContain('translate(1060, 540)');
 
     const reenteredBroadcastHtml = renderToString(
       <StagePartLayers {...commonProps} appMode="broadcast" broadcastSessionActivated={false} />,
@@ -117,7 +117,7 @@ describe('StagePartLayers — named sequence broadcast evaluation', () => {
       { sequenceId: 'SPECIAL', status, frame, durationFrames: 30 },
     );
 
-    expect(html).toContain(`translate(${300 + expectedX}, 240)`);
+    expect(html).toContain(`translate(${960 + expectedX}, 540)`);
   });
 
   it('uses the same runtime frame for parent composition and matte source/target evaluation', () => {
@@ -136,8 +136,8 @@ describe('StagePartLayers — named sequence broadcast evaluation', () => {
       { sequenceId: 'SPECIAL', status: 'playing', frame: 15, durationFrames: 30 },
     );
 
-    expect(html).toContain('translate(420, 240)');
-    expect(html).toContain('translate(300, 270)');
+    expect(html).toContain('translate(1060, 540)');
+    expect(html).toContain('translate(960, 570)');
     expect(html).toContain('clip-path="url(#kcs-clip-SOURCE)"');
   });
 
@@ -157,7 +157,7 @@ describe('StagePartLayers — named sequence broadcast evaluation', () => {
         [inTrack],
         { sequenceId, status: frame === 30 ? 'holding' : 'playing', frame, durationFrames: 30 },
       );
-      expect(html).toContain(`translate(${300 + expectedX}, 240)`);
+      expect(html).toContain(`translate(${960 + expectedX}, 540)`);
     }
   });
 
@@ -187,8 +187,8 @@ describe('StagePartLayers — named sequence broadcast evaluation', () => {
       />
     );
 
-    expect(html).toContain('translate(400, 240)');
-    expect(html).not.toContain('translate(500, 240)');
+    expect(html).toContain('translate(1060, 540)');
+    expect(html).not.toContain('translate(1460, 540)');
   });
 
   it('preserves legacy custom_timeline frame overrides while named sequence runtime is idle', () => {
@@ -216,6 +216,6 @@ describe('StagePartLayers — named sequence broadcast evaluation', () => {
       />
     );
 
-    expect(html).toContain('translate(1400, 240)');
+    expect(html).toContain('translate(2060, 540)');
   });
 });

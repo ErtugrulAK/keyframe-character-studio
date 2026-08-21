@@ -42,8 +42,8 @@ async function artboardScreenRect(page: Page) {
   return page.evaluate(() => {
     const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
     const pr = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5')!).projectResolution;
-    const p1 = svg.createSVGPoint(); p1.x = 300 - pr.width / 2; p1.y = 240 - pr.height / 2;
-    const p2 = svg.createSVGPoint(); p2.x = 300 + pr.width / 2; p2.y = 240 + pr.height / 2;
+    const p1 = svg.createSVGPoint(); p1.x = 0; p1.y = 0;
+    const p2 = svg.createSVGPoint(); p2.x = pr.width; p2.y = pr.height;
     const s1 = p1.matrixTransform(svg.getScreenCTM()!);
     const s2 = p2.matrixTransform(svg.getScreenCTM()!);
     return { left: s1.x, top: s1.y, right: s2.x, bottom: s2.y };
@@ -76,7 +76,7 @@ test('BROADCAST-1 — first entry fits the FULL artboard (no crop) at any edit z
   const rect = await artboardScreenRect(page);
   expectFullArtboard(rect, vp);
   const bcViewBox = await page.evaluate(() => [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!.getAttribute('viewBox'));
-  expect(bcViewBox).toBe('-660 -300 1920 1080'); // full artboard bounds
+  expect(bcViewBox).toBe('0 0 1920 1080'); // clean project-space bounds
 });
 
 test('BROADCAST-2 — clean entry is empty, then triggered edge parts are ON SCREEN', async ({ page }) => {

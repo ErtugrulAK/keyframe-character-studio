@@ -4,7 +4,7 @@ import type { EvaluatedLayer } from '../../../types/composition';
 import { renderShapePart } from './parts/ShapePartRenderers';
 import { renderMediaPart } from './parts/MediaPartRenderer';
 import { renderTextOrClonerPart } from './parts/TextAndClonerRenderers';
-import { CANVAS_CENTER } from '../../../utils/constants';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 
 interface PartRendererProps {
   part: CharacterPart;
@@ -22,10 +22,9 @@ interface PartRendererProps {
    *  (alpha/luminance/inverted). Never combined with matteClipPathId —
    *  a part's matte mode selects exactly one of clip / mask. */
   matteMaskId?: string;
+  /** Output origin: edit camera center or project-resolution center. */
+  outputOrigin?: CoordinatePoint;
 }
-
-const CANVAS_CX = CANVAS_CENTER.x;
-const CANVAS_CY = CANVAS_CENTER.y;
 
 export const PartRenderer: React.FC<PartRendererProps> = ({
   part,
@@ -38,6 +37,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   evaluatedLayer,
   matteClipPathId,
   matteMaskId,
+  outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
   const el = evaluatedLayer;
   if (!el.visible) return null;
@@ -100,7 +100,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       mask={matteMaskId ? `url(#${matteMaskId})` : undefined}
     >
       <g
-        transform={`translate(${CANVAS_CX + el.transform.x}, ${CANVAS_CY + el.transform.y}) rotate(${el.transform.rotation}) scale(${el.transform.scaleX}, ${el.transform.scaleY})`}
+        transform={`translate(${outputOrigin.x + el.transform.x}, ${outputOrigin.y + el.transform.y}) rotate(${el.transform.rotation}) scale(${el.transform.scaleX}, ${el.transform.scaleY})`}
         style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined }}
         onClick={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onSelect(part.id); } }}
         onMouseDown={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onStartTranslateDrag(part.id, e); } }}

@@ -15,7 +15,7 @@
 import type { BodyPartType, CharacterPart, MatteMode } from '../types/animator';
 import type { WorldTransform } from '../types/composition';
 import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
-import { CANVAS_CENTER } from './constants';
+import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from './projectCoordinates';
 
 export interface MatteClipPath {
   id: string;
@@ -65,13 +65,14 @@ export function isMatteActive(matte: { enabled?: boolean } | undefined): boolean
 export function buildMattePath(
   sourcePart: CharacterPart,
   world: WorldTransform,
+  outputOrigin: CoordinatePoint = EDITOR_CAMERA_CENTER,
 ): string | null {
   if (sourcePart.type === 'custom_freeform') {
-    return freeformWorldPathD(sourcePart.points, world);
+    return freeformWorldPathD(sourcePart.points, world, outputOrigin);
   }
   const geo = getShapeGeometry(sourcePart.type);
   if (!geo) return null;
-  return geometryToWorldPathD(geo, world);
+  return geometryToWorldPathD(geo, world, outputOrigin);
 }
 
 /** M15 — world-space polygon path from LOCAL freeform points. Identical math
@@ -80,9 +81,10 @@ export function buildMattePath(
 function freeformWorldPathD(
   points: { x: number; y: number }[] | undefined,
   w: WorldTransform,
+  outputOrigin: CoordinatePoint,
 ): string | null {
   if (!Array.isArray(points) || points.length < 2) return null;
-  const pts = points.map((p) => applyWorld(p, w));
+  const pts = points.map((p) => applyWorld(p, w, outputOrigin));
   return `M ${fmtPt(pts[0])}` + pts.slice(1).map((p) => ` L ${fmtPt(p)}`).join('') + ' Z';
 }
 
@@ -107,8 +109,9 @@ export function isMatteEligible(part: { type: string } | undefined): boolean {
 export function buildMatteClipPath(
   sourcePart: CharacterPart,
   world: WorldTransform,
+  outputOrigin: CoordinatePoint = EDITOR_CAMERA_CENTER,
 ): MatteClipPath | null {
-  const pathD = buildMattePath(sourcePart, world);
+  const pathD = buildMattePath(sourcePart, world, outputOrigin);
   if (!pathD) return null;
   return { id: matteClipPathId(sourcePart.id), pathD };
 }
@@ -237,6 +240,7 @@ export function radialGradientGeometry(
   sourcePart: Pick<CharacterPart, 'type' | 'points'>,
   world: WorldTransform,
   local: boolean,
+  outputOrigin: CoordinatePoint = EDITOR_CAMERA_CENTER,
 ): MatteRadialGeometry | undefined {
   const pts = sourceLocalPoints(sourcePart);
   if (!pts) return undefined;
@@ -253,7 +257,7 @@ export function radialGradientGeometry(
   if (local) {
     return { cx, cy, r: localRadius }; // LOCAL (text element space)
   }
-  const wc = applyWorld({ x: cx, y: cy }, world);
+  const wc = applyWorld({ x: cx, y: cy }, world, outputOrigin);
   // Zero scale → 1 (mirrors worldToLocal); abs for negative (flip) scales.
   const sx = world.scaleX === 0 ? 1 : Math.abs(world.scaleX ?? 1);
   const sy = world.scaleY === 0 ? 1 : Math.abs(world.scaleY ?? 1);
@@ -528,14 +532,15 @@ export function buildMatteImageMask(
 export function worldToLocal(
   p: { x: number; y: number },
   w: WorldTransform,
+  outputOrigin: CoordinatePoint = EDITOR_CAMERA_CENTER,
 ): { x: number; y: number } {
   const rad = ((w.rotation ?? 0) * Math.PI) / 180;
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
   const sx = w.scaleX === 0 ? 1 : (w.scaleX ?? 1);
   const sy = w.scaleY === 0 ? 1 : (w.scaleY ?? 1);
-  const dx = p.x - (CANVAS_CENTER.x + (w.x ?? 0));
-  const dy = p.y - (CANVAS_CENTER.y + (w.y ?? 0));
+  const dx = p.x - (outputOrigin.x + (w.x ?? 0));
+  const dy = p.y - (outputOrigin.y + (w.y ?? 0));
   return {
     x: (dx * cos + dy * sin) / sx,
     y: (-dx * sin + dy * cos) / sy,
@@ -550,11 +555,12 @@ export function gradientEndpointsLocal(
   sourcePart: Pick<CharacterPart, 'type' | 'points'>,
   world: WorldTransform,
   angle: number,
+  outputOrigin: CoordinatePoint = EDITOR_CAMERA_CENTER,
 ): MatteGradientEndpoints | undefined {
-  const worldEps = gradientEndpoints(sourcePart, world, angle);
+  const worldEps = gradientEndpoints(sourcePart, world, angle, outputOrigin);
   if (!worldEps) return undefined;
-  const p1 = worldToLocal({ x: worldEps.x1, y: worldEps.y1 }, world);
-  const p2 = worldToLocal({ x: worldEps.x2, y: worldEps.y2 }, world);
+  const p1 = worldToLocal({ x: worldEps.x1, y: worldEps.y1 }, world, outputOrigin);
+  const p2 = worldToLocal({ x: worldEps.x2, y: worldEps.y2 }, world, outputOrigin);
   return { x1: p1.x, y1: p1.y, x2: p2.x, y2: p2.y };
 }
 
@@ -671,6 +677,7 @@ export function gradientEndpoints(
   sourcePart: Pick<CharacterPart, 'type' | 'points'>,
   world: WorldTransform,
   angle: number,
+  outputOrigin: CoordinatePoint = EDITOR_CAMERA_CENTER,
 ): MatteGradientEndpoints | undefined {
   // Local bounds from the SAME geometry the matte path uses — shapeGeometry
   // for static shapes, CharacterPart.points for freeform. Never a second
@@ -701,8 +708,8 @@ export function gradientEndpoints(
   const half = (maxP - minP) / 2;
   const p1 = { x: cx - dx * half, y: cy - dy * half };
   const p2 = { x: cx + dx * half, y: cy + dy * half };
-  const w1 = applyWorld(p1, world);
-  const w2 = applyWorld(p2, world);
+  const w1 = applyWorld(p1, world, outputOrigin);
+  const w2 = applyWorld(p2, world, outputOrigin);
   return { x1: w1.x, y1: w1.y, x2: w2.x, y2: w2.y };
 }
 
@@ -712,8 +719,9 @@ export function buildMatteMask(
   mode: Exclude<MatteMode, 'clip'>,
   inverted: boolean,
   fillColor: string,
+  outputOrigin: CoordinatePoint = EDITOR_CAMERA_CENTER,
 ): MatteMask | null {
-  const pathD = buildMattePath(sourcePart, world);
+  const pathD = buildMattePath(sourcePart, world, outputOrigin);
   if (!pathD) return null;
   return {
     id: matteMaskId(sourcePart.id, mode, inverted),
@@ -755,15 +763,15 @@ export function buildMatteMaskFromPath(
 
 const deg2rad = (d: number) => (d * Math.PI) / 180;
 
-function applyWorld(p: { x: number; y: number }, w: WorldTransform): { x: number; y: number } {
+function applyWorld(p: { x: number; y: number }, w: WorldTransform, outputOrigin: CoordinatePoint): { x: number; y: number } {
   const rad = deg2rad(w.rotation);
   const cos = Math.cos(rad);
   const sin = Math.sin(rad);
   const sx = p.x * (w.scaleX ?? 1);
   const sy = p.y * (w.scaleY ?? 1);
   return {
-    x: CANVAS_CENTER.x + (w.x ?? 0) + (sx * cos - sy * sin),
-    y: CANVAS_CENTER.y + (w.y ?? 0) + (sx * sin + sy * cos),
+    x: outputOrigin.x + (w.x ?? 0) + (sx * cos - sy * sin),
+    y: outputOrigin.y + (w.y ?? 0) + (sx * sin + sy * cos),
   };
 }
 
@@ -774,11 +782,11 @@ const fmt = (n: number) => {
 
 const fmtPt = (p: { x: number; y: number }) => `${fmt(p.x)} ${fmt(p.y)}`;
 
-function geometryToWorldPathD(geo: ShapeGeometry, w: WorldTransform): string | null {
+function geometryToWorldPathD(geo: ShapeGeometry, w: WorldTransform, outputOrigin: CoordinatePoint): string | null {
   switch (geo.kind) {
     case 'polygon': {
       if (geo.points.length < 2) return null;
-      const pts = geo.points.map((p) => applyWorld(p, w));
+      const pts = geo.points.map((p) => applyWorld(p, w, outputOrigin));
       return `M ${fmtPt(pts[0])}` + pts.slice(1).map((p) => ` L ${fmtPt(p)}`).join('') + ' Z';
     }
 
@@ -787,8 +795,8 @@ function geometryToWorldPathD(geo: ShapeGeometry, w: WorldTransform): string | n
       const rx = geo.r * Math.abs(w.scaleX ?? 1);
       const ry = geo.r * Math.abs(w.scaleY ?? 1);
       if (rx <= 0 || ry <= 0) return null;
-      const a = applyWorld({ x: geo.r, y: 0 }, w);
-      const b = applyWorld({ x: -geo.r, y: 0 }, w);
+      const a = applyWorld({ x: geo.r, y: 0 }, w, outputOrigin);
+      const b = applyWorld({ x: -geo.r, y: 0 }, w, outputOrigin);
       const rot = w.rotation ?? 0;
       return `M ${fmtPt(a)} A ${fmt(rx)} ${fmt(ry)} ${fmt(rot)} 0 1 ${fmtPt(b)} A ${fmt(rx)} ${fmt(ry)} ${fmt(rot)} 0 1 ${fmtPt(a)}`;
     }
@@ -797,10 +805,10 @@ function geometryToWorldPathD(geo: ShapeGeometry, w: WorldTransform): string | n
       if (geo.width <= 0 || geo.height <= 0) return null;
       if (geo.rx <= 0) {
         // Plain rect — 4 corners
-        const tl = applyWorld({ x: geo.x, y: geo.y }, w);
-        const tr = applyWorld({ x: geo.x + geo.width, y: geo.y }, w);
-        const br = applyWorld({ x: geo.x + geo.width, y: geo.y + geo.height }, w);
-        const bl = applyWorld({ x: geo.x, y: geo.y + geo.height }, w);
+        const tl = applyWorld({ x: geo.x, y: geo.y }, w, outputOrigin);
+        const tr = applyWorld({ x: geo.x + geo.width, y: geo.y }, w, outputOrigin);
+        const br = applyWorld({ x: geo.x + geo.width, y: geo.y + geo.height }, w, outputOrigin);
+        const bl = applyWorld({ x: geo.x, y: geo.y + geo.height }, w, outputOrigin);
         return `M ${fmtPt(tl)} L ${fmtPt(tr)} L ${fmtPt(br)} L ${fmtPt(bl)} Z`;
       }
       // Rounded rect — 8 anchor points + 4 corner arcs. Arc radii scale with
@@ -809,7 +817,7 @@ function geometryToWorldPathD(geo: ShapeGeometry, w: WorldTransform): string | n
       const rx = geo.rx * Math.abs(w.scaleX ?? 1);
       const ry = geo.rx * Math.abs(w.scaleY ?? 1);
       const rot = w.rotation ?? 0;
-      const p = (x: number, y: number) => applyWorld({ x, y }, w);
+      const p = (x: number, y: number) => applyWorld({ x, y }, w, outputOrigin);
       const X1 = geo.x + geo.rx;
       const X2 = geo.x + geo.width - geo.rx;
       const Y1 = geo.y + geo.rx;

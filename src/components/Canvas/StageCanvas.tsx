@@ -3,7 +3,8 @@ import { useAnimator } from '../../context/AnimatorContext';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
-import { CANVAS_CENTER_X, CANVAS_CENTER_Y, computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
+import { computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
+import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeFreeformPoints } from '../../utils/freeform';
 import { worldToContainerLocal } from '../../utils/containerMath';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
@@ -87,20 +88,21 @@ export const StageCanvas: React.FC = () => {
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTransform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
+  const outputOrigin = appMode === 'broadcast' ? getProjectCenter(projectResolution) : EDITOR_CAMERA_CENTER;
 
   const clientToSVG = useCallback(
     (clientX: number, clientY: number): { svgX: number; svgY: number } => {
       if (!containerRef.current) return { svgX: 0, svgY: 0 };
       const rect = containerRef.current.getBoundingClientRect();
-      const scale = Math.min(rect.width / 600, rect.height / 480) || 1;
-      const viewBoxX = (clientX - rect.left - (rect.width - 600 * scale) / 2) / scale;
-      const viewBoxY = (clientY - rect.top - (rect.height - 480 * scale) / 2) / scale;
+      const scale = Math.min(rect.width / EDITOR_CAMERA_VIEWBOX.width, rect.height / EDITOR_CAMERA_VIEWBOX.height) || 1;
+      const viewBoxX = (clientX - rect.left - (rect.width - EDITOR_CAMERA_VIEWBOX.width * scale) / 2) / scale;
+      const viewBoxY = (clientY - rect.top - (rect.height - EDITOR_CAMERA_VIEWBOX.height * scale) / 2) / scale;
 
-      const relX = viewBoxX - CANVAS_CENTER_X;
-      const relY = viewBoxY - CANVAS_CENTER_Y;
+      const relX = viewBoxX - EDITOR_CAMERA_CENTER.x;
+      const relY = viewBoxY - EDITOR_CAMERA_CENTER.y;
 
-      const svgX = relX / zoomLevel - panOffset.x + CANVAS_CENTER_X;
-      const svgY = relY / zoomLevel - panOffset.y + CANVAS_CENTER_Y;
+      const svgX = relX / zoomLevel - panOffset.x + EDITOR_CAMERA_CENTER.x;
+      const svgY = relY / zoomLevel - panOffset.y + EDITOR_CAMERA_CENTER.y;
       return { svgX, svgY };
     },
     [zoomLevel, panOffset]
@@ -112,7 +114,7 @@ export const StageCanvas: React.FC = () => {
     getStagePoint: useCallback(
       (clientX: number, clientY: number) => {
         const { svgX, svgY } = clientToSVG(clientX, clientY);
-        return { x: svgX - CANVAS_CENTER_X, y: svgY - CANVAS_CENTER_Y };
+        return { x: svgX - EDITOR_CAMERA_CENTER.x, y: svgY - EDITOR_CAMERA_CENTER.y };
       },
       [clientToSVG]
     ),
@@ -215,8 +217,8 @@ export const StageCanvas: React.FC = () => {
     setDragMode('rotate');
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const centerX = CANVAS_CENTER_X + selectedTransform.x;
-    const centerY = CANVAS_CENTER_Y + selectedTransform.y;
+    const centerX = EDITOR_CAMERA_CENTER.x + selectedTransform.x;
+    const centerY = EDITOR_CAMERA_CENTER.y + selectedTransform.y;
     const dx = svgX - centerX;
     const dy = svgY - centerY;
     const initialAngleRad = Math.atan2(dy, dx);
@@ -237,8 +239,8 @@ export const StageCanvas: React.FC = () => {
     setDragMode(mode);
 
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const centerX = CANVAS_CENTER_X + selectedTransform.x;
-    const centerY = CANVAS_CENTER_Y + selectedTransform.y;
+    const centerX = EDITOR_CAMERA_CENTER.x + selectedTransform.x;
+    const centerY = EDITOR_CAMERA_CENTER.y + selectedTransform.y;
     const dx = svgX - centerX;
     const dy = svgY - centerY;
 
@@ -375,11 +377,11 @@ export const StageCanvas: React.FC = () => {
             // Check canvas center
             if (Math.abs(movingCX - 0) < SNAP_DIST) {
               snappedX -= movingCX;
-              newSnapLines.push({ x1: CANVAS_CENTER_X, y1: -1000, x2: CANVAS_CENTER_X, y2: 1000, color: '#f472b6' }); // Canvas Center Y-Axis
+              newSnapLines.push({ x1: EDITOR_CAMERA_CENTER.x, y1: -1000, x2: EDITOR_CAMERA_CENTER.x, y2: 1000, color: '#f472b6' }); // Canvas Center Y-Axis
             }
             if (Math.abs(movingCY - 0) < SNAP_DIST) {
               snappedY -= movingCY;
-              newSnapLines.push({ x1: -1000, y1: CANVAS_CENTER_Y, x2: 1000, y2: CANVAS_CENTER_Y, color: '#f472b6' }); // Canvas Center X-Axis
+              newSnapLines.push({ x1: -1000, y1: EDITOR_CAMERA_CENTER.y, x2: 1000, y2: EDITOR_CAMERA_CENTER.y, color: '#f472b6' }); // Canvas Center X-Axis
             }
             
             // Check other parts
@@ -390,11 +392,11 @@ export const StageCanvas: React.FC = () => {
               
               if (Math.abs(movingCX - cx) < SNAP_DIST && newSnapLines.length < 5) {
                 snappedX -= (movingCX - cx);
-                newSnapLines.push({ x1: CANVAS_CENTER_X + cx, y1: -1000, x2: CANVAS_CENTER_X + cx, y2: 1000, color: '#38bdf8' });
+                newSnapLines.push({ x1: EDITOR_CAMERA_CENTER.x + cx, y1: -1000, x2: EDITOR_CAMERA_CENTER.x + cx, y2: 1000, color: '#38bdf8' });
               }
               if (Math.abs(movingCY - cy) < SNAP_DIST && newSnapLines.length < 5) {
                 snappedY -= (movingCY - cy);
-                newSnapLines.push({ x1: -1000, y1: CANVAS_CENTER_Y + cy, x2: 1000, y2: CANVAS_CENTER_Y + cy, color: '#38bdf8' });
+                newSnapLines.push({ x1: -1000, y1: EDITOR_CAMERA_CENTER.y + cy, x2: 1000, y2: EDITOR_CAMERA_CENTER.y + cy, color: '#38bdf8' });
               }
             });
           }
@@ -432,8 +434,8 @@ export const StageCanvas: React.FC = () => {
           }
         return;
       } else if (dragMode === 'rotate') {
-        const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
-        const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
+        const centerX = EDITOR_CAMERA_CENTER.x + dragStart.initialTransform.x;
+        const centerY = EDITOR_CAMERA_CENTER.y + dragStart.initialTransform.y;
         const dx = svgX - centerX;
         const dy = svgY - centerY;
         const currentAngleRad = Math.atan2(dy, dx);
@@ -443,8 +445,8 @@ export const StageCanvas: React.FC = () => {
         const newRotation = Math.round(dragStart.initialTransform.rotation + deltaAngleDeg);
         updateCurrentTransform({ rotation: newRotation });
       } else if (dragMode === 'scale_corner' || dragMode === 'scale') {
-        const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
-        const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
+        const centerX = EDITOR_CAMERA_CENTER.x + dragStart.initialTransform.x;
+        const centerY = EDITOR_CAMERA_CENTER.y + dragStart.initialTransform.y;
 
         // Anchor scaling: the corner opposite the grab point stays fixed.
         // The grabbed corner is derived from the initial click position.
@@ -510,8 +512,8 @@ export const StageCanvas: React.FC = () => {
           })
         );
       } else if (dragMode === 'scale_x') {
-        const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
-        const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
+        const centerX = EDITOR_CAMERA_CENTER.x + dragStart.initialTransform.x;
+        const centerY = EDITOR_CAMERA_CENTER.y + dragStart.initialTransform.y;
         const dx = svgX - centerX;
         const dy = svgY - centerY;
 
@@ -522,8 +524,8 @@ export const StageCanvas: React.FC = () => {
         const newScaleX = parseFloat(Math.max(0.05, dragStart.initialTransform.scaleX * ratioX).toFixed(2));
         updateCurrentTransform({ scaleX: newScaleX });
       } else if (dragMode === 'scale_y') {
-        const centerX = CANVAS_CENTER_X + dragStart.initialTransform.x;
-        const centerY = CANVAS_CENTER_Y + dragStart.initialTransform.y;
+        const centerX = EDITOR_CAMERA_CENTER.x + dragStart.initialTransform.x;
+        const centerY = EDITOR_CAMERA_CENTER.y + dragStart.initialTransform.y;
         const dx = svgX - centerX;
         const dy = svgY - centerY;
 
@@ -626,8 +628,8 @@ export const StageCanvas: React.FC = () => {
           const part = characterParts[i];
           const transform = getComputedTransform(part.id, currentFrame);
           
-          const dx = svgX - (CANVAS_CENTER_X + transform.x);
-          const dy = svgY - (CANVAS_CENTER_Y + transform.y);
+          const dx = svgX - (EDITOR_CAMERA_CENTER.x + transform.x);
+          const dy = svgY - (EDITOR_CAMERA_CENTER.y + transform.y);
           const rad = -transform.rotation * Math.PI / 180;
           const localX = dx * Math.cos(rad) - dy * Math.sin(rad);
           const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
@@ -650,7 +652,7 @@ export const StageCanvas: React.FC = () => {
         } else {
           // Drop in empty area -> create new media part
           addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
-            baseTransform: { x: Math.round(svgX - CANVAS_CENTER_X), y: Math.round(svgY - CANVAS_CENTER_Y), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+            baseTransform: { x: Math.round(svgX - EDITOR_CAMERA_CENTER.x), y: Math.round(svgY - EDITOR_CAMERA_CENTER.y), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
             ...(isVideo ? { videoUrl: url } : { imageUrl: url }),
           });
         }
@@ -666,8 +668,8 @@ export const StageCanvas: React.FC = () => {
 
       addCustomPart(data.type, data.name || 'Dropped Element', {
         baseTransform: {
-          x: Math.round(svgX - CANVAS_CENTER_X),
-          y: Math.round(svgY - CANVAS_CENTER_Y),
+          x: Math.round(svgX - EDITOR_CAMERA_CENTER.x),
+          y: Math.round(svgY - EDITOR_CAMERA_CENTER.y),
           rotation: 0,
           scaleX: 1,
           scaleY: 1,
@@ -717,8 +719,8 @@ export const StageCanvas: React.FC = () => {
         width="100%"
         height="100%"
         viewBox={appMode === 'broadcast'
-          ? `${CANVAS_CENTER_X - projectResolution.width / 2} ${CANVAS_CENTER_Y - projectResolution.height / 2} ${projectResolution.width} ${projectResolution.height}`
-          : '0 0 600 480'}
+          ? `0 0 ${projectResolution.width} ${projectResolution.height}`
+          : `0 0 ${EDITOR_CAMERA_VIEWBOX.width} ${EDITOR_CAMERA_VIEWBOX.height}`}
         preserveAspectRatio="xMidYMid meet"
         onDoubleClick={(e) => {
           if (activeTool === 'freeform_draw') {
@@ -735,8 +737,8 @@ export const StageCanvas: React.FC = () => {
             width="50"
             height="50"
             patternUnits="userSpaceOnUse"
-            x={CANVAS_CENTER_X}
-            y={CANVAS_CENTER_Y}
+            x={EDITOR_CAMERA_CENTER.x}
+            y={EDITOR_CAMERA_CENTER.y}
           >
             <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(56, 189, 248, 0.10)" strokeWidth="1" />
           </pattern>
@@ -746,15 +748,15 @@ export const StageCanvas: React.FC = () => {
             width="100"
             height="100"
             patternUnits="userSpaceOnUse"
-            x={CANVAS_CENTER_X}
-            y={CANVAS_CENTER_Y}
+            x={EDITOR_CAMERA_CENTER.x}
+            y={EDITOR_CAMERA_CENTER.y}
           >
             <path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(56, 189, 248, 0.22)" strokeWidth="1" />
           </pattern>
           <clipPath id="artboard-clip">
             <rect
-              x={CANVAS_CENTER_X - projectResolution.width / 2}
-              y={CANVAS_CENTER_Y - projectResolution.height / 2}
+              x={outputOrigin.x - projectResolution.width / 2}
+              y={outputOrigin.y - projectResolution.height / 2}
               width={projectResolution.width}
               height={projectResolution.height}
             />
@@ -766,8 +768,8 @@ export const StageCanvas: React.FC = () => {
 
         {(() => {
           const zScale = 1 / Math.max(0.15, zoomLevel);
-          const artX = CANVAS_CENTER_X - projectResolution.width / 2;
-          const artY = CANVAS_CENTER_Y - projectResolution.height / 2;
+          const artX = outputOrigin.x - projectResolution.width / 2;
+          const artY = outputOrigin.y - projectResolution.height / 2;
 
           return (
             <>
@@ -791,6 +793,7 @@ export const StageCanvas: React.FC = () => {
                 zScale={zScale}
                 showGrid={appMode === 'broadcast' ? false : showGrid}
                 appMode={appMode}
+                origin={EDITOR_CAMERA_CENTER}
               />
 
               {/* Character Parts Active Render (Clipped in Broadcast mode, unclipped & visible in Edit mode) */}
@@ -815,7 +818,7 @@ export const StageCanvas: React.FC = () => {
 
               {/* Freeform Drawing Preview (active draw tool) */}
               {freeform.isDrawing && freeform.points.length > 0 && (
-                <g transform={`translate(${CANVAS_CENTER_X}, ${CANVAS_CENTER_Y})`} pointerEvents="none">
+                <g transform={`translate(${EDITOR_CAMERA_CENTER.x}, ${EDITOR_CAMERA_CENTER.y})`} pointerEvents="none">
                   <path
                     d={buildFreeformPath([...freeform.points, ...(freeform.cursorPoint ? [freeform.cursorPoint] : [])])}
                     fill="rgba(56, 189, 248, 0.10)"
@@ -897,8 +900,8 @@ export const StageCanvas: React.FC = () => {
                   <g pointerEvents="none">
                     {getFreeformVertexWorldPositions(
                       selectedPart.points,
-                      CANVAS_CENTER_X + selectedTransform.x,
-                      CANVAS_CENTER_Y + selectedTransform.y,
+                      EDITOR_CAMERA_CENTER.x + selectedTransform.x,
+                      EDITOR_CAMERA_CENTER.y + selectedTransform.y,
                       selectedTransform.scaleX,
                       selectedTransform.scaleY,
                       selectedTransform.rotation
@@ -927,6 +930,7 @@ export const StageCanvas: React.FC = () => {
                   onRotateStart={startRotate}
                   onScaleStart={startScale}
                   onTranslateStart={startTranslateDragForPart}
+                  outputOrigin={EDITOR_CAMERA_CENTER}
                 />
               )}
             </>

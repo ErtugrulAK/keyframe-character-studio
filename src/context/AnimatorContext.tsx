@@ -37,7 +37,7 @@ import { useTemplates } from '../hooks/useTemplates';
 import { useMath } from '../hooks/useMath';
 import { useSerialization } from '../hooks/useSerialization';
 import { useToast } from '../hooks/useToast';
-import { usePresets, type SavePresetInput } from '../hooks/usePresets';
+import { usePresets, type SavePresetInput, type UpdatePresetInput } from '../hooks/usePresets';
 import { useProjectState } from '../hooks/useProjectState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
@@ -166,6 +166,7 @@ interface AnimatorContextType {
   customPresets: CustomMotionPreset[];
   // M25 — user-saved custom preset library management (25A data layer)
   savePreset: (input: SavePresetInput) => CustomMotionPreset | null;
+  updatePreset: (id: string, input: UpdatePresetInput) => CustomMotionPreset | null;
   deletePreset: (id: string) => void;
   importPresets: (presets: CustomMotionPreset[]) => void;
 
@@ -204,7 +205,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   
   const { tracks, setTracks, tracksRef, characterParts, setCharacterParts, characterPartsRef } = useProjectState();
 
-  const { customPresets, customPresetsRef, savePreset, deletePreset, importPresets } = usePresets();
+  const { customPresets, customPresetsRef, savePreset, updatePreset, deletePreset, importPresets } = usePresets();
 
   const {
     appMode,
@@ -568,6 +569,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         resetBroadcastState,
         customPresets,
         savePreset,
+        updatePreset,
         deletePreset,
         importPresets,
         liveStuntsState,

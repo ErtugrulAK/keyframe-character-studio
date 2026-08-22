@@ -31,6 +31,13 @@ describe('stroke-aware part bounds', () => {
     expect(bounds).toEqual({ halfW: 80, halfH: 50 });
   });
 
+  it('keeps inside alignment within the authored geometry bounds', () => {
+    const bounds = getPartBounds(makePart('custom_rect', {
+      fillEnabled: true, strokeEnabled: true, strokeWidth: 20, strokeOpacity: 1, strokeAlignment: 'inside',
+    }), { scaleX: 1, scaleY: 1 });
+    expect(bounds).toEqual({ halfW: 60, halfH: 30 });
+  });
+
   it.each([
     { strokeEnabled: false, strokeOpacity: 1, strokeWidth: 20 },
     { strokeEnabled: true, strokeOpacity: 0, strokeWidth: 20 },

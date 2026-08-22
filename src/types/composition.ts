@@ -92,7 +92,7 @@ export interface SceneLayer {
   strokeEnabled?: boolean;
   strokeWidth?: number;
   strokeOpacity?: number;
-  strokeAlignment?: 'center' | 'outside';
+  strokeAlignment?: 'center' | 'inside' | 'outside';
   trimPathEnabled?: boolean;
   trimPathStart?: number;
   trimPathEnd?: number;
@@ -208,7 +208,9 @@ export interface LayerContent {
   strokeEnabled?: boolean;
   strokeWidth?: number;
   strokeOpacity?: number;
-  strokeAlignment?: 'center' | 'outside';
+  strokeAlignment?: 'center' | 'inside' | 'outside';
+  /** Static matte relationship/paint descriptor for renderer adapters. */
+  matte?: PartMatte;
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;

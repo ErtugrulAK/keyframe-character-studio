@@ -118,7 +118,6 @@ test('BROADCAST-SEQ-3 — sequence play does NOT advance/reset the edit timeline
   await page.waitForTimeout(900); // frame advances
   const editFrameBefore = await page.evaluate(() => {
     // read the timeline playhead position or frame display
-    const svg = document.querySelector('.stage-svg') as SVGSVGElement | null;
     // fallback: any element whose text matches "N / M"
     const els = [...document.querySelectorAll('*')].map((e) => e.textContent?.trim() ?? '');
     const m = els.find((t) => /^\d+\s*\/\s*\d+$/.test(t));

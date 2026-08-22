@@ -23,16 +23,16 @@ async function seedLegacyProceduralScene(page: Page): Promise<void> {
   await expect(page.locator('.app-container')).toBeVisible();
 }
 
-test.describe('M23 — legacy procedural compatibility under named-sequence primary UX', () => {
-  test('procedural fields load and persist while the removed editor stays absent', async ({ page }) => {
+test.describe('M23 — procedural compatibility under the approved Transform Inspector workflow', () => {
+  test('procedural fields load, remain editable, and persist through the existing authority', async ({ page }) => {
     await seedLegacyProceduralScene(page);
     await page.locator('.actor-node', { hasText: 'Legacy Procedural' }).click();
 
-    await expect(page.getByText('ANIMATION DATA')).toBeVisible();
-    await expect(page.locator('[aria-label="Animation In Preset"]')).toHaveCount(0);
-    await expect(page.locator('[aria-label="Animation Out Preset"]')).toHaveCount(0);
-    await expect(page.locator('[aria-label="Animation In Duration"]')).toHaveCount(0);
-    await expect(page.locator('[aria-label="Animation Out Duration"]')).toHaveCount(0);
+    await expect(page.getByText('ANIMATION IN / OUT')).toBeVisible();
+    await expect(page.locator('[aria-label="Animation In Preset"]')).toHaveValue('fade');
+    await expect(page.locator('[aria-label="Animation Out Preset"]')).toHaveValue('slide-right');
+    await expect(page.locator('[aria-label="Animation In Duration"]')).toHaveValue('15');
+    await expect(page.locator('[aria-label="Animation Out Duration"]')).toHaveValue('24');
 
     await page.locator('.autosave-status-badge').click();
     await expect.poll(() => page.evaluate((key) => {

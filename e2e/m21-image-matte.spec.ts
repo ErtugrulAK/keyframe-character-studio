@@ -125,8 +125,6 @@ function imgDataUri(body: string, w = 200, h = 100): string {
 }
 const FIX_HALF = imgDataUri('<rect x="0" y="0" width="100" height="100" fill="white"/>'); // left opaque, right transparent
 const FIX_HALF_BW = imgDataUri('<rect x="0" y="0" width="100" height="100" fill="white"/><rect x="100" y="0" width="100" height="100" fill="black"/>');
-const FIX_WIDE = imgDataUri('<rect x="0" y="0" width="400" height="100" fill="white"/>', 400, 100);
-const FIX_WHITE = imgDataUri('<rect x="0" y="0" width="200" height="100" fill="white"/>');
 // black-opaque variants: alpha 1 but ZERO green-channel bleed from the
 // visible source layer (the source stays part of the scene below the matted
 // target — pixel probes then read the PURE mask value like the 7A spike)
@@ -172,9 +170,7 @@ test.describe('M21 image matte — real browser pixel matrix', () => {
   test('V-M3 — image + inverted: luminance structure — dark pixels hole, bright pixels visible', async ({ page }) => {
     await seed(page, [imgSource(FIX_HALF_BW), greenTarget({ sourcePartId: 'img', mode: 'alpha', inverted: true })]);
     expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-img-alpha-inv"]')?.getAttribute('mask-type'))).toBe('luminance');
-    const bright = await greenAt(page, 250, 240); // white image area stays visible (7A: cannot repaint)
     const dark = await greenAt(page, 350, 240); // black image area → hole
-    const noImg = await greenAt(page, 170, 240); // outside image, INSIDE the target circle (150..450 — (150,240) is the AA edge)
     // poll: the data-URI luminance composite settles within a couple of
     // screenshot passes (decode gate — measured: first pass can be partial)
     await expect.poll(async () => greenAt(page, 250, 240)).toBeGreaterThan(150);
@@ -276,7 +272,6 @@ test.describe('M21 image matte — real browser pixel matrix', () => {
     // old image area → (250,240); new image area (400..600) ∩ target → (430,240).
     // Also avoid (300,240) — the edit-mode cyan center marker lives exactly there.
     const stale = await greenAt(page, 250, 240); // old image area (inside target)
-    const moved = await greenAt(page, 430, 240); // new image area (inside target)
     expect(stale).toBeLessThan(45); // no stale content at the old location
     await expect.poll(async () => greenAt(page, 430, 240)).toBeGreaterThan(200);
   });
@@ -346,7 +341,6 @@ test.describe('M21 image matte — real browser pixel matrix', () => {
     await seed(page, [imgSource(FIX_BW_SQUARE), greenTarget({ sourcePartId: 'img', mode: 'alpha', inverted: true, gradient: { type: 'radial', stops: STOPS2 } })]);
     expect(await page.evaluate(() => document.querySelector('mask[id^="kcs-mask-img-alpha-inv"]')?.getAttribute('mask-type'))).toBe('luminance');
     // FIX_BW_SQUARE 200×100 → world 200..400 × 165..315; white half x 200..300
-    const whiteImg = await greenAt(page, 250, 240); // bright image area stays visible (7A)
     const blackImg = await greenAt(page, 350, 240); // dark image area → hole
     await expect.poll(async () => greenAt(page, 250, 240)).toBeGreaterThan(150);
     expect(blackImg).toBeLessThan(45);
@@ -355,7 +349,6 @@ test.describe('M21 image matte — real browser pixel matrix', () => {
   test('V-M15 — image + INVERTED + LINEAR: same luminance + gradient structure', async ({ page }) => {
     await seed(page, [imgSource(FIX_BW_SQUARE), greenTarget({ sourcePartId: 'img', mode: 'alpha', inverted: true, gradient: { angle: 0, stops: STOPS2 } })]);
     expect(await page.evaluate(() => document.querySelector('mask[id^="kcs-mask-img-alpha-inv"]')?.getAttribute('mask-type'))).toBe('luminance');
-    const whiteImg = await greenAt(page, 250, 240);
     const blackImg = await greenAt(page, 350, 240);
     await expect.poll(async () => greenAt(page, 250, 240)).toBeGreaterThan(150);
     expect(blackImg).toBeLessThan(45);

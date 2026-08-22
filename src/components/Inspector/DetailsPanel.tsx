@@ -32,6 +32,7 @@ export const DetailsPanel: React.FC = () => {
     duplicateSelectedPart,
     customPresets,
     savePreset,
+    updatePreset,
     deletePreset,
     importPresets,
     copySelectedPart,
@@ -204,6 +205,7 @@ export const DetailsPanel: React.FC = () => {
               handleZIndexChange={handleZIndexChange}
               customPresets={customPresets}
               onSavePreset={savePreset}
+              onUpdatePreset={updatePreset}
               onDeletePreset={deletePreset}
               onImportPresets={importPresets}
               showToast={showToast}

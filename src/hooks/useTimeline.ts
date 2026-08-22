@@ -60,7 +60,7 @@ export const useTimeline = ({
     if (selectedPartId === partId) {
       setSelectedPartId(null);
     }
-  }, [selectedPartId, selectedPartIds]);
+  }, [selectedPartId, selectedPartIds, setCharacterParts, setSelectedPartId, setSelectedPartIds, setTracks]);
 
   // Keyframe & Track Actions
   const addKeyframeToTrack = (trackId: string, frame: number) => {
@@ -213,7 +213,7 @@ export const useTimeline = ({
       prev.map((t) => (t.partId === partId ? { ...t, name: trimmed } : t))
     );
     showToast(`Renamed layer to "${trimmed}"`, 'success');
-  }, [showToast]);
+  }, [setCharacterParts, setTracks, showToast]);
 
   const reorderParts = useCallback((dragIndex: number, hoverIndex: number) => {
     if (dragIndex === hoverIndex) return;
@@ -246,7 +246,7 @@ export const useTimeline = ({
 
       return reindexedParts;
     });
-  }, []);
+  }, [setCharacterParts, setTracks]);
 
 
 

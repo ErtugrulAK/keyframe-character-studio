@@ -43,7 +43,7 @@ export const useBroadcast = ({
     } else {
       setNamedSequenceRuntime(createIdleNamedSequenceRuntime());
     }
-  }, [appMode]);
+  }, [appMode, setIsPlaying]);
 
   const playNamedSequence = useCallback((sequenceId: string, durationFrames: number) => {
     setBroadcastSessionActivated(true);
@@ -96,7 +96,7 @@ export const useBroadcast = ({
       ...prev,
       [partId]: { state: 'animating_in', progress: 0 }
     }));
-  }, [showToast]);
+  }, [showToast, tracksRef]);
 
   const triggerBroadcastOut = useCallback((partId: string) => {
     setBroadcastSessionActivated(true);
@@ -116,7 +116,7 @@ export const useBroadcast = ({
       }
     });
     setBroadcastState(nextState);
-  }, []);
+  }, [characterPartsRef, tracksRef]);
 
   const triggerAllBroadcastOut = useCallback(() => {
     setBroadcastSessionActivated(true);
@@ -129,7 +129,7 @@ export const useBroadcast = ({
       });
       return nextState;
     });
-  }, []);
+  }, [characterPartsRef]);
 
   // Realtime Live Stunts Engine
   const [liveStuntsState, setLiveStuntsState] = useState<Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>>({});
@@ -165,7 +165,7 @@ export const useBroadcast = ({
       [partId]: { stunt, progress: 0, loop, customPresetId }
     }));
     showToast(`Triggered live stunt "${stunt.toUpperCase()}"${loop ? ' (LOOPING)' : ''}!`, 'success');
-  }, [showToast]);
+  }, [customPresetsRef, showToast]);
 
   const stopLiveStunt = useCallback((partId: string) => {
     setLiveStuntsState(prev => {
@@ -230,7 +230,7 @@ export const useBroadcast = ({
     return () => {
       if (broadcastReqRef.current) cancelAnimationFrame(broadcastReqRef.current);
     };
-  }, [appMode]);
+  }, [appMode, characterPartsRef, customPresetsRef, fpsRef]);
 
   return {
     appMode,

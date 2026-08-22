@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 
 const SCENE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
-test('M24 — combination preset data remains compatible without restoring its editor UI', async ({ page }) => {
+test('M24 — combination preset data remains compatible in the approved Transform Inspector UI', async ({ page }) => {
   await page.goto('/');
   await page.evaluate((key) => {
     localStorage.clear();
@@ -22,8 +22,8 @@ test('M24 — combination preset data remains compatible without restoring its e
   await page.reload();
   await page.locator('.actor-node', { hasText: 'Combination Legacy' }).click();
 
-  await expect(page.locator('[aria-label="Animation In Preset"]')).toHaveCount(0);
-  await expect(page.locator('[aria-label="Animation Out Preset"]')).toHaveCount(0);
+  await expect(page.locator('[aria-label="Animation In Preset"]')).toHaveValue('slide-scale-left');
+  await expect(page.locator('[aria-label="Animation Out Preset"]')).toHaveValue('soft-pop');
   await page.locator('.autosave-status-badge').click();
   await expect.poll(() => page.evaluate((key) => {
     const layer = JSON.parse(localStorage.getItem(key) ?? '{}').layers?.[0] ?? {};

@@ -164,4 +164,19 @@ describe('P4-S5 — pure pipeline runs in Node environment', () => {
     const frame = evaluateFrame(layers, [], TOTAL, 0, makeRuntime(), NO_PRESETS);
     expect(frame.layers[0].transform.x).toBe(7);
   });
+
+  test('9: matte state remains renderer-neutral evaluated content', () => {
+    const matte = {
+      sourcePartId: 'M',
+      mode: 'alpha' as const,
+      inverted: true,
+      feather: 4,
+      strength: 0.5,
+    };
+    const source = makeLayer({ id: 'M' });
+    const target = makeLayer({ id: 'T', matte });
+    const frame = evaluateFrame([source, target], [], TOTAL, 0, makeRuntime(), NO_PRESETS);
+    expect(frame.layers.find((layer) => layer.id === 'T')?.content.matte).toEqual(matte);
+    expect(target.matte).toEqual(matte);
+  });
 });

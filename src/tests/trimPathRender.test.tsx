@@ -27,6 +27,8 @@ describe('Trim Path SVG rendering', () => {
     expect(html).toContain('fill="#f00"');
     expect(html).toContain('pathLength="1"');
     expect(html).toContain('stroke-dasharray="0.5 0.5"');
+    expect(html).toContain('stroke-width="4"');
+    expect(html).not.toContain('mask="url(#inside-stroke-trim)"');
   });
 
   it('disabled Trim Path renders a full authored stroke without dash attributes', () => {
@@ -47,6 +49,7 @@ describe('Trim Path SVG rendering', () => {
     expect(html).toContain('mask="url(#outside-stroke-trim)"');
     expect(html).toContain('fill="#f00"');
     expect(html).toContain('stroke-dasharray="0.5 0.5"');
+    expect(html).toContain('stroke-width="4"');
   });
 
   it('keeps outside stroke visible when fill is disabled', () => {
@@ -54,5 +57,21 @@ describe('Trim Path SVG rendering', () => {
     expect(html).toContain('fill="none"');
     expect(html).toContain('stroke="#000"');
     expect(html).toContain('mask="url(#outside-stroke-trim)"');
+  });
+
+  it('renders inside stroke through the same canonical geometry and Trim Path node', () => {
+    const html = render(part({
+      fillEnabled: false,
+      strokeAlignment: 'inside',
+      trimPathEnabled: true,
+      trimPathStart: 0,
+      trimPathEnd: 0.5,
+    }));
+    expect(html).toContain('mask="url(#inside-stroke-trim)"');
+    expect(html).toContain('fill="black"');
+    expect(html).toContain('fill="white"');
+    expect(html).toContain('stroke="#000"');
+    expect(html).toContain('stroke-width="8"');
+    expect(html).toContain('stroke-dasharray="0.5 0.5"');
   });
 });

@@ -2,6 +2,8 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { usePresets } from '../hooks/usePresets';
 import { DEFAULT_INITIAL_PRESETS } from '../context/initialStateData';
+import { buildPresetExportPayload, isDefaultPresetId } from '../utils/presetExportImport';
+import { initializeIdCounter } from '../utils/idGenerator';
 import type { CustomMotionPreset } from '../types/animator';
 
 const STORAGE_KEY = 'keyframe_custom_motion_presets';
@@ -96,6 +98,89 @@ describe('usePresets — M25 savePreset / deletePreset (data layer)', () => {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]') as CustomMotionPreset[];
     expect(stored.at(-1)?.name).toBe('Persist Me');
     expectOnlyPresetKey(vi.mocked(localStorage.setItem));
+  });
+
+  it('savePreset trims and persists an optional category', () => {
+    const { result } = renderHook(() => usePresets());
+    let created: CustomMotionPreset | null = null;
+    act(() => {
+      created = result.current.savePreset(validInput({ category: '  Logo Reveals  ' }));
+    });
+    expect(created?.category).toBe('Logo Reveals');
+    expect(result.current.customPresets.at(-1)?.category).toBe('Logo Reveals');
+  });
+
+  it('updatePreset preserves stable identity and sampled data while changing name and category', () => {
+    const { result } = renderHook(() => usePresets());
+    let created: CustomMotionPreset | null = null;
+    act(() => {
+      created = result.current.savePreset(validInput({ name: 'Original' }));
+    });
+    const keyframesBefore = structuredClone(created!.keyframes);
+    let updated: CustomMotionPreset | null = null;
+    act(() => {
+      updated = result.current.updatePreset(created!.id, {
+        name: '  Renamed  ',
+        category: '  Branding  ',
+      });
+    });
+    expect(updated).toMatchObject({
+      id: created!.id,
+      name: 'Renamed',
+      category: 'Branding',
+      type: created!.type,
+      durationFrames: created!.durationFrames,
+    });
+    expect(updated!.keyframes).toEqual(keyframesBefore);
+    expect(result.current.customPresets.find((preset) => preset.id === created!.id)).toEqual(updated);
+  });
+
+  it('updatePreset rejects empty names, missing ids, and default preset ids', () => {
+    const { result } = renderHook(() => usePresets());
+    const before = structuredClone(result.current.customPresets);
+    expect(result.current.updatePreset('missing', { name: 'X' })).toBeNull();
+    expect(result.current.updatePreset(DEFAULT_INITIAL_PRESETS[0].id, { name: 'Changed' })).toBeNull();
+    expect(result.current.updatePreset('missing', { name: '   ' })).toBeNull();
+    expect(result.current.customPresets).toEqual(before);
+  });
+
+  it('reserves protected default ids across save, rename, category, export, and delete', () => {
+    initializeIdCounter([]);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([{
+      id: 'custom_existing',
+      name: 'Existing',
+      type: 'in',
+      durationFrames: 20,
+      keyframes: [],
+    }]));
+    const { result } = renderHook(() => usePresets());
+
+    let created: CustomMotionPreset | null = null;
+    act(() => {
+      created = result.current.savePreset(validInput({ name: 'Collision Safe' }));
+    });
+    expect(created?.id).toBe('preset_3');
+    expect(isDefaultPresetId(created!.id)).toBe(false);
+
+    act(() => {
+      result.current.updatePreset(created!.id, {
+        name: 'Renamed Safely',
+        category: 'Branding',
+      });
+    });
+    const updated = result.current.customPresets.find((preset) => preset.id === created!.id)!;
+    expect(updated).toMatchObject({
+      id: 'preset_3',
+      name: 'Renamed Safely',
+      category: 'Branding',
+    });
+    expect(buildPresetExportPayload(result.current.customPresets).presets)
+      .toEqual(expect.arrayContaining([expect.objectContaining({ id: 'preset_3' })]));
+
+    act(() => {
+      result.current.deletePreset(created!.id);
+    });
+    expect(result.current.customPresets.some((preset) => preset.id === 'preset_3')).toBe(false);
   });
 
   it('deletePreset removes the preset and persists', () => {

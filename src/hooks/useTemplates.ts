@@ -91,7 +91,7 @@ export const useTemplates = ({
       setCurrentFrame(0);
       setIsPlaying(false);
     }
-  }, [appMode]);
+  }, [appMode, setCurrentFrame, setIsPlaying]);
 
   const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
     const newTmpl = createMotionTemplate(name, motionTemplates, type);
@@ -153,7 +153,7 @@ export const useTemplates = ({
     if (activeTemplateId === idToDelete) {
       onSequenceDeleted?.(idToDelete);
     }
-  }, [activeTemplateId, motionTemplates, onSequenceDeleted]);
+  }, [activeTemplateId, motionTemplates, onSequenceDeleted, setTracks]);
 
   const duplicateMotionTemplate = useCallback((sourceId: string) => {
     const source = motionTemplates.find((template) => template.id === sourceId);
@@ -168,7 +168,7 @@ export const useTemplates = ({
     setMotionTemplates((prev) => [...prev, duplicate]);
     setTracks((prevTracks) => cloneSequenceAnimation(prevTracks, sourceId, duplicate.id));
     setActiveTemplateIdState(duplicate.id);
-  }, [motionTemplates]);
+  }, [motionTemplates, setTracks]);
 
   const updateMotionTemplateDuration = useCallback((id: string, durationFrames: number) => {
     const duration = normalizeSequenceDuration(durationFrames);
@@ -249,7 +249,7 @@ export const useTemplates = ({
     setActiveProjectTemplateIdState(newId);
     setSceneTitleState(cleanName);
     setFps(60); // Strictly default to 60 FPS for new templates
-  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, projectTemplates.length, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
+  }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setTemplateCanvasStore, setProjectTemplates, setCharacterParts, setTracks, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState, setFps, setCoordinateSystem]);
 
   const renameProjectTemplate = useCallback((id: string, newName: string) => {
     const cleanName = newName.trim();

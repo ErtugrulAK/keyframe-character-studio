@@ -260,8 +260,8 @@ describe('TransformTab — M23 IN/OUT animation presets', () => {
   });
 });
 
-describe('TransformTab — named-sequence primary workflow cleanup', () => {
-  it('hides the legacy procedural editor while preserving animation-data actions', () => {
+describe('TransformTab — procedural preset workflow access', () => {
+  it('renders the approved preset management card alongside canonical animation-data actions', () => {
     render(
       <TransformTab
         selectedPart={makePart({ inAnimPreset: 'fade', outAnimPreset: 'spin' })}
@@ -272,6 +272,7 @@ describe('TransformTab — named-sequence primary workflow cleanup', () => {
         handlePartPropChange={vi.fn()}
         customPresets={[]}
         onSavePreset={vi.fn()}
+        onUpdatePreset={vi.fn()}
         onDeletePreset={vi.fn()}
         onCopyAnimation={vi.fn()}
         onPasteAnimation={vi.fn()}
@@ -280,9 +281,9 @@ describe('TransformTab — named-sequence primary workflow cleanup', () => {
       />,
     );
 
-    expect(screen.queryByText('ANIMATION IN / OUT')).toBeNull();
-    expect(screen.queryByLabelText('Animation In Preset')).toBeNull();
-    expect(screen.queryByLabelText('Animation Out Preset')).toBeNull();
+    expect(screen.getByText('ANIMATION IN / OUT')).toBeTruthy();
+    expect(screen.getByLabelText('Animation In Preset')).toBeTruthy();
+    expect(screen.getByLabelText('Animation Out Preset')).toBeTruthy();
     expect(screen.getByText('ANIMATION DATA')).toBeTruthy();
     expect(screen.getByLabelText('Copy Animation')).toBeTruthy();
     expect(screen.getByLabelText('Paste Animation')).toBeTruthy();

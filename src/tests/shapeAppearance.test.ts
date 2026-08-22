@@ -34,8 +34,9 @@ describe('shape appearance resolver', () => {
     });
   });
 
-  it('defaults missing alignment to center and accepts outside', () => {
+  it('defaults missing alignment to center and accepts inside/outside', () => {
     expect(resolveShapeAppearance({ ...basePart(), fillEnabled: true })).toMatchObject({ strokeAlignment: 'center' });
+    expect(resolveShapeAppearance({ ...basePart(), fillEnabled: true, strokeAlignment: 'inside' })).toMatchObject({ strokeAlignment: 'inside' });
     expect(resolveShapeAppearance({ ...basePart(), fillEnabled: true, strokeAlignment: 'outside' })).toMatchObject({ strokeAlignment: 'outside' });
   });
 

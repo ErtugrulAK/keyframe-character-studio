@@ -10,7 +10,7 @@ const channels = () => ({
 
 const keyframe = (id: string, frame: number, value: number) => ({ id, frame, value, easing: 'linear', templateId: 'Sequence' });
 
-const scene = (animated = false, alignment: 'center' | 'outside' = 'center') => {
+const scene = (animated = false, alignment: 'center' | 'inside' | 'outside' = 'center') => {
   const ch = channels();
   if (animated) ch.trimPathEnd = [keyframe('end0', 0, 0), keyframe('end60', 60, 1)];
   return {
@@ -58,11 +58,13 @@ test.describe('Stroke Alignment V2', () => {
     const centerStroke = page.locator('.stage-svg rect[stroke="#101218"]').first();
     const centerBounds = await centerStroke.boundingBox();
     expect(centerBounds).not.toBeNull();
+    await expect(centerStroke).toHaveAttribute('stroke-width', '40');
 
     await page.getByLabel('Stroke Alignment').selectOption('outside');
     await expect(page.getByLabel('Stroke Alignment')).toHaveValue('outside');
     const outsideStroke = page.locator('.stage-svg rect[mask*="outside-stroke"]').first();
     await expect(outsideStroke).toBeVisible();
+    await expect(outsideStroke).toHaveAttribute('stroke-width', '40');
     const outsideBounds = await outsideStroke.boundingBox();
     expect(outsideBounds).not.toBeNull();
     expect(outsideBounds!.width).toBeGreaterThanOrEqual(centerBounds!.width);
@@ -88,6 +90,27 @@ test.describe('Stroke Alignment V2', () => {
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
     await page.getByText('Style', { exact: true }).click();
     await expect(page.getByLabel('Stroke Alignment')).toHaveValue('outside');
+  });
+
+  test('inside alignment clips the canonical Trim Path stroke to authored geometry and persists', async ({ page }) => {
+    await seed(page, scene(true));
+    await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
+    await page.getByText('Style', { exact: true }).click();
+    await page.getByLabel('Stroke Alignment').selectOption('inside');
+
+    const stroke = page.locator('.stage-svg rect[mask*="inside-stroke"]').first();
+    await expect(stroke).toHaveAttribute('stroke-width', '80');
+    await expect(stroke).toBeVisible();
+    await expect(stroke).toHaveAttribute('pathLength', '1');
+    await expect(page.locator('.stage-svg mask[id*="inside-stroke"] > rect').first()).toHaveAttribute('fill', 'black');
+    await expect(page.locator('.stage-svg mask[id*="inside-stroke"] > rect').nth(1)).toHaveAttribute('fill', 'white');
+
+    const badge = page.locator('.autosave-status-badge');
+    if (await badge.count()) await badge.click();
+    await expect.poll(() => page.evaluate((key) => {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw).layers?.[0]?.strokeAlignment : undefined;
+    }, STORAGE_KEY)).toBe('inside');
   });
 
   test('outside alignment consumes the canonical Trim Path result in Broadcast', async ({ page }) => {

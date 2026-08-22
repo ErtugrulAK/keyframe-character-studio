@@ -39,7 +39,7 @@ const normalizeStrokeWidth = (value: number | undefined): number =>
   typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 1.5;
 
 const normalizeStrokeAlignment = (value: StrokeAlignment | undefined): StrokeAlignment =>
-  value === 'outside' ? 'outside' : 'center';
+  value === 'inside' || value === 'outside' ? value : 'center';
 
 const hasVisibleStrokeColor = (strokeColor: string): boolean =>
   strokeColor !== 'none' && strokeColor !== 'transparent';

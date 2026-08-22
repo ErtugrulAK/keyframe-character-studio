@@ -78,8 +78,6 @@ const renderModernGeometry = (
   }
 };
 
-const getOutsideStrokeMaskId = (part: CharacterPart, isGhost: boolean): string =>
-  `outside-stroke-${part.id.replace(/[^a-zA-Z0-9_-]/g, '_')}${isGhost ? '-ghost' : ''}`;
 
 const renderModernShape = (
   part: CharacterPart,
@@ -100,23 +98,32 @@ const renderModernShape = (
     ...dashProps,
   };
 
-  if (appearance.strokeAlignment !== 'outside' || !appearance.strokeEnabled || appearance.strokeWidth <= 0) {
+  if (appearance.strokeAlignment === 'center' || !appearance.strokeEnabled || appearance.strokeWidth <= 0) {
     return renderModernGeometry(part, geo, common);
   }
 
-  // SVG has no reliable cross-browser stroke-alignment property. Clip only
-  // the stroke paint to the outside of the authored geometry. The fill and
-  // the normalized Trim Path dash semantics remain independently authored.
-  const maskId = getOutsideStrokeMaskId(part, isGhost);
+  // SVG has no reliable cross-browser stroke-alignment property. Mask the
+  // centered stroke paint against the same authored geometry: outside keeps
+  // the exterior half; inside keeps the interior half. Fill, canonical
+  // geometry, non-scaling-stroke, and Trim Path dash semantics stay shared.
+  const alignment = appearance.strokeAlignment;
+  const maskId = `${alignment}-stroke-${part.id.replace(/[^a-zA-Z0-9_-]/g, '_')}${isGhost ? '-ghost' : ''}`;
   const fillProps: SvgShapeProps = { ...common, stroke: 'none', strokeWidth: 0 };
-  const strokeProps: SvgShapeProps = { ...common, fill: 'none', mask: `url(#${maskId})` };
-  const maskGeometry = renderModernGeometry(part, geo, { fill: 'black', stroke: 'none' });
-
+  const strokeProps: SvgShapeProps = {
+    ...common,
+    fill: 'none',
+    strokeWidth: alignment === 'inside' ? appearance.strokeWidth * 2 : appearance.strokeWidth,
+    mask: `url(#${maskId})`,
+  };
+  const maskGeometry = renderModernGeometry(part, geo, {
+    fill: alignment === 'inside' ? 'white' : 'black',
+    stroke: 'none',
+  });
   return (
     <g>
       <defs>
         <mask id={maskId} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse">
-          <rect x={-1000000} y={-1000000} width={2000000} height={2000000} fill="white" />
+          <rect x={-1000000} y={-1000000} width={2000000} height={2000000} fill={alignment === 'inside' ? 'black' : 'white'} />
           {maskGeometry}
         </mask>
       </defs>

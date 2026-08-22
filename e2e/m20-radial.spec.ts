@@ -118,21 +118,6 @@ async function boxMax(page: Page, x0: number, x1: number, y0: number, y1: number
   return Math.max(...pts.map(([x, y]) => png.data[(y * png.width + x) * png.bpp + 1]));
 }
 
-async function boxMin(page: Page, x0: number, x1: number, y0: number, y1: number, step = 5): Promise<number> {
-  const buf = await page.screenshot();
-  const png = decodePng(buf);
-  const pts = await page.evaluate(([a0, a1, b0, b1, st]: [number, number, number, number, number]) => {
-    const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
-    const out: [number, number][] = [];
-    for (let x = a0; x <= a1; x += st) for (let y = b0; y <= b1; y += st) {
-      const pt = svg.createSVGPoint(); pt.x = x; pt.y = y;
-      const s = pt.matrixTransform(svg.getScreenCTM()!);
-      out.push([Math.round(s.x), Math.round(s.y)]);
-    }
-    return out;
-  }, [x0, x1, y0, y1, step]);
-  return Math.min(...pts.map(([x, y]) => png.data[(y * png.width + x) * png.bpp + 1]));
-}
 
 test.describe('M20 radial gradient — real browser pixel matrix', () => {
   // Fixture: small CIRCLE source (r=30 → local bbox 60×60 → localRadius

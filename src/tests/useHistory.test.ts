@@ -132,19 +132,19 @@ describe('useHistory Hook', () => {
 
     // Undo 1 → enabled restored to undefined(active)
     act(() => { result.current.undo(); });
-    expect((mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'B', mode: 'clip' });
+    expect((mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'B', mode: 'clip' });
 
     // Undo 2 → source back to A
     act(() => { result.current.undo(); });
-    expect((mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'A', mode: 'clip' });
+    expect((mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'A', mode: 'clip' });
 
     // Redo 1 → source B again
     act(() => { result.current.redo(); });
-    expect((mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'B', mode: 'clip' });
+    expect((mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'B', mode: 'clip' });
 
     // Redo 2 → enabled false again
     act(() => { result.current.redo(); });
-    expect((mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'B', mode: 'clip', enabled: false });
+    expect((mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[])[0].matte).toEqual({ sourcePartId: 'B', mode: 'clip', enabled: false });
   });
 
   it('handles batch interaction correctly', () => {

@@ -71,10 +71,11 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
           id="stroke-alignment-select"
           aria-label="Stroke Alignment"
           value={selectedPart.strokeAlignment ?? 'center'}
-          onChange={(event) => onPartPropChange('strokeAlignment', event.target.value as 'center' | 'outside')}
+          onChange={(event) => onPartPropChange('strokeAlignment', event.target.value as 'center' | 'inside' | 'outside')}
           style={{ width: '100%' }}
         >
           <option value="center">CENTER</option>
+          <option value="inside">INSIDE</option>
           <option value="outside">OUTSIDE</option>
         </select>
       </div>

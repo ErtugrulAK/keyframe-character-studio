@@ -66,7 +66,7 @@ export const useHistory = ({
         ...(motionTemplates ? { motionTemplates: structuredClone(motionTemplates) } : {}),
       };
     }
-  }, [motionTemplates]);
+  }, [characterPartsRef, motionTemplates, tracksRef]);
 
   const endBatchInteraction = useCallback(() => {
     if (isBatchInteractingRef.current) {
@@ -88,7 +88,7 @@ export const useHistory = ({
         commitHistory([...base, finalSnap].slice(-50));
       }
     }
-  }, [commitHistory, motionTemplates]);
+  }, [characterPartsRef, commitHistory, motionTemplates, tracksRef]);
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {

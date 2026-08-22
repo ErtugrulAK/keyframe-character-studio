@@ -1,7 +1,7 @@
 import React from 'react';
 import type { CharacterPart, CustomMotionPreset, Track, Transform, TrackChannel } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
-import type { SavePresetInput } from '../../../hooks/usePresets';
+import type { SavePresetInput, UpdatePresetInput } from '../../../hooks/usePresets';
 import { TransformAlignmentBar } from './transform/TransformAlignmentBar';
 import { TransformPositionRotationCard } from './transform/TransformPositionRotationCard';
 import { TransformScaleCard } from './transform/TransformScaleCard';
@@ -10,6 +10,7 @@ import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
 import { SelectedKeyframeSection } from './transform/SelectedKeyframeSection';
+import { TransformInOutPresetCard } from './transform/TransformInOutPresetCard';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -23,6 +24,7 @@ interface TransformTabProps {
   // M25 — user-saved custom preset library (passed through to the card)
   customPresets: CustomMotionPreset[];
   onSavePreset: (input: SavePresetInput) => CustomMotionPreset | null;
+  onUpdatePreset: (id: string, input: UpdatePresetInput) => CustomMotionPreset | null;
   onDeletePreset: (id: string) => void;
   // M30 — preset library export/import (passed through to the card)
   onImportPresets?: (presets: CustomMotionPreset[]) => void;
@@ -53,6 +55,12 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   updateCurrentPropertyChannel,
   handlePartPropChange,
   handleZIndexChange,
+  customPresets,
+  onSavePreset,
+  onUpdatePreset,
+  onDeletePreset,
+  onImportPresets,
+  showToast,
   onCopyAnimation,
   onPasteAnimation,
   onClearAnimation,
@@ -106,6 +114,19 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           <TransformZIndexCard
             zIndex={selectedPart.zIndex}
             onZIndexChange={handleZIndexChange}
+          />
+        )}
+
+        {handlePartPropChange && (
+          <TransformInOutPresetCard
+            selectedPart={selectedPart}
+            onPartPropChange={handlePartPropChange}
+            customPresets={customPresets}
+            onSavePreset={onSavePreset}
+            onUpdatePreset={onUpdatePreset}
+            onDeletePreset={onDeletePreset}
+            onImportPresets={onImportPresets}
+            showToast={showToast}
           />
         )}
 

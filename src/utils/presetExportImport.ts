@@ -92,6 +92,9 @@ function validatePreset(p: unknown, index: number): string | null {
   if (!isFiniteNumber(preset.durationFrames) || (preset.durationFrames as number) < 0) {
     return `presets[${index}].durationFrames must be a finite number >= 0`;
   }
+  if (preset.category !== undefined && typeof preset.category !== 'string') {
+    return `presets[${index}].category must be a string`;
+  }
   if (preset.scope !== undefined && !SCOPE_TYPES.includes(preset.scope as (typeof SCOPE_TYPES)[number])) {
     return `presets[${index}].scope is invalid`;
   }

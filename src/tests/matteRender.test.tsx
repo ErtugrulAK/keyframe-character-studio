@@ -909,8 +909,8 @@ describe('StagePartLayers — M20 radial gradient render', () => {
 
   it('19-20. mask suffix matches the gradient identity; no duplicate defs', () => {
     const html = renderStage([star(), target({ sourcePartId: 'src', mode: 'alpha', gradient: { type: 'radial', stops: stops2 } })]);
-    const defId = html.match(/<radialGradient id="([^"]+)"/)?.[1]!;
-    const maskId = html.match(/<mask id="([^"]+)"/)?.[1]!;
+    const defId = html.match(/<radialGradient id="([^"]+)"/)![1];
+    const maskId = html.match(/<mask id="([^"]+)"/)![1];
     expect(maskId).toBe('kcs-mask-src-alpha-radial-s37c8dd2b'); // radial mask discriminator
     expect(html).toContain(`fill="url(#${defId})"`); // the MASK CONTENT consumes the radial def
     expect(html).toContain(`mask="url(#${maskId})"`); // the TARGET consumes the mask

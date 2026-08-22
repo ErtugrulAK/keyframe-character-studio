@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, type Mock } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TransformInOutPresetCard } from '../components/Inspector/sections/transform/TransformInOutPresetCard';
 import type { CharacterPart, CustomMotionPreset } from '../types/animator';
@@ -37,9 +37,10 @@ const CUSTOM_OUT = makeCustom('user-out-1', 'My Exit Slide', 'out');
 function renderCard(
   part: CharacterPart,
   customPresets: CustomMotionPreset[] = [],
-  onSave: ReturnType<typeof vi.fn> = vi.fn(),
-  onDelete: ReturnType<typeof vi.fn> = vi.fn(),
-  onProp: ReturnType<typeof vi.fn> = vi.fn(),
+  onSave: Mock = vi.fn(),
+  onUpdate: Mock = vi.fn(),
+  onDelete: Mock = vi.fn(),
+  onProp: Mock = vi.fn(),
 ) {
   const utils = render(
     <TransformInOutPresetCard
@@ -47,10 +48,11 @@ function renderCard(
       onPartPropChange={onProp}
       customPresets={customPresets}
       onSavePreset={onSave}
+      onUpdatePreset={onUpdate}
       onDeletePreset={onDelete}
     />,
   );
-  return { ...utils, onSave, onDelete, onProp };
+  return { ...utils, onSave, onUpdate, onDelete, onProp };
 }
 
 function optionValues(label: string): string[] {
@@ -121,6 +123,15 @@ describe('M25 25C — custom optgroup', () => {
       'slide-scale-left', 'slide-scale-right', 'soft-pop',
     ]);
   });
+
+  it('groups custom presets by optional category without changing ids or order', () => {
+    const branded = { ...CUSTOM_IN, category: 'Branding' };
+    renderCard(makePart(), [branded]);
+    const group = screen.getByRole('group', { name: 'Custom · Branding' });
+    const option = group.querySelector('option')!;
+    expect(option.value).toBe(CUSTOM_IN.id);
+    expect(option.textContent).toBe(CUSTOM_IN.name);
+  });
 });
 
 describe('M25 25C — save current as preset', () => {
@@ -163,6 +174,19 @@ describe('M25 25C — save current as preset', () => {
     expect(input.keyframes.length).toBeGreaterThanOrEqual(2);
     expect(input.keyframes[0].progress).toBe(0);    // sampled keyframes, not the builtin id
     expect(onProp).not.toHaveBeenCalled();          // 15. part untouched on save
+  });
+
+  it('saves the trimmed optional category with the existing sampled preset input', () => {
+    const { onSave } = renderCard(makePart({ inAnimPreset: 'fade' }));
+    fireEvent.click(screen.getAllByTitle('Save current animation as a custom preset')[0]);
+    fireEvent.change(screen.getByLabelText('Preset Name'), { target: { value: 'Brand Fade' } });
+    fireEvent.change(screen.getByLabelText('Preset Category'), { target: { value: ' Branding ' } });
+    fireEvent.click(screen.getByText('Save'));
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      name: 'Brand Fade',
+      category: ' Branding ',
+      type: 'in',
+    });
   });
 
   it('18+19. saved OUT duration and type are preserved', () => {
@@ -214,6 +238,133 @@ describe('M25 25C — save current as preset', () => {
     fireEvent.change(screen.getByLabelText('Preset Name'), { target: { value: 'X' } });
     fireEvent.click(screen.getByText('Save'));
     expect(onProp).not.toHaveBeenCalled(); // no part field was written
+  });
+
+  it('closes without saving when the source preset changes while the save dialog is open', () => {
+    const second = makeCustom('user-in-2', 'Second', 'in');
+    const onSave = vi.fn();
+    const { rerender } = renderCard(
+      makePart({ inAnimPreset: CUSTOM_IN.id }),
+      [CUSTOM_IN, second],
+      onSave,
+    );
+    fireEvent.click(screen.getAllByTitle('Save current animation as a custom preset')[0]);
+    fireEvent.change(screen.getByLabelText('Preset Name'), { target: { value: 'Must Not Save' } });
+
+    rerender(
+      <TransformInOutPresetCard
+        selectedPart={makePart({ inAnimPreset: second.id })}
+        onPartPropChange={vi.fn()}
+        customPresets={[CUSTOM_IN, second]}
+        onSavePreset={onSave}
+        onDeletePreset={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Save Animation Preset' })).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it('closes without saving when the selected part changes while the save dialog is open', () => {
+    const onSave = vi.fn();
+    const { rerender } = renderCard(
+      makePart({ id: 'part-a', inAnimPreset: CUSTOM_IN.id }),
+      [CUSTOM_IN],
+      onSave,
+    );
+    fireEvent.click(screen.getAllByTitle('Save current animation as a custom preset')[0]);
+
+    rerender(
+      <TransformInOutPresetCard
+        selectedPart={makePart({ id: 'part-b', inAnimPreset: CUSTOM_IN.id })}
+        onPartPropChange={vi.fn()}
+        customPresets={[CUSTOM_IN]}
+        onSavePreset={onSave}
+        onDeletePreset={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Save Animation Preset' })).toBeNull();
+    expect(onSave).not.toHaveBeenCalled();
+  });
+});
+
+describe('Animation Preset System V2 — rename and category editing', () => {
+  it('edits the selected user preset without mutating the selected part', () => {
+    const onUpdate = vi.fn(() => ({ ...CUSTOM_IN, name: 'Renamed', category: 'Branding' }));
+    const { onProp } = renderCard(
+      makePart({ inAnimPreset: CUSTOM_IN.id }),
+      [CUSTOM_IN],
+      vi.fn(),
+      onUpdate,
+    );
+    fireEvent.click(screen.getByLabelText('Edit Animation Preset'));
+    expect(screen.getByRole('dialog', { name: 'Edit Animation Preset' })).toBeTruthy();
+    fireEvent.change(screen.getByLabelText('Edit Preset Name'), { target: { value: '  Renamed  ' } });
+    fireEvent.change(screen.getByLabelText('Edit Preset Category'), { target: { value: '  Branding  ' } });
+    fireEvent.click(screen.getByRole('dialog', { name: 'Edit Animation Preset' }).querySelector('button:last-child')!);
+    expect(onUpdate).toHaveBeenCalledWith(CUSTOM_IN.id, {
+      name: '  Renamed  ',
+      category: '  Branding  ',
+    });
+    expect(onProp).not.toHaveBeenCalled();
+  });
+
+  it('does not expose edit controls for builtins or default presets', () => {
+    renderCard(makePart({ inAnimPreset: 'fade' }), [...DEFAULT_INITIAL_PRESETS]);
+    expect(screen.queryByLabelText('Edit Animation Preset')).toBeNull();
+  });
+
+  it('closes without mutation when the selected preset changes while editing', () => {
+    const second = makeCustom('user-in-2', 'Second', 'in');
+    const onUpdate = vi.fn();
+    const { rerender } = renderCard(
+      makePart({ inAnimPreset: CUSTOM_IN.id }),
+      [CUSTOM_IN, second],
+      vi.fn(),
+      onUpdate,
+    );
+    fireEvent.click(screen.getByLabelText('Edit Animation Preset'));
+    fireEvent.change(screen.getByLabelText('Edit Preset Name'), { target: { value: 'Wrong Target' } });
+
+    rerender(
+      <TransformInOutPresetCard
+        selectedPart={makePart({ inAnimPreset: second.id })}
+        onPartPropChange={vi.fn()}
+        customPresets={[CUSTOM_IN, second]}
+        onSavePreset={vi.fn()}
+        onUpdatePreset={onUpdate}
+        onDeletePreset={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Edit Animation Preset' })).toBeNull();
+    expect(onUpdate).not.toHaveBeenCalled();
+  });
+
+  it('closes without mutation when the selected part changes while editing', () => {
+    const onUpdate = vi.fn();
+    const { rerender } = renderCard(
+      makePart({ id: 'part-a', inAnimPreset: CUSTOM_IN.id }),
+      [CUSTOM_IN],
+      vi.fn(),
+      onUpdate,
+    );
+    fireEvent.click(screen.getByLabelText('Edit Animation Preset'));
+
+    rerender(
+      <TransformInOutPresetCard
+        selectedPart={makePart({ id: 'part-b', inAnimPreset: CUSTOM_IN.id })}
+        onPartPropChange={vi.fn()}
+        customPresets={[CUSTOM_IN]}
+        onSavePreset={vi.fn()}
+        onUpdatePreset={onUpdate}
+        onDeletePreset={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('dialog', { name: 'Edit Animation Preset' })).toBeNull();
+    expect(onUpdate).not.toHaveBeenCalled();
   });
 });
 

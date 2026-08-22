@@ -133,6 +133,16 @@ describe('M30 30A — import validation (atomic)', () => {
     expect(validatePresetImportPayload({ version: 1, presets: [{ ...userA, durationFrames: NaN }] }).ok).toBe(false);
   });
 
+  it('accepts an optional category string and rejects malformed category values atomically', () => {
+    const categorized = { ...userA, category: 'Branding' };
+    const valid = validatePresetImportPayload({ version: 1, presets: [categorized] });
+    expect(valid).toEqual({ ok: true, presets: [categorized] });
+    expect(validatePresetImportPayload({
+      version: 1,
+      presets: [userA, { ...userB, category: 42 }],
+    }).ok).toBe(false);
+  });
+
   it('19. invalid keyframes rejected', () => {
     expect(validatePresetImportPayload({ version: 1, presets: [{ ...userA, keyframes: [] }] }).ok).toBe(true); // empty ok
     expect(validatePresetImportPayload({ version: 1, presets: [{ ...userA, keyframes: 'x' }] }).ok).toBe(false);

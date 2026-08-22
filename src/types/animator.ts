@@ -29,7 +29,7 @@ export interface MaskPoint {
 export type MatteMode = 'clip' | 'alpha' | 'luminance';
 
 /** Static placement of a modern shape stroke relative to its authored path. */
-export type StrokeAlignment = 'center' | 'outside';
+export type StrokeAlignment = 'center' | 'inside' | 'outside';
 
 /** M11 — Track matte: this part is clipped by another part's (the source's)
  *  evaluated world-space shape geometry. Legacy data may omit `mode` (treated
@@ -39,7 +39,7 @@ export interface PartMatte {
   sourcePartId: string;
   /** 'clip' (clipPath) | 'alpha' | 'luminance' (SVG <mask>). Absent in
    *  legacy data → resolved as 'clip'. */
-  mode: MatteMode;
+  mode?: MatteMode;
   /** Invert the matte (hide INSIDE the source geometry). Requires the
    *  <mask> pipeline — clipPath cannot express negative area. */
   inverted?: boolean;
@@ -329,12 +329,12 @@ export interface CharacterPart {
   particleConfig?: ParticleConfig;
 
   // ── Feature 7: Broadcast In/Out Animations ──
-  inAnimPreset?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'pop' | 'spin' | 'custom_timeline';
+  inAnimPreset?: string;
   inAnimDuration?: number; // duration in frames
   inAnimTimelineStart?: number;
   inAnimTimelineEnd?: number;
 
-  outAnimPreset?: 'none' | 'fade' | 'slide-left' | 'slide-right' | 'slide-up' | 'slide-down' | 'pop' | 'spin' | 'custom_timeline';
+  outAnimPreset?: string;
   outAnimDuration?: number; // duration in frames
   outAnimTimelineStart?: number;
   outAnimTimelineEnd?: number;
@@ -387,6 +387,8 @@ export interface CustomMotionPreset {
   name: string;
   type: 'in' | 'out' | 'stunt';
   durationFrames: number;
+  /** Optional user-defined library category. Absent/blank means uncategorized. */
+  category?: string;
   scope?: 'both' | 'motion_only' | 'shape_only' | 'none';
   maskShape?: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart';
   showInDirector?: boolean;

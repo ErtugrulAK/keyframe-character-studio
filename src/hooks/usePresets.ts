@@ -12,9 +12,15 @@ export interface SavePresetInput {
   type: 'in' | 'out' | 'stunt';
   durationFrames: number;
   keyframes: CustomMotionPresetKeyframe[];
+  category?: string;
   scope?: 'both' | 'motion_only' | 'shape_only' | 'none';
   maskShape?: 'none' | 'circle' | 'pill' | 'star' | 'hexagon' | 'heart';
   showInDirector?: boolean;
+}
+
+export interface UpdatePresetInput {
+  name: string;
+  category?: string;
 }
 
 export const usePresets = () => {
@@ -63,7 +69,10 @@ export const usePresets = () => {
     // Deterministic collision guard: sequential counter may overlap builtin
     // preset_N ids if the counter was not seeded — walk forward if needed.
     // (Null-safe: malformed stored entries never crash the collision check.)
-    while (customPresetsRef.current.some((p) => p != null && p.id === id)) {
+    while (
+      DEFAULT_INITIAL_PRESETS.some((preset) => preset.id === id)
+      || customPresetsRef.current.some((preset) => preset != null && preset.id === id)
+    ) {
       id = generateId('preset');
     }
 
@@ -75,6 +84,7 @@ export const usePresets = () => {
       // Deep clone: stored preset must never be mutated through the caller's
       // original keyframes reference (defensive copy).
       keyframes: structuredClone(input.keyframes),
+      ...(input.category?.trim() ? { category: input.category.trim() } : {}),
       ...(input.scope !== undefined ? { scope: input.scope } : {}),
       ...(input.maskShape !== undefined ? { maskShape: input.maskShape } : {}),
       ...(input.showInDirector !== undefined ? { showInDirector: input.showInDirector } : {}),
@@ -82,6 +92,29 @@ export const usePresets = () => {
 
     setCustomPresets((prev) => [...prev, preset]);
     return preset;
+  }, []);
+
+  /**
+   * Rename and categorize an existing user preset without changing its stable
+   * id, sampled keyframes, runtime semantics, or scene references.
+   * Default presets and invalid/missing ids are immutable safe no-ops.
+   */
+  const updatePreset = useCallback((id: string, input: UpdatePresetInput): CustomMotionPreset | null => {
+    const name = (input.name ?? '').trim();
+    if (!name) return null;
+    if (DEFAULT_INITIAL_PRESETS.some((preset) => preset.id === id)) return null;
+
+    const existing = customPresetsRef.current.find((preset) => preset?.id === id);
+    if (!existing) return null;
+
+    const category = input.category?.trim();
+    const updated: CustomMotionPreset = {
+      ...existing,
+      name,
+      category: category || undefined,
+    };
+    setCustomPresets((prev) => prev.map((preset) => preset?.id === id ? updated : preset));
+    return updated;
   }, []);
 
   /**
@@ -107,5 +140,5 @@ export const usePresets = () => {
     setCustomPresets(presets);
   }, []);
 
-  return { customPresets, customPresetsRef, savePreset, deletePreset, importPresets };
+  return { customPresets, customPresetsRef, savePreset, updatePreset, deletePreset, importPresets };
 };

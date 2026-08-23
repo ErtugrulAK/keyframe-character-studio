@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import type { ToolType } from '../types/animator';
 
 interface UseKeyboardShortcutsOptions {
   selectedPartId: string | null;
@@ -9,6 +10,7 @@ interface UseKeyboardShortcutsOptions {
   duplicateSelectedPart: () => void;
   deleteSelectedKeyframe: () => boolean;
   deletePart: (partId: string) => void;
+  setActiveTool?: (tool: ToolType) => void;
 }
 
 export const useKeyboardShortcuts = ({
@@ -20,53 +22,59 @@ export const useKeyboardShortcuts = ({
   duplicateSelectedPart,
   deleteSelectedKeyframe,
   deletePart,
+  setActiveTool,
 }: UseKeyboardShortcutsOptions) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
-      const isInputActive =
-        activeEl &&
-        (activeEl.tagName === 'INPUT' ||
-          activeEl.tagName === 'TEXTAREA' ||
-          activeEl.tagName === 'SELECT' ||
-          (activeEl as HTMLElement).isContentEditable);
-
+      const isInputActive = activeEl && (
+        activeEl.tagName === 'INPUT'
+        || activeEl.tagName === 'TEXTAREA'
+        || activeEl.tagName === 'SELECT'
+        || (activeEl as HTMLElement).isContentEditable
+      );
       if (isInputActive) return;
 
-      // Undo: Ctrl + Z
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      const key = e.key.toLowerCase();
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && key === 'v') {
+        setActiveTool?.('select');
+        return;
+      }
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && key === 'h') {
+        setActiveTool?.('pan');
+        return;
+      }
+      if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.key === '+' || e.key === '=' || e.key === '-')) {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('canvas-viewport-command', {
+          detail: { type: e.key === '-' ? 'zoom-out' : 'zoom-in' },
+        }));
+        return;
+      }
+
+      if ((e.ctrlKey || e.metaKey) && key === 'z' && !e.shiftKey) {
         e.preventDefault();
         undo();
-      }
-      // Redo: Ctrl + Y or Ctrl + Shift + Z
-      else if (
-        ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
-        ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')
+      } else if (
+        ((e.ctrlKey || e.metaKey) && key === 'y')
+        || ((e.ctrlKey || e.metaKey) && e.shiftKey && key === 'z')
       ) {
         e.preventDefault();
         redo();
-      }
-      // Copy: Ctrl + C
-      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+      } else if ((e.ctrlKey || e.metaKey) && key === 'c') {
         if (selectedPartId) {
           e.preventDefault();
           copySelectedPart();
         }
-      }
-      // Paste: Ctrl + V
-      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+      } else if ((e.ctrlKey || e.metaKey) && key === 'v') {
         e.preventDefault();
         pasteCopiedPart();
-      }
-      // Duplicate: Ctrl + D
-      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
+      } else if ((e.ctrlKey || e.metaKey) && key === 'd') {
         if (selectedPartId) {
           e.preventDefault();
           duplicateSelectedPart();
         }
-      }
-      // Instant Delete without alert modal on Backspace or Delete
-      else if (e.key === 'Backspace' || e.key === 'Delete') {
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
         if (deleteSelectedKeyframe()) {
           e.preventDefault();
           return;
@@ -80,5 +88,5 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPartId, deletePart, deleteSelectedKeyframe, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart]);
+  }, [selectedPartId, deletePart, deleteSelectedKeyframe, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, setActiveTool]);
 };

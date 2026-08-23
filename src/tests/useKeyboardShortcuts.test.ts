@@ -135,4 +135,34 @@ describe('useKeyboardShortcuts Hook', () => {
     expect(deletePart).not.toHaveBeenCalled();
     editor.remove();
   });
+  it('switches Select/Hand tools and emits centralized zoom commands', () => {
+    const setActiveTool = vi.fn();
+    const zoomCommands: string[] = [];
+    const listener = (event: Event) => {
+      const type = (event as CustomEvent<{ type: string }>).detail.type;
+      zoomCommands.push(type);
+    };
+    window.addEventListener('canvas-viewport-command', listener);
+    renderHook(() => useKeyboardShortcuts({
+      selectedPartId: null,
+      undo: vi.fn(),
+      redo: vi.fn(),
+      copySelectedPart: vi.fn(),
+      pasteCopiedPart: vi.fn(),
+      duplicateSelectedPart: vi.fn(),
+      deleteSelectedKeyframe: vi.fn(() => false),
+      deletePart: vi.fn(),
+      setActiveTool,
+    }));
+
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'v' })));
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' })));
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '+' })));
+    act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: '-' })));
+
+    expect(setActiveTool).toHaveBeenNthCalledWith(1, 'select');
+    expect(setActiveTool).toHaveBeenNthCalledWith(2, 'pan');
+    expect(zoomCommands).toEqual(['zoom-in', 'zoom-out']);
+    window.removeEventListener('canvas-viewport-command', listener);
+  });
 });

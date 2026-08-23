@@ -162,3 +162,16 @@
   color: var(--accent-cyan);
   font-weight: 700;
 }
+
+.stage-canvas-container.select-tool {
+  cursor: default;
+}
+
+.stage-canvas-container.hand-tool {
+  cursor: grab;
+}
+
+.stage-canvas-container.hand-tool.interaction-dragging,
+.stage-canvas-container.panning {
+  cursor: grabbing;
+}

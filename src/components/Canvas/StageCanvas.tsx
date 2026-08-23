@@ -3,7 +3,7 @@ import { useAnimator } from '../../context/AnimatorContext';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
-import { computeEdgeScale, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
+import { clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeFreeformPoints } from '../../utils/freeform';
 import { worldToContainerLocal } from '../../utils/containerMath';
@@ -138,8 +138,7 @@ export const StageCanvas: React.FC = () => {
   });
 
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
-    if (appMode === 'broadcast' || e.button !== 0) return;
-    if (activeTool === 'freeform_draw') return; // drawing tool: do not move parts
+    if (appMode === 'broadcast' || activeTool !== 'select' || e.button !== 0) return;
     e.stopPropagation();
     setSelectedPartId(partId);
     const transform = getComputedTransform(partId, currentFrame);
@@ -166,7 +165,6 @@ export const StageCanvas: React.FC = () => {
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    // Freeform draw tool: left click/drag starts a drawing gesture.
     if (activeTool === 'freeform_draw' && appMode !== 'broadcast' && e.button === 0) {
       e.preventDefault();
       e.stopPropagation();
@@ -174,7 +172,8 @@ export const StageCanvas: React.FC = () => {
       return;
     }
 
-    if (e.button === 2 || activeTool === 'pan') {
+    if (e.button === 2 || (e.button === 0 && activeTool === 'pan')) {
+      e.preventDefault();
       setIsDragging(true);
       setDragMode('pan');
       setDragStart({
@@ -185,30 +184,27 @@ export const StageCanvas: React.FC = () => {
       return;
     }
 
-    if (appMode === 'broadcast') return;
+    if (appMode === 'broadcast' || activeTool !== 'select') return;
 
     const target = e.target as HTMLElement;
     if (
-      target === containerRef.current || 
-      target.tagName === 'svg' ||
-      target.classList.contains('canvas-bg') ||
-      target.classList.contains('focus-spotlight-dimmer')
+      target === containerRef.current
+      || target.tagName === 'svg'
+      || target.classList.contains('canvas-bg')
+      || target.classList.contains('focus-spotlight-dimmer')
     ) {
       handleSelectPart(null);
       setFocusModeNodeId(null);
-      setActiveTool('select');
-      
       const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
       setIsDragging(true);
       setDragMode('marquee');
       setDragStart({
         x: svgX,
         y: svgY,
-        initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }
+        initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
       });
     }
   };
-
   const startRotate = (e: React.MouseEvent) => {
     if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
     e.stopPropagation();
@@ -283,8 +279,6 @@ export const StageCanvas: React.FC = () => {
         return;
       }
 
-      if (!selectedPartId) return;
-
       const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
 
       if (dragMode === 'marquee') {
@@ -295,6 +289,8 @@ export const StageCanvas: React.FC = () => {
         setMarqueeRect({ x: minX, y: minY, w, h });
         return;
       }
+
+      if (!selectedPartId) return;
 
       if (dragMode === 'child_frame_scale') {
         // Uniform scale of a shape child around its center (world space),
@@ -541,51 +537,60 @@ export const StageCanvas: React.FC = () => {
   );
 
   const handleMouseUp = useCallback(() => {
-      if (dragMode === 'marquee' && marqueeRect) {
-        const selected = getPartsInMarquee(
-          characterParts,
-          (id) => getComputedTransform(id, currentFrame),
-          marqueeRect
-        );
-
-        if (selected.length > 0) {
-          handleSelectPart(selected[selected.length - 1], false);
-          // Manually update all selections
-          setTimeout(() => {
-            selected.forEach((id, i) => {
-              if (i < selected.length - 1) handleSelectPart(id, true);
-            });
-          }, 0);
-        }
+    if (dragMode === 'marquee' && marqueeRect) {
+      const selected = getPartsInMarquee(
+        characterParts,
+        (id) => getComputedTransform(id, currentFrame),
+        marqueeRect,
+        EDITOR_CAMERA_CENTER.x,
+        EDITOR_CAMERA_CENTER.y,
+        (part) => tracks.find((track) => track.partId === part.id)?.editVisible !== false,
+      );
+      if (selected.length > 0) {
+        handleSelectPart(selected[selected.length - 1], false);
+        selected.slice(0, -1).forEach((id) => handleSelectPart(id, true));
       }
+    }
 
-      if (isDragging) {
-        endBatchInteraction();
-      }
-      setIsDragging(false);
-      setDragMode(null);
-      setMarqueeRect(null);
-      setSnapLines([]);
-  }, [dragMode, marqueeRect, characterParts, currentFrame, handleSelectPart, getComputedTransform, isDragging, endBatchInteraction]);
+    if (isDragging) endBatchInteraction();
+    setIsDragging(false);
+    setDragMode(null);
+    setMarqueeRect(null);
+    setSnapLines([]);
+  }, [dragMode, marqueeRect, characterParts, currentFrame, handleSelectPart, getComputedTransform, tracks, isDragging, endBatchInteraction]);
 
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       window.addEventListener('pointerup', handleMouseUp);
+      window.addEventListener('pointercancel', handleMouseUp);
     }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
       window.removeEventListener('pointerup', handleMouseUp);
+      window.removeEventListener('pointercancel', handleMouseUp);
     };
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    setZoomLevel((prev) => Math.min(3, Math.max(0.3, prev * zoomFactor)));
-  }, []);
+    const container = containerRef.current;
+    if (!container || appMode === 'broadcast') return;
+    const nextZoom = clampZoom(zoomRef.current * (e.deltaY < 0 ? 1.1 : 0.9));
+    const anchored = getCursorAnchoredViewport({
+      rect: container.getBoundingClientRect(),
+      clientX: e.clientX,
+      clientY: e.clientY,
+      zoom: zoomRef.current,
+      pan: panRef.current,
+      nextZoom,
+      viewBox: EDITOR_CAMERA_VIEWBOX,
+    });
+    setZoomLevel(anchored.zoom);
+    setPanOffset(anchored.pan);
+  }, [appMode]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -594,8 +599,18 @@ export const StageCanvas: React.FC = () => {
     return () => container.removeEventListener('wheel', handleWheel);
   }, [handleWheel]);
 
-  const [isDropTargetHover, setIsDropTargetHover] = useState<boolean>(false);
+  useEffect(() => {
+    const handleViewportCommand = (event: Event) => {
+      const type = (event as CustomEvent<{ type?: string }>).detail?.type;
+      if (type !== 'zoom-in' && type !== 'zoom-out') return;
+      const nextZoom = clampZoom(zoomRef.current * (type === 'zoom-in' ? 1.1 : 0.9));
+      setZoomLevel(nextZoom);
+    };
+    window.addEventListener('canvas-viewport-command', handleViewportCommand);
+    return () => window.removeEventListener('canvas-viewport-command', handleViewportCommand);
+  }, []);
 
+  const [isDropTargetHover, setIsDropTargetHover] = useState<boolean>(false);
   const handleDragOverStage = (e: React.DragEvent) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'copy';
@@ -686,7 +701,7 @@ export const StageCanvas: React.FC = () => {
 
   return (
     <div
-      className={`stage-canvas-container ${isPanning ? 'panning' : ''}`}
+      className={`stage-canvas-container ${isPanning ? 'panning' : ''} ${activeTool === 'pan' ? 'hand-tool' : 'select-tool'} ${isDragging ? 'interaction-dragging' : ''}`}
       ref={containerRef}
       onMouseDown={handleMouseDown}
       onContextMenu={(e) => e.preventDefault()}

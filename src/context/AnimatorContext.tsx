@@ -386,6 +386,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     duplicateSelectedPart,
     deleteSelectedKeyframe,
     deletePart,
+    setActiveTool,
   });
 
   const { getComputedTransform } = useMath({

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { BodyPartType, CharacterPart, ToolType, Track } from '../types/animator';
 import { createCustomPart } from '../utils/partFactory';
 
@@ -17,17 +17,34 @@ export const useToolbar = ({
   setCharacterParts,
   setSelectedPartId,
 }: UseToolbarOptions) => {
-  const [activeTool, setActiveTool] = useState<ToolType>('select');
+  const [activeTool, setActiveToolState] = useState<ToolType>('select');
+  const [pendingShapeType, setPendingShapeType] = useState<BodyPartType | null>(null);
+  const [pendingShapeName, setPendingShapeName] = useState<string | null>(null);
+
+  const clearShapeCreation = useCallback(() => {
+    setPendingShapeType(null);
+    setPendingShapeName(null);
+    setActiveToolState((current) => current === 'shape_create' ? 'select' : current);
+  }, []);
+
+  const setActiveTool = useCallback((tool: ToolType) => {
+    if (tool !== 'shape_create') {
+      setPendingShapeType(null);
+      setPendingShapeName(null);
+    }
+    setActiveToolState(tool);
+  }, []);
+
+  const armShapeCreation = useCallback((type: BodyPartType, name: string) => {
+    setPendingShapeType(type);
+    setPendingShapeName(name);
+    setActiveToolState('shape_create');
+  }, []);
 
   const addCustomPart = (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => {
-    // Preserve authored zIndex values on existing parts. New parts are placed
-    // above the current highest layer instead of rebuilding every index from
-    // the array order (which silently reset user edits after adding a part).
     const nextZIndex = characterParts.reduce((max, part) => Math.max(max, part.zIndex), 0) + 1;
     const { newPart, newTrack } = createCustomPart(type, name, nextZIndex, extraProps);
-
-    const nextTracks = [newTrack, ...tracks];
-    setTracks(nextTracks);
+    setTracks([newTrack, ...tracks]);
     setCharacterParts((prev) => [newPart, ...prev]);
     setSelectedPartId(newPart.id);
   };
@@ -35,6 +52,10 @@ export const useToolbar = ({
   return {
     activeTool,
     setActiveTool,
+    pendingShapeType,
+    pendingShapeName,
+    armShapeCreation,
+    clearShapeCreation,
     addCustomPart,
   };
 };

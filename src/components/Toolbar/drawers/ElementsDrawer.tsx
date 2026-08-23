@@ -39,8 +39,7 @@ const SHAPE_ITEMS: { type: BodyPartType; label: string; icon: React.ReactNode }[
 ];
 
 export const ElementsDrawer: React.FC = () => {
-  const { addCustomPart, activeTool, setActiveTool } = useAnimator();
-
+  const { armShapeCreation, activeTool, pendingShapeType, setActiveTool } = useAnimator();
   const handleDragStart = (e: React.DragEvent, type: BodyPartType, label: string) => {
     if (type === 'custom_freeform') return; // free draw is a tool, not a draggable element
     e.dataTransfer.setData(
@@ -57,19 +56,20 @@ export const ElementsDrawer: React.FC = () => {
     <div className="drawer-content">
       <div className="drawer-grid">
         {SHAPE_ITEMS.map((item) => {
-          const isFreeDrawActive = item.type === 'custom_freeform' && activeTool === 'freeform_draw';
+          const isActive = item.type === 'custom_freeform'
+            ? activeTool === 'freeform_draw'
+            : activeTool === 'shape_create' && pendingShapeType === item.type;
           return (
             <button
               key={item.type}
-              className={`drawer-item-card ${isFreeDrawActive ? 'active' : ''}`}
+              className={`drawer-item-card ${isActive ? 'active' : ''}`}
               draggable={item.type !== 'custom_freeform'}
               onDragStart={(e) => handleDragStart(e, item.type, item.label)}
               onClick={() => {
                 if (item.type === 'custom_freeform') {
-                  // Toggle: clicking again deactivates the tool
                   setActiveTool(activeTool === 'freeform_draw' ? 'select' : 'freeform_draw');
                 } else {
-                  addCustomPart(item.type, item.label);
+                  armShapeCreation(item.type, item.label);
                 }
               }}
               title={item.type === 'custom_freeform' ? 'Freehand drawing: click corners or drag to draw freely' : undefined}

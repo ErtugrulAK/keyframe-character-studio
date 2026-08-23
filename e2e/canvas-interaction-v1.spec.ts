@@ -31,8 +31,15 @@ test('canvas tools and cursor-anchored zoom remain in one interaction surface', 
 test('corner resize preserves the existing transform pipeline', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  const canvas = page.locator('.stage-canvas-container');
+  const canvasBox = await canvas.boundingBox();
+  expect(canvasBox).not.toBeNull();
   await page.getByTitle('Vector Shapes & Graphic Elements').click();
   await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await page.mouse.move(canvasBox!.x + canvasBox!.width * 0.68, canvasBox!.y + canvasBox!.height * 0.68);
+  await page.mouse.down();
+  await page.mouse.move(canvasBox!.x + canvasBox!.width * 0.42, canvasBox!.y + canvasBox!.height * 0.42);
+  await page.mouse.up();
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
   const handle = page.locator('[data-testid="transform-gizmo"] rect').last();
   await expect(handle).toBeVisible();

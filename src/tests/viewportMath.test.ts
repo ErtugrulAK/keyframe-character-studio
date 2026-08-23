@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
-import { getCursorAnchoredViewport, getPartsInMarquee } from '../utils/viewportMath';
+import { getCursorAnchoredViewport, getPartsInMarquee, getShapeCreationBounds, getShapeCreationPlacement } from '../utils/viewportMath';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,
@@ -47,5 +47,25 @@ describe('Canvas Interaction V1 viewport math', () => {
     const parts = [part('visible'), part('hidden')];
     const transform: Transform = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
     expect(getPartsInMarquee(parts, () => transform, { x: 250, y: 225, w: 100, h: 100 }, 300, 240, (candidate) => candidate.id === 'visible')).toEqual(['visible']);
+  });
+  it.each([
+    [{ x: 10, y: 20 }, { x: 110, y: 220 }],
+    [{ x: 110, y: 220 }, { x: 10, y: 20 }],
+    [{ x: 110, y: 20 }, { x: 10, y: 220 }],
+    [{ x: 10, y: 220 }, { x: 110, y: 20 }],
+  ])('normalizes shape creation bounds in every drag direction', (start, current) => {
+    const bounds = getShapeCreationBounds(start, current);
+    expect(bounds).toMatchObject({ minX: 10, minY: 20, maxX: 110, maxY: 220, width: 100, height: 200, centerX: 60, centerY: 120 });
+  });
+
+  it('derives rectangle, circle and asymmetric polygon placement from canonical bounds', () => {
+    const bounds = getShapeCreationBounds({ x: 200, y: 140 }, { x: 400, y: 340 });
+    expect(getShapeCreationPlacement('custom_rect', bounds)).toEqual({ x: 0, y: 0, scaleX: 5 / 3, scaleY: 10 / 3 });
+    expect(getShapeCreationPlacement('custom_circle', bounds)).toEqual({ x: 0, y: 0, scaleX: 10 / 3, scaleY: 10 / 3 });
+    const parallelogram = getShapeCreationPlacement('custom_parallelogram', bounds);
+    expect(parallelogram?.scaleX).toBeCloseTo(200 / 170, 8);
+    expect(parallelogram?.scaleY).toBeCloseTo(200 / 60, 8);
+    expect(parallelogram?.x).toBeCloseTo(0, 8);
+    expect(parallelogram?.y).toBeCloseTo(0, 8);
   });
 });

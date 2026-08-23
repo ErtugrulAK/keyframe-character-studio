@@ -11,6 +11,7 @@ interface UseKeyboardShortcutsOptions {
   deleteSelectedKeyframe: () => boolean;
   deletePart: (partId: string) => void;
   setActiveTool?: (tool: ToolType) => void;
+  cancelShapeCreation?: () => void;
 }
 
 export const useKeyboardShortcuts = ({
@@ -23,6 +24,7 @@ export const useKeyboardShortcuts = ({
   deleteSelectedKeyframe,
   deletePart,
   setActiveTool,
+  cancelShapeCreation,
 }: UseKeyboardShortcutsOptions) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -36,6 +38,10 @@ export const useKeyboardShortcuts = ({
       if (isInputActive) return;
 
       const key = e.key.toLowerCase();
+      if (e.key === 'Escape' && cancelShapeCreation) {
+        cancelShapeCreation();
+        return;
+      }
       if (!e.ctrlKey && !e.metaKey && !e.altKey && key === 'v') {
         setActiveTool?.('select');
         return;
@@ -88,5 +94,5 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPartId, deletePart, deleteSelectedKeyframe, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, setActiveTool]);
+  }, [selectedPartId, deletePart, deleteSelectedKeyframe, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, setActiveTool, cancelShapeCreation]);
 };

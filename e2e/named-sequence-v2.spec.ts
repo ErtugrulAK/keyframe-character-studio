@@ -8,6 +8,16 @@ async function clearProject(page: Page) {
   await page.reload();
 }
 
+async function createShapeByDrag(page: Page, name: string): Promise<void> {
+  await page.getByRole('button', { name, exact: true }).click();
+  const box = await page.locator('.stage-canvas-container').boundingBox();
+  if (!box) throw new Error('Canvas bounds unavailable');
+  await page.mouse.move(box.x + 360, box.y + 280);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 280, box.y + 200);
+  await page.mouse.up();
+}
+
 async function saveAndReadScene(page: Page) {
   await page.getByTitle('Auto-saved every 10 seconds. Click to save manually.').click();
   return page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}'), STORAGE_KEY);
@@ -18,8 +28,8 @@ test('Named Sequence V2 — stable IDs, authoring metadata, Broadcast status, an
   await clearProject(page);
 
   // Fresh authoring workflow: create a real layer and a named sequence.
-  await page.getByText('Elements', { exact: true }).click();
-  await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+  await page.getByTitle('Vector Shapes & Graphic Elements').click();
+  await createShapeByDrag(page, 'Rectangle');
   await page.getByTitle('Create New Sequence').click();
   await page.getByPlaceholder('Sequence name (e.g. In_V1, Out_V1)...').fill('IN');
   await page.getByRole('button', { name: 'Create Sequence', exact: true }).click();

@@ -395,7 +395,7 @@ export interface CustomMotionPreset {
   keyframes: CustomMotionPresetKeyframe[];
 }
 
-export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan' | 'mask' | 'freeform_draw';
+export type ToolType = 'select' | 'move' | 'rotate' | 'scale' | 'pan' | 'mask' | 'freeform_draw' | 'shape_create';
 
 export interface AnimationProject {
   name: string;

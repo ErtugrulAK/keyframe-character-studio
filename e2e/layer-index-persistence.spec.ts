@@ -2,6 +2,15 @@ import { test, expect } from '@playwright/test';
 
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
+async function createShapeByDrag(page: import('@playwright/test').Page, name: string, offsetX = 0): Promise<void> {
+  await page.getByRole('button', { name, exact: true }).click();
+  const box = await page.locator('.stage-canvas-container').boundingBox();
+  if (!box) throw new Error('Canvas bounds unavailable');
+  await page.mouse.move(box.x + 360 + offsetX, box.y + 280);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 280 + offsetX, box.y + 200);
+  await page.mouse.up();
+}
 test('authored layer index survives new layers, template switching, autosave, and reload', async ({ page }) => {
   test.setTimeout(60000);
   await page.goto('/');
@@ -9,10 +18,9 @@ test('authored layer index survives new layers, template switching, autosave, an
   await page.reload();
 
   await page.getByTitle('Vector Shapes & Graphic Elements').click();
-  for (const shape of ['Rectangle', 'Circle', 'Triangle']) {
-    await page.getByRole('button', { name: shape, exact: true }).click();
+  for (const [index, shape] of ['Rectangle', 'Circle', 'Triangle'].entries()) {
+    await createShapeByDrag(page, shape, (index - 1) * 80);
   }
-
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
   await page.getByRole('button', { name: 'Bring Forward (+1)', exact: true }).click();
   await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
@@ -21,9 +29,8 @@ test('authored layer index survives new layers, template switching, autosave, an
   await expect(page.getByTitle('Redo')).toBeEnabled();
   await page.getByTitle('Redo').click();
   await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
-
+  await createShapeByDrag(page, 'Square', 120);
   // Adding a new shape used to silently reindex every existing part.
-  await page.getByRole('button', { name: 'Square', exact: true }).click();
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
   await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
 

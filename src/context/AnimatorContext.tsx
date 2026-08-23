@@ -66,6 +66,10 @@ interface AnimatorContextType {
   setSelectedKeyframeId: (id: string | null) => void;
   activeTool: ToolType;
   setActiveTool: (tool: ToolType) => void;
+  pendingShapeType: BodyPartType | null;
+  pendingShapeName: string | null;
+  armShapeCreation: (type: BodyPartType, name: string) => void;
+  clearShapeCreation: () => void;
 
   tracks: Track[];
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
@@ -293,6 +297,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const {
     activeTool,
     setActiveTool,
+    pendingShapeType,
+    pendingShapeName,
+    armShapeCreation,
+    clearShapeCreation,
     addCustomPart,
   } = useToolbar({
     tracks,
@@ -387,6 +395,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     deleteSelectedKeyframe,
     deletePart,
     setActiveTool,
+    cancelShapeCreation: pendingShapeType ? clearShapeCreation : undefined,
   });
 
   const { getComputedTransform } = useMath({
@@ -508,6 +517,10 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setSelectedKeyframeId,
         activeTool,
         setActiveTool,
+        pendingShapeType,
+        pendingShapeName,
+        armShapeCreation,
+        clearShapeCreation,
         isScaleLocked,
         setIsScaleLocked,
         tracks,

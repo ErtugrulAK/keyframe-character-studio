@@ -1,11 +1,84 @@
-import type { CharacterPart, Transform } from '../types/animator';
+import type { BodyPartType, CharacterPart, Transform } from '../types/animator';
 import { getPartBounds } from './bounds';
-
+import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
 /** Pure viewport / canvas math for the Stage canvas. */
 export const CANVAS_CENTER_X = 300;
 export const CANVAS_CENTER_Y = 240;
 
 export const clampZoom = (zoom: number): number => Math.min(3, Math.max(0.3, zoom));
+
+export interface ShapeCreationBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+}
+
+export interface ShapeCreationPlacement {
+  x: number;
+  y: number;
+  scaleX: number;
+  scaleY: number;
+}
+
+export const getShapeCreationBounds = (
+  start: { x: number; y: number },
+  current: { x: number; y: number },
+): ShapeCreationBounds => {
+  const minX = Math.min(start.x, current.x);
+  const minY = Math.min(start.y, current.y);
+  const maxX = Math.max(start.x, current.x);
+  const maxY = Math.max(start.y, current.y);
+  return {
+    minX,
+    minY,
+    maxX,
+    maxY,
+    width: maxX - minX,
+    height: maxY - minY,
+    centerX: (minX + maxX) / 2,
+    centerY: (minY + maxY) / 2,
+  };
+};
+
+const getGeometryBounds = (geometry: ShapeGeometry): { minX: number; minY: number; maxX: number; maxY: number } => {
+  if (geometry.kind === 'rect') {
+    return { minX: geometry.x, minY: geometry.y, maxX: geometry.x + geometry.width, maxY: geometry.y + geometry.height };
+  }
+  if (geometry.kind === 'circle') {
+    return { minX: -geometry.r, minY: -geometry.r, maxX: geometry.r, maxY: geometry.r };
+  }
+  const xs = geometry.points.map((point) => point.x);
+  const ys = geometry.points.map((point) => point.y);
+  return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+};
+
+export const getShapeCreationPlacement = (
+  type: BodyPartType,
+  bounds: ShapeCreationBounds,
+  canvasCenterX: number = CANVAS_CENTER_X,
+  canvasCenterY: number = CANVAS_CENTER_Y,
+): ShapeCreationPlacement | null => {
+  const geometry = getShapeGeometry(type);
+  if (!geometry) return null;
+  const local = getGeometryBounds(geometry);
+  const canonicalWidth = Math.max(0.001, local.maxX - local.minX);
+  const canonicalHeight = Math.max(0.001, local.maxY - local.minY);
+  const scaleX = bounds.width / canonicalWidth;
+  const scaleY = bounds.height / canonicalHeight;
+  const localCenterX = (local.minX + local.maxX) / 2;
+  const localCenterY = (local.minY + local.maxY) / 2;
+  return {
+    x: bounds.centerX - canvasCenterX - localCenterX * scaleX,
+    y: bounds.centerY - canvasCenterY - localCenterY * scaleY,
+    scaleX,
+    scaleY,
+  };
+};
 
 export interface CursorAnchoredViewportInput {
   rect: { left: number; top: number; width: number; height: number };

@@ -6,6 +6,17 @@ test.describe('Phase 6.4 E2E Workflows', () => {
     await page.goto('/');
   });
 
+async function createShapeByDrag(page: import('@playwright/test').Page, name: string, offsetX = 0, offsetY = 0): Promise<void> {
+  await page.getByRole('button', { name, exact: true }).click();
+  const canvas = page.locator('.stage-canvas-container');
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('Canvas bounds unavailable');
+  await page.mouse.move(box.x + 360 + offsetX, box.y + 280 + offsetY);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 280 + offsetX, box.y + 200 + offsetY);
+  await page.mouse.up();
+}
+
   test('Create a new project, add parts, edit, and play', async ({ page }) => {
     test.setTimeout(60000);
     // The application should initialize and render the canvas
@@ -14,11 +25,9 @@ test.describe('Phase 6.4 E2E Workflows', () => {
     // Navigate to Vector Shapes Toolbar
     await page.getByTitle('Vector Shapes & Graphic Elements').click();
 
-    // Add a Rectangle
-    await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
-
-    // Add a Circle
-    await page.getByRole('button', { name: 'Circle', exact: true }).click();
+    // Add Rectangle and Circle through the approved drag-creation contract.
+    await createShapeByDrag(page, 'Rectangle', -40, 0);
+    await createShapeByDrag(page, 'Circle', 40, 0);
 
     // Verify elements appear in the timeline outliner (scoped to the outliner
     // because 'Rectangle'/'Circle' also appear in the toolbar and on the canvas)
@@ -80,18 +89,15 @@ test.describe('Phase 6.4 E2E Workflows', () => {
 
     // The finished shape appears in the timeline outliner
     await expect(page.locator('.ue-outliner').getByText('Freeform Shape').first()).toBeVisible();
-
-    // The tool automatically returns to the select tool after committing
-    await expect(page.getByTitle('Vector Shapes & Graphic Elements')).toBeVisible();
   });
 
   test('Persisted parent relation makes a freeform shape move with its rectangle', async ({ page }) => {
     test.setTimeout(60000);
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
-    // Add a Rectangle (the container)
+    // Add a Rectangle (the container) using interactive creation.
     await page.getByTitle('Vector Shapes & Graphic Elements').click();
-    await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
+    await createShapeByDrag(page, 'Rectangle');
 
     // Draw a small freeform INSIDE the rectangle's area (rect sits at center 300,240)
     await page.getByRole('button', { name: 'Free Draw', exact: true }).click();

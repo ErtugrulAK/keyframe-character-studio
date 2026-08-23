@@ -3,13 +3,14 @@ import { useAnimator } from '../../context/AnimatorContext';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
-import { clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee } from '../../utils/viewportMath';
+import { clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeFreeformPoints } from '../../utils/freeform';
 import { worldToContainerLocal } from '../../utils/containerMath';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
+import { ShapeCreationPreview } from './ShapeCreationPreview';
 import { SelectionGizmo } from './SelectionGizmo';
 import { StagePartLayers } from './StagePartLayers';
 import { Sparkles } from 'lucide-react';
@@ -26,10 +27,13 @@ export const StageCanvas: React.FC = () => {
     getComputedTransform,
     updateCurrentTransform,
     activeTool,
-    showGrid,
-    setShowGrid,
+    pendingShapeType,
+    pendingShapeName,
+    clearShapeCreation,
     addCustomPart,
     updatePartMedia,
+    showGrid,
+    setShowGrid,
     projectResolution,
     totalFrames,
     appMode,
@@ -73,8 +77,10 @@ export const StageCanvas: React.FC = () => {
   }, [appMode]);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'child_frame_scale' | 'child_frame_rotate' | null>(null);
-  const [marqueeRect, setMarqueeRect] = useState<{ x: number, y: number, w: number, h: number } | null>(null);
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'shape_create' | 'child_frame_scale' | 'child_frame_rotate' | null>(null);
+  const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [shapeCreationStart, setShapeCreationStart] = useState<{ clientX: number; clientY: number; svgX: number; svgY: number } | null>(null);
+  const [shapeCreationPreview, setShapeCreationPreview] = useState<{ type: NonNullable<typeof pendingShapeType>; bounds: ReturnType<typeof getShapeCreationBounds> } | null>(null);
   const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number }>({
     x: 0,
     y: 0,
@@ -137,6 +143,13 @@ export const StageCanvas: React.FC = () => {
     }, [setActiveTool, showToast]),
   });
 
+  useEffect(() => {
+    if (activeTool !== 'shape_create' && (shapeCreationStart || shapeCreationPreview)) {
+      setShapeCreationStart(null);
+      setShapeCreationPreview(null);
+    }
+  }, [activeTool, shapeCreationStart, shapeCreationPreview]);
+
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
     if (appMode === 'broadcast' || activeTool !== 'select' || e.button !== 0) return;
     e.stopPropagation();
@@ -169,6 +182,22 @@ export const StageCanvas: React.FC = () => {
       e.preventDefault();
       e.stopPropagation();
       freeform.beginDraw(e.clientX, e.clientY);
+      return;
+    }
+    if (activeTool === 'shape_create' && appMode !== 'broadcast' && pendingShapeType && e.button === 0) {
+      const target = e.target as HTMLElement;
+      const isCanvasTarget = target === containerRef.current
+        || target.tagName === 'svg'
+        || target.classList.contains('canvas-bg')
+        || target.classList.contains('focus-spotlight-dimmer');
+      if (!isCanvasTarget) return;
+      const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(true);
+      setDragMode('shape_create');
+      setShapeCreationStart({ clientX: e.clientX, clientY: e.clientY, svgX, svgY });
+      setShapeCreationPreview(null);
       return;
     }
 
@@ -287,6 +316,19 @@ export const StageCanvas: React.FC = () => {
         const w = Math.abs(svgX - dragStart.x);
         const h = Math.abs(svgY - dragStart.y);
         setMarqueeRect({ x: minX, y: minY, w, h });
+        return;
+      }
+      if (dragMode === 'shape_create' && shapeCreationStart && pendingShapeType) {
+        const distance = Math.hypot(e.clientX - shapeCreationStart.clientX, e.clientY - shapeCreationStart.clientY);
+        if (distance >= 4) {
+          setShapeCreationPreview({
+            type: pendingShapeType,
+            bounds: getShapeCreationBounds(
+              { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },
+              { x: svgX, y: svgY },
+            ),
+          });
+        }
         return;
       }
 
@@ -536,7 +578,20 @@ export const StageCanvas: React.FC = () => {
     [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, zoomLevel]
   );
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((commitShape: boolean = true) => {
+    if (dragMode === 'shape_create') {
+      if (commitShape && shapeCreationPreview && pendingShapeType && pendingShapeName) {
+        const placement = getShapeCreationPlacement(pendingShapeType, shapeCreationPreview.bounds);
+        if (placement) {
+          startBatchInteraction();
+          addCustomPart(pendingShapeType, pendingShapeName, { baseTransform: { ...placement, rotation: 0, opacity: 1 } });
+        }
+      }
+      clearShapeCreation();
+      setShapeCreationStart(null);
+      setShapeCreationPreview(null);
+    }
+
     if (dragMode === 'marquee' && marqueeRect) {
       const selected = getPartsInMarquee(
         characterParts,
@@ -557,22 +612,25 @@ export const StageCanvas: React.FC = () => {
     setDragMode(null);
     setMarqueeRect(null);
     setSnapLines([]);
-  }, [dragMode, marqueeRect, characterParts, currentFrame, handleSelectPart, getComputedTransform, tracks, isDragging, endBatchInteraction]);
+  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, handleSelectPart, getComputedTransform, tracks, isDragging, endBatchInteraction]);
+  const handlePointerUp = useCallback(() => handleMouseUp(), [handleMouseUp]);
+
+  const handlePointerCancel = useCallback(() => handleMouseUp(false), [handleMouseUp]);
 
   useEffect(() => {
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-      window.addEventListener('pointerup', handleMouseUp);
-      window.addEventListener('pointercancel', handleMouseUp);
+      window.addEventListener('mouseup', handlePointerUp);
+      window.addEventListener('pointerup', handlePointerUp);
+      window.addEventListener('pointercancel', handlePointerCancel);
     }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-      window.removeEventListener('pointerup', handleMouseUp);
-      window.removeEventListener('pointercancel', handleMouseUp);
+      window.removeEventListener('mouseup', handlePointerUp);
+      window.removeEventListener('pointerup', handlePointerUp);
+      window.removeEventListener('pointercancel', handlePointerCancel);
     };
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, handleMouseMove, handlePointerUp, handlePointerCancel]);
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
@@ -853,6 +911,14 @@ export const StageCanvas: React.FC = () => {
                 </g>
               )}
 
+              {shapeCreationPreview && pendingShapeType && (
+                <ShapeCreationPreview
+                  type={pendingShapeType}
+                  bounds={shapeCreationPreview.bounds}
+                  outputOrigin={EDITOR_CAMERA_CENTER}
+                  zoom={zoomLevel}
+                />
+              )}
               {/* Snap Lines */}
               {snapLines.map((line, i) => (
                 <line

@@ -39,6 +39,23 @@ describe('useToolbar Hook', () => {
     expect(result.current.activeTool).toBe('move');
   });
 
+  it('arms fixed shape creation without creating an authored part', () => {
+    const { result } = renderHook(() => useToolbar({
+      tracks: mockTracks,
+      setTracks: mockSetTracks,
+      characterParts: mockCharacterParts,
+      setCharacterParts: mockSetCharacterParts,
+      setSelectedPartId: mockSetSelectedPartId,
+    }));
+
+    act(() => result.current.armShapeCreation('custom_rect', 'Rectangle'));
+
+    expect(result.current.activeTool).toBe('shape_create');
+    expect(result.current.pendingShapeType).toBe('custom_rect');
+    expect(result.current.pendingShapeName).toBe('Rectangle');
+    expect(mockSetTracks).not.toHaveBeenCalled();
+    expect(mockSetCharacterParts).not.toHaveBeenCalled();
+  });
   it('adds a custom part and selects it', () => {
     const { result } = renderHook(() => useToolbar({
       tracks: mockTracks,

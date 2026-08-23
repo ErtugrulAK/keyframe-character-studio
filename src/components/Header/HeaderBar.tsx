@@ -8,6 +8,9 @@ import {
   Plus,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
+import { compileOGrafPackage } from '../../ograf/packageCompiler';
+import { createOGrafBrowserZip } from '../../ograf/browserZip';
+import type { SceneData } from '../../types/composition';
 import './HeaderBar.css';
 
 export const HeaderBar: React.FC = () => {
@@ -33,6 +36,7 @@ export const HeaderBar: React.FC = () => {
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
   const [editingTmplName, setEditingTmplName] = useState<string>('');
+  const [isOGrafExporting, setIsOGrafExporting] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,6 +69,40 @@ export const HeaderBar: React.FC = () => {
     a.click();
     URL.revokeObjectURL(url);
     showToast(`Exported "${cleanFileName}"`, 'success');
+  };
+
+  const handleOGrafExport = async () => {
+    if (isOGrafExporting) return;
+    setIsOGrafExporting(true);
+    try {
+      const sceneData = JSON.parse(exportProject()) as SceneData;
+      const plan = compileOGrafPackage(sceneData);
+      const errors = plan.diagnostics.filter((diagnostic) => diagnostic.severity === 'ERROR');
+      if (errors.length > 0) {
+        errors.forEach((diagnostic) => {
+          const location = diagnostic.layerName ? ` [${diagnostic.layerName}]` : '';
+          showToast(`${diagnostic.message}${location}`, 'error');
+        });
+        return;
+      }
+
+      const archive = await createOGrafBrowserZip(plan);
+      const blob = new Blob([new Uint8Array(archive.bytes).buffer as ArrayBuffer], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = archive.fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      showToast(`Exported "${archive.fileName}"`, 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unexpected OGraf export failure.';
+      showToast(`Could not export OGraf: ${message}`, 'error');
+    } finally {
+      setIsOGrafExporting(false);
+    }
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -249,6 +287,16 @@ export const HeaderBar: React.FC = () => {
             <span>Import</span>
           </button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportFile} />
+
+          <button
+            className="header-action-btn export-btn"
+            onClick={handleOGrafExport}
+            disabled={isOGrafExporting}
+            title="Export as OGraf"
+          >
+            <Download size={14} />
+            <span>{isOGrafExporting ? 'Exporting OGraf…' : 'Export as OGraf'}</span>
+          </button>
 
           <button className="header-action-btn export-btn" onClick={handleExport} title="Export Video / Animation Sequence">
             <Download size={14} />

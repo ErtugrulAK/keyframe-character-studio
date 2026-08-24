@@ -41,6 +41,18 @@ describe('native SVG shape appearance rendering', () => {
     expect(render('custom_rect', { strokeWidth: 0 })).toContain('stroke-width="0"');
   });
 
+  it('applies alpha to legacy color-bearing banner paint', () => {
+    const html = renderToString(renderShapePart({
+      part: makePart('custom_banner', { fillOpacity: 0.4, strokeOpacity: 0.6 }),
+      fill: '#ff0000',
+      stroke: '#101218',
+      isSelected: false,
+      isGhost: false,
+    }));
+    expect(html).toContain('fill-opacity="0.4"');
+    expect(html).toContain('stroke-opacity="0.6"');
+  });
+
   it.each(['custom_circle', 'custom_triangle', 'custom_star', 'custom_diamond', 'custom_parallelogram', 'custom_capsule'] as BodyPartType[])('uses native appearance for %s', (type) => {
     const html = render(type);
     expect(html).toContain('stroke-width="8"');

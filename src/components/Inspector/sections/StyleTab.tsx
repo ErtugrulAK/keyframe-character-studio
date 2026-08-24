@@ -31,8 +31,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       <StyleColorSection
         selectedPart={selectedPart}
         onPartColorChange={handlePartColorChange}
+        onPartPropChange={handlePartPropChange}
       />
-
       {isShapeAppearanceEligible(selectedPart.type) && (
         <StyleAppearanceSection
           selectedPart={selectedPart}

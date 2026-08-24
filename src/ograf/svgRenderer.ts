@@ -99,7 +99,9 @@ function renderShape(layer: EvaluatedLayer): string {
 function renderText(layer: EvaluatedLayer): string {
   const content = layer.content;
   const text = content.textValue || 'TEXT';
-  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(content.fillColor || 'none')}" stroke="${escapeXml(content.strokeColor || 'none')}" stroke-width="0.5" font-size="${content.fontSize || 24}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}" vector-effect="non-scaling-stroke">${escapeXml(text)}</text>`;
+  const fillOpacity = content.fillOpacity === undefined ? 1 : content.fillOpacity;
+  const strokeOpacity = content.strokeOpacity === undefined ? 1 : content.strokeOpacity;
+  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(content.fillColor || 'none')}" fill-opacity="${fillOpacity}" stroke="${escapeXml(content.strokeColor || 'none')}" stroke-opacity="${strokeOpacity}" stroke-width="0.5" font-size="${content.fontSize || 24}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}" vector-effect="non-scaling-stroke">${escapeXml(text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions): string {

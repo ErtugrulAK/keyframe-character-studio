@@ -122,25 +122,38 @@ test.describe('modern stroke-aware editor bounds', () => {
     }
   });
 
-  test('Appearance authoring persists and undo restores the previous width', async ({ page }) => {
+  test('Appearance authoring persists RGBA alpha and undo restores the previous width', async ({ page }) => {
     await seed(page, [layer('rect', 'Authoring Rectangle', 'custom_rect', {
       fillEnabled: true, fillOpacity: 1, strokeEnabled: true, strokeColor: '#101218', strokeWidth: 1.5, strokeOpacity: 1,
     })]);
     await page.locator('.actor-node', { hasText: 'Authoring Rectangle' }).click();
     await page.getByText('Style', { exact: true }).click();
+    const details = page.locator('.details-container');
+    await expect(details.getByText('OPACITY', { exact: true })).toHaveCount(0);
     await page.getByLabel('Fill Enabled').uncheck();
     await page.locator('.appearance-color-field .color-hex-input').nth(1).fill('#ffffff');
+    await page.getByLabel('Fill Alpha').fill('50');
+    await page.getByLabel('Fill Alpha').press('Tab');
+    await page.getByLabel('Stroke Alpha').fill('60');
+    await page.getByLabel('Stroke Alpha').press('Tab');
     await page.getByLabel('Stroke Width').fill('8');
     await page.getByLabel('Stroke Width').press('Tab');
     await page.locator('.autosave-status-badge').click();
 
     await expect.poll(async () => page.evaluate((key) => {
       const layerData = JSON.parse(localStorage.getItem(key) || '{}').layers?.[0];
-      return [layerData?.fillEnabled, layerData?.strokeColor, layerData?.strokeWidth];
-    }, STORAGE_KEY)).toEqual([false, '#ffffff', 8]);
+      return [layerData?.fillEnabled, layerData?.fillOpacity, layerData?.strokeOpacity, layerData?.strokeColor, layerData?.strokeWidth];
+    }, STORAGE_KEY)).toEqual([false, 0.5, 0.6, '#ffffff', 8]);
 
     await page.keyboard.press('Control+Z');
     await page.locator('.autosave-status-badge').click();
-    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}').layers?.[0]?.strokeWidth, STORAGE_KEY)).toBe(1.5);
+    await expect.poll(async () => page.evaluate((key) => {
+      const layerData = JSON.parse(localStorage.getItem(key) || '{}').layers?.[0];
+      return [layerData?.strokeOpacity, layerData?.strokeWidth];
+    }, STORAGE_KEY)).toEqual([0.6, 1.5]);
+
+    await page.keyboard.press('Control+Z');
+    await page.locator('.autosave-status-badge').click();
+    await expect.poll(async () => page.evaluate((key) => JSON.parse(localStorage.getItem(key) || '{}').layers?.[0]?.strokeOpacity, STORAGE_KEY)).toBe(1);
   });
 });

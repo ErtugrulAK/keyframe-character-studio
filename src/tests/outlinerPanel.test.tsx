@@ -193,4 +193,18 @@ describe('OutlinerPanel — M22 matte relationship indicator', () => {
     expect(container.querySelectorAll('.col-eye').length).toBe(2);
     expect(screen.getAllByLabelText(/Matte source/).length).toBe(1);
   });
+
+  it('16. renders parent-child parts as a nested tree without a second selection authority', () => {
+    animatorCtx.characterParts = [
+      part('parent', 'Parent', 'custom_box'),
+      { ...part('child', 'Child', 'custom_image'), parentId: 'parent' },
+    ];
+    animatorCtx.selectedPartId = 'child';
+    animatorCtx.selectedPartIds = ['child'];
+    const { container } = renderPanel();
+    const rows = [...container.querySelectorAll<HTMLElement>('.actor-node')];
+    expect(rows.map((row) => row.dataset.treeDepth)).toEqual(['0', '1']);
+    expect(rows[1].dataset.parentId).toBe('parent');
+    expect(rows[1].classList.contains('selected')).toBe(true);
+  });
 });

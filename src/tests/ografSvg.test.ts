@@ -135,9 +135,9 @@ describe('OGraf standalone SVG Phase 2A', () => {
     expect(svg).toContain('stroke-width="8"');
   });
 
-  test('renders text and package-relative local image references', () => {
+  test('renders text and package-relative local image references with text alpha', () => {
     const scene = makeScene([
-      makeLayer({ id: 'text', type: 'custom_text', textValue: '<Hello>', fontSize: 30, fontFamily: 'Test Font' }),
+      makeLayer({ id: 'text', type: 'custom_text', textValue: '<Hello>', fontSize: 30, fontFamily: 'Test Font', fillOpacity: 0.4, strokeOpacity: 0.6 }),
       makeLayer({ id: 'image', type: 'custom_image', imageUrl: 'assets/logo.png', width: 80, height: 40, zIndex: 1 }),
     ]);
     const svg = renderOGrafSvg(evaluateOGrafScene(scene, 0), {
@@ -146,6 +146,8 @@ describe('OGraf standalone SVG Phase 2A', () => {
 
     expect(svg).toContain('&lt;Hello&gt;');
     expect(svg).toContain('font-family="Test Font"');
+    expect(svg).toContain('fill-opacity="0.4"');
+    expect(svg).toContain('stroke-opacity="0.6"');
     expect(svg).toContain('href="assets/images/logo.png"');
   });
 

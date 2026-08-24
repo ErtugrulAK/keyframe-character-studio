@@ -1,12 +1,12 @@
 import { test, expect, type Page } from '@playwright/test';
 
 /**
- * M29 STEP 29B — REAL USER E2E: Selected Keyframe section (TransformTab).
+ * M29 STEP 29B — REAL USER E2E: Selected Keyframe section in the unified Edit surface.
  *
- * Real UI flow: click a keyframe diamond in the timeline → the Transform tab
- * shows "SELECTED KEYFRAME @ F" with ONLY the channels that hold a keyframe
- * at F (raw stored values) → edit a value through SmartNumberInput (Enter)
- * → the existing updateCurrentTransform pipeline updates exactly that
+ * Real UI flow: click a keyframe diamond in the timeline → the unified Edit
+ * surface shows "SELECTED KEYFRAME @ F" with ONLY the channels that hold a
+ * keyframe at F (raw stored values) → edit a value through SmartNumberInput
+ * (Enter) → the existing updateCurrentTransform pipeline updates exactly that
  * keyframe, preserving easing/template/bezier and other channels; one Ctrl+Z
  * restores the previous value.
  */
@@ -65,11 +65,9 @@ async function selectPart(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(250);
 }
 
-async function openTransformTab(page: Page): Promise<void> {
-  const tab = page.locator('.tab-btn', { hasText: /^Transform/ }).first();
-  await tab.waitFor({ state: 'visible', timeout: 10000 });
-  await tab.click();
-  await page.waitForTimeout(250);
+async function openEditInspector(page: Page): Promise<void> {
+  await page.locator('.details-tabs-bar').getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(page.locator('.details-body .inspector-subsection-heading', { hasText: 'Transform' })).toBeVisible();
 }
 
 /** Click the FIRST keyframe diamond (playhead jumps to its frame). */
@@ -118,7 +116,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page); // playhead → 20
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeVisible();
     await expect(page.locator('input[aria-label="Keyframe Location X"]')).toBeVisible();
@@ -135,7 +133,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     const xInput = page.locator('input[aria-label="Keyframe Location X"]');
     await xInput.click();
@@ -162,7 +160,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     const rInput = page.locator('input[aria-label="Keyframe Rotation"]');
     await rInput.click();
@@ -184,7 +182,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, [makeLayer('a', 'Part A')], tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     const opInput = page.locator('input[aria-label="Keyframe Opacity"]');
     await opInput.click();
@@ -206,7 +204,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, [makeLayer('a', 'Part A')], tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     // The shared scale lock defaults ON. Explicitly unlock through the real UI
     // before asserting the free-axis editing contract.
@@ -228,7 +226,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     const xInput = page.locator('input[aria-label="Keyframe Location X"]');
     await xInput.click();
@@ -248,7 +246,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     const xInput = page.locator('input[aria-label="Keyframe Location X"]');
     await xInput.click();
@@ -268,7 +266,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     const { layers, tracks } = xRotTracks();
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
-    await openTransformTab(page); // no keyframe clicked
+    await openEditInspector(page); // no keyframe clicked
     expect(await page.getByText('SELECTED KEYFRAME @ FRAME', { exact: false }).count()).toBe(0);
     // base transform controls still present and usable
     const baseX = page.locator('.form-field-group', { hasText: 'POS X' }).locator('input').first();
@@ -280,7 +278,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
     await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeVisible();
 
     // delete through the existing keyframe menu
@@ -307,12 +305,12 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
 
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
     await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeVisible();
 
     // switch to B (no selection on B) → A's section must not show
     await selectPart(page, 'Part B');
-    await openTransformTab(page);
+    await openEditInspector(page);
     expect(await page.getByText('SELECTED KEYFRAME @ FRAME 20').count()).toBe(0);
   });
 
@@ -321,7 +319,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     const xInput = page.locator('input[aria-label="Keyframe Location X"]');
     await xInput.click();
@@ -365,7 +363,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
         break;
       }
     }
-    await openTransformTab(page);
+    await openEditInspector(page);
     await expect(page.getByText('SELECTED KEYFRAME @ FRAME 30')).toBeVisible();
     const xInput = page.locator('input[aria-label="Keyframe Location X"]');
     await xInput.click();
@@ -387,7 +385,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, [A], tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     const xInput = page.locator('input[aria-label="Keyframe Location X"]');
     await xInput.click();
@@ -411,7 +409,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
 
     await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeVisible();
     const xInput = page.locator('input[aria-label="Keyframe Location X"]');
@@ -428,7 +426,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     expect(x.find((k) => k.frame === 20)!.value).toBe(99);
     await selectPart(page, 'Part A');
     await clickFirstKeyframe(page);
-    await openTransformTab(page);
+    await openEditInspector(page);
     await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeVisible();
     await expect(xInput).toHaveValue('99');
   });
@@ -441,14 +439,14 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     const diamondCount = await page.locator('.keyframe-diamond').count();
     if (diamondCount > 0) {
       await clickFirstKeyframe(page);
-      await openTransformTab(page);
+      await openEditInspector(page);
       // Import migrates legacy composite keyframes into canonical channels, so
       // the current M8/channel authority intentionally exposes the section.
       await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeVisible();
       await expect(page.locator('input[aria-label="Keyframe Location X"]')).toHaveValue('55');
     } else {
       // import may drop legacy-only keyframes (pre-existing behavior) — safe either way
-      await openTransformTab(page);
+      await openEditInspector(page);
       expect(await page.getByText('SELECTED KEYFRAME @ FRAME').count()).toBe(0);
     }
   });

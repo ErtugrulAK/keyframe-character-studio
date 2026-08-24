@@ -13,8 +13,6 @@ import {
   Copy,
   Trash2,
   Activity,
-  Palette,
-  Diamond,
   CopyPlus,
 } from 'lucide-react';
 
@@ -48,7 +46,7 @@ export const DetailsPanel: React.FC = () => {
     coordinateSystem,
   } = useAnimator();
 
-  const [activeTabSection, setActiveTabSection] = useState<'transform' | 'style' | 'keyframes' | 'duplicate'>('transform');
+  const [activeTabSection, setActiveTabSection] = useState<'edit' | 'duplicate'>('edit');
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -160,25 +158,11 @@ export const DetailsPanel: React.FC = () => {
       {selectedPart && (
         <div className="details-tabs-bar">
           <button
-            className={`tab-btn ${activeTabSection === 'transform' ? 'active' : ''}`}
-            onClick={() => setActiveTabSection('transform')}
+            className={`tab-btn ${activeTabSection === 'edit' ? 'active' : ''}`}
+            onClick={() => setActiveTabSection('edit')}
           >
             <Activity size={12} />
-            <span>Transform</span>
-          </button>
-          <button
-            className={`tab-btn ${activeTabSection === 'style' ? 'active' : ''}`}
-            onClick={() => setActiveTabSection('style')}
-          >
-            <Palette size={12} />
-            <span>Style</span>
-          </button>
-          <button
-            className={`tab-btn ${activeTabSection === 'keyframes' ? 'active' : ''}`}
-            onClick={() => setActiveTabSection('keyframes')}
-          >
-            <Diamond size={12} className="text-teal" />
-            <span>Keyframes</span>
+            <span>Edit</span>
           </button>
           <button
             className={`tab-btn ${activeTabSection === 'duplicate' ? 'active' : ''}`}
@@ -193,54 +177,61 @@ export const DetailsPanel: React.FC = () => {
       {/* 4. Property Section Body */}
       {selectedPart && transform && (
         <div className="details-body">
-          {activeTabSection === 'transform' && (
-            <TransformTab
-              selectedPart={selectedPart}
-              transform={transform}
-              coordinateSystem={coordinateSystem}
-              currentFrame={currentFrame}
-              updateCurrentTransform={updateCurrentTransform}
-              updateCurrentPropertyChannel={updateCurrentPropertyChannel}
-              handlePartPropChange={handlePartPropChange}
-              handleZIndexChange={handleZIndexChange}
-              customPresets={customPresets}
-              onSavePreset={savePreset}
-              onUpdatePreset={updatePreset}
-              onDeletePreset={deletePreset}
-              onImportPresets={importPresets}
-              showToast={showToast}
-              onCopyAnimation={handleCopyAnimation}
-              onPasteAnimation={handlePasteAnimation}
-              onClearAnimation={handleClearAnimation}
-              clipboardSourceId={clipboardData?.part.id ?? null}
-              track={tracks.find((t) => t.partId === selectedPartId) ?? null}
-              selectedKeyframeId={selectedKeyframeId}
-              activeTemplateId={activeTemplateId}
-              isScaleLocked={isScaleLocked}
-            />
+          {activeTabSection === 'edit' && (
+            <>
+              <div className="inspector-subsection-heading">
+                <Activity size={12} />
+                <span>Transform</span>
+              </div>
+              <TransformTab
+                selectedPart={selectedPart}
+                transform={transform}
+                coordinateSystem={coordinateSystem}
+                currentFrame={currentFrame}
+                updateCurrentTransform={updateCurrentTransform}
+                updateCurrentPropertyChannel={updateCurrentPropertyChannel}
+                handlePartPropChange={handlePartPropChange}
+                handleZIndexChange={handleZIndexChange}
+                customPresets={customPresets}
+                onSavePreset={savePreset}
+                onUpdatePreset={updatePreset}
+                onDeletePreset={deletePreset}
+                onImportPresets={importPresets}
+                showToast={showToast}
+                onCopyAnimation={handleCopyAnimation}
+                onPasteAnimation={handlePasteAnimation}
+                onClearAnimation={handleClearAnimation}
+                clipboardSourceId={clipboardData?.part.id ?? null}
+                track={tracks.find((t) => t.partId === selectedPartId) ?? null}
+                selectedKeyframeId={selectedKeyframeId}
+                activeTemplateId={activeTemplateId}
+                isScaleLocked={isScaleLocked}
+              />
+
+              <div className="inspector-subsection-heading">
+                <Activity size={12} />
+                <span>Style</span>
+              </div>
+              <StyleTab
+                selectedPart={selectedPart}
+                characterParts={characterParts}
+                handlePartPropChange={handlePartPropChange}
+                handlePartColorChange={handlePartColorChange}
+                handleZIndexChange={handleZIndexChange}
+              />
+
+              <div className="inspector-subsection-heading">
+                <Activity size={12} />
+                <span>Animation</span>
+              </div>
+              <KeyframesTab selectedPart={selectedPart} />
+            </>
           )}
 
-          {activeTabSection === 'style' && (
-            <StyleTab
-              selectedPart={selectedPart}
-              characterParts={characterParts}
-              handlePartPropChange={handlePartPropChange}
-              handlePartColorChange={handlePartColorChange}
-              handleZIndexChange={handleZIndexChange}
-            />
-          )}
-
-          {activeTabSection === 'keyframes' && (
-            <KeyframesTab
-              selectedPart={selectedPart}
-            />
-          )}
-
-          {activeTabSection === 'duplicate' && (
-            <DuplicateTab />
-          )}
+          {activeTabSection === 'duplicate' && <DuplicateTab />}
         </div>
       )}
+
     </div>
   );
 };

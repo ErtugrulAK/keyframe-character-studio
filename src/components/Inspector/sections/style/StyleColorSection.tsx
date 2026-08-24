@@ -2,9 +2,9 @@ import React from 'react';
 import { Palette } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartHexInput } from '../../inputs/SmartHexInput';
+import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
 import { isShapeAppearanceEligible } from '../../../../utils/shapeAppearance';
-
 const COLOR_SWATCHES = [
   '#00d2ff', '#38bdf8', '#6366f1', '#a855f7', '#ec4899', '#f43f5e',
   '#ffb700', '#f59e0b', '#10b981', '#14b8a6', '#0f172a', '#ffffff',
@@ -13,9 +13,10 @@ const COLOR_SWATCHES = [
 interface StyleColorSectionProps {
   selectedPart: CharacterPart;
   onPartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
+  onPartPropChange: (key: 'fillOpacity' | 'strokeOpacity', value: number) => void;
 }
 
-export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPart, onPartColorChange }) => {
+export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPart, onPartColorChange, onPartPropChange }) => {
   if (isShapeAppearanceEligible(selectedPart.type)) return null;
   return (
     <StyleCard title="COLOR" icon={<Palette size={13} />}>
@@ -36,6 +37,19 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPa
               onChange={(val) => onPartColorChange('fillColor', val)}
             />
           </div>
+          <div className="appearance-field" style={{ marginTop: 6 }}>
+            <label className="appearance-field-label">FILL ALPHA</label>
+            <SmartNumberInput
+              ariaLabel="Fill Alpha"
+              value={selectedPart.fillOpacity ?? 1}
+              min={0}
+              max={1}
+              step={0.01}
+              displayScale={100}
+              precision={0}
+              onChange={(value) => onPartPropChange('fillOpacity', value)}
+            />
+          </div>
         </div>
 
         <div className="color-picker-card">
@@ -51,6 +65,19 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPa
               value={selectedPart.strokeColor || ''}
               fallback="#1e293b"
               onChange={(val) => onPartColorChange('strokeColor', val)}
+            />
+          </div>
+          <div className="appearance-field" style={{ marginTop: 6 }}>
+            <label className="appearance-field-label">STROKE ALPHA</label>
+            <SmartNumberInput
+              ariaLabel="Stroke Alpha"
+              value={selectedPart.strokeOpacity ?? 1}
+              min={0}
+              max={1}
+              step={0.01}
+              displayScale={100}
+              precision={0}
+              onChange={(value) => onPartPropChange('strokeOpacity', value)}
             />
           </div>
         </div>

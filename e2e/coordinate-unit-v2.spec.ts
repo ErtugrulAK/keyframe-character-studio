@@ -90,3 +90,40 @@ for (const [width, height] of [[1920, 1080], [1280, 720], [3840, 2160], [1080, 1
     expect(viewBox).toBe(`0 0 ${width} ${height}`);
   });
 }
+
+test('project resolution changes preserve imported image placement and dimensions', async ({ page }) => {
+  const data = scene('project-unit-center-v1', 300, -100);
+  data.layers[0] = {
+    ...data.layers[0],
+    type: 'custom_image',
+    imageUrl: 'photo.png',
+    width: 320,
+    height: 180,
+  };
+  await seed(page, data);
+
+  const before = await page.evaluate(() => {
+    const image = document.querySelector<SVGImageElement>('image[href="photo.png"]');
+    const group = image?.closest('g')?.parentElement;
+    return {
+      transform: group?.getAttribute('transform'),
+      width: image?.getAttribute('width'),
+      height: image?.getAttribute('height'),
+    };
+  });
+
+  await page.getByText('Project', { exact: true }).click();
+  await page.getByRole('button', { name: '1440p (16:9)' }).click();
+  await expect(page.getByText('1440p (16:9)', { exact: true })).toBeVisible();
+
+  const after = await page.evaluate(() => {
+    const image = document.querySelector<SVGImageElement>('image[href="photo.png"]');
+    const group = image?.closest('g')?.parentElement;
+    return {
+      transform: group?.getAttribute('transform'),
+      width: image?.getAttribute('width'),
+      height: image?.getAttribute('height'),
+    };
+  });
+  expect(after).toEqual(before);
+});

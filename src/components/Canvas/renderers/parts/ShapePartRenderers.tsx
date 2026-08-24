@@ -275,11 +275,11 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimP
             y={g.y}
             width={g.width}
             height={g.height}
-            rx={part.borderRadius ?? g.rx}
             fill={fill === 'none' || fill === 'transparent' ? 'rgba(0,0,0,0.001)' : fill}
+            fillOpacity={part.fillOpacity}
             stroke={stroke}
+            strokeOpacity={part.strokeOpacity}
             strokeWidth={isSelected ? 2 : 1.5}
-            vectorEffect="non-scaling-stroke"
             {...getShapeDashProps(renderPart, 420)}
           />
           <text
@@ -366,11 +366,11 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimP
             y={g.y}
             width={g.width}
             height={g.height}
-            rx={part.borderRadius ?? g.rx}
             fill={fill === 'none' || fill === 'transparent' ? 'rgba(0,0,0,0.001)' : fill}
+            fillOpacity={part.fillOpacity}
             stroke={stroke}
+            strokeOpacity={part.strokeOpacity}
             strokeWidth={isSelected ? 2 : 1.5}
-            vectorEffect="non-scaling-stroke"
             {...getShapeDashProps(renderPart, 560)}
           />
           <rect x={-80} y={-40} width={160} height={22} rx={6} fill="#0d0f14" opacity={0.7} style={{ pointerEvents: 'none' }} />

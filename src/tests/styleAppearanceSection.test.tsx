@@ -26,10 +26,15 @@ describe('StyleAppearanceSection', () => {
     expect(onChange).toHaveBeenCalledWith('strokeEnabled', true);
   });
 
-  it('keeps the old color card for excluded types', () => {
+  it('keeps the old color card for excluded types with alpha controls', () => {
     const onColorChange = vi.fn();
-    render(<StyleColorSection selectedPart={makePart('custom_banner')} onPartColorChange={onColorChange} />);
+    const onPropChange = vi.fn();
+    render(<StyleColorSection selectedPart={makePart('custom_banner')} onPartColorChange={onColorChange} onPartPropChange={onPropChange} />);
     expect(screen.getByText('COLOR')).toBeTruthy();
+    expect(screen.getByText('FILL ALPHA')).toBeTruthy();
+    expect(screen.getByText('STROKE ALPHA')).toBeTruthy();
     expect(screen.queryByText('APPEARANCE')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Fill Alpha'), { target: { value: '50' } });
+    expect(onPropChange).toHaveBeenCalledWith('fillOpacity', 0.5);
   });
 });

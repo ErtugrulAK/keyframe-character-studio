@@ -39,8 +39,8 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
       </label>
       <ColorControl label="COLOR" value={selectedPart.fillColor} fallback="#00d2ff" onChange={(value) => onPartPropChange('fillColor', value)} />
       <div className="appearance-field">
-        <label className="appearance-field-label" htmlFor="fill-opacity-input">OPACITY</label>
-        <SmartNumberInput ariaLabel="Fill Opacity" value={selectedPart.fillOpacity ?? 1} min={0} max={1} step={0.01} displayScale={100} precision={0} onChange={(value) => onPartPropChange('fillOpacity', value)} />
+        <label className="appearance-field-label" htmlFor="fill-alpha-input">ALPHA</label>
+        <SmartNumberInput ariaLabel="Fill Alpha" value={selectedPart.fillOpacity ?? 1} min={0} max={1} step={0.01} displayScale={100} precision={0} onChange={(value) => onPartPropChange('fillOpacity', value)} />
       </div>
     </div>
 
@@ -61,8 +61,8 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
           <SmartNumberInput ariaLabel="Stroke Width" value={selectedPart.strokeWidth ?? 1.5} min={0} max={100} step={0.5} precision={2} onChange={(value) => onPartPropChange('strokeWidth', value)} />
         </div>
         <div className="appearance-field">
-          <label className="appearance-field-label" htmlFor="stroke-opacity-input">OPACITY</label>
-          <SmartNumberInput ariaLabel="Stroke Opacity" value={selectedPart.strokeOpacity ?? 1} min={0} max={1} step={0.01} displayScale={100} precision={0} onChange={(value) => onPartPropChange('strokeOpacity', value)} />
+          <label className="appearance-field-label" htmlFor="stroke-alpha-input">ALPHA</label>
+          <SmartNumberInput ariaLabel="Stroke Alpha" value={selectedPart.strokeOpacity ?? 1} min={0} max={1} step={0.01} displayScale={100} precision={0} onChange={(value) => onPartPropChange('strokeOpacity', value)} />
         </div>
       </div>
       <div className="appearance-field" style={{ marginTop: 8 }}>

@@ -102,6 +102,14 @@ describe('OGraf Export V1 Phase 1', () => {
   ] as const)('rejects %s', (type, code) => {
     expect(errorCodes(makeScene([makeLayer({ type })]))).toContain(code);
   });
+  test('blocks Boolean groups instead of silently exporting stale geometry', () => {
+    const result = validateSceneForOGraf(makeScene([makeLayer({
+      booleanOperation: 'union',
+      booleanOperandIds: ['layer-1', 'layer-2'],
+    })]));
+    expect(result.canCompile).toBe(false);
+    expect(errorCodes(makeScene([makeLayer({ booleanOperation: 'union' })]))).toContain('OGRAF_UNSUPPORTED_BOOLEAN');
+  });
 
   test('rejects unsupported matte modes and non-deterministic animation', () => {
     const scene = makeScene([makeLayer({

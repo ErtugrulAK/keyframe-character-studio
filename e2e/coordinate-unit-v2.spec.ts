@@ -30,7 +30,6 @@ async function seed(page: Page, data: Record<string, unknown>) {
 test('project-unit inspector and persistence remain raw project units', async ({ page }) => {
   await seed(page, scene('project-unit-center-v1', 300, -100));
   await page.getByText('Coordinate Box', { exact: true }).first().click();
-  await page.getByText('Transform', { exact: true }).first().click();
 
   const positionCard = page.locator('.panel-card', { hasText: 'POSITION' }).first();
   const xInput = positionCard.locator('input[type="number"]').nth(0);

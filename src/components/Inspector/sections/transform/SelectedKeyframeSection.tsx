@@ -6,7 +6,7 @@ import { groupChannelKeyframesByFrame } from '../../../../utils/channelKeyframeG
 import { CHANNEL_META } from '../../../Timeline/timelineConstants';
 
 /**
- * M29 29A — SELECTED KEYFRAME SECTION (TransformTab).
+ * Selected-keyframe property editor used by the canonical timeline surface.
  *
  * Pure presentational layer over the EXISTING mutation pipeline: when a
  * keyframe is selected (and the playhead is still on its frame), show a

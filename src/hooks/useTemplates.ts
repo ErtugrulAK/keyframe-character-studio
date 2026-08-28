@@ -5,9 +5,7 @@ import { DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_CHARACTER_PARTS, DEFAULT_TRACKS } from '../utils/defaults';
 import { DEFAULT_SCENE_COORDINATE_SYSTEM } from '../utils/coordinateMigration';
 import {
-  cloneSequenceAnimation,
   createMotionTemplate,
-  createUniqueSequenceName,
   hasSequenceName,
   normalizeMotionTemplates,
   normalizeSequenceDuration,
@@ -155,20 +153,6 @@ export const useTemplates = ({
     }
   }, [activeTemplateId, motionTemplates, onSequenceDeleted, setTracks]);
 
-  const duplicateMotionTemplate = useCallback((sourceId: string) => {
-    const source = motionTemplates.find((template) => template.id === sourceId);
-    if (!source) return;
-
-    const duplicate = createMotionTemplate(
-      createUniqueSequenceName(`${source.name} Copy`, motionTemplates),
-      motionTemplates,
-      source.type,
-      source.durationFrames,
-    );
-    setMotionTemplates((prev) => [...prev, duplicate]);
-    setTracks((prevTracks) => cloneSequenceAnimation(prevTracks, sourceId, duplicate.id));
-    setActiveTemplateIdState(duplicate.id);
-  }, [motionTemplates, setTracks]);
 
   const updateMotionTemplateDuration = useCallback((id: string, durationFrames: number) => {
     const duration = normalizeSequenceDuration(durationFrames);
@@ -313,7 +297,6 @@ export const useTemplates = ({
     addMotionTemplate,
     renameMotionTemplate,
     deleteMotionTemplate,
-    duplicateMotionTemplate,
     updateMotionTemplateDuration,
     setActiveProjectTemplateId,
     addProjectTemplate,

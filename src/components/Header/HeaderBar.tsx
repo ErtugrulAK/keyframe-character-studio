@@ -6,8 +6,11 @@ import {
   RotateCcw,
   CheckCircle2,
   Plus,
+  ChevronDown,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
+import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
+import { InlineRename } from '../Shared/InlineRename';
 import { compileOGrafPackage } from '../../ograf/packageCompiler';
 import { createOGrafBrowserZip } from '../../ograf/browserZip';
 import type { SceneData } from '../../types/composition';
@@ -36,8 +39,10 @@ export const HeaderBar: React.FC = () => {
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
   const [editingTmplName, setEditingTmplName] = useState<string>('');
+  const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<{ id: string; name: string } | null>(null);
   const [isOGrafExporting, setIsOGrafExporting] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [timeAgoStr, setTimeAgoStr] = useState<string>('Not saved yet');
@@ -141,37 +146,14 @@ export const HeaderBar: React.FC = () => {
                   style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                 >
                   {isEditing ? (
-                    <input className="input-control"
-                type="text"
+                    <InlineRename
                       value={editingTmplName}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                      onFocus={(e) => e.target.select()}
-                      onChange={(e) => setEditingTmplName(e.target.value)}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.key === 'Enter') {
-                          if (editingTmplName.trim()) renameProjectTemplate(tmpl.id, editingTmplName.trim());
-                          setEditingTmplId(null);
-                        } else if (e.key === 'Escape') {
-                          setEditingTmplId(null);
-                        }
-                      }}
-                      onBlur={() => {
-                        if (editingTmplName.trim()) renameProjectTemplate(tmpl.id, editingTmplName.trim());
+                      ariaLabel={`Rename template ${tmpl.name}`}
+                      onCommit={(next) => {
+                        renameProjectTemplate(tmpl.id, next);
                         setEditingTmplId(null);
                       }}
-                      style={{
-                        background: '#090b10',
-                        border: '1px solid #38bdf8',
-                        color: '#fff',
-                        borderRadius: 4,
-                        padding: '2px 8px',
-                        fontSize: 15,
-                        fontWeight: 700,
-                        outline: 'none',
-                        width: 110,
-                      }}
+                      onCancel={() => setEditingTmplId(null)}
                     />
                   ) : (
                     <span
@@ -191,7 +173,7 @@ export const HeaderBar: React.FC = () => {
                       className="tab-close-icon"
                       onClick={(e) => {
                         e.stopPropagation();
-                        deleteProjectTemplate(tmpl.id);
+                        setPendingDeleteTemplate({ id: tmpl.id, name: tmpl.name });
                       }}
                       title="Delete template"
                     >
@@ -288,20 +270,63 @@ export const HeaderBar: React.FC = () => {
           </button>
           <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportFile} />
 
-          <button
-            className="header-action-btn export-btn"
-            onClick={handleOGrafExport}
-            disabled={isOGrafExporting}
-            title="Export as OGraf"
-          >
-            <Download size={14} />
-            <span>{isOGrafExporting ? 'Exporting OGraf…' : 'Export as OGraf'}</span>
-          </button>
-
-          <button className="header-action-btn export-btn" onClick={handleExport} title="Export Video / Animation Sequence">
-            <Download size={14} />
-            <span>Export Video</span>
-          </button>
+          <div style={{ position: 'relative' }}>
+            <button
+              className="header-action-btn export-btn"
+              onClick={() => setIsExportMenuOpen((open) => !open)}
+              aria-haspopup="menu"
+              aria-expanded={isExportMenuOpen}
+              title="Export project"
+            >
+              <Download size={14} />
+              <span>Export</span>
+              <ChevronDown size={13} />
+            </button>
+            {isExportMenuOpen && (
+              <div
+                role="menu"
+                aria-label="Export options"
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  right: 0,
+                  zIndex: 1000,
+                  minWidth: 150,
+                  padding: 4,
+                  background: 'var(--bg-panel)',
+                  border: '1px solid var(--border-light)',
+                  borderRadius: 6,
+                  boxShadow: '0 12px 28px rgba(0,0,0,0.4)',
+                }}
+              >
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="header-action-btn"
+                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  onClick={() => {
+                    setIsExportMenuOpen(false);
+                    handleExport();
+                  }}
+                >
+                  JSON
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="header-action-btn"
+                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  disabled={isOGrafExporting}
+                  onClick={() => {
+                    setIsExportMenuOpen(false);
+                    void handleOGrafExport();
+                  }}
+                >
+                  {isOGrafExporting ? 'Exporting OGraf…' : 'OGraf'}
+                </button>
+              </div>
+            )}
+          </div>
 
           <button className="btn-icon reset-btn" onClick={resetProject} title="Reset Canvas Project">
             <RotateCcw size={15} />
@@ -319,6 +344,16 @@ export const HeaderBar: React.FC = () => {
         confirmLabel="Create Template"
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={(val) => addProjectTemplate(val)}
+      />
+      <ConfirmationDialog
+        isOpen={pendingDeleteTemplate !== null}
+        title="Delete template?"
+        description={pendingDeleteTemplate ? `Deleting “${pendingDeleteTemplate.name}” removes its authored scene and animation data.` : ''}
+        onCancel={() => setPendingDeleteTemplate(null)}
+        onConfirm={() => {
+          if (pendingDeleteTemplate) deleteProjectTemplate(pendingDeleteTemplate.id);
+          setPendingDeleteTemplate(null);
+        }}
       />
     </>
   );

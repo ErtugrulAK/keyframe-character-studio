@@ -353,6 +353,11 @@ export interface CharacterPart {
 
   // ── Feature 9: Advanced Masking ──
   mask?: MaskData;
+  /** Non-destructive vector Boolean relationship. Operands remain authored parts. */
+  booleanGroupId?: string;
+  booleanOperation?: 'union' | 'subtract' | 'intersect' | 'exclude';
+  booleanOperandIds?: string[];
+  booleanContours?: FreeformPoint[][];
 
   // ── M11: Track Matte (SVG clipPath) ──
   /** Track matte reference — this part is clipped by another part's shape. */

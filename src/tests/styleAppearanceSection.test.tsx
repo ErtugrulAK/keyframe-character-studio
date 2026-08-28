@@ -12,29 +12,43 @@ const makePart = (type: CharacterPart['type']): CharacterPart => ({
 } as CharacterPart);
 
 describe('StyleAppearanceSection', () => {
-  it('renders independent fill and stroke controls with zero-safe values', () => {
+  it('renders fill and stroke RGBA pickers with zero-safe alpha values', () => {
     const onChange = vi.fn();
     const part = { ...makePart('custom_rect'), fillEnabled: true, fillOpacity: 0, strokeEnabled: false, strokeWidth: 0, strokeOpacity: 0 };
     render(<StyleAppearanceSection selectedPart={part} onPartPropChange={onChange} />);
     expect(screen.getByText('APPEARANCE')).toBeTruthy();
     expect((screen.getByLabelText('Fill Enabled') as HTMLInputElement).checked).toBe(true);
     expect((screen.getByLabelText('Stroke Enabled') as HTMLInputElement).checked).toBe(false);
-    expect(screen.getAllByDisplayValue('0').length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(screen.getByLabelText('FILL COLOR Color Picker'));
+    expect(screen.getByLabelText('FILL COLOR Alpha')).toHaveValue('0');
+    expect(screen.queryByText('FILL ALPHA')).toBeNull();
+    fireEvent.change(screen.getByLabelText('FILL COLOR Alpha'), { target: { value: '50' } });
+    expect(onChange).toHaveBeenCalledWith('fillOpacity', 0.5);
     fireEvent.click(screen.getByLabelText('Fill Enabled'));
     expect(onChange).toHaveBeenCalledWith('fillEnabled', false);
     fireEvent.click(screen.getByLabelText('Stroke Enabled'));
     expect(onChange).toHaveBeenCalledWith('strokeEnabled', true);
   });
+  it('keeps one shared picker active and synchronizes RGB and hex controls', () => {
+    const onChange = vi.fn();
+    render(<StyleAppearanceSection selectedPart={makePart('custom_rect')} onPartPropChange={onChange} />);
+    fireEvent.click(screen.getByLabelText('FILL COLOR Color Picker'));
+    fireEvent.change(screen.getByLabelText('FILL COLOR R'), { target: { value: '128' } });
+    expect(onChange).toHaveBeenCalledWith('fillColor', '#800000');
+    expect(screen.getByLabelText('FILL COLOR Alpha')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('STROKE COLOR Color Picker'));
+    expect(screen.queryByRole('dialog', { name: 'FILL COLOR RGBA Picker' })).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'STROKE COLOR RGBA Picker' })).toBeTruthy();
+  });
 
-  it('keeps the old color card for excluded types with alpha controls', () => {
+  it('keeps excluded color-bearing types on the shared RGBA picker', () => {
     const onColorChange = vi.fn();
     const onPropChange = vi.fn();
     render(<StyleColorSection selectedPart={makePart('custom_banner')} onPartColorChange={onColorChange} onPartPropChange={onPropChange} />);
     expect(screen.getByText('COLOR')).toBeTruthy();
-    expect(screen.getByText('FILL ALPHA')).toBeTruthy();
-    expect(screen.getByText('STROKE ALPHA')).toBeTruthy();
+    fireEvent.click(screen.getByLabelText('FILL COLOR Color Picker'));
+    expect(screen.getByLabelText('FILL COLOR Alpha')).toBeTruthy();
+    expect(screen.queryByText('FILL ALPHA')).toBeNull();
     expect(screen.queryByText('APPEARANCE')).toBeNull();
-    fireEvent.change(screen.getByLabelText('Fill Alpha'), { target: { value: '50' } });
-    expect(onPropChange).toHaveBeenCalledWith('fillOpacity', 0.5);
   });
 });

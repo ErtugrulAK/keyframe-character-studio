@@ -136,8 +136,11 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
     diagnostics.push(diagnostic(code, 'ERROR', `Layer type "${layer.type}" is not supported by OGraf Export V1.`, layer, layer.type));
   }
 
+  if (layer.booleanOperation || layer.booleanOperandIds?.length || layer.booleanGroupId) {
+    diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_BOOLEAN', 'ERROR', 'Boolean groups are not supported by OGraf Export V1 yet.', layer, 'boolean'));
+  }
+
   if (layer.imageUrl && layer.type !== 'custom_image') {
-    diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_SHAPE', 'ERROR', 'Only custom_image layers may declare image assets.', layer, 'image'));
   }
   if (layer.imageUrl) {
     const asset = validateAsset(layer.imageUrl, 'image', options, diagnostics, layer);

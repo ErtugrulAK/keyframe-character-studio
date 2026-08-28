@@ -45,7 +45,6 @@ test.describe('Stroke Alignment V2', () => {
     await page.setViewportSize({ width: 1200, height: 800 });
     await seed(page, scene());
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
-    await page.getByText('Style', { exact: true }).click();
 
     const fillRect = page.locator('.stage-svg rect[fill="#ff2020"]').first();
     await expect(fillRect).toBeVisible();
@@ -88,14 +87,12 @@ test.describe('Stroke Alignment V2', () => {
       return raw ? JSON.parse(raw).layers?.[0]?.strokeAlignment : undefined;
     }, STORAGE_KEY)).toBe('outside');
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
-    await page.getByText('Style', { exact: true }).click();
     await expect(page.getByLabel('Stroke Alignment')).toHaveValue('outside');
   });
 
   test('inside alignment clips the canonical Trim Path stroke to authored geometry and persists', async ({ page }) => {
     await seed(page, scene(true));
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
-    await page.getByText('Style', { exact: true }).click();
     await page.getByLabel('Stroke Alignment').selectOption('inside');
 
     const stroke = page.locator('.stage-svg rect[mask*="inside-stroke"]').first();

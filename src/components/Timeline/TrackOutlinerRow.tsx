@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronDown, ChevronRight, Diamond, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
 import type { CharacterPart, Track, TrackChannel } from '../../types/animator';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
+import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {
   track: Track;
@@ -17,9 +18,7 @@ interface TrackOutlinerRowProps {
   activeTemplateId: string | null;
   onSelect: (partId: string, shiftKey: boolean) => void;
   onStartEdit: (partId: string, name: string) => void;
-  onChangeEditValue: (value: string) => void;
   onEnterCommit: (partId: string, name: string) => void;
-  onBlurCommit: (partId: string, name: string) => void;
   onCancelEdit: () => void;
   onToggleExpand: (trackId: string) => void;
   onToggleEditVisible: (trackId: string) => void;
@@ -46,9 +45,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   activeTemplateId,
   onSelect,
   onStartEdit,
-  onChangeEditValue,
   onEnterCommit,
-  onBlurCommit,
   onCancelEdit,
   onToggleExpand,
   onToggleEditVisible,
@@ -118,35 +115,13 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
 
         <span className="ue-color-dot" style={{ backgroundColor: track.color }} />
 
-        {/* Double-Click Inline Renaming */}
         {editingPartId === track.partId ? (
-          <input className="input-control"
-        type="text"
-            autoFocus
+          <InlineRename
             value={editingNameValue}
-            onClick={(e) => e.stopPropagation()}
-            onChange={(e) => onChangeEditValue(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                onEnterCommit(track.partId, editingNameValue);
-              } else if (e.key === 'Escape') {
-                onCancelEdit();
-              }
-            }}
-            onBlur={() => {
-              onBlurCommit(track.partId, editingNameValue);
-            }}
-            style={{
-              background: 'var(--bg-input)',
-              border: '1px solid var(--accent-cyan)',
-              color: '#fff',
-              fontSize: 11,
-              fontWeight: 600,
-              padding: '1px 5px',
-              borderRadius: 3,
-              outline: 'none',
-              maxWidth: 130,
-            }}
+            ariaLabel={`Rename layer ${displayName}`}
+            className="ue-track-name-edit"
+            onCommit={(next) => onEnterCommit(track.partId, next)}
+            onCancel={onCancelEdit}
           />
         ) : (
           <span

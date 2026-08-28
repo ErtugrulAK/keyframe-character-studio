@@ -129,7 +129,6 @@ interface AnimatorContextType {
   addMotionTemplate: (name: string, type?: 'in' | 'out' | 'stunt') => void;
   renameMotionTemplate: (oldId: string, newName: string) => void;
   deleteMotionTemplate: (id: string) => void;
-  duplicateMotionTemplate: (id: string) => void;
   updateMotionTemplateDuration: (id: string, durationFrames: number) => void;
   renamePartAndTrack: (partId: string, newName: string) => void;
   reorderParts: (dragIndex: number, hoverIndex: number) => void;
@@ -259,7 +258,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     addMotionTemplate,
     renameMotionTemplate,
     deleteMotionTemplate,
-    duplicateMotionTemplate,
     updateMotionTemplateDuration,
     setActiveProjectTemplateId,
     addProjectTemplate,
@@ -608,7 +606,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         addMotionTemplate,
         renameMotionTemplate,
         deleteMotionTemplate,
-        duplicateMotionTemplate,
         updateMotionTemplateDuration,
       }}
     >

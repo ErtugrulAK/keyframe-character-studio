@@ -28,7 +28,29 @@ export interface ShapeCreationPlacement {
 export const getShapeCreationBounds = (
   start: { x: number; y: number },
   current: { x: number; y: number },
+  constrainSquare = false,
 ): ShapeCreationBounds => {
+  const deltaX = current.x - start.x;
+  const deltaY = current.y - start.y;
+  if (constrainSquare) {
+    const size = Math.max(Math.abs(deltaX), Math.abs(deltaY));
+    const endX = start.x + (deltaX < 0 ? -size : size);
+    const endY = start.y + (deltaY < 0 ? -size : size);
+    const minX = Math.min(start.x, endX);
+    const minY = Math.min(start.y, endY);
+    const maxX = Math.max(start.x, endX);
+    const maxY = Math.max(start.y, endY);
+    return {
+      minX,
+      minY,
+      maxX,
+      maxY,
+      width: size,
+      height: size,
+      centerX: (minX + maxX) / 2,
+      centerY: (minY + maxY) / 2,
+    };
+  }
   const minX = Math.min(start.x, current.x);
   const minY = Math.min(start.y, current.y);
   const maxX = Math.max(start.x, current.x);
@@ -89,7 +111,6 @@ export interface CursorAnchoredViewportInput {
   nextZoom: number;
   viewBox: { width: number; height: number };
 }
-
 export const getCursorAnchoredViewport = ({
   rect,
   clientX,
@@ -100,19 +121,27 @@ export const getCursorAnchoredViewport = ({
   viewBox,
 }: CursorAnchoredViewportInput): { zoom: number; pan: { x: number; y: number } } => {
   const baseScale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height) || 1;
-  const viewBoxX = (clientX - rect.left - (rect.width - viewBox.width * baseScale) / 2) / baseScale;
-  const viewBoxY = (clientY - rect.top - (rect.height - viewBox.height * baseScale) / 2) / baseScale;
-  const relX = viewBoxX - viewBox.width / 2;
-  const relY = viewBoxY - viewBox.height / 2;
+  const baseTranslateX = rect.left + (rect.width - viewBox.width * baseScale) / 2;
+  const baseTranslateY = rect.top + (rect.height - viewBox.height * baseScale) / 2;
+  const originX = rect.left + rect.width / 2;
+  const originY = rect.top + rect.height / 2;
+  const localX = ((clientX - originX - pan.x) / zoom - (baseTranslateX - originX)) / baseScale;
+  const localY = ((clientY - originY - pan.y) / zoom - (baseTranslateY - originY)) / baseScale;
   return {
     zoom: nextZoom,
     pan: {
-      x: pan.x + relX / nextZoom - relX / zoom,
-      y: pan.y + relY / nextZoom - relY / zoom,
+      x: clientX - originX - nextZoom * (baseScale * localX + baseTranslateX - originX),
+      y: clientY - originY - nextZoom * (baseScale * localY + baseTranslateY - originY),
     },
   };
 };
-
+export const getPointerDelta = (
+  start: { x: number; y: number },
+  current: { x: number; y: number },
+): { dx: number; dy: number } => ({
+  dx: current.x - start.x,
+  dy: current.y - start.y,
+});
 export const getLocalDelta = (dx: number, dy: number, rotationDeg: number) => {
   const rad = (rotationDeg * Math.PI) / 180;
   const cosR = Math.cos(rad);

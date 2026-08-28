@@ -50,14 +50,14 @@ export const useTimeline = ({
   const [timelineZoom, setTimelineZoom] = useState<number>(18); // px per frame
   const [showGrid, setShowGrid] = useState<boolean>(true);
 
-  // Delete part directly without confirm
+  // Delete the requested part or the complete canonical selection in one state transaction.
   const deletePart = useCallback((partId: string) => {
-    setCharacterParts((prev) => prev.filter((p) => p.id !== partId));
-    if (selectedPartIds.includes(partId)) {
-      setSelectedPartIds(selectedPartIds.filter((id) => id !== partId));
-    }
-    setTracks((prev) => prev.filter((t) => t.partId !== partId));
-    if (selectedPartId === partId) {
+    const idsToDelete = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
+    const idSet = new Set(idsToDelete);
+    setCharacterParts((prev) => prev.filter((p) => !idSet.has(p.id)));
+    setTracks((prev) => prev.filter((t) => !idSet.has(t.partId)));
+    setSelectedPartIds(selectedPartIds.filter((id) => !idSet.has(id)));
+    if (selectedPartId && idSet.has(selectedPartId)) {
       setSelectedPartId(null);
     }
   }, [selectedPartId, selectedPartIds, setCharacterParts, setSelectedPartId, setSelectedPartIds, setTracks]);

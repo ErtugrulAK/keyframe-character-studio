@@ -71,6 +71,29 @@
   --inspector-width: 400px;
   --timeline-height: 290px;
 }
+/* Semantic editor aliases: keep the existing CSS architecture while giving
+   panels, controls, and overlays one shared vocabulary. */
+:root {
+  --kcs-bg-canvas: var(--bg-darkest);
+  --kcs-bg-panel: var(--bg-dark);
+  --kcs-bg-surface: var(--bg-panel);
+  --kcs-bg-elevated: #222735;
+  --kcs-bg-hover: var(--bg-panel-hover);
+  --kcs-bg-active: rgba(20, 184, 166, 0.14);
+  --kcs-border-subtle: rgba(148, 163, 184, 0.16);
+  --kcs-border-default: var(--border-color);
+  --kcs-border-focus: var(--accent-cyan);
+  --kcs-text-primary: var(--text-primary);
+  --kcs-text-secondary: var(--text-secondary);
+  --kcs-text-muted: var(--text-muted);
+  --kcs-accent: var(--accent-teal);
+  --kcs-accent-hover: var(--accent-cyan);
+  --kcs-danger: var(--accent-red);
+  --kcs-control-xs: 24px;
+  --kcs-control-sm: 28px;
+  --kcs-control-md: 32px;
+  --kcs-radius-control: var(--radius-xs);
+}
 
 /* ── Typography Utility Classes ── */
 h1, .text-h1 { font-family: var(--font-main); font-size: var(--font-size-h1); line-height: var(--line-height-tight); letter-spacing: var(--letter-spacing-h1); font-weight: 800; color: var(--text-primary); }
@@ -207,6 +230,14 @@ button {
   border-radius: var(--radius-md);
   white-space: nowrap;
   transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[role='button']:focus-visible {
+  outline: 2px solid var(--kcs-border-focus);
+  outline-offset: 2px;
 }
 
 button:disabled {
@@ -477,4 +508,28 @@ input[type="number"]::-webkit-outer-spin-button {
 }
 input[type="number"] {
   -moz-appearance: textfield !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+@media (max-width: 1100px) {
+  :root {
+    --header-height: 50px;
+    --toolbar-width: 72px;
+    --timeline-height: 260px;
+  }
+
+  .header-bar {
+    gap: var(--space-xs);
+  }
+
+  .main-layout {
+    min-width: 0;
+  }
 }

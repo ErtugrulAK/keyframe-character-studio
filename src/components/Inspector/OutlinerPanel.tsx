@@ -53,15 +53,19 @@ export const OutlinerPanel: React.FC = () => {
   const childrenByParentId = useMemo(() => {
     const children = new Map<string, typeof characterParts>();
     characterParts.forEach((part) => {
-      if (!part.parentId || !partById.has(part.parentId)) return;
-      const siblings = children.get(part.parentId) ?? [];
+      const relationshipParentId = part.parentId ?? part.booleanGroupId;
+      if (!relationshipParentId || !partById.has(relationshipParentId)) return;
+      const siblings = children.get(relationshipParentId) ?? [];
       siblings.push(part);
-      children.set(part.parentId, siblings);
+      children.set(relationshipParentId, siblings);
     });
     return children;
   }, [characterParts, partById]);
   const rootParts = useMemo(
-    () => characterParts.filter((part) => !part.parentId || !partById.has(part.parentId)),
+    () => characterParts.filter((part) => {
+      const relationshipParentId = part.parentId ?? part.booleanGroupId;
+      return !relationshipParentId || !partById.has(relationshipParentId);
+    }),
     [characterParts, partById],
   );
   const togglePartExpanded = (partId: string) => {
@@ -87,8 +91,8 @@ export const OutlinerPanel: React.FC = () => {
       <div
         key={part.id}
         role="treeitem"
-        className={`tree-node actor-node ${selectedPartIds?.includes(part.id) ? 'selected' : ''} ${selectedPartId === part.id ? 'primary-selected' : ''} ${draggedIdx === index ? 'dragging' : ''} ${dragOverIdx === index ? 'drag-over' : ''}`}
-        data-parent-id={part.parentId ?? ''}
+        className={`tree-node actor-node ${selectedPartIds?.includes(part.id) ? 'selected' : ''} ${selectedPartId === part.id ? 'primary-selected' : ''} ${hasChildren ? 'has-children' : ''} ${depth > 0 ? 'nested-node' : ''} ${draggedIdx === index ? 'dragging' : ''} ${dragOverIdx === index ? 'drag-over' : ''}`}
+        data-parent-id={(part.parentId ?? part.booleanGroupId) ?? ''}
         data-tree-depth={depth}
         aria-level={depth + 1}
         onClick={(e) => {
@@ -98,7 +102,7 @@ export const OutlinerPanel: React.FC = () => {
             setActiveTool('select');
             setFocusModeNodeId(null);
           }
-          handleSelectPart(part.id, e.shiftKey);
+          handleSelectPart(part.id, e.shiftKey || e.ctrlKey || e.metaKey);
         }}
         draggable={true}
         onDragStart={(e) => {
@@ -126,7 +130,7 @@ export const OutlinerPanel: React.FC = () => {
         style={{
           display: 'flex',
           alignItems: 'center',
-          padding: `4px 8px 4px ${8 + depth * 16}px`,
+          padding: `4px 8px 4px ${8 + depth * 22}px`,
           cursor: 'pointer',
           userSelect: 'none',
         }}
@@ -167,7 +171,7 @@ export const OutlinerPanel: React.FC = () => {
 
         {/* Item Label Column */}
         <div className="col-label" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          {getActorIcon(part.type)}
+          {getActorIcon(part.type, Boolean(part.booleanOperandIds?.length))}
           <span className="actor-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {part.name}
           </span>
@@ -189,10 +193,13 @@ export const OutlinerPanel: React.FC = () => {
               }}
             >
               {matteSourcePart(part.matte.sourcePartId) ? <Scissors size={10} /> : <AlertTriangle size={10} />}
-              <span style={{ maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {matteSourcePart(part.matte.sourcePartId) ? matteSourcePart(part.matte.sourcePartId)!.name : 'Missing'}
-              </span>
+                <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {matteSourcePart(part.matte.sourcePartId) ? `Mask → ${matteSourcePart(part.matte.sourcePartId)!.name}` : 'Mask → Missing'}
+                </span>
             </span>
+          )}
+          {part.booleanGroupId && (
+            <span className="boolean-operand-label" title="Boolean operand">Operand</span>
           )}
         </div>
 
@@ -256,7 +263,8 @@ export const OutlinerPanel: React.FC = () => {
   // authority — no cached/duplicated source state).
   const matteSourcePart = (sourcePartId: string) => characterParts.find((part) => part.id === sourcePartId);
 
-  const getActorIcon = (type: string) => {
+  const getActorIcon = (type: string, isBooleanGroup: boolean = false) => {
+    if (isBooleanGroup) return <Layers size={12} className="text-purple" />;
     switch (type) {
       case 'custom_text':
         return <TypeIcon size={12} className="text-cyan" />;

@@ -219,10 +219,26 @@
   transition: all 0.18s ease;
 }
 
+.drawer-item-card.active {
+  background: rgba(20, 184, 166, 0.16);
+  border-color: var(--accent-teal);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.32), 0 0 14px rgba(20, 184, 166, 0.18);
+}
+
+.drawer-item-card.active .item-icon-box {
+  color: var(--accent-cyan);
+}
+
 .drawer-item-card:hover {
   background: var(--bg-panel-hover);
   border-color: var(--border-light);
   transform: translateY(-1px);
+}
+
+.drawer-item-card.active:hover {
+  background: rgba(20, 184, 166, 0.22);
+  border-color: var(--accent-cyan);
 }
 
 .transition-card {
@@ -275,4 +291,61 @@
 .add-kf-drawer-btn, .text-add-btn {
   gap: var(--space-xs);
   margin-top: var(--space-xs);
+}
+/* V4 editor-density pass: one compact scale for rail, drawers, and element cards. */
+.left-sidebar-nav {
+  width: 72px;
+  padding: var(--space-xs) 6px;
+  gap: 4px;
+}
+
+.sidebar-nav-item {
+  width: 60px;
+  height: 48px;
+  border-radius: var(--kcs-radius-control);
+  gap: 3px;
+}
+
+.nav-label {
+  font-size: var(--font-size-caption);
+  line-height: 1.15;
+}
+
+.left-drawer-panel {
+  width: 264px;
+}
+
+.drawer-content {
+  padding: 12px;
+  gap: 12px;
+}
+
+.drawer-grid,
+.transition-grid {
+  gap: 6px;
+}
+
+.drawer-item-card {
+  min-height: 72px;
+  padding: 8px 6px;
+  border-radius: var(--kcs-radius-control);
+}
+
+.drawer-item-card:hover {
+  transform: none;
+}
+
+.item-icon-box {
+  width: 24px;
+  height: 24px;
+}
+
+.item-label {
+  font-size: var(--font-size-caption);
+  line-height: 1.15;
+}
+
+.transition-card,
+.transition-icon-box {
+  border-radius: var(--kcs-radius-control);
 }

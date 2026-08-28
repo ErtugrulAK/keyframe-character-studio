@@ -38,52 +38,27 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
   outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
   if (selectedPartIds.length > 1) {
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    selectedPartIds.forEach((id) => {
-      const part = characterParts.find((p) => p.id === id);
-      if (!part) return;
-      const t = getComputedTransform(id, currentFrame);
-      const b = getPartBounds(part, t);
-      const left = t.x - b.halfW * Math.abs(t.scaleX);
-      const right = t.x + b.halfW * Math.abs(t.scaleX);
-      const top = t.y - b.halfH * Math.abs(t.scaleY);
-      const bottom = t.y + b.halfH * Math.abs(t.scaleY);
-      if (left < minX) minX = left;
-      if (right > maxX) maxX = right;
-      if (top < minY) minY = top;
-      if (bottom > maxY) maxY = bottom;
-    });
-
-    if (minX === Infinity) return null;
-
-    const groupTransform: Transform = {
-      x: (minX + maxX) / 2,
-      y: (minY + maxY) / 2,
-      rotation: 0,
-      scaleX: 1,
-      scaleY: 1,
-      opacity: 1,
-    };
-
-    const halfW = (maxX - minX) / 2;
-    const halfH = (maxY - minY) / 2;
-
     return (
-      <TransformGizmo
-        selectedPart={characterParts[0]}
-        selectedTransform={groupTransform}
-        zScale={zScale}
-        onRotateMouseDown={() => {}}
-        onScaleMouseDown={() => {}}
-        isGroup={true}
-        overrideHalfW={halfW}
-        overrideHalfH={halfH}
-        outputOrigin={outputOrigin}
-      />
+      <>
+        {selectedPartIds.map((id) => {
+          const part = characterParts.find((candidate) => candidate.id === id);
+          const transform = part ? getComputedTransform(id, currentFrame) : null;
+          const track = tracks.find((candidate) => candidate.partId === id);
+          if (!part || !transform || track?.editVisible === false) return null;
+          return (
+            <TransformGizmo
+              key={`multi-selection-${id}`}
+              selectedPart={part}
+              selectedTransform={transform}
+              zScale={zScale}
+              onRotateMouseDown={() => {}}
+              onScaleMouseDown={() => {}}
+              isGroup={true}
+              outputOrigin={outputOrigin}
+            />
+          );
+        })}
+      </>
     );
   }
 

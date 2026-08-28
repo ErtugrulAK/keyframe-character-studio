@@ -1,5 +1,5 @@
 import React from 'react';
-import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
+import type { CoordinatePoint } from '../../../utils/projectCoordinates';
 
 interface CanvasGridOverlayProps {
   artX: number;
@@ -20,7 +20,6 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
   zScale,
   showGrid,
   appMode,
-  origin = EDITOR_CAMERA_CENTER,
 }) => {
   if (appMode === 'broadcast') return null;
 
@@ -95,83 +94,6 @@ export const CanvasGridOverlay: React.FC<CanvasGridOverlayProps> = ({
           />
         ))}
 
-        {/* Boundary Coordinate Text Labels (Minimal X / Y values matching Inspector) */}
-        {/* Top Edge Label */}
-        <text
-          x={origin.x}
-          y={artY - 6 * zScale}
-          fill="#38bdf8"
-          fontSize={11 * zScale}
-          fontWeight="700"
-          textAnchor="middle"
-          style={{ userSelect: 'none', pointerEvents: 'none' }}
-        >
-          +{(height / 200).toFixed(2)}
-        </text>
-
-        {/* Bottom Edge Label */}
-        <text
-          x={origin.x}
-          y={artY + height + 14 * zScale}
-          fill="#38bdf8"
-          fontSize={11 * zScale}
-          fontWeight="700"
-          textAnchor="middle"
-          style={{ userSelect: 'none', pointerEvents: 'none' }}
-        >
-          -{(height / 200).toFixed(2)}
-        </text>
-
-        {/* Left Edge Label */}
-        <text
-          x={artX - 8 * zScale}
-          y={origin.y}
-          fill="#38bdf8"
-          fontSize={11 * zScale}
-          fontWeight="700"
-          textAnchor="end"
-          dominantBaseline="middle"
-          style={{ userSelect: 'none', pointerEvents: 'none' }}
-        >
-          -{(width / 200).toFixed(2)}
-        </text>
-
-        {/* Right Edge Label */}
-        <text
-          x={artX + width + 8 * zScale}
-          y={origin.y}
-          fill="#38bdf8"
-          fontSize={11 * zScale}
-          fontWeight="700"
-          textAnchor="start"
-          dominantBaseline="middle"
-          style={{ userSelect: 'none', pointerEvents: 'none' }}
-        >
-          +{(width / 200).toFixed(2)}
-        </text>
-      </g>
-
-      {/* Origin Center Grid Axes */}
-      <g clipPath="url(#artboard-clip)" pointerEvents="none">
-        <line
-          x1="-300000"
-          y1={origin.y}
-          x2="300000"
-          y2={origin.y}
-          stroke="rgba(239, 68, 68, 0.75)"
-          strokeWidth={1.5 * zScale}
-          strokeDasharray={`${6 * zScale} ${4 * zScale}`}
-        />
-        <line
-          x1={origin.x}
-          y1="-300000"
-          x2={origin.x}
-          y2="300000"
-          stroke="rgba(16, 185, 129, 0.75)"
-          strokeWidth={1.5 * zScale}
-          strokeDasharray={`${6 * zScale} ${4 * zScale}`}
-        />
-        <circle cx={origin.x} cy={origin.y} r={5 * Math.min(3, zScale)} fill="#38bdf8" stroke="#ffffff" strokeWidth={1.5 * zScale} />
       </g>
     </>
   );

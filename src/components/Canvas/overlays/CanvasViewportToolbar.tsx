@@ -1,5 +1,5 @@
 import React from 'react';
-import { Grid, ZoomIn, ZoomOut, Compass } from 'lucide-react';
+import { Grid, ZoomIn, ZoomOut, Compass, MousePointer2, Hand } from 'lucide-react';
 
 interface CanvasViewportToolbarProps {
   showGrid: boolean;
@@ -7,6 +7,8 @@ interface CanvasViewportToolbarProps {
   zoomLevel: number;
   setZoomLevel: React.Dispatch<React.SetStateAction<number>>;
   setPanOffset: (val: { x: number; y: number }) => void;
+  activeTool: 'select' | 'pan';
+  setActiveTool: (tool: 'select' | 'pan') => void;
 }
 
 export const CanvasViewportToolbar: React.FC<CanvasViewportToolbarProps> = ({
@@ -15,9 +17,28 @@ export const CanvasViewportToolbar: React.FC<CanvasViewportToolbarProps> = ({
   zoomLevel,
   setZoomLevel,
   setPanOffset,
+  activeTool,
+  setActiveTool,
 }) => {
   return (
     <div className="viewport-tools-overlay">
+      <button
+        className={`btn-icon viewport-btn ${activeTool === 'select' ? 'active' : ''}`}
+        onClick={() => setActiveTool('select')}
+        title="Select Tool (V)"
+        aria-label="Select Tool"
+      >
+        <MousePointer2 size={14} />
+      </button>
+      <button
+        className={`btn-icon viewport-btn ${activeTool === 'pan' ? 'active' : ''}`}
+        onClick={() => setActiveTool('pan')}
+        title="Hand / Pan Tool (H)"
+        aria-label="Hand / Pan Tool"
+      >
+        <Hand size={14} />
+      </button>
+      <div style={{ height: 16, width: 1, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
       <button
         className={`btn-icon viewport-btn ${showGrid ? 'active' : ''}`}
         onClick={() => setShowGrid(!showGrid)}
@@ -50,11 +71,9 @@ export const CanvasViewportToolbar: React.FC<CanvasViewportToolbarProps> = ({
 
       <button
         className="btn-icon viewport-btn"
-        onClick={() => {
-          setZoomLevel(1.0);
-          setPanOffset({ x: 0, y: 0 });
-        }}
-        title="Reset Viewport Pan & Zoom"
+        onClick={() => setPanOffset({ x: 0, y: 0 })}
+        title="Reset View Position (Keep Zoom)"
+        aria-label="Reset View Position"
       >
         <Compass size={14} />
       </button>

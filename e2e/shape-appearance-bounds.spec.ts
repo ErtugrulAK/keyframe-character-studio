@@ -93,7 +93,6 @@ test.describe('modern stroke-aware editor bounds', () => {
       fillEnabled: true, fillOpacity: 0.5, strokeEnabled: true, strokeWidth: 20, strokeOpacity: 1,
     })]);
     await page.locator('.actor-node', { hasText: 'Appearance Rectangle' }).click();
-    await page.getByText('Style', { exact: true }).click();
 
     const card = page.locator('.panel-card').filter({ hasText: 'APPEARANCE' }).first();
     await expect(card).toBeVisible();
@@ -127,15 +126,13 @@ test.describe('modern stroke-aware editor bounds', () => {
       fillEnabled: true, fillOpacity: 1, strokeEnabled: true, strokeColor: '#101218', strokeWidth: 1.5, strokeOpacity: 1,
     })]);
     await page.locator('.actor-node', { hasText: 'Authoring Rectangle' }).click();
-    await page.getByText('Style', { exact: true }).click();
     const details = page.locator('.details-container');
     await expect(details.getByText('OPACITY', { exact: true })).toHaveCount(0);
     await page.getByLabel('Fill Enabled').uncheck();
-    await page.locator('.appearance-color-field .color-hex-input').nth(1).fill('#ffffff');
-    await page.getByLabel('Fill Alpha').fill('50');
-    await page.getByLabel('Fill Alpha').press('Tab');
-    await page.getByLabel('Stroke Alpha').fill('60');
-    await page.getByLabel('Stroke Alpha').press('Tab');
+    await page.getByLabel('FILL COLOR Color Picker').click();
+    await page.getByLabel('FILL COLOR Alpha').fill('50');
+    await page.getByLabel('STROKE COLOR Color Picker').click();
+    await page.getByLabel('STROKE COLOR Alpha').fill('60');
     await page.getByLabel('Stroke Width').fill('8');
     await page.getByLabel('Stroke Width').press('Tab');
     await page.locator('.autosave-status-badge').click();
@@ -143,7 +140,7 @@ test.describe('modern stroke-aware editor bounds', () => {
     await expect.poll(async () => page.evaluate((key) => {
       const layerData = JSON.parse(localStorage.getItem(key) || '{}').layers?.[0];
       return [layerData?.fillEnabled, layerData?.fillOpacity, layerData?.strokeOpacity, layerData?.strokeColor, layerData?.strokeWidth];
-    }, STORAGE_KEY)).toEqual([false, 0.5, 0.6, '#ffffff', 8]);
+    }, STORAGE_KEY)).toEqual([false, 0.5, 0.6, '#101218', 8]);
 
     await page.keyboard.press('Control+Z');
     await page.locator('.autosave-status-badge').click();

@@ -12,10 +12,12 @@ interface PartRendererProps {
   ghostColor?: string;
   isSelected?: boolean;
   currentFrame: number;
-  onSelect: (partId: string) => void;
+  onSelect: (partId: string, event: React.MouseEvent) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
   /** Pre-evaluated layer data from the composition engine */
   evaluatedLayer: EvaluatedLayer;
+  /** Dynamic Boolean contours evaluated for the current frame. */
+  booleanContours?: CharacterPart['booleanContours'];
   /** M11: track matte — id of the world-space clipPath clipping this part */
   matteClipPathId?: string;
   /** M13: track matte — id of the world-space <mask> masking this part
@@ -35,6 +37,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   onSelect,
   onStartTranslateDrag,
   evaluatedLayer,
+  booleanContours,
   matteClipPathId,
   matteMaskId,
   outputOrigin = EDITOR_CAMERA_CENTER,
@@ -78,6 +81,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     trimPathOffset: el.content.trimPathOffset ?? part.trimPathOffset,
     clonerConfig: el.content.clonerConfig ?? part.clonerConfig,
     particleConfig: el.content.particleConfig ?? part.particleConfig,
+    booleanContours: booleanContours ?? part.booleanContours,
   };
 
   let pathContent: React.ReactNode = null;
@@ -92,7 +96,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   return (
     <g
       key={`${part.id}${isGhost ? '-ghost-' + ghostColor : ''}`}
-      // M13 Step 2E fix — coordinate-space bug: clipPath/mask with
+      data-part-id={part.id}
       // clipPathUnits/maskUnits="userSpaceOnUse" resolve in the "user
       // coordinate system in place at the time the def is REFERENCED", which
       // for a transformed target <g> is the target's LOCAL space. Our matte
@@ -107,7 +111,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
       <g
         transform={`translate(${outputOrigin.x + el.transform.x}, ${outputOrigin.y + el.transform.y}) rotate(${el.transform.rotation}) scale(${el.transform.scaleX}, ${el.transform.scaleY})`}
         style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined }}
-        onClick={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onSelect(part.id); } }}
+        onClick={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onSelect(part.id, e); } }}
         onMouseDown={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onStartTranslateDrag(part.id, e); } }}
       >
         <defs>

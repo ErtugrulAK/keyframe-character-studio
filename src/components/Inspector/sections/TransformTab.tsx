@@ -2,14 +2,11 @@ import React from 'react';
 import type { CharacterPart, CustomMotionPreset, Track, Transform, TrackChannel } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import type { SavePresetInput, UpdatePresetInput } from '../../../hooks/usePresets';
-import { TransformAlignmentBar } from './transform/TransformAlignmentBar';
 import { TransformPositionRotationCard } from './transform/TransformPositionRotationCard';
 import { TransformScaleCard } from './transform/TransformScaleCard';
 import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
-import { SelectedKeyframeSection } from './transform/SelectedKeyframeSection';
-import { TransformInOutPresetCard } from './transform/TransformInOutPresetCard';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -42,51 +39,24 @@ interface TransformTabProps {
 
 /**
  * Transform inspector section. Thin composition of focused section components:
- * alignment bar (multi-select), position/rotation, scale, z-index, container
- * assignment, and the 4 control points editor.
+ * position/rotation, scale, z-index, container assignment, and control points.
  */
 export const TransformTab: React.FC<TransformTabProps> = ({
   selectedPart,
   transform,
   coordinateSystem,
-  currentFrame,
   updateCurrentTransform,
-  updateCurrentPropertyChannel,
   handlePartPropChange,
   handleZIndexChange,
-  customPresets,
-  onSavePreset,
-  onUpdatePreset,
-  onDeletePreset,
-  onImportPresets,
-  showToast,
   onCopyAnimation,
   onPasteAnimation,
   onClearAnimation,
   clipboardSourceId,
-  track,
-  selectedKeyframeId,
-  activeTemplateId,
-  isScaleLocked = false,
 }) => {
 
   return (
     <>
       <div className="inspector-section" style={{ paddingTop: 8 }}>
-        <TransformAlignmentBar />
-
-        {/* M29 — selected keyframe raw values (hidden without selection) */}
-        <SelectedKeyframeSection
-          track={track ?? null}
-          selectedKeyframeId={selectedKeyframeId ?? null}
-          currentFrame={currentFrame}
-          transform={transform}
-          activeTemplateId={activeTemplateId ?? null}
-          isScaleLocked={isScaleLocked}
-          coordinateSystem={coordinateSystem}
-          onUpdate={updateCurrentTransform}
-          onUpdateChannel={updateCurrentPropertyChannel}
-        />
 
         {/* Unified transform block: position, rotation, scale rows */}
         <div className="panel-card" style={{ marginBottom: 10 }}>
@@ -112,18 +82,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         )}
 
-        {handlePartPropChange && (
-          <TransformInOutPresetCard
-            selectedPart={selectedPart}
-            onPartPropChange={handlePartPropChange}
-            customPresets={customPresets}
-            onSavePreset={onSavePreset}
-            onUpdatePreset={onUpdatePreset}
-            onDeletePreset={onDeletePreset}
-            onImportPresets={onImportPresets}
-            showToast={showToast}
-          />
-        )}
 
         {/* 4 control points only make sense for regular shapes — hand-drawn
             freeform polygons use the per-vertex editor below instead */}

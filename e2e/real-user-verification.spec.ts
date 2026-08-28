@@ -63,12 +63,11 @@ async function timelineDiamondLefts(page: Page): Promise<number[]> {
   );
 }
 
-async function keyframesTabFrameValues(page: Page): Promise<number[]> {
-  // The consolidated Edit surface renders keyframe rows inline.
+async function timelineKeyframeFrameValues(page: Page): Promise<number[]> {
   return page.evaluate(() =>
-    [...document.querySelectorAll<HTMLInputElement>('.section-block input[type="number"]')]
-      .map((i) => parseInt(i.value, 10))
-      .filter((v) => !isNaN(v))
+    [...document.querySelectorAll<HTMLElement>('.keyframe-diamond')]
+      .map((diamond) => Number(diamond.getAttribute('title')?.match(/Frame:\s*(\d+)/u)?.[1]))
+      .filter((frame) => Number.isFinite(frame))
       .sort((a, b) => a - b),
   );
 }
@@ -81,8 +80,8 @@ test('BUG 3 — layer order (Bring Forward / Send Backward) preserves keyframes'
 
   // Select "The Cow" in the outliner (Template Elements).
   await page.getByText('The Cow', { exact: true }).first().click();
-  await expect(page.getByText('LAYER KEYFRAMES (3)', { exact: true })).toBeVisible();
-  const framesBefore = await keyframesTabFrameValues(page);
+  await expect(page.locator('.details-container .section-block')).toHaveCount(0);
+  const framesBefore = await timelineKeyframeFrameValues(page);
   expect(framesBefore).toEqual([0, 20, 40]);
 
   // Layer order changes: Bring Forward ×2, Send Backward ×1.
@@ -92,8 +91,8 @@ test('BUG 3 — layer order (Bring Forward / Send Backward) preserves keyframes'
 
   // Re-select The Cow; the consolidated surface keeps keyframes reachable.
   await page.getByText('The Cow', { exact: true }).first().click();
-  await expect(page.getByText('LAYER KEYFRAMES (3)', { exact: true })).toBeVisible();
-  const framesAfter = await keyframesTabFrameValues(page);
+  await expect(page.locator('.details-container .section-block')).toHaveCount(0);
+  const framesAfter = await timelineKeyframeFrameValues(page);
   expect(framesAfter).toEqual([0, 20, 40]); // same frames — nothing lost
 
   const afterTimeline = await timelineDiamondLefts(page);

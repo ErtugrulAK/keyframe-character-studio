@@ -1,8 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Palette } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
-import { SmartHexInput } from '../../inputs/SmartHexInput';
-import { SmartNumberInput } from '../../inputs/SmartNumberInput';
+import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
 import { isShapeAppearanceEligible } from '../../../../utils/shapeAppearance';
 const COLOR_SWATCHES = [
@@ -17,6 +16,7 @@ interface StyleColorSectionProps {
 }
 
 export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPart, onPartColorChange, onPartPropChange }) => {
+  const [activePickerId, setActivePickerId] = useState<string | null>(null);
   if (isShapeAppearanceEligible(selectedPart.type)) return null;
   return (
     <StyleCard title="COLOR" icon={<Palette size={13} />}>
@@ -24,62 +24,32 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPa
       <div className="color-grid-two-col">
         <div className="color-picker-card">
           <label className="color-card-label">FILL COLOR</label>
-          <div className="color-picker-compact">
-            <input
-              type="color"
-              className="color-swatch-input"
-              value={selectedPart.fillColor || '#00d2ff'}
-              onChange={(e) => onPartColorChange('fillColor', e.target.value)}
-            />
-            <SmartHexInput
-              value={selectedPart.fillColor || ''}
-              fallback="#00d2ff"
-              onChange={(val) => onPartColorChange('fillColor', val)}
-            />
-          </div>
-          <div className="appearance-field" style={{ marginTop: 6 }}>
-            <label className="appearance-field-label">FILL ALPHA</label>
-            <SmartNumberInput
-              ariaLabel="Fill Alpha"
-              value={selectedPart.fillOpacity ?? 1}
-              min={0}
-              max={1}
-              step={0.01}
-              displayScale={100}
-              precision={0}
-              onChange={(value) => onPartPropChange('fillOpacity', value)}
-            />
-          </div>
+          <ColorPickerPopover
+            label="FILL COLOR"
+            color={selectedPart.fillColor || '#00d2ff'}
+            alpha={selectedPart.fillOpacity ?? 1}
+            fallback="#00d2ff"
+            pickerId="fill"
+            activePickerId={activePickerId}
+            onActivePickerChange={setActivePickerId}
+            onColorChange={(color) => onPartColorChange('fillColor', color)}
+            onAlphaChange={(alpha) => onPartPropChange('fillOpacity', alpha)}
+          />
         </div>
 
         <div className="color-picker-card">
           <label className="color-card-label">STROKE COLOR</label>
-          <div className="color-picker-compact">
-            <input
-              type="color"
-              className="color-swatch-input"
-              value={selectedPart.strokeColor || '#1e293b'}
-              onChange={(e) => onPartColorChange('strokeColor', e.target.value)}
-            />
-            <SmartHexInput
-              value={selectedPart.strokeColor || ''}
-              fallback="#1e293b"
-              onChange={(val) => onPartColorChange('strokeColor', val)}
-            />
-          </div>
-          <div className="appearance-field" style={{ marginTop: 6 }}>
-            <label className="appearance-field-label">STROKE ALPHA</label>
-            <SmartNumberInput
-              ariaLabel="Stroke Alpha"
-              value={selectedPart.strokeOpacity ?? 1}
-              min={0}
-              max={1}
-              step={0.01}
-              displayScale={100}
-              precision={0}
-              onChange={(value) => onPartPropChange('strokeOpacity', value)}
-            />
-          </div>
+          <ColorPickerPopover
+            label="STROKE COLOR"
+            color={selectedPart.strokeColor || '#1e293b'}
+            alpha={selectedPart.strokeOpacity ?? 1}
+            fallback="#1e293b"
+            pickerId="stroke"
+            activePickerId={activePickerId}
+            onActivePickerChange={setActivePickerId}
+            onColorChange={(color) => onPartColorChange('strokeColor', color)}
+            onAlphaChange={(alpha) => onPartPropChange('strokeOpacity', alpha)}
+          />
         </div>
       </div>
 

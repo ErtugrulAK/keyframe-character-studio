@@ -63,4 +63,8 @@ describe('stroke-aware part bounds', () => {
     const part = makePart('custom_rect', { fillEnabled: true, strokeEnabled: true, strokeWidth: 40, strokeOpacity: 1 });
     expect(getPartBounds(part)).toEqual({ halfW: 60, halfH: 30 });
   });
+  it('uses renderer geometry extents for asymmetric polygon transform bounds', () => {
+    expect(getPartBounds(makePart('custom_triangle'))).toEqual({ halfW: 35, halfH: 35 });
+    expect(getPartBounds(makePart('custom_parallelogram'))).toEqual({ halfW: 85, halfH: 30 });
+  });
 });

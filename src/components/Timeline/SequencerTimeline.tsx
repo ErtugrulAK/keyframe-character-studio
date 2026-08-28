@@ -19,14 +19,16 @@ import {
   Clock,
   Scissors,
   TrendingUp,
-  Copy,
 } from 'lucide-react';
+import { SelectedKeyframeSection } from '../Inspector/sections/transform/SelectedKeyframeSection';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
+import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane } from './TrackLane';
 import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
+import { InlineRename } from '../Shared/InlineRename';
 import './SequencerTimeline.css';
 
 
@@ -76,17 +78,24 @@ export const SequencerTimeline: React.FC = () => {
     addMotionTemplate,
     renameMotionTemplate,
     deleteMotionTemplate,
-    duplicateMotionTemplate,
-    updateMotionTemplateDuration,
+    updateCurrentTransform,
+    updateCurrentPropertyChannel,
+    coordinateSystem,
+    isScaleLocked,
   } = useAnimator();
-
   // Sequencer Tree Modal Toggle State & Inline Sequence Rename
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
   const [isAddSeqModalOpen, setIsAddSeqModalOpen] = useState<boolean>(false);
   const [editingSeqId, setEditingSeqId] = useState<string | null>(null);
   const [editingSeqName, setEditingSeqName] = useState<string>('');
+  const [pendingDeleteSequence, setPendingDeleteSequence] = useState<{ id: string; name: string } | null>(null);
   const seqMenuRef = useRef<HTMLDivElement>(null);
-  const activeSequence = motionTemplates.find((template) => template.id === activeTemplateId);
+  const selectedTrack = selectedPartId
+    ? tracks.find((track) => track.partId === selectedPartId) ?? null
+    : null;
+  const selectedKeyframeTransform = selectedPartId
+    ? getComputedTransform(selectedPartId, currentFrame)
+    : null;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -398,37 +407,15 @@ export const SequencerTimeline: React.FC = () => {
                 title={`Sequence: ${tmpl.name}`}
               >
                 {isEditing ? (
-                  <input className="input-control"
-                type="text"
+                  <InlineRename
                     value={editingSeqName}
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                    onFocus={(e) => e.target.select()}
-                    onChange={(e) => setEditingSeqName(e.target.value)}
-                    onKeyDown={(e) => {
-                      e.stopPropagation();
-                      if (e.key === 'Enter') {
-                        if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
-                        setEditingSeqId(null);
-                      } else if (e.key === 'Escape') {
-                        setEditingSeqId(null);
-                      }
-                    }}
-                    onBlur={() => {
-                      if (editingSeqName.trim()) renameMotionTemplate(tmpl.id, editingSeqName.trim());
+                    ariaLabel={`Rename sequence ${tmpl.name}`}
+                    className="timeline-seq-tab-inline-input"
+                    onCommit={(next) => {
+                      renameMotionTemplate(tmpl.id, next);
                       setEditingSeqId(null);
                     }}
-                    style={{
-                      background: '#090b10',
-                      border: '1px solid #38bdf8',
-                      color: '#fff',
-                      borderRadius: 4,
-                      padding: '1px 6px',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      outline: 'none',
-                      width: 90,
-                    }}
+                    onCancel={() => setEditingSeqId(null)}
                   />
                 ) : (
                   <span
@@ -445,31 +432,19 @@ export const SequencerTimeline: React.FC = () => {
                 )}
 
                 {motionTemplates.length > 1 && (
-                  <span
+                  <button
+                    type="button"
                     className="timeline-seq-tab-close"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm(`Delete sequence "${tmpl.name}"? Its authored animation channels will also be removed.`)) {
-                        deleteMotionTemplate(tmpl.id);
-                      }
+                      setPendingDeleteSequence({ id: tmpl.id, name: tmpl.name });
                     }}
                     title="Delete sequence"
+                    aria-label={`Delete sequence ${tmpl.name}`}
                   >
-                    ✕
-                  </span>
+                    ×
+                  </button>
                 )}
-                <button
-                  type="button"
-                  className="timeline-seq-tab-duplicate"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    duplicateMotionTemplate(tmpl.id);
-                  }}
-                  title="Duplicate sequence"
-                  aria-label={`Duplicate sequence ${tmpl.name}`}
-                >
-                  <Copy size={11} />
-                </button>
               </div>
             );
           })}
@@ -484,35 +459,16 @@ export const SequencerTimeline: React.FC = () => {
         </div>
       </div>
 
-      <div
-        className="timeline-sequence-meta"
-        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', borderBottom: '1px solid var(--border-color)', background: 'rgba(15, 23, 42, 0.55)' }}
-      >
-        <span style={{ fontSize: 10, fontWeight: 800, color: 'var(--text-muted)', letterSpacing: '0.4px' }}>SEQUENCE DURATION</span>
-        <input
-          className="input-control"
-          data-testid="sequence-duration-input"
-          aria-label="Sequence duration in frames"
-          type="number"
-          min={0}
-          step={1}
-          value={activeSequence?.durationFrames ?? 0}
-          onChange={(event) => {
-            const value = Number(event.target.value);
-            if (Number.isFinite(value) && value >= 0 && activeSequence) {
-              updateMotionTemplateDuration(activeSequence.id, value);
-            }
-          }}
-          style={{ width: 64, height: 22, fontSize: 11, textAlign: 'center' }}
-        />
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>frames</span>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-          {activeSequence ? `${(activeSequence.durationFrames / Math.max(1, fps)).toFixed(2)}s @ ${fps} FPS` : '—'}
-        </span>
-        <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text-muted)' }}>
-          ID: {activeSequence?.id ?? '—'}
-        </span>
-      </div>
+      <ConfirmationDialog
+        isOpen={pendingDeleteSequence !== null}
+        title="Delete sequence?"
+        description={pendingDeleteSequence ? `Deleting “${pendingDeleteSequence.name}” also removes its authored animation channels.` : ''}
+        onCancel={() => setPendingDeleteSequence(null)}
+        onConfirm={() => {
+          if (pendingDeleteSequence) deleteMotionTemplate(pendingDeleteSequence.id);
+          setPendingDeleteSequence(null);
+        }}
+      />
 
       {/* Header Bar */}
       <div className="timeline-header">
@@ -625,9 +581,7 @@ export const SequencerTimeline: React.FC = () => {
                   activeTemplateId={activeTemplateId}
                   onSelect={handleSelectPart}
                   onStartEdit={(partId, name) => { setEditingPartId(partId); setEditingNameValue(name); }}
-                  onChangeEditValue={setEditingNameValue}
                   onEnterCommit={(partId, name) => { if (name.trim()) renamePartAndTrack(partId, name.trim()); setEditingPartId(null); }}
-                  onBlurCommit={(partId, name) => { renamePartAndTrack(partId, name); setEditingPartId(null); }}
                   onCancelEdit={() => setEditingPartId(null)}
                   onToggleExpand={toggleTrackExpanded}
                   onToggleEditVisible={toggleTrackEditVisibility}
@@ -690,6 +644,23 @@ export const SequencerTimeline: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {selectedKeyframeId && selectedTrack && selectedKeyframeTransform && (
+        <div className="timeline-selected-keyframe-panel">
+          <div className="timeline-selected-keyframe-title">Selected Keyframe</div>
+          <SelectedKeyframeSection
+            track={selectedTrack}
+            selectedKeyframeId={selectedKeyframeId}
+            currentFrame={currentFrame}
+            transform={selectedKeyframeTransform}
+            activeTemplateId={activeTemplateId}
+            isScaleLocked={isScaleLocked}
+            coordinateSystem={coordinateSystem}
+            onUpdate={updateCurrentTransform}
+            onUpdateChannel={updateCurrentPropertyChannel}
+          />
+        </div>
+      )}
 
       {/* Floating Keyframe Tooltip */}
       {hoveredKf && (

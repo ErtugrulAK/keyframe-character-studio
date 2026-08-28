@@ -77,21 +77,25 @@ describe('browser OGraf ZIP writer', () => {
 });
 
 describe('HeaderBar OGraf export integration', () => {
-  it('exposes OGraf export and preserves JSON/Video export actions', async () => {
+  it('exposes one Export menu with JSON and OGraf choices; Video is absent', async () => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
     createZipMock.mockResolvedValue({ fileName: 'my-project-demo-ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:ograf'), revokeObjectURL: vi.fn() });
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
 
     render(<HeaderBar />);
-    expect(screen.getByTitle('Export as OGraf')).toBeTruthy();
-    expect(screen.getByTitle('Export Video / Animation Sequence')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export', exact: true })).toBeTruthy();
+    expect(screen.queryByText('Export Video')).toBeNull();
 
-    fireEvent.click(screen.getByTitle('Export as OGraf'));
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    expect(screen.getByRole('menuitem', { name: 'JSON', exact: true })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'OGraf', exact: true })).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
     expect(context.showToast).toHaveBeenCalledWith('Exported "my-project-demo-ograf.zip"', 'success');
 
-    fireEvent.click(screen.getByTitle('Export Video / Animation Sequence'));
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'JSON', exact: true }));
     expect(context.exportProject).toHaveBeenCalledTimes(2);
   });
 
@@ -101,7 +105,8 @@ describe('HeaderBar OGraf export integration', () => {
     vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() });
     render(<HeaderBar />);
 
-    fireEvent.click(screen.getByTitle('Export as OGraf'));
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
     await waitFor(() => expect(context.showToast).toHaveBeenCalled());
     expect(context.showToast.mock.calls[0][0]).toContain('custom_video');
     expect(createObjectURL).not.toHaveBeenCalled();
@@ -110,7 +115,8 @@ describe('HeaderBar OGraf export integration', () => {
     context.showToast.mockClear();
     context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_image', imageUrl: 'assets/missing.png' }))));
     render(<HeaderBar />);
-    fireEvent.click(screen.getByTitle('Export as OGraf'));
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
     await waitFor(() => expect(context.showToast).toHaveBeenCalled());
     expect(context.showToast.mock.calls[0][0]).toContain('asset');
     expect(createObjectURL).not.toHaveBeenCalled();
@@ -118,18 +124,21 @@ describe('HeaderBar OGraf export integration', () => {
 
   it('prevents duplicate concurrent exports while preparation is active', async () => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
-    let resolveZip: ((value: { fileName: string; bytes: Uint8Array }) => void) | undefined;
-    createZipMock.mockImplementation(() => new Promise((resolve) => {
-      resolveZip = resolve;
-    }));
+    const { promise: zipPromise, resolve: resolveZip } = Promise.withResolvers<{ fileName: string; bytes: Uint8Array }>();
+    createZipMock.mockReturnValue(zipPromise);
     render(<HeaderBar />);
-    const button = screen.getByTitle('Export as OGraf') as HTMLButtonElement;
 
-    fireEvent.click(button);
-    fireEvent.click(button);
-    expect(button.disabled).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
     expect(createZipMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    const menuItem = screen.getByRole('menuitem', { name: /OGraf/u }) as HTMLButtonElement;
+    expect(menuItem.disabled).toBe(true);
+    fireEvent.click(menuItem);
+    expect(createZipMock).toHaveBeenCalledTimes(1);
+
     resolveZip?.({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
-    await waitFor(() => expect(button.disabled).toBe(false));
+    await waitFor(() => expect(menuItem.disabled).toBe(false));
   });
 });

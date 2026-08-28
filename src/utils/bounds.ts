@@ -1,5 +1,6 @@
 import type { CharacterPart, Transform } from '../types/animator';
 import { getFreeformBounds } from './freeform';
+import { getShapeGeometry } from './shapeGeometry';
 import { resolveShapeAppearance } from './shapeAppearance';
 
 export const getTextMetrics = (text: string, fontSize: number, fontFamily?: string): { halfW: number; halfH: number } => {
@@ -50,85 +51,62 @@ export const getTextMetrics = (text: string, fontSize: number, fontFamily?: stri
 export const getPartBounds = (part: CharacterPart, transform?: Pick<Transform, 'scaleX' | 'scaleY'>): { halfW: number; halfH: number } => {
   let halfW = 32;
   let halfH = 32;
+  const geometry = getShapeGeometry(part.type);
 
-  switch (part.type as string) {
-    case 'custom_freeform': {
-      const b = getFreeformBounds(part.points || []);
-      halfW = b.halfW;
-      halfH = b.halfH;
-      break;
+  if (geometry) {
+    if (geometry.kind === 'circle') {
+      halfW = geometry.r;
+      halfH = geometry.r;
+    } else if (geometry.kind === 'polygon') {
+      halfW = Math.max(...geometry.points.map((point) => Math.abs(point.x)));
+      halfH = Math.max(...geometry.points.map((point) => Math.abs(point.y)));
+    } else {
+      halfW = Math.max(Math.abs(geometry.x), Math.abs(geometry.x + geometry.width));
+      halfH = Math.max(Math.abs(geometry.y), Math.abs(geometry.y + geometry.height));
     }
-    case 'custom_circle':
-    case 'custom_box':
-      halfW = part.width ? part.width / 2 : 30;
-      halfH = part.height ? part.height / 2 : 30;
-      break;
-    case 'custom_star':
-      halfW = part.width ? part.width / 2 : 35;
-      halfH = part.height ? part.height / 2 : 32.5;
-      break;
-    case 'custom_triangle':
-      halfW = part.width ? part.width / 2 : 35;
-      halfH = part.height ? part.height / 2 : 30;
-      break;
-    case 'custom_diamond':
-      halfW = part.width ? part.width / 2 : 35;
-      halfH = part.height ? part.height / 2 : 35;
-      break;
-    case 'custom_parallelogram':
-      halfW = part.width ? part.width / 2 : 60;
-      halfH = part.height ? part.height / 2 : 30;
-      break;
-    case 'custom_capsule':
-      halfW = part.width ? part.width / 2 : 50;
-      halfH = part.height ? part.height / 2 : 20;
-      break;
-    case 'custom_card':
-      halfW = part.width ? part.width / 2 : 90;
-      halfH = part.height ? part.height / 2 : 50;
-      break;
-    case 'custom_rect':
-      halfW = part.width ? part.width / 2 : 60;
-      halfH = part.height ? part.height / 2 : 30;
-      break;
-    case 'custom_banner':
-      halfW = part.width ? part.width / 2 : 80;
-      halfH = part.height ? part.height / 2 : 25;
-      break;
-    case 'custom_text':
-    case 'text':
-    case 'heading':
-    case 'title': {
-      const textStr = part.textValue || part.name || 'TEXT';
-      const fontSize = part.fontSize || 24;
-      const metrics = getTextMetrics(textStr, fontSize, part.fontFamily);
-      halfW = metrics.halfW;
-      halfH = metrics.halfH;
-      break;
-    }
-    case 'custom_image':
-    case 'custom_video':
-      halfW = part.width ? part.width / 2 : (part.type === 'custom_video' ? 100 : 90);
-      halfH = part.height ? part.height / 2 : 60;
-      break;
-    case 'mograph_cloner': {
-      const cfg = part.clonerConfig;
-      if (cfg) {
-        if (cfg.mode === 'grid') {
-          halfW = Math.max(30, ((cfg.countX - 1) * cfg.spacingX + cfg.childSize * 2) / 2);
-          halfH = Math.max(30, ((cfg.countY - 1) * cfg.spacingY + cfg.childSize * 2) / 2);
-        } else if (cfg.mode === 'circle') {
-          halfW = Math.max(30, cfg.radius + cfg.childSize);
-          halfH = Math.max(30, cfg.radius + cfg.childSize);
-        } else {
-          halfW = Math.max(30, ((cfg.countLinear - 1) * cfg.spacingLinear + cfg.childSize * 2) / 2);
-          halfH = Math.max(20, cfg.childSize);
-        }
-      } else {
-        halfW = 60;
-        halfH = 40;
+  } else {
+    switch (part.type as string) {
+      case 'custom_freeform': {
+        const b = getFreeformBounds(part.points || []);
+        halfW = b.halfW;
+        halfH = b.halfH;
+        break;
       }
-      break;
+      case 'custom_text':
+      case 'text':
+      case 'heading':
+      case 'title': {
+        const textStr = part.textValue || part.name || 'TEXT';
+        const fontSize = part.fontSize || 24;
+        const metrics = getTextMetrics(textStr, fontSize, part.fontFamily);
+        halfW = metrics.halfW;
+        halfH = metrics.halfH;
+        break;
+      }
+      case 'custom_image':
+      case 'custom_video':
+        halfW = part.width ? part.width / 2 : (part.type === 'custom_video' ? 100 : 90);
+        halfH = part.height ? part.height / 2 : 60;
+        break;
+      case 'mograph_cloner': {
+        const cfg = part.clonerConfig;
+        if (cfg) {
+          if (cfg.mode === 'grid') {
+            halfW = Math.max(30, ((cfg.countX - 1) * cfg.spacingX + cfg.childSize * 2) / 2);
+            halfH = Math.max(30, ((cfg.countY - 1) * cfg.spacingY + cfg.childSize * 2) / 2);
+          } else if (cfg.mode === 'circle') {
+            halfW = Math.max(30, cfg.radius + cfg.childSize);
+            halfH = Math.max(30, cfg.radius + cfg.childSize);
+          } else {
+            halfW = Math.max(30, ((cfg.countLinear - 1) * cfg.spacingLinear + cfg.childSize * 2) / 2);
+            halfH = Math.max(20, cfg.childSize);
+          }
+        } else {
+          halfW = 60;
+          halfH = 40;
+        }
+        break;
+      }
     }
   }
 

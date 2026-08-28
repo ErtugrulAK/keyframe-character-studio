@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
-import { getCursorAnchoredViewport, getPartsInMarquee, getShapeCreationBounds, getShapeCreationPlacement } from '../utils/viewportMath';
+import { getCursorAnchoredViewport, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../utils/viewportMath';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,
@@ -27,12 +27,12 @@ describe('Canvas Interaction V1 viewport math', () => {
     };
     const next = getCursorAnchoredViewport(input);
     const baseScale = Math.min(input.rect.width / 600, input.rect.height / 480);
-    const viewBoxX = (input.clientX - input.rect.left - (input.rect.width - 600 * baseScale) / 2) / baseScale;
-    const viewBoxY = (input.clientY - input.rect.top - (input.rect.height - 480 * baseScale) / 2) / baseScale;
-    const relX = viewBoxX - 300;
-    const relY = viewBoxY - 240;
-    const before = { x: relX / input.zoom - input.pan.x, y: relY / input.zoom - input.pan.y };
-    const after = { x: relX / next.zoom - next.pan.x, y: relY / next.zoom - next.pan.y };
+    const baseTranslateX = input.rect.left + (input.rect.width - 600 * baseScale) / 2;
+    const baseTranslateY = input.rect.top + (input.rect.height - 480 * baseScale) / 2;
+    const originX = input.rect.left + input.rect.width / 2;
+    const originY = input.rect.top + input.rect.height / 2;
+    const before = { x: ((input.clientX - originX - input.pan.x) / input.zoom - (baseTranslateX - originX)) / baseScale, y: ((input.clientY - originY - input.pan.y) / input.zoom - (baseTranslateY - originY)) / baseScale };
+    const after = { x: ((input.clientX - originX - next.pan.x) / next.zoom - (baseTranslateX - originX)) / baseScale, y: ((input.clientY - originY - next.pan.y) / next.zoom - (baseTranslateY - originY)) / baseScale };
     expect(after.x).toBeCloseTo(before.x, 10);
     expect(after.y).toBeCloseTo(before.y, 10);
   });
@@ -57,6 +57,57 @@ describe('Canvas Interaction V1 viewport math', () => {
     const bounds = getShapeCreationBounds(start, current);
     expect(bounds).toMatchObject({ minX: 10, minY: 20, maxX: 110, maxY: 220, width: 100, height: 200, centerX: 60, centerY: 120 });
   });
+
+  it('keeps cursor points stable at edges and through repeated zoom changes', () => {
+    const rect = { left: 20, top: 30, width: 1000, height: 700 };
+    const viewBox = { width: 600, height: 480 };
+    const cursors = [
+      { x: 520, y: 380 },
+      { x: 40, y: 50 },
+      { x: 990, y: 680 },
+    ];
+    for (const cursor of cursors) {
+      let state = { zoom: 0.8, pan: { x: 35, y: -22 } };
+      for (const nextZoom of [1.1, 1.6, 0.7, 1.3]) {
+        const baseScale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height);
+        const baseTranslateX = rect.left + (rect.width - viewBox.width * baseScale) / 2;
+        const baseTranslateY = rect.top + (rect.height - viewBox.height * baseScale) / 2;
+        const originX = rect.left + rect.width / 2;
+        const originY = rect.top + rect.height / 2;
+        const before = { x: ((cursor.x - originX - state.pan.x) / state.zoom - (baseTranslateX - originX)) / baseScale, y: ((cursor.y - originY - state.pan.y) / state.zoom - (baseTranslateY - originY)) / baseScale };
+        const next = getCursorAnchoredViewport({
+          rect,
+          clientX: cursor.x,
+          clientY: cursor.y,
+          zoom: state.zoom,
+          pan: state.pan,
+          nextZoom,
+          viewBox,
+        });
+        const after = { x: ((cursor.x - originX - next.pan.x) / next.zoom - (baseTranslateX - originX)) / baseScale, y: ((cursor.y - originY - next.pan.y) / next.zoom - (baseTranslateY - originY)) / baseScale };
+        expect(after.x).toBeCloseTo(before.x, 8);
+        expect(after.y).toBeCloseTo(before.y, 8);
+        state = next;
+      }
+    }
+  });
+
+  it.each([
+    [{ x: 10, y: 20 }, { x: 110, y: 60 }],
+    [{ x: 110, y: 60 }, { x: 10, y: 20 }],
+    [{ x: 110, y: 20 }, { x: 10, y: 60 }],
+    [{ x: 10, y: 60 }, { x: 110, y: 20 }],
+  ])('constrains square creation bounds in every drag direction', (start, current) => {
+    const bounds = getShapeCreationBounds(start, current, true);
+    expect(bounds.width).toBe(bounds.height);
+    expect(bounds.width).toBe(100);
+  });
+
+  it('preserves pointer-derived deltas near former snap thresholds', () => {
+    expect(getPointerDelta({ x: 0, y: 0 }, { x: 5, y: -4 })).toEqual({ dx: 5, dy: -4 });
+    expect(getPointerDelta({ x: 0, y: 0 }, { x: 7.9, y: 8.1 })).toEqual({ dx: 7.9, dy: 8.1 });
+  });
+
 
   it('derives rectangle, circle and asymmetric polygon placement from canonical bounds', () => {
     const bounds = getShapeCreationBounds({ x: 200, y: 140 }, { x: 400, y: 340 });

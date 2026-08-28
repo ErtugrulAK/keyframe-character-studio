@@ -6,21 +6,26 @@ import { isTrimPathEligible } from '../../utils/trimPath';
 import { updateTrimPath, type TrimPathAuthoringPatch } from '../../utils/trimPathAuthoring';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
-import { KeyframesTab } from './sections/KeyframesTab';
 import { DuplicateTab } from './sections/DuplicateTab';
+import { isBooleanEligible, computeBooleanContours, dissolveBooleanGroup as dissolveBooleanGroupState, type BooleanOperation } from '../../utils/booleanGeometry';
+import { generateId } from '../../utils/idGenerator';
 import {
   Sliders,
   Copy,
   Trash2,
   Activity,
   CopyPlus,
+  Unlink,
 } from 'lucide-react';
 
 export const DetailsPanel: React.FC = () => {
   const {
     currentFrame,
     selectedPartId,
+    selectedPartIds,
     characterParts,
+    setSelectedPartId,
+    setSelectedPartIds,
     setCharacterParts,
     setTracks,
     getComputedTransform,
@@ -40,15 +45,105 @@ export const DetailsPanel: React.FC = () => {
     endBatchInteraction,
     showToast,
     tracks,
-    selectedKeyframeId,
     activeTemplateId,
     isScaleLocked,
     coordinateSystem,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'edit' | 'duplicate'>('edit');
+  const booleanEligibleParts = selectedPartIds
+    .map((id) => characterParts.find((part) => part.id === id))
+    .filter((part): part is NonNullable<typeof part> => Boolean(part && isBooleanEligible(part)));
+
+  const createBooleanGroup = (operation: BooleanOperation) => {
+    if (booleanEligibleParts.length < 2) return;
+    const contours = computeBooleanContours(
+      operation,
+      booleanEligibleParts,
+      Object.fromEntries(booleanEligibleParts.map((part) => [part.id, getComputedTransform(part.id, currentFrame)])),
+    );
+    if (contours.length === 0) {
+      showToast('The selected shapes produce an empty result.', 'info');
+      return;
+    }
+    const groupId = generateId('boolean');
+    const groupPart = {
+      ...booleanEligibleParts[0],
+      id: groupId,
+      name: `Boolean · ${operation[0].toUpperCase()}${operation.slice(1)}`,
+      type: 'custom_freeform' as const,
+      zIndex: Math.max(...booleanEligibleParts.map((part) => part.zIndex)) + 1,
+      parentId: undefined,
+      booleanGroupId: undefined,
+      matte: undefined,
+      booleanOperation: operation,
+      booleanOperandIds: booleanEligibleParts.map((part) => part.id),
+      booleanContours: contours,
+      points: contours[0],
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    };
+    startBatchInteraction();
+    setCharacterParts((parts) => [
+      ...parts.map((part) => booleanEligibleParts.some((operand) => operand.id === part.id) ? { ...part, booleanGroupId: groupId } : part),
+      groupPart,
+    ]);
+    setTracks((currentTracks) => [
+      ...currentTracks,
+      {
+        id: generateId('track'),
+        partId: groupId,
+        name: groupPart.name,
+        color: '#38bdf8',
+        visible: true,
+        locked: false,
+        channels: makeEmptyChannels(),
+      },
+    ]);
+    endBatchInteraction();
+    setSelectedPartIds([groupId]);
+    setSelectedPartId(groupId);
+    showToast(`${operation[0].toUpperCase()}${operation.slice(1)} boolean created`, 'success');
+  };
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
+  const selectedBooleanGroup = selectedPart?.booleanOperandIds?.length
+    ? selectedPart
+    : undefined;
+
+  const updateBooleanOperation = (operation: BooleanOperation) => {
+    if (!selectedBooleanGroup || !selectedBooleanGroup.booleanOperandIds) return;
+    const operands = selectedBooleanGroup.booleanOperandIds
+      .map((id) => characterParts.find((part) => part.id === id))
+      .filter((part): part is NonNullable<typeof part> => Boolean(part));
+    const transforms = Object.fromEntries(
+      operands.map((operand) => [operand.id, getComputedTransform(operand.id, currentFrame)]),
+    );
+    const contours = computeBooleanContours(operation, operands, transforms);
+    startBatchInteraction();
+    setCharacterParts((parts) => parts.map((part) => part.id === selectedBooleanGroup.id
+      ? {
+        ...part,
+        name: `Boolean · ${operation[0].toUpperCase()}${operation.slice(1)}`,
+        booleanOperation: operation,
+        booleanContours: contours,
+        points: contours[0] ?? [],
+      }
+      : part));
+    endBatchInteraction();
+    if (contours.length === 0) showToast('Boolean result is empty.', 'info');
+  };
+  const dissolveBooleanGroup = () => {
+    if (!selectedBooleanGroup?.booleanOperandIds) return;
+    const result = dissolveBooleanGroupState(characterParts, tracks, selectedBooleanGroup.id);
+    if (result.operandIds.length === 0) return;
+    startBatchInteraction();
+    setCharacterParts(result.parts);
+    setTracks(result.tracks);
+    setSelectedPartIds(result.operandIds);
+    setSelectedPartId(result.operandIds[result.operandIds.length - 1] ?? null);
+    endBatchInteraction();
+    showToast('Boolean dissolved; operands preserved.', 'success');
+  };
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
 
   const handlePartPropChange = (key: any, value: any) => {
@@ -141,10 +236,11 @@ export const DetailsPanel: React.FC = () => {
             </button>
             <button
               className="btn-icon-small danger"
-              onClick={() => deletePart(selectedPart.id)}
-              title="Delete Actor Instance"
+              onClick={selectedBooleanGroup ? dissolveBooleanGroup : () => deletePart(selectedPart.id)}
+              title={selectedBooleanGroup ? 'Dissolve Boolean and preserve operands' : 'Delete Actor Instance'}
+              aria-label={selectedBooleanGroup ? 'Dissolve Boolean' : 'Delete Actor Instance'}
             >
-              <Trash2 size={12} />
+              {selectedBooleanGroup ? <Unlink size={12} /> : <Trash2 size={12} />}
             </button>
           </div>
         </div>
@@ -152,6 +248,65 @@ export const DetailsPanel: React.FC = () => {
         <div className="details-empty-state">
           <span>Select an element on Canvas or Outliner to view details</span>
         </div>
+      )}
+      {booleanEligibleParts.length >= 2 && (
+        <section className="shape-operations-section" aria-label="Shape operations">
+          <div className="inspector-section-label">SHAPE OPERATIONS</div>
+          <p className="shape-operations-description">Combine eligible closed vector shapes into a non-destructive Boolean result.</p>
+          <div className="shape-operations-grid">
+            {(['union', 'subtract', 'intersect', 'exclude'] as const).map((operation) => (
+              <button key={operation} type="button" onClick={() => createBooleanGroup(operation)} title={`Create ${operation} Boolean`}>
+                {operation[0].toUpperCase() + operation.slice(1)}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+      {selectedBooleanGroup && (
+        <section className="boolean-editor-section" aria-label="Boolean operation">
+          <div className="inspector-section-label">BOOLEAN RESULT</div>
+          <p className="boolean-description">Combine vector geometry. Operands remain authored and editable.</p>
+          <label className="boolean-operation-field">
+            <span>Operation</span>
+            <select
+              aria-label="Boolean operation"
+              value={selectedBooleanGroup.booleanOperation ?? 'union'}
+              onChange={(event) => updateBooleanOperation(event.target.value as BooleanOperation)}
+            >
+              <option value="union">Union</option>
+              <option value="subtract">Subtract</option>
+              <option value="intersect">Intersect</option>
+              <option value="exclude">Exclude</option>
+            </select>
+          </label>
+          <div className="boolean-operands-list" aria-label="Boolean operands">
+            {selectedBooleanGroup.booleanOperandIds?.map((operandId) => (
+              <button
+                key={operandId}
+                type="button"
+                className="boolean-operand-button"
+                onClick={() => {
+                  setSelectedPartIds([operandId]);
+                  setSelectedPartId(operandId);
+                }}
+              >
+                {characterParts.find((part) => part.id === operandId)?.name ?? operandId}
+              </button>
+            ))}
+          </div>
+          {selectedBooleanGroup.booleanContours?.length === 0 && (
+            <p className="boolean-empty-message">Boolean result is empty.</p>
+          )}
+          <button type="button" className="btn-secondary boolean-dissolve-button" onClick={dissolveBooleanGroup}>
+            <Unlink size={12} /> Dissolve Boolean
+          </button>
+        </section>
+      )}
+      {selectedPart && !selectedBooleanGroup && booleanEligibleParts.length < 2 && (
+        <section className="shape-operations-section shape-operations-hint" aria-label="Boolean operations unavailable">
+          <div className="inspector-section-label">SHAPE OPERATIONS</div>
+          <p>Boolean: select 2 closed vector shapes.</p>
+        </section>
       )}
 
       {/* 3. Section Navigation Tabs */}
@@ -179,10 +334,6 @@ export const DetailsPanel: React.FC = () => {
         <div className="details-body">
           {activeTabSection === 'edit' && (
             <>
-              <div className="inspector-subsection-heading">
-                <Activity size={12} />
-                <span>Transform</span>
-              </div>
               <TransformTab
                 selectedPart={selectedPart}
                 transform={transform}
@@ -203,15 +354,10 @@ export const DetailsPanel: React.FC = () => {
                 onClearAnimation={handleClearAnimation}
                 clipboardSourceId={clipboardData?.part.id ?? null}
                 track={tracks.find((t) => t.partId === selectedPartId) ?? null}
-                selectedKeyframeId={selectedKeyframeId}
                 activeTemplateId={activeTemplateId}
                 isScaleLocked={isScaleLocked}
               />
 
-              <div className="inspector-subsection-heading">
-                <Activity size={12} />
-                <span>Style</span>
-              </div>
               <StyleTab
                 selectedPart={selectedPart}
                 characterParts={characterParts}
@@ -220,11 +366,6 @@ export const DetailsPanel: React.FC = () => {
                 handleZIndexChange={handleZIndexChange}
               />
 
-              <div className="inspector-subsection-heading">
-                <Activity size={12} />
-                <span>Animation</span>
-              </div>
-              <KeyframesTab selectedPart={selectedPart} />
             </>
           )}
 

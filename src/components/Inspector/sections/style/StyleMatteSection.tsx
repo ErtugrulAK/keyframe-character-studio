@@ -227,10 +227,11 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   };
 
   return (
-    <StyleCard title="TRACK MATTE" icon={<Scissors size={13} />} color="#00d2ff">
+    <StyleCard title="MASK / TRACK MATTE" icon={<Scissors size={13} />} color="#00d2ff">
+      <p className="matte-description">Control visibility using another layer. Boolean operations combine geometry instead.</p>
       <div className="matte-control-grid">
         <div className="matte-field">
-          <label className="form-label">MATTE SOURCE</label>
+          <label className="form-label">MASK SOURCE</label>
           <select className="select-control" style={selectStyle} value={selectValue} onChange={(e) => onSelectSource(e.target.value)}>
             <option value="">None</option>
             {eligibleSources.map((p) => (

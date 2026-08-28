@@ -3,7 +3,7 @@ import { useAnimator } from '../../context/AnimatorContext';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
-import { clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
+import { clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeFreeformPoints } from '../../utils/freeform';
 import { worldToContainerLocal } from '../../utils/containerMath';
@@ -24,6 +24,7 @@ export const StageCanvas: React.FC = () => {
     selectedPartIds,
     handleSelectPart,
     setSelectedPartId,
+    setSelectedPartIds,
     getComputedTransform,
     updateCurrentTransform,
     activeTool,
@@ -34,14 +35,13 @@ export const StageCanvas: React.FC = () => {
     updatePartMedia,
     showGrid,
     setShowGrid,
-    projectResolution,
     totalFrames,
+    projectResolution,
     appMode,
     broadcastState,
     broadcastSessionActivated,
     namedSequenceRuntime,
     tracks,
-    focusModeNodeId,
     setFocusModeNodeId,
     startBatchInteraction,
     endBatchInteraction,
@@ -86,7 +86,6 @@ export const StageCanvas: React.FC = () => {
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
   });
-  const [snapLines, setSnapLines] = useState<{x1: number, y1: number, x2: number, y2: number, color?: string}[]>([]);
 
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
   const [dragInitialLocalX, setDragInitialLocalX] = useState<number>(1);
@@ -107,8 +106,8 @@ export const StageCanvas: React.FC = () => {
       const relX = viewBoxX - EDITOR_CAMERA_CENTER.x;
       const relY = viewBoxY - EDITOR_CAMERA_CENTER.y;
 
-      const svgX = relX / zoomLevel - panOffset.x + EDITOR_CAMERA_CENTER.x;
-      const svgY = relY / zoomLevel - panOffset.y + EDITOR_CAMERA_CENTER.y;
+      const svgX = relX / zoomLevel - panOffset.x / scale + EDITOR_CAMERA_CENTER.x;
+      const svgY = relY / zoomLevel - panOffset.y / scale + EDITOR_CAMERA_CENTER.y;
       return { svgX, svgY };
     },
     [zoomLevel, panOffset]
@@ -152,8 +151,13 @@ export const StageCanvas: React.FC = () => {
 
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
     if (appMode === 'broadcast' || activeTool !== 'select' || e.button !== 0) return;
+    if (e.ctrlKey || e.metaKey) return;
     e.stopPropagation();
-    setSelectedPartId(partId);
+    if (!selectedPartIds.includes(partId)) {
+      handleSelectPart(partId);
+    } else {
+      setSelectedPartId(partId);
+    }
     const transform = getComputedTransform(partId, currentFrame);
     if (!transform) return;
 
@@ -161,14 +165,14 @@ export const StageCanvas: React.FC = () => {
     setIsDragging(true);
     setDragMode('translate');
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    
+
     const initialTransforms: Record<string, Transform> = {};
     const relevantIds = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
     relevantIds.forEach(id => {
       const t = getComputedTransform(id, currentFrame);
       if (t) initialTransforms[id] = { ...t };
     });
-    
+
     setDragStart({
       x: svgX,
       y: svgY,
@@ -298,8 +302,8 @@ export const StageCanvas: React.FC = () => {
         const clientY = e.clientY;
         if (rafPanRef.current) cancelAnimationFrame(rafPanRef.current);
         rafPanRef.current = requestAnimationFrame(() => {
-          const dx = (clientX - dragStart.x) / zoomLevel;
-          const dy = (clientY - dragStart.y) / zoomLevel;
+          const dx = clientX - dragStart.x;
+          const dy = clientY - dragStart.y;
           setPanOffset({
             x: dragStart.initialTransform.x + dx,
             y: dragStart.initialTransform.y + dy,
@@ -326,6 +330,7 @@ export const StageCanvas: React.FC = () => {
             bounds: getShapeCreationBounds(
               { x: shapeCreationStart.svgX, y: shapeCreationStart.svgY },
               { x: svgX, y: svgY },
+              pendingShapeType === 'custom_box',
             ),
           });
         }
@@ -381,67 +386,10 @@ export const StageCanvas: React.FC = () => {
       if (!selectedPartId) return;
 
       if (dragMode === 'translate') {
-        let dx = svgX - dragStart.x;
-        let dy = svgY - dragStart.y;
-        
-        // Snapping Logic
-        let snappedX = dx;
-        let snappedY = dy;
-        const newSnapLines: {x1: number, y1: number, x2: number, y2: number, color?: string}[] = [];
-        const SNAP_DIST = 8 / zoomLevel;
-        
-        if (focusModeNodeId !== selectedPartId) {
-          // Compute moving group/part center and bounds
-          let minX = Infinity; let minY = Infinity; let maxX = -Infinity; let maxY = -Infinity;
-          
-          const relevantIds = selectedPartIds.includes(selectedPartId) ? selectedPartIds : [selectedPartId];
-          relevantIds.forEach(id => {
-            const part = characterParts.find(p => p.id === id);
-            if (!part) return;
-            const initT = dragStart.initialTransforms?.[id] || dragStart.initialTransform;
-            const b = getPartBounds(part, initT);
-            const left = initT.x + dx - b.halfW * Math.abs(initT.scaleX);
-            const right = initT.x + dx + b.halfW * Math.abs(initT.scaleX);
-            const top = initT.y + dy - b.halfH * Math.abs(initT.scaleY);
-            const bottom = initT.y + dy + b.halfH * Math.abs(initT.scaleY);
-            if (left < minX) minX = left; if (right > maxX) maxX = right;
-            if (top < minY) minY = top; if (bottom > maxY) maxY = bottom;
-          });
-          
-          if (minX !== Infinity) {
-            const movingCX = (minX + maxX) / 2;
-            const movingCY = (minY + maxY) / 2;
-            
-            // Check canvas center
-            if (Math.abs(movingCX - 0) < SNAP_DIST) {
-              snappedX -= movingCX;
-              newSnapLines.push({ x1: EDITOR_CAMERA_CENTER.x, y1: -1000, x2: EDITOR_CAMERA_CENTER.x, y2: 1000, color: '#f472b6' }); // Canvas Center Y-Axis
-            }
-            if (Math.abs(movingCY - 0) < SNAP_DIST) {
-              snappedY -= movingCY;
-              newSnapLines.push({ x1: -1000, y1: EDITOR_CAMERA_CENTER.y, x2: 1000, y2: EDITOR_CAMERA_CENTER.y, color: '#f472b6' }); // Canvas Center X-Axis
-            }
-            
-            // Check other parts
-            characterParts.forEach(part => {
-              if (relevantIds.includes(part.id)) return;
-              const t = getComputedTransform(part.id, currentFrame);
-              const cx = t.x; const cy = t.y;
-              
-              if (Math.abs(movingCX - cx) < SNAP_DIST && newSnapLines.length < 5) {
-                snappedX -= (movingCX - cx);
-                newSnapLines.push({ x1: EDITOR_CAMERA_CENTER.x + cx, y1: -1000, x2: EDITOR_CAMERA_CENTER.x + cx, y2: 1000, color: '#38bdf8' });
-              }
-              if (Math.abs(movingCY - cy) < SNAP_DIST && newSnapLines.length < 5) {
-                snappedY -= (movingCY - cy);
-                newSnapLines.push({ x1: -1000, y1: EDITOR_CAMERA_CENTER.y + cy, x2: 1000, y2: EDITOR_CAMERA_CENTER.y + cy, color: '#38bdf8' });
-              }
-            });
-          }
-        }
-        
-        setSnapLines(newSnapLines);
-        
+        const { dx: deltaX, dy: deltaY } = getPointerDelta(
+          { x: dragStart.x, y: dragStart.y },
+          { x: svgX, y: svgY },
+        );
         // If we have multiple selections and the dragged part is in it, move all of them
         if (dragStart.initialTransforms) {
             Object.keys(dragStart.initialTransforms).forEach(id => {
@@ -451,10 +399,10 @@ export const StageCanvas: React.FC = () => {
                 // Child of a container: the stored position is container-relative,
                 // so convert the moved WORLD position back into container space.
                 const pt = getComputedTransform(movedPart.parentId, currentFrame);
-                const local = worldToContainerLocal({ ...initT, x: initT.x + snappedX, y: initT.y + snappedY }, pt);
+                const local = worldToContainerLocal({ ...initT, x: initT.x + deltaX, y: initT.y + deltaY }, pt);
                 updateCurrentTransform({ x: local.x, y: local.y }, id);
               } else {
-                updateCurrentTransform({ x: initT.x + snappedX, y: initT.y + snappedY }, id);
+                updateCurrentTransform({ x: initT.x + deltaX, y: initT.y + deltaY }, id);
               }
             });
           } else {
@@ -462,12 +410,12 @@ export const StageCanvas: React.FC = () => {
             if (draggedPart?.parentId) {
               const pt = getComputedTransform(draggedPart.parentId, currentFrame);
               const local = worldToContainerLocal(
-                { ...dragStart.initialTransform, x: dragStart.initialTransform.x + snappedX, y: dragStart.initialTransform.y + snappedY },
+                { ...dragStart.initialTransform, x: dragStart.initialTransform.x + deltaX, y: dragStart.initialTransform.y + deltaY },
                 pt
               );
               updateCurrentTransform({ x: local.x, y: local.y });
             } else {
-              updateCurrentTransform({ x: dragStart.initialTransform.x + snappedX, y: dragStart.initialTransform.y + snappedY });
+              updateCurrentTransform({ x: dragStart.initialTransform.x + deltaX, y: dragStart.initialTransform.y + deltaY });
             }
           }
         return;
@@ -575,7 +523,9 @@ export const StageCanvas: React.FC = () => {
         updateCurrentTransform({ scaleY: newScaleY });
       }
     },
-    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, zoomLevel]
+    // The pointer-up effect owns the current mouse-up callback; adding the later-declared callback here would create a declaration cycle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, shapeCreationStart, pendingShapeType, currentFrame, getComputedTransform, isScaleLocked]
   );
 
   const handleMouseUp = useCallback((commitShape: boolean = true) => {
@@ -602,8 +552,8 @@ export const StageCanvas: React.FC = () => {
         (part) => tracks.find((track) => track.partId === part.id)?.editVisible !== false,
       );
       if (selected.length > 0) {
-        handleSelectPart(selected[selected.length - 1], false);
-        selected.slice(0, -1).forEach((id) => handleSelectPart(id, true));
+        setSelectedPartIds(selected);
+        setSelectedPartId(selected[selected.length - 1]);
       }
     }
 
@@ -611,8 +561,7 @@ export const StageCanvas: React.FC = () => {
     setIsDragging(false);
     setDragMode(null);
     setMarqueeRect(null);
-    setSnapLines([]);
-  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, handleSelectPart, getComputedTransform, tracks, isDragging, endBatchInteraction]);
+  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId]);
   const handlePointerUp = useCallback(() => handleMouseUp(), [handleMouseUp]);
 
   const handlePointerCancel = useCallback(() => handleMouseUp(false), [handleMouseUp]);
@@ -635,21 +584,23 @@ export const StageCanvas: React.FC = () => {
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
     const container = containerRef.current;
-    if (!container || appMode === 'broadcast') return;
-    const nextZoom = clampZoom(zoomRef.current * (e.deltaY < 0 ? 1.1 : 0.9));
+    const svg = container?.querySelector<SVGSVGElement>('svg.stage-svg');
+    if (!container || !svg || appMode === 'broadcast') return;
+    const cssTransform = new DOMMatrix(getComputedStyle(svg).transform);
+    const currentZoom = cssTransform.a > 0 ? cssTransform.a : zoomRef.current;
+    const nextZoom = clampZoom(currentZoom * (e.deltaY < 0 ? 1.1 : 0.9));
     const anchored = getCursorAnchoredViewport({
       rect: container.getBoundingClientRect(),
       clientX: e.clientX,
       clientY: e.clientY,
-      zoom: zoomRef.current,
-      pan: panRef.current,
+      zoom: currentZoom,
+      pan: { x: cssTransform.e, y: cssTransform.f },
       nextZoom,
       viewBox: EDITOR_CAMERA_VIEWBOX,
     });
     setZoomLevel(anchored.zoom);
     setPanOffset(anchored.pan);
   }, [appMode]);
-
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -784,6 +735,8 @@ export const StageCanvas: React.FC = () => {
           zoomLevel={zoomLevel}
           setZoomLevel={setZoomLevel}
           setPanOffset={setPanOffset}
+          activeTool={activeTool === 'pan' ? 'pan' : 'select'}
+          setActiveTool={setActiveTool}
         />
       )}
 
@@ -801,7 +754,7 @@ export const StageCanvas: React.FC = () => {
             freeform.finishDraw();
           }
         }}
-        style={{ transform: `scale(${zoomLevel}) translate(${panOffset.x}px, ${panOffset.y}px)`, transformOrigin: 'center center', cursor: activeTool === 'freeform_draw' ? 'crosshair' : undefined }}
+        style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`, transformOrigin: 'center center', cursor: activeTool === 'freeform_draw' ? 'crosshair' : undefined }}
       >
         <defs>
           {/* Minor grid: 50px cells anchored at the origin (2 cells = 100px = 1 unit) */}
@@ -877,15 +830,15 @@ export const StageCanvas: React.FC = () => {
                 broadcastSessionActivated={broadcastSessionActivated}
                 namedSequenceRuntime={namedSequenceRuntime}
                 currentFrame={currentFrame}
-                selectedPartId={selectedPartId}
                 totalFrames={totalFrames}
                 tracks={tracks}
-                projectResolution={projectResolution}
+                selectedPartId={selectedPartId}
+                selectedPartIds={selectedPartIds}
+                onSelect={(id, event) => {
+                  handleSelectPart(id, event.ctrlKey || event.metaKey);
+                }}
                 customPresets={customPresets}
                 liveStuntsState={liveStuntsState}
-                onSelect={(id) => {
-                  setSelectedPartId(id);
-                }}
                 onStartTranslateDrag={startTranslateDragForPart}
               />
 
@@ -919,20 +872,6 @@ export const StageCanvas: React.FC = () => {
                   zoom={zoomLevel}
                 />
               )}
-              {/* Snap Lines */}
-              {snapLines.map((line, i) => (
-                <line
-                  key={`snap-${i}`}
-                  x1={line.x1}
-                  y1={line.y1}
-                  x2={line.x2}
-                  y2={line.y2}
-                  stroke={line.color || '#38bdf8'}
-                  strokeWidth={1 / zoomLevel}
-                  pointerEvents="none"
-                  strokeDasharray="4,4"
-                />
-              ))}
 
               {/* Marquee Tool */}
               {marqueeRect && (

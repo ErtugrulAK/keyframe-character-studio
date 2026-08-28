@@ -38,10 +38,13 @@ async function selectPart(page: Page, name: string): Promise<void> {
   await page.locator('.actor-node', { hasText: name }).first().click();
 }
 
-async function openEditInspector(page: Page): Promise<void> {
-  await page.locator('.details-tabs-bar').getByRole('button', { name: 'Edit', exact: true }).click();
-  await expect(page.locator('.details-body .inspector-subsection-heading', { hasText: 'Transform' })).toBeVisible();
+async function openTimelineKeyframeEditor(page: Page): Promise<void> {
+  await expect(page.locator('.timeline-selected-keyframe-panel')).toBeVisible();
+  await expect(page.getByText('SELECTED KEYFRAME @ FRAME', { exact: false })).toBeVisible();
+  await expect(page.locator('.details-container .section-block')).toHaveCount(0);
+  await expect(page.getByText('ANIMATION IN / OUT', { exact: true })).toHaveCount(0);
 }
+
 
 async function saveNow(page: Page): Promise<void> {
   await page.locator('.autosave-status-badge').click();
@@ -109,7 +112,7 @@ test.describe('editor interaction regressions', () => {
     ]);
     await selectPart(page, 'Animated Part');
     await page.locator('.keyframe-diamond').first().click();
-    await openEditInspector(page);
+    await openTimelineKeyframeEditor(page);
     await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeVisible();
 
     await page.keyboard.press('Backspace');
@@ -130,7 +133,7 @@ test.describe('editor interaction regressions', () => {
     await seed(page, [layer('part', 'Animated Part', 'custom_box', 0)], [{ partId: 'part', channels }]);
     await selectPart(page, 'Animated Part');
     await page.locator('.keyframe-diamond').click();
-    await openEditInspector(page);
+    await openTimelineKeyframeEditor(page);
     const input = page.locator('input[aria-label="Keyframe Location X"]');
     await input.focus();
     await page.keyboard.press('Backspace');

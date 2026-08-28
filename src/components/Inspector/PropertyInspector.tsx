@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { OutlinerPanel } from './OutlinerPanel';
 import { DetailsPanel } from './DetailsPanel';
 import './PropertyInspector.css';
@@ -8,6 +8,15 @@ export const PropertyInspector: React.FC = () => {
   const [outlinerHeight, setOutlinerHeight] = useState<number>(240);
   const isResizingWidthRef = useRef<boolean>(false);
   const isResizingHeightRef = useRef<boolean>(false);
+  useEffect(() => {
+    const constrainForViewport = () => {
+      const maxPanelWidth = Math.max(300, Math.floor(window.innerWidth * 0.34));
+      setSidebarWidth((current) => Math.min(current, maxPanelWidth));
+    };
+    constrainForViewport();
+    window.addEventListener('resize', constrainForViewport);
+    return () => window.removeEventListener('resize', constrainForViewport);
+  }, []);
 
   // Horizontal Width Resizer
   const handleWidthMouseDown = (e: React.MouseEvent) => {

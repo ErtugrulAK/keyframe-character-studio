@@ -136,7 +136,7 @@ const renderModernShape = (
 export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimPath }: ShapePartProps): React.ReactNode => {
   const renderPart = trimPath ? { ...part, ...trimPath } : part;
   const appearance = resolveShapeAppearance(renderPart);
-  const useModernAppearance = isShapeAppearanceEligible(part.type) && appearance.isModernAppearance;
+  const useModernAppearance = isShapeAppearanceEligible(part.type) && appearance.isModernAppearance && part.booleanContours === undefined;
   const isCustomStroke = Boolean(part.strokeColor && part.strokeColor !== '#101218' && part.strokeColor !== 'none' && part.strokeColor !== 'transparent');
   const hasStroke = (part.strokeProgress === undefined || part.strokeProgress > 0) && !isCustomStroke;
   const strokeToUse = hasStroke ? stroke : (isSelected ? '#38bdf8' : 'none');
@@ -338,21 +338,15 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimP
     }
 
     case 'custom_freeform': {
+      const contours = part.booleanContours?.filter((contour) => contour.length >= 3);
       const points = part.points && part.points.length >= 2 ? part.points : undefined;
-      const d = points ? buildFreeformPath(points) : '';
+      const paths = contours?.map((contour) => buildFreeformPath(contour)).filter(Boolean) ?? [];
+      const d = part.booleanContours !== undefined ? paths.join(' ') : (points ? buildFreeformPath(points) : '');
       if (!d) return null;
       return (
         <g>
-          <path d={d} fill="rgba(0,0,0,0.001)" />
-          <path
-            d={d}
-            fill={fill}
-            stroke={strokeToUse}
-            strokeWidth={isSelected ? 2 : 1.5}
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-            {...getShapeDashProps(renderPart, points ? getFreeformPerimeter(points) : 0)}
-          />
+          <path d={d} fill="rgba(0,0,0,0.001)" fillRule="evenodd" />
+          <path d={d} fill={fill} fillRule="evenodd" stroke={strokeToUse} strokeWidth={isSelected ? 2 : 1.5} strokeLinejoin="round" vectorEffect="non-scaling-stroke" {...getShapeDashProps(renderPart, points ? getFreeformPerimeter(points) : 0)} />
         </g>
       );
     }

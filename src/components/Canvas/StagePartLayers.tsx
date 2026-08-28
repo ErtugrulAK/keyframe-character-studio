@@ -37,6 +37,7 @@ import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } f
 import type { WorldTransform } from '../../types/composition';
 import type { NamedSequenceRuntimeState } from '../../utils/broadcastEngine';
 import { EDITOR_CAMERA_CENTER, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
+import { computeBooleanContours, transformBooleanContours } from '../../utils/booleanGeometry';
 
 interface StagePartLayersProps {
   sortedParts: CharacterPart[];
@@ -46,8 +47,9 @@ interface StagePartLayersProps {
   namedSequenceRuntime?: NamedSequenceRuntimeState;
   currentFrame: number;
   selectedPartId: string | null;
+  selectedPartIds?: string[];
   totalFrames: number;
-  onSelect: (id: string) => void;
+  onSelect: (id: string, event: React.MouseEvent) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
   tracks: (AnimationTrackData & RuntimeTrackState)[];
   customPresets: CustomMotionPreset[];
@@ -83,6 +85,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   namedSequenceRuntime,
   currentFrame,
   selectedPartId,
+  selectedPartIds = [],
   totalFrames,
   onSelect,
   onStartTranslateDrag,
@@ -153,6 +156,25 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     activeNamedSequence ? undefined : frameOverrides,
     activeNamedSequence?.sequenceId ?? 'Sequence',
   );
+  const booleanContoursByGroup = new Map<string, CharacterPart['booleanContours']>();
+  for (const group of sortedParts) {
+    if (!group.booleanOperandIds || !group.booleanOperation) continue;
+    const operands = group.booleanOperandIds
+      .map((id) => sortedParts.find((part) => part.id === id))
+      .filter((part): part is CharacterPart => Boolean(part));
+    const transforms = Object.fromEntries(
+      operands.map((operand) => [
+        operand.id,
+        evaluatedFrame.layers.find((layer) => layer.id === operand.id)?.transform ?? operand.baseTransform,
+      ]),
+    );
+    const contours = computeBooleanContours(group.booleanOperation, operands, transforms);
+    const groupTransform = evaluatedFrame.layers.find((layer) => layer.id === group.id)?.transform;
+    booleanContoursByGroup.set(
+      group.id,
+      groupTransform ? transformBooleanContours(contours, groupTransform) : contours,
+    );
+  }
 
   // M11 Step 2B / M13 Step 2C — Track matte: build ONE world-space clipPath
   // or <mask> def per (source, mode, inverted) from the source's evaluated
@@ -596,18 +618,33 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       </defs>
       {evaluatedFrame.layers.map((el) => {
         const part = sortedParts.find(p => p.id === el.id);
-        if (!part) return null;
+        if (!part || (part.booleanGroupId && !part.booleanOperandIds?.length)) return null;
         const matteAttrs = matteAttrFor(part);
+        const booleanContours = booleanContoursByGroup.get(part.id);
+        const renderLayer = booleanContours
+          ? {
+            ...el,
+            transform: {
+              ...el.transform,
+              x: 0,
+              y: 0,
+              rotation: 0,
+              scaleX: 1,
+              scaleY: 1,
+            },
+          }
+          : el;
 
         return (
           <PartRenderer
             key={el.id}
             part={part}
-            isSelected={selectedPartId === el.id}
             currentFrame={currentFrame}
             onSelect={onSelect}
             onStartTranslateDrag={onStartTranslateDrag}
-            evaluatedLayer={el}
+            isSelected={selectedPartIds.includes(el.id) || selectedPartId === el.id}
+            evaluatedLayer={renderLayer}
+            booleanContours={booleanContours}
             matteClipPathId={matteAttrs.clipId}
             matteMaskId={matteAttrs.maskId}
             outputOrigin={outputOrigin}

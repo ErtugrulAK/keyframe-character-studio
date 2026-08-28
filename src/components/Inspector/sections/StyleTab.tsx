@@ -15,7 +15,7 @@ import { isTrimPathEligible } from '../../../utils/trimPath';
 interface StyleTabProps {
   selectedPart: CharacterPart;
   characterParts: CharacterPart[];
-  handlePartPropChange: (key: keyof CharacterPart, value: any) => void;
+  handlePartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
   handleZIndexChange?: (zIndex: number) => void;
 }
@@ -25,58 +25,16 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   characterParts,
   handlePartPropChange,
   handlePartColorChange,
-}) => {
-  return (
-    <div className="inspector-section" style={{ paddingTop: 8 }}>
-      <StyleColorSection
-        selectedPart={selectedPart}
-        onPartColorChange={handlePartColorChange}
-        onPartPropChange={handlePartPropChange}
-      />
-      {isShapeAppearanceEligible(selectedPart.type) && (
-        <StyleAppearanceSection
-          selectedPart={selectedPart}
-          onPartPropChange={handlePartPropChange}
-        />
-      )}
-
-      <StyleTextFields
-        selectedPart={selectedPart}
-        onPartPropChange={handlePartPropChange}
-      />
-
-      <StyleGeometrySection
-        selectedPart={selectedPart}
-        onPartPropChange={handlePartPropChange}
-      />
-
-      {isTrimPathEligible(selectedPart.type) && (
-        <TrimPathSection
-          selectedPart={selectedPart}
-          onPartPropChange={handlePartPropChange}
-        />
-      )}
-
-      <StyleClonerSection
-        selectedPart={selectedPart}
-        onPartPropChange={handlePartPropChange}
-      />
-
-      <StyleParticleSection
-        selectedPart={selectedPart}
-        onPartPropChange={handlePartPropChange}
-      />
-
-      <StyleEffectsSection
-        selectedPart={selectedPart}
-        onPartPropChange={handlePartPropChange}
-      />
-
-      <StyleMatteSection
-        selectedPart={selectedPart}
-        characterParts={characterParts}
-        onPartPropChange={handlePartPropChange}
-      />
-    </div>
-  );
-};
+}) => (
+  <div className="inspector-section" style={{ paddingTop: 8 }}>
+    <StyleGeometrySection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+    {isTrimPathEligible(selectedPart.type) && <TrimPathSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
+    {isShapeAppearanceEligible(selectedPart.type) && <StyleAppearanceSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
+    <StyleColorSection selectedPart={selectedPart} onPartColorChange={handlePartColorChange} onPartPropChange={handlePartPropChange} />
+    <StyleTextFields selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+    <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+    <StyleMatteSection selectedPart={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} />
+    <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+    <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+  </div>
+);

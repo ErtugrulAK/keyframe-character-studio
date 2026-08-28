@@ -42,7 +42,7 @@ describe('StyleMatteSection — track matte editor UI', () => {
     const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', enabled: true });
     const { container } = renderMatte(target, [STAR, target]);
     const grid = container.querySelector('.matte-control-grid');
-    const source = screen.getByText('MATTE SOURCE').closest('.matte-field');
+    const source = screen.getByText('MASK SOURCE').closest('.matte-field');
     const mode = screen.getByText('MODE').closest('.matte-field');
 
     expect(grid).toBeTruthy();

@@ -4,14 +4,24 @@ test('canvas tools and cursor-anchored zoom remain in one interaction surface', 
   await page.goto('/');
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   await expect(page.locator('.stage-canvas-container')).toBeVisible({ timeout: 30000 });
+  const canvas = page.locator('.stage-canvas-container');
+  const selectTool = page.getByRole('button', { name: 'Select Tool', exact: true });
+  const handTool = page.getByRole('button', { name: 'Hand / Pan Tool', exact: true });
+  await expect(selectTool).toHaveClass(/active/);
+  await handTool.click();
+  await expect(handTool).toHaveClass(/active/);
+  await expect(canvas).toHaveClass(/hand-tool/);
+  await selectTool.click();
+  await expect(selectTool).toHaveClass(/active/);
+  await expect(canvas).toHaveClass(/select-tool/);
 
   await page.getByTitle('Vector Shapes & Graphic Elements').click();
   await page.getByRole('button', { name: 'Rectangle', exact: true }).click();
-  const canvas = page.locator('.stage-canvas-container');
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
 
   await page.keyboard.press('h');
+  await expect(handTool).toHaveClass(/active/);
   await expect(canvas).toHaveClass(/hand-tool/);
   await page.mouse.move(box!.x + 40, box!.y + 40);
   await page.mouse.down();
@@ -26,6 +36,60 @@ test('canvas tools and cursor-anchored zoom remain in one interaction surface', 
 
   await page.keyboard.press('v');
   await expect(canvas).toHaveClass(/select-tool/);
+});
+
+test('cursor-centered zoom keeps the exact SVG point under the pointer', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+  const canvas = page.locator('.stage-canvas-container');
+  await expect(canvas).toBeVisible();
+  const canvasBox = await canvas.boundingBox();
+  expect(canvasBox).not.toBeNull();
+
+  await page.getByRole('button', { name: 'Hand / Pan Tool', exact: true }).click();
+  await page.mouse.move(canvasBox!.x + canvasBox!.width * 0.5, canvasBox!.y + canvasBox!.height * 0.5);
+  await page.mouse.down();
+  await page.mouse.move(canvasBox!.x + canvasBox!.width * 0.56, canvasBox!.y + canvasBox!.height * 0.54);
+  await page.mouse.up();
+  await page.getByRole('button', { name: 'Select Tool', exact: true }).click();
+  let previousMatrix = '';
+  const waitForStableMatrix = async () => {
+    previousMatrix = '';
+    await expect.poll(async () => {
+      const current = await page.evaluate(() => {
+        const matrix = document.querySelector<SVGSVGElement>('.stage-svg')?.getScreenCTM();
+        return matrix ? [matrix.a, matrix.d, matrix.e, matrix.f].join('|') : '';
+      });
+      const stable = current !== '' && current === previousMatrix;
+      previousMatrix = current;
+      return stable;
+    }).toBe(true);
+  };
+  await waitForStableMatrix();
+  for (const [ratioX, ratioY] of [[0.5, 0.5], [0.1, 0.12], [0.88, 0.82]]) {
+    const cursor = {
+      x: canvasBox!.x + canvasBox!.width * ratioX,
+      y: canvasBox!.y + canvasBox!.height * ratioY,
+    };
+    await waitForStableMatrix();
+    const before = await page.evaluate(({ x, y }) => {
+      const svg = document.querySelector<SVGSVGElement>('.stage-svg');
+      if (!svg) throw new Error('Stage SVG unavailable');
+      const point = new DOMPoint(x, y).matrixTransform(svg.getScreenCTM()!.inverse());
+      return { point: { x: point.x, y: point.y }, cursor: { x, y } };
+    }, cursor);
+    await page.mouse.move(cursor.x, cursor.y);
+    await page.mouse.wheel(0, -120);
+    await waitForStableMatrix();
+    const after = await page.evaluate((point) => {
+      const svg = document.querySelector<SVGSVGElement>('.stage-svg');
+      if (!svg) throw new Error('Stage SVG unavailable');
+      const screenPoint = new DOMPoint(point.x, point.y).matrixTransform(svg.getScreenCTM()!);
+      return { x: screenPoint.x, y: screenPoint.y };
+    }, before.point);
+    expect(Math.abs(after.x - before.cursor.x)).toBeLessThan(0.1);
+    expect(Math.abs(after.y - before.cursor.y)).toBeLessThan(0.1);
+  }
 });
 
 test('corner resize preserves the existing transform pipeline', async ({ page }) => {

@@ -54,3 +54,34 @@ test('reverse circle drag normalizes bounds and Escape cancels the next tool', a
   await page.keyboard.press('Escape');
   await expect(page.locator('.actor-node', { hasText: 'Triangle' })).toHaveCount(0);
 });
+
+test('square creation keeps active feedback and equal authored scales', async ({ page }) => {
+  await openElements(page);
+  const canvas = page.locator('.stage-canvas-container');
+  const box = await canvas.boundingBox();
+  expect(box).not.toBeNull();
+
+  const squareTool = page.getByRole('button', { name: 'Square', exact: true });
+  await squareTool.click();
+  await expect(squareTool).toHaveClass(/active/);
+
+  await page.mouse.move(box!.x + box!.width * 0.7, box!.y + box!.height * 0.65);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.45, box!.y + box!.height * 0.5);
+  await page.mouse.up();
+
+  await expect(page.locator('.actor-node', { hasText: 'Square' })).toHaveCount(1);
+  await expect(squareTool).not.toHaveClass(/active/);
+  await page.locator('.autosave-status-badge').click();
+  await expect.poll(() => page.evaluate(() => {
+    const scene = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+    const layer = scene.layers?.find((candidate: { name?: string }) => candidate.name === 'Square');
+    return layer ? [layer.scaleX, layer.scaleY] : null;
+  })).toEqual(expect.arrayContaining([expect.any(Number), expect.any(Number)]));
+  const scales = await page.evaluate(() => {
+    const scene = JSON.parse(localStorage.getItem('SEQUENCER_STUDIO_PRO_V5') ?? '{}');
+    const layer = scene.layers?.find((candidate: { name?: string }) => candidate.name === 'Square');
+    return [layer?.scaleX, layer?.scaleY];
+  });
+  expect(scales[0]).toBe(scales[1]);
+});

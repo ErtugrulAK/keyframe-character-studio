@@ -43,7 +43,6 @@ test.describe('Trim Path V2', () => {
     await page.setViewportSize({ width: 900, height: 800 });
     await seed(page, scene());
     await page.locator('.actor-node', { hasText: 'Trim Shape' }).click();
-    await page.getByText('Style', { exact: true }).click();
 
     const card = page.locator('.panel-card', { hasText: 'TRIM PATH' }).first();
     await expect(card).toBeVisible();

@@ -55,7 +55,7 @@ describe('OutlinerPanel — M22 matte relationship indicator', () => {
     renderPanel();
     expect(screen.getByLabelText('Matte source: The Cow')).toBeTruthy();
     // the name appears both as the source row label AND the matte indicator
-    expect(screen.getAllByText('The Cow').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Mask → The Cow')).toBeTruthy();
   });
 
   it('4. source name uses CharacterPart.name (never track.name)', () => {
@@ -76,7 +76,7 @@ describe('OutlinerPanel — M22 matte relationship indicator', () => {
     ];
     renderPanel();
     expect(screen.getByLabelText('Missing matte source')).toBeTruthy();
-    expect(screen.getByText('Missing')).toBeTruthy();
+    expect(screen.getByText('Mask → Missing')).toBeTruthy();
   });
 
   it('7. indicator carries an accessible label/title', () => {

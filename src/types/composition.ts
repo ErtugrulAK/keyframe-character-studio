@@ -75,9 +75,11 @@ export interface SceneLayer {
   // Hierarchy
   parentId?: string;
 
-  // M11 — Track matte (clipped by another layer's shape)
   matte?: PartMatte;
-
+  booleanGroupId?: string;
+  booleanOperation?: 'union' | 'subtract' | 'intersect' | 'exclude';
+  booleanOperandIds?: string[];
+  booleanContours?: { x: number; y: number }[][];
   // Visibility (editor toggle)
   visible: boolean;
 

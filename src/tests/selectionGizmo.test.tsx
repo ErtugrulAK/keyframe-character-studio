@@ -67,6 +67,28 @@ describe('SelectionGizmo — editor-only matte interaction area', () => {
     const mirroredGizmo = mirrored.container.querySelector('[data-testid="transform-gizmo"]');
     expect(mirroredGizmo?.querySelector('g')?.getAttribute('transform')).toBe('scale(-1, 1)');
   });
+  it('renders individual bounds without a permanent aggregate multi-selection box', () => {
+    const parts = [makePart('custom_triangle'), { ...makePart('custom_rect'), id: 'second' }];
+    render(
+      <svg>
+        <SelectionGizmo
+          selectedPartIds={parts.map((item) => item.id)}
+          characterParts={parts}
+          getComputedTransform={() => transform}
+          currentFrame={0}
+          selectedPart={parts[0]}
+          selectedTransform={transform}
+          tracks={[]}
+          zScale={1}
+          onRotateStart={() => {}}
+          onScaleStart={() => {}}
+          onTranslateStart={() => {}}
+        />
+      </svg>,
+    );
+    expect(screen.getAllByTestId('transform-gizmo')).toHaveLength(2);
+    expect(screen.queryByTestId('aggregate-selection-box')).toBeNull();
+  });
 
   it.each(['custom_image', 'custom_text', 'custom_box', 'custom_freeform'] as const)(
     'exposes evaluated bounds for a selected enabled-matte %s target',

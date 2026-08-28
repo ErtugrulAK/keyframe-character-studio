@@ -38,8 +38,6 @@ test('authored layer index survives new layers, template switching, autosave, an
   // the selected part from an older/default layer index.
   await page.locator('.actor-node', { hasText: 'Triangle' }).click();
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
-  await page.getByText('Style', { exact: true }).click();
-  await page.getByText('Transform', { exact: true }).click();
   await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
 
   // Project template switching is part of the active-state contract.

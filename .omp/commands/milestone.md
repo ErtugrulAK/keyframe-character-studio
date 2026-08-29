@@ -15,11 +15,11 @@ Follow this workflow:
 ## 1. Discovery and safety
 
 - Read repository-root `AGENTS.md` first; it is the main engineering authority.
+- Read `reports/DEVELOPMENT_REPORTING_POLICY.md` before planning or implementing a meaningful milestone. It is the single canonical reporting policy; do not duplicate it in other workflow files.
 - Confirm the user-approved package and boundaries from `$ARGUMENTS` and the conversation. Do not invent milestone numbering or begin unrelated roadmap work.
 - Inspect branch, HEAD, upstream, ahead/behind, staged/unstaged changes, and untracked files. Existing unrelated `.hermes/desktop-attachments/` files are local artifacts only and must never be touched. Stop for any other unexpected user change.
 - Do not create/switch branches, commit, push, merge, rebase, reset, or stash.
 - Before editing, identify protected/high-risk contracts and authorities touched by the package, including applicable animation channels/evaluation, playback, broadcast, rendering/matte/geometry, history, serialization/migration, presets, clipboard, and backward-compatibility paths.
-
 ## 2. Contract and design
 
 1. Document current observable behavior and canonical ownership from current source, tests, types, and configuration.
@@ -41,8 +41,14 @@ If approval is missing for implementation or a protected/high-risk contract, sto
 - After each phase, run focused unit/component/integration tests and relevant Playwright scenarios for the changed contract.
 - Run `/regression` after implementation when the package reaches full-regression scope. Classify failures; never weaken assertions or hide failures with skips, retries, sleeps, thresholds, tolerances, or fallbacks.
 - Audit the final diff, public contracts, compatibility paths, generated artifacts, and Git scope. Stop for unexpected user changes.
-
+- During final scope audit, create `reports/progress_XXX.md` using the next sequential number and the canonical reporting policy. A meaningful milestone is incomplete until the report exists and is verified.
 ## Final report
+
+Before the short terminal response:
+
+- Verify the required numbered development report exists and was not written over an earlier report.
+- Record exact commands, test paths, outcomes, known limitations, Git state, and remaining risks in the report. Never claim unrun checks.
+- Keep chat output short; the permanent technical record belongs in `reports/progress_XXX.md`.
 
 Return:
 

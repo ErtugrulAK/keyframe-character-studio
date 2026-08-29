@@ -71,9 +71,9 @@ export function evaluateTransform(
     };
   }
 
-  // 4. Parent-child hierarchy (recursive)
-  if (part && part.parentId) {
-    const parentPart = layers.find((p) => p.id === part.parentId);
+  const relationshipParentId = part?.parentId ?? part?.booleanGroupId;
+  if (part && relationshipParentId) {
+    const parentPart = layers.find((p) => p.id === relationshipParentId);
     if (parentPart && parentPart.id !== partId) {
       const parentTransform = evaluateTransform(layers, tracks, activeTemplateId, parentPart.id, frame);
       const rad = (parentTransform.rotation * Math.PI) / 180;

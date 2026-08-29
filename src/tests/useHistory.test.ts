@@ -2,6 +2,7 @@ import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { useHistory } from '../hooks/useHistory';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
+import { deleteParts } from '../utils/partDeletion';
 
 describe('useHistory Hook', () => {
   const mockSetTracks = vi.fn();
@@ -276,5 +277,54 @@ describe('useHistory Hook', () => {
     act(() => result.current.undo());
     expect(currentTemplates[0].name).toBe('Sequence');
     expect(result.current.canRedo).toBe(true);
+  });
+
+  it('undoes and redoes a Boolean cascade deletion as one scene change', () => {
+    const initialParts: CharacterPart[] = [
+      { id: 'group', name: 'Boolean', type: 'custom_freeform', zIndex: 3, booleanOperandIds: ['a', 'b'], booleanOperation: 'union', baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } },
+      { id: 'a', name: 'A', type: 'custom_rect', zIndex: 1, booleanGroupId: 'group', baseTransform: { x: -20, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } },
+      { id: 'b', name: 'B', type: 'custom_rect', zIndex: 2, booleanGroupId: 'group', baseTransform: { x: 20, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } },
+    ];
+    const initialTracks: Track[] = initialParts.map((part) => ({ id: `${part.id}-track`, partId: part.id, name: part.name, channels: {}, keyframes: [] }));
+    let currentParts = initialParts;
+    let currentTracks = initialTracks;
+    const partsRef = { current: currentParts };
+    const tracksRef = { current: currentTracks };
+    const setParts: React.Dispatch<React.SetStateAction<CharacterPart[]>> = (value) => {
+      currentParts = typeof value === 'function' ? value(currentParts) : value;
+      partsRef.current = currentParts;
+    };
+    const setTracks: React.Dispatch<React.SetStateAction<Track[]>> = (value) => {
+      currentTracks = typeof value === 'function' ? value(currentTracks) : value;
+      tracksRef.current = currentTracks;
+    };
+    const { result, rerender } = renderHook(
+      (props: { parts: CharacterPart[]; tracks: Track[] }) => useHistory({
+        tracks: props.tracks,
+        setTracks,
+        tracksRef,
+        characterParts: props.parts,
+        setCharacterParts: setParts,
+        characterPartsRef: partsRef,
+      }),
+      { initialProps: { parts: currentParts, tracks: currentTracks } },
+    );
+
+    const deleted = deleteParts(currentParts, currentTracks, ['group']);
+    currentParts = deleted.parts;
+    currentTracks = deleted.tracks;
+    partsRef.current = currentParts;
+    tracksRef.current = currentTracks;
+    rerender({ parts: currentParts, tracks: currentTracks });
+    expect(result.current.canUndo).toBe(true);
+
+    act(() => result.current.undo());
+    expect(currentParts.map((part) => part.id)).toEqual(['group', 'a', 'b']);
+    expect(currentParts[0].booleanOperandIds).toEqual(['a', 'b']);
+    expect(result.current.canRedo).toBe(true);
+
+    act(() => result.current.redo());
+    expect(currentParts).toEqual([]);
+    expect(currentTracks).toEqual([]);
   });
 });

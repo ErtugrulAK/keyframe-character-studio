@@ -3,11 +3,13 @@ import { useState, useCallback } from 'react';
 export const useSelection = () => {
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
   const [selectedPartIds, setSelectedPartIds] = useState<string[]>([]);
+  const [booleanOperandEditingGroupId, setBooleanOperandEditingGroupId] = useState<string | null>(null);
   
   const handleSelectPart = useCallback((id: string | null, isMulti: boolean = false) => {
     if (!id) {
       setSelectedPartId(null);
       setSelectedPartIds([]);
+      setBooleanOperandEditingGroupId(null);
       return;
     }
     
@@ -37,6 +39,8 @@ export const useSelection = () => {
     selectedPartIds,
     setSelectedPartIds,
     handleSelectPart,
+    booleanOperandEditingGroupId,
+    setBooleanOperandEditingGroupId,
     focusModeNodeId,
     setFocusModeNodeId,
     selectedKeyframeId,

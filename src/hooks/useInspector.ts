@@ -1,4 +1,5 @@
 import type { CharacterPart, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
+import { worldToContainerLocal } from '../utils/containerMath';
 import { generateId } from '../utils/idGenerator';
 
 interface UseInspectorOptions {
@@ -7,6 +8,7 @@ interface UseInspectorOptions {
   activeTemplateId: string;
   currentFrame: number;
   tracks: Track[];
+  characterParts?: CharacterPart[];
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   getComputedTransform: (partId: string, frame: number) => Transform;
@@ -29,6 +31,7 @@ export const useInspector = ({
   activeTemplateId,
   currentFrame,
   tracks,
+  characterParts,
   setTracks,
   setCharacterParts,
   getComputedTransform,
@@ -152,6 +155,24 @@ export const useInspector = ({
     const targetPartId = partIdOverride || selectedPartId;
     if (!targetPartId) return;
 
+    const targetPart = characterParts?.find((part) => part.id === targetPartId);
+    const relationshipParentId = !partIdOverride && selectedPartIds.length <= 1
+      ? targetPart?.parentId ?? targetPart?.booleanGroupId
+      : undefined;
+    const normalizedTransform = relationshipParentId
+      ? (() => {
+        const parentTransform = getComputedTransform(relationshipParentId, currentFrame);
+        const currentWorld = getComputedTransform(targetPartId, currentFrame);
+        const desiredWorld = { ...currentWorld, ...newTransform };
+        const local = worldToContainerLocal(desiredWorld, parentTransform);
+        const localPatch: Partial<Transform> = {};
+        (['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const).forEach((key) => {
+          if (newTransform[key] !== undefined) localPatch[key] = local[key];
+        });
+        return localPatch;
+      })()
+      : newTransform;
+
     const partsToUpdate = (!partIdOverride && selectedPartIds.length > 1)
       ? selectedPartIds
       : [targetPartId];
@@ -161,30 +182,30 @@ export const useInspector = ({
     // If updating multiple parts via inspector delta
     if (!partIdOverride && selectedPartIds.length > 1) {
       const primaryPartT = getComputedTransform(targetPartId, currentFrame);
-      
-      const deltaX = newTransform.x !== undefined ? newTransform.x - primaryPartT.x : 0;
-      const deltaY = newTransform.y !== undefined ? newTransform.y - primaryPartT.y : 0;
-      const deltaRot = newTransform.rotation !== undefined ? newTransform.rotation - primaryPartT.rotation : 0;
-      const deltaScaleX = newTransform.scaleX !== undefined ? newTransform.scaleX - primaryPartT.scaleX : 0;
-      const deltaScaleY = newTransform.scaleY !== undefined ? newTransform.scaleY - primaryPartT.scaleY : 0;
-      const deltaOpacity = newTransform.opacity !== undefined ? newTransform.opacity - primaryPartT.opacity : 0;
+
+      const deltaX = normalizedTransform.x !== undefined ? normalizedTransform.x - primaryPartT.x : 0;
+      const deltaY = normalizedTransform.y !== undefined ? normalizedTransform.y - primaryPartT.y : 0;
+      const deltaRot = normalizedTransform.rotation !== undefined ? normalizedTransform.rotation - primaryPartT.rotation : 0;
+      const deltaScaleX = normalizedTransform.scaleX !== undefined ? normalizedTransform.scaleX - primaryPartT.scaleX : 0;
+      const deltaScaleY = normalizedTransform.scaleY !== undefined ? normalizedTransform.scaleY - primaryPartT.scaleY : 0;
+      const deltaOpacity = normalizedTransform.opacity !== undefined ? normalizedTransform.opacity - primaryPartT.opacity : 0;
 
       partsToUpdate.forEach(id => {
         const t = getComputedTransform(id, currentFrame);
         const relativeUpdate: Partial<Transform> = {};
-        if (newTransform.x !== undefined) relativeUpdate.x = t.x + deltaX;
-        if (newTransform.y !== undefined) relativeUpdate.y = t.y + deltaY;
-        if (newTransform.rotation !== undefined) relativeUpdate.rotation = t.rotation + deltaRot;
-        if (newTransform.scaleX !== undefined) relativeUpdate.scaleX = t.scaleX + deltaScaleX;
-        if (newTransform.scaleY !== undefined) relativeUpdate.scaleY = t.scaleY + deltaScaleY;
-        if (newTransform.opacity !== undefined) relativeUpdate.opacity = t.opacity + deltaOpacity;
-        
+        if (normalizedTransform.x !== undefined) relativeUpdate.x = t.x + deltaX;
+        if (normalizedTransform.y !== undefined) relativeUpdate.y = t.y + deltaY;
+        if (normalizedTransform.rotation !== undefined) relativeUpdate.rotation = t.rotation + deltaRot;
+        if (normalizedTransform.scaleX !== undefined) relativeUpdate.scaleX = t.scaleX + deltaScaleX;
+        if (normalizedTransform.scaleY !== undefined) relativeUpdate.scaleY = t.scaleY + deltaScaleY;
+        if (normalizedTransform.opacity !== undefined) relativeUpdate.opacity = t.opacity + deltaOpacity;
+
         applyTransformToPart(id, relativeUpdate, activeTmpl);
       });
       return;
     }
 
-    applyTransformToPart(targetPartId, newTransform, activeTmpl);
+    applyTransformToPart(targetPartId, normalizedTransform, activeTmpl);
   };
 
   const updateCurrentPropertyChannel = (channel: TrackChannel, value: number, partIdOverride?: string) => {

@@ -52,9 +52,10 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await page.locator('.actor-node', { hasText: 'Operand A' }).click();
     await page.locator('.actor-node', { hasText: 'Operand B' }).click({ modifiers: ['Control'] });
     await page.getByRole('button', { name: 'Union', exact: true }).click();
-    await expect(page.getByText('BOOLEAN RESULT', { exact: true })).toBeVisible();
-    await expect(page.getByRole('treeitem', { name: /Operand A/ })).toBeVisible();
-    await expect(page.getByRole('treeitem', { name: /Operand B/ })).toBeVisible();
+    await expect(page.getByText('BOOLEAN', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-testid="freeform-vertex-marker"]')).toHaveCount(0);
+    await expect(page.locator('.nested-node.actor-node', { hasText: 'Operand A' })).toBeVisible();
+    await expect(page.locator('.nested-node.actor-node', { hasText: 'Operand B' })).toBeVisible();
     await page.locator('.boolean-dissolve-button').click();
     await expect(page.locator('.actor-node', { hasText: 'Operand A' })).toHaveCount(1);
     await expect(page.locator('.actor-node', { hasText: 'Operand B' })).toHaveCount(1);

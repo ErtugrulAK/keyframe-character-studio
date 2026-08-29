@@ -73,6 +73,46 @@ describe('useTimeline Hook', () => {
     expect(mockSetSelectedPartIds).toHaveBeenCalledWith([]);
   });
 
+  it('deletes a Boolean parent, owned operands, tracks, and editing state', () => {
+    const group = { ...mockParts[0], id: 'group', booleanOperandIds: ['a', 'b'], booleanOperation: 'union' as const };
+    const operandA = { ...mockParts[0], id: 'a', booleanGroupId: 'group' };
+    const operandB = { ...mockParts[0], id: 'b', booleanGroupId: 'group' };
+    const unrelated = { ...mockParts[0], id: 'circle' };
+    const parts = [group, operandA, operandB, unrelated];
+    const tracks = parts.map((item) => ({ ...mockTracks[0], id: `${item.id}-track`, partId: item.id }));
+    const setBooleanOperandEditingGroupId = vi.fn();
+    const { result } = renderHook(() => useTimeline({
+      characterParts: parts,
+      setCharacterParts: mockSetCharacterParts,
+      tracks,
+      setTracks: mockSetTracks,
+      selectedPartId: 'group',
+      setSelectedPartId: mockSetSelectedPartId,
+      selectedPartIds: ['group'],
+      setSelectedPartIds: mockSetSelectedPartIds,
+      booleanOperandEditingGroupId: 'group',
+      setBooleanOperandEditingGroupId,
+      selectedKeyframeId: 'group-key',
+      setSelectedKeyframeId: mockSetSelectedKeyframeId,
+      currentFrame: 0,
+      totalFrames: 60,
+      activeTemplateId: 'Sequence',
+      getComputedTransform: mockGetComputedTransform,
+      showToast: mockShowToast,
+    }));
+
+    act(() => result.current.deletePart('group'));
+
+    const nextParts = mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[];
+    const nextTracks = mockSetTracks.mock.calls.at(-1)![0] as Track[];
+    expect(nextParts.map((item) => item.id)).toEqual(['circle']);
+    expect(nextTracks.map((item) => item.partId)).toEqual(['circle']);
+    expect(mockSetSelectedPartIds).toHaveBeenCalledWith([]);
+    expect(mockSetSelectedKeyframeId).toHaveBeenCalledWith(null);
+    expect(mockSetSelectedPartId).toHaveBeenCalledWith(null);
+    expect(setBooleanOperandEditingGroupId).toHaveBeenCalledWith(null);
+  });
+
   it('toggles track visibility', () => {
     const { result } = renderHook(() => useTimeline({
       characterParts: mockParts,

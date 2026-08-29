@@ -334,6 +334,21 @@ describe('evaluateFrame — hierarchy', () => {
     expect(cLayer.transform.rotation).toBe(90);
   });
 
+  test('Boolean operands inherit the parent transform while preserving local offsets', () => {
+    const parent = makeLayer({ id: 'B', baseTransform: { x: 100, y: -20, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
+    const operand = makeLayer({
+      id: 'O',
+      booleanGroupId: 'B',
+      baseTransform: { x: 35, y: 15, rotation: 10, scaleX: 1, scaleY: 1, opacity: 1 },
+    });
+    const result = evaluateFrame([parent, operand], [makeTrack('B'), makeTrack('O')], 120, 0, makeRuntime(), NO_PRESETS);
+    const evaluated = result.layers.find((layer) => layer.id === 'O')!;
+
+    expect(evaluated.transform.x).toBe(135);
+    expect(evaluated.transform.y).toBe(-5);
+    expect(evaluated.transform.rotation).toBe(10);
+  });
+
   test('missing parent falls back to no parent', () => {
     const child = makeLayer({ id: 'C', parentId: 'GHOST', baseTransform: { x: 10, y: 10, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
     const layers = [child];

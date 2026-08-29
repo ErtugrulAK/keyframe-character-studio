@@ -3,9 +3,9 @@ import { useAnimator } from '../../context/AnimatorContext';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
-import { clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
+import { clientToSVGPoint, clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
-import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeFreeformPoints } from '../../utils/freeform';
+import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeClosedPoints, normalizeFreeformPoints } from '../../utils/freeform';
 import { worldToContainerLocal } from '../../utils/containerMath';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
@@ -50,6 +50,8 @@ export const StageCanvas: React.FC = () => {
     isScaleLocked,
     customPresets,
     liveStuntsState,
+    booleanOperandEditingGroupId,
+    setBooleanOperandEditingGroupId,
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -94,21 +96,25 @@ export const StageCanvas: React.FC = () => {
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTransform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
   const outputOrigin = appMode === 'broadcast' ? getProjectCenter(projectResolution) : EDITOR_CAMERA_CENTER;
-
   const clientToSVG = useCallback(
     (clientX: number, clientY: number): { svgX: number; svgY: number } => {
       if (!containerRef.current) return { svgX: 0, svgY: 0 };
+      const svg = containerRef.current.querySelector<SVGSVGElement>('svg.stage-svg');
+      const screenMatrix = svg?.getScreenCTM?.();
+      if (screenMatrix && typeof DOMPoint !== 'undefined') {
+        const point = new DOMPoint(clientX, clientY).matrixTransform(screenMatrix.inverse());
+        return { svgX: point.x, svgY: point.y };
+      }
       const rect = containerRef.current.getBoundingClientRect();
-      const scale = Math.min(rect.width / EDITOR_CAMERA_VIEWBOX.width, rect.height / EDITOR_CAMERA_VIEWBOX.height) || 1;
-      const viewBoxX = (clientX - rect.left - (rect.width - EDITOR_CAMERA_VIEWBOX.width * scale) / 2) / scale;
-      const viewBoxY = (clientY - rect.top - (rect.height - EDITOR_CAMERA_VIEWBOX.height * scale) / 2) / scale;
-
-      const relX = viewBoxX - EDITOR_CAMERA_CENTER.x;
-      const relY = viewBoxY - EDITOR_CAMERA_CENTER.y;
-
-      const svgX = relX / zoomLevel - panOffset.x / scale + EDITOR_CAMERA_CENTER.x;
-      const svgY = relY / zoomLevel - panOffset.y / scale + EDITOR_CAMERA_CENTER.y;
-      return { svgX, svgY };
+      const point = clientToSVGPoint({
+        rect,
+        clientX,
+        clientY,
+        zoom: zoomLevel,
+        pan: panOffset,
+        viewBox: EDITOR_CAMERA_VIEWBOX,
+      });
+      return { svgX: point.x, svgY: point.y };
     },
     [zoomLevel, panOffset]
   );
@@ -152,6 +158,15 @@ export const StageCanvas: React.FC = () => {
   const startTranslateDragForPart = (partId: string, e: React.MouseEvent) => {
     if (appMode === 'broadcast' || activeTool !== 'select' || e.button !== 0) return;
     if (e.ctrlKey || e.metaKey) return;
+    const draggedPart = characterParts.find((part) => part.id === partId);
+    if (
+      booleanOperandEditingGroupId
+      && draggedPart
+      && draggedPart.id !== booleanOperandEditingGroupId
+      && draggedPart.booleanGroupId !== booleanOperandEditingGroupId
+    ) {
+      setBooleanOperandEditingGroupId(null);
+    }
     e.stopPropagation();
     if (!selectedPartIds.includes(partId)) {
       handleSelectPart(partId);
@@ -348,9 +363,9 @@ export const StageCanvas: React.FC = () => {
         const factor = initDist > 0.001 ? curDist / initDist : 1;
         const newWorldScale = Math.max(0.05, Math.round((dragStart.initialChildScaleX || 1) * factor * 100) / 100);
         const targetId = dragStart.partId ?? selectedPartId;
-        if (!targetId) return;
         const part = characterParts.find((p) => p.id === targetId);
-        const parentT = part?.parentId ? getComputedTransform(part.parentId, currentFrame) : null;
+        const relationshipParentId = part?.parentId ?? part?.booleanGroupId;
+        const parentT = relationshipParentId ? getComputedTransform(relationshipParentId, currentFrame) : null;
         if (parentT) {
           const worldT = { ...dragStart.initialTransform, scaleX: newWorldScale, scaleY: newWorldScale };
           const local = worldToContainerLocal(worldT, parentT);
@@ -369,10 +384,9 @@ export const StageCanvas: React.FC = () => {
         const curAngle = (Math.atan2(svgX - c.y, svgY - c.x) * 180) / Math.PI;
         const delta = ((curAngle - initAngle + 540) % 360) - 180;
         const newWorldRot = Math.round(((dragStart.initialChildRot || 0) + delta) * 100) / 100;
-        const targetId = dragStart.partId ?? selectedPartId;
-        if (!targetId) return;
         const part = characterParts.find((p) => p.id === targetId);
-        const parentT = part?.parentId ? getComputedTransform(part.parentId, currentFrame) : null;
+        const relationshipParentId = part?.parentId ?? part?.booleanGroupId;
+        const parentT = relationshipParentId ? getComputedTransform(relationshipParentId, currentFrame) : null;
         if (parentT) {
           const worldT = { ...dragStart.initialTransform, rotation: newWorldRot };
           const local = worldToContainerLocal(worldT, parentT);
@@ -390,36 +404,38 @@ export const StageCanvas: React.FC = () => {
           { x: dragStart.x, y: dragStart.y },
           { x: svgX, y: svgY },
         );
-        // If we have multiple selections and the dragged part is in it, move all of them
+        // If we have multiple selections and the dragged part is in it, move all of them.
         if (dragStart.initialTransforms) {
-            Object.keys(dragStart.initialTransforms).forEach(id => {
-              const initT = dragStart.initialTransforms![id];
-              const movedPart = characterParts.find((x) => x.id === id);
-              if (movedPart?.parentId) {
-                // Child of a container: the stored position is container-relative,
-                // so convert the moved WORLD position back into container space.
-                const pt = getComputedTransform(movedPart.parentId, currentFrame);
-                const local = worldToContainerLocal({ ...initT, x: initT.x + deltaX, y: initT.y + deltaY }, pt);
-                updateCurrentTransform({ x: local.x, y: local.y }, id);
-              } else {
-                updateCurrentTransform({ x: initT.x + deltaX, y: initT.y + deltaY }, id);
-              }
-            });
-          } else {
-            const draggedPart = characterParts.find((x) => x.id === selectedPartId);
-            if (draggedPart?.parentId) {
-              const pt = getComputedTransform(draggedPart.parentId, currentFrame);
-              const local = worldToContainerLocal(
-                { ...dragStart.initialTransform, x: dragStart.initialTransform.x + deltaX, y: dragStart.initialTransform.y + deltaY },
-                pt
-              );
-              updateCurrentTransform({ x: local.x, y: local.y });
+          Object.keys(dragStart.initialTransforms).forEach(id => {
+            const initT = dragStart.initialTransforms![id];
+            const movedPart = characterParts.find((x) => x.id === id);
+            const relationshipParentId = movedPart?.parentId ?? movedPart?.booleanGroupId;
+            if (relationshipParentId) {
+              const pt = getComputedTransform(relationshipParentId, currentFrame);
+              const local = worldToContainerLocal({ ...initT, x: initT.x + deltaX, y: initT.y + deltaY }, pt);
+              updateCurrentTransform({ x: local.x, y: local.y }, id);
             } else {
-              updateCurrentTransform({ x: dragStart.initialTransform.x + deltaX, y: dragStart.initialTransform.y + deltaY });
+              updateCurrentTransform({ x: initT.x + deltaX, y: initT.y + deltaY }, id);
             }
+          });
+        } else {
+          const draggedPart = characterParts.find((x) => x.id === selectedPartId);
+          const relationshipParentId = draggedPart?.parentId ?? draggedPart?.booleanGroupId;
+          if (relationshipParentId) {
+            const pt = getComputedTransform(relationshipParentId, currentFrame);
+            const local = worldToContainerLocal(
+              { ...dragStart.initialTransform, x: dragStart.initialTransform.x + deltaX, y: dragStart.initialTransform.y + deltaY },
+              pt,
+            );
+            updateCurrentTransform({ x: local.x, y: local.y });
+          } else {
+            updateCurrentTransform({ x: dragStart.initialTransform.x + deltaX, y: dragStart.initialTransform.y + deltaY });
           }
+        }
         return;
-      } else if (dragMode === 'rotate') {
+      }
+
+      if (dragMode === 'rotate') {
         const centerX = EDITOR_CAMERA_CENTER.x + dragStart.initialTransform.x;
         const centerY = EDITOR_CAMERA_CENTER.y + dragStart.initialTransform.y;
         const dx = svgX - centerX;
@@ -549,7 +565,11 @@ export const StageCanvas: React.FC = () => {
         marqueeRect,
         EDITOR_CAMERA_CENTER.x,
         EDITOR_CAMERA_CENTER.y,
-        (part) => tracks.find((track) => track.partId === part.id)?.editVisible !== false,
+        (part) => (
+          tracks.find((track) => track.partId === part.id)?.editVisible !== false
+          && (!part.booleanGroupId || part.booleanGroupId === booleanOperandEditingGroupId)
+          && (!booleanOperandEditingGroupId || !part.booleanOperandIds?.length)
+        ),
       );
       if (selected.length > 0) {
         setSelectedPartIds(selected);
@@ -561,7 +581,7 @@ export const StageCanvas: React.FC = () => {
     setIsDragging(false);
     setDragMode(null);
     setMarqueeRect(null);
-  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId]);
+  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId, booleanOperandEditingGroupId]);
   const handlePointerUp = useCallback(() => handleMouseUp(), [handleMouseUp]);
 
   const handlePointerCancel = useCallback(() => handleMouseUp(false), [handleMouseUp]);
@@ -834,6 +854,7 @@ export const StageCanvas: React.FC = () => {
                 tracks={tracks}
                 selectedPartId={selectedPartId}
                 selectedPartIds={selectedPartIds}
+                booleanOperandEditingGroupId={booleanOperandEditingGroupId}
                 onSelect={(id, event) => {
                   handleSelectPart(id, event.ctrlKey || event.metaKey);
                 }}
@@ -913,20 +934,21 @@ export const StageCanvas: React.FC = () => {
 
               {/* Freeform vertex markers (numbered, matching the inspector vertex list) */}
               {selectedPart?.type === 'custom_freeform' &&
+                !selectedPart.booleanOperandIds?.length &&
                 selectedTransform &&
                 appMode !== 'broadcast' &&
                 selectedPart.points &&
                 selectedPart.points.length > 0 && (
                   <g pointerEvents="none">
                     {getFreeformVertexWorldPositions(
-                      selectedPart.points,
+                      normalizeClosedPoints(selectedPart.points),
                       EDITOR_CAMERA_CENTER.x + selectedTransform.x,
                       EDITOR_CAMERA_CENTER.y + selectedTransform.y,
                       selectedTransform.scaleX,
                       selectedTransform.scaleY,
                       selectedTransform.rotation
                     ).map((v, i) => (
-                      <g key={`vm-${i}`} transform={`translate(${v.x}, ${v.y})`}>
+                      <g key={`vm-${i}`} data-testid="freeform-vertex-marker" transform={`translate(${v.x}, ${v.y})`}>
                         <circle r={7 * zScale} fill="#0f172a" stroke="#38bdf8" strokeWidth={1.2 * zScale} />
                         <text y={3 * zScale} fontSize={8.5 * zScale} fontWeight={700} textAnchor="middle" fill="#7dd3fc" style={{ userSelect: 'none' }}>
                           {i + 1}
@@ -947,6 +969,7 @@ export const StageCanvas: React.FC = () => {
                   selectedTransform={selectedTransform}
                   tracks={tracks}
                   zScale={zScale}
+                  booleanOperandEditingGroupId={booleanOperandEditingGroupId}
                   onRotateStart={startRotate}
                   onScaleStart={startScale}
                   onTranslateStart={startTranslateDragForPart}

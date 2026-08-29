@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart } from '../types/animator';
-import { getPartBounds } from '../utils/bounds';
+import { getPartBounds, getPartLocalBounds, getPartWorldBounds } from '../utils/bounds';
 
 const makePart = (type: CharacterPart['type'] = 'custom_rect', overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id: 'bounds', type, name: type, zIndex: 1,
@@ -66,5 +66,41 @@ describe('stroke-aware part bounds', () => {
   it('uses renderer geometry extents for asymmetric polygon transform bounds', () => {
     expect(getPartBounds(makePart('custom_triangle'))).toEqual({ halfW: 35, halfH: 35 });
     expect(getPartBounds(makePart('custom_parallelogram'))).toEqual({ halfW: 85, halfH: 30 });
+  });
+});
+
+describe('precise geometry bounds', () => {
+  it('uses the actual asymmetric triangle and star extents', () => {
+    const triangle = getPartLocalBounds(makePart('custom_triangle'));
+    const star = getPartLocalBounds(makePart('custom_star'));
+
+    expect(triangle).toMatchObject({ minY: -35, maxY: 25, offsetY: -5 });
+    expect(star).toMatchObject({ minY: -35, maxY: 30, offsetY: -2.5 });
+  });
+
+  it('uses all Boolean contours for local bounds', () => {
+    const bounds = getPartLocalBounds(makePart('custom_freeform', {
+      points: [{ x: -10, y: -10 }, { x: 10, y: 10 }],
+      booleanContours: [[
+        { x: -100, y: -20 },
+        { x: 80, y: -20 },
+        { x: 80, y: 20 },
+        { x: -100, y: 20 },
+      ], [
+        { x: 150, y: -5 },
+        { x: 170, y: -5 },
+        { x: 170, y: 5 },
+        { x: 150, y: 5 },
+      ]],
+    }));
+
+    expect(bounds).toMatchObject({ minX: -100, maxX: 170 });
+  });
+
+  it('transforms precise local bounds into world marquee bounds', () => {
+    const bounds = getPartWorldBounds(makePart('custom_triangle'), {
+      x: 50, y: 30, rotation: 0, scaleX: 2, scaleY: 3, opacity: 1,
+    }, 300, 240);
+    expect(bounds).toEqual({ minX: 280, minY: 165, maxX: 420, maxY: 345 });
   });
 });

@@ -37,7 +37,7 @@ import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } f
 import type { WorldTransform } from '../../types/composition';
 import type { NamedSequenceRuntimeState } from '../../utils/broadcastEngine';
 import { EDITOR_CAMERA_CENTER, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
-import { computeBooleanContours, transformBooleanContours } from '../../utils/booleanGeometry';
+import { deriveBooleanGeometry } from '../../utils/booleanGeometry';
 
 interface StagePartLayersProps {
   sortedParts: CharacterPart[];
@@ -48,6 +48,7 @@ interface StagePartLayersProps {
   currentFrame: number;
   selectedPartId: string | null;
   selectedPartIds?: string[];
+  booleanOperandEditingGroupId?: string | null;
   totalFrames: number;
   onSelect: (id: string, event: React.MouseEvent) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
@@ -86,6 +87,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   currentFrame,
   selectedPartId,
   selectedPartIds = [],
+  booleanOperandEditingGroupId = null,
   totalFrames,
   onSelect,
   onStartTranslateDrag,
@@ -168,12 +170,14 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
         evaluatedFrame.layers.find((layer) => layer.id === operand.id)?.transform ?? operand.baseTransform,
       ]),
     );
-    const contours = computeBooleanContours(group.booleanOperation, operands, transforms);
-    const groupTransform = evaluatedFrame.layers.find((layer) => layer.id === group.id)?.transform;
-    booleanContoursByGroup.set(
-      group.id,
-      groupTransform ? transformBooleanContours(contours, groupTransform) : contours,
+    const groupTransform = evaluatedFrame.layers.find((layer) => layer.id === group.id)?.transform ?? group.baseTransform;
+    const derived = deriveBooleanGeometry(
+      group.booleanOperation,
+      operands,
+      transforms,
+      groupTransform,
     );
+    booleanContoursByGroup.set(group.id, derived.localContours);
   }
 
   // M11 Step 2B / M13 Step 2C — Track matte: build ONE world-space clipPath
@@ -616,41 +620,40 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
           </mask>
         ))}
       </defs>
-      {evaluatedFrame.layers.map((el) => {
-        const part = sortedParts.find(p => p.id === el.id);
-        if (!part || (part.booleanGroupId && !part.booleanOperandIds?.length)) return null;
-        const matteAttrs = matteAttrFor(part);
-        const booleanContours = booleanContoursByGroup.get(part.id);
-        const renderLayer = booleanContours
-          ? {
-            ...el,
-            transform: {
-              ...el.transform,
-              x: 0,
-              y: 0,
-              rotation: 0,
-              scaleX: 1,
-              scaleY: 1,
-            },
-          }
-          : el;
+      {(() => {
+        const operandEditingActive = appMode !== 'broadcast' && Boolean(booleanOperandEditingGroupId);
+        const layers = evaluatedFrame.layers.filter((el) => {
+          const part = sortedParts.find((candidate) => candidate.id === el.id);
+          return !part?.booleanGroupId || !operandEditingActive;
+        });
+          layers.push(...evaluatedFrame.layers.filter((el) => {
+            const part = sortedParts.find((candidate) => candidate.id === el.id);
+            return part?.booleanGroupId === booleanOperandEditingGroupId;
+          }));
+        return layers.map((el) => {
+          const part = sortedParts.find(p => p.id === el.id);
+          if (!part) return null;
+          if (part.booleanGroupId && part.booleanGroupId !== booleanOperandEditingGroupId) return null;
+          const matteAttrs = matteAttrFor(part);
+          const booleanContours = booleanContoursByGroup.get(part.id);
 
-        return (
-          <PartRenderer
-            key={el.id}
-            part={part}
-            currentFrame={currentFrame}
-            onSelect={onSelect}
-            onStartTranslateDrag={onStartTranslateDrag}
-            isSelected={selectedPartIds.includes(el.id) || selectedPartId === el.id}
-            evaluatedLayer={renderLayer}
-            booleanContours={booleanContours}
-            matteClipPathId={matteAttrs.clipId}
-            matteMaskId={matteAttrs.maskId}
-            outputOrigin={outputOrigin}
-          />
-        );
-      })}
+          return (
+            <PartRenderer
+              key={el.id}
+              part={part}
+              currentFrame={currentFrame}
+              onSelect={onSelect}
+              onStartTranslateDrag={onStartTranslateDrag}
+              isSelected={selectedPartIds.includes(el.id) || selectedPartId === el.id}
+              evaluatedLayer={el}
+              booleanContours={booleanContours}
+              matteClipPathId={matteAttrs.clipId}
+              matteMaskId={matteAttrs.maskId}
+              outputOrigin={outputOrigin}
+            />
+          );
+        });
+      })()}
     </g>
   );
 };

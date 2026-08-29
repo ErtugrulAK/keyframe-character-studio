@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart } from '../types/animator';
-import { computeBooleanContours, dissolveBooleanGroup, isBooleanEligible, transformBooleanContours } from '../utils/booleanGeometry';
+import { computeBooleanContours, createBooleanDisplayName, deriveBooleanGeometry, dissolveBooleanGroup, inverseTransformBooleanContours, isBooleanEligible, isGeneratedBooleanName, transformBooleanContours } from '../utils/booleanGeometry';
 
 const part = (id: string, type: CharacterPart['type'], x: number, y: number): CharacterPart => ({
   id,
@@ -83,3 +83,57 @@ describe('boolean geometry', () => {
     expect(isBooleanEligible(part('circle', 'custom_circle', 0, 0))).toBe(true);
   });
 });
+
+  it('generates compact operand-derived names and preserves custom names', () => {
+    const existing = [part('group-1', 'custom_freeform', 0, 0), {
+      ...part('group-2', 'custom_freeform', 0, 0),
+      name: 'Boolean 1 · Union',
+    }];
+    expect(createBooleanDisplayName('union', existing, undefined, ['Rectangle', 'Circle'])).toBe('Rectangle + Circle · Union');
+    expect(createBooleanDisplayName('intersect', existing, 'Rectangle + Circle · Union', ['Rectangle', 'Circle'])).toBe('Rectangle + Circle · Intersect');
+    expect(createBooleanDisplayName('subtract', existing, 'My Composite', ['Rectangle', 'Circle'])).toBe('My Composite');
+    expect(isGeneratedBooleanName('Rectangle + Circle · Union')).toBe(true);
+    expect(isGeneratedBooleanName('My Composite')).toBe(false);
+  });
+
+  it('keeps the legacy numeric fallback deterministic without operand names', () => {
+    const existing = [{
+      ...part('group-2', 'custom_freeform', 0, 0),
+      name: 'Boolean 1 · Union',
+    }];
+    expect(createBooleanDisplayName('subtract', existing)).toBe('Boolean 2 · Subtract');
+  });
+
+  it('derives current Boolean geometry from evaluated operand transforms', () => {
+    const a = part('a', 'custom_rect', 0, 0);
+    const b = part('b', 'custom_rect', 40, 0);
+    const derived = deriveBooleanGeometry(
+      'union',
+      [a, b],
+      { a: { ...a.baseTransform, x: 20 }, b: { ...b.baseTransform, x: 80 } },
+      { x: 50, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    );
+    expect(derived.worldContours.length).toBeGreaterThan(0);
+    expect(derived.localContours).not.toEqual(derived.worldContours);
+  });
+
+  it('retains all disconnected contours for Exclude geometry', () => {
+    const a = part('a', 'custom_rect', -100, 0);
+    const b = part('b', 'custom_rect', 100, 0);
+    const derived = deriveBooleanGeometry(
+      'exclude',
+      [a, b],
+      { a: a.baseTransform, b: b.baseTransform },
+      { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    );
+    expect(derived.worldContours).toHaveLength(2);
+    expect(derived.localContours).toHaveLength(2);
+  });
+
+  it('round-trips Boolean contours through a parent transform', () => {
+    const local = [[{ x: -10, y: -5 }, { x: 20, y: -5 }, { x: 20, y: 10 }]];
+    const parent = { x: 40, y: -25, rotation: 30, scaleX: 2, scaleY: 0.5, opacity: 1 };
+    const roundTrip = inverseTransformBooleanContours(transformBooleanContours(local, parent), parent);
+    expect(roundTrip[0][0].x).toBeCloseTo(-10, 10);
+    expect(roundTrip[0][0].y).toBeCloseTo(-5, 10);
+  });

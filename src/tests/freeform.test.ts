@@ -10,6 +10,7 @@ import {
   hasValidFreeformPoints,
   normalizeFreeformPoints,
   simplifyFreeformPoints,
+  normalizeClosedPoints,
   MIN_FREEFORM_POINTS,
 } from '../utils/freeform';
 
@@ -33,6 +34,21 @@ describe('freeform utils', () => {
     it('omits the closing Z when closed=false', () => {
       const d = buildFreeformPath([{ x: 0, y: 0 }, { x: 5, y: 5 }], false);
       expect(d).toBe('M 0 0 L 5 5');
+    });
+  });
+
+  describe('normalizeClosedPoints', () => {
+    it('removes only the repeated closing vertex', () => {
+      expect(normalizeClosedPoints([
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 0 },
+      ])).toEqual([
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+      ]);
     });
   });
 

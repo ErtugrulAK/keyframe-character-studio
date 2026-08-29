@@ -13,15 +13,18 @@ import {
   applyTransitionChannelsMutator,
   applyTransitionToTrackCanonicalMutator
 } from '../utils/trackMutations';
+import { deleteParts } from '../utils/partDeletion';
 
 interface UseTimelineOptions {
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
+  characterParts: CharacterPart[];
   tracks: Track[];
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
   selectedPartId: string | null;
   setSelectedPartId: (id: string | null) => void;
   selectedPartIds: string[];
-  setSelectedPartIds: React.Dispatch<React.SetStateAction<string[]>>;
+  booleanOperandEditingGroupId?: string | null;
+  setBooleanOperandEditingGroupId?: (id: string | null) => void;
   selectedKeyframeId: string | null;
   setSelectedKeyframeId: (id: string | null) => void;
   currentFrame: number;
@@ -33,12 +36,15 @@ interface UseTimelineOptions {
 
 export const useTimeline = ({
   setCharacterParts,
+  characterParts,
   tracks,
   setTracks,
   selectedPartId,
   setSelectedPartId,
   selectedPartIds,
   setSelectedPartIds,
+  booleanOperandEditingGroupId,
+  setBooleanOperandEditingGroupId = () => {},
   selectedKeyframeId,
   setSelectedKeyframeId,
   currentFrame,
@@ -52,15 +58,42 @@ export const useTimeline = ({
 
   // Delete the requested part or the complete canonical selection in one state transaction.
   const deletePart = useCallback((partId: string) => {
-    const idsToDelete = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
-    const idSet = new Set(idsToDelete);
-    setCharacterParts((prev) => prev.filter((p) => !idSet.has(p.id)));
-    setTracks((prev) => prev.filter((t) => !idSet.has(t.partId)));
-    setSelectedPartIds(selectedPartIds.filter((id) => !idSet.has(id)));
-    if (selectedPartId && idSet.has(selectedPartId)) {
+    const requestedIds = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
+    const deletion = deleteParts(characterParts, tracks, requestedIds);
+    if (deletion.deletedIds.length === 0) return;
+    const deletedIdSet = new Set(deletion.deletedIds);
+    setCharacterParts(deletion.parts);
+    setTracks(deletion.tracks);
+    setSelectedPartIds(selectedPartIds.filter((id) => !deletedIdSet.has(id)));
+    if (selectedPartId && deletedIdSet.has(selectedPartId)) {
       setSelectedPartId(null);
     }
-  }, [selectedPartId, selectedPartIds, setCharacterParts, setSelectedPartId, setSelectedPartIds, setTracks]);
+    if (selectedKeyframeId && tracks.some((track) => deletedIdSet.has(track.partId))) {
+      setSelectedKeyframeId(null);
+    }
+    const activeOperandDeleted = characterParts.some(
+      (part) => part.booleanGroupId === booleanOperandEditingGroupId && deletedIdSet.has(part.id),
+    );
+    if (
+      (booleanOperandEditingGroupId && deletedIdSet.has(booleanOperandEditingGroupId))
+      || activeOperandDeleted
+    ) {
+      setBooleanOperandEditingGroupId(null);
+    }
+  }, [
+    booleanOperandEditingGroupId,
+    characterParts,
+    selectedPartId,
+    selectedKeyframeId,
+    selectedPartIds,
+    setBooleanOperandEditingGroupId,
+    setCharacterParts,
+    setSelectedPartId,
+    setSelectedPartIds,
+    setSelectedKeyframeId,
+    setTracks,
+    tracks,
+  ]);
 
   // Keyframe & Track Actions
   const addKeyframeToTrack = (trackId: string, frame: number) => {

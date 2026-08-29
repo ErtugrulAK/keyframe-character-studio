@@ -1,11 +1,39 @@
 import type { BodyPartType, CharacterPart, Transform } from '../types/animator';
-import { getPartBounds } from './bounds';
+import { getPartWorldBounds } from './bounds';
+import { deriveBooleanGeometry } from './booleanGeometry';
 import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
 /** Pure viewport / canvas math for the Stage canvas. */
 export const CANVAS_CENTER_X = 300;
 export const CANVAS_CENTER_Y = 240;
 
 export const clampZoom = (zoom: number): number => Math.min(3, Math.max(0.3, zoom));
+
+export interface ClientToSVGPointInput {
+  rect: { left: number; top: number; width: number; height: number };
+  clientX: number;
+  clientY: number;
+  zoom: number;
+  pan: { x: number; y: number };
+  viewBox: { width: number; height: number };
+}
+
+/** Fallback client-to-SVG conversion for environments without screen CTM. */
+export const clientToSVGPoint = ({
+  rect,
+  clientX,
+  clientY,
+  zoom,
+  pan,
+  viewBox,
+}: ClientToSVGPointInput): { x: number; y: number } => {
+  const scale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height) || 1;
+  const viewBoxX = (clientX - rect.left - (rect.width - viewBox.width * scale) / 2) / scale;
+  const viewBoxY = (clientY - rect.top - (rect.height - viewBox.height * scale) / 2) / scale;
+  return {
+    x: ((viewBoxX - viewBox.width / 2) - pan.x / scale) / zoom + viewBox.width / 2,
+    y: ((viewBoxY - viewBox.height / 2) - pan.y / scale) / zoom + viewBox.height / 2,
+  };
+};
 
 export interface ShapeCreationBounds {
   minX: number;
@@ -216,15 +244,26 @@ export const getPartsInMarquee = (
     if (!isSelectable(part)) return;
     const t = getTransform(part.id);
     if (!t) return;
-    const bounds = getPartBounds(part, t);
-    const cx = canvasCenterX + t.x;
-    const cy = canvasCenterY + t.y;
-    const halfW = bounds.halfW * Math.abs(t.scaleX);
-    const halfH = bounds.halfH * Math.abs(t.scaleY);
-    const partLeft = cx - halfW;
-    const partRight = cx + halfW;
-    const partTop = cy - halfH;
-    const partBottom = cy + halfH;
+    const selectionPart = part.booleanOperandIds?.length && part.booleanOperation
+      ? {
+        ...part,
+        booleanContours: deriveBooleanGeometry(
+          part.booleanOperation,
+          part.booleanOperandIds
+            .map((operandId) => characterParts.find((candidate) => candidate.id === operandId))
+            .filter((candidate): candidate is CharacterPart => Boolean(candidate)),
+          Object.fromEntries(
+            part.booleanOperandIds.map((operandId) => [operandId, getTransform(operandId)]),
+          ),
+          t,
+        ).localContours,
+      }
+      : part;
+    const bounds = getPartWorldBounds(selectionPart, t, canvasCenterX, canvasCenterY);
+    const partLeft = bounds.minX;
+    const partRight = bounds.maxX;
+    const partTop = bounds.minY;
+    const partBottom = bounds.maxY;
     if (partRight > marquee.x && partLeft < marquee.x + marquee.w && partBottom > marquee.y && partTop < marquee.y + marquee.h) {
       selected.push(part.id);
     }

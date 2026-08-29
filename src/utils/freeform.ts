@@ -91,6 +91,21 @@ export const buildFreeformPath = (points: FreeformPoint[], closed: boolean = tru
 };
 
 /**
+ * Remove a closing duplicate of the first vertex from a polygon ring.
+ * SVG paths close themselves, so keeping the duplicate only creates an
+ * overlapping marker and makes the vertex list appear to skip its first label.
+ */
+export const normalizeClosedPoints = (points: FreeformPoint[]): FreeformPoint[] => {
+  if (!Array.isArray(points) || points.length < 2) return points || [];
+  const first = points[0];
+  const last = points[points.length - 1];
+  if (Math.hypot(last.x - first.x, last.y - first.y) <= 1e-6) {
+    return points.slice(0, -1);
+  }
+  return points;
+};
+
+/**
  * Half-extents of the bounding box around the points.
  * Falls back to a 32x32 default for empty input.
  */

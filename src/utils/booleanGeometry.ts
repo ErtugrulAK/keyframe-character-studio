@@ -1,6 +1,7 @@
 import { difference, intersection, union, xor, type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping';
 import type { CharacterPart, FreeformPoint, Track, Transform } from '../types/animator';
 import { getShapeGeometry } from './shapeGeometry';
+import { normalizeClosedPoints } from './freeform';
 
 export type BooleanOperation = 'union' | 'subtract' | 'intersect' | 'exclude';
 export type BooleanContours = FreeformPoint[][];
@@ -55,6 +56,91 @@ export const transformBooleanContours = (
     };
   }));
 };
+
+const inverseTransformPoint = (point: FreeformPoint, transform: Transform): FreeformPoint => {
+  const radians = (transform.rotation * Math.PI) / 180;
+  const dx = point.x - transform.x;
+  const dy = point.y - transform.y;
+  const unrotatedX = dx * Math.cos(radians) + dy * Math.sin(radians);
+  const unrotatedY = -dx * Math.sin(radians) + dy * Math.cos(radians);
+  return {
+    x: unrotatedX / (transform.scaleX || 1),
+    y: unrotatedY / (transform.scaleY || 1),
+  };
+};
+
+/** Convert world-space Boolean contours into the group's local space. */
+export const inverseTransformBooleanContours = (
+  contours: BooleanContours,
+  transform: Transform,
+): BooleanContours => contours.map((contour) => contour.map((point) => inverseTransformPoint(point, transform)));
+
+const BOOLEAN_OPERATION_LABELS: Record<BooleanOperation, string> = {
+  union: 'Union',
+  subtract: 'Subtract',
+  intersect: 'Intersect',
+  exclude: 'Exclude',
+};
+
+const GENERATED_BOOLEAN_NAME = /^Boolean(?: (\d+))? · (Union|Subtract|Intersect|Exclude)$/u;
+const DERIVED_BOOLEAN_NAME = /^.+ (?:\+|\/) .+ · (Union|Subtract|Intersect|Exclude)$/u;
+
+export const booleanOperationLabel = (operation: BooleanOperation): string => BOOLEAN_OPERATION_LABELS[operation];
+
+export const isGeneratedBooleanName = (name: string): boolean => (
+  GENERATED_BOOLEAN_NAME.test(name) || DERIVED_BOOLEAN_NAME.test(name)
+);
+
+export const createBooleanDisplayName = (
+  operation: BooleanOperation,
+  existingParts: CharacterPart[],
+  currentName?: string,
+  operandNames: string[] = [],
+): string => {
+  const currentMatch = currentName?.match(GENERATED_BOOLEAN_NAME);
+  const currentIsGenerated = currentName ? isGeneratedBooleanName(currentName) : false;
+  const normalizedOperandNames = operandNames.map((name) => name.trim()).filter(Boolean);
+  if (currentName && !currentIsGenerated) return currentName;
+  if ((currentName === undefined || currentIsGenerated) && normalizedOperandNames.length > 0) {
+    return `${normalizedOperandNames.join(' + ')} · ${booleanOperationLabel(operation)}`;
+  }
+  if (currentMatch) {
+    const number = currentMatch[1] ?? '1';
+    return `Boolean ${number} · ${booleanOperationLabel(operation)}`;
+  }
+  const usedNumbers = new Set(
+    existingParts
+      .map((part) => part.name.match(GENERATED_BOOLEAN_NAME))
+      .filter((match): match is RegExpMatchArray => Boolean(match))
+      .map((match) => match[1] ?? '1'),
+  );
+  let number = 1;
+  while (usedNumbers.has(String(number))) number += 1;
+  return `Boolean ${number} · ${booleanOperationLabel(operation)}`;
+};
+
+export interface DerivedBooleanGeometry {
+  worldContours: BooleanContours;
+  localContours: BooleanContours;
+}
+
+/**
+ * Derive the current-frame Boolean result once from evaluated operand
+ * transforms. Renderers and selection consumers must use the same local/world
+ * pair instead of reading persisted result contours for live editor geometry.
+ */
+export const deriveBooleanGeometry = (
+  operation: BooleanOperation,
+  operands: CharacterPart[],
+  operandTransforms: Record<string, Transform>,
+  groupTransform: Transform,
+): DerivedBooleanGeometry => {
+  const worldContours = computeBooleanContours(operation, operands, operandTransforms);
+  return {
+    worldContours,
+    localContours: inverseTransformBooleanContours(worldContours, groupTransform),
+  };
+};
 export const dissolveBooleanGroup = (
   parts: CharacterPart[],
   tracks: Track[],
@@ -85,7 +171,7 @@ export const partToWorldPolygon = (part: CharacterPart, transform?: Transform): 
 };
 
 const flattenResult = (result: MultiPolygon): BooleanContours => result.flatMap((polygon) => (
-  polygon.map((ring) => ring.map(([x, y]) => ({ x, y })))
+  polygon.map((ring) => normalizeClosedPoints(ring.map(([x, y]) => ({ x, y }))))
 ));
 
 export const computeBooleanContours = (

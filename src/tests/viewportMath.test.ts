@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
-import { getCursorAnchoredViewport, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../utils/viewportMath';
+import { clientToSVGPoint, getCursorAnchoredViewport, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../utils/viewportMath';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,
@@ -118,5 +118,30 @@ describe('Canvas Interaction V1 viewport math', () => {
     expect(parallelogram?.scaleY).toBeCloseTo(200 / 60, 8);
     expect(parallelogram?.x).toBeCloseTo(0, 8);
     expect(parallelogram?.y).toBeCloseTo(0, 8);
+  });
+
+  it('inverts client coordinates through aspect-fit, zoom, and pan', () => {
+    const rect = { left: 120, top: 60, width: 840, height: 620 };
+    const viewBox = { width: 600, height: 480 };
+    const zoom = 1.5;
+    const pan = { x: 23, y: -11 };
+    const scale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height);
+    const point = { x: 420, y: 300 };
+    const client = {
+      x: rect.left + rect.width / 2 + (point.x - viewBox.width / 2) * scale * zoom + pan.x,
+      y: rect.top + rect.height / 2 + (point.y - viewBox.height / 2) * scale * zoom + pan.y,
+    };
+
+    expect(clientToSVGPoint({
+      rect,
+      clientX: client.x,
+      clientY: client.y,
+      zoom,
+      pan,
+      viewBox,
+    })).toMatchObject({
+      x: expect.closeTo(point.x, 8),
+      y: expect.closeTo(point.y, 8),
+    });
   });
 });

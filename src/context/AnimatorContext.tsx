@@ -60,6 +60,8 @@ interface AnimatorContextType {
   selectedPartIds: string[];
   setSelectedPartIds: (ids: string[]) => void;
   handleSelectPart: (id: string | null, isMulti?: boolean) => void;
+  booleanOperandEditingGroupId: string | null;
+  setBooleanOperandEditingGroupId: (id: string | null) => void;
   focusModeNodeId: string | null;
   setFocusModeNodeId: (id: string | null) => void;
   selectedKeyframeId: string | null;
@@ -280,13 +282,14 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
   const [projectResolution, setProjectResolution] = useState<{ width: number; height: number }>({ width: 1920, height: 1080 });
-
   const {
     selectedPartId,
     setSelectedPartId,
     selectedPartIds,
     setSelectedPartIds,
     handleSelectPart,
+    booleanOperandEditingGroupId,
+    setBooleanOperandEditingGroupId,
     focusModeNodeId,
     setFocusModeNodeId,
     selectedKeyframeId,
@@ -333,14 +336,15 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     reorderParts,
   } = useTimeline({
     setCharacterParts,
+    characterParts,
     tracks,
     setTracks,
     selectedPartId,
     setSelectedPartId,
     selectedPartIds,
     setSelectedPartIds,
-    selectedKeyframeId,
-    setSelectedKeyframeId,
+    booleanOperandEditingGroupId,
+    setBooleanOperandEditingGroupId,
     currentFrame,
     totalFrames,
     activeTemplateId,
@@ -394,6 +398,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     deletePart,
     setActiveTool,
     cancelShapeCreation: pendingShapeType ? clearShapeCreation : undefined,
+    exitBooleanOperandEditing: () => setBooleanOperandEditingGroupId(null),
   });
 
   const { getComputedTransform } = useMath({
@@ -414,6 +419,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     selectedPartId,
     selectedPartIds,
     activeTemplateId,
+    characterParts,
     currentFrame,
     tracks,
     setTracks,
@@ -503,12 +509,13 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isLooping,
         setIsLooping,
         projectResolution,
-        setProjectResolution,
         selectedPartId,
         setSelectedPartId,
         selectedPartIds,
         setSelectedPartIds,
         handleSelectPart,
+        booleanOperandEditingGroupId,
+        setBooleanOperandEditingGroupId,
         focusModeNodeId,
         setFocusModeNodeId,
         selectedKeyframeId,

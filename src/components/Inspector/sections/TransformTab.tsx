@@ -17,6 +17,7 @@ interface TransformTabProps {
   updateCurrentPropertyChannel?: (channel: TrackChannel, value: number) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
   handleZIndexChange?: (zIndex: number) => void;
+  editWorkflowContent?: React.ReactNode;
   // M25 — user-saved custom preset library (passed through to the card)
   customPresets: CustomMotionPreset[];
   onSavePreset: (input: SavePresetInput) => CustomMotionPreset | null;
@@ -52,10 +53,12 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   onPasteAnimation,
   onClearAnimation,
   clipboardSourceId,
+  editWorkflowContent,
 }) => {
 
   return (
     <>
+        {editWorkflowContent}
       <div className="inspector-section" style={{ paddingTop: 8 }}>
 
         {/* Unified transform block: position, rotation, scale rows */}
@@ -94,8 +97,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           />
         )}
 
-        {/* Freeform shapes get a per-vertex coordinate editor */}
-        {selectedPart.type === 'custom_freeform' && handlePartPropChange && (
+        {selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length && handlePartPropChange && (
           <TransformVertexEditor
             selectedPart={selectedPart}
             transform={transform}

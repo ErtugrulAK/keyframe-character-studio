@@ -12,6 +12,7 @@ interface UseKeyboardShortcutsOptions {
   deletePart: (partId: string) => void;
   setActiveTool?: (tool: ToolType) => void;
   cancelShapeCreation?: () => void;
+  exitBooleanOperandEditing?: () => void;
 }
 
 export const useKeyboardShortcuts = ({
@@ -25,6 +26,7 @@ export const useKeyboardShortcuts = ({
   deletePart,
   setActiveTool,
   cancelShapeCreation,
+  exitBooleanOperandEditing,
 }: UseKeyboardShortcutsOptions) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -38,8 +40,12 @@ export const useKeyboardShortcuts = ({
       if (isInputActive) return;
 
       const key = e.key.toLowerCase();
-      if (e.key === 'Escape' && cancelShapeCreation) {
-        cancelShapeCreation();
+      if (e.key === 'Escape') {
+        if (cancelShapeCreation) {
+          cancelShapeCreation();
+          return;
+        }
+        exitBooleanOperandEditing?.();
         return;
       }
       if (!e.ctrlKey && !e.metaKey && !e.altKey && key === 'v') {
@@ -94,5 +100,5 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPartId, deletePart, deleteSelectedKeyframe, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, setActiveTool, cancelShapeCreation]);
+  }, [selectedPartId, deletePart, deleteSelectedKeyframe, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, setActiveTool, cancelShapeCreation, exitBooleanOperandEditing]);
 };

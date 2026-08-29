@@ -7,7 +7,7 @@ import { updateTrimPath, type TrimPathAuthoringPatch } from '../../utils/trimPat
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { DuplicateTab } from './sections/DuplicateTab';
-import { isBooleanEligible, computeBooleanContours, dissolveBooleanGroup as dissolveBooleanGroupState, type BooleanOperation } from '../../utils/booleanGeometry';
+import { isBooleanEligible, computeBooleanContours, deriveBooleanGeometry, dissolveBooleanGroup as dissolveBooleanGroupState, createBooleanDisplayName, isGeneratedBooleanName, type BooleanOperation } from '../../utils/booleanGeometry';
 import { generateId } from '../../utils/idGenerator';
 import {
   Sliders,
@@ -16,6 +16,8 @@ import {
   Activity,
   CopyPlus,
   Unlink,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 
 export const DetailsPanel: React.FC = () => {
@@ -48,6 +50,8 @@ export const DetailsPanel: React.FC = () => {
     activeTemplateId,
     isScaleLocked,
     coordinateSystem,
+    booleanOperandEditingGroupId,
+    setBooleanOperandEditingGroupId,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'edit' | 'duplicate'>('edit');
@@ -70,7 +74,7 @@ export const DetailsPanel: React.FC = () => {
     const groupPart = {
       ...booleanEligibleParts[0],
       id: groupId,
-      name: `Boolean · ${operation[0].toUpperCase()}${operation.slice(1)}`,
+      name: createBooleanDisplayName(operation, characterParts, undefined, booleanEligibleParts.map((part) => part.name)),
       type: 'custom_freeform' as const,
       zIndex: Math.max(...booleanEligibleParts.map((part) => part.zIndex)) + 1,
       parentId: undefined,
@@ -108,7 +112,7 @@ export const DetailsPanel: React.FC = () => {
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedBooleanGroup = selectedPart?.booleanOperandIds?.length
     ? selectedPart
-    : undefined;
+    : characterParts.find((part) => part.id === selectedPart?.booleanGroupId);
 
   const updateBooleanOperation = (operation: BooleanOperation) => {
     if (!selectedBooleanGroup || !selectedBooleanGroup.booleanOperandIds) return;
@@ -118,12 +122,17 @@ export const DetailsPanel: React.FC = () => {
     const transforms = Object.fromEntries(
       operands.map((operand) => [operand.id, getComputedTransform(operand.id, currentFrame)]),
     );
-    const contours = computeBooleanContours(operation, operands, transforms);
+    const groupTransform = getComputedTransform(selectedBooleanGroup.id, currentFrame);
+    const operandNames = operands.map((operand) => operand.name);
+    const derived = deriveBooleanGeometry(operation, operands, transforms, groupTransform);
+    const contours = derived.localContours;
     startBatchInteraction();
     setCharacterParts((parts) => parts.map((part) => part.id === selectedBooleanGroup.id
       ? {
         ...part,
-        name: `Boolean · ${operation[0].toUpperCase()}${operation.slice(1)}`,
+        name: isGeneratedBooleanName(part.name)
+          ? createBooleanDisplayName(operation, parts, part.name, operandNames)
+          : part.name,
         booleanOperation: operation,
         booleanContours: contours,
         points: contours[0] ?? [],
@@ -132,13 +141,24 @@ export const DetailsPanel: React.FC = () => {
     endBatchInteraction();
     if (contours.length === 0) showToast('Boolean result is empty.', 'info');
   };
+
   const dissolveBooleanGroup = () => {
     if (!selectedBooleanGroup?.booleanOperandIds) return;
+    const operandWorldTransforms = Object.fromEntries(
+      selectedBooleanGroup.booleanOperandIds.map((id) => [id, getComputedTransform(id, currentFrame)]),
+    );
     const result = dissolveBooleanGroupState(characterParts, tracks, selectedBooleanGroup.id);
     if (result.operandIds.length === 0) return;
+    const bakedParts = result.parts.map((part) => {
+      const world = operandWorldTransforms[part.id];
+      return world
+        ? { ...part, baseTransform: { ...part.baseTransform, ...world }, booleanGroupId: undefined }
+        : part;
+    });
     startBatchInteraction();
-    setCharacterParts(result.parts);
+    setCharacterParts(bakedParts);
     setTracks(result.tracks);
+    setBooleanOperandEditingGroupId(null);
     setSelectedPartIds(result.operandIds);
     setSelectedPartId(result.operandIds[result.operandIds.length - 1] ?? null);
     endBatchInteraction();
@@ -209,6 +229,78 @@ export const DetailsPanel: React.FC = () => {
     showToast('Animation cleared', 'success');
   };
 
+  const booleanWorkflowContent = selectedBooleanGroup ? (
+    <section className="boolean-editor-section" aria-label="Boolean operation">
+      <div className="inspector-section-label">BOOLEAN</div>
+      <p className="boolean-description">Combine vector geometry. Operands remain authored and editable.</p>
+      <label className="boolean-operation-field">
+        <span>Operation</span>
+        <select
+          aria-label="Boolean operation"
+          value={selectedBooleanGroup.booleanOperation ?? 'union'}
+          onChange={(event) => updateBooleanOperation(event.target.value as BooleanOperation)}
+        >
+          <option value="union">Union</option>
+          <option value="subtract">Subtract</option>
+          <option value="intersect">Intersect</option>
+          <option value="exclude">Exclude</option>
+        </select>
+      </label>
+      <button
+        type="button"
+        className={`boolean-operand-mode-button ${booleanOperandEditingGroupId === selectedBooleanGroup.id ? 'active' : ''}`}
+        aria-pressed={booleanOperandEditingGroupId === selectedBooleanGroup.id}
+        onClick={() => setBooleanOperandEditingGroupId(
+          booleanOperandEditingGroupId === selectedBooleanGroup.id ? null : selectedBooleanGroup.id,
+        )}
+      >
+        {booleanOperandEditingGroupId === selectedBooleanGroup.id ? <Unlock size={12} /> : <Lock size={12} />}
+        {booleanOperandEditingGroupId === selectedBooleanGroup.id ? 'Lock Operands' : 'Edit Operands'}
+      </button>
+      {booleanOperandEditingGroupId === selectedBooleanGroup.id && (
+        <p className="boolean-editing-status">Operand editing is active. Drag a child shape on the canvas.</p>
+      )}
+      <div className="boolean-operands-list" aria-label="Boolean operands">
+        {selectedBooleanGroup.booleanOperandIds?.map((operandId) => (
+          <button
+            key={operandId}
+            type="button"
+            className="boolean-operand-button"
+            onClick={() => {
+              setSelectedPartIds([operandId]);
+              setSelectedPartId(operandId);
+            }}
+          >
+            {characterParts.find((part) => part.id === operandId)?.name ?? operandId}
+          </button>
+        ))}
+      </div>
+      {selectedBooleanGroup.booleanContours?.length === 0 && (
+        <p className="boolean-empty-message">Boolean result is empty.</p>
+      )}
+      <button type="button" className="btn-secondary boolean-dissolve-button" onClick={dissolveBooleanGroup}>
+        <Unlink size={12} /> Dissolve Boolean
+      </button>
+    </section>
+  ) : booleanEligibleParts.length >= 2 ? (
+    <section className="shape-operations-section" aria-label="Shape operations">
+      <div className="inspector-section-label">BOOLEAN</div>
+      <p className="shape-operations-description">Combine eligible closed vector shapes into a non-destructive Boolean result.</p>
+      <div className="shape-operations-grid">
+        {(['union', 'subtract', 'intersect', 'exclude'] as const).map((operation) => (
+          <button key={operation} type="button" onClick={() => createBooleanGroup(operation)} title={`Create ${operation} Boolean`}>
+            {operation[0].toUpperCase() + operation.slice(1)}
+          </button>
+        ))}
+      </div>
+    </section>
+  ) : selectedPart && isBooleanEligible(selectedPart) ? (
+    <section className="shape-operations-section shape-operations-hint" aria-label="Boolean operations unavailable">
+      <div className="inspector-section-label">BOOLEAN</div>
+      <p>Boolean: select 2 closed vector shapes.</p>
+    </section>
+  ) : null;
+
   return (
     <div className="details-container">
       {/* 1. Header Bar */}
@@ -249,65 +341,6 @@ export const DetailsPanel: React.FC = () => {
           <span>Select an element on Canvas or Outliner to view details</span>
         </div>
       )}
-      {booleanEligibleParts.length >= 2 && (
-        <section className="shape-operations-section" aria-label="Shape operations">
-          <div className="inspector-section-label">SHAPE OPERATIONS</div>
-          <p className="shape-operations-description">Combine eligible closed vector shapes into a non-destructive Boolean result.</p>
-          <div className="shape-operations-grid">
-            {(['union', 'subtract', 'intersect', 'exclude'] as const).map((operation) => (
-              <button key={operation} type="button" onClick={() => createBooleanGroup(operation)} title={`Create ${operation} Boolean`}>
-                {operation[0].toUpperCase() + operation.slice(1)}
-              </button>
-            ))}
-          </div>
-        </section>
-      )}
-      {selectedBooleanGroup && (
-        <section className="boolean-editor-section" aria-label="Boolean operation">
-          <div className="inspector-section-label">BOOLEAN RESULT</div>
-          <p className="boolean-description">Combine vector geometry. Operands remain authored and editable.</p>
-          <label className="boolean-operation-field">
-            <span>Operation</span>
-            <select
-              aria-label="Boolean operation"
-              value={selectedBooleanGroup.booleanOperation ?? 'union'}
-              onChange={(event) => updateBooleanOperation(event.target.value as BooleanOperation)}
-            >
-              <option value="union">Union</option>
-              <option value="subtract">Subtract</option>
-              <option value="intersect">Intersect</option>
-              <option value="exclude">Exclude</option>
-            </select>
-          </label>
-          <div className="boolean-operands-list" aria-label="Boolean operands">
-            {selectedBooleanGroup.booleanOperandIds?.map((operandId) => (
-              <button
-                key={operandId}
-                type="button"
-                className="boolean-operand-button"
-                onClick={() => {
-                  setSelectedPartIds([operandId]);
-                  setSelectedPartId(operandId);
-                }}
-              >
-                {characterParts.find((part) => part.id === operandId)?.name ?? operandId}
-              </button>
-            ))}
-          </div>
-          {selectedBooleanGroup.booleanContours?.length === 0 && (
-            <p className="boolean-empty-message">Boolean result is empty.</p>
-          )}
-          <button type="button" className="btn-secondary boolean-dissolve-button" onClick={dissolveBooleanGroup}>
-            <Unlink size={12} /> Dissolve Boolean
-          </button>
-        </section>
-      )}
-      {selectedPart && !selectedBooleanGroup && booleanEligibleParts.length < 2 && (
-        <section className="shape-operations-section shape-operations-hint" aria-label="Boolean operations unavailable">
-          <div className="inspector-section-label">SHAPE OPERATIONS</div>
-          <p>Boolean: select 2 closed vector shapes.</p>
-        </section>
-      )}
 
       {/* 3. Section Navigation Tabs */}
       {selectedPart && (
@@ -343,6 +376,7 @@ export const DetailsPanel: React.FC = () => {
                 updateCurrentPropertyChannel={updateCurrentPropertyChannel}
                 handlePartPropChange={handlePartPropChange}
                 handleZIndexChange={handleZIndexChange}
+                editWorkflowContent={booleanWorkflowContent}
                 customPresets={customPresets}
                 onSavePreset={savePreset}
                 onUpdatePreset={updatePreset}

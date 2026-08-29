@@ -1,6 +1,7 @@
 import React from 'react';
 import type { CharacterPart, Track, Transform } from '../../types/animator';
-import { getPartBounds } from '../../utils/bounds';
+import { getPartLocalBounds } from '../../utils/bounds';
+import { deriveBooleanGeometry } from '../../utils/booleanGeometry';
 import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../utils/projectCoordinates';
 
@@ -13,11 +14,34 @@ interface SelectionGizmoProps {
   selectedTransform: Transform | null;
   tracks: Track[];
   zScale: number;
+  booleanOperandEditingGroupId?: string | null;
   onRotateStart: (e: React.MouseEvent) => void;
   onScaleStart: (e: React.MouseEvent, mode?: ScaleMode) => void;
   onTranslateStart: (partId: string, e: React.MouseEvent) => void;
   outputOrigin?: CoordinatePoint;
 }
+const withCurrentBooleanGeometry = (
+  part: CharacterPart,
+  characterParts: CharacterPart[],
+  getComputedTransform: (partId: string, frame: number) => Transform,
+  currentFrame: number,
+): CharacterPart => {
+  if (!part.booleanOperandIds?.length || !part.booleanOperation) return part;
+  const operands = part.booleanOperandIds
+    .map((operandId) => characterParts.find((candidate) => candidate.id === operandId))
+    .filter((candidate): candidate is CharacterPart => Boolean(candidate));
+  const operandTransforms = Object.fromEntries(
+    operands.map((operand) => [operand.id, getComputedTransform(operand.id, currentFrame)]),
+  );
+  const groupTransform = getComputedTransform(part.id, currentFrame);
+  const derived = deriveBooleanGeometry(part.booleanOperation, operands, operandTransforms, groupTransform);
+  return {
+    ...part,
+    booleanContours: derived.localContours,
+    points: derived.localContours[0] ?? [],
+  };
+};
+
 
 /**
  * Interactive transform gizmo layer for the stage canvas.
@@ -32,6 +56,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
   selectedTransform,
   tracks,
   zScale,
+  booleanOperandEditingGroupId = null,
   onRotateStart,
   onScaleStart,
   onTranslateStart,
@@ -44,11 +69,13 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
           const part = characterParts.find((candidate) => candidate.id === id);
           const transform = part ? getComputedTransform(id, currentFrame) : null;
           const track = tracks.find((candidate) => candidate.partId === id);
-          if (!part || !transform || track?.editVisible === false) return null;
+          if (!part || !transform || track?.editVisible === false || (part.booleanGroupId && part.booleanGroupId !== booleanOperandEditingGroupId)) return null;
+          const selectionPart = withCurrentBooleanGeometry(part, characterParts, getComputedTransform, currentFrame);
+          if (selectionPart.booleanOperandIds?.length && selectionPart.booleanContours?.length === 0) return null;
           return (
             <TransformGizmo
               key={`multi-selection-${id}`}
-              selectedPart={part}
+              selectedPart={selectionPart}
               selectedTransform={transform}
               zScale={zScale}
               onRotateMouseDown={() => {}}
@@ -64,10 +91,13 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
 
   if (selectedPart && selectedTransform) {
     const selTrack = tracks.find((t) => t.partId === selectedPart.id);
+    if (selectedPart.booleanGroupId && selectedPart.booleanGroupId !== booleanOperandEditingGroupId) return null;
     if (selTrack && selTrack.editVisible === false) return null;
 
     const hasActiveMatte = Boolean(selectedPart.matte?.sourcePartId && selectedPart.matte.enabled !== false);
-    const bounds = getPartBounds(selectedPart, selectedTransform);
+    const selectionPart = withCurrentBooleanGeometry(selectedPart, characterParts, getComputedTransform, currentFrame);
+    if (selectionPart.booleanOperandIds?.length && selectionPart.booleanContours?.length === 0) return null;
+    const bounds = getPartLocalBounds(selectionPart, selectedTransform);
     const matteHitArea = hasActiveMatte ? (
       <g
         transform={`translate(${outputOrigin.x + selectedTransform.x}, ${outputOrigin.y + selectedTransform.y}) rotate(${selectedTransform.rotation}) scale(${selectedTransform.scaleX}, ${selectedTransform.scaleY})`}
@@ -75,10 +105,10 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
         <rect
           data-testid="matte-editor-hit-area"
           data-part-id={selectedPart.id}
-          x={-bounds.halfW}
-          y={-bounds.halfH}
-          width={bounds.halfW * 2}
-          height={bounds.halfH * 2}
+          x={bounds.minX}
+          y={bounds.minY}
+          width={bounds.maxX - bounds.minX}
+          height={bounds.maxY - bounds.minY}
           fill="transparent"
           pointerEvents="all"
           style={{ cursor: 'move' }}
@@ -87,14 +117,14 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
       </g>
     ) : null;
 
-    const isFreeform = selectedPart.type === 'custom_freeform';
+    const isFreeform = selectionPart.type === 'custom_freeform' && !selectionPart.booleanOperandIds?.length;
 
     return (
       <>
         {matteHitArea}
         {!isFreeform && (
           <TransformGizmo
-            selectedPart={selectedPart}
+            selectedPart={selectionPart}
             selectedTransform={selectedTransform}
             zScale={zScale}
             onRotateMouseDown={onRotateStart}

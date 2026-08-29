@@ -298,7 +298,42 @@ describe('useInspector Hook', () => {
     const newTracks = mockSetTracks.mock.calls.at(-1)[0]([track]);
     const seqKf = newTracks[0].channels.x.find((k: any) => k.templateId === 'Sequence');
     const outroKf = newTracks[0].channels.x.find((k: any) => k.templateId === 'Outro');
+
     expect(seqKf.value).toBe(42);
     expect(outroKf.value).toBe(99); // untouched
+  });
+  it('converts Boolean operand Inspector world coordinates back to parent-local space', () => {
+    const operand: CharacterPart = {
+      id: 'operand',
+      name: 'Operand',
+      type: 'custom_rect',
+      zIndex: 1,
+      fillColor: '#fff',
+      strokeColor: '#000',
+      pivot: { x: 0, y: 0 },
+      booleanGroupId: 'group',
+      baseTransform: { x: 30, y: 10, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    };
+    const groupTransform = { x: 100, y: 20, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+    const currentWorld = { x: 130, y: 30, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+    const setCharacterParts = vi.fn();
+    const { result } = renderHook(() => useInspector({
+      selectedPartId: 'operand',
+      selectedPartIds: ['operand'],
+      activeTemplateId: 'Sequence',
+      currentFrame: 0,
+      tracks: [{ id: 'operand-track', partId: 'operand', name: 'Operand', channels: {}, keyframes: [] } as Track],
+      characterParts: [operand],
+      setTracks: mockSetTracks,
+      setCharacterParts,
+      getComputedTransform: vi.fn((id: string) => id === 'group' ? groupTransform : currentWorld),
+      addKeyframeToTrack: mockAddKeyframeToTrack,
+    }));
+
+    act(() => result.current.updateCurrentTransform({ x: 150, y: 50 }));
+
+    const updateFn = setCharacterParts.mock.calls.at(-1)[0];
+    const updated = updateFn([operand]);
+    expect(updated[0].baseTransform).toMatchObject({ x: 50, y: 30 });
   });
 });

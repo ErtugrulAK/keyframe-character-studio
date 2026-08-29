@@ -23,8 +23,10 @@ const animatorCtx = {
   setActiveTool: vi.fn(),
   focusModeNodeId: undefined as string | undefined,
   setFocusModeNodeId: vi.fn(),
-};
+  booleanOperandEditingGroupId: null as string | null,
+  setBooleanOperandEditingGroupId: vi.fn(),
 
+};
 vi.mock('../context/AnimatorContext', () => ({
   useAnimator: () => animatorCtx,
 }));
@@ -206,5 +208,11 @@ describe('OutlinerPanel — M22 matte relationship indicator', () => {
     expect(rows.map((row) => row.dataset.treeDepth)).toEqual(['0', '1']);
     expect(rows[1].dataset.parentId).toBe('parent');
     expect(rows[1].classList.contains('selected')).toBe(true);
+  });
+
+  it('renders a Parallelogram row without crashing', () => {
+    animatorCtx.characterParts = [part('para', 'Parallelogram', 'custom_parallelogram')];
+    renderPanel();
+    expect(screen.getByText('Parallelogram')).toBeTruthy();
   });
 });

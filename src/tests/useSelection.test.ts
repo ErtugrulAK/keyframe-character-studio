@@ -53,4 +53,14 @@ describe('useSelection Hook', () => {
     expect(result.current.selectedPartId).toBeNull();
     expect(result.current.selectedPartIds).toEqual([]);
   });
+
+  it('tracks transient Boolean operand editing and clears it on deselection', () => {
+    const { result } = renderHook(() => useSelection());
+
+    act(() => result.current.setBooleanOperandEditingGroupId('group'));
+    expect(result.current.booleanOperandEditingGroupId).toBe('group');
+
+    act(() => result.current.handleSelectPart(null));
+    expect(result.current.booleanOperandEditingGroupId).toBeNull();
+  });
 });

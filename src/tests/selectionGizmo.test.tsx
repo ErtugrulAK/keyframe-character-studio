@@ -90,6 +90,56 @@ describe('SelectionGizmo — editor-only matte interaction area', () => {
     expect(screen.queryByTestId('aggregate-selection-box')).toBeNull();
   });
 
+  it('draws tight bounds for asymmetric polygon geometry', () => {
+    const { container } = renderGizmo(makePart('custom_triangle'));
+    const bounds = container.querySelector('[data-testid="transform-gizmo"] > g > rect');
+
+    expect(bounds).not.toBeNull();
+    expect(bounds?.getAttribute('x')).toBe('-70');
+    expect(bounds?.getAttribute('y')).toBe('-17.5');
+    expect(bounds?.getAttribute('width')).toBe('140');
+    expect(bounds?.getAttribute('height')).toBe('30');
+  });
+
+  it('derives Boolean selection bounds from current operands instead of persisted contours', () => {
+    const group = {
+      ...makePart('custom_freeform'),
+      id: 'group',
+      booleanOperation: 'exclude' as const,
+      booleanOperandIds: ['a', 'b'],
+      booleanContours: [[{ x: -10000, y: -10000 }, { x: 10000, y: -10000 }, { x: 10000, y: 10000 }]],
+      points: [{ x: -10000, y: -10000 }, { x: 10000, y: -10000 }, { x: 10000, y: 10000 }],
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    };
+    const a = { ...makePart('custom_rect'), id: 'a', baseTransform: { ...makePart('custom_rect').baseTransform, x: -150 } };
+    const b = { ...makePart('custom_rect'), id: 'b', baseTransform: { ...makePart('custom_rect').baseTransform, x: 150 } };
+    const transforms: Record<string, Transform> = {
+      group: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      a: { x: -150, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      b: { x: 150, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    };
+    const { container } = render(
+      <svg>
+        <SelectionGizmo
+          selectedPartIds={['group']}
+          characterParts={[group, a, b]}
+          getComputedTransform={(id) => transforms[id]}
+          currentFrame={0}
+          selectedPart={group}
+          selectedTransform={transforms.group}
+          tracks={[]}
+          zScale={1}
+          onRotateStart={() => {}}
+          onScaleStart={() => {}}
+          onTranslateStart={() => {}}
+        />
+      </svg>,
+    );
+    const bounds = container.querySelector('[data-testid="transform-gizmo"] > g > rect');
+    expect(Number(bounds?.getAttribute('width'))).toBeGreaterThan(300);
+    expect(Number(bounds?.getAttribute('width'))).toBeLessThan(500);
+  });
+
   it.each(['custom_image', 'custom_text', 'custom_box', 'custom_freeform'] as const)(
     'exposes evaluated bounds for a selected enabled-matte %s target',
     (type) => {

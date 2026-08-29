@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
-import { buildFreeformPath, getFreeformPerimeter } from '../../../../utils/freeform';
+import { buildFreeformPath, getFreeformPerimeter, normalizeClosedPoints } from '../../../../utils/freeform';
 import { getShapeGeometry, polygonPointsToString } from '../../../../utils/shapeGeometry';
 import { isShapeAppearanceEligible, resolveShapeAppearance, type ResolvedShapeAppearance } from '../../../../utils/shapeAppearance';
 import { getTrimPathDashProps, resolveTrimPath } from '../../../../utils/trimPath';
@@ -338,8 +338,10 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimP
     }
 
     case 'custom_freeform': {
-      const contours = part.booleanContours?.filter((contour) => contour.length >= 3);
-      const points = part.points && part.points.length >= 2 ? part.points : undefined;
+      const contours = part.booleanContours
+        ?.map(normalizeClosedPoints)
+        .filter((contour) => contour.length >= 3);
+      const points = part.points && part.points.length >= 2 ? normalizeClosedPoints(part.points) : undefined;
       const paths = contours?.map((contour) => buildFreeformPath(contour)).filter(Boolean) ?? [];
       const d = part.booleanContours !== undefined ? paths.join(' ') : (points ? buildFreeformPath(points) : '');
       if (!d) return null;

@@ -23,6 +23,7 @@ import {
   Scissors,
   AlertTriangle,
 } from 'lucide-react';
+import { booleanOperationLabel } from '../../utils/booleanGeometry';
 import { ParallelogramIcon } from '../Toolbar/drawers/ElementsDrawer';
 
 export const OutlinerPanel: React.FC = () => {
@@ -39,6 +40,8 @@ export const OutlinerPanel: React.FC = () => {
     setActiveTool,
     focusModeNodeId,
     setFocusModeNodeId,
+    booleanOperandEditingGroupId,
+    setBooleanOperandEditingGroupId,
   } = useAnimator();
 
   const [isGroupExpanded, setIsGroupExpanded] = useState(true);
@@ -94,10 +97,16 @@ export const OutlinerPanel: React.FC = () => {
         className={`tree-node actor-node ${selectedPartIds?.includes(part.id) ? 'selected' : ''} ${selectedPartId === part.id ? 'primary-selected' : ''} ${hasChildren ? 'has-children' : ''} ${depth > 0 ? 'nested-node' : ''} ${draggedIdx === index ? 'dragging' : ''} ${dragOverIdx === index ? 'drag-over' : ''}`}
         data-parent-id={(part.parentId ?? part.booleanGroupId) ?? ''}
         data-tree-depth={depth}
-        aria-level={depth + 1}
         onClick={(e) => {
-          // Selecting a part from the outliner exits the mask tool
-          // + focus mode so the normal gizmo comes back.
+          // Selecting a part outside the active Boolean structure exits the
+          // transient operand editing mode.
+          if (
+            booleanOperandEditingGroupId
+            && part.id !== booleanOperandEditingGroupId
+            && part.booleanGroupId !== booleanOperandEditingGroupId
+          ) {
+            setBooleanOperandEditingGroupId(null);
+          }
           if ((activeTool === 'mask' || focusModeNodeId) && focusModeNodeId !== part.id) {
             setActiveTool('select');
             setFocusModeNodeId(null);
@@ -175,6 +184,11 @@ export const OutlinerPanel: React.FC = () => {
           <span className="actor-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {part.name}
           </span>
+          {part.booleanOperandIds?.length && part.booleanOperation && (
+            <span className="boolean-operation-badge" title={`Boolean operation: ${booleanOperationLabel(part.booleanOperation)}`}>
+              {booleanOperationLabel(part.booleanOperation)}
+            </span>
+          )}
           {part.matte?.sourcePartId && (
             <span
               title={matteSourcePart(part.matte.sourcePartId)

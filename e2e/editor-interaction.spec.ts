@@ -154,4 +154,43 @@ test.describe('editor interaction regressions', () => {
 
     await expect(page.locator('.actor-node', { hasText: 'Plain Part' })).toHaveCount(0);
   });
+
+  test('Boolean parent deletion cascades owned operands and restores through undo/redo', async ({ page }) => {
+    await seed(page, [
+      layer('rect', 'Rectangle', 'custom_rect', -40),
+      layer('tri', 'Triangle', 'custom_triangle', 40),
+      layer('circle', 'Circle', 'custom_circle', 220),
+    ], [
+      { partId: 'rect', channels: emptyChannels() },
+      { partId: 'tri', channels: emptyChannels() },
+      { partId: 'circle', channels: emptyChannels() },
+    ]);
+    await selectPart(page, 'Rectangle');
+    await page.locator('.actor-node', { hasText: 'Triangle' }).click({ modifiers: ['Control'] });
+    await page.getByRole('button', { name: 'Union', exact: true }).click();
+    await expect(page.locator('.nested-node.actor-node')).toHaveCount(2);
+
+    await page.keyboard.press('Delete');
+    await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(0);
+    await expect(page.locator('.actor-node', { hasText: 'Triangle' })).toHaveCount(0);
+    await expect(page.locator('.actor-node', { hasText: 'Circle' })).toHaveCount(1);
+    await expect(page.getByText('Select an element on Canvas or Outliner to view details', { exact: true })).toBeVisible();
+    await saveNow(page);
+    await expect.poll(() => page.evaluate((key) => {
+      const scene = JSON.parse(localStorage.getItem(key) ?? '{}');
+      return {
+        layers: scene.layers?.map((item: { id: string }) => item.id) ?? [],
+        tracks: scene.tracks?.map((item: { partId: string }) => item.partId) ?? [],
+      };
+    }, STORAGE_KEY)).toEqual({ layers: ['circle'], tracks: ['circle'] });
+
+    await page.keyboard.press('Control+Z');
+    await expect(page.locator('.nested-node.actor-node', { hasText: 'Rectangle' })).toHaveCount(1);
+    await expect(page.locator('.nested-node.actor-node', { hasText: 'Triangle' })).toHaveCount(1);
+    await expect(page.locator('.nested-node.actor-node')).toHaveCount(2);
+    await page.keyboard.press('Control+Y');
+    await expect(page.locator('.actor-node', { hasText: 'Rectangle' })).toHaveCount(0);
+    await expect(page.locator('.actor-node', { hasText: 'Triangle' })).toHaveCount(0);
+    await expect(page.locator('.actor-node', { hasText: 'Circle' })).toHaveCount(1);
+  });
 });

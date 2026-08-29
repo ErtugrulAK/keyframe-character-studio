@@ -25,18 +25,36 @@ export const MODERN_SHAPE_APPEARANCE_TYPES: ReadonlySet<BodyPartType> = new Set(
   'custom_parallelogram',
   'custom_capsule',
   'custom_freeform',
+  // Text authors the same fill/stroke paint as shapes: the editor renderer and
+  // the OGraf SVG export both paint text with a 0.5 outline by default.
+  'custom_text',
 ]);
 
 export const isShapeAppearanceEligible = (type: BodyPartType): boolean =>
   MODERN_SHAPE_APPEARANCE_TYPES.has(type);
+
+/**
+ * Types whose renderer cannot split a centered stroke into inside/outside
+ * halves (no geometry mask), so the Appearance section must not offer the
+ * alignment control for them.
+ */
+export const supportsStrokeAlignment = (type: BodyPartType): boolean =>
+  isShapeAppearanceEligible(type) && type !== 'custom_text';
+
+const DEFAULT_STROKE_WIDTH = 1.5;
+const TEXT_STROKE_WIDTH = 0.5;
+
+/** Canonical outline width used when a layer has never authored one. */
+export const defaultStrokeWidth = (type: BodyPartType): number =>
+  type === 'custom_text' ? TEXT_STROKE_WIDTH : DEFAULT_STROKE_WIDTH;
 
 const normalizeOpacity = (value: number | undefined): number =>
   typeof value === 'number' && Number.isFinite(value)
     ? Math.min(1, Math.max(0, value))
     : 1;
 
-const normalizeStrokeWidth = (value: number | undefined): number =>
-  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : 1.5;
+const normalizeStrokeWidth = (value: number | undefined, fallback: number): number =>
+  typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : fallback;
 
 const normalizeStrokeAlignment = (value: StrokeAlignment | undefined): StrokeAlignment =>
   value === 'inside' || value === 'outside' ? value : 'center';
@@ -83,6 +101,8 @@ export const resolveShapeAppearance = (
     || part.strokeOpacity !== undefined
     || part.strokeAlignment !== undefined;
 
+  const strokeWidthFallback = defaultStrokeWidth(part.type);
+
   if (isModernAppearance) {
     return {
       fillEnabled: typeof part.fillEnabled === 'boolean' ? part.fillEnabled : true,
@@ -90,7 +110,7 @@ export const resolveShapeAppearance = (
       fillOpacity: normalizeOpacity(part.fillOpacity),
       strokeEnabled: typeof part.strokeEnabled === 'boolean' ? part.strokeEnabled : true,
       strokeColor: part.strokeColor,
-      strokeWidth: normalizeStrokeWidth(part.strokeWidth),
+      strokeWidth: normalizeStrokeWidth(part.strokeWidth, strokeWidthFallback),
       strokeOpacity: normalizeOpacity(part.strokeOpacity),
       strokeAlignment: normalizeStrokeAlignment(part.strokeAlignment),
       isModernAppearance: true,
@@ -103,7 +123,7 @@ export const resolveShapeAppearance = (
     fillOpacity: 1,
     strokeEnabled: legacyStrokeEnabled(part),
     strokeColor: part.strokeColor,
-    strokeWidth: 1.5,
+    strokeWidth: strokeWidthFallback,
     strokeOpacity: 1,
     strokeAlignment: 'center',
     isModernAppearance: false,

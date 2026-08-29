@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
+import { resolveShapeAppearance } from '../../../../utils/shapeAppearance';
 
 interface TextAndClonerProps {
   part: CharacterPart;
@@ -13,6 +14,20 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
   if (part.type === 'custom_text') {
     const textStr = part.textValue || 'TEXT';
     const isStaggered = part.textAnimMode && part.textAnimMode !== 'none';
+    const appearance = resolveShapeAppearance(part);
+    const textFill = appearance.fillEnabled ? fill : 'none';
+    // Authored paint wins: the `stroke` prop carries the legacy selection
+    // highlight, so it is only used as the unset-colour fallback, and as the
+    // highlight while the outline itself is switched off.
+    const textStroke = appearance.strokeEnabled
+      ? (appearance.strokeColor || stroke)
+      : (isSelected ? '#38bdf8' : 'none');
+    const textStrokeProps = {
+      stroke: textStroke,
+      strokeOpacity: appearance.strokeOpacity,
+      strokeWidth: appearance.strokeWidth,
+      vectorEffect: 'non-scaling-stroke' as const,
+    };
 
     if (isStaggered) {
       const items = part.textAnimMode === 'words' ? textStr.split(' ') : textStr.split('');
@@ -26,14 +41,12 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
             y={0}
             textAnchor="middle"
             dominantBaseline="middle"
-            fill={fill}
-            fillOpacity={part.fillOpacity}
-            stroke={stroke}
-            strokeOpacity={part.strokeOpacity}
+            fill={textFill}
+            fillOpacity={appearance.fillOpacity}
+            {...textStrokeProps}
             fontSize={part.fontSize || 24}
             fontWeight="bold"
             fontFamily={part.fontFamily || 'Outfit'}
-            vectorEffect="non-scaling-stroke"
           >
             {items.map((item, idx) => {
               const itemStartFrame = startFrame + idx * staggerDelayFrames;
@@ -63,15 +76,12 @@ export const renderTextOrClonerPart = ({ part, fill, stroke, isSelected, current
             x={0}
             y={0}
             textAnchor="middle"
-            fill={fill}
-            fillOpacity={part.fillOpacity}
-            stroke={stroke}
-            strokeOpacity={part.strokeOpacity}
-            strokeWidth={isSelected ? 1.5 : 0.5}
+            fill={textFill}
+            fillOpacity={appearance.fillOpacity}
+            {...textStrokeProps}
             fontSize={part.fontSize || 24}
             fontWeight="bold"
             fontFamily={part.fontFamily || 'Outfit'}
-            vectorEffect="non-scaling-stroke"
           >
             {textStr}
           </text>

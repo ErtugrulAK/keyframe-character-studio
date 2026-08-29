@@ -145,6 +145,32 @@ async function maxGreenInWorldRect(page: Page, x0: number, x1: number, y0: numbe
   return max;
 }
 
+/** Sample the exact step-5 world grid over a rect with ONE screenshot and ONE
+ *  CTM resolution, then read every green channel out of the decoded buffer in
+ *  memory. Mirrors greenAtWorld's world→screen `Math.round` mapping exactly
+ *  (see the M18/M19 suites) so the sampled grid/statistics are unchanged.
+ *  Captured per invocation — never cached across scene changes. */
+async function sampleGreenGrid(
+  page: Page,
+  x0: number, x1: number, y0: number, y1: number,
+  step = 5,
+): Promise<number[]> {
+  const worldPoints: [number, number][] = [];
+  for (let x = x0; x <= x1; x += step) for (let y = y0; y <= y1; y += step) worldPoints.push([x, y]);
+  const buf = await page.screenshot();
+  const png = decodePng(buf);
+  const screenPoints = await page.evaluate((points: [number, number][]) => {
+    const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
+    const ctm = svg.getScreenCTM()!;
+    return points.map(([wx, wy]) => {
+      const pt = svg.createSVGPoint(); pt.x = wx; pt.y = wy;
+      const s = pt.matrixTransform(ctm);
+      return [Math.round(s.x), Math.round(s.y)];
+    });
+  }, worldPoints);
+  return screenPoints.map(([x, y]) => png.data[(y * png.width + x) * png.bpp + 1]);
+}
+
 function makeLayer(id: string, name: string, type: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id, name, type,
@@ -1311,26 +1337,20 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
 
   async function maxGreen(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
     let m = 0;
-    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) {
-      const px = await greenAtWorld(page, x, y);
-      if (px > m) m = px;
-    }
+    for (const px of await sampleGreenGrid(page, x0, x1, y0, y1)) if (px > m) m = px;
     return m;
   }
 
   /** Min green over the box — the inverted text hole (black strokes exist). */
   async function minGreen(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
     let m = 255;
-    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) {
-      const px = await greenAtWorld(page, x, y);
-      if (px < m) m = px;
-    }
+    for (const px of await sampleGreenGrid(page, x0, x1, y0, y1)) if (px < m) m = px;
     return m;
   }
 
   async function avgGreenWorld(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
     let sum = 0, n = 0;
-    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) { sum += await greenAtWorld(page, x, y); n++; }
+    for (const px of await sampleGreenGrid(page, x0, x1, y0, y1)) { sum += px; n++; }
     return sum / n;
   }
 
@@ -1429,9 +1449,7 @@ test.describe('M18 text matte — real browser pixel assertions (full 4E matrix)
     await seed(page, [textSource({ rotation: 90 }), wideTarget({ sourcePartId: 'txt', mode: 'alpha' })]);
     await ready(page);
     // Vertical scan at x=320 hits the rotated crossbar band
-    let m = 0;
-    for (let y = 170; y <= 310; y += 5) m = Math.max(m, await greenAtWorld(page, 320, y));
-    expect(m).toBeGreaterThan(150);
+    expect(await maxGreen(page, 320, 320, 170, 310)).toBeGreaterThan(150);
     expect(await greenAtWorld(page, 320, 110)).toBeLessThan(45);
     expect(await page.evaluate(() => document.querySelector('mask[id="kcs-mask-txt-alpha"] g')?.getAttribute('transform'))).toContain('rotate(90)');
   });
@@ -1645,18 +1663,12 @@ test.describe('M19 multi-stop gradient — real browser pixel assertions (5E mat
   }
   async function maxGreen(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
     let m = 0;
-    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) {
-      const px = await greenAtWorld(page, x, y);
-      if (px > m) m = px;
-    }
+    for (const px of await sampleGreenGrid(page, x0, x1, y0, y1)) if (px > m) m = px;
     return m;
   }
   async function minGreen(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
     let m = 255;
-    for (let x = x0; x <= x1; x += 5) for (let y = y0; y <= y1; y += 5) {
-      const px = await greenAtWorld(page, x, y);
-      if (px < m) m = px;
-    }
+    for (const px of await sampleGreenGrid(page, x0, x1, y0, y1)) if (px < m) m = px;
     return m;
   }
 
@@ -1750,9 +1762,7 @@ test.describe('M19 multi-stop gradient — real browser pixel assertions (5E mat
     const stops = [RAMP(0, 1), RAMP(0.5, 0.5), RAMP(1, 0)];
     await seed(page, [textSource({ rotation: 90 }), wideTarget({ sourcePartId: 'txt', mode: 'alpha', gradient: { angle: 0, stops } })]);
     await ready(page);
-    let m = 0;
-    for (let y = 170; y <= 310; y += 5) m = Math.max(m, await greenAtWorld(page, 320, y));
-    expect(m).toBeGreaterThan(150); // rotated crossbar band
+    expect(await maxGreen(page, 320, 320, 170, 310)).toBeGreaterThan(150); // rotated crossbar band
     expect(await page.evaluate(() => document.querySelector('mask[id*="-g0-s"] g')?.getAttribute('transform'))).toContain('rotate(90)');
     expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id^="kcs-mg-txt-0-s"] stop').length)).toBe(3);
   });

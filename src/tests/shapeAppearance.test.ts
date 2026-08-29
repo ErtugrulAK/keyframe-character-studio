@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { BodyPartType } from '../types/animator';
 import {
+  defaultStrokeWidth,
   isShapeAppearanceEligible,
   resolveShapeAppearance,
+  supportsStrokeAlignment,
   toAuthoringStrokeAlignment,
   toStrokeAlignmentControlValue,
   updateShapeAppearance,
@@ -10,7 +12,7 @@ import {
 
 const eligibleTypes: BodyPartType[] = [
   'custom_rect', 'custom_box', 'custom_circle', 'custom_triangle', 'custom_star',
-  'custom_diamond', 'custom_parallelogram', 'custom_capsule', 'custom_freeform',
+  'custom_diamond', 'custom_parallelogram', 'custom_capsule', 'custom_freeform', 'custom_text',
 ];
 
 const basePart = (type: BodyPartType = 'custom_rect') => ({
@@ -74,10 +76,28 @@ describe('shape appearance resolver', () => {
 
   it.each(eligibleTypes)('classifies %s as eligible', (type) => {
     expect(isShapeAppearanceEligible(type)).toBe(true);
-    expect(resolveShapeAppearance(basePart(type))).toMatchObject({ fillEnabled: true, fillOpacity: 1, strokeWidth: 1.5, isModernAppearance: false });
+    expect(resolveShapeAppearance(basePart(type))).toMatchObject({
+      fillEnabled: true,
+      fillOpacity: 1,
+      strokeWidth: defaultStrokeWidth(type),
+      isModernAppearance: false,
+    });
   });
 
-  it.each<BodyPartType>(['custom_banner', 'custom_card', 'custom_text', 'custom_image', 'custom_video', 'mograph_cloner', 'particle_system'])('excludes %s from V1 eligibility', (type) => {
+  it('defaults the text outline to the canonical 0.5 width', () => {
+    expect(defaultStrokeWidth('custom_text')).toBe(0.5);
+    expect(resolveShapeAppearance(basePart('custom_text')).strokeWidth).toBe(0.5);
+    expect(resolveShapeAppearance({ ...basePart('custom_text'), fillOpacity: 1 }).strokeWidth).toBe(0.5);
+    expect(resolveShapeAppearance({ ...basePart('custom_text'), fillOpacity: 1, strokeWidth: 3 }).strokeWidth).toBe(3);
+  });
+
+  it('offers stroke alignment only for types that can mask a centered stroke', () => {
+    expect(supportsStrokeAlignment('custom_rect')).toBe(true);
+    expect(supportsStrokeAlignment('custom_text')).toBe(false);
+    expect(supportsStrokeAlignment('custom_banner')).toBe(false);
+  });
+
+  it.each<BodyPartType>(['custom_banner', 'custom_card', 'custom_image', 'custom_video', 'mograph_cloner', 'particle_system'])('excludes %s from V1 eligibility', (type) => {
     expect(isShapeAppearanceEligible(type)).toBe(false);
   });
 
@@ -119,9 +139,17 @@ describe('shape appearance resolver', () => {
   });
 
   it('does not materialize excluded part types', () => {
-    const text = { ...basePart('custom_text') };
-    const next = updateShapeAppearance(text as never, { fillOpacity: 0 });
+    const banner = { ...basePart('custom_banner') };
+    const next = updateShapeAppearance(banner as never, { fillOpacity: 0 });
     expect(next.fillOpacity).toBe(0);
     expect(next.fillEnabled).toBeUndefined();
+  });
+
+  it('materializes text appearance like other eligible types', () => {
+    const next = updateShapeAppearance({ ...basePart('custom_text') } as never, { strokeOpacity: 0.25 });
+    expect(next.strokeOpacity).toBe(0.25);
+    expect(next.strokeWidth).toBe(0.5);
+    expect(next.fillEnabled).toBe(true);
+    expect(next.strokeEnabled).toBe(true);
   });
 });

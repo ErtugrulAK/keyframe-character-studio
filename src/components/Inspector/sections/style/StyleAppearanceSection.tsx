@@ -1,6 +1,8 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import {
+  defaultStrokeWidth,
+  supportsStrokeAlignment,
   toAuthoringStrokeAlignment,
   toStrokeAlignmentControlValue,
 } from '../../../../utils/shapeAppearance';
@@ -41,6 +43,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
     selectedPart.type === 'custom_box' ||
     selectedPart.type === 'custom_card' ||
     selectedPart.type === 'custom_banner';
+  const hasStrokeAlignmentControl = supportsStrokeAlignment(selectedPart.type);
 
   return (
     <StyleCard title="APPEARANCE" collapsible defaultOpen={false}>
@@ -64,7 +67,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
           />
         </div>
       )}
-      <div className="appearance-group">
+      <div className={`appearance-group${selectedPart.fillEnabled === false ? ' is-muted' : ''}`}>
         <div className="appearance-group-header">
           <label htmlFor="appearance-fill-enabled">FILL</label>
           <input id="appearance-fill-enabled" type="checkbox" aria-label="Fill Enabled" checked={selectedPart.fillEnabled ?? true} onChange={(e) => onPartPropChange('fillEnabled', e.target.checked)} />
@@ -79,7 +82,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
         />
       </div>
 
-      <div className="appearance-group appearance-group-stroke">
+      <div className={`appearance-group appearance-group-stroke${selectedPart.strokeEnabled === false ? ' is-muted' : ''}`}>
         <div className="appearance-group-header">
           <label htmlFor="appearance-stroke-enabled">STROKE</label>
           <input id="appearance-stroke-enabled" type="checkbox" aria-label="Stroke Enabled" checked={selectedPart.strokeEnabled ?? true} onChange={(e) => onPartPropChange('strokeEnabled', e.target.checked)} />
@@ -95,15 +98,17 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
         <div className="stroke-inline-fields">
           <div className="appearance-field">
             <label className="appearance-field-label" htmlFor="stroke-width-input">WIDTH</label>
-            <SmartNumberInput ariaLabel="Stroke Width" value={selectedPart.strokeWidth ?? 1.5} min={0} max={100} step={0.5} precision={2} onChange={(value) => onPartPropChange('strokeWidth', value)} />
+            <SmartNumberInput ariaLabel="Stroke Width" value={selectedPart.strokeWidth ?? defaultStrokeWidth(selectedPart.type)} min={0} max={100} step={0.5} precision={2} onChange={(value) => onPartPropChange('strokeWidth', value)} />
           </div>
-          <div className="appearance-field">
-            <label className="appearance-field-label" htmlFor="stroke-alignment-select">ALIGN</label>
-            <select id="stroke-alignment-select" aria-label="Stroke Alignment" value={strokeAlignment} onChange={(event) => onPartPropChange('strokeAlignment', toAuthoringStrokeAlignment(event.target.value as StrokeAlignmentControlValue))} style={{ width: '100%' }}>
-              <option value="inside">INSIDE</option>
-              <option value="outside">OUTSIDE</option>
-            </select>
-          </div>
+          {hasStrokeAlignmentControl && (
+            <div className="appearance-field">
+              <label className="appearance-field-label" htmlFor="stroke-alignment-select">ALIGN</label>
+              <select id="stroke-alignment-select" aria-label="Stroke Alignment" value={strokeAlignment} onChange={(event) => onPartPropChange('strokeAlignment', toAuthoringStrokeAlignment(event.target.value as StrokeAlignmentControlValue))} style={{ width: '100%' }}>
+                <option value="inside">INSIDE</option>
+                <option value="outside">OUTSIDE</option>
+              </select>
+            </div>
+          )}
         </div>
         <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={onPartPropChange} embedded />
       </div>

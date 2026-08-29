@@ -5,6 +5,7 @@ import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
 import { StyleEffectsSection } from './StyleEffectsSection';
 import { KCS_TEXT_FONT_FAMILIES } from '../../../../utils/textFonts';
+import { defaultStrokeWidth } from '../../../../utils/shapeAppearance';
 
 interface StyleTextFieldsProps {
   selectedPart: CharacterPart;
@@ -113,6 +114,47 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
               />
             </div>
           </div>
+
+          {/* Text authors the same fill/stroke paint as shapes; the outline
+              width defaults to the canonical 0.5 text outline. */}
+          {selectedPart.type === 'custom_text' && (
+            <div className={`appearance-group appearance-group-stroke${selectedPart.strokeEnabled === false ? ' is-muted' : ''}`}>
+              <div className="appearance-group-header">
+                <label htmlFor="text-stroke-enabled">STROKE</label>
+                <input
+                  id="text-stroke-enabled"
+                  type="checkbox"
+                  aria-label="Text Stroke Enabled"
+                  checked={selectedPart.strokeEnabled ?? true}
+                  onChange={(e) => onPartPropChange('strokeEnabled', e.target.checked)}
+                />
+              </div>
+              <div className="appearance-color-field">
+                <ColorPickerPopover
+                  label="TEXT STROKE"
+                  color={selectedPart.strokeColor || '#101218'}
+                  alpha={selectedPart.strokeOpacity ?? 1}
+                  fallback="#101218"
+                  onColorChange={(value) => onPartColorChange('strokeColor', value)}
+                  onAlphaChange={(value) => onPartPropChange('strokeOpacity', value)}
+                />
+              </div>
+              <div className="stroke-inline-fields">
+                <div className="appearance-field">
+                  <label className="appearance-field-label" htmlFor="text-stroke-width-input">WIDTH</label>
+                  <SmartNumberInput
+                    ariaLabel="Text Stroke Width"
+                    value={selectedPart.strokeWidth ?? defaultStrokeWidth(selectedPart.type)}
+                    min={0}
+                    max={100}
+                    step={0.5}
+                    precision={2}
+                    onChange={(value) => onPartPropChange('strokeWidth', value)}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
         <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={onPartPropChange} embedded />
         {(selectedPart.type === 'custom_card' || selectedPart.type === 'custom_banner') && (
           <StyleCard title="APPEARANCE" collapsible defaultOpen={false}>

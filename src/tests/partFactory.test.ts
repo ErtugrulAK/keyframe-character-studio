@@ -31,8 +31,10 @@ describe('PartFactory Utility', () => {
 
     const textRes = createCustomPart('custom_text', 'Text Layer', 1);
     expect(textRes.newPart.textValue).toBe('NEW TEXT');
-    expect(textRes.newPart.fillEnabled).toBeUndefined();
-    expect(textRes.newPart.strokeOpacity).toBeUndefined();
+    // Text authors the same paint as shapes and carries the canonical 0.5 outline.
+    expect(textRes.newPart.fillEnabled).toBe(true);
+    expect(textRes.newPart.strokeOpacity).toBe(1);
+    expect(textRes.newPart.strokeWidth).toBe(0.5);
 
     const mographRes = createCustomPart('mograph_cloner', 'Cloner', 2);
     expect(mographRes.newPart.clonerConfig).toBeDefined();

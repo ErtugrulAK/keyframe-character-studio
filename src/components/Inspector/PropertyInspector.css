@@ -17,7 +17,7 @@
   height: 100%;
   z-index: 90;
   box-shadow: -6px 0 24px rgba(0, 0, 0, 0.4);
-  transition: width 240ms ease, min-width 240ms ease, flex-basis 240ms ease, transform 240ms ease, opacity 200ms ease, border-color 240ms ease, box-shadow 240ms ease;
+  transition: width 240ms ease, min-width 240ms ease, flex-basis 240ms ease, transform 240ms ease, opacity 240ms ease, border-color 240ms ease, box-shadow 240ms ease;
   overflow: hidden;
   user-select: none;
   font-size: var(--font-size-caption);
@@ -863,6 +863,12 @@
   white-space: nowrap;
 }
 
+.transform-keyframe-action.is-active {
+  color: var(--accent-cyan);
+  border-color: var(--accent-cyan);
+  background: rgba(56, 189, 248, 0.14);
+}
+
 .transform-scale-lock {
   gap: var(--space-3xs);
   color: var(--text-muted);
@@ -1177,6 +1183,11 @@
   min-width: 0;
 }
 
+/* Switched-off paint keeps its authored values but reads as inactive. */
+.appearance-group.is-muted > :not(.appearance-group-header) {
+  opacity: 0.55;
+}
+
 .appearance-group-stroke {
   border-top: 1px solid var(--border-color);
   padding-top: var(--space-xs);
@@ -1233,11 +1244,17 @@
   min-width: 0;
 }
 
+/* Auto-fit keeps WIDTH full-width when the type offers no ALIGN control. */
 .stroke-inline-fields {
   display: grid;
-  grid-template-columns: minmax(88px, 0.75fr) minmax(132px, 1.25fr);
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
   gap: var(--space-xs);
   min-width: 0;
+}
+
+/* A lone WIDTH field (text has no alignment) should not span the panel. */
+.stroke-inline-fields > :only-child {
+  max-width: 148px;
 }
 
 @container (max-width: 300px) {
@@ -1869,7 +1886,7 @@
   background: var(--kcs-panel);
   border-left-color: var(--kcs-border-quiet);
   box-shadow: -8px 0 20px rgba(0, 0, 0, .18);
-  transition: transform 0.24s cubic-bezier(0,1.15,1,.93), opacity 0.2s ease, width 0.24s ease, min-width 0.24s ease, flex-basis 0.24s ease;
+  transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease, width 240ms ease, min-width 240ms ease, flex-basis 240ms ease;
 }
 
 .motion-design-right-sidebar.is-hidden {
@@ -2018,5 +2035,7 @@
 }
 /* Preserve the Inspector dock-follow motion over the shared handle defaults. */
 .sidebar-handle.inspector-dock-toggle {
-  transition: right 300ms cubic-bezier(0,1.15,1,.93), background-color 160ms ease, color 160ms ease;
+  /* The handle rides the collapsing edge: same 240ms/ease as the panel width,
+     no overshoot curve, so it never detaches from the edge. */
+  transition: right 240ms ease, transform 240ms ease, background-color 160ms ease, color 160ms ease;
 }

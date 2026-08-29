@@ -80,10 +80,23 @@ function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
   // paint. Appending them instead produced a second `fill` the browser ignores,
   // which left the glyphs their own colour and the hole missing for a dark text.
   const { fill, stroke, 'fill-opacity': fillOpacity, ...rest } = props;
-  const fillColor = fill === undefined ? content.fillColor : String(fill);
-  const strokeColor = stroke === undefined ? content.strokeColor : String(stroke);
-  const resolvedFillOpacity = fillOpacity === undefined ? content.fillOpacity : Number(fillOpacity);
-  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(content.strokeOpacity ?? 1)}" stroke-width="0.5" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}" vector-effect="non-scaling-stroke"${attributes(rest)}>${escapeXml(text)}</text>`;
+  const appearance = resolveShapeAppearance({
+    type: 'custom_text',
+    fillColor: content.fillColor ?? 'none',
+    strokeColor: content.strokeColor ?? 'none',
+    fillEnabled: content.fillEnabled,
+    fillOpacity: content.fillOpacity,
+    strokeEnabled: content.strokeEnabled,
+    strokeOpacity: content.strokeOpacity,
+    strokeWidth: content.strokeWidth,
+    strokeAlignment: content.strokeAlignment,
+  });
+  // Authored paint wins; only silhouette callers (matte) replace the stroke.
+  const authoredStroke = appearance.strokeEnabled ? appearance.strokeColor : 'none';
+  const strokeColor = stroke === undefined ? authoredStroke : String(stroke);
+  const fillColor = fill === undefined ? (appearance.fillEnabled ? appearance.fillColor : 'none') : String(fill);
+  const resolvedFillOpacity = fillOpacity === undefined ? appearance.fillOpacity : Number(fillOpacity);
+  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(appearance.strokeOpacity)}" stroke-width="${svgNumber(appearance.strokeWidth)}" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}" vector-effect="non-scaling-stroke"${attributes(rest)}>${escapeXml(text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {

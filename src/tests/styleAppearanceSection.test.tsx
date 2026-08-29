@@ -153,7 +153,9 @@ describe('StyleAppearanceSection', () => {
     expect(screen.getByText('TEXT')).toBeTruthy();
     expect(screen.getAllByText('COLOR').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText('FILL')).toBeNull();
-    expect(screen.queryByText('STROKE')).toBeNull();
+    // Text owns a STROKE group here; the shape Appearance card stays separate.
+    expect(screen.getByText('STROKE')).toBeTruthy();
+    expect(screen.getByLabelText('Text Stroke Enabled')).toBeTruthy();
     expect(screen.queryByRole('button', { name: 'Expand APPEARANCE' })).toBeNull();
     expect(screen.queryByText('QUICK PALETTE SWATCHES')).toBeNull();
     expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);

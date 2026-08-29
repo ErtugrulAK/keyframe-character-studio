@@ -31,7 +31,7 @@ async function seed(page: Page) {
 }
 
 test.describe('KCS V5.1 consolidated recovery', () => {
-  test('text selection bounds follow the rendered SVG text and inspector stays compact', async ({ page }) => {
+  test('text selection bounds follow the rendered SVG text', async ({ page }) => {
     await seed(page);
     await page.locator('.actor-node', { hasText: 'Headline' }).click();
     const geometry = await page.evaluate(() => {
@@ -49,16 +49,6 @@ test.describe('KCS V5.1 consolidated recovery', () => {
     expect(Math.abs(geometry!.selection.y - geometry!.text.y)).toBeLessThan(2);
     expect(Math.abs(geometry!.selection.width - geometry!.text.width)).toBeLessThan(2);
     expect(Math.abs(geometry!.selection.height - geometry!.text.height)).toBeLessThan(2);
-
-    await page.getByRole('button', { name: 'Expand TEXT' }).click();
-    const textSection = page.locator('.panel-card').filter({ hasText: 'TEXT' }).first();
-    await expect(textSection).toContainText('COLOR');
-    await expect(textSection).not.toContainText('FILL');
-    await expect(textSection).not.toContainText('STROKE');
-    await expect(textSection).not.toContainText('QUICK PALETTE');
-    await expect(textSection.locator('input[type="color"]')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Expand APPEARANCE' })).toHaveCount(0);
-    await expect(page.getByText('Transitions', { exact: true })).toHaveCount(0);
   });
 
   test('ruler, playhead, and tracks share one horizontal scroll coordinate', async ({ page }) => {

@@ -38,6 +38,12 @@ Run every applicable command and record its exact command, exit status, and esse
 
 Never weaken assertions, skip tests, add or increase retries, add arbitrary sleeps, widen thresholds/tolerances, introduce fallback behavior, or hide output to obtain a pass. Playwright already owns its configured CI retry policy; do not change it.
 
+### Diagnosis versus final validation
+
+Controlled reproduction may use explicitly scoped stress or repeated triggering when necessary to increase the chance of observing an intermittent failure. Keep that technique inside diagnosis evidence only.
+
+Final validation remains deterministic. It must not rely on arbitrary sleeps, retry loops, widened tolerances, weakened assertions, hidden fallbacks, or random thresholds. Do not reorder the validation commands or change their failure classifications to accommodate diagnosis behavior.
+
 Classify every failure as one of:
 
 - product regression;

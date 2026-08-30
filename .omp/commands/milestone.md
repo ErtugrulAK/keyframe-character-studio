@@ -31,6 +31,45 @@ Follow this workflow:
 
 If approval is missing for implementation or a protected/high-risk contract, stop after the plan and request the required approval. If a destructive migration or unresolved architecture decision is required, stop and report options and trade-offs instead of guessing.
 
+### Optional clarification gate
+
+Activate this gate only when critical product semantics are materially unclear. Ask only questions that can change:
+
+- scope;
+- ownership;
+- persistence;
+- user-visible behavior;
+- compatibility; or
+- acceptance criteria.
+
+When activated:
+
+1. Identify overloaded or newly introduced domain terms.
+2. Resolve hard-to-reverse design choices before proposing implementation scope.
+3. Use one canonical term in the plan and report.
+4. Record durable terminology or a decision only when the approved glossary or ADR criteria qualify.
+5. Continue to alternatives, risks, proposed scope, and explicit approval.
+
+If semantics are clear, skip this gate and continue the normal milestone workflow. This is a bounded clarification step, not a mandatory interview, external router, issue-tracker flow, or Skill-tool invocation.
+
+### Conditional architecture lens
+
+For ownership changes, new public interfaces, cross-domain behavior, duplicated authorities, high-risk domain boundaries, or meaningful testability/seam questions, use the conditional codebase-design lens in `kcs-workflows`. Inspect module depth, seams, adapters, locality, authority duplication, orchestration versus domain logic, and public interface shape, then map the result to:
+
+`pure helper → domain hook → thin context → minimal component`
+
+Skip this lens for simple copy, local CSS, routine deterministic fixes, and unrelated documentation. Do not rename KCS architecture or create an abstraction solely to match external vocabulary.
+
+### Test decision
+
+Select testing discipline from the observable contract and available seam:
+
+- **REQUIRED** — A reproducible behavioral bug with a correct stable seam; a new pure domain helper; new deterministic core/domain behavior; or a compatibility-sensitive deterministic contract with a public seam. Prefer a failing test, minimal implementation, green result, and only approved or necessary refactoring.
+- **RECOMMENDED** — Hook behavior, cross-domain orchestration, renderer/matte behavior with a stable DOM or pixel seam, or interaction behavior with a meaningful browser/DOM/pixel assertion.
+- **NOT NECESSARY** — Documentation-only changes, reports, workflow prose, simple agent-instruction maintenance, or a high-friction visual issue with no real stable test seam.
+
+For browser-only behavior, reproduce in the browser first and test the stable portion when a real seam exists. If no correct seam can exercise the defect, document that limitation and use appropriate browser/manual evidence. Preserve focused tests first, relevant E2E/browser checks next, and full regression when scope warrants it.
+
 ## 3. Implementation and QA
 
 - Implement only the approved package, in small internally verifiable phases.

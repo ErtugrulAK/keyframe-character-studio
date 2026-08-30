@@ -27,6 +27,48 @@ Consolidated Hermes port of the repo's `.agents/workflows/*.md` files (architect
 | Reviewing code (read-only) | §7 Code Review |
 | Writing / improving tests | §8 Testing |
 
+
+## Selected Concept Adapters
+
+External concepts are subordinate guidance adapted from the reviewed `mattpocock/skills` revision `6654f6b60cd9d5be8b54c6fafe44346dabeb3b76`. KCS remains authoritative. These concepts do not authorize product scope, file changes, branch operations, commits, pushes, issue-tracker mutation, dependency installation, test shortcuts, hidden fallbacks, or compatibility changes.
+
+| Task type | KCS workflow | Adapted concept | Activation | Expected artifact |
+|---|---|---|---|---|
+| Hard, intermittent, regressed, slow, or unclear bug | `/bugfix` | `diagnosing-bugs` | Mandatory | Red-capable reproduction, minimised case, evidence-backed root cause, cleanup, and report |
+| Reproducible domain bug or new deterministic core behavior | `/bugfix` or approved feature flow | `diagnosing-bugs` + `tdd` | Diagnosis plus regression-first TDD required when a correct stable seam exists | Failing regression test at the public seam, minimal fix, and green verification |
+| Hook, cross-domain, renderer/matte, or interaction behavior with a stable seam | Approved feature or milestone flow | `tdd` | Recommended | Focused contract test and relevant browser/E2E coverage |
+| Materially ambiguous milestone | `/milestone` | `grill-with-docs` + `domain-modeling` | Conditional | Targeted clarification, canonical terminology, and durable record only when criteria qualify |
+| Ownership, interface, cross-domain, duplication, or testability change | `/milestone` | `codebase-design` | Conditional | Architecture and seam assessment mapped to the KCS layer flow |
+| Agent-document maintenance | Existing workflow task | `writing-for-agents` | Recommended | Single-owner rule, activation pointer, completion criterion, and scoped diff |
+| Documentation-only, report, or workflow-prose change | Existing workflow task | TDD not necessary | Skip product TDD unless runtime/configuration scope changes | Documentation and Git scope verification |
+
+Operational detail remains owned by the relevant `.omp/commands/*.md` file. This table is an activation map, not a second workflow.
+
+### Domain language adapter
+
+When a term is materially ambiguous, overloaded across domains, newly introduced and user-facing, or needed to resolve persistence, ownership, or behavior, inspect current source, types, tests, and documentation first. Distinguish authored/serialized state, derived/evaluated state, and transient editor/UI state. Use one canonical term in the plan and report, and ask only when competing meanings can change behavior.
+
+Create a future glossary entry only when the term is KCS-specific or meaningfully specialized, stable, materially ambiguous/overloaded/new, and useful to future decisions. A future `CONTEXT.md` contains concise domain definitions and avoided synonyms only. It is not implementation documentation, a module index, test plan, milestone log, workflow rule set, or duplicate of `docs/ARCHITECTURE.md`. Its creation remains lazy and separately approved.
+
+Create a future ADR only when all three conditions hold: the decision is hard to reverse or expensive to change, it would be surprising without preserved context, and real alternatives or trade-offs existed. Do not create ADRs for routine implementation choices, reversible helpers, UI wording, test placement, obvious authority preservation, or ordinary refactors.
+
+### Conditional codebase-design lens
+
+For architecture-heavy work, inspect module depth, seams, adapters, locality, authority duplication, orchestration versus domain logic, and public interface shape. Map the result to:
+
+`pure helper → domain hook → thin context → minimal component`
+
+Use this as diagnostic vocabulary, not a mandatory process. Do not rename KCS architecture, create a second authority, or introduce an abstraction solely to match external terminology. Skip it for simple copy, local CSS, routine deterministic fixes, and unrelated documentation.
+
+### Agent-document maintenance
+
+When editing agent-facing documents, keep one owner per rule, use pointers instead of repeated rule bodies, disclose branch-specific detail progressively, state concise activation conditions, provide observable completion criteria, and prune duplication that adds no trigger, rationale, or guardrail. Verify paths, headings, links, and scope.
+
+Preserve the existing ownership map: `AGENTS.md` is repository-wide authority; `.agents/AGENTS.md` is the detailed constitution; `.omp/RULES.md` is short harness safety guidance; `.omp/commands/*` owns procedural workflows; `skills/keyframe-studio/*` owns reusable KCS guidance; and `reports/DEVELOPMENT_REPORTING_POLICY.md` owns permanent report structure. Do not rewrite all instruction files or create a router/meta-skill.
+
+### Adapter precedence
+
+When an adapted concept conflicts with KCS, follow explicit user scope and approval, root `AGENTS.md`, `.agents/AGENTS.md`, `.omp/RULES.md`, current source/tests/types/configuration, existing KCS domain authorities, KCS command workflows, reporting policy, Git safety, validation requirements, and compatibility requirements before the external concept. The external repository and its MIT license are reference provenance, not execution dependencies.
 ## Common Rules (apply to all workflows)
 
 - Follow `kcs-constitution` — approval-first: analyze → plan → approval → implement → validate. Never modify files without explicit user approval.

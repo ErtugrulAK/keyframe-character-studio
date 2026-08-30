@@ -580,8 +580,7 @@
 }
 
 .input-field label,
-.param-label,
-.color-card-label {
+.param-label {
   font-size: 10.5px !important;
   font-weight: 700 !important;
   color: var(--text-muted) !important;
@@ -731,12 +730,6 @@
   box-sizing: border-box;
 }
 
-.color-card-label {
-  font-size: 10px !important;
-  font-weight: 700 !important;
-  color: var(--text-muted) !important;
-  text-transform: uppercase;
-}
 
 .color-picker-compact {
   display: flex;
@@ -845,60 +838,14 @@
 }
 
 .rgba-picker {
-  position: relative;
-  min-width: 0;
-}
-
-.rgba-picker-trigger {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
+  display: grid;
+  gap: var(--space-xs);
   width: 100%;
-  min-height: 28px;
-  padding: 4px 6px;
+  min-width: 0;
+  padding: var(--space-xs);
   background: var(--bg-input);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-xs);
-  color: var(--text-primary);
-  cursor: pointer;
-  text-align: left;
-}
-
-.rgba-picker-trigger:hover,
-.rgba-picker-trigger[aria-expanded='true'] {
-  border-color: var(--accent-cyan);
-  background: var(--bg-panel-hover);
-}
-
-.rgba-picker-swatch {
-  width: 22px;
-  height: 20px;
-  flex: 0 0 auto;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: var(--radius-xs);
-}
-
-.rgba-picker-trigger-value {
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-size: 10px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rgba-picker-popover {
-  position: fixed;
-  z-index: 100000;
-  width: 280px;
-  max-height: min(440px, calc(100vh - 16px));
-  box-sizing: border-box;
-  overflow: auto;
-  padding: 12px;
-  background: var(--kcs-bg-elevated);
-  border: 1px solid var(--kcs-border-default);
-  border-radius: var(--kcs-radius-control);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
 }
 
 .rgba-picker-header,
@@ -918,11 +865,9 @@
   font-size: 9px;
 }
 
-
 .rgba-picker-preview {
   display: flex;
-  height: 52px;
-  margin: 10px 0;
+  height: 40px;
   overflow: hidden;
   border: 1px solid var(--kcs-border-subtle);
   border-radius: var(--kcs-radius-control);
@@ -936,13 +881,55 @@
   flex: 1;
 }
 
-.rgba-picker-visual-control {
+.rgba-picker-channel-grid {
   display: grid;
-  grid-template-columns: 1fr 120px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2xs);
+}
+
+.rgba-picker-channel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.rgba-picker-channel input {
+  width: 100%;
+  min-width: 0;
+  height: 26px;
+  padding: 0 4px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font-size: 11px;
+}
+
+.rgba-picker-alpha {
+  display: grid;
+  gap: 4px;
+}
+
+.rgba-picker-alpha-label {
+  margin: 0;
+}
+
+.rgba-picker-alpha input[type='range'] {
+  width: 100%;
+  accent-color: var(--accent-cyan);
+}
+
+.rgba-picker-hex {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
-  color: var(--kcs-text-muted);
-  font-size: var(--font-size-caption);
+  gap: var(--space-2xs);
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 800;
 }
 .shape-operations-section {
   padding: 10px 12px;
@@ -1098,43 +1085,7 @@
   font-size: 10px;
   line-height: 1.35;
 }
-.rgba-picker-native-input {
-  width: 100%;
-  height: 26px;
-  margin: 0;
-  padding: 0;
-  border: 1px solid var(--kcs-border-default);
-  border-radius: var(--kcs-radius-control);
-  background: transparent;
-  cursor: pointer;
-}
-.appearance-group {
-  position: relative;
-  z-index: 1;
-}
 
-.appearance-group:first-child {
-  z-index: 1;
-}
-
-.appearance-group-stroke {
-  z-index: 2;
-}
-
-.color-picker-card {
-  position: relative;
-  z-index: 1;
-}
-
-.color-picker-card:last-child {
-  z-index: 2;
-}
-
-.rgba-picker-channel-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 5px;
-}
 
 .rgba-picker-channel {
   display: flex;
@@ -1157,13 +1108,6 @@
   font-size: 11px;
 }
 
-.rgba-picker-alpha {
-  margin: 10px 0 8px;
-}
-
-.rgba-picker-alpha-label {
-  margin-bottom: 4px;
-}
 
 .rgba-picker-alpha input[type='range'] {
   width: 100%;

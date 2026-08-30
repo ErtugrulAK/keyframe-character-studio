@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { BodyPartType } from '../types/animator';
-import { isShapeAppearanceEligible, resolveShapeAppearance, updateShapeAppearance } from '../utils/shapeAppearance';
+import {
+  isShapeAppearanceEligible,
+  resolveShapeAppearance,
+  toAuthoringStrokeAlignment,
+  toStrokeAlignmentControlValue,
+  updateShapeAppearance,
+} from '../utils/shapeAppearance';
 
 const eligibleTypes: BodyPartType[] = [
   'custom_rect', 'custom_box', 'custom_circle', 'custom_triangle', 'custom_star',
@@ -38,6 +44,15 @@ describe('shape appearance resolver', () => {
     expect(resolveShapeAppearance({ ...basePart(), fillEnabled: true })).toMatchObject({ strokeAlignment: 'center' });
     expect(resolveShapeAppearance({ ...basePart(), fillEnabled: true, strokeAlignment: 'inside' })).toMatchObject({ strokeAlignment: 'inside' });
     expect(resolveShapeAppearance({ ...basePart(), fillEnabled: true, strokeAlignment: 'outside' })).toMatchObject({ strokeAlignment: 'outside' });
+  });
+
+  it('maps legacy center alignment to the Outside control without changing renderer compatibility', () => {
+    expect(toStrokeAlignmentControlValue(undefined)).toBe('outside');
+    expect(toStrokeAlignmentControlValue('center')).toBe('outside');
+    expect(toStrokeAlignmentControlValue('outside')).toBe('outside');
+    expect(toStrokeAlignmentControlValue('inside')).toBe('inside');
+    expect(toAuthoringStrokeAlignment('outside')).toBe('center');
+    expect(toAuthoringStrokeAlignment('inside')).toBe('inside');
   });
 
   it('clamps finite opacities while preserving zero', () => {

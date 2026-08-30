@@ -41,6 +41,16 @@ const normalizeStrokeWidth = (value: number | undefined): number =>
 const normalizeStrokeAlignment = (value: StrokeAlignment | undefined): StrokeAlignment =>
   value === 'inside' || value === 'outside' ? value : 'center';
 
+/** UI-compatible alignment values. Center remains an internal legacy value. */
+export type StrokeAlignmentControlValue = 'inside' | 'outside';
+
+/** Map legacy/missing center alignment to the supported Outside control. */
+export const toStrokeAlignmentControlValue = (value: StrokeAlignment | undefined): StrokeAlignmentControlValue =>
+  value === 'inside' ? 'inside' : 'outside';
+
+/** Keep the existing centered stroke renderer behavior behind the Outside control. */
+export const toAuthoringStrokeAlignment = (value: StrokeAlignmentControlValue): StrokeAlignment =>
+  value === 'inside' ? 'inside' : 'center';
 const hasVisibleStrokeColor = (strokeColor: string): boolean =>
   strokeColor !== 'none' && strokeColor !== 'transparent';
 

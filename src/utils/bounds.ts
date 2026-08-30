@@ -1,5 +1,4 @@
 import type { CharacterPart, Transform } from '../types/animator';
-import { getFreeformBounds } from './freeform';
 import { getShapeGeometry } from './shapeGeometry';
 import { resolveShapeAppearance } from './shapeAppearance';
 

@@ -384,6 +384,7 @@ export const StageCanvas: React.FC = () => {
         const curAngle = (Math.atan2(svgX - c.y, svgY - c.x) * 180) / Math.PI;
         const delta = ((curAngle - initAngle + 540) % 360) - 180;
         const newWorldRot = Math.round(((dragStart.initialChildRot || 0) + delta) * 100) / 100;
+        const targetId = dragStart.partId ?? selectedPartId;
         const part = characterParts.find((p) => p.id === targetId);
         const relationshipParentId = part?.parentId ?? part?.booleanGroupId;
         const parentT = relationshipParentId ? getComputedTransform(relationshipParentId, currentFrame) : null;

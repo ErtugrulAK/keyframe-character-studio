@@ -23,6 +23,7 @@ interface UseTimelineOptions {
   selectedPartId: string | null;
   setSelectedPartId: (id: string | null) => void;
   selectedPartIds: string[];
+  setSelectedPartIds: (ids: string[]) => void;
   booleanOperandEditingGroupId?: string | null;
   setBooleanOperandEditingGroupId?: (id: string | null) => void;
   selectedKeyframeId: string | null;

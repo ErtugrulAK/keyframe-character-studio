@@ -7,6 +7,7 @@ import { TransformScaleCard } from './transform/TransformScaleCard';
 import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
+import { StyleCard } from './style/StyleCard';
 
 interface TransformTabProps {
   selectedPart: CharacterPart;
@@ -58,12 +59,10 @@ export const TransformTab: React.FC<TransformTabProps> = ({
 
   return (
     <>
-        {editWorkflowContent}
+      {editWorkflowContent}
       <div className="inspector-section" style={{ paddingTop: 8 }}>
-
-        {/* Unified transform block: position, rotation, scale rows */}
-        <div className="panel-card" style={{ marginBottom: 10 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <StyleCard title="TRANSFORM" collapsible defaultOpen={false}>
+          <div className="transform-property-list">
             <TransformPositionRotationCard
               transform={transform}
               coordinateSystem={coordinateSystem}
@@ -75,26 +74,26 @@ export const TransformTab: React.FC<TransformTabProps> = ({
               onUpdate={updateCurrentTransform}
             />
 
+            {handleZIndexChange && (
+              <TransformZIndexCard
+                zIndex={selectedPart.zIndex}
+                onZIndexChange={handleZIndexChange}
+              />
+            )}
           </div>
-        </div>
-
-        {handleZIndexChange && (
-          <TransformZIndexCard
-            zIndex={selectedPart.zIndex}
-            onZIndexChange={handleZIndexChange}
-          />
-        )}
-
+        </StyleCard>
 
         {/* 4 control points only make sense for regular shapes — hand-drawn
             freeform polygons use the per-vertex editor below instead */}
         {selectedPart.type !== 'custom_freeform' && (
-          <TransformControlPoints
-            selectedPart={selectedPart}
-            transform={transform}
-            coordinateSystem={coordinateSystem}
-            onUpdate={updateCurrentTransform}
-          />
+          <StyleCard title="CONTROL POINTS" collapsible defaultOpen={false}>
+            <TransformControlPoints
+              selectedPart={selectedPart}
+              transform={transform}
+              coordinateSystem={coordinateSystem}
+              onUpdate={updateCurrentTransform}
+            />
+          </StyleCard>
         )}
 
         {selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length && handlePartPropChange && (
@@ -110,8 +109,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             The legacy procedural IN/OUT editor is intentionally de-emphasized
             without removing its data model or runtime support. */}
         {onCopyAnimation && (
-          <div className="panel-card" style={{ marginBottom: 10 }}>
-            <div className="section-title" style={{ fontSize: 10 }}>ANIMATION DATA</div>
+          <StyleCard title="ANIMATION DATA" collapsible defaultOpen={false}>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
               <button
                 type="button"
@@ -145,7 +143,7 @@ export const TransformTab: React.FC<TransformTabProps> = ({
                 </button>
               )}
             </div>
-          </div>
+          </StyleCard>
         )}
       </div>
     </>

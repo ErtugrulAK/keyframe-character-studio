@@ -31,9 +31,9 @@ test('project-unit inspector and persistence remain raw project units', async ({
   await seed(page, scene('project-unit-center-v1', 300, -100));
   await page.getByText('Coordinate Box', { exact: true }).first().click();
 
-  const positionCard = page.locator('.panel-card', { hasText: 'POSITION' }).first();
-  const xInput = positionCard.locator('input[type="number"]').nth(0);
-  const yInput = positionCard.locator('input[type="number"]').nth(1);
+  await page.getByRole('button', { name: 'Expand TRANSFORM', exact: true }).click();
+  const xInput = page.locator('input[aria-label="Position X"]');
+  const yInput = page.locator('input[aria-label="Position Y"]');
   await expect(xInput).toHaveValue('300');
   await expect(yInput).toHaveValue('100');
   const saveBadge = page.locator('.autosave-status-badge');

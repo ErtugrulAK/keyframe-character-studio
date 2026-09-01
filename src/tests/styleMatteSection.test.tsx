@@ -27,6 +27,7 @@ function renderMatte(target: CharacterPart, allParts: CharacterPart[]) {
   const utils = render(
     <StyleMatteSection selectedPart={target} characterParts={allParts} onPartPropChange={onPartPropChange} />
   );
+  fireEvent.click(utils.getByRole('button', { name: 'Expand MASK / TRACK MATTE' }));
   return { onPartPropChange, ...utils };
 }
 
@@ -42,6 +43,8 @@ describe('StyleMatteSection — track matte editor UI', () => {
     const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', enabled: true });
     const { container } = renderMatte(target, [STAR, target]);
     const grid = container.querySelector('.matte-control-grid');
+    expect(screen.getByText('MASK SOURCE')).toBeVisible();
+    expect(screen.queryByText('Control visibility using another layer. Boolean operations combine geometry instead.')).toBeNull();
     const source = screen.getByText('MASK SOURCE').closest('.matte-field');
     const mode = screen.getByText('MODE').closest('.matte-field');
 

@@ -1,23 +1,44 @@
-import React from 'react';
+import React, { useId, useState } from 'react';
 
 interface StyleCardProps {
   title: string;
-  icon?: React.ReactNode;
-  color?: string;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
   children: React.ReactNode;
 }
 
 /**
- * Titled rectangle card used by every Style tab section — the same visual
- * language as the LAYER ORDER card in the Transform tab.
+ * Shared Inspector section shell. Disclosure state is local UI state and is
+ * intentionally not connected to project data or history.
  */
-export const StyleCard: React.FC<StyleCardProps> = ({ title, icon, color = '#38bdf8', children }) => (
-  <div className="panel-card" style={{ marginBottom: 10 }}>
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-      <span style={{ fontSize: 11, fontWeight: 700, color, display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
-        {icon} {title}
-      </span>
-    </div>
-    {children}
-  </div>
-);
+export const StyleCard: React.FC<StyleCardProps> = ({
+  title,
+  collapsible = false,
+  defaultOpen = true,
+  children,
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const contentId = useId();
+  const visible = !collapsible || isOpen;
+
+  return (
+    <section className={`panel-card inspector-section-card ${collapsible ? 'is-collapsible' : ''}`}>
+      <div className="inspector-section-header">
+        <span className="inspector-section-title">{title}</span>
+        {collapsible && (
+          <button
+            type="button"
+            className="inspector-disclosure-button"
+            aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${title}`}
+            aria-expanded={isOpen}
+            aria-controls={contentId}
+            onClick={() => setIsOpen((open) => !open)}
+          >
+            <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
+          </button>
+        )}
+      </div>
+      {visible && <div id={contentId} className="inspector-section-content">{children}</div>}
+    </section>
+  );
+};

@@ -284,7 +284,9 @@ describe('TransformTab — procedural preset workflow access', () => {
     expect(screen.queryByText('ANIMATION IN / OUT')).toBeNull();
     expect(screen.queryByLabelText('Animation In Preset')).toBeNull();
     expect(screen.queryByLabelText('Animation Out Preset')).toBeNull();
-    expect(screen.getByText('ANIMATION DATA')).toBeTruthy();
+    const disclosure = screen.getByRole('button', { name: 'Expand ANIMATION DATA' });
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(disclosure);
     expect(screen.getByLabelText('Copy Animation')).toBeTruthy();
     expect(screen.getByLabelText('Paste Animation')).toBeTruthy();
     expect(screen.getByLabelText('Clear Animation')).toBeTruthy();

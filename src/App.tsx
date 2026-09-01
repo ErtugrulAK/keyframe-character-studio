@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
+import { PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { AnimatorProvider, useAnimator } from './context/AnimatorContext';
 import { HeaderBar } from './components/Header/HeaderBar';
 import { LeftToolbar } from './components/Toolbar/LeftToolbar';
@@ -9,12 +10,12 @@ import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 
 const MainAppContent: React.FC = () => {
   const { setIsPlaying, appMode } = useAnimator();
+  const [isInspectorVisible, setIsInspectorVisible] = useState(true);
 
   // Keyboard shortcut: Spacebar toggles play/pause
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (appMode === 'broadcast') return; // Disable play/pause in broadcast mode
-      // Don't trigger if typing inside input or select
+      if (appMode === 'broadcast') return;
       if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
         return;
       }
@@ -31,10 +32,25 @@ const MainAppContent: React.FC = () => {
   return (
     <div className="app-container">
       <HeaderBar />
-      <div className="main-layout">
+      <div className={`main-layout ${isInspectorVisible ? '' : 'inspector-hidden'}`}>
         {appMode === 'edit' && <LeftToolbar />}
         <StageCanvas />
-        {appMode === 'edit' && <PropertyInspector />}
+        {appMode === 'edit' && (
+          <button
+            type="button"
+            className="inspector-dock-toggle"
+            aria-label={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
+            title={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
+            onClick={() => setIsInspectorVisible((visible) => !visible)}
+          >
+            {isInspectorVisible ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+          </button>
+        )}
+        {appMode === 'edit' && (
+          <PropertyInspector
+            isHidden={!isInspectorVisible}
+          />
+        )}
       </div>
       {appMode === 'edit' ? <SequencerTimeline /> : <LiveDirectorPanel />}
     </div>

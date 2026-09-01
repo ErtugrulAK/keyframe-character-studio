@@ -1,5 +1,4 @@
 import React from 'react';
-import { Crop } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { StyleCard } from './StyleCard';
 
@@ -17,7 +16,7 @@ export const StyleGeometrySection: React.FC<StyleGeometrySectionProps> = ({ sele
   if (!hasCornerRadiusControl) return null;
 
   return (
-    <StyleCard title="GEOMETRY" icon={<Crop size={13} />} color="#14b8a6">
+    <StyleCard title="GEOMETRY" collapsible defaultOpen={false}>
       {/* CORNER RADIUS CONTROL */}
       {(selectedPart.type === 'custom_rect' ||
         selectedPart.type === 'custom_box' ||

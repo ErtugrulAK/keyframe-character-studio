@@ -1,5 +1,4 @@
 import React from 'react';
-import { Palette } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
@@ -19,7 +18,7 @@ interface StyleColorSectionProps {
 export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPart, onPartColorChange, onPartPropChange }) => {
   if (isShapeAppearanceEligible(selectedPart.type)) return null;
   return (
-    <StyleCard title="COLOR" icon={<Palette size={13} />}>
+    <StyleCard title="COLOR" collapsible defaultOpen={false}>
       {/* FILL & STROKE COLOR GRID */}
       <div className="color-grid-two-col">
         <div className="color-picker-card">

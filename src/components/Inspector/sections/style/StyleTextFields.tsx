@@ -1,5 +1,4 @@
 import React from 'react';
-import { Type } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
@@ -17,7 +16,7 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
   if (!applies) return null;
 
   return (
-    <StyleCard title="TEXT" icon={<Type size={13} />}>
+    <StyleCard title="TEXT" collapsible defaultOpen={false}>
       {/* UI CARD CUSTOMIZATION FIELDS */}
       {selectedPart.type === 'custom_card' && (
         <>

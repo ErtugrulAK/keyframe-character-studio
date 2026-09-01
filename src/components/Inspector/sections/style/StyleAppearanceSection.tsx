@@ -1,5 +1,4 @@
 import React from 'react';
-import { Palette } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import {
   toAuthoringStrokeAlignment,
@@ -39,7 +38,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
   const strokeAlignment = toStrokeAlignmentControlValue(selectedPart.strokeAlignment);
 
   return (
-    <StyleCard title="APPEARANCE" icon={<Palette size={13} />}>
+    <StyleCard title="APPEARANCE" collapsible defaultOpen={false}>
       <div className="appearance-group">
         <div className="appearance-group-header">
           <label htmlFor="appearance-fill-enabled">FILL</label>
@@ -68,18 +67,18 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
           onColorChange={(value) => onPartPropChange('strokeColor', value)}
           onAlphaChange={(value) => onPartPropChange('strokeOpacity', value)}
         />
-        <div className="appearance-inline-fields">
+        <div className="stroke-inline-fields">
           <div className="appearance-field">
             <label className="appearance-field-label" htmlFor="stroke-width-input">WIDTH</label>
             <SmartNumberInput ariaLabel="Stroke Width" value={selectedPart.strokeWidth ?? 1.5} min={0} max={100} step={0.5} precision={2} onChange={(value) => onPartPropChange('strokeWidth', value)} />
           </div>
-        </div>
-        <div className="appearance-field appearance-alignment-field">
-          <label className="appearance-field-label" htmlFor="stroke-alignment-select">ALIGN</label>
-          <select id="stroke-alignment-select" aria-label="Stroke Alignment" value={strokeAlignment} onChange={(event) => onPartPropChange('strokeAlignment', toAuthoringStrokeAlignment(event.target.value as StrokeAlignmentControlValue))} style={{ width: '100%' }}>
-            <option value="inside">INSIDE</option>
-            <option value="outside">OUTSIDE</option>
-          </select>
+          <div className="appearance-field">
+            <label className="appearance-field-label" htmlFor="stroke-alignment-select">ALIGN</label>
+            <select id="stroke-alignment-select" aria-label="Stroke Alignment" value={strokeAlignment} onChange={(event) => onPartPropChange('strokeAlignment', toAuthoringStrokeAlignment(event.target.value as StrokeAlignmentControlValue))} style={{ width: '100%' }}>
+              <option value="inside">INSIDE</option>
+              <option value="outside">OUTSIDE</option>
+            </select>
+          </div>
         </div>
       </div>
     </StyleCard>

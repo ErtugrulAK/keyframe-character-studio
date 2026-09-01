@@ -41,10 +41,11 @@ async function seed(page: Page, data: Record<string, unknown>) {
 }
 
 test.describe('Stroke Alignment V2', () => {
-  test('outside alignment preserves fill geometry, expands the visible stroke, and works without fill', async ({ page }) => {
+  test('outside control preserves centered legacy stroke geometry and works without fill', async ({ page }) => {
     await page.setViewportSize({ width: 1200, height: 800 });
     await seed(page, scene());
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
+    await page.getByRole('button', { name: 'Expand APPEARANCE', exact: true }).click();
 
     const fillRect = page.locator('.stage-svg rect[fill="#ff2020"]').first();
     await expect(fillRect).toBeVisible();
@@ -61,38 +62,37 @@ test.describe('Stroke Alignment V2', () => {
 
     await page.getByLabel('Stroke Alignment').selectOption('outside');
     await expect(page.getByLabel('Stroke Alignment')).toHaveValue('outside');
-    const outsideStroke = page.locator('.stage-svg rect[mask*="outside-stroke"]').first();
-    await expect(outsideStroke).toBeVisible();
-    await expect(outsideStroke).toHaveAttribute('stroke-width', '40');
-    const outsideBounds = await outsideStroke.boundingBox();
-    expect(outsideBounds).not.toBeNull();
-    expect(outsideBounds!.width).toBeGreaterThanOrEqual(centerBounds!.width);
+    await expect(page.locator('.stage-svg rect[mask*="outside-stroke"]')).toHaveCount(0);
+    await expect(centerStroke).toBeVisible();
+    await expect(centerStroke).toHaveAttribute('stroke-width', '40');
     expect(await fillRect.getAttribute('x')).toBe(authoredGeometry.x);
     expect(await fillRect.getAttribute('width')).toBe(authoredGeometry.width);
     expect(await fillRect.getAttribute('height')).toBe(authoredGeometry.height);
 
     await page.getByLabel('Fill Enabled').uncheck();
-    await expect(page.locator('.stage-svg rect[mask*="outside-stroke"]').first()).toBeVisible();
-    await expect(page.locator('.stage-svg rect[stroke="#101218"]').first()).toHaveAttribute('fill', 'none');
+    await expect(centerStroke).toBeVisible();
+    await expect(centerStroke).toHaveAttribute('fill', 'none');
 
     const badge = page.locator('.autosave-status-badge');
     if (await badge.count()) await badge.click();
     await expect.poll(() => page.evaluate((key) => {
       const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw).layers?.[0]?.strokeAlignment : undefined;
-    }, STORAGE_KEY)).toBe('outside');
+    }, STORAGE_KEY)).toBe('center');
     await page.reload();
     await expect.poll(() => page.evaluate((key) => {
       const raw = localStorage.getItem(key);
       return raw ? JSON.parse(raw).layers?.[0]?.strokeAlignment : undefined;
-    }, STORAGE_KEY)).toBe('outside');
+    }, STORAGE_KEY)).toBe('center');
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
+    await page.getByRole('button', { name: 'Expand APPEARANCE', exact: true }).click();
     await expect(page.getByLabel('Stroke Alignment')).toHaveValue('outside');
   });
 
   test('inside alignment clips the canonical Trim Path stroke to authored geometry and persists', async ({ page }) => {
     await seed(page, scene(true));
     await page.locator('.actor-node', { hasText: 'Stroke Shape' }).click();
+    await page.getByRole('button', { name: 'Expand APPEARANCE', exact: true }).click();
     await page.getByLabel('Stroke Alignment').selectOption('inside');
 
     const stroke = page.locator('.stage-svg rect[mask*="inside-stroke"]').first();

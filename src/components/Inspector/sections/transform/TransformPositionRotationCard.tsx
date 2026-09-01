@@ -9,75 +9,60 @@ interface TransformPositionRotationCardProps {
   onUpdate: (partial: Partial<Transform>) => void;
 }
 
-const sectionLabel: React.CSSProperties = {
-  fontSize: 9,
-  fontWeight: 700,
-  color: '#64748b',
-  letterSpacing: '0.6px',
-  marginBottom: 4,
-};
-
 /**
- * Position (X/Y) and rotation rows used inside the unified TRANSFORM card.
+ * Position (X/Y) and rotation rows used inside the unified TRANSFORM section.
  */
 export const TransformPositionRotationCard: React.FC<TransformPositionRotationCardProps> = ({ transform, coordinateSystem, onUpdate }) => {
   const usesRawProjectUnits = coordinateSystem === 'project-unit-center-v1';
   const positionDisplayScale = usesRawProjectUnits ? undefined : 0.01;
 
   return (
-    <>
-      {/* Position */}
-      <div>
-        <div style={sectionLabel}>POSITION</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, width: "100%" }}>
-          <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 6px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-            <span className="form-label text-red" style={{ fontSize: 9 }}>POS X</span>
-            <SmartNumberInput
-              value={transform.x}
-              step={1}
-              displayScale={positionDisplayScale}
-              precision={2}
-              onChange={(val) => onUpdate({ x: val })}
-            />
-          </div>
-
-          <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 6px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-            <span className="form-label text-green" style={{ fontSize: 9 }}>POS Y</span>
-            <SmartNumberInput
-              value={-transform.y}
-              step={1}
-              displayScale={positionDisplayScale}
-              precision={2}
-              onChange={(val) => onUpdate({ y: -val })}
-            />
-          </div>
-        </div>
+    <div className="transform-property-group">
+      <div className="transform-property-title">Position</div>
+      <div className="transform-property-row transform-position-row">
+        <label className="transform-field">
+          <span className="transform-field-label text-red">X</span>
+          <SmartNumberInput
+            value={transform.x}
+            step={1}
+            displayScale={positionDisplayScale}
+            precision={2}
+            ariaLabel="Position X"
+            onChange={(val) => onUpdate({ x: val })}
+          />
+        </label>
+        <label className="transform-field">
+          <span className="transform-field-label text-green">Y</span>
+          <SmartNumberInput
+            value={-transform.y}
+            step={1}
+            displayScale={positionDisplayScale}
+            precision={2}
+            ariaLabel="Position Y"
+            onChange={(val) => onUpdate({ y: -val })}
+          />
+        </label>
       </div>
 
-      {/* Rotation */}
-      <div>
-        <div style={sectionLabel}>ROTATION</div>
-        <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-          <span className="form-label text-blue" style={{ fontSize: 9 }}>ROT (°)</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 }}>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <SmartNumberInput
-                value={transform.rotation}
-                onChange={(val) => onUpdate({ rotation: val })}
-              />
-            </div>
-            <button
-              type="button"
-              className="btn-secondary"
-              style={{ height: 24, fontSize: 10, padding: '0 8px', whiteSpace: 'nowrap', flexShrink: 0 }}
-              onClick={() => onUpdate({ rotation: 0 })}
-              title="Reset rotation angle to 0°"
-            >
-              Reset 0°
-            </button>
-          </div>
-        </div>
+      <div className="transform-property-title">Rotation</div>
+      <div className="transform-property-row">
+        <label className="transform-field transform-field-grow">
+          <span className="transform-field-label text-blue">°</span>
+          <SmartNumberInput
+            value={transform.rotation}
+            ariaLabel="Rotation"
+            onChange={(val) => onUpdate({ rotation: val })}
+          />
+        </label>
+        <button
+          type="button"
+          className="btn-secondary transform-compact-action"
+          onClick={() => onUpdate({ rotation: 0 })}
+          title="Reset rotation angle to 0°"
+        >
+          Reset 0°
+        </button>
       </div>
-    </>
+    </div>
   );
 };

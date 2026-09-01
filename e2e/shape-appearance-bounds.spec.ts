@@ -93,6 +93,7 @@ test.describe('modern stroke-aware editor bounds', () => {
       fillEnabled: true, fillOpacity: 0.5, strokeEnabled: true, strokeWidth: 20, strokeOpacity: 1,
     })]);
     await page.locator('.actor-node', { hasText: 'Appearance Rectangle' }).click();
+    await page.getByRole('button', { name: 'Expand APPEARANCE' }).click();
 
     const card = page.locator('.panel-card').filter({ hasText: 'APPEARANCE' }).first();
     await expect(card).toBeVisible();
@@ -105,7 +106,7 @@ test.describe('modern stroke-aware editor bounds', () => {
       const box = node.getBoundingClientRect();
       return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
     }));
-    expect(boxes.length).toBe(6);
+    expect(boxes.length).toBe(4);
     for (const box of boxes) {
       expect(box.left).toBeGreaterThanOrEqual(cardBox!.x);
       expect(box.right).toBeLessThanOrEqual(cardBox!.x + cardBox!.width);
@@ -128,11 +129,10 @@ test.describe('modern stroke-aware editor bounds', () => {
     await page.locator('.actor-node', { hasText: 'Authoring Rectangle' }).click();
     const details = page.locator('.details-container');
     await expect(details.getByText('OPACITY', { exact: true })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Expand APPEARANCE' }).click();
     await page.getByLabel('Fill Enabled').uncheck();
-    await page.getByLabel('FILL COLOR Color Picker').click();
-    await page.getByLabel('FILL COLOR Alpha').fill('50');
-    await page.getByLabel('STROKE COLOR Color Picker').click();
-    await page.getByLabel('STROKE COLOR Alpha').fill('60');
+    await page.getByRole('spinbutton', { name: 'FILL COLOR A' }).fill('128');
+    await page.getByRole('spinbutton', { name: 'STROKE COLOR A' }).fill('153');
     await page.getByLabel('Stroke Width').fill('8');
     await page.getByLabel('Stroke Width').press('Tab');
     await page.locator('.autosave-status-badge').click();
@@ -140,14 +140,14 @@ test.describe('modern stroke-aware editor bounds', () => {
     await expect.poll(async () => page.evaluate((key) => {
       const layerData = JSON.parse(localStorage.getItem(key) || '{}').layers?.[0];
       return [layerData?.fillEnabled, layerData?.fillOpacity, layerData?.strokeOpacity, layerData?.strokeColor, layerData?.strokeWidth];
-    }, STORAGE_KEY)).toEqual([false, 0.5, 0.6, '#101218', 8]);
-
+    }, STORAGE_KEY)).toEqual([false, 128 / 255, 153 / 255, '#101218', 8]);
+    await page.getByRole('button', { name: 'Collapse APPEARANCE' }).click();
     await page.keyboard.press('Control+Z');
     await page.locator('.autosave-status-badge').click();
     await expect.poll(async () => page.evaluate((key) => {
       const layerData = JSON.parse(localStorage.getItem(key) || '{}').layers?.[0];
       return [layerData?.strokeOpacity, layerData?.strokeWidth];
-    }, STORAGE_KEY)).toEqual([0.6, 1.5]);
+    }, STORAGE_KEY)).toEqual([153 / 255, 1.5]);
 
     await page.keyboard.press('Control+Z');
     await page.locator('.autosave-status-badge').click();

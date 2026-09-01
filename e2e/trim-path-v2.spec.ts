@@ -46,6 +46,8 @@ test.describe('Trim Path V2', () => {
 
     const card = page.locator('.panel-card', { hasText: 'TRIM PATH' }).first();
     await expect(card).toBeVisible();
+    await card.getByRole('button', { name: 'Expand TRIM PATH', exact: true }).click();
+    await expect(card.getByRole('button', { name: 'Collapse TRIM PATH', exact: true })).toHaveAttribute('aria-expanded', 'true');
     await expect(card.getByLabel('Trim Path Enabled')).toBeChecked();
     await expect.poll(() => card.evaluate((node) => node.scrollWidth <= node.clientWidth)).toBe(true);
 

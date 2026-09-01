@@ -1,5 +1,4 @@
 import React from 'react';
-import { Scissors } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { normalizeTrimPathOffset } from '../../../../utils/trimPath';
@@ -11,7 +10,7 @@ interface TrimPathSectionProps {
 }
 
 export const TrimPathSection: React.FC<TrimPathSectionProps> = ({ selectedPart, onPartPropChange }) => (
-  <StyleCard title="TRIM PATH" icon={<Scissors size={13} />}>
+  <StyleCard title="TRIM PATH" collapsible defaultOpen={false}>
     <label className="appearance-group-header">
       <span>ENABLE TRIM PATH</span>
       <input
@@ -22,7 +21,7 @@ export const TrimPathSection: React.FC<TrimPathSectionProps> = ({ selectedPart, 
       />
     </label>
 
-    <div className="appearance-inline-fields" style={{ marginTop: 8 }}>
+    <div className="trim-path-fields">
       <div className="appearance-field">
         <label className="appearance-field-label" htmlFor="trim-path-start-input">START</label>
         <SmartNumberInput
@@ -49,19 +48,18 @@ export const TrimPathSection: React.FC<TrimPathSectionProps> = ({ selectedPart, 
           onChange={(value) => onPartPropChange('trimPathEnd', value)}
         />
       </div>
-    </div>
-
-    <div className="appearance-field" style={{ marginTop: 8 }}>
-      <label className="appearance-field-label" htmlFor="trim-path-offset-input">OFFSET (DEGREES)</label>
-      <SmartNumberInput
-        ariaLabel="Trim Path Offset"
-        value={selectedPart.trimPathOffset ?? 0}
-        min={-720}
-        max={720}
-        step={1}
-        precision={0}
-        onChange={(value) => onPartPropChange('trimPathOffset', normalizeTrimPathOffset(value))}
-      />
+      <div className="appearance-field">
+        <label className="appearance-field-label" htmlFor="trim-path-offset-input">OFFSET (DEGREES)</label>
+        <SmartNumberInput
+          ariaLabel="Trim Path Offset"
+          value={selectedPart.trimPathOffset ?? 0}
+          min={-720}
+          max={720}
+          step={1}
+          precision={0}
+          onChange={(value) => onPartPropChange('trimPathOffset', normalizeTrimPathOffset(value))}
+        />
+      </div>
     </div>
   </StyleCard>
 );

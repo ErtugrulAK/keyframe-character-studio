@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Move } from 'lucide-react';
 import type { CharacterPart, Transform } from '../../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { getPartBounds } from '../../../../utils/bounds';
@@ -12,10 +11,19 @@ interface TransformControlPointsProps {
   onUpdate: (partial: Partial<Transform>) => void;
 }
 
+interface ControlPointRow {
+  key: string;
+  label: string;
+  x: number;
+  y: number;
+  onXChange: (value: number) => void;
+  onYChange: (value: number) => void;
+}
+
 /**
- * 4 control points (stage X & Y coordinates) editor.
- * Supports two modes: edge midpoints and corner points, each anchored to the
- * strict opposite anchor so dragging one point only stretches one side.
+ * Four control points (stage X/Y coordinates) in a compact matrix.
+ * Supports edge midpoints and corner points, each retaining the strict
+ * opposite-anchor isolation used by the original editor.
  */
 export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ selectedPart, transform, coordinateSystem, onUpdate }) => {
   const [pointMode, setPointMode] = useState<'edge' | 'corner'>('corner');
@@ -28,365 +36,212 @@ export const TransformControlPoints: React.FC<TransformControlPointsProps> = ({ 
   const cy = -transform.y; // Cartesian Y
   const positionDisplayScale = coordinateSystem === 'legacy-unknown' || coordinateSystem === 'legacy-centi-unit' ? 0.01 : undefined;
 
+  const pointRows: ControlPointRow[] = pointMode === 'edge'
+    ? [
+        {
+          key: 'left',
+          label: 'LEFT POINT',
+          x: cx - currentHalfW,
+          y: cy,
+          onXChange: (targetLeftX) => {
+            const fixedRightX = cx + currentHalfW;
+            const validLeftX = Math.min(fixedRightX, targetLeftX);
+            const newWidth = fixedRightX - validLeftX;
+            const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
+            const newCx = Math.round((validLeftX + fixedRightX) / 2);
+            onUpdate({ scaleX: newScaleX, x: newCx });
+          },
+          onYChange: (targetY) => onUpdate({ y: -targetY }),
+        },
+        {
+          key: 'right',
+          label: 'RIGHT POINT',
+          x: cx + currentHalfW,
+          y: cy,
+          onXChange: (targetRightX) => {
+            const fixedLeftX = cx - currentHalfW;
+            const validRightX = Math.max(fixedLeftX, targetRightX);
+            const newWidth = validRightX - fixedLeftX;
+            const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
+            const newCx = Math.round((fixedLeftX + validRightX) / 2);
+            onUpdate({ scaleX: newScaleX, x: newCx });
+          },
+          onYChange: (targetY) => onUpdate({ y: -targetY }),
+        },
+        {
+          key: 'top',
+          label: 'TOP POINT',
+          x: cx,
+          y: cy + currentHalfH,
+          onXChange: (targetX) => onUpdate({ x: targetX }),
+          onYChange: (targetTopY) => {
+            const fixedBottomY = cy - currentHalfH;
+            const validTopY = Math.max(fixedBottomY, targetTopY);
+            const newHeight = validTopY - fixedBottomY;
+            const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
+            const newCy = Math.round((validTopY + fixedBottomY) / 2);
+            onUpdate({ scaleY: newScaleY, y: -newCy });
+          },
+        },
+        {
+          key: 'bottom',
+          label: 'BOTTOM POINT',
+          x: cx,
+          y: cy - currentHalfH,
+          onXChange: (targetX) => onUpdate({ x: targetX }),
+          onYChange: (targetBottomY) => {
+            const fixedTopY = cy + currentHalfH;
+            const validBottomY = Math.min(fixedTopY, targetBottomY);
+            const newHeight = fixedTopY - validBottomY;
+            const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
+            const newCy = Math.round((fixedTopY + validBottomY) / 2);
+            onUpdate({ scaleY: newScaleY, y: -newCy });
+          },
+        },
+      ]
+    : [
+        {
+          key: 'top-left',
+          label: 'TOP LEFT',
+          x: cx - currentHalfW,
+          y: cy + currentHalfH,
+          onXChange: (targetTLX) => {
+            const fixedRightX = cx + currentHalfW;
+            const validTLX = Math.min(fixedRightX, targetTLX);
+            const newWidth = fixedRightX - validTLX;
+            const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
+            const newCx = Math.round((validTLX + fixedRightX) / 2);
+            onUpdate({ scaleX: newScaleX, x: newCx });
+          },
+          onYChange: (targetTLY) => {
+            const fixedBottomY = cy - currentHalfH;
+            const validTLY = Math.max(fixedBottomY, targetTLY);
+            const newHeight = validTLY - fixedBottomY;
+            const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
+            const newCy = Math.round((validTLY + fixedBottomY) / 2);
+            onUpdate({ scaleY: newScaleY, y: -newCy });
+          },
+        },
+        {
+          key: 'top-right',
+          label: 'TOP RIGHT',
+          x: cx + currentHalfW,
+          y: cy + currentHalfH,
+          onXChange: (targetTRX) => {
+            const fixedLeftX = cx - currentHalfW;
+            const validTRX = Math.max(fixedLeftX, targetTRX);
+            const newWidth = validTRX - fixedLeftX;
+            const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
+            const newCx = Math.round((fixedLeftX + validTRX) / 2);
+            onUpdate({ scaleX: newScaleX, x: newCx });
+          },
+          onYChange: (targetTRY) => {
+            const fixedBottomY = cy - currentHalfH;
+            const validTRY = Math.max(fixedBottomY, targetTRY);
+            const newHeight = validTRY - fixedBottomY;
+            const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
+            const newCy = Math.round((validTRY + fixedBottomY) / 2);
+            onUpdate({ scaleY: newScaleY, y: -newCy });
+          },
+        },
+        {
+          key: 'bottom-left',
+          label: 'BOTTOM LEFT',
+          x: cx - currentHalfW,
+          y: cy - currentHalfH,
+          onXChange: (targetBLX) => {
+            const fixedRightX = cx + currentHalfW;
+            const validBLX = Math.min(fixedRightX, targetBLX);
+            const newWidth = fixedRightX - validBLX;
+            const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
+            const newCx = Math.round((validBLX + fixedRightX) / 2);
+            onUpdate({ scaleX: newScaleX, x: newCx });
+          },
+          onYChange: (targetBLY) => {
+            const fixedTopY = cy + currentHalfH;
+            const validBLY = Math.min(fixedTopY, targetBLY);
+            const newHeight = fixedTopY - validBLY;
+            const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
+            const newCy = Math.round((fixedTopY + validBLY) / 2);
+            onUpdate({ scaleY: newScaleY, y: -newCy });
+          },
+        },
+        {
+          key: 'bottom-right',
+          label: 'BOTTOM RIGHT',
+          x: cx + currentHalfW,
+          y: cy - currentHalfH,
+          onXChange: (targetBRX) => {
+            const fixedLeftX = cx - currentHalfW;
+            const validBRX = Math.max(fixedLeftX, targetBRX);
+            const newWidth = validBRX - fixedLeftX;
+            const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
+            const newCx = Math.round((fixedLeftX + validBRX) / 2);
+            onUpdate({ scaleX: newScaleX, x: newCx });
+          },
+          onYChange: (targetBRY) => {
+            const fixedTopY = cy + currentHalfH;
+            const validBRY = Math.min(fixedTopY, targetBRY);
+            const newHeight = fixedTopY - validBRY;
+            const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
+            const newCy = Math.round((fixedTopY + validBRY) / 2);
+            onUpdate({ scaleY: newScaleY, y: -newCy });
+          },
+        },
+      ];
+
   return (
-    <div className="panel-card" style={{ marginTop: 8 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 6, letterSpacing: '0.4px' }}>
-          <Move size={13} /> 4 CONTROL POINTS (X/Y)
-        </span>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{
-              height: 20,
-              fontSize: 9,
-              fontWeight: 700,
-              padding: '0 6px',
-              color: pointMode === 'edge' ? '#38bdf8' : '#64748b',
-              background: pointMode === 'edge' ? 'rgba(56, 189, 248, 0.15)' : '#0e1118',
-              border: `1px solid ${pointMode === 'edge' ? '#38bdf8' : '#232836'}`,
-              borderRadius: 3,
-            }}
-            onClick={() => setPointMode('edge')}
-          >
-            Edge Points
-          </button>
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{
-              height: 20,
-              fontSize: 9,
-              fontWeight: 700,
-              padding: '0 6px',
-              color: pointMode === 'corner' ? '#c084fc' : '#64748b',
-              background: pointMode === 'corner' ? 'rgba(192, 132, 252, 0.15)' : '#0e1118',
-              border: `1px solid ${pointMode === 'corner' ? '#c084fc' : '#232836'}`,
-              borderRadius: 3,
-            }}
-            onClick={() => setPointMode('corner')}
-          >
-            Corners
-          </button>
-        </div>
+    <div className="control-point-editor">
+      <div className="control-point-mode-switch" role="group" aria-label="Control point mode">
+        <button
+          type="button"
+          className={`btn-secondary ${pointMode === 'edge' ? 'is-active' : ''}`}
+          aria-pressed={pointMode === 'edge'}
+          onClick={() => setPointMode('edge')}
+        >
+          Edge Points
+        </button>
+        <button
+          type="button"
+          className={`btn-secondary ${pointMode === 'corner' ? 'is-active' : ''}`}
+          aria-pressed={pointMode === 'corner'}
+          onClick={() => setPointMode('corner')}
+        >
+          Corners
+        </button>
       </div>
 
-      {pointMode === 'edge' ? (
-        /* ── 4 EDGE MIDPOINTS (STRICT OPPOSITE ANCHOR ISOLATION) ── */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          {/* LEFT EDGE POINT */}
-          <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> LEFT POINT
-              </span>
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
-              <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
-              <SmartNumberInput
-                value={cx - currentHalfW}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetLeftX) => {
-                  const fixedRightX = cx + currentHalfW;
-                  const validLeftX = Math.min(fixedRightX, targetLeftX);
-                  const newWidth = fixedRightX - validLeftX;
-                  const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                  const newCx = Math.round((validLeftX + fixedRightX) / 2);
-                  onUpdate({ scaleX: newScaleX, x: newCx });
-                }}
-              />
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-              <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
-              <SmartNumberInput
-                value={cy}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetY) => onUpdate({ y: -targetY })}
-              />
-            </div>
-          </div>
-
-          {/* RIGHT EDGE POINT */}
-          <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} /> RIGHT POINT
-              </span>
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
-              <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
-              <SmartNumberInput
-                value={cx + currentHalfW}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetRightX) => {
-                  const fixedLeftX = cx - currentHalfW;
-                  const validRightX = Math.max(fixedLeftX, targetRightX);
-                  const newWidth = validRightX - fixedLeftX;
-                  const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                  const newCx = Math.round((fixedLeftX + validRightX) / 2);
-                  onUpdate({ scaleX: newScaleX, x: newCx });
-                }}
-              />
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-              <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
-              <SmartNumberInput
-                value={cy}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetY) => onUpdate({ y: -targetY })}
-              />
-            </div>
-          </div>
-
-          {/* TOP EDGE POINT */}
-          <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> TOP POINT
-              </span>
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
-              <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
-              <SmartNumberInput
-                value={cx}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetX) => onUpdate({ x: targetX })}
-              />
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-              <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
-              <SmartNumberInput
-                value={cy + currentHalfH}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetTopY) => {
-                  const fixedBottomY = cy - currentHalfH;
-                  const validTopY = Math.max(fixedBottomY, targetTopY);
-                  const newHeight = validTopY - fixedBottomY;
-                  const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                  const newCy = Math.round((validTopY + fixedBottomY) / 2);
-                  onUpdate({ scaleY: newScaleY, y: -newCy });
-                }}
-              />
-            </div>
-          </div>
-
-          {/* BOTTOM EDGE POINT */}
-          <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'flex', alignItems: 'center', gap: 4 }}>
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} /> BOTTOM POINT
-              </span>
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
-              <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
-              <SmartNumberInput
-                value={cx}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetX) => onUpdate({ x: targetX })}
-              />
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-              <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
-              <SmartNumberInput
-                value={cy - currentHalfH}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetBottomY) => {
-                  const fixedTopY = cy + currentHalfH;
-                  const validBottomY = Math.min(fixedTopY, targetBottomY);
-                  const newHeight = fixedTopY - validBottomY;
-                  const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                  const newCy = Math.round((fixedTopY + validBottomY) / 2);
-                  onUpdate({ scaleY: newScaleY, y: -newCy });
-                }}
-              />
-            </div>
-          </div>
+      <div className="control-point-matrix" role="grid" aria-label={`${pointMode === 'edge' ? 'Edge' : 'Corner'} control points`}>
+        <div className="control-point-matrix-row control-point-matrix-header" role="row">
+          <span role="columnheader" />
+          <span role="columnheader">X</span>
+          <span role="columnheader">Y</span>
         </div>
-      ) : (
-        /* ── 4 CORNER POINTS (TL, TR, BR, BL) (STRICT OPPOSITE ANCHOR ISOLATION) ── */
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-          {/* TOP-LEFT (TL) */}
-          <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 4 }}>
-              ↖ TOP-LEFT (TL)
+        {pointRows.map((row) => (
+          <div className="control-point-matrix-row" role="row" key={row.key}>
+            <span className="control-point-label" role="rowheader">
+              <span className="control-point-dot" aria-hidden="true" />
+              {row.label}
             </span>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
-              <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
-              <SmartNumberInput
-                value={cx - currentHalfW}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetTLX) => {
-                  const fixedRightX = cx + currentHalfW;
-                  const validTLX = Math.min(fixedRightX, targetTLX);
-                  const newWidth = fixedRightX - validTLX;
-                  const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                  const newCx = Math.round((validTLX + fixedRightX) / 2);
-                  onUpdate({ scaleX: newScaleX, x: newCx });
-                }}
-              />
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-              <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
-              <SmartNumberInput
-                value={cy + currentHalfH}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetTLY) => {
-                  const fixedBottomY = cy - currentHalfH;
-                  const validTLY = Math.max(fixedBottomY, targetTLY);
-                  const newHeight = validTLY - fixedBottomY;
-                  const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                  const newCy = Math.round((validTLY + fixedBottomY) / 2);
-                  onUpdate({ scaleY: newScaleY, y: -newCy });
-                }}
-              />
-            </div>
+            <SmartNumberInput
+              value={row.x}
+              step={1}
+              displayScale={positionDisplayScale}
+              precision={2}
+              ariaLabel={`${row.label} X`}
+              onChange={row.onXChange}
+            />
+            <SmartNumberInput
+              value={row.y}
+              step={1}
+              displayScale={positionDisplayScale}
+              precision={2}
+              ariaLabel={`${row.label} Y`}
+              onChange={row.onYChange}
+            />
           </div>
-
-          {/* TOP-RIGHT (TR) */}
-          <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#10b981', display: 'block', marginBottom: 4 }}>
-              ↗ TOP-RIGHT (TR)
-            </span>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
-              <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
-              <SmartNumberInput
-                value={cx + currentHalfW}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetTRX) => {
-                  const fixedLeftX = cx - currentHalfW;
-                  const validTRX = Math.max(fixedLeftX, targetTRX);
-                  const newWidth = validTRX - fixedLeftX;
-                  const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                  const newCx = Math.round((fixedLeftX + validTRX) / 2);
-                  onUpdate({ scaleX: newScaleX, x: newCx });
-                }}
-              />
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-              <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
-              <SmartNumberInput
-                value={cy + currentHalfH}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetTRY) => {
-                  const fixedBottomY = cy - currentHalfH;
-                  const validTRY = Math.max(fixedBottomY, targetTRY);
-                  const newHeight = validTRY - fixedBottomY;
-                  const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                  const newCy = Math.round((validTRY + fixedBottomY) / 2);
-                  onUpdate({ scaleY: newScaleY, y: -newCy });
-                }}
-              />
-            </div>
-          </div>
-
-          {/* BOTTOM-LEFT (BL) */}
-          <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#c084fc', display: 'block', marginBottom: 4 }}>
-              ↙ BOTTOM-LEFT (BL)
-            </span>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
-              <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
-              <SmartNumberInput
-                value={cx - currentHalfW}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetBLX) => {
-                  const fixedRightX = cx + currentHalfW;
-                  const validBLX = Math.min(fixedRightX, targetBLX);
-                  const newWidth = fixedRightX - validBLX;
-                  const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                  const newCx = Math.round((validBLX + fixedRightX) / 2);
-                  onUpdate({ scaleX: newScaleX, x: newCx });
-                }}
-              />
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-              <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
-              <SmartNumberInput
-                value={cy - currentHalfH}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetBLY) => {
-                  const fixedTopY = cy + currentHalfH;
-                  const validBLY = Math.min(fixedTopY, targetBLY);
-                  const newHeight = fixedTopY - validBLY;
-                  const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                  const newCy = Math.round((fixedTopY + validBLY) / 2);
-                  onUpdate({ scaleY: newScaleY, y: -newCy });
-                }}
-              />
-            </div>
-          </div>
-
-          {/* BOTTOM-RIGHT (BR) */}
-          <div style={{ background: '#0e1118', padding: '6px 8px', borderRadius: 5, border: '1px solid #232836' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#f59e0b', display: 'block', marginBottom: 4 }}>
-              ↘ BOTTOM-RIGHT (BR)
-            </span>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0,  marginBottom: 4 }}>
-              <span className="form-label text-red" style={{ fontSize: 9 }}>X</span>
-              <SmartNumberInput
-                value={cx + currentHalfW}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetBRX) => {
-                  const fixedLeftX = cx - currentHalfW;
-                  const validBRX = Math.max(fixedLeftX, targetBRX);
-                  const newWidth = validBRX - fixedLeftX;
-                  const newScaleX = parseFloat((newWidth / (2 * baseHalfW)).toFixed(3));
-                  const newCx = Math.round((fixedLeftX + validBRX) / 2);
-                  onUpdate({ scaleX: newScaleX, x: newCx });
-                }}
-              />
-            </div>
-            <div className="form-field-group" style={{ background: "var(--bg-panel)", border: "1px solid var(--border-color)", padding: "4px 8px", borderRadius: "var(--radius-sm)", justifyContent: "space-between", margin: 0 }}>
-              <span className="form-label text-green" style={{ fontSize: 9 }}>Y</span>
-              <SmartNumberInput
-                value={cy - currentHalfH}
-                step={1}
-                displayScale={positionDisplayScale}
-                precision={2}
-                onChange={(targetBRY) => {
-                  const fixedTopY = cy + currentHalfH;
-                  const validBRY = Math.min(fixedTopY, targetBRY);
-                  const newHeight = fixedTopY - validBRY;
-                  const newScaleY = parseFloat((newHeight / (2 * baseHalfH)).toFixed(3));
-                  const newCy = Math.round((fixedTopY + validBRY) / 2);
-                  onUpdate({ scaleY: newScaleY, y: -newCy });
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 };

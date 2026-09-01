@@ -1,5 +1,4 @@
 import React from 'react';
-import { Grid3x3 } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
@@ -18,7 +17,7 @@ export const StyleClonerSection: React.FC<StyleClonerSectionProps> = ({ selected
   };
 
   return (
-    <StyleCard title="CLONER" icon={<Grid3x3 size={13} />} color="#a855f7">
+    <StyleCard title="CLONER" collapsible defaultOpen={false}>
       <div className="form-field-group">
         <label className="form-label">CLONER LAYOUT MODE</label>
         <select className="select-control"

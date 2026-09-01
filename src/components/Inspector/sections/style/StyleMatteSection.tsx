@@ -1,5 +1,5 @@
 import React from 'react';
-import { Scissors, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { CharacterPart, MatteMode, PartMatte } from '../../../../types/animator';
 import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
 import type { MatteGradientStop } from '../../../../utils/matte';
@@ -227,8 +227,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   };
 
   return (
-    <StyleCard title="MASK / TRACK MATTE" icon={<Scissors size={13} />} color="#00d2ff">
-      <p className="matte-description">Control visibility using another layer. Boolean operations combine geometry instead.</p>
+    <StyleCard title="MASK / TRACK MATTE" collapsible defaultOpen={false}>
       <div className="matte-control-grid">
         <div className="matte-field">
           <label className="form-label">MASK SOURCE</label>

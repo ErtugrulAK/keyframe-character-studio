@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { CharacterPart } from '../types/animator';
 import { StyleGeometrySection } from '../components/Inspector/sections/style/StyleGeometrySection';
@@ -25,6 +25,7 @@ describe('StyleGeometrySection', () => {
     'preserves the corner-radius control for %s',
     (type) => {
       render(<StyleGeometrySection selectedPart={makePart(type)} onPartPropChange={vi.fn()} />);
+      fireEvent.click(screen.getByRole('button', { name: 'Expand GEOMETRY' }));
       expect(screen.getByText('GEOMETRY')).toBeVisible();
       expect(screen.getByText('CORNER RADIUS')).toBeVisible();
     },

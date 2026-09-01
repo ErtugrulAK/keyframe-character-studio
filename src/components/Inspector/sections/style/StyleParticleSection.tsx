@@ -1,5 +1,4 @@
 import React from 'react';
-import { Atom } from 'lucide-react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
@@ -18,7 +17,7 @@ export const StyleParticleSection: React.FC<StyleParticleSectionProps> = ({ sele
   };
 
   return (
-    <StyleCard title="PARTICLES" icon={<Atom size={13} />} color="#14b8a6">
+    <StyleCard title="PARTICLES" collapsible defaultOpen={false}>
       <div className="input-grid">
         <div className="form-field-group">
           <label className="form-label">PARTICLE COUNT</label>

@@ -613,6 +613,26 @@
   flex: 0 1 var(--inspector-control-sm);
   width: var(--inspector-control-sm);
 }
+.motion-design-right-sidebar .text-content-control,
+.motion-design-right-sidebar .text-font-family-control {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.motion-design-right-sidebar .text-font-size-field {
+  flex-wrap: nowrap;
+}
+
+.motion-design-right-sidebar .text-font-size-field > .input-control {
+  flex: 0 1 var(--inspector-control-sm);
+  width: var(--inspector-control-sm);
+}
+
+.motion-design-right-sidebar .text-animation-field > .select-control {
+  flex: 0 1 220px;
+  width: 220px;
+  max-width: 100%;
+}
 
 .motion-design-right-sidebar .input-grid {
   display: grid;
@@ -1004,6 +1024,24 @@
   gap: var(--space-2xs);
   min-width: 0;
 }
+.matte-compact-field {
+  align-items: flex-start;
+}
+
+.matte-compact-field > .select-control {
+  width: var(--inspector-control-sm);
+  max-width: 100%;
+}
+
+.matte-source-field {
+  grid-column: 1 / -1;
+}
+
+.matte-source-field > .select-control {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .matte-field > .select-control,
 .matte-field > input[type='range'] {
@@ -1021,6 +1059,77 @@
 
 .matte-span-full {
   grid-column: 1 / -1;
+}
+
+.effects-color-field {
+  min-width: 0;
+  margin-bottom: var(--space-xs);
+}
+
+.effects-color-row {
+  min-width: 0;
+}
+
+.effects-color-controls {
+  flex: 1;
+  min-width: 0;
+}
+
+.effects-clear-button {
+  flex: 0 0 auto;
+  height: 26px;
+  padding: 0 var(--space-xs);
+  font-size: var(--font-size-caption);
+}
+
+.effects-property-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.effects-property-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+  padding: var(--space-2xs);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+}
+
+.effects-property-field .param-label {
+  margin-bottom: 0;
+}
+
+.effects-property-field .input-control {
+  width: 100%;
+  min-width: 0;
+}
+
+@container (max-width: 300px) {
+  .effects-color-row {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--space-2xs);
+  }
+
+  .effects-color-controls {
+    flex: 0 0 auto;
+    width: 100%;
+  }
+
+  .effects-property-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 220px) {
+  .effects-property-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 

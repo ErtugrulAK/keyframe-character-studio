@@ -56,6 +56,21 @@ describe('StyleMatteSection — track matte editor UI', () => {
     expect(grid?.contains(mode)).toBe(true);
   });
 
+  it('keeps the layer-name source selector full-width and structurally readable', () => {
+    const longName = 'Character Matte Source With A Long Layer Name';
+    const source = makePart('src', 'custom_star', longName);
+    const target = makePart('tgt', 'custom_box', 'Box Part', { sourcePartId: 'src', mode: 'clip', enabled: true });
+    const { container } = renderMatte(target, [source, target]);
+    const sourceField = container.querySelector('.matte-source-field');
+    const select = sourceField?.querySelector('select');
+
+    expect(sourceField).toBeTruthy();
+    expect(sourceField).toHaveClass('matte-span-full');
+    expect(select).toHaveClass('select-control');
+    expect(select).toHaveValue('src');
+    expect(screen.getByRole('option', { name: longName })).toBeTruthy();
+  });
+
   it('starts with None when no matte is set', () => {
     const { container } = renderMatte(BOX, [STAR, BOX, FREEFORM, TEXT]);
     const select = container.querySelector('select') as HTMLSelectElement;
@@ -505,6 +520,32 @@ describe('StyleMatteSection — M17 gradient controls', () => {
     expect(onPartPropChange).toHaveBeenLastCalledWith('matte', {
       sourcePartId: 'src', mode: 'alpha', gradient: { angle: 180 },
     });
+  });
+
+  it('keeps the 360° endpoint displayed at the right edge until an external angle change', () => {
+    const initialTarget = target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } });
+    const { container, onPartPropChange, rerender } = renderMatte(initialTarget, [star(), initialTarget]);
+    const slider = angle(container);
+
+    fireEvent.change(slider, { target: { value: '360' } });
+
+    expect(slider).toHaveValue('360');
+    expect(angleLabel(container)).toContain('360°');
+    expect(onPartPropChange).toHaveBeenLastCalledWith('matte', {
+      sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 },
+    });
+
+    const externalTarget = target({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 45 } });
+    rerender(
+      <StyleMatteSection
+        selectedPart={externalTarget}
+        characterParts={[star(), externalTarget]}
+        onPartPropChange={onPartPropChange}
+      />,
+    );
+
+    expect(angle(container)).toHaveValue('45');
+    expect(angleLabel(container)).toContain('45°');
   });
 
   it('malformed existing angle is safely normalized for display (-10 → 350, NaN → 0)', () => {

@@ -13,6 +13,7 @@ import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { InlineRename } from '../Shared/InlineRename';
 import { compileOGrafPackage } from '../../ograf/packageCompiler';
 import { createOGrafBrowserZip } from '../../ograf/browserZip';
+import { prepareLegacyOGrafExport } from '../../ograf/legacyCompatibility';
 import type { SceneData } from '../../types/composition';
 import './HeaderBar.css';
 
@@ -81,7 +82,9 @@ export const HeaderBar: React.FC = () => {
     setIsOGrafExporting(true);
     try {
       const sceneData = JSON.parse(exportProject()) as SceneData;
-      const plan = compileOGrafPackage(sceneData);
+      const preparation = prepareLegacyOGrafExport(sceneData);
+      const prepared = preparation instanceof Promise ? await preparation : preparation;
+      const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
       const errors = plan.diagnostics.filter((diagnostic) => diagnostic.severity === 'ERROR');
       if (errors.length > 0) {
         errors.forEach((diagnostic) => {

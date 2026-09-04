@@ -121,7 +121,41 @@ function validateAsset(
     packagedPath: normalizePackagedPath(source, kind, catalogEntry?.packagedPath),
     kind,
     ...(catalogEntry?.sourcePath ? { sourcePath: catalogEntry.sourcePath } : {}),
+    ...(catalogEntry?.binaryContent ? { binaryContent: catalogEntry.binaryContent } : {}),
   };
+}
+
+function validateFont(
+  layer: SceneLayer,
+  options: OGrafExportOptions,
+  diagnostics: OGrafExportDiagnostic[],
+  assets: OGrafAssetPlan[],
+): void {
+  if (!layer.fontFamily) return;
+
+  const source = `font:${layer.fontFamily}`;
+  const entry = options.assetCatalog?.[source] || options.assetCatalog?.[layer.fontFamily];
+  const hasPortableSource = entry?.kind === 'local' && Boolean(entry.sourcePath || entry.binaryContent);
+
+  if (!hasPortableSource) {
+    diagnostics.push(diagnostic(
+      'OGRAF_FONT_UNVERIFIED',
+      options.requirePortableAssets ? 'ERROR' : 'WARNING',
+      `Font "${layer.fontFamily}" has no portable local font source. Provide assetCatalog["${source}"] with a local sourcePath or browser binaryContent.`,
+      layer,
+      'font',
+    ));
+    return;
+  }
+
+  const safeName = layer.fontFamily.toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-+|-+$/gu, '') || 'font';
+  assets.push({
+    source,
+    packagedPath: entry.packagedPath || `fonts/${safeName}.font`,
+    kind: 'font',
+    ...(entry.sourcePath ? { sourcePath: entry.sourcePath } : {}),
+    ...(entry.binaryContent ? { binaryContent: entry.binaryContent } : {}),
+  });
 }
 
 function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnostics: OGrafExportDiagnostic[], assets: OGrafAssetPlan[]): void {
@@ -148,7 +182,7 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
   }
 
   if (layer.fontFamily) {
-    diagnostics.push(diagnostic('OGRAF_FONT_UNVERIFIED', 'WARNING', `Font "${layer.fontFamily}" requires a later local font asset resolution step.`, layer, 'font'));
+    validateFont(layer, options, diagnostics, assets);
   }
 
   const matte = layer.matte;

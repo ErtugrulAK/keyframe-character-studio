@@ -38,13 +38,21 @@ function makeTrack(partId: string): Track {
   } as Track;
 }
 
-function renderStage(parts: CharacterPart[], frame = 0, tracksOverride?: Track[]) {
+function renderStage(
+  parts: CharacterPart[],
+  frame = 0,
+  tracksOverride?: Track[],
+  appMode: 'edit' | 'broadcast' = 'edit',
+  projectResolution?: { width: number; height: number },
+) {
   const tracks = tracksOverride ?? parts.map((p) => makeTrack(p.id));
   return renderToString(
     <StagePartLayers
       sortedParts={parts}
-      appMode="edit"
+      appMode={appMode}
       broadcastState={{}}
+      broadcastSessionActivated={appMode === 'broadcast'}
+      projectResolution={projectResolution}
       currentFrame={frame}
       selectedPartId={null}
       totalFrames={60}
@@ -53,7 +61,7 @@ function renderStage(parts: CharacterPart[], frame = 0, tracksOverride?: Track[]
       tracks={tracks}
       customPresets={[]}
       liveStuntsState={{}}
-    />
+    />,
   );
 }
 
@@ -65,6 +73,50 @@ describe('StagePartLayers — track matte render', () => {
 
     expect(html).toContain(`<clipPath id="${matteClipPathId('src')}"`);
     expect(html).toContain(`clip-path="url(#${matteClipPathId('src')})"`);
+  });
+
+  it('clip + inverted uses the existing alpha hole mask instead of a no-op clipPath', () => {
+    const source = makePart('src', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'clip', inverted: true });
+    const html = renderStage([source, target]);
+
+    expect(html).toContain('<mask id="kcs-mask-src-alpha-inv"');
+    expect(html).toContain('x="-660"');
+    expect(html).toContain('y="-300"');
+    expect(html).toContain('width="1920"');
+    expect(html).toContain('height="1080"');
+    expect(html).toContain('mask-type="alpha"');
+    expect(html).toContain('fill-rule="evenodd"');
+    expect(html).toContain('mask="url(#kcs-mask-src-alpha-inv)"');
+    expect(html).not.toContain('clip-path="url(#kcs-clip-src)"');
+    expect(html).not.toContain('<clipPath id="kcs-clip-src"');
+  });
+
+  it('uses the supplied project resolution center for broadcast matte output', () => {
+    const source = makePart('src', 'custom_box');
+    source.baseTransform = { x: 40, y: -20, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'src', mode: 'clip' });
+    const expected = buildMatteClipPath(
+      source,
+      source.baseTransform,
+      { x: 640, y: 360 },
+    );
+    const html = renderStage([source, target], 0, undefined, 'broadcast', { width: 1280, height: 720 });
+
+    expect(expected).not.toBeNull();
+    expect(html).toContain(`d="${expected!.pathD}"`);
+  });
+
+  it('applies explicit project coverage to Alpha and Luminance masks', () => {
+    const source = makePart('src', 'custom_box');
+    for (const mode of ['alpha', 'luminance'] as const) {
+      const target = makePart('tgt', 'custom_text', { sourcePartId: 'src', mode });
+      const html = renderStage([source, target]);
+
+      expect(html).toContain(`<mask id="kcs-mask-src-${mode}" x="-660" y="-300" width="1920" height="1080"`);
+      expect(html).toContain('maskUnits="userSpaceOnUse"');
+      expect(html).toContain('maskContentUnits="userSpaceOnUse"');
+    }
   });
 
   it('renders the matte source normally (its own <g> is present)', () => {

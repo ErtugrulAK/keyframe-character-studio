@@ -72,7 +72,16 @@ export function buildMattePath(
   }
   const geo = getShapeGeometry(sourcePart.type);
   if (!geo) return null;
-  return geometryToWorldPathD(geo, world, outputOrigin);
+  // Rectangle and box renderers apply the authored corner radius directly to
+  // the same local geometry. Reuse that value here so a rounded matte source
+  // cannot diverge from the visible source contour.
+  const resolvedGeo = (sourcePart.type === 'custom_rect' || sourcePart.type === 'custom_box')
+    && geo.kind === 'rect'
+    && typeof sourcePart.borderRadius === 'number'
+    && Number.isFinite(sourcePart.borderRadius)
+    ? { ...geo, rx: Math.max(0, Math.min(sourcePart.borderRadius, geo.width / 2, geo.height / 2)) }
+    : geo;
+  return geometryToWorldPathD(resolvedGeo, world, outputOrigin);
 }
 
 /** M15 — world-space polygon path from LOCAL freeform points. Identical math

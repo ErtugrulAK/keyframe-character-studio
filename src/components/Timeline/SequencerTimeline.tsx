@@ -608,7 +608,7 @@ export const SequencerTimeline: React.FC = () => {
           />
 
           {/* Playhead */}
-          <div className="playhead-line" style={{ left: `${currentFrame * FRAME_WIDTH}px` }}>
+          <div className="playhead-line" data-frame={currentFrame} style={{ left: `${currentFrame * FRAME_WIDTH}px` }}>
             <div className="playhead-head">
               <span className="playhead-frame-label">{currentFrame}</span>
             </div>

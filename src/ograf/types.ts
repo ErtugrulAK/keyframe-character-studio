@@ -38,8 +38,10 @@ export interface OGrafExportDiagnostic {
 export interface OGrafAssetCatalogEntry {
   kind: 'local' | 'external' | 'missing';
   packagedPath?: string;
-  /** Filesystem source used only by the Phase 2B materializer. */
+  /** Filesystem source used by Node materialization when available. */
   sourcePath?: string;
+  /** Browser-safe bytes used by the browser ZIP materializer when available. */
+  binaryContent?: Uint8Array;
 }
 
 export interface OGrafPublicTextField {
@@ -75,6 +77,11 @@ export interface OGrafExportOptions {
   allowExternalResources?: boolean;
   /** Pure caller-provided asset ownership information. No filesystem access is performed. */
   assetCatalog?: Record<string, OGrafAssetCatalogEntry>;
+  /**
+   * Package compilation requires a verified local source for every referenced
+   * font. Preview/evaluation callers keep the historical warning behavior.
+   */
+  requirePortableAssets?: boolean;
   publicTextFields?: OGrafPublicTextField[];
   publicImageFields?: OGrafPublicImageField[];
   emitRenderRequirements?: boolean;
@@ -113,6 +120,7 @@ export interface OGrafAssetPlan {
   packagedPath: string;
   kind: 'image' | 'font';
   sourcePath?: string;
+  binaryContent?: Uint8Array;
 }
 
 export interface OGrafPackagePlan {

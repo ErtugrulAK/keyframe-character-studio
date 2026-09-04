@@ -11,6 +11,7 @@ export function generateGraphicModule(
   textFields: OGrafPublicTextField[] = [],
   imageFields: OGrafPublicImageField[] = [],
   imageReferences: Record<string, string> = {},
+  fontReferences: Record<string, string> = {},
 ): string {
   const bindings = {
     text: Object.fromEntries(textFields.map((field) => [field.id, { layerId: field.layerId, property: 'textValue' }])),
@@ -20,10 +21,13 @@ export function generateGraphicModule(
   return `const SCENE = ${JSON.stringify(sceneData)};
 const PUBLIC_BINDINGS = ${JSON.stringify(bindings)};
 const IMAGE_REFERENCES = ${JSON.stringify(imageReferences)};
-
+const FONT_REFERENCES = ${JSON.stringify(fontReferences)};
 function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 function escapeXml(value) {
   return String(value).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;').split("'").join('&apos;');
+}
+function fontStyles() {
+  return Object.entries(FONT_REFERENCES).map(([family, path]) => '@font-face{font-family:' + JSON.stringify(family) + ';src:url(' + JSON.stringify(path) + ');}').join('');
 }
 function solveCubicBezier(x1, y1, x2, y2, input) {
   if (input <= 0) return 0;
@@ -191,7 +195,7 @@ function renderScene(scene, frame, imageReferences) {
     const matte = layer.matte; const clip = matte && (matte.mode || 'clip') === 'clip' ? ' clip-path="url(#kcs-clip-' + escapeXml(matte.sourcePartId) + ')"' : '';
     return '<g data-layer-id="' + escapeXml(layer.id) + '" data-z-index="' + layer.zIndex + '" transform="' + layerTransform(scene, layer) + '" opacity="' + layer.opacity + '"' + clip + '>' + body + '</g>';
   }).join('');
-  return '<svg xmlns="http://www.w3.org/2000/svg" width="' + scene.width + '" height="' + scene.height + '" viewBox="0 0 ' + scene.width + ' ' + scene.height + '"><defs>' + defs + '</defs>' + markup + '</svg>';
+  return '<svg xmlns="http://www.w3.org/2000/svg" width="' + scene.width + '" height="' + scene.height + '" viewBox="0 0 ' + scene.width + ' ' + scene.height + '"><style>' + fontStyles() + '</style><defs>' + defs + '</defs>' + markup + '</svg>';
 }
 
 export default class Graphic extends HTMLElement {

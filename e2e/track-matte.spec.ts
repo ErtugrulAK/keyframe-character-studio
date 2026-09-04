@@ -113,6 +113,38 @@ async function pixelAt(page: Page, worldX: number, worldY: number): Promise<Colo
   return classify(png.data[i], png.data[i + 1], png.data[i + 2]);
 }
 
+async function maxGreenInWorldRect(page: Page, x0: number, x1: number, y0: number, y1: number): Promise<number> {
+  const buf = await page.screenshot();
+  const png = decodePng(buf);
+  const bounds = await page.evaluate(([a, b, c, d]: [number, number, number, number]) => {
+    const svg = [...document.querySelectorAll('svg')].find(
+      (candidate) => !!candidate.querySelector('#artboard-clip')
+    ) ?? document.querySelector('svg')!;
+    const ctm = svg.getScreenCTM()!;
+    const points = [
+      [a, c], [b, c], [a, d], [b, d],
+    ].map(([x, y]) => {
+      const point = svg.createSVGPoint();
+      point.x = x;
+      point.y = y;
+      return point.matrixTransform(ctm);
+    });
+    return {
+      left: Math.max(0, Math.floor(Math.min(...points.map((point) => point.x)))),
+      right: Math.min(innerWidth - 1, Math.ceil(Math.max(...points.map((point) => point.x)))),
+      top: Math.max(0, Math.floor(Math.min(...points.map((point) => point.y)))),
+      bottom: Math.min(innerHeight - 1, Math.ceil(Math.max(...points.map((point) => point.y)))),
+    };
+  }, [x0, x1, y0, y1]);
+  let max = 0;
+  for (let y = bounds.top; y <= bounds.bottom; y += 1) {
+    for (let x = bounds.left; x <= bounds.right; x += 1) {
+      max = Math.max(max, png.data[(y * png.width + x) * png.bpp + 1]);
+    }
+  }
+  return max;
+}
+
 function makeLayer(id: string, name: string, type: string, overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     id, name, type,
@@ -361,6 +393,161 @@ test.describe('M13 track matte — real browser COMPOSITING (pixel assertions)',
     await seed(page, [source, target]);
     expect(await pixelAt(page, 310, 240)).toBe('green'); // box region shows target
     expect(await pixelAt(page, 350, 240)).toBe('dark');  // ring clipped away
+  });
+
+  test('V-A2 — clip + inverted uses a binary alpha hole and updates the target', async ({ page }) => {
+    const source = makeLayer('src', 'Source', 'custom_box', { zIndex: 1, fillColor: '#ff0000' });
+    const target = makeLayer('tgt', 'Target', 'custom_circle', {
+      zIndex: 2,
+      fillColor: '#00ff00',
+      scaleX: 2,
+      scaleY: 2,
+      matte: { sourcePartId: 'src', mode: 'clip', inverted: true },
+    });
+    await seed(page, [source, target]);
+
+    const dom = await matteDom(page);
+    const mask = dom.masks.find((candidate) => candidate.id === 'kcs-mask-src-alpha-inv');
+    expect(mask).toBeTruthy();
+    expect(mask!.type).toBe('alpha');
+    expect(mask!.children).toHaveLength(1);
+    expect(mask!.children[0].tag.toLowerCase()).toBe('path');
+    expect(dom.clips).toHaveLength(0);
+    expect(dom.layers.some((layer) => layer.mask === 'url(#kcs-mask-src-alpha-inv)')).toBe(true);
+
+    expect(await pixelAt(page, 310, 240)).toBe('red'); // source contour is the inverse hole
+    expect(await pixelAt(page, 350, 240)).toBe('green'); // target ring remains visible
+  });
+
+  test('V-A3 — Clip inverted keeps an off-target Text fully visible', async ({ page }) => {
+    const source = makeLayer('src', 'Rectangle Source', 'custom_rect', {
+      zIndex: 1,
+      x: -400,
+      fillColor: '#ffffff',
+    });
+    const target = makeLayer('tgt', 'NEW TEXT', 'custom_text', {
+      zIndex: 2,
+      fillColor: '#00ff00',
+      textValue: 'NEW TEXT',
+      fontSize: 120,
+      fontFamily: 'Arial',
+      fontWeight: '700',
+      matte: { sourcePartId: 'src', mode: 'clip', inverted: true },
+    });
+    await seed(page, [source, target]);
+
+    const mask = await page.locator('mask[id="kcs-mask-src-alpha-inv"]').evaluate((node) => ({
+      x: node.getAttribute('x'),
+      y: node.getAttribute('y'),
+      width: node.getAttribute('width'),
+      height: node.getAttribute('height'),
+      units: node.getAttribute('maskUnits'),
+      contentUnits: node.getAttribute('maskContentUnits'),
+    }));
+    expect(mask).toEqual({
+      x: '-660',
+      y: '-300',
+      width: '1920',
+      height: '1080',
+      units: 'userSpaceOnUse',
+      contentUnits: 'userSpaceOnUse',
+    });
+    expect(await maxGreenInWorldRect(page, 80, 250, 120, 280)).toBeGreaterThan(110);
+    expect(await maxGreenInWorldRect(page, 350, 570, 120, 280)).toBeGreaterThan(110);
+  });
+
+  test('V-A4 — Clip inverted keeps both outside regions around a partial source overlap', async ({ page }) => {
+    const source = makeLayer('src', 'Rectangle Source', 'custom_rect', {
+      zIndex: 1,
+      x: 100,
+      fillColor: '#ffffff',
+    });
+    const target = makeLayer('tgt', 'NEW TEXT', 'custom_text', {
+      zIndex: 2,
+      fillColor: '#00ff00',
+      textValue: 'NEW TEXT',
+      fontSize: 120,
+      fontFamily: 'Arial',
+      fontWeight: '700',
+      matte: { sourcePartId: 'src', mode: 'clip', inverted: true },
+    });
+    await seed(page, [source, target]);
+
+    const maskPath = await page.locator('mask[id="kcs-mask-src-alpha-inv"] path').getAttribute('d');
+    expect(maskPath).toContain('M 340 210 L 460 210 L 460 270 L 340 270 Z');
+    expect(await maxGreenInWorldRect(page, 80, 280, 120, 280)).toBeGreaterThan(110);
+    expect(await maxGreenInWorldRect(page, 500, 580, 120, 280)).toBeGreaterThan(110);
+  });
+
+  test('V-B3 — Alpha and Luminance use the same explicit project coverage with partial source overlap', async ({ page }) => {
+    for (const mode of ['alpha', 'luminance'] as const) {
+      const source = makeLayer('src', 'Rectangle Source', 'custom_rect', {
+        zIndex: 1,
+        x: -100,
+        fillColor: '#ffffff',
+      });
+      const target = makeLayer('tgt', 'NEW TEXT', 'custom_text', {
+        zIndex: 2,
+        fillColor: '#00ff00',
+        textValue: 'NEW TEXT',
+        fontSize: 120,
+        fontFamily: 'Arial',
+        fontWeight: '700',
+        matte: { sourcePartId: 'src', mode },
+      });
+      await seed(page, [source, target]);
+
+      const mask = await page.locator(`mask[id="kcs-mask-src-${mode}"]`).evaluate((node) => ({
+        x: node.getAttribute('x'),
+        y: node.getAttribute('y'),
+        width: node.getAttribute('width'),
+        height: node.getAttribute('height'),
+        units: node.getAttribute('maskUnits'),
+        contentUnits: node.getAttribute('maskContentUnits'),
+      }));
+      expect(mask).toEqual({
+        x: '-660',
+        y: '-300',
+        width: '1920',
+        height: '1080',
+        units: 'userSpaceOnUse',
+        contentUnits: 'userSpaceOnUse',
+      });
+      expect(await maxGreenInWorldRect(page, 140, 260, 120, 280)).toBeGreaterThan(110);
+      expect(await maxGreenInWorldRect(page, 350, 570, 120, 280)).toBeLessThan(70);
+    }
+  });
+
+  test('V-B2 — alpha matte keeps source world geometry with a transformed Text target', async ({ page }) => {
+    const source = makeLayer('src', 'Source', 'custom_rect', {
+      zIndex: 1,
+      x: -90,
+      scaleX: 1.5,
+      scaleY: 1.2,
+    });
+    const target = makeLayer('tgt', 'Target', 'custom_text', {
+      zIndex: 2,
+      x: 30,
+      y: 10,
+      scaleX: 1.25,
+      rotation: -10,
+      textValue: 'NEW TEXT',
+      fontSize: 48,
+      fillColor: '#00ff00',
+      matte: { sourcePartId: 'src', mode: 'alpha' },
+    });
+    await seed(page, [source, target]);
+
+    const mask = (await matteDom(page)).masks.find((candidate) => candidate.id === 'kcs-mask-src-alpha');
+    expect(mask).toBeTruthy();
+    expect(mask!.children[0].d).toBe('M 120 204 L 300 204 L 300 276 L 120 276 Z');
+
+    const targetLayer = await page.locator('g[data-part-id="tgt"]').evaluate((node) => ({
+      mask: node.getAttribute('mask'),
+      transform: node.querySelector(':scope > g')?.getAttribute('transform'),
+    }));
+    expect(targetLayer.mask).toBe('url(#kcs-mask-src-alpha)');
+    expect(targetLayer.transform).toBe('translate(330, 250) rotate(-10) scale(1.25, 1)');
   });
 
   test('V-B — alpha + target transform (scale 2)', async ({ page }) => {
@@ -1077,6 +1264,32 @@ test.describe('M17 gradient matte — real browser pixel assertions', () => {
     expect(await page.evaluate(() => document.querySelectorAll('linearGradient[id="kcs-mg-src-90-alpha"]').length)).toBe(1);
     expect(await page.evaluate(() => document.querySelectorAll('mask[id="kcs-mask-src-alpha-g45"]').length)).toBe(1);
     expect(await page.evaluate(() => document.querySelectorAll('[mask="url(#kcs-mask-src-alpha-g45)"]').length)).toBe(2); // shared by 2 targets
+  });
+
+  test('V-G13 — angle endpoint keeps the active UI at 360° while authored data stays normalized', async ({ page }) => {
+    const sourcePart = source();
+    const targetPart = greenTarget({ sourcePartId: 'src', mode: 'alpha', gradient: { angle: 0 } });
+    await seed(page, [sourcePart, targetPart]);
+
+    await page.getByRole('treeitem', { name: /^Target/ }).click();
+    await page.getByRole('button', { name: 'Expand MASK / TRACK MATTE' }).click();
+    const angle = page.locator('input[aria-label="Gradient angle"]');
+    await angle.focus();
+    await angle.press('End');
+    await expect.poll(async () => page.evaluate(() => {
+      const raw = localStorage.getItem('SEQUENCER_STUDIO_PRO_V5');
+      if (!raw) return undefined;
+      const parsed: unknown = JSON.parse(raw);
+      if (!parsed || typeof parsed !== 'object' || !('layers' in parsed) || !Array.isArray(parsed.layers)) return undefined;
+      const layer = parsed.layers.find((candidate) =>
+        candidate && typeof candidate === 'object' && 'id' in candidate && candidate.id === 'tgt'
+      );
+      if (!layer || typeof layer !== 'object' || !('matte' in layer) || !layer.matte || typeof layer.matte !== 'object') return undefined;
+      if (!('gradient' in layer.matte) || !layer.matte.gradient || typeof layer.matte.gradient !== 'object') return undefined;
+      return 'angle' in layer.matte.gradient && typeof layer.matte.gradient.angle === 'number'
+        ? layer.matte.gradient.angle
+        : undefined;
+    })).toBe(0);
   });
 });
 

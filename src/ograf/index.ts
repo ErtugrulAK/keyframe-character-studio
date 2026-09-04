@@ -6,3 +6,4 @@ export * from './svgRenderer';
 export * from './packageCompiler';
 export * from './packageWriter';
 export * from './browserZip';
+export * from './legacyCompatibility';

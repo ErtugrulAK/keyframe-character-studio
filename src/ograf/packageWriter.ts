@@ -25,8 +25,8 @@ export async function materializeOGrafPackage(plan: OGrafGeneratedPackage, outpu
     await mkdir(dirname(target), { recursive: true });
     if (file.kind === 'asset') {
       const asset = plan.assets.find((candidate) => candidate.packagedPath === file.path);
-      if (!asset?.sourcePath) throw new Error(`Missing source path for packaged asset: ${file.path}`);
-      const binaryContent = await readFile(asset.sourcePath);
+      if (!asset?.sourcePath && !asset?.binaryContent) throw new Error(`Missing local source or browser bytes for packaged asset: ${file.path}`);
+      const binaryContent = asset.binaryContent || await readFile(asset.sourcePath as string);
       await writeFile(target, binaryContent);
       materializedFiles.push({ ...file, status: 'generated', binaryContent });
     } else {

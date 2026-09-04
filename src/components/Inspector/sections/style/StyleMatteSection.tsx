@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { CharacterPart, MatteMode, PartMatte } from '../../../../types/animator';
 import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
@@ -22,6 +22,11 @@ const selectStyle: React.CSSProperties = {
   fontWeight: 700,
   padding: '0 6px',
 };
+const compactSelectStyle: React.CSSProperties = {
+  ...selectStyle,
+  width: 'var(--inspector-control-sm)',
+  maxWidth: '100%',
+};
 
 /**
  * M11 Step 3 — Track Matte editor UI.
@@ -40,6 +45,29 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   onPartPropChange,
 }) => {
   const matte = selectedPart.matte;
+  const authoredAngle = normalizeGradientAngle(matte?.gradient?.angle) ?? 0;
+  const angleSourceKey = `${selectedPart.id}:${String(matte?.gradient?.angle)}`;
+  const [angleDisplay, setAngleDisplay] = useState<number | null>(null);
+  const pendingAngleUpdate = useRef<{ partId: string; value: number } | null>(null);
+  const previousAngleSourceKey = useRef(angleSourceKey);
+
+  // Keep the 360° endpoint visible while the normalized authored value is
+  // transiently 0. External part/project changes still clear this local-only
+  // display so the matte object remains the sole persisted authority.
+  useEffect(() => {
+    if (angleSourceKey === previousAngleSourceKey.current) return;
+    previousAngleSourceKey.current = angleSourceKey;
+    if (
+      pendingAngleUpdate.current
+      && pendingAngleUpdate.current.partId === selectedPart.id
+      && pendingAngleUpdate.current.value === authoredAngle
+    ) {
+      pendingAngleUpdate.current = null;
+      return;
+    }
+    pendingAngleUpdate.current = null;
+    setAngleDisplay(null);
+  }, [angleSourceKey, authoredAngle, selectedPart.id]);
 
   // M15 3D: eligible = static shape geometry OR custom_freeform (points-based).
   // Self-reference still excluded. Text/image/video stay ineligible.
@@ -110,12 +138,13 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     setMatte({ ...matte, strength: value });
   };
 
-  // M17 gradient: matte.gradient is the ONLY source of truth (no local state).
-  // Toggle OFF → gradient: undefined; ON → fresh { angle: 0 } (the angle is
-  // stored ON the gradient object, so re-enabling starts at 0 — no local
-  // memory by design).
+  // M17 gradient: matte.gradient remains the ONLY persisted source of truth.
+  // The local endpoint display is transient and exists solely to keep 360°
+  // visually at the right edge while the callback normalizes it to 0.
   const onToggleGradient = () => {
     if (!matte) return;
+    pendingAngleUpdate.current = null;
+    setAngleDisplay(null);
     if (matte.gradient) {
       setMatte({ ...matte, gradient: undefined });
     } else {
@@ -125,9 +154,13 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
 
   const onChangeGradientAngle = (value: number) => {
     if (!matte) return;
-    // Preserve every other matte field — only the angle changes; the slider
-    // writes the NORMALIZED angle (360 ≡ 0) via the shared pure helper.
-    setMatte({ ...matte, gradient: { ...matte.gradient, angle: normalizeGradientAngle(value) ?? 0 } });
+    const nextAngle = Math.max(0, Math.min(360, value));
+    const normalizedAngle = normalizeGradientAngle(nextAngle) ?? 0;
+    pendingAngleUpdate.current = { partId: selectedPart.id, value: normalizedAngle };
+    setAngleDisplay(nextAngle);
+    // Preserve every other matte field — only the angle changes; the
+    // serialized value keeps the existing normalized 360° ≡ 0° semantics.
+    setMatte({ ...matte, gradient: { ...matte.gradient, angle: normalizedAngle } });
   };
 
   // M20 — gradient TYPE (linear | radial) is derived from matte.gradient via
@@ -170,11 +203,11 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   // Same clip-mode rule: clipPath cannot express opacity → disabled in Clip.
   const strengthValue = Math.round(normalizeStrength(matte?.strength) * 100);
   const strengthDisabled = modeValue === 'clip';
-  // M17 gradient: matte.gradient is the ONLY source of truth. Displayed angle
-  // is the normalized value (undefined/absent → 0 for the control readout).
+  // M17 gradient: the persisted angle is normalized for render/serialization
+  // compatibility; `angleDisplay` is a transient endpoint-preserving overlay.
   const gradientEnabled = matte?.gradient !== undefined;
   const gradientDisabled = modeValue === 'clip';
-  const angleValue = Math.round(normalizeGradientAngle(matte?.gradient?.angle) ?? 0);
+  const angleValue = Math.round(angleDisplay ?? authoredAngle);
 
   // ─── M19: multi-stop gradient editor — static paint data ─────────────────
   // The displayed stop list is ALWAYS the 5B-normalized form (legacy {angle}
@@ -229,7 +262,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   return (
     <StyleCard title="MASK / TRACK MATTE" collapsible defaultOpen={false}>
       <div className="matte-control-grid">
-        <div className="matte-field">
+        <div className="matte-field matte-source-field matte-span-full">
           <label className="form-label">MASK SOURCE</label>
           <select className="select-control" style={selectStyle} value={selectValue} onChange={(e) => onSelectSource(e.target.value)}>
             <option value="">None</option>
@@ -246,14 +279,13 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             Missing source ({matte!.sourcePartId}) — clip not applied
           </div>
         )}
-
         {matte && !sourceMissing && (
           <>
-            <div className="matte-field">
+            <div className="matte-field matte-compact-field">
               <label className="form-label">MODE</label>
               <select
                 className="select-control"
-                style={selectStyle}
+                style={compactSelectStyle}
                 value={modeValue}
                 onChange={(e) => onChangeMode(e.target.value as MatteMode)}
               >
@@ -330,12 +362,12 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
             </div>
 
             {gradientEnabled && (
-              <div className="matte-field">
+              <div className="matte-field matte-compact-field">
                 <label className="form-label">TYPE</label>
                 <select
                   className="select-control"
                   aria-label="Gradient type"
-                  style={selectStyle}
+                  style={compactSelectStyle}
                   value={gradientTypeValue}
                   disabled={gradientDisabled}
                   onChange={(e) => onChangeGradientType(e.target.value)}

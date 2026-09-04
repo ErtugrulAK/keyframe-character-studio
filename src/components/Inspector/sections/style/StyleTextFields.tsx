@@ -60,10 +60,10 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
 
       {/* Standard Text Input Control if object is Text or Banner */}
       {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner') && (
-        <div className="form-field-group">
+        <div className="form-field-group text-content-field">
           <label className="form-label">TEXT CONTENT</label>
-          <input className="input-control"
-              type="text"
+          <input className="input-control text-content-control"
+            type="text"
             value={selectedPart.textValue || ''}
             placeholder="Enter text..."
             onFocus={(e) => e.target.select()}
@@ -74,9 +74,9 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
 
       {(selectedPart.type === 'custom_text' || selectedPart.type === 'custom_banner' || selectedPart.type === 'custom_card') && (
         <>
-          <div className="form-field-group">
+          <div className="form-field-group text-font-family-field">
             <label className="form-label">FONT FAMILY</label>
-            <select className="select-control"
+            <select className="select-control text-font-family-control"
               value={selectedPart.fontFamily || 'Outfit'}
               onChange={(e) => onPartPropChange('fontFamily', e.target.value)}
             >
@@ -90,7 +90,7 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
             </select>
           </div>
 
-          <div className="form-field-group">
+          <div className="form-field-group text-font-size-field">
             <label className="form-label">FONT SIZE (PX)</label>
             <SmartNumberInput
               value={selectedPart.fontSize ?? 20}
@@ -100,8 +100,9 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
             />
           </div>
 
+
           {/* STAGGERED TEXT ANIMATION */}
-          <div className="form-field-group">
+          <div className="form-field-group text-animation-field">
             <label className="form-label">STAGGERED TEXT ANIMATION</label>
             <select className="select-control"
               value={selectedPart.textAnimMode || 'none'}

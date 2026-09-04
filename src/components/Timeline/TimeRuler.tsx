@@ -23,7 +23,7 @@ export const TimeRuler: React.FC<TimeRulerProps> = ({ frameNumbers, frameWidth, 
         const isTen = frame % 10 === 0;
         const isFive = frame % 5 === 0;
         return (
-          <div key={frame} className={`ruler-mark ${isTen ? 'ten' : isFive ? 'major' : 'minor'}`} style={{ left: `${frame * frameWidth}px` }}>
+          <div key={frame} data-frame={frame} className={`ruler-mark ${isTen ? 'ten' : isFive ? 'major' : 'minor'}`} style={{ left: `${frame * frameWidth}px` }}>
             {isLabel && <span className="ruler-label">{frame}</span>}
           </div>
         );

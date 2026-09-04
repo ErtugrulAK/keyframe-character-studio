@@ -216,10 +216,23 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     const mode = resolveMatteMode(layer.matte);
 
     if (mode === 'clip') {
-      const clipId = matteClipPathId(source.id);
-      if (matteClips.has(clipId)) continue; // already built for this source (1 source → N targets)
-      const clip = buildMatteClipPath(source, sourceEl.transform, outputOrigin);
-      if (clip) matteClips.set(clip.id, clip);
+      if (layer.matte.inverted === true) {
+        // clipPath cannot represent a negative area. Preserve Clip's binary
+        // geometry semantics by using the existing alpha evenodd-hole mask
+        // structure, without enabling feather/strength/gradient parameters.
+        const pathD = buildMattePath(source, sourceEl.transform, outputOrigin);
+        if (pathD) {
+          const maskId = matteMaskId(source.id, 'alpha', true);
+          if (!matteMasks.has(maskId)) {
+            matteMasks.set(maskId, buildMatteMaskFromPath(source.id, pathD, 'alpha', true, '#ffffff'));
+          }
+        }
+      } else {
+        const clipId = matteClipPathId(source.id);
+        if (matteClips.has(clipId)) continue; // already built for this source (1 source → N targets)
+        const clip = buildMatteClipPath(source, sourceEl.transform, outputOrigin);
+        if (clip) matteClips.set(clip.id, clip);
+      }
       continue;
     }
 
@@ -383,6 +396,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     if (!sortedParts.some((p) => p.id === part.matte!.sourcePartId)) return {};
     const mode = resolveMatteMode(part.matte);
     if (mode === 'clip') {
+      if (part.matte.inverted === true) {
+        const id = matteMaskId(part.matte.sourcePartId, 'alpha', true);
+        return matteMasks.has(id) ? { maskId: id } : {};
+      }
       const id = matteClipPathId(part.matte.sourcePartId);
       return matteClips.has(id) ? { clipId: id } : {};
     }
@@ -396,9 +413,11 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     return matteMasks.has(id) ? { maskId: id } : {};
   };
 
-  // Inverted masks need an explicit full-artboard region (default mask bbox
-  // would leave the outer area unmasked). Same computation as StageCanvas's
-  // artboard-clip: outputOrigin ± projectResolution / 2. No pan/zoom.
+  // Every userSpaceOnUse mask gets the same explicit project/stage coverage
+  // region. SVG's implicit percentage mask region is viewport-relative and
+  // can impose an unrelated rectangular cutoff on otherwise valid target
+  // content. The region is derived from the active output origin and project
+  // resolution, never from target or selection bounds.
   const region = {
     x: outputOrigin.x - (projectResolution?.width ?? 1920) / 2,
     y: outputOrigin.y - (projectResolution?.height ?? 1080) / 2,
@@ -407,9 +426,9 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   };
 
   // M14 feather: deterministic filter id derived from the mask id (which
-  // already encodes source + mode + inverted + feather). Wide explicit
-  // userSpaceOnUse region = artboard bounds inflated by the feather, so the
-  // Gaussian blur is never clipped (spike-verified: tight regions cut it).
+  // already encodes source + mode + inverted + feather). The filter region
+  // remains broad; the explicit mask region above prevents default mask
+  // coverage from clipping the softened edge.
   const featherFilterId = (maskId: string) => `kcs-matte-feather-${maskId.slice('kcs-mask-'.length)}`;
   const featherUrl = (mask: MatteMask): string | undefined =>
     (mask.feather ?? 0) > 0 ? `url(#${featherFilterId(mask.id)})` : undefined;
@@ -533,6 +552,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
           <mask
             key={c.id}
             id={c.id}
+            x={region.x}
+            y={region.y}
+            width={region.width}
+            height={region.height}
             maskUnits="userSpaceOnUse"
             maskContentUnits="userSpaceOnUse"
             mask-type="alpha"
@@ -554,6 +577,10 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
           <mask
             key={mask.id}
             id={mask.id}
+            x={region.x}
+            y={region.y}
+            width={region.width}
+            height={region.height}
             maskUnits="userSpaceOnUse"
             maskContentUnits="userSpaceOnUse"
             // M18/M21 — inverted TEXT/IMAGE always render the luminance

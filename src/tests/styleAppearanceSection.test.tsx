@@ -15,9 +15,9 @@ const openAppearance = (selectedPart: CharacterPart, onPartPropChange: PartChang
   return utils;
 };
 
-const openLegacyColor = (selectedPart: CharacterPart, onPartColorChange: ColorChange, onPartPropChange: PartChange) => {
+const openModernTextColor = (selectedPart: CharacterPart, onPartColorChange: ColorChange, onPartPropChange: PartChange) => {
   const utils = render(<StyleColorSection selectedPart={selectedPart} onPartColorChange={onPartColorChange} onPartPropChange={onPartPropChange} />);
-  fireEvent.click(utils.getByRole('button', { name: 'Expand COLOR' }));
+  fireEvent.click(utils.getByRole('button', { name: 'Expand APPEARANCE' }));
   return utils;
 };
 
@@ -123,15 +123,17 @@ describe('StyleAppearanceSection', () => {
     expect(onChange).toHaveBeenCalledWith('strokeAlignment', 'inside');
   });
 
-  it('keeps excluded color-bearing types on the inline RGBA editor', () => {
+  it('uses the modern inline Appearance language for non-shape color-bearing types', () => {
     const onColorChange = vi.fn();
     const onPropChange = vi.fn();
-    const { container } = openLegacyColor(makePart('custom_banner'), onColorChange, onPropChange);
+    const { container } = openModernTextColor(makePart('custom_banner'), onColorChange, onPropChange);
 
-    expect(screen.getByText('COLOR')).toBeTruthy();
+    expect(screen.getByText('APPEARANCE')).toBeTruthy();
+    expect(screen.getByText('FILL')).toBeTruthy();
+    expect(screen.getByText('STROKE')).toBeTruthy();
     expect(screen.getByLabelText('FILL COLOR A')).toBeTruthy();
-    expect(screen.queryByText('FILL ALPHA')).toBeNull();
-    expect(screen.queryByText('APPEARANCE')).toBeNull();
+    expect(screen.queryByText('QUICK PALETTE SWATCHES')).toBeNull();
+    expect(screen.queryByText('COLOR')).toBeNull();
     expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
     expect(screen.queryByRole('dialog')).toBeNull();
   });

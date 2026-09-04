@@ -12,37 +12,37 @@ interface StyleEffectsSectionProps {
 export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({ selectedPart, onPartPropChange }) => {
   return (
     <StyleCard title="EFFECTS" collapsible defaultOpen={false}>
-      {/* DROP SHADOW / GLOW CONTROLS */}
-      <div className="form-field-group" style={{ marginBottom: 8 }}>
-        <label className="form-label">SHADOW / GLOW COLOR</label>
-        <div className="color-picker-compact">
-          <input
-            type="color"
-            className="color-swatch-input"
-            value={selectedPart.shadowColor || '#000000'}
-            onChange={(e) => onPartPropChange('shadowColor', e.target.value)}
-          />
-          <SmartHexInput
-            value={selectedPart.shadowColor || ''}
-            fallback="#000000"
-            placeholder="NONE"
-            onChange={(val) => onPartPropChange('shadowColor', val)}
-          />
-          <button
-            type="button"
-            className="btn-secondary"
-            style={{ padding: '2px 8px', fontSize: 10, height: 32, whiteSpace: 'nowrap' }}
-            onClick={() => onPartPropChange('shadowColor', undefined)}
-          >
-            Clear Shadow
-          </button>
+      <div className="effects-color-field">
+        <div className="form-field-group effects-color-row">
+          <label className="form-label">SHADOW / GLOW COLOR</label>
+          <div className="color-picker-compact effects-color-controls">
+            <input
+              type="color"
+              className="color-swatch-input"
+              value={selectedPart.shadowColor || '#000000'}
+              onChange={(e) => onPartPropChange('shadowColor', e.target.value)}
+            />
+            <SmartHexInput
+              value={selectedPart.shadowColor || ''}
+              fallback="#000000"
+              placeholder="NONE"
+              onChange={(val) => onPartPropChange('shadowColor', val)}
+            />
+            <button
+              type="button"
+              className="btn-secondary effects-clear-button"
+              onClick={() => onPartPropChange('shadowColor', undefined)}
+            >
+              Clear Shadow
+            </button>
+          </div>
         </div>
       </div>
 
       {selectedPart.shadowColor && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 8 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '6px 8px', borderRadius: 'var(--radius-sm)' }}>
-            <span className="param-label" style={{ fontSize: 9 }}>BLUR RADIUS</span>
+        <div className="effects-property-grid">
+          <div className="effects-property-field">
+            <span className="param-label">BLUR RADIUS</span>
             <SmartNumberInput
               value={selectedPart.shadowBlur ?? 8}
               min={0}
@@ -50,8 +50,8 @@ export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({ select
               onChange={(val) => onPartPropChange('shadowBlur', val)}
             />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '6px 8px', borderRadius: 'var(--radius-sm)' }}>
-            <span className="param-label" style={{ fontSize: 9 }}>OFFSET X</span>
+          <div className="effects-property-field">
+            <span className="param-label">OFFSET X</span>
             <SmartNumberInput
               value={selectedPart.shadowOffsetX ?? 0}
               min={-50}
@@ -59,8 +59,8 @@ export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({ select
               onChange={(val) => onPartPropChange('shadowOffsetX', val)}
             />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, background: 'var(--bg-panel)', border: '1px solid var(--border-color)', padding: '6px 8px', borderRadius: 'var(--radius-sm)' }}>
-            <span className="param-label" style={{ fontSize: 9 }}>OFFSET Y</span>
+          <div className="effects-property-field">
+            <span className="param-label">OFFSET Y</span>
             <SmartNumberInput
               value={selectedPart.shadowOffsetY ?? 4}
               min={-50}

@@ -2,8 +2,14 @@ import type { CharacterPart, Transform } from '../types/animator';
 import { getShapeGeometry } from './shapeGeometry';
 import { resolveShapeAppearance } from './shapeAppearance';
 
-export const getTextMetrics = (text: string, fontSize: number, fontFamily?: string): { halfW: number; halfH: number } => {
-  if (!text) return { halfW: 20, halfH: 12 };
+type TextMetrics = {
+  halfW: number;
+  halfH: number;
+  offsetY: number;
+};
+
+const TEXT_METRICS_FALLBACK = (text: string, fontSize: number, fontFamily?: string): TextMetrics => {
+  if (!text) return { halfW: 20, halfH: 12, offsetY: 0 };
 
   let fontMultiplier = 0.48;
   const family = (fontFamily || '').toLowerCase();
@@ -34,10 +40,39 @@ export const getTextMetrics = (text: string, fontSize: number, fontFamily?: stri
     }
   }
 
-  const halfW = Math.max(20, (totalWidth + 24) / 2);
-  const halfH = Math.max(14, (fontSize * 0.9 + 12) / 2);
+  return {
+    halfW: Math.max(20, (totalWidth + 24) / 2),
+    halfH: Math.max(14, (fontSize * 0.9 + 12) / 2),
+    offsetY: -(fontSize * 0.35),
+  };
+};
 
-  return { halfW, halfH };
+/**
+ * Match the normal SVG text renderer's baseline contract. Browser Canvas
+ * metrics provide the actual advance width for the active font; the fallback
+ * preserves deterministic geometry in non-browser test environments.
+ */
+export const getTextMetrics = (text: string, fontSize: number, fontFamily?: string): TextMetrics => {
+  const fallback = TEXT_METRICS_FALLBACK(text, fontSize, fontFamily);
+  if (typeof document === 'undefined') return fallback;
+
+  try {
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d');
+    if (!context) return fallback;
+
+    context.font = `bold ${fontSize}px ${fontFamily || 'Outfit'}`;
+    const measured = context.measureText(text || 'TEXT');
+    if (!Number.isFinite(measured.width) || measured.width <= 0) return fallback;
+
+    return {
+      halfW: measured.width / 2,
+      halfH: fontSize * 0.561,
+      offsetY: -(fontSize * 0.346),
+    };
+  } catch {
+    return fallback;
+  }
 };
 
 /**
@@ -137,8 +172,8 @@ export const getPartLocalBounds = (
       case 'title': {
         const metrics = getTextMetrics(part.textValue || part.name || 'TEXT', part.fontSize || 24, part.fontFamily);
         bounds = boundsFromPoints([
-          { x: -metrics.halfW, y: -metrics.halfH },
-          { x: metrics.halfW, y: metrics.halfH },
+          { x: -metrics.halfW, y: metrics.offsetY - metrics.halfH },
+          { x: metrics.halfW, y: metrics.offsetY + metrics.halfH },
         ]);
         break;
       }
@@ -187,6 +222,7 @@ export const getPartLocalBounds = (
   }
   return resolved;
 };
+
 
 /**
  * Legacy symmetric extents API. Existing scaling and hit-test callers keep

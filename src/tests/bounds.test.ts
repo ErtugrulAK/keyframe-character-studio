@@ -78,6 +78,19 @@ describe('precise geometry bounds', () => {
     expect(star).toMatchObject({ minY: -35, maxY: 30, offsetY: -2.5 });
   });
 
+  it('keeps Text selection bounds centered on the renderer baseline box', () => {
+    const bounds = getPartLocalBounds(makePart('custom_text', {
+      textValue: 'NEW TEXT',
+      fontSize: 120,
+      fontFamily: 'Arial',
+    }));
+
+    expect(bounds.offsetX).toBe(0);
+    expect(bounds.offsetY).toBeCloseTo(-42);
+    expect(bounds.minY).toBeLessThan(-90);
+    expect(bounds.maxY).toBeGreaterThan(-1);
+  });
+
   it('uses all Boolean contours for local bounds', () => {
     const bounds = getPartLocalBounds(makePart('custom_freeform', {
       points: [{ x: -10, y: -10 }, { x: 10, y: 10 }],

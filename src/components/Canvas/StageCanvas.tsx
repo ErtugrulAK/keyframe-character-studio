@@ -862,6 +862,7 @@ export const StageCanvas: React.FC = () => {
                 customPresets={customPresets}
                 liveStuntsState={liveStuntsState}
                 onStartTranslateDrag={startTranslateDragForPart}
+                projectResolution={projectResolution}
               />
 
               {/* Freeform Drawing Preview (active draw tool) */}

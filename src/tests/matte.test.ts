@@ -68,6 +68,14 @@ describe('matte — world-space path (TEST A: static)', () => {
     expect(clip!.pathD).toContain(`L ${cx - 30} ${cy + 30}`);
     expect(clip!.pathD.endsWith(' Z')).toBe(true);
   });
+
+  it('uses the authored Rectangle border radius in the matte contour', () => {
+    const source = makeSourcePart('custom_rect', { borderRadius: 20 } as Partial<CharacterPart>);
+    const clip = buildMatteClipPath(source, { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 });
+
+    expect(clip).not.toBeNull();
+    expect(clip!.pathD).toContain('A 20 20 0 0 1 360 230');
+  });
 });
 
 describe('matte — world-space path (TEST B: rotated + scaled)', () => {

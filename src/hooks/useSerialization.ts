@@ -87,6 +87,7 @@ function toSceneData(
   const layers: SceneLayer[] = characterParts.map(p => ({
     id: p.id,
     parentId: p.parentId,
+    ...(p.boundPartIds?.length ? { boundPartIds: p.boundPartIds } : {}),
     name: p.name,
     type: p.type,
     x: p.baseTransform.x,
@@ -212,6 +213,7 @@ function fromSceneData(
     ...(l.strokeEnabled !== undefined ? { strokeEnabled: l.strokeEnabled } : {}),
     pivot: { x: 0, y: 0 },
     parentId: l.parentId,
+    ...(l.boundPartIds && l.boundPartIds.length > 0 ? { boundPartIds: l.boundPartIds } : {}),
     matte: l.matte,
     masks: l.masks,
     trackMatte: l.trackMatte,

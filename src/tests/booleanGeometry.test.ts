@@ -45,6 +45,75 @@ describe('boolean geometry', () => {
     expect(subtract).not.toEqual(reverse);
     expect(exclude.length).toBeGreaterThan(0);
   });
+
+  it('accepts freeform paths, static text and the closed shapes as operands', () => {
+    const path = {
+      version: 1 as const,
+      coordinateSpace: 'local' as const,
+      closed: true,
+      points: [
+        { id: 'p0', x: -30, y: -20 },
+        { id: 'p1', x: 30, y: -20 },
+        { id: 'p2', x: 0, y: 30 },
+      ],
+    };
+
+    expect(isBooleanEligible(part('shape', 'custom_rect', 0, 0))).toBe(true);
+    expect(isBooleanEligible({ ...part('free', 'custom_freeform', 0, 0), path })).toBe(true);
+    expect(isBooleanEligible({ ...part('text', 'custom_text', 0, 0), textValue: 'A' })).toBe(true);
+    // Not geometry: no path yet, an empty text, a staggered text (its outline is
+    // per character and per frame), and layers that draw no vector outline.
+    expect(isBooleanEligible(part('empty-free', 'custom_freeform', 0, 0))).toBe(false);
+    expect(isBooleanEligible({ ...part('empty-text', 'custom_text', 0, 0), textValue: '   ' })).toBe(false);
+    expect(isBooleanEligible({ ...part('stagger', 'custom_text', 0, 0), textValue: 'AB', textAnimMode: 'chars' })).toBe(false);
+    expect(isBooleanEligible(part('image', 'custom_image', 0, 0))).toBe(false);
+    expect(isBooleanEligible(undefined)).toBe(false);
+  });
+
+  it('uses a freeform layer\'s own path as its operand geometry', () => {
+    const box = part('box', 'custom_box', 0, 0);
+    const freeform = {
+      ...part('free', 'custom_freeform', 20, 0),
+      path: {
+        version: 1 as const,
+        coordinateSpace: 'local' as const,
+        closed: true,
+        points: [
+          { id: 'p0', x: -40, y: -40 },
+          { id: 'p1', x: 40, y: -40 },
+          { id: 'p2', x: 0, y: 40 },
+        ],
+      },
+    };
+
+    const union = computeBooleanContours('union', [box, freeform]);
+    const intersect = computeBooleanContours('intersect', [box, freeform]);
+
+    expect(union.length).toBeGreaterThan(0);
+    expect(intersect.length).toBeGreaterThan(0);
+    // The triangle reaches further up and down than the box it overlaps.
+    const bounds = union[0].reduce(
+      (box2, point) => ({
+        minY: Math.min(box2.minY, point.y),
+        maxY: Math.max(box2.maxY, point.y),
+      }),
+      { minY: Number.POSITIVE_INFINITY, maxY: Number.NEGATIVE_INFINITY },
+    );
+    expect(bounds.minY).toBeLessThan(-30);
+    expect(bounds.maxY).toBeGreaterThan(30);
+  });
+
+  it('produces no geometry for a text operand the environment cannot trace', () => {
+    // This environment has no canvas, so the traced text outline is unavailable.
+    // The contract is the honest one: no geometry rather than a guessed box, and
+    // the workflow reports the empty result.
+    const text = { ...part('text', 'custom_text', 0, 0), textValue: 'O' };
+    const box = part('box', 'custom_rect', 0, 0);
+
+    expect(computeBooleanContours('intersect', [text, box])).toEqual([]);
+    expect(deriveBooleanGeometry('intersect', [text, box], {}, box.baseTransform).worldContours).toEqual([]);
+  });
+
   it('applies group transforms without mutating authored contours', () => {
     const contours = [[{ x: 1, y: 2 }, { x: 3, y: 2 }, { x: 3, y: 4 }]];
     const transformed = transformBooleanContours(contours, {

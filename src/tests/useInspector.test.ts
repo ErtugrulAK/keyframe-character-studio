@@ -337,3 +337,80 @@ describe('useInspector Hook', () => {
     expect(updated[0].baseTransform).toMatchObject({ x: 50, y: 30 });
   });
 });
+
+/**
+ * Bonds move together: a position change on one layer is written to its bonded
+ * partners as the same world-space delta. Rotation/scale stay independent, and a
+ * partner that is already part of the same write must not move twice.
+ */
+describe('useInspector bonded layers', () => {
+  const layer = (id: string, overrides: Record<string, unknown> = {}) => ({
+    id,
+    name: id,
+    type: 'custom_box',
+    zIndex: 1,
+    fillColor: '#fff',
+    strokeColor: '#000',
+    pivot: { x: 0, y: 0 },
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    ...overrides,
+  });
+  const track = (partId: string): Track => ({ id: `track_${partId}`, partId, name: partId, channels: {}, keyframes: [] } as unknown as Track);
+
+  const world = (x: number, y: number) => ({ x, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 });
+  const worlds: Record<string, ReturnType<typeof world>> = { a: world(0, 0), b: world(100, 40) };
+  const getComputedTransform = (id: string) => worlds[id] ?? world(0, 0);
+
+  it('writes the same position delta to a bonded layer', () => {
+    const setCharacterParts = vi.fn();
+    const parts = [layer('a'), layer('b', { boundPartIds: ['a'] })];
+    const { result } = renderHook(() => useInspector({
+      selectedPartId: 'a',
+      selectedPartIds: ['a'],
+      activeTemplateId: 'Sequence',
+      currentFrame: 0,
+      tracks: [track('a'), track('b')],
+      characterParts: parts as never,
+      setTracks: vi.fn(),
+      setCharacterParts,
+      getComputedTransform,
+      addKeyframeToTrack: vi.fn(),
+    }));
+
+    act(() => result.current.updateCurrentTransform({ x: 30, y: 12 }));
+
+    // React applies the queued updaters in order, so compose them the same way.
+    let state = parts as never;
+    for (const call of setCharacterParts.mock.calls) state = call[0](state);
+    const finalParts = state as unknown as { id: string; baseTransform: { x: number; y: number } }[];
+    expect(finalParts.find((entry) => entry.id === 'a')?.baseTransform).toMatchObject({ x: 30, y: 12 });
+    expect(finalParts.find((entry) => entry.id === 'b')?.baseTransform).toMatchObject({ x: 130, y: 52 });
+  });
+
+  it('does not move a bonded layer twice when both are selected', () => {
+    const setCharacterParts = vi.fn();
+    const parts = [layer('a'), layer('b', { boundPartIds: ['a'] })];
+    const { result } = renderHook(() => useInspector({
+      selectedPartId: 'a',
+      selectedPartIds: ['a', 'b'],
+      activeTemplateId: 'Sequence',
+      currentFrame: 0,
+      tracks: [track('a'), track('b')],
+      characterParts: parts as never,
+      setTracks: vi.fn(),
+      setCharacterParts,
+      getComputedTransform,
+      addKeyframeToTrack: vi.fn(),
+    }));
+
+    act(() => result.current.updateCurrentTransform({ x: 30, y: 12 }));
+
+    // One write per selected layer, and no extra write for the bond: both were
+    // already part of this change.
+    expect(setCharacterParts).toHaveBeenCalledTimes(2);
+    let state = parts as never;
+    for (const call of setCharacterParts.mock.calls) state = call[0](state);
+    const finalParts = state as unknown as { id: string; baseTransform: { x: number; y: number } }[];
+    expect(finalParts.find((entry) => entry.id === 'b')?.baseTransform).toMatchObject({ x: 130, y: 52 });
+  });
+});

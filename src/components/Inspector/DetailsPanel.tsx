@@ -10,6 +10,7 @@ import { StyleTab } from './sections/StyleTab';
 import { DuplicateTab } from './sections/DuplicateTab';
 import { isBooleanEligible, computeBooleanContours, deriveBooleanGeometry, dissolveBooleanGroup as dissolveBooleanGroupState, createBooleanDisplayName, isGeneratedBooleanName, type BooleanOperation } from '../../utils/booleanGeometry';
 import { generateId } from '../../utils/idGenerator';
+import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../../utils/partBinding';
 import { layerMaskChannel } from '../../types/animator';
 import type { CharacterPart } from '../../types/animator';
 import {
@@ -37,6 +38,7 @@ export const DetailsPanel: React.FC = () => {
     updateCurrentPropertyChannel,
     updatePropertyKeyframeValue,
     addPropertyKeyframe,
+    deletePropertyKeyframe,
     addMaskPathKeyframe,
     authorMaskPath,
     deletePart,
@@ -54,8 +56,7 @@ export const DetailsPanel: React.FC = () => {
     showToast,
     tracks,
     activeTemplateId,
-    isScaleLocked,
-    coordinateSystem,
+      coordinateSystem,
     booleanOperandEditingGroupId,
     setBooleanOperandEditingGroupId,
   } = useAnimator();
@@ -85,6 +86,7 @@ export const DetailsPanel: React.FC = () => {
       zIndex: Math.max(...booleanEligibleParts.map((part) => part.zIndex)) + 1,
       parentId: undefined,
       booleanGroupId: undefined,
+      boundPartIds: undefined,
       matte: undefined,
       booleanOperation: operation,
       booleanOperandIds: booleanEligibleParts.map((part) => part.id),
@@ -176,6 +178,11 @@ export const DetailsPanel: React.FC = () => {
     : undefined;
   const inspectorPart = selectedPart && evaluatedMasks ? { ...selectedPart, masks: evaluatedMasks } : selectedPart;
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
+  const opacityKeyframeAtFrame = selectedTrack
+    ? (selectedTrack.channels?.opacity ?? []).find(
+      (keyframe) => keyframe.frame === currentFrame && (keyframe.templateId || 'Sequence') === (activeTemplateId || 'Sequence'),
+    )
+    : undefined;
 
   const handlePartPropChange = (key: keyof CharacterPart, value: unknown) => {
     if (!selectedPartId) return;
@@ -270,6 +277,68 @@ export const DetailsPanel: React.FC = () => {
     showToast('Animation cleared', 'success');
   };
 
+  const bindSelection = selectedPartIds
+    .map((id) => characterParts.find((part) => part.id === id))
+    .filter((part): part is NonNullable<typeof part> => Boolean(part));
+  const bondGroupIds = selectedPart ? resolveBondGroup(characterParts, selectedPart.id) : [];
+
+  /** Bond the selected layers so a position change on one moves the others. */
+  const createBind = () => {
+    const ids = bindSelection.map((part) => part.id);
+    if (ids.length < 2) return;
+    const blocked = ids.some((first, index) =>
+      ids.slice(index + 1).some((second) => isRelationshipChainRelated(characterParts, first, second)));
+    if (blocked) {
+      showToast('Those layers are already parent and child; bonding them would move the child twice.', 'info');
+      return;
+    }
+    startBatchInteraction();
+    setCharacterParts((parts) => bindParts(parts, ids));
+    endBatchInteraction();
+    showToast('Layers bonded: moving one moves the others.', 'success');
+  };
+
+  const releaseBind = () => {
+    if (!selectedPart) return;
+    startBatchInteraction();
+    setCharacterParts((parts) => unbindPart(parts, selectedPart.id));
+    endBatchInteraction();
+    showToast('Bond released.', 'info');
+  };
+
+  const bindWorkflowContent = selectedPart && bondGroupIds.length > 1 ? (
+    <section className="boolean-editor-section" aria-label="Bound layers">
+      <div className="inspector-section-label">BIND</div>
+      <p className="boolean-description">Bonded layers move together. Only position follows; rotation and scale stay their own.</p>
+      <div className="boolean-operands-list" aria-label="Bonded layers">
+        {bondGroupIds.map((boundId) => (
+          <button
+            key={boundId}
+            type="button"
+            className="boolean-operand-button"
+            onClick={() => {
+              setSelectedPartIds([boundId]);
+              setSelectedPartId(boundId);
+            }}
+          >
+            {characterParts.find((part) => part.id === boundId)?.name ?? boundId}
+          </button>
+        ))}
+      </div>
+      <button type="button" className="btn-secondary boolean-dissolve-button" onClick={releaseBind}>
+        <Unlink size={12} /> Unbind
+      </button>
+    </section>
+  ) : bindSelection.length >= 2 ? (
+    <section className="shape-operations-section" aria-label="Layer binding">
+      <div className="inspector-section-label">BIND</div>
+      <p className="shape-operations-description">Bond the selected layers so a position change on one moves the others.</p>
+      <div className="shape-operations-grid">
+        <button type="button" onClick={createBind} title="Bond the selected layers">Bind</button>
+      </div>
+    </section>
+  ) : null;
+
   const booleanWorkflowContent = selectedBooleanGroup ? (
     <section className="boolean-editor-section" aria-label="Boolean operation">
       <div className="inspector-section-label">BOOLEAN</div>
@@ -326,7 +395,7 @@ export const DetailsPanel: React.FC = () => {
   ) : booleanEligibleParts.length >= 2 ? (
     <section className="shape-operations-section" aria-label="Shape operations">
       <div className="inspector-section-label">BOOLEAN</div>
-      <p className="shape-operations-description">Combine eligible closed vector shapes into a non-destructive Boolean result.</p>
+      <p className="shape-operations-description">Combine the selected shapes, freeform paths or text layers into a non-destructive Boolean result.</p>
       <div className="shape-operations-grid">
         {(['union', 'subtract', 'intersect', 'exclude'] as const).map((operation) => (
           <button key={operation} type="button" onClick={() => createBooleanGroup(operation)} title={`Create ${operation} Boolean`}>
@@ -338,7 +407,7 @@ export const DetailsPanel: React.FC = () => {
   ) : selectedPart && isBooleanEligible(selectedPart) ? (
     <section className="shape-operations-section shape-operations-hint" aria-label="Boolean operations unavailable">
       <div className="inspector-section-label">BOOLEAN</div>
-      <p>Boolean: select 2 closed vector shapes.</p>
+      <p>Boolean: select 2 shapes, freeform paths or text layers.</p>
     </section>
   ) : null;
 
@@ -410,9 +479,17 @@ export const DetailsPanel: React.FC = () => {
                 currentFrame={currentFrame}
                 updateCurrentTransform={updateCurrentTransform}
                 updateCurrentPropertyChannel={updateCurrentPropertyChannel}
+                opacityKeyframedAtCurrentFrame={Boolean(opacityKeyframeAtFrame)}
+                onToggleOpacityKeyframe={selectedTrack && transform ? () => {
+                  if (opacityKeyframeAtFrame) {
+                    deletePropertyKeyframe(selectedTrack.id, 'opacity', opacityKeyframeAtFrame.id);
+                    return;
+                  }
+                  addPropertyKeyframe(selectedTrack.id, 'opacity', currentFrame, transform.opacity);
+                } : undefined}
                 handlePartPropChange={handlePartPropChange}
                 handleZIndexChange={handleZIndexChange}
-                editWorkflowContent={booleanWorkflowContent}
+                editWorkflowContent={<>{booleanWorkflowContent}{bindWorkflowContent}</>}
                 customPresets={customPresets}
                 onSavePreset={savePreset}
                 onUpdatePreset={updatePreset}
@@ -423,9 +500,6 @@ export const DetailsPanel: React.FC = () => {
                 onPasteAnimation={handlePasteAnimation}
                 onClearAnimation={handleClearAnimation}
                 clipboardSourceId={clipboardData?.part.id ?? null}
-                track={tracks.find((t) => t.partId === selectedPartId) ?? null}
-                activeTemplateId={activeTemplateId}
-                isScaleLocked={isScaleLocked}
               />
 
               <StyleTab

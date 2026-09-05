@@ -352,6 +352,13 @@ export interface CharacterPart {
   strokeAlignment?: StrokeAlignment;
   pivot: { x: number; y: number };
   parentId?: string;
+  /**
+   * Layers bonded to this one: a position change on either side moves both by
+   * the same world-space delta. Mutual — the union of both lists is the
+   * authority (see `utils/partBinding`). Rotation, scale and opacity stay
+   * independent, so this is not a parent-child transform.
+   */
+  boundPartIds?: string[];
   baseTransform: Transform;
   textValue?: string;
   fontSize?: number;

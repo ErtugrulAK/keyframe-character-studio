@@ -1,7 +1,9 @@
 import { difference, intersection, union, xor, type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping';
 import type { CharacterPart, FreeformPoint, Track, Transform } from '../types/animator';
 import { getShapeGeometry } from './shapeGeometry';
-import { normalizeClosedPoints } from './freeform';
+import { normalizeClosedPoints, resolveFreeformPath } from './freeform';
+import { sampleBezierPath } from './bezierPath';
+import { getTextOutlinePolygons, type OutlinePolygon } from './textOutline';
 
 export type BooleanOperation = 'union' | 'subtract' | 'intersect' | 'exclude';
 export type BooleanContours = FreeformPoint[][];
@@ -10,6 +12,21 @@ const CLOSED_VECTOR_TYPES = new Set<CharacterPart['type']>([
   'custom_star', 'custom_circle', 'custom_box', 'custom_rect', 'custom_triangle',
   'custom_banner', 'custom_capsule', 'custom_diamond', 'custom_parallelogram', 'custom_card',
 ]);
+
+/** A freeform layer contributes its canonical path when it has a drawable one. */
+const hasPathGeometry = (part: CharacterPart): boolean => (
+  sampleBezierPath(resolveFreeformPath(part), 4).length >= 3
+);
+
+/**
+ * A text layer contributes real letterform geometry (traced from its rendered
+ * mask, holes included). Only the text the renderer draws as one static string
+ * qualifies: a staggered text animates per character and per frame, so its
+ * outline is not a single fixed shape, and an empty value draws nothing.
+ */
+const hasStaticTextGeometry = (part: CharacterPart): boolean => (
+  Boolean(part.textValue?.trim()) && (!part.textAnimMode || part.textAnimMode === 'none')
+);
 
 const toTransform = (part: CharacterPart, transform?: Transform): Transform => transform ?? part.baseTransform;
 
@@ -23,7 +40,8 @@ const transformPoint = (point: FreeformPoint, transform: Transform): [number, nu
   ];
 };
 
-const localPolygon = (part: CharacterPart): FreeformPoint[] | null => {
+/** One region of a shape: a single exterior ring with no holes. */
+const localShapeRing = (part: CharacterPart): FreeformPoint[] | null => {
   const geometry = getShapeGeometry(part.type);
   if (!geometry) return null;
   if (geometry.kind === 'circle') {
@@ -39,6 +57,27 @@ const localPolygon = (part: CharacterPart): FreeformPoint[] | null => {
     { x: geometry.x + geometry.width, y: geometry.y + geometry.height },
     { x: geometry.x, y: geometry.y + geometry.height },
   ];
+};
+
+/**
+ * The operand's local geometry as regions: `[exterior, ...holes]` per region.
+ *
+ * A closed shape is one region with no holes, a freeform is its canonical path
+ * sampled through the shared bezier sampler, and a text is traced from its own
+ * rendered mask (so its counters are holes, not extra filled regions). A part
+ * whose geometry cannot be produced contributes nothing.
+ */
+const localPolygons = (part: CharacterPart): OutlinePolygon[] | null => {
+  if (part.type === 'custom_text') return getTextOutlinePolygons(part);
+
+  if (part.type === 'custom_freeform') {
+    const samples = sampleBezierPath(resolveFreeformPath(part));
+    if (samples.length < 3) return null;
+    return [[samples.map((point): [number, number] => [point.x, point.y])]];
+  }
+
+  const ring = localShapeRing(part);
+  return ring ? [[ring.map((point): [number, number] => [point.x, point.y])]] : null;
 };
 export const transformBooleanContours = (
   contours: BooleanContours,
@@ -159,15 +198,22 @@ export const dissolveBooleanGroup = (
   };
 };
 
-export const isBooleanEligible = (part: CharacterPart | undefined): boolean => (
-  Boolean(part && CLOSED_VECTOR_TYPES.has(part.type))
-);
+export const isBooleanEligible = (part: CharacterPart | undefined): boolean => {
+  if (!part) return false;
+  if (CLOSED_VECTOR_TYPES.has(part.type)) return true;
+  if (part.type === 'custom_freeform') return hasPathGeometry(part);
+  if (part.type === 'custom_text') return hasStaticTextGeometry(part);
+  return false;
+};
 
-export const partToWorldPolygon = (part: CharacterPart, transform?: Transform): Polygon | null => {
-  const points = localPolygon(part);
-  if (!points) return null;
-  const world = points.map((point) => transformPoint(point, toTransform(part, transform)));
-  return [world];
+/** Every region of the operand in world space, or `null` when it has none. */
+export const partToWorldPolygons = (part: CharacterPart, transform?: Transform): Polygon[] | null => {
+  const polygons = localPolygons(part);
+  if (!polygons) return null;
+  const worldTransform = toTransform(part, transform);
+  return polygons.map((polygon) => polygon.map((ring) => ring.map(
+    ([x, y]) => transformPoint({ x, y }, worldTransform),
+  )));
 };
 
 const flattenResult = (result: MultiPolygon): BooleanContours => result.flatMap((polygon) => (
@@ -179,16 +225,20 @@ export const computeBooleanContours = (
   operands: CharacterPart[],
   transforms?: Record<string, Transform>,
 ): BooleanContours => {
-  const polygons = operands
-    .map((part) => partToWorldPolygon(part, transforms?.[part.id]))
-    .filter((polygon): polygon is Polygon => polygon !== null);
-  if (polygons.length < 2) return [];
+  // An operand is a *set* of regions (a text is several glyphs, each with its own
+  // holes), so the first operand's regions are the Boolean subject and the rest
+  // are its clippers.
+  const geometries = operands
+    .map((part) => partToWorldPolygons(part, transforms?.[part.id]))
+    .filter((polygons): polygons is Polygon[] => polygons !== null && polygons.length > 0);
+  if (geometries.length < 2) return [];
 
+  const [subject, ...clippers] = geometries;
   let result: MultiPolygon;
-  if (operation === 'subtract') result = difference(polygons[0], ...polygons.slice(1));
-  else if (operation === 'intersect') result = polygons.slice(1).reduce<MultiPolygon>((current, polygon) => intersection(current, polygon), [polygons[0]]);
-  else if (operation === 'exclude') result = xor(polygons[0], ...polygons.slice(1));
-  else result = union(polygons[0], ...polygons.slice(1));
+  if (operation === 'subtract') result = difference(subject, ...clippers);
+  else if (operation === 'intersect') result = clippers.reduce<MultiPolygon>((current, geometry) => intersection(current, geometry), subject);
+  else if (operation === 'exclude') result = xor(subject, ...clippers);
+  else result = union(subject, ...clippers);
   return flattenResult(result);
 };
 

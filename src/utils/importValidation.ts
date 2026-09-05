@@ -277,6 +277,10 @@ const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, 
     && !(Array.isArray(record.booleanOperandIds) && record.booleanOperandIds.every((entry) => typeof entry === 'string'))) {
     return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.booleanOperandIds`, `${owner} lists boolean operands that are not layer ids.`);
   }
+  if (record.boundPartIds !== undefined
+    && !(Array.isArray(record.boundPartIds) && record.boundPartIds.every((entry) => typeof entry === 'string'))) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.boundPartIds`, `${owner} lists bound layers that are not layer ids.`);
+  }
   if (record.booleanContours !== undefined) {
     if (!Array.isArray(record.booleanContours)) {
       return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.booleanContours`, `${owner} carries boolean contours that are not a list.`);

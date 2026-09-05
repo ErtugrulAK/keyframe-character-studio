@@ -49,6 +49,8 @@ export const useClipboard = ({
       id: newPartId,
       name: `${clipboardData.part.name} Copy`,
       zIndex: characterParts.length + 1,
+      // A copy is not bonded to the original's partners.
+      boundPartIds: undefined,
       baseTransform: {
         ...clipboardData.part.baseTransform,
         x: clipboardData.part.baseTransform.x + 20,
@@ -109,6 +111,7 @@ export const useClipboard = ({
       id: newPartId,
       name: `${part.name} Copy`,
       zIndex: characterParts.length + 1,
+      boundPartIds: undefined,
       baseTransform: {
         ...part.baseTransform,
         x: part.baseTransform.x + 20,
@@ -177,6 +180,7 @@ export const useClipboard = ({
         id: newPartId,
         name: `${part.name} ${mirrorName}`,
         zIndex: characterParts.length + 1,
+        boundPartIds: undefined,
         baseTransform: mirrorTransform(part.baseTransform, axis),
       };
 

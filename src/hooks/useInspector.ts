@@ -1,5 +1,6 @@
 import type { CharacterPart, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
 import { worldToContainerLocal } from '../utils/containerMath';
+import { resolveBoundPartners } from '../utils/partBinding';
 import { generateId } from '../utils/idGenerator';
 
 interface UseInspectorOptions {
@@ -151,6 +152,45 @@ export const useInspector = ({
     }
   };
 
+  /**
+   * Bonded layers follow the same world-space position delta.
+   *
+   * `requested` is the incoming patch (world-space x/y, exactly what the caller
+   * asked for), so the delta is measured against the source's current world
+   * position. Layers that are already part of this write — the dragged layer
+   * itself or a multi-selection — are skipped, or they would move twice.
+   */
+  const applyBondedPositionDelta = (
+    sourcePartId: string,
+    requested: Partial<Transform>,
+    alreadyUpdated: string[],
+    activeTmpl: string,
+  ) => {
+    if (requested.x === undefined && requested.y === undefined) return;
+    const partners = resolveBoundPartners(characterParts ?? [], sourcePartId)
+      .filter((partner) => !alreadyUpdated.includes(partner.id));
+    if (partners.length === 0) return;
+
+    const sourceWorld = getComputedTransform(sourcePartId, currentFrame);
+    const deltaX = requested.x === undefined ? 0 : requested.x - sourceWorld.x;
+    const deltaY = requested.y === undefined ? 0 : requested.y - sourceWorld.y;
+    if (deltaX === 0 && deltaY === 0) return;
+
+    for (const partner of partners) {
+      const partnerWorld = getComputedTransform(partner.id, currentFrame);
+      const desiredWorld = { ...partnerWorld, x: partnerWorld.x + deltaX, y: partnerWorld.y + deltaY };
+      const partnerParentId = partner.parentId ?? partner.booleanGroupId;
+      if (partnerParentId) {
+        // A parented partner stores its own local space, exactly like the
+        // single-target path above.
+        const local = worldToContainerLocal(desiredWorld, getComputedTransform(partnerParentId, currentFrame));
+        applyTransformToPart(partner.id, { x: local.x, y: local.y }, activeTmpl);
+      } else {
+        applyTransformToPart(partner.id, { x: desiredWorld.x, y: desiredWorld.y }, activeTmpl);
+      }
+    }
+  };
+
   const updateCurrentTransform = (newTransform: Partial<Transform>, partIdOverride?: string) => {
     const targetPartId = partIdOverride || selectedPartId;
     if (!targetPartId) return;
@@ -202,10 +242,12 @@ export const useInspector = ({
 
         applyTransformToPart(id, relativeUpdate, activeTmpl);
       });
+      applyBondedPositionDelta(targetPartId, newTransform, partsToUpdate, activeTmpl);
       return;
     }
 
     applyTransformToPart(targetPartId, normalizedTransform, activeTmpl);
+    applyBondedPositionDelta(targetPartId, newTransform, partsToUpdate, activeTmpl);
   };
 
   const updateCurrentPropertyChannel = (channel: TrackChannel, value: number, partIdOverride?: string) => {

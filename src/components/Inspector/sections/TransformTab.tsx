@@ -1,9 +1,10 @@
 import React from 'react';
-import type { CharacterPart, CustomMotionPreset, Track, Transform, TrackChannel } from '../../../types/animator';
+import type { CharacterPart, CustomMotionPreset, Transform, TrackChannel } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import type { SavePresetInput, UpdatePresetInput } from '../../../hooks/usePresets';
 import { TransformPositionRotationCard } from './transform/TransformPositionRotationCard';
 import { TransformScaleCard } from './transform/TransformScaleCard';
+import { TransformOpacityCard } from './transform/TransformOpacityCard';
 import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { StyleCard } from './style/StyleCard';
@@ -14,6 +15,9 @@ interface TransformTabProps {
   coordinateSystem: SceneCoordinateSystem;
   currentFrame: number;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
+  /** True when the opacity channel owns a keyframe on the current frame. */
+  opacityKeyframedAtCurrentFrame?: boolean;
+  onToggleOpacityKeyframe?: () => void;
   updateCurrentPropertyChannel?: (channel: TrackChannel, value: number) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
   handleZIndexChange?: (zIndex: number) => void;
@@ -31,11 +35,6 @@ interface TransformTabProps {
   onPasteAnimation?: () => void;
   onClearAnimation?: () => void;
   clipboardSourceId?: string | null;
-  // M29 — selected keyframe section (raw keyframe values on the existing pipeline)
-  track?: Track | null;
-  selectedKeyframeId?: string | null;
-  activeTemplateId?: string | null;
-  isScaleLocked?: boolean;
 }
 
 /**
@@ -47,6 +46,8 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   transform,
   coordinateSystem,
   updateCurrentTransform,
+  opacityKeyframedAtCurrentFrame,
+  onToggleOpacityKeyframe,
   handleZIndexChange,
   onCopyAnimation,
   onPasteAnimation,
@@ -70,6 +71,13 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             <TransformScaleCard
               transform={transform}
               onUpdate={updateCurrentTransform}
+            />
+
+            <TransformOpacityCard
+              opacity={transform.opacity}
+              onOpacityChange={(opacity) => updateCurrentTransform({ opacity })}
+              keyframedAtCurrentFrame={opacityKeyframedAtCurrentFrame ?? false}
+              onToggleKeyframe={onToggleOpacityKeyframe}
             />
 
             {handleZIndexChange && (

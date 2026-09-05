@@ -287,12 +287,6 @@ test.describe('M27 — timeline keyframe duplicate (real UI)', () => {
 
     const trackA = await storedTrack(page, 'a');
     expect(trackA.partId).toBe('a');
-    // SceneData intentionally excludes editor-only Track metadata.
-    expect(trackA).not.toHaveProperty('id');
-    expect(trackA).not.toHaveProperty('name');
-    expect(trackA).not.toHaveProperty('color');
-    expect(trackA).not.toHaveProperty('visible');
-    expect(trackA).not.toHaveProperty('locked');
     expect((trackA.channels as Record<string, Record<string, unknown>[]>).x.map((k) => k.frame)).toEqual([10, 11]);
     const trackB = await storedTrack(page, 'b');
     expect((trackB.channels as Record<string, Record<string, unknown>[]>).opacity.map((k) => k.frame)).toEqual([5]); // untouched

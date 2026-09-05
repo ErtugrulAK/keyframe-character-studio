@@ -82,6 +82,8 @@ export interface SceneLayer {
 
   // Hierarchy
   parentId?: string;
+  /** Layers bonded to this one for position-only movement (see `partBinding`). */
+  boundPartIds?: string[];
 
   matte?: PartMatte;
   /** V6 ordered same-layer masks. */

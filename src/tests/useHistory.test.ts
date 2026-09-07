@@ -248,6 +248,49 @@ describe('useHistory Hook', () => {
     expect(tracksRef.current).toEqual([]);
   });
 
+  it('restores an authored layer index through undo and redo', () => {
+    let currentParts: CharacterPart[] = [{
+      id: 'p1',
+      name: 'Layer',
+      type: 'custom_box',
+      zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    }];
+    const partsRef = { current: currentParts };
+    const setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>> = (value) => {
+      currentParts = typeof value === 'function'
+        ? (value as (prev: CharacterPart[]) => CharacterPart[])(currentParts)
+        : value;
+      partsRef.current = currentParts;
+    };
+
+    const { result, rerender } = renderHook(
+      (props: { parts: CharacterPart[] }) =>
+        useHistory({
+          tracks: emptyTracks,
+          setTracks: mockSetTracks,
+          tracksRef: emptyTracksRef,
+          characterParts: props.parts,
+          setCharacterParts,
+          characterPartsRef: partsRef,
+        }),
+      { initialProps: { parts: currentParts } },
+    );
+
+    currentParts = [{ ...currentParts[0], zIndex: 2 }];
+    partsRef.current = currentParts;
+    rerender({ parts: currentParts });
+    expect(result.current.canUndo).toBe(true);
+
+    act(() => result.current.undo());
+    expect(currentParts[0].zIndex).toBe(1);
+    expect(result.current.canRedo).toBe(true);
+
+    act(() => result.current.redo());
+    expect(currentParts[0].zIndex).toBe(2);
+    expect(result.current.canRedo).toBe(false);
+  });
+
   it('includes sequence metadata in undo/redo snapshots when provided', () => {
     let currentTemplates: MotionTemplate[] = [{ id: 'Sequence', name: 'Sequence', type: 'in', durationFrames: 60 }];
     const setMotionTemplates: React.Dispatch<React.SetStateAction<MotionTemplate[]>> = (value) => {

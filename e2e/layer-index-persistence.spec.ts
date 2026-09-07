@@ -31,7 +31,7 @@ test('authored layer index survives new layers, template switching, autosave, an
   await openTransform(page);
   await page.getByRole('button', { name: 'Bring Forward (+1)', exact: true }).click();
   await expect(page.getByLabel('Layer index')).toHaveText('Index 2');
-  await page.keyboard.press('Control+Z');
+  await page.getByTitle('Undo').click();
   await expect(page.getByLabel('Layer index')).toHaveText('Index 1');
   await expect(page.getByTitle('Redo')).toBeEnabled();
   await page.getByTitle('Redo').click();

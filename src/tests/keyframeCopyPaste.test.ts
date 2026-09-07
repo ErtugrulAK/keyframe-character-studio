@@ -274,3 +274,17 @@ describe('M28 28A — immutability / schema / determinism', () => {
     expect(strip(a.track)).toEqual(strip(b.track));
   });
 });
+ 
+describe('V6 mask frame groups', () => {
+  it('copies and pastes scalar and path mask channels atomically', () => {
+    const source = makeTrack('source', 'part', {
+      maskChannels: { 'mask-a:opacity': [kf('mo', 20, 0.4) as never] },
+      maskPathChannels: { 'mask-a:path': [kf('mp', 20, { points: [] } as never) as never] },
+    });
+    const payload = copyKeyframeGroupData(source, 20);
+    const result = pasteKeyframeGroupData(makeTrack(), 30, payload);
+    expect(result.pasted).toBe(true);
+    expect(result.track.maskChannels?.['mask-a:opacity'][0].frame).toBe(30);
+    expect(result.track.maskPathChannels?.['mask-a:path'][0].frame).toBe(30);
+  });
+});

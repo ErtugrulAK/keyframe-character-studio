@@ -8,6 +8,7 @@ describe('useTemplates Hook', () => {
   const mockSetTracks = vi.fn();
   const mockSetFps = vi.fn();
   const mockSetCurrentFrame = vi.fn();
+  const mockSetTotalFrames = vi.fn();
   const mockSetIsPlaying = vi.fn();
 
   const render = (appMode: 'edit' | 'broadcast' = 'edit') =>
@@ -16,6 +17,7 @@ describe('useTemplates Hook', () => {
       setCharacterParts: mockSetCharacterParts,
       tracks: [],
       setTracks: mockSetTracks,
+      setTotalFrames: mockSetTotalFrames,
       setFps: mockSetFps,
       setCurrentFrame: mockSetCurrentFrame,
       setIsPlaying: mockSetIsPlaying,
@@ -141,15 +143,35 @@ describe('useTemplates Hook', () => {
     expect(updated[0].channels.opacity.map((pk) => pk.id)).toEqual(['co_seq']);
   });
 
+  it('deletes scalar and path mask channels with the sequence atomically', () => {
+    const { result } = render();
+    act(() => result.current.addMotionTemplate('Masks', 'in'));
+    const id = result.current.motionTemplates[1].id;
+    const track = {
+      id: 't1', partId: 'p1', name: 'T1', color: '#f00',
+      keyframes: [], channels: {},
+      maskChannels: { 'mask-a:opacity': [{ id: 'm1', frame: 1, value: 0.5, easing: 'linear', templateId: id }] },
+      maskPathChannels: { 'mask-a:path': [{ id: 'p1', frame: 1, value: { points: [] }, easing: 'linear', templateId: id }] },
+    } as unknown as Track;
+    mockSetTracks.mockClear();
+    act(() => result.current.deleteMotionTemplate(id));
+    const updater = mockSetTracks.mock.calls.at(-1)?.[0] as (prev: Track[]) => Track[];
+    const updated = updater([track])[0];
+    expect(updated.maskChannels?.['mask-a:opacity']).toEqual([]);
+    expect(updated.maskPathChannels?.['mask-a:path']).toEqual([]);
+  });
+
   // BUGFIX (broadcast isolation): selecting a sequence in broadcast mode must
   // NOT touch the edit timeline playback state (currentFrame/isPlaying).
   it('edit mode: selecting a sequence resets frame 0 and stops playback (legacy behavior)', () => {
     mockSetCurrentFrame.mockClear();
     mockSetIsPlaying.mockClear();
     const { result } = render('edit');
+    mockSetTotalFrames.mockClear();
     act(() => {
       result.current.setActiveTemplateId('Sequence');
     });
+    expect(mockSetTotalFrames).toHaveBeenCalledWith(60);
     expect(mockSetCurrentFrame).toHaveBeenCalledWith(0);
     expect(mockSetIsPlaying).toHaveBeenCalledWith(false);
   });

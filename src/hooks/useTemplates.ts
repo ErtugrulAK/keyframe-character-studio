@@ -23,8 +23,8 @@ interface UseTemplatesOptions {
   characterParts: CharacterPart[];
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   tracks: Track[];
-  setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
   setFps: React.Dispatch<React.SetStateAction<number>>;
+  setTotalFrames?: React.Dispatch<React.SetStateAction<number>>;
   setCurrentFrame: (frame: number | ((prev: number) => number)) => void;
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
   /** BUGFIX (broadcast isolation): sequence selection in broadcast mode must
@@ -44,6 +44,7 @@ export const useTemplates = ({
   tracks,
   setTracks,
   setFps,
+  setTotalFrames,
   setCurrentFrame,
   setIsPlaying,
   appMode,
@@ -79,17 +80,17 @@ export const useTemplates = ({
   const [activeTemplateId, setActiveTemplateIdState] = useState<string>('Sequence');
 
   const [motionTemplates, setMotionTemplates] = useState<MotionTemplate[]>(() => normalizeMotionTemplates(DEFAULT_MOTION_TEMPLATES));
-
   const setActiveTemplateId = useCallback((id: string) => {
     setActiveTemplateIdState(id);
-    // BUGFIX (broadcast isolation): in broadcast mode the sequence selection
-    // must not reset the EDIT timeline (currentFrame/isPlaying) — broadcast
-    // playback is driven by broadcastState, not by the edit timeline.
+    // Keep edit playback bounds synchronized with the selected sequence.
+    // Broadcast selection is intentionally isolated from edit playback.
     if (appMode !== 'broadcast') {
+      const duration = motionTemplates.find((template) => template.id === id)?.durationFrames;
+      if (duration !== undefined) setTotalFrames?.(duration);
       setCurrentFrame(0);
       setIsPlaying(false);
     }
-  }, [appMode, setCurrentFrame, setIsPlaying]);
+  }, [appMode, motionTemplates, setTotalFrames, setCurrentFrame, setIsPlaying]);
 
   const addMotionTemplate = useCallback((name: string, type: 'in' | 'out' | 'stunt' = 'in') => {
     const newTmpl = createMotionTemplate(name, motionTemplates, type);
@@ -125,28 +126,25 @@ export const useTemplates = ({
       }
       return filtered;
     });
-
     setTracks((prevTracks) =>
       prevTracks.map((tr) => {
-        const updatedKfs = (tr.keyframes || []).filter((k) => (k.templateId || 'Sequence') !== idToDelete);
-        let updatedChannels = { ...tr.channels };
-        if (tr.channels) {
-          Object.keys(tr.channels).forEach((chKey) => {
-            const ch = chKey as TrackChannel;
-            if (updatedChannels[ch]) {
-              updatedChannels[ch] = updatedChannels[ch]!.filter(
-                (pk) => (pk.templateId || 'Sequence') !== idToDelete
-              );
-            }
-          });
-        }
+        const filterMap = <T extends { templateId?: string }>(map: Record<string, T[]> | undefined) =>
+          Object.fromEntries(Object.entries(map ?? {}).map(([channel, keyframes]) => [
+            channel,
+            keyframes.filter((keyframe) => (keyframe.templateId || 'Sequence') !== idToDelete),
+          ]));
         return {
           ...tr,
-          keyframes: updatedKfs,
-          channels: updatedChannels,
+          keyframes: (tr.keyframes || []).filter((k) => (k.templateId || 'Sequence') !== idToDelete),
+          channels: Object.fromEntries(Object.entries(tr.channels ?? {}).map(([channel, keyframes]) => [
+            channel,
+            keyframes.filter((keyframe) => (keyframe.templateId || 'Sequence') !== idToDelete),
+          ])),
+          maskChannels: filterMap(tr.maskChannels),
+          maskPathChannels: filterMap(tr.maskPathChannels),
           ...(tr.sequencerTemplateId === idToDelete ? { sequencerTemplateId: undefined } : {}),
         };
-      })
+      }),
     );
     if (activeTemplateId === idToDelete) {
       onSequenceDeleted?.(idToDelete);

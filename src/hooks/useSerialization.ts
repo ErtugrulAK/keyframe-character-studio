@@ -57,6 +57,7 @@ function toSceneData(
 ): SceneData {
   const layers: SceneLayer[] = characterParts.map(p => ({
     id: p.id,
+    parentId: p.parentId,
     name: p.name,
     type: p.type,
     x: p.baseTransform.x,

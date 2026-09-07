@@ -242,3 +242,16 @@ describe('M27 27A — determinism / schema / metadata', () => {
     expect(strip(a.track)).toEqual(strip(b.track));
   });
 });
+ 
+describe('V6 mask frame groups', () => {
+  it('duplicates scalar and path mask channels as one group', () => {
+    const source = makeTrack({
+      maskChannels: { 'mask-a:opacity': [kf('mo', 10, { value: 0.4 }) as never] },
+      maskPathChannels: { 'mask-a:path': [kf('mp', 10, { value: { points: [] } }) as never] },
+    });
+    const result = duplicateKeyframeGroup(source, 10);
+    expect(result.duplicated).toBe(true);
+    expect(result.track.maskChannels?.['mask-a:opacity'].map((keyframe) => keyframe.frame)).toEqual([10, 11]);
+    expect(result.track.maskPathChannels?.['mask-a:path'].map((keyframe) => keyframe.frame)).toEqual([10, 11]);
+  });
+});

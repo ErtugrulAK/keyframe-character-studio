@@ -281,6 +281,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     tracks,
     setTracks,
     setFps,
+    setTotalFrames,
     setCurrentFrame,
     setIsPlaying,
     appMode,

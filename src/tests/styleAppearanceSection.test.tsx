@@ -3,6 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { StyleAppearanceSection } from '../components/Inspector/sections/style/StyleAppearanceSection';
 import { StyleColorSection } from '../components/Inspector/sections/style/StyleColorSection';
+import { StyleTextFields } from '../components/Inspector/sections/style/StyleTextFields';
 import { StyleEffectsSection } from '../components/Inspector/sections/style/StyleEffectsSection';
 import type { CharacterPart } from '../types/animator';
 
@@ -136,6 +137,35 @@ describe('StyleAppearanceSection', () => {
     expect(screen.queryByText('COLOR')).toBeNull();
     expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
     expect(screen.queryByRole('dialog')).toBeNull();
+  });
+  it('embeds modern Fill and Stroke controls inside the TEXT section', () => {
+    const onColorChange = vi.fn();
+    const onPropChange = vi.fn();
+    const { container } = render(
+      <StyleTextFields
+        selectedPart={{ ...makePart('custom_text'), textValue: 'Headline', fontFamily: 'Inter' }}
+        onPartPropChange={onPropChange}
+        onPartColorChange={onColorChange}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Expand TEXT' }));
+    expect(screen.getByText('TEXT')).toBeTruthy();
+    expect(screen.getByText('FILL')).toBeTruthy();
+    expect(screen.getByText('STROKE')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Expand APPEARANCE' })).toBeNull();
+    expect(screen.queryByText('QUICK PALETTE SWATCHES')).toBeNull();
+    expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
+
+    const hue = screen.getByRole('slider', { name: 'FILL COLOR Hue' });
+    const alpha = screen.getByRole('slider', { name: 'FILL COLOR Alpha' });
+    vi.spyOn(hue, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => ({}) });
+    vi.spyOn(alpha, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.pointerDown(hue, { clientX: 50, pointerId: 1 });
+    fireEvent.pointerDown(alpha, { clientX: 25, pointerId: 2 });
+
+    expect(onColorChange).toHaveBeenCalledWith('fillColor', '#00ffff');
+    expect(onPropChange).toHaveBeenCalledWith('fillOpacity', 0.25);
   });
 });
 

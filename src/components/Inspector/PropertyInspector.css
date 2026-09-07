@@ -17,6 +17,7 @@
   height: 100%;
   z-index: 90;
   box-shadow: -6px 0 24px rgba(0, 0, 0, 0.4);
+  transition: width 240ms ease, min-width 240ms ease, flex-basis 240ms ease, transform 240ms ease, opacity 200ms ease, border-color 240ms ease, box-shadow 240ms ease;
   overflow: hidden;
   user-select: none;
   font-size: var(--font-size-caption);
@@ -47,7 +48,7 @@
   background: var(--bg-panel);
   color: var(--text-muted);
   cursor: pointer;
-  transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition: right 240ms ease, color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 
 .inspector-dock-toggle:hover,

@@ -2,6 +2,7 @@ import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 import { getPartLocalBounds } from '../../../utils/bounds';
+import { getTransformGizmoMetrics } from '../../../utils/transformGizmoMetrics';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 
 export type ScaleMode = 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom';
@@ -44,6 +45,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   const bottom = centerY + halfH;
   const orientationScaleX = selectedTransform.scaleX < 0 ? -1 : 1;
   const orientationScaleY = selectedTransform.scaleY < 0 ? -1 : 1;
+  const metrics = getTransformGizmoMetrics(halfW * 2, halfH * 2, zScale);
 
   const renderBounds = (
     <rect
@@ -58,7 +60,6 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
       vectorEffect="non-scaling-stroke"
     />
   );
-
   const renderIndividualSelection = () => (
     <>
       {renderBounds}
@@ -70,23 +71,43 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
             { x: left, y: bottom, key: 'bottom-left' },
             { x: right, y: bottom, key: 'bottom-right' },
           ].map((corner) => (
-            <rect
-              key={`corner-${corner.key}`}
-              x={corner.x - 5 * zScale}
-              y={corner.y - 5 * zScale}
-              width={10 * zScale}
-              height={10 * zScale}
-              fill="#00d2ff"
-              stroke="#ffffff"
-              strokeWidth={1.5 * zScale}
-              style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
-              onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
-            />
+            <g key={`corner-${corner.key}`}>
+              <rect
+                x={corner.x - metrics.cornerSize / 2}
+                y={corner.y - metrics.cornerSize / 2}
+                width={metrics.cornerSize}
+                height={metrics.cornerSize}
+                fill="#00d2ff"
+                stroke="#ffffff"
+                strokeWidth={1.5 * zScale}
+                style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
+                onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
+              />
+              <rect
+                data-testid="gizmo-hit-target"
+                x={corner.x - metrics.hitRadius}
+                y={corner.y - metrics.hitRadius}
+                width={metrics.hitRadius * 2}
+                height={metrics.hitRadius * 2}
+                fill="transparent"
+                pointerEvents="auto"
+                style={{ cursor: 'nwse-resize' }}
+                onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
+              />
+            </g>
           ))}
-          <circle cx={centerX} cy={centerY} r={4 * zScale} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+          <circle cx={centerX} cy={centerY} r={metrics.centerRadius} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
         </>
       )}
     </>
+  );
+
+  const rotationY = top - metrics.rotationOffset;
+  const renderEdgeHandle = (cx: number, cy: number, cursor: string, mode: ScaleMode, fill: string) => (
+    <g>
+      <circle cx={cx} cy={cy} r={metrics.edgeRadius} fill={fill} stroke="#ffffff" strokeWidth={1.5 * zScale} style={{ cursor, pointerEvents: 'auto' }} onMouseDown={(e) => onScaleMouseDown(e, mode)} />
+      <circle data-testid="gizmo-hit-target" cx={cx} cy={cy} r={metrics.hitRadius} fill="transparent" pointerEvents="auto" style={{ cursor }} onMouseDown={(e) => onScaleMouseDown(e, mode)} />
+    </g>
   );
 
   return (
@@ -104,15 +125,15 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
               x1={centerX}
               y1={top}
               x2={centerX}
-              y2={top - 30 * zScale}
+              y2={rotationY}
               stroke="#00d2ff"
               strokeWidth={2 * zScale}
               vectorEffect="non-scaling-stroke"
             />
             <circle
               cx={centerX}
-              cy={top - 30 * zScale}
-              r={7 * zScale}
+              cy={rotationY}
+              r={metrics.rotationRadius}
               fill="#ffb700"
               stroke="#ffffff"
               strokeWidth={2 * zScale}
@@ -120,45 +141,19 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
               onMouseDown={onRotateMouseDown}
             />
             <circle
-              cx={left}
-              cy={centerY}
-              r={4.5 * zScale}
-              fill="#38bdf8"
-              stroke="#ffffff"
-              strokeWidth={1.5 * zScale}
-              style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
-              onMouseDown={(e) => onScaleMouseDown(e, 'scale_left')}
-            />
-            <circle
-              cx={right}
-              cy={centerY}
-              r={4.5 * zScale}
-              fill="#38bdf8"
-              stroke="#ffffff"
-              strokeWidth={1.5 * zScale}
-              style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
-              onMouseDown={(e) => onScaleMouseDown(e, 'scale_right')}
-            />
-            <circle
+              data-testid="gizmo-hit-target"
               cx={centerX}
-              cy={top}
-              r={4.5 * zScale}
-              fill="#c084fc"
-              stroke="#ffffff"
-              strokeWidth={1.5 * zScale}
-              style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
-              onMouseDown={(e) => onScaleMouseDown(e, 'scale_top')}
+              cy={rotationY}
+              r={metrics.hitRadius}
+              fill="transparent"
+              pointerEvents="auto"
+              style={{ cursor: 'grab' }}
+              onMouseDown={onRotateMouseDown}
             />
-            <circle
-              cx={centerX}
-              cy={bottom}
-              r={4.5 * zScale}
-              fill="#c084fc"
-              stroke="#ffffff"
-              strokeWidth={1.5 * zScale}
-              style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
-              onMouseDown={(e) => onScaleMouseDown(e, 'scale_bottom')}
-            />
+            {renderEdgeHandle(left, centerY, 'ew-resize', 'scale_left', '#38bdf8')}
+            {renderEdgeHandle(right, centerY, 'ew-resize', 'scale_right', '#38bdf8')}
+            {renderEdgeHandle(centerX, top, 'ns-resize', 'scale_top', '#c084fc')}
+            {renderEdgeHandle(centerX, bottom, 'ns-resize', 'scale_bottom', '#c084fc')}
           </>
         )}
       </g>

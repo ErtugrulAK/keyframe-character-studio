@@ -121,6 +121,19 @@ describe('HeaderBar OGraf export integration', () => {
     expect(context.showToast.mock.calls[0][0]).toContain('asset');
     expect(createObjectURL).not.toHaveBeenCalled();
   });
+  it('aggregates duplicate missing-font diagnostics by font root cause', async () => {
+    const firstTextLayer = makeLayer({ id: 'title', name: 'Title', type: 'custom_text', textValue: 'Title', fontFamily: 'Inter' });
+    const scene = makeScene(firstTextLayer);
+    scene.layers = [firstTextLayer, { ...firstTextLayer, id: 'subtitle', name: 'Subtitle', textValue: 'Subtitle' }];
+    context.exportProject.mockReturnValue(JSON.stringify(scene));
+    render(<HeaderBar />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
+    await waitFor(() => expect(context.showToast).toHaveBeenCalledTimes(1));
+    expect(context.showToast.mock.calls[0][0]).toContain('assetCatalog["font:Inter"]');
+  });
+
 
   it('prevents duplicate concurrent exports while preparation is active', async () => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene()));

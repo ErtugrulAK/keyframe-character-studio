@@ -25,16 +25,29 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   characterParts,
   handlePartPropChange,
   handlePartColorChange,
-}) => (
-  <div className="inspector-section" style={{ paddingTop: 8 }}>
-    <StyleGeometrySection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-    {isTrimPathEligible(selectedPart.type) && <TrimPathSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
-    {isShapeAppearanceEligible(selectedPart.type) && <StyleAppearanceSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
-    <StyleColorSection selectedPart={selectedPart} onPartColorChange={handlePartColorChange} onPartPropChange={handlePartPropChange} />
-    <StyleTextFields selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-    <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-    <StyleMatteSection selectedPart={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} />
-    <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-    <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-  </div>
-);
+}) => {
+  const isTextBearing =
+    selectedPart.type === 'custom_card' ||
+    selectedPart.type === 'custom_text' ||
+    selectedPart.type === 'custom_banner';
+
+  return (
+    <div className="inspector-section" style={{ paddingTop: 8 }}>
+      <StyleGeometrySection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+      {isTrimPathEligible(selectedPart.type) && <TrimPathSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
+      {isShapeAppearanceEligible(selectedPart.type) && <StyleAppearanceSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
+      {!isTextBearing && (
+        <StyleColorSection selectedPart={selectedPart} onPartColorChange={handlePartColorChange} onPartPropChange={handlePartPropChange} />
+      )}
+      <StyleTextFields
+        selectedPart={selectedPart}
+        onPartPropChange={handlePartPropChange}
+        onPartColorChange={handlePartColorChange}
+      />
+      <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+      <StyleMatteSection selectedPart={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} />
+      <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+      <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+    </div>
+  );
+};

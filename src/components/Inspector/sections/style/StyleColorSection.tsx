@@ -8,17 +8,23 @@ interface StyleColorSectionProps {
   selectedPart: CharacterPart;
   onPartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
   onPartPropChange: (key: 'fillOpacity' | 'strokeOpacity', value: number) => void;
+  embedded?: boolean;
 }
 
 /**
- * Legacy color-bearing parts use the same inline RGBA editor as modern
- * Appearance. The mapping keeps Text/Banner authored callbacks unchanged.
+ * Shared modern Fill/Stroke editor. Text-bearing parts embed these controls
+ * inside TEXT; other legacy color-bearing parts retain the standalone card.
  */
-export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPart, onPartColorChange, onPartPropChange }) => {
+export const StyleColorSection: React.FC<StyleColorSectionProps> = ({
+  selectedPart,
+  onPartColorChange,
+  onPartPropChange,
+  embedded = false,
+}) => {
   if (isShapeAppearanceEligible(selectedPart.type)) return null;
 
-  return (
-    <StyleCard title="APPEARANCE" collapsible defaultOpen={false}>
+  const controls = (
+    <>
       <div className="appearance-group">
         <div className="appearance-group-header">
           <span>FILL</span>
@@ -50,6 +56,8 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({ selectedPa
           />
         </div>
       </div>
-    </StyleCard>
+    </>
   );
+
+  return embedded ? controls : <StyleCard title="APPEARANCE" collapsible defaultOpen={false}>{controls}</StyleCard>;
 };

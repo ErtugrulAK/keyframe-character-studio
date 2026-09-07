@@ -14,6 +14,7 @@ import { InlineRename } from '../Shared/InlineRename';
 import { compileOGrafPackage } from '../../ograf/packageCompiler';
 import { createOGrafBrowserZip } from '../../ograf/browserZip';
 import { prepareLegacyOGrafExport } from '../../ograf/legacyCompatibility';
+import { getUniqueOGrafExportErrors } from '../../ograf/diagnostics';
 import type { SceneData } from '../../types/composition';
 import './HeaderBar.css';
 
@@ -85,7 +86,7 @@ export const HeaderBar: React.FC = () => {
       const preparation = prepareLegacyOGrafExport(sceneData);
       const prepared = preparation instanceof Promise ? await preparation : preparation;
       const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
-      const errors = plan.diagnostics.filter((diagnostic) => diagnostic.severity === 'ERROR');
+      const errors = getUniqueOGrafExportErrors(plan.diagnostics);
       if (errors.length > 0) {
         errors.forEach((diagnostic) => {
           const location = diagnostic.layerName ? ` [${diagnostic.layerName}]` : '';

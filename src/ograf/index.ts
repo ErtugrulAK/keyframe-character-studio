@@ -7,3 +7,4 @@ export * from './packageCompiler';
 export * from './packageWriter';
 export * from './browserZip';
 export * from './legacyCompatibility';
+export * from './diagnostics';

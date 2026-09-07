@@ -50,12 +50,13 @@ test.describe('KCS V5.1 consolidated recovery', () => {
     expect(Math.abs(geometry!.selection.width - geometry!.text.width)).toBeLessThan(2);
     expect(Math.abs(geometry!.selection.height - geometry!.text.height)).toBeLessThan(2);
 
-    await page.getByRole('button', { name: 'Expand APPEARANCE' }).click();
-    const appearance = page.locator('.panel-card').filter({ hasText: 'APPEARANCE' }).first();
-    await expect(appearance).toContainText('FILL');
-    await expect(appearance).toContainText('STROKE');
-    await expect(appearance).not.toContainText('QUICK PALETTE');
-    await expect(appearance.locator('input[type="color"]')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Expand TEXT' }).click();
+    const textSection = page.locator('.panel-card').filter({ hasText: 'TEXT' }).first();
+    await expect(textSection).toContainText('FILL');
+    await expect(textSection).toContainText('STROKE');
+    await expect(textSection).not.toContainText('QUICK PALETTE');
+    await expect(textSection.locator('input[type="color"]')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Expand APPEARANCE' })).toHaveCount(0);
     await expect(page.getByText('Transitions', { exact: true })).toHaveCount(0);
   });
 
@@ -77,5 +78,23 @@ test.describe('KCS V5.1 consolidated recovery', () => {
     expect(result!.after.ruler - result!.before.ruler).toBe(result!.after.playhead - result!.before.playhead);
     await page.getByRole('button', { name: 'Fit', exact: true }).click();
     await expect.poll(() => page.locator('.timeline-grid-container').evaluate((node) => node.scrollLeft)).toBe(0);
+  });
+
+  test('inspector hide and show uses a restrained layout transition without a gutter', async ({ page }) => {
+    await seed(page);
+    const sidebar = page.locator('.motion-design-right-sidebar');
+    const transition = await sidebar.evaluate((node) => getComputedStyle(node).transition);
+    expect(transition).toContain('width 0.24s');
+    expect(transition).toContain('transform 0.24s');
+
+    await page.getByRole('button', { name: 'Hide Inspector' }).click();
+    await expect(page.locator('.main-layout')).toHaveClass(/inspector-hidden/u);
+    await expect(page.getByRole('button', { name: 'Show Inspector' })).toBeVisible();
+    await expect.poll(() => sidebar.evaluate((node) => Math.round(node.getBoundingClientRect().width))).toBe(0);
+
+    await page.getByRole('button', { name: 'Show Inspector' }).click();
+    await expect(page.locator('.main-layout')).not.toHaveClass(/inspector-hidden/u);
+    await expect(page.getByRole('button', { name: 'Hide Inspector' })).toBeVisible();
+    await expect.poll(() => sidebar.evaluate((node) => Math.round(node.getBoundingClientRect().width))).toBeGreaterThan(0);
   });
 });

@@ -2,13 +2,15 @@ import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
+import { StyleColorSection } from './StyleColorSection';
 
 interface StyleTextFieldsProps {
   selectedPart: CharacterPart;
-  onPartPropChange: (key: keyof CharacterPart, value: any) => void;
+  onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
+  onPartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
 }
 
-export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, onPartPropChange }) => {
+export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, onPartPropChange, onPartColorChange }) => {
   const applies =
     selectedPart.type === 'custom_card' ||
     selectedPart.type === 'custom_text' ||
@@ -126,6 +128,12 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
               />
             </div>
           )}
+          <StyleColorSection
+            embedded
+            selectedPart={selectedPart}
+            onPartColorChange={onPartColorChange}
+            onPartPropChange={onPartPropChange}
+          />
         </>
       )}
     </StyleCard>

@@ -18,9 +18,8 @@ V6 establishes the canonical path, compositing, interpolation, and graph contrac
 ### V6.1 — Authoring depth
 
 1. Add direct tangent-handle editing to the canvas path authoring surface while reusing `BezierPathEditor` and `src/utils/bezierPath.ts`.
-2. Add mask path keyframes using the same topology compatibility policy as layer paths.
-3. Add explicit track-matte source selection affordances to the outliner without duplicating validation rules.
-4. Add graph selection state so Value Graph and Speed Graph focus on the selected channel rather than the first available lane.
+2. Add explicit track-matte source selection affordances to the outliner without duplicating validation rules.
+3. Extend graph selection and channel-aware editing coverage as remaining polish around the delivered active-sequence graph contract.
 
 ### V6.2 — Interchange
 

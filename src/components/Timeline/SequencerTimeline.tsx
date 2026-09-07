@@ -100,16 +100,29 @@ export const SequencerTimeline: React.FC = () => {
   const selectedKeyframeTransform = selectedPartId
     ? getComputedTransform(selectedPartId, currentFrame)
     : null;
-  const graphTrack = selectedTrack ?? tracks.find((track) =>
-    Object.values(track.maskChannels ?? {}).some((keyframes) => keyframes.length > 0)
-      || Object.values(track.channels).some((keyframes) => keyframes.length > 0),
-  ) ?? tracks[0] ?? null;
+  const activeGraphTemplate = activeTemplateId || 'Sequence';
+  const hasActiveChannelData = (track: typeof tracks[number]): boolean => (
+    Object.values(track.maskChannels ?? {}).some((keyframes) =>
+      keyframes.some((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate),
+    )
+    || Object.values(track.channels).some((keyframes) =>
+      keyframes.some((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate),
+    )
+  );
+  const graphTrack = selectedTrack && hasActiveChannelData(selectedTrack)
+    ? selectedTrack
+    : tracks.find(hasActiveChannelData) ?? tracks[0] ?? null;
   const graphChannel = graphTrack
-    ? Object.keys(graphTrack.channels).find((channel) => graphTrack.channels[channel as TrackChannel]?.length)
-      ?? Object.keys(graphTrack.maskChannels ?? {}).find((channel) => graphTrack.maskChannels?.[channel as keyof NonNullable<typeof graphTrack.maskChannels>]?.length)
+    ? Object.keys(graphTrack.channels).find((channel) =>
+      graphTrack.channels[channel as TrackChannel]?.some((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate),
+    )
+      ?? Object.keys(graphTrack.maskChannels ?? {}).find((channel) =>
+        graphTrack.maskChannels?.[channel as keyof NonNullable<typeof graphTrack.maskChannels>]?.some((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate),
+      )
     : undefined;
   const graphKeyframes = graphChannel
     ? (graphTrack?.channels[graphChannel as TrackChannel] ?? graphTrack?.maskChannels?.[graphChannel as keyof NonNullable<typeof graphTrack.maskChannels>] ?? [])
+      .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate)
     : [];
   const activeSequenceDurationFrames = motionTemplates.find((template) => template.id === activeTemplateId)?.durationFrames ?? totalFrames;
 

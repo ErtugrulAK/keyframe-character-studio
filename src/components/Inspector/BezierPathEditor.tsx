@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import type { BezierPath, BezierVertex } from '../../types/animator';
 import { buildBezierPathD } from '../../utils/bezierPath';
-
+import { generateId } from '../../utils/idGenerator';
 interface BezierPathEditorProps {
   path: BezierPath;
   onChange: (path: BezierPath) => void;
@@ -48,6 +48,19 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
     if (!dragTarget) return;
     updateVertex(dragTarget.index, dragTarget.type, toPathPoint(event));
   };
+  const handleVertexKeyDown = (event: React.KeyboardEvent<SVGCircleElement>, index: number, target: DragTarget['type']) => {
+    if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const point = path.points[index];
+    const targetPoint = target === 'point' ? point : point[target];
+    if (!targetPoint) return;
+    const step = path.coordinateSpace === 'normalized' ? 0.01 : 1;
+    const delta = {
+      x: event.key === 'ArrowLeft' ? -step : event.key === 'ArrowRight' ? step : 0,
+      y: event.key === 'ArrowUp' ? -step : event.key === 'ArrowDown' ? step : 0,
+    };
+    updateVertex(index, target, { x: targetPoint.x + delta.x, y: targetPoint.y + delta.y });
+  };
 
   const addVertex = () => {
     const last = path.points[path.points.length - 1];
@@ -57,13 +70,15 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
       y: (last.y + first.y) / 2,
     };
     const newIndex = path.points.length;
+    const existingIds = new Set(path.points.map((candidate) => candidate.id));
+    let id = generateId('vertex');
+    while (existingIds.has(id)) id = generateId('vertex');
     onChange({
       ...path,
-      points: [...path.points, { id: `vertex-${newIndex}`, ...point, kind: 'corner' }],
+      points: [...path.points, { id, ...point, kind: 'corner' }],
     });
     setSelectedIndex(newIndex);
   };
-
   const deleteVertex = () => {
     const index = Math.min(selectedIndex, path.points.length - 1);
     const nextPoints = path.points.filter((_, pointIndex) => pointIndex !== index);
@@ -131,14 +146,17 @@ export const BezierPathEditor: React.FC<BezierPathEditorProps> = ({
           return (
             <g key={point.id}>
               {point.handleIn && <line x1={viewPoint.x * width} y1={viewPoint.y * height} x2={toView(point.handleIn).x} y2={toView(point.handleIn).y} stroke="#fbbf24" strokeWidth={1} />}
-              {point.handleIn && <circle cx={toView(point.handleIn).x} cy={toView(point.handleIn).y} r={4} fill="#fbbf24" onMouseDown={(event) => { event.stopPropagation(); setSelectedIndex(index); setDragTarget({ type: 'handleIn', index }); }} />}
-              {point.handleOut && <circle cx={toView(point.handleOut).x} cy={toView(point.handleOut).y} r={4} fill="#fbbf24" onMouseDown={(event) => { event.stopPropagation(); setSelectedIndex(index); setDragTarget({ type: 'handleOut', index }); }} />}
+              {point.handleIn && <circle cx={toView(point.handleIn).x} cy={toView(point.handleIn).y} r={4} fill="#fbbf24" tabIndex={0} role="button" aria-label={`Vertex ${index + 1} incoming handle`} onKeyDown={(event) => handleVertexKeyDown(event, index, 'handleIn')} onMouseDown={(event) => { event.stopPropagation(); setSelectedIndex(index); setDragTarget({ type: 'handleIn', index }); }} />}
+              {point.handleOut && <circle cx={toView(point.handleOut).x} cy={toView(point.handleOut).y} r={4} fill="#fbbf24" tabIndex={0} role="button" aria-label={`Vertex ${index + 1} outgoing handle`} onKeyDown={(event) => handleVertexKeyDown(event, index, 'handleOut')} onMouseDown={(event) => { event.stopPropagation(); setSelectedIndex(index); setDragTarget({ type: 'handleOut', index }); }} />}
               <circle
                 cx={viewPoint.x * width}
                 cy={viewPoint.y * height}
                 r={6}
                 fill={index === selectedIndex ? '#f8fafc' : '#38bdf8'}
                 stroke="#0f172a"
+                tabIndex={0}
+                role="button"
+                onKeyDown={(event) => handleVertexKeyDown(event, index, 'point')}
                 onMouseDown={(event) => { event.stopPropagation(); setSelectedIndex(index); setDragTarget({ type: 'point', index }); }}
                 aria-label={`Vertex ${index + 1}`}
               />

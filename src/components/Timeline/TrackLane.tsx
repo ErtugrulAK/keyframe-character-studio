@@ -62,6 +62,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   const isTrackExpanded = track.expanded === true;
   const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
   const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
+  const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
   const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
 
   // M27 — minimal keyframe context menu (right-click on any keyframe).
@@ -285,11 +286,12 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
               {isRotationExpanded && ['rotation'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
 
-              {/* Scale Header Lane Spacer */}
+              {/* Scale Sub-Group */}
+              <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
+              {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
               {/* V6 Layer Mask channels share the track and evaluator. */}
               {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
               {Object.keys(track.maskPathChannels ?? {}).map((channel) => renderChannelLane(channel as LayerMaskPathChannel))}
-              {['opacity'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
 
               {/* Trim Path channel lanes */}
               <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />

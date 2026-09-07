@@ -65,7 +65,8 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
     y: HEIGHT - PAD - ((value - minValue) / valueRange) * (HEIGHT - PAD * 2),
   });
   const toValue = (clientY: number, rect: DOMRect): number => {
-    const normalized = clamp((clientY - rect.top - PAD) / (HEIGHT - PAD * 2), 0, 1);
+    const svgY = ((clientY - rect.top) / Math.max(rect.height, 1)) * HEIGHT;
+    const normalized = clamp((svgY - PAD) / (HEIGHT - PAD * 2), 0, 1);
     return maxValue - normalized * valueRange;
   };
   const pathD = sampled.map((point, index) => {
@@ -79,6 +80,13 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
     if (!keyframe) return;
     const rect = event.currentTarget.getBoundingClientRect();
     onChangeKeyframeValue(draggingId, toValue(event.clientY, rect));
+  };
+  const handleKeyframeKeyDown = (event: React.KeyboardEvent<SVGCircleElement>, keyframe: PropertyKeyframe) => {
+    if (mode !== 'value' || !onChangeKeyframeValue) return;
+    if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
+    event.preventDefault();
+    const step = Math.max(valueRange / 100, 0.01);
+    onChangeKeyframeValue(keyframe.id, keyframe.value + (event.key === 'ArrowUp' ? step : -step));
   };
 
   return (
@@ -116,7 +124,10 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
                 fill="#f8fafc"
                 stroke="#22d3ee"
                 strokeWidth={2}
+                tabIndex={0}
+                role="button"
                 aria-label={`Keyframe ${keyframe.frame}`}
+                onKeyDown={(event) => handleKeyframeKeyDown(event, keyframe)}
                 onMouseDown={(event) => { event.stopPropagation(); setDraggingId(keyframe.id); }}
               />
             );

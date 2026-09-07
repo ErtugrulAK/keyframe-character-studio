@@ -34,10 +34,9 @@ export const DetailsPanel: React.FC = () => {
     setCharacterParts,
     setTracks,
     getComputedTransform,
-    updateCurrentTransform,
     updateCurrentPropertyChannel,
+    updatePropertyKeyframeValue,
     addPropertyKeyframe,
-    addMaskPathKeyframe,
     authorMaskPath,
     deletePart,
     customPresets,
@@ -200,7 +199,24 @@ export const DetailsPanel: React.FC = () => {
   const handleDisplayedPartPropChange = (key: keyof CharacterPart, value: unknown) => {
     if (key === 'masks' && Array.isArray(value)) {
       const baseMasks = characterParts.find((part) => part.id === selectedPartId)?.masks ?? [];
-      const mergedMasks = value.map((mask) => {
+      const maskScalarProperties = ['feather', 'opacity', 'expansion'] as const;
+      const baseValue = value.map((mask) => {
+        const baseMask = baseMasks.find((candidate) => candidate.id === mask.id);
+        if (!baseMask || !selectedTrack) return mask;
+        const nextMask = { ...mask };
+        for (const property of maskScalarProperties) {
+          const channel = layerMaskChannel(mask.id, property);
+          const keyframe = selectedTrack.maskChannels?.[channel]?.find(
+            (candidate) => candidate.frame === currentFrame && (candidate.templateId || 'Sequence') === (activeTemplateId || 'Sequence'),
+          );
+          if (keyframe && mask[property] !== keyframe.value) {
+            updatePropertyKeyframeValue(selectedTrack.id, channel, keyframe.id, Number(mask[property]));
+            nextMask[property] = baseMask[property];
+          }
+        }
+        return nextMask;
+      });
+      const mergedMasks = baseValue.map((mask) => {
         const baseMask = baseMasks.find((candidate) => candidate.id === mask.id);
         return baseMask ? { ...mask, path: baseMask.path } : mask;
       });

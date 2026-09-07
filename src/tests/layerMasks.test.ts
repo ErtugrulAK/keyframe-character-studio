@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { CharacterPart, LayerMask } from '../types/animator';
 import { buildLayerMaskDefinition, buildLayerMaskPathD } from '../utils/layerMasks';
 import { evaluateLayerMasks } from '../utils/evaluateLayerMasks';
-import { layerMaskChannel } from '../types/animator';
+import { layerMaskChannel, layerMaskPathChannel } from '../types/animator';
 
 const part = {
   id: 'layer-1',
@@ -76,5 +76,29 @@ describe('layer mask core', () => {
     };
     const evaluated = evaluateLayerMasks({ ...part, masks: [mask] }, track, 5);
     expect(evaluated?.[0]).toMatchObject({ opacity: 0.5, feather: 7, expansion: 0 });
+  });
+  it('filters scalar and path channels by the active named sequence', () => {
+    const mask: LayerMask = { id: 'mask-1', name: 'Mask', path, mode: 'add', opacity: 0.1, feather: 0, expansion: 0 };
+    const alternatePath = { ...path, points: path.points.map((point) => ({ ...point, x: point.x + 0.25 })) };
+    const track = {
+      partId: part.id,
+      channels: {} as never,
+      maskChannels: {
+        [layerMaskChannel('mask-1', 'opacity')]: [
+          { id: 'sequence', frame: 0, value: 0.2, easing: 'linear' as const, templateId: 'Sequence' },
+          { id: 'named', frame: 0, value: 0.8, easing: 'linear' as const, templateId: 'Alt' },
+        ],
+      },
+      maskPathChannels: {
+        [layerMaskPathChannel('mask-1')]: [
+          { id: 'sequence-path', frame: 0, value: path, easing: 'linear' as const, templateId: 'Sequence' },
+          { id: 'named-path', frame: 0, value: alternatePath, easing: 'linear' as const, templateId: 'Alt' },
+        ],
+      },
+    };
+    expect(evaluateLayerMasks({ ...part, masks: [mask] }, track, 0, 'Alt')?.[0].opacity).toBe(0.8);
+    expect(evaluateLayerMasks({ ...part, masks: [mask] }, track, 0, 'Alt')?.[0].path).toBe(alternatePath);
+    expect(evaluateLayerMasks({ ...part, masks: [mask] }, track, 0, 'Sequence')?.[0].opacity).toBe(0.2);
+    expect(evaluateLayerMasks({ ...part, masks: [mask] }, track, 0, 'Sequence')?.[0].path).toBe(path);
   });
 });

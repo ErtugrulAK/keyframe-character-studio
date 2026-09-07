@@ -94,7 +94,7 @@ export function evaluateFrame(
     const track = tracks.find((candidate) => candidate.partId === layer.id);
     const layerFrame = frameOverrides?.[layer.id] ?? frame;
     const trim = evaluateTrimPath(layer, track, layerFrame, sequenceId || 'Sequence');
-    const masks = evaluateLayerMasks(layer, track, layerFrame);
+    const masks = evaluateLayerMasks(layer, track, layerFrame, sequenceId);
 
     evaluated.push({
       id: layer.id,

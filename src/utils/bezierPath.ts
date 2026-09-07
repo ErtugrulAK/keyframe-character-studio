@@ -151,6 +151,7 @@ export const areBezierPathsTopologyCompatible = (
 ): boolean => Boolean(
   first
   && second
+  && first.coordinateSpace === second.coordinateSpace
   && first.closed === second.closed
   && first.points.length === second.points.length
   && first.points.every((point, index) => point.id === second.points[index]?.id),
@@ -164,10 +165,16 @@ export const interpolateBezierPath = (
   if (!previous || !next || !areBezierPathsTopologyCompatible(previous, next)) return previous;
   const t = Math.max(0, Math.min(1, progress));
   const lerp = (a: number, b: number) => a + (b - a) * t;
-  const interpolateHandle = (a: PathHandle | undefined, b: PathHandle | undefined): PathHandle | undefined => {
+  const interpolateHandle = (
+    a: PathHandle | undefined,
+    b: PathHandle | undefined,
+    anchor: PathPoint,
+  ): PathHandle | undefined => {
     if (!a && !b) return undefined;
-    const start = a ?? b!;
-    const end = b ?? a!;
+    if (t === 0) return a;
+    if (t === 1) return b;
+    const start = a ?? anchor;
+    const end = b ?? anchor;
     return { x: lerp(start.x, end.x), y: lerp(start.y, end.y) };
   };
   return {
@@ -176,12 +183,14 @@ export const interpolateBezierPath = (
     closed: previous.closed,
     points: previous.points.map((point, index) => {
       const target = next.points[index];
+      const handleIn = interpolateHandle(point.handleIn, target.handleIn, point);
+      const handleOut = interpolateHandle(point.handleOut, target.handleOut, point);
       return {
         id: point.id,
         x: lerp(point.x, target.x),
         y: lerp(point.y, target.y),
-        ...(interpolateHandle(point.handleIn, target.handleIn) ? { handleIn: interpolateHandle(point.handleIn, target.handleIn) } : {}),
-        ...(interpolateHandle(point.handleOut, target.handleOut) ? { handleOut: interpolateHandle(point.handleOut, target.handleOut) } : {}),
+        ...(handleIn ? { handleIn } : {}),
+        ...(handleOut ? { handleOut } : {}),
         kind: t < 0.5 ? point.kind : target.kind,
       };
     }),

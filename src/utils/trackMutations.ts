@@ -55,16 +55,20 @@ export const addPropertyKeyframeMutator = (
     const isMask = isLayerMaskChannel(channel);
     const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
     const keyframes = channelMap[channel] ?? [];
-    const existing = keyframes.find((k) => k.frame === frame);
+    const existing = keyframes.find((k) => k.frame === frame && (!isMask || (k.templateId || 'Sequence') === templateId));
     const newKf: PropertyKeyframe = {
-      id: generateId(`pkf_${channel}`),
+      id: existing?.id ?? generateId(`pkf_${channel}`),
       frame,
       value,
       easing,
       templateId,
     };
     const updated = existing
-      ? keyframes.map((k) => (k.frame === frame ? { ...k, value, easing } : k))
+      ? keyframes.map((k) => (
+        k.id === existing.id
+          ? (isMask ? { ...k, value, easing, templateId } : { ...k, value, easing })
+          : k
+      ))
       : [...keyframes, newKf].sort((a, b) => a.frame - b.frame);
     return isMask
       ? { ...t, maskChannels: { ...t.maskChannels, [channel]: updated } }
@@ -230,41 +234,39 @@ export const deleteSelectedKeyframeGroupMutator = (
       };
     }
 
-    const selectedPropertyKeyframe = ANIMATABLE_CHANNELS
-      .flatMap((channel) => track.channels?.[channel] || [])
-      .find((keyframe) => keyframe.id === selectedKeyframeId
-        && (keyframe.templateId || 'Sequence') === activeTemplateId);
+    const selectedPropertyEntry = [
+      ...ANIMATABLE_CHANNELS.flatMap((channel) => (track.channels?.[channel] || []).map((keyframe) => ({ keyframe, channel }))),
+      ...Object.entries(track.maskChannels ?? {}).flatMap(([channel, keyframes]) => keyframes.map((keyframe) => ({ keyframe, channel }))),
+    ].find(({ keyframe }) => keyframe.id === selectedKeyframeId
+      && (keyframe.templateId || 'Sequence') === activeTemplateId);
     const selectedPathEntry = Object.entries(track.maskPathChannels ?? {})
-      .map(([channel, keyframes]) => ({ channel: channel as LayerMaskPathChannel, keyframe: keyframes.find((keyframe) => keyframe.id === selectedKeyframeId && (keyframe.templateId || 'Sequence') === activeTemplateId) }))
-      .find((entry) => Boolean(entry.keyframe));
-    if (selectedPathEntry?.keyframe) {
-      return {
-        deleted: true,
-        tracks: tracks.map((candidate) => candidate.id === track.id
-          ? {
-            ...candidate,
-            maskPathChannels: {
-              ...candidate.maskPathChannels,
-              [selectedPathEntry.channel]: (candidate.maskPathChannels?.[selectedPathEntry.channel] ?? [])
-                .filter((keyframe) => keyframe.id !== selectedKeyframeId),
-            },
-          }
-          : candidate),
-      };
-    }
-    if (!selectedPropertyKeyframe) continue;
+      .flatMap(([channel, keyframes]) => keyframes.map((keyframe) => ({ channel, keyframe })))
+      .find(({ keyframe }) => keyframe.id === selectedKeyframeId
+        && (keyframe.templateId || 'Sequence') === activeTemplateId);
+    const selectedFrame = selectedPropertyEntry?.keyframe.frame ?? selectedPathEntry?.keyframe.frame;
+    if (selectedFrame === undefined) continue;
 
-    const channels = { ...track.channels };
-    for (const channel of ANIMATABLE_CHANNELS) {
-      channels[channel] = (channels[channel] || []).filter(
-        (keyframe) => keyframe.frame !== selectedPropertyKeyframe.frame
-          || (keyframe.templateId || 'Sequence') !== activeTemplateId,
-      );
-    }
+    const channels = Object.fromEntries(Object.entries(track.channels ?? {}).map(([channel, keyframes]) => [
+      channel,
+      keyframes.filter((keyframe) => keyframe.frame !== selectedFrame
+        || (keyframe.templateId || 'Sequence') !== activeTemplateId),
+    ]));
+    const maskChannels = Object.fromEntries(Object.entries(track.maskChannels ?? {}).map(([channel, keyframes]) => [
+      channel,
+      keyframes.filter((keyframe) => keyframe.frame !== selectedFrame
+        || (keyframe.templateId || 'Sequence') !== activeTemplateId),
+    ]));
+    const maskPathChannels = Object.fromEntries(Object.entries(track.maskPathChannels ?? {}).map(([channel, keyframes]) => [
+      channel,
+      keyframes.filter((keyframe) => keyframe.frame !== selectedFrame
+        || (keyframe.templateId || 'Sequence') !== activeTemplateId),
+    ]));
 
     return {
       deleted: true,
-      tracks: tracks.map((candidate) => candidate.id === track.id ? { ...candidate, channels } : candidate),
+      tracks: tracks.map((candidate) => candidate.id === track.id
+        ? { ...candidate, channels, maskChannels, maskPathChannels }
+        : candidate),
     };
   }
 

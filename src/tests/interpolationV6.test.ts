@@ -39,4 +39,19 @@ describe('V6 interpolation authority', () => {
     expect(controls[3]).toBeLessThanOrEqual(1);
     expect(applyEasing(0.5, 'hold')).toBe(0);
   });
+  it('uses the nearest sorted auto-bezier neighbors', () => {
+    const controls = deriveAutoBezierControlPoints(
+      keyframe('c', 30, 30, 'autoBezier'),
+      keyframe('d', 40, 40, 'linear'),
+      keyframe('b', 20, 10, 'linear'),
+      keyframe('e', 50, 45, 'linear'),
+    );
+    const oldestNeighbor = deriveAutoBezierControlPoints(
+      keyframe('c', 30, 30, 'autoBezier'),
+      keyframe('d', 40, 40, 'linear'),
+      keyframe('a', 0, -100, 'linear'),
+      keyframe('e', 50, 45, 'linear'),
+    );
+    expect(controls[1]).not.toBe(oldestNeighbor[1]);
+  });
 });

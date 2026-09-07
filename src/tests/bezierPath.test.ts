@@ -73,4 +73,25 @@ describe('bezierPath', () => {
     expect(areBezierPathsTopologyCompatible(first, mismatched)).toBe(false);
     expect(interpolateBezierPath(first, mismatched, 0.5)).toBe(first);
   });
+  it('rejects coordinate-space mismatches and preserves one-sided handle endpoints', () => {
+    const local = {
+      ...legacyFreeformPointsToPath([{ x: 0, y: 0 }, { x: 10, y: 0 }], false)!,
+      points: [
+        { id: 'vertex-0', x: 0, y: 0 },
+        { id: 'vertex-1', x: 10, y: 0, handleIn: { x: 8, y: 0 } },
+      ],
+    };
+    const normalized = { ...local, coordinateSpace: 'normalized' as const };
+    expect(areBezierPathsTopologyCompatible(local, normalized)).toBe(false);
+    const straight = {
+      ...local,
+      points: local.points.map((point) => ({ ...point, handleIn: undefined })),
+    };
+    const curved = {
+      ...local,
+      points: local.points.map((point) => ({ ...point, handleOut: { x: 4, y: 0 } })),
+    };
+    expect(interpolateBezierPath(straight, curved, 0)?.points[0].handleOut).toBeUndefined();
+    expect(interpolateBezierPath(straight, curved, 1)?.points[0].handleOut).toEqual({ x: 4, y: 0 });
+  });
 });

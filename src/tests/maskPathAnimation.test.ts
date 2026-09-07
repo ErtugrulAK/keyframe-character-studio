@@ -73,7 +73,7 @@ describe('V6 mask path animation', () => {
 
     const evaluated = evaluateLayerMasks(part, edited, 6);
     expect(evaluated?.[0].path.points[0].x).toBeCloseTo(0.35, 4);
-    expect(evaluated?.[0].path.points[0].handleOut).toEqual({ x: 0.6, y: 0.2 });
+    expect(evaluated?.[0].path.points[0].handleOut).toEqual({ x: 0.4, y: 0.2 });
 
     const deleted = deleteMaskPathKeyframeMutator([edited], 'track-1', channel, edited.maskPathChannels![channel][0].id)[0];
     expect(deleted.maskPathChannels![channel]).toHaveLength(1);

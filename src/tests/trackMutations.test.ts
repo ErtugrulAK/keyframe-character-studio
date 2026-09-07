@@ -62,6 +62,20 @@ describe('TrackMutations Utility', () => {
     expect(final[0].channels?.opacity?.[0].id).toBe(kf30!.id);
     expect(final[0].channels?.opacity?.[0].frame).toBe(15);
   });
+  it('keeps same-frame scalar mask keyframes isolated by sequence', () => {
+    const maskTrack: Track = {
+      ...mockTrack,
+      maskChannels: {
+        'mask-1:opacity': [
+          { id: 'sequence-mask', frame: 5, value: 0.2, easing: 'linear', templateId: 'Sequence' },
+        ],
+      },
+    };
+    const next = addPropertyKeyframeMutator([maskTrack], 'track_1', 'mask-1:opacity', 5, 0.8, 'linear', 'Alt')[0];
+    expect(next.maskChannels?.['mask-1:opacity']).toHaveLength(2);
+    expect(next.maskChannels?.['mask-1:opacity'].find((keyframe) => keyframe.templateId === 'Sequence')?.value).toBe(0.2);
+    expect(next.maskChannels?.['mask-1:opacity'].find((keyframe) => keyframe.templateId === 'Alt')?.value).toBe(0.8);
+  });
 
   it('deletes only the selected canonical frame group in the active template', () => {
     const track: Track = {

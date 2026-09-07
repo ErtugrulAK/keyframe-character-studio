@@ -73,8 +73,8 @@ export function interpolateChannel(
   const duration = next.frame - prev.frame;
   if (duration <= 0) return prev.value;
   const progress = (frame - prev.frame) / duration;
-  const previousPrevious = sorted.find((candidate) => candidate.frame < prev.frame);
-  const nextNext = sorted.find((candidate) => candidate.frame > next.frame);
+  const previousPrevious = sorted[sorted.indexOf(prev) - 1];
+  const nextNext = sorted[sorted.indexOf(next) + 1];
   const autoBezier = prev.easing === 'autoBezier'
     ? deriveAutoBezierControlPoints(prev, next, previousPrevious, nextNext)
     : undefined;

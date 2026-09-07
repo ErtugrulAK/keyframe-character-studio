@@ -16,18 +16,32 @@ const makePath = (): BezierPath => ({
 });
 
 describe('BezierPathEditor', () => {
-  it('adds and selects a new vertex, then deletes the selected vertex', () => {
+  it('adds and selects a collision-safe vertex, then deletes the selected vertex', () => {
     const onChange = vi.fn();
     const { rerender } = render(<BezierPathEditor path={makePath()} onChange={onChange} />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Add vertex' }));
     const addedPath = onChange.mock.lastCall?.[0] as BezierPath;
     expect(addedPath.points).toHaveLength(4);
-    expect(addedPath.points[3].id).toBe('vertex-3');
+    expect(new Set(addedPath.points.map((point) => point.id)).size).toBe(4);
 
     rerender(<BezierPathEditor path={addedPath} onChange={onChange} />);
     fireEvent.click(screen.getByRole('button', { name: 'Delete vertex' }));
     expect(onChange.mock.lastCall?.[0].points).toHaveLength(3);
+  });
+
+  it('keeps vertex ids unique after deleting an interior vertex and adding again', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<BezierPathEditor path={makePath()} onChange={onChange} />);
+
+    fireEvent.mouseDown(screen.getByLabelText('Vertex 2'));
+    fireEvent.click(screen.getByRole('button', { name: 'Delete vertex' }));
+    const afterDelete = onChange.mock.lastCall?.[0] as BezierPath;
+    rerender(<BezierPathEditor path={afterDelete} onChange={onChange} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Add vertex' }));
+
+    const afterAdd = onChange.mock.lastCall?.[0] as BezierPath;
+    expect(new Set(afterAdd.points.map((point) => point.id)).size).toBe(afterAdd.points.length);
   });
 
   it('keeps vertex selection after mouseup and applies one smooth toggle update', () => {

@@ -1,4 +1,4 @@
-import type { Track, Keyframe, PropertyKeyframe } from '../types/animator';
+import type { Track, Keyframe, PropertyKeyframe, PathKeyframe } from '../types/animator';
 import { TRACK_CHANNELS } from '../types/animator';
 import { generateId } from './idGenerator';
 
@@ -9,8 +9,10 @@ export function duplicateKeyframeGroup(track: Track, sourceFrame: number, offset
   if (!Number.isFinite(sourceFrame) || sourceFrame < 0 || (totalFrames !== undefined && (sourceFrame > totalFrames || targetFrame > totalFrames))) return { track, duplicated: false };
   const channels = track.channels ?? {};
   const sourceChannelKfs = TRACK_CHANNELS.filter((channel) => (channels[channel] ?? []).some((keyframe) => keyframe.frame === sourceFrame));
-  const maskKeys = Object.keys(track.maskChannels ?? {}).filter((channel) => (track.maskChannels?.[channel] ?? []).some((keyframe) => keyframe.frame === sourceFrame));
-  const pathKeys = Object.keys(track.maskPathChannels ?? {}).filter((channel) => (track.maskPathChannels?.[channel] ?? []).some((keyframe) => keyframe.frame === sourceFrame));
+  const maskChannels = (track.maskChannels ?? {}) as Record<string, PropertyKeyframe[]>;
+  const maskPathChannels = (track.maskPathChannels ?? {}) as Record<string, PathKeyframe[]>;
+  const maskKeys = Object.keys(maskChannels).filter((channel) => (maskChannels[channel] ?? []).some((keyframe) => keyframe.frame === sourceFrame));
+  const pathKeys = Object.keys(maskPathChannels).filter((channel) => (maskPathChannels[channel] ?? []).some((keyframe) => keyframe.frame === sourceFrame));
   const sourceLegacy = (track.keyframes ?? []).filter((keyframe) => keyframe.frame === sourceFrame);
   if (!sourceChannelKfs.length && !maskKeys.length && !pathKeys.length && !sourceLegacy.length) return { track, duplicated: false };
   const occupied = (map: Record<string, Array<{ frame: number }> > | undefined) => Object.values(map ?? {}).some((keyframes) => keyframes.some((keyframe) => keyframe.frame === targetFrame));

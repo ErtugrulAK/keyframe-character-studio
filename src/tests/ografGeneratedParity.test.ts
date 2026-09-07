@@ -259,8 +259,8 @@ describe('generated runtime parity', () => {
     expect(graphic.innerHTML).toContain('id="kcs-clip-source___hostile"');
     expect(graphic.innerHTML).toContain('clip-path="url(#kcs-clip-source___hostile)"');
     expect(graphic.innerHTML).toContain('id="kcs-ograf-layer-mask-target___hostile-mask___hostile-add"');
-    expect(graphic.innerHTML).not.toMatch(/\sid="[^"]*[\/# ]/u);
-    expect(graphic.innerHTML).not.toMatch(/url\(#[^)]*[\/# ]/u);
+    expect(graphic.innerHTML).not.toMatch(/\sid="[^"]*[/# ]/u);
+    expect(graphic.innerHTML).not.toMatch(/url\(#[^)]*[/# ]/u);
     await graphic.dispose();
   });
 });

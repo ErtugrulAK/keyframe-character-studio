@@ -253,7 +253,7 @@ function renderClipDefs(scene: OGrafEvaluatedScene, options: OGrafSvgRenderOptio
   for (const target of scene.layers) {
     const relationship = getMatteRelationship(target);
     const sourceLayerId = relationship?.sourceLayerId || target.content.matte?.sourcePartId;
-    const isClip = relationship?.mode === 'clip' || target.content.matte?.mode === 'clip' || (!relationship && Boolean(target.content.matte));
+    const isClip = relationship?.mode === undefined && (target.content.matte?.mode === 'clip' || (!relationship && Boolean(target.content.matte)));
     if (!sourceLayerId || !isClip || renderedSources.has(sourceLayerId)) continue;
     const source = scene.layers.find((layer) => layer.id === sourceLayerId);
     if (!source) throw new Error(`Clip matte source "${sourceLayerId}" for layer "${target.id}" was not found.`);
@@ -270,7 +270,7 @@ function renderLayer(scene: OGrafEvaluatedScene, layer: EvaluatedLayer, options:
   const legacyMatte = layer.content.matte;
   const relationship = getMatteRelationship(layer);
   const clipSourceId = relationship?.sourceLayerId || legacyMatte?.sourcePartId;
-  const clip = clipSourceId && (relationship?.mode === 'clip' || legacyMatte?.mode === 'clip' || (!relationship && legacyMatte))
+  const clip = clipSourceId && (relationship?.mode === undefined && (legacyMatte?.mode === 'clip' || (!relationship && Boolean(legacyMatte))))
     ? ` clip-path="url(#kcs-clip-${safeSvgId(clipSourceId)})"` : '';
   const allMaskIds = [...maskIds, ...(matteId ? [matteId] : [])];
   const transformedBody = `<g transform="${layerTransform(scene, layer)}">${body}</g>`;

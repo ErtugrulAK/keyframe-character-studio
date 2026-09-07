@@ -250,17 +250,17 @@ export const deleteSelectedKeyframeGroupMutator = (
       channel,
       keyframes.filter((keyframe) => keyframe.frame !== selectedFrame
         || (keyframe.templateId || 'Sequence') !== activeTemplateId),
-    ]));
+    ])) as Track['channels'];
     const maskChannels = Object.fromEntries(Object.entries(track.maskChannels ?? {}).map(([channel, keyframes]) => [
       channel,
       keyframes.filter((keyframe) => keyframe.frame !== selectedFrame
         || (keyframe.templateId || 'Sequence') !== activeTemplateId),
-    ]));
+    ])) as Track['maskChannels'];
     const maskPathChannels = Object.fromEntries(Object.entries(track.maskPathChannels ?? {}).map(([channel, keyframes]) => [
       channel,
       keyframes.filter((keyframe) => keyframe.frame !== selectedFrame
         || (keyframe.templateId || 'Sequence') !== activeTemplateId),
-    ]));
+    ])) as Track['maskPathChannels'];
 
     return {
       deleted: true,

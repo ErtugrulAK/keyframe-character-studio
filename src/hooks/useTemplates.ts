@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import type { CharacterPart, Track, MotionTemplate, ProjectTemplate, TrackChannel, AppMode } from '../types/animator';
+import type { CharacterPart, Track, MotionTemplate, ProjectTemplate, AppMode } from '../types/animator';
 import type { SceneCoordinateSystem } from '../types/composition';
 import { DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_CHARACTER_PARTS, DEFAULT_TRACKS } from '../utils/defaults';
@@ -23,6 +23,7 @@ interface UseTemplatesOptions {
   characterParts: CharacterPart[];
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   tracks: Track[];
+  setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
   setFps: React.Dispatch<React.SetStateAction<number>>;
   setTotalFrames?: React.Dispatch<React.SetStateAction<number>>;
   setCurrentFrame: (frame: number | ((prev: number) => number)) => void;
@@ -128,7 +129,9 @@ export const useTemplates = ({
     });
     setTracks((prevTracks) =>
       prevTracks.map((tr) => {
-        const filterMap = <T extends { templateId?: string }>(map: Record<string, T[]> | undefined) =>
+        const filterMap = <T extends { templateId?: string }>(
+          map: Record<string, T[]> | undefined,
+        ): Record<string, T[]> =>
           Object.fromEntries(Object.entries(map ?? {}).map(([channel, keyframes]) => [
             channel,
             keyframes.filter((keyframe) => (keyframe.templateId || 'Sequence') !== idToDelete),
@@ -136,10 +139,7 @@ export const useTemplates = ({
         return {
           ...tr,
           keyframes: (tr.keyframes || []).filter((k) => (k.templateId || 'Sequence') !== idToDelete),
-          channels: Object.fromEntries(Object.entries(tr.channels ?? {}).map(([channel, keyframes]) => [
-            channel,
-            keyframes.filter((keyframe) => (keyframe.templateId || 'Sequence') !== idToDelete),
-          ])),
+          channels: filterMap(tr.channels) as Track['channels'],
           maskChannels: filterMap(tr.maskChannels),
           maskPathChannels: filterMap(tr.maskPathChannels),
           ...(tr.sequencerTemplateId === idToDelete ? { sequencerTemplateId: undefined } : {}),

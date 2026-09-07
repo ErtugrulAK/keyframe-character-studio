@@ -51,19 +51,19 @@ async function selectPart(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(300);
 }
 
-/** Open the Inspector STYLE tab (the TRACK MATTE card lives there). */
-async function openStyleTab(page: Page): Promise<void> {
-  const styleTab = page.locator('button', { hasText: /^Style$/ }).first();
-  if (await styleTab.count()) {
-    await styleTab.click();
-    await page.waitForTimeout(300);
+/** Open the consolidated Inspector MASK / TRACK MATTE card. */
+async function openMatteSection(page: Page): Promise<void> {
+  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) MASK \/ TRACK MATTE/ });
+  await expect(disclosure).toBeVisible();
+  if (await disclosure.getAttribute('aria-expanded') === 'false') {
+    await disclosure.click();
   }
 }
 
 /** Set the matte source via the Inspector's MATTE SOURCE select. */
 async function setMatteSource(page: Page, sourceId: string): Promise<void> {
-  await openStyleTab(page);
-  // the matte source select is the select containing the eligible sources
+  await openMatteSection(page);
+  // The matte source select is the select containing the eligible sources.
   const select = page.locator(`select.select-control:has(option[value="${sourceId}"])`);
   await select.waitFor({ state: 'visible', timeout: 10000 });
   await select.selectOption(sourceId);
@@ -101,7 +101,6 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
     expect(await matteIndicator(page, 'Matte source: The Cow')).toBe(true);
     // delete the SOURCE part through the Inspector delete button (real path)
     await selectPart(page, 'The Cow');
-    await openStyleTab(page);
     const del = page.locator('button[title="Delete Actor Instance"]');
     await del.waitFor({ state: 'visible', timeout: 10000 });
     await del.click();
@@ -121,7 +120,7 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
       makeLayer('logo', 'The Logo', 'custom_box'),
     ]);
     await selectPart(page, 'The Logo');
-    await openStyleTab(page);
+    await openMatteSection(page);
     // the source selector must NOT offer the part itself (UI guard)
     const select = page.locator('select.select-control').filter({ has: page.locator('option[value="logo"]') });
     expect(await select.count()).toBe(0);
@@ -214,7 +213,6 @@ test.describe('M22 — outliner matte relationship + validation (real UI)', () =
     ]);
     expect(await matteIndicator(page, 'Matte source: The Cow')).toBe(true);
     await selectPart(page, 'The Cow');
-    await openStyleTab(page);
     await page.locator('button[title="Delete Actor Instance"]').click();
     await page.waitForTimeout(400);
     expect(await matteIndicator(page, 'Missing matte source')).toBe(true);

@@ -22,8 +22,13 @@ test('M24 — combination preset data remains compatible in the approved Transfo
   await page.reload();
   await page.locator('.actor-node', { hasText: 'Combination Legacy' }).click();
 
-  await expect(page.locator('[aria-label="Animation In Preset"]')).toHaveValue('slide-scale-left');
-  await expect(page.locator('[aria-label="Animation Out Preset"]')).toHaveValue('soft-pop');
+  const animationData = page.getByRole('button', { name: /(?:Expand|Collapse) ANIMATION DATA/ });
+  await expect(animationData).toBeVisible();
+  if (await animationData.getAttribute('aria-expanded') === 'false') {
+    await animationData.click();
+  }
+  await expect(page.getByRole('button', { name: 'Copy Animation', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Clear Animation', exact: true })).toBeVisible();
   await page.locator('.autosave-status-badge').click();
   await expect.poll(() => page.evaluate((key) => {
     const layer = JSON.parse(localStorage.getItem(key) ?? '{}').layers?.[0] ?? {};

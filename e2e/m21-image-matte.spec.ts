@@ -435,11 +435,11 @@ test.describe('M21 image matte — real browser pixel matrix', () => {
     expect(pt).not.toBeNull();
     await page.mouse.click(pt!.x, pt!.y);
     await page.waitForTimeout(600);
-    // ensure the Inspector shows the STYLE tab (TRACK MATTE lives there)
-    const styleTab = page.locator('button', { hasText: /^Style$/ }).first();
-    if (await styleTab.count()) {
-      await styleTab.click();
-      await page.waitForTimeout(400);
+    // The matte relationship is owned by the consolidated Inspector card.
+    const matteDisclosure = page.getByRole('button', { name: /(?:Expand|Collapse) MASK \/ TRACK MATTE/ });
+    await expect(matteDisclosure).toBeVisible();
+    if (await matteDisclosure.getAttribute('aria-expanded') === 'false') {
+      await matteDisclosure.click();
     }
     // Inspector opens on the target — switch the matte source select to the shape
     const sourceSelect = page.locator('select.select-control:has(option[value="img"])');

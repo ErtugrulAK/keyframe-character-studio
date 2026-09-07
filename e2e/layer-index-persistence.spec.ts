@@ -30,24 +30,24 @@ test('authored layer index survives new layers, template switching, autosave, an
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
   await openTransform(page);
   await page.getByRole('button', { name: 'Bring Forward (+1)', exact: true }).click();
-  await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Layer index')).toHaveText('Index 2');
   await page.keyboard.press('Control+Z');
-  await expect(page.getByText('Index 1', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Layer index')).toHaveText('Index 1');
   await expect(page.getByTitle('Redo')).toBeEnabled();
   await page.getByTitle('Redo').click();
-  await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Layer index')).toHaveText('Index 2');
   await createShapeByDrag(page, 'Square', 120);
   // Adding a new shape used to silently reindex every existing part.
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
   await openTransform(page);
-  await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Layer index')).toHaveText('Index 2');
 
   // Selection changes and an unrelated style-tab visit must not reconstruct
   // the selected part from an older/default layer index.
   await page.locator('.actor-node', { hasText: 'Triangle' }).click();
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
   await openTransform(page);
-  await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Layer index')).toHaveText('Index 2');
 
   // Project template switching is part of the active-state contract.
   await page.getByTitle('Create New Template').click();
@@ -56,14 +56,14 @@ test('authored layer index survives new layers, template switching, autosave, an
   await page.getByTitle('Template: Template').click();
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
   await openTransform(page);
-  await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Layer index')).toHaveText('Index 2');
 
   // Edit/Broadcast mode transitions do not own the authored zIndex state.
   await page.getByText('BROADCAST', { exact: true }).click();
   await page.getByText('EDIT MODE', { exact: true }).click();
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
   await openTransform(page);
-  await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Layer index')).toHaveText('Index 2');
 
   // Wait for the observable autosave payload rather than sleeping for an
   // unexplained duration.
@@ -76,7 +76,7 @@ test('authored layer index survives new layers, template switching, autosave, an
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   await page.locator('.actor-node', { hasText: 'Rectangle' }).click();
   await openTransform(page);
-  await expect(page.getByText('Index 2', { exact: true })).toBeVisible();
+  await expect(page.getByLabel('Layer index')).toHaveText('Index 2');
 
   const persisted = await page.evaluate((key) => {
     const data = JSON.parse(localStorage.getItem(key) || '{}') as { layers?: { name?: string; zIndex?: number }[] };

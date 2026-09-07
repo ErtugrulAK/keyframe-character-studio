@@ -65,6 +65,14 @@ async function selectPart(page: Page, name: string): Promise<void> {
   await page.waitForTimeout(250);
 }
 
+async function openTransformSection(page: Page): Promise<void> {
+  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) TRANSFORM/ });
+  await expect(disclosure).toBeVisible();
+  if (await disclosure.getAttribute('aria-expanded') === 'false') {
+    await disclosure.click();
+  }
+}
+
 async function openTimelineKeyframeEditor(page: Page): Promise<void> {
   await expect(page.locator('.timeline-selected-keyframe-panel')).toBeVisible();
   await expect(page.getByText('SELECTED KEYFRAME @ FRAME', { exact: false })).toBeVisible();
@@ -205,6 +213,7 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     const tracks = [{ id: 't_a', partId: 'a', name: 'Part A', color: '#ff0000', channels: ch, keyframes: [], visible: true, locked: false, expanded: true }];
     await seed(page, [makeLayer('a', 'Part A')], tracks);
     await selectPart(page, 'Part A');
+    await openTransformSection(page);
     await clickFirstKeyframe(page);
     await openTimelineKeyframeEditor(page);
 
@@ -268,10 +277,10 @@ test.describe('M29 — selected keyframe value editing (real UI)', () => {
     const { layers, tracks } = xRotTracks();
     await seed(page, layers, tracks);
     await selectPart(page, 'Part A');
+    await openTransformSection(page);
     expect(await page.getByText('SELECTED KEYFRAME @ FRAME', { exact: false }).count()).toBe(0);
-    // base transform controls still present and usable
-    const baseX = page.locator('.form-field-group', { hasText: 'POS X' }).locator('input').first();
-    expect(await baseX.count()).toBeGreaterThan(0);
+    // Base transform controls still present and usable.
+    await expect(page.getByLabel('Position X')).toBeVisible();
   });
 
   test('E2E-12 — stale selection: deleting the keyframe hides the section safely', async ({ page }) => {

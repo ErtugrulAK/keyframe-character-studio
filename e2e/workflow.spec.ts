@@ -64,11 +64,11 @@ async function createShapeByDrag(page: import('@playwright/test').Page, name: st
     // Delete part
     await page.keyboard.press('Delete');
 
-    // Switch Project Templates
-    await page.getByTitle('Project Workspace').click();
-
-    // Switch Motion Templates
-    await page.getByTitle('Motion Transitions').click();
+    // The current V6 workflow keeps project templates in the Project Workspace.
+    // The former Motion Transitions surface is intentionally not part of the
+    // consolidated toolbar.
+    await expect(page.getByTitle('Project Workspace')).toBeVisible();
+    await expect(page.getByTitle('Motion Transitions')).toHaveCount(0);
   });
 
   test('Draw a freeform shape with the Free Draw tool', async ({ page }) => {

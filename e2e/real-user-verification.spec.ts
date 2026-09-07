@@ -72,6 +72,14 @@ async function timelineKeyframeFrameValues(page: Page): Promise<number[]> {
   );
 }
 
+async function openTransformSection(page: Page): Promise<void> {
+  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) TRANSFORM/ });
+  await expect(disclosure).toBeVisible();
+  if (await disclosure.getAttribute('aria-expanded') === 'false') {
+    await disclosure.click();
+  }
+}
+
 test('BUG 3 — layer order (Bring Forward / Send Backward) preserves keyframes', async ({ page }) => {
   await seed(page, cowLionTigerScene());
 
@@ -81,17 +89,19 @@ test('BUG 3 — layer order (Bring Forward / Send Backward) preserves keyframes'
   // Select "The Cow" in the outliner (Template Elements).
   await page.getByText('The Cow', { exact: true }).first().click();
   await expect(page.locator('.details-container .section-block')).toHaveCount(0);
+  await openTransformSection(page);
   const framesBefore = await timelineKeyframeFrameValues(page);
   expect(framesBefore).toEqual([0, 20, 40]);
 
   // Layer order changes: Bring Forward ×2, Send Backward ×1.
-  await page.getByText('Bring Forward (+1)', { exact: true }).click();
-  await page.getByText('Bring Forward (+1)', { exact: true }).click();
-  await page.getByText('Send Backward (-1)', { exact: true }).click();
+  await page.getByRole('button', { name: 'Bring Forward (+1)', exact: true }).click();
+  await page.getByRole('button', { name: 'Bring Forward (+1)', exact: true }).click();
+  await page.getByRole('button', { name: 'Send Backward (-1)', exact: true }).click();
 
   // Re-select The Cow; the consolidated surface keeps keyframes reachable.
   await page.getByText('The Cow', { exact: true }).first().click();
   await expect(page.locator('.details-container .section-block')).toHaveCount(0);
+  await openTransformSection(page);
   const framesAfter = await timelineKeyframeFrameValues(page);
   expect(framesAfter).toEqual([0, 20, 40]); // same frames — nothing lost
 

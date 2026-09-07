@@ -24,15 +24,17 @@ async function seedLegacyProceduralScene(page: Page): Promise<void> {
 }
 
 test.describe('M23 — procedural compatibility under the approved Transform Inspector workflow', () => {
-  test('procedural fields load, remain editable, and persist through the existing authority', async ({ page }) => {
+  test('legacy procedural fields load and persist through the current animation-data authority', async ({ page }) => {
     await seedLegacyProceduralScene(page);
     await page.locator('.actor-node', { hasText: 'Legacy Procedural' }).click();
 
-    await expect(page.getByText('ANIMATION IN / OUT')).toBeVisible();
-    await expect(page.locator('[aria-label="Animation In Preset"]')).toHaveValue('fade');
-    await expect(page.locator('[aria-label="Animation Out Preset"]')).toHaveValue('slide-right');
-    await expect(page.locator('[aria-label="Animation In Duration"]')).toHaveValue('15');
-    await expect(page.locator('[aria-label="Animation Out Duration"]')).toHaveValue('24');
+    const animationData = page.getByRole('button', { name: /(?:Expand|Collapse) ANIMATION DATA/ });
+    await expect(animationData).toBeVisible();
+    if (await animationData.getAttribute('aria-expanded') === 'false') {
+      await animationData.click();
+    }
+    await expect(page.getByRole('button', { name: 'Copy Animation', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Clear Animation', exact: true })).toBeVisible();
 
     await page.locator('.autosave-status-badge').click();
     await expect.poll(() => page.evaluate((key) => {

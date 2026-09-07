@@ -81,6 +81,7 @@ export const SequencerTimeline: React.FC = () => {
     addMotionTemplate,
     renameMotionTemplate,
     deleteMotionTemplate,
+    updateMotionTemplateDuration,
     updateCurrentTransform,
     updateCurrentPropertyChannel,
     coordinateSystem,
@@ -110,6 +111,8 @@ export const SequencerTimeline: React.FC = () => {
   const graphKeyframes = graphChannel
     ? (graphTrack?.channels[graphChannel as TrackChannel] ?? graphTrack?.maskChannels?.[graphChannel as keyof NonNullable<typeof graphTrack.maskChannels>] ?? [])
     : [];
+  const activeSequenceDurationFrames = motionTemplates.find((template) => template.id === activeTemplateId)?.durationFrames ?? totalFrames;
+
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -516,16 +519,30 @@ export const SequencerTimeline: React.FC = () => {
           <div className="duration-control-box" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <label className="form-label" style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)' }}>DURATION:</label>
             <input className="input-control"
-                type="number" step={0.5} min={0.5} max={40}
+              type="number"
+              step={0.5}
+              min={0.5}
+              max={40}
               style={{ width: 44, height: 22, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11, fontWeight: 700, textAlign: 'center' }}
-              value={Number((totalFrames / fps).toFixed(1))}
+              value={Number((activeSequenceDurationFrames / fps).toFixed(1))}
               onFocus={(e) => e.target.select()}
-              onChange={(e) => { const sec = parseFloat(e.target.value); if (!isNaN(sec) && sec > 0) setTotalFrames(Math.round(sec * fps)); }}
+              onChange={(e) => {
+                const sec = parseFloat(e.target.value);
+                if (!isNaN(sec) && sec > 0) {
+                  const durationFrames = Math.round(sec * fps);
+                  updateMotionTemplateDuration(activeTemplateId, durationFrames);
+                  setTotalFrames(durationFrames);
+                }
+              }}
             />
             <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>s</span>
             <div style={{ display: 'flex', gap: 3, marginLeft: 2 }}>
               {[1, 2, 3, 5, 10].map((sec) => (
-                <button key={sec} className={`duration-preset-pill ${totalFrames === sec * fps ? 'active' : ''}`} onClick={() => setTotalFrames(sec * fps)} title={`${sec}s`}>{sec}s</button>
+                <button key={sec} className={`duration-preset-pill ${activeSequenceDurationFrames === sec * fps ? 'active' : ''}`} onClick={() => {
+                  const durationFrames = sec * fps;
+                  updateMotionTemplateDuration(activeTemplateId, durationFrames);
+                  setTotalFrames(durationFrames);
+                }} title={`${sec}s`}>{sec}s</button>
               ))}
             </div>
             <button className="fit-pill-btn crop-btn" onClick={handleCropToContent} style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4, padding: '3px 8px' }}>

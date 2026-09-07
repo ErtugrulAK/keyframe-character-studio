@@ -30,6 +30,11 @@ async function seed(page: Page): Promise<void> {
 async function selectPart(page: Page, name: string): Promise<void> {
   await page.locator('.actor-node', { hasText: name }).click();
   await expect(page.getByText('ANIMATION DATA')).toBeVisible();
+  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) ANIMATION DATA/ });
+  await expect(disclosure).toBeVisible();
+  if (await disclosure.getAttribute('aria-expanded') === 'false') {
+    await disclosure.click();
+  }
 }
 
 async function savedScene(page: Page): Promise<Record<string, unknown>> {

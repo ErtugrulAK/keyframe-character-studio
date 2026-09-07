@@ -213,6 +213,8 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       const definition = buildLayerMaskDefinition(part, mask, evaluated.transform, outputOrigin);
       if (!definition) continue;
       if (definition.mode === 'add' && !definition.inverted) {
+        const compatible = additive && additive.opacity === definition.opacity && additive.feather === definition.feather && additive.expansion === definition.expansion;
+        if (!compatible) flushAdditive();
         if (!additive) additive = { ...definition, id: `${definition.id}-add` };
         additivePaths.push(definition.pathD);
         continue;

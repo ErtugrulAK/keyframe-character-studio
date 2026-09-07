@@ -191,6 +191,15 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
     if (mode === 'clip' && !matte.inverted && !(matte.feather || 0) && !matte.gradient) {
       diagnostics.push(diagnostic('OGRAF_CONDITIONAL_CLIP_MATTE', 'WARNING', 'Clip matte is emitted as a portable SVG clipPath.', layer, 'matte'));
     }
+    if (mode !== 'clip' && matte.feather && matte.feather > 0) {
+      diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_FEATHER_MATTE', 'ERROR', 'Legacy matte feather cannot be emitted faithfully by OGraf Export V1.', layer, 'matte'));
+    }
+    if (mode !== 'clip' && matte.gradient) {
+      diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_GRADIENT_MATTE', 'ERROR', 'Legacy matte gradients cannot be emitted faithfully by OGraf Export V1.', layer, 'matte'));
+    }
+    if (mode !== 'clip' && matte.strength !== undefined && matte.strength !== 1) {
+      diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_ALPHA_MATTE', 'ERROR', 'Legacy matte strength cannot be emitted faithfully by OGraf Export V1.', layer, 'matte'));
+    }
   }
   if (layer.trackMatte && layer.trackMatte.sourceLayerId === layer.id) {
     diagnostics.push(diagnostic('OGRAF_INVALID_TRACK_MATTE', 'ERROR', 'Track Matte V2 cannot reference its own layer.', layer, 'track-matte'));

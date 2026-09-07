@@ -29,6 +29,11 @@ function escapeXml(value: string): string {
     .replace(/'/gu, '&apos;');
 }
 
+/** One deterministic namespace for every generated SVG identifier. */
+function safeSvgId(value: string): string {
+  return String(value).replace(/[^a-zA-Z0-9_-]/gu, '_') || 'empty';
+}
+
 function svgAttributeName(key: string): string {
   if (key === 'strokeDasharray') return 'stroke-dasharray';
   if (key === 'strokeDashoffset') return 'stroke-dashoffset';
@@ -113,13 +118,12 @@ function renderShape(layer: EvaluatedLayer): string {
     stroke: appearance.strokeEnabled ? appearance.strokeColor : 'none',
     'stroke-opacity': appearance.strokeOpacity,
     'stroke-width': appearance.strokeWidth,
-    'vector-effect': 'non-scaling-stroke',
     ...renderTrim(content),
   };
   const geometry = renderGeometry(layer.type, content, common);
   if (!geometry) throw new Error(`Unsupported or invalid SVG geometry for layer "${layer.id}" (${layer.type}).`);
   if (appearance.strokeAlignment === 'center' || !appearance.strokeEnabled || appearance.strokeWidth <= 0) return geometry;
-  const maskId = `${appearance.strokeAlignment}-stroke-${layer.id.replace(/[^a-zA-Z0-9_-]/gu, '_')}`;
+  const maskId = safeSvgId(`${appearance.strokeAlignment}-stroke-${layer.id}`);
   const maskGeometry = renderGeometry(layer.type, content, {
     fill: appearance.strokeAlignment === 'inside' ? 'white' : 'black',
     stroke: 'none',
@@ -162,11 +166,11 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
     if (!additiveMask || additivePaths.length === 0) return;
     const definition = buildLayerMaskDefinition(part, { ...additiveMask, path: additiveMask.path }, target.transform, { x: scene.width / 2, y: scene.height / 2 });
     if (definition) {
-      const id = `kcs-ograf-layer-mask-${target.id}-${additiveMask.id}-add`;
+      const id = safeSvgId(`kcs-ograf-layer-mask-${target.id}-${additiveMask.id}-add`);
       const filter = definition.feather > 0 || definition.expansion !== 0
-        ? `<filter id="${layerMaskFilterId(id)}" filterUnits="userSpaceOnUse"><feMorphology operator="${definition.expansion > 0 ? 'dilate' : 'erode'}" radius="${Math.abs(definition.expansion)}" />${definition.feather > 0 ? `<feGaussianBlur stdDeviation="${definition.feather / 2}" />` : ''}</filter>`
+        ? `<filter id="${safeSvgId(layerMaskFilterId(id))}" filterUnits="userSpaceOnUse"><feMorphology operator="${definition.expansion > 0 ? 'dilate' : 'erode'}" radius="${Math.abs(definition.expansion)}" />${definition.feather > 0 ? `<feGaussianBlur stdDeviation="${definition.feather / 2}" />` : ''}</filter>`
         : '';
-      definitions.push(`${filter}<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha"><path d="${escapeXml(additivePaths.join(' '))}" fill="white" fill-opacity="${definition.opacity}"${filter ? ` filter="url(#${layerMaskFilterId(id)})"` : ''} /></mask>`);
+      definitions.push(`${filter}<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha"><path d="${escapeXml(additivePaths.join(' '))}" fill="white" fill-opacity="${definition.opacity}"${filter ? ` filter="url(#${safeSvgId(layerMaskFilterId(id))})` : ''} /></mask>`);
       ids.push(id);
     }
     additiveMask = undefined;
@@ -177,18 +181,20 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
     const definition = buildLayerMaskDefinition(part, mask, target.transform, { x: scene.width / 2, y: scene.height / 2 });
     if (!definition) continue;
     if (mask.mode === 'add' && mask.inverted !== true) {
+      const compatible = additiveMask && additiveMask.opacity === mask.opacity && additiveMask.feather === mask.feather && additiveMask.expansion === mask.expansion;
+      if (!compatible) flushAdditive();
       if (!additiveMask) additiveMask = mask;
       additivePaths.push(definition.pathD);
       continue;
     }
     flushAdditive();
-    const id = `kcs-ograf-layer-mask-${target.id}-${mask.id}`;
+    const id = safeSvgId(`kcs-ograf-layer-mask-${target.id}-${mask.id}`);
     const hole = mask.mode === 'subtract' || mask.mode === 'difference' ? mask.inverted !== true : mask.inverted === true;
     const path = hole ? `${region} ${definition.pathD}` : definition.pathD;
     const filter = definition.feather > 0 || definition.expansion !== 0
-      ? `<filter id="${layerMaskFilterId(id)}" filterUnits="userSpaceOnUse"><feMorphology operator="${definition.expansion > 0 ? 'dilate' : 'erode'}" radius="${Math.abs(definition.expansion)}" />${definition.feather > 0 ? `<feGaussianBlur stdDeviation="${definition.feather / 2}" />` : ''}</filter>`
+      ? `<filter id="${safeSvgId(layerMaskFilterId(id))}" filterUnits="userSpaceOnUse"><feMorphology operator="${definition.expansion > 0 ? 'dilate' : 'erode'}" radius="${Math.abs(definition.expansion)}" />${definition.feather > 0 ? `<feGaussianBlur stdDeviation="${definition.feather / 2}" />` : ''}</filter>`
       : '';
-    definitions.push(`${filter}<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha"><path d="${escapeXml(path)}" fill="white" fill-opacity="${hole ? 1 : definition.opacity}" fill-rule="${hole ? 'evenodd' : 'nonzero'}"${filter ? ` filter="url(#${layerMaskFilterId(id)})"` : ''} />${hole && definition.opacity < 1 ? `<path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${1 - definition.opacity}" />` : ''}</mask>`);
+    definitions.push(`${filter}<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha"><path d="${escapeXml(path)}" fill="white" fill-opacity="${hole ? 1 : definition.opacity}" fill-rule="${hole ? 'evenodd' : 'nonzero'}"${filter ? ` filter="url(#${safeSvgId(layerMaskFilterId(id))})` : ''} />${hole && definition.opacity < 1 ? `<path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${1 - definition.opacity}" />` : ''}</mask>`);
     ids.push(id);
   }
   flushAdditive();
@@ -197,12 +203,13 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
 
 function getMatteRelationship(layer: EvaluatedLayer): MatteRelationship | undefined {
   const v2 = layer.content.trackMatte;
-  if (v2) return {
+  if (v2 && v2.enabled !== false) return {
     sourceLayerId: v2.sourceLayerId,
     mode: v2.mode,
     inverted: v2.inverted === true,
     sourceVisible: v2.sourceVisible !== false,
   };
+  if (v2) return undefined;
   const legacy = layer.content.matte;
   if (!legacy || (legacy.mode || 'clip') === 'clip') return undefined;
   return {
@@ -213,13 +220,13 @@ function getMatteRelationship(layer: EvaluatedLayer): MatteRelationship | undefi
   };
 }
 
-function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: EvaluatedLayer): { defs: string; id?: string; relationship?: MatteRelationship } {
+function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: EvaluatedLayer, options: OGrafSvgRenderOptions): { defs: string; id?: string; relationship?: MatteRelationship } {
   const relationship = getMatteRelationship(target);
   if (!relationship) return { defs: '' };
   const source = scene.layers.find((candidate) => candidate.id === relationship.sourceLayerId);
   if (!source) throw new Error(`Track matte source "${relationship.sourceLayerId}" for layer "${target.id}" was not found.`);
-  const id = `kcs-ograf-track-matte-${target.id}-${source.id}-${relationship.mode}${relationship.inverted ? '-inverted' : ''}`;
-  const sourceContent = renderLayerContent(source, {}, {
+  const id = safeSvgId(`kcs-ograf-track-matte-${target.id}-${source.id}-${relationship.mode}${relationship.inverted ? '-inverted' : ''}`);
+  const sourceContent = renderLayerContent(source, options, {
     fill: relationship.mode === 'luminance' ? (source.content.fillColor || 'white') : 'white',
     stroke: 'none',
     'fill-opacity': source.content.fillOpacity ?? 1,
@@ -232,24 +239,27 @@ function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: Evaluate
       ? `<filter id="${id}-invert"><feComponentTransfer><feFuncR type="table" tableValues="1 0" /><feFuncG type="table" tableValues="1 0" /><feFuncB type="table" tableValues="1 0" /><feFuncA type="table" tableValues="1 0" /></feComponentTransfer></filter>${sourceShape.replace('<g ', `<g filter="url(#${id}-invert)" `)}`
       : sourceShape;
   return {
-    defs: `<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="${relationship.mode}">${body}</mask>`,
+    defs: relationship.inverted && relationship.mode === 'alpha'
+      ? `<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="${relationship.mode}"><path d="M 0 0 H ${scene.width} V ${scene.height} H 0 Z" fill="white" fill-rule="evenodd" />${sourceShape.replace('fill="white"', 'fill="black"')}</mask>`
+      : `<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="${relationship.mode}">${body}</mask>`,
     id,
     relationship,
   };
 }
 
-function renderClipDefs(scene: OGrafEvaluatedScene): string {
+function renderClipDefs(scene: OGrafEvaluatedScene, options: OGrafSvgRenderOptions): string {
   const defs: string[] = [];
   const renderedSources = new Set<string>();
   for (const target of scene.layers) {
-    const matte = target.content.matte;
-    if (!matte || (matte.mode || 'clip') !== 'clip' || renderedSources.has(matte.sourcePartId)) continue;
-    const source = scene.layers.find((layer) => layer.id === matte.sourcePartId);
-    if (!source) throw new Error(`Clip matte source "${matte.sourcePartId}" for layer "${target.id}" was not found.`);
-    const sourceGeometry = renderLayerContent(source, {}, { fill: 'white', stroke: 'none' });
+    const relationship = getMatteRelationship(target);
+    const sourceLayerId = relationship?.sourceLayerId || target.content.matte?.sourcePartId;
+    const isClip = relationship?.mode === 'clip' || target.content.matte?.mode === 'clip' || (!relationship && Boolean(target.content.matte));
+    if (!sourceLayerId || !isClip || renderedSources.has(sourceLayerId)) continue;
+    const source = scene.layers.find((layer) => layer.id === sourceLayerId);
+    if (!source) throw new Error(`Clip matte source "${sourceLayerId}" for layer "${target.id}" was not found.`);
+    const sourceGeometry = renderLayerContent(source, options, { fill: 'white', stroke: 'none' });
     if (!sourceGeometry) throw new Error(`Clip matte source "${source.id}" has no supported SVG content.`);
-    renderedSources.add(source.id);
-    defs.push(`<clipPath id="kcs-clip-${escapeXml(source.id)}" clipPathUnits="userSpaceOnUse"><g transform="${layerTransform(scene, source)}">${sourceGeometry}</g></clipPath>`);
+    defs.push(`<clipPath id="kcs-clip-${safeSvgId(source.id)}" clipPathUnits="userSpaceOnUse"><g transform="${layerTransform(scene, source)}">${sourceGeometry}</g></clipPath>`);
   }
   return defs.join('');
 }
@@ -258,7 +268,10 @@ function renderLayer(scene: OGrafEvaluatedScene, layer: EvaluatedLayer, options:
   if (hidden || !layer.visible || layer.opacity <= 0) return '';
   const body = layer.type === 'custom_text' || layer.type === 'custom_image' ? renderLayerContent(layer, options) : renderShape(layer);
   const legacyMatte = layer.content.matte;
-  const clip = legacyMatte && (legacyMatte.mode || 'clip') === 'clip' ? ` clip-path="url(#kcs-clip-${escapeXml(legacyMatte.sourcePartId)})"` : '';
+  const relationship = getMatteRelationship(layer);
+  const clipSourceId = relationship?.sourceLayerId || legacyMatte?.sourcePartId;
+  const clip = clipSourceId && (relationship?.mode === 'clip' || legacyMatte?.mode === 'clip' || (!relationship && legacyMatte))
+    ? ` clip-path="url(#kcs-clip-${safeSvgId(clipSourceId)})"` : '';
   const allMaskIds = [...maskIds, ...(matteId ? [matteId] : [])];
   const transformedBody = `<g transform="${layerTransform(scene, layer)}">${body}</g>`;
   const maskedBody = allMaskIds.reduceRight(
@@ -269,7 +282,7 @@ function renderLayer(scene: OGrafEvaluatedScene, layer: EvaluatedLayer, options:
 }
 
 export function renderOGrafSvg(scene: OGrafEvaluatedScene, options: OGrafSvgRenderOptions = {}): string {
-  const defs: string[] = [renderClipDefs(scene)];
+  const defs: string[] = [renderClipDefs(scene, options)];
   const maskIds = new Map<string, string[]>();
   const matteIds = new Map<string, string>();
   const hiddenSources = new Set<string>();
@@ -277,7 +290,7 @@ export function renderOGrafSvg(scene: OGrafEvaluatedScene, options: OGrafSvgRend
     const layerMasks = renderLayerMaskDefinitions(scene, target);
     defs.push(layerMasks.defs);
     maskIds.set(target.id, layerMasks.ids);
-    const matte = renderTrackMatteDefinition(scene, target);
+    const matte = renderTrackMatteDefinition(scene, target, options);
     defs.push(matte.defs);
     if (matte.id) matteIds.set(target.id, matte.id);
     if (matte.relationship && !matte.relationship.sourceVisible) hiddenSources.add(matte.relationship.sourceLayerId);

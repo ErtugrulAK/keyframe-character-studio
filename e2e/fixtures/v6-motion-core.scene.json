@@ -1,0 +1,102 @@
+{
+  "version": 2,
+  "name": "V6 Motion Core Fixture",
+  "width": 1920,
+  "height": 1080,
+  "fps": 30,
+  "totalFrames": 30,
+  "layers": [
+    {
+      "id": "source",
+      "name": "Matte Source",
+      "type": "custom_rect",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "opacity": 1,
+      "visible": true,
+      "zIndex": 1,
+      "fillColor": "#ffffff",
+      "strokeColor": "#101218",
+      "width": 160,
+      "height": 100
+    },
+    {
+      "id": "target",
+      "name": "Bezier Target",
+      "type": "custom_freeform",
+      "x": 0,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "opacity": 1,
+      "visible": true,
+      "zIndex": 2,
+      "fillColor": "#00ff00",
+      "strokeColor": "#101218",
+      "points": [{ "x": -120, "y": -80 }, { "x": 120, "y": -80 }, { "x": 120, "y": 80 }, { "x": -120, "y": 80 }],
+      "path": {
+        "version": 1,
+        "coordinateSpace": "local",
+        "closed": true,
+        "points": [
+          { "id": "v0", "x": -120, "y": -80, "kind": "corner" },
+          { "id": "v1", "x": 120, "y": -80, "kind": "smooth", "handleIn": { "x": 60, "y": -130 }, "handleOut": { "x": 150, "y": -30 } },
+          { "id": "v2", "x": 120, "y": 80, "kind": "corner" },
+          { "id": "v3", "x": -120, "y": 80, "kind": "corner" }
+        ]
+      },
+      "masks": [
+        {
+          "id": "mask-1",
+          "name": "Primary Mask",
+          "mode": "add",
+          "enabled": true,
+          "opacity": 1,
+          "feather": 2,
+          "expansion": 0,
+          "path": {
+            "version": 1,
+            "coordinateSpace": "normalized",
+            "closed": true,
+            "points": [
+              { "id": "m0", "x": 0.1, "y": 0.1 },
+              { "id": "m1", "x": 0.9, "y": 0.1 },
+              { "id": "m2", "x": 0.9, "y": 0.9 },
+              { "id": "m3", "x": 0.1, "y": 0.9 }
+            ]
+          }
+        }
+      ],
+      "trackMatte": {
+        "sourceLayerId": "source",
+        "mode": "alpha",
+        "enabled": true,
+        "sourceVisible": true
+      }
+    }
+  ],
+  "tracks": [
+    {
+      "partId": "target",
+      "channels": {
+        "x": [], "y": [], "rotation": [], "scaleX": [], "scaleY": [], "opacity": [],
+        "maskOffsetX": [], "maskOffsetY": [], "maskScale": [], "maskRotation": [],
+        "trimPathStart": [], "trimPathEnd": [], "trimPathOffset": []
+      },
+      "maskChannels": {
+        "mask-1:opacity": [
+          { "id": "mask-opacity-0", "frame": 0, "value": 0.4, "easing": "linear" },
+          { "id": "mask-opacity-10", "frame": 10, "value": 1, "easing": "bezier", "bezierOut": { "x": 0.2, "y": 0 }, "bezierIn": { "x": 0.8, "y": 1 } }
+        ],
+        "mask-1:feather": [
+          { "id": "mask-feather-0", "frame": 0, "value": 2, "easing": "linear" },
+          { "id": "mask-feather-10", "frame": 10, "value": 8, "easing": "autoBezier" }
+        ]
+      }
+    }
+  ]
+}

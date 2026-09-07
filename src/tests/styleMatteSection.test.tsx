@@ -1208,3 +1208,41 @@ describe('StyleMatteSection — M21 image matte UI', () => {
     expect(legacy.container.textContent).toContain('Image sources require Alpha or Luminance mode');
   });
 });
+
+describe('StyleMatteSection — V6 layer mask authoring', () => {
+  test('adds a mask property keyframe through the shared track callback', () => {
+    const onPartPropChange = vi.fn();
+    const onAddMaskKeyframe = vi.fn();
+    const target = {
+      ...BOX,
+      masks: [{
+        id: 'mask-1',
+        name: 'Mask 1',
+        mode: 'add' as const,
+        path: {
+          version: 1 as const,
+          coordinateSpace: 'normalized' as const,
+          closed: true,
+          points: [
+            { id: 'a', x: 0.2, y: 0.2 },
+            { id: 'b', x: 0.8, y: 0.2 },
+          ],
+        },
+        opacity: 0.4,
+        feather: 3,
+        expansion: 2,
+      }],
+    } as CharacterPart;
+    render(
+      <StyleMatteSection
+        selectedPart={target}
+        characterParts={[target]}
+        onPartPropChange={onPartPropChange}
+        onAddMaskKeyframe={onAddMaskKeyframe}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Expand LAYER MASKS' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add opacity keyframe' }));
+    expect(onAddMaskKeyframe).toHaveBeenCalledWith('mask-1', 'opacity', 0.4);
+  });
+});

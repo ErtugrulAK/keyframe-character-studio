@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Track, TrackChannel } from '../../types/animator';
+import type { Track, TrackChannel, AnimationChannel, PropertyKeyframe } from '../../types/animator';
 import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame } from '../../utils/channelKeyframeGroups';
@@ -17,10 +17,10 @@ interface TrackLaneProps {
   onSelectPart: (partId: string, shiftKey: boolean) => void;
   onSetFrame: (frame: number) => void;
   onStartDragKf: (drag: { trackId: string; keyframeId: string }) => void;
-  onStartDragPKf: (drag: { trackId: string; channel: TrackChannel; keyframeId: string }) => void;
+  onStartDragPKf: (drag: { trackId: string; channel: AnimationChannel; keyframeId: string }) => void;
   onHoverKf: (hover: { frame: number; label: string } | null) => void;
   onDeleteKeyframe: (trackId: string, keyframeId: string) => void;
-  onDeletePropertyKeyframe: (trackId: string, channel: TrackChannel, keyframeId: string) => void;
+  onDeletePropertyKeyframe: (trackId: string, channel: AnimationChannel, keyframeId: string) => void;
   // M27 — duplicate the whole keyframe frame-group at `frame` (27A helper)
   onDuplicateKeyframeGroup: (trackId: string, frame: number) => void;
   // M28 — copy / paste keyframe frame-groups (28A helpers)
@@ -61,7 +61,6 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
   const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
   const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
-  const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
 
   // M27 — minimal keyframe context menu (right-click on any keyframe).
   // The menu exposes "Duplicate Keyframes" (whole frame-group, 27A helper)
@@ -134,9 +133,15 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
     }
   };
 
-  const renderChannelLane = (ch: TrackChannel) => {
-    const meta = CHANNEL_META[ch];
-    const chKfs = [...(track.channels?.[ch] ?? [])]
+  const renderChannelLane = (ch: AnimationChannel) => {
+    const baseMeta = !ch.includes(':') ? CHANNEL_META[ch as TrackChannel] : undefined;
+    const meta = baseMeta ?? {
+      label: `Mask ${ch.split(':').slice(1).join(' ')}`,
+      color: '#f59e0b',
+      shortLabel: 'M',
+    };
+    const source = ch.includes(':') ? track.maskChannels : track.channels;
+    const chKfs = [...((source as Record<string, PropertyKeyframe[]> | undefined)?.[ch] ?? [])]
       .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
       .sort((a, b) => a.frame - b.frame);
     return (
@@ -270,10 +275,8 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               {isRotationExpanded && ['rotation'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
 
               {/* Scale Header Lane Spacer */}
-              <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
-              {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
-
-              {/* Opacity Channel Lane */}
+              {/* V6 Layer Mask scalar channels share the track and evaluator. */}
+              {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
               {['opacity'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
 
               {/* Trim Path channel lanes */}

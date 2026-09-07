@@ -1,4 +1,5 @@
 import type { EvaluatedLayer, LayerContent } from '../types/composition';
+import { buildBezierPathD } from '../utils/bezierPath';
 import { buildFreeformPath } from '../utils/freeform';
 import { getShapeGeometry, polygonPointsToString } from '../utils/shapeGeometry';
 import { resolveShapeAppearance } from '../utils/shapeAppearance';
@@ -36,7 +37,11 @@ function attributes(values: SvgAttributes): string {
 function renderGeometry(type: string, content: LayerContent, props: SvgAttributes = {}): string {
   const geometry = getShapeGeometry(type as Parameters<typeof getShapeGeometry>[0]);
   if (type === 'custom_freeform') {
-    const path = content.points && content.points.length >= 3 ? buildFreeformPath(content.points) : '';
+    const path = content.path
+      ? buildBezierPathD(content.path)
+      : content.points && content.points.length >= 3
+        ? buildFreeformPath(content.points)
+        : '';
     if (!path) return '';
     return `<path d="${escapeXml(path)}" stroke-linejoin="round"${attributes(props)} />`;
   }

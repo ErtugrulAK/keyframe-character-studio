@@ -14,7 +14,8 @@
     "test:coverage": "vitest run --coverage",
     "check": "npm run lint && npx tsc --noEmit && npm test && npm run build",
     "preview": "vite preview",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "qa:v6": "playwright test e2e/v6-motion-core.spec.ts --project=chromium"
   },
   "dependencies": {
     "cors": "^2.8.6",

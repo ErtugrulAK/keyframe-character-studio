@@ -1,12 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Copy, Check, X, Play, Pause, Sparkles } from 'lucide-react';
-
+import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
+import { TemporalGraphPanel } from './TemporalGraphPanel';
 interface InteractiveCubicBezierEditorProps {
   controlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
   onChange: (points: [number, number, number, number]) => void;
   initialModalOpen?: boolean;
   onCloseModal?: () => void;
+  valueKeyframes?: PropertyKeyframe[];
+  onChangeKeyframeValue?: (keyframeId: string, value: number) => void;
+  onChangeKeyframeHandles?: (
+    keyframeId: string,
+    patch: { bezierIn?: TemporalHandle; bezierOut?: TemporalHandle },
+  ) => void;
 }
 
 const PRESET_BEZIERS: { label: string; points: [number, number, number, number] }[] = [
@@ -25,10 +32,14 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   onChange,
   initialModalOpen = true,
   onCloseModal,
+  valueKeyframes = [],
+  onChangeKeyframeValue,
+  onChangeKeyframeHandles,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(initialModalOpen);
   const [draggingPoint, setDraggingPoint] = useState<1 | 2 | null>(null);
+  const [graphMode, setGraphMode] = useState<'value' | 'speed'>('value');
 
   // Pro Studio Modal State
   const [previewDuration, setPreviewDuration] = useState<number>(1.2);
@@ -387,6 +398,29 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                   </div>
                 </div>
               </div>
+            {onChangeKeyframeValue && (
+              <div style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
+                <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
+                  {(['value', 'speed'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      className="btn-secondary"
+                      aria-pressed={graphMode === mode}
+                      onClick={() => setGraphMode(mode)}
+                    >
+                      {mode === 'value' ? 'Value Graph' : 'Speed Graph'}
+                    </button>
+                  ))}
+                </div>
+                <TemporalGraphPanel
+                  keyframes={valueKeyframes}
+                  mode={graphMode}
+                  onChangeKeyframeValue={onChangeKeyframeValue}
+                  onChangeKeyframeHandles={onChangeKeyframeHandles}
+                />
+              </div>
+            )}
             </div>
           </div>
 

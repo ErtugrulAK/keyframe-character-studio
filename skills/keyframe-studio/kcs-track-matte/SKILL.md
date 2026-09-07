@@ -1,12 +1,12 @@
 ---
 name: kcs-track-matte
 description: Use when working on KCS Track Matte (SVG clipPath + mask) and animation presets/transfer/timeline (M23-30) — architecture, data model, browser-verified semantics, rules, tests.
-version: 18.0.0
+version: 18.1.0
 author: senmu
 license: MIT
 metadata:
   hermes:
-    tags: [keyframe-studio, track-matte, svg, clipPath, mask, alpha, luminance, inverted, freeform, strength, gradient, text-matte, multi-stop]
+    tags: [keyframe-studio, track-matte, svg, clipPath, mask, alpha, luminance, inverted, freeform, bezier, temporal-interpolation, strength, gradient, text-matte, multi-stop]
     related_skills: [kcs-project-context, kcs-constitution, kcs-workflows]
 ---
 
@@ -857,3 +857,26 @@ timeline matte indicator · drag/drop matte assignment ·
 
 > M21 ile image matte TAMAMLANDI — "image/video matte" maddesinden image ÇIKARILDI
 > (video kaldı); deferred'den image matte için kalan hiçbir öğe yoktur.
+## V6 Motion Core and Compositing Boundary
+
+V6 adds canonical motion/compositing fields without removing the legacy `PartMatte` contract:
+
+```ts
+interface CharacterPart {
+  path?: BezierPath;
+  masks?: LayerMask[];
+  trackMatte?: TrackMatteV2;
+}
+
+interface Track {
+  maskChannels?: Record<string, PropertyKeyframe[]>;
+}
+```
+
+- `BezierPath` is authored and rendered through `src/utils/bezierPath.ts`; legacy freeform `points` remain an additive import/export fallback.
+- `LayerMask[]` is ordered and evaluated by `src/utils/layerMasks.ts`. `add` masks may share a definition; subtract/intersect/difference operations remain explicit nested SVG masks.
+- `TrackMatteV2` stores a source layer relationship, alpha/luminance mode, inversion, enabled state, and source visibility. Existing `PartMatte` rendering remains the compatibility authority for legacy scenes.
+- `maskChannels` use the canonical timeline channel mutators and the shared `interpolateChannel` evaluator.
+- SceneData version 2 preserves V6 fields. `migrateSceneLayerV6` normalizes imported paths and masks while retaining legacy fields.
+- OGraf Export V1 supports canonical freeform SVG paths and legacy clip mattes. V6 masks, alpha/luminance mattes, and animated mask properties are diagnosed as deferred rather than silently flattened.
+- Browser proof: run `npm run qa:v6`. Focused regression proof includes `src/tests/layerMasks.test.ts`, `src/tests/matteRender.test.tsx`, `src/tests/interpolationV6.test.ts`, `src/tests/TemporalGraphPanel.test.tsx`, and `src/tests/useSerialization.test.ts`.

@@ -1,19 +1,46 @@
 import type { MatteGradientStop } from '../utils/matte';
 
-export type EasingType = 
-  | 'linear' 
-  | 'easeIn' 
-  | 'easeOut' 
-  | 'easeInOut' 
-  | 'bounce' 
-  | 'elastic' 
-  | 'anticipate' 
+export type EasingType =
+  | 'linear'
+  | 'easeIn'
+  | 'easeOut'
+  | 'easeInOut'
+  | 'bounce'
+  | 'elastic'
+  | 'anticipate'
   | 'overshoot'
-  | 'cubic_bezier';
+  | 'cubic_bezier'
+  | 'hold'
+  | 'bezier'
+  | 'autoBezier';
 
-export interface ProjectTemplate {
+export interface PathHandle {
+  x: number;
+  y: number;
+}
+
+export type PathCoordinateSpace = 'local' | 'normalized';
+export type PathVertexKind = 'corner' | 'smooth';
+
+export interface BezierVertex {
   id: string;
-  name: string;
+  x: number;
+  y: number;
+  handleIn?: PathHandle;
+  handleOut?: PathHandle;
+  kind?: PathVertexKind;
+}
+
+export interface BezierPath {
+  version: 1;
+  coordinateSpace: PathCoordinateSpace;
+  closed: boolean;
+  points: BezierVertex[];
+}
+
+export interface TemporalHandle {
+  x: number;
+  y: number;
 }
 
 export interface MaskPoint {
@@ -27,6 +54,39 @@ export interface MaskPoint {
  *  source's world-space geometry via SVG clipPath; `'alpha'` and `'luminance'`
  *  use an SVG <mask> (alpha channel / luminance of the source's fill). */
 export type MatteMode = 'clip' | 'alpha' | 'luminance';
+
+export type LayerMaskMode = 'add' | 'subtract' | 'intersect' | 'difference';
+
+export interface LayerMask {
+  id: string;
+  name: string;
+  path: BezierPath;
+  mode: LayerMaskMode;
+  inverted?: boolean;
+  enabled?: boolean;
+  feather?: number;
+  opacity?: number;
+  expansion?: number;
+  locked?: boolean;
+}
+
+export interface LayerMaskStack {
+  masks: LayerMask[];
+}
+
+export interface TrackMatteV2 {
+  sourceLayerId: string;
+  mode: 'alpha' | 'luminance';
+  inverted?: boolean;
+  enabled?: boolean;
+  sourceVisible?: boolean;
+}
+
+export interface ProjectTemplate {
+  id: string;
+  name: string;
+}
+
 
 /** Static placement of a modern shape stroke relative to its authored path. */
 export type StrokeAlignment = 'center' | 'inside' | 'outside';
@@ -78,6 +138,8 @@ export interface MaskData {
   opacity: number;
   closed: boolean;
   points: MaskPoint[];
+  /** V6 canonical path; `points` remains a legacy compatibility field. */
+  path?: BezierPath;
 }
 
 export interface Transform {
@@ -100,6 +162,8 @@ export interface Keyframe {
   transform: Transform;
   easing: EasingType;
   bezierControlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
+  bezierIn?: TemporalHandle;
+  bezierOut?: TemporalHandle;
   templateId?: string; // Isolated to specific motion sequence template
 }
 
@@ -110,20 +174,28 @@ export interface PropertyKeyframe {
   value: number;
   easing: EasingType;
   bezierControlPoints?: [number, number, number, number];
+  bezierIn?: TemporalHandle;
+  bezierOut?: TemporalHandle;
   templateId?: string; // Isolated to specific motion sequence template
 }
 
 // Channel keys match Transform property names
 export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset';
 
+export type LayerMaskChannelProperty = 'opacity' | 'feather' | 'expansion';
+export type LayerMaskChannel = `${string}:${LayerMaskChannelProperty}`;
+export type AnimationChannel = TrackChannel | LayerMaskChannel;
 export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];
+
+export const layerMaskChannel = (maskId: string, property: LayerMaskChannelProperty): LayerMaskChannel =>
+  `${maskId}:${property}`;
 
 /**
  * Track data model (Phase 3 Step 5).
  *
  * Split into two orthogonal concerns:
  *   - AnimationTrackData: everything the animation/composition engine needs
- *   - EditorTrackState:    everything the editor/UI needs (no animation logic)
+ *   - EditorTrackState: everything the editor/UI needs (no animation logic)
  *
  * `Track` is the union of both — structurally identical to the previous
  * single interface, so no consumer changes are required.
@@ -133,31 +205,24 @@ export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', '
 export interface AnimationTrackData {
   /** Which layer this track animates */
   partId: string;
-  /** Legacy composite keyframes — kept ONLY for legacy import compatibility.
-   *  M8e: no longer exported (channels-only policy); may be absent on modern
-   *  tracks. */
+  /** Legacy composite keyframes — kept ONLY for legacy import compatibility. */
   keyframes?: Keyframe[];
   /** Per-property keyframe channels (canonical animation format) */
   channels: Record<TrackChannel, PropertyKeyframe[]>;
-  /** Motion Design template ID (e.g. In_V1, Out_V1) — which sequence's keyframes are active */
+  /** V6 animated layer-mask scalar properties on the same canonical track. */
+  maskChannels?: Record<LayerMaskChannel, PropertyKeyframe[]>;
+  /** Motion Design template ID */
   sequencerTemplateId?: string;
 }
 
 /** Editor/UI-domain track fields (no animation logic) */
 export interface EditorTrackState {
-  /** Editor track identity */
   id: string;
-  /** Display name in the timeline */
   name: string;
-  /** Timeline lane color */
   color: string;
-  /** Broadcast mute state */
   visible: boolean;
-  /** Edit canvas hard-hide state */
   editVisible?: boolean;
-  /** Prevent editing this track */
   locked: boolean;
-  /** Unreal-style collapse/expand state */
   expanded?: boolean;
 }
 
@@ -285,6 +350,8 @@ export interface CharacterPart {
   height?: number;
   // Freeform drawn shape: vertices relative to the part center (stage units)
   points?: FreeformPoint[];
+  /** V6 canonical freeform path; `points` remains a legacy compatibility field. */
+  path?: BezierPath;
 
   // Media Overlay Text Caption
   overlayText?: string;
@@ -353,6 +420,8 @@ export interface CharacterPart {
 
   // ── Feature 9: Advanced Masking ──
   mask?: MaskData;
+  /** V6 ordered same-layer mask stack. */
+  masks?: LayerMask[];
   /** Non-destructive vector Boolean relationship. Operands remain authored parts. */
   booleanGroupId?: string;
   booleanOperation?: 'union' | 'subtract' | 'intersect' | 'exclude';
@@ -362,6 +431,8 @@ export interface CharacterPart {
   // ── M11: Track Matte (SVG clipPath) ──
   /** Track matte reference — this part is clipped by another part's shape. */
   matte?: PartMatte;
+  /** V6 source relationship. Legacy `matte` remains the fallback. */
+  trackMatte?: TrackMatteV2;
 
   // ── Feature 10: Custom Preset Animation Engine ──
   inCustomPresetId?: string;

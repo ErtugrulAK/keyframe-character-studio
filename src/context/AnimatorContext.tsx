@@ -8,6 +8,7 @@ import type {
   ToolType,
   EasingType,
   TrackChannel,
+  AnimationChannel,
   AppMode,
   BroadcastObjectState,
   CustomMotionPreset,
@@ -150,9 +151,11 @@ interface AnimatorContextType {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   isScaleLocked: boolean;
   setIsScaleLocked: (locked: boolean) => void;
-  addPropertyKeyframe: (trackId: string, channel: TrackChannel, frame: number, value: number, easing?: EasingType) => void;
-  deletePropertyKeyframe: (trackId: string, channel: TrackChannel, keyframeId: string) => void;
-  updatePropertyKeyframeFrame: (trackId: string, channel: TrackChannel, keyframeId: string, newFrame: number) => void;
+  addPropertyKeyframe: (trackId: string, channel: AnimationChannel, frame: number, value: number, easing?: EasingType) => void;
+  updatePropertyKeyframeValue: (trackId: string, channel: AnimationChannel, keyframeId: string, value: number) => void;
+  updatePropertyKeyframeTemporalHandles: (trackId: string, channel: AnimationChannel, keyframeId: string, patch: { bezierIn?: { x: number; y: number }; bezierOut?: { x: number; y: number } }) => void;
+  updatePropertyKeyframeFrame: (trackId: string, channel: AnimationChannel, keyframeId: string, frame: number) => void;
+  deletePropertyKeyframe: (trackId: string, channel: AnimationChannel, keyframeId: string) => void;
 
   // Broadcast Mode & Custom Presets
   appMode: AppMode;
@@ -328,9 +331,11 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     toggleTrackLock,
     toggleTrackExpanded,
     addPropertyKeyframe,
+    updatePropertyKeyframeValue,
+    updatePropertyKeyframeTemporalHandles,
     deletePropertyKeyframe,
-    deleteSelectedKeyframe,
     updatePropertyKeyframeFrame,
+    deleteSelectedKeyframe,
     applyMotionTransition,
     renamePartAndTrack,
     reorderParts,
@@ -575,9 +580,11 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         pasteKeyframeClipboard,
         applyMotionTransition,
         showToast,
-        addPropertyKeyframe,
-        deletePropertyKeyframe,
         updatePropertyKeyframeFrame,
+        addPropertyKeyframe,
+        updatePropertyKeyframeValue,
+        updatePropertyKeyframeTemporalHandles,
+        deletePropertyKeyframe,
         appMode,
         setAppMode,
         broadcastState,

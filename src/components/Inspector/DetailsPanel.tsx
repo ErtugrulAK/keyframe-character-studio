@@ -9,6 +9,7 @@ import { StyleTab } from './sections/StyleTab';
 import { DuplicateTab } from './sections/DuplicateTab';
 import { isBooleanEligible, computeBooleanContours, deriveBooleanGeometry, dissolveBooleanGroup as dissolveBooleanGroupState, createBooleanDisplayName, isGeneratedBooleanName, type BooleanOperation } from '../../utils/booleanGeometry';
 import { generateId } from '../../utils/idGenerator';
+import { layerMaskChannel } from '../../types/animator';
 import {
   Sliders,
   Copy,
@@ -33,6 +34,7 @@ export const DetailsPanel: React.FC = () => {
     getComputedTransform,
     updateCurrentTransform,
     updateCurrentPropertyChannel,
+    addPropertyKeyframe,
     deletePart,
     duplicateSelectedPart,
     customPresets,
@@ -398,6 +400,11 @@ export const DetailsPanel: React.FC = () => {
                 handlePartPropChange={handlePartPropChange}
                 handlePartColorChange={handlePartColorChange}
                 handleZIndexChange={handleZIndexChange}
+                currentFrame={currentFrame}
+                onAddMaskKeyframe={(maskId, property, value) => {
+                  const selectedTrack = tracks.find((track) => track.partId === selectedPart.id);
+                  if (selectedTrack) addPropertyKeyframe(selectedTrack.id, layerMaskChannel(maskId, property), currentFrame, value);
+                }}
               />
 
             </>

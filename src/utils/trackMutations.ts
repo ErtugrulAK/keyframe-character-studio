@@ -1,11 +1,13 @@
-import type { Track, TrackChannel, EasingType, PropertyKeyframe } from '../types/animator';
+import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, EasingType, PropertyKeyframe } from '../types/animator';
 import { TRACK_CHANNELS } from '../types/animator';
 import { generateId } from './idGenerator';
-import { makeEmptyChannels } from './defaults';
 import { ANIMATABLE_CHANNELS, DISPLAY_CHANNELS } from './channelKeyframeGroups';
 import type { TransitionChannelResult } from './motionTransitions';
 import { convertLegacyKeyframesToChannels } from './legacyKeyframeConversion';
+import { makeEmptyChannels } from './defaults';
 
+
+const isLayerMaskChannel = (channel: AnimationChannel): channel is LayerMaskChannel => channel.includes(':');
 export const updateKeyframeBezierPointsMutator = (
   tracks: Track[],
   trackId: string,
@@ -42,7 +44,7 @@ export const updateKeyframeBezierPointsMutator = (
 export const addPropertyKeyframeMutator = (
   tracks: Track[],
   trackId: string,
-  channel: TrackChannel,
+  channel: AnimationChannel,
   frame: number,
   value: number,
   easing: EasingType,
@@ -50,8 +52,10 @@ export const addPropertyKeyframeMutator = (
 ): Track[] => {
   return tracks.map((t) => {
     if (t.id !== trackId) return t;
-    const ch = t.channels ?? makeEmptyChannels();
-    const existing = ch[channel].find((k) => k.frame === frame);
+    const isMask = isLayerMaskChannel(channel);
+    const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
+    const keyframes = channelMap[channel] ?? [];
+    const existing = keyframes.find((k) => k.frame === frame);
     const newKf: PropertyKeyframe = {
       id: generateId(`pkf_${channel}`),
       frame,
@@ -60,22 +64,62 @@ export const addPropertyKeyframeMutator = (
       templateId,
     };
     const updated = existing
-      ? ch[channel].map((k) => (k.frame === frame ? { ...k, value, easing } : k))
-      : [...ch[channel], newKf].sort((a, b) => a.frame - b.frame);
-    return { ...t, channels: { ...ch, [channel]: updated } };
+      ? keyframes.map((k) => (k.frame === frame ? { ...k, value, easing } : k))
+      : [...keyframes, newKf].sort((a, b) => a.frame - b.frame);
+    return isMask
+      ? { ...t, maskChannels: { ...t.maskChannels, [channel]: updated } }
+      : { ...t, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
+  });
+};
+export const updatePropertyKeyframeValueMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: AnimationChannel,
+  keyframeId: string,
+  value: number,
+): Track[] => {
+  return tracks.map((t) => {
+    if (t.id !== trackId) return t;
+    const isMask = isLayerMaskChannel(channel);
+    const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
+    const updated = (channelMap[channel] ?? []).map((k) => (k.id === keyframeId ? { ...k, value } : k));
+    return isMask
+      ? { ...t, maskChannels: { ...t.maskChannels, [channel]: updated } }
+      : { ...t, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
+  });
+};
+export const updatePropertyKeyframeTemporalHandlesMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: AnimationChannel,
+  keyframeId: string,
+  patch: { bezierIn?: { x: number; y: number }; bezierOut?: { x: number; y: number } },
+): Track[] => {
+  return tracks.map((t) => {
+    if (t.id !== trackId) return t;
+    const isMask = isLayerMaskChannel(channel);
+    const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
+    const updated = (channelMap[channel] ?? []).map((k) => k.id === keyframeId ? { ...k, ...patch } : k);
+    return isMask
+      ? { ...t, maskChannels: { ...t.maskChannels, [channel]: updated } }
+      : { ...t, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
   });
 };
 
 export const deletePropertyKeyframeMutator = (
   tracks: Track[],
   trackId: string,
-  channel: TrackChannel,
+  channel: AnimationChannel,
   keyframeId: string
 ): Track[] => {
   return tracks.map((t) => {
     if (t.id !== trackId) return t;
-    const ch = t.channels ?? makeEmptyChannels();
-    return { ...t, channels: { ...ch, [channel]: ch[channel].filter((k) => k.id !== keyframeId) } };
+    const isMask = isLayerMaskChannel(channel);
+    const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
+    const updated = (channelMap[channel] ?? []).filter((k) => k.id !== keyframeId);
+    return isMask
+      ? { ...t, maskChannels: { ...t.maskChannels, [channel]: updated } }
+      : { ...t, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
   });
 };
 
@@ -134,15 +178,20 @@ export const deleteSelectedKeyframeGroupMutator = (
 export const updatePropertyKeyframeFrameMutator = (
   tracks: Track[],
   trackId: string,
-  channel: TrackChannel,
+  channel: AnimationChannel,
   keyframeId: string,
   newFrame: number
 ): Track[] => {
   return tracks.map((t) => {
     if (t.id !== trackId) return t;
-    const ch = t.channels ?? makeEmptyChannels();
-    const updated = ch[channel].map((k) => (k.id === keyframeId ? { ...k, frame: newFrame } : k)).sort((a, b) => a.frame - b.frame);
-    return { ...t, channels: { ...ch, [channel]: updated } };
+    const isMask = isLayerMaskChannel(channel);
+    const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
+    const updated = (channelMap[channel] ?? [])
+      .map((k) => (k.id === keyframeId ? { ...k, frame: newFrame } : k))
+      .sort((a, b) => a.frame - b.frame);
+    return isMask
+      ? { ...t, maskChannels: { ...t.maskChannels, [channel]: updated } }
+      : { ...t, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
   });
 };
 
@@ -151,15 +200,18 @@ export const updatePropertyKeyframeFrameMutator = (
 export const updatePropertyKeyframeEasingMutator = (
   tracks: Track[],
   trackId: string,
-  channel: TrackChannel,
+  channel: AnimationChannel,
   keyframeId: string,
   easing: EasingType
 ): Track[] => {
   return tracks.map((t) => {
     if (t.id !== trackId) return t;
-    const ch = t.channels ?? makeEmptyChannels();
-    const updated = ch[channel].map((k) => (k.id === keyframeId ? { ...k, easing } : k));
-    return { ...t, channels: { ...ch, [channel]: updated } };
+    const isMask = isLayerMaskChannel(channel);
+    const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
+    const updated = (channelMap[channel] ?? []).map((k) => (k.id === keyframeId ? { ...k, easing } : k));
+    return isMask
+      ? { ...t, maskChannels: { ...t.maskChannels, [channel]: updated } }
+      : { ...t, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
   });
 };
 

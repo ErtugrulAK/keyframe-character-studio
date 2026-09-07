@@ -1,4 +1,5 @@
 import type { FreeformPoint } from '../types/animator';
+import { buildBezierPathD, createBezierPath } from './bezierPath';
 
 /**
  * Pure helpers for the freeform drawing feature.
@@ -82,12 +83,7 @@ export const hasValidFreeformPoints = (points: FreeformPoint[] | undefined): boo
  */
 export const buildFreeformPath = (points: FreeformPoint[], closed: boolean = true): string => {
   if (!Array.isArray(points) || points.length < 2) return '';
-  let d = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i++) {
-    d += ` L ${points[i].x} ${points[i].y}`;
-  }
-  if (closed) d += ' Z';
-  return d;
+  return buildBezierPathD(createBezierPath(points, 'local', closed));
 };
 
 /**

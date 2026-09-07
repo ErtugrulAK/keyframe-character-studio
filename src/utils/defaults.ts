@@ -1,4 +1,5 @@
 import type { CharacterPart, Track, Transform, EasingType, TrackChannel, PropertyKeyframe } from '../types/animator';
+import { interpolateBezierPath, legacyMaskPointsToPath, pathToLegacyMaskPoints } from './bezierPath';
 
 export const DEFAULT_TRANSFORM: Transform = {
   x: 0,
@@ -20,6 +21,32 @@ export function makeEmptyChannels(): Record<TrackChannel, PropertyKeyframe[]> {
     maskOffsetX: [], maskOffsetY: [], maskScale: [], maskRotation: [],
     trimPathStart: [], trimPathEnd: [], trimPathOffset: [],
   };
+}
+
+/** Derive monotonic temporal controls from neighboring values. */
+export function deriveAutoBezierControlPoints(
+  previous: PropertyKeyframe,
+  next: PropertyKeyframe,
+  previousPrevious?: PropertyKeyframe,
+  nextNext?: PropertyKeyframe,
+): [number, number, number, number] {
+  const duration = Math.max(1, next.frame - previous.frame);
+  const delta = next.value - previous.value;
+  if (Math.abs(delta) < 1e-8) return [1 / 3, 0, 2 / 3, 1];
+  const previousSlope = previousPrevious
+    ? (next.value - previousPrevious.value) / Math.max(1, next.frame - previousPrevious.frame)
+    : delta / duration;
+  const nextSlope = nextNext
+    ? (nextNext.value - previous.value) / Math.max(1, nextNext.frame - previous.frame)
+    : delta / duration;
+  const normalizedPreviousSlope = (previousSlope * duration) / delta;
+  const normalizedNextSlope = (nextSlope * duration) / delta;
+  return [
+    1 / 3,
+    Math.max(0, Math.min(1, normalizedPreviousSlope / 3)),
+    2 / 3,
+    Math.max(0, Math.min(1, 1 - normalizedNextSlope / 3)),
+  ];
 }
 
 /** Interpolate a single numeric channel at a given frame */
@@ -44,8 +71,19 @@ export function interpolateChannel(
     }
   }
   const duration = next.frame - prev.frame;
+  if (duration <= 0) return prev.value;
   const progress = (frame - prev.frame) / duration;
-  const eased = applyEasing(progress, prev.easing, prev.bezierControlPoints);
+  const previousPrevious = sorted.find((candidate) => candidate.frame < prev.frame);
+  const nextNext = sorted.find((candidate) => candidate.frame > next.frame);
+  const autoBezier = prev.easing === 'autoBezier'
+    ? deriveAutoBezierControlPoints(prev, next, previousPrevious, nextNext)
+    : undefined;
+  const eased = applyEasing(
+    progress,
+    prev.easing,
+    prev.bezierControlPoints ?? autoBezier,
+    prev.bezierOut && next.bezierIn ? { out: prev.bezierOut, in: next.bezierIn } : undefined,
+  );
   return lerp(prev.value, next.value, eased);
 }
 
@@ -70,43 +108,56 @@ export function solveCubicBezier(x1: number, y1: number, x2: number, y2: number,
 export function applyEasing(
   t: number,
   easing: EasingType,
-  controlPoints?: [number, number, number, number]
+  controlPoints?: [number, number, number, number],
+  temporalHandles?: { in: { x: number; y: number }; out: { x: number; y: number } },
 ): number {
+  const progress = Math.max(0, Math.min(1, t));
+  if (easing === 'hold') return 0;
+  if (temporalHandles) {
+    return solveCubicBezier(
+      temporalHandles.out.x,
+      temporalHandles.out.y,
+      temporalHandles.in.x,
+      temporalHandles.in.y,
+      progress,
+    );
+  }
   if (controlPoints) {
-    return solveCubicBezier(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3], t);
+    return solveCubicBezier(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3], progress);
   }
 
   switch (easing) {
     case 'cubic_bezier':
-      return controlPoints
-        ? solveCubicBezier(controlPoints[0], controlPoints[1], controlPoints[2], controlPoints[3], t)
-        : solveCubicBezier(0.42, 0, 0.58, 1, t);
+    case 'bezier':
+      return solveCubicBezier(0.42, 0, 0.58, 1, progress);
+    case 'autoBezier':
+      return solveCubicBezier(0.42, 0, 0.58, 1, progress);
     case 'easeIn':
-      return solveCubicBezier(0.42, 0, 1, 1, t);
+      return solveCubicBezier(0.42, 0, 1, 1, progress);
     case 'easeOut':
-      return solveCubicBezier(0, 0, 0.58, 1, t);
+      return solveCubicBezier(0, 0, 0.58, 1, progress);
     case 'easeInOut':
-      return solveCubicBezier(0.42, 0, 0.58, 1, t);
+      return solveCubicBezier(0.42, 0, 0.58, 1, progress);
     case 'bounce': {
       const n1 = 7.5625;
       const d1 = 2.75;
-      let x = t;
+      let x = progress;
       if (x < 1 / d1) return n1 * x * x;
-      else if (x < 2 / d1) return n1 * (x -= 1.5 / d1) * x + 0.75;
-      else if (x < 2.5 / d1) return n1 * (x -= 2.25 / d1) * x + 0.9375;
-      else return n1 * (x -= 2.625 / d1) * x + 0.984375;
+      if (x < 2 / d1) return n1 * (x -= 1.5 / d1) * x + 0.75;
+      if (x < 2.5 / d1) return n1 * (x -= 2.25 / d1) * x + 0.9375;
+      return n1 * (x -= 2.625 / d1) * x + 0.984375;
     }
     case 'elastic': {
       const c4 = (2 * Math.PI) / 3;
-      return t === 0 ? 0 : t === 1 ? 1 : -Math.pow(2, 10 * t - 10) * Math.sin((t * 10 - 10.75) * c4);
+      return progress === 0 ? 0 : progress === 1 ? 1 : -Math.pow(2, 10 * progress - 10) * Math.sin((progress * 10 - 10.75) * c4);
     }
     case 'anticipate':
-      return solveCubicBezier(0.6, -0.28, 0.735, 0.045, t);
+      return solveCubicBezier(0.6, -0.28, 0.735, 0.045, progress);
     case 'overshoot':
-      return solveCubicBezier(0.175, 0.885, 0.32, 1.275, t);
+      return solveCubicBezier(0.175, 0.885, 0.32, 1.275, progress);
     case 'linear':
     default:
-      return t;
+      return progress;
   }
 }
 
@@ -136,31 +187,19 @@ export function interpolateTransform(
   };
 
   if (t1.mask && t2.mask) {
+    const path = interpolateBezierPath(
+      t1.mask.path ?? legacyMaskPointsToPath(t1.mask.points, t1.mask.closed),
+      t2.mask.path ?? legacyMaskPointsToPath(t2.mask.points, t2.mask.closed),
+      eased,
+    );
+    const points = pathToLegacyMaskPoints(path) ?? t1.mask.points;
     result.mask = {
       ...t1.mask,
       feather: lerp(t1.mask.feather, t2.mask.feather, eased),
       opacity: lerp(t1.mask.opacity, t2.mask.opacity, eased),
-      points: t1.mask.points.map((p1, i) => {
-        const p2 = t2.mask!.points[i];
-        if (!p2) return p1;
-        const np: any = {
-          x: lerp(p1.x, p2.x, eased),
-          y: lerp(p1.y, p2.y, eased),
-        };
-        if (p1.handleIn && p2.handleIn) {
-          np.handleIn = {
-            x: lerp(p1.handleIn.x, p2.handleIn.x, eased),
-            y: lerp(p1.handleIn.y, p2.handleIn.y, eased),
-          };
-        }
-        if (p1.handleOut && p2.handleOut) {
-          np.handleOut = {
-            x: lerp(p1.handleOut.x, p2.handleOut.x, eased),
-            y: lerp(p1.handleOut.y, p2.handleOut.y, eased),
-          };
-        }
-        return np;
-      })
+      closed: path?.closed ?? t1.mask.closed,
+      points,
+      ...(path ? { path } : {}),
     };
   } else if (t1.mask) {
     result.mask = { ...t1.mask };

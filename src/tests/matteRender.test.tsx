@@ -1103,3 +1103,27 @@ describe('StagePartLayers — M21 image matte render', () => {
     expect(html).not.toContain('<image');
   });
 });
+
+describe('StagePartLayers — V6 Track Matte V2 render', () => {
+  it('maps the explicit V2 source relationship into the existing alpha matte renderer', () => {
+    const source = makePart('source', 'custom_box');
+    const target = {
+      ...makePart('target', 'custom_circle'),
+      trackMatte: { sourceLayerId: 'source', mode: 'alpha' as const, enabled: true },
+    } as CharacterPart;
+    const html = renderStage([source, target]);
+    expect(html).toContain('id="kcs-mask-source-alpha"');
+    expect(html).toContain('mask="url(#kcs-mask-source-alpha)"');
+  });
+
+  it('keeps a V2 source available to defs but hides it from final layer output', () => {
+    const source = makePart('source', 'custom_box');
+    const target = {
+      ...makePart('target', 'custom_circle'),
+      trackMatte: { sourceLayerId: 'source', mode: 'luminance' as const, sourceVisible: false },
+    } as CharacterPart;
+    const html = renderStage([source, target]);
+    expect(html).toContain('id="kcs-mask-source-luminance"');
+    expect((html.match(/data-part-id="source"/g) ?? []).length).toBe(0);
+  });
+});

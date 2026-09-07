@@ -161,6 +161,17 @@ export const getPartLocalBounds = (
   }
 
   if (!bounds && part.type === 'custom_freeform') {
+    if (part.path?.points?.length) {
+      const width = part.width ?? 200;
+      const height = part.height ?? 120;
+      const pathPoints = part.path.coordinateSpace === 'normalized'
+        ? part.path.points.map((point) => ({ x: (point.x - 0.5) * width, y: (point.y - 0.5) * height }))
+        : part.path.points;
+      bounds = boundsFromPoints(pathPoints);
+    }
+  }
+
+  if (!bounds && part.type === 'custom_freeform') {
     bounds = boundsFromPoints(part.points || []);
   }
 

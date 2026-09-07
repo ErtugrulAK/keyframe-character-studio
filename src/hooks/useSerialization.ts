@@ -7,6 +7,7 @@ import { convertLegacyKeyframesToChannels } from '../utils/legacyKeyframeConvers
 import { AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_SCENE_COORDINATE_SYSTEM, migrateSceneCoordinates } from '../utils/coordinateMigration';
 import { normalizeMotionTemplates } from '../utils/motionTemplates';
+import { migrateSceneLayerV6 } from '../utils/v6Migration';
 
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 
@@ -23,7 +24,7 @@ function migrateTrack(t: Track): Track {
 // ─── Phase 3: SceneData ↔ AnimationProject conversion ───────────────
 
 /**
- * Export current state to canonical SceneData format (version 1).
+ * Export current state to canonical SceneData format (version 2).
  */
 function toSceneData(
   characterParts: CharacterPart[],
@@ -46,8 +47,9 @@ function toSceneData(
     scaleX: p.baseTransform.scaleX,
     scaleY: p.baseTransform.scaleY,
     opacity: p.baseTransform.opacity,
-    parentId: p.parentId,
     matte: p.matte,
+    masks: p.masks,
+    trackMatte: p.trackMatte,
     booleanGroupId: p.booleanGroupId,
     booleanOperation: p.booleanOperation,
     booleanOperandIds: p.booleanOperandIds,
@@ -70,6 +72,7 @@ function toSceneData(
     width: p.width,
     height: p.height,
     points: p.points,
+    path: p.path,
     textValue: p.textValue,
     fontSize: p.fontSize,
     fontFamily: p.fontFamily,
@@ -100,12 +103,13 @@ function toSceneData(
     return {
       partId: t.partId,
       channels: channels as Record<string, PropertyKeyframe[]>,
+      maskChannels: t.maskChannels,
       sequencerTemplateId: t.sequencerTemplateId,
     };
   });
 
   return {
-    version: 1,
+    version: 2,
     // Persist the active authoring contract; legacy-unknown is retained for
     // historical/mixed scenes until an explicit contract is selected.
     coordinateSystem,
@@ -138,7 +142,7 @@ function fromSceneData(
   setMotionTemplates: React.Dispatch<React.SetStateAction<MotionTemplate[]>>,
   setActiveTemplateId: React.Dispatch<React.SetStateAction<string>>,
 ): boolean {
-  const parts: CharacterPart[] = scene.layers.map(l => ({
+  const parts: CharacterPart[] = scene.layers.map(l => migrateSceneLayerV6(l)).map(l => ({
     id: l.id,
     name: l.name,
     type: l.type as any,
@@ -151,6 +155,8 @@ function fromSceneData(
     pivot: { x: 0, y: 0 },
     parentId: l.parentId,
     matte: l.matte,
+    masks: l.masks,
+    trackMatte: l.trackMatte,
     booleanGroupId: l.booleanGroupId,
     booleanOperation: l.booleanOperation,
     booleanOperandIds: l.booleanOperandIds,
@@ -174,8 +180,9 @@ function fromSceneData(
     borderRadius: l.borderRadius,
     width: l.width,
     height: l.height,
-    points: l.points,
     ...(l.strokeWidth !== undefined ? { strokeWidth: l.strokeWidth } : {}),
+    points: l.points,
+    path: l.path,
     ...(l.strokeOpacity !== undefined ? { strokeOpacity: l.strokeOpacity } : {}),
     ...(l.strokeAlignment !== undefined ? { strokeAlignment: l.strokeAlignment } : {}),
     ...(l.trimPathEnabled !== undefined ? { trimPathEnabled: l.trimPathEnabled } : {}),
@@ -225,8 +232,9 @@ function fromSceneData(
       channels: ((t.channels && Object.values(t.channels).some((arr) => arr.length > 0))
         ? t.channels
         : convertLegacyKeyframesToChannels(t.keyframes || [])) as Track['channels'],
-      visible: true,
+      maskChannels: t.maskChannels,
       locked: false,
+      visible: true,
     };
   });
 
@@ -412,8 +420,6 @@ export const useSerialization = ({
       const parsed: any = JSON.parse(jsonStr);
       if (!parsed) return false;
 
-      // Phase 3: SceneData format
-      // BUG #2: empty/missing name → '' so fromSceneData keeps the current title (no-op)
       if (isSceneData(parsed)) {
         return fromSceneData(parsed, defaultName || parsed.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
       }

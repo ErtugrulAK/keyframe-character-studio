@@ -1,14 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import type { CharacterPart, MatteMode, PartMatte } from '../../../../types/animator';
+import type { CharacterPart, LayerMask, LayerMaskChannelProperty, MatteMode, PartMatte } from '../../../../types/animator';
+import { BezierPathEditor } from '../../BezierPathEditor';
+import { createBezierPath } from '../../../../utils/bezierPath';
 import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
 import type { MatteGradientStop } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
-
 interface StyleMatteSectionProps {
   selectedPart: CharacterPart;
   characterParts: CharacterPart[];
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
+  currentFrame?: number;
+  onAddMaskKeyframe?: (maskId: string, property: LayerMaskChannelProperty, value: number) => void;
 }
 
 const selectStyle: React.CSSProperties = {
@@ -43,6 +46,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   selectedPart,
   characterParts,
   onPartPropChange,
+  onAddMaskKeyframe,
 }) => {
   const matte = selectedPart.matte;
   const authoredAngle = normalizeGradientAngle(matte?.gradient?.angle) ?? 0;
@@ -258,8 +262,48 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     if (!matte?.gradient) return;
     writeStops(displayStops.map((s, i) => (i === index ? { ...s, ...patch } : s)));
   };
+  const layerMasks = selectedPart.masks ?? [];
+  const [selectedLayerMaskId, setSelectedLayerMaskId] = useState<string | undefined>(layerMasks[0]?.id);
+  const activeLayerMask = layerMasks.find((layerMask) => layerMask.id === selectedLayerMaskId) ?? layerMasks[0];
+  const setLayerMasks = (next: LayerMask[]) => onPartPropChange('masks', next);
+  const addLayerMask = () => {
+    const id = `mask-${layerMasks.length + 1}`;
+    setLayerMasks([
+      ...layerMasks,
+      {
+        id,
+        name: `Mask ${layerMasks.length + 1}`,
+        path: createBezierPath([
+          { x: 0.2, y: 0.2 },
+          { x: 0.8, y: 0.2 },
+          { x: 0.8, y: 0.8 },
+          { x: 0.2, y: 0.8 },
+        ], 'normalized'),
+        mode: 'add',
+        enabled: true,
+        opacity: 1,
+        feather: 0,
+        expansion: 0,
+      },
+    ]);
+    setSelectedLayerMaskId(id);
+  };
+  const updateActiveLayerMask = (patch: Partial<LayerMask>) => {
+    if (!activeLayerMask) return;
+    setLayerMasks(layerMasks.map((layerMask) => layerMask.id === activeLayerMask.id ? { ...layerMask, ...patch } : layerMask));
+  };
+  const trackMatte = selectedPart.trackMatte;
+  const addMaskKeyframe = (property: LayerMaskChannelProperty) => {
+    if (!activeLayerMask || !onAddMaskKeyframe) return;
+    const value = activeLayerMask[property] ?? (property === 'opacity' ? 1 : 0);
+    onAddMaskKeyframe(activeLayerMask.id, property, value);
+  };
+  const trackMatteSourceMissing = !!trackMatte && !characterParts.some((part) => part.id === trackMatte.sourceLayerId);
+  const trackMatteSources = characterParts.filter((part) => part.id !== selectedPart.id);
+  const setTrackMatte = (next: CharacterPart['trackMatte'] | undefined) => onPartPropChange('trackMatte', next);
 
   return (
+    <>
     <StyleCard title="MASK / TRACK MATTE" collapsible defaultOpen={false}>
       <div className="matte-control-grid">
         <div className="matte-field matte-source-field matte-span-full">
@@ -486,5 +530,111 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
         </div>
       )}
     </StyleCard>
+    <StyleCard title="LAYER MASKS" collapsible defaultOpen={false}>
+      <div className="matte-control-grid">
+        <div className="matte-span-full" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {layerMasks.map((layerMask, index) => (
+            <button
+              key={layerMask.id}
+              type="button"
+              className={layerMask.id === activeLayerMask?.id ? 'btn-primary' : 'btn-secondary'}
+              onClick={() => setSelectedLayerMaskId(layerMask.id)}
+            >
+              {index + 1}. {layerMask.name}
+            </button>
+          ))}
+          <button type="button" className="btn-secondary" onClick={addLayerMask}>Add mask</button>
+        </div>
+        {activeLayerMask && (
+          <>
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">MODE</label>
+              <select className="select-control" style={compactSelectStyle} value={activeLayerMask.mode} onChange={(event) => updateActiveLayerMask({ mode: event.target.value as LayerMask['mode'] })}>
+                <option value="add">Add</option>
+                <option value="subtract">Subtract</option>
+                <option value="intersect">Intersect</option>
+                <option value="difference">Difference</option>
+              </select>
+            </div>
+            <label className="matte-toggle-field matte-compact-field">
+              <input type="checkbox" checked={activeLayerMask.enabled !== false} onChange={(event) => updateActiveLayerMask({ enabled: event.target.checked })} />
+              Enabled
+            </label>
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">FEATHER</label>
+              <input className="input-control" type="number" min={0} step={0.5} value={activeLayerMask.feather ?? 0} onChange={(event) => updateActiveLayerMask({ feather: Number(event.target.value) })} />
+              {onAddMaskKeyframe && <button type="button" className="btn-secondary" onClick={() => addMaskKeyframe('feather')}>Add feather keyframe</button>}
+            </div>
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">OPACITY</label>
+              <input className="input-control" type="number" min={0} max={1} step={0.05} value={activeLayerMask.opacity ?? 1} onChange={(event) => updateActiveLayerMask({ opacity: Number(event.target.value) })} />
+              {onAddMaskKeyframe && <button type="button" className="btn-secondary" onClick={() => addMaskKeyframe('opacity')}>Add opacity keyframe</button>}
+            </div>
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">EXPANSION</label>
+              <input className="input-control" type="number" step={1} value={activeLayerMask.expansion ?? 0} onChange={(event) => updateActiveLayerMask({ expansion: Number(event.target.value) })} />
+              {onAddMaskKeyframe && <button type="button" className="btn-secondary" onClick={() => addMaskKeyframe('expansion')}>Add expansion keyframe</button>}
+            </div>
+            <div className="matte-span-full">
+              <BezierPathEditor path={activeLayerMask.path} onChange={(path) => updateActiveLayerMask({ path })} />
+            </div>
+          </>
+        )}
+      </div>
+    </StyleCard>
+    <StyleCard title="TRACK MATTE V2" collapsible defaultOpen={false}>
+      <div className="matte-control-grid">
+        <div className="matte-field matte-source-field matte-span-full">
+          <label className="form-label">SOURCE LAYER</label>
+          <select
+            className="select-control"
+            style={selectStyle}
+            value={trackMatte && !trackMatteSourceMissing ? trackMatte.sourceLayerId : ''}
+            onChange={(event) => {
+              const sourceLayerId = event.target.value;
+              setTrackMatte(sourceLayerId ? {
+                sourceLayerId,
+                mode: trackMatte?.mode ?? 'alpha',
+                enabled: trackMatte?.enabled !== false,
+                inverted: trackMatte?.inverted === true,
+                sourceVisible: trackMatte?.sourceVisible !== false,
+              } : undefined);
+            }}
+          >
+            <option value="">None</option>
+            {trackMatteSources.map((part) => <option key={part.id} value={part.id}>{part.name}</option>)}
+          </select>
+        </div>
+        {trackMatteSourceMissing && (
+          <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b' }}>
+            Missing source ({trackMatte!.sourceLayerId}) — track matte not applied
+          </div>
+        )}
+        {trackMatte && !trackMatteSourceMissing && (
+          <>
+            <div className="matte-field matte-compact-field">
+              <label className="form-label">MODE</label>
+              <select className="select-control" style={compactSelectStyle} value={trackMatte.mode} onChange={(event) => setTrackMatte({ ...trackMatte, mode: event.target.value as 'alpha' | 'luminance' })}>
+                <option value="alpha">Alpha</option>
+                <option value="luminance">Luminance</option>
+              </select>
+            </div>
+            <label className="matte-toggle-field matte-compact-field">
+              <input type="checkbox" checked={trackMatte.enabled !== false} onChange={(event) => setTrackMatte({ ...trackMatte, enabled: event.target.checked })} />
+              Enabled
+            </label>
+            <label className="matte-toggle-field matte-compact-field">
+              <input type="checkbox" checked={trackMatte.inverted === true} onChange={(event) => setTrackMatte({ ...trackMatte, inverted: event.target.checked })} />
+              Inverted
+            </label>
+            <label className="matte-toggle-field matte-compact-field">
+              <input type="checkbox" checked={trackMatte.sourceVisible !== false} onChange={(event) => setTrackMatte({ ...trackMatte, sourceVisible: event.target.checked })} />
+              Show source
+            </label>
+          </>
+        )}
+      </div>
+    </StyleCard>
+    </>
   );
 };

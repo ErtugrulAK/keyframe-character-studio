@@ -1,15 +1,17 @@
 import { useState, useCallback } from 'react';
-import type { CharacterPart, Track, TrackChannel, EasingType, Keyframe, Transform } from '../types/animator';
+import type { CharacterPart, Track, AnimationChannel, EasingType, Keyframe, Transform } from '../types/animator';
 import { generateId } from '../utils/idGenerator';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
 import { hasChannelDataForTemplate } from '../utils/timelineMetrics';
 import { 
-  updateKeyframeBezierPointsMutator, 
-  addPropertyKeyframeMutator, 
-  deletePropertyKeyframeMutator, 
-  deleteSelectedKeyframeGroupMutator,
+  updateKeyframeBezierPointsMutator,
+  addPropertyKeyframeMutator,
+  updatePropertyKeyframeValueMutator,
+  updatePropertyKeyframeTemporalHandlesMutator,
   updatePropertyKeyframeFrameMutator,
   updatePropertyKeyframeEasingMutator,
+  deletePropertyKeyframeMutator,
+  deleteSelectedKeyframeGroupMutator,
   applyTransitionChannelsMutator,
   applyTransitionToTrackCanonicalMutator
 } from '../utils/trackMutations';
@@ -178,7 +180,7 @@ export const useTimeline = ({
   // Per-property channel keyframe actions (Unreal-style)
   const addPropertyKeyframe = (
     trackId: string,
-    channel: TrackChannel,
+    channel: AnimationChannel,
     frame: number,
     value: number,
     easing: EasingType = 'easeInOut'
@@ -186,7 +188,18 @@ export const useTimeline = ({
     setTracks((prev) => addPropertyKeyframeMutator(prev, trackId, channel, frame, value, easing, activeTemplateId || 'Sequence'));
   };
 
-  const deletePropertyKeyframe = (trackId: string, channel: TrackChannel, keyframeId: string) => {
+  const updatePropertyKeyframeValue = (trackId: string, channel: AnimationChannel, keyframeId: string, value: number) => {
+    setTracks((prev) => updatePropertyKeyframeValueMutator(prev, trackId, channel, keyframeId, value));
+  };
+  const updatePropertyKeyframeTemporalHandles = (
+    trackId: string,
+    channel: AnimationChannel,
+    keyframeId: string,
+    patch: { bezierIn?: { x: number; y: number }; bezierOut?: { x: number; y: number } },
+  ) => {
+    setTracks((prev) => updatePropertyKeyframeTemporalHandlesMutator(prev, trackId, channel, keyframeId, patch));
+  };
+  const deletePropertyKeyframe = (trackId: string, channel: AnimationChannel, keyframeId: string) => {
     setTracks((prev) => deletePropertyKeyframeMutator(prev, trackId, channel, keyframeId));
   };
 
@@ -201,12 +214,12 @@ export const useTimeline = ({
     return true;
   }, [activeTemplateId, selectedKeyframeId, setSelectedKeyframeId, setTracks, tracks]);
 
-  const updatePropertyKeyframeFrame = (trackId: string, channel: TrackChannel, keyframeId: string, newFrame: number) => {
+  const updatePropertyKeyframeFrame = (trackId: string, channel: AnimationChannel, keyframeId: string, newFrame: number) => {
     setTracks((prev) => updatePropertyKeyframeFrameMutator(prev, trackId, channel, keyframeId, newFrame));
   };
 
   // M1: change easing of a single channel keyframe
-  const updatePropertyKeyframeEasing = (trackId: string, channel: TrackChannel, keyframeId: string, easing: EasingType) => {
+  const updatePropertyKeyframeEasing = (trackId: string, channel: AnimationChannel, keyframeId: string, easing: EasingType) => {
     setTracks((prev) => updatePropertyKeyframeEasingMutator(prev, trackId, channel, keyframeId, easing));
   };
 
@@ -299,6 +312,8 @@ export const useTimeline = ({
     toggleTrackLock,
     toggleTrackExpanded,
     addPropertyKeyframe,
+    updatePropertyKeyframeValue,
+    updatePropertyKeyframeTemporalHandles,
     deletePropertyKeyframe,
     deleteSelectedKeyframe,
     updatePropertyKeyframeFrame,

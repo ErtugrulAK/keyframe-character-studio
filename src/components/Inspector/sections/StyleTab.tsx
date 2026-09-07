@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CharacterPart } from '../../../types/animator';
+import type { CharacterPart, LayerMaskChannelProperty } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
 import { isShapeAppearanceEligible } from '../../../utils/shapeAppearance';
@@ -18,6 +18,8 @@ interface StyleTabProps {
   handlePartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
   handleZIndexChange?: (zIndex: number) => void;
+  currentFrame?: number;
+  onAddMaskKeyframe?: (maskId: string, property: LayerMaskChannelProperty, value: number) => void;
 }
 
 export const StyleTab: React.FC<StyleTabProps> = ({
@@ -25,6 +27,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   characterParts,
   handlePartPropChange,
   handlePartColorChange,
+  currentFrame,
+  onAddMaskKeyframe,
 }) => {
   const isTextBearing =
     selectedPart.type === 'custom_card' ||
@@ -41,11 +45,11 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       )}
       <StyleTextFields
         selectedPart={selectedPart}
-        onPartPropChange={handlePartPropChange}
         onPartColorChange={handlePartColorChange}
+        onPartPropChange={handlePartPropChange}
       />
       <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-      <StyleMatteSection selectedPart={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} />
+      <StyleMatteSection selectedPart={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} currentFrame={currentFrame} onAddMaskKeyframe={onAddMaskKeyframe} />
       <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
       <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
     </div>

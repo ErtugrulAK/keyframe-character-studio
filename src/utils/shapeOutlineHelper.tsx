@@ -1,6 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../types/animator';
-
+import { buildNormalizedPathD, legacyMaskPointsToPath } from './bezierPath';
 interface OutlineStyleProps {
   stroke?: string;
   strokeWidth?: number;
@@ -95,46 +95,9 @@ export function renderShapeOutline(
 
   // 1. Bezier Path Mask check
   if (part.mask?.enabled && part.mask.points && part.mask.points.length > 1) {
-    const points = part.mask.points;
-    let pathD = '';
-    
-    // Convert normalized or pixel mask points to path
-    points.forEach((pt, i) => {
-      const px = (pt.x - 0.5) * (halfW * 2);
-      const py = (pt.y - 0.5) * (halfH * 2);
-
-      if (i === 0) {
-        pathD += `M ${px} ${py}`;
-      } else {
-        const prevPt = points[i - 1];
-        if (prevPt.handleOut || pt.handleIn) {
-          const h1x = prevPt.handleOut ? (prevPt.handleOut.x - 0.5) * (halfW * 2) : (prevPt.x - 0.5) * (halfW * 2);
-          const h1y = prevPt.handleOut ? (prevPt.handleOut.y - 0.5) * (halfH * 2) : (prevPt.y - 0.5) * (halfH * 2);
-          const h2x = pt.handleIn ? (pt.handleIn.x - 0.5) * (halfW * 2) : px;
-          const h2y = pt.handleIn ? (pt.handleIn.y - 0.5) * (halfH * 2) : py;
-          pathD += ` C ${h1x} ${h1y}, ${h2x} ${h2y}, ${px} ${py}`;
-        } else {
-          pathD += ` L ${px} ${py}`;
-        }
-      }
-    });
-
-    if (part.mask.closed) {
-      const lastPt = points[points.length - 1];
-      const firstPt = points[0];
-      if (lastPt.handleOut || firstPt.handleIn) {
-        const h1x = lastPt.handleOut ? (lastPt.handleOut.x - 0.5) * (halfW * 2) : (lastPt.x - 0.5) * (halfW * 2);
-        const h1y = lastPt.handleOut ? (lastPt.handleOut.y - 0.5) * (halfH * 2) : (lastPt.y - 0.5) * (halfH * 2);
-        const firstPx = (firstPt.x - 0.5) * (halfW * 2);
-        const firstPy = (firstPt.y - 0.5) * (halfH * 2);
-        const h2x = firstPt.handleIn ? (firstPt.handleIn.x - 0.5) * (halfW * 2) : firstPx;
-        const h2y = firstPt.handleIn ? (firstPt.handleIn.y - 0.5) * (halfH * 2) : firstPy;
-        pathD += ` C ${h1x} ${h1y}, ${h2x} ${h2y}, ${firstPx} ${firstPy}`;
-      }
-      pathD += ' Z';
-    }
-
-    return <path d={pathD} fill="none" {...commonProps} />;
+    const path = part.mask.path ?? legacyMaskPointsToPath(part.mask.points, part.mask.closed);
+    const pathD = buildNormalizedPathD(path, halfW * 2, halfH * 2);
+    if (pathD) return <path d={pathD} fill="none" {...commonProps} />;
   }
 
   // 2. Canva-Style Mask Shape override or explicit maskShape

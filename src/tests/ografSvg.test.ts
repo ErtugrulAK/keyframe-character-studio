@@ -83,6 +83,27 @@ describe('OGraf standalone SVG Phase 2A', () => {
 
     expect(renderOGrafSvg(evaluated)).toContain('<path d="M -10 -10 L 20 -10 L 0 20 Z"');
   });
+  test('renders canonical V6 freeform paths before legacy point fallback', () => {
+    const scene = makeScene([makeLayer({
+      type: 'custom_freeform',
+      path: {
+        version: 1,
+        coordinateSpace: 'local',
+        closed: true,
+        points: [
+          { id: 'p0', x: -20, y: -10, handleOut: { x: 10, y: 0 } },
+          { id: 'p1', x: 20, y: -10, handleIn: { x: -10, y: 0 } },
+          { id: 'p2', x: 0, y: 20 },
+        ],
+      },
+      points: [{ x: 1, y: 1 }],
+    })]);
+
+    const svg = renderOGrafSvg(evaluateOGrafScene(scene, 0));
+
+    expect(svg).toContain('<path d="M -20 -10 C 10 0, -10 0, 20 -10 L 0 20 Z"');
+  });
+
 
   test('reuses canonical channel interpolation and preserves hierarchy', () => {
     const parent = makeLayer({ id: 'parent', x: 20, y: 10, rotation: 90, scaleX: 2, scaleY: 2 });

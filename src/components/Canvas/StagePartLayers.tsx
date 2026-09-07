@@ -34,6 +34,8 @@ import {
   resolveMatteMode,
 } from '../../utils/matte';
 import type { MatteClipPath, MatteMask, MatteGradientStop, MatteImageContent } from '../../utils/matte';
+import { buildLayerMaskDefinition, layerMaskFilterId } from '../../utils/layerMasks';
+import type { LayerMaskSvgDefinition } from '../../utils/layerMasks';
 import type { WorldTransform } from '../../types/composition';
 import type { NamedSequenceRuntimeState } from '../../utils/broadcastEngine';
 import { EDITOR_CAMERA_CENTER, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
@@ -76,6 +78,17 @@ function toLiveStuntsRuntime(
     result[id] = { stunt: s.stunt, progress: s.progress, customPresetId: s.customPresetId };
   }
   return result;
+}
+function getEffectiveMatte(part: CharacterPart): CharacterPart['matte'] {
+  if (part.trackMatte && part.trackMatte.enabled !== false) {
+    return {
+      sourcePartId: part.trackMatte.sourceLayerId,
+      mode: part.trackMatte.mode,
+      inverted: part.trackMatte.inverted === true,
+      enabled: true,
+    };
+  }
+  return part.matte;
 }
 
 export const StagePartLayers: React.FC<StagePartLayersProps> = ({
@@ -179,6 +192,37 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     );
     booleanContoursByGroup.set(group.id, derived.localContours);
   }
+  const layerMaskDefinitions = new Map<string, LayerMaskSvgDefinition>();
+  const layerMaskIdsByPart = new Map<string, string[]>();
+  for (const part of sortedParts) {
+    const evaluated = evaluatedFrame.layers.find((layer) => layer.id === part.id);
+    if (!evaluated || !part.masks?.length) continue;
+    const ids: string[] = [];
+    let additive: LayerMaskSvgDefinition | undefined;
+    let additivePaths: string[] = [];
+    const flushAdditive = () => {
+      if (!additive || additivePaths.length === 0) return;
+      const combined = { ...additive, pathD: additivePaths.join(' ') };
+      layerMaskDefinitions.set(combined.id, combined);
+      ids.push(combined.id);
+      additive = undefined;
+      additivePaths = [];
+    };
+    for (const mask of part.masks) {
+      const definition = buildLayerMaskDefinition(part, mask, evaluated.transform, outputOrigin);
+      if (!definition) continue;
+      if (definition.mode === 'add' && !definition.inverted) {
+        if (!additive) additive = { ...definition, id: `${definition.id}-add` };
+        additivePaths.push(definition.pathD);
+        continue;
+      }
+      flushAdditive();
+      layerMaskDefinitions.set(definition.id, definition);
+      ids.push(definition.id);
+    }
+    flushAdditive();
+    if (ids.length > 0) layerMaskIdsByPart.set(part.id, ids);
+  }
 
   // M11 Step 2B / M13 Step 2C — Track matte: build ONE world-space clipPath
   // or <mask> def per (source, mode, inverted) from the source's evaluated
@@ -208,15 +252,16 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   // mask wraps around the gradient rect — pure SVG multiplication, no canvas.
   const imageContentMasks = new Map<string, { id: string; content: MatteImageContent; transform: WorldTransform; opacity?: number }>();
   for (const layer of sortedParts) {
-    if (!layer.matte || !isMatteActive(layer.matte)) continue;
-    const source = sortedParts.find((p) => p.id === layer.matte!.sourcePartId);
+    const matte = getEffectiveMatte(layer);
+    if (!matte || !isMatteActive(matte)) continue;
+    const source = sortedParts.find((p) => p.id === matte.sourcePartId);
     if (!source) continue; // missing source → no clip/mask (recoverable validation warns)
     const sourceEl = evaluatedFrame.layers.find((el) => el.id === source.id);
     if (!sourceEl) continue;
-    const mode = resolveMatteMode(layer.matte);
+    const mode = resolveMatteMode(matte);
 
     if (mode === 'clip') {
-      if (layer.matte.inverted === true) {
+      if (matte.inverted === true) {
         // clipPath cannot represent a negative area. Preserve Clip's binary
         // geometry semantics by using the existing alpha evenodd-hole mask
         // structure, without enabling feather/strength/gradient parameters.
@@ -238,16 +283,15 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
 
     // alpha | luminance
     if (mode !== 'alpha' && mode !== 'luminance') continue; // TS narrowing (unreachable)
-    const inverted = layer.matte.inverted === true;
-    const feather = normalizeFeather(layer.matte.feather);
+    const inverted = matte.inverted === true;
+    const feather = normalizeFeather(matte.feather);
     // M16: strength < 1 gets a deterministic -s{strength} suffix so the same
     // (source, mode, inverted, feather) with DIFFERENT strengths never
-    // collides. strength undefined/1 = canonical (legacy id, byte-for-byte).
-    const strength = normalizeStrength(layer.matte.strength);
-    // M17: gradient (mask modes only) — the -g{angle} suffix (NORMALIZED
-    // angle) keeps gradient variants apart; no gradient → canonical id.
-    const gradientAngle = layer.matte.gradient
-      ? normalizeGradientAngle(layer.matte.gradient.angle) ?? 0
+    // collides. strength undefined/1 = legacy behavior = full strength (1).
+    const strength = normalizeStrength(matte.strength);
+    // M17: gradient (mask modes only) — the -g suffix keeps gradient variants apart.
+    const gradientAngle = matte.gradient
+      ? normalizeGradientAngle(matte.gradient.angle) ?? 0
       : undefined;
     // M14: when feathered, the mask id gets a deterministic -f{feather} suffix
     // so the same (source, mode, inverted) with DIFFERENT feather values never
@@ -258,7 +302,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     // DIFFERENT stops must never share one mask (dedupe Map key). Legacy
     // gradients (no stops) keep the byte-for-byte `-g{angle}` suffix.
     const baseMaskId = matteMaskId(source.id, mode, inverted);
-    const maskId = `${baseMaskId}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${matteMaskGradientSuffix(layer.matte.gradient)}`;
+    const maskId = `${baseMaskId}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${matteMaskGradientSuffix(matte.gradient)}`;
     if (matteMasks.has(maskId)) continue; // same (source, mode, inverted, feather, strength, gradient) already built
 
     // M18 — TEXT source: buildMattePath stays null (text has NO path
@@ -316,7 +360,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     // for non-inverted text). Geometry is recomputed from the EVALUATED
     // transform every frame — animated sources never go stale.
     let maskGradientId: string | undefined;
-    if (layer.matte.gradient) {
+    if (matte.gradient) {
       const structure = source.type === 'custom_text' && inverted ? 'luminance' : mode;
       // M19 5E BLOCKER FIX — coordinate-space mismatch: in the inverted TEXT
       // structure the ONLY gradient consumer is the WORLD-space region rect
@@ -329,9 +373,9 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       // structure key so it can never collide with a non-inverted luminance
       // TEXT def (which stays LOCAL). The same rule applies to radial.
       const isInvertedText = source.type === 'custom_text' && inverted;
-      const gradId = `${gradientId(source.id, layer.matte.gradient)!}-${structure}${isInvertedText ? '-inv' : ''}`;
+      const gradId = `${gradientId(source.id, matte.gradient)!}-${structure}${isInvertedText ? '-inv' : ''}`;
       if (!matteGradients.has(gradId)) {
-        const isRadial = normalizeGradientType(layer.matte.gradient.type) === 'radial';
+        const isRadial = normalizeGradientType(matte.gradient.type) === 'radial';
         if (isRadial) {
           // WORLD for shape/freeform AND inverted text (region rect consumes
           // the def); LOCAL only for the non-inverted text element (4A).
@@ -345,7 +389,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
               cx: geo.cx,
               cy: geo.cy,
               r: geo.r,
-              stops: normalizeGradientStops(layer.matte.gradient?.stops, structure),
+              stops: normalizeGradientStops(matte.gradient?.stops, structure),
             });
             maskGradientId = gradId;
           }
@@ -360,7 +404,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
               id: gradId,
               kind: 'linear',
               ...eps,
-              stops: normalizeGradientStops(layer.matte.gradient?.stops, structure),
+              stops: normalizeGradientStops(matte.gradient?.stops, structure),
             });
             maskGradientId = gradId;
           }
@@ -392,24 +436,23 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   }
 
   const matteAttrFor = (part: CharacterPart): { clipId?: string; maskId?: string } => {
-    if (!part.matte || !isMatteActive(part.matte)) return {};
-    if (!sortedParts.some((p) => p.id === part.matte!.sourcePartId)) return {};
-    const mode = resolveMatteMode(part.matte);
+    const matte = getEffectiveMatte(part);
+    if (!matte || !isMatteActive(matte)) return {};
+    if (!sortedParts.some((p) => p.id === matte.sourcePartId)) return {};
+    const mode = resolveMatteMode(matte);
     if (mode === 'clip') {
-      if (part.matte.inverted === true) {
-        const id = matteMaskId(part.matte.sourcePartId, 'alpha', true);
+      if (matte.inverted === true) {
+        const id = matteMaskId(matte.sourcePartId, 'alpha', true);
         return matteMasks.has(id) ? { maskId: id } : {};
       }
-      const id = matteClipPathId(part.matte.sourcePartId);
+      const id = matteClipPathId(matte.sourcePartId);
       return matteClips.has(id) ? { clipId: id } : {};
     }
     if (mode === undefined) return {}; // unreachable when matte exists; TS narrowing
-    const feather = normalizeFeather(part.matte.feather);
-    const strength = normalizeStrength(part.matte.strength);
-    // M19 — matteMaskGradientSuffix carries the stops identity into the lookup
-    // id, keeping it byte-for-byte aligned with the def-building loop.
-    const base = matteMaskId(part.matte.sourcePartId, mode, part.matte.inverted === true);
-    const id = `${base}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${matteMaskGradientSuffix(part.matte.gradient)}`;
+    const feather = normalizeFeather(matte.feather);
+    const strength = normalizeStrength(matte.strength);
+    const base = matteMaskId(matte.sourcePartId, mode, matte.inverted === true);
+    const id = `${base}${feather > 0 ? `-f${feather}` : ''}${strength < 1 ? `-s${strength}` : ''}${matteMaskGradientSuffix(matte.gradient)}`;
     return matteMasks.has(id) ? { maskId: id } : {};
   };
 
@@ -424,6 +467,15 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     width: projectResolution?.width ?? 1920,
     height: projectResolution?.height ?? 1080,
   };
+  const layerMaskOuterPath = `M ${region.x} ${region.y} H ${region.x + region.width} V ${region.y + region.height} H ${region.x} Z`;
+  const layerMaskUsesHole = (definition: LayerMaskSvgDefinition): boolean =>
+    definition.mode === 'subtract' || definition.mode === 'difference'
+      ? !definition.inverted
+      : definition.inverted;
+  const layerMaskFilterUrl = (definition: LayerMaskSvgDefinition): string | undefined =>
+    definition.feather > 0 || definition.expansion !== 0
+      ? `url(#${layerMaskFilterId(definition.id)})`
+      : undefined;
 
   // M14 feather: deterministic filter id derived from the mask id (which
   // already encodes source + mode + inverted + feather). The filter region
@@ -494,6 +546,57 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   return (
     <g clipPath={appMode === 'broadcast' ? 'url(#artboard-clip)' : undefined}>
       <defs>
+        {[...layerMaskDefinitions.values()]
+          .filter((definition) => definition.feather > 0 || definition.expansion !== 0)
+          .map((definition) => (
+            <filter
+              key={layerMaskFilterId(definition.id)}
+              id={layerMaskFilterId(definition.id)}
+              filterUnits="userSpaceOnUse"
+              x={region.x - definition.feather - Math.abs(definition.expansion)}
+              y={region.y - definition.feather - Math.abs(definition.expansion)}
+              width={region.width + (definition.feather + Math.abs(definition.expansion)) * 2}
+              height={region.height + (definition.feather + Math.abs(definition.expansion)) * 2}
+            >
+              {definition.expansion !== 0 && (
+                <feMorphology
+                  operator={definition.expansion > 0 ? 'dilate' : 'erode'}
+                  radius={Math.abs(definition.expansion)}
+                />
+              )}
+              {definition.feather > 0 && <feGaussianBlur stdDeviation={definition.feather / 2} />}
+            </filter>
+          ))}
+        {[...layerMaskDefinitions.values()].map((definition) => {
+          const hole = layerMaskUsesHole(definition);
+          const path = hole
+            ? `${layerMaskOuterPath} ${definition.pathD}`
+            : definition.pathD;
+          return (
+            <mask
+              key={definition.id}
+              id={definition.id}
+              x={region.x}
+              y={region.y}
+              width={region.width}
+              height={region.height}
+              maskUnits="userSpaceOnUse"
+              maskContentUnits="userSpaceOnUse"
+              mask-type="alpha"
+            >
+              <path
+                d={path}
+                fill="white"
+                fillOpacity={hole ? 1 : definition.opacity}
+                fillRule={hole ? 'evenodd' : undefined}
+                filter={layerMaskFilterUrl(definition)}
+              />
+              {hole && definition.opacity < 1 && (
+                <path d={definition.pathD} fill="black" fillOpacity={1 - definition.opacity} />
+              )}
+            </mask>
+          );
+        })}
         {[...matteMasks.values()]
           .filter((m) => (m.feather ?? 0) > 0)
           .map((mask) => {
@@ -649,13 +752,18 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       </defs>
       {(() => {
         const operandEditingActive = appMode !== 'broadcast' && Boolean(booleanOperandEditingGroupId);
+        const hiddenMatteSources = new Set(
+          sortedParts
+            .filter((part) => part.trackMatte?.sourceVisible === false && part.trackMatte.enabled !== false)
+            .map((part) => part.trackMatte!.sourceLayerId),
+        );
         const layers = evaluatedFrame.layers.filter((el) => {
           const part = sortedParts.find((candidate) => candidate.id === el.id);
-          return !part?.booleanGroupId || !operandEditingActive;
+          return !hiddenMatteSources.has(el.id) && (!part?.booleanGroupId || !operandEditingActive);
         });
           layers.push(...evaluatedFrame.layers.filter((el) => {
             const part = sortedParts.find((candidate) => candidate.id === el.id);
-            return part?.booleanGroupId === booleanOperandEditingGroupId;
+            return !hiddenMatteSources.has(el.id) && part?.booleanGroupId === booleanOperandEditingGroupId;
           }));
         return layers.map((el) => {
           const part = sortedParts.find(p => p.id === el.id);
@@ -663,6 +771,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
           if (part.booleanGroupId && part.booleanGroupId !== booleanOperandEditingGroupId) return null;
           const matteAttrs = matteAttrFor(part);
           const booleanContours = booleanContoursByGroup.get(part.id);
+          const layerMaskIds = layerMaskIdsByPart.get(part.id);
 
           return (
             <PartRenderer
@@ -674,6 +783,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
               isSelected={selectedPartIds.includes(el.id) || selectedPartId === el.id}
               evaluatedLayer={el}
               booleanContours={booleanContours}
+              layerMaskIds={layerMaskIds}
               matteClipPathId={matteAttrs.clipId}
               matteMaskId={matteAttrs.maskId}
               outputOrigin={outputOrigin}

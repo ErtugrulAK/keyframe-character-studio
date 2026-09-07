@@ -1,23 +1,14 @@
 /**
- * Phase 2 — Canonical Composition Types
+ * Phase 2/V6 — Canonical composition boundary types.
  *
- * These types define the TARGET architecture for the scene model,
- * composition engine, and renderer boundary. They are NOT yet wired
- * into runtime code — they serve as the specification that migration
- * steps will incrementally implement.
- *
- * Current runtime types (CharacterPart, Track, Transform) in
- * `animator.ts` remain unchanged and continue to power the editor.
- *
- * Fields are included ONLY when they have a verified counterpart in
- * the current `CharacterPart` / `PartRenderer` codebase.
+ * These types are consumed incrementally by the runtime. Legacy fields remain
+ * optional where migration requires backward-compatible scene loading.
  */
 
 // Animation track model is defined once in `animator.ts` as `AnimationTrackData`
 // (partId-based, canonical). `SceneData.tracks` references it directly —
 // there is no separate AnimationTrack type (P4-S3).
-import type { AnimationTrackData, MotionTemplate, PartMatte } from './animator';
-
+import type { AnimationTrackData, BezierPath, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
 /**
  * Coordinate-unit semantics for persisted scene data.
  *
@@ -35,7 +26,7 @@ export type SceneCoordinateSystem =
 
 export interface SceneData {
   /** Schema version for forward-compatible migration */
-  version: 1;
+  version: 1 | 2;
   /** Explicit coordinate-unit semantics; absent on historical v1 files. */
   coordinateSystem?: SceneCoordinateSystem;
   /** Human-readable scene name */
@@ -76,6 +67,10 @@ export interface SceneLayer {
   parentId?: string;
 
   matte?: PartMatte;
+  /** V6 ordered same-layer masks. */
+  masks?: LayerMask[];
+  /** V6 track matte relationship. */
+  trackMatte?: TrackMatteV2;
   booleanGroupId?: string;
   booleanOperation?: 'union' | 'subtract' | 'intersect' | 'exclude';
   booleanOperandIds?: string[];
@@ -113,6 +108,8 @@ export interface SceneLayer {
   videoUrl?: string;
   /** Freeform polygon vertices (center-relative) */
   points?: { x: number; y: number }[];
+  /** V6 canonical freeform path. */
+  path?: import('./animator').BezierPath;
   /** Explicit dimensions for rect / card shapes */
   width?: number;
   height?: number;
@@ -213,12 +210,19 @@ export interface LayerContent {
   strokeAlignment?: 'center' | 'inside' | 'outside';
   /** Static matte relationship/paint descriptor for renderer adapters. */
   matte?: PartMatte;
+  /** Legacy freeform vertices retained for import compatibility. */
+  points?: { x: number; y: number }[];
+  /** V6 canonical freeform path. */
+  path?: BezierPath;
   textValue?: string;
   fontSize?: number;
   fontFamily?: string;
   imageUrl?: string;
   videoUrl?: string;
-  points?: { x: number; y: number }[];
+  /** V6 same-layer mask stack. */
+  masks?: LayerMask[];
+  /** V6 track matte relationship. */
+  trackMatte?: TrackMatteV2;
   shadowColor?: string;
   shadowBlur?: number;
   shadowOffsetX?: number;

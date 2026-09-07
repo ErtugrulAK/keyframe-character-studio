@@ -18,9 +18,10 @@ import type { ValidationError } from '../types/composition';
 export interface LayerRef {
   id: string;
   parentId?: string;
-  /** M11: track matte reference (source part id); M22 8B: enabled flag — a
-   *  disabled matte is NOT an active relationship (excluded from cycle graph) */
+  /** M11: legacy track matte reference. */
   matte?: { sourcePartId?: string; enabled?: boolean };
+  /** V6: explicit source relationship. */
+  trackMatte?: { sourceLayerId?: string; enabled?: boolean };
 }
 
 /**
@@ -88,12 +89,19 @@ export function validateCritical(scene: { layers: LayerRef[] }): ValidationError
 
   // ── Matte source references (recoverable) ─────────────────────────
   for (const layer of scene.layers) {
-    if (!layer.matte?.sourcePartId) continue;
-    if (!layerMap.has(layer.matte.sourcePartId)) {
+    if (layer.matte?.sourcePartId && !layerMap.has(layer.matte.sourcePartId)) {
       errors.push({
         type: 'MATTE_MISSING_SOURCE',
         layerId: layer.id,
         message: `Matte source "${layer.matte.sourcePartId}" not found for layer "${layer.id}"`,
+        severity: 'recoverable',
+      });
+    }
+    if (layer.trackMatte?.sourceLayerId && !layerMap.has(layer.trackMatte.sourceLayerId)) {
+      errors.push({
+        type: 'TRACK_MATTE_MISSING_SOURCE',
+        layerId: layer.id,
+        message: `Track matte source "${layer.trackMatte.sourceLayerId}" not found for layer "${layer.id}"`,
         severity: 'recoverable',
       });
     }
@@ -128,6 +136,27 @@ export function validateCritical(scene: { layers: LayerRef[] }): ValidationError
       // through a disabled relationship)
       if (!next?.matte?.sourcePartId || next.matte.enabled === false) break;
       current = next.matte.sourcePartId;
+    }
+  }
+  // ── V6 track-matte cycles / self-reference (recoverable) ──────────
+  for (const layer of scene.layers) {
+    if (!layer.trackMatte?.sourceLayerId || layer.trackMatte.enabled === false) continue;
+    const visited = new Set<string>();
+    let current: string | undefined = layer.id;
+    while (current) {
+      if (visited.has(current)) {
+        errors.push({
+          type: 'TRACK_MATTE_CYCLE',
+          layerId: layer.id,
+          message: `Track matte cycle detected starting from layer "${layer.id}"`,
+          severity: 'recoverable',
+        });
+        break;
+      }
+      visited.add(current);
+      const next = layerMap.get(current);
+      if (!next?.trackMatte?.sourceLayerId || next.trackMatte.enabled === false) break;
+      current = next.trackMatte.sourceLayerId;
     }
   }
 

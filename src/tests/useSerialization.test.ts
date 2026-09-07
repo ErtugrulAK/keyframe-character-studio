@@ -124,7 +124,7 @@ describe('useSerialization Hook', () => {
 
   // ── Phase 3: SceneData format tests ──────────────────────────────
 
-  it('exports with version: 1 in SceneData format', () => {
+  it('exports with version: 2 in SceneData format', () => {
     const { result } = renderHook(() => useSerialization({
       fps: 30, setFps: mockSetFps,
       totalFrames: 100, setTotalFrames: mockSetTotalFrames,
@@ -144,7 +144,7 @@ describe('useSerialization Hook', () => {
     const exported = result.current.exportProject();
     const parsed = JSON.parse(exported);
 
-    expect(parsed.version).toBe(1);
+    expect(parsed.version).toBe(2);
     expect(parsed.coordinateSystem).toBe('legacy-unknown');
     expect(parsed.width).toBe(800);
     expect(parsed.height).toBe(600);
@@ -220,7 +220,7 @@ describe('useSerialization Hook', () => {
     // Re-export and verify version preserved
     const reExported = result.current.exportProject();
     const reParsed = JSON.parse(reExported);
-    expect(reParsed.version).toBe(1);
+    expect(reParsed.version).toBe(2);
   });
 
   it('P4-S3: exports tracks with canonical partId', () => {
@@ -1400,12 +1400,12 @@ describe('useSerialization Hook', () => {
 
   // ─── M13 Step 2E: matte mode/inverted serialization round-trip ──────
 
-  function renderSerializationWithPart(part: any) {
+  function renderSerializationWithPart(part: any, tracks: Track[] = []) {
     return renderHook(() => useSerialization({
       fps: 30, setFps: mockSetFps,
       totalFrames: 120, setTotalFrames: mockSetTotalFrames,
       projectResolution: { width: 1920, height: 1080 }, setProjectResolution: mockSetProjectResolution,
-      tracks: [], setTracks: mockSetTracks,
+      tracks, setTracks: mockSetTracks,
       characterParts: [part], setCharacterParts: mockSetCharacterParts,
       activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
       motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
@@ -2164,4 +2164,60 @@ describe('useSerialization — M21 image matte serialization contract', () => {
     expect(JSON.stringify(matteJson)).not.toContain('radius');
   });
 });
+  it('V6: canonical paths, masks, track mattes, and mask channels survive serialization', () => {
+    const part = {
+      id: 'v6-target',
+      type: 'custom_freeform',
+      name: 'V6 Target',
+      zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      points: [{ x: 0, y: 0 }, { x: 20, y: 0 }],
+      path: {
+        version: 1,
+        coordinateSpace: 'local',
+        closed: false,
+        points: [
+          { id: 'v0', x: 0, y: 0, handleOut: { x: 8, y: 0 } },
+          { id: 'v1', x: 20, y: 0, handleIn: { x: -8, y: 0 } },
+        ],
+      },
+      masks: [{
+        id: 'mask-1',
+        name: 'Mask 1',
+        mode: 'add',
+        path: {
+          version: 1,
+          coordinateSpace: 'normalized',
+          closed: true,
+          points: [{ id: 'm0', x: 0, y: 0 }, { id: 'm1', x: 1, y: 0 }, { id: 'm2', x: 1, y: 1 }],
+        },
+      }],
+      trackMatte: { sourceLayerId: 'v6-source', mode: 'alpha', sourceVisible: false },
+    } as any;
+    const track = {
+      id: 'track-v6-target',
+      partId: 'v6-target',
+      name: 'V6 Target',
+      color: '#3b82f6',
+      keyframes: [],
+      channels: makeEmptyChannels(),
+      maskChannels: {
+        'mask-1:opacity': [{ id: 'mask-kf-1', frame: 0, value: 0.75 }],
+      },
+      visible: true,
+      locked: false,
+    } as Track;
+    const { result } = renderSerializationWithPart(part, [track]);
+    const exported = JSON.parse(result.current.exportProject());
+    expect(exported.version).toBe(2);
+    expect(exported.layers[0].path.points[0].handleOut).toEqual({ x: 8, y: 0 });
+    expect(exported.layers[0].masks[0].path.coordinateSpace).toBe('normalized');
+    expect(exported.layers[0].trackMatte).toEqual({
+      sourceLayerId: 'v6-source',
+      mode: 'alpha',
+      sourceVisible: false,
+    });
+    expect(exported.tracks[0].maskChannels['mask-1:opacity'][0].value).toBe(0.75);
+  });
+
 });

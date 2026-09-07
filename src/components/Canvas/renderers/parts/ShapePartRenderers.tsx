@@ -1,5 +1,6 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
+import { buildBezierPathD, legacyFreeformPointsToPath } from '../../../../utils/bezierPath';
 import { buildFreeformPath, getFreeformPerimeter, normalizeClosedPoints } from '../../../../utils/freeform';
 import { getShapeGeometry, polygonPointsToString } from '../../../../utils/shapeGeometry';
 import { isShapeAppearanceEligible, resolveShapeAppearance, type ResolvedShapeAppearance } from '../../../../utils/shapeAppearance';
@@ -69,8 +70,8 @@ const renderModernGeometry = (
       return <polygon points={points} {...props} />;
     }
     case 'custom_freeform': {
-      const points = part.points && part.points.length >= 2 ? part.points : undefined;
-      const d = points ? buildFreeformPath(points) : '';
+      const path = part.path ?? legacyFreeformPointsToPath(part.points);
+      const d = path ? buildBezierPathD(path) : '';
       return d ? <path d={d} strokeLinejoin="round" {...props} /> : null;
     }
     default:
@@ -342,8 +343,9 @@ export const renderShapePart = ({ part, fill, stroke, isSelected, isGhost, trimP
         ?.map(normalizeClosedPoints)
         .filter((contour) => contour.length >= 3);
       const points = part.points && part.points.length >= 2 ? normalizeClosedPoints(part.points) : undefined;
+      const path = part.path ?? legacyFreeformPointsToPath(points);
       const paths = contours?.map((contour) => buildFreeformPath(contour)).filter(Boolean) ?? [];
-      const d = part.booleanContours !== undefined ? paths.join(' ') : (points ? buildFreeformPath(points) : '');
+      const d = part.booleanContours !== undefined ? paths.join(' ') : (path ? buildBezierPathD(path) : '');
       if (!d) return null;
       return (
         <g>

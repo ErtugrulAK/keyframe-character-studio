@@ -1,8 +1,7 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
-import type { PropertyKeyframe, TrackChannel } from '../../types/animator';
-import { TRACK_CHANNELS } from '../../types/animator';
+import { TRACK_CHANNELS, type PropertyKeyframe, type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, findChannelKeyframeAtFrame, hasChannelDataForTemplate } from '../../utils/timelineMetrics';
 import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, buildTransformSnapshot } from '../../utils/channelKeyframeGroups';
 import {
@@ -71,6 +70,8 @@ export const SequencerTimeline: React.FC = () => {
     duplicateKeyframeGroup,
     pasteKeyframeClipboard,
     updateKeyframeBezierPoints,
+    updatePropertyKeyframeValue,
+    updatePropertyKeyframeTemporalHandles,
     getComputedTransform,
     motionTemplates,
     activeTemplateId,
@@ -96,6 +97,17 @@ export const SequencerTimeline: React.FC = () => {
   const selectedKeyframeTransform = selectedPartId
     ? getComputedTransform(selectedPartId, currentFrame)
     : null;
+  const graphTrack = selectedTrack ?? tracks.find((track) =>
+    Object.values(track.maskChannels ?? {}).some((keyframes) => keyframes.length > 0)
+      || Object.values(track.channels).some((keyframes) => keyframes.length > 0),
+  ) ?? tracks[0] ?? null;
+  const graphChannel = graphTrack
+    ? Object.keys(graphTrack.channels).find((channel) => graphTrack.channels[channel as TrackChannel]?.length)
+      ?? Object.keys(graphTrack.maskChannels ?? {}).find((channel) => graphTrack.maskChannels?.[channel as keyof NonNullable<typeof graphTrack.maskChannels>]?.length)
+    : undefined;
+  const graphKeyframes = graphChannel
+    ? (graphTrack?.channels[graphChannel as TrackChannel] ?? graphTrack?.maskChannels?.[graphChannel as keyof NonNullable<typeof graphTrack.maskChannels>] ?? [])
+    : [];
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -138,7 +150,7 @@ export const SequencerTimeline: React.FC = () => {
   );
 
   const [draggingKf, setDraggingKf] = useState<{ trackId: string; keyframeId: string } | null>(null);
-  const [draggingPKf, setDraggingPKf] = useState<{ trackId: string; channel: TrackChannel; keyframeId: string } | null>(null);
+  const [draggingPKf, setDraggingPKf] = useState<{ trackId: string; channel: AnimationChannel; keyframeId: string } | null>(null);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [hoveredKf, setHoveredKf] = useState<{ frame: number; label: string } | null>(null);
 
@@ -326,16 +338,26 @@ export const SequencerTimeline: React.FC = () => {
   };
 
   // Add property keyframe at current frame for given channel
-  const handleAddChannelKeyframe = (trackId: string, channel: TrackChannel, partId: string) => {
+  const handleAddChannelKeyframe = (trackId: string, channel: AnimationChannel, partId: string) => {
     const transform = getComputedTransform(partId, currentFrame);
     const part = characterParts.find((candidate) => candidate.id === partId);
-    const val = channel === 'trimPathStart'
-      ? (part?.trimPathStart ?? 0)
-      : channel === 'trimPathEnd'
-        ? (part?.trimPathEnd ?? 1)
-        : channel === 'trimPathOffset'
-          ? (part?.trimPathOffset ?? 0)
-          : transform[channel] ?? (channel === 'maskScale' ? 1 : 0);
+    const maskValue = (() => {
+      if (!channel.includes(':')) return undefined;
+      const separator = channel.lastIndexOf(':');
+      const maskId = channel.slice(0, separator);
+      const property = channel.slice(separator + 1) as 'opacity' | 'feather' | 'expansion';
+      const mask = part?.masks?.find((candidate) => candidate.id === maskId);
+      return mask?.[property];
+    })();
+    const val = maskValue !== undefined
+      ? maskValue
+      : channel === 'trimPathStart'
+        ? (part?.trimPathStart ?? 0)
+        : channel === 'trimPathEnd'
+          ? (part?.trimPathEnd ?? 1)
+          : channel === 'trimPathOffset'
+            ? (part?.trimPathOffset ?? 0)
+            : (transform as unknown as Record<string, number>)[channel] ?? (channel === 'maskScale' ? 1 : 0);
     addPropertyKeyframe(trackId, channel, currentFrame, val);
   };
 
@@ -725,6 +747,13 @@ export const SequencerTimeline: React.FC = () => {
             }
             // Channel track with no keyframe at this frame: nothing to attach
             // bezier to — do not pollute channels with a legacy snapshot.
+          }}
+          valueKeyframes={graphKeyframes.filter((keyframe) => (keyframe.templateId || 'Sequence') === (activeTemplateId || 'Sequence'))}
+          onChangeKeyframeValue={(keyframeId, value) => {
+            if (graphTrack && graphChannel) updatePropertyKeyframeValue(graphTrack.id, graphChannel as AnimationChannel, keyframeId, value);
+          }}
+          onChangeKeyframeHandles={(keyframeId, patch) => {
+            if (graphTrack && graphChannel) updatePropertyKeyframeTemporalHandles(graphTrack.id, graphChannel as AnimationChannel, keyframeId, patch);
           }}
           initialModalOpen={true}
           onCloseModal={() => setIsCurveModalOpen(false)}

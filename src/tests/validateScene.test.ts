@@ -322,3 +322,43 @@ describe('validateCritical — M22 8B matte cycle / self-reference', () => {
     expect(errors.filter(e => e.type === 'MATTE_CYCLE')).toHaveLength(0);
   });
 });
+
+describe('validateCritical — V6 Track Matte V2', () => {
+  test('reports a missing V2 source as recoverable', () => {
+    const errors = validateCritical({
+      layers: [
+        { id: 'target', trackMatte: { sourceLayerId: 'ghost', mode: 'alpha' } },
+      ],
+    });
+    expect(errors).toContainEqual(expect.objectContaining({
+      type: 'TRACK_MATTE_MISSING_SOURCE',
+      layerId: 'target',
+      severity: 'recoverable',
+    }));
+  });
+
+  test('detects self-reference and two-layer V2 cycles', () => {
+    const selfErrors = validateCritical({
+      layers: [{ id: 'A', trackMatte: { sourceLayerId: 'A', mode: 'alpha' } }],
+    });
+    expect(selfErrors.some((error) => error.type === 'TRACK_MATTE_CYCLE')).toBe(true);
+
+    const cycleErrors = validateCritical({
+      layers: [
+        { id: 'A', trackMatte: { sourceLayerId: 'B', mode: 'luminance' } },
+        { id: 'B', trackMatte: { sourceLayerId: 'A', mode: 'alpha' } },
+      ],
+    });
+    expect(cycleErrors.filter((error) => error.type === 'TRACK_MATTE_CYCLE')).toHaveLength(2);
+  });
+
+  test('ignores disabled V2 relationships in cycle checks', () => {
+    const errors = validateCritical({
+      layers: [
+        { id: 'A', trackMatte: { sourceLayerId: 'B', mode: 'alpha', enabled: false } },
+        { id: 'B', trackMatte: { sourceLayerId: 'A', mode: 'alpha' } },
+      ],
+    });
+    expect(errors.some((error) => error.type === 'TRACK_MATTE_CYCLE')).toBe(false);
+  });
+});

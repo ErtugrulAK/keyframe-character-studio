@@ -13,6 +13,7 @@
  * here. `custom_freeform` (and non-shape types) return null → no clip.
  */
 import type { BodyPartType, CharacterPart, MatteMode } from '../types/animator';
+import { buildBezierPathD, legacyFreeformPointsToPath } from './bezierPath';
 import type { WorldTransform } from '../types/composition';
 import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from './projectCoordinates';
@@ -68,13 +69,13 @@ export function buildMattePath(
   outputOrigin: CoordinatePoint = EDITOR_CAMERA_CENTER,
 ): string | null {
   if (sourcePart.type === 'custom_freeform') {
-    return freeformWorldPathD(sourcePart.points, world, outputOrigin);
+    return freeformWorldPathD(sourcePart.path ?? legacyFreeformPointsToPath(sourcePart.points), world, outputOrigin);
   }
   const geo = getShapeGeometry(sourcePart.type);
   if (!geo) return null;
   // Rectangle and box renderers apply the authored corner radius directly to
-  // the same local geometry. Reuse that value here so a rounded matte source
-  // cannot diverge from the visible source contour.
+  // the same local geometry. Reuse that value so a rounded matte source cannot
+  // diverge from the visible source contour.
   const resolvedGeo = (sourcePart.type === 'custom_rect' || sourcePart.type === 'custom_box')
     && geo.kind === 'rect'
     && typeof sourcePart.borderRadius === 'number'
@@ -84,17 +85,13 @@ export function buildMattePath(
   return geometryToWorldPathD(resolvedGeo, world, outputOrigin);
 }
 
-/** M15 — world-space polygon path from LOCAL freeform points. Identical math
- *  to the static polygon branch (applyWorld per point), fed by
- *  `CharacterPart.points` — the renderer's buildFreeformPath source. */
 function freeformWorldPathD(
-  points: { x: number; y: number }[] | undefined,
+  path: import('../types/animator').BezierPath | undefined,
   w: WorldTransform,
   outputOrigin: CoordinatePoint,
 ): string | null {
-  if (!Array.isArray(points) || points.length < 2) return null;
-  const pts = points.map((p) => applyWorld(p, w, outputOrigin));
-  return `M ${fmtPt(pts[0])}` + pts.slice(1).map((p) => ` L ${fmtPt(p)}`).join('') + ' Z';
+  if (!path || path.points.length < 2) return null;
+  return buildBezierPathD(path, (point) => applyWorld(point, w, outputOrigin));
 }
 
 /** M15 — whether a part can be a matte source: static shape geometry OR a

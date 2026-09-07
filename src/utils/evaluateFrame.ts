@@ -15,7 +15,7 @@
  *   - proceduralAnimation.ts (Step 4 Phase A)
  */
 
-import type { CharacterPart, CustomMotionPreset, AnimationTrackData } from '../types/animator';
+import type { CharacterPart, CustomMotionPreset, AnimationTrackData, LayerMask } from '../types/animator';
 import type {
   EvaluatedFrame,
   EvaluatedLayer,
@@ -25,6 +25,7 @@ import type {
 } from '../types/composition';
 import { evaluateTransform } from './evaluateTransform';
 import { computeProceduralDelta } from './proceduralAnimation';
+import { evaluateLayerMasks } from './evaluateLayerMasks';
 import { evaluateTrimPath } from './trimPath';
 
 /**
@@ -93,6 +94,7 @@ export function evaluateFrame(
     const track = tracks.find((candidate) => candidate.partId === layer.id);
     const layerFrame = frameOverrides?.[layer.id] ?? frame;
     const trim = evaluateTrimPath(layer, track, layerFrame, sequenceId || 'Sequence');
+    const masks = evaluateLayerMasks(layer, track, layerFrame);
 
     evaluated.push({
       id: layer.id,
@@ -107,7 +109,7 @@ export function evaluateFrame(
       },
       opacity: finalOpacity,
       visible,
-      content: extractContent(layer, trim),
+      content: extractContent(layer, trim, masks),
       zIndex: layer.zIndex,
     });
   }
@@ -119,7 +121,11 @@ export function evaluateFrame(
 
 // ─── Content extraction ──────────────────────────────────────────────────
 
-function extractContent(layer: CharacterPart, trim: ReturnType<typeof evaluateTrimPath>): LayerContent {
+function extractContent(
+  layer: CharacterPart,
+  trim: ReturnType<typeof evaluateTrimPath>,
+  masks?: LayerMask[],
+): LayerContent {
   return {
     fillColor: layer.fillColor,
     strokeColor: layer.strokeColor,
@@ -130,12 +136,15 @@ function extractContent(layer: CharacterPart, trim: ReturnType<typeof evaluateTr
     strokeOpacity: layer.strokeOpacity,
     strokeAlignment: layer.strokeAlignment,
     matte: layer.matte,
+    masks: masks ?? layer.masks,
+    trackMatte: layer.trackMatte,
     textValue: layer.textValue,
     fontSize: layer.fontSize,
     fontFamily: layer.fontFamily,
     imageUrl: layer.imageUrl,
     videoUrl: layer.videoUrl,
     points: layer.points,
+    path: layer.path,
     shadowColor: layer.shadowColor,
     shadowBlur: layer.shadowBlur,
     shadowOffsetX: layer.shadowOffsetX,

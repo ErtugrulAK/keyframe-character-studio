@@ -2204,11 +2204,30 @@ describe('useSerialization — M21 image matte serialization contract', () => {
       maskChannels: {
         'mask-1:opacity': [{ id: 'mask-kf-1', frame: 0, value: 0.75 }],
       },
+      maskPathChannels: {
+        'mask-1:path': [{
+          id: 'mask-path-kf-1',
+          frame: 10,
+          value: {
+            version: 1,
+            coordinateSpace: 'normalized',
+            closed: true,
+            points: [
+              { id: 'm0', x: 0.1, y: 0.1, handleOut: { x: 0.25, y: 0.1 } },
+              { id: 'm1', x: 0.9, y: 0.1 },
+              { id: 'm2', x: 0.9, y: 0.9 },
+            ],
+          },
+          easing: 'linear',
+        }],
+      },
       visible: true,
       locked: false,
     } as Track;
     const { result } = renderSerializationWithPart(part, [track]);
     const exported = JSON.parse(result.current.exportProject());
+    expect(exported.tracks[0].maskPathChannels['mask-1:path'][0].value.points[0].handleOut).toEqual({ x: 0.25, y: 0.1 });
+    expect(exported.tracks[0].maskPathChannels['mask-1:path'][0].frame).toBe(10);
     expect(exported.version).toBe(2);
     expect(exported.layers[0].path.points[0].handleOut).toEqual({ x: 8, y: 0 });
     expect(exported.layers[0].masks[0].path.coordinateSpace).toBe('normalized');

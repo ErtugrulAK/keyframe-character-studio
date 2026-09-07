@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
-import type { CharacterPart, Track, AnimationChannel, EasingType, Keyframe, Transform } from '../types/animator';
+import type { CharacterPart, Track, AnimationChannel, EasingType, Keyframe, Transform, BezierPath, LayerMaskPathChannel } from '../types/animator';
+import { layerMaskPathChannel } from '../types/animator';
 import { generateId } from '../utils/idGenerator';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
 import { hasChannelDataForTemplate } from '../utils/timelineMetrics';
@@ -12,6 +13,10 @@ import {
   updatePropertyKeyframeEasingMutator,
   deletePropertyKeyframeMutator,
   deleteSelectedKeyframeGroupMutator,
+  addMaskPathKeyframeMutator,
+  updateMaskPathKeyframeValueMutator,
+  updateMaskPathKeyframeFrameMutator,
+  deleteMaskPathKeyframeMutator,
   applyTransitionChannelsMutator,
   applyTransitionToTrackCanonicalMutator
 } from '../utils/trackMutations';
@@ -214,6 +219,64 @@ export const useTimeline = ({
     return true;
   }, [activeTemplateId, selectedKeyframeId, setSelectedKeyframeId, setTracks, tracks]);
 
+  const addMaskPathKeyframe = (
+    trackId: string,
+    maskId: string,
+    frame: number,
+    path: BezierPath,
+    easing: EasingType = 'easeInOut',
+  ) => {
+    setTracks((prev) => addMaskPathKeyframeMutator(
+      prev,
+      trackId,
+      layerMaskPathChannel(maskId),
+      frame,
+      path,
+      easing,
+      activeTemplateId || 'Sequence',
+    ));
+  };
+
+  const updateMaskPathKeyframeValue = (
+    trackId: string,
+    channel: LayerMaskPathChannel,
+    keyframeId: string,
+    path: BezierPath,
+  ) => {
+    setTracks((prev) => updateMaskPathKeyframeValueMutator(prev, trackId, channel, keyframeId, path));
+  };
+
+  const updateMaskPathKeyframeFrame = (
+    trackId: string,
+    channel: LayerMaskPathChannel,
+    keyframeId: string,
+    frame: number,
+  ) => {
+    setTracks((prev) => updateMaskPathKeyframeFrameMutator(prev, trackId, channel, keyframeId, frame));
+  };
+
+  const deleteMaskPathKeyframe = (
+    trackId: string,
+    channel: LayerMaskPathChannel,
+    keyframeId: string,
+  ) => {
+    setTracks((prev) => deleteMaskPathKeyframeMutator(prev, trackId, channel, keyframeId));
+  };
+
+  /** Author geometry using the same between-key convention as scalar Inspector channels. */
+  const authorMaskPath = (partId: string, maskId: string, path: BezierPath) => {
+    const track = tracks.find((candidate) => candidate.partId === partId);
+    const channel = layerMaskPathChannel(maskId);
+    const keyframes = track?.maskPathChannels?.[channel] ?? [];
+    if (keyframes.length > 0 && track) {
+      addMaskPathKeyframe(track.id, maskId, currentFrame, path);
+      return;
+    }
+    setCharacterParts((prev) => prev.map((part) => part.id === partId
+      ? { ...part, masks: part.masks?.map((mask) => mask.id === maskId ? { ...mask, path } : mask) }
+      : part));
+  };
+
   const updatePropertyKeyframeFrame = (trackId: string, channel: AnimationChannel, keyframeId: string, newFrame: number) => {
     setTracks((prev) => updatePropertyKeyframeFrameMutator(prev, trackId, channel, keyframeId, newFrame));
   };
@@ -315,6 +378,11 @@ export const useTimeline = ({
     updatePropertyKeyframeValue,
     updatePropertyKeyframeTemporalHandles,
     deletePropertyKeyframe,
+    addMaskPathKeyframe,
+    updateMaskPathKeyframeValue,
+    updateMaskPathKeyframeFrame,
+    deleteMaskPathKeyframe,
+    authorMaskPath,
     deleteSelectedKeyframe,
     updatePropertyKeyframeFrame,
     updatePropertyKeyframeEasing,

@@ -179,16 +179,32 @@ export interface PropertyKeyframe {
   templateId?: string; // Isolated to specific motion sequence template
 }
 
+/** Canonical animated geometry keyframe. Path topology is never guessed. */
+export interface PathKeyframe {
+  id: string;
+  frame: number;
+  value: BezierPath;
+  easing: EasingType;
+  bezierControlPoints?: [number, number, number, number];
+  bezierIn?: TemporalHandle;
+  bezierOut?: TemporalHandle;
+  templateId?: string;
+}
+
 // Channel keys match Transform property names
 export type TrackChannel = 'x' | 'y' | 'rotation' | 'scaleX' | 'scaleY' | 'opacity' | 'maskOffsetX' | 'maskOffsetY' | 'maskScale' | 'maskRotation' | 'trimPathStart' | 'trimPathEnd' | 'trimPathOffset';
 
 export type LayerMaskChannelProperty = 'opacity' | 'feather' | 'expansion';
 export type LayerMaskChannel = `${string}:${LayerMaskChannelProperty}`;
-export type AnimationChannel = TrackChannel | LayerMaskChannel;
+export type LayerMaskPathChannel = `${string}:path`;
+export type AnimationChannel = TrackChannel | LayerMaskChannel | LayerMaskPathChannel;
 export const TRACK_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'maskOffsetX', 'maskOffsetY', 'maskScale', 'maskRotation', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];
 
 export const layerMaskChannel = (maskId: string, property: LayerMaskChannelProperty): LayerMaskChannel =>
   `${maskId}:${property}`;
+
+export const layerMaskPathChannel = (maskId: string): LayerMaskPathChannel =>
+  `${maskId}:path`;
 
 /**
  * Track data model (Phase 3 Step 5).
@@ -211,6 +227,8 @@ export interface AnimationTrackData {
   channels: Record<TrackChannel, PropertyKeyframe[]>;
   /** V6 animated layer-mask scalar properties on the same canonical track. */
   maskChannels?: Record<LayerMaskChannel, PropertyKeyframe[]>;
+  /** V6 animated layer-mask geometry on the same canonical track. */
+  maskPathChannels?: Record<LayerMaskPathChannel, PathKeyframe[]>;
   /** Motion Design template ID */
   sequencerTemplateId?: string;
 }
@@ -228,6 +246,7 @@ export interface EditorTrackState {
 
 /** Full track = animation data + editor state */
 export type Track = AnimationTrackData & EditorTrackState;
+
 
 export type BodyPartType = 
   | 'custom_star'

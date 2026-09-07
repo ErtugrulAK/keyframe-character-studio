@@ -1,4 +1,4 @@
-import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, EasingType, PropertyKeyframe } from '../types/animator';
+import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, EasingType, PropertyKeyframe, PathKeyframe, BezierPath } from '../types/animator';
 import { TRACK_CHANNELS } from '../types/animator';
 import { generateId } from './idGenerator';
 import { ANIMATABLE_CHANNELS, DISPLAY_CHANNELS } from './channelKeyframeGroups';
@@ -6,8 +6,8 @@ import type { TransitionChannelResult } from './motionTransitions';
 import { convertLegacyKeyframesToChannels } from './legacyKeyframeConversion';
 import { makeEmptyChannels } from './defaults';
 
-
-const isLayerMaskChannel = (channel: AnimationChannel): channel is LayerMaskChannel => channel.includes(':');
+const isLayerMaskChannel = (channel: AnimationChannel): channel is LayerMaskChannel =>
+  channel.includes(':') && !channel.endsWith(':path');
 export const updateKeyframeBezierPointsMutator = (
   tracks: Track[],
   trackId: string,
@@ -71,6 +71,84 @@ export const addPropertyKeyframeMutator = (
       : { ...t, channels: { ...channelMap, [channel]: updated } as Track['channels'] };
   });
 };
+
+export const addMaskPathKeyframeMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: LayerMaskPathChannel,
+  frame: number,
+  value: BezierPath,
+  easing: EasingType,
+  templateId: string,
+): Track[] => tracks.map((track) => {
+  if (track.id !== trackId) return track;
+  const keyframes = track.maskPathChannels?.[channel] ?? [];
+  const existing = keyframes.find((keyframe) => keyframe.frame === frame && (keyframe.templateId || 'Sequence') === templateId);
+  const nextKeyframe: PathKeyframe = {
+    id: existing?.id ?? generateId(`pkf_${channel}`),
+    frame,
+    value,
+    easing,
+    templateId,
+  };
+  const updated = existing
+    ? keyframes.map((keyframe) => keyframe.id === existing.id ? nextKeyframe : keyframe)
+    : [...keyframes, nextKeyframe].sort((a, b) => a.frame - b.frame);
+  return {
+    ...track,
+    maskPathChannels: { ...track.maskPathChannels, [channel]: updated },
+  };
+});
+
+export const updateMaskPathKeyframeValueMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: LayerMaskPathChannel,
+  keyframeId: string,
+  value: BezierPath,
+): Track[] => tracks.map((track) => track.id === trackId
+  ? {
+    ...track,
+    maskPathChannels: {
+      ...track.maskPathChannels,
+      [channel]: (track.maskPathChannels?.[channel] ?? []).map((keyframe) =>
+        keyframe.id === keyframeId ? { ...keyframe, value } : keyframe),
+    },
+  }
+  : track);
+
+export const updateMaskPathKeyframeFrameMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: LayerMaskPathChannel,
+  keyframeId: string,
+  newFrame: number,
+): Track[] => tracks.map((track) => track.id === trackId
+  ? {
+    ...track,
+    maskPathChannels: {
+      ...track.maskPathChannels,
+      [channel]: (track.maskPathChannels?.[channel] ?? [])
+        .map((keyframe) => keyframe.id === keyframeId ? { ...keyframe, frame: newFrame } : keyframe)
+        .sort((a, b) => a.frame - b.frame),
+    },
+  }
+  : track);
+
+export const deleteMaskPathKeyframeMutator = (
+  tracks: Track[],
+  trackId: string,
+  channel: LayerMaskPathChannel,
+  keyframeId: string,
+): Track[] => tracks.map((track) => track.id === trackId
+  ? {
+    ...track,
+    maskPathChannels: {
+      ...track.maskPathChannels,
+      [channel]: (track.maskPathChannels?.[channel] ?? []).filter((keyframe) => keyframe.id !== keyframeId),
+    },
+  }
+  : track);
 export const updatePropertyKeyframeValueMutator = (
   tracks: Track[],
   trackId: string,
@@ -156,6 +234,24 @@ export const deleteSelectedKeyframeGroupMutator = (
       .flatMap((channel) => track.channels?.[channel] || [])
       .find((keyframe) => keyframe.id === selectedKeyframeId
         && (keyframe.templateId || 'Sequence') === activeTemplateId);
+    const selectedPathEntry = Object.entries(track.maskPathChannels ?? {})
+      .map(([channel, keyframes]) => ({ channel: channel as LayerMaskPathChannel, keyframe: keyframes.find((keyframe) => keyframe.id === selectedKeyframeId && (keyframe.templateId || 'Sequence') === activeTemplateId) }))
+      .find((entry) => Boolean(entry.keyframe));
+    if (selectedPathEntry?.keyframe) {
+      return {
+        deleted: true,
+        tracks: tracks.map((candidate) => candidate.id === track.id
+          ? {
+            ...candidate,
+            maskPathChannels: {
+              ...candidate.maskPathChannels,
+              [selectedPathEntry.channel]: (candidate.maskPathChannels?.[selectedPathEntry.channel] ?? [])
+                .filter((keyframe) => keyframe.id !== selectedKeyframeId),
+            },
+          }
+          : candidate),
+      };
+    }
     if (!selectedPropertyKeyframe) continue;
 
     const channels = { ...track.channels };

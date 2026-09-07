@@ -72,6 +72,8 @@ export const SequencerTimeline: React.FC = () => {
     updateKeyframeBezierPoints,
     updatePropertyKeyframeValue,
     updatePropertyKeyframeTemporalHandles,
+    updateMaskPathKeyframeFrame,
+    deleteMaskPathKeyframe,
     getComputedTransform,
     motionTemplates,
     activeTemplateId,
@@ -270,10 +272,20 @@ export const SequencerTimeline: React.FC = () => {
           }
         }
       } else if (draggingPKf) {
-        updatePropertyKeyframeFrame(draggingPKf.trackId, draggingPKf.channel, draggingPKf.keyframeId, getFrameFromMouse(e.clientX));
+        const targetFrame = getFrameFromMouse(e.clientX);
+        if (draggingPKf.channel.endsWith(':path')) {
+          updateMaskPathKeyframeFrame(
+            draggingPKf.trackId,
+            draggingPKf.channel as `${string}:path`,
+            draggingPKf.keyframeId,
+            targetFrame,
+          );
+        } else {
+          updatePropertyKeyframeFrame(draggingPKf.trackId, draggingPKf.channel, draggingPKf.keyframeId, targetFrame);
+        }
       }
     },
-    [isScrubbing, draggingKf, draggingPKf, getFrameFromMouse, setCurrentFrame, updateKeyframeFrame, updatePropertyKeyframeFrame, tracks, activeTemplateId]
+    [isScrubbing, draggingKf, draggingPKf, getFrameFromMouse, setCurrentFrame, updateKeyframeFrame, updatePropertyKeyframeFrame, updateMaskPathKeyframeFrame, tracks, activeTemplateId]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -656,6 +668,8 @@ export const SequencerTimeline: React.FC = () => {
                 onHoverKf={setHoveredKf}
                 onDeleteKeyframe={deleteKeyframe}
                 onDeletePropertyKeyframe={deletePropertyKeyframe}
+                onUpdateMaskPathKeyframeFrame={updateMaskPathKeyframeFrame}
+                onDeleteMaskPathKeyframe={deleteMaskPathKeyframe}
                 onDuplicateKeyframeGroup={duplicateKeyframeGroup}
                 kfClipboard={kfClipboard}
                 onCopyKeyframes={handleCopyKeyframes}

@@ -196,7 +196,8 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   const layerMaskIdsByPart = new Map<string, string[]>();
   for (const part of sortedParts) {
     const evaluated = evaluatedFrame.layers.find((layer) => layer.id === part.id);
-    if (!evaluated || !part.masks?.length) continue;
+    const evaluatedMasks = evaluated?.content.masks ?? part.masks;
+    if (!evaluated || !evaluatedMasks?.length) continue;
     const ids: string[] = [];
     let additive: LayerMaskSvgDefinition | undefined;
     let additivePaths: string[] = [];
@@ -208,7 +209,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
       additive = undefined;
       additivePaths = [];
     };
-    for (const mask of part.masks) {
+    for (const mask of evaluatedMasks) {
       const definition = buildLayerMaskDefinition(part, mask, evaluated.transform, outputOrigin);
       if (!definition) continue;
       if (definition.mode === 'add' && !definition.inverted) {

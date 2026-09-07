@@ -188,14 +188,12 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
   const matte = layer.matte;
   if (matte) {
     const mode = matte.mode || 'clip';
-    if (mode === 'alpha') diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_ALPHA_MATTE', 'ERROR', 'Alpha mattes are deferred from OGraf Export V1.', layer, 'matte'));
-    if (mode === 'luminance') diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_LUMINANCE_MATTE', 'ERROR', 'Luminance mattes are deferred from OGraf Export V1.', layer, 'matte'));
-    if (matte.inverted) diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_INVERTED_MATTE', 'ERROR', 'Inverted mattes are deferred from OGraf Export V1.', layer, 'matte'));
-    if ((matte.feather || 0) > 0) diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_FEATHER_MATTE', 'ERROR', 'Feathered mattes are deferred from OGraf Export V1.', layer, 'matte'));
-    if (matte.gradient) diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_GRADIENT_MATTE', 'ERROR', 'Gradient mattes are deferred from OGraf Export V1.', layer, 'matte'));
     if (mode === 'clip' && !matte.inverted && !(matte.feather || 0) && !matte.gradient) {
-      diagnostics.push(diagnostic('OGRAF_CONDITIONAL_CLIP_MATTE', 'WARNING', 'Clip matte requires standalone SVG renderer validation in a later phase.', layer, 'matte'));
+      diagnostics.push(diagnostic('OGRAF_CONDITIONAL_CLIP_MATTE', 'WARNING', 'Clip matte is emitted as a portable SVG clipPath.', layer, 'matte'));
     }
+  }
+  if (layer.trackMatte && layer.trackMatte.sourceLayerId === layer.id) {
+    diagnostics.push(diagnostic('OGRAF_INVALID_TRACK_MATTE', 'ERROR', 'Track Matte V2 cannot reference its own layer.', layer, 'track-matte'));
   }
 
   const proceduralValues = [layer.inAnimPreset, layer.outAnimPreset].filter((value): value is string => Boolean(value));
@@ -227,16 +225,52 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   const diagnostics: OGrafExportDiagnostic[] = [];
   const assets: OGrafAssetPlan[] = [];
 
-  if (!sceneData || sceneData.version !== 1 || !Number.isFinite(sceneData.width) || !Number.isFinite(sceneData.height) || !Number.isFinite(sceneData.fps)) {
-    diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData must be a version 1 project with finite width, height, and FPS.' });
+  if (!sceneData || (sceneData.version !== 1 && sceneData.version !== 2) || !Number.isFinite(sceneData.width) || !Number.isFinite(sceneData.height) || !Number.isFinite(sceneData.fps)) {
+    diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData must be a version 1 or version 2 project with finite width, height, and FPS.' });
   }
-  if (sceneData.width <= 0 || sceneData.height <= 0 || sceneData.fps <= 0) {
+  if (!sceneData || sceneData.width <= 0 || sceneData.height <= 0 || sceneData.fps <= 0) {
     diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData width, height, and FPS must be greater than zero.' });
   }
 
   validatePublicFields(options, sceneData.layers || [], diagnostics);
   for (const layer of sceneData.layers || []) validateLayer(layer, options, diagnostics, assets);
-
+  const layerById = new Map((sceneData.layers || []).map((layer) => [layer.id, layer]));
+  const relationships = new Map<string, string>();
+  for (const layer of sceneData.layers || []) {
+    const sourceId = layer.trackMatte?.sourceLayerId ?? layer.matte?.sourcePartId;
+    if (!sourceId) continue;
+    relationships.set(layer.id, sourceId);
+    if (!layerById.has(sourceId)) {
+      diagnostics.push({
+        code: 'OGRAF_INVALID_TRACK_MATTE',
+        severity: 'ERROR',
+        message: `Track matte source "${sourceId}" for layer "${layer.id}" was not found.`,
+        layerId: layer.id,
+        layerName: layer.name,
+        feature: 'track-matte',
+      });
+    }
+  }
+  const visit = (id: string, visiting: Set<string>, visited: Set<string>) => {
+    if (visiting.has(id)) {
+      const layer = layerById.get(id);
+      diagnostics.push({
+        code: 'OGRAF_INVALID_TRACK_MATTE',
+        severity: 'ERROR',
+        message: `Track matte cycle detected at layer "${id}".`,
+        ...(layer ? { layerId: layer.id, layerName: layer.name } : {}),
+        feature: 'track-matte',
+      });
+      return;
+    }
+    if (visited.has(id)) return;
+    visiting.add(id);
+    const sourceId = relationships.get(id);
+    if (sourceId && layerById.has(sourceId)) visit(sourceId, visiting, visited);
+    visiting.delete(id);
+    visited.add(id);
+  };
+  for (const id of relationships.keys()) visit(id, new Set(), new Set());
   return {
     sceneData,
     diagnostics,

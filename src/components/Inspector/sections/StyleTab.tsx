@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CharacterPart, LayerMaskChannelProperty } from '../../../types/animator';
+import type { BezierPath, CharacterPart, LayerMaskChannelProperty } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
 import { isShapeAppearanceEligible } from '../../../utils/shapeAppearance';
@@ -20,6 +20,8 @@ interface StyleTabProps {
   handleZIndexChange?: (zIndex: number) => void;
   currentFrame?: number;
   onAddMaskKeyframe?: (maskId: string, property: LayerMaskChannelProperty, value: number) => void;
+  onAddMaskPathKeyframe?: (maskId: string, path: BezierPath) => void;
+  onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
 }
 
 export const StyleTab: React.FC<StyleTabProps> = ({
@@ -29,6 +31,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   handlePartColorChange,
   currentFrame,
   onAddMaskKeyframe,
+  onAddMaskPathKeyframe,
+  onChangeMaskPath,
 }) => {
   const isTextBearing =
     selectedPart.type === 'custom_card' ||
@@ -49,7 +53,15 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onPartPropChange={handlePartPropChange}
       />
       <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-      <StyleMatteSection selectedPart={selectedPart} characterParts={characterParts} onPartPropChange={handlePartPropChange} currentFrame={currentFrame} onAddMaskKeyframe={onAddMaskKeyframe} />
+      <StyleMatteSection
+        selectedPart={selectedPart}
+        characterParts={characterParts}
+        onPartPropChange={handlePartPropChange}
+        currentFrame={currentFrame}
+        onAddMaskKeyframe={onAddMaskKeyframe}
+        onAddMaskPathKeyframe={onAddMaskPathKeyframe}
+        onChangeMaskPath={onChangeMaskPath}
+      />
       <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
       <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
     </div>

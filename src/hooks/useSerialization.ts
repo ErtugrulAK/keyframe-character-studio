@@ -8,6 +8,7 @@ import { AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constan
 import { DEFAULT_SCENE_COORDINATE_SYSTEM, migrateSceneCoordinates } from '../utils/coordinateMigration';
 import { normalizeMotionTemplates } from '../utils/motionTemplates';
 import { migrateSceneLayerV6 } from '../utils/v6Migration';
+import { normalizeBezierPath } from '../utils/bezierPath';
 
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 
@@ -19,6 +20,23 @@ function migrateTrack(t: Track): Track {
     expanded: t.expanded ?? false,
     editVisible: t.editVisible ?? true,
   };
+}
+
+function migrateMaskPathChannels(
+  channels: AnimationTrackData['maskPathChannels'],
+): AnimationTrackData['maskPathChannels'] {
+  if (!channels) return undefined;
+  const migrated: NonNullable<AnimationTrackData['maskPathChannels']> = {};
+  for (const [channel, keyframes] of Object.entries(channels)) {
+    const valid = keyframes
+      .map((keyframe) => {
+        const path = normalizeBezierPath(keyframe.value, 'normalized');
+        return path ? { ...keyframe, value: path } : undefined;
+      })
+      .filter((keyframe): keyframe is NonNullable<typeof keyframe> => Boolean(keyframe));
+    if (valid.length > 0) migrated[channel as keyof typeof migrated] = valid;
+  }
+  return Object.keys(migrated).length > 0 ? migrated : undefined;
 }
 
 // ─── Phase 3: SceneData ↔ AnimationProject conversion ───────────────
@@ -104,6 +122,7 @@ function toSceneData(
       partId: t.partId,
       channels: channels as Record<string, PropertyKeyframe[]>,
       maskChannels: t.maskChannels,
+      maskPathChannels: t.maskPathChannels,
       sequencerTemplateId: t.sequencerTemplateId,
     };
   });
@@ -213,9 +232,11 @@ function fromSceneData(
         id: k.id,
         frame: k.frame,
         transform: {
-          x: k.transform.x, y: k.transform.y,
-          rotation: k.transform.rotation,
-          scaleX: k.transform.scaleX, scaleY: k.transform.scaleY,
+          x: k.transform.x,
+          y: k.transform.y,
+          rotation: k.transform.rotation ?? 0,
+          scaleX: k.transform.scaleX ?? 1,
+          scaleY: k.transform.scaleY ?? 1,
           // BUG #4 fix: `??` so opacity 0 (invisible keyframe) is preserved;
           // only undefined/missing opacity falls back to 1.
           opacity: k.transform.opacity ?? 1,
@@ -233,8 +254,9 @@ function fromSceneData(
         ? t.channels
         : convertLegacyKeyframesToChannels(t.keyframes || [])) as Track['channels'],
       maskChannels: t.maskChannels,
-      locked: false,
-      visible: true,
+      maskPathChannels: migrateMaskPathChannels(t.maskPathChannels),
+      visible: (t as Track).visible ?? true,
+      locked: (t as Track).locked ?? false,
     };
   });
 

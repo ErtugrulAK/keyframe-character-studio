@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../context/AnimatorContext';
 import { makeEmptyChannels } from '../../utils/defaults';
+import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
 import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../../utils/shapeAppearance';
 import { isTrimPathEligible } from '../../utils/trimPath';
 import { updateTrimPath, type TrimPathAuthoringPatch } from '../../utils/trimPathAuthoring';
@@ -10,6 +11,7 @@ import { DuplicateTab } from './sections/DuplicateTab';
 import { isBooleanEligible, computeBooleanContours, deriveBooleanGeometry, dissolveBooleanGroup as dissolveBooleanGroupState, createBooleanDisplayName, isGeneratedBooleanName, type BooleanOperation } from '../../utils/booleanGeometry';
 import { generateId } from '../../utils/idGenerator';
 import { layerMaskChannel } from '../../types/animator';
+import type { CharacterPart } from '../../types/animator';
 import {
   Sliders,
   Copy,
@@ -35,12 +37,14 @@ export const DetailsPanel: React.FC = () => {
     updateCurrentTransform,
     updateCurrentPropertyChannel,
     addPropertyKeyframe,
+    addMaskPathKeyframe,
+    authorMaskPath,
     deletePart,
-    duplicateSelectedPart,
     customPresets,
     savePreset,
     updatePreset,
     deletePreset,
+    duplicateSelectedPart,
     importPresets,
     copySelectedPart,
     pasteAnimationOntoSelected,
@@ -166,9 +170,14 @@ export const DetailsPanel: React.FC = () => {
     endBatchInteraction();
     showToast('Boolean dissolved; operands preserved.', 'success');
   };
+  const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
+  const evaluatedMasks = selectedPart && selectedTrack
+    ? evaluateLayerMasks(selectedPart, selectedTrack, currentFrame)
+    : undefined;
+  const inspectorPart = selectedPart && evaluatedMasks ? { ...selectedPart, masks: evaluatedMasks } : selectedPart;
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
 
-  const handlePartPropChange = (key: any, value: any) => {
+  const handlePartPropChange = (key: keyof CharacterPart, value: unknown) => {
     if (!selectedPartId) return;
     setCharacterParts((prev) =>
       prev.map((p) => {
@@ -186,6 +195,19 @@ export const DetailsPanel: React.FC = () => {
         return { ...p, [key]: value };
       })
     );
+  };
+
+  const handleDisplayedPartPropChange = (key: keyof CharacterPart, value: unknown) => {
+    if (key === 'masks' && Array.isArray(value)) {
+      const baseMasks = characterParts.find((part) => part.id === selectedPartId)?.masks ?? [];
+      const mergedMasks = value.map((mask) => {
+        const baseMask = baseMasks.find((candidate) => candidate.id === mask.id);
+        return baseMask ? { ...mask, path: baseMask.path } : mask;
+      });
+      handlePartPropChange(key, mergedMasks);
+      return;
+    }
+    handlePartPropChange(key, value);
   };
 
   const handlePartColorChange = (key: 'fillColor' | 'strokeColor', color: string) => {
@@ -395,15 +417,20 @@ export const DetailsPanel: React.FC = () => {
               />
 
               <StyleTab
-                selectedPart={selectedPart}
+                selectedPart={inspectorPart ?? selectedPart}
                 characterParts={characterParts}
-                handlePartPropChange={handlePartPropChange}
+                handlePartPropChange={handleDisplayedPartPropChange}
                 handlePartColorChange={handlePartColorChange}
                 handleZIndexChange={handleZIndexChange}
                 currentFrame={currentFrame}
                 onAddMaskKeyframe={(maskId, property, value) => {
-                  const selectedTrack = tracks.find((track) => track.partId === selectedPart.id);
                   if (selectedTrack) addPropertyKeyframe(selectedTrack.id, layerMaskChannel(maskId, property), currentFrame, value);
+                }}
+                onAddMaskPathKeyframe={(maskId, path) => {
+                  if (selectedTrack) addMaskPathKeyframe(selectedTrack.id, maskId, currentFrame, path);
+                }}
+                onChangeMaskPath={(maskId, path) => {
+                  if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
                 }}
               />
 

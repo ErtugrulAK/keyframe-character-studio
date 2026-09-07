@@ -21,6 +21,12 @@ export function computeMaxFrame(tracks: Track[]): number {
     TRACK_CHANNELS.forEach((ch) => {
       (track.channels?.[ch] ?? []).forEach((pkf) => { if (pkf.frame > maxFrame) maxFrame = pkf.frame; });
     });
+    Object.values(track.maskChannels ?? {}).forEach((keyframes) => {
+      keyframes.forEach((keyframe) => { if (keyframe.frame > maxFrame) maxFrame = keyframe.frame; });
+    });
+    Object.values(track.maskPathChannels ?? {}).forEach((keyframes) => {
+      keyframes.forEach((keyframe) => { if (keyframe.frame > maxFrame) maxFrame = keyframe.frame; });
+    });
   });
   return maxFrame;
 }

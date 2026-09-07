@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import type { Track, TrackChannel, AnimationChannel, PropertyKeyframe } from '../../types/animator';
+import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe } from '../../types/animator';
 import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame } from '../../utils/channelKeyframeGroups';
@@ -21,9 +21,9 @@ interface TrackLaneProps {
   onHoverKf: (hover: { frame: number; label: string } | null) => void;
   onDeleteKeyframe: (trackId: string, keyframeId: string) => void;
   onDeletePropertyKeyframe: (trackId: string, channel: AnimationChannel, keyframeId: string) => void;
-  // M27 — duplicate the whole keyframe frame-group at `frame` (27A helper)
+  onUpdateMaskPathKeyframeFrame: (trackId: string, channel: LayerMaskPathChannel, keyframeId: string, frame: number) => void;
+  onDeleteMaskPathKeyframe: (trackId: string, channel: LayerMaskPathChannel, keyframeId: string) => void;
   onDuplicateKeyframeGroup: (trackId: string, frame: number) => void;
-  // M28 — copy / paste keyframe frame-groups (28A helpers)
   kfClipboard: KeyframeCopyPayload | null;
   onCopyKeyframes: (trackId: string, frame: number) => void;
   onPasteKeyframes: (trackId: string, frame: number) => void;
@@ -51,6 +51,8 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   onHoverKf,
   onDeleteKeyframe,
   onDeletePropertyKeyframe,
+  onUpdateMaskPathKeyframeFrame: _onUpdateMaskPathKeyframeFrame,
+  onDeleteMaskPathKeyframe,
   onDuplicateKeyframeGroup,
   kfClipboard,
   onCopyKeyframes,
@@ -132,21 +134,24 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
       if (kf) onDeletePropertyKeyframe(track.id, ch, kf.id);
     }
   };
-
   const renderChannelLane = (ch: AnimationChannel) => {
+    const isPathChannel = ch.endsWith(':path');
     const baseMeta = !ch.includes(':') ? CHANNEL_META[ch as TrackChannel] : undefined;
     const meta = baseMeta ?? {
       label: `Mask ${ch.split(':').slice(1).join(' ')}`,
-      color: '#f59e0b',
-      shortLabel: 'M',
+      color: isPathChannel ? '#38bdf8' : '#f59e0b',
+      shortLabel: isPathChannel ? 'P' : 'M',
     };
-    const source = ch.includes(':') ? track.maskChannels : track.channels;
-    const chKfs = [...((source as Record<string, PropertyKeyframe[]> | undefined)?.[ch] ?? [])]
-      .filter((k) => (k.templateId || 'Sequence') === activeTmpl)
-      .sort((a, b) => a.frame - b.frame);
+    const source = isPathChannel
+      ? track.maskPathChannels?.[ch as LayerMaskPathChannel]
+      : ch.includes(':')
+        ? track.maskChannels?.[ch as LayerMaskChannel]
+        : track.channels?.[ch as TrackChannel];
+    const chKfs = [...(source ?? [])]
+      .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeTmpl)
+      .sort((a, b) => a.frame - b.frame) as (PropertyKeyframe | PathKeyframe)[];
     return (
       <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }}>
-        {/* Horizontal connecting trajectory line for keyframes (Unreal Engine style) */}
         {chKfs.length > 0 && (
           <div
             className="ue-trajectory-line"
@@ -157,18 +162,24 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
             }}
           />
         )}
-        {chKfs.map((pkf) => (
-          <div
-            key={pkf.id}
-            className="ue-prop-diamond"
-            style={{ left: `${pkf.frame * frameWidth}px`, '--diamond-color': meta.color } as React.CSSProperties}
-            onMouseDown={(e) => { e.stopPropagation(); onStartDragPKf({ trackId: track.id, channel: ch, keyframeId: pkf.id }); onSetFrame(pkf.frame); }}
-            onMouseEnter={() => onHoverKf({ frame: pkf.frame, label: `${meta.label}: ${pkf.value.toFixed(2)}` })}
-            onMouseLeave={() => onHoverKf(null)}
-            onContextMenu={(e) => openKfMenu(e, pkf.frame, () => onDeletePropertyKeyframe(track.id, ch, pkf.id))}
-            title={`${meta.label} = ${pkf.value.toFixed(2)} @ F${pkf.frame} (Right-click: menu)`}
-          />
-        ))}
+        {chKfs.map((keyframe) => {
+          const valueLabel = isPathChannel ? 'geometry' : String((keyframe as PropertyKeyframe).value.toFixed(2));
+          const onDelete = isPathChannel
+            ? () => onDeleteMaskPathKeyframe(track.id, ch as LayerMaskPathChannel, keyframe.id)
+            : () => onDeletePropertyKeyframe(track.id, ch, keyframe.id);
+          return (
+            <div
+              key={keyframe.id}
+              className={`ue-prop-diamond ${selectedKeyframeId === keyframe.id ? 'selected' : ''}`}
+              style={{ left: `${keyframe.frame * frameWidth}px`, '--diamond-color': meta.color } as React.CSSProperties}
+              onMouseDown={(e) => { e.stopPropagation(); onStartDragPKf({ trackId: track.id, channel: ch, keyframeId: keyframe.id }); onSelectKeyframe(keyframe.id); onSetFrame(keyframe.frame); }}
+              onMouseEnter={() => onHoverKf({ frame: keyframe.frame, label: `${meta.label}: ${valueLabel}` })}
+              onMouseLeave={() => onHoverKf(null)}
+              onContextMenu={(e) => openKfMenu(e, keyframe.frame, onDelete)}
+              title={`${meta.label} = ${valueLabel} @ F${keyframe.frame} (Right-click: menu)`}
+            />
+          );
+        })}
       </div>
     );
   };
@@ -275,8 +286,9 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               {isRotationExpanded && ['rotation'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
 
               {/* Scale Header Lane Spacer */}
-              {/* V6 Layer Mask scalar channels share the track and evaluator. */}
+              {/* V6 Layer Mask channels share the track and evaluator. */}
               {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
+              {Object.keys(track.maskPathChannels ?? {}).map((channel) => renderChannelLane(channel as LayerMaskPathChannel))}
               {['opacity'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
 
               {/* Trim Path channel lanes */}

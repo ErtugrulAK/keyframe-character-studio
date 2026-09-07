@@ -7,8 +7,8 @@
   "totalFrames": 30,
   "layers": [
     {
-      "id": "source",
-      "name": "Matte Source",
+      "id": "source-alpha",
+      "name": "Alpha Matte Source",
       "type": "custom_rect",
       "x": 0,
       "y": 0,
@@ -24,6 +24,23 @@
       "height": 100
     },
     {
+      "id": "source-luma",
+      "name": "Luminance Matte Source",
+      "type": "custom_rect",
+      "x": 260,
+      "y": 0,
+      "rotation": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "opacity": 1,
+      "visible": true,
+      "zIndex": 2,
+      "fillColor": "#808080",
+      "strokeColor": "#101218",
+      "width": 160,
+      "height": 100
+    },
+    {
       "id": "target",
       "name": "Bezier Target",
       "type": "custom_freeform",
@@ -34,7 +51,7 @@
       "scaleY": 1,
       "opacity": 1,
       "visible": true,
-      "zIndex": 2,
+      "zIndex": 3,
       "fillColor": "#00ff00",
       "strokeColor": "#101218",
       "points": [{ "x": -120, "y": -80 }, { "x": 120, "y": -80 }, { "x": 120, "y": 80 }, { "x": -120, "y": 80 }],
@@ -51,11 +68,11 @@
       },
       "masks": [
         {
-          "id": "mask-1",
-          "name": "Primary Mask",
+          "id": "mask-1-add",
+          "name": "Add Mask",
           "mode": "add",
           "enabled": true,
-          "opacity": 1,
+          "opacity": 0.4,
           "feather": 2,
           "expansion": 0,
           "path": {
@@ -69,13 +86,92 @@
               { "id": "m3", "x": 0.1, "y": 0.9 }
             ]
           }
+        },
+        {
+          "id": "mask-2-subtract",
+          "name": "Subtract Mask",
+          "mode": "subtract",
+          "enabled": true,
+          "opacity": 1,
+          "path": {
+            "version": 1,
+            "coordinateSpace": "normalized",
+            "closed": true,
+            "points": [
+              { "id": "s0", "x": 0.3, "y": 0.3 },
+              { "id": "s1", "x": 0.7, "y": 0.3 },
+              { "id": "s2", "x": 0.7, "y": 0.7 },
+              { "id": "s3", "x": 0.3, "y": 0.7 }
+            ]
+          }
+        },
+        {
+          "id": "mask-3-intersect",
+          "name": "Intersect Mask",
+          "mode": "intersect",
+          "enabled": true,
+          "opacity": 1,
+          "path": {
+            "version": 1,
+            "coordinateSpace": "normalized",
+            "closed": true,
+            "points": [
+              { "id": "i0", "x": 0.2, "y": 0.2 },
+              { "id": "i1", "x": 0.8, "y": 0.2 },
+              { "id": "i2", "x": 0.8, "y": 0.8 },
+              { "id": "i3", "x": 0.2, "y": 0.8 }
+            ]
+          }
+        },
+        {
+          "id": "mask-4-difference",
+          "name": "Difference Mask",
+          "mode": "difference",
+          "enabled": true,
+          "inverted": true,
+          "opacity": 1,
+          "path": {
+            "version": 1,
+            "coordinateSpace": "normalized",
+            "closed": true,
+            "points": [
+              { "id": "d0", "x": 0.4, "y": 0.4 },
+              { "id": "d1", "x": 0.6, "y": 0.4 },
+              { "id": "d2", "x": 0.6, "y": 0.6 },
+              { "id": "d3", "x": 0.4, "y": 0.6 }
+            ]
+          }
         }
       ],
       "trackMatte": {
-        "sourceLayerId": "source",
+        "sourceLayerId": "source-alpha",
         "mode": "alpha",
+        "inverted": false,
         "enabled": true,
-        "sourceVisible": true
+        "sourceVisible": false
+      }
+    },
+    {
+      "id": "luma-target",
+      "name": "Luminance Target",
+      "type": "custom_rect",
+      "x": 260,
+      "y": 0,
+      "scaleX": 1,
+      "scaleY": 1,
+      "opacity": 1,
+      "visible": true,
+      "zIndex": 4,
+      "fillColor": "#ff00ff",
+      "strokeColor": "#101218",
+      "width": 160,
+      "height": 100,
+      "trackMatte": {
+        "sourceLayerId": "source-luma",
+        "mode": "luminance",
+        "inverted": true,
+        "enabled": true,
+        "sourceVisible": false
       }
     }
   ],
@@ -87,15 +183,61 @@
         "maskOffsetX": [], "maskOffsetY": [], "maskScale": [], "maskRotation": [],
         "trimPathStart": [], "trimPathEnd": [], "trimPathOffset": []
       },
+      "maskPathChannels": {
+        "mask-1-add:path": [
+          {
+            "id": "mask-path-0",
+            "frame": 0,
+            "value": {
+              "version": 1,
+              "coordinateSpace": "normalized",
+              "closed": true,
+              "points": [
+                { "id": "m0", "x": 0.1, "y": 0.1, "handleOut": { "x": 0.25, "y": 0.1 } },
+                { "id": "m1", "x": 0.9, "y": 0.1 },
+                { "id": "m2", "x": 0.9, "y": 0.9 },
+                { "id": "m3", "x": 0.1, "y": 0.9 }
+              ]
+            },
+            "easing": "linear"
+          },
+          {
+            "id": "mask-path-10",
+            "frame": 10,
+            "value": {
+              "version": 1,
+              "coordinateSpace": "normalized",
+              "closed": true,
+              "points": [
+                { "id": "m0", "x": 0.2, "y": 0.1, "handleOut": { "x": 0.35, "y": 0.1 } },
+                { "id": "m1", "x": 0.9, "y": 0.1 },
+                { "id": "m2", "x": 0.9, "y": 0.9 },
+                { "id": "m3", "x": 0.2, "y": 0.9 }
+              ]
+            },
+            "easing": "bezier",
+            "bezierOut": { "x": 0.2, "y": 0 },
+            "bezierIn": { "x": 0.8, "y": 1 }
+          }
+        ]
+      },
       "maskChannels": {
-        "mask-1:opacity": [
+        "mask-1-add:opacity": [
           { "id": "mask-opacity-0", "frame": 0, "value": 0.4, "easing": "linear" },
           { "id": "mask-opacity-10", "frame": 10, "value": 1, "easing": "bezier", "bezierOut": { "x": 0.2, "y": 0 }, "bezierIn": { "x": 0.8, "y": 1 } }
         ],
-        "mask-1:feather": [
+        "mask-1-add:feather": [
           { "id": "mask-feather-0", "frame": 0, "value": 2, "easing": "linear" },
           { "id": "mask-feather-10", "frame": 10, "value": 8, "easing": "autoBezier" }
         ]
+      }
+    },
+    {
+      "partId": "luma-target",
+      "channels": {
+        "x": [], "y": [], "rotation": [], "scaleX": [], "scaleY": [], "opacity": [],
+        "maskOffsetX": [], "maskOffsetY": [], "maskScale": [], "maskRotation": [],
+        "trimPathStart": [], "trimPathEnd": [], "trimPathOffset": []
       }
     }
   ]

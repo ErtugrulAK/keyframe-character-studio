@@ -17,13 +17,31 @@ test.describe('V6 Motion Core and Compositing', () => {
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   });
 
-  test('renders canonical Bezier geometry, layer masks, and V2 track matte in Chromium', async ({ page }) => {
-    await expect(page.locator('#kcs-layer-mask-target-mask-1-add')).toHaveCount(1);
-    await expect(page.locator('[mask="url(#kcs-layer-mask-target-mask-1-add)"]')).toHaveCount(1);
-    await expect(page.locator('#kcs-mask-source-alpha')).toHaveCount(1);
-    await expect(page.locator('[mask="url(#kcs-mask-source-alpha)"]')).toHaveCount(1);
-    await expect(page.locator('#kcs-layer-mask-filter-kcs-layer-mask-target-mask-1-add')).toHaveCount(1);
-    await expect(page.locator('path[d*="C"]')).toHaveCount(2);
+  test('renders canonical Bezier geometry, all layer masks, and V2 track mattes in Chromium', async ({ page }) => {
+    await expect(page.locator('#kcs-layer-mask-target-mask-1-add-add')).toHaveCount(1);
+    await expect(page.locator('#kcs-layer-mask-target-mask-2-subtract')).toHaveCount(1);
+    await expect(page.locator('#kcs-layer-mask-target-mask-3-intersect')).toHaveCount(1);
+    await expect(page.locator('#kcs-layer-mask-target-mask-4-difference')).toHaveCount(1);
+    await expect(page.locator('[mask="url(#kcs-layer-mask-target-mask-1-add-add)"]')).toHaveCount(1);
+    await expect(page.locator('#kcs-mask-source-alpha-alpha')).toHaveCount(1);
+    await expect(page.locator('#kcs-mask-source-luma-luminance-inv')).toHaveCount(1);
+    await expect(page.locator('[mask="url(#kcs-mask-source-alpha-alpha)"]')).toHaveCount(1);
+    await expect(page.locator('[mask="url(#kcs-mask-source-luma-luminance-inv)"]')).toHaveCount(1);
+    await expect(page.locator('#kcs-layer-mask-filter-kcs-layer-mask-target-mask-1-add-add')).toHaveCount(1);
+    await expect(page.locator('path[d*="C"]')).toHaveCount(3);
+  });
+
+  test('preserves V6 path channels and matte relationships through the browser boundary', async ({ page }) => {
+    const state = await page.evaluate((key) => {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : null;
+    }, STORAGE_KEY);
+    expect(state.version).toBe(2);
+    expect(state.layers.find((layer: { id: string }) => layer.id === 'target').trackMatte.mode).toBe('alpha');
+    expect(state.tracks.find((track: { partId: string }) => track.partId === 'target').maskPathChannels['mask-1-add:path']).toHaveLength(2);
+    await page.reload();
+    await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+    await expect(page.locator('#kcs-layer-mask-target-mask-4-difference')).toHaveCount(1);
   });
   test('opens the timeline graph studio with both derived graph modes', async ({ page }) => {
     await page.getByRole('button', { name: 'Motion Curves' }).click();

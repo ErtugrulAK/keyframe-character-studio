@@ -111,20 +111,22 @@ describe('OGraf Export V1 Phase 1', () => {
     expect(errorCodes(makeScene([makeLayer({ booleanOperation: 'union' })]))).toContain('OGRAF_UNSUPPORTED_BOOLEAN');
   });
 
-  test('rejects unsupported matte modes and non-deterministic animation', () => {
-    const scene = makeScene([makeLayer({
-      matte: { sourcePartId: 'mask', mode: 'alpha' },
-      inAnimPreset: 'shake',
-    })]);
+  test('supports alpha mattes while still rejecting non-deterministic animation', () => {
+    const scene = makeScene([
+      makeLayer({ id: 'mask' }),
+      makeLayer({ id: 'target', matte: { sourcePartId: 'mask', mode: 'alpha' }, inAnimPreset: 'shake' }),
+    ]);
 
     expect(errorCodes(scene)).toEqual([
-      'OGRAF_UNSUPPORTED_ALPHA_MATTE',
       'OGRAF_UNSUPPORTED_NONDETERMINISTIC_PROCEDURAL',
     ]);
   });
 
-  test('diagnoses clip matte as conditional without rejecting it', () => {
-    const result = validateSceneForOGraf(makeScene([makeLayer({ matte: { sourcePartId: 'mask', mode: 'clip' } })]));
+  test('diagnoses a portable clip matte as conditional without rejecting it', () => {
+    const result = validateSceneForOGraf(makeScene([
+      makeLayer({ id: 'mask' }),
+      makeLayer({ id: 'target', matte: { sourcePartId: 'mask', mode: 'clip' } }),
+    ]));
 
     expect(result.canCompile).toBe(true);
     expect(result.diagnostics).toEqual([

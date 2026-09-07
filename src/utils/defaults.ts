@@ -1,4 +1,4 @@
-import type { CharacterPart, Track, Transform, EasingType, TrackChannel, PropertyKeyframe } from '../types/animator';
+import type { CharacterPart, Track, Transform, EasingType, TrackChannel, PropertyKeyframe, PathKeyframe, BezierPath } from '../types/animator';
 import { interpolateBezierPath, legacyMaskPointsToPath, pathToLegacyMaskPoints } from './bezierPath';
 
 export const DEFAULT_TRANSFORM: Transform = {
@@ -85,6 +85,39 @@ export function interpolateChannel(
     prev.bezierOut && next.bezierIn ? { out: prev.bezierOut, in: next.bezierIn } : undefined,
   );
   return lerp(prev.value, next.value, eased);
+}
+
+/** Interpolate a canonical animated path without guessing vertex correspondence. */
+export function interpolatePathChannel(
+  keyframes: PathKeyframe[],
+  frame: number,
+  fallback: BezierPath,
+): BezierPath {
+  if (!keyframes || keyframes.length === 0) return fallback;
+  const sorted = [...keyframes].sort((a, b) => a.frame - b.frame);
+  const exact = sorted.find((keyframe) => keyframe.frame === frame);
+  if (exact) return exact.value;
+  if (frame <= sorted[0].frame) return sorted[0].value;
+  if (frame >= sorted[sorted.length - 1].frame) return sorted[sorted.length - 1].value;
+  let previous = sorted[0];
+  let next = sorted[sorted.length - 1];
+  for (let index = 0; index < sorted.length - 1; index += 1) {
+    if (frame >= sorted[index].frame && frame <= sorted[index + 1].frame) {
+      previous = sorted[index];
+      next = sorted[index + 1];
+      break;
+    }
+  }
+  const duration = next.frame - previous.frame;
+  if (duration <= 0) return previous.value;
+  const progress = (frame - previous.frame) / duration;
+  const eased = applyEasing(
+    progress,
+    previous.easing,
+    previous.bezierControlPoints,
+    previous.bezierOut && next.bezierIn ? { out: previous.bezierOut, in: next.bezierIn } : undefined,
+  );
+  return interpolateBezierPath(previous.value, next.value, eased) ?? previous.value;
 }
 
 export function solveCubicBezier(x1: number, y1: number, x2: number, y2: number, X: number): number {

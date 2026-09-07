@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
-import type { CharacterPart, LayerMask, LayerMaskChannelProperty, MatteMode, PartMatte } from '../../../../types/animator';
+import type { BezierPath, CharacterPart, LayerMask, LayerMaskChannelProperty, MatteMode, PartMatte } from '../../../../types/animator';
 import { BezierPathEditor } from '../../BezierPathEditor';
 import { createBezierPath } from '../../../../utils/bezierPath';
 import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
@@ -12,6 +12,8 @@ interface StyleMatteSectionProps {
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
   currentFrame?: number;
   onAddMaskKeyframe?: (maskId: string, property: LayerMaskChannelProperty, value: number) => void;
+  onAddMaskPathKeyframe?: (maskId: string, path: BezierPath) => void;
+  onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
 }
 
 const selectStyle: React.CSSProperties = {
@@ -47,6 +49,8 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   characterParts,
   onPartPropChange,
   onAddMaskKeyframe,
+  onAddMaskPathKeyframe,
+  onChangeMaskPath,
 }) => {
   const matte = selectedPart.matte;
   const authoredAngle = normalizeGradientAngle(matte?.gradient?.angle) ?? 0;
@@ -297,6 +301,10 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
     if (!activeLayerMask || !onAddMaskKeyframe) return;
     const value = activeLayerMask[property] ?? (property === 'opacity' ? 1 : 0);
     onAddMaskKeyframe(activeLayerMask.id, property, value);
+  };
+  const addMaskPathKeyframe = () => {
+    if (!activeLayerMask || !onAddMaskPathKeyframe) return;
+    onAddMaskPathKeyframe(activeLayerMask.id, activeLayerMask.path);
   };
   const trackMatteSourceMissing = !!trackMatte && !characterParts.some((part) => part.id === trackMatte.sourceLayerId);
   const trackMatteSources = characterParts.filter((part) => part.id !== selectedPart.id);
@@ -576,7 +584,20 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
               {onAddMaskKeyframe && <button type="button" className="btn-secondary" onClick={() => addMaskKeyframe('expansion')}>Add expansion keyframe</button>}
             </div>
             <div className="matte-span-full">
-              <BezierPathEditor path={activeLayerMask.path} onChange={(path) => updateActiveLayerMask({ path })} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label className="form-label">MASK PATH</label>
+                {onAddMaskPathKeyframe && (
+                  <button type="button" className="btn-secondary" onClick={addMaskPathKeyframe}>
+                    Add Mask Path keyframe
+                  </button>
+                )}
+              </div>
+              <BezierPathEditor
+                path={activeLayerMask.path}
+                onChange={(path) => onChangeMaskPath
+                  ? onChangeMaskPath(activeLayerMask.id, path)
+                  : updateActiveLayerMask({ path })}
+              />
             </div>
           </>
         )}

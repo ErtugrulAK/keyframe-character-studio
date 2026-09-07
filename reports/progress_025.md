@@ -17,7 +17,7 @@ Implemented the approved V6 Motion Core and Compositing package. KCS now has one
 
 User impact: freeform paths can carry cubic handles; masks and track mattes have explicit relationships and modes; mask scalar channels appear in the timeline; graph editing uses the same interpolation evaluator as playback; legacy freeform and matte projects remain importable.
 
-Completion state: implementation, focused tests, full Vitest, TypeScript, lint, production build, focused Chromium proof, manual browser proof, documentation, and one feature-branch checkpoint are complete. The feature branch has not been pushed yet. The final repeated `npm run qa:v6` attempt was blocked by an existing port-5173 process serving a Playwright report instead of the app; an earlier post-fix Chromium run passed both tests, and direct browser verification on the live V6 frontend passed the path/mask/matte/graph checks.
+Completion state: implementation, focused tests, full Vitest, TypeScript, lint, production build, focused Chromium proof, manual browser proof, documentation, feature-branch checkpoints, and feature-branch push are complete. The final repeated `npm run qa:v6` attempt was blocked by an existing port-5173 process serving a Playwright report instead of the app; an earlier post-fix Chromium run passed both tests, and direct browser verification on the live V6 frontend passed the path/mask/matte/graph checks.
 
 # 2. Original Objectives
 
@@ -346,7 +346,7 @@ No dependency changes. `qa:v6` uses the existing Playwright installation. No new
 - Starting HEAD: `8024d4f` pre-V6 checkpoint
 - Ending HEAD: `ef900c6 feat: deliver v6 motion core and compositing`
 - Commit: `YES — ef900c6`
-- Push: `NOT YET — feature branch only is the next approved release action.`
+- Push: `YES — origin/feat/v6-motion-core` (feature branch only).
 - Working tree after checkpoint: clean (`git status --short --branch` returned only the branch header).
 - Main branch: not modified, merged, rebased, reset, or pushed.
 - Changed file count: 52 files in the V6 checkpoint.
@@ -402,9 +402,9 @@ Current milestone: V6 Motion Core and Compositing implementation checkpoint comp
 
 Completed: path core, Layer Masks, Track Matte V2, interpolation/graphs, serialization migration, OGraf audit, fixtures, focused tests, browser proof, build/lint, documentation, and checkpoint commit.
 
-Remaining release action: push the feature branch only, then report the final milestone status.
+Remaining release action: none for this milestone. The feature branch is published; it was not merged into `main`.
 
-QA stage: implementation and validation complete; release handoff pending feature-branch push.
+QA stage: implementation, validation, and feature-branch release handoff complete.
 
 # 29. AI Development Notes
 

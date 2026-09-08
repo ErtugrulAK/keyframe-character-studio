@@ -60,20 +60,29 @@ The Graph Editor provides Value Graph editing, Bézier handles, easing presets, 
 
 KCS is intended for artists, motion designers, broadcast graphics developers, and engineers who want a small, inspectable authoring surface instead of a black-box renderer. The project favors explicit state ownership, deterministic evaluation, SVG-native composition, and compatibility-preserving migration over feature claims that are not backed by the current implementation.
 
-## Architecture
+## Visual map
 
-```text
-React UI
-  ↓
-AnimatorContext (thin orchestration)
-  ↓
-Domain hooks: playback, timeline, history, clipboard, serialization, broadcast
-  ↓
-Pure utilities and canonical evaluators
-  ↓
-SVG canvas / matte compositor and OGraf adapters
-  ↓
-Scene serialization and optional REST persistence
+### Authoring loop
+
+```mermaid
+flowchart LR
+  A[Select layer] --> B[Edit Inspector]
+  B --> C[Animate timeline]
+  C --> D[Shape Value Graph]
+  D --> E[Preview on SVG canvas]
+  E --> F[Save or Broadcast]
+  F --> B
+```
+
+### Runtime boundaries
+
+```mermaid
+flowchart TB
+  UI[React editor UI] --> CTX[AnimatorContext orchestration]
+  CTX --> HOOKS[Domain hooks]
+  HOOKS --> EVAL[Canonical evaluators]
+  EVAL --> SVG[SVG canvas and matte compositor]
+  EVAL --> EXPORT[Scene serialization and OGraf adapters]
 ```
 
 `Track.channels` is the canonical animation representation. `evaluateTransform` and `evaluateFrame` own animation evaluation, while `shapeGeometry` and `buildMattePath` own geometry and matte paths. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for module responsibilities and [docs/interop/V6_LOTTIE_MAPPING.md](docs/interop/V6_LOTTIE_MAPPING.md) for current interchange boundaries.

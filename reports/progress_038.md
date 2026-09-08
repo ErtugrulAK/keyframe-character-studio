@@ -290,7 +290,9 @@ Captured under `docs/design/after/v3/`:
 - Feature branch: `feat/v6-ui-bold-v3`.
 - Main modified: NO.
 - Branch checkpoint pushed before implementation: YES.
-- Final feature branch push: pending final commit in this report step.
+- Final feature branch push: YES (`43cf8fe`).
+- Final branch/origin parity: YES.
+- Working tree: CLEAN.
 
 ## Self review
 

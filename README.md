@@ -1,319 +1,145 @@
-# 🎬 Keyframe Character Studio & Live Broadcast Motion Graphics Sequencer Pro
+# Keyframe Character Studio
 
-[![React 19](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript 6](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite 8](https://img.shields.io/badge/Vite-8.1-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Express.js](https://img.shields.io/badge/Express-5.2-000000?logo=express&logoColor=white)](https://expressjs.com/)
+A browser-based 2D motion design editor for authoring vector graphics, animation, masks, mattes, and reusable broadcast-oriented compositions.
+
+Keyframe Character Studio (KCS) combines a visual SVG canvas, timeline-based animation, graph editing, and project serialization in a focused React and TypeScript workspace. The current V6/UI work is developed on `feat/v6-ui-redesign`; `main` intentionally remains a stable earlier baseline.
+
+![Keyframe Character Studio editor overview](docs/assets/github/kcs-editor-overview.webp)
+
+[![CI](https://github.com/ErtugrulAK/keyframe-character-studio/actions/workflows/ci.yml/badge.svg)](https://github.com/ErtugrulAK/keyframe-character-studio/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 
-An advanced **2D Vector Animation Studio, Motion Graphics Sequencer, & Real-Time Broadcast Motion Graphics Director** built with **React 19**, **TypeScript**, **Vite**, **Express**, **PostgreSQL**, and **Embedded SQLite**.
+## What KCS provides
 
----
+- **Vector and text authoring** — Create and edit shapes, freeform paths, cards, banners, and text in an SVG-based canvas.
+- **Timeline animation** — Animate transform and mask channels with keyframes, easing, hold segments, and reusable sequences.
+- **Graph authoring** — Edit Value Graph curves with cubic Bézier controls; Speed Graph is currently a derived view.
+- **Masks and mattes** — Layer masks, animated mask paths, alpha/luminance Track Matte V2, feather, expansion, strength, inversion, gradients, and relationship validation.
+- **Composition tools** — Boolean shape operations, layer hierarchy, visibility/lock state, named sequences, and direct canvas editing.
+- **Project portability** — Versioned scene serialization, legacy migration paths, undo/redo, and OGraf-oriented output/runtime support for the documented subset.
+- **Broadcast-oriented workflows** — Edit and Broadcast modes with IN/OUT motion presets and live sequencing controls.
 
-## 📸 Application Showcase
+## Screenshots
 
-### 1. Main Studio Editor & Sequencer
-![Keyframe Character Studio Main Editor](docs/assets/main-editor.png)
-*Figure 1: Full studio interface featuring the interactive Stage Canvas, multi-track Sequencer Timeline with Bezier Motion Curves, Template Tabs, and Property Inspector.*
+### Masks and Track Matte
 
-### 2. Live Broadcast Director Panel (Reji Mode)
-![Live Director Broadcast Panel](docs/assets/live-director.png)
-*Figure 2: Real-time broadcast control interface for triggering live graphic sequence animations, PLAY IN / PLAY OUT motion transitions, and stage stunts.*
+The Inspector exposes mask paths and Track Matte V2 controls while the canvas shows the evaluated composition.
 
----
+![KCS masks and Track Matte workflow](docs/assets/github/kcs-mask-track-matte.webp)
 
-## ✨ Overview & Core Capabilities
+### Timeline and animation
 
-Keyframe Character Studio provides a browser-based timeline animation editor and live broadcast control panel designed for creating character animations, motion graphics templates, keyframe sequences, and real-time lower thirds or overlays for broadcast software (OBS Studio, vMix, NDI, etc.).
+Timeline rows, property disclosure, frame navigation, and keyframe controls remain visible alongside the canvas and Inspector.
 
-### 1. 🎬 Motion Design Sequencer
-- **Multi-Track Hierarchy**: Layer ordering, track lock, eye visibility toggles, and z-index ordering.
-- **Precision Keyframing**: Interpolates position (`x`, `y`), scale (`scaleX`, `scaleY`), rotation, and opacity at 60 FPS.
-- **Interactive Cubic Bezier Easing**: Fine-tune animation curves with velocity control, preset curves, and real-time preview canvas.
-- **Unified Sequence Tabs**: Create, rename (double-click inline edit), switch, and delete sequence motion templates.
+![KCS timeline animation workflow](docs/assets/github/kcs-timeline-animation.webp)
 
-### 2. 📐 Single-Edge Directional Vector Transform Gizmo
-- **8-Handle Transform Controls**: Corner handles for proportional scaling + 4 midpoint handles for single-edge stretching.
-- **Directional Edge Resizing**: Dragging top, bottom, left, or right handles expands elements strictly along that direction while keeping opposite edges fixed in world coordinates (trigonometric matrix math).
-- **Interactive Rotation**: Top bar knob for intuitive 360° rotation.
+### Graph Editor and Bézier authoring
 
-### 3. 🎭 Track Matte — SVG Clip / Alpha / Luminance / Feather
-- **SVG-based matte system**: Clip a layer by another layer's (the source's) world-space shape geometry — pure SVG (`clipPath` / `<mask>`); **no Canvas 2D / PixiJS / Fabric.js**.
-- **Matte modes**:
-  - ✂️ **Clip** — hard geometric clip via SVG `clipPath`
-  - 🩸 **Alpha** — alpha-channel mask: inside the geometry visible, outside hidden
-  - 💡 **Luminance** — luminance-based mask: white = visible, black = hidden, gray = partial
-- **Inverted matte**: hide INSIDE the source geometry (mask-based; single evenodd path for alpha, white region + black geometry for luminance).
-- **Matte Feather**: soft edges via `feGaussianBlur` (`stdDeviation = feather / 2`), applied in world-space pixels; sharp edge when `0`/unset.
-- **Freeform sources (M15)**: shapes drawn with the Free Draw tool (`custom_freeform`) can be matte sources too — their polygon is built from the same `CharacterPart.points` the renderer draws, and works with Clip / Alpha / Luminance / Inverted / Feather, including animated sources.
-- **Matte Strength (M16)**: control the matte's intensity from the Inspector (0–100% slider; 50% = half-strength soft mask). Applies to Alpha/Luminance/Inverted modes; inactive in Clip mode. Optional — legacy mattes render at full strength.
-- **Gradient Track Matte (M17)**: linear, source-local gradient with angle control (0–360°) — the gradient is painted through the matte (white→transparent for Alpha, white→black for Luminance) and follows the source's movement/rotation/scale/animation; combines with Feather and Strength; freeform sources supported; Clip mode unaffected. Preset / animated gradients are deferred (radial: see M20).
-- **Text Track Matte (M18)**: text parts can now act as matte sources — the glyphs become the mask content (alpha / luminance / inverted-luminance, gradient, feather, strength, transforms, animation tracking and serialization parity via `sourcePartId`); text + Clip is not supported (UI-guarded).
-- **Image Track Matte (M21)**: image parts can now act as matte sources — the `<image>` becomes the mask content element (alpha / luminance / inverted-image-luminance, feather, strength, linear + radial + multi-stop gradients, transforms and animated-source tracking via the existing evaluated pipeline). Image strength renders as `opacity` (fill-opacity is inert on `<image>`); image + gradient composes through nested SVG masks (image alpha/luminance × gradient — no Canvas/foreignObject); inverted image uses luminance semantics (bright pixels stay visible, dark pixels punch the hole — no black repaint); image + Clip is unsupported (UI-guarded); serialization round-trips exactly via `sourcePartId` (runtime image data is never persisted). Video mattes remain deferred.
-- **Custom / Multi-stop Gradient (M19)**: 2–4 custom gradient stops (offset / color / opacity) with a deterministic normalization + hashed def identity — different stops on the same source never collide (dedupe is stops-aware), legacy `{angle}` gradients keep their exact behavior until edited, and everything works with feather, strength, inversion, transforms and text mattes (including inverted-text world-space gradient handling). Preset / animated gradients remain deferred.
-- **Radial Gradient (M20)**: linear **and** radial gradient mattes — radial center/radius are derived automatically from the source bounds/transform (no persisted geometry, no rX/rY — one scalar radius scaled by max|scale|), multi-stop support shared with M19, works on shapes/freeform/text (text keeps its LOCAL/WORLD coordinate split; inverted text stays black with a world region rect), compatible with feather and strength, follows animated sources every frame, and serialization round-trips exactly (legacy `{angle: 45}` stays linear, byte-for-byte). Radial presets / custom center-radius controls / animated gradients remain deferred.
-- **Matte Relationship UX + Integrity (M22)**: the outliner now shows matte relationships — every matted part row carries a small indicator with the source part's name (valid) or a "Missing" warning (deleted source), resolved from `CharacterPart.name` at render time (no cached/duplicated relationship state); matte cycles and self-references are detected by scene validation (`MATTE_CYCLE`, recoverable — disabled mattes excluded, missing sources stay distinct as `MATTE_MISSING_SOURCE`), so malformed relationships are visible and understood without breaking rendering, geometry, or serialization. Matte drag/drop, timeline matte indicators, matte gizmos, radial center/radius controls and multi/nested mattes remain deferred.
-- **Basic IN/OUT Preset UX (M23)**: select a part and configure IN and OUT animation presets from the Inspector Transform tab — Fade, Slide Left/Right/Up/Down, Pop, Spin, each with its own frame duration. This exposes the existing procedural animation engine (`inAnimPreset`/`outAnimPreset` + durations consumed by `computeProceduralDelta`/`applyEditPreset` in edit preview and the broadcast state machine) — **no keyframes are generated, no channels are added, no second animation system**; presets persist through the existing schema (save/reload parity), undo through the shared history, and broadcast stays compatible (the Inspector never touches transport state). Preset rename, multi-select presets and animated gradients remain deferred.
-- **Builtin Combination Presets (M24)**: three genuinely-new preset combinations join the same Inspector select under a "Combinations" group — **Slide + Scale Left, Slide + Scale Right, Soft Pop** — reusing the existing procedural system (slide direction convention + scale/opacity through the same easing; Soft Pop animates scale 0.85→1). **No keyframes are generated** and no engine/schema/broadcast change was needed (IDs are plain strings in the existing preset fields). "Fade + Slide" / "Fade + Scale" / "Pop + Fade" are intentionally NOT offered — existing builtins already combine those (opacity easing is built into every preset), so those would be duplicates. User-saved combinations, Wipe/Matte Reveal and preset chaining remain deferred.
-- **User-Saved Animation Presets (M25)**: **Save Current as Preset** in the Inspector captures the selected IN or OUT animation (builtin or combination) into your own **Custom preset library** (`keyframe_custom_motion_presets`) — name it, apply it to any other element from the Custom group, reload keeps it, and delete it anytime (builtins are protected). Custom presets are stored as sampled keyframes fully independent of the builtin code, support both IN and OUT with their durations, work in edit preview AND broadcast, live outside the scene JSON (not part of template serialization), and applying one is a normal undoable part edit. Preset rename, categories, multi-select application and combination editing remain deferred.
-- **Copy / Paste Animation (M26)**: copy the full animation of one element (timeline channel keyframes + IN/OUT presets + durations) and paste it onto another EXISTING element — the target keeps its identity, transform, matte and hierarchy (fresh keyframe IDs, one-click undo). **Clear Animation** resets IN/OUT presets and keyframes in a single undoable step. Multi-select paste remains deferred.
-- **Timeline Keyframe Duplicate (M27)**: right-click any keyframe in the timeline → **Duplicate Keyframes** copies the WHOLE frame-group (every channel at that frame, plus any legacy keyframe) to frame + 1 — values/easing/template/bezier preserved, fresh IDs, collisions are safe no-ops, and one Ctrl+Z removes the whole duplicate. Existing Delete Keyframe and keyframe drag keep working; Ctrl+D still duplicates the element.
-- **Timeline Keyframe Copy / Paste (M28)**: **Copy Keyframes** grabs the whole frame-group into a timeline-local clipboard (not persisted, separate from the part clipboard), then **Paste Keyframes** drops it onto the EXACT right-clicked frame of the same or another track — same/cross-track, fresh IDs, collision-safe (occupied frames never offer Paste), one undo. Distinct from M26 Copy Animation (which also transfers IN/OUT presets + durations).
-- **Selected Keyframe Value Editing (M29)**: click any timeline keyframe and the Inspector Transform tab shows a **"Selected Keyframe @ F"** section with the raw values of ONLY the channels actually keyframed at that frame (no computed values pretending to be keyframes) — edit any value through the existing transform pipeline (easing/template/bezier preserved, unrelated channels untouched, one-step undo), while the normal Transform controls still edit the base transform when no keyframe is selected. Pasted (M28) and duplicated (M27) keyframes are editable the same way.
-- **Custom Preset Export / Import (M30)**: move your custom animation preset library between machines — **Export Presets** downloads a versioned `{version:1, presets}` JSON (user presets only, builtins never included), **Import Presets** validates the WHOLE file first (invalid files change nothing) then merges into your existing library (never replaces it). IDs are preserved when safe so a deleted preset's references reconnect after reimport; collisions are remapped, duplicate names stay allowed, and the preset library remains entirely separate from the scene JSON (no AnimationProject changes).
-- Geometry comes from the single `shapeGeometry → buildMattePath` chain (world-space; animated with the source's own keyframes/channels; no matte animation channels).
-- Browser behavior is **Chromium pixel-verified** (real compositing tests); Firefox/Safari not yet verified.
-- Architecture details: `skills/keyframe-studio/kcs-track-matte/SKILL.md` · wiki: `wiki/entities/keyframe-character-studio.md`.
+The Graph Editor provides Value Graph editing, Bézier handles, easing presets, and preview controls. Speed Graph remains derived/read-only until a canonical reverse conversion is defined.
 
-### 4. 🎨 Unified Graphic Template & Sequence Management
-- **Dual Tab Architecture**: Unified top Header bar (Graphic Templates) and bottom Timeline (Sequence Tabs) sharing identical styling, heights, hover states, and close icons.
-- **Inline Tab Renaming**: Double-click any template or sequence tab to edit its title directly in-place.
-- **Clean Modal Workflows**: Default modals for `New Template` and `New Sequence`.
+![KCS Graph Editor](docs/assets/github/kcs-graph-editor.webp)
 
-### 5. 📡 Real-Time Live Director Panel (Reji Mode)
-- **Live Broadcast Controls**: Zero-latency triggers for broadcast streaming platforms.
-- **PLAY IN / PLAY OUT**: Trigger entrance & exit motion transitions live on air per graphic layer or globally.
-- **Eye Mute Sync**: Layers hidden or muted on timeline automatically sync state with broadcast output.
-- **Live Motion Stunts**: Trigger mid-broadcast stunts (Bounce, Pulse, Wobble, Spin 360, High-frequency Shake, Float, and custom keyframe loops).
+## Feature status
 
-### 6. 🗄️ Dual Database Architecture & REST API Server
-- **PostgreSQL Database (`server/db/schema.sql` & `server/db/seed.sql`)**: Relational database for production environments.
-- **Embedded SQLite Local Database (`keyframe_studio.sqlite`)**: Automatic fallback embedded database enabling zero-config execution without external software requirements.
-- **Express REST API Backend**: Handlers for project serialization, motion presets, and system health checks.
+| Feature | Status | Notes |
+| --- | --- | --- |
+| Vector shapes and text | Available | SVG canvas with direct selection and property editing. |
+| Timeline animation and keyframes | Available | Canonical channel model with legacy compatibility. |
+| Value Graph | Available | Shared evaluator and cubic Bézier controls. |
+| Speed Graph editing | Planned | Derived view today; editable conversion is not yet defined. |
+| Bézier paths | Available | Path topology, handles, and keyboard-accessible controls. |
+| Layer masks | Available | Ordered mask composition with animated mask paths. |
+| Track Matte V2 | Available | Alpha/luminance relationships with validation and animated sources. |
+| Boolean shape operations | Available | Supported through the current geometry pipeline. |
+| Named sequences | Available | Sequence-aware evaluation and serialization. |
+| OGraf output/runtime | Partial | Supported fields are mapped; unsupported V6 compositing is preserved and reported. |
 
----
+## Why KCS
 
-## 🏛️ High-Level Architecture
+KCS is intended for artists, motion designers, broadcast graphics developers, and engineers who want a small, inspectable authoring surface instead of a black-box renderer. The project favors explicit state ownership, deterministic evaluation, SVG-native composition, and compatibility-preserving migration over feature claims that are not backed by the current implementation.
 
-The project adheres strictly to the **Thin Orchestrator Pattern**:
-- `AnimatorContext` serves exclusively as a dependency injection and state orchestration layer.
-- Business logic is isolated inside 15 domain-specific hooks (`usePlayback`, `useTimeline`, `useSelection`, `useClipboard`, `useBroadcast`, etc.).
-- Complex mathematical transformations, interpolations, and shape calculations are handled by pure utility modules (`src/utils/`).
-
-```mermaid
-graph TD
-    App[App Component] --> Provider[AnimatorContext Provider]
-    
-    subgraph Domain Hooks
-        DH1[usePlayback]
-        DH2[useTimeline]
-        DH3[useSelection]
-        DH4[useClipboard]
-        DH5[useBroadcast]
-        DH6[useSerialization]
-        DH7[Other Domain Hooks...]
-    end
-
-    subgraph Pure Utility Layer
-        U1[bounds.ts]
-        U2[broadcastEngine.ts]
-        U3[defaults.ts]
-        U4[motionTransitions.ts]
-        U5[partFactory.ts]
-        U6[trackMutations.ts]
-    end
-
-    Provider --> DH1
-    Provider --> DH2
-    Provider --> DH3
-    Provider --> DH4
-    Provider --> DH5
-    Provider --> DH6
-    Provider --> DH7
-
-    DH1 & DH2 & DH5 & DH6 --> U1 & U2 & U3 & U4 & U5 & U6
-
-    subgraph User Interface Layer
-        UI1[HeaderBar]
-        UI2[StageCanvas & PartRenderer]
-        UI3[Sequencer Timeline]
-        UI4[PropertyInspector & DetailsPanel]
-        UI5[LiveDirectorPanel]
-    end
-
-    Provider --> UI1 & UI2 & UI3 & UI4 & UI5
-
-    subgraph Backend & Storage
-        API[Express REST API]
-        PG[(PostgreSQL)]
-        SQLITE[(SQLite Embedded)]
-    end
-
-    DH6 <--> API
-    API <--> PG
-    API <--> SQLITE
-```
-
----
-
-## 📂 Repository Directory Structure
+## Architecture
 
 ```text
-keyframe-character-studio/
-├── .agents/                    # Agent constitution, branch strategy, and workflows
-│   ├── AGENTS.md               # Project constitution and core rules
-│   ├── BRANCH_STRATEGY.md      # Branching rules and lifecycle policy
-│   ├── PROJECT_CONTEXT.md      # Architecture boundaries and technology stack
-│   └── workflows/              # Standard operational workflows
-├── docs/                       # Project documentation
-│   ├── API.md                  # REST API specification
-│   ├── ARCHITECTURE.md         # In-depth architectural guide
-│   └── postgres-setup-guide.md # PostgreSQL setup instructions
-├── e2e/                        # Playwright end-to-end test suite
-│   ├── workflow.spec.ts
-│   └── track-matte.spec.ts     # Track Matte browser/pixel verification
-├── public/                     # Static public assets
-├── scripts/                    # Database setup scripts
-│   └── setup-db.js
-├── server/                     # Backend REST API server
-│   ├── index.js                # Express app entrypoint & API routes
-│   └── db/                     # PostgreSQL pool & SQLite fallback engine
-│       ├── index.js            # PostgreSQL connection pool
-│       ├── schema.sql          # PostgreSQL schema
-│       ├── seed.sql            # PostgreSQL seed data
-│       └── sqlite.js           # SQLite embedded engine
-├── src/                        # Frontend source code
-│   ├── components/             # UI components (Canvas, Header, Inspector, Timeline, Broadcast)
-│   ├── context/                # AnimatorContext orchestrator
-│   ├── hooks/                  # 15 domain-specific React hooks
-│   ├── tests/                  # 21 Vitest unit & integration test suites
-│   ├── types/                  # TypeScript interface definitions
-│   └── utils/                  # Pure mathematical and state utility functions
-├── index.html                  # Main HTML entrypoint
-├── package.json                # Project dependencies and script definitions
-├── playwright.config.ts        # Playwright E2E configuration
-├── tsconfig.app.json           # Application TypeScript configuration
-├── vite.config.ts              # Vite bundler configuration
-└── vitest.config.ts            # Vitest testing environment configuration
+React UI
+  ↓
+AnimatorContext (thin orchestration)
+  ↓
+Domain hooks: playback, timeline, history, clipboard, serialization, broadcast
+  ↓
+Pure utilities and canonical evaluators
+  ↓
+SVG canvas / matte compositor and OGraf adapters
+  ↓
+Scene serialization and optional REST persistence
 ```
 
----
+`Track.channels` is the canonical animation representation. `evaluateTransform` and `evaluateFrame` own animation evaluation, while `shapeGeometry` and `buildMattePath` own geometry and matte paths. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for module responsibilities and [docs/interop/V6_LOTTIE_MAPPING.md](docs/interop/V6_LOTTIE_MAPPING.md) for current interchange boundaries.
 
-## 🛠️ Technology Stack
+## OGraf and interoperability
 
-| Layer | Technology |
-| :--- | :--- |
-| **Frontend UI** | React 19.2, TypeScript 6.0, Vite 8.1, Lucide React, CSS3 Glassmorphism |
-| **Animation & Render Engine** | SVG Vector Engine, Matrix Trigonometry, Cubic Bezier Interpolation |
-| **Backend REST API** | Node.js, Express 5.2, CORS, Dotenv |
-| **Database Layer** | PostgreSQL 16 (Production) + Embedded SQLite 3 (Zero-config Fallback) |
-| **Testing & Quality** | Vitest 4.1, React Testing Library, Playwright 1.62, Oxlint |
+KCS includes OGraf-oriented export and runtime paths for the supported scene subset. Export is not a claim of complete EBU or third-party player parity: unsupported V6 compositing is retained in `scene.kcs` and reported rather than silently flattened. The detailed mapping and compatibility boundary are documented in [V6 Lottie Mapping](docs/interop/V6_LOTTIE_MAPPING.md) and the source architecture.
 
----
+## Getting started
 
-## 🚀 Quick Start
+### Prerequisites
 
-### 1. Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm**: v9.0.0 or higher
+- Node.js 22 or newer (the CI workflow uses Node.js 22)
+- npm
 
-### 2. Installation
+### Run locally
+
 ```bash
 git clone https://github.com/ErtugrulAK/keyframe-character-studio.git
 cd keyframe-character-studio
 npm install
-```
-
-### 3. Running the Application
-
-#### Concurrent Mode (Frontend + Backend Server)
-```bash
 npm run dev
 ```
-- Frontend Dev Server: [http://localhost:5173](http://localhost:5173)
-- Backend REST API: [http://localhost:5000](http://localhost:5000)
 
-#### Independent Frontend Dev Server
+Open [http://localhost:5173](http://localhost:5173). `npm run dev` starts the Vite frontend and the Express service together. The backend uses the configured database connection when available and has the repository's embedded SQLite path for local development.
+
+### Verification commands
+
 ```bash
-npm run dev:frontend
-```
-
-#### Independent Backend REST API Server
-```bash
-npm run server
-```
-
-### 4. Database Setup (Optional)
-By default, the backend automatically creates and uses an embedded local SQLite database (`keyframe_studio.sqlite`). If PostgreSQL is installed:
-```bash
-npm run db:setup
-```
-*(For detailed PostgreSQL instructions, refer to [docs/postgres-setup-guide.md](docs/postgres-setup-guide.md))*
-
----
-
-## 🧪 Testing & Validation
-
-### Unit & Integration Tests (Vitest)
-Run the Vitest test suite covering 21 test files (62 tests):
-```bash
-npx vitest run
-```
-
-To run tests with limited memory allocation or sequential execution:
-```bash
-npx vitest run --maxWorkers=2
-```
-
-### End-to-End Tests (Playwright)
-Run the Playwright E2E test suite:
-```bash
+npm test
 npm run test:e2e
-```
-
-### Type Checking & Linting
-```bash
 npx tsc --noEmit
 npm run lint
-```
-
-### Production Build
-```bash
 npm run build
+npm run qa:v6
 ```
 
----
+The V6/UI branch has recent verified results for the full regression and focused V6 checks. Always recalculate results from the commit you are testing; historical report counts are not a substitute for current command output.
 
-## 🌐 API Overview
+## Repository guide
 
-The Express backend exposes endpoints for project persistence, motion presets, and health checks:
+- `src/components/` — editor UI, canvas, Inspector, timeline, graph, and broadcast surfaces
+- `src/hooks/` — domain orchestration and state authorities
+- `src/utils/` — deterministic evaluation, geometry, migration, and mutation helpers
+- `src/ograf/` — OGraf export and runtime adapters
+- `e2e/` — Playwright browser and pixel regression coverage
+- `docs/ARCHITECTURE.md` — detailed architecture
+- `docs/V6_PLUS_ANIMATION_ROADMAP.md` — current delivered boundary and future work
+- `CONTRIBUTING.md` — contributor setup and verification expectations
 
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `GET` | `/api/health` | Health check reporting service status and active DB (PostgreSQL vs SQLite) |
-| `GET` | `/api/projects` | Fetch list of saved animation projects |
-| `GET` | `/api/projects/:id` | Fetch detailed project payload by ID |
-| `POST` | `/api/projects` | Save or update an animation project |
-| `DELETE` | `/api/projects/:id` | Delete a project by ID |
-| `GET` | `/api/presets` | Fetch available custom motion presets |
-| `POST` | `/api/presets` | Create or update a custom motion preset |
+## Current status
 
-*(For full endpoint request/response payloads, see [docs/API.md](docs/API.md))*
+KCS is in active development. The V6 motion core and professional UI work are available on their feature branches and this presentation branch is based on `feat/v6-ui-redesign`. The project is not presented as production-ready software or as complete standard parity. Browser verification is currently Chromium-focused; Firefox and Safari remain unverified.
 
----
+## Roadmap
 
-## 📜 NPM Scripts Reference
+The short-term roadmap is maintained in [V6+ Animation Roadmap](docs/V6_PLUS_ANIMATION_ROADMAP.md). Confirmed future areas include deeper Bézier tangent authoring, explicit matte source selection, Lottie interchange, editable Speed Graph controls after a defined temporal conversion, and measured runtime-scale improvements. No roadmap item carries a promised release date.
 
-| Script | Command | Description |
-| :--- | :--- | :--- |
-| `dev` | `concurrently "node server/index.js" "vite --host"` | Runs backend server and frontend dev server concurrently |
-| `dev:frontend` | `vite --host` | Starts Vite frontend dev server on port `5173` |
-| `server` | `node server/index.js` | Starts Express REST API backend server on port `5000` |
-| `db:setup` | `node scripts/setup-db.js` | Executes PostgreSQL database setup and seeds initial data |
-| `build` | `tsc -b && vite build` | Compiles TypeScript and builds Vite production bundle |
-| `lint` | `oxlint` | Runs Oxlint code quality and static analysis |
-| `preview` | `vite preview` | Previews production build locally |
-| `test:e2e` | `playwright test` | Executes Playwright end-to-end tests |
+## Contributing
 
----
+Start with [CONTRIBUTING.md](CONTRIBUTING.md). For behavior changes, preserve canonical authorities, add regression coverage at the correct seam, and browser-check interaction or rendering changes. Pull requests should remain focused and must not weaken assertions to conceal regressions.
 
-## 🤝 Contributing
+## Security
 
-Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style, conventional commits, branch workflow (`.agents/BRANCH_STRATEGY.md`), and pull request guidelines.
+See [SECURITY.md](SECURITY.md) for supported-version scope and vulnerability reporting guidance.
 
----
+## License
 
-## 📄 License
-
-This project is licensed under the [MIT License](LICENSE).
+KCS is distributed under the [MIT License](LICENSE). Copyright (c) 2026 ErtugrulAK.

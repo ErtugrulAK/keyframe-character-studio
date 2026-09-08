@@ -1,35 +1,36 @@
-## Summary of Changes
+## Summary
 
-Brief description of what this PR introduces or fixes.
+<!-- What user-visible problem does this change solve? -->
 
----
+## Scope and authority
 
-## Affected Domain
+- Affected area: <!-- UI, timeline, renderer, animation, persistence, backend, infrastructure, docs -->
+- Canonical authority reused: <!-- hook, utility, evaluator, renderer, serializer, or other -->
+- Out of scope:
 
-Select the domain branch matching this change:
+## Verification
 
-- [ ] `ui` (Toolbars, Inspector, Modals, Drawers)
-- [ ] `timeline` (Sequencer Timeline, Keyframes, Tracks)
-- [ ] `renderer` (Canvas Engine, SVG, Gizmo, Shapes, Masks)
-- [ ] `animation` (Playback, Interpolation, Math, Broadcast Engine)
-- [ ] `backend` (Express REST API, PostgreSQL, SQLite)
-- [ ] `infrastructure` (Workflows, Tests, Build Configs)
+- [ ] `npx tsc --noEmit`
+- [ ] `npm run lint`
+- [ ] `npm test`
+- [ ] `npm run build`
+- [ ] Relevant Playwright or `npm run qa:v6` checks
+- [ ] Browser verification for UI/rendering changes
+- [ ] Screenshots attached for visual changes
 
----
+## Compatibility and risk
 
-## Verification & Testing Checklist
+- [ ] Legacy import/export and saved-project behavior preserved
+- [ ] No parallel evaluator, clock, serializer, history store, clipboard, or compositor introduced
+- Regression risk and remaining limitations:
 
-Please check all items that apply:
+## Review checklist
 
-- [ ] `npx tsc --noEmit` completes with 0 type errors
-- [ ] `npm run lint` completes cleanly
-- [ ] `npx vitest run` passes all 21 test suites (62 tests)
-- [ ] `npm run build` completes successfully
-- [ ] Added or updated unit/integration tests in `src/tests/`
-- [ ] Commit messages follow Conventional Commits format
+- [ ] Scope is focused; unrelated refactors are excluded
+- [ ] Tests defend observable behavior or compatibility where applicable
+- [ ] No secrets, private files, or generated artifacts are included
+- [ ] Commit messages follow Conventional Commits
 
----
+## Related issues
 
-## Related Issues
-
-Fixes #
+<!-- Fixes #123 or Related to #123 -->

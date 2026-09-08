@@ -1,4 +1,4 @@
-import type { CharacterPart, LayerMask } from '../types/animator';
+import type { CharacterPart } from '../types/animator';
 import type { EvaluatedLayer, LayerContent } from '../types/composition';
 import { buildBezierPathD } from '../utils/bezierPath';
 import { buildFreeformPath } from '../utils/freeform';
@@ -159,46 +159,38 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
   const part = asCharacterPart(target);
   const region = `M 0 0 H ${scene.width} V ${scene.height} H 0 Z`;
   const definitions: string[] = [];
-  const ids: string[] = [];
-  let additivePaths: string[] = [];
-  let additiveMask: LayerMask | undefined;
-  const flushAdditive = () => {
-    if (!additiveMask || additivePaths.length === 0) return;
-    const definition = buildLayerMaskDefinition(part, { ...additiveMask, path: additiveMask.path }, target.transform, { x: scene.width / 2, y: scene.height / 2 });
-    if (definition) {
-      const id = safeSvgId(`kcs-ograf-layer-mask-${target.id}-${additiveMask.id}-add`);
-      const filter = definition.feather > 0 || definition.expansion !== 0
-        ? `<filter id="${safeSvgId(layerMaskFilterId(id))}" filterUnits="userSpaceOnUse"><feMorphology operator="${definition.expansion > 0 ? 'dilate' : 'erode'}" radius="${Math.abs(definition.expansion)}" />${definition.feather > 0 ? `<feGaussianBlur stdDeviation="${definition.feather / 2}" />` : ''}</filter>`
-        : '';
-      definitions.push(`${filter}<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha"><path d="${escapeXml(additivePaths.join(' '))}" fill="white" fill-opacity="${definition.opacity}"${filter ? ` filter="url(#${safeSvgId(layerMaskFilterId(id))})` : ''} /></mask>`);
-      ids.push(id);
-    }
-    additiveMask = undefined;
-    additivePaths = [];
-  };
-  for (const mask of masks) {
-    if (mask.enabled === false) continue;
+  let previousId: string | undefined;
+  masks.forEach((mask) => {
     const definition = buildLayerMaskDefinition(part, mask, target.transform, { x: scene.width / 2, y: scene.height / 2 });
-    if (!definition) continue;
-    if (mask.mode === 'add' && mask.inverted !== true) {
-      const compatible = additiveMask && additiveMask.opacity === mask.opacity && additiveMask.feather === mask.feather && additiveMask.expansion === mask.expansion;
-      if (!compatible) flushAdditive();
-      if (!additiveMask) additiveMask = mask;
-      additivePaths.push(definition.pathD);
-      continue;
-    }
-    flushAdditive();
-    const id = safeSvgId(`kcs-ograf-layer-mask-${target.id}-${mask.id}`);
-    const hole = mask.mode === 'subtract' || mask.mode === 'difference' ? mask.inverted !== true : mask.inverted === true;
-    const path = hole ? `${region} ${definition.pathD}` : definition.pathD;
+    if (!definition) return;
+    const id = safeSvgId(`kcs-ograf-layer-mask-${target.id}-${mask.id}${definition.mode === 'add' && !previousId ? '-add' : ''}`);
+    const effectiveMode = definition.inverted
+      ? definition.mode === 'add' ? 'subtract' : definition.mode === 'subtract' ? 'add' : 'difference'
+      : definition.mode;
     const filter = definition.feather > 0 || definition.expansion !== 0
       ? `<filter id="${safeSvgId(layerMaskFilterId(id))}" filterUnits="userSpaceOnUse"><feMorphology operator="${definition.expansion > 0 ? 'dilate' : 'erode'}" radius="${Math.abs(definition.expansion)}" />${definition.feather > 0 ? `<feGaussianBlur stdDeviation="${definition.feather / 2}" />` : ''}</filter>`
       : '';
-    definitions.push(`${filter}<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha"><path d="${escapeXml(path)}" fill="white" fill-opacity="${hole ? 1 : definition.opacity}" fill-rule="${hole ? 'evenodd' : 'nonzero'}"${filter ? ` filter="url(#${safeSvgId(layerMaskFilterId(id))})` : ''} />${hole && definition.opacity < 1 ? `<path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${1 - definition.opacity}" />` : ''}</mask>`);
-    ids.push(id);
-  }
-  flushAdditive();
-  return { defs: definitions.join(''), ids };
+    let body: string;
+    if (!previousId) {
+      const hole = effectiveMode === 'subtract' || effectiveMode === 'difference';
+      body = `<path d="${escapeXml(hole ? `${region} ${definition.pathD}` : definition.pathD)}" fill="white" fill-opacity="${hole ? 1 : definition.opacity}" fill-rule="${hole ? 'evenodd' : 'nonzero'}" />`;
+    } else if (effectiveMode === 'add') {
+      body = `<rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" mask="url(#${previousId})" /><path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${definition.opacity}" />`;
+    } else if (effectiveMode === 'difference') {
+      const shapeId = `${id}-shape`;
+      const previousInverse = `${previousId}-inverse`;
+      const currentInverse = `${id}-inverse`;
+      definitions.push(`<mask id="${shapeId}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse"><path d="${escapeXml(definition.pathD)}" fill="white" /></mask><mask id="${previousInverse}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" /><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="black" mask="url(#${previousId})" /></mask><mask id="${currentInverse}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" /><path d="${escapeXml(definition.pathD)}" fill="black" /></mask>`);
+      body = `<g mask="url(#${currentInverse})"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" mask="url(#${previousId})" /></g><g mask="url(#${previousInverse})"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" mask="url(#${shapeId})" /></g>`;
+    } else {
+      body = effectiveMode === 'intersect'
+        ? `<path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${definition.opacity}" mask="url(#${previousId})" />`
+        : `<rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" mask="url(#${previousId})" /><path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${definition.opacity}" />`;
+    }
+    definitions.push(`${filter}<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha" data-mask-operation="${effectiveMode}">${body}</mask>`);
+    previousId = id;
+  });
+  return { defs: definitions.join(''), ids: previousId ? [previousId] : [] };
 }
 
 function getMatteRelationship(layer: EvaluatedLayer): MatteRelationship | undefined {

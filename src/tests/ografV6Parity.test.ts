@@ -81,6 +81,9 @@ describe('OGraf V6 compositor parity', () => {
     expect(midpoint).toContain('kcs-ograf-layer-mask-target-subtract');
     expect(midpoint).toContain('kcs-ograf-layer-mask-target-intersect');
     expect(midpoint).toContain('kcs-ograf-layer-mask-target-difference');
+    expect(midpoint).toContain('data-mask-operation="difference"');
+    expect(midpoint).toContain('kcs-ograf-layer-mask-target-difference-inverse');
+    expect(midpoint).toContain('kcs-ograf-layer-mask-target-intersect-inverse');
     expect(midpoint).toContain('C');
     expect(midpoint).toContain('kcs-ograf-track-matte-target-source-alpha');
     expect(midpoint).not.toContain('data-layer-id="source"');

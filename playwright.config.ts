@@ -10,7 +10,6 @@ export default defineConfig({
   testDir: './e2e',
   forbidOnly: isCiRun,
   retries: isCiRun ? 2 : 0,
-  workers: isCiRun ? 1 : undefined,
   reporter: 'html',
   use: {
     baseURL: `http://${qaHost}:${qaPort}`,

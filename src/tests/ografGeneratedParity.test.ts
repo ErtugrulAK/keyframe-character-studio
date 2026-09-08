@@ -178,12 +178,12 @@ describe('generated runtime parity', () => {
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
     expect(graphic.innerHTML).toContain('fill-opacity="0.2"');
-    expect(graphic.innerHTML).toContain('fill-opacity="1" fill-rule="evenodd"');
-    expect(graphic.innerHTML).toContain('fill-opacity="0.75"');
+    expect(graphic.innerHTML).toContain('data-mask-operation="subtract"');
+    expect(graphic.innerHTML).toContain('fill-opacity="0.25"');
     expect(graphic.innerHTML).toContain('feMorphology');
     expect(graphic.innerHTML).toContain('feGaussianBlur');
     await graphic.playAction({ skipAnimation: true });
-    expect(graphic.innerHTML).toContain('fill-opacity="0.25"');
+    expect(graphic.innerHTML).toContain('fill-opacity="0.75"');
     expect(graphic.innerHTML).toContain('M 136 72');
     await graphic.dispose();
   });

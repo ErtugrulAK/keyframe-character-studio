@@ -4,6 +4,8 @@ import { buildBezierPathD } from './bezierPath';
 import { getPartBounds } from './bounds';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from './projectCoordinates';
 
+export type LayerMaskCompositeMode = 'add' | 'subtract' | 'intersect' | 'difference';
+
 export interface LayerMaskSvgDefinition {
   id: string;
   pathD: string;
@@ -12,6 +14,9 @@ export interface LayerMaskSvgDefinition {
   opacity: number;
   feather: number;
   expansion: number;
+  /** Previous accumulated stack and the ordered operation for this step. */
+  previousId?: string;
+  compositeMode?: LayerMaskCompositeMode;
 }
 
 export const layerMaskId = (partId: string, maskId: string): string => `kcs-layer-mask-${partId}-${maskId}`;

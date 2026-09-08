@@ -199,32 +199,21 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     const evaluatedMasks = evaluated?.content.masks ?? part.masks;
     if (!evaluated || !evaluatedMasks?.length) continue;
     const ids: string[] = [];
-    let additive: LayerMaskSvgDefinition | undefined;
-    let additivePaths: string[] = [];
-    const flushAdditive = () => {
-      if (!additive || additivePaths.length === 0) return;
-      const combined = { ...additive, pathD: additivePaths.join(' ') };
-      layerMaskDefinitions.set(combined.id, combined);
-      ids.push(combined.id);
-      additive = undefined;
-      additivePaths = [];
-    };
+    let previousId: string | undefined;
     for (const mask of evaluatedMasks) {
       const definition = buildLayerMaskDefinition(part, mask, evaluated.transform, outputOrigin);
       if (!definition) continue;
-      if (definition.mode === 'add' && !definition.inverted) {
-        const compatible = additive && additive.opacity === definition.opacity && additive.feather === definition.feather && additive.expansion === definition.expansion;
-        if (!compatible) flushAdditive();
-        if (!additive) additive = { ...definition, id: `${definition.id}-add` };
-        additivePaths.push(definition.pathD);
-        continue;
-      }
-      flushAdditive();
-      layerMaskDefinitions.set(definition.id, definition);
-      ids.push(definition.id);
+      const id = `kcs-layer-mask-${part.id}-${mask.id}${definition.mode === 'add' && !previousId ? '-add' : ''}`;
+      const compositeMode = definition.inverted
+        ? definition.mode === 'add' ? 'subtract' : definition.mode === 'subtract' ? 'add' : 'difference'
+        : definition.mode;
+      layerMaskDefinitions.set(id, { ...definition, id, previousId, compositeMode });
+      previousId = id;
     }
-    flushAdditive();
-    if (ids.length > 0) layerMaskIdsByPart.set(part.id, ids);
+    if (previousId) {
+      ids.push(previousId);
+      layerMaskIdsByPart.set(part.id, ids);
+    }
   }
 
   // M11 Step 2B / M13 Step 2C — Track matte: build ONE world-space clipPath
@@ -471,10 +460,6 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     height: projectResolution?.height ?? 1080,
   };
   const layerMaskOuterPath = `M ${region.x} ${region.y} H ${region.x + region.width} V ${region.y + region.height} H ${region.x} Z`;
-  const layerMaskUsesHole = (definition: LayerMaskSvgDefinition): boolean =>
-    definition.mode === 'subtract' || definition.mode === 'difference'
-      ? !definition.inverted
-      : definition.inverted;
   const layerMaskFilterUrl = (definition: LayerMaskSvgDefinition): string | undefined =>
     definition.feather > 0 || definition.expansion !== 0
       ? `url(#${layerMaskFilterId(definition.id)})`
@@ -571,34 +556,24 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
             </filter>
           ))}
         {[...layerMaskDefinitions.values()].map((definition) => {
-          const hole = layerMaskUsesHole(definition);
-          const path = hole
-            ? `${layerMaskOuterPath} ${definition.pathD}`
-            : definition.pathD;
-          return (
-            <mask
-              key={definition.id}
-              id={definition.id}
-              x={region.x}
-              y={region.y}
-              width={region.width}
-              height={region.height}
-              maskUnits="userSpaceOnUse"
-              maskContentUnits="userSpaceOnUse"
-              mask-type="alpha"
-            >
-              <path
-                d={path}
-                fill="white"
-                fillOpacity={hole ? 1 : definition.opacity}
-                fillRule={hole ? 'evenodd' : undefined}
-                filter={layerMaskFilterUrl(definition)}
-              />
-              {hole && definition.opacity < 1 && (
-                <path d={definition.pathD} fill="black" fillOpacity={1 - definition.opacity} />
-              )}
-            </mask>
-          );
+          const operation = definition.compositeMode ?? definition.mode;
+          const hole = operation === 'subtract' || operation === 'difference';
+          const shapeId = `${definition.id}-shape`;
+          const inverseId = `${definition.previousId ?? definition.id}-inverse`;
+          const currentInverse = `${definition.id}-inverse`;
+          const body = !definition.previousId
+            ? <path d={hole ? `${layerMaskOuterPath} ${definition.pathD}` : definition.pathD} fill="white" fillOpacity={hole ? 1 : definition.opacity} fillRule={hole ? 'evenodd' : undefined} filter={layerMaskFilterUrl(definition)} />
+            : operation === 'add'
+              ? <><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" mask={`url(#${definition.previousId})`} /><path d={definition.pathD} fill="white" fillOpacity={definition.opacity} filter={layerMaskFilterUrl(definition)} /></>
+              : operation === 'intersect'
+                ? <path d={definition.pathD} fill="white" fillOpacity={definition.opacity} mask={`url(#${definition.previousId})`} filter={layerMaskFilterUrl(definition)} />
+                : operation === 'difference'
+                  ? <><g mask={`url(#${currentInverse})`}><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" mask={`url(#${definition.previousId})`} /></g><g mask={`url(#${inverseId})`}><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" mask={`url(#${shapeId})`} /></g></>
+                  : <><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" mask={`url(#${definition.previousId})`} /><path d={definition.pathD} fill="black" fillOpacity={definition.opacity} filter={layerMaskFilterUrl(definition)} /></>;
+          const auxiliary = definition.previousId && operation === 'difference'
+            ? <><mask id={shapeId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><path d={definition.pathD} fill="white" /></mask><mask id={inverseId} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" /><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="black" mask={`url(#${definition.previousId})`} /></mask><mask id={`${definition.id}-inverse`} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse"><rect x={region.x} y={region.y} width={region.width} height={region.height} fill="white" /><path d={definition.pathD} fill="black" /></mask></>
+            : null;
+          return <React.Fragment key={definition.id}>{auxiliary}<mask id={definition.id} x={region.x} y={region.y} width={region.width} height={region.height} maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha" data-mask-operation={operation}>{body}</mask></React.Fragment>;
         })}
         {[...matteMasks.values()]
           .filter((m) => (m.feather ?? 0) > 0)

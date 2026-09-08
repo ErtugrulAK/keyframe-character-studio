@@ -4,7 +4,6 @@ import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
 import { isShapeAppearanceEligible } from '../../../utils/shapeAppearance';
 import { StyleTextFields } from './style/StyleTextFields';
-import { StyleGeometrySection } from './style/StyleGeometrySection';
 import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
 import { StyleEffectsSection } from './style/StyleEffectsSection';
@@ -41,7 +40,6 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
   return (
     <div className="inspector-section" style={{ paddingTop: 8 }}>
-      <StyleGeometrySection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
       {isTrimPathEligible(selectedPart.type) && <TrimPathSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
       {isShapeAppearanceEligible(selectedPart.type) && <StyleAppearanceSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
       {!isTextBearing && (

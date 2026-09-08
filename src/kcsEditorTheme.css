@@ -119,3 +119,217 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (prefers-reduced-motion: reduce) {
   button, .motion-design-right-sidebar, .left-toolbar-container { transition: none !important; }
 }
+
+/* UI polish: preserve the 79px shell frame while tightening internal rhythm. */
+.header-bar {
+  align-items: center;
+  gap: 8px;
+}
+
+@media (min-width: 801px) {
+  .header-bar {
+    flex-wrap: nowrap;
+  }
+}
+
+.header-brand,
+.header-center-controls,
+.header-actions {
+  min-width: 0;
+}
+
+.header-center-controls {
+  gap: 6px;
+}
+
+.details-actor-header {
+  min-height: 36px;
+  height: auto;
+  gap: 8px;
+}
+
+.actor-action-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.actor-mode-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: var(--kcs-text-muted);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.actor-mode-action:hover,
+.actor-mode-action:focus-visible,
+.actor-mode-action.active {
+  color: var(--kcs-text-primary);
+  background: var(--kcs-bg-active);
+  border-color: var(--kcs-border-subtle);
+  outline: none;
+}
+
+.actor-mode-action.active {
+  color: var(--kcs-accent);
+}
+
+.actor-action-divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 2px;
+  background: var(--kcs-border-subtle);
+}
+
+.appearance-group-corner-radius {
+  padding-bottom: var(--space-xs);
+  border-bottom: 1px solid var(--kcs-border-subtle);
+}
+
+.appearance-unit-value {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  color: var(--kcs-accent);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.appearance-unit-value strong {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.appearance-unit-value span {
+  color: var(--kcs-text-muted);
+  font-size: 9px;
+  letter-spacing: .06em;
+}
+
+.appearance-range {
+  width: 100%;
+  accent-color: var(--kcs-accent);
+  cursor: pointer;
+}
+
+.bezier-modal-shell {
+  max-width: 960px !important;
+  border-radius: 8px !important;
+  border-color: var(--kcs-border-default) !important;
+  background: var(--kcs-bg-panel) !important;
+}
+
+.bezier-modal-grid {
+  gap: 16px !important;
+  padding: 8px 20px 20px !important;
+}
+
+.bezier-modal-column {
+  gap: 12px !important;
+}
+
+.bezier-graph-surface {
+  border-radius: 6px !important;
+  border-color: var(--kcs-border-subtle) !important;
+  padding: 16px 10px !important;
+}
+
+.bezier-handle-grid {
+  gap: 8px !important;
+}
+
+.bezier-handle-card,
+.bezier-value-graph-card,
+.bezier-preview-card,
+.bezier-css-card {
+  border-radius: 6px !important;
+  border-color: var(--kcs-border-subtle) !important;
+  background: var(--kcs-bg-surface) !important;
+}
+
+.bezier-handle-card {
+  padding: 10px !important;
+}
+
+.bezier-handle-card input {
+  height: 28px !important;
+  padding: 0 8px !important;
+  border-radius: var(--kcs-radius-control) !important;
+  font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.bezier-value-graph-card {
+  padding: 10px !important;
+}
+
+.bezier-value-graph-card > div:first-child {
+  margin-bottom: 6px !important;
+}
+
+.bezier-value-graph-card > div:first-child button {
+  min-height: 26px;
+  flex: 1;
+  padding: 0 8px !important;
+  font-size: 10px;
+}
+
+.bezier-presets-section {
+  padding: 2px 0;
+}
+
+.bezier-presets-grid {
+  gap: 5px !important;
+}
+
+.bezier-presets-grid button {
+  min-height: 30px;
+  padding: 0 9px !important;
+  border-radius: var(--kcs-radius-control) !important;
+  border-color: var(--kcs-border-subtle) !important;
+  background: var(--kcs-bg-surface) !important;
+  font-size: 10px !important;
+}
+
+.bezier-presets-grid button:hover,
+.bezier-presets-grid button:focus-visible {
+  border-color: var(--kcs-border-focus) !important;
+  background: var(--kcs-bg-hover) !important;
+  outline: none;
+}
+
+.bezier-css-card {
+  padding: 10px !important;
+}
+
+.bezier-css-card span {
+  overflow-wrap: anywhere;
+  font-size: 11px !important;
+}
+
+.bezier-apply-button {
+  min-height: 32px;
+  padding: 0 !important;
+  border-radius: var(--kcs-radius-control) !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 820px) {
+  .bezier-modal-grid {
+    grid-template-columns: 1fr !important;
+  }
+}

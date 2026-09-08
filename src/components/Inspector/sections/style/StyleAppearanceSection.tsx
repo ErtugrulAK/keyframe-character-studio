@@ -36,9 +36,34 @@ const ColorControl: React.FC<{
 
 export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ selectedPart, onPartPropChange }) => {
   const strokeAlignment = toStrokeAlignmentControlValue(selectedPart.strokeAlignment);
+  const hasCornerRadiusControl =
+    selectedPart.type === 'custom_rect' ||
+    selectedPart.type === 'custom_box' ||
+    selectedPart.type === 'custom_card' ||
+    selectedPart.type === 'custom_banner';
 
   return (
     <StyleCard title="APPEARANCE" collapsible defaultOpen={false}>
+      {hasCornerRadiusControl && (
+        <div className="appearance-group appearance-group-corner-radius">
+          <div className="appearance-group-header">
+            <label htmlFor="appearance-corner-radius">CORNER RADIUS</label>
+            <span className="appearance-unit-value">
+              <strong>{selectedPart.borderRadius ?? 0}</strong>
+              <span> PX</span>
+            </span>
+          </div>
+          <input
+            id="appearance-corner-radius"
+            className="appearance-range"
+            type="range"
+            min={0}
+            max={40}
+            value={selectedPart.borderRadius ?? 0}
+            onChange={(event) => onPartPropChange('borderRadius', parseInt(event.target.value, 10))}
+          />
+        </div>
+      )}
       <div className="appearance-group">
         <div className="appearance-group-header">
           <label htmlFor="appearance-fill-enabled">FILL</label>

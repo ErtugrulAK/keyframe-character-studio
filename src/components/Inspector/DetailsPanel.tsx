@@ -360,15 +360,35 @@ export const DetailsPanel: React.FC = () => {
             <span className="actor-main-name">{selectedPart.name}</span>
           </div>
 
-          <div className="actor-quick-actions">
+          <div className="actor-action-row" role="group" aria-label="Inspector object actions">
             <button
+              type="button"
+              className={`actor-mode-action ${activeTabSection === 'edit' ? 'active' : ''}`}
+              onClick={() => setActiveTabSection('edit')}
+            >
+              <Activity size={12} />
+              <span>Edit</span>
+            </button>
+            <button
+              type="button"
+              className={`actor-mode-action ${activeTabSection === 'duplicate' ? 'active' : ''}`}
+              onClick={() => setActiveTabSection('duplicate')}
+            >
+              <CopyPlus size={12} className="text-teal" />
+              <span>Duplicate</span>
+            </button>
+            <span className="actor-action-divider" aria-hidden="true" />
+            <button
+              type="button"
               className="btn-icon-small"
               onClick={duplicateSelectedPart}
               title="Duplicate Actor Instance"
+              aria-label="Duplicate Actor Instance"
             >
               <Copy size={12} />
             </button>
             <button
+              type="button"
               className="btn-icon-small danger"
               onClick={selectedBooleanGroup ? dissolveBooleanGroup : () => deletePart(selectedPart.id)}
               title={selectedBooleanGroup ? 'Dissolve Boolean and preserve operands' : 'Delete Actor Instance'}
@@ -384,25 +404,6 @@ export const DetailsPanel: React.FC = () => {
         </div>
       )}
 
-      {/* 3. Section Navigation Tabs */}
-      {selectedPart && (
-        <div className="details-tabs-bar">
-          <button
-            className={`tab-btn ${activeTabSection === 'edit' ? 'active' : ''}`}
-            onClick={() => setActiveTabSection('edit')}
-          >
-            <Activity size={12} />
-            <span>Edit</span>
-          </button>
-          <button
-            className={`tab-btn ${activeTabSection === 'duplicate' ? 'active' : ''}`}
-            onClick={() => setActiveTabSection('duplicate')}
-          >
-            <CopyPlus size={12} className="text-teal" />
-            <span>Duplicate</span>
-          </button>
-        </div>
-      )}
 
       {/* 4. Property Section Body */}
       {selectedPart && transform && (

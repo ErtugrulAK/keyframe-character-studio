@@ -279,7 +279,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       }}
     >
       <div
-        className="bezier-modal-card"
+        className="bezier-modal-card bezier-modal-shell"
         style={{
           width: '100%',
           maxWidth: 920,
@@ -323,11 +323,11 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         </div>
 
         {/* Modal Content Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, padding: '12px 28px 28px 28px' }}>
+        <div className="bezier-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, padding: '12px 28px 28px 28px' }}>
           {/* Left Column: SVG Canvas + P1/P2 Coordinates */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="bezier-modal-column bezier-modal-main" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* SVG Canvas Box with Exact Red Limit Lines */}
-            <div
+            <div className="bezier-graph-surface"
               style={{
                 background: '#090b10',
                 borderRadius: 12,
@@ -342,8 +342,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
             </div>
 
             {/* Direct Coordinate Inputs */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <div style={{ background: '#181d2a', padding: '12px 14px', borderRadius: 8, border: '1px solid #283044' }}>
+            <div className="bezier-handle-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div className="bezier-handle-card" style={{ background: '#181d2a', padding: '12px 14px', borderRadius: 8, border: '1px solid #283044' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 8 }}>
                   P1 HANDLE (CYAN)
                 </span>
@@ -371,7 +371,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 </div>
               </div>
 
-              <div style={{ background: '#181d2a', padding: '12px 14px', borderRadius: 8, border: '1px solid #283044' }}>
+              <div className="bezier-handle-card" style={{ background: '#181d2a', padding: '12px 14px', borderRadius: 8, border: '1px solid #283044' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#fbbf24', display: 'block', marginBottom: 8 }}>
                   P2 HANDLE (GOLD)
                 </span>
@@ -399,7 +399,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 </div>
               </div>
             {onChangeKeyframeValue && (
-              <div style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
+              <div className="bezier-value-graph-card" style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
                   {(['value', 'speed'] as const).map((mode) => (
                     <button
@@ -425,9 +425,9 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           </div>
 
           {/* Right Column: Live Motion Simulation, Presets, Easing Code & Apply */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="bezier-modal-column bezier-modal-side" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Live Motion Test Box */}
-            <div style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
+            <div className="bezier-preview-card" style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
               {/* Duration & Play Controls */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -506,11 +506,11 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
             </div>
 
             {/* Presets Grid */}
-            <div>
+            <div className="bezier-presets-section">
               <label className="form-label" style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', display: 'block', marginBottom: 8 }}>
                 STUDIO BEZIER PRESETS
               </label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+              <div className="bezier-presets-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 {PRESET_BEZIERS.map((preset) => (
                   <button
                     key={preset.label}
@@ -537,7 +537,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
             </div>
 
             {/* CSS Code Output */}
-            <div style={{ background: '#181d2a', padding: 12, borderRadius: 8, border: '1px solid #283044' }}>
+            <div className="bezier-css-card" style={{ background: '#181d2a', padding: 12, borderRadius: 8, border: '1px solid #283044' }}>
               <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 4 }}>CSS EASING CODE</label>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: 12, fontFamily: 'monospace', color: '#38bdf8', fontWeight: 700 }}>
@@ -551,7 +551,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
             {/* Apply Button */}
             <button
-              className="btn-primary w-full"
+              className="btn-primary w-full bezier-apply-button"
               onClick={() => {
                 setIsModalOpen(false);
                 onCloseModal?.();

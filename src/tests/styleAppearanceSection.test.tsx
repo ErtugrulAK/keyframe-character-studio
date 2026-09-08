@@ -169,6 +169,30 @@ describe('StyleAppearanceSection', () => {
   });
 });
 
+describe('Corner Radius presentation', () => {
+  it.each(['custom_rect', 'custom_box', 'custom_card', 'custom_banner'] as const)(
+    'keeps Corner Radius inside Appearance for %s',
+    (type) => {
+      const onChange = vi.fn();
+      const { container } = openAppearance({ ...makePart(type), borderRadius: 8 }, onChange);
+
+      expect(screen.getByText('CORNER RADIUS')).toBeVisible();
+      expect(screen.getByText('PX')).toBeVisible();
+      expect(container.querySelector('.appearance-group-corner-radius')).toBeTruthy();
+      fireEvent.change(screen.getByLabelText('CORNER RADIUS'), { target: { value: '12' } });
+      expect(onChange).toHaveBeenCalledWith('borderRadius', 12);
+    },
+  );
+
+  it.each(['custom_triangle', 'custom_circle', 'custom_star', 'custom_diamond', 'custom_parallelogram', 'custom_freeform'] as const)(
+    'does not render Corner Radius for %s',
+    (type) => {
+      openAppearance(makePart(type), vi.fn());
+      expect(screen.queryByText('CORNER RADIUS')).toBeNull();
+    },
+  );
+});
+
 describe('Inspector disclosure sections', () => {
   it('closes Appearance by default and opens without mutating authored state', () => {
     const onChange = vi.fn();

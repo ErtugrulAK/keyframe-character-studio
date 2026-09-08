@@ -5,8 +5,8 @@ Metadata:
 - Milestone: KCS — DETERMINISTIC AGENT COMMANDS V2
 - Branch: chore/kcs-role-aware-routing
 - Starting HEAD: 7b3b5cf docs: record V2 UI redesign gate
-- Ending HEAD: 7b3b5cf before commit
-- Commit status: Pending final commit of supported routing/docs only
+- Ending HEAD: c895005 feat: add role-aware agent routing
+- Commit status: Committed and pushed to `origin/chore/kcs-role-aware-routing`
 - Report number: 037
 
 # 1. Executive Summary
@@ -255,7 +255,7 @@ Revisit only if a future OMP release documents and exposes a native command-hand
 - NO-GO implementation: no extension created.
 - Existing routing/docs work remains the supported deliverable.
 - `reports/model_routing_analysis.md` was pre-existing and preserved; its machine-specific config path was redacted before commit.
-- Commit/push decision: only supported routing/docs changes may be committed; no fake V2 extension may be committed.
+- Commit/push result: c895005 was committed and pushed; no fake V2 extension was committed.
 
 # 25. Updated Project Tree
 

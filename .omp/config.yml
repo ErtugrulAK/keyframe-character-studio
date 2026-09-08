@@ -1,0 +1,8 @@
+# Project-native task routing. Concrete model identities remain in the authoritative user modelRoles config.
+task:
+  agentModelOverrides:
+    designer-agent: "@designer"
+    reviewer-agent: "@advisor"
+    planner-agent: "@plan"
+    commit-agent: "@commit"
+    slow-agent: "@slow"

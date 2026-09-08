@@ -12,6 +12,17 @@ Follow this workflow:
 
 `DISCOVERY → CURRENT CONTRACT → USER GOAL → GAP → EXISTING AUTHORITIES TO REUSE → ALTERNATIVES → RISKS → IMPLEMENTATION → FOCUSED QA → FULL REGRESSION → SCOPE AUDIT → FINAL REPORT`
 
+## Role-aware delegation
+
+Keep the main milestone orchestrator on the configured DEFAULT/Luna model. Delegate only when the phase requires specialist work:
+
+- design-heavy research or visual critique → `designer-agent`;
+- difficult architecture or debugging blocker → `slow-agent`;
+- independent correctness or regression review → `reviewer-agent`;
+- generic implementation → the default `task` worker or direct implementation.
+
+Do not route every milestone phase through a specialist model. Specialist model selection is owned by project `task.agentModelOverrides`; the command itself does not select a model.
+
 ## 1. Discovery and safety
 
 - Read repository-root `AGENTS.md` first; it is the main engineering authority.

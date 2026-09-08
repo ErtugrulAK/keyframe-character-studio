@@ -333,3 +333,273 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     grid-template-columns: 1fr !important;
   }
 }
+:root {
+  --kcs-bg-active-muted: rgba(148, 163, 184, 0.09);
+  --kcs-bg-selected: rgba(41, 211, 183, 0.12);
+  --kcs-border-strong: rgba(148, 163, 184, 0.3);
+  --kcs-text-label: #9ca9b8;
+}
+
+/* V2 hierarchy: primary action color is reserved for meaningful state. */
+.header-center-controls > div {
+  background: var(--kcs-bg-input) !important;
+  border: 1px solid var(--kcs-border-subtle);
+  padding: 2px !important;
+  gap: 2px !important;
+}
+
+.header-center-controls > div > button {
+  height: 28px !important;
+  padding: 0 10px !important;
+  border: 1px solid transparent;
+  border-radius: 3px !important;
+  color: var(--kcs-text-secondary) !important;
+  background: transparent !important;
+  transition: background-color var(--kcs-motion-fast) ease, border-color var(--kcs-motion-fast) ease, color var(--kcs-motion-fast) ease !important;
+}
+
+.header-center-controls > div > .header-mode-button.active {
+  background: var(--kcs-bg-active-muted) !important;
+  border-color: var(--kcs-border-subtle);
+  color: var(--kcs-text-primary) !important;
+}
+
+.header-center-controls > div > .header-mode-button.broadcast.active {
+  color: var(--kcs-warning) !important;
+}
+.header-center-controls > div > button.header-mode-button:not(.active) {
+  background: transparent !important;
+  color: var(--kcs-text-secondary) !important;
+}
+
+.header-center-controls > div > button.header-mode-button.edit.active {
+  background: var(--kcs-bg-active-muted) !important;
+}
+
+.header-center-controls > div > button.header-mode-button.broadcast.active {
+  background: rgba(241, 183, 91, .12) !important;
+  border-color: rgba(241, 183, 91, .3);
+}
+
+.header-center-controls > div > button:hover,
+.header-center-controls > div > button:focus-visible {
+  background: var(--kcs-bg-hover) !important;
+  border-color: var(--kcs-border-strong);
+  color: var(--kcs-text-primary) !important;
+  outline: none;
+}
+
+.autosave-status-badge {
+  background: transparent;
+  border-color: transparent;
+  color: var(--kcs-text-muted);
+  padding-inline: 4px;
+}
+
+.sidebar-nav-item.active {
+  border-color: transparent;
+  background: var(--kcs-bg-active-muted);
+}
+
+.sidebar-nav-item.active .nav-icon {
+  color: var(--kcs-text-primary);
+}
+
+.outliner-header,
+.details-header {
+  background: var(--kcs-bg-panel);
+}
+
+.outliner-title,
+.details-title {
+  color: var(--kcs-text-label);
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+.btn-icon-sm {
+  color: var(--kcs-text-secondary);
+}
+
+.tree-node.selected {
+  background: var(--kcs-bg-selected);
+  border-left-color: transparent;
+}
+
+.details-actor-header {
+  border-bottom: 1px solid var(--kcs-border-subtle);
+}
+
+.details-body {
+  background: transparent;
+}
+
+/* Timeline hierarchy: compact transport and clearer lane/ruler separation. */
+.timeline-header {
+  height: 44px;
+  padding-inline: 10px;
+}
+
+.timeline-header-left,
+.timeline-header-center,
+.timeline-header-right {
+  gap: 6px;
+}
+
+.play-main-btn-teal {
+  width: 32px;
+  height: 32px;
+  background: var(--kcs-accent);
+  box-shadow: none;
+  transition: background-color var(--kcs-motion-fast) ease, transform var(--kcs-motion-fast) ease !important;
+}
+
+.play-main-btn-teal:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 0 2px rgba(41, 211, 183, .16);
+}
+
+.play-main-btn-teal.playing {
+  background: var(--kcs-accent-hover);
+  box-shadow: none;
+}
+
+.transport-btn,
+.zoom-btn,
+.fit-pill-btn {
+  height: 28px;
+}
+
+.fit-pill-btn {
+  border-radius: var(--kcs-radius-control);
+  padding-inline: 10px;
+}
+
+.timeline-header-right .btn-director.active {
+  background: var(--kcs-bg-active-muted);
+  border-color: var(--kcs-border-subtle);
+  color: var(--kcs-text-primary);
+}
+
+.ue-track-lane {
+  background-color: #11161e;
+  border-bottom-color: rgba(148, 163, 184, .11);
+}
+
+.ue-channel-lane,
+.ue-channel-header-lane {
+  background-color: #0f141b;
+  border-bottom-color: rgba(148, 163, 184, .08);
+}
+
+.ue-track-lane.selected {
+  background-color: rgba(41, 211, 183, .07);
+}
+
+.time-ruler {
+  background: #151b23;
+}
+
+/* Focused designer polish pass: flatten support surfaces and clarify state. */
+.header-tab.active {
+  background: var(--kcs-bg-active-muted);
+  border-color: var(--kcs-border-subtle);
+  color: var(--kcs-text-primary);
+  box-shadow: none;
+}
+
+.dropzone-box {
+  align-items: flex-start;
+  padding: 14px 10px;
+  border-style: solid;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+.dropzone-box:hover,
+.dropzone-box.drag-over {
+  background: var(--kcs-bg-active-muted);
+  border-color: var(--kcs-border-subtle);
+  box-shadow: none;
+}
+
+.details-empty-state {
+  padding: 14px 12px;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.timeline-seq-tab.active {
+  background: var(--kcs-bg-active-muted);
+  border-color: var(--kcs-border-subtle);
+  color: var(--kcs-text-primary);
+  box-shadow: none;
+}
+
+.bezier-handle-card,
+.bezier-value-graph-card,
+.bezier-preview-card,
+.bezier-css-card {
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.bezier-handle-card,
+.bezier-value-graph-card,
+.bezier-preview-card,
+.bezier-css-card {
+  border-bottom: 1px solid var(--kcs-border-subtle) !important;
+}
+
+.bezier-handle-card {
+  padding-inline: 0 !important;
+  padding-top: 4px !important;
+}
+
+.bezier-value-graph-card,
+.bezier-preview-card,
+.bezier-css-card {
+  padding-inline: 0 !important;
+}
+
+.bezier-modal-side {
+  gap: 10px !important;
+}
+
+.bezier-modal-shell,
+.details-dock,
+.outliner-dock,
+.sequencer-timeline {
+  overscroll-behavior: contain;
+}
+
+.bezier-presets-grid button {
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border-bottom: 1px solid var(--kcs-border-subtle) !important;
+  justify-content: flex-start !important;
+  gap: 8px;
+}
+
+.bezier-presets-grid button:hover,
+.bezier-presets-grid button:focus-visible {
+  background: var(--kcs-bg-active-muted) !important;
+  border-color: var(--kcs-border-subtle) !important;
+}
+
+.keyframe-diamond.selected,
+.ue-prop-diamond.selected {
+  box-shadow: 0 0 0 2px rgba(41, 211, 183, .18);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-center-controls > div > button,
+  .play-main-btn-teal {
+    transition: none !important;
+  }
+}

@@ -201,6 +201,7 @@ export const HeaderBar: React.FC = () => {
         <div className="header-center-controls">
           <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-dark)', borderRadius: 6, padding: '4px', gap: 4, flexShrink: 0 }}>
             <button
+              className={`header-mode-button edit ${appMode === 'edit' ? 'active' : ''}`}
               style={{
                 padding: '6px 12px',
                 borderRadius: 4,
@@ -216,6 +217,7 @@ export const HeaderBar: React.FC = () => {
               EDIT MODE
             </button>
             <button
+              className={`header-mode-button broadcast ${appMode === 'broadcast' ? 'active' : ''}`}
               style={{
                 padding: '6px 12px',
                 borderRadius: 4,

@@ -297,7 +297,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header Row with Close Button */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '16px 24px 0 24px' }}>
+        <div className="bezier-modal-header v3-graph-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '16px 24px 0 24px' }}>
           <button
             className="btn-icon"
             onClick={() => {
@@ -323,9 +323,9 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         </div>
 
         {/* Modal Content Grid */}
-        <div className="bezier-modal-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, padding: '12px 28px 28px 28px' }}>
+        <div className="bezier-modal-grid v3-graph-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, padding: '12px 28px 28px 28px' }}>
           {/* Left Column: SVG Canvas + P1/P2 Coordinates */}
-          <div className="bezier-modal-column bezier-modal-main" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="bezier-modal-column bezier-modal-main v3-graph-main" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* SVG Canvas Box with Exact Red Limit Lines */}
             <div className="bezier-graph-surface"
               style={{
@@ -425,7 +425,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           </div>
 
           {/* Right Column: Live Motion Simulation, Presets, Easing Code & Apply */}
-          <div className="bezier-modal-column bezier-modal-side" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div className="bezier-modal-column bezier-modal-side v3-graph-support" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Live Motion Test Box */}
             <div className="bezier-preview-card" style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
               {/* Duration & Play Controls */}

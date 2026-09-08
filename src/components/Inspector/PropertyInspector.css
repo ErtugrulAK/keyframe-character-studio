@@ -1637,3 +1637,140 @@
 .section-title-bar {
   border-color: var(--kcs-border-subtle);
 }
+/* V3 Inspector: selected-object identity and property-editor density. */
+.motion-design-right-sidebar {
+  background: #0d141b;
+  border-left-color: #2a3946;
+}
+
+.outliner-dock,
+.details-dock {
+  background: #0f171f;
+}
+
+.outliner-header,
+.details-header {
+  min-height: 36px;
+  background: #17222d;
+  border-bottom-color: #30404e;
+}
+
+.outliner-header {
+  padding-inline: 10px;
+}
+
+.details-header {
+  padding-inline: 10px;
+}
+
+.outliner-title,
+.details-title {
+  color: #8da4b4;
+  font-size: 10px;
+  letter-spacing: .12em;
+}
+
+.tree-node {
+  min-height: 28px;
+  border-left: 2px solid transparent;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.tree-node:hover {
+  background: #172631;
+}
+
+.tree-node.selected {
+  background: #1a353b;
+  border-left-color: var(--kcs-accent);
+}
+
+.actor-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.details-actor-header {
+  padding: 10px;
+  background: #111d26;
+  border-bottom-color: #30404e;
+}
+
+.actor-main-name {
+  font-size: 12px;
+  letter-spacing: .02em;
+}
+
+.details-body {
+  padding: 8px 10px 16px;
+  background: #0d141b;
+}
+
+.inspector-section,
+.panel-card,
+.inspector-section-card {
+  border-radius: 3px;
+}
+
+.panel-card {
+  padding: 8px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid #263442;
+}
+
+.inspector-section-header {
+  min-height: 30px;
+  padding: 0 0 7px;
+  border-bottom-color: #30404e;
+}
+
+.inspector-section-title {
+  color: #9db1bd;
+  font-size: 10px;
+  letter-spacing: .1em;
+}
+
+.inspector-section-content {
+  gap: 6px;
+  padding-top: 8px;
+}
+
+.transform-property-row,
+.appearance-field,
+.appearance-color-field,
+.matte-field {
+  min-height: 28px;
+}
+
+.param-label,
+.appearance-field-label,
+.transform-field-label {
+  color: #91a5b1;
+  font-size: 10px;
+}
+
+.motion-design-right-sidebar input[type="number"],
+.motion-design-right-sidebar input[type="text"],
+.motion-design-right-sidebar select,
+.motion-design-right-sidebar .input-control,
+.motion-design-right-sidebar .select-control {
+  font-variant-numeric: tabular-nums;
+  background: #091118;
+  border-color: #2c414e;
+}
+
+.motion-design-right-sidebar input:focus-visible,
+.motion-design-right-sidebar select:focus-visible,
+.motion-design-right-sidebar button:focus-visible {
+  outline: 2px solid var(--kcs-border-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-node {
+    transition: none;
+  }
+}

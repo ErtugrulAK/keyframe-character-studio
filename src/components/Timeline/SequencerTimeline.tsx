@@ -522,7 +522,7 @@ export const SequencerTimeline: React.FC = () => {
 
       {/* Header Bar */}
       <div className="timeline-header">
-        <div className="timeline-header-left" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="timeline-header-left timeline-header-band timeline-header-band-timing" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <Clock size={15} className="text-teal" />
             <span className="timecode-text">{formatTimecode(currentFrame, fps)}</span>
@@ -564,7 +564,7 @@ export const SequencerTimeline: React.FC = () => {
           </div>
         </div>
 
-        <div className="timeline-header-center">
+        <div className="timeline-header-center timeline-transport-band">
           <button className="btn-icon transport-btn" onClick={() => setCurrentFrame((f) => Math.max(0, f - 1))} title="Step Back"><SkipBack size={16} /></button>
           <button
             className={`play-main-btn-teal ${isPlaying ? 'playing' : ''}`}
@@ -582,7 +582,7 @@ export const SequencerTimeline: React.FC = () => {
           <button className={`btn-icon transport-btn ${isLooping ? 'active' : ''}`} onClick={() => setIsLooping(!isLooping)} title="Toggle Loop"><Repeat size={15} /></button>
         </div>
 
-        <div className="timeline-header-right">
+        <div className="timeline-header-right timeline-actions-band">
           <button
             type="button"
             className="btn-director active"
@@ -618,10 +618,10 @@ export const SequencerTimeline: React.FC = () => {
       </div>
 
       {/* Body: Left Outliner + Right Grid */}
-      <div className="timeline-body" ref={timelineBodyRef}>
+      <div className="timeline-body timeline-body-v3" ref={timelineBodyRef}>
 
         {/* ── LEFT OUTLINER ── */}
-        <div className="track-outliner ue-outliner">
+        <div className="track-outliner ue-outliner timeline-layer-pane">
           {/* Sticky ruler-height spacer to align with grid ruler */}
           <div className="ue-outliner-ruler-spacer">
             <span>LAYERS ({tracks.length})</span>
@@ -662,7 +662,7 @@ export const SequencerTimeline: React.FC = () => {
         </div>
 
         {/* ── RIGHT SCROLLABLE GRID ── */}
-        <div className="timeline-grid-container" ref={timelineGridRef} onScroll={handleGridScroll}>
+        <div className="timeline-grid-container timeline-graph-pane" ref={timelineGridRef} onScroll={handleGridScroll}>
           {/* Time Ruler */}
           <TimeRuler
             frameNumbers={frameNumbers}

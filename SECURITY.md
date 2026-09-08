@@ -1,33 +1,34 @@
 # Security Policy
 
-## Supported Versions
+## Supported versions
 
-The following versions of **Keyframe Character Studio** are currently supported with security updates:
+KCS is an actively developed prototype. There is no separately maintained release line or guaranteed security-support window at this time.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.0.x   | :white_check_mark: |
-| < 1.0.0 | :x:                |
+| Version or branch | Security fixes |
+| --- | --- |
+| Current development branch | Best effort during active development |
+| Older commits and branches | Not supported |
 
----
+## Reporting a vulnerability
 
-## Reporting a Vulnerability
+Please do not disclose a security vulnerability in a public GitHub issue.
 
-We take the security of Keyframe Character Studio seriously. If you discover a security vulnerability, please follow these steps:
+This repository currently has no verified security email address or published private response SLA. If GitHub's private vulnerability reporting or Security Advisories feature is enabled for the repository, use that private channel. Otherwise, contact the repository maintainers through an available private GitHub channel before public disclosure.
 
-1. **Do NOT open a public GitHub issue** for security vulnerabilities.
-2. Email a detailed vulnerability report to the repository maintainer.
-3. Include the following details in your report:
-   - Type of vulnerability (e.g., XSS, CORS misconfiguration, SQL injection)
-   - Steps to reproduce the issue
-   - Potential impact and affected components (e.g., Express REST API, PostgreSQL/SQLite queries)
-   - Proof-of-concept code or payload, if available
+Include, when safe to share:
 
----
+- affected commit, branch, or version;
+- operating system, browser, and deployment context;
+- reproducible steps or a minimal proof of concept;
+- affected surface, such as the browser UI, Express API, import/export, or database boundary;
+- potential impact and any suggested mitigation.
 
-## Security Practices in Keyframe Character Studio
+Please allow maintainers reasonable time to investigate before publishing details. Do not include real credentials, private project files, or personal data in a report.
 
-- **Environment Variables**: Sensitive configuration parameters (database credentials, API keys) must be stored in `.env` files and never committed to version control.
-- **REST API Payload Limits**: The Express backend enforces explicit JSON body payload limits (`50mb`).
-- **SQL Injection Prevention**: Database queries use parameterized placeholders (`$1`, `$2` for PostgreSQL; `?` for SQLite).
-- **CORS Protection**: CORS middleware is configured explicitly in `server/index.js`.
+## Security practices
+
+- Keep environment variables and credentials out of Git.
+- Validate imported project and preset data at external boundaries.
+- Use parameterized database queries in server code.
+- Review SVG, HTML, file-upload, and generated-runtime changes for injection and resource risks.
+- Treat browser, localStorage, JSON, API, and database responses as untrusted input.

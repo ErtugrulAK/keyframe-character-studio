@@ -86,19 +86,22 @@ Pending until this report is committed and the checkpoint branch is pushed. `mai
 
 ## Branch Topology Audit
 
-The V6 UI/routing chain is linear and contained through `feat/v6-ui-bold-v3`: motion core → UI redesign → UI polish → design v2 → role-aware routing → bold v3. The separate `docs/github-presentation` branch contains three unique commits and must be preserved unless explicitly integrated; it is not safe to delete.
+The V6 UI/routing chain is linear and contained in `integration/v6-ui-stable`: motion core → UI redesign → UI polish → design v2 → role-aware routing → bold v3 → stabilization checkpoint. Containment evidence before deletion was `git rev-list --left-right --count integration/v6-ui-stable...branch`: redesign `13 0`, polish `10 0`, design-v2 `6 0`, role-aware-routing `4 0`, bold-v3 `0 0`, motion-core `16 0`, and main `32 0`.
 
-Protected branches (`main`, `without-mask`, and unrelated `copilot/*`) remain kept. No branch has been deleted at report authoring time.
+`docs/github-presentation` reported `13 3` and was not contained; its three unique commits were preserved. `without-mask` exists remotely and was preserved. Unrelated `copilot/*` branches were preserved.
+
+The five fully contained historical UI/routing branches were safely deleted locally with `git branch -d` and remotely with normal `git push --delete`. No force deletion or history rewrite was used.
 
 ## Reviewer Findings
 
 `reviewer-agent` found no product or test stabilization blocker. It identified two process risks, both addressed in this checkpoint sequence: stale progress-041 status is superseded by this report, and the separate `docs/github-presentation` unique work is explicitly preserved.
-
 ## Main and Working Tree Status
 
+
 - Main: unchanged; `main` and `origin/main` remain at `8024d4f`.
-- Current checkpoint branch: `feat/v6-ui-bold-v3`.
-- Checkpoint working tree: expected clean after report commit.
+- Integration branch: `integration/v6-ui-stable`, HEAD `390a815`, tracking `origin/integration/v6-ui-stable`.
+- Checkpoint branch `feat/v6-ui-bold-v3`: pushed at `390a815` before safe cleanup.
+- Working tree: clean after the final report commit.
 
 ## SUBAGENT ORCHESTRATION
 
@@ -126,11 +129,15 @@ Parallelization effectiveness: PASS
 
 ## Branches Removed
 
-None yet.
+- `feat/v6-ui-redesign` — fully contained (`13 0`), local and remote deleted.
+- `feat/v6-ui-polish` — fully contained (`10 0`), local and remote deleted.
+- `feat/v6-ui-design-v2` — fully contained (`6 0`), local and remote deleted.
+- `chore/kcs-role-aware-routing` — fully contained (`4 0`), local and remote deleted.
+- `feat/v6-ui-bold-v3` — checkpoint ancestor (`0 0`), local and remote deleted after integration branch creation.
 
 ## Branches Kept
 
-`main`, `without-mask`, unrelated `copilot/*`, `docs/github-presentation` (unique commits), and all protected or not-yet-proven branches remain kept pending final containment evidence.
+`main`, `without-mask`, unrelated `copilot/*`, `feat/v6-motion-core`, `docs/github-presentation`, and other protected/unrelated branches remain kept. `docs/github-presentation` is protected by three unique unpreserved commits (`13 3`).
 
 ## Next Recommended Task
 

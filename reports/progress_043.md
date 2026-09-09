@@ -4,7 +4,7 @@
 
 V3.4 editor control cleanup is complete on `feat/v6-ui-v34-control-cleanup`, branched from `integration/v6-ui-stable@0289402`. Reset View now restores the canonical default viewport, the sidebar handles share one visual authority, native target tooltips were removed in favor of accessible names, and Canvas toolbar active-state behavior remains animation-driven. The final focused checks and full regression gates are green.
 
-Checkpoint commits are recorded after validation.
+Checkpoint commit: `ab4cf38` (`fix: stabilize V3.4 editor controls`).
 
 ## Scope and User Feedback
 
@@ -144,6 +144,7 @@ The only remaining observations are non-blocking future debt: viewport default l
 
 - Feature branch: `feat/v6-ui-v34-control-cleanup`.
 - Base: `integration/v6-ui-stable@0289402`.
+- Checkpoint commit: `ab4cf38`; pushed to `origin/feat/v6-ui-v34-control-cleanup`.
 - `main` and `origin/main` remain untouched at `8024d4f`.
 - No unrelated working-tree changes were identified.
 - No branch deletion, history rewrite, force push, or main mutation is permitted by this checkpoint.

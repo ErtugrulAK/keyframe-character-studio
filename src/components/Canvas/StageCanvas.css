@@ -175,3 +175,153 @@
 .stage-canvas-container.panning {
   cursor: grabbing;
 }
+/* V3.1 viewport tool selection: explicit motion and an anchored active rail. */
+.viewport-tools-overlay {
+  position: absolute;
+  isolation: isolate;
+}
+
+.viewport-tools-highlight {
+  position: absolute;
+  z-index: -1;
+  top: 5px;
+  left: 5px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(41,211,183,.58);
+  border-radius: 4px;
+  background: rgba(41,211,183,.12);
+  pointer-events: none;
+  transition: transform 180ms cubic-bezier(.2,.8,.2,1), border-color 180ms ease, background-color 180ms ease;
+}
+
+.viewport-tools-pan .viewport-tools-highlight {
+  border-color: rgba(56,189,248,.62);
+  background: rgba(56,189,248,.14);
+  transform: translateX(29px);
+}
+
+.viewport-btn {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 150ms ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport-tools-highlight,
+  .viewport-btn {
+    transition: none !important;
+  }
+}
+/* V3.2 reference-driven stretch -> slide -> settle highlight. */
+.viewport-tools-highlight {
+  width: 28px;
+  transform-origin: left center;
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(.65, 0, .35, 1);
+  animation-fill-mode: both;
+}
+
+.viewport-tools-select .viewport-tools-highlight {
+  animation-name: kcsViewportHighlightSelect;
+}
+
+.viewport-tools-pan .viewport-tools-highlight {
+  animation-name: kcsViewportHighlightPan;
+}
+
+@keyframes kcsViewportHighlightSelect {
+  0% { transform: translateX(30px) scaleX(1.18); }
+  55% { transform: translateX(-3px) scaleX(1.08); }
+  78% { transform: translateX(1px) scaleX(.96); }
+  100% { transform: translateX(0) scaleX(1); }
+}
+
+@keyframes kcsViewportHighlightPan {
+  0% { transform: translateX(0) scaleX(1.18); }
+  55% { transform: translateX(32px) scaleX(1.08); }
+  78% { transform: translateX(28px) scaleX(.96); }
+  100% { transform: translateX(29px) scaleX(1); }
+}
+
+.viewport-tool-choice:focus-visible {
+  outline: 2px solid rgba(125, 211, 252, .9);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport-tools-highlight {
+    animation: none !important;
+  }
+}
+/* V3.2 WAAPI owns stretch/slide/settle; CSS only supplies the resting state. */
+.viewport-tools-highlight {
+  animation: none !important;
+  transition: none !important;
+  will-change: transform, width;
+}
+.viewport-tools-highlight {
+  transform-origin: center center;
+}
+/* V3.3 viewport cleanup: flat semantic surface and focused active states. */
+.viewport-tools-overlay {
+  height: 36px;
+  gap: 3px;
+  padding: 0 5px;
+  background: var(--kcs-panel-elevated);
+  border: 1px solid var(--kcs-border-quiet);
+  border-radius: var(--kcs-radius-control);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .24);
+  overflow: hidden;
+}
+
+.viewport-btn {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: var(--kcs-radius-control);
+  color: var(--kcs-text-muted);
+}
+
+.viewport-btn:hover {
+  background: var(--kcs-hover);
+  color: var(--kcs-text-primary);
+}
+
+.viewport-btn.active {
+  background: var(--kcs-selected);
+  border: 0;
+  box-shadow: none;
+  color: var(--kcs-accent);
+}
+
+.viewport-btn:focus-visible {
+  outline: 2px solid var(--kcs-focus);
+  outline-offset: -2px;
+}
+
+.viewport-tools-overlay > div[style*="width: 1px"] {
+  background: var(--kcs-border-quiet) !important;
+  margin-inline: 4px !important;
+}
+
+.zoom-level-text {
+  min-width: 40px;
+  padding-inline: 3px;
+  color: var(--kcs-text-secondary);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 26px;
+  text-align: center;
+}
+
+.viewport-tools-highlight {
+  top: 4px;
+  left: 4px;
+  border: 1px solid var(--kcs-accent);
+  background: var(--kcs-selected);
+}
+
+.viewport-tools-pan .viewport-tools-highlight {
+  border-color: var(--kcs-accent-hover);
+  background: rgba(97, 230, 208, .12);
+}

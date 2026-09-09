@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom';
 import { Copy, Check, X, Play, Pause, Sparkles } from 'lucide-react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
 import { TemporalGraphPanel } from './TemporalGraphPanel';
+import { solveCubicBezier } from '../../utils/defaults';
 interface InteractiveCubicBezierEditorProps {
   controlPoints?: [number, number, number, number]; // [x1, y1, x2, y2]
   onChange: (points: [number, number, number, number]) => void;
@@ -26,6 +27,8 @@ const PRESET_BEZIERS: { label: string; points: [number, number, number, number] 
   { label: 'Slow Mo', points: [0.1, 1.0, 0.1, 1.0] },
   { label: 'Elastic', points: [0.68, -0.55, 0.265, 1.55] },
 ];
+const clampControlPoint = (value: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, value));
 
 export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditorProps> = ({
   controlPoints = [0.42, 0.0, 0.58, 1.0],
@@ -43,9 +46,16 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
   // Pro Studio Modal State
   const [previewDuration, setPreviewDuration] = useState<number>(1.2);
-  const [isPreviewPlaying, setIsPreviewPlaying] = useState<boolean>(true);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState<boolean>(false);
 
   const modalSvgRef = useRef<SVGSVGElement>(null);
+  const previewBallRef = useRef<HTMLDivElement>(null);
+  const modalCardRef = useRef<HTMLDivElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseModalRef = useRef(onCloseModal);
+  const draggingPointerIdRef = useRef<number | null>(null);
+  const draggingPointRef = useRef<1 | 2 | null>(null);
+  const suppressBackdropClickRef = useRef(false);
 
   const [p1, setP1] = useState<{ x: number; y: number }>({ x: controlPoints[0], y: controlPoints[1] });
   const [p2, setP2] = useState<{ x: number; y: number }>({ x: controlPoints[2], y: controlPoints[3] });
@@ -54,6 +64,77 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     setP1({ x: controlPoints[0], y: controlPoints[1] });
     setP2({ x: controlPoints[2], y: controlPoints[3] });
   }, [controlPoints]);
+  useEffect(() => {
+    onCloseModalRef.current = onCloseModal;
+  }, [onCloseModal]);
+  useEffect(() => {
+    if (!isModalOpen) return;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const getFocusableElements = () => Array.from(
+      modalCardRef.current?.querySelectorAll<HTMLElement>('button, input, select, textarea, [tabindex]:not([tabindex="-1"])') ?? [],
+    );
+    const focusInitial = () => getFocusableElements()[0]?.focus();
+    const handleModalKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsModalOpen(false);
+        onCloseModalRef.current?.();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusableElements = getFocusableElements();
+      if (focusableElements.length === 0) return;
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    const frame = window.requestAnimationFrame(focusInitial);
+    window.addEventListener('keydown', handleModalKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('keydown', handleModalKeyDown);
+      previousFocusRef.current?.focus();
+      previousFocusRef.current = null;
+    };
+  }, [isModalOpen]);
+
+  useEffect(() => {
+    const ball = previewBallRef.current;
+    if (!ball || typeof ball.animate !== 'function') return;
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const cancelAnimations = () => ball.getAnimations().forEach((animation) => animation.cancel());
+    const handleMotionPreferenceChange = () => {
+      if (mediaQuery.matches) cancelAnimations();
+    };
+    mediaQuery.addEventListener?.('change', handleMotionPreferenceChange);
+    cancelAnimations();
+    if (mediaQuery.matches || !isPreviewPlaying) {
+      return () => mediaQuery.removeEventListener?.('change', handleMotionPreferenceChange);
+    }
+    const keyframes = Array.from({ length: 25 }, (_, index) => {
+      const progress = index / 24;
+      const eased = solveCubicBezier(p1.x, p1.y, p2.x, p2.y, progress);
+      const bounded = Math.max(0, Math.min(1, eased));
+      return {
+        left: `clamp(14px, ${bounded * 100}%, calc(100% - 40px))`,
+      };
+    });
+    const animation = ball.animate(keyframes, {
+      duration: previewDuration * 1000,
+      easing: 'linear',
+      iterations: Infinity,
+      direction: 'alternate',
+    });
+    return () => {
+      animation.cancel();
+      mediaQuery.removeEventListener?.('change', handleMotionPreferenceChange);
+    };
+  }, [isPreviewPlaying, p1, p2, previewDuration]);
 
   const cssString = `cubic-bezier(${p1.x}, ${p1.y}, ${p2.x}, ${p2.y})`;
 
@@ -70,51 +151,47 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   };
 
   const getMotionAnalysis = () => {
-    let tags = [];
-    if (p1.y < 0 || p2.y < 0) tags.push('🎒 Anticipation Pullback');
-    if (p1.y > 1 || p2.y > 1) tags.push('🎯 Elastic Overshoot');
-    if (p1.x < 0.2 && p2.x < 0.2) tags.push('⚡ Instant Velocity Burst');
-    if (p1.x > 0.8 && p2.x > 0.8) tags.push('🐢 Delayed Impulse');
-    if (tags.length === 0) tags.push('✨ Smooth Easing Flow');
-    return tags.join(' • ');
+    const tags: string[] = [];
+    if (p1.y < 0 || p2.y < 0) tags.push('Anticipation pullback');
+    if (p1.y > 1 || p2.y > 1) tags.push('Elastic overshoot');
+    if (p1.x < 0.2 && p2.x < 0.2) tags.push('Instant velocity burst');
+    if (p1.x > 0.8 && p2.x > 0.8) tags.push('Delayed impulse');
+    if (tags.length === 0) tags.push('Smooth easing flow');
+    return tags.join(' · ');
   };
 
-  // Drag handle events on SVG canvas
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!draggingPoint || !modalSvgRef.current) return;
-      const rect = modalSvgRef.current.getBoundingClientRect();
-      const paddingX = 50;
-      const paddingY = 40;
-      const innerWidth = rect.width - paddingX * 2;
-      const innerHeight = rect.height - paddingY * 2;
-
-      // Mouse X & Y mapped strictly to math coordinates [0..1] and [-1.0..2.0] (range = 3.0)
-      const mouseX = e.clientX - rect.left - paddingX;
-      const mouseY = e.clientY - rect.top - paddingY;
-
-      const xClamped = Math.max(0, Math.min(1, parseFloat((mouseX / innerWidth).toFixed(2))));
-      const yNormalized = Math.max(0, Math.min(1, 1 - mouseY / innerHeight));
-      const yMath = parseFloat((-1.0 + yNormalized * 3.0).toFixed(2));
-
-      if (draggingPoint === 1) {
-        updatePoints({ x: xClamped, y: yMath }, p2);
-      } else {
-        updatePoints(p1, { x: xClamped, y: yMath });
-      }
-    };
-
-    const handleMouseUp = () => setDraggingPoint(null);
-
-    if (draggingPoint) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+  // Pointer capture keeps curve-handle drags alive when the pointer leaves the graph or modal.
+  const updateDraggedPoint = (clientX: number, clientY: number) => {
+    const point = draggingPointRef.current;
+    const svg = modalSvgRef.current;
+    if (!point || !svg) return;
+    const rect = svg.getBoundingClientRect();
+    const paddingX = 50;
+    const paddingY = 40;
+    const innerWidth = rect.width - paddingX * 2;
+    const innerHeight = rect.height - paddingY * 2;
+    const mouseX = clientX - rect.left - paddingX;
+    const mouseY = clientY - rect.top - paddingY;
+    const xClamped = Math.max(0, Math.min(1, parseFloat((mouseX / innerWidth).toFixed(2))));
+    const yNormalized = Math.max(0, Math.min(1, 1 - mouseY / innerHeight));
+    const yMath = parseFloat((-1.0 + yNormalized * 3.0).toFixed(2));
+    if (point === 1) {
+      updatePoints({ x: xClamped, y: yMath }, p2);
+    } else {
+      updatePoints(p1, { x: xClamped, y: yMath });
     }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [draggingPoint, p1, p2, updatePoints]);
+  };
+
+  const finishPointerDrag = () => {
+    if (!draggingPointRef.current) return;
+    draggingPointRef.current = null;
+    draggingPointerIdRef.current = null;
+    setDraggingPoint(null);
+    suppressBackdropClickRef.current = true;
+    window.setTimeout(() => {
+      suppressBackdropClickRef.current = false;
+    }, 0);
+  };
 
   // Helper for rendering SVG Graph with exact max/min limit red boundary lines [-1.0, 2.0]
   const renderSvgGraph = (
@@ -148,10 +225,26 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
     const bezierPathD = `M ${startP.sx},${startP.sy} C ${handle1P.sx},${handle1P.sy} ${handle2P.sx},${handle2P.sy} ${endP.sx},${endP.sy}`;
 
-    const handlePointerDown = (pointNum: 1 | 2, e: React.MouseEvent) => {
-      e.stopPropagation();
-      e.preventDefault();
+    const handlePointerDown = (pointNum: 1 | 2, event: React.PointerEvent<SVGGElement>) => {
+      event.stopPropagation();
+      event.preventDefault();
+      draggingPointRef.current = pointNum;
+      draggingPointerIdRef.current = event.pointerId;
       setDraggingPoint(pointNum);
+      event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+    const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
+      if (draggingPointerIdRef.current !== event.pointerId) return;
+      updateDraggedPoint(event.clientX, event.clientY);
+    };
+
+    const handlePointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
+      if (draggingPointerIdRef.current === event.pointerId) finishPointerDrag();
+    };
+
+    const handleLostPointerCapture = (event: React.PointerEvent<SVGSVGElement>) => {
+      if (draggingPointerIdRef.current === event.pointerId) finishPointerDrag();
     };
 
     return (
@@ -159,7 +252,10 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         ref={ref}
         width={svgWidth}
         height={svgHeight}
-        style={{ overflow: 'visible', cursor: draggingPoint ? 'grabbing' : 'default' }}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onLostPointerCapture={handleLostPointerCapture}
+        style={{ overflow: 'visible', cursor: draggingPoint ? 'grabbing' : 'default', touchAction: 'none' }}
       >
         {/* Unit Box (0 to 1) Solid Outline */}
         <rect
@@ -232,7 +328,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         <g
           transform={`translate(${handle1P.sx}, ${handle1P.sy})`}
           style={{ cursor: 'grab' }}
-          onMouseDown={(e) => handlePointerDown(1, e)}
+          onPointerDown={(event) => handlePointerDown(1, event)}
         >
           <circle r="12" fill="rgba(56, 189, 248, 0.2)" />
           <circle r="7" fill="#38bdf8" stroke="#ffffff" strokeWidth="2.5" />
@@ -245,7 +341,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         <g
           transform={`translate(${handle2P.sx}, ${handle2P.sy})`}
           style={{ cursor: 'grab' }}
-          onMouseDown={(e) => handlePointerDown(2, e)}
+          onPointerDown={(event) => handlePointerDown(2, event)}
         >
           <circle r="12" fill="rgba(251, 191, 36, 0.2)" />
           <circle r="7" fill="#fbbf24" stroke="#ffffff" strokeWidth="2.5" />
@@ -256,8 +352,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       </svg>
     );
   };
-
   if (!isModalOpen) return null;
+
 
   return ReactDOM.createPortal(
     <div
@@ -273,13 +369,18 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         justifyContent: 'center',
         padding: 20,
       }}
-      onClick={() => {
+      onClick={(event) => {
+        if (event.target !== event.currentTarget || suppressBackdropClickRef.current || draggingPointRef.current) return;
         setIsModalOpen(false);
-        onCloseModal?.();
+        onCloseModalRef.current?.();
       }}
     >
       <div
+        ref={modalCardRef}
         className="bezier-modal-card bezier-modal-shell"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bezier-modal-title"
         style={{
           width: '100%',
           maxWidth: 920,
@@ -297,7 +398,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header Row with Close Button */}
-        <div className="bezier-modal-header v3-graph-header" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', padding: '16px 24px 0 24px' }}>
+        <div className="bezier-modal-header v3-graph-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px 0 24px' }}>
+          <h2 id="bezier-modal-title" className="bezier-modal-title">Motion Curve Editor</h2>
           <button
             className="btn-icon"
             onClick={() => {
@@ -349,23 +451,26 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 </span>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X1 (0..1)</label>
-                    <input className="input-control"
+                    <label className="form-label" htmlFor="bezier-p1-x" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X1 (0..1)</label>
+                    <input id="bezier-p1-x" className="input-control"
                 type="number"
+                      min={0}
+                      max={1}
                       step={0.05}
                       value={p1.x}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onChange={(e) => updatePoints({ x: parseFloat(e.target.value) || 0, y: p1.y }, p2)}
+                      onChange={(e) => updatePoints({ x: clampControlPoint(parseFloat(e.target.value) || 0, 0, 1), y: p1.y }, p2)}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y1 (-1.0..2.0)</label>
-                    <input className="input-control"
+                    <label className="form-label" htmlFor="bezier-p1-y" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y1 (-1.0..2.0)</label>
+                    <input id="bezier-p1-y" className="input-control"
                 type="number"
+                      min={-1}
+                      max={2}
                       step={0.05}
                       value={p1.y}
-                      style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onChange={(e) => updatePoints({ x: p1.x, y: parseFloat(e.target.value) || 0 }, p2)}
+                      onChange={(e) => updatePoints({ x: p1.x, y: clampControlPoint(parseFloat(e.target.value) || 0, -1, 2) }, p2)}
                     />
                   </div>
                 </div>
@@ -377,27 +482,31 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                 </span>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X2 (0..1)</label>
-                    <input className="input-control"
-                type="number"
+                    <label className="form-label" htmlFor="bezier-p2-x" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>X2 (0..1)</label>
+                    <input id="bezier-p2-x" className="input-control"
+                      type="number"
+                      min={0}
+                      max={1}
                       step={0.05}
                       value={p2.x}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onChange={(e) => updatePoints(p1, { x: parseFloat(e.target.value) || 0, y: p2.y })}
+                      onChange={(e) => updatePoints(p1, { x: clampControlPoint(parseFloat(e.target.value) || 0, 0, 1), y: p2.y })}
                     />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label className="form-label" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y2 (-1.0..2.0)</label>
-                    <input className="input-control"
-                type="number"
+                    <label className="form-label" htmlFor="bezier-p2-y" style={{ fontSize: 10, color: '#94a3b8', display: 'block', marginBottom: 3 }}>Y2 (-1.0..2.0)</label>
+                    <input id="bezier-p2-y" className="input-control"
+                      type="number"
+                      min={-1}
+                      max={2}
                       step={0.05}
                       value={p2.y}
                       style={{ width: '100%', background: '#0e1118', border: '1px solid #2a3348', color: '#fff', borderRadius: 5, padding: '6px 8px', fontSize: 12, fontWeight: 600 }}
-                      onChange={(e) => updatePoints(p1, { x: p2.x, y: parseFloat(e.target.value) || 0 })}
+                      onChange={(e) => updatePoints(p1, { x: p2.x, y: clampControlPoint(parseFloat(e.target.value) || 0, -1, 2) })}
                     />
+                </div>
                   </div>
                 </div>
-              </div>
             {onChangeKeyframeValue && (
               <div className="bezier-value-graph-card" style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
                 <div style={{ display: 'flex', gap: 4, marginBottom: 8 }}>
@@ -427,25 +536,16 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           {/* Right Column: Live Motion Simulation, Presets, Easing Code & Apply */}
           <div className="bezier-modal-column bezier-modal-side v3-graph-support" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Live Motion Test Box */}
-            <div className="bezier-preview-card" style={{ background: '#181d2a', borderRadius: 10, border: '1px solid #283044', padding: 14 }}>
-              {/* Duration & Play Controls */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 11, color: '#94a3b8' }}>Test Speed:</span>
-                  <div style={{ display: 'flex', gap: 4 }}>
+            <div className="bezier-preview-card">
+              <div className="bezier-preview-toolbar">
+                <div className="bezier-preview-speed">
+                  <span>Test Speed</span>
+                  <div className="bezier-preview-speed-options">
                     {[0.6, 1.2, 1.8, 3.0].map((dur) => (
                       <button
                         key={dur}
-                        style={{
-                          fontSize: 10,
-                          padding: '3px 8px',
-                          background: previewDuration === dur ? '#14b8a6' : '#0e1118',
-                          color: previewDuration === dur ? '#000' : '#cbd5e1',
-                          border: `1px solid ${previewDuration === dur ? '#2dd4bf' : '#2a3348'}`,
-                          borderRadius: 4,
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
+                        type="button"
+                        className={previewDuration === dur ? 'is-active' : ''}
                         onClick={() => setPreviewDuration(dur)}
                       >
                         {dur}s
@@ -453,55 +553,30 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                     ))}
                   </div>
                 </div>
-
                 <button
-                  className="btn-icon"
-                  onClick={() => setIsPreviewPlaying(!isPreviewPlaying)}
-                  style={{ width: 24, height: 24, borderRadius: 4, background: '#0e1118', border: '1px solid #2a3348', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  type="button"
+                  className="btn-icon bezier-preview-play"
+                  onClick={() => {
+                    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+                    setIsPreviewPlaying((playing) => !playing);
+                  }}
                   title={isPreviewPlaying ? 'Pause Preview' : 'Play Preview'}
+                  aria-label={isPreviewPlaying ? 'Pause Preview' : 'Play Preview'}
                 >
                   {isPreviewPlaying ? <Pause size={12} /> : <Play size={12} />}
                 </button>
               </div>
 
-              {/* Motion Track with Ball Only */}
-              <div
-                style={{
-                  height: 54,
-                  background: '#090b10',
-                  borderRadius: 8,
-                  position: 'relative',
-                  overflow: 'hidden',
-                  border: '1px solid #232838',
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '0 12px',
-                }}
-              >
-                <style>{`
-                  @keyframes curveStudioPreviewAnim {
-                    0% { transform: translateX(0px); }
-                    50% { transform: translateX(230px); }
-                    100% { transform: translateX(0px); }
-                  }
-                `}</style>
-
-                {/* Always Render Glowing Cyan/Teal Ball Only */}
+              <div className="bezier-mini-stage" data-testid="bezier-mini-stage">
+                <div className="bezier-mini-stage-track" />
                 <div
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #14b8a6, #38bdf8)',
-                    boxShadow: '0 0 14px rgba(20, 184, 166, 0.6)',
-                    animation: isPreviewPlaying ? `curveStudioPreviewAnim ${previewDuration}s ${cssString} infinite` : 'none',
-                  }}
+                  ref={previewBallRef}
+                  className={`bezier-preview-ball${isPreviewPlaying ? ' is-playing' : ''}`}
                 />
               </div>
 
-              {/* Motion Characteristics Badge */}
-              <div style={{ marginTop: 10, fontSize: 11, fontWeight: 700, color: '#2dd4bf', textAlign: 'center' }}>
-                {getMotionAnalysis()}
+              <div className="bezier-preview-status" aria-live="polite">
+                {isPreviewPlaying ? 'Playing preview' : 'Preview paused'} · {getMotionAnalysis()}
               </div>
             </div>
 

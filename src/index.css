@@ -533,3 +533,23 @@ input[type="number"] {
     min-width: 0;
   }
 }
+/* V3.3 semantic editor palette aliases. */
+:root {
+  --kcs-shell: var(--kcs-bg-app);
+  --kcs-rail: #0e131a;
+  --kcs-panel: var(--kcs-bg-panel);
+  --kcs-panel-elevated: var(--kcs-bg-elevated);
+  --kcs-panel-subtle: #151b23;
+  --kcs-border-quiet: var(--kcs-border-subtle);
+  --kcs-border-strong: var(--kcs-border-default);
+  --kcs-text-primary: var(--text-primary);
+  --kcs-text-secondary: var(--text-secondary);
+  --kcs-text-muted: var(--text-muted);
+  --kcs-accent: var(--accent-teal);
+  --kcs-accent-muted: var(--kcs-bg-active);
+  --kcs-selected: var(--kcs-bg-active);
+  --kcs-hover: var(--kcs-bg-hover);
+  --kcs-focus: var(--kcs-border-focus);
+  --kcs-danger: var(--accent-red);
+  --kcs-warning: var(--accent-gold);
+}

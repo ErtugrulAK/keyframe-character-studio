@@ -871,3 +871,227 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     border-bottom: 1px solid #30404e;
   }
 }
+/* V3.1 Curve semantics and bounded preview. */
+.temporal-graph-panel {
+  padding: 12px !important;
+  background: #0b1219;
+  border: 1px solid #2b4350;
+}
+
+.temporal-graph-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 24px;
+  margin-bottom: 8px;
+}
+
+.temporal-graph-title {
+  color: #d3e1e6;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.temporal-graph-badge {
+  padding: 2px 5px;
+  border: 1px solid;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.temporal-graph-badge.is-editable {
+  color: #7ee9d4;
+  border-color: #3f897e;
+  background: rgba(41,211,183,.12);
+}
+
+.temporal-graph-badge.is-derived {
+  color: #c2ccd2;
+  border-color: #61717a;
+  background: rgba(148,163,184,.12);
+}
+
+.temporal-graph-helper {
+  flex: 1 1 100%;
+  color: #8197a3;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.temporal-graph-panel-value .temporal-graph-svg {
+  border-color: #3b8f83 !important;
+  box-shadow: inset 0 0 0 1px rgba(41,211,183,.08);
+}
+
+.temporal-graph-panel-speed .temporal-graph-svg {
+  border-color: #586a75 !important;
+  background: #111a21 !important;
+  opacity: .92;
+}
+
+.temporal-graph-panel-speed .input-control {
+  display: none;
+}
+
+.bezier-preview-card {
+  padding: 10px !important;
+  background: #101b24 !important;
+  border: 1px solid #304655 !important;
+  border-radius: 4px !important;
+}
+
+.bezier-preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  color: #9bb0ba;
+  font-size: 10px;
+}
+
+.bezier-preview-speed {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bezier-preview-speed-options {
+  display: flex;
+  gap: 3px;
+}
+
+.bezier-preview-speed-options button,
+.bezier-preview-play {
+  min-width: 28px;
+  min-height: 24px;
+  padding: 0 6px;
+  border: 1px solid #304655;
+  border-radius: 3px;
+  background: #0a141b;
+  color: #b8cbd2;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.bezier-preview-speed-options button.is-active,
+.bezier-preview-play:hover,
+.bezier-preview-play:focus-visible {
+  background: #1c3d40;
+  border-color: #57a79b;
+  color: #d9f5ee;
+}
+
+.bezier-mini-stage {
+  position: relative;
+  height: 82px;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid #34505d;
+  border-radius: 3px;
+  background: #071017;
+}
+
+.bezier-mini-stage::before {
+  content: 'SAFE PREVIEW';
+  position: absolute;
+  top: 6px;
+  left: 8px;
+  color: #5e7b87;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.bezier-mini-stage-track {
+  position: absolute;
+  top: 50%;
+  right: 28px;
+  left: 28px;
+  height: 2px;
+  background: #31525d;
+  transform: translateY(-50%);
+}
+
+.bezier-mini-stage-track::before,
+.bezier-mini-stage-track::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border: 1px solid #6f99a4;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.bezier-mini-stage-track::before { left: 0; }
+.bezier-mini-stage-track::after { right: 0; }
+
+.bezier-preview-ball {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 14px;
+  width: 24px;
+  height: 24px;
+  border: 2px solid #d8fff6;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #14b8a6, #38bdf8);
+  box-shadow: 0 0 12px rgba(20,184,166,.45);
+  transform: translateY(-50%);
+}
+
+.bezier-preview-ball.is-playing {
+  animation-name: kcsBoundedCurvePreview;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+@keyframes kcsBoundedCurvePreview {
+  0% { left: 16px; }
+  50% { left: calc(50% - 12px); }
+  100% { left: calc(100% - 40px); }
+}
+
+.bezier-preview-status {
+  margin-top: 7px;
+  color: #7fd7c6;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bezier-preview-ball.is-playing {
+    animation: none;
+  }
+}
+/* V3.2 preview uses sampled canonical easing through Web Animations API. */
+.bezier-preview-ball.is-playing {
+  animation: none;
+  will-change: left;
+}
+/* V3.3 flat semantic surfaces: retain grid geometry, remove decorative chrome. */
+.brand-logo {
+  background: var(--kcs-accent);
+}
+
+.viewport-tools-overlay,
+.canvas-footer-legend {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.pulse-green-dot {
+  box-shadow: none;
+}
+
+.bezier-preview-ball {
+  background: var(--kcs-accent);
+  box-shadow: none;
+}

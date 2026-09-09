@@ -12,7 +12,7 @@ const keyframes: PropertyKeyframe[] = [
 describe('TemporalGraphPanel', () => {
   it('renders a value graph from the shared evaluator and exposes keyframe points', () => {
     render(<TemporalGraphPanel keyframes={keyframes} mode="value" />);
-    expect(screen.getByTestId('value-graph-panel')).toBeTruthy();
+    expect(screen.getByText('EDITABLE')).toBeTruthy();
     expect(screen.getByRole('img', { name: 'Value graph' })).toBeTruthy();
     expect(screen.getByLabelText('Keyframe 0')).toBeTruthy();
     expect(screen.getByLabelText('Keyframe 10')).toBeTruthy();
@@ -29,8 +29,8 @@ describe('TemporalGraphPanel', () => {
 
   it('renders a derived speed graph without editable value points', () => {
     render(<TemporalGraphPanel keyframes={keyframes} mode="speed" onChangeKeyframeValue={vi.fn()} />);
-    expect(screen.getByTestId('speed-graph-panel')).toBeTruthy();
-    expect(screen.getByRole('img', { name: 'Speed graph' })).toBeTruthy();
+    expect(screen.getByText('DERIVED · READ ONLY')).toBeTruthy();
+    expect(screen.queryByLabelText('Keyframe 0')).toBeNull();
     expect(screen.queryByLabelText('Keyframe 10')).toBeNull();
   });
   it('edits temporal handle coordinates from the Value Graph controls', () => {

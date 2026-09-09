@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import type { PropertyKeyframe, TemporalHandle } from '../../types/animator';
 import { interpolateChannel } from '../../utils/defaults';
 
@@ -31,6 +31,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   onChangeKeyframeHandles,
 }) => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  const dragDomainRef = useRef<{ min: number; max: number } | null>(null);
   const sorted = useMemo(() => [...keyframes].sort((a, b) => a.frame - b.frame), [keyframes]);
   const sampled = useMemo<GraphPoint[]>(() => {
     if (sorted.length === 0) return [];
@@ -57,6 +58,9 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   const minValue = Math.min(...graphValues, 0);
   const maxValue = Math.max(...graphValues, 1);
   const valueRange = Math.max(1e-6, maxValue - minValue);
+  const activeMinValue = dragDomainRef.current?.min ?? minValue;
+  const activeMaxValue = dragDomainRef.current?.max ?? maxValue;
+  const activeValueRange = Math.max(1e-6, activeMaxValue - activeMinValue);
   const startFrame = sorted[0]?.frame ?? 0;
   const endFrame = sorted[sorted.length - 1]?.frame ?? 1;
   const frameRange = Math.max(1, endFrame - startFrame);
@@ -67,7 +71,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   const toValue = (clientY: number, rect: DOMRect): number => {
     const svgY = ((clientY - rect.top) / Math.max(rect.height, 1)) * HEIGHT;
     const normalized = clamp((svgY - PAD) / (HEIGHT - PAD * 2), 0, 1);
-    return maxValue - normalized * valueRange;
+    return activeMinValue + (1 - normalized) * activeValueRange;
   };
   const pathD = sampled.map((point, index) => {
     const svg = toSvg(point.frame, point.value);
@@ -85,34 +89,45 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
     if (mode !== 'value' || !onChangeKeyframeValue) return;
     if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
     event.preventDefault();
-    const step = Math.max(valueRange / 100, 0.01);
+    const step = Math.max(activeValueRange / 100, 0.01);
     onChangeKeyframeValue(keyframe.id, keyframe.value + (event.key === 'ArrowUp' ? step : -step));
   };
 
   return (
-    <div className="temporal-graph-panel" data-testid={`${mode}-graph-panel`}>
-      <div style={{ fontSize: 11, fontWeight: 800, color: '#cbd5e1', marginBottom: 4 }}>
-        {mode === 'value' ? 'Value Graph' : 'Speed Graph'}
-        {mode === 'value' && <span style={{ marginLeft: 8, color: '#94a3b8', fontWeight: 500 }}>Drag keyframe points to edit values</span>}
-        {mode === 'speed' && <span style={{ marginLeft: 8, color: '#94a3b8', fontWeight: 500 }}>Derived from the shared interpolation evaluator</span>}
+    <div className={`temporal-graph-panel temporal-graph-panel-${mode}`} data-testid={`${mode}-graph-panel`} data-graph-mode={mode}>
+      <div className="temporal-graph-heading">
+        <span className="temporal-graph-title">{mode === 'value' ? 'Value Graph' : 'Speed Graph'}</span>
+        <span className={`temporal-graph-badge ${mode === 'value' ? 'is-editable' : 'is-derived'}`}>
+          {mode === 'value' ? 'EDITABLE' : 'DERIVED · READ ONLY'}
+        </span>
+        <span className="temporal-graph-helper">
+          {mode === 'value' ? 'Drag keyframe points to edit values' : 'Derived from the shared interpolation evaluator'}
+        </span>
       </div>
       {sorted.length < 2 ? (
         <div style={{ color: '#94a3b8', fontSize: 11 }}>Add at least two keyframes to display this graph.</div>
       ) : (
         <svg
+          className={`temporal-graph-svg temporal-graph-svg-${mode}`}
           width={WIDTH}
           height={HEIGHT}
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           role="img"
           aria-label={`${mode === 'value' ? 'Value' : 'Speed'} graph`}
           onMouseMove={handleMouseMove}
-          onMouseUp={() => setDraggingId(null)}
-          onMouseLeave={() => setDraggingId(null)}
+          onMouseUp={() => {
+            setDraggingId(null);
+            dragDomainRef.current = null;
+          }}
+          onMouseLeave={() => {
+            setDraggingId(null);
+            dragDomainRef.current = null;
+          }}
           style={{ width: '100%', maxWidth: WIDTH, background: '#111827', border: '1px solid #293548', borderRadius: 4 }}
         >
           <line x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} stroke="#334155" />
           <line x1={PAD} y1={PAD} x2={PAD} y2={HEIGHT - PAD} stroke="#334155" />
-          <path d={pathD} fill="none" stroke={mode === 'value' ? '#22d3ee' : '#f59e0b'} strokeWidth={2} />
+          <path d={pathD} fill={mode === 'speed' ? 'rgba(148,163,184,.12)' : 'none'} stroke={mode === 'value' ? '#22d3ee' : '#94a3b8'} strokeWidth={2} strokeDasharray={mode === 'speed' ? '6 5' : undefined} />
           {mode === 'value' && sorted.map((keyframe) => {
             const point = toSvg(keyframe.frame, keyframe.value);
             return (
@@ -126,9 +141,13 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
                 strokeWidth={2}
                 tabIndex={0}
                 role="button"
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                  dragDomainRef.current = { min: minValue, max: maxValue };
+                  setDraggingId(keyframe.id);
+                }}
                 aria-label={`Keyframe ${keyframe.frame}`}
                 onKeyDown={(event) => handleKeyframeKeyDown(event, keyframe)}
-                onMouseDown={(event) => { event.stopPropagation(); setDraggingId(keyframe.id); }}
               />
             );
           })}

@@ -199,18 +199,17 @@ export const HeaderBar: React.FC = () => {
 
         {/* Mode Toggle - Centered */}
         <div className="header-center-controls">
-          <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-dark)', borderRadius: 6, padding: '4px', gap: 4, flexShrink: 0 }}>
+          <div className={`header-mode-switch ${appMode === 'broadcast' ? 'is-broadcast' : 'is-edit'}`} style={{ display: 'flex', alignItems: 'center', background: 'var(--bg-dark)', borderRadius: 6, padding: '4px', gap: 4, flexShrink: 0 }}>
+            <span className="header-mode-indicator" aria-hidden="true" />
             <button
               className={`header-mode-button edit ${appMode === 'edit' ? 'active' : ''}`}
+              aria-pressed={appMode === 'edit'}
               style={{
                 padding: '6px 12px',
                 borderRadius: 4,
                 fontSize: 12,
                 fontWeight: 700,
                 whiteSpace: 'nowrap',
-                color: appMode === 'edit' ? '#fff' : 'var(--text-muted)',
-                background: appMode === 'edit' ? 'var(--accent-teal)' : 'transparent',
-                transition: 'all 0.2s',
               }}
               onClick={() => setAppMode('edit')}
             >
@@ -218,15 +217,13 @@ export const HeaderBar: React.FC = () => {
             </button>
             <button
               className={`header-mode-button broadcast ${appMode === 'broadcast' ? 'active' : ''}`}
+              aria-pressed={appMode === 'broadcast'}
               style={{
                 padding: '6px 12px',
                 borderRadius: 4,
                 fontSize: 12,
                 fontWeight: 700,
                 whiteSpace: 'nowrap',
-                color: appMode === 'broadcast' ? '#fff' : 'var(--text-muted)',
-                background: appMode === 'broadcast' ? 'var(--accent-gold)' : 'transparent',
-                transition: 'all 0.2s',
               }}
               onClick={() => setAppMode('broadcast')}
             >

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAnimator } from '../../context/AnimatorContext';
 import { ProjectDrawer } from './drawers/ProjectDrawer';
 import { MediaDrawer } from './drawers/MediaDrawer';
 import { ElementsDrawer } from './drawers/ElementsDrawer';
@@ -16,47 +17,52 @@ import './LeftToolbar.css';
 type ActiveNavCategory = 'project' | 'media' | 'texts' | 'shapes';
 
 export const LeftToolbar: React.FC = () => {
+  const { activeTool } = useAnimator();
   const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('media');
   // UI-only layout state: collapsing hides the drawer so the canvas gets the
   // space. It never touches tool/selection/keyframe/playback/scene state.
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <aside className={`left-toolbar-container${isCollapsed ? ' collapsed' : ''}`}>
+    <aside className={`left-toolbar-container${isCollapsed ? ' collapsed' : ''}${activeTool === 'shape_create' || activeTool === 'freeform_draw' ? ' tool-capturing' : ''}`}>
       <div className="left-sidebar-nav">
         <button
           className={`sidebar-nav-item ${activeCategory === 'project' ? 'active' : ''}`}
           onClick={() => setActiveCategory('project')}
+          aria-pressed={activeCategory === 'project'}
           title="Project Workspace"
         >
-          <Layout size={20} className="nav-icon text-teal" />
+          <Layout size={20} className="nav-icon" />
           <span className="nav-label">Project</span>
         </button>
 
         <button
           className={`sidebar-nav-item ${activeCategory === 'media' ? 'active' : ''}`}
           onClick={() => setActiveCategory('media')}
+          aria-pressed={activeCategory === 'media'}
           title="Media Assets"
         >
-          <Monitor size={20} className="nav-icon text-teal" />
+          <Monitor size={20} className="nav-icon" />
           <span className="nav-label">Media</span>
         </button>
 
         <button
           className={`sidebar-nav-item ${activeCategory === 'shapes' ? 'active' : ''}`}
           onClick={() => setActiveCategory('shapes')}
+          aria-pressed={activeCategory === 'shapes'}
           title="Vector Shapes & Graphic Elements"
         >
-          <Square size={20} className="nav-icon text-cyan" />
+          <Square size={20} className="nav-icon" />
           <span className="nav-label">Elements</span>
         </button>
 
         <button
           className={`sidebar-nav-item ${activeCategory === 'texts' ? 'active' : ''}`}
           onClick={() => setActiveCategory('texts')}
+          aria-pressed={activeCategory === 'texts'}
           title="Typography & Headlines"
         >
-          <Type size={20} className="nav-icon text-cyan" />
+          <Type size={20} className="nav-icon" />
           <span className="nav-label">Texts</span>
         </button>
 
@@ -73,7 +79,7 @@ export const LeftToolbar: React.FC = () => {
         </button>
       </div>
 
-      <div className="left-drawer-panel">
+      <div className="left-drawer-panel" aria-hidden={isCollapsed}>
         {activeCategory === 'project' && <ProjectDrawer />}
         {activeCategory === 'media' && <MediaDrawer />}
         {activeCategory === 'shapes' && <ElementsDrawer />}

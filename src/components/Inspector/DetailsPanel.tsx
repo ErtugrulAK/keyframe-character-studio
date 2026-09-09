@@ -16,7 +16,6 @@ import {
   Sliders,
   Copy,
   Trash2,
-  Activity,
   CopyPlus,
   Unlink,
   Lock,
@@ -358,26 +357,20 @@ export const DetailsPanel: React.FC = () => {
         <div className="details-actor-header">
           <div className="actor-title-box">
             <span className="actor-main-name">{selectedPart.name}</span>
+            <span className="actor-type-label">{selectedPart.type.replace('custom_', '')}</span>
           </div>
 
           <div className="actor-action-row" role="group" aria-label="Inspector object actions">
             <button
               type="button"
-              className={`actor-mode-action ${activeTabSection === 'edit' ? 'active' : ''}`}
-              onClick={() => setActiveTabSection('edit')}
+              className={`actor-context-action ${activeTabSection === 'duplicate' ? 'active' : ''}`}
+              aria-expanded={activeTabSection === 'duplicate'}
+              aria-label="Duplicate"
+              title="Duplicate options"
+              onClick={() => setActiveTabSection((section) => section === 'duplicate' ? 'edit' : 'duplicate')}
             >
-              <Activity size={12} />
-              <span>Edit</span>
+              <CopyPlus size={13} />
             </button>
-            <button
-              type="button"
-              className={`actor-mode-action ${activeTabSection === 'duplicate' ? 'active' : ''}`}
-              onClick={() => setActiveTabSection('duplicate')}
-            >
-              <CopyPlus size={12} className="text-teal" />
-              <span>Duplicate</span>
-            </button>
-            <span className="actor-action-divider" aria-hidden="true" />
             <button
               type="button"
               className="btn-icon-small"

@@ -11,7 +11,14 @@ import {
   PenTool,
 } from 'lucide-react';
 
-export const ParallelogramIcon = ({ size = 16, className }: { size?: number; className?: string }) => (
+const SHAPE_ICON_SIZE = 18;
+
+type ShapeIconProps = {
+  size?: number;
+  className?: string;
+};
+
+export const ParallelogramIcon = ({ size = SHAPE_ICON_SIZE, className }: ShapeIconProps) => (
   <svg
     width={size}
     height={size}
@@ -22,20 +29,23 @@ export const ParallelogramIcon = ({ size = 16, className }: { size?: number; cla
     strokeLinecap="round"
     strokeLinejoin="round"
     className={className}
+    aria-hidden="true"
   >
     <path d="M5 6h14l-3 12H2z" />
   </svg>
 );
 
-const SHAPE_ITEMS: { type: BodyPartType; label: string; icon: React.ReactNode }[] = [
-  { type: 'custom_rect', label: 'Rectangle', icon: <RectangleHorizontal size={16} className="text-teal" /> },
-  { type: 'custom_box', label: 'Square', icon: <Square size={16} className="text-cyan" /> },
-  { type: 'custom_circle', label: 'Circle', icon: <Circle size={16} className="text-green" /> },
-  { type: 'custom_triangle', label: 'Triangle', icon: <Triangle size={16} className="text-red" /> },
-  { type: 'custom_star', label: 'Star', icon: <Star size={16} className="text-purple" /> },
-  { type: 'custom_diamond', label: 'Rhombus', icon: <Diamond size={16} className="text-gold" /> },
-  { type: 'custom_parallelogram', label: 'Parallelogram', icon: <ParallelogramIcon size={16} className="text-gold" /> },
-  { type: 'custom_freeform', label: 'Free Draw', icon: <PenTool size={16} className="text-cyan" /> },
+type ShapeIcon = React.ComponentType<ShapeIconProps>;
+
+const SHAPE_ITEMS: { type: BodyPartType; label: string; icon: ShapeIcon }[] = [
+  { type: 'custom_rect', label: 'Rectangle', icon: RectangleHorizontal },
+  { type: 'custom_box', label: 'Square', icon: Square },
+  { type: 'custom_circle', label: 'Circle', icon: Circle },
+  { type: 'custom_triangle', label: 'Triangle', icon: Triangle },
+  { type: 'custom_star', label: 'Star', icon: Star },
+  { type: 'custom_diamond', label: 'Rhombus', icon: Diamond },
+  { type: 'custom_parallelogram', label: 'Parallelogram', icon: ParallelogramIcon },
+  { type: 'custom_freeform', label: 'Free Draw', icon: PenTool },
 ];
 
 export const ElementsDrawer: React.FC = () => {
@@ -59,6 +69,7 @@ export const ElementsDrawer: React.FC = () => {
           const isActive = item.type === 'custom_freeform'
             ? activeTool === 'freeform_draw'
             : activeTool === 'shape_create' && pendingShapeType === item.type;
+          const ShapeIcon = item.icon;
           return (
             <button
               key={item.type}
@@ -74,7 +85,7 @@ export const ElementsDrawer: React.FC = () => {
               }}
               title={item.type === 'custom_freeform' ? 'Freehand drawing: click corners or drag to draw freely' : undefined}
             >
-              <div className="item-icon-box">{item.icon}</div>
+              <div className="item-icon-box"><ShapeIcon size={SHAPE_ICON_SIZE} className="element-shape-icon" /></div>
               <span className="item-label">{item.label}</span>
             </button>
           );

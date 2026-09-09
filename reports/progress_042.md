@@ -78,11 +78,12 @@ Required sanity targets: 1920x1080, 1440x900, and 1366x768. No page-overflow def
 ## Checkpoint Commit(s)
 
 - `0c1eaf7` — `feat: stabilize V6 editor UI interaction stack`
-- This report will be added as the follow-up documentation commit.
+- `390a815` — `docs: record V6 stabilization checkpoint`
+- The final topology correction is recorded in this report and pushed on the integration branch.
 
 ## Integration Branch Creation
 
-Pending until this report is committed and the checkpoint branch is pushed. `main` remains untouched at `8024d4f`.
+`integration/v6-ui-stable` was created from the verified checkpoint and pushed to origin. `main` remains untouched at `8024d4f`.
 
 ## Branch Topology Audit
 
@@ -95,11 +96,11 @@ The five fully contained historical UI/routing branches were safely deleted loca
 ## Reviewer Findings
 
 `reviewer-agent` found no product or test stabilization blocker. It identified two process risks, both addressed in this checkpoint sequence: stale progress-041 status is superseded by this report, and the separate `docs/github-presentation` unique work is explicitly preserved.
+
 ## Main and Working Tree Status
 
-
 - Main: unchanged; `main` and `origin/main` remain at `8024d4f`.
-- Integration branch: `integration/v6-ui-stable`, HEAD `390a815`, tracking `origin/integration/v6-ui-stable`.
+- Integration branch: `integration/v6-ui-stable`, contained checkpoint base `390a815`, tracking `origin/integration/v6-ui-stable`; current tip was `9307ee6` before this documentation correction.
 - Checkpoint branch `feat/v6-ui-bold-v3`: pushed at `390a815` before safe cleanup.
 - Working tree: clean after the final report commit.
 

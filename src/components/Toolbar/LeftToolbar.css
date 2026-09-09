@@ -7,27 +7,6 @@
 }
 
 /* Collapse toggle — pinned to the bottom of the nav rail, always visible */
-.left-toolbar-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 34px;
-  margin-top: auto;
-  margin-bottom: 4px;
-  border-radius: var(--radius-md);
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.18s ease;
-}
-
-.left-toolbar-toggle:hover {
-  background: var(--bg-panel-hover);
-  color: var(--text-primary);
-  border-color: var(--border-light);
-}
 
 /* Collapsed state: only the icon rail remains, the drawer narrows to 0 so
    the canvas/stage really gains the horizontal space (flex layout). */
@@ -45,9 +24,6 @@
   display: none;
 }
 
-.left-toolbar-container.collapsed .left-toolbar-toggle {
-  width: 44px;
-}
 
 .left-sidebar-nav {
   width: var(--toolbar-width);
@@ -456,18 +432,6 @@
   padding-top: 0;
   border-top: 0;
 }
-.left-toolbar-toggle {
-  border: 0;
-  border-radius: 0;
-  color: var(--kcs-text-muted);
-}
-
-.left-toolbar-toggle:hover,
-.left-toolbar-toggle:focus-visible {
-  background: var(--kcs-hover);
-  color: var(--kcs-text-primary);
-  outline: 2px solid var(--kcs-focus);
-}
 
 .left-drawer-panel {
   background: var(--kcs-panel);
@@ -502,14 +466,4 @@
   margin: 0;
   z-index: 3;
   transform: translateY(-50%);
-}
-
-.left-toolbar-toggle:hover,
-.left-toolbar-toggle:focus-visible {
-  background: var(--kcs-hover);
-  border: 0;
-}
-/* Keep the mirrored handle size in the collapsed specificity path. */
-.left-toolbar-container.collapsed .left-toolbar-toggle {
-  width: 26px;
 }

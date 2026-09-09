@@ -133,3 +133,81 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   const afterResize = await canvasBox(page);
   expect(afterResize.width).toBeGreaterThan(200);
 });
+
+test('Sidebar handles keep a mirrored narrow visual contract across interaction states', async ({ page }) => {
+  await seed(page);
+  const selectors = ['.left-toolbar-toggle', '.inspector-dock-toggle'];
+
+  const readHandle = (selector: string) => page.locator(selector).evaluate((element) => {
+    const style = getComputedStyle(element);
+    const rect = element.getBoundingClientRect();
+    const icon = element.querySelector('svg')?.getBoundingClientRect();
+    return {
+      width: rect.width,
+      height: rect.height,
+      minWidth: style.minWidth,
+      minHeight: style.minHeight,
+      padding: style.padding,
+      margin: style.margin,
+      borderWidth: style.borderWidth,
+      borderRadius: style.borderRadius,
+      position: style.position,
+      zIndex: style.zIndex,
+      outlineWidth: style.outlineWidth,
+      outlineOffset: style.outlineOffset,
+      outlineStyle: style.outlineStyle,
+      before: getComputedStyle(element, '::before').content,
+      after: getComputedStyle(element, '::after').content,
+      ariaLabel: element.getAttribute('aria-label'),
+      title: element.getAttribute('title'),
+      iconWidth: icon?.width ?? 0,
+      iconHeight: icon?.height ?? 0,
+    };
+  });
+
+  const rest = await Promise.all(selectors.map(readHandle));
+  expect(Math.abs(rest[0].width - rest[1].width)).toBeLessThanOrEqual(2);
+  expect(Math.abs(rest[0].height - rest[1].height)).toBeLessThanOrEqual(2);
+  expect(rest[0].width).toBeGreaterThanOrEqual(24);
+  expect(rest[0].width).toBeLessThanOrEqual(28);
+  expect(rest[0].height).toBeGreaterThanOrEqual(44);
+  expect(rest[0].height).toBeLessThanOrEqual(50);
+  expect(rest[0].borderWidth).toBe(rest[1].borderWidth);
+  expect(rest[0].borderRadius).toBe(rest[1].borderRadius);
+  expect(rest[0].iconWidth).toBe(rest[1].iconWidth);
+  expect(rest[0].iconHeight).toBe(rest[1].iconHeight);
+  expect(rest[0].position).toBe('absolute');
+  expect(rest[1].position).toBe('absolute');
+  expect(rest[0].zIndex).toBe('3');
+  expect(rest[1].zIndex).toBe('100');
+  expect(rest.every((handle) => handle.before === 'none' && handle.after === 'none')).toBe(true);
+  expect(rest.every((handle) => handle.title === null && handle.ariaLabel)).toBe(true);
+
+  for (const selector of selectors) {
+    await page.locator(selector).hover({ force: true });
+    const hover = await readHandle(selector);
+    expect(hover.width).toBe(rest[selectors.indexOf(selector)].width);
+    expect(hover.height).toBe(rest[selectors.indexOf(selector)].height);
+    expect(hover.outlineStyle).toBe('none');
+  }
+
+  for (const selector of selectors) {
+    await page.locator(selector).focus();
+    const focus = await readHandle(selector);
+    expect(focus.width).toBe(rest[selectors.indexOf(selector)].width);
+    expect(focus.height).toBe(rest[selectors.indexOf(selector)].height);
+    expect(focus.outlineStyle).toBe('solid');
+    expect(focus.outlineWidth).toBe('2px');
+    expect(focus.outlineOffset).toBe('-2px');
+  }
+
+  await page.locator('.left-toolbar-toggle').click();
+  const collapsedLeft = await readHandle('.left-toolbar-toggle');
+  expect(collapsedLeft.width).toBe(rest[0].width);
+  expect(collapsedLeft.height).toBe(rest[0].height);
+  await page.locator('.left-toolbar-toggle').click();
+  await page.locator('.inspector-dock-toggle').click({ force: true });
+  const hiddenRight = await readHandle('.inspector-dock-toggle');
+  expect(hiddenRight.width).toBe(rest[1].width);
+  expect(hiddenRight.height).toBe(rest[1].height);
+});

@@ -35,30 +35,6 @@
   pointer-events: none;
   visibility: hidden;
 }
-.inspector-dock-toggle {
-  position: absolute;
-  z-index: 100;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  padding: 0;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-xs);
-  background: var(--bg-panel);
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: right 240ms ease, color 0.18s ease, border-color 0.18s ease, background 0.18s ease;
-}
-
-.inspector-dock-toggle:hover,
-.inspector-dock-toggle:focus-visible {
-  border-color: var(--border-accent);
-  background: var(--bg-panel-hover);
-  color: var(--accent-cyan);
-  outline: 2px solid var(--kcs-focus);
-}
 
 .main-layout:not(.inspector-hidden) .inspector-dock-toggle {
   top: 50%;
@@ -1912,22 +1888,6 @@
   transform: translateX(12px);
 }
 
-.inspector-dock-toggle {
-  width: 26px;
-  height: 48px;
-  border: 0;
-  border-radius: 3px 0 0 3px;
-  background: var(--kcs-panel-elevated);
-  color: var(--kcs-text-muted);
-  transition: right 300ms cubic-bezier(0,1.15,1,.93), background-color 160ms ease, color 160ms ease;
-}
-
-.inspector-dock-toggle:hover,
-.inspector-dock-toggle:focus-visible {
-  background: var(--kcs-hover);
-  color: var(--kcs-text-primary);
-  outline: 2px solid var(--kcs-focus);
-}
 
 .details-header,
 .details-actor-header {
@@ -2022,21 +1982,12 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
-/* V3.4 mirrored handle geometry: match the left rail hinge. */
+/* Preserve Inspector edge positioning over the shared handle visual authority. */
 .inspector-dock-toggle {
-  width: 26px;
-  height: 48px;
-  border: 0;
-  border-radius: 0;
-  background: var(--kcs-panel-elevated);
-  cursor: pointer;
-}
-
-.inspector-dock-toggle:hover,
-.inspector-dock-toggle:focus-visible {
-  background: var(--kcs-hover);
+  position: absolute;
+  z-index: 100;
 }
 /* Preserve the Inspector dock-follow motion over the shared handle defaults. */
 .sidebar-handle.inspector-dock-toggle {
-  transition: right 300ms cubic-bezier(0, 1.15, 1, 0.93), background-color 160ms ease, color 160ms ease;
+  transition: right 300ms cubic-bezier(0,1.15,1,.93), background-color 160ms ease, color 160ms ease;
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider, useAnimator } from './context/AnimatorContext';
 import { HeaderBar } from './components/Header/HeaderBar';
 import { LeftToolbar } from './components/Toolbar/LeftToolbar';
@@ -43,7 +43,7 @@ const MainAppContent: React.FC = () => {
             aria-label={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
             onClick={() => setIsInspectorVisible((visible) => !visible)}
           >
-            {isInspectorVisible ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+            {isInspectorVisible ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
           </button>
         )}
         {appMode === 'edit' && (

@@ -39,9 +39,8 @@ const MainAppContent: React.FC = () => {
         {appMode === 'edit' && (
           <button
             type="button"
-            className="inspector-dock-toggle"
+            className="sidebar-handle inspector-dock-toggle"
             aria-label={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
-            title={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
             onClick={() => setIsInspectorVisible((visible) => !visible)}
           >
             {isInspectorVisible ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}

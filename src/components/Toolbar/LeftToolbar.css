@@ -490,3 +490,26 @@
 .left-toolbar-container.tool-capturing .left-drawer-panel {
   pointer-events: none;
 }
+/* V3.4 mirrored handle geometry: attach the left hinge to the rail edge. */
+.left-sidebar-nav {
+  position: relative;
+}
+
+.left-toolbar-toggle {
+  position: absolute;
+  top: 50%;
+  right: -13px;
+  margin: 0;
+  z-index: 3;
+  transform: translateY(-50%);
+}
+
+.left-toolbar-toggle:hover,
+.left-toolbar-toggle:focus-visible {
+  background: var(--kcs-hover);
+  border: 0;
+}
+/* Keep the mirrored handle size in the collapsed specificity path. */
+.left-toolbar-container.collapsed .left-toolbar-toggle {
+  width: 26px;
+}

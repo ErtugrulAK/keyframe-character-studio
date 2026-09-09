@@ -63,7 +63,7 @@ test('BROADCAST-1 — first entry fits the FULL artboard (no crop) at any edit z
 
   // Zoom In x5 in EDIT mode (real UI)
   for (let i = 0; i < 5; i++) {
-    await page.getByTitle('Zoom In (+)').click();
+    await page.locator('.viewport-tools-overlay').getByRole('button', { name: 'Zoom In (+)' }).click();
     await page.waitForTimeout(60);
   }
   const editViewBox = await page.evaluate(() => [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!.getAttribute('viewBox'));

@@ -201,7 +201,7 @@ test('BUG 5 — broadcast starts FIT, does not inherit edit zoom/pan (real UI)',
 
   // 1. EDIT: zoom in hard (5× +0.1) — svg transform reflects the zoom
   for (let i = 0; i < 5; i++) {
-    await page.getByTitle('Zoom In (+)').click();
+    await page.locator('.viewport-tools-overlay').getByRole('button', { name: 'Zoom In (+)' }).click();
     await page.waitForTimeout(80);
   }
   const editZoom = await page.evaluate(() => {

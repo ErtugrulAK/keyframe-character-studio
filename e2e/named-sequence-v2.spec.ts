@@ -28,7 +28,7 @@ test('Named Sequence V2 — stable IDs, authoring metadata, Broadcast status, an
   await clearProject(page);
 
   // Fresh authoring workflow: create a real layer and a named sequence.
-  await page.getByTitle('Vector Shapes & Graphic Elements').click();
+  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
   await createShapeByDrag(page, 'Rectangle');
   await page.getByTitle('Create New Sequence').click();
   await page.getByPlaceholder('Sequence name (e.g. In_V1, Out_V1)...').fill('IN');

@@ -2022,3 +2022,21 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+/* V3.4 mirrored handle geometry: match the left rail hinge. */
+.inspector-dock-toggle {
+  width: 26px;
+  height: 48px;
+  border: 0;
+  border-radius: 0;
+  background: var(--kcs-panel-elevated);
+  cursor: pointer;
+}
+
+.inspector-dock-toggle:hover,
+.inspector-dock-toggle:focus-visible {
+  background: var(--kcs-hover);
+}
+/* Preserve the Inspector dock-follow motion over the shared handle defaults. */
+.sidebar-handle.inspector-dock-toggle {
+  transition: right 300ms cubic-bezier(0, 1.15, 1, 0.93), background-color 160ms ease, color 160ms ease;
+}

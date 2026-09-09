@@ -10,6 +10,9 @@ interface CanvasViewportToolbarProps {
   activeTool: 'select' | 'pan';
   setActiveTool: (tool: 'select' | 'pan') => void;
 }
+
+const DEFAULT_ZOOM_LEVEL = 1;
+const DEFAULT_PAN_OFFSET = { x: 0, y: 0 };
 const VIEWPORT_TOOL_OPTIONS: Array<'select' | 'pan'> = ['select', 'pan'];
 const VIEWPORT_TOOL_STEP = 29;
 
@@ -75,14 +78,16 @@ export const CanvasViewportToolbar: React.FC<CanvasViewportToolbarProps> = ({
     toolButtonRefs.current[nextIndex]?.focus();
   };
   return (
-    <div className={`viewport-tools-overlay viewport-tools-${activeTool}`}>
+    <div
+      className={`viewport-tools-overlay viewport-tools-${activeTool}`}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
       <span ref={highlightRef} className="viewport-tools-highlight" aria-hidden="true" />
       <button
         ref={(element) => { toolButtonRefs.current[0] = element; }}
         className={`btn-icon viewport-btn viewport-tool-choice${activeTool === 'select' ? ' active' : ''}`}
         onClick={() => setActiveTool('select')}
         onKeyDown={handleToolKeyDown}
-        title="Select Tool (V)"
         aria-label="Select Tool"
         aria-pressed={activeTool === 'select'}
         tabIndex={activeTool === 'select' ? 0 : -1}
@@ -94,7 +99,6 @@ export const CanvasViewportToolbar: React.FC<CanvasViewportToolbarProps> = ({
         className={`btn-icon viewport-btn viewport-tool-choice${activeTool === 'pan' ? ' active' : ''}`}
         onClick={() => setActiveTool('pan')}
         onKeyDown={handleToolKeyDown}
-        title="Hand / Pan Tool (H)"
         aria-label="Hand / Pan Tool"
         aria-pressed={activeTool === 'pan'}
         tabIndex={activeTool === 'pan' ? 0 : -1}
@@ -104,18 +108,17 @@ export const CanvasViewportToolbar: React.FC<CanvasViewportToolbarProps> = ({
       <button
         className={`btn-icon viewport-btn ${showGrid ? 'active' : ''}`}
         aria-pressed={showGrid}
+        aria-label={showGrid ? 'Hide Grid' : 'Show Grid'}
         onClick={() => setShowGrid(!showGrid)}
-        title={showGrid ? 'Grid Overlay: ON (Click to Hide)' : 'Grid Overlay: OFF (Click to Show)'}
       >
         <Grid size={14} />
       </button>
 
-      <div style={{ height: 16, width: 1, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
-
+      <div className="viewport-tools-divider" />
       <button
         className="btn-icon viewport-btn"
         onClick={() => setZoomLevel((z) => Math.max(0.3, parseFloat((z - 0.1).toFixed(2))))}
-        title="Zoom Out (-)"
+        aria-label="Zoom Out (-)"
       >
         <ZoomOut size={14} />
       </button>
@@ -127,15 +130,17 @@ export const CanvasViewportToolbar: React.FC<CanvasViewportToolbarProps> = ({
       <button
         className="btn-icon viewport-btn"
         onClick={() => setZoomLevel((z) => Math.min(3.0, parseFloat((z + 0.1).toFixed(2))))}
-        title="Zoom In (+)"
+        aria-label="Zoom In (+)"
       >
         <ZoomIn size={14} />
       </button>
 
       <button
         className="btn-icon viewport-btn"
-        onClick={() => setPanOffset({ x: 0, y: 0 })}
-        title="Reset View Position (Keep Zoom)"
+        onClick={() => {
+          setZoomLevel(DEFAULT_ZOOM_LEVEL);
+          setPanOffset({ ...DEFAULT_PAN_OFFSET });
+        }}
         aria-label="Reset View Position"
       >
         <Compass size={14} />

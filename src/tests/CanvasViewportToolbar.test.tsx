@@ -34,10 +34,12 @@ describe('CanvasViewportToolbar', () => {
     expect(setActiveTool).toHaveBeenCalledWith('pan');
   });
 
-  it('preserves native pressed semantics for tools and grid', () => {
+  it('preserves pressed semantics and accessible names without native tooltips', () => {
     renderToolbar('pan');
     expect(screen.getByRole('button', { name: 'Hand / Pan Tool' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Select Tool' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'Grid Overlay: OFF (Click to Show)' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Show Grid' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Zoom Out (-)' })).not.toHaveAttribute('title');
+    expect(screen.getByRole('button', { name: 'Reset View Position' })).not.toHaveAttribute('title');
   });
 });

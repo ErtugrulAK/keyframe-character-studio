@@ -23,7 +23,7 @@ test('authored layer index survives new layers, template switching, autosave, an
   await page.evaluate(() => localStorage.clear());
   await page.reload();
 
-  await page.getByTitle('Vector Shapes & Graphic Elements').click();
+  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
   for (const [index, shape] of ['Rectangle', 'Circle', 'Triangle'].entries()) {
     await createShapeByDrag(page, shape, (index - 1) * 80);
   }

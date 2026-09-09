@@ -50,27 +50,34 @@ function canvasBox(page: Page) {
 
 test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reachable rail', async ({ page }) => {
   await seed(page);
-
   // Expanded baseline
   const expanded = await canvasBox(page);
   const expandedLayout = await page.evaluate(() => {
     const rail = document.querySelector('.left-sidebar-nav')!;
     const drawer = document.querySelector('.left-drawer-panel')!;
+    const leftHandle = document.querySelector('.left-toolbar-toggle')!;
+    const rightHandle = document.querySelector('.inspector-dock-toggle')!;
     const right = document.querySelector('.motion-design-right-sidebar');
     return {
       railWidth: Math.round(rail.getBoundingClientRect().width),
       drawerWidth: Math.round(drawer.getBoundingClientRect().width),
       drawerPointerEvents: getComputedStyle(drawer).pointerEvents,
+      leftHandleWidth: Math.round(leftHandle.getBoundingClientRect().width),
+      rightHandleWidth: Math.round(rightHandle.getBoundingClientRect().width),
+      rightHandleTransition: getComputedStyle(rightHandle).transition,
       rightWidth: right ? Math.round(right.getBoundingClientRect().width) : 0,
     };
   });
   expect(expandedLayout.railWidth).toBe(56);
   expect(expandedLayout.drawerWidth).toBeGreaterThan(0);
   expect(expandedLayout.drawerPointerEvents).toBe('auto');
+  expect(expandedLayout.leftHandleWidth).toBe(26);
+  expect(expandedLayout.rightHandleWidth).toBe(26);
+  expect(expandedLayout.rightHandleTransition).toContain('right');
   expect(expandedLayout.rightWidth).toBeGreaterThan(0);
 
   // Collapse the contextual drawer without changing the rail or stage origin.
-  await page.getByTitle('Collapse toolbar').click();
+  await page.getByRole('button', { name: 'Hide Left Toolbar' }).click();
   await page.waitForFunction(() => {
     const drawer = document.querySelector('.left-drawer-panel');
     return drawer && getComputedStyle(drawer).pointerEvents === 'none' && getComputedStyle(drawer).opacity === '0';
@@ -79,22 +86,25 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   const collapsedLayout = await page.evaluate(() => {
     const rail = document.querySelector('.left-sidebar-nav')!;
     const drawer = document.querySelector('.left-drawer-panel')!;
+    const leftHandle = document.querySelector('.left-toolbar-toggle')!;
     return {
       railWidth: Math.round(rail.getBoundingClientRect().width),
       drawerHidden: drawer.getAttribute('aria-hidden') === 'true',
       drawerPointerEvents: getComputedStyle(drawer).pointerEvents,
+      leftHandleWidth: Math.round(leftHandle.getBoundingClientRect().width),
     };
   });
   expect(collapsed.width).toBeCloseTo(expanded.width, 0);
   expect(collapsed.left).toBeCloseTo(expanded.left, 0);
   expect(collapsedLayout.railWidth).toBe(56);
+  expect(collapsedLayout.leftHandleWidth).toBe(26);
   expect(collapsedLayout.drawerHidden).toBe(true);
   expect(collapsedLayout.drawerPointerEvents).toBe('none');
-  expect(await page.getByTitle('Media Assets').isVisible()).toBe(true);
+  expect(await page.getByRole('button', { name: 'Media Assets' }).isVisible()).toBe(true);
   expect(await page.locator('.stage-canvas-container').isVisible()).toBe(true);
 
   // Reopening restores the drawer without geometry drift.
-  await page.getByTitle('Expand toolbar').click();
+  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
   await page.waitForFunction(() => {
     const drawer = document.querySelector('.left-drawer-panel');
     return drawer && getComputedStyle(drawer).pointerEvents === 'auto' && getComputedStyle(drawer).opacity === '1';
@@ -112,13 +122,13 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   // The Right Toolbar has no collapse control; its width is independently
   // managed and must not introduce horizontal overflow with the rail collapsed.
   await page.waitForFunction(() => document.documentElement.scrollWidth <= window.innerWidth);
-  await page.getByTitle('Collapse toolbar').click();
-  await expect(page.getByTitle('Expand toolbar')).toBeVisible();
+  await page.getByRole('button', { name: 'Hide Left Toolbar' }).click();
+  await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toBeVisible();
 
   // Supported compact QA viewport keeps the control reachable.
   await page.setViewportSize({ width: 1366, height: 768 });
-  await expect(page.getByTitle('Expand toolbar')).toBeVisible();
-  await page.getByTitle('Expand toolbar').click();
+  await expect(page.getByRole('button', { name: 'Show Left Toolbar' })).toBeVisible();
+  await page.getByRole('button', { name: 'Show Left Toolbar' }).click();
   await expect(page.locator('.stage-canvas-container')).toBeVisible();
   const afterResize = await canvasBox(page);
   expect(afterResize.width).toBeGreaterThan(200);

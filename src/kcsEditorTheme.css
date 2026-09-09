@@ -1095,3 +1095,25 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   background: var(--kcs-accent);
   box-shadow: none;
 }
+/* V3.4 mirrored sidebar handle authority. */
+.sidebar-handle {
+  width: 26px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--kcs-panel-elevated);
+  color: var(--kcs-text-muted);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease, outline-color 160ms ease;
+}
+
+.sidebar-handle:hover {
+  background: var(--kcs-hover);
+  color: var(--kcs-text-primary);
+}
+
+.sidebar-handle:focus-visible {
+  outline: 2px solid var(--kcs-focus);
+  outline-offset: -2px;
+}

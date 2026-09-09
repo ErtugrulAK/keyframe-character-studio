@@ -325,3 +325,17 @@
   border-color: var(--kcs-accent-hover);
   background: rgba(97, 230, 208, .12);
 }
+/* V3.4 toolbar cleanup: one active highlight owns the selected surface. */
+.viewport-btn.active {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.viewport-tools-divider {
+  width: 1px;
+  height: 16px;
+  flex: 0 0 1px;
+  margin-inline: 4px;
+  background: var(--kcs-border-quiet);
+}

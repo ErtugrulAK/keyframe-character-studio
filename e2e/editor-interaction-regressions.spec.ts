@@ -40,7 +40,7 @@ test('drawing a Parallelogram keeps the editor mounted without runtime errors', 
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await seedParallelogram(page);
-  await page.getByRole('button', { name: 'Elements', exact: true }).click();
+  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements', exact: true }).click();
   await page.getByRole('button', { name: 'Parallelogram', exact: true }).click();
   const canvas = page.locator('.stage-canvas-container');
   const box = await canvas.boundingBox();

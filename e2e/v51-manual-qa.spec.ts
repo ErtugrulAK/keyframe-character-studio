@@ -62,12 +62,24 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await expect(page.getByText('Boolean dissolved; operands preserved.', { exact: true })).toBeVisible();
   });
 
-  test('keeps Reset View zoom while resetting pan', async ({ page }) => {
+  test('resets zoom and pan to the default viewport', async ({ page }) => {
     await seed(page, [layer('a', 'Shape', 'custom_rect', 0)]);
     await page.getByRole('button', { name: 'Zoom Out (-)' }).click();
     await expect(page.locator('.zoom-level-text')).toHaveText('90%');
+    await page.getByRole('button', { name: 'Hand / Pan Tool' }).click();
+    const canvas = page.locator('.stage-canvas-container');
+    const box = await canvas.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box!.x + box!.width / 2 + 80, box!.y + box!.height / 2 + 40);
+    await page.mouse.up();
+    await expect(page.locator('.stage-svg')).toHaveCSS('transform', /matrix/);
     await page.getByRole('button', { name: 'Reset View Position' }).click();
-    await expect(page.locator('.zoom-level-text')).toHaveText('90%');
+    await expect(page.locator('.zoom-level-text')).toHaveText('100%');
+    await expect(page.locator('.stage-svg')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
+    await page.getByRole('button', { name: 'Reset View Position' }).click();
+    await expect(page.locator('.stage-svg')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');
   });
 
   test('supports arbitrary pointer drag without alignment snapping', async ({ page }) => {

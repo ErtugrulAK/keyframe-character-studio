@@ -29,8 +29,8 @@ export const LeftToolbar: React.FC = () => {
         <button
           className={`sidebar-nav-item ${activeCategory === 'project' ? 'active' : ''}`}
           onClick={() => setActiveCategory('project')}
+          aria-label="Project Workspace"
           aria-pressed={activeCategory === 'project'}
-          title="Project Workspace"
         >
           <Layout size={20} className="nav-icon" />
           <span className="nav-label">Project</span>
@@ -39,8 +39,8 @@ export const LeftToolbar: React.FC = () => {
         <button
           className={`sidebar-nav-item ${activeCategory === 'media' ? 'active' : ''}`}
           onClick={() => setActiveCategory('media')}
+          aria-label="Media Assets"
           aria-pressed={activeCategory === 'media'}
-          title="Media Assets"
         >
           <Monitor size={20} className="nav-icon" />
           <span className="nav-label">Media</span>
@@ -49,8 +49,8 @@ export const LeftToolbar: React.FC = () => {
         <button
           className={`sidebar-nav-item ${activeCategory === 'shapes' ? 'active' : ''}`}
           onClick={() => setActiveCategory('shapes')}
+          aria-label="Vector Shapes & Graphic Elements"
           aria-pressed={activeCategory === 'shapes'}
-          title="Vector Shapes & Graphic Elements"
         >
           <Square size={20} className="nav-icon" />
           <span className="nav-label">Elements</span>
@@ -59,8 +59,8 @@ export const LeftToolbar: React.FC = () => {
         <button
           className={`sidebar-nav-item ${activeCategory === 'texts' ? 'active' : ''}`}
           onClick={() => setActiveCategory('texts')}
+          aria-label="Typography & Headlines"
           aria-pressed={activeCategory === 'texts'}
-          title="Typography & Headlines"
         >
           <Type size={20} className="nav-icon" />
           <span className="nav-label">Texts</span>
@@ -71,11 +71,11 @@ export const LeftToolbar: React.FC = () => {
             preserved so re-expanding restores the exact previous drawer. */}
         <button
           type="button"
-          className="left-toolbar-toggle"
+          className="sidebar-handle left-toolbar-toggle"
           onClick={() => setIsCollapsed((c) => !c)}
-          title={isCollapsed ? 'Expand toolbar' : 'Collapse toolbar'}
+          aria-label={isCollapsed ? 'Show Left Toolbar' : 'Hide Left Toolbar'}
         >
-          {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </div>
 

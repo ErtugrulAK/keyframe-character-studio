@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { CanvasViewportToolbar } from '../components/Canvas/overlays/CanvasViewportToolbar';
 
 describe('CanvasViewportToolbar', () => {
-  it('resets pan while preserving the current zoom level', () => {
+  it('resets pan and zoom to the exact default viewport', () => {
     const setZoomLevel = vi.fn();
     const setPanOffset = vi.fn();
 
@@ -20,9 +20,13 @@ describe('CanvasViewportToolbar', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Reset View Position' }));
+    const reset = screen.getByRole('button', { name: 'Reset View Position' });
+    fireEvent.click(reset);
+    fireEvent.click(reset);
 
-    expect(setPanOffset).toHaveBeenCalledWith({ x: 0, y: 0 });
-    expect(setZoomLevel).not.toHaveBeenCalled();
+    expect(setPanOffset).toHaveBeenNthCalledWith(1, { x: 0, y: 0 });
+    expect(setPanOffset).toHaveBeenNthCalledWith(2, { x: 0, y: 0 });
+    expect(setZoomLevel).toHaveBeenNthCalledWith(1, 1);
+    expect(setZoomLevel).toHaveBeenNthCalledWith(2, 1);
   });
 });

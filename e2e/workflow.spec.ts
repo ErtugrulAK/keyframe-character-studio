@@ -23,7 +23,7 @@ async function createShapeByDrag(page: import('@playwright/test').Page, name: st
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
     // Navigate to Vector Shapes Toolbar
-    await page.getByTitle('Vector Shapes & Graphic Elements').click();
+    await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
 
     // Add Rectangle and Circle through the approved drag-creation contract.
     await createShapeByDrag(page, 'Rectangle', -40, 0);
@@ -67,7 +67,7 @@ async function createShapeByDrag(page: import('@playwright/test').Page, name: st
     // The current V6 workflow keeps project templates in the Project Workspace.
     // The former Motion Transitions surface is intentionally not part of the
     // consolidated toolbar.
-    await expect(page.getByTitle('Project Workspace')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Project Workspace' })).toBeVisible();
     await expect(page.getByTitle('Motion Transitions')).toHaveCount(0);
   });
 
@@ -77,7 +77,7 @@ async function createShapeByDrag(page: import('@playwright/test').Page, name: st
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
     // Open the vector shapes drawer and activate the Free Draw tool
-    await page.getByTitle('Vector Shapes & Graphic Elements').click();
+    await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
     await page.getByRole('button', { name: 'Free Draw', exact: true }).click();
 
     // Draw an irregular polygon: 3 corner clicks + double-click to finish
@@ -96,7 +96,7 @@ async function createShapeByDrag(page: import('@playwright/test').Page, name: st
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
     // Add a Rectangle (the container) using interactive creation.
-    await page.getByTitle('Vector Shapes & Graphic Elements').click();
+    await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
     await createShapeByDrag(page, 'Rectangle');
 
     // Draw a small freeform INSIDE the rectangle's area (rect sits at center 300,240)

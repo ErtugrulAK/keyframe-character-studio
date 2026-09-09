@@ -3,7 +3,7 @@ import { test, expect } from '@playwright/test';
 async function openElements(page: import('@playwright/test').Page): Promise<void> {
   await page.goto('/');
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
-  await page.getByTitle('Vector Shapes & Graphic Elements').click();
+  await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
 }
 
 test('rectangle click arms creation and drag commits one selected shape', async ({ page }) => {

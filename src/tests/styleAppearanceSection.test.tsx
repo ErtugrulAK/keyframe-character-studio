@@ -67,7 +67,7 @@ describe('StyleAppearanceSection', () => {
     expect(onChange).toHaveBeenCalledWith('fillColor', '#00ffff');
     fireEvent.pointerDown(alpha, { clientX: 25, pointerId: 2 });
     expect(onChange).toHaveBeenCalledWith('fillOpacity', 0.25);
-    expect(container.querySelectorAll('.rgba-picker-hue-slider')).toHaveLength(2);
+    expect(container.querySelectorAll('.rgba-picker-hue-slider')).toHaveLength(3);
   });
 
   it('keeps RGB, alpha, hex, and fill/stroke channels independent', () => {
@@ -138,7 +138,7 @@ describe('StyleAppearanceSection', () => {
     expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
     expect(screen.queryByRole('dialog')).toBeNull();
   });
-  it('embeds modern Fill and Stroke controls inside the TEXT section', () => {
+  it('embeds a single Color control inside the TEXT section', () => {
     const onColorChange = vi.fn();
     const onPropChange = vi.fn();
     const { container } = render(
@@ -151,14 +151,15 @@ describe('StyleAppearanceSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand TEXT' }));
     expect(screen.getByText('TEXT')).toBeTruthy();
-    expect(screen.getByText('FILL')).toBeTruthy();
-    expect(screen.getByText('STROKE')).toBeTruthy();
+    expect(screen.getAllByText('COLOR').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('FILL')).toBeNull();
+    expect(screen.queryByText('STROKE')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Expand APPEARANCE' })).toBeNull();
     expect(screen.queryByText('QUICK PALETTE SWATCHES')).toBeNull();
     expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
 
-    const hue = screen.getByRole('slider', { name: 'FILL COLOR Hue' });
-    const alpha = screen.getByRole('slider', { name: 'FILL COLOR Alpha' });
+    const hue = screen.getByRole('slider', { name: 'COLOR Hue' });
+    const alpha = screen.getByRole('slider', { name: 'COLOR Alpha' });
     vi.spyOn(hue, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => ({}) });
     vi.spyOn(alpha, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => ({}) });
     fireEvent.pointerDown(hue, { clientX: 50, pointerId: 1 });

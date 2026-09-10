@@ -431,6 +431,8 @@ export const DetailsPanel: React.FC = () => {
               <StyleTab
                 selectedPart={inspectorPart ?? selectedPart}
                 characterParts={characterParts}
+                transform={transform}
+                coordinateSystem={coordinateSystem}
                 handlePartPropChange={handleDisplayedPartPropChange}
                 handlePartColorChange={handlePartColorChange}
                 handleZIndexChange={handleZIndexChange}

@@ -1,12 +1,13 @@
 import React from 'react';
-import type { BezierPath, CharacterPart, LayerMaskChannelProperty } from '../../../types/animator';
+import type { BezierPath, CharacterPart, LayerMaskChannelProperty, Transform } from '../../../types/animator';
 import { StyleColorSection } from './style/StyleColorSection';
 import { StyleAppearanceSection } from './style/StyleAppearanceSection';
 import { isShapeAppearanceEligible } from '../../../utils/shapeAppearance';
 import { StyleTextFields } from './style/StyleTextFields';
 import { StyleClonerSection } from './style/StyleClonerSection';
 import { StyleParticleSection } from './style/StyleParticleSection';
-import { StyleEffectsSection } from './style/StyleEffectsSection';
+import { TransformVertexEditor } from './transform/TransformVertexEditor';
+import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
 import { TrimPathSection } from './style/TrimPathSection';
 import { isTrimPathEligible } from '../../../utils/trimPath';
@@ -16,6 +17,8 @@ interface StyleTabProps {
   characterParts: CharacterPart[];
   handlePartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
+  transform?: Transform;
+  coordinateSystem?: SceneCoordinateSystem;
   handleZIndexChange?: (zIndex: number) => void;
   currentFrame?: number;
   onAddMaskKeyframe?: (maskId: string, property: LayerMaskChannelProperty, value: number) => void;
@@ -28,6 +31,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   characterParts,
   handlePartPropChange,
   handlePartColorChange,
+  transform,
+  coordinateSystem,
   currentFrame,
   onAddMaskKeyframe,
   onAddMaskPathKeyframe,
@@ -50,7 +55,9 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         onPartColorChange={handlePartColorChange}
         onPartPropChange={handlePartPropChange}
       />
-      <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
+      {selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length && transform && coordinateSystem && (
+        <TransformVertexEditor selectedPart={selectedPart} transform={transform} coordinateSystem={coordinateSystem} onPartPropChange={handlePartPropChange} />
+      )}
       <StyleMatteSection
         selectedPart={selectedPart}
         characterParts={characterParts}

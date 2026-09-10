@@ -1,8 +1,9 @@
 import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
+import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
-import { StyleColorSection } from './StyleColorSection';
+import { StyleEffectsSection } from './StyleEffectsSection';
 
 interface StyleTextFieldsProps {
   selectedPart: CharacterPart;
@@ -102,39 +103,34 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
             />
           </div>
 
-
-          {/* STAGGERED TEXT ANIMATION */}
-          <div className="form-field-group text-animation-field">
-            <label className="form-label">STAGGERED TEXT ANIMATION</label>
-            <select className="select-control"
-              value={selectedPart.textAnimMode || 'none'}
-              onChange={(e) => onPartPropChange('textAnimMode', e.target.value)}
-            >
-              <option value="none">None (Standard Static Text)</option>
-              <option value="chars">Character by Character (Stagger Chars)</option>
-              <option value="words">Word by Word (Stagger Words)</option>
-            </select>
-          </div>
-
-          {selectedPart.textAnimMode && selectedPart.textAnimMode !== 'none' && (
-            <div className="form-field-group">
-              <label className="form-label">STAGGER DELAY (MS)</label>
-              <SmartNumberInput
-                value={selectedPart.textStaggerDelay || 60}
-                min={10}
-                max={500}
-                step={10}
-                onChange={(val) => onPartPropChange('textStaggerDelay', val)}
+          <div className="appearance-group">
+            <div className="appearance-group-header"><span>COLOR</span></div>
+            <div className="appearance-color-field">
+              <ColorPickerPopover
+                label="COLOR"
+                color={selectedPart.fillColor || '#00d2ff'}
+                alpha={selectedPart.fillOpacity ?? 1}
+                fallback="#00d2ff"
+                onColorChange={(value) => onPartColorChange('fillColor', value)}
+                onAlphaChange={(value) => onPartPropChange('fillOpacity', value)}
               />
             </div>
-          )}
-          <StyleColorSection
-            embedded
-            selectedPart={selectedPart}
-            onPartColorChange={onPartColorChange}
-            onPartPropChange={onPartPropChange}
-          />
-        </>
+          </div>
+        <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={onPartPropChange} embedded />
+        {(selectedPart.type === 'custom_card' || selectedPart.type === 'custom_banner') && (
+          <StyleCard title="APPEARANCE" collapsible defaultOpen={false}>
+            <div className="form-field-group">
+              <label className="form-label">CORNER RADIUS</label>
+              <SmartNumberInput
+                value={selectedPart.borderRadius ?? 0}
+                min={0}
+                max={100}
+                onChange={(value) => onPartPropChange('borderRadius', value)}
+              />
+            </div>
+          </StyleCard>
+        )}
+</>
       )}
     </StyleCard>
   );

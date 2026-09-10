@@ -6,7 +6,6 @@ import { TransformPositionRotationCard } from './transform/TransformPositionRota
 import { TransformScaleCard } from './transform/TransformScaleCard';
 import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
-import { TransformVertexEditor } from './transform/TransformVertexEditor';
 import { StyleCard } from './style/StyleCard';
 
 interface TransformTabProps {
@@ -48,7 +47,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   transform,
   coordinateSystem,
   updateCurrentTransform,
-  handlePartPropChange,
   handleZIndexChange,
   onCopyAnimation,
   onPasteAnimation,
@@ -96,14 +94,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
           </StyleCard>
         )}
 
-        {selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length && handlePartPropChange && (
-          <TransformVertexEditor
-            selectedPart={selectedPart}
-            transform={transform}
-            coordinateSystem={coordinateSystem}
-            onPartPropChange={handlePartPropChange}
-          />
-        )}
 
         {/* Canonical animation-data actions remain useful for named sequences.
             The legacy procedural IN/OUT editor is intentionally de-emphasized

@@ -11,7 +11,6 @@ interface CanvasViewportToolbarProps {
   setActiveTool: (tool: 'select' | 'pan') => void;
 }
 
-const DEFAULT_ZOOM_LEVEL = 1;
 const DEFAULT_PAN_OFFSET = { x: 0, y: 0 };
 const VIEWPORT_TOOL_OPTIONS: Array<'select' | 'pan'> = ['select', 'pan'];
 const VIEWPORT_TOOL_STEP = 29;
@@ -138,7 +137,7 @@ export const CanvasViewportToolbar: React.FC<CanvasViewportToolbarProps> = ({
       <button
         className="btn-icon viewport-btn"
         onClick={() => {
-          setZoomLevel(DEFAULT_ZOOM_LEVEL);
+          // Reset only the camera position; zoom, grid visibility, and active tool are preserved.
           setPanOffset({ ...DEFAULT_PAN_OFFSET });
         }}
         aria-label="Reset View Position"

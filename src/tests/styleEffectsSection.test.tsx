@@ -60,7 +60,7 @@ describe('StyleEffectsSection compact editor', () => {
     expect(onPartPropChange).toHaveBeenNthCalledWith(2, 'shadowOffsetX', -8);
     expect(onPartPropChange).toHaveBeenNthCalledWith(3, 'shadowOffsetY', 10);
 
-    const colorInput = container.querySelector('input[type="color"]') as HTMLInputElement;
+    const colorInput = container.querySelector('.rgba-picker-hex input') as HTMLInputElement;
     fireEvent.change(colorInput, { target: { value: '#abcdef' } });
     expect(onPartPropChange).toHaveBeenNthCalledWith(4, 'shadowColor', '#abcdef');
 

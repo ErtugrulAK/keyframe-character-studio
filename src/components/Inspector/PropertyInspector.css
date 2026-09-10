@@ -1982,6 +1982,51 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* V3.5 Trim Path compact control group: percentages share a row, offset stays readable. */
+.trim-path-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs) 8px;
+}
+
+.trim-path-field {
+  min-width: 0;
+}
+
+.trim-path-field .appearance-field-label {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  min-width: 0;
+}
+
+.trim-path-unit {
+  color: var(--kcs-text-muted, #788596);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+.trim-path-offset-field {
+  grid-column: 1 / -1;
+}
+
+.trim-path-field .input-control,
+.trim-path-field input {
+  width: 100%;
+  min-width: 0;
+}
+
+@container (max-width: 250px) {
+  .trim-path-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trim-path-offset-field {
+    grid-column: auto;
+  }
+}
 /* Preserve Inspector edge positioning over the shared handle visual authority. */
 .inspector-dock-toggle {
   position: absolute;

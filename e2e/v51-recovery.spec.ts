@@ -52,8 +52,9 @@ test.describe('KCS V5.1 consolidated recovery', () => {
 
     await page.getByRole('button', { name: 'Expand TEXT' }).click();
     const textSection = page.locator('.panel-card').filter({ hasText: 'TEXT' }).first();
-    await expect(textSection).toContainText('FILL');
-    await expect(textSection).toContainText('STROKE');
+    await expect(textSection).toContainText('COLOR');
+    await expect(textSection).not.toContainText('FILL');
+    await expect(textSection).not.toContainText('STROKE');
     await expect(textSection).not.toContainText('QUICK PALETTE');
     await expect(textSection.locator('input[type="color"]')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Expand APPEARANCE' })).toHaveCount(0);

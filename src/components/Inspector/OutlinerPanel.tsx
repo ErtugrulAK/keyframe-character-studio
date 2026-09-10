@@ -12,20 +12,18 @@ import {
   ChevronRight,
   ChevronUp,
   GripVertical,
-  RectangleHorizontal,
-  Square,
-  Triangle,
-  Star,
-  Diamond,
-  PenTool,
   Pill,
   Flag,
   Scissors,
   AlertTriangle,
 } from 'lucide-react';
+import type { BodyPartType } from '../../types/animator';
 import { booleanOperationLabel } from '../../utils/booleanGeometry';
-import { ParallelogramIcon } from '../Toolbar/drawers/ElementsDrawer';
-
+import {
+  SHAPE_ICON_MAP,
+  SHAPE_ICON_SIZE,
+  SHAPE_ICON_STROKE_WIDTH,
+} from '../../utils/shapeIconMap';
 export const OutlinerPanel: React.FC = () => {
   const {
     tracks,
@@ -279,6 +277,16 @@ export const OutlinerPanel: React.FC = () => {
 
   const getActorIcon = (type: string, isBooleanGroup: boolean = false) => {
     if (isBooleanGroup) return <Layers size={12} className="text-purple" />;
+    const ShapeIcon = SHAPE_ICON_MAP[type as BodyPartType];
+    if (ShapeIcon) {
+      return (
+        <ShapeIcon
+          size={SHAPE_ICON_SIZE - 6}
+          strokeWidth={SHAPE_ICON_STROKE_WIDTH}
+          style={{ color: 'var(--text-muted)' }}
+        />
+      );
+    }
     switch (type) {
       case 'custom_text':
         return <TypeIcon size={12} className="text-cyan" />;
@@ -288,22 +296,6 @@ export const OutlinerPanel: React.FC = () => {
         return <VideoIcon size={12} className="text-purple" />;
       case 'custom_card':
         return <Layers size={12} className="text-gold" />;
-      case 'custom_rect':
-      case 'custom_box':
-        return <RectangleHorizontal size={12} className="text-teal" />;
-      case 'custom_square':
-      case 'custom_circle':
-        return <Square size={12} className="text-teal" />;
-      case 'custom_triangle':
-        return <Triangle size={12} className="text-teal" />;
-      case 'custom_star':
-        return <Star size={12} className="text-gold" />;
-      case 'custom_diamond':
-        return <Diamond size={12} className="text-gold" />;
-      case 'custom_parallelogram':
-        return <ParallelogramIcon size={12} className="text-gold" />;
-      case 'custom_freeform':
-        return <PenTool size={12} className="text-cyan" />;
       case 'custom_capsule':
         return <Pill size={12} className="text-blue" />;
       case 'custom_banner':

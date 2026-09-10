@@ -215,4 +215,25 @@ describe('OutlinerPanel — M22 matte relationship indicator', () => {
     renderPanel();
     expect(screen.getByText('Parallelogram')).toBeTruthy();
   });
+  it.each([
+    ['custom_capsule', 'Capsule', 'pill'],
+    ['custom_parallelogram', 'Parallelogram', null],
+    ['custom_diamond', 'Rhombus', 'diamond'],
+    ['custom_star', 'Star', 'star'],
+    ['custom_triangle', 'Triangle', 'triangle'],
+    ['custom_circle', 'Circle', 'circle'],
+    ['custom_box', 'Square', 'square'],
+    ['custom_rect', 'Rectangle', 'rectangle-horizontal'],
+  ] as const)('uses the canonical neutral icon for %s', (type, name, iconClass) => {
+    animatorCtx.characterParts = [part(type, name, type)];
+    const { container } = renderPanel();
+    const icon = container.querySelector('.col-label svg');
+    expect(icon).toBeTruthy();
+    expect(icon?.getAttribute('width')).toBe('12');
+    expect(icon?.getAttribute('height')).toBe('12');
+    expect(icon?.getAttribute('stroke-width')).toBe('2');
+    expect(icon?.getAttribute('style')).toContain('color: var(--text-muted)');
+    expect(icon?.className.baseVal ?? '').not.toMatch(/text-(teal|gold|cyan)/);
+    if (iconClass) expect(icon?.className.baseVal).toContain(`lucide-${iconClass}`);
+  });
 });

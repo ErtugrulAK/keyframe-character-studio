@@ -467,3 +467,77 @@
   z-index: 3;
   transform: translateY(-50%);
 }
+/* V3.5 in-flow drawer dock: keep the rail in the main layout while the
+   contextual panel is a flex item that can fully relinquish its footprint. */
+.left-toolbar-container {
+  --left-rail-width: 56px;
+  --left-drawer-width: 280px;
+  width: var(--left-rail-width);
+  min-width: var(--left-rail-width);
+  flex: 0 0 var(--left-rail-width);
+  overflow: visible;
+}
+
+.left-sidebar-nav {
+  position: relative;
+  width: var(--left-rail-width);
+  min-width: var(--left-rail-width);
+  flex: 0 0 var(--left-rail-width);
+}
+
+.left-drawer-panel {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: var(--left-drawer-width);
+  min-width: var(--left-drawer-width);
+  flex: 0 0 var(--left-drawer-width);
+  height: 100%;
+  transform: none;
+  overflow: hidden;
+  transition: width 240ms ease, min-width 240ms ease, flex-basis 240ms ease,
+    opacity 200ms ease, border-color 240ms ease, box-shadow 240ms ease,
+    visibility 240ms ease;
+}
+
+.left-toolbar-container.collapsed .left-drawer-panel {
+  width: 0;
+  min-width: 0;
+  flex-basis: 0;
+  opacity: 0;
+  border-right: 0;
+  box-shadow: none;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.left-toolbar-container:not(.collapsed) .left-drawer-panel {
+  width: var(--left-drawer-width);
+  min-width: var(--left-drawer-width);
+  flex-basis: var(--left-drawer-width);
+  opacity: 1;
+  pointer-events: auto;
+  visibility: visible;
+}
+
+/* The control follows the drawer edge while expanded, but remains reachable
+   against the rail edge after the drawer gives up its layout footprint. */
+.left-toolbar-toggle {
+  left: calc(var(--left-rail-width) + var(--left-drawer-width) - 13px);
+  right: auto;
+}
+
+.left-toolbar-container.collapsed .left-toolbar-toggle {
+  left: calc(var(--left-rail-width) - 13px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .left-drawer-panel,
+  .left-toolbar-toggle {
+    transition: none !important;
+  }
+}
+.left-toolbar-container:not(.collapsed) {
+  width: calc(var(--left-rail-width) + var(--left-drawer-width));
+  flex-basis: calc(var(--left-rail-width) + var(--left-drawer-width));
+}

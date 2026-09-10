@@ -2,12 +2,13 @@ import React from 'react';
 import type { CharacterPart } from '../../../../types/animator';
 import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
+import { StyleEffectsSection } from './StyleEffectsSection';
 import { isShapeAppearanceEligible } from '../../../../utils/shapeAppearance';
 
 interface StyleColorSectionProps {
   selectedPart: CharacterPart;
   onPartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
-  onPartPropChange: (key: 'fillOpacity' | 'strokeOpacity', value: number) => void;
+  onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   embedded?: boolean;
 }
 
@@ -56,6 +57,7 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({
           />
         </div>
       </div>
+      <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={onPartPropChange} embedded />
     </>
   );
 

@@ -71,9 +71,26 @@ async function createShapeByDrag(page: import('@playwright/test').Page, name: st
     await expect(page.getByTitle('Motion Transitions')).toHaveCount(0);
   });
 
+  test('Finalize a freeform shape with Enter and return to Select', async ({ page }) => {
+    test.setTimeout(60000);
+    await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
+
+    await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
+    await page.getByRole('button', { name: 'Free Draw', exact: true }).click();
+    await page.getByRole('button', { name: 'Hide Left Toolbar', exact: true }).click();
+
+    const svg = page.locator('.stage-svg');
+    await svg.click({ position: { x: 220, y: 180 } });
+    await svg.click({ position: { x: 360, y: 200 } });
+    await svg.click({ position: { x: 300, y: 280 } });
+    await page.keyboard.press('Enter');
+
+    await expect(page.locator('.ue-outliner').getByText('Freeform Shape').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Select Tool', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('Draw a freeform shape with the Free Draw tool', async ({ page }) => {
     test.setTimeout(60000);
-    // The application should initialize and render the canvas
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
     // Open the vector shapes drawer and activate the Free Draw tool

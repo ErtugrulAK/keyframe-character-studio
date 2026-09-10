@@ -82,13 +82,19 @@ export const useFreeformDraw = ({ enabled, getStagePoint, onComplete, onCancel }
     if (notify) onCancelRef.current?.();
   }, [reset]);
 
-  // Enter commits / Escape exits while the tool is active (even before drawing).
+  // Enter commits an in-progress drawing; Escape exits the active tool.
   useEffect(() => {
     if (!enabled) return;
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Enter') {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))) return;
+      if (e.key === 'Enter' && pointsRef.current.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
         finish();
       } else if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
         cancel(true); // Esc exits the drawing tool entirely (notifies the caller)
       }
     };

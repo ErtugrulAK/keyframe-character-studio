@@ -22,8 +22,11 @@ export const TrimPathSection: React.FC<TrimPathSectionProps> = ({ selectedPart, 
     </label>
 
     <div className="trim-path-fields">
-      <div className="appearance-field">
-        <label className="appearance-field-label" htmlFor="trim-path-start-input">START</label>
+      <div className="appearance-field trim-path-field">
+        <label className="appearance-field-label" htmlFor="trim-path-start-input">
+          <span>START</span>
+          <span className="trim-path-unit">%</span>
+        </label>
         <SmartNumberInput
           ariaLabel="Trim Path Start"
           value={selectedPart.trimPathStart ?? 0}
@@ -35,8 +38,11 @@ export const TrimPathSection: React.FC<TrimPathSectionProps> = ({ selectedPart, 
           onChange={(value) => onPartPropChange('trimPathStart', value)}
         />
       </div>
-      <div className="appearance-field">
-        <label className="appearance-field-label" htmlFor="trim-path-end-input">END</label>
+      <div className="appearance-field trim-path-field">
+        <label className="appearance-field-label" htmlFor="trim-path-end-input">
+          <span>END</span>
+          <span className="trim-path-unit">%</span>
+        </label>
         <SmartNumberInput
           ariaLabel="Trim Path End"
           value={selectedPart.trimPathEnd ?? 1}
@@ -48,8 +54,11 @@ export const TrimPathSection: React.FC<TrimPathSectionProps> = ({ selectedPart, 
           onChange={(value) => onPartPropChange('trimPathEnd', value)}
         />
       </div>
-      <div className="appearance-field">
-        <label className="appearance-field-label" htmlFor="trim-path-offset-input">OFFSET (DEGREES)</label>
+      <div className="appearance-field trim-path-field trim-path-offset-field">
+        <label className="appearance-field-label" htmlFor="trim-path-offset-input">
+          <span>OFFSET</span>
+          <span className="trim-path-unit">°</span>
+        </label>
         <SmartNumberInput
           ariaLabel="Trim Path Offset"
           value={selectedPart.trimPathOffset ?? 0}

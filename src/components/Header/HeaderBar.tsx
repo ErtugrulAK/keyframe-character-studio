@@ -264,7 +264,6 @@ export const HeaderBar: React.FC = () => {
             <option value={60}>60 FPS</option>
             <option value={120}>120 FPS</option>
           </select>
-
           <div className="divider-v" />
 
           <button className="header-action-btn import-btn" onClick={() => fileInputRef.current?.click()} title="Import JSON Animation File">

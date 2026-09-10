@@ -1120,3 +1120,64 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   outline: 2px solid var(--kcs-focus);
   outline-offset: -2px;
 }
+
+/* V3.5 semantic dark-editor palette: flat surfaces, restrained accent, explicit states. */
+:root {
+  --kcs-bg-shell: #0b0e13;
+  --kcs-bg-rail: #0e131a;
+  --kcs-bg-drawer: #11161e;
+  --kcs-bg-inspector: #10151c;
+  --kcs-bg-timeline: #0c1117;
+  --kcs-bg-graph: #0f151c;
+  --kcs-bg-elevated: #1a222d;
+  --kcs-bg-selected: rgba(41, 211, 183, .12);
+  --kcs-bg-hover: #1b2530;
+  --kcs-border-focus: #52e2c7;
+  --kcs-text-primary: #e7edf3;
+  --kcs-text-secondary: #b7c2ce;
+  --kcs-text-muted: #8290a0;
+  --kcs-text-disabled: #56616f;
+  --kcs-accent: #35c8b0;
+  --kcs-accent-hover: #55d8c1;
+  --kcs-panel-subtle: #121922;
+  --kcs-panel-elevated: var(--kcs-bg-elevated);
+  --kcs-selected: var(--kcs-bg-selected);
+  --kcs-hover: var(--kcs-bg-hover);
+  --kcs-focus: var(--kcs-border-focus);
+}
+
+.header-bar {
+  background: var(--kcs-bg-shell);
+  box-shadow: none;
+}
+
+.left-sidebar-nav { background: var(--kcs-bg-rail); }
+.left-drawer-panel { background: var(--kcs-bg-drawer); }
+.motion-design-right-sidebar { background: var(--kcs-bg-inspector); box-shadow: none; }
+.outliner-dock { background: var(--kcs-bg-drawer); }
+.details-dock { background: var(--kcs-bg-inspector); }
+.sequencer-timeline { background: var(--kcs-bg-timeline); }
+.temporal-graph-panel { background: var(--kcs-bg-graph); }
+.canvas-viewport-radial-bg {
+  background-color: var(--kcs-bg-canvas);
+  background-image: none;
+}
+.canvas-viewport-toolbar,
+.viewport-toolbar {
+  background: var(--kcs-bg-elevated);
+  box-shadow: none;
+}
+.header-tab:hover,
+.sidebar-nav-item:hover,
+.track-row:hover,
+.track-lane:hover {
+  background: var(--kcs-bg-hover);
+}
+.header-tab.active,
+.sidebar-nav-item.active,
+.tree-node.selected,
+.ue-track-lane.selected {
+  background: var(--kcs-bg-selected);
+}
+.header-tab.active { border-color: var(--kcs-border-subtle); }
+.playhead { box-shadow: none; }

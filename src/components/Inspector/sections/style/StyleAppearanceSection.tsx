@@ -8,7 +8,7 @@ import type { StrokeAlignmentControlValue } from '../../../../utils/shapeAppeara
 import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { StyleCard } from './StyleCard';
-
+import { StyleEffectsSection } from './StyleEffectsSection';
 interface StyleAppearanceSectionProps {
   selectedPart: CharacterPart;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
@@ -105,6 +105,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
             </select>
           </div>
         </div>
+        <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={onPartPropChange} embedded />
       </div>
     </StyleCard>
   );

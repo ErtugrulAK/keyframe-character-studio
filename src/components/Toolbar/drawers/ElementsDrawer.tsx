@@ -2,50 +2,27 @@ import React from 'react';
 import { useAnimator } from '../../../context/AnimatorContext';
 import type { BodyPartType } from '../../../types/animator';
 import {
-  Square,
-  Circle,
-  Triangle,
-  Star,
-  Diamond,
-  RectangleHorizontal,
-  PenTool,
-} from 'lucide-react';
+  SHAPE_ICON_MAP,
+  SHAPE_ICON_SIZE,
+  SHAPE_ICON_STROKE_WIDTH,
+} from '../../../utils/shapeIconMap';
 
-const SHAPE_ICON_SIZE = 18;
-
-type ShapeIconProps = {
+type ShapeIcon = React.ComponentType<{
   size?: number;
   className?: string;
-};
-
-export const ParallelogramIcon = ({ size = SHAPE_ICON_SIZE, className }: ShapeIconProps) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    aria-hidden="true"
-  >
-    <path d="M5 6h14l-3 12H2z" />
-  </svg>
-);
-
-type ShapeIcon = React.ComponentType<ShapeIconProps>;
+  strokeWidth?: number;
+  style?: React.CSSProperties;
+}>;
 
 const SHAPE_ITEMS: { type: BodyPartType; label: string; icon: ShapeIcon }[] = [
-  { type: 'custom_rect', label: 'Rectangle', icon: RectangleHorizontal },
-  { type: 'custom_box', label: 'Square', icon: Square },
-  { type: 'custom_circle', label: 'Circle', icon: Circle },
-  { type: 'custom_triangle', label: 'Triangle', icon: Triangle },
-  { type: 'custom_star', label: 'Star', icon: Star },
-  { type: 'custom_diamond', label: 'Rhombus', icon: Diamond },
-  { type: 'custom_parallelogram', label: 'Parallelogram', icon: ParallelogramIcon },
-  { type: 'custom_freeform', label: 'Free Draw', icon: PenTool },
+  { type: 'custom_rect', label: 'Rectangle', icon: SHAPE_ICON_MAP.custom_rect! },
+  { type: 'custom_box', label: 'Square', icon: SHAPE_ICON_MAP.custom_box! },
+  { type: 'custom_circle', label: 'Circle', icon: SHAPE_ICON_MAP.custom_circle! },
+  { type: 'custom_triangle', label: 'Triangle', icon: SHAPE_ICON_MAP.custom_triangle! },
+  { type: 'custom_star', label: 'Star', icon: SHAPE_ICON_MAP.custom_star! },
+  { type: 'custom_diamond', label: 'Rhombus', icon: SHAPE_ICON_MAP.custom_diamond! },
+  { type: 'custom_parallelogram', label: 'Parallelogram', icon: SHAPE_ICON_MAP.custom_parallelogram! },
+  { type: 'custom_freeform', label: 'Free Draw', icon: SHAPE_ICON_MAP.custom_freeform! },
 ];
 
 export const ElementsDrawer: React.FC = () => {
@@ -85,7 +62,7 @@ export const ElementsDrawer: React.FC = () => {
               }}
               title={item.type === 'custom_freeform' ? 'Freehand drawing: click corners or drag to draw freely' : undefined}
             >
-              <div className="item-icon-box"><ShapeIcon size={SHAPE_ICON_SIZE} className="element-shape-icon" /></div>
+              <div className="item-icon-box"><ShapeIcon size={SHAPE_ICON_SIZE} strokeWidth={SHAPE_ICON_STROKE_WIDTH} className="element-shape-icon" /></div>
               <span className="item-label">{item.label}</span>
             </button>
           );

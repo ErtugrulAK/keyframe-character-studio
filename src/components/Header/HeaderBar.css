@@ -492,3 +492,8 @@
   outline: 2px solid var(--kcs-focus);
   outline-offset: -2px;
 }
+
+/* Keep the centered mode rail open; its moving indicator remains the sole state marker. */
+.header-mode-switch {
+  border: none;
+}

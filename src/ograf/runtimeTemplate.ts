@@ -26,7 +26,8 @@ function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 function escapeXml(value) { return String(value).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;').split("'").join('&apos;'); }
 const RUNTIME_ID_CACHE = Object.create(null); const RUNTIME_ID_OWNERS = Object.create(null);
 function runtimeId(...parts) { const logical = JSON.stringify(parts); if (RUNTIME_ID_CACHE[logical]) return RUNTIME_ID_CACHE[logical]; const base = parts.filter((part) => part !== undefined && part !== null && part !== '').map((part) => { const safe = String(part).replace(/[^a-zA-Z0-9_-]/gu, '_'); return safe || '_'; }).join('-').replace(/^[0-9]/u, '_$&'); let id = base || '_'; let suffix = 2; while (RUNTIME_ID_OWNERS[id] && RUNTIME_ID_OWNERS[id] !== logical) id = base + '-' + suffix++; RUNTIME_ID_CACHE[logical] = id; RUNTIME_ID_OWNERS[id] = logical; return id; }
-function fontStyles() { return Object.entries(FONT_REFERENCES).map(([family, path]) => '@font-face{font-family:' + JSON.stringify(family) + ';src:url(' + JSON.stringify(path) + ');}' ).join(''); }
+function cssString(value) { return JSON.stringify(String(value)).split('<').join('\\\\u003c').split('>').join('\\\\u003e'); }
+function fontStyles() { return Object.entries(FONT_REFERENCES).map(([family, path]) => '@font-face{font-family:' + cssString(family) + ';src:url(' + cssString(path) + ');}' ).join(''); }
 function solveCubicBezier(x1, y1, x2, y2, input) {
   if (input <= 0) return 0; if (input >= 1) return 1;
   let t = input;

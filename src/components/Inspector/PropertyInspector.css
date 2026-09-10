@@ -45,7 +45,7 @@
 .main-layout.inspector-hidden .inspector-dock-toggle {
   top: 50%;
   right: 0;
-  transform: translate(50%, -50%);
+  transform: translate(0, -50%);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1246,18 +1246,6 @@
   }
 }
 
-.trim-path-fields {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-xs);
-  min-width: 0;
-}
-
-@container (max-width: 300px) {
-  .trim-path-fields {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
 
 .color-swatch-input {
   width: 28px !important;
@@ -1972,21 +1960,11 @@
 .motion-design-right-sidebar:not(.is-hidden) {
   visibility: visible;
 }
-/* V3.3 narrow Inspector safety: Trim Path stays two-column until room exists. */
 .trim-path-fields {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-@container (min-width: 360px) {
-  .trim-path-fields {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-/* V3.5 Trim Path compact control group: percentages share a row, offset stays readable. */
-.trim-path-fields {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-xs) 8px;
+  min-width: 0;
 }
 
 .trim-path-field {
@@ -2008,14 +1986,20 @@
   letter-spacing: .04em;
 }
 
-.trim-path-offset-field {
-  grid-column: 1 / -1;
-}
-
 .trim-path-field .input-control,
 .trim-path-field input {
   width: 100%;
   min-width: 0;
+}
+
+@container (max-width: 300px) {
+  .trim-path-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trim-path-offset-field {
+    grid-column: 1 / -1;
+  }
 }
 
 @container (max-width: 250px) {

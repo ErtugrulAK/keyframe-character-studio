@@ -1,16 +1,15 @@
 /// <reference types="node" />
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, isAbsolute, relative, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { isSafeOGrafPackagePath } from './compiler';
 import type { OGrafGeneratedPackage, OGrafMaterializedPackage, OGrafPackageFile } from './types';
 
 function assertSafePackagePath(root: string, relativePath: string): string {
   const normalized = relativePath.replace(/\\/gu, '/');
-  if (!normalized || normalized.startsWith('/') || isAbsolute(relativePath) || /^[a-zA-Z]:\//u.test(normalized) || normalized.split('/').includes('..')) {
-    throw new Error(`Unsafe package path: ${relativePath}`);
-  }
-  const target = resolve(root, relativePath);
-  const targetRelative = relative(resolve(root), target);
-  if (targetRelative.startsWith('..') || isAbsolute(targetRelative)) throw new Error(`Package path escapes output directory: ${relativePath}`);
+  if (!isSafeOGrafPackagePath(normalized)) throw new Error(`Unsafe package path: ${relativePath}`);
+  const target = resolve(root, normalized);
+  const targetRelative = resolve(root) === target ? '' : target.slice(resolve(root).length + 1);
+  if (!targetRelative || targetRelative.startsWith('..')) throw new Error(`Package path escapes output directory: ${relativePath}`);
   return target;
 }
 
@@ -20,7 +19,10 @@ export async function materializeOGrafPackage(plan: OGrafGeneratedPackage, outpu
   }
   await mkdir(outputDirectory, { recursive: true });
   const materializedFiles: OGrafPackageFile[] = [];
+  const seenPaths = new Set<string>();
   for (const file of plan.files) {
+    if (seenPaths.has(file.path)) throw new Error(`Duplicate package path: ${file.path}`);
+    seenPaths.add(file.path);
     const target = assertSafePackagePath(outputDirectory, file.path);
     await mkdir(dirname(target), { recursive: true });
     if (file.kind === 'asset') {

@@ -537,7 +537,50 @@
     transition: none !important;
   }
 }
-.left-toolbar-container:not(.collapsed) {
+.left-toolbar-container:not(.hidden) {
   width: calc(var(--left-rail-width) + var(--left-drawer-width));
   flex-basis: calc(var(--left-rail-width) + var(--left-drawer-width));
+}
+.main-layout {
+  --left-rail-width: 56px;
+  --left-drawer-width: 280px;
+}
+
+/* The parent owns visibility; a hidden dock relinquishes every layout pixel. */
+.left-toolbar-container.hidden {
+  width: 0 !important;
+  min-width: 0 !important;
+  flex-basis: 0 !important;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.left-toolbar-container.left-toolbar-container.hidden .left-sidebar-nav,
+.left-toolbar-container.left-toolbar-container.hidden .left-drawer-panel {
+  width: 0 !important;
+  min-width: 0 !important;
+  flex-basis: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  border: 0 !important;
+}
+
+.main-layout .left-toolbar-toggle {
+  position: absolute;
+  top: 50%;
+  left: calc(var(--left-rail-width) + var(--left-drawer-width));
+  right: auto;
+  z-index: 100;
+  transform: translate(-50%, -50%);
+}
+
+.main-layout.left-toolbar-hidden .left-toolbar-toggle {
+  left: 0;
+  transform: translate(0, -50%);
 }

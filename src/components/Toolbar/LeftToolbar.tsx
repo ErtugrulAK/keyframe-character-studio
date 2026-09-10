@@ -9,22 +9,29 @@ import {
   Square,
   Layout,
   Monitor,
-  ChevronLeft,
-  ChevronRight,
 } from 'lucide-react';
 import './LeftToolbar.css';
 
 type ActiveNavCategory = 'project' | 'media' | 'texts' | 'shapes';
 
-export const LeftToolbar: React.FC = () => {
+export interface LeftToolbarProps {
+  isHidden?: boolean;
+}
+
+export const LeftToolbar: React.FC<LeftToolbarProps> = ({ isHidden = false }) => {
   const { activeTool } = useAnimator();
   const [activeCategory, setActiveCategory] = useState<ActiveNavCategory>('media');
-  // UI-only layout state: collapsing hides the drawer so the canvas gets the
-  // space. It never touches tool/selection/keyframe/playback/scene state.
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // UI-only category state remains local so collapse never changes the active tool.
+  const isCapturing = activeTool === 'shape_create' || activeTool === 'freeform_draw';
 
   return (
-    <aside className={`left-toolbar-container${isCollapsed ? ' collapsed' : ''}${activeTool === 'shape_create' || activeTool === 'freeform_draw' ? ' tool-capturing' : ''}`}>
+    <aside
+      id="left-toolbar-panel"
+      className={`left-toolbar-container${isHidden ? ' hidden' : ''}${isCapturing ? ' tool-capturing' : ''}`}
+      aria-hidden={isHidden}
+      inert={isHidden ? true : undefined}
+    >
+
       <div className="left-sidebar-nav">
         <button
           className={`sidebar-nav-item ${activeCategory === 'project' ? 'active' : ''}`}
@@ -66,20 +73,9 @@ export const LeftToolbar: React.FC = () => {
           <span className="nav-label">Texts</span>
         </button>
 
-        {/* Collapse / Expand toggle — always visible (collapsed state keeps a
-            reachable control). Pure layout state; the active nav category is
-            preserved so re-expanding restores the exact previous drawer. */}
-        <button
-          type="button"
-          className="sidebar-handle left-toolbar-toggle"
-          onClick={() => setIsCollapsed((c) => !c)}
-          aria-label={isCollapsed ? 'Show Left Toolbar' : 'Hide Left Toolbar'}
-        >
-          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
       </div>
 
-      <div className="left-drawer-panel" aria-hidden={isCollapsed}>
+      <div className="left-drawer-panel" aria-hidden={isHidden}>
         {activeCategory === 'project' && <ProjectDrawer />}
         {activeCategory === 'media' && <MediaDrawer />}
         {activeCategory === 'shapes' && <ElementsDrawer />}

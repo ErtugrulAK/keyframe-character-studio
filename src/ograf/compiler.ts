@@ -19,7 +19,7 @@ function hashString(value: string): string {
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
 
-function sanitizeId(value: string): string {
+export function sanitizeOGrafId(value: string): string {
   const sanitized = value
     .normalize('NFKD')
     .replace(/[^a-zA-Z0-9._-]+/gu, '-')
@@ -30,8 +30,9 @@ function sanitizeId(value: string): string {
 }
 
 function getGraphicId(sceneData: SceneData, options: OGrafExportOptions): string {
-  const source = options.graphicId?.trim() || sceneData.name?.trim() || 'graphic';
-  const base = sanitizeId(source).replace(/\//gu, '-');
+  const explicit = options.graphicId?.trim();
+  if (explicit) return sanitizeOGrafId(explicit);
+  const base = sanitizeOGrafId(sceneData.name?.trim() || 'graphic');
   const fingerprint = hashString(JSON.stringify(sceneData));
   return `${base}-${fingerprint}`;
 }
@@ -39,7 +40,6 @@ function getGraphicId(sceneData: SceneData, options: OGrafExportOptions): string
 function getGraphicName(sceneData: SceneData, options: OGrafExportOptions): string {
   return options.name?.trim() || sceneData.name?.trim() || 'Keyframe Character Studio Graphic';
 }
-
 function collectCompilerDiagnostics(options: OGrafExportOptions): OGrafExportDiagnostic[] {
   const diagnostics: OGrafExportDiagnostic[] = [];
   const publicFields = [...(options.publicTextFields || []), ...(options.publicImageFields || [])];
@@ -53,7 +53,26 @@ function collectCompilerDiagnostics(options: OGrafExportOptions): OGrafExportDia
       });
     }
   }
+  const main = options.main?.trim() || OGRAF_DEFAULT_MAIN;
+  if (!isSafeOGrafPackagePath(main)) {
+    diagnostics.push({
+      code: 'OGRAF_INVALID_MAIN',
+      severity: 'ERROR',
+      message: `Manifest main path "${main}" must be a safe package-relative file path.`,
+      feature: 'manifest',
+    });
+  }
   return diagnostics;
+}
+
+export function isSafeOGrafPackagePath(value: string): boolean {
+  const normalized = value.replace(/\\/gu, '/');
+  return Boolean(normalized)
+    && !normalized.startsWith('/')
+    && !/^[a-zA-Z]:/u.test(normalized)
+    && !normalized.split('/').some((segment) => segment === '..' || segment === '' || segment === '.')
+    && !/[^\x20-\x7E]/u.test(normalized)
+    && !normalized.endsWith('/');
 }
 
 export interface OGrafManifestCompilation {
@@ -68,7 +87,7 @@ export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportO
     $schema: OGRAF_GRAPHICS_SCHEMA_URL,
     id: getGraphicId(sceneData, options),
     name: getGraphicName(sceneData, options),
-    main: options.main?.trim() || OGRAF_DEFAULT_MAIN,
+    main: (options.main?.trim() || OGRAF_DEFAULT_MAIN).replace(/\\/gu, '/'),
     version: options.version?.trim() || OGRAF_DEFAULT_VERSION,
     supportsRealTime: true,
     supportsNonRealTime: false,
@@ -92,7 +111,7 @@ export function compileOGrafPackagePlan(sceneData: SceneData, options: OGrafExpo
   const validated = validateSceneForOGraf(sceneData, options);
   const compiled = compileOGrafManifest(sceneData, options);
   const diagnostics = compiled.diagnostics;
-  const graphicName = sanitizeId(options.name?.trim() || sceneData.name?.trim() || 'graphic');
+  const graphicName = sanitizeOGrafId(options.name?.trim() || sceneData.name?.trim() || 'graphic');
   const manifestPath = `${graphicName}.ograf.json`;
 
   return {

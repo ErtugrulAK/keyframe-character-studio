@@ -50,7 +50,8 @@ function isLikelyLocalAsset(value: string): boolean {
 
 function normalizePackagedPath(source: string, kind: 'image' | 'font', configuredPath?: string): string {
   const extension = source.split(/[?#]/u)[0].split('.').pop()?.toLowerCase() || (kind === 'image' ? 'asset' : 'font');
-  const base = configuredPath?.replace(/^[\\/]+/u, '').replace(/\\/gu, '/') || `${kind}s/${source.split(/[\\/]/u).pop()?.split(/[?#]/u)[0] || `asset.${extension}`}`;
+  const fallback = `assets/${kind}s/${source.split(/[\\/]/u).pop()?.split(/[?#]/u)[0] || `asset.${extension}`}`;
+  const base = configuredPath?.replace(/\\/gu, '/') || fallback;
   return base.replace(/^\.\//u, '');
 }
 function validatePublicFields(options: OGrafExportOptions, layers: SceneLayer[], diagnostics: OGrafExportDiagnostic[]): void {
@@ -151,7 +152,7 @@ function validateFont(
   const safeName = layer.fontFamily.toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-+|-+$/gu, '') || 'font';
   assets.push({
     source,
-    packagedPath: entry.packagedPath || `fonts/${safeName}.font`,
+    packagedPath: entry.packagedPath || `assets/fonts/${safeName}.font`,
     kind: 'font',
     ...(entry.sourcePath ? { sourcePath: entry.sourcePath } : {}),
     ...(entry.binaryContent ? { binaryContent: entry.binaryContent } : {}),

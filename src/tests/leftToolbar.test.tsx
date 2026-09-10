@@ -1,85 +1,78 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import React, { useState } from 'react';
 import { AnimatorProvider } from '../context/AnimatorContext';
 
-// Mock the drawers — LeftToolbar collapse/expand is a layout behavior; the
-// drawer internals (which need the AnimatorProvider) are irrelevant here.
 vi.mock('../components/Toolbar/drawers/ProjectDrawer', () => ({ ProjectDrawer: () => <div data-testid="drawer-project" /> }));
 vi.mock('../components/Toolbar/drawers/MediaDrawer', () => ({ MediaDrawer: () => <div data-testid="drawer-media" /> }));
 vi.mock('../components/Toolbar/drawers/ElementsDrawer', () => ({ ElementsDrawer: () => <div data-testid="drawer-elements" /> }));
 vi.mock('../components/Toolbar/drawers/TextsDrawer', () => ({ TextsDrawer: () => <div data-testid="drawer-texts" /> }));
-vi.mock('../components/Toolbar/drawers/TransitionsDrawer', () => ({ TransitionsDrawer: () => <div data-testid="drawer-transitions" /> }));
 
 import { LeftToolbar } from '../components/Toolbar/LeftToolbar';
 
-function renderToolbar() {
-  return render(
+function Harness() {
+  const [visible, setVisible] = useState(true);
+  return (
     <AnimatorProvider>
-      <LeftToolbar />
-    </AnimatorProvider>,
+      <main className={`main-layout ${visible ? '' : 'left-toolbar-hidden'}`}>
+        <button
+          type="button"
+          className="sidebar-handle left-toolbar-toggle"
+          aria-label={visible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
+          onClick={() => setVisible((current) => !current)}
+        />
+        <LeftToolbar isHidden={!visible} />
+        <div data-testid="stage" />
+      </main>
+    </AnimatorProvider>
   );
+}
+
+function renderToolbar() {
+  return render(<Harness />);
 }
 
 function container() {
   return document.querySelector('.left-toolbar-container') as HTMLElement;
 }
 
-describe('LeftToolbar collapse/expand (UI layout only)', () => {
-  it('TEST 1 — starts expanded with accessible chrome names', () => {
+describe('LeftToolbar collapse/expand (parent-owned layout state)', () => {
+  it('starts expanded with accessible chrome names', () => {
     renderToolbar();
-    expect(container().className).not.toContain('collapsed');
-    expect(screen.getByTestId('drawer-media')).toBeTruthy(); // default category drawer
-    const handle = screen.getByRole('button', { name: 'Hide Left Toolbar' });
-    expect(handle).toBeTruthy();
-    expect(handle).not.toHaveAttribute('title');
+    expect(container().className).not.toContain('hidden');
+    expect(screen.getByTestId('drawer-media')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hide Left Toolbar' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Media Assets' })).not.toHaveAttribute('title');
   });
 
-  it('TEST 2 — collapse button preserves the fixed rail (collapsed class)', () => {
+  it('moves visibility authority to the parent and removes hidden footprint', () => {
     renderToolbar();
     fireEvent.click(screen.getByRole('button', { name: 'Hide Left Toolbar' }));
-    expect(container().className).toContain('collapsed');
-    expect(screen.getByRole('button', { name: 'Show Left Toolbar' })).toBeTruthy(); // control stays reachable
+    expect(container()).toHaveClass('hidden');
+    expect(container()).toHaveAttribute('aria-hidden', 'true');
+    expect(container()).toHaveAttribute('inert');
+    expect(screen.getByRole('button', { name: 'Show Left Toolbar' })).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'Media Assets' })).toBeNull();
+    // The browser contract (zero width/flex footprint) is asserted by the
+    // real-layout E2E; jsdom does not evaluate the stylesheet.
+    expect(container()).toHaveClass('hidden');
   });
 
-  it('TEST 3 — toggling again expands back', () => {
+  it('preserves active category across hide/show', () => {
     renderToolbar();
-    fireEvent.click(screen.getByRole('button', { name: 'Hide Left Toolbar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Show Left Toolbar' }));
-    expect(container().className).not.toContain('collapsed');
-    expect(screen.getByRole('button', { name: 'Hide Left Toolbar' })).toBeTruthy();
-  });
-
-  it('TEST 4 — active nav category is preserved across collapse (tool state intact)', () => {
-    renderToolbar();
-    // switch to Texts drawer
     fireEvent.click(screen.getByText('Texts'));
-    expect(screen.getByTestId('drawer-texts')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Hide Left Toolbar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Show Left Toolbar' }));
-    // re-expanding restores the exact previous drawer (state preserved)
     expect(screen.getByTestId('drawer-texts')).toBeTruthy();
-    // the Texts nav item is still the active one
-    const textsItem = screen.getByText('Texts').closest('button')!;
-    expect(textsItem.className).toContain('active');
+    expect(screen.getByText('Texts').closest('button')).toHaveClass('active');
   });
 
-  it('TEST 5 — collapse does not touch selection/playback/timeline state (LeftToolbar has no such state — only UI)', () => {
-    // LeftToolbar owns only activeCategory + isCollapsed; toggling must not
-    // throw and must not change any other UI state it renders.
+  it('keeps nav content mounted but inaccessible while hidden', () => {
     renderToolbar();
-    const navItems = document.querySelectorAll('.sidebar-nav-item');
+    const count = document.querySelectorAll('.sidebar-nav-item').length;
     fireEvent.click(screen.getByRole('button', { name: 'Hide Left Toolbar' }));
-    expect(document.querySelectorAll('.sidebar-nav-item').length).toBe(navItems.length); // tool icons preserved
-    expect(screen.getByText('Media')).toBeTruthy(); // labels may be hidden via CSS, elements remain
-  });
-
-  it('TEST 6 — collapsed class hides mounted drawer via CSS', () => {
-    renderToolbar();
-    fireEvent.click(screen.getByRole('button', { name: 'Hide Left Toolbar' }));
-    const drawer = document.querySelector('.left-drawer-panel') as HTMLElement;
-    // still mounted (smooth transition) — collapsed styling comes from CSS
-    expect(drawer).toBeTruthy();
-    expect(container().className).toContain('collapsed');
+    expect(document.querySelectorAll('.sidebar-nav-item')).toHaveLength(count);
+    expect(screen.queryByRole('button', { name: 'Typography & Headlines' })).toBeNull();
+    expect((document.querySelector('.left-drawer-panel') as HTMLElement)).toHaveAttribute('aria-hidden', 'true');
   });
 });

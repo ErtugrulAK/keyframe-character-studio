@@ -25,7 +25,8 @@ export type OGrafDiagnosticCode =
   | 'OGRAF_ASSET_UNVERIFIED'
   | 'OGRAF_FONT_UNVERIFIED'
   | 'OGRAF_INVALID_PROJECT'
-  | 'OGRAF_INVALID_PUBLIC_FIELD';
+  | 'OGRAF_INVALID_PUBLIC_FIELD'
+  | 'OGRAF_INVALID_MAIN';
 
 export interface OGrafExportDiagnostic {
   code: OGrafDiagnosticCode;

@@ -125,6 +125,41 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
     expect(new Set(first.assets.map((asset) => asset.packagedPath)).size).toBe(2);
   });
 
+  test('deduplicates repeated references while keeping distinct path collisions deterministic', () => {
+    const scene = makeScene([
+      makeLayer({ id: 'one', imageUrl: 'same/logo.png' }),
+      makeLayer({ id: 'two', imageUrl: 'same/logo.png', zIndex: 1 }),
+      makeLayer({ id: 'three', imageUrl: 'other/logo.png', zIndex: 2 }),
+    ]);
+    const options = {
+      assetCatalog: {
+        'same/logo.png': { kind: 'local' as const, sourcePath: 'same.png', packagedPath: 'assets/logo.png' },
+        'other/logo.png': { kind: 'local' as const, sourcePath: 'other.png', packagedPath: 'assets/logo.png' },
+      },
+    };
+    const plan = compileOGrafPackage(scene, options);
+    const repeat = compileOGrafPackage(scene, options);
+
+    expect(plan.status).toBe('ready-to-materialize');
+    expect(plan.assets.map((asset) => asset.packagedPath)).toEqual([
+      'assets/logo.png',
+      expect.stringMatching(/^assets\/logo-[0-9a-f]{8}\.png$/u),
+    ]);
+    expect(plan.files.filter((file) => file.kind === 'asset')).toHaveLength(2);
+    expect(plan.files.map((file) => file.path)).toEqual(repeat.files.map((file) => file.path));
+  });
+
+  test('rejects an unsafe manifest main path before generating package files', () => {
+    const plan = compileOGrafPackage(makeScene(), {
+      main: '../runtime.mjs',
+      assetCatalog: {
+        'source/logo.png': { kind: 'local', sourcePath: 'logo.png', packagedPath: 'assets/logo.png' },
+      },
+    });
+
+    expect(plan.status).toBe('blocked');
+    expect(plan.diagnostics.some((diagnostic) => diagnostic.code === 'OGRAF_INVALID_MAIN')).toBe(true);
+  });
   test('blocks missing and external assets', () => {
     expect(compileOGrafPackage(makeScene()).status).toBe('blocked');
     expect(compileOGrafPackage(makeScene(), {
@@ -155,6 +190,20 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
 
     expect(plan.status).toBe('blocked');
     expect(plan.diagnostics.some((diagnostic) => diagnostic.message.includes('escapes'))).toBe(true);
+  });
+  test('rejects absolute, drive-relative, directory, and reserved package paths', () => {
+    for (const main of ['/runtime.mjs', 'C:runtime.mjs', 'runtime/', '.']) {
+      const plan = compileOGrafPackage(makeScene(), { main });
+      expect(plan.status).toBe('blocked');
+      expect(plan.diagnostics.some((diagnostic) => diagnostic.code === 'OGRAF_INVALID_MAIN')).toBe(true);
+    }
+    const collision = compileOGrafPackage(makeScene(), {
+      assetCatalog: {
+        'source/logo.png': { kind: 'local', sourcePath: 'logo.png', packagedPath: 'scene.kcs' },
+      },
+    });
+    expect(collision.status).toBe('blocked');
+    expect(collision.diagnostics.some((diagnostic) => diagnostic.message.includes('duplicated'))).toBe(true);
   });
 
   test('loads and updates declared public text while rejecting undeclared fields', () => {

@@ -12,7 +12,7 @@ import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { InlineRename } from '../Shared/InlineRename';
 import { compileOGrafPackage } from '../../ograf/packageCompiler';
-import { createOGrafBrowserZip } from '../../ograf/browserZip';
+import { createOGrafBrowserZip, sanitizeOGrafDownloadName } from '../../ograf/browserZip';
 import { prepareLegacyOGrafExport } from '../../ograf/legacyCompatibility';
 import { getUniqueOGrafExportErrors } from '../../ograf/diagnostics';
 import type { SceneData } from '../../types/composition';
@@ -109,6 +109,38 @@ export const HeaderBar: React.FC = () => {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unexpected OGraf export failure.';
       showToast(`Could not export OGraf: ${message}`, 'error');
+    } finally {
+      setIsOGrafExporting(false);
+    }
+  };
+  const handleOGrafLegacyExport = async () => {
+    if (isOGrafExporting) return;
+    setIsOGrafExporting(true);
+    try {
+      const sceneData = JSON.parse(exportProject()) as SceneData;
+      const preparation = prepareLegacyOGrafExport(sceneData);
+      const prepared = preparation instanceof Promise ? await preparation : preparation;
+      const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
+      const errors = getUniqueOGrafExportErrors(plan.diagnostics);
+      if (errors.length > 0) {
+        errors.forEach((diagnostic) => showToast(`${diagnostic.message}${diagnostic.layerName ? ` [${diagnostic.layerName}]` : ''}`, 'error'));
+        return;
+      }
+      const runtime = plan.files.find((file) => file.kind === 'runtime' && file.content !== undefined);
+      if (!runtime?.content) throw new Error('Generated OGraf runtime is unavailable.');
+      const fileName = `${sanitizeOGrafDownloadName(plan.manifest.name)}.mjs`;
+      const url = URL.createObjectURL(new Blob([runtime.content], { type: 'text/javascript' }));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      showToast(`Exported "${fileName}"`, 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unexpected OGraf legacy export failure.';
+      showToast(`Could not export OGraf legacy file: ${message}`, 'error');
     } finally {
       setIsOGrafExporting(false);
     }
@@ -324,7 +356,20 @@ export const HeaderBar: React.FC = () => {
                     void handleOGrafExport();
                   }}
                 >
-                  {isOGrafExporting ? 'Exporting OGraf…' : 'OGraf'}
+                  {isOGrafExporting ? 'Exporting OGraf…' : 'OGraf Package'}
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="header-action-btn"
+                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  disabled={isOGrafExporting}
+                  onClick={() => {
+                    setIsExportMenuOpen(false);
+                    void handleOGrafLegacyExport();
+                  }}
+                >
+                  OGraf Single File (Legacy)
                 </button>
               </div>
             )}

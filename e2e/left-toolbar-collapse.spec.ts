@@ -2,9 +2,10 @@ import { test, expect, type Page } from '@playwright/test';
 
 /**
  * UI CONTRACT — Left Toolbar collapse/expand (real browser).
- * Verifies: the 56px rail remains load-bearing, the drawer becomes hidden and
- * non-interactive, the canonical stage origin stays stable, and the canvas
- * remains usable while the Right Toolbar is unaffected.
+ * Visibility is parent-owned: hidden left dock has zero footprint and its
+ * content is inaccessible, while a sibling handle remains reachable at x=0.
+ * Expanded layout gives the stage the left dock footprint and anchors its handle
+ * at the full sidebar's far-right edge.
  */
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -50,9 +51,10 @@ function canvasBox(page: Page) {
 
 test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reachable rail', async ({ page }) => {
   await seed(page);
-  // Expanded baseline
   const expanded = await canvasBox(page);
+  // Expanded baseline
   const expandedLayout = await page.evaluate(() => {
+    const dock = document.querySelector('.left-toolbar-container')!;
     const rail = document.querySelector('.left-sidebar-nav')!;
     const drawer = document.querySelector('.left-drawer-panel')!;
     const leftHandle = document.querySelector('.left-toolbar-toggle')!;
@@ -60,8 +62,10 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
     const right = document.querySelector('.motion-design-right-sidebar');
     const drawerStyle = getComputedStyle(drawer);
     const drawerRect = drawer.getBoundingClientRect();
+    const dockRect = dock.getBoundingClientRect();
     const handleRect = leftHandle.getBoundingClientRect();
     return {
+      dockWidth: Math.round(dockRect.width),
       railWidth: Math.round(rail.getBoundingClientRect().width),
       drawerWidth: Math.round(drawerRect.width),
       drawerMinWidth: drawerStyle.minWidth,
@@ -76,6 +80,7 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
       rightWidth: right ? Math.round(right.getBoundingClientRect().width) : 0,
     };
   });
+  expect(expandedLayout.dockWidth).toBe(expandedLayout.railWidth + expandedLayout.drawerWidth);
   expect(expandedLayout.railWidth).toBe(56);
   expect(expandedLayout.drawerWidth).toBeGreaterThan(0);
   expect(expandedLayout.drawerMinWidth).toBe(`${expandedLayout.drawerWidth}px`);
@@ -90,46 +95,64 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   // Collapse the contextual drawer; the in-flow rail expands the canvas footprint.
   await page.getByRole('button', { name: 'Hide Left Toolbar' }).click();
   await page.waitForFunction(() => {
+    const dock = document.querySelector('.left-toolbar-container');
     const drawer = document.querySelector('.left-drawer-panel');
-    if (!drawer) return false;
-    const style = getComputedStyle(drawer);
-    return style.pointerEvents === 'none'
-      && style.opacity === '0'
-      && style.width === '0px'
-      && style.minWidth === '0px'
-      && style.flexBasis === '0px';
+    if (!dock || !drawer) return false;
+    const dockStyle = getComputedStyle(dock);
+    const drawerStyle = getComputedStyle(drawer);
+    return dockStyle.width === '0px'
+      && dockStyle.minWidth === '0px'
+      && dockStyle.flexBasis === '0px'
+      && drawerStyle.pointerEvents === 'none'
+      && drawerStyle.opacity === '0'
+      && drawerStyle.width === '0px'
+      && drawerStyle.minWidth === '0px'
+      && drawerStyle.flexBasis === '0px';
   });
   const collapsed = await canvasBox(page);
   expect(collapsed.width).toBeGreaterThan(expanded.width + 200);
   expect(collapsed.left).toBeLessThan(expanded.left - 200);
   const collapsedLayout = await page.evaluate(() => {
+    const dock = document.querySelector('.left-toolbar-container')!;
     const rail = document.querySelector('.left-sidebar-nav')!;
     const drawer = document.querySelector('.left-drawer-panel')!;
     const leftHandle = document.querySelector('.left-toolbar-toggle')!;
+    const dockStyle = getComputedStyle(dock);
     const drawerStyle = getComputedStyle(drawer);
     const drawerRect = drawer.getBoundingClientRect();
     const handleRect = leftHandle.getBoundingClientRect();
     return {
+      dockWidth: Math.round(dock.getBoundingClientRect().width),
+      dockMinWidth: dockStyle.minWidth,
+      dockFlexBasis: dockStyle.flexBasis,
       railWidth: Math.round(rail.getBoundingClientRect().width),
       drawerWidth: Math.round(drawerRect.width),
       drawerMinWidth: drawerStyle.minWidth,
       drawerFlexBasis: drawerStyle.flexBasis,
       drawerHidden: drawer.getAttribute('aria-hidden') === 'true',
+      dockHidden: dock.getAttribute('aria-hidden') === 'true',
       drawerVisibility: drawerStyle.visibility,
       drawerPointerEvents: drawerStyle.pointerEvents,
       leftHandleWidth: Math.round(handleRect.width),
       leftHandleLeft: Math.round(handleRect.left),
+      leftHandleRight: Math.round(handleRect.right),
       railLeft: Math.round(rail.getBoundingClientRect().left),
     };
   });
+  expect(collapsedLayout.dockWidth).toBe(0);
+  expect(collapsedLayout.dockMinWidth).toBe('0px');
+  expect(collapsedLayout.dockFlexBasis).toBe('0px');
+  expect(collapsedLayout.railWidth).toBe(0);
   expect(collapsedLayout.drawerWidth).toBe(0);
   expect(collapsedLayout.drawerMinWidth).toBe('0px');
   expect(collapsedLayout.drawerFlexBasis).toBe('0px');
   expect(collapsedLayout.drawerVisibility).toBe('hidden');
-  expect(collapsedLayout.leftHandleLeft).toBe(collapsedLayout.railLeft + 43);
+  expect(collapsedLayout.leftHandleLeft).toBe(0);
+  expect(collapsedLayout.leftHandleRight).toBe(collapsedLayout.leftHandleWidth);
   expect(collapsedLayout.drawerHidden).toBe(true);
+  expect(collapsedLayout.dockHidden).toBe(true);
   expect(collapsedLayout.drawerPointerEvents).toBe('none');
-  expect(await page.getByRole('button', { name: 'Media Assets' }).isVisible()).toBe(true);
+  expect(await page.getByRole('button', { name: 'Media Assets' }).count()).toBe(0);
   expect(await page.locator('.stage-canvas-container').isVisible()).toBe(true);
 
   // Reopening restores the drawer without geometry drift.
@@ -213,7 +236,7 @@ test('Sidebar handles keep a mirrored narrow visual contract across interaction 
   expect(rest[0].iconHeight).toBe(rest[1].iconHeight);
   expect(rest[0].position).toBe('absolute');
   expect(rest[1].position).toBe('absolute');
-  expect(rest[0].zIndex).toBe('3');
+  expect(rest[0].zIndex).toBe('100');
   expect(rest[1].zIndex).toBe('100');
   expect(rest.every((handle) => handle.before === 'none' && handle.after === 'none')).toBe(true);
   expect(rest.every((handle) => handle.title === null && handle.ariaLabel)).toBe(true);

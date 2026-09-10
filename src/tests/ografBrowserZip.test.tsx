@@ -77,26 +77,32 @@ describe('browser OGraf ZIP writer', () => {
 });
 
 describe('HeaderBar OGraf export integration', () => {
-  it('exposes one Export menu with JSON and OGraf choices; Video is absent', async () => {
+  it('exposes one Export menu with JSON and explicit OGraf choices; Video is absent', async () => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
     createZipMock.mockResolvedValue({ fileName: 'my-project-demo-ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:ograf'), revokeObjectURL: vi.fn() });
-    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
-
+    const downloads: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () { downloads.push(this.download); });
     render(<HeaderBar />);
     expect(screen.getByRole('button', { name: 'Export', exact: true })).toBeTruthy();
     expect(screen.queryByText('Export Video')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     expect(screen.getByRole('menuitem', { name: 'JSON', exact: true })).toBeTruthy();
-    expect(screen.getByRole('menuitem', { name: 'OGraf', exact: true })).toBeTruthy();
-    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
+    expect(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true })).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
-    expect(context.showToast).toHaveBeenCalledWith('Exported "my-project-demo-ograf.zip"', 'success');
+    expect(downloads[0]).toBe('my-project-demo-ograf.zip');
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'JSON', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }));
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(2));
     expect(context.exportProject).toHaveBeenCalledTimes(2);
+    expect(downloads[1]).toBe('my-project-demo.mjs');
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'JSON', exact: true }));
+    expect(context.exportProject).toHaveBeenCalledTimes(3);
   });
 
   it('blocks unsupported and missing-asset scenes with actionable diagnostics', async () => {
@@ -106,7 +112,7 @@ describe('HeaderBar OGraf export integration', () => {
     render(<HeaderBar />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(context.showToast).toHaveBeenCalled());
     expect(context.showToast.mock.calls[0][0]).toContain('custom_video');
     expect(createObjectURL).not.toHaveBeenCalled();
@@ -116,7 +122,7 @@ describe('HeaderBar OGraf export integration', () => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_image', imageUrl: 'assets/missing.png' }))));
     render(<HeaderBar />);
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(context.showToast).toHaveBeenCalled());
     expect(context.showToast.mock.calls[0][0]).toContain('asset');
     expect(createObjectURL).not.toHaveBeenCalled();
@@ -129,7 +135,7 @@ describe('HeaderBar OGraf export integration', () => {
     render(<HeaderBar />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(context.showToast).toHaveBeenCalledTimes(1));
     expect(context.showToast.mock.calls[0][0]).toContain('assetCatalog["font:Inter"]');
   });
@@ -142,11 +148,11 @@ describe('HeaderBar OGraf export integration', () => {
     render(<HeaderBar />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     expect(createZipMock).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
-    const menuItem = screen.getByRole('menuitem', { name: /OGraf/u }) as HTMLButtonElement;
+    const menuItem = screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }) as HTMLButtonElement;
     expect(menuItem.disabled).toBe(true);
     fireEvent.click(menuItem);
     expect(createZipMock).toHaveBeenCalledTimes(1);

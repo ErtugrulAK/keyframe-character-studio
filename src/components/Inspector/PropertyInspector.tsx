@@ -42,8 +42,10 @@ export const PropertyInspector: React.FC<PropertyInspectorProps> = ({ isHidden }
   };
   return (
     <aside
+      id="right-inspector-panel"
       className={`motion-design-right-sidebar ${isHidden ? 'is-hidden' : ''}`}
       aria-hidden={isHidden}
+      inert={isHidden ? true : undefined}
     >
       <div
         className="sidebar-dock-pane outliner-dock"

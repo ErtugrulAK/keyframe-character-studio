@@ -5,8 +5,8 @@ Metadata:
 - Milestone: OGraf V2.1 spec-compliance, Devtool validation, font portability
 - Branch: `feat/ograf-v21-spec-compliance`
 - Starting HEAD: `de830d6`
-- Ending HEAD: `5b2820ab7d31f216343ba97ee506bae37ac1c9bd` (implementation commit; report-finalization commit pending)
-- Commit status: implementation committed and pushed; report-finalization commit pending
+- Ending HEAD: `e8a4d25` (implementation and report finalized)
+- Commit status: committed and pushed
 - Report number: `progress_047`
 
 # 1. Executive Summary
@@ -79,7 +79,7 @@ Hosted picker requires user action. Simple Renderer was not run. No legal portab
 Add permanent tests for hostile font DOM, default asset tree, image decode, Windows case/device names, and manual Devtool import evidence. Add real font catalog UI before changing remediation wording.
 
 # 24. Git Summary
-Branch started at `de830d6`; implementation commit `5b2820a` is pushed to `origin/feat/ograf-v21-spec-compliance`. A report-finalization commit is pending. Main has not been modified. Intended files are listed in sections 4–5.
+Branch started at `de830d6`; implementation commit `5b2820a` and report-finalization commit `e8a4d25` are pushed to `origin/feat/ograf-v21-spec-compliance`. Main has not been modified. Intended files are listed in sections 4–5.
 
 # 25. Updated Project Tree
 ```text

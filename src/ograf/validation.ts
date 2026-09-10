@@ -285,8 +285,8 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     if (visited.has(id)) return;
     visiting.add(id);
     const sourceId = relationships.get(id);
+    if (sourceId) visit(sourceId, visiting, visited);
     visiting.delete(id);
-    visited.add(id);
   };
   for (const id of relationships.keys()) visit(id, new Set(), new Set());
   return {

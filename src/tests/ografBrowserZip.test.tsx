@@ -51,8 +51,8 @@ function makeScene(layerValue: SceneLayer = makeLayer()): SceneData {
 
 afterEach(() => {
   cleanup();
-  vi.restoreAllMocks();
   context.showToast.mockClear();
+  context.importProject.mockClear();
   context.exportProject.mockReset();
   createZipMock.mockReset();
 });
@@ -159,5 +159,29 @@ describe('HeaderBar OGraf export integration', () => {
 
     resolveZip?.({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
     await waitFor(() => expect(menuItem.disabled).toBe(false));
+  });
+  it('explains when an OGraf manifest is supplied to KCS project import', async () => {
+    render(<HeaderBar />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['{"$schema":"https://ograf.ebu.io/v1/specification/json-schemas/graphics/schema.json"}'], 'graphic.ograf.json', { type: 'application/json' })] } });
+    await waitFor(() => expect(context.showToast).toHaveBeenCalledWith(expect.stringContaining('OGraf graphic manifest/package'), 'error'));
+    expect(context.importProject).not.toHaveBeenCalled();
+  });
+
+  it('imports a KCS scene file through the existing project path', async () => {
+    context.importProject.mockReturnValue(true);
+    render(<HeaderBar />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['{"version":1}'], 'scene.kcs', { type: 'application/json' })] } });
+    await waitFor(() => expect(context.importProject).toHaveBeenCalledWith('{"version":1}', 'scene'));
+    expect(context.showToast).toHaveBeenCalledWith('Imported "scene" as a new Template tab!', 'success');
+  });
+
+  it('explains that an OGraf package requires dedicated package import support', async () => {
+    render(<HeaderBar />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['PK'], 'graphic-ograf.zip', { type: 'application/zip' })] } });
+    await waitFor(() => expect(context.showToast).toHaveBeenCalledWith(expect.stringContaining('KCS project import expects a .kcs project file'), 'error'));
+    expect(context.importProject).not.toHaveBeenCalled();
   });
 });

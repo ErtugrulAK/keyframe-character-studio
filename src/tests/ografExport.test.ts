@@ -75,7 +75,7 @@ describe('OGraf Export V1 Phase 1', () => {
   test('keeps the public schema separate and empty by default', () => {
     const { manifest } = compileOGrafManifest(makeScene());
 
-    expect(manifest.schema).toEqual({ type: 'object', properties: {} });
+    expect(manifest.schema).toEqual({ type: 'object', properties: {}, additionalProperties: false });
     expect(manifest.schema).not.toHaveProperty('layers');
     expect(manifest.schema).not.toHaveProperty('tracks');
   });

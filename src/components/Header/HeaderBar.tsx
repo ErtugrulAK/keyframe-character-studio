@@ -149,11 +149,29 @@ export const HeaderBar: React.FC = () => {
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const fileNameWithoutExt = file.name.replace(/\.json$/i, '').trim();
+    const lowerName = file.name.toLowerCase();
+    const isOGrafManifest = lowerName.endsWith('.ograf.json');
+    const isOGrafPackage = lowerName.endsWith('.zip') || lowerName.endsWith('.ograf');
+    if (isOGrafManifest || isOGrafPackage) {
+      showToast('This is an OGraf graphic manifest/package. KCS project import expects a .kcs project file. Use Export/OGraf tools or add Import OGraf Package support.', 'error');
+      e.target.value = '';
+      return;
+    }
+    const fileNameWithoutExt = file.name.replace(/\.(?:json|kcs)$/i, '').trim();
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
       if (text) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text);
+        } catch {
+          parsed = undefined;
+        }
+        if (parsed && typeof parsed === 'object' && '$schema' in parsed && String(parsed.$schema).includes('/ograf/')) {
+          showToast('This is an OGraf graphic manifest/package. KCS project import expects a .kcs project file. Use Export/OGraf tools or add Import OGraf Package support.', 'error');
+          return;
+        }
         const success = importProject(text, fileNameWithoutExt);
         if (success) showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
         else showToast('Invalid project file format!', 'error');
@@ -298,11 +316,11 @@ export const HeaderBar: React.FC = () => {
           </select>
           <div className="divider-v" />
 
-          <button className="header-action-btn import-btn" onClick={() => fileInputRef.current?.click()} title="Import JSON Animation File">
+          <button className="header-action-btn import-btn" onClick={() => fileInputRef.current?.click()} title="Import KCS Project or OGraf Manifest">
             <Upload size={14} />
             <span>Import</span>
           </button>
-          <input ref={fileInputRef} type="file" accept=".json" style={{ display: 'none' }} onChange={handleImportFile} />
+          <input ref={fileInputRef} type="file" accept=".json,.kcs,.ograf.json,.zip" style={{ display: 'none' }} onChange={handleImportFile} />
 
           <div style={{ position: 'relative' }}>
             <button

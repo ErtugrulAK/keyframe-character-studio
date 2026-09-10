@@ -74,6 +74,6 @@ describe('legacy OGraf asset compatibility', () => {
 
     const blocked = compileOGrafPackage(scene);
     expect(blocked.status).toBe('blocked');
-    expect(blocked.diagnostics.find((diagnostic) => diagnostic.code === 'OGRAF_FONT_UNVERIFIED')?.message).toContain('assetCatalog["font:Inter"]');
+    expect(blocked.diagnostics.find((diagnostic) => diagnostic.code === 'OGRAF_FONT_UNVERIFIED')?.message).toContain('Display Layer uses Inter');
   });
 });

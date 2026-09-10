@@ -66,7 +66,7 @@ type GeneratedGraphic = HTMLElement & {
 
 let graphicCounter = 0;
 function instantiateGraphic(source: string): GeneratedGraphic {
-  const Graphic = new Function('HTMLElement', `${source.replace('export default class Graphic', 'return class Graphic')}`)(HTMLElement) as unknown as new () => GeneratedGraphic;
+  const Graphic = new Function('HTMLElement', `${source.replace('export default class Graphic', 'return class Graphic').replaceAll('import.meta.url', 'location.href')}`)(HTMLElement) as unknown as new () => GeneratedGraphic;
   graphicCounter += 1;
   const tagName = `x-ograf-parity-${graphicCounter}`;
   customElements.define(tagName, Graphic);

@@ -95,7 +95,7 @@ describe('OGraf V6 compositor parity', () => {
     const plan = compileOGrafPackage(scene);
     expect(plan.status).toBe('ready-to-materialize');
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
-    const Graphic = new Function('HTMLElement', `${source.replace('export default class Graphic', 'return class Graphic')}`)(HTMLElement) as new () => HTMLElement & { load: (params: { renderType: 'realtime' }) => Promise<unknown>; _scene: SceneData; _currentFrame: number; _render: () => void };
+    const Graphic = new Function('HTMLElement', `${source.replace('export default class Graphic', 'return class Graphic').replaceAll('import.meta.url', 'location.href')}`)(HTMLElement) as new () => HTMLElement & { load: (params: { renderType: 'realtime' }) => Promise<unknown>; _scene: SceneData; _currentFrame: number; _render: () => void };
     const tag = `x-ograf-v6-${Date.now()}`;
     customElements.define(tag, Graphic);
     const graphic = document.createElement(tag);

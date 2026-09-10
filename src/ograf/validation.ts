@@ -103,6 +103,10 @@ function validateAsset(
     diagnostics.push(diagnostic('OGRAF_MISSING_ASSET', 'ERROR', `Asset "${source}" is not a supported local asset reference.`, layer, kind));
     return undefined;
   }
+  if (/^(?:[a-z]:[\\/]|[\\/])/iu.test(source)) {
+    diagnostics.push(diagnostic('OGRAF_MISSING_ASSET', 'ERROR', `Asset "${source}" uses a machine-absolute path and cannot be packaged portably.`, layer, kind));
+    return undefined;
+  }
 
   const catalogEntry = options.assetCatalog?.[source];
   if (catalogEntry?.kind === 'missing') {
@@ -142,7 +146,7 @@ function validateFont(
     diagnostics.push(diagnostic(
       'OGRAF_FONT_UNVERIFIED',
       options.requirePortableAssets ? 'ERROR' : 'WARNING',
-      `Font "${layer.fontFamily}" has no portable local font source. Provide assetCatalog["${source}"] with a local sourcePath or browser binaryContent.`,
+      `Display ${layer.name} uses ${layer.fontFamily}, but KCS has no portable font file for this font. Import/upload the font file or choose a portable font before OGraf export.`,
       layer,
       'font',
     ));
@@ -212,7 +216,7 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
   }
 }
 
-function createPublicStateSchema(options: OGrafExportOptions): OGrafPublicStateSchema {
+function createPublicStateSchema(options: OGrafExportOptions, layers: SceneLayer[]): OGrafPublicStateSchema {
   const properties: Record<string, Record<string, unknown>> = {};
   for (const field of options.publicTextFields || []) {
     properties[field.id] = {
@@ -221,14 +225,19 @@ function createPublicStateSchema(options: OGrafExportOptions): OGrafPublicStateS
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
     };
   }
+  const imageSources = new Set(layers.filter((layer) => layer.type === 'custom_image' && layer.imageUrl).map((layer) => layer.imageUrl as string));
+  const packagedImageValues = Object.entries(options.assetCatalog || {})
+    .filter(([source, entry]) => entry.kind === 'local' && imageSources.has(source))
+    .map(([source]) => source);
   for (const field of options.publicImageFields || []) {
     properties[field.id] = {
       type: 'string',
+      enum: packagedImageValues,
       ...(field.title ? { title: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
     };
   }
-  return { type: 'object', properties };
+  return { type: 'object', properties, additionalProperties: false };
 }
 
 export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExportOptions = {}): ValidatedOGrafScene {
@@ -276,7 +285,6 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     if (visited.has(id)) return;
     visiting.add(id);
     const sourceId = relationships.get(id);
-    if (sourceId && layerById.has(sourceId)) visit(sourceId, visiting, visited);
     visiting.delete(id);
     visited.add(id);
   };
@@ -285,7 +293,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     sceneData,
     diagnostics,
     assets,
-    publicStateSchema: createPublicStateSchema(options),
+    publicStateSchema: createPublicStateSchema(options, sceneData.layers),
     canCompile: diagnostics.every((item) => item.severity !== 'ERROR'),
   };
 }

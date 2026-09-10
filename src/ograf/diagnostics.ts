@@ -6,7 +6,10 @@ export function getUniqueOGrafExportErrors(diagnostics: OGrafExportDiagnostic[])
 
   return diagnostics.filter((diagnostic) => {
     if (diagnostic.severity !== 'ERROR') return false;
-    const key = `${diagnostic.code}:${diagnostic.message}`;
+    const fontRoot = diagnostic.code === 'OGRAF_FONT_UNVERIFIED'
+      ? diagnostic.message.match(/uses (.*), but KCS has no portable font file/u)?.[1]
+      : undefined;
+    const key = `${diagnostic.code}:${fontRoot || diagnostic.message}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

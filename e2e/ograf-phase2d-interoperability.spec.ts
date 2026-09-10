@@ -187,7 +187,7 @@ test('materialized KCS OGraf package interoperates with Chromium', async ({ page
     expect(result.initialSvg).toContain('stroke-dasharray');
     expect(result.initialSvg).toContain('inside-stroke-target');
     expect(result.initialSvg).toContain('kcs-clip-source');
-    expect(result.imageHref).toBe('assets/images/logo.png');
+    expect(new URL(result.imageHref).pathname).toBe('/assets/images/logo.png');
     expect(result.imageOk).toBe(true);
     expect(result.intermediateSvg).toContain('data-layer-id="target"');
     expect(result.finalSvg).not.toBe(result.intermediateSvg);

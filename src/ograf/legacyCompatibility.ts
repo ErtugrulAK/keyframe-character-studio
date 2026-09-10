@@ -89,8 +89,8 @@ function applyPreparedAsset(layer: SceneLayer, source: string, embedded: { bytes
   };
 }
 
-function finishPreparation(state: PreparationState): LegacyOGrafPreparation {
-  return { sceneData: state.sceneData, options: { assetCatalog: state.assetCatalog } };
+function finishPreparation(state: PreparationState, baseOptions: OGrafExportOptions = {}): LegacyOGrafPreparation {
+  return { sceneData: state.sceneData, options: { ...baseOptions, assetCatalog: { ...(baseOptions.assetCatalog || {}), ...state.assetCatalog } } };
 }
 
 /**
@@ -101,7 +101,7 @@ function finishPreparation(state: PreparationState): LegacyOGrafPreparation {
  * Data URLs are handled synchronously to preserve the existing export flow;
  * blob URLs return a Promise because their browser bytes require fetch().
  */
-export function prepareLegacyOGrafExport(sceneData: SceneData): LegacyOGrafPreparation | Promise<LegacyOGrafPreparation> {
+export function prepareLegacyOGrafExport(sceneData: SceneData, baseOptions: OGrafExportOptions = {}): LegacyOGrafPreparation | Promise<LegacyOGrafPreparation> {
   const state: PreparationState = {
     sceneData: JSON.parse(JSON.stringify(sceneData)) as SceneData,
     assetCatalog: {},
@@ -117,12 +117,12 @@ export function prepareLegacyOGrafExport(sceneData: SceneData): LegacyOGrafPrepa
     else if (source.startsWith('blob:')) blobLayers.push({ layer, source });
   }
 
-  if (blobLayers.length === 0) return finishPreparation(state);
+  if (blobLayers.length === 0) return finishPreparation(state, baseOptions);
   return (async () => {
     for (const { layer, source } of blobLayers) {
       const embedded = await readBlobUrl(source);
       if (embedded) applyPreparedAsset(layer, source, embedded, state);
     }
-    return finishPreparation(state);
+    return finishPreparation(state, baseOptions);
   })();
 }

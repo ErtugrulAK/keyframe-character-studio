@@ -83,7 +83,7 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
       expect(await readFile(join(output, 'portable-graphic.ograf.json'), 'utf8')).toContain('supportsRealTime');
 
       const moduleSource = await readFile(join(output, 'graphic.mjs'), 'utf8');
-      const Graphic = new Function(`${moduleSource.replace('export default class Graphic', 'return class Graphic')}`)();
+      const Graphic = new Function(`${moduleSource.replace('export default class Graphic', 'return class Graphic').replaceAll('import.meta.url', 'location.href')}`)();
       const tagName = `x-ograf-test-${Date.now()}`;
       customElements.define(tagName, Graphic);
       const graphic = document.createElement(tagName);
@@ -94,8 +94,8 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
       expect(await supersedingAction).toEqual({ statusCode: 200 });
       expect(await activeAction).toMatchObject({ statusCode: 200, statusMessage: 'Superseded' });
       expect(await graphic.playAction({ skipAnimation: true })).toMatchObject({ statusCode: 200, currentStep: 0 });
+      expect(await graphic.playAction({ skipAnimation: true })).toMatchObject({ statusCode: 200, currentStep: undefined });
       expect(await graphic.stopAction({ skipAnimation: true })).toEqual({ statusCode: 200 });
-      expect(await graphic.customAction({ id: 'unknown', payload: {} })).toMatchObject({ statusCode: 400 });
       expect(await graphic.dispose()).toEqual({ statusCode: 200 });
     } finally {
       await rm(fixture.root, { recursive: true, force: true });

@@ -64,6 +64,7 @@ export interface OGrafPublicStateSchema {
   type: 'object';
   properties: Record<string, Record<string, unknown>>;
   required?: string[];
+  additionalProperties?: boolean;
 }
 
 export interface OGrafExportOptions {

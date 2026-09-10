@@ -1,8 +1,44 @@
 # Project-native task routing. Concrete model identities remain in the authoritative user modelRoles config.
 task:
+  # Prefer delegation for non-trivial work while keeping parent integration explicit.
+  eager: preferred
+  batch: true
+  maxConcurrency: 4
+  maxRecursionDepth: 2
+  isolation:
+    enabled: true
+    apply: true
+    merge: patch
   agentModelOverrides:
     designer-agent: "@designer"
     reviewer-agent: "@advisor"
     planner-agent: "@plan"
     commit-agent: "@commit"
     slow-agent: "@slow"
+compaction:
+  enabled: true
+  midTurnEnabled: true
+branchSummary:
+  enabled: true
+memory:
+  backend: off
+providers:
+  maxInFlightRequests:
+    openai-codex: 3
+    google-antigravity: 2
+    opencode-go: 4
+bash:
+  autoBackground:
+    enabled: true
+    thresholdMs: 60000
+  patterns:
+    - match: "rm -rf *"
+      approval: deny
+    - match: "git reset --hard *"
+      approval: deny
+    - match: "git push --force*"
+      approval: deny
+    - match: "git branch -D *"
+      approval: deny
+    - match: "git branch --delete --force *"
+      approval: deny

@@ -8,7 +8,7 @@
 4. Cap concurrent requests per actual provider: OpenAI Codex 3, Google Antigravity 2, OpenCode Go 4.
 5. Keep compaction and mid-turn compaction enabled.
 6. Keep branch summaries enabled.
-7. Disable project memory persistence with `memory.backend: off`.
+7. Preserve project memory with the user-approved `memory.backend: mnemopi` setting; memory is intentionally enabled.
 8. Keep bash auto-background at 60 seconds for long-running development commands.
 9. Deny the explicitly listed destructive Git/filesystem command patterns.
 10. Preserve the existing role-to-model map exactly.

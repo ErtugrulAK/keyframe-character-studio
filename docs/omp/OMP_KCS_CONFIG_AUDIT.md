@@ -19,6 +19,7 @@ Scope: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 - Global backup: `.omp/backups/global-config.yml.20260911-011842.bak`
 
 Backups were created before project configuration edits. The global file was not edited.
+The project intentionally keeps `memory.backend: mnemopi`; this is a user-approved, deliberate setting. Project memory is enabled, not disabled.
 
 ## Model freeze
 
@@ -49,7 +50,7 @@ No `modelRoles.*`, provider ID, model ID, suffix, credential, or role mapping wa
 | `compaction.enabled` | `true` | `true` | Explicitly pinned project behavior. |
 | `compaction.midTurnEnabled` | `true` | `true` | Explicitly pinned project behavior. |
 | `branchSummary.enabled` | `true` | `true` | Already enabled; explicitly pinned. |
-| `memory.backend` | `mnemopi` | `off` | Avoid surprise persistent memory for this project. |
+| `memory.backend` | `mnemopi` | `mnemopi` | Preserved as the user's intentional, approved memory setting; project memory remains enabled. |
 | `providers.maxInFlightRequests` | `{}` | `openai-codex: 3`, `google-antigravity: 2`, `opencode-go: 4` | Bound actual providers without changing models. |
 | `bash.autoBackground.thresholdMs` | `60000` | `60000` | Already suitable for dev servers and long Playwright runs. |
 | `bash.patterns` | `[]` | Five deny rules | Block high-risk reset, force-push, branch-delete, and recursive-delete patterns. |

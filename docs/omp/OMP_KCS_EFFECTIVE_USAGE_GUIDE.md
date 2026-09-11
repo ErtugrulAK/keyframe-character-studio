@@ -29,7 +29,7 @@ The parent must report actual metadata. Use `NOT EXPOSED` when OMP does not emit
 
 Project fan-out is capped at four tasks. Provider request caps are OpenAI Codex 3, Google Antigravity 2, and OpenCode Go 4. Subagent isolation is enabled with patch integration. This is a throughput/safety balance; do not raise it for routine work.
 
-Compaction and mid-turn compaction remain enabled. Branch summaries remain enabled. Project memory is off to avoid unexpected persistent context. Bash auto-background starts at 60 seconds for development servers and long Playwright runs.
+Compaction and mid-turn compaction remain enabled. Branch summaries remain enabled. Project memory intentionally remains enabled with the user's approved `memory.backend: mnemopi` setting. Bash auto-background starts at 60 seconds for development servers and long Playwright runs.
 
 The project policy denies the configured destructive command patterns. `tools.approvalMode` remains `yolo`; do not interpret the deny list as a substitute for review of destructive operations.
 

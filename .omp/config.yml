@@ -21,7 +21,7 @@ compaction:
 branchSummary:
   enabled: true
 memory:
-  backend: off
+  backend: mnemopi
 providers:
   maxInFlightRequests:
     openai-codex: 3

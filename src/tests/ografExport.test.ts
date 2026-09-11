@@ -72,21 +72,50 @@ describe('OGraf Export V1 Phase 1', () => {
     expect(first).not.toContain('/');
   });
 
-  test('keeps the public schema separate and empty by default', () => {
+  test('generates deterministic public controls from real scene content', () => {
     const { manifest } = compileOGrafManifest(makeScene());
 
-    expect(manifest.schema).toEqual({ type: 'object', properties: {}, additionalProperties: false });
+    expect(manifest.schema.properties).toEqual({
+      fill_layer_1: {
+        type: 'string',
+        gddType: 'color-rrggbb',
+        pattern: '^#[0-9a-f]{6}$',
+        title: 'Box Fill Color',
+        default: '#ffffff',
+      },
+      stroke_layer_1: {
+        type: 'string',
+        gddType: 'color-rrggbb',
+        pattern: '^#[0-9a-f]{6}$',
+        title: 'Box Stroke Color',
+        default: '#000000',
+      },
+    });
     expect(manifest.schema).not.toHaveProperty('layers');
     expect(manifest.schema).not.toHaveProperty('tracks');
   });
 
-  test('represents explicit public text fields without exposing SceneData', () => {
+  test('preserves explicit text controls alongside generated color controls', () => {
     const { manifest } = compileOGrafManifest(makeScene(), {
       publicTextFields: [{ id: 'headline', title: 'Headline', defaultValue: 'Hello', layerId: 'layer-1' }],
     });
 
     expect(manifest.schema.properties).toEqual({
       headline: { type: 'string', title: 'Headline', default: 'Hello' },
+      fill_layer_1: {
+        type: 'string',
+        gddType: 'color-rrggbb',
+        pattern: '^#[0-9a-f]{6}$',
+        title: 'Box Fill Color',
+        default: '#ffffff',
+      },
+      stroke_layer_1: {
+        type: 'string',
+        gddType: 'color-rrggbb',
+        pattern: '^#[0-9a-f]{6}$',
+        title: 'Box Stroke Color',
+        default: '#000000',
+      },
     });
     expect(manifest.schema).not.toHaveProperty('layers');
   });

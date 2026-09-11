@@ -61,7 +61,7 @@ function scene(layers: SceneLayer[], tracks: AnimationTrackData[] = []): SceneDa
 type GeneratedGraphic = HTMLElement & {
   load: (params: { renderType: 'realtime'; data?: unknown }) => Promise<Record<string, unknown>>;
   dispose: () => Promise<Record<string, unknown>>;
-  playAction: (params: { skipAnimation?: boolean }) => Promise<Record<string, unknown>>;
+  updateAction: (params: { data?: Record<string, string> }) => Promise<Record<string, unknown>>;
 };
 
 let graphicCounter = 0;
@@ -261,6 +261,42 @@ describe('generated runtime parity', () => {
     expect(graphic.innerHTML).toContain('id="kcs-ograf-layer-mask-target___hostile-mask___hostile-add"');
     expect(graphic.innerHTML).not.toMatch(/\sid="[^"]*[/# ]/u);
     expect(graphic.innerHTML).not.toMatch(/url\(#[^)]*[/# ]/u);
+    await graphic.dispose();
+  });
+  test('applies generated text, image, and color public controls safely', async () => {
+    const authored = scene([
+      layer({ id: 'headline', name: 'Headline', type: 'custom_text', textValue: 'Before', fillColor: '#ffffff' }),
+      layer({ id: 'logo', name: 'Logo', type: 'custom_image', imageUrl: 'source/logo.png', fillColor: 'none', strokeColor: 'none' }),
+      layer({ id: 'alternate', name: 'Alternate', type: 'custom_image', imageUrl: 'source/alternate.png', fillColor: 'none', strokeColor: 'none' }),
+    ]);
+    const plan = compileOGrafPackage(authored, {
+      assetCatalog: {
+        'source/logo.png': { kind: 'local', packagedPath: 'assets/images/logo.png', binaryContent: new Uint8Array([1]) },
+        'source/alternate.png': { kind: 'local', packagedPath: 'assets/images/alternate.png', binaryContent: new Uint8Array([2]) },
+      },
+    });
+    expect(plan.status).toBe('ready-to-materialize');
+    expect(plan.manifest.schema.properties.headline).toMatchObject({ type: 'string', default: 'Before' });
+    expect(plan.manifest.schema.properties.image_logo).toMatchObject({ enum: ['assets/images/logo.png', 'assets/images/alternate.png'] });
+    expect(plan.manifest.schema.properties.fill_headline).toMatchObject({ gddType: 'color-rrggbb' });
+
+    const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
+    const graphic = instantiateGraphic(source);
+    await graphic.load({ renderType: 'realtime', data: {} });
+    const updated = await graphic.updateAction({
+      data: {
+        headline: 'After',
+        image_logo: 'assets/images/alternate.png',
+        fill_headline: '#00ff00',
+      },
+    });
+    expect(updated.statusCode).toBe(200);
+    expect(graphic.innerHTML).toContain('>After</text>');
+    expect(graphic.innerHTML).toContain('assets/images/alternate.png');
+    expect(graphic.innerHTML).toContain('fill="#00ff00"');
+
+    const rejected = await graphic.updateAction({ data: { image_logo: '../outside.png' } });
+    expect(rejected.statusCode).toBe(400);
     await graphic.dispose();
   });
 });

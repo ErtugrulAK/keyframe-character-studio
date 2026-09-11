@@ -2,46 +2,42 @@
 
 ## What just happened
 
-Created `integration/v6-ui-ograf-release-candidate` from `integration/v6-ui-stable@0289402` and fast-forwarded the complete linear descendant `docs/record-host-qa-pass@3a7eda3`.
+Created `feat/ograf-public-controls-v1` from `integration/v6-ui-ograf-release-candidate@4e4c269` and implemented OGraf Public Controls V1.
 
-Included product line:
+Implemented:
 
-- V3.4.1 UI.
-- V3.5 UX.
-- V3.6 and OGraf Package Export V2.
-- OGraf V2.1 and import UX.
-- Host compatibility handoff.
-- Current-state and host-QA documentation.
-
-No conflicts occurred. `chore/omp-kcs-config-optimization@50b42d4` remains separate tooling work.
+- Deterministic automatic text controls for visible text layers.
+- Package-relative image selectors with safe enum validation and runtime swapping.
+- Fill/stroke color controls using OGraf `color-rrggbb` schema fields.
+- Generated runtime `updateAction` support for text, image, and color properties.
+- Matte-source exclusion from the public control panel.
+- Public-controls design specification and external host QA packages.
 
 ## Current branch
 
-`integration/v6-ui-ograf-release-candidate`
+`feat/ograf-public-controls-v1`
 
-Base: `integration/v6-ui-stable@0289402`.
+Base: `integration/v6-ui-ograf-release-candidate@4e4c269`.
 
-## Host QA carried forward
-
-The target host/downstream application accepted the manifest-rooted folders:
-
-- BASIC: PASS — PLAY moves the text slightly right.
-- ASSET: PASS — portable image appears after a short delay.
-- COMPOSITING: PASS — rectangle/color transition renders.
-
-This is separate from KCS Import.
-
-## Release-candidate validation
+## Validation
 
 - TypeScript: PASS.
-- Lint: PASS with the pre-existing Fast Refresh warning.
-- Vitest: PASS, 100 files / 1,435 tests.
+- Lint: PASS with the existing Fast Refresh warning.
+- Vitest: PASS, 100 files / 1,436 tests.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
 - Full Playwright: PASS, 254/254.
-- OGraf manifests: PASS, 3/3.
+- Public-controls OGraf manifests: PASS, 3/3.
 - `git diff --check`: PASS.
 
-## First action for the next session
+## QA handoff
 
-Read `docs/KCS_INTEGRATION_EXECUTION_PLAN.md` and `reports/progress_051.md`, confirm the branch is clean, then perform manual release-candidate host smoke and request an explicit user release decision. Do not merge `main`.
+Generated folder:
+
+`C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa`
+
+Test BASIC, ASSET, and COMPOSITING with the Turkish README in that folder. Manual public-controls host QA is not yet claimed.
+
+## Protected state
+
+`main` remains untouched. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain preserved.

@@ -10,6 +10,7 @@ import type {
   OGrafManifest,
   OGrafPackageFile,
 } from './types';
+import { resolveOGrafPublicControls, type OGrafPublicControls } from './publicControls';
 
 function hashString(value: string): string {
   let hash = 2166136261;
@@ -81,11 +82,24 @@ function packageAssetDiagnostics(sceneData: SceneData, options: OGrafExportOptio
   }
 }
 
-function generatedFiles(sceneData: SceneData, options: OGrafExportOptions, assets: OGrafAssetPlan[], manifest: OGrafManifest): OGrafPackageFile[] {
+function generatedFiles(
+  sceneData: SceneData,
+  options: OGrafExportOptions,
+  assets: OGrafAssetPlan[],
+  manifest: OGrafManifest,
+  publicControls: OGrafPublicControls,
+): OGrafPackageFile[] {
   const graphicName = sanitizeOGrafId(options.name?.trim() || sceneData.name?.trim() || 'graphic');
   const imageReferences = Object.fromEntries(assets.filter((asset) => asset.kind === 'image').map((asset) => [asset.source, asset.packagedPath]));
   const fontReferences = Object.fromEntries(assets.filter((asset) => asset.kind === 'font').map((asset) => [asset.source.slice('font:'.length), asset.packagedPath]));
-  const runtime = generateGraphicModule(sceneData, options.publicTextFields, options.publicImageFields, imageReferences, fontReferences);
+  const runtime = generateGraphicModule(
+    sceneData,
+    publicControls.textFields,
+    publicControls.imageFields,
+    publicControls.colorFields,
+    imageReferences,
+    fontReferences,
+  );
   return [
     { path: `${graphicName}.ograf.json`, kind: 'manifest', status: 'generated', content: `${JSON.stringify(manifest, null, 2)}\n` },
     { path: 'scene.kcs', kind: 'scene', status: 'generated', content: `${JSON.stringify(sceneData, null, 2)}\n` },
@@ -109,11 +123,22 @@ function packageEntryDiagnostics(files: OGrafPackageFile[], diagnostics: OGrafEx
 export function compileOGrafPackage(sceneData: SceneData, options: OGrafExportOptions = {}): OGrafGeneratedPackage {
   const packageOptions = { ...options, requirePortableAssets: true };
   const validated = validateSceneForOGraf(sceneData, packageOptions);
-  const compiled = compileOGrafManifest(sceneData, packageOptions);
-  const diagnostics = [...compiled.diagnostics];
+  const diagnostics = [...validated.diagnostics];
   const assets = uniqueAssetPlans(validated.assets, diagnostics);
   packageAssetDiagnostics(sceneData, packageOptions, assets, diagnostics);
-  const files = generatedFiles(sceneData, packageOptions, assets, compiled.manifest);
+  const packagedCatalog = Object.fromEntries(assets.map((asset) => [asset.source, {
+    kind: 'local' as const,
+    packagedPath: asset.packagedPath,
+    ...(asset.sourcePath ? { sourcePath: asset.sourcePath } : {}),
+    ...(asset.binaryContent ? { binaryContent: asset.binaryContent } : {}),
+  }]));
+  const compiled = compileOGrafManifest(sceneData, {
+    ...packageOptions,
+    assetCatalog: { ...(packageOptions.assetCatalog || {}), ...packagedCatalog },
+  });
+  diagnostics.push(...compiled.diagnostics);
+  const publicControls = resolveOGrafPublicControls(sceneData, packageOptions, assets);
+  const files = generatedFiles(sceneData, packageOptions, assets, compiled.manifest, publicControls);
   packageEntryDiagnostics(files, diagnostics);
   const hasErrors = diagnostics.some((diagnostic) => diagnostic.severity === 'ERROR');
   return {

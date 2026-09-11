@@ -1,30 +1,21 @@
 # KCS Open Tasks
 
-## P0 — Release candidate decision
+## P0 — Public-controls host QA
 
-### Release-candidate validation
+- Test `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\BASIC`.
+- Test `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\ASSET`.
+- Test `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\COMPOSITING`.
+- Record exact host controls, changed values, render behavior, errors, and screenshots.
+- Confirm the older `kcs-ograf-host-compat-qa` folder still works.
 
-Run and record:
+## Release decision
 
-- TypeScript
-- lint
-- Vitest
-- build
-- V6 QA
-- full Playwright
-- OGraf manifest validation
-- `git diff --check`
-- manual host smoke: BASIC → COMPOSITING → ASSET folders
-
-### Release decision
-
-Review `docs/KCS_INTEGRATION_EXECUTION_PLAN.md` and `reports/progress_051.md`, then request explicit user approval before any `main` merge. This branch is a release candidate, not a main merge.
+Review `reports/progress_052.md` and the public-controls QA evidence, then request explicit approval before any `main` merge. This branch is not a main merge.
 
 ## P1 — Planned after release decision
 
-- Design OGraf Package → editable KCS import around explicit package extraction, `scene.kcs` validation, asset rebasing, and an editable-state contract.
-- Perform final manual UI QA for pending release surfaces.
-- Prepare a release checkpoint after the candidate is accepted.
+- Design OGraf Package → editable KCS import around explicit extraction, validation, asset rebasing, and editable-state semantics.
+- Prepare a release checkpoint after public-controls QA acceptance.
 
 ## P2 — Non-blocking follow-up
 

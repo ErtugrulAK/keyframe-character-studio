@@ -8,7 +8,11 @@ Repository:
 
 Checkout:
 
-`integration/v6-ui-ograf-release-candidate`
+`feat/ograf-public-controls-v1`
+
+Base:
+
+`integration/v6-ui-ograf-release-candidate@4e4c269`
 
 ## Guardrails
 
@@ -17,26 +21,24 @@ Checkout:
 - Do not modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 - Keep `.omp/config.yml` `memory.backend: mnemopi`.
 - Do not change model roles, provider mappings, or global configuration.
-- Keep `chore/omp-kcs-config-optimization` separate unless explicitly approved.
+- Keep the release-candidate and OMP tooling branches separate.
 
 ## First task
 
-Read `docs/KCS_INTEGRATION_EXECUTION_PLAN.md` and `reports/progress_051.md`. Full automated release-candidate validation is PASS. Perform the manual host smoke with the existing manifest-rooted folders:
+Perform manual public-controls host QA using:
 
-1. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\BASIC`
-2. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\COMPOSITING`
-3. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\ASSET`
+1. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\BASIC`
+2. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\ASSET`
+3. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\COMPOSITING`
 
-## Current host QA
+Follow `README_PUBLIC_CONTROLS_QA_TR.txt`. Record the exact host field, changed value, render result, and any error or screenshot.
 
-User-provided target-host results remain PASS:
+## Expected checks
 
-- BASIC: text moves slightly right on PLAY.
-- ASSET: portable image appears after a short delay.
-- COMPOSITING: rectangle/color transition renders.
-
-The import unit is the manifest-rooted folder. KCS Import is not the host QA surface.
+- BASIC: change `Headline`; PLAY keeps the text update and motion.
+- ASSET: inspect `Logo`; switch packaged image choices if more than one is present, otherwise confirm the one default option.
+- COMPOSITING: change `Content Fill Color`; confirm color change and preserved animation.
 
 ## Approval boundary
 
-After manual release-candidate smoke, ask the user for a release decision. No merge to `main` is allowed without separate explicit approval.
+After manual QA, request explicit release approval. Do not merge `main` without separate explicit approval.

@@ -4,9 +4,13 @@ import {
   type OGrafDiagnosticCode,
   type OGrafExportDiagnostic,
   type OGrafExportOptions,
+  type OGrafPublicColorField,
+  type OGrafPublicImageField,
+  type OGrafPublicTextField,
   type OGrafPublicStateSchema,
   type ValidatedOGrafScene,
 } from './types';
+import { resolveOGrafPublicControls } from './publicControls';
 
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_box: true,
@@ -54,10 +58,16 @@ function normalizePackagedPath(source: string, kind: 'image' | 'font', configure
   const base = configuredPath?.replace(/\\/gu, '/') || fallback;
   return base.replace(/^\.\//u, '');
 }
-function validatePublicFields(options: OGrafExportOptions, layers: SceneLayer[], diagnostics: OGrafExportDiagnostic[]): void {
+function validatePublicFields(
+  textFields: OGrafPublicTextField[],
+  imageFields: OGrafPublicImageField[],
+  colorFields: OGrafPublicColorField[],
+  layers: SceneLayer[],
+  diagnostics: OGrafExportDiagnostic[],
+): void {
   const ids = new Set<string>();
   const layerIds = new Set(layers.map((layer) => layer.id));
-  for (const field of [...(options.publicTextFields || []), ...(options.publicImageFields || [])]) {
+  for (const field of [...textFields, ...imageFields, ...colorFields]) {
     if (!field.id || ids.has(field.id) || !field.layerId || !layerIds.has(field.layerId)) {
       diagnostics.push({
         code: 'OGRAF_INVALID_PUBLIC_FIELD',
@@ -67,7 +77,7 @@ function validatePublicFields(options: OGrafExportOptions, layers: SceneLayer[],
         feature: 'public-state',
       });
     }
-    ids.add(field.id);
+    if (field.id) ids.add(field.id);
   }
 }
 
@@ -216,25 +226,36 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
   }
 }
 
-function createPublicStateSchema(options: OGrafExportOptions, layers: SceneLayer[]): OGrafPublicStateSchema {
+function createPublicStateSchema(
+  textFields: OGrafPublicTextField[],
+  imageFields: OGrafPublicImageField[],
+  colorFields: OGrafPublicColorField[],
+  assets: OGrafAssetPlan[],
+): OGrafPublicStateSchema {
   const properties: Record<string, Record<string, unknown>> = {};
-  for (const field of options.publicTextFields || []) {
+  for (const field of textFields) {
     properties[field.id] = {
       type: 'string',
       ...(field.title ? { title: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
     };
   }
-  const imageSources = new Set(layers.filter((layer) => layer.type === 'custom_image' && layer.imageUrl).map((layer) => layer.imageUrl as string));
-  const packagedImageValues = Object.entries(options.assetCatalog || {})
-    .filter(([source, entry]) => entry.kind === 'local' && imageSources.has(source))
-    .map(([source]) => source);
-  for (const field of options.publicImageFields || []) {
+  const packagedImageValues = assets.filter((asset) => asset.kind === 'image').map((asset) => asset.packagedPath);
+  for (const field of imageFields) {
     properties[field.id] = {
       type: 'string',
-      enum: packagedImageValues,
+      enum: field.options || packagedImageValues,
       ...(field.title ? { title: field.title } : {}),
       ...(field.defaultValue !== undefined ? { default: field.defaultValue } : {}),
+    };
+  }
+  for (const field of colorFields) {
+    properties[field.id] = {
+      type: 'string',
+      gddType: 'color-rrggbb',
+      pattern: '^#[0-9a-f]{6}$',
+      ...(field.title ? { title: field.title } : {}),
+      ...(field.defaultValue !== undefined ? { default: field.defaultValue.toLowerCase() } : {}),
     };
   }
   return { type: 'object', properties, additionalProperties: false };
@@ -251,8 +272,9 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     diagnostics.push({ code: 'OGRAF_INVALID_PROJECT', severity: 'ERROR', message: 'SceneData width, height, and FPS must be greater than zero.' });
   }
 
-  validatePublicFields(options, sceneData.layers || [], diagnostics);
   for (const layer of sceneData.layers || []) validateLayer(layer, options, diagnostics, assets);
+  const publicControls = resolveOGrafPublicControls(sceneData, options, assets);
+  validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, sceneData.layers || [], diagnostics);
   const layerById = new Map((sceneData.layers || []).map((layer) => [layer.id, layer]));
   const relationships = new Map<string, string>();
   for (const layer of sceneData.layers || []) {
@@ -289,11 +311,20 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     visiting.delete(id);
   };
   for (const id of relationships.keys()) visit(id, new Set(), new Set());
+  const publicStateSchema = createPublicStateSchema(
+    publicControls.textFields,
+    publicControls.imageFields,
+    publicControls.colorFields,
+    assets,
+  );
   return {
     sceneData,
     diagnostics,
     assets,
-    publicStateSchema: createPublicStateSchema(options, sceneData.layers),
+    publicStateSchema,
+    publicTextFields: publicControls.textFields,
+    publicImageFields: publicControls.imageFields,
+    publicColorFields: publicControls.colorFields,
     canCompile: diagnostics.every((item) => item.severity !== 'ERROR'),
   };
 }

@@ -1,6 +1,13 @@
 import type { SceneData } from '../types/composition';
-import type { OGrafPublicImageField, OGrafPublicTextField } from './types';
+import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField } from './types';
 
+function imageReferenceLookup(imageReferences: Record<string, string>): Record<string, string> {
+  return Object.entries(imageReferences).reduce<Record<string, string>>((lookup, [source, packagedPath]) => {
+    lookup[source] = packagedPath;
+    lookup[packagedPath] = packagedPath;
+    return lookup;
+  }, {});
+}
 /**
  * Emit a standalone OGraf runtime. Its pure path, mask, matte, and channel
  * evaluators intentionally mirror the editor authorities without importing the
@@ -10,17 +17,23 @@ export function generateGraphicModule(
   sceneData: SceneData,
   textFields: OGrafPublicTextField[] = [],
   imageFields: OGrafPublicImageField[] = [],
+  colorFields: OGrafPublicColorField[] = [],
   imageReferences: Record<string, string> = {},
   fontReferences: Record<string, string> = {},
 ): string {
   const bindings = {
     text: Object.fromEntries(textFields.map((field) => [field.id, { layerId: field.layerId, property: 'textValue' }])),
-    image: Object.fromEntries(imageFields.map((field) => [field.id, { layerId: field.layerId, property: 'imageUrl' }])),
+    image: Object.fromEntries(imageFields.map((field) => [field.id, {
+      layerId: field.layerId,
+      property: 'imageUrl',
+      allowedValues: field.options || (field.defaultValue ? [field.defaultValue] : []),
+    }])),
+    color: Object.fromEntries(colorFields.map((field) => [field.id, { layerId: field.layerId, property: field.property }])),
   };
 
   return `const SCENE = ${JSON.stringify(sceneData)};
 const PUBLIC_BINDINGS = ${JSON.stringify(bindings)};
-const IMAGE_REFERENCES = ${JSON.stringify(imageReferences)};
+const IMAGE_REFERENCES = ${JSON.stringify(imageReferenceLookup(imageReferences))};
 const FONT_REFERENCES = ${JSON.stringify(fontReferences)};
 function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 function escapeXml(value) { return String(value).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;').split("'").join('&apos;'); }
@@ -173,7 +186,23 @@ export default class Graphic extends HTMLElement {
   constructor() { super(); this._scene = JSON.parse(JSON.stringify(SCENE)); this._currentFrame = 0; this._currentStep = undefined; this._stopped = false; this._raf = null; this._token = 0; this._resolveAction = null; }
   _cancel() { this._token += 1; if (this._resolveAction) { this._resolveAction({ statusCode: 200, statusMessage: 'Superseded' }); this._resolveAction = null; } if (this._raf !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this._raf); this._raf = null; }
   _render() { this.innerHTML = renderScene(this._scene, this._currentFrame, this._stopped); }
-  _applyData(data) { if (!data || typeof data !== 'object') return undefined; for (const key of Object.keys(data)) { const binding = PUBLIC_BINDINGS.text[key] || PUBLIC_BINDINGS.image[key]; if (!binding) return { statusCode: 400, statusMessage: 'Unknown public field: ' + key }; const layer = this._scene.layers.find((item) => item.id === binding.layerId); if (!layer || typeof data[key] !== 'string') return { statusCode: 400, statusMessage: 'Invalid public field value: ' + key }; if (binding.property === 'imageUrl' && !IMAGE_REFERENCES[data[key]]) return { statusCode: 400, statusMessage: 'Image value is not a packaged asset: ' + key }; layer[binding.property] = data[key]; } return undefined; }
+  _applyData(data) {
+    if (!data || typeof data !== 'object') return undefined;
+    for (const key of Object.keys(data)) {
+      const binding = PUBLIC_BINDINGS.text[key] || PUBLIC_BINDINGS.image[key] || PUBLIC_BINDINGS.color[key];
+      if (!binding) return { statusCode: 400, statusMessage: 'Unknown public field: ' + key };
+      const layer = this._scene.layers.find((item) => item.id === binding.layerId);
+      if (!layer || typeof data[key] !== 'string') return { statusCode: 400, statusMessage: 'Invalid public field value: ' + key };
+      if (binding.property === 'imageUrl' && (!binding.allowedValues.includes(data[key]) || !IMAGE_REFERENCES[data[key]])) {
+        return { statusCode: 400, statusMessage: 'Image value is not a packaged asset: ' + key };
+      }
+      if ((binding.property === 'fillColor' || binding.property === 'strokeColor') && !/^#[0-9a-f]{6}$/iu.test(data[key])) {
+        return { statusCode: 400, statusMessage: 'Color value must be a #rrggbb value: ' + key };
+      }
+      layer[binding.property] = data[key];
+    }
+    return undefined;
+  }
   async load(params) { this._cancel(); if (params && params.renderType && params.renderType !== 'realtime') return { statusCode: 400, statusMessage: 'Only realtime rendering is supported' }; const error = this._applyData(params && params.data); if (error) return error; this._currentFrame = 0; this._currentStep = undefined; this._stopped = false; this._render(); return { statusCode: 200 }; }
   async dispose() { this._cancel(); this._scene = JSON.parse(JSON.stringify(SCENE)); this._stopped = false; this.innerHTML = ''; return { statusCode: 200 }; }
   _animate(targetFrame, skipAnimation) { this._cancel(); const token = this._token; const startFrame = this._currentFrame; if (skipAnimation || startFrame === targetFrame || typeof requestAnimationFrame !== 'function') { this._currentFrame = targetFrame; this._render(); return Promise.resolve({ statusCode: 200 }); } const duration = Math.abs(targetFrame - startFrame) / this._scene.fps * 1000; const started = typeof performance === 'object' ? performance.now() : Date.now(); return new Promise((resolve) => { this._resolveAction = resolve; const tick = (now) => { if (token !== this._token || !this._scene) { resolve({ statusCode: 200, statusMessage: 'Superseded' }); return; } const progress = clamp((now - started) / duration, 0, 1); this._currentFrame = startFrame + (targetFrame - startFrame) * progress; this._render(); if (progress >= 1) { this._raf = null; this._resolveAction = null; resolve({ statusCode: 200 }); return; } this._raf = requestAnimationFrame(tick); }; this._raf = requestAnimationFrame(tick); }); }

@@ -191,6 +191,16 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
     expect(plan.status).toBe('blocked');
     expect(plan.diagnostics.some((diagnostic) => diagnostic.message.includes('escapes'))).toBe(true);
   });
+  test('rejects URL-encoded package traversal', () => {
+    const plan = compileOGrafPackage(makeScene(), {
+      assetCatalog: {
+        'source/logo.png': { kind: 'local', sourcePath: 'logo.png', packagedPath: 'assets/images/%2e%2e/logo.png' },
+      },
+    });
+
+    expect(plan.status).toBe('blocked');
+    expect(plan.diagnostics.some((diagnostic) => diagnostic.code === 'OGRAF_MISSING_ASSET')).toBe(true);
+  });
   test('rejects absolute, drive-relative, directory, and reserved package paths', () => {
     for (const main of ['/runtime.mjs', 'C:runtime.mjs', 'runtime/', '.']) {
       const plan = compileOGrafPackage(makeScene(), { main });

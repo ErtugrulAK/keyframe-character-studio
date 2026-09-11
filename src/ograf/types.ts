@@ -57,7 +57,15 @@ export interface OGrafPublicImageField {
   id: string;
   title?: string;
   defaultValue?: string;
+  options?: string[];
   layerId: string;
+}
+export interface OGrafPublicColorField {
+  id: string;
+  title?: string;
+  defaultValue?: string;
+  layerId: string;
+  property: 'fillColor' | 'strokeColor';
 }
 
 export interface OGrafPublicStateSchema {
@@ -87,6 +95,7 @@ export interface OGrafExportOptions {
   requirePortableAssets?: boolean;
   publicTextFields?: OGrafPublicTextField[];
   publicImageFields?: OGrafPublicImageField[];
+  publicColorFields?: OGrafPublicColorField[];
   emitRenderRequirements?: boolean;
 }
 
@@ -160,5 +169,8 @@ export interface ValidatedOGrafScene {
   diagnostics: OGrafExportDiagnostic[];
   assets: OGrafAssetPlan[];
   publicStateSchema: OGrafPublicStateSchema;
+  publicTextFields: OGrafPublicTextField[];
+  publicImageFields: OGrafPublicImageField[];
+  publicColorFields: OGrafPublicColorField[];
   canCompile: boolean;
 }

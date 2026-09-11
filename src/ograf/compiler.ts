@@ -40,9 +40,11 @@ function getGraphicId(sceneData: SceneData, options: OGrafExportOptions): string
 function getGraphicName(sceneData: SceneData, options: OGrafExportOptions): string {
   return options.name?.trim() || sceneData.name?.trim() || 'Keyframe Character Studio Graphic';
 }
-function collectCompilerDiagnostics(options: OGrafExportOptions): OGrafExportDiagnostic[] {
+function collectCompilerDiagnostics(
+  options: OGrafExportOptions,
+  publicFields: Array<{ id: string }>,
+): OGrafExportDiagnostic[] {
   const diagnostics: OGrafExportDiagnostic[] = [];
-  const publicFields = [...(options.publicTextFields || []), ...(options.publicImageFields || [])];
   for (const field of publicFields) {
     if (field.id.includes('/')) {
       diagnostics.push({
@@ -71,6 +73,7 @@ export function isSafeOGrafPackagePath(value: string): boolean {
     && !normalized.startsWith('/')
     && !/^[a-zA-Z]:/u.test(normalized)
     && !normalized.split('/').some((segment) => segment === '..' || segment === '' || segment === '.')
+    && !/[?#%]/u.test(normalized)
     && !/[^\x20-\x7E]/u.test(normalized)
     && !normalized.endsWith('/');
 }
@@ -82,7 +85,8 @@ export interface OGrafManifestCompilation {
 
 export function compileOGrafManifest(sceneData: SceneData, options: OGrafExportOptions = {}): OGrafManifestCompilation {
   const validated = validateSceneForOGraf(sceneData, options);
-  const diagnostics = [...validated.diagnostics, ...collectCompilerDiagnostics(options)];
+  const publicFields = [...validated.publicTextFields, ...validated.publicImageFields, ...validated.publicColorFields];
+  const diagnostics = [...validated.diagnostics, ...collectCompilerDiagnostics(options, publicFields)];
   const manifest: OGrafManifest = {
     $schema: OGRAF_GRAPHICS_SCHEMA_URL,
     id: getGraphicId(sceneData, options),

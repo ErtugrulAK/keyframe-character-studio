@@ -78,6 +78,8 @@ Independent reviewer recheck: 0 blockers after fixes. The review specifically co
 
 - Branch: `feat/ograf-public-controls-v1`.
 - Base: `integration/v6-ui-ograf-release-candidate@4e4c269`.
+- Commit: `b07941c feat: expose OGraf public controls for host editing`.
+- Branch pushed to `origin`: yes.
 - `main`: unchanged at `8024d4f`.
 - `memory.backend`: `mnemopi`.
 - Model/provider mappings and global OMP configuration: unchanged.

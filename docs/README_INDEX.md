@@ -3,11 +3,12 @@
 ## Read this first
 
 1. `PROJECT_STATE.md` — accepted milestones, protected state, and current boundaries.
-2. `SESSION.md` — what just happened and the immediate host QA handoff.
-3. `NEXT_SESSION.md` — exact branch, guardrails, and first action for the next session.
+2. `SESSION.md` — current host QA result and integration boundary.
+3. `NEXT_SESSION.md` — exact branch, guardrails, and approval question.
 4. `docs/KCS_CURRENT_STATE.md` — consolidated technical current state.
 5. `docs/KCS_BRANCH_STATUS.md` — known branch heads and integration boundaries.
-6. `docs/KCS_OPEN_TASKS.md` — prioritized P0/P1/P2 work.
+6. `docs/KCS_OPEN_TASKS.md` — prioritized integration and follow-up work.
+7. `docs/KCS_INTEGRATION_READINESS_PLAN.md` — merge/cherry-pick order and required validation.
 
 ## Current-state docs
 
@@ -27,6 +28,7 @@ Historical reports are preserved under `reports/` and are not replaced by this i
 - `reports/progress_047.md` — OGraf V2.1 compliance and downstream QA.
 - `reports/progress_048.md` — OGraf import UX correction.
 - `reports/progress_049.md` — OGraf host compatibility folder QA handoff.
+- `reports/progress_050.md` — host QA PASS and integration readiness.
 
 ## OGraf research and design
 

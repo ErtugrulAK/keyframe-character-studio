@@ -1,42 +1,50 @@
 # KCS Open Tasks
 
-## P0 — Required before new host implementation
+## P0 — Integration readiness
 
-### User host QA
+### A. Integration readiness decision
 
-Test these external host/downstream application folders in order:
+Decide whether to consolidate the accepted product branches into the integration branch. Do not merge or modify `main` without explicit user approval.
 
-1. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\BASIC`
-2. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\COMPOSITING`
-3. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\ASSET`
+### B. Branch integration plan
 
-Select each folder itself. Do not use KCS Import, a standalone manifest, or a ZIP. The official Devtool PASS is distinct from target host application QA.
+Review the safest merge/cherry-pick order:
 
-If rejected, collect:
+1. V3.4.1 UI correction.
+2. V3.5 UX corrections.
+3. V3.6 OGraf Package V2.
+4. OGraf V2.1 and import UX.
+5. Host-compatibility documentation and handoff.
+6. Documentation consolidation and host QA recording.
+7. Keep `chore/omp-kcs-config-optimization` separate unless tooling integration is explicitly approved; it is not product code.
 
-- selected path
-- exact application error
-- screenshot
-- whether a known-working `ograf-graphics` reference project imports in the same host app
+Check whether each branch is a linear descendant or requires cherry-pick/merge. Identify conflicts before any integration action.
 
-### Current host decision boundary
+### Completed P0 evidence
 
-Do not add a guessed wrapper, descriptor, vendor block, ZIP importer, or alternate exporter until the target host returns evidence that the existing manifest-rooted folder contract is insufficient.
+Target host/downstream QA is complete:
 
-## P1 — Planned after P0
+- BASIC: PASS — text moves slightly right on PLAY.
+- ASSET: PASS — portable image appears after a short delay.
+- COMPOSITING: PASS — rectangle/color transition renders.
+- Confirmed import unit: manifest-rooted folder.
+- This is not KCS Import.
 
-- Design OGraf Package → KCS editable import around explicit package extraction, `scene.kcs` validation, asset rebasing, and an editable-state contract.
-- Prepare a branch consolidation/integration plan after host QA, without touching `main` until explicitly approved.
-- Perform final manual UI QA for any pending release surfaces and update the appropriate report without rewriting historical reports.
+## P1 — Planned after approval
+
+- Design OGraf Package → editable KCS import around explicit package extraction, `scene.kcs` validation, asset rebasing, and an editable-state contract.
+- Perform final manual UI QA for pending release surfaces.
+- Prepare a release checkpoint after branch integration and validation.
 
 ## P2 — Non-blocking follow-up
 
 - Add Windows case/device-name hardening tests and boundary handling.
 - Add font catalog UI and improve portable-font UX without introducing unowned fallback binaries.
-- Prepare a release checkpoint or tag only after integration scope and user QA are approved.
+- Polish the release tag/changelog after integration scope is approved.
 
 ## Invariants
 
+- Keep `main` untouched until explicitly approved.
 - Keep `memory.backend: mnemopi`.
 - Keep model mappings and provider selections unchanged.
 - Keep `.omp/backups/` present and ignored.

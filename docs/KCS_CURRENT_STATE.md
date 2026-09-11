@@ -2,7 +2,7 @@
 
 ## Executive summary
 
-KCS has completed the V3.4.1, V3.5, and V3.6 UI milestones, OGraf V2.1 compliance, OGraf import UX classification, and the host-compatibility QA handoff. The official hosted OGraf Devtool PASS for BASIC, COMPOSITING, and ASSET is current milestone context. The remaining external check is user testing in the real target host/downstream application.
+KCS has completed the V3.4.1, V3.5, and V3.6 UI milestones, OGraf V2.1 compliance, OGraf import UX classification, the host-compatibility QA handoff, and target host/downstream QA. The user confirmed PASS for BASIC, COMPOSITING, and ASSET using the manifest-rooted folders.
 
 The project remains intentionally conservative: official OGraf standard export is separate from host QA, KCS Import is not an OGraf package importer, global OMP configuration is unchanged, model mappings are frozen, and project memory remains `mnemopi`.
 
@@ -36,8 +36,13 @@ Report `progress_048.md` records the compatible KCS Import behavior: OGraf manif
 
 ### Host compatibility
 
-Branch `feat/ograf-host-compat-package` at `c2db6a4`. Corpus evidence and hosted Devtool behavior establish the manifest-rooted folder as the import unit. Host QA copies are at `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa` with BASIC, COMPOSITING, and ASSET folders. The target host application result remains user QA pending.
+Branch `feat/ograf-host-compat-package` at `c2db6a4`. The target host/downstream application accepted the manifest-rooted folders:
 
+- BASIC: PASS — PLAY moves the text slightly right.
+- ASSET: PASS — the portable image appears after a short delay.
+- COMPOSITING: PASS — a rectangle transitions from red/pink toward white, like a loading/fade effect.
+
+The host import unit is confirmed as the manifest-rooted folder. This is not KCS Import, and no exporter change is justified by the result.
 ## OMP configuration optimization
 
 Branch `chore/omp-kcs-config-optimization` at `50b42d4`. Project-local task routing, isolation, concurrency limits, compaction, branch summaries, and destructive-command deny rules are documented and committed. The global config and model/provider mappings were not changed. `memory.backend: mnemopi` is an intentional user-approved setting and must remain enabled. `.omp/backups/` is preserved and ignored.
@@ -56,22 +61,22 @@ Select the individual host QA package folder, beginning with BASIC. Do not use K
 
 ## Current known limitations
 
-- Real target host/downstream app QA has not been recorded in this repository.
 - OGraf Package → editable KCS import is intentionally not started.
-- Native hosted Devtool picker automation is not a CLI/headless workflow; prior reports preserve that limitation.
+- Native hosted Devtool picker automation is not a CLI/headless workflow; historical reports preserve that limitation.
 - Windows case/device-name hardening remains technical debt.
 - Unowned system fonts remain blocked when portable font bytes are unavailable; no fake font is bundled.
 - The official Simple Rendering System was not run.
 
 ## Open tasklist
 
-See `docs/KCS_OPEN_TASKS.md`. P0 is external host QA. No new implementation should begin before that result is known.
+See `docs/KCS_OPEN_TASKS.md`. P0 is integration readiness approval; host QA is complete.
+
 
 ## Recommended next order
 
-1. User tests BASIC in the target host/downstream app.
-2. User tests COMPOSITING, then ASSET.
-3. Record exact failures and reference-project comparison if any package is rejected.
-4. Decide whether host compatibility is complete or requires evidence-backed investigation.
-5. Only after explicit approval, plan branch consolidation and the separate editable OGraf import design.
+1. Request explicit user approval for the integration readiness plan.
+2. Inspect branch lineage and choose merge/cherry-pick order without touching `main`.
+3. After approval, integrate accepted product branches with focused/full validation.
+4. Preserve the separate OMP tooling branch and documentation history unless explicitly approved for integration.
+5. Design editable OGraf import only as a separate P1 task.
 6. Handle non-blocking Windows hardening, font UX, and release checkpoint work afterward.

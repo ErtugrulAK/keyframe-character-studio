@@ -4,22 +4,23 @@
 
 This session verified the host QA handoff and prepared the documentation consolidation branch. It does not start a new feature implementation.
 
-- Branch created from `feat/ograf-host-compat-package` at `c2db6a4`.
+- Branch created from `docs/kcs-current-state-consolidation` at `3ac1765`.
 - Host QA folder verified at `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa`.
-- BASIC, COMPOSITING, and ASSET folders contain their manifests, declared `graphic.mjs`, `scene.kcs`, and required package-relative assets.
+- User-provided target host QA is PASS for BASIC, COMPOSITING, and ASSET.
+- BASIC PLAY moves the text slightly right; ASSET shows the portable image after a short delay; COMPOSITING shows a red/pink-to-white rectangle transition.
 - Turkish QA instructions require folder selection and prohibit using KCS Import for host testing.
 - Historical reports remain preserved.
 - `memory.backend` remains `mnemopi`; `.omp/backups/` remains ignored and preserved.
 
 ## Current branch
 
-`docs/kcs-current-state-consolidation`
+`docs/record-host-qa-pass`
 
-Base: `feat/ograf-host-compat-package@c2db6a4`.
+Base: `docs/kcs-current-state-consolidation@3ac1765`.
 
 ## Latest host-compat status
 
-The official OGraf Devtool PASS for BASIC, COMPOSITING, and ASSET is established in the current milestone context. The evidence-backed target host import unit is the manifest-rooted folder. The real target host/downstream application still needs user QA.
+The target host/downstream application accepted the manifest-rooted folders. BASIC, ASSET, and COMPOSITING are all PASS. This is separate from KCS Import, which remains a KCS project importer.
 
 ## Last verification
 
@@ -36,20 +37,14 @@ From the host-compat milestone:
 
 This documentation-only milestone requires no full test rerun.
 
-## Exact next user QA
+## Exact recorded host QA result
 
-Open the target host/downstream application and select the folder itself:
+- BASIC: PASS — PLAY moves the text slightly to the right.
+- ASSET: PASS — the portable image appears after a short delay.
+- COMPOSITING: PASS — a rectangle transitions from red/pink toward white, like a loading/fade effect.
 
-`C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\BASIC`
-
-Then test, in order:
-
-1. BASIC
-2. COMPOSITING
-3. ASSET
-
-Do not use KCS Import. If the host rejects a package, capture the selected path, exact application error, screenshot, and whether a known-working `ograf-graphics` reference project imports in the same host.
+The confirmed import unit is the manifest-rooted folder. No exporter change is justified by this result.
 
 ## First action for the next session
 
-Read `NEXT_SESSION.md`, confirm the branch and clean state, then ask whether the user has tested the BASIC folder. If not, repeat the exact BASIC folder path above; do not begin implementation.
+Read `NEXT_SESSION.md`, confirm the branch and clean state, then request explicit approval for the integration readiness plan. Do not merge or modify `main`.

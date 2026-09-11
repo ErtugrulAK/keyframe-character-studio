@@ -2,49 +2,46 @@
 
 ## What just happened
 
-This session verified the host QA handoff and prepared the documentation consolidation branch. It does not start a new feature implementation.
+Created `integration/v6-ui-ograf-release-candidate` from `integration/v6-ui-stable@0289402` and fast-forwarded the complete linear descendant `docs/record-host-qa-pass@3a7eda3`.
 
-- Branch created from `docs/kcs-current-state-consolidation` at `3ac1765`.
-- Host QA folder verified at `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa`.
-- User-provided target host QA is PASS for BASIC, COMPOSITING, and ASSET.
-- BASIC PLAY moves the text slightly right; ASSET shows the portable image after a short delay; COMPOSITING shows a red/pink-to-white rectangle transition.
-- Turkish QA instructions require folder selection and prohibit using KCS Import for host testing.
-- Historical reports remain preserved.
-- `memory.backend` remains `mnemopi`; `.omp/backups/` remains ignored and preserved.
+Included product line:
+
+- V3.4.1 UI.
+- V3.5 UX.
+- V3.6 and OGraf Package Export V2.
+- OGraf V2.1 and import UX.
+- Host compatibility handoff.
+- Current-state and host-QA documentation.
+
+No conflicts occurred. `chore/omp-kcs-config-optimization@50b42d4` remains separate tooling work.
 
 ## Current branch
 
-`docs/record-host-qa-pass`
+`integration/v6-ui-ograf-release-candidate`
 
-Base: `docs/kcs-current-state-consolidation@3ac1765`.
+Base: `integration/v6-ui-stable@0289402`.
 
-## Latest host-compat status
+## Host QA carried forward
 
-The target host/downstream application accepted the manifest-rooted folders. BASIC, ASSET, and COMPOSITING are all PASS. This is separate from KCS Import, which remains a KCS project importer.
+The target host/downstream application accepted the manifest-rooted folders:
 
-## Last verification
+- BASIC: PASS — PLAY moves the text slightly right.
+- ASSET: PASS — portable image appears after a short delay.
+- COMPOSITING: PASS — rectangle/color transition renders.
 
-From the host-compat milestone:
+This is separate from KCS Import.
 
-- 3/3 OGraf manifests valid.
-- TypeScript PASS.
-- Lint PASS with the pre-existing Fast Refresh warning.
-- Vitest PASS: 100 files / 1,435 tests.
-- Build PASS with the existing chunk-size warning.
-- V6 QA PASS: 3/3.
-- Full Playwright PASS: 254/254.
-- `git diff --check` PASS.
+## Release-candidate validation
 
-This documentation-only milestone requires no full test rerun.
-
-## Exact recorded host QA result
-
-- BASIC: PASS — PLAY moves the text slightly to the right.
-- ASSET: PASS — the portable image appears after a short delay.
-- COMPOSITING: PASS — a rectangle transitions from red/pink toward white, like a loading/fade effect.
-
-The confirmed import unit is the manifest-rooted folder. No exporter change is justified by this result.
+- TypeScript: PASS.
+- Lint: PASS with the pre-existing Fast Refresh warning.
+- Vitest: PASS, 100 files / 1,435 tests.
+- Build: PASS with the existing chunk-size warning.
+- V6 QA: PASS, 3/3.
+- Full Playwright: PASS, 254/254.
+- OGraf manifests: PASS, 3/3.
+- `git diff --check`: PASS.
 
 ## First action for the next session
 
-Read `NEXT_SESSION.md`, confirm the branch and clean state, then request explicit approval for the integration readiness plan. Do not merge or modify `main`.
+Read `docs/KCS_INTEGRATION_EXECUTION_PLAN.md` and `reports/progress_051.md`, confirm the branch is clean, then perform manual release-candidate host smoke and request an explicit user release decision. Do not merge `main`.

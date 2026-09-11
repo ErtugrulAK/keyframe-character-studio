@@ -8,34 +8,35 @@ Repository:
 
 Checkout:
 
-`docs/record-host-qa-pass`
-
-This branch is documentation-only and must not be replaced with `main`.
+`integration/v6-ui-ograf-release-candidate`
 
 ## Guardrails
 
-- Do not touch `main`.
-- Do not delete or rewrite old reports.
-- Do not modify the read-only corpus at `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
-- Keep `.omp/backups/` present and ignored.
+- Do not touch or merge to `main`.
+- Do not reset hard, force push, delete branches, reports, QA folders, or `.omp/backups/`.
+- Do not modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 - Keep `.omp/config.yml` `memory.backend: mnemopi`.
 - Do not change model roles, provider mappings, or global configuration.
-- Do not start OGraf host implementation; host QA is complete and integration approval is now the boundary.
+- Keep `chore/omp-kcs-config-optimization` separate unless explicitly approved.
 
 ## First task
 
-Review `docs/KCS_INTEGRATION_READINESS_PLAN.md` and request explicit user approval before any branch consolidation or merge.
+Read `docs/KCS_INTEGRATION_EXECUTION_PLAN.md` and `reports/progress_051.md`. Full automated release-candidate validation is PASS. Perform the manual host smoke with the existing manifest-rooted folders:
 
-If integration approval is not yet provided, do not merge. If the user has a new host QA result, record it first without rewriting historical reports.
+1. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\BASIC`
+2. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\COMPOSITING`
+3. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa\ASSET`
 
-## Current host QA result
+## Current host QA
 
-- BASIC: PASS — text moves slightly right on PLAY.
-- ASSET: PASS — portable image appears after a short delay.
-- COMPOSITING: PASS — rectangle/color transition renders.
-- Confirmed import unit: manifest-rooted folder.
-- Do not use KCS Import for OGraf packages.
+User-provided target-host results remain PASS:
 
-## Exact question if integration approval is unknown
+- BASIC: text moves slightly right on PLAY.
+- ASSET: portable image appears after a short delay.
+- COMPOSITING: rectangle/color transition renders.
 
-“Host QA PASS sonucu kaydedildi. Branch consolidation/integration planını uygulamaya başlamam için açık onay veriyor musun? `main` branch’ine merge yapılmayacak; yalnızca planlanan branch sırası ve doğrulamalar yürütülecek.”
+The import unit is the manifest-rooted folder. KCS Import is not the host QA surface.
+
+## Approval boundary
+
+After manual release-candidate smoke, ask the user for a release decision. No merge to `main` is allowed without separate explicit approval.

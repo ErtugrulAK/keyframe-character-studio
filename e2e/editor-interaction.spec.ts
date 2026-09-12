@@ -38,11 +38,13 @@ async function selectPart(page: Page, name: string): Promise<void> {
   await page.locator('.actor-node', { hasText: name }).first().click();
 }
 
-async function openTimelineKeyframeEditor(page: Page): Promise<void> {
-  await expect(page.locator('.timeline-selected-keyframe-panel')).toBeVisible();
-  await expect(page.getByText('SELECTED KEYFRAME @ FRAME', { exact: false })).toBeVisible();
-  await expect(page.locator('.details-container .section-block')).toHaveCount(0);
-  await expect(page.getByText('ANIMATION IN / OUT', { exact: true })).toHaveCount(0);
+/**
+ * Selecting a keyframe must not open a property editor for it: the timeline
+ * keeps the selection (highlight, Delete/duplicate) and nothing else.
+ */
+async function expectNoKeyframeEditor(page: Page): Promise<void> {
+  await expect(page.locator('.timeline-selected-keyframe-panel')).toHaveCount(0);
+  await expect(page.getByText('SELECTED KEYFRAME @ FRAME', { exact: false })).toHaveCount(0);
 }
 
 
@@ -112,12 +114,12 @@ test.describe('editor interaction regressions', () => {
     ]);
     await selectPart(page, 'Animated Part');
     await page.locator('.keyframe-diamond').first().click();
-    await openTimelineKeyframeEditor(page);
-    await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toBeVisible();
+    await expectNoKeyframeEditor(page);
+    await expect(page.locator('.keyframe-diamond.selected')).toHaveCount(1);
 
     await page.keyboard.press('Backspace');
 
-    await expect(page.getByText('SELECTED KEYFRAME @ FRAME 20')).toHaveCount(0);
+    await expect(page.locator('.keyframe-diamond.selected')).toHaveCount(0);
     await expect(page.locator('.actor-node', { hasText: 'Animated Part' })).toHaveCount(1);
     await expect(page.locator('.keyframe-diamond')).toHaveCount(1);
     await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
@@ -133,8 +135,12 @@ test.describe('editor interaction regressions', () => {
     await seed(page, [layer('part', 'Animated Part', 'custom_box', 0)], [{ partId: 'part', channels }]);
     await selectPart(page, 'Animated Part');
     await page.locator('.keyframe-diamond').click();
-    await openTimelineKeyframeEditor(page);
-    const input = page.locator('input[aria-label="Keyframe Location X"]');
+    await expectNoKeyframeEditor(page);
+    // A focused text input keeps the editor's Delete/Backspace inert; the
+    // Inspector's transform field is that surface now that selecting a keyframe
+    // opens no editor of its own.
+    await page.getByRole('button', { name: 'Expand TRANSFORM', exact: true }).click();
+    const input = page.locator('input[aria-label="Position X"]');
     await input.focus();
     await page.keyboard.press('Backspace');
     await expect(page.locator('.actor-node', { hasText: 'Animated Part' })).toHaveCount(1);

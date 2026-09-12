@@ -6,7 +6,7 @@
  * component.
  */
 
-import type { Track, TrackChannel, PropertyKeyframe } from '../types/animator';
+import type { Track, TrackChannel } from '../types/animator';
 import { TRACK_CHANNELS } from '../types/animator';
 
 /**
@@ -31,32 +31,68 @@ export function computeMaxFrame(tracks: Track[]): number {
   return maxFrame;
 }
 
-/**
- * Find the first channel keyframe at a given frame for the active template.
- * Used by the Motion Curves modal as the canonical fallback when no legacy
- * composite keyframe exists at the frame.
- */
-export function findChannelKeyframeAtFrame(
-  track: Track,
-  activeTemplateId: string,
-  frame: number,
-): PropertyKeyframe | null {
-  if (!track.channels) return null;
-  for (const ch of TRACK_CHANNELS) {
-    const match = (track.channels[ch] || []).find(
-      (k) => (k.templateId || 'Sequence') === activeTemplateId && k.frame === frame,
-    );
-    if (match) return match;
-  }
-  return null;
-}
-
 /** Does the track carry any canonical channel keyframes for the template? */
 export function hasChannelDataForTemplate(track: Track, activeTemplateId: string): boolean {
   if (!track.channels) return false;
   return Object.values(track.channels).some((arr) =>
     arr.some((k) => (k.templateId || 'Sequence') === activeTemplateId),
   );
+}
+
+/**
+ * The fields a curve segment needs. Legacy composite keyframes and channel
+ * keyframes both carry them, so one resolver serves either model.
+ */
+export interface CurveSegmentKeyframe {
+  id: string;
+  frame: number;
+  templateId?: string;
+  bezierControlPoints?: [number, number, number, number];
+}
+
+/** The curve segment the Motion Curves modal shapes. */
+export interface CurveSegment {
+  /** Keyframe the segment starts at; it stores the segment's curve. */
+  from: CurveSegmentKeyframe;
+  /** Keyframe the segment arrives at (the one under the playhead). */
+  to: CurveSegmentKeyframe;
+  /** Every keyframe of the animated property, in frame order. */
+  list: CurveSegmentKeyframe[];
+}
+
+/**
+ * Resolve the segment a keyframe owns as its *incoming* curve:
+ * `[previous keyframe → this keyframe]`.
+ *
+ * The evaluator reads a segment's curve from the keyframe the segment STARTS
+ * at (`prev.easing` / `prev.bezierControlPoints` / `prev.bezierOut`), so the
+ * edit target is the previous keyframe and the curve that leads into it is
+ * untouched. A keyframe without a predecessor — the first one, or the only
+ * one — owns no segment, so the caller must offer no curve at all instead of
+ * silently editing a different keyframe.
+ *
+ * The keyframe is picked by the playhead first (clicking a diamond moves it
+ * there) and by the timeline's keyframe selection second. Returns null when
+ * nothing matches, rather than guessing.
+ */
+export function resolveCurveSegment(
+  keyframes: CurveSegmentKeyframe[],
+  activeTemplateId: string,
+  selectedKeyframeId: string | null,
+  currentFrame: number,
+): CurveSegment | null {
+  const list = keyframes
+    .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeTemplateId)
+    .sort((a, b) => a.frame - b.frame);
+  if (list.length < 2) return null;
+
+  let index = list.findIndex((keyframe) => keyframe.frame === currentFrame);
+  if (index < 0 && selectedKeyframeId) {
+    index = list.findIndex((keyframe) => keyframe.id === selectedKeyframeId);
+  }
+  if (index < 1) return null;
+
+  return { from: list[index - 1], to: list[index], list };
 }
 
 /** Channel display order (same as DISPLAY_CHANNELS in the editor panel) */

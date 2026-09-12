@@ -104,13 +104,15 @@ test.describe('Milestone B — keyboard accessibility', () => {
 
     // 5. Enter selects the focused keyframe through the existing pipeline.
     await page.keyboard.press('Enter');
-    await expect(page.locator('.timeline-selected-keyframe-panel')).toBeVisible();
-    await expect(page.getByText('SELECTED KEYFRAME @ FRAME 12')).toBeVisible();
+    await expect(page.locator('.keyframe-diamond.selected')).toHaveCount(1);
     expect(await page.evaluate(() => document.activeElement?.getAttribute('aria-pressed'))).toBe('true');
+    // Selecting a keyframe opens no property editor for it.
+    await expect(page.locator('.timeline-selected-keyframe-panel')).toHaveCount(0);
+    await expect(page.getByText('SELECTED KEYFRAME @ FRAME', { exact: false })).toHaveCount(0);
 
     // 6. The mouse path still selects the same way.
     await page.locator('.keyframe-diamond').first().click();
-    await expect(page.getByText('SELECTED KEYFRAME @ FRAME 0')).toBeVisible();
+    await expect(page.locator('.keyframe-diamond.selected')).toHaveCount(1);
 
     expect(consoleErrors).toEqual([]);
   });
@@ -118,6 +120,12 @@ test.describe('Milestone B — keyboard accessibility', () => {
   test('the value graph exposes a labelled group whose keyframe points are keyboard operable', async ({ page }) => {
     await seed(page);
     await page.locator('.actor-node', { hasText: 'Part A' }).click();
+
+    // Motion Curves shapes the segment that leads INTO the selected keyframe, and
+    // the seeded x channel has keyframes at frames 0, 12 and 30. Selecting the
+    // first diamond leaves the studio intentionally inactive, so select the
+    // incoming segment's end keyframe (frame 12) first.
+    await page.locator('.keyframe-diamond[aria-label*="frame 12"]').click();
 
     // The graph lives in the Curve Studio modal: open it through its own control,
     // so this test fails if the graph semantics regress.

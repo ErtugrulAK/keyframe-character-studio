@@ -1,8 +1,8 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/useAnimator';
-import { TRACK_CHANNELS, type PropertyKeyframe, type TrackChannel, type AnimationChannel } from '../../types/animator';
-import { computeMaxFrame, findChannelKeyframeAtFrame, hasChannelDataForTemplate } from '../../utils/timelineMetrics';
+import { type PropertyKeyframe, type TrackChannel, type AnimationChannel } from '../../types/animator';
+import { computeMaxFrame, hasChannelDataForTemplate, resolveCurveSegment, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
 import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, buildTransformSnapshot } from '../../utils/channelKeyframeGroups';
 import {
   Plus,
@@ -19,12 +19,12 @@ import {
   Scissors,
   TrendingUp,
 } from 'lucide-react';
-import { SelectedKeyframeSection } from '../Inspector/sections/transform/SelectedKeyframeSection';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane } from './TrackLane';
+import { CHANNEL_META } from './timelineConstants';
 import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { InlineRename } from '../Shared/InlineRename';
@@ -82,10 +82,6 @@ export const SequencerTimeline: React.FC = () => {
     renameMotionTemplate,
     deleteMotionTemplate,
     updateMotionTemplateDuration,
-    updateCurrentTransform,
-    updateCurrentPropertyChannel,
-    coordinateSystem,
-    isScaleLocked,
   } = useAnimator();
   // Sequencer Tree Modal Toggle State & Inline Sequence Rename
   const [isSeqTreeOpen, setIsSeqTreeOpen] = useState<boolean>(false);
@@ -96,9 +92,6 @@ export const SequencerTimeline: React.FC = () => {
   const seqMenuRef = useRef<HTMLDivElement>(null);
   const selectedTrack = selectedPartId
     ? tracks.find((track) => track.partId === selectedPartId) ?? null
-    : null;
-  const selectedKeyframeTransform = selectedPartId
-    ? getComputedTransform(selectedPartId, currentFrame)
     : null;
   const activeGraphTemplate = activeTemplateId || 'Sequence';
   const hasActiveChannelData = (track: typeof tracks[number]): boolean => (
@@ -125,6 +118,28 @@ export const SequencerTimeline: React.FC = () => {
       .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate)
     : [];
   const activeSequenceDurationFrames = motionTemplates.find((template) => template.id === activeTemplateId)?.durationFrames ?? totalFrames;
+
+  /**
+   * Motion Curves shapes ONE segment: the curve that leads INTO the keyframe
+   * under the playhead, from the keyframe before it. The evaluator reads a
+   * segment's curve from the keyframe the segment starts at, so the edit lands
+   * on the previous keyframe, and a keyframe without a predecessor (the first,
+   * or the only one) owns no segment — the modal then explains that instead of
+   * silently editing another keyframe.
+   */
+  const curveKeyframes: CurveSegmentKeyframe[] = graphKeyframes.length > 0
+    ? graphKeyframes
+    : (graphTrack?.keyframes ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate);
+  const curveSegment = resolveCurveSegment(curveKeyframes, activeGraphTemplate, selectedKeyframeId, currentFrame);
+  const curveSegmentFrames = curveSegment ? { from: curveSegment.from.frame, to: curveSegment.to.frame } : undefined;
+  const curveChannelLabel = graphChannel
+    ? CHANNEL_META[graphChannel as TrackChannel]?.label ?? `Mask ${String(graphChannel).split(':').slice(1).join(' ')}`
+    : undefined;
+  const curveInactiveReason = curveSegment
+    ? null
+    : curveKeyframes.length < 2
+      ? 'This property carries a single keyframe, and a curve belongs to the segment between two keyframes. Add a second keyframe, then select the later one to shape the segment that leads into it.'
+      : 'Select a keyframe other than the first one. A curve shapes the segment that leads into a keyframe from the one before it, so the first keyframe — and a keyframe with nothing before it — has no curve to edit.';
 
 
   useEffect(() => {
@@ -522,44 +537,47 @@ export const SequencerTimeline: React.FC = () => {
 
       {/* Header Bar */}
       <div className="timeline-header">
-        <div className="timeline-header-left timeline-header-band timeline-header-band-timing" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Clock size={15} className="text-teal" />
+        <div className="timeline-header-left timeline-header-band timeline-header-band-timing">
+          <div className="timeline-timing-group">
+            <Clock size={15} className="timeline-clock-icon" aria-hidden="true" />
             <span className="timecode-text">{formatTimecode(currentFrame, fps)}</span>
             <span className="timecode-total">/ {formatTimecode(totalFrames, fps)}</span>
           </div>
           <div className="divider-v" />
-          <div className="duration-control-box" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <label className="form-label" style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-muted)' }}>DURATION:</label>
-            <input className="input-control"
-              type="number"
-              step={0.5}
-              min={0.5}
-              max={40}
-              style={{ width: 44, height: 22, background: 'var(--bg-input)', border: '1px solid var(--border-color)', borderRadius: 4, color: '#fff', fontSize: 11, fontWeight: 700, textAlign: 'center' }}
-              value={Number((activeSequenceDurationFrames / fps).toFixed(1))}
-              onFocus={(e) => e.target.select()}
-              onChange={(e) => {
-                const sec = parseFloat(e.target.value);
-                if (!isNaN(sec) && sec > 0) {
-                  const durationFrames = Math.round(sec * fps);
-                  updateMotionTemplateDuration(activeTemplateId, durationFrames);
-                  setTotalFrames(durationFrames);
-                }
-              }}
-            />
-            <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>s</span>
-            <div style={{ display: 'flex', gap: 3, marginLeft: 2 }}>
+          <div className="duration-control-box">
+            <label className="duration-label" htmlFor="sequence-duration-input">DURATION</label>
+            <span className="duration-input-group">
+              <input
+                id="sequence-duration-input"
+                className="duration-input"
+                type="number"
+                step={0.5}
+                min={0.5}
+                max={40}
+                value={Number((activeSequenceDurationFrames / fps).toFixed(1))}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const sec = parseFloat(e.target.value);
+                  if (!isNaN(sec) && sec > 0) {
+                    const durationFrames = Math.round(sec * fps);
+                    updateMotionTemplateDuration(activeTemplateId, durationFrames);
+                    setTotalFrames(durationFrames);
+                  }
+                }}
+              />
+              <span className="duration-unit" aria-hidden="true">s</span>
+            </span>
+            <div className="duration-preset-group" role="group" aria-label="Sequence duration presets">
               {[1, 2, 3, 5, 10].map((sec) => (
                 <button key={sec} className={`duration-preset-pill ${activeSequenceDurationFrames === sec * fps ? 'active' : ''}`} onClick={() => {
                   const durationFrames = sec * fps;
                   updateMotionTemplateDuration(activeTemplateId, durationFrames);
                   setTotalFrames(durationFrames);
-                }} title={`${sec}s`}>{sec}s</button>
+                }} title={`Set the sequence to ${sec} seconds`} aria-pressed={activeSequenceDurationFrames === sec * fps}>{sec}s</button>
               ))}
             </div>
-            <button className="fit-pill-btn crop-btn" onClick={handleCropToContent} style={{ display: 'flex', alignItems: 'center', gap: 4, marginLeft: 4, padding: '3px 8px' }}>
-              <Scissors size={12} className="text-teal" /><span>Crop</span>
+            <button className="fit-pill-btn crop-btn" onClick={handleCropToContent} title="Crop the sequence to the last keyframe">
+              <Scissors size={12} aria-hidden="true" /><span>Crop</span>
             </button>
           </div>
         </div>
@@ -585,26 +603,11 @@ export const SequencerTimeline: React.FC = () => {
         <div className="timeline-header-right timeline-actions-band">
           <button
             type="button"
-            className="btn-director active"
+            className="btn-director active motion-curves-btn"
             onClick={() => setIsCurveModalOpen(true)}
-            style={{
-              fontSize: 10,
-              fontWeight: 800,
-              padding: '3px 9px',
-              height: 26,
-              background: 'rgba(56, 189, 248, 0.15)',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
-              color: 'var(--accent-cyan)',
-              borderRadius: 6,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-              marginRight: 6,
-            }}
             title="Open Expanded Pro Cubic Bezier Motion Curve Studio Modal"
           >
-            <TrendingUp size={13} className="text-cyan" />
+            <TrendingUp size={13} aria-hidden="true" />
             <span>Motion Curves</span>
           </button>
           <div className="divider-v" style={{ marginRight: 6 }} />
@@ -711,23 +714,6 @@ export const SequencerTimeline: React.FC = () => {
         </div>
       </div>
 
-      {selectedKeyframeId && selectedTrack && selectedKeyframeTransform && (
-        <div className="timeline-selected-keyframe-panel">
-          <div className="timeline-selected-keyframe-title">Selected Keyframe</div>
-          <SelectedKeyframeSection
-            track={selectedTrack}
-            selectedKeyframeId={selectedKeyframeId}
-            currentFrame={currentFrame}
-            transform={selectedKeyframeTransform}
-            activeTemplateId={activeTemplateId}
-            isScaleLocked={isScaleLocked}
-            coordinateSystem={coordinateSystem}
-            onUpdate={updateCurrentTransform}
-            onUpdateChannel={updateCurrentPropertyChannel}
-          />
-        </div>
-      )}
-
       {/* Floating Keyframe Tooltip */}
       {hoveredKf && (
         <div className="kf-hover-tooltip">
@@ -739,58 +725,15 @@ export const SequencerTimeline: React.FC = () => {
       {/* Expanded Pro Cubic Bezier Curve Studio Modal */}
       {isCurveModalOpen && (
         <InteractiveCubicBezierEditor
-          controlPoints={(() => {
-            const activeTmpl = activeTemplateId || 'Sequence';
-            const track = tracks.find((t) => t.partId === selectedPartId) || tracks[0];
-            if (!track) return [0.42, 0, 0.58, 1];
-
-            const tmplKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
-            const exactKf = tmplKfs.find((k) => k.frame === currentFrame);
-            if (exactKf?.bezierControlPoints) return exactKf.bezierControlPoints;
-
-            const pastKfs = tmplKfs.filter((k) => k.frame <= currentFrame).sort((a, b) => b.frame - a.frame);
-            if (pastKfs.length > 0 && pastKfs[0].bezierControlPoints) return pastKfs[0].bezierControlPoints;
-            if (tmplKfs.length > 0 && tmplKfs[0].bezierControlPoints) return tmplKfs[0].bezierControlPoints;
-
-            if (track.channels) {
-              for (const ch of TRACK_CHANNELS) {
-                const chKfs = (track.channels[ch] || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
-                const matchCh = chKfs.find((k) => k.frame === currentFrame) || chKfs[0];
-                if (matchCh?.bezierControlPoints) return matchCh.bezierControlPoints;
-              }
-            }
-
-            return [0.42, 0, 0.58, 1];
-          })()}
+          controlPoints={curveSegment?.from.bezierControlPoints ?? [0.42, 0, 0.58, 1]}
+          segmentFrames={curveSegmentFrames}
+          segmentChannelLabel={curveChannelLabel}
+          inactiveReason={curveInactiveReason}
           onChange={(points) => {
-            const activeTmpl = activeTemplateId || 'Sequence';
-            const track = tracks.find((t) => t.partId === selectedPartId) || tracks[0];
-            if (!track) return;
-
-            const tmplKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
-            let targetKf = tmplKfs.find((k) => k.frame === currentFrame);
-
-            if (!targetKf && tmplKfs.length > 0) {
-              const pastKfs = tmplKfs.filter((k) => k.frame <= currentFrame).sort((a, b) => b.frame - a.frame);
-              targetKf = pastKfs[0] || tmplKfs[0];
-            }
-
-            if (!targetKf) {
-              // M5: canonical fallback — channel-only tracks have no legacy
-              // keyframes; resolve the channel keyframe at this frame so bezier
-              // edits land on channels (updateKeyframeBezierPointsMutator is
-              // dual — it updates both keyframes[] and channels[] by id).
-              targetKf = findChannelKeyframeAtFrame(track, activeTmpl, currentFrame) as any;
-            }
-
-            if (targetKf) {
-              updateKeyframeBezierPoints(track.id, targetKf.id, points);
-            } else if (!hasChannelDataForTemplate(track, activeTmpl)) {
-              // Legacy-only track with no keyframe: keep the old snapshot behavior.
-              addKeyframeToTrack(track.id, currentFrame);
-            }
-            // Channel track with no keyframe at this frame: nothing to attach
-            // bezier to — do not pollute channels with a legacy snapshot.
+            if (!curveSegment || !graphTrack) return;
+            // The segment's curve lives on the keyframe it starts at; the
+            // mutator is dual, so this covers legacy and channel keyframes.
+            updateKeyframeBezierPoints(graphTrack.id, curveSegment.from.id, points);
           }}
           valueKeyframes={graphKeyframes.filter((keyframe) => (keyframe.templateId || 'Sequence') === (activeTemplateId || 'Sequence'))}
           onChangeKeyframeValue={(keyframeId, value) => {

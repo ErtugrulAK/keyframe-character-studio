@@ -10,6 +10,15 @@ interface InteractiveCubicBezierEditorProps {
   initialModalOpen?: boolean;
   onCloseModal?: () => void;
   valueKeyframes?: PropertyKeyframe[];
+  /** Frames and property of the segment being shaped, when there is one. */
+  segmentFrames?: { from: number; to: number };
+  /** Property label of the segment (e.g. "Opacity"), for the header. */
+  segmentChannelLabel?: string;
+  /**
+   * Why this editor has nothing to shape. When set, the curve controls are
+   * replaced by an explanation instead of silently editing another keyframe.
+   */
+  inactiveReason?: string | null;
   onChangeKeyframeValue?: (keyframeId: string, value: number) => void;
   onChangeKeyframeHandles?: (
     keyframeId: string,
@@ -36,6 +45,9 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   initialModalOpen = true,
   onCloseModal,
   valueKeyframes = [],
+  segmentFrames,
+  segmentChannelLabel,
+  inactiveReason = null,
   onChangeKeyframeValue,
   onChangeKeyframeHandles,
 }) => {
@@ -401,7 +413,25 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       >
         {/* Top Header Row with Close Button */}
         <div className="bezier-modal-header v3-graph-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px 0 24px' }}>
-          <h2 id="bezier-modal-title" className="bezier-modal-title">Motion Curve Editor</h2>
+          <div className="bezier-modal-heading" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <h2 id="bezier-modal-title" className="bezier-modal-title">Motion Curve Editor</h2>
+            {segmentFrames ? (
+              <span
+                className="bezier-modal-segment"
+                style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3, color: '#38bdf8' }}
+              >
+                {segmentChannelLabel ? `${segmentChannelLabel} · ` : ''}
+                Segment F{segmentFrames.from} → F{segmentFrames.to}
+              </span>
+            ) : (
+              <span
+                className="bezier-modal-segment is-empty"
+                style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.3, color: '#64748b' }}
+              >
+                No segment selected
+              </span>
+            )}
+          </div>
           <button
             className="btn-icon"
             onClick={() => {
@@ -426,7 +456,33 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
           </button>
         </div>
 
+        {/* No segment: explain instead of editing an unrelated keyframe. */}
+        {inactiveReason && (
+          <div
+            className="bezier-modal-empty"
+            role="status"
+            style={{
+              margin: '12px 28px 28px 28px',
+              padding: '22px 24px',
+              background: '#0f131c',
+              border: '1px solid #242a3a',
+              borderRadius: 12,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8,
+            }}
+          >
+            <p className="bezier-modal-empty-title" style={{ margin: 0, fontSize: 13, fontWeight: 700, color: '#e2e8f0' }}>
+              No curve to shape here
+            </p>
+            <p className="bezier-modal-empty-body" style={{ margin: 0, fontSize: 12, lineHeight: 1.55, color: '#94a3b8' }}>
+              {inactiveReason}
+            </p>
+          </div>
+        )}
+
         {/* Modal Content Grid */}
+        {!inactiveReason && (
         <div className="bezier-modal-grid v3-graph-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 24, padding: '12px 28px 28px 28px' }}>
           {/* Left Column: SVG Canvas + P1/P2 Coordinates */}
           <div className="bezier-modal-column bezier-modal-main v3-graph-main" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -449,7 +505,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
             <div className="bezier-handle-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               <div className="bezier-handle-card" style={{ background: '#181d2a', padding: '12px 14px', borderRadius: 8, border: '1px solid #283044' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#38bdf8', display: 'block', marginBottom: 8 }}>
-                  P1 HANDLE (CYAN)
+                  P1 HANDLE (CYAN){segmentFrames ? ` · leaves F${segmentFrames.from}` : ''}
                 </span>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
@@ -480,7 +536,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
 
               <div className="bezier-handle-card" style={{ background: '#181d2a', padding: '12px 14px', borderRadius: 8, border: '1px solid #283044' }}>
                 <span style={{ fontSize: 11, fontWeight: 700, color: '#fbbf24', display: 'block', marginBottom: 8 }}>
-                  P2 HANDLE (GOLD)
+                  P2 HANDLE (GOLD){segmentFrames ? ` · arrives at F${segmentFrames.to}` : ''}
                 </span>
                 <div style={{ display: 'flex', gap: 10 }}>
                   <div style={{ flex: 1 }}>
@@ -655,6 +711,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>,
     document.body

@@ -872,33 +872,6 @@
   box-shadow: 0 0 0 4px var(--accent-teal-glow);
 }
 
-.timeline-selected-keyframe-panel {
-  flex: 0 0 auto;
-  max-height: 170px;
-  overflow: auto;
-  padding: 6px 10px 8px;
-  background: var(--bg-darkest);
-  border-top: 1px solid var(--border-color);
-}
-
-.timeline-selected-keyframe-panel .section-block {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 4px;
-}
-
-.timeline-selected-keyframe-panel .panel-card {
-  margin-bottom: 0 !important;
-}
-
-.timeline-selected-keyframe-title {
-  margin-bottom: 4px;
-  color: var(--accent-cyan);
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-}
 /* ── KEYFRAME TOOLTIP ── */
 .kf-hover-tooltip {
   position: absolute; bottom: 10px; right: 16px;
@@ -1122,4 +1095,178 @@
     grid-column: 1 / -1;
     justify-content: flex-start;
   }
+}
+
+/* ── Transport row: one control height, one radius, one muted tone ──
+   The timing readout, the duration input and its presets, the transport
+   buttons and the support pills all share a 28px row so nothing drifts. */
+.timeline-header {
+  min-height: 44px;
+  padding: 6px 10px;
+  gap: 10px;
+}
+
+.timeline-header-left,
+.timeline-header-center,
+.timeline-header .timeline-header-right {
+  gap: 6px;
+  min-width: 0;
+}
+
+.timeline-header .timeline-timing-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.timeline-header .timeline-clock-icon {
+  color: var(--kcs-accent);
+  flex: none;
+}
+
+.timeline-header .timecode-text {
+  min-width: 62px;
+  text-align: right;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  font-variant-numeric: tabular-nums;
+  color: var(--kcs-accent);
+}
+
+.timeline-header .timecode-total {
+  min-width: 56px;
+  font-size: 11.5px;
+  color: #7f96a4;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-header .duration-control-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.timeline-header .duration-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #7f96a4;
+}
+
+.timeline-header .duration-input-group {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  background: #101b24;
+  border: 1px solid #2c414e;
+  border-radius: 4px;
+  overflow: hidden;
+  transition: border-color 140ms ease;
+}
+
+.timeline-header .duration-input-group:focus-within {
+  border-color: var(--kcs-accent);
+}
+
+.timeline-header .duration-input {
+  width: 44px;
+  height: 24px;
+  padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: #e6edf3;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-header .duration-input:focus {
+  outline: none;
+}
+
+.timeline-header .duration-unit {
+  padding-right: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #7f96a4;
+}
+
+.timeline-header .duration-preset-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 3px;
+  background: #101b24;
+  border: 1px solid #2c414e;
+  border-radius: 5px;
+}
+
+.timeline-header .duration-preset-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 5px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: #7f96a4;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.timeline-header .duration-preset-pill:hover {
+  background: #1a2a36;
+  color: #d4e3e7;
+}
+
+.timeline-header .duration-preset-pill.active {
+  background: #1c3036;
+  border-color: #4e7a7c;
+  color: #c7e2df;
+}
+
+.timeline-header .crop-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+
+.timeline-header .play-main-btn-teal {
+  height: 28px;
+}
+
+.timeline-header .divider-v {
+  height: 20px;
+}
+
+.timeline-header .motion-curves-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: var(--accent-cyan);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.timeline-header .motion-curves-btn:hover {
+  background: rgba(56, 189, 248, 0.24);
+  border-color: rgba(56, 189, 248, 0.62);
 }

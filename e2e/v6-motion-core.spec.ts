@@ -44,6 +44,14 @@ test.describe('V6 Motion Core and Compositing', () => {
     await expect(page.locator('#kcs-layer-mask-target-mask-4-difference')).toHaveCount(1);
   });
   test('opens the timeline graph studio with both derived graph modes', async ({ page }) => {
+    await page.locator('.actor-node', { hasText: 'Bezier Target' }).click();
+
+    // Motion Curves shapes the segment that leads INTO the selected keyframe, so
+    // select the target layer's canonical x-channel end keyframe (frame 10)
+    // before opening it — the first keyframe leaves the studio intentionally
+    // inactive.
+    await page.locator('.keyframe-diamond[aria-label*="frame 10"]').click();
+
     await page.getByRole('button', { name: 'Motion Curves' }).click();
     await expect(page.getByRole('button', { name: 'Value Graph' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Speed Graph' })).toBeVisible();

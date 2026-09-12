@@ -179,7 +179,11 @@
     {
       "partId": "target",
       "channels": {
-        "x": [], "y": [], "rotation": [], "scaleX": [], "scaleY": [], "opacity": [],
+        "x": [
+          { "id": "target-x-0", "frame": 0, "value": 0, "easing": "easeInOut" },
+          { "id": "target-x-10", "frame": 10, "value": 120, "easing": "easeInOut" }
+        ],
+        "y": [], "rotation": [], "scaleX": [], "scaleY": [], "opacity": [],
         "maskOffsetX": [], "maskOffsetY": [], "maskScale": [], "maskRotation": [],
         "trimPathStart": [], "trimPathEnd": [], "trimPathOffset": []
       },

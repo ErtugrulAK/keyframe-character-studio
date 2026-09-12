@@ -3,12 +3,12 @@
  *
  * Verifies the pure helpers extracted from SequencerTimeline:
  *   - computeMaxFrame (timeline length across legacy + channels)
- *   - findChannelKeyframeAtFrame / hasChannelDataForTemplate
+ *   - hasChannelDataForTemplate / resolveCurveSegment
  *   - bezier edits land on channel keyframes via the dual mutator
  */
 
 import { describe, test, expect } from 'vitest';
-import { computeMaxFrame, findChannelKeyframeAtFrame, hasChannelDataForTemplate } from '../utils/timelineMetrics';
+import { computeMaxFrame, hasChannelDataForTemplate, resolveCurveSegment } from '../utils/timelineMetrics';
 import { updateKeyframeBezierPointsMutator } from '../utils/trackMutations';
 import type { Track, TrackChannel, PropertyKeyframe, Keyframe } from '../types/animator';
 
@@ -80,20 +80,10 @@ describe('M5 — computeMaxFrame', () => {
   });
 });
 
-describe('M5 — findChannelKeyframeAtFrame / hasChannelDataForTemplate', () => {
+describe('M5 — hasChannelDataForTemplate / updateKeyframeBezierPointsMutator', () => {
 
-  test('7: finds channel keyframe at frame for active template', () => {
-    const track = makeTrack('a', { channels: { x: [pk('x1', 30, 5, 'Sequence')] } });
-    const found = findChannelKeyframeAtFrame(track, 'Sequence', 30);
-    expect(found).not.toBeNull();
-    expect(found!.id).toBe('x1');
-    expect(findChannelKeyframeAtFrame(track, 'Sequence', 31)).toBeNull();
-  });
-
-  test('8: template filtering — other template not returned', () => {
+  test('7: template filtering — channel data is reported per template', () => {
     const track = makeTrack('a', { channels: { x: [pk('x1', 30, 5, 'Outro')] } });
-    expect(findChannelKeyframeAtFrame(track, 'Sequence', 30)).toBeNull();
-    expect(findChannelKeyframeAtFrame(track, 'Outro', 30)?.id).toBe('x1');
     expect(hasChannelDataForTemplate(track, 'Sequence')).toBe(false);
     expect(hasChannelDataForTemplate(track, 'Outro')).toBe(true);
   });
@@ -121,5 +111,49 @@ describe('M5 — findChannelKeyframeAtFrame / hasChannelDataForTemplate', () => 
     const [u1, u2] = updateKeyframeBezierPointsMutator([t1, t2], t1.id, 'x1', [0.5, 0.5, 0.5, 0.5]);
     expect(u1.channels.x[0].bezierControlPoints).toEqual([0.5, 0.5, 0.5, 0.5]);
     expect(u2.channels.x[0].bezierControlPoints).toBeUndefined();
+  });
+});
+
+describe('M5 — resolveCurveSegment', () => {
+  const kf = (id: string, frame: number, templateId = 'Sequence') => pk(id, frame, frame, templateId);
+
+  test('a single keyframe owns no segment', () => {
+    expect(resolveCurveSegment([kf('a', 0)], 'Sequence', 'a', 0)).toBeNull();
+    expect(resolveCurveSegment([], 'Sequence', null, 0)).toBeNull();
+  });
+
+  test('the first keyframe has nothing before it', () => {
+    const list = [kf('a', 0), kf('b', 30)];
+    expect(resolveCurveSegment(list, 'Sequence', 'a', 0)).toBeNull();
+  });
+
+  test('a later keyframe resolves the segment that leads into it', () => {
+    const list = [kf('a', 0), kf('b', 30), kf('c', 60), kf('d', 90), kf('e', 120)];
+    const segment = resolveCurveSegment(list, 'Sequence', 'd', 90);
+    expect(segment?.from.id).toBe('c');
+    expect(segment?.to.id).toBe('d');
+    expect(segment?.from.frame).toBe(60);
+    expect(segment?.to.frame).toBe(90);
+    expect(segment?.list.map((k) => k.id)).toEqual(['a', 'b', 'c', 'd', 'e']);
+  });
+
+  test('the playhead picks the keyframe; the selection is the fallback', () => {
+    const list = [kf('a', 0), kf('b', 30), kf('c', 60)];
+    expect(resolveCurveSegment(list, 'Sequence', 'a', 60)?.from.id).toBe('b');
+    expect(resolveCurveSegment(list, 'Sequence', 'c', 7)?.from.id).toBe('b');
+  });
+
+  test('an unrelated selection or a frame between keyframes resolves nothing', () => {
+    const list = [kf('a', 0), kf('b', 30)];
+    expect(resolveCurveSegment(list, 'Sequence', 'nope', 12)).toBeNull();
+    expect(resolveCurveSegment(list, 'Sequence', null, 30)?.from.id).toBe('a');
+  });
+
+  test('keyframes of another template never participate', () => {
+    const list = [kf('a', 0, 'Outro'), kf('b', 30), kf('c', 60)];
+    const segment = resolveCurveSegment(list, 'Sequence', 'c', 60);
+    expect(segment?.from.id).toBe('b');
+    expect(segment?.list.map((k) => k.id)).toEqual(['b', 'c']);
+    expect(resolveCurveSegment(list, 'Outro', 'a', 0)).toBeNull();
   });
 });

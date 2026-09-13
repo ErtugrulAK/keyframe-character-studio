@@ -24,9 +24,9 @@
 - `reports/progress_057.md` — protected main integration and release validation.
 - `reports/progress_058.md` — post-main cleanup audit and release checkpoint.
 - `reports/progress_059.md` — release tag and safe merged branch cleanup result.
-- `reports/progress_060.md` — remaining investigation branch audit.
 - `reports/progress_061.md` — safe Copilot branch cleanup result.
 - `reports/progress_062.md` — GitHub presentation import review result.
+- `reports/progress_063.md` — GitHub presentation review merge result.
 
 Presentation review material is indexed at `docs/presentation/README.md`.
 

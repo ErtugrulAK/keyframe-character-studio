@@ -1,18 +1,18 @@
 # KCS Open Tasks
 
-## P0 — Presentation import decision
+## P0 — Post-merge branch decisions
 
-- Review `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md`.
-- Decide whether to create a review branch for `docs/github-presentation`.
+- Decide whether to delete the original `docs/github-presentation` branch.
 - Decide whether to keep or archive `without-mask`.
+- Then move to GitHub Actions/CI work.
 
 ## Current release state
 
-Public Controls V1 is integrated into `main@373d74b`. Release tag `v1.1.0-public-controls` targets `6351d1a`. The three approved safe Copilot branches have been deleted.
+Public Controls V1 and the reviewed GitHub presentation materials are integrated into `main`. Release tag `v1.1.0-public-controls` targets `6351d1a`. The review branch was deleted after merge; the original presentation branch remains preserved.
 
 ## Investigation state
 
-- `docs/github-presentation` remains preserved as the only import candidate.
+- `docs/github-presentation` remains preserved and untouched.
 - `without-mask` remains preserved for manual keep/archive review.
 - `chore/omp-kcs-config-optimization` remains separate and must be kept.
 

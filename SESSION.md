@@ -62,3 +62,9 @@ Release tag `v1.1.0-public-controls` was created and pushed at `6351d1a`. The au
 - `reports/progress_061.md` records deletion of the three approved safe Copilot remote branches.
 - `docs/github-presentation`, `without-mask`, and `chore/omp-kcs-config-optimization` were preserved.
 - No tag, source, report, QA folder, or OMP setting was changed.
+
+## Presentation merge
+
+- `review/github-presentation-import` was fast-forwarded into `main`; `reports/progress_063.md` records the result.
+- The review branch was deleted after pushed-main ancestry verification.
+- `docs/github-presentation`, `without-mask`, and `chore/omp-kcs-config-optimization` remain untouched.

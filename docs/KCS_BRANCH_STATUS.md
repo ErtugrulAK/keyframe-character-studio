@@ -1,12 +1,12 @@
 # KCS Branch Status
 
-Public-controls work is integrated into `main@373d74b` (with RC tip `111c101` in its ancestry). The three approved safe Copilot branches were deleted after verification. The OMP tooling branch, `docs/github-presentation`, and `without-mask` remain separate.
+Public-controls work is integrated into `main`; the GitHub presentation review branch was fast-forwarded into main at `07f3d84`. The original `docs/github-presentation` branch and `without-mask` remain separate and untouched.
 
 | BRANCH | PURPOSE | STATUS | LATEST KNOWN COMMIT | NEXT ACTION |
 |---|---|---|---|---|
-| `main` | Protected product baseline | INTEGRATED / RELEASE-TAGGED | `373d74b` | Review presentation import |
+| `main` | Protected product baseline | INTEGRATED / RELEASE-TAGGED | `07f3d84` plus merge result docs | Review imported presentation material |
 | `chore/omp-kcs-config-optimization` | Project-local OMP policy | SEPARATE / COMPLETE | `50b42d4` | Keep separate |
-| `docs/github-presentation` | Presentation docs | IMPORT CANDIDATE / PRESERVED | `8540165` | Create review branch only after approval |
+| `docs/github-presentation` | Original presentation source | PRESERVED / UNCHANGED | `8540165` | Decide deletion separately |
 | `without-mask` | Divergent historical line | UNKNOWN / PRESERVED | `eb1d9b4` | Manual keep/archive decision |
 
 ## Public-controls scope
@@ -18,4 +18,4 @@ Public-controls work is integrated into `main@373d74b` (with RC tip `111c101` in
 
 ## Protected invariants
 
-`main` is release-tagged at `6351d1a` as `v1.1.0-public-controls`; current main is `373d74b`. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain unchanged. No non-approved branch was deleted.
+`main` is release-tagged at `6351d1a` as `v1.1.0-public-controls`. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain unchanged. No source/package files changed.

@@ -28,7 +28,7 @@ Specification: `docs/design/KCS_OGRAF_PUBLIC_CONTROLS_V1_SPEC.md`.
 
 Current integration RC:
 
-`integration/v6-ui-ograf-public-controls-rc@0efd64a`
+`integration/v6-ui-ograf-public-controls-rc@c7f5bb1`
 
 It was created from `origin/feat/ograf-public-controls-v1@2a6b5dc` and contains `integration/v6-ui-ograf-release-candidate@4e4c269` ancestry. The source feature branch remains available. The OMP tooling branch `chore/omp-kcs-config-optimization@50b42d4` remains separate. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, and `.omp/backups/` are unchanged/preserved.
 

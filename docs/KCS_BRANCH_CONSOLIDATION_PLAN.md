@@ -8,7 +8,7 @@ Planning only. No branch merge, branch deletion, reset, force push, or `main` mo
 
 - `integration/v6-ui-ograf-release-candidate@4e4c269`
 - `feat/ograf-public-controls-v1@2a6b5dc`
-- `integration/v6-ui-ograf-public-controls-rc@0efd64a` — current consolidated integration RC
+- `integration/v6-ui-ograf-public-controls-rc@c7f5bb1` — current consolidated integration RC
 
 The integration RC was created from the accepted public-controls tip and contains both required ancestry lines.
 
@@ -23,7 +23,7 @@ The integration RC was created from the accepted public-controls tip and contain
 ## Recommended strategy
 
 1. Keep `main` untouched until explicit release approval.
-2. Treat `integration/v6-ui-ograf-public-controls-rc@0efd64a` as the current integration release-candidate tip.
+2. Treat `integration/v6-ui-ograf-public-controls-rc@c7f5bb1` as the current integration release-candidate tip.
 3. Run and record the release validation set on that integration branch.
 4. Ask for explicit approval before any `main` merge.
 5. Only after `main` approval, merge or fast-forward to `main` safely.

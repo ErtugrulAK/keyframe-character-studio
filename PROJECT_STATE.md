@@ -25,11 +25,11 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 - `main` remains protected and unchanged at `8024d4f`.
 - No merge to `main` is authorized by this milestone.
 - Historical reports and old host QA folders are preserved.
-- Read-only corpus: `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
+- Read-only corpus: `C:\Users\ertugrul.ak\Desktop\ograf-graphics`; do not modify.
 - `.omp/backups/` is preserved and ignored.
 - `.omp/config.yml` retains `memory.backend: mnemopi`.
 - Model roles, provider mappings, and global configuration remain unchanged.
 
 ## Current next action
 
-Documentation cleanup is complete for this checkpoint. Review `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`, then request explicit approval before creating/updating an integration RC branch or merging anything to `main`.
+The integration RC is now available at `integration/v6-ui-ograf-public-controls-rc`. Request explicit approval before any `main` merge.

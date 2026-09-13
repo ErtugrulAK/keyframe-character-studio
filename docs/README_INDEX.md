@@ -26,8 +26,8 @@
 - `reports/progress_051.md` — release-candidate integration and validation.
 - `reports/progress_052.md` — OGraf Public Controls V1 implementation and QA handoff.
 - `reports/progress_053.md` — public-controls host QA fixup with alternate image and color-field visibility.
-- `reports/progress_054.md` — AJV/Playwright validation and subagent fixup.
 - `reports/progress_055.md` — target-host public-controls QA PASS and cleanup checkpoint.
+- `reports/progress_056.md` — integration RC creation, ancestry, and validation checkpoint.
 
 Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 

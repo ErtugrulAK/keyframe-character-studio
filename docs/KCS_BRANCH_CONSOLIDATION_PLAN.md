@@ -7,9 +7,10 @@ Planning only. No branch merge, branch deletion, reset, force push, or `main` mo
 ## Current candidate line
 
 - `integration/v6-ui-ograf-release-candidate@4e4c269`
-- `feat/ograf-public-controls-v1` at the latest pushed checkpoint
+- `feat/ograf-public-controls-v1@2a6b5dc`
+- `integration/v6-ui-ograf-public-controls-rc@2a6b5dc` — current consolidated integration RC
 
-The feature branch contains the accepted public-controls implementation, automated validation, and reported BASIC/ASSET/COMPOSITING target-host QA PASS.
+The integration RC was created from the accepted public-controls tip and contains both required ancestry lines.
 
 ## Accepted status
 
@@ -22,22 +23,11 @@ The feature branch contains the accepted public-controls implementation, automat
 ## Recommended strategy
 
 1. Keep `main` untouched until explicit release approval.
-2. Treat `feat/ograf-public-controls-v1` as the new release-candidate tip after the QA PASS.
-3. After approval, create or update a dedicated integration branch, for example:
-   `integration/v6-ui-ograf-public-controls-rc`.
-4. Merge or fast-forward the public-controls branch into that integration branch.
-5. Run the release validation set on the integration branch:
-   - `git diff --check`
-   - `npx tsc --noEmit`
-   - `npm run lint`
-   - `npm test`
-   - `npm run build`
-   - `npm run qa:v6`
-   - `npm run validate:ograf`
-   - Playwright shard strategy if the full aggregate exceeds the command envelope.
-6. Ask for explicit approval before any `main` merge.
-7. Only after `main` approval, merge or fast-forward to `main` safely.
-8. Create a release tag or checkpoint only if separately approved.
+2. Treat `integration/v6-ui-ograf-public-controls-rc@2a6b5dc` as the current integration release-candidate tip.
+3. Run and record the release validation set on that integration branch.
+4. Ask for explicit approval before any `main` merge.
+5. Only after `main` approval, merge or fast-forward to `main` safely.
+6. Create a release tag or checkpoint only if separately approved.
 
 ## Separation rules
 
@@ -48,4 +38,4 @@ The feature branch contains the accepted public-controls implementation, automat
 
 ## Current decision point
 
-Documentation cleanup and the local desktop archive are complete for this checkpoint. The next action is an explicit decision on whether to create/update the integration RC branch. No `main` merge is implied.
+The integration RC has been created and pushed. Documentation and validation are complete for this checkpoint. No `main` merge is implied; the next action is explicit `main` merge approval only.

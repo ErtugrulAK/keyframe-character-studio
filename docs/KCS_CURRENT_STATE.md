@@ -26,9 +26,11 @@ Specification: `docs/design/KCS_OGRAF_PUBLIC_CONTROLS_V1_SPEC.md`.
 
 ## Branch
 
-`feat/ograf-public-controls-v1`, based on `integration/v6-ui-ograf-release-candidate@4e4c269`.
+Current integration RC:
 
-The OMP tooling branch `chore/omp-kcs-config-optimization@50b42d4` remains separate. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, and `.omp/backups/` are unchanged/preserved.
+`integration/v6-ui-ograf-public-controls-rc@2a6b5dc`
+
+It was created from `origin/feat/ograf-public-controls-v1@2a6b5dc` and contains `integration/v6-ui-ograf-release-candidate@4e4c269` ancestry. The source feature branch remains available. The OMP tooling branch `chore/omp-kcs-config-optimization@50b42d4` remains separate. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, and `.omp/backups/` are unchanged/preserved.
 
 ## Generated QA
 
@@ -66,6 +68,6 @@ The desktop collection inventory and archive result are recorded in:
 
 ## Next order
 
-1. Review `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`.
-2. Request explicit approval before creating/updating an integration RC branch.
-3. Only after separate approval, consider a protected `main` integration.
+1. Request explicit approval before any `main` merge.
+2. If approved, merge or fast-forward only through the planned integration path.
+3. Keep the OMP tooling branch and desktop QA hygiene separate.

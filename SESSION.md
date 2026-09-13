@@ -17,9 +17,9 @@ Implemented the host-QA fixup:
 
 ## Current branch
 
-`feat/ograf-public-controls-v1`
+`integration/v6-ui-ograf-public-controls-rc`
 
-Base: `integration/v6-ui-ograf-release-candidate@4e4c269`.
+Created from `origin/feat/ograf-public-controls-v1@2a6b5dc`; it contains `integration/v6-ui-ograf-release-candidate@4e4c269` ancestry.
 
 ## Validation
 
@@ -30,8 +30,8 @@ Base: `integration/v6-ui-ograf-release-candidate@4e4c269`.
 - Lint: PASS with the existing Fast Refresh warning.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
-- Playwright equivalent coverage: PASS, 254/254 across shard 1 (141), shard 2 excluding isolated V-T17 (112), and isolated V-T17 (1).
-- Full Playwright aggregate: TIMEOUT — the 254-test command exceeded the 600-second command timeout; no test change or timeout weakening was made.
+- Playwright equivalent coverage on integration RC: PASS, shard 1 `141`, shard 2 `111 passed + 1 flaky V-H12`, isolated V-H12 PASS, isolated V-T17 PASS.
+- Full Playwright aggregate: TIMEOUT — the 254-test command exceeds the 600-second command envelope.
 - `git diff --check`: PASS.
 
 ## QA handoff
@@ -42,7 +42,7 @@ The validated host import root is:
 
 Manual target-host QA is complete: BASIC PASS, ASSET PASS, and COMPOSITING PASS. This was manifest-rooted host testing, not KCS Import.
 
-The current gate is documentation cleanup plus branch consolidation planning. Explicit user approval remains required before any `main` merge.
+The current gate is explicit release approval before any `main` merge. The integration RC was created without a merge commit, reset, rebase, or force push.
 
 ## Protected state
 

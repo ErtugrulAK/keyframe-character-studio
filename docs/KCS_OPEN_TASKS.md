@@ -1,20 +1,18 @@
 # KCS Open Tasks
 
-## P0 — Documentation and branch decision
+## P0 — Main release decision
 
-- Record target-host public-controls QA: BASIC PASS, ASSET PASS, COMPOSITING PASS.
-- Review `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` and decide whether older host-compat or downstream folders should be archived later.
-- Review `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`.
-- Request explicit release approval before any integration-branch update or `main` merge.
+- Review the current integration RC at `integration/v6-ui-ograf-public-controls-rc@2a6b5dc`.
+- Review `reports/progress_056.md`.
+- Request explicit release approval before any `main` merge.
 
 ## Release decision
 
-Public Controls V1 is accepted by the reported target-host QA. This branch is not a `main` merge; `main` remains protected.
+Public Controls V1 is accepted by target-host QA and included in the integration RC. `main` remains protected and untouched.
 
 ## P1 — Planned after release decision
 
-- Create or update the dedicated integration RC branch only after explicit approval.
-- Run the release validation set on that integration branch.
+- Run the release validation set again if the integration RC is changed.
 - Design OGraf Package → editable KCS import around explicit extraction, validation, asset rebasing, and editable-state semantics.
 
 ## P2 — Non-blocking follow-up

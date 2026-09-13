@@ -8,7 +8,11 @@ Repository:
 
 Checkout:
 
-`feat/ograf-public-controls-v1`
+`integration/v6-ui-ograf-public-controls-rc`
+
+Source:
+
+`feat/ograf-public-controls-v1@2a6b5dc`
 
 Base:
 
@@ -25,19 +29,14 @@ Base:
 
 ## First task
 
-Review the completed public-controls QA and the cleanup checkpoint:
+Review:
 
-1. `reports/progress_055.md`
-2. `docs/KCS_DESKTOP_FOLDER_INVENTORY.md`
-3. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md`
-4. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`
+1. `reports/progress_056.md`
+2. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`
+3. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`
 
-The target-host QA result is:
-
-- BASIC: PASS — text changes and PLAY motion.
-- ASSET: PASS — `Logo` replacement from `assets/images/logo.png` to `assets/images/logo_alt.svg`.
-- COMPOSITING: PASS — `Content Fill Color` `#00ff00` and `Content Stroke Color` `#0000ff`.
+The integration RC contains the accepted Public Controls V1 line and target-host QA PASS.
 
 ## Approval boundary
 
-Request explicit release approval before creating/updating an integration RC branch. Do not merge `main` without separate explicit approval.
+Ask for explicit approval before any `main` merge. Do not delete branches, rebase, reset, or force push.

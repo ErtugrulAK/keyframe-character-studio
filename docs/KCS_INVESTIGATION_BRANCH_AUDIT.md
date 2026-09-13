@@ -41,16 +41,9 @@ The branch retains three unique OMP policy commits and remains intentionally sep
 
 The three approved safe Copilot branches were deleted. No further deletion commands are pending for these branches.
 
-## Import candidate
+## Import review result
 
-`docs/github-presentation` is the only import candidate. Future workflow, not run here:
-
-```bash
-git switch -c review/github-presentation-import main
-git cherry-pick dfabaeb 6d86729 8540165
-```
-
-Review conflicts and file ownership before any cherry-pick. This audit did not create the branch or cherry-pick commits.
+`review/github-presentation-import` was created from current `main`. The four presentation images were imported, and `docs/presentation/README.md` now indexes them. Current top-level documentation and GitHub templates were preserved from `main`. No merge into `main` occurred; see `reports/progress_062.md`.
 
 ## Keep / manual decision
 

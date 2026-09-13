@@ -1,54 +1,47 @@
 name: Bug Report
-description: Report a reproducible problem in Keyframe Character Studio
-title: "[Bug]: "
+description: Create a report to help us fix a bug in Keyframe Character Studio
+title: "[BUG]: "
 labels: ["bug"]
 body:
   - type: markdown
     attributes:
-      value: |
-        Thanks for taking the time to report a reproducible problem. Do not include secrets or private project files.
-  - type: input
-    id: version
+      value: Thank you for taking the time to report a bug! Please fill out the sections below.
+  - type: textarea
+    id: description
     attributes:
-      label: Commit or version
-      description: Which commit, branch, or release did you test?
-      placeholder: "e.g. 3e650ce or feat/v6-ui-redesign"
-    validations:
-      required: true
-  - type: input
-    id: environment
-    attributes:
-      label: Operating system and browser
-      placeholder: "e.g. Windows 11, Chromium 140"
+      label: Bug Description
+      description: Provide a clear and concise description of the bug.
+      placeholder: Describe what happened...
     validations:
       required: true
   - type: textarea
-    id: reproduction
+    id: steps
     attributes:
-      label: Steps to reproduce
-      description: Give the smallest reliable sequence of actions.
+      label: Steps to Reproduce
+      description: List the steps required to reproduce the behavior.
       placeholder: |
-        1. Start KCS with npm run dev
-        2. Import or create a project
-        3. ...
+        1. Open the Sequencer Timeline
+        2. Add a keyframe to track X
+        3. Click Play
+        4. See error
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: Expected behavior
+      label: Expected Behavior
+      description: What did you expect to happen?
     validations:
       required: true
-  - type: textarea
-    id: actual
+  - type: dropdown
+    id: environment
     attributes:
-      label: Actual behavior
+      label: Operating System / Browser
+      options:
+        - Chrome / Chromium
+        - Firefox
+        - Safari
+        - Edge
+        - Other
     validations:
       required: true
-  - type: textarea
-    id: project
-    attributes:
-      label: Fixture or supporting evidence
-      description: Provide a safe fixture, console output, or screenshot when useful. Remove personal or confidential data.
-    validations:
-      required: false

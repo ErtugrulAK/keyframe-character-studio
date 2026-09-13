@@ -35,12 +35,12 @@ Main after:
 
 Review:
 
-1. `reports/progress_061.md`
-2. `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md`
-3. `docs/KCS_BRANCH_STATUS.md`
+1. `reports/progress_062.md`
+2. `docs/presentation/README.md`
+3. `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md`
 
-`main@373d74b` contains the released Public Controls V1 integration. Tag `v1.1.0-public-controls` targets `6351d1a`. The three approved safe Copilot branches were deleted; all preserved branches remain untouched.
+`review/github-presentation-import` contains the isolated presentation assets. Current `main` documentation was preserved, and `main@373d74b` was not changed by the import. Tag `v1.1.0-public-controls` still targets `6351d1a`.
 
 ## Approval boundary
 
-Request separate approval before creating a review branch or importing `docs/github-presentation`. Keep `without-mask` under manual review and keep the OMP tooling branch separate.
+Do not merge the review branch into `main` without separate approval. Do not delete branches. Keep `without-mask` and `chore/omp-kcs-config-optimization` untouched.

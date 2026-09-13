@@ -4,15 +4,15 @@
 
 The accepted KCS product/documentation line remains available through `integration/v6-ui-ograf-release-candidate@4e4c269`. `feat/ograf-public-controls-v1` is based on that release candidate and adds host-editable OGraf text, image, and color controls. `main` remains untouched.
 
-## Existing host behavior
+The second target-host QA completed successfully:
 
-The first manual target-host QA produced a mixed result:
+- BASIC: PASS — `Headline` changes and PLAY motion remain functional.
+- ASSET: PASS — `Logo` replacement works after the alternate-resource fixup.
+- COMPOSITING: PASS — public color controls work after the color metadata fixup.
 
-- BASIC passed: `Headline` changed and PLAY preserved motion.
-- ASSET was unclear because the package exposed only one image choice.
-- COMPOSITING was partial/failing because the host did not visibly expose usable color controls.
+This was manifest-rooted target-host testing, not KCS Import. The host import unit remains the generated public-controls folder.
 
-The implementation already generated safe image/color bindings, but the ASSET artifact lacked a second resource and the color schema did not advertise the standard `format: color` hint.
+The previous ASSET and COMPOSITING uncertainty is closed for the tested host.
 
 ## Public Controls V1
 
@@ -32,17 +32,18 @@ The OMP tooling branch `chore/omp-kcs-config-optimization@50b42d4` remains separ
 
 ## Generated QA
 
-`C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa`
+`C:\Users\senmu\Masaüstü\KCS\kcs-ograf-public-controls-qa`
 
 - BASIC: explicit `Headline`, generated fill/stroke controls, existing motion.
-- ASSET: `Logo` selector now contains `assets/images/logo.png` and deterministic `assets/images/logo_alt.svg`.
+- ASSET: `Logo` selector contains `assets/images/logo.png` and deterministic `assets/images/logo_alt.svg`.
 - COMPOSITING: `Content Fill Color` and `Content Stroke Color` include `format: color` plus `gddType: color-rrggbb`.
-- Turkish instructions explain exact field names, values, and expected render changes.
+- Target-host QA: BASIC PASS, ASSET PASS, COMPOSITING PASS.
 
-The prior host QA folder remains preserved:
+The desktop collection inventory and archive result are recorded in:
 
-`C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa`
-
+- `docs/KCS_DESKTOP_FOLDER_INVENTORY.md`
+- `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md`
+- `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md`
 ## Validation status
 
 - TypeScript: PASS.
@@ -57,8 +58,7 @@ The prior host QA folder remains preserved:
 
 ## Known limitations
 
-- Second manual public-controls host smoke is pending.
-- Host support for native color controls is not independently confirmed; the manifest retains both standard `format: color` and OGraf `gddType: color-rrggbb`, with string `#rrggbb` fallback instructions.
+- Full aggregate Playwright exceeds the 600-second command envelope; equivalent 254/254 coverage passed through shards plus isolated V-T17.
 - OGraf Package → editable KCS import remains intentionally unimplemented.
 - Windows case/device-name hardening remains technical debt.
 - Unowned system fonts remain blocked when portable font bytes are unavailable.
@@ -66,7 +66,6 @@ The prior host QA folder remains preserved:
 
 ## Next order
 
-1. Test the new BASIC, ASSET, and COMPOSITING folders in the target host.
-2. Record exact controls, changed values, output, and failures in `reports/progress_053.md`.
-3. Request explicit release approval.
-4. Only after approval, consider a separate protected `main` integration.
+1. Review `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`.
+2. Request explicit approval before creating/updating an integration RC branch.
+3. Only after separate approval, consider a protected `main` integration.

@@ -1,21 +1,21 @@
 # KCS Open Tasks
 
-## P0 — Public-controls host QA
+## P0 — Documentation and branch decision
 
-- Retest `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa\BASIC`.
-- Retest `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa\ASSET`; switch `Logo` from `assets/images/logo.png` to `assets/images/logo_alt.svg`.
-- Retest `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa\COMPOSITING`; set `Content Fill Color` to `#00ff00` and `Content Stroke Color` to `#0000ff`.
-- Record exact host controls, changed values, render behavior, errors, and screenshots.
-- Confirm the older `kcs-ograf-host-compat-qa` folder still works.
+- Record target-host public-controls QA: BASIC PASS, ASSET PASS, COMPOSITING PASS.
+- Review `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` and decide whether older host-compat or downstream folders should be archived later.
+- Review `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`.
+- Request explicit release approval before any integration-branch update or `main` merge.
 
 ## Release decision
 
-Review `reports/progress_053.md` and the updated public-controls QA evidence, then request explicit approval before any `main` merge. This branch is not a main merge.
+Public Controls V1 is accepted by the reported target-host QA. This branch is not a `main` merge; `main` remains protected.
 
 ## P1 — Planned after release decision
 
+- Create or update the dedicated integration RC branch only after explicit approval.
+- Run the release validation set on that integration branch.
 - Design OGraf Package → editable KCS import around explicit extraction, validation, asset rebasing, and editable-state semantics.
-- Prepare a release checkpoint after public-controls QA acceptance.
 
 ## P2 — Non-blocking follow-up
 

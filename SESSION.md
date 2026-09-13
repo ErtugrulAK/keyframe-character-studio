@@ -1,8 +1,10 @@
 # Current Session
 
-## What just happened
+Recorded the second target-host public-controls QA as PASS:
 
-Recorded the manual host QA result: BASIC passed; ASSET was unclear because the package exposed only one image choice; COMPOSITING was partial/failing because the host did not visibly expose usable color controls.
+- BASIC: text changes and PLAY motion PASS.
+- ASSET: image/logo replacement PASS after the fixup.
+- COMPOSITING: color controls PASS after the fixup.
 
 Implemented the host-QA fixup:
 
@@ -34,11 +36,13 @@ Base: `integration/v6-ui-ograf-release-candidate@4e4c269`.
 
 ## QA handoff
 
-Regenerated folder:
+The validated host import root is:
 
-`C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa`
+`C:\Users\senmu\Masaüstü\KCS\kcs-ograf-public-controls-qa`
 
-Test BASIC, ASSET, and COMPOSITING with the updated Turkish README. BASIC remains a known PASS. ASSET must switch `Logo` from `assets/images/logo.png` to `assets/images/logo_alt.svg`. COMPOSITING must edit `Content Fill Color` and `Content Stroke Color`.
+Manual target-host QA is complete: BASIC PASS, ASSET PASS, and COMPOSITING PASS. This was manifest-rooted host testing, not KCS Import.
+
+The current gate is documentation cleanup plus branch consolidation planning. Explicit user approval remains required before any `main` merge.
 
 ## Protected state
 

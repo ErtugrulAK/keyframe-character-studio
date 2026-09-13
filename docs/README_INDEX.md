@@ -3,12 +3,16 @@
 ## Read this first
 
 1. `PROJECT_STATE.md` — current public-controls branch state and protected boundaries.
-2. `SESSION.md` — implementation session and validation results.
-3. `NEXT_SESSION.md` — manual public-controls host QA handoff.
+2. `SESSION.md` — latest implementation, QA, and validation results.
+3. `NEXT_SESSION.md` — exact next action and approval boundary.
 4. `docs/KCS_CURRENT_STATE.md` — consolidated technical current state.
-5. `docs/KCS_BRANCH_STATUS.md` — branch inclusion and protected lines.
-6. `docs/KCS_OPEN_TASKS.md` — public-controls QA and release decision tasks.
-7. `docs/KCS_INTEGRATION_EXECUTION_PLAN.md` — release-candidate ancestry and strategy.
+5. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` — accepted milestones and release boundary.
+6. `docs/KCS_BRANCH_STATUS.md` — branch inclusion and protected lines.
+7. `docs/KCS_OPEN_TASKS.md` — remaining decisions and follow-up work.
+8. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md` — planning-only branch path.
+9. `docs/KCS_DESKTOP_FOLDER_INVENTORY.md` — desktop collection inventory.
+10. `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md` — archive-only cleanup decision.
+11. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` — applied local archive result.
 
 ## Reports
 
@@ -22,6 +26,10 @@
 - `reports/progress_051.md` — release-candidate integration and validation.
 - `reports/progress_052.md` — OGraf Public Controls V1 implementation and QA handoff.
 - `reports/progress_053.md` — public-controls host QA fixup with alternate image and color-field visibility.
+- `reports/progress_054.md` — AJV/Playwright validation and subagent fixup.
+- `reports/progress_055.md` — target-host public-controls QA PASS and cleanup checkpoint.
+
+Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 
 ## OGraf docs
 
@@ -41,8 +49,7 @@ OMP optimization remains on `chore/omp-kcs-config-optimization`:
 - `docs/omp/OMP_KCS_EFFECTIVE_USAGE_GUIDE.md`
 
 ## External QA
-
-- `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa`
-- `C:\Users\ertugrul.ak\Desktop\kcs-ograf-host-compat-qa`
-- `C:\Users\ertugrul.ak\Desktop\kcs-ograf-downstream-qa`
-- `C:\Users\ertugrul.ak\Desktop\ograf-graphics` (read-only)
+- `C:\Users\senmu\Masaüstü\KCS\kcs-ograf-public-controls-qa`
+- `C:\Users\senmu\Masaüstü\KCS\kcs-ograf-host-compat-qa`
+- `C:\Users\senmu\Masaüstü\KCS\kcs-ograf-downstream-qa`
+- `C:\Users\senmu\Masaüstü\KCS\ograf-graphics` (read-only)

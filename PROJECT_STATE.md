@@ -13,12 +13,12 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 | Area | Status | Evidence |
 |---|---|---|
 | Text controls | IMPLEMENTED | Deterministic generated bindings; explicit `headline` compatibility preserved |
-| Image controls | QA-VERIFIABLE | Package-relative enum/defaults now include default and alternate ASSET resources; safe runtime swapping |
-| Color controls | QA-VERIFIABLE | Visible fill/stroke fields include `format: color`, OGraf `color-rrggbb`, lowercase hex pattern |
+| Image controls | QA-PASS | Package-relative enum/defaults include default and alternate ASSET resources; target-host replacement confirmed |
+| Color controls | QA-PASS | Visible fill/stroke fields include `format: color`, OGraf `color-rrggbb`, lowercase hex pattern; target-host changes confirmed |
 | Runtime `updateAction` | IMPLEMENTED | Text/image/color writes rendered in generated runtime; unsafe image paths rejected |
-| Host QA packages | REGENERATED | `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa` with two ASSET image choices |
+| Host QA packages | QA-PASS | `C:\Users\senmu\Masaüstü\KCS\kcs-ograf-public-controls-qa`; BASIC, ASSET, and COMPOSITING PASS |
 | Automated validation | COMPLETE | AJV manifests 3/3; Vitest 1,437/1,437; TypeScript, lint, build, V6 QA, and equivalent Playwright coverage completed |
-| Manual public-controls host QA | NEEDS SECOND PASS | BASIC previously PASS; ASSET and COMPOSITING require host retest with explicit controls |
+| Manual public-controls host QA | PASS | User confirms BASIC text/motion, ASSET image replacement, and COMPOSITING color controls |
 
 ## Protected state
 
@@ -32,4 +32,4 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Current next action
 
-Run second manual public-controls host QA in BASIC → ASSET → COMPOSITING. In ASSET select `assets/images/logo_alt.svg`; in COMPOSITING edit `Content Fill Color` to `#00ff00` and `Content Stroke Color` to `#0000ff`. Do not merge `main`.
+Documentation cleanup is complete for this checkpoint. Review `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`, then request explicit approval before creating/updating an integration RC branch or merging anything to `main`.

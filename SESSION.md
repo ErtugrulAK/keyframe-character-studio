@@ -35,17 +35,16 @@ Fast-forwarded from `8024d4f` to the accepted integration RC at `111c101`.
 
 ## QA and release handoff
 
-Manual target-host QA is complete: BASIC PASS, ASSET PASS, and COMPOSITING PASS. Main now contains the accepted integration RC.
+Manual target-host QA is complete: BASIC PASS, ASSET PASS, and COMPOSITING PASS. Main contains the accepted integration RC.
 
-No release tag was created. No branches were deleted. The OMP tooling branch remains separate.
+Release tag `v1.1.0-public-controls` was created and pushed at `6351d1a`. The audited safe merged branches were deleted; investigation branches and the OMP tooling branch remain separate.
 
 ## Protected state
 
-`memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain preserved. Further tag/checkpoint or branch-cleanup work requires separate approval.
+`memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain preserved. No reports or documentation were deleted.
 
-## Post-main checkpoint
+## Post-main result
 
-- Current pushed `main` HEAD: `717d662`; integrated RC tip `111c101` remains in ancestry.
-- `reports/progress_058.md` records the read-only branch and markdown cleanup audits.
-- No branch, tag, report, or tracked file was deleted or moved.
-- `memory.backend: mnemopi` remains unchanged.
+- `reports/progress_059.md` records the release tag and safe branch cleanup.
+- Main remains checked out.
+- Final next action: run the two-PC sync audit on both machines.

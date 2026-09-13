@@ -22,8 +22,8 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Protected state
 
-- `main` is integrated at `717d662`; the accepted RC tip `111c101` remains in its ancestry.
-- Release tag creation and branch cleanup require separate approval.
+- `main` is integrated at `6351d1a`; the accepted RC tip `111c101` remains in its ancestry.
+- Release tag `v1.1.0-public-controls` points to `6351d1a` and was pushed.
 - Historical reports and old host QA folders are preserved.
 - Read-only corpus: `C:\Users\ertugrul.ak\Desktop\ograf-graphics`; do not modify.
 - `.omp/backups/` is preserved and ignored.
@@ -32,4 +32,4 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Current next action
 
-Review `reports/progress_058.md`, then separately approve a release tag and/or optional branch cleanup. No deletion or tag creation is implied by this audit.
+Run the final two-PC sync audit. Safe merged branch cleanup is complete; investigation branches remain untouched.

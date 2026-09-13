@@ -1,15 +1,16 @@
 # KCS Branch Status
 
-Public-controls work is integrated into `main@717d662` (with RC tip `111c101` in its ancestry). The source and integration branches remain available. The OMP tooling branch remains separate. Cleanup is classified, not executed.
+Public-controls work is integrated into `main@6351d1a` (with RC tip `111c101` in its ancestry). Audited safe merged branches were deleted after verification. The OMP tooling branch remains separate.
 
-| BRANCH | PURPOSE | BASE | STATUS | LATEST KNOWN COMMIT | MERGE TARGET | NEXT ACTION |
-|---|---|---|---|---|---|---|
-| `main` | Protected product baseline | — | INTEGRATED / PUSHED | `717d662` | None | Review release checkpoint |
-| `integration/v6-ui-stable` | V6 UI integration baseline | V6 predecessor | BASE / MERGED | `0289402` | RC | Candidate only after approval |
-| `integration/v6-ui-ograf-release-candidate` | Product/docs release candidate | `integration/v6-ui-stable` | READY / MERGED | `4e4c269` | Public-controls RC | Candidate only after approval |
-| `integration/v6-ui-ograf-public-controls-rc` | Consolidated public-controls integration RC | RC@`4e4c269` + public-controls tip | INTEGRATED / PUSHED | `111c101` | Main | Candidate only after approval |
-| `feat/ograf-public-controls-v1` | Host-editable text/image/color controls | RC@`4e4c269` | QA-PASS / MERGED SOURCE | `2a6b5dc` | Integration RC | Candidate only after approval |
-| `chore/omp-kcs-config-optimization` | Project-local OMP policy | Independent | SEPARATE / COMPLETE | `50b42d4` | None by default | Keep separate |
+| BRANCH | PURPOSE | STATUS | LATEST KNOWN COMMIT | NEXT ACTION |
+|---|---|---|---|---|
+| `main` | Protected product baseline | INTEGRATED / RELEASE-TAGGED | `6351d1a` | Final two-PC sync audit |
+| `chore/omp-kcs-config-optimization` | Project-local OMP policy | SEPARATE / COMPLETE | `50b42d4` | Keep separate |
+| `copilot/analyze-repository-improvement-audit` | Repository audit | NEEDS INVESTIGATION / PRESERVED | — | Investigate only if needed |
+| `copilot/fix-gh-actions-workflow-failure` | Workflow repair | NEEDS INVESTIGATION / PRESERVED | — | Investigate only if needed |
+| `copilot/fix-build-lint-test-verification` | Verification work | NEEDS INVESTIGATION / PRESERVED | — | Inspect unique commit before action |
+| `docs/github-presentation` | Presentation docs | NEEDS INVESTIGATION / PRESERVED | — | Inspect unique commits before action |
+| `without-mask` | Divergent historical line | NEEDS INVESTIGATION / PRESERVED | — | Do not delete without review |
 
 ## Public-controls scope
 
@@ -20,4 +21,4 @@ Public-controls work is integrated into `main@717d662` (with RC tip `111c101` in
 
 ## Protected invariants
 
-`main` is integrated at `717d662` with RC tip `111c101` in ancestry. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain unchanged. No branches were deleted.
+`main` is release-tagged at `6351d1a` as `v1.1.0-public-controls`. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain unchanged. No investigation branch was deleted.

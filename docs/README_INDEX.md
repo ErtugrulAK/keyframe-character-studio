@@ -22,6 +22,7 @@
 - `reports/README.md` — report navigation and preservation rules.
 - `reports/progress_057.md` — protected main integration and release validation.
 - `reports/progress_058.md` — post-main cleanup audit and release checkpoint.
+- `reports/progress_059.md` — release tag and safe merged branch cleanup result.
 
 Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 

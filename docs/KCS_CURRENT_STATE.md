@@ -1,6 +1,6 @@
 # KCS Current State
 
-The accepted KCS product/documentation line is integrated into `main@717d662`; the integrated release-candidate tip is `111c101`. The integration RC and public-controls source branches remain available. The OMP tooling branch remains separate.
+The accepted KCS product/documentation line is integrated into `main@6351d1a`; the release tag `v1.1.0-public-controls` points to this release checkpoint. The audited safe merged branches were removed. The OMP tooling branch and investigation branches remain separate.
 
 The second target-host QA completed successfully:
 
@@ -24,15 +24,13 @@ Specification: `docs/design/KCS_OGRAF_PUBLIC_CONTROLS_V1_SPEC.md`.
 
 ## Branch
 
-`main@111c101` now contains the accepted integration RC.
+`main@6351d1a` is the released checkpoint.
 
-The source and integration branches remain available:
+The OMP tooling branch remains separate:
 
-- `integration/v6-ui-ograf-public-controls-rc@111c101`
-- `feat/ograf-public-controls-v1@2a6b5dc`
-- `integration/v6-ui-ograf-release-candidate@4e4c269`
+- `chore/omp-kcs-config-optimization`
 
-`chore/omp-kcs-config-optimization@50b42d4` remains separate. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, and `.omp/backups/` are unchanged/preserved.
+Investigation branches remain preserved: the three `copilot/*` branches, `docs/github-presentation`, and `without-mask`. The safe merged branches were deleted after ancestry verification. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, and `.omp/backups/` are unchanged.
 
 ## Generated QA
 
@@ -70,6 +68,4 @@ The desktop collection inventory and archive result are recorded in:
 
 ## Next order
 
-1. Review `reports/progress_058.md` and the two cleanup audits.
-2. Separately approve a release tag if desired.
-3. Separately approve optional branch cleanup; do not delete branches by default.
+1. Run the final two-PC sync audit on both machines.

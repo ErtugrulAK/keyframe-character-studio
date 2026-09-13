@@ -25,22 +25,22 @@ Main after:
 ## Guardrails
 
 - Do not merge to or otherwise rewrite `main`.
-- Do not reset hard, force push, delete branches, reports, QA folders, or `.omp/backups/`.
+- Do not reset hard, force push, delete additional branches, reports, QA folders, or `.omp/backups/`.
 - Do not modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 - Keep `.omp/config.yml` `memory.backend: mnemopi`.
 - Do not change model roles, provider mappings, or global configuration.
-- Keep the release-candidate and OMP tooling branches separate.
+- Keep the OMP tooling branch separate.
 
 ## First task
 
 Review:
 
-1. `reports/progress_058.md`
+1. `reports/progress_059.md`
 2. `docs/KCS_BRANCH_CLEANUP_AUDIT.md`
 3. `docs/KCS_MARKDOWN_CLEANUP_AUDIT.md`
 
-`main@717d662` contains the accepted Public Controls V1 integration. No release tag was created and no branches were deleted.
+`main@6351d1a` contains the accepted Public Controls V1 integration. Release tag `v1.1.0-public-controls` points to the pre-result-docs release commit `6351d1a`. Safe merged branch cleanup is complete.
 
 ## Approval boundary
 
-Request separate approval before creating a release tag or deleting/cleaning branches.
+The approved tag and audited safe branch cleanup are complete. Request separate approval before any further branch deletion or release-history change. Next action is the final two-PC sync audit.

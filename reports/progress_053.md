@@ -77,7 +77,7 @@ The pre-fix folder was preserved as:
 - Lint: PASS with the existing Fast Refresh warning.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
-- Full Playwright: PASS, 254/254.
+- Full Playwright: FAIL/TIMEOUT — `CI=true npm run test:e2e` exceeded the 600-second command timeout after starting 254 tests; no final aggregate result was emitted.
 - OGraf manifest validation: BLOCKED in this environment because `scripts/validate-ograf-manifest.mjs` could not import the declared `ajv` package; independent JSON parsing passed for BASIC, ASSET, and COMPOSITING.
 - `git diff --check`: PASS.
 

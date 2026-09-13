@@ -50,7 +50,7 @@ The prior host QA folder remains preserved:
 - Vitest: PASS, 100 files / 1,437 tests.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
-- Full Playwright: PASS, 254/254.
+- Full Playwright: TIMEOUT — the 254-test run exceeded the 600-second command timeout before an aggregate result was emitted.
 - Public-controls OGraf manifest validation: BLOCKED by missing local `ajv` import; independent JSON parsing PASS, 3/3.
 - `git diff --check`: PASS.
 

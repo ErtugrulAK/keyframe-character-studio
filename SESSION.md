@@ -27,8 +27,7 @@ Base: `integration/v6-ui-ograf-release-candidate@4e4c269`.
 - Lint: PASS with the existing Fast Refresh warning.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
-- Full Playwright: PASS, 254/254.
-- Public-controls OGraf manifests: PASS, 3/3.
+- Full Playwright: TIMEOUT — the 254-test run exceeded the 600-second command timeout before an aggregate result was emitted.
 - `git diff --check`: PASS.
 
 ## QA handoff

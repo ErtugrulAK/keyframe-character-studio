@@ -17,7 +17,7 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 | Color controls | QA-VERIFIABLE | Visible fill/stroke fields include `format: color`, OGraf `color-rrggbb`, lowercase hex pattern |
 | Runtime `updateAction` | IMPLEMENTED | Text/image/color writes rendered in generated runtime; unsafe image paths rejected |
 | Host QA packages | REGENERATED | `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa` with two ASSET image choices |
-| Automated validation | IN PROGRESS | Focused and full Vitest/TypeScript completed; remaining commands recorded in progress report |
+| Automated validation | COMPLETE | AJV manifests 3/3; Vitest 1,437/1,437; TypeScript, lint, build, V6 QA, and equivalent Playwright coverage completed |
 | Manual public-controls host QA | NEEDS SECOND PASS | BASIC previously PASS; ASSET and COMPOSITING require host retest with explicit controls |
 
 ## Protected state

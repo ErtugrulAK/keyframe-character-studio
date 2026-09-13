@@ -21,13 +21,15 @@ Base: `integration/v6-ui-ograf-release-candidate@4e4c269`.
 
 ## Validation
 
-- Focused OGraf tests: PASS, 2 files / 19 tests.
+- Focused OGraf tests: PASS, 2 tests.
+- Public-controls OGraf manifest validation: PASS, 3/3 after `npm ci` restored declared `ajv` and `ajv-formats` dependencies.
 - TypeScript: PASS.
 - Vitest: PASS, 100 files / 1,437 tests.
 - Lint: PASS with the existing Fast Refresh warning.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
-- Full Playwright: TIMEOUT — the 254-test run exceeded the 600-second command timeout before an aggregate result was emitted.
+- Playwright equivalent coverage: PASS, 254/254 across shard 1 (141), shard 2 excluding isolated V-T17 (112), and isolated V-T17 (1).
+- Full Playwright aggregate: TIMEOUT — the 254-test command exceeded the 600-second command timeout; no test change or timeout weakening was made.
 - `git diff --check`: PASS.
 
 ## QA handoff

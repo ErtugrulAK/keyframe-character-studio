@@ -50,8 +50,9 @@ The prior host QA folder remains preserved:
 - Vitest: PASS, 100 files / 1,437 tests.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
-- Full Playwright: TIMEOUT — the 254-test run exceeded the 600-second command timeout before an aggregate result was emitted.
-- Public-controls OGraf manifest validation: BLOCKED by missing local `ajv` import; independent JSON parsing PASS, 3/3.
+- Public-controls OGraf manifest validation: PASS, 3/3 after `npm ci` restored declared `ajv` and `ajv-formats` dependencies.
+- Playwright equivalent coverage: PASS, 254/254 across shard 1 (141), shard 2 excluding isolated V-T17 (112), and isolated V-T17 (1).
+- Full Playwright aggregate: TIMEOUT — the 254-test command exceeded the 600-second command timeout; V-T17 passed when isolated with one worker and a 120-second test timeout.
 - `git diff --check`: PASS.
 
 ## Known limitations

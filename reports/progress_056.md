@@ -63,11 +63,13 @@ Equivalent coverage is PASS for the full 254-test set. The parallel shard expose
 
 ## Git summary
 
+- Integration RC final HEAD after documentation commit: `0efd64a`.
+- Documentation commit: `0efd64a docs: record public controls integration rc`.
 - `main`: untouched.
 - OMP tooling branch: separate.
 - `memory.backend`: remains `mnemopi`.
 - Global OMP configuration and model mappings: unchanged.
-- Integration RC documentation update: pending commit and push.
+- Integration RC pushed with upstream tracking: complete.
 
 ## Next action
 

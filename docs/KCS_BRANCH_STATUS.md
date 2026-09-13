@@ -7,7 +7,7 @@ Public-controls work is now consolidated into the integration RC branch while re
 | `main` | Protected release baseline | — | PROTECTED / UNCHANGED | `8024d4f` | None without explicit approval | Preserve |
 | `integration/v6-ui-stable` | V6 UI integration baseline | V6 predecessor | BASE | `0289402` | RC | Preserve |
 | `integration/v6-ui-ograf-release-candidate` | Product/docs release candidate | `integration/v6-ui-stable` | READY / BASE | `4e4c269` | Public-controls RC | Preserve |
-| `integration/v6-ui-ograf-public-controls-rc` | Consolidated public-controls integration RC | RC@`4e4c269` + public-controls tip | CURRENT / PUSHED | `2a6b5dc` | None without explicit approval | Request main merge approval |
+| `integration/v6-ui-ograf-public-controls-rc` | Consolidated public-controls integration RC | RC@`4e4c269` + public-controls tip | CURRENT / PUSHED | `0efd64a` | None without explicit approval | Request main merge approval |
 | `feat/ograf-public-controls-v1` | Host-editable text/image/color controls | RC@`4e4c269` | QA-PASS / SOURCE | `2a6b5dc` | Integration RC | Preserve |
 | `chore/omp-kcs-config-optimization` | Project-local OMP policy | Independent | SEPARATE / COMPLETE | `50b42d4` | None by default | Keep separate |
 

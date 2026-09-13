@@ -2,7 +2,7 @@
 
 ## Release boundary
 
-The current product candidate is `integration/v6-ui-ograf-public-controls-rc@2a6b5dc`, created from `feat/ograf-public-controls-v1@2a6b5dc` and based on `integration/v6-ui-ograf-release-candidate@4e4c269`. Public Controls V1 is accepted for the target host after the second manual QA pass. This document does not authorize a `main` merge.
+The current product candidate is `integration/v6-ui-ograf-public-controls-rc@0efd64a`, created from `feat/ograf-public-controls-v1@2a6b5dc` and based on `integration/v6-ui-ograf-release-candidate@4e4c269`. Public Controls V1 is accepted for the target host after the second manual QA pass. This document does not authorize a `main` merge.
 
 ## Accepted milestones
 
@@ -38,7 +38,7 @@ The current product candidate is `integration/v6-ui-ograf-public-controls-rc@2a6
 
 - `main`: protected and untouched.
 - `integration/v6-ui-ograf-release-candidate`: product release-candidate baseline at `4e4c269`.
-- `integration/v6-ui-ograf-public-controls-rc`: current consolidated integration RC at `2a6b5dc`.
+- `integration/v6-ui-ograf-public-controls-rc`: current consolidated integration RC at `0efd64a`.
 - `feat/ograf-public-controls-v1`: source feature branch at `2a6b5dc`.
 - `chore/omp-kcs-config-optimization`: separate OMP tooling branch; not included by default.
 

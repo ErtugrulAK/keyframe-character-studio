@@ -2,7 +2,7 @@
 
 ## P0 — Main release decision
 
-- Review the current integration RC at `integration/v6-ui-ograf-public-controls-rc@2a6b5dc`.
+- Review the current integration RC at `integration/v6-ui-ograf-public-controls-rc@0efd64a`.
 - Review `reports/progress_056.md`.
 - Request explicit release approval before any `main` merge.
 

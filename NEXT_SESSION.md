@@ -35,12 +35,12 @@ Main after:
 
 Review:
 
-1. `reports/progress_059.md`
-2. `docs/KCS_BRANCH_CLEANUP_AUDIT.md`
-3. `docs/KCS_MARKDOWN_CLEANUP_AUDIT.md`
+1. `reports/progress_060.md`
+2. `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md`
+3. `docs/KCS_BRANCH_CLEANUP_AUDIT.md`
 
-`main@6351d1a` contains the accepted Public Controls V1 integration. Release tag `v1.1.0-public-controls` points to the pre-result-docs release commit `6351d1a`. Safe merged branch cleanup is complete.
+`main@1ad4bd3` contains the released Public Controls V1 integration. Tag `v1.1.0-public-controls` targets `6351d1a`. Investigation branches were audited read-only; no branch was deleted, merged, or cherry-picked.
 
 ## Approval boundary
 
-The approved tag and audited safe branch cleanup are complete. Request separate approval before any further branch deletion or release-history change. Next action is the final two-PC sync audit.
+Request separate approval before deleting the three safe candidates or importing `docs/github-presentation`. Keep `without-mask` under manual review and keep the OMP tooling branch separate.

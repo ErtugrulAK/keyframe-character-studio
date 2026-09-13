@@ -10,12 +10,13 @@
 6. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` — accepted milestones and release boundary.
 7. `docs/KCS_BRANCH_STATUS.md` — branch inclusion and protected lines.
 8. `docs/KCS_OPEN_TASKS.md` — remaining decisions and follow-up work.
-9. `docs/KCS_BRANCH_CLEANUP_AUDIT.md` — read-only branch classifications and future commands.
+9. `docs/KCS_BRANCH_CLEANUP_AUDIT.md` — completed safe merged branch audit.
 10. `docs/KCS_MARKDOWN_CLEANUP_AUDIT.md` — markdown inventory and archive-only plan.
-11. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md` — planning-only branch path.
-12. `docs/KCS_DESKTOP_FOLDER_INVENTORY.md` — desktop collection inventory.
-13. `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md` — archive-only cleanup decision.
-14. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` — applied local archive result.
+11. `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md` — remaining investigation branch classifications.
+12. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md` — planning-only branch path.
+13. `docs/KCS_DESKTOP_FOLDER_INVENTORY.md` — desktop collection inventory.
+14. `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md` — archive-only cleanup decision.
+15. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` — applied local archive result.
 
 ## Reports
 
@@ -23,6 +24,7 @@
 - `reports/progress_057.md` — protected main integration and release validation.
 - `reports/progress_058.md` — post-main cleanup audit and release checkpoint.
 - `reports/progress_059.md` — release tag and safe merged branch cleanup result.
+- `reports/progress_060.md` — remaining investigation branch audit.
 
 Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 

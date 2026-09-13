@@ -48,3 +48,11 @@ Release tag `v1.1.0-public-controls` was created and pushed at `6351d1a`. The au
 - `reports/progress_059.md` records the release tag and safe branch cleanup.
 - Main remains checked out.
 - Final next action: run the two-PC sync audit on both machines.
+
+## Investigation branch audit
+
+- `reports/progress_060.md` and `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md` record the read-only audit.
+- Three Copilot branches are safe deletion candidates after later approval.
+- `docs/github-presentation` is an import candidate for a future review branch.
+- `without-mask` remains a keep/archive manual decision.
+- No branch was deleted, merged, or cherry-picked during the audit.

@@ -56,3 +56,9 @@ Release tag `v1.1.0-public-controls` was created and pushed at `6351d1a`. The au
 - `docs/github-presentation` is an import candidate for a future review branch.
 - `without-mask` remains a keep/archive manual decision.
 - No branch was deleted, merged, or cherry-picked during the audit.
+
+## Safe Copilot cleanup
+
+- `reports/progress_061.md` records deletion of the three approved safe Copilot remote branches.
+- `docs/github-presentation`, `without-mask`, and `chore/omp-kcs-config-optimization` were preserved.
+- No tag, source, report, QA folder, or OMP setting was changed.

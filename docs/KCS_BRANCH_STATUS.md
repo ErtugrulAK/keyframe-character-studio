@@ -1,16 +1,13 @@
 # KCS Branch Status
 
-Public-controls work is integrated into `main@6351d1a` (with RC tip `111c101` in its ancestry). Audited safe merged branches were deleted after verification. The OMP tooling branch remains separate.
+Public-controls work is integrated into `main@373d74b` (with RC tip `111c101` in its ancestry). The three approved safe Copilot branches were deleted after verification. The OMP tooling branch, `docs/github-presentation`, and `without-mask` remain separate.
 
 | BRANCH | PURPOSE | STATUS | LATEST KNOWN COMMIT | NEXT ACTION |
 |---|---|---|---|---|
-| `main` | Protected product baseline | INTEGRATED / RELEASE-TAGGED | `6351d1a` | Final two-PC sync audit |
+| `main` | Protected product baseline | INTEGRATED / RELEASE-TAGGED | `373d74b` | Review presentation import |
 | `chore/omp-kcs-config-optimization` | Project-local OMP policy | SEPARATE / COMPLETE | `50b42d4` | Keep separate |
-| `copilot/analyze-repository-improvement-audit` | Repository audit | NEEDS INVESTIGATION / PRESERVED | — | Investigate only if needed |
-| `copilot/fix-gh-actions-workflow-failure` | Workflow repair | NEEDS INVESTIGATION / PRESERVED | — | Investigate only if needed |
-| `copilot/fix-build-lint-test-verification` | Verification work | NEEDS INVESTIGATION / PRESERVED | — | Inspect unique commit before action |
-| `docs/github-presentation` | Presentation docs | NEEDS INVESTIGATION / PRESERVED | — | Inspect unique commits before action |
-| `without-mask` | Divergent historical line | NEEDS INVESTIGATION / PRESERVED | — | Do not delete without review |
+| `docs/github-presentation` | Presentation docs | IMPORT CANDIDATE / PRESERVED | `8540165` | Create review branch only after approval |
+| `without-mask` | Divergent historical line | UNKNOWN / PRESERVED | `eb1d9b4` | Manual keep/archive decision |
 
 ## Public-controls scope
 
@@ -21,4 +18,4 @@ Public-controls work is integrated into `main@6351d1a` (with RC tip `111c101` in
 
 ## Protected invariants
 
-`main` is release-tagged at `6351d1a` as `v1.1.0-public-controls`. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain unchanged. No investigation branch was deleted.
+`main` is release-tagged at `6351d1a` as `v1.1.0-public-controls`; current main is `373d74b`. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain unchanged. No non-approved branch was deleted.

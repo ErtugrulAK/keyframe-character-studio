@@ -35,12 +35,12 @@ Main after:
 
 Review:
 
-1. `reports/progress_060.md`
+1. `reports/progress_061.md`
 2. `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md`
-3. `docs/KCS_BRANCH_CLEANUP_AUDIT.md`
+3. `docs/KCS_BRANCH_STATUS.md`
 
-`main@1ad4bd3` contains the released Public Controls V1 integration. Tag `v1.1.0-public-controls` targets `6351d1a`. Investigation branches were audited read-only; no branch was deleted, merged, or cherry-picked.
+`main@373d74b` contains the released Public Controls V1 integration. Tag `v1.1.0-public-controls` targets `6351d1a`. The three approved safe Copilot branches were deleted; all preserved branches remain untouched.
 
 ## Approval boundary
 
-Request separate approval before deleting the three safe candidates or importing `docs/github-presentation`. Keep `without-mask` under manual review and keep the OMP tooling branch separate.
+Request separate approval before creating a review branch or importing `docs/github-presentation`. Keep `without-mask` under manual review and keep the OMP tooling branch separate.

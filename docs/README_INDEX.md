@@ -25,6 +25,7 @@
 - `reports/progress_058.md` — post-main cleanup audit and release checkpoint.
 - `reports/progress_059.md` — release tag and safe merged branch cleanup result.
 - `reports/progress_060.md` — remaining investigation branch audit.
+- `reports/progress_061.md` — safe Copilot branch cleanup result.
 
 Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 

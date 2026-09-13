@@ -24,7 +24,7 @@ Main after:
 
 ## Guardrails
 
-- Do not touch or merge to `main`.
+- Do not merge to or otherwise rewrite `main`.
 - Do not reset hard, force push, delete branches, reports, QA folders, or `.omp/backups/`.
 - Do not modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 - Keep `.omp/config.yml` `memory.backend: mnemopi`.
@@ -35,12 +35,12 @@ Main after:
 
 Review:
 
-1. `reports/progress_057.md`
-2. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`
-3. `docs/KCS_BRANCH_STATUS.md`
+1. `reports/progress_058.md`
+2. `docs/KCS_BRANCH_CLEANUP_AUDIT.md`
+3. `docs/KCS_MARKDOWN_CLEANUP_AUDIT.md`
 
-Main contains the accepted Public Controls V1 integration. No release tag was created and no branches were deleted.
+`main@717d662` contains the accepted Public Controls V1 integration. No release tag was created and no branches were deleted.
 
 ## Approval boundary
 
-Request separate approval before creating a release tag/checkpoint or deleting/cleaning branches.
+Request separate approval before creating a release tag or deleting/cleaning branches.

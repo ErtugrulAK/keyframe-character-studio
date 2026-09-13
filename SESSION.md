@@ -42,3 +42,10 @@ No release tag was created. No branches were deleted. The OMP tooling branch rem
 ## Protected state
 
 `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain preserved. Further tag/checkpoint or branch-cleanup work requires separate approval.
+
+## Post-main checkpoint
+
+- Current pushed `main` HEAD: `717d662`; integrated RC tip `111c101` remains in ancestry.
+- `reports/progress_058.md` records the read-only branch and markdown cleanup audits.
+- No branch, tag, report, or tracked file was deleted or moved.
+- `memory.backend: mnemopi` remains unchanged.

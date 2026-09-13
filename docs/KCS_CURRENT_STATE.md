@@ -1,6 +1,6 @@
 # KCS Current State
 
-The accepted KCS product/documentation line is now integrated into `main@111c101`. The integration RC remains available at `integration/v6-ui-ograf-public-controls-rc@111c101`, and the public-controls source branch remains available. The OMP tooling branch remains separate.
+The accepted KCS product/documentation line is integrated into `main@717d662`; the integrated release-candidate tip is `111c101`. The integration RC and public-controls source branches remain available. The OMP tooling branch remains separate.
 
 The second target-host QA completed successfully:
 
@@ -70,6 +70,6 @@ The desktop collection inventory and archive result are recorded in:
 
 ## Next order
 
-1. Review `reports/progress_057.md`.
-2. Separately approve a release tag/checkpoint if desired.
+1. Review `reports/progress_058.md` and the two cleanup audits.
+2. Separately approve a release tag if desired.
 3. Separately approve optional branch cleanup; do not delete branches by default.

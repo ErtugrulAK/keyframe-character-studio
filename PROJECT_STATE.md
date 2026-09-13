@@ -2,7 +2,7 @@
 
 ## Current position
 
-The repository is on `feat/ograf-public-controls-v1`, based on `integration/v6-ui-ograf-release-candidate@4e4c269`. The feature branch adds host-editable OGraf text, image, and color controls. `main` remains untouched.
+The accepted integration is now on `main`; the current pushed `main` HEAD is `717d662`, containing the integrated release-candidate tip `111c101`. The source and integration branches remain available.
 
 ## Accepted baseline
 
@@ -22,8 +22,8 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Protected state
 
-- `main` now contains the accepted integration RC at `111c101`; no further merge is implied.
-- Release tag/checkpoint and branch cleanup require separate approval.
+- `main` is integrated at `717d662`; the accepted RC tip `111c101` remains in its ancestry.
+- Release tag creation and branch cleanup require separate approval.
 - Historical reports and old host QA folders are preserved.
 - Read-only corpus: `C:\Users\ertugrul.ak\Desktop\ograf-graphics`; do not modify.
 - `.omp/backups/` is preserved and ignored.
@@ -32,4 +32,4 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Current next action
 
-Review `reports/progress_057.md`, then separately approve a release tag/checkpoint and optional branch cleanup plan if desired.
+Review `reports/progress_058.md`, then separately approve a release tag and/or optional branch cleanup. No deletion or tag creation is implied by this audit.

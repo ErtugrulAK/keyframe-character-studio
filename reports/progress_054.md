@@ -85,8 +85,8 @@ Named project agents remain available and respond successfully:
 - `main`: untouched.
 - Global OMP config: unchanged.
 - `memory.backend`: remains `mnemopi`.
-- Commit: pending.
-- Push: pending.
+- Commit: `807ac15 docs: record validation and subagent fixup`.
+- Push: completed to `origin/feat/ograf-public-controls-v1`.
 
 ## Next user QA action
 

@@ -32,4 +32,4 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Current next action
 
-Run the final two-PC sync audit. Safe merged branch cleanup is complete; investigation branches remain untouched.
+Decide whether to keep or archive `without-mask`, then move to GitHub Actions/CI. The presentation review and original `docs/github-presentation` branch cleanup are complete; the OMP tooling branch remains separate.

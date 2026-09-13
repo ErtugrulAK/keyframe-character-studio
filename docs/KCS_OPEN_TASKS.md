@@ -1,18 +1,16 @@
 # KCS Open Tasks
 
-## P0 — Post-merge branch decisions
+## P0 — without-mask and CI decision
 
-- Decide whether to delete the original `docs/github-presentation` branch.
 - Decide whether to keep or archive `without-mask`.
 - Then move to GitHub Actions/CI work.
 
 ## Current release state
 
-Public Controls V1 and the reviewed GitHub presentation materials are integrated into `main`. Release tag `v1.1.0-public-controls` targets `6351d1a`. The review branch was deleted after merge; the original presentation branch remains preserved.
+Public Controls V1 and the reviewed GitHub presentation materials are integrated into `main`. The original `docs/github-presentation` branch was deleted after verification. Release tag `v1.1.0-public-controls` targets `6351d1a`.
 
 ## Investigation state
 
-- `docs/github-presentation` remains preserved and untouched.
 - `without-mask` remains preserved for manual keep/archive review.
 - `chore/omp-kcs-config-optimization` remains separate and must be kept.
 

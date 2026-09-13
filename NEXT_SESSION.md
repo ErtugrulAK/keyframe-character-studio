@@ -35,12 +35,12 @@ Main after:
 
 Review:
 
-1. `reports/progress_063.md`
-2. `docs/presentation/README.md`
-3. `docs/KCS_BRANCH_STATUS.md`
+1. `reports/progress_064.md`
+2. `docs/KCS_BRANCH_STATUS.md`
+3. `docs/KCS_OPEN_TASKS.md`
 
-The GitHub presentation review branch was fast-forwarded into `main`. The imported assets remain docs-only. `docs/github-presentation` and `without-mask` were not changed. Tag `v1.1.0-public-controls` still targets `6351d1a`.
+The original `docs/github-presentation` branch was deleted after verifying its useful presentation material on `main`. `without-mask` and `chore/omp-kcs-config-optimization` remain untouched. Tag `v1.1.0-public-controls` still targets `6351d1a`.
 
 ## Next approval boundary
 
-Decide whether to delete the original `docs/github-presentation` branch. Then decide the keep/archive policy for `without-mask`, followed by GitHub Actions/CI work. Do not delete or modify either branch without explicit approval.
+Decide whether to keep or archive `without-mask`, then move to GitHub Actions/CI work. Do not modify the preserved OMP branch or release tag.

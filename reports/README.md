@@ -14,4 +14,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_061.md` — safe Copilot branch cleanup result.
 - `progress_062.md` — GitHub presentation import review result.
 - `progress_063.md` — GitHub presentation review merge result.
-Older progress reports document earlier milestones and remain historical records. They should not be read first. Reports are not moved to `reports/archive/` in this run; any future move requires link-impact review and explicit approval.
+- `progress_064.md` — original presentation branch cleanup result.

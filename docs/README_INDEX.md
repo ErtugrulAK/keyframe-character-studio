@@ -27,6 +27,7 @@
 - `reports/progress_061.md` — safe Copilot branch cleanup result.
 - `reports/progress_062.md` — GitHub presentation import review result.
 - `reports/progress_063.md` — GitHub presentation review merge result.
+- `reports/progress_064.md` — original presentation branch cleanup result.
 
 Presentation review material is indexed at `docs/presentation/README.md`.
 

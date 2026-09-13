@@ -41,9 +41,9 @@ The branch retains three unique OMP policy commits and remains intentionally sep
 
 The three approved safe Copilot branches were deleted. No further deletion commands are pending for these branches.
 
-## Import review result
+## Import and cleanup result
 
-`review/github-presentation-import` was created from current `main`. The four presentation images were imported, and `docs/presentation/README.md` now indexes them. Current top-level documentation and GitHub templates were preserved from `main`. No merge into `main` occurred; see `reports/progress_062.md`.
+`review/github-presentation-import` was merged into `main`, and the original `docs/github-presentation` branch was deleted after verifying the imported assets and review documentation on `main`. `without-mask` and `chore/omp-kcs-config-optimization` remain untouched. See `reports/progress_064.md`.
 
 ## Keep / manual decision
 

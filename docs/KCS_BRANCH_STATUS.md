@@ -1,12 +1,11 @@
 # KCS Branch Status
 
-Public-controls work is integrated into `main`; the GitHub presentation review branch was fast-forwarded into main at `07f3d84`. The original `docs/github-presentation` branch and `without-mask` remain separate and untouched.
+Public-controls work and the reviewed GitHub presentation materials are integrated into `main`. The original `docs/github-presentation` branch was deleted after import verification. `without-mask` and the OMP tooling branch remain separate and untouched.
 
 | BRANCH | PURPOSE | STATUS | LATEST KNOWN COMMIT | NEXT ACTION |
 |---|---|---|---|---|
-| `main` | Protected product baseline | INTEGRATED / RELEASE-TAGGED | `07f3d84` plus merge result docs | Review imported presentation material |
+| `main` | Protected product baseline | INTEGRATED / RELEASE-TAGGED | `4d8a5ca` | Decide without-mask policy |
 | `chore/omp-kcs-config-optimization` | Project-local OMP policy | SEPARATE / COMPLETE | `50b42d4` | Keep separate |
-| `docs/github-presentation` | Original presentation source | PRESERVED / UNCHANGED | `8540165` | Decide deletion separately |
 | `without-mask` | Divergent historical line | UNKNOWN / PRESERVED | `eb1d9b4` | Manual keep/archive decision |
 
 ## Public-controls scope

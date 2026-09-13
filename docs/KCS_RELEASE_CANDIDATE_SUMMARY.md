@@ -2,7 +2,7 @@
 
 ## Release boundary
 
-The current product candidate is `integration/v6-ui-ograf-public-controls-rc@c7f5bb1`, created from `feat/ograf-public-controls-v1@2a6b5dc` and based on `integration/v6-ui-ograf-release-candidate@4e4c269`. Public Controls V1 is accepted for the target host after the second manual QA pass. This document does not authorize a `main` merge.
+The accepted Public Controls V1 integration is now in `main@111c101`. The source and integration RC branches remain available. This document does not authorize tag creation or branch deletion.
 
 ## Accepted milestones
 
@@ -36,9 +36,9 @@ The current product candidate is `integration/v6-ui-ograf-public-controls-rc@c7f
 
 ## Branches
 
-- `main`: protected and untouched.
+- `main`: integrated at `111c101`; protected history remains intact.
 - `integration/v6-ui-ograf-release-candidate`: product release-candidate baseline at `4e4c269`.
-- `integration/v6-ui-ograf-public-controls-rc`: current consolidated integration RC at `c7f5bb1`.
+- `integration/v6-ui-ograf-public-controls-rc`: integrated source branch at `111c101`.
 - `feat/ograf-public-controls-v1`: source feature branch at `2a6b5dc`.
 - `chore/omp-kcs-config-optimization`: separate OMP tooling branch; not included by default.
 
@@ -53,4 +53,4 @@ The current product candidate is `integration/v6-ui-ograf-public-controls-rc@c7f
 
 ## Release decision
 
-The branch is ready for an explicit release decision. Do not merge or fast-forward `main` until the user separately approves that action.
+Main integration is complete. Release tag/checkpoint creation and optional branch cleanup require separate explicit approval.

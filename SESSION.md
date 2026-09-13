@@ -17,33 +17,28 @@ Implemented the host-QA fixup:
 
 ## Current branch
 
-`integration/v6-ui-ograf-public-controls-rc`
+`main`
 
-Created from `origin/feat/ograf-public-controls-v1@2a6b5dc`; it contains `integration/v6-ui-ograf-release-candidate@4e4c269` ancestry.
+Fast-forwarded from `8024d4f` to the accepted integration RC at `111c101`.
 
 ## Validation
 
-- Focused OGraf tests: PASS, 2 tests.
-- Public-controls OGraf manifest validation: PASS, 3/3 after `npm ci` restored declared `ajv` and `ajv-formats` dependencies.
+- Public-controls OGraf manifest validation: PASS, 3/3.
 - TypeScript: PASS.
 - Vitest: PASS, 100 files / 1,437 tests.
 - Lint: PASS with the existing Fast Refresh warning.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
-- Playwright equivalent coverage on integration RC: PASS, shard 1 `141`, shard 2 `111 passed + 1 flaky V-H12`, isolated V-H12 PASS, isolated V-T17 PASS.
+- Playwright equivalent coverage on main: PASS, 254/254 via shard 1 `141`, shard 2 `111 passed` plus isolated V-H12 and V-T17.
 - Full Playwright aggregate: TIMEOUT — the 254-test command exceeds the 600-second command envelope.
 - `git diff --check`: PASS.
 
-## QA handoff
+## QA and release handoff
 
-The validated host import root is:
+Manual target-host QA is complete: BASIC PASS, ASSET PASS, and COMPOSITING PASS. Main now contains the accepted integration RC.
 
-`C:\Users\senmu\Masaüstü\KCS\kcs-ograf-public-controls-qa`
-
-Manual target-host QA is complete: BASIC PASS, ASSET PASS, and COMPOSITING PASS. This was manifest-rooted host testing, not KCS Import.
-
-The current gate is explicit release approval before any `main` merge. The integration RC was created without a merge commit, reset, rebase, or force push.
+No release tag was created. No branches were deleted. The OMP tooling branch remains separate.
 
 ## Protected state
 
-`main` remains untouched. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain preserved.
+`memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain preserved. Further tag/checkpoint or branch-cleanup work requires separate approval.

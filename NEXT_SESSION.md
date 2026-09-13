@@ -8,15 +8,19 @@ Repository:
 
 Checkout:
 
-`integration/v6-ui-ograf-public-controls-rc`
+`main`
 
-Source:
+Integrated RC:
 
-`feat/ograf-public-controls-v1@2a6b5dc`
+`integration/v6-ui-ograf-public-controls-rc@111c101`
 
-Base:
+Main before:
 
-`integration/v6-ui-ograf-release-candidate@4e4c269`
+`8024d4f`
+
+Main after:
+
+`111c101`
 
 ## Guardrails
 
@@ -31,12 +35,12 @@ Base:
 
 Review:
 
-1. `reports/progress_056.md`
+1. `reports/progress_057.md`
 2. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`
-3. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`
+3. `docs/KCS_BRANCH_STATUS.md`
 
-The integration RC contains the accepted Public Controls V1 line and target-host QA PASS.
+Main contains the accepted Public Controls V1 integration. No release tag was created and no branches were deleted.
 
 ## Approval boundary
 
-Ask for explicit approval before any `main` merge. Do not delete branches, rebase, reset, or force push.
+Request separate approval before creating a release tag/checkpoint or deleting/cleaning branches.

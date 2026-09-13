@@ -1,8 +1,6 @@
 # KCS Current State
 
-## Executive summary
-
-The accepted KCS product/documentation line remains available through `integration/v6-ui-ograf-release-candidate@4e4c269`. `feat/ograf-public-controls-v1` is based on that release candidate and adds host-editable OGraf text, image, and color controls. `main` remains untouched.
+The accepted KCS product/documentation line is now integrated into `main@111c101`. The integration RC remains available at `integration/v6-ui-ograf-public-controls-rc@111c101`, and the public-controls source branch remains available. The OMP tooling branch remains separate.
 
 The second target-host QA completed successfully:
 
@@ -26,11 +24,15 @@ Specification: `docs/design/KCS_OGRAF_PUBLIC_CONTROLS_V1_SPEC.md`.
 
 ## Branch
 
-Current integration RC:
+`main@111c101` now contains the accepted integration RC.
 
-`integration/v6-ui-ograf-public-controls-rc@c7f5bb1`
+The source and integration branches remain available:
 
-It was created from `origin/feat/ograf-public-controls-v1@2a6b5dc` and contains `integration/v6-ui-ograf-release-candidate@4e4c269` ancestry. The source feature branch remains available. The OMP tooling branch `chore/omp-kcs-config-optimization@50b42d4` remains separate. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, and `.omp/backups/` are unchanged/preserved.
+- `integration/v6-ui-ograf-public-controls-rc@111c101`
+- `feat/ograf-public-controls-v1@2a6b5dc`
+- `integration/v6-ui-ograf-release-candidate@4e4c269`
+
+`chore/omp-kcs-config-optimization@50b42d4` remains separate. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, and `.omp/backups/` are unchanged/preserved.
 
 ## Generated QA
 
@@ -53,9 +55,9 @@ The desktop collection inventory and archive result are recorded in:
 - Vitest: PASS, 100 files / 1,437 tests.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
-- Public-controls OGraf manifest validation: PASS, 3/3 after `npm ci` restored declared `ajv` and `ajv-formats` dependencies.
-- Playwright equivalent coverage: PASS, 254/254 across shard 1 (141), shard 2 excluding isolated V-T17 (112), and isolated V-T17 (1).
-- Full Playwright aggregate: TIMEOUT — the 254-test command exceeded the 600-second command timeout; V-T17 passed when isolated with one worker and a 120-second test timeout.
+- Public-controls OGraf manifest validation: PASS, 3/3.
+- Playwright equivalent coverage on main: PASS, 254/254 via shard 1, shard 2 plus isolated V-H12 and V-T17.
+- Full Playwright aggregate: TIMEOUT — the 254-test command exceeded the 600-second command timeout.
 - `git diff --check`: PASS.
 
 ## Known limitations
@@ -68,6 +70,6 @@ The desktop collection inventory and archive result are recorded in:
 
 ## Next order
 
-1. Request explicit approval before any `main` merge.
-2. If approved, merge or fast-forward only through the planned integration path.
-3. Keep the OMP tooling branch and desktop QA hygiene separate.
+1. Review `reports/progress_057.md`.
+2. Separately approve a release tag/checkpoint if desired.
+3. Separately approve optional branch cleanup; do not delete branches by default.

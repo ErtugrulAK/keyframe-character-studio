@@ -22,8 +22,8 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Protected state
 
-- `main` remains protected and unchanged at `8024d4f`.
-- No merge to `main` is authorized by this milestone.
+- `main` now contains the accepted integration RC at `111c101`; no further merge is implied.
+- Release tag/checkpoint and branch cleanup require separate approval.
 - Historical reports and old host QA folders are preserved.
 - Read-only corpus: `C:\Users\ertugrul.ak\Desktop\ograf-graphics`; do not modify.
 - `.omp/backups/` is preserved and ignored.
@@ -32,4 +32,4 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Current next action
 
-The integration RC is now available at `integration/v6-ui-ograf-public-controls-rc`. Request explicit approval before any `main` merge.
+Review `reports/progress_057.md`, then separately approve a release tag/checkpoint and optional branch cleanup plan if desired.

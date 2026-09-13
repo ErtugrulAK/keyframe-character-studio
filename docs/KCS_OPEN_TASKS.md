@@ -1,19 +1,19 @@
 # KCS Open Tasks
 
-## P0 — Main release decision
+## P0 — Release checkpoint decision
 
-- Review the current integration RC at `integration/v6-ui-ograf-public-controls-rc@c7f5bb1`.
-- Review `reports/progress_056.md`.
-- Request explicit release approval before any `main` merge.
+- Review `reports/progress_057.md`.
+- Decide whether to create a release tag/checkpoint.
+- Decide whether to prepare an optional branch cleanup plan; do not delete branches without separate approval.
 
 ## Release decision
 
-Public Controls V1 is accepted by target-host QA and included in the integration RC. `main` remains protected and untouched.
+Public Controls V1 is integrated into `main` and target-host QA is PASS. No release tag has been created.
 
 ## P1 — Planned after release decision
 
-- Run the release validation set again if the integration RC is changed.
-- Design OGraf Package → editable KCS import around explicit extraction, validation, asset rebasing, and editable-state semantics.
+- Create the approved release tag/checkpoint.
+- Prepare, but do not execute, any branch cleanup.
 
 ## P2 — Non-blocking follow-up
 
@@ -23,9 +23,8 @@ Public Controls V1 is accepted by target-host QA and included in the integration
 
 ## Invariants
 
-- Keep `main` untouched until explicitly approved.
+- Keep `main` integrated at the accepted checkpoint.
+- Keep source and integration branches available.
 - Keep `memory.backend: mnemopi`.
 - Keep model/provider mappings and global config unchanged.
-- Keep `.omp/backups/` present and ignored.
-- Keep the read-only OGraf reference corpus untouched.
 - Preserve standard OGraf export, legacy single-file export, KCS project export, and KCS Import behavior.

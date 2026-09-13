@@ -46,7 +46,7 @@ For every visible, non-matte-source `custom_image` layer with a verified portabl
 - Runtime property: `imageUrl`.
 - `updateAction` accepts only values in the generated field enum and the packaged reference map.
 
-The runtime never accepts an absolute path, traversal path, external URL, data URL, or arbitrary unlisted value. The package compiler still requires a local source or browser-owned bytes for each image. A one-image package intentionally exposes a one-option selector; multiple packaged image assets provide multiple choices.
+The runtime never accepts an absolute path, traversal path, external URL, data URL, or arbitrary unlisted value. The package compiler still requires a local source or browser-owned bytes for each image. A one-image package intentionally exposes a one-option selector; the public-controls ASSET QA package includes two deterministic packaged choices to prove replacement.
 
 ## Color controls
 
@@ -54,7 +54,7 @@ For every eligible visible, non-matte-source shape/text/freeform layer:
 
 - Fill field: `fill_<layer>`, when fill is enabled and a fill exists.
 - Stroke field: `stroke_<layer>`, when stroke is enabled and a non-`none` stroke exists.
-- Schema: `type: string`, `gddType: color-rrggbb`, `pattern: ^#[0-9a-f]{6}$`.
+- Schema: `type: string`, `format: color`, `gddType: color-rrggbb`, `pattern: ^#[0-9a-f]{6}$`.
 - Default: normalized lowercase `#rrggbb` value from the layer.
 - Runtime property: `fillColor` or `strokeColor`.
 

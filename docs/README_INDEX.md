@@ -21,6 +21,7 @@
 - `reports/progress_050.md` — host QA PASS and integration readiness.
 - `reports/progress_051.md` — release-candidate integration and validation.
 - `reports/progress_052.md` — OGraf Public Controls V1 implementation and QA handoff.
+- `reports/progress_053.md` — public-controls host QA fixup with alternate image and color-field visibility.
 
 ## OGraf docs
 

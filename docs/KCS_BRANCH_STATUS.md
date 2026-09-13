@@ -7,14 +7,14 @@ Public-controls work is isolated from `main` and from the separate OMP tooling b
 | `main` | Protected release baseline | — | PROTECTED / UNCHANGED | `8024d4f` | None without explicit approval | Preserve |
 | `integration/v6-ui-stable` | V6 UI integration baseline | V6 predecessor | BASE | `0289402` | RC | Preserve |
 | `integration/v6-ui-ograf-release-candidate` | Product/docs release candidate | `integration/v6-ui-stable` | READY | `4e4c269` | Public-controls branch | Preserve |
-| `feat/ograf-public-controls-v1` | Host-editable text/image/color controls | RC@`4e4c269` | PUSHED / QA PENDING | `b07941c` | None yet | Manual host QA |
+| `feat/ograf-public-controls-v1` | Host-editable text/image/color controls | RC@`4e4c269` | PUSHED / SECOND QA READY | `48577be` | None yet | Manual host QA with alternate image and color fields |
 | `chore/omp-kcs-config-optimization` | Project-local OMP policy | Independent | SEPARATE / COMPLETE | `50b42d4` | None by default | Keep separate |
 
 ## Public-controls scope
 
 - Text fields are generated for visible text layers, with explicit `headline` compatibility.
-- Image fields use package-relative enum/default paths and runtime safe-value checks.
-- Fill/stroke fields use deterministic IDs and OGraf `color-rrggbb` schema metadata.
+- Image fields use package-relative enum/default paths and runtime safe-value checks; ASSET QA includes default and alternate resources.
+- Fill/stroke fields use deterministic IDs, `format: color`, and OGraf `color-rrggbb` schema metadata.
 - Matte-source helper layers are excluded.
 
 ## Protected invariants

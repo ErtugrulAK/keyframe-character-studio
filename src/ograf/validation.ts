@@ -252,6 +252,7 @@ function createPublicStateSchema(
   for (const field of colorFields) {
     properties[field.id] = {
       type: 'string',
+      format: 'color',
       gddType: 'color-rrggbb',
       pattern: '^#[0-9a-f]{6}$',
       ...(field.title ? { title: field.title } : {}),

@@ -278,7 +278,7 @@ describe('generated runtime parity', () => {
     expect(plan.status).toBe('ready-to-materialize');
     expect(plan.manifest.schema.properties.headline).toMatchObject({ type: 'string', default: 'Before' });
     expect(plan.manifest.schema.properties.image_logo).toMatchObject({ enum: ['assets/images/logo.png', 'assets/images/alternate.png'] });
-    expect(plan.manifest.schema.properties.fill_headline).toMatchObject({ gddType: 'color-rrggbb' });
+    expect(plan.manifest.schema.properties.fill_headline).toMatchObject({ type: 'string', format: 'color', gddType: 'color-rrggbb', pattern: '^#[0-9a-f]{6}$' });
 
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
@@ -288,15 +288,19 @@ describe('generated runtime parity', () => {
         headline: 'After',
         image_logo: 'assets/images/alternate.png',
         fill_headline: '#00ff00',
+        stroke_headline: '#0000ff',
       },
     });
     expect(updated.statusCode).toBe(200);
     expect(graphic.innerHTML).toContain('>After</text>');
     expect(graphic.innerHTML).toContain('assets/images/alternate.png');
     expect(graphic.innerHTML).toContain('fill="#00ff00"');
+    expect(graphic.innerHTML).toContain('stroke="#0000ff"');
 
-    const rejected = await graphic.updateAction({ data: { image_logo: '../outside.png' } });
-    expect(rejected.statusCode).toBe(400);
+    for (const value of ['../outside.png', '/absolute.png', 'C:\\\\absolute.png', 'https://example.com/image.png']) {
+      const rejected = await graphic.updateAction({ data: { image_logo: value } });
+      expect(rejected.statusCode).toBe(400);
+    }
     await graphic.dispose();
   });
 });

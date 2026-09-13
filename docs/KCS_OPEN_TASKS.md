@@ -2,15 +2,15 @@
 
 ## P0 — Public-controls host QA
 
-- Test `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\BASIC`.
-- Test `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\ASSET`.
-- Test `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\COMPOSITING`.
+- Retest `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa\BASIC`.
+- Retest `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa\ASSET`; switch `Logo` from `assets/images/logo.png` to `assets/images/logo_alt.svg`.
+- Retest `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa\COMPOSITING`; set `Content Fill Color` to `#00ff00` and `Content Stroke Color` to `#0000ff`.
 - Record exact host controls, changed values, render behavior, errors, and screenshots.
 - Confirm the older `kcs-ograf-host-compat-qa` folder still works.
 
 ## Release decision
 
-Review `reports/progress_052.md` and the public-controls QA evidence, then request explicit approval before any `main` merge. This branch is not a main merge.
+Review `reports/progress_053.md` and the updated public-controls QA evidence, then request explicit approval before any `main` merge. This branch is not a main merge.
 
 ## P1 — Planned after release decision
 

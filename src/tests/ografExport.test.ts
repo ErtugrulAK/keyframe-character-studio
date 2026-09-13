@@ -78,6 +78,7 @@ describe('OGraf Export V1 Phase 1', () => {
     expect(manifest.schema.properties).toEqual({
       fill_layer_1: {
         type: 'string',
+        format: 'color',
         gddType: 'color-rrggbb',
         pattern: '^#[0-9a-f]{6}$',
         title: 'Box Fill Color',
@@ -85,6 +86,7 @@ describe('OGraf Export V1 Phase 1', () => {
       },
       stroke_layer_1: {
         type: 'string',
+        format: 'color',
         gddType: 'color-rrggbb',
         pattern: '^#[0-9a-f]{6}$',
         title: 'Box Stroke Color',
@@ -104,6 +106,7 @@ describe('OGraf Export V1 Phase 1', () => {
       headline: { type: 'string', title: 'Headline', default: 'Hello' },
       fill_layer_1: {
         type: 'string',
+        format: 'color',
         gddType: 'color-rrggbb',
         pattern: '^#[0-9a-f]{6}$',
         title: 'Box Fill Color',
@@ -111,6 +114,7 @@ describe('OGraf Export V1 Phase 1', () => {
       },
       stroke_layer_1: {
         type: 'string',
+        format: 'color',
         gddType: 'color-rrggbb',
         pattern: '^#[0-9a-f]{6}$',
         title: 'Box Stroke Color',

@@ -25,19 +25,19 @@ Base:
 
 ## First task
 
-Perform manual public-controls host QA using:
+Perform the second manual public-controls host QA using:
 
-1. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\BASIC`
-2. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\ASSET`
-3. `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa\COMPOSITING`
+1. `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa\BASIC`
+2. `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa\ASSET`
+3. `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa\COMPOSITING`
 
 Follow `README_PUBLIC_CONTROLS_QA_TR.txt`. Record the exact host field, changed value, render result, and any error or screenshot.
 
 ## Expected checks
 
 - BASIC: change `Headline`; PLAY keeps the text update and motion.
-- ASSET: inspect `Logo`; switch packaged image choices if more than one is present, otherwise confirm the one default option.
-- COMPOSITING: change `Content Fill Color`; confirm color change and preserved animation.
+- ASSET: open `Logo`; switch from `assets/images/logo.png` to `assets/images/logo_alt.svg`; the visible image must change.
+- COMPOSITING: change `Content Fill Color` to `#00ff00` and `Content Stroke Color` to `#0000ff`; confirm color changes and preserved animation.
 
 ## Approval boundary
 

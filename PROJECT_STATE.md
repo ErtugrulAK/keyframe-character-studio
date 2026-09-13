@@ -13,12 +13,12 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 | Area | Status | Evidence |
 |---|---|---|
 | Text controls | IMPLEMENTED | Deterministic generated bindings; explicit `headline` compatibility preserved |
-| Image controls | IMPLEMENTED | Package-relative enum/defaults and safe runtime swapping |
-| Color controls | IMPLEMENTED | Fill/stroke `#rrggbb` controls with OGraf `color-rrggbb` schema |
-| Runtime `updateAction` | IMPLEMENTED | Text/image/color writes rendered in generated runtime |
-| Host QA packages | GENERATED | `C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa` |
-| Automated validation | PASS | TypeScript/lint/Vitest/build/V6/E2E/manifest checks |
-| Manual public-controls host QA | PENDING | User must test the new QA folders |
+| Image controls | QA-VERIFIABLE | Package-relative enum/defaults now include default and alternate ASSET resources; safe runtime swapping |
+| Color controls | QA-VERIFIABLE | Visible fill/stroke fields include `format: color`, OGraf `color-rrggbb`, lowercase hex pattern |
+| Runtime `updateAction` | IMPLEMENTED | Text/image/color writes rendered in generated runtime; unsafe image paths rejected |
+| Host QA packages | REGENERATED | `C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa` with two ASSET image choices |
+| Automated validation | IN PROGRESS | Focused and full Vitest/TypeScript completed; remaining commands recorded in progress report |
+| Manual public-controls host QA | NEEDS SECOND PASS | BASIC previously PASS; ASSET and COMPOSITING require host retest with explicit controls |
 
 ## Protected state
 
@@ -32,4 +32,4 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Current next action
 
-Run manual public-controls host QA in BASIC → ASSET → COMPOSITING, record exact control behavior, then request release approval. Do not merge `main`.
+Run second manual public-controls host QA in BASIC → ASSET → COMPOSITING. In ASSET select `assets/images/logo_alt.svg`; in COMPOSITING edit `Content Fill Color` to `#00ff00` and `Content Stroke Color` to `#0000ff`. Do not merge `main`.

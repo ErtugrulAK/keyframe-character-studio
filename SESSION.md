@@ -2,16 +2,16 @@
 
 ## What just happened
 
-Created `feat/ograf-public-controls-v1` from `integration/v6-ui-ograf-release-candidate@4e4c269` and implemented OGraf Public Controls V1.
+Recorded the manual host QA result: BASIC passed; ASSET was unclear because the package exposed only one image choice; COMPOSITING was partial/failing because the host did not visibly expose usable color controls.
 
-Implemented:
+Implemented the host-QA fixup:
 
-- Deterministic automatic text controls for visible text layers.
-- Package-relative image selectors with safe enum validation and runtime swapping.
-- Fill/stroke color controls using OGraf `color-rrggbb` schema fields.
-- Generated runtime `updateAction` support for text, image, and color properties.
-- Matte-source exclusion from the public control panel.
-- Public-controls design specification and external host QA packages.
+- Added a reproducible `scripts/generate-public-controls-qa-assets.mjs` updater.
+- Regenerated the external ASSET QA package with `assets/images/logo.png` and deterministic `assets/images/logo_alt.svg`.
+- Updated the ASSET manifest enum/default and runtime image reference allow-list.
+- Added standard `format: color` alongside `gddType: color-rrggbb` for generated color fields.
+- Updated the COMPOSITING manifest and Turkish README with exact field names and `#00ff00`/`#0000ff` examples.
+- Extended generated-runtime tests for color metadata, stroke writes, and unsafe image values.
 
 ## Current branch
 
@@ -21,9 +21,10 @@ Base: `integration/v6-ui-ograf-release-candidate@4e4c269`.
 
 ## Validation
 
+- Focused OGraf tests: PASS, 2 files / 19 tests.
 - TypeScript: PASS.
+- Vitest: PASS, 100 files / 1,437 tests.
 - Lint: PASS with the existing Fast Refresh warning.
-- Vitest: PASS, 100 files / 1,436 tests.
 - Build: PASS with the existing chunk-size warning.
 - V6 QA: PASS, 3/3.
 - Full Playwright: PASS, 254/254.
@@ -32,11 +33,11 @@ Base: `integration/v6-ui-ograf-release-candidate@4e4c269`.
 
 ## QA handoff
 
-Generated folder:
+Regenerated folder:
 
-`C:\Users\ertugrul.ak\Desktop\kcs-ograf-public-controls-qa`
+`C:\Users\senmu\Masaüstü\kcs-ograf-public-controls-qa`
 
-Test BASIC, ASSET, and COMPOSITING with the Turkish README in that folder. Manual public-controls host QA is not yet claimed.
+Test BASIC, ASSET, and COMPOSITING with the updated Turkish README. BASIC remains a known PASS. ASSET must switch `Logo` from `assets/images/logo.png` to `assets/images/logo_alt.svg`. COMPOSITING must edit `Content Fill Color` and `Content Stroke Color`.
 
 ## Protected state
 

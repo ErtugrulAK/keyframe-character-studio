@@ -10,13 +10,14 @@
 6. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` — accepted milestones and release boundary.
 7. `docs/KCS_BRANCH_STATUS.md` — branch inclusion and protected lines.
 8. `docs/KCS_OPEN_TASKS.md` — remaining decisions and follow-up work.
-9. `docs/KCS_BRANCH_CLEANUP_AUDIT.md` — completed safe merged branch audit.
-10. `docs/KCS_MARKDOWN_CLEANUP_AUDIT.md` — markdown inventory and archive-only plan.
-11. `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md` — remaining investigation branch classifications.
-12. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md` — planning-only branch path.
-13. `docs/KCS_DESKTOP_FOLDER_INVENTORY.md` — desktop collection inventory.
-14. `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md` — archive-only cleanup decision.
-15. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` — applied local archive result.
+9. `docs/KCS_WITHOUT_MASK_BRANCH_AUDIT.md` — standalone branch evidence and archive classification.
+10. `docs/KCS_BRANCH_CLEANUP_AUDIT.md` — completed safe merged branch audit.
+11. `docs/KCS_MARKDOWN_CLEANUP_AUDIT.md` — markdown inventory and archive-only plan.
+12. `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md` — remaining investigation branch classifications.
+13. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md` — planning-only branch path.
+14. `docs/KCS_DESKTOP_FOLDER_INVENTORY.md` — desktop collection inventory.
+15. `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md` — archive-only cleanup decision.
+16. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` — applied local archive result.
 
 ## Reports
 
@@ -29,10 +30,9 @@
 - `reports/progress_063.md` — GitHub presentation review merge result.
 - `reports/progress_064.md` — original presentation branch cleanup result.
 - `reports/progress_065.md` — final checkpoint and Work PC sync handoff.
+- `reports/progress_066.md` — `without-mask` branch audit and archive classification.
 
-`docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free Home PC tooling state.
-Historical reports remain unchanged and are audit-trail documents, not first-read current state.
-
+`docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free global tooling state. Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 
 ## OGraf docs
 

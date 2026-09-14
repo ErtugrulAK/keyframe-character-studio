@@ -16,3 +16,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_063.md` — GitHub presentation review merge result.
 - `progress_064.md` — original presentation branch cleanup result.
 - `progress_065.md` — final checkpoint and Work PC sync handoff.
+- `progress_066.md` — `without-mask` branch audit and archive classification.

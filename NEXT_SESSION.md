@@ -10,37 +10,33 @@ Checkout:
 
 `main`
 
-Integrated RC:
+Current main:
 
-`integration/v6-ui-ograf-public-controls-rc@111c101`
+`258dda3`
 
-Main before:
+Release tag:
 
-`8024d4f`
-
-Main after:
-
-`111c101`
+`v1.1.0-public-controls@6351d1a`
 
 ## Guardrails
 
-- Do not merge to or otherwise rewrite `main`.
-- Do not reset hard, force push, delete additional branches, reports, QA folders, or `.omp/backups/`.
+- Do not reset hard, force push, delete reports, QA folders, or `.omp/backups/`.
 - Do not modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 - Keep `.omp/config.yml` `memory.backend: mnemopi`.
-- Do not change model roles, provider mappings, or global configuration.
+- Do not change model roles, provider mappings, or global configuration without approval.
 - Keep the OMP tooling branch separate.
+- Do not delete, rename, merge, cherry-pick, or import from `without-mask` without separate approval.
 
-## First task
+## Completed `without-mask` decision
+
+`origin/without-mask@eb1d9b4` is a standalone root-commit KCS project snapshot with no merge base against `main`. It contains unique source, tests, docs, database artifacts, and wiki/assets content. The audit classification is `ARCHIVE`; the remote branch remains untouched.
 
 Review:
 
-1. `reports/progress_065.md`
-2. `docs/OMP_GLOBAL_TOOLING_STATUS.md`
-3. `docs/KCS_CURRENT_STATE.md`
+1. `docs/KCS_WITHOUT_MASK_BRANCH_AUDIT.md`
+2. `reports/progress_066.md`
+3. `docs/KCS_BRANCH_STATUS.md`
 
-The Home PC checkpoint is documented. `main` contains the released product and presentation documentation; the release tag remains `v1.1.0-public-controls @ 6351d1a`. No branches or tags were changed by this checkpoint.
+## Next action
 
-## Next approval boundary
-
-Synchronize the Work PC repository and global OMP tooling without copying credential stores or secrets. Then decide the keep/archive policy for `without-mask` and move to GitHub Actions/CI.
+Move to GitHub Actions/CI. Any later archive rename, bundle archive, deletion, merge, cherry-pick, or selected import for `without-mask` requires explicit approval.

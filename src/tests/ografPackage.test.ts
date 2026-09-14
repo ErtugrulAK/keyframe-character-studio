@@ -181,6 +181,26 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
     }
   });
 
+  test.each(['portable-graphic.ograf.json', 'scene.kcs', 'graphic.mjs'])('rejects missing text content for %s', async (path) => {
+    const root = await mkdtemp(join(tmpdir(), 'kcs-ograf-content-'));
+    try {
+      const plan = compileOGrafPackage(makeScene(), {
+        assetCatalog: {
+          'source/logo.png': { kind: 'local', sourcePath: join(root, 'logo.png'), packagedPath: 'assets/images/logo.png' },
+        },
+      });
+      const malformedPlan = {
+        ...plan,
+        files: plan.files.map((file) => file.path === path ? { ...file, content: undefined } : file),
+      };
+
+      await expect(materializeOGrafPackage(malformedPlan, join(root, 'output'))).rejects.toThrow(`Missing text content for packaged file: ${path}`);
+      await expect(readFile(join(root, 'output', path), 'utf8')).rejects.toThrow();
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   test('blocks package path traversal', () => {
     const plan = compileOGrafPackage(makeScene(), {
       assetCatalog: {

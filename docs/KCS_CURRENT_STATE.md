@@ -1,6 +1,6 @@
 # KCS Current State
 
-The accepted KCS product/documentation line is integrated into `main@6351d1a`; the release tag `v1.1.0-public-controls` points to this release checkpoint. The audited safe merged branches were removed. The OMP tooling branch and investigation branches remain separate.
+The accepted KCS product and documentation line is integrated into `main@b51f4f3`; the release tag `v1.1.0-public-controls` points to `6351d1a`. Safe merged branch cleanup, safe Copilot cleanup, and the GitHub presentation import/cleanup are complete. `without-mask` remains a manual decision, and the OMP tooling branch remains separate.
 
 The second target-host QA completed successfully:
 
@@ -24,13 +24,13 @@ Specification: `docs/design/KCS_OGRAF_PUBLIC_CONTROLS_V1_SPEC.md`.
 
 ## Branch
 
-`main@6351d1a` is the released checkpoint.
+`main@b51f4f3` is the current pushed checkpoint before this docs-only update. The release tag remains at `6351d1a`.
 
 The OMP tooling branch remains separate:
 
 - `chore/omp-kcs-config-optimization`
 
-Investigation branches remain preserved: the three `copilot/*` branches, `docs/github-presentation`, and `without-mask`. The safe merged branches were deleted after ancestry verification. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, and `.omp/backups/` are unchanged.
+`docs/github-presentation` and the review branch cleanup are complete. `without-mask` remains preserved for manual review. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, and `.omp/backups/` are unchanged.
 
 ## Generated QA
 
@@ -68,4 +68,6 @@ The desktop collection inventory and archive result are recorded in:
 
 ## Next order
 
-1. Run the final two-PC sync audit on both machines.
+1. Sync the Work PC repository and global OMP tooling safely.
+2. Decide the keep/archive policy for `without-mask`.
+3. Move to GitHub Actions/CI.

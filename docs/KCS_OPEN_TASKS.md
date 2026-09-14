@@ -1,18 +1,20 @@
 # KCS Open Tasks
 
-## P0 — without-mask and CI decision
+## P0 — Final synchronization and branch decision
 
+- Sync the Work PC repository and global OMP tooling safely.
 - Decide whether to keep or archive `without-mask`.
 - Then move to GitHub Actions/CI work.
 
 ## Current release state
 
-Public Controls V1 and the reviewed GitHub presentation materials are integrated into `main`. The original `docs/github-presentation` branch was deleted after verification. Release tag `v1.1.0-public-controls` targets `6351d1a`.
+Public Controls V1 and the reviewed GitHub presentation materials are integrated into `main`. The original presentation branch and review branch were cleaned up. Release tag `v1.1.0-public-controls` targets `6351d1a`.
 
-## Investigation state
+## Global tooling state
 
-- `without-mask` remains preserved for manual keep/archive review.
-- `chore/omp-kcs-config-optimization` remains separate and must be kept.
+- Home PC OMP and OpenCode tooling is configured and subagent/task delegation is ready.
+- Context7 and Playwright MCP checks passed; gated tools remain gated.
+- `memory.backend: mnemopi` and `modelRoles` remain unchanged.
 
 ## P2 — Non-blocking follow-up
 

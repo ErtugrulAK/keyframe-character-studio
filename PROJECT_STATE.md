@@ -32,4 +32,4 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 
 ## Current next action
 
-Decide whether to keep or archive `without-mask`, then move to GitHub Actions/CI. The presentation review and original `docs/github-presentation` branch cleanup are complete; the OMP tooling branch remains separate.
+Run the final Work PC repository and global OMP tooling synchronization without copying credential stores or secrets. Then decide whether to keep or archive `without-mask`, followed by GitHub Actions/CI work.

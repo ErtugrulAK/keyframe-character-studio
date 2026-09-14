@@ -15,3 +15,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_062.md` — GitHub presentation import review result.
 - `progress_063.md` — GitHub presentation review merge result.
 - `progress_064.md` — original presentation branch cleanup result.
+- `progress_065.md` — final checkpoint and Work PC sync handoff.

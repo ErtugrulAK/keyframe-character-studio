@@ -28,9 +28,9 @@
 - `reports/progress_062.md` — GitHub presentation import review result.
 - `reports/progress_063.md` — GitHub presentation review merge result.
 - `reports/progress_064.md` — original presentation branch cleanup result.
+- `reports/progress_065.md` — final checkpoint and Work PC sync handoff.
 
-Presentation review material is indexed at `docs/presentation/README.md`.
-
+`docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free Home PC tooling state.
 Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 
 

@@ -1,13 +1,12 @@
 # KCS Branch Status
 
-Public-controls work and the reviewed GitHub presentation materials are integrated into `main`. The original `docs/github-presentation` branch was deleted after import verification. `without-mask` and the OMP tooling branch remain separate and untouched.
+Public-controls work, presentation materials, and the final cleanup state are integrated into `main`. The current docs-only checkpoint is being recorded from `main@b51f4f3`; `without-mask` and the OMP tooling branch remain separate and untouched.
 
 | BRANCH | PURPOSE | STATUS | LATEST KNOWN COMMIT | NEXT ACTION |
 |---|---|---|---|---|
-| `main` | Protected product baseline | INTEGRATED / RELEASE-TAGGED | `4d8a5ca` | Decide without-mask policy |
+| `main` | Protected product baseline | INTEGRATED / RELEASE-TAGGED | `b51f4f3` before checkpoint | Work PC sync |
 | `chore/omp-kcs-config-optimization` | Project-local OMP policy | SEPARATE / COMPLETE | `50b42d4` | Keep separate |
 | `without-mask` | Divergent historical line | UNKNOWN / PRESERVED | `eb1d9b4` | Manual keep/archive decision |
-
 ## Public-controls scope
 
 - Text fields are generated for visible text layers, with explicit `headline` compatibility.

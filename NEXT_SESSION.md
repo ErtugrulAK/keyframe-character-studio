@@ -35,12 +35,12 @@ Main after:
 
 Review:
 
-1. `reports/progress_064.md`
-2. `docs/KCS_BRANCH_STATUS.md`
-3. `docs/KCS_OPEN_TASKS.md`
+1. `reports/progress_065.md`
+2. `docs/OMP_GLOBAL_TOOLING_STATUS.md`
+3. `docs/KCS_CURRENT_STATE.md`
 
-The original `docs/github-presentation` branch was deleted after verifying its useful presentation material on `main`. `without-mask` and `chore/omp-kcs-config-optimization` remain untouched. Tag `v1.1.0-public-controls` still targets `6351d1a`.
+The Home PC checkpoint is documented. `main` contains the released product and presentation documentation; the release tag remains `v1.1.0-public-controls @ 6351d1a`. No branches or tags were changed by this checkpoint.
 
 ## Next approval boundary
 
-Decide whether to keep or archive `without-mask`, then move to GitHub Actions/CI work. Do not modify the preserved OMP branch or release tag.
+Synchronize the Work PC repository and global OMP tooling without copying credential stores or secrets. Then decide the keep/archive policy for `without-mask` and move to GitHub Actions/CI.

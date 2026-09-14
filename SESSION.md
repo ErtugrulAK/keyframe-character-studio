@@ -74,3 +74,9 @@ Release tag `v1.1.0-public-controls` was created and pushed at `6351d1a`. The au
 - `reports/progress_064.md` records deletion of the original `docs/github-presentation` remote branch.
 - Imported presentation assets remain on `main`.
 - `without-mask` and `chore/omp-kcs-config-optimization` remain untouched.
+
+## Final checkpoint
+
+- `reports/progress_065.md` records the release, branch, presentation, and Home PC OMP tooling checkpoint.
+- `docs/OMP_GLOBAL_TOOLING_STATUS.md` contains only secret-free tooling status and gating rules.
+- Next action is safe Work PC repository and global OMP tooling synchronization.

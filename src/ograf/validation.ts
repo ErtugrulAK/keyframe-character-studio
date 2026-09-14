@@ -235,7 +235,6 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
   if (layer.trackMatte && layer.trackMatte.sourceLayerId === layer.id) {
     diagnostics.push(diagnostic('OGRAF_INVALID_TRACK_MATTE', 'ERROR', 'Track Matte V2 cannot reference its own layer.', layer, 'track-matte'));
   }
-
   const proceduralValues = [layer.inAnimPreset, layer.outAnimPreset].filter((value): value is string => Boolean(value));
   if (proceduralValues.some((value) => /(?:shake|random)/iu.test(value))) {
     diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_NONDETERMINISTIC_PROCEDURAL', 'ERROR', 'Non-deterministic procedural animation is not supported by OGraf Export V1.', layer, 'procedural-animation'));
@@ -248,8 +247,9 @@ function createPublicStateSchema(
   colorFields: OGrafPublicColorField[],
   assets: OGrafAssetPlan[],
 ): OGrafPublicStateSchema {
-  const properties: Record<string, Record<string, unknown>> = {};
+  const properties: Record<string, Record<string, unknown>> = Object.create(null);
   for (const field of textFields) {
+    if (isPrototypeSensitiveKey(field.id)) continue;
     properties[field.id] = {
       type: 'string',
       ...(field.title ? { title: field.title } : {}),
@@ -258,6 +258,7 @@ function createPublicStateSchema(
   }
   const packagedImageValues = assets.filter((asset) => asset.kind === 'image').map((asset) => asset.packagedPath);
   for (const field of imageFields) {
+    if (isPrototypeSensitiveKey(field.id)) continue;
     properties[field.id] = {
       type: 'string',
       enum: field.options || packagedImageValues,
@@ -266,6 +267,7 @@ function createPublicStateSchema(
     };
   }
   for (const field of colorFields) {
+    if (isPrototypeSensitiveKey(field.id)) continue;
     properties[field.id] = {
       type: 'string',
       format: 'color',

@@ -174,6 +174,24 @@ describe('OGraf Export V1 Phase 1', () => {
     expect(result.canCompile).toBe(false);
     expect(result.diagnostics.some((diagnostic) => diagnostic.feature === 'mask-id')).toBe(true);
   });
+  test.each(['constructor', '__proto__', 'prototype'] as const)('rejects a prototype-sensitive legacy matte source independently %s', (id) => {
+    const result = validateSceneForOGraf(makeScene([
+      makeLayer({ id: 'source' }),
+      makeLayer({ id: 'target', matte: { sourcePartId: id, mode: 'alpha' } }),
+    ]));
+    expect(result.canCompile).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.feature === 'track-matte')).toBe(true);
+  });
+
+  test.each(['constructor', '__proto__', 'prototype'] as const)('rejects a prototype-sensitive track matte source independently %s', (id) => {
+    const result = validateSceneForOGraf(makeScene([
+      makeLayer({ id: 'source' }),
+      makeLayer({ id: 'target', trackMatte: { sourceLayerId: id, mode: 'alpha' } }),
+    ]));
+    expect(result.canCompile).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.feature === 'track-matte')).toBe(true);
+  });
+
 
   test.each(['constructor', '__proto__', 'prototype'] as const)('rejects prototype-sensitive public field ID %s at the schema boundary', (id) => {
     const result = validateSceneForOGraf(makeScene(), {
@@ -183,6 +201,7 @@ describe('OGraf Export V1 Phase 1', () => {
     expect(result.diagnostics.some((diagnostic) => diagnostic.severity === 'ERROR')).toBe(true);
     if (id === '__proto__') {
       expect(Object.prototype.hasOwnProperty.call(result.publicStateSchema.properties, id)).toBe(false);
+      expect(Object.getPrototypeOf(result.publicStateSchema.properties)).toBeNull();
     }
   });
 

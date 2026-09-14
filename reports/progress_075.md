@@ -15,16 +15,16 @@ Implemented:
 - Prototype-sensitive package path segment rejection through the central path policy.
 - Own-key embedded MIME allowlist checks for data and blob image preparation.
 - Null-prototype/own-key-safe generated runtime maps for transforms, matte/mask/clip bookkeeping, public bindings, image/font references, procedural broadcast state, and frame overrides.
-- Regression coverage for hostile layer types/IDs, mask and matte IDs, public field IDs, exact package keys, embedded MIME values, and browser ZIP rejection.
+- Regression coverage for hostile layer types/IDs, isolated mask/matte/track-matte IDs, public field IDs, exact package keys, embedded MIME values, browser ZIP rejection, and schema map integrity.
 
 ## Validation
 
 - `npm ci` — PASS; existing deprecated `prebuild-install` and blocked `sqlite3` install-script warnings remain.
-- Focused hostile-key tests — PASS, 5 files / 69 tests.
-- Full Vitest — PASS, 101 files / 1,473 tests.
+- Focused hostile-key tests — PASS, 5 files / 75 tests.
+- Full Vitest — PASS, 101 files / 1,479 tests.
 - TypeScript — PASS.
 - Lint — PASS with the existing `AnimatorContext.tsx:655` Fast Refresh warning.
-- Build — PASS with the existing Vite chunk-size warning; generated JS is approximately 591.87 kB.
+- Build — PASS with the existing Vite chunk-size warning; generated JS is approximately 591.93 kB.
 - `git diff --check` — PASS.
 - `validate:ograf` — NOT APPLICABLE; no `*.ograf.json` fixtures exist.
 
@@ -56,7 +56,7 @@ Explicit follow-ups, not folded into this narrow patch:
 
 ## Delivery
 
-- Commit: `fix: harden prototype-sensitive imported keys`
+- Commits: `00d8e88` (`fix: harden prototype-sensitive imported keys`) and the follow-up schema/mask regression fix.
 - Push target: `origin/feat/prototype-key-security-hardening`
 - Main merge: intentionally not performed.
 - Production release/tag: intentionally not prepared.

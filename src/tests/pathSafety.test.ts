@@ -73,8 +73,23 @@ describe('Windows path safety', () => {
     expect(isSafePackageRelativePath('assets/images/logo.')).toBe(false);
   });
 
-  test('accepts printable ASCII package paths but rejects Unicode package paths', () => {
-    expect(isSafePackageRelativePath('assets/images/logo-2.png')).toBe(true);
+  test.each([
+    'assets/images/logo#2.png',
+    'assets/images/logo?2.png',
+    'assets/images/logo%2.png',
+  ])('rejects URL-unsafe package-relative path %s', (path) => {
+    expect(isSafePackageRelativePath(path)).toBe(false);
+  });
+
+  test.each([
+    'assets/images/logo-2.png',
+    'assets/images/logo_2.png',
+    'assets/fonts/font-regular.ttf',
+  ])('accepts valid package-relative asset path %s', (path) => {
+    expect(isSafePackageRelativePath(path)).toBe(true);
+  });
+
+  test('rejects Unicode package paths', () => {
     expect(isSafePackageRelativePath('assets/images/キャラクター.png')).toBe(false);
   });
 

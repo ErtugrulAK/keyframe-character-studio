@@ -27,6 +27,7 @@ const WINDOWS_RESERVED_NAMES: Record<string, true> = {
 };
 const WINDOWS_INVALID_FILENAME_CHARACTERS = /[<>:"/\\|?*]/u;
 const WINDOWS_INVALID_FILENAME_CHARACTERS_GLOBAL = /[<>:"/\\|?*]/gu;
+const PACKAGE_UNSAFE_URL_CHARACTERS = /[?#%]/u;
 function replaceControlCharacters(value: string): string {
   return Array.from(value, (character) => character.charCodeAt(0) < 0x20 ? '-' : character).join('');
 }
@@ -59,7 +60,7 @@ export function isSafePackageRelativePath(value: string): boolean {
   if (!normalized
     || normalized.startsWith('/')
     || /^[a-zA-Z]:/u.test(normalized)
-    || normalized.includes('%')
+    || PACKAGE_UNSAFE_URL_CHARACTERS.test(normalized)
     || normalized.endsWith('/')
     || /[^\x20-\x7E]/u.test(normalized)) {
     return false;

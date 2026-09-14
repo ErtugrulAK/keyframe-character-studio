@@ -12,7 +12,7 @@ Windows-safe filename and package-relative path handling for KCS exports, OGraf 
 - Empty, whitespace-only, dot-only, and reserved generated names use deterministic safe fallbacks.
 - Unicode filename content is preserved by the filename sanitizer where it is otherwise safe.
 - Package-internal paths normalize `\\` to `/`.
-- Package paths reject absolute paths, drive-letter paths, UNC paths, traversal segments, empty/dot segments, encoded-percent traversal markers, invalid characters, non-ASCII package entry characters, trailing dots/spaces, reserved device-name segments, and directory entries.
+- Package paths reject absolute paths, drive-letter paths, UNC paths, traversal segments, empty/dot segments, URL-unsafe query/fragment characters (`?` and `#`), encoded-percent traversal and escape markers (`%`), invalid characters, non-ASCII package entry characters, trailing dots/spaces, reserved device-name segments, and directory entries.
 - Package asset collisions are compared case-insensitively and receive deterministic suffixes where the existing collision policy permits recovery.
 - Browser ZIP creation and filesystem materialization revalidate normalized paths and reject case-insensitive duplicate entries.
 - Standard KCS download filenames now use the same filename-component sanitizer.
@@ -43,7 +43,7 @@ Public Controls V1 image values remain package-relative and are still restricted
 
 ## Tests
 
-- `src/tests/pathSafety.test.ts` covers invalid characters, reserved names including superscript COM/LPT forms with mixed case and extensions, trailing separators, Unicode preservation, slash normalization, traversal, absolute/UNC paths, allowed asset prefixes, non-ASCII package rejection, and case-insensitive collisions.
+- `src/tests/pathSafety.test.ts` covers invalid characters, reserved names including superscript COM/LPT forms with mixed case and extensions, URL-unsafe `?`/`#`/`%` package paths, trailing separators, Unicode preservation, slash normalization, traversal, absolute/UNC paths, allowed asset prefixes, non-ASCII package rejection, and case-insensitive collisions.
 - `src/tests/ografPackage.test.ts` covers reserved graphic fallback, reserved asset rejection, and case-insensitive asset collision handling.
 - Existing OGraf browser ZIP and package tests remain passing.
 

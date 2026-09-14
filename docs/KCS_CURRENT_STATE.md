@@ -1,6 +1,6 @@
 # KCS Current State
 
-The accepted KCS product and documentation line is integrated into `main@258dda3`; the release tag `v1.1.0-public-controls` points to `6351d1a`. Safe merged branch cleanup, safe Copilot cleanup, and the GitHub presentation import/cleanup are complete. The `without-mask` manual decision is now classified as archive/preserve, and the OMP tooling branch remains separate.
+The accepted KCS product and documentation line is integrated into `main@b34879a`; the release tag `v1.1.0-public-controls` resolves to `0a71bd8` in this checkout. Safe merged branch cleanup, safe Copilot cleanup, and the GitHub presentation import/cleanup are complete. The `without-mask` manual decision is classified as archive/preserve, and the OMP tooling branch remains separate.
 
 ## Public Controls V1
 
@@ -12,16 +12,22 @@ The accepted KCS product and documentation line is integrated into `main@258dda3
 
 Specification: `docs/design/KCS_OGRAF_PUBLIC_CONTROLS_V1_SPEC.md`.
 
+## Windows Path Hardening V1
+
+The feature branch `feat/windows-path-hardening-v1` adds centralized Windows filename and package-relative path safety for KCS downloads, OGraf IDs, package assets, browser ZIP entries, and filesystem materialization. It rejects invalid characters, device names, trailing dots/spaces, traversal, absolute/UNC/drive paths, unsafe package segments, and case-insensitive package collisions while preserving valid OGraf structure and public-controls behavior.
+
+Specification and evidence: `docs/KCS_WINDOWS_PATH_HARDENING.md` and `reports/progress_068.md`.
+
 ## `without-mask` branch decision
 
-`origin/without-mask@eb1d9b4` is a root commit with no parent and no merge base with `main`. It is a complete standalone KCS project snapshot containing source, tests, docs, database artifacts, and a large wiki/assets corpus. No current PR or issue reference was found by the available `gh` queries.
+`origin/without-mask` is a root commit with no parent and no merge base with `main`. It is a complete standalone KCS project snapshot containing source, tests, docs, database artifacts, and a large wiki/assets corpus. No current PR or issue reference was found by the available `gh` queries.
 
 Classification: **ARCHIVE**. The remote branch remains untouched. Future rename, bundle archive, deletion, merge, cherry-pick, or selected import requires explicit approval. Full evidence is recorded in `docs/KCS_WITHOUT_MASK_BRANCH_AUDIT.md` and `reports/progress_066.md`.
 
 ## Protected state
 
-- `main` is integrated at `258dda3`.
-- Release tag `v1.1.0-public-controls` points to `6351d1a`.
+- `main` remains integrated at `b34879a`.
+- Release tag `v1.1.0-public-controls` remains unchanged at the observed `0a71bd8`.
 - Historical reports and old host QA folders are preserved.
 - Read-only corpus: `C:\Users\ertugrul.ak\Desktop\ograf-graphics`; do not modify.
 - `.omp/backups/` is preserved and ignored.
@@ -29,16 +35,12 @@ Classification: **ARCHIVE**. The remote branch remains untouched. Future rename,
 - Model roles, provider mappings, and global configuration remain unchanged.
 
 ## Validation status
-
-- Release checkpoint and Work PC sync: PASS.
-- `without-mask` read-only audit: PASS; no merge base, standalone root snapshot.
-- `gh` PR/issue searches for `without-mask`: no results.
-- `git diff --check`: PASS for the audit documentation change.
-
+- Windows path hardening focused tests: PASS — 3 files / 27 tests.
+- Full Vitest: PASS — 101 files / 1,444 tests.
+- TypeScript, lint, and production build: PASS; only pre-existing warnings remain.
+- `validate:ograf`: no repository manifests; script usage exit 2 is not applicable to this checkout.
+- Feature branch is ready for commit and push; no merge to main.
 ## Next order
 
-1. Preserve `without-mask` as an archive candidate unless a later approval changes the decision.
-2. Move to GitHub Actions/CI.
-## GitHub Actions / CI
-
-The checked-in CI workflow is green on `main@bd41339`; latest run `34822884119` passed. Local `npm ci`, TypeScript, lint, Vitest (100 files / 1,437 tests), and build also pass. Historical failed runs were caused by stale errors on older commits and are resolved. No workflow or product-code fix was needed. See `docs/KCS_CI_STATUS.md` and `reports/progress_067.md`.
+1. Commit and push `feat/windows-path-hardening-v1` without merging it into `main`.
+2. Review the feature branch before any merge decision.

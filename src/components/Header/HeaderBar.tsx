@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { sanitizeFilenameComponent } from '../../utils/pathSafety';
 import { useAnimator } from '../../context/AnimatorContext';
 import {
   Download,
@@ -69,9 +70,9 @@ export const HeaderBar: React.FC = () => {
     const json = exportProject();
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
+    const cleanFileName = `${sanitizeFilenameComponent(sceneTitle || 'Template', 'Template')}.json`;
     const a = document.createElement('a');
     a.href = url;
-    const cleanFileName = `${sceneTitle || 'Template'}.json`;
     a.download = cleanFileName;
     a.click();
     URL.revokeObjectURL(url);

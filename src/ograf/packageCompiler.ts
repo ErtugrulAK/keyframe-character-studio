@@ -1,4 +1,5 @@
 import type { SceneData } from '../types/composition';
+import { normalizePackagePath } from '../utils/pathSafety';
 import { compileOGrafManifest, isSafeOGrafPackagePath, sanitizeOGrafId } from './compiler';
 import { generateGraphicModule } from './runtimeTemplate';
 import { validateSceneForOGraf } from './validation';
@@ -29,7 +30,7 @@ function uniqueAssetPlans(assets: OGrafAssetPlan[], diagnostics: OGrafExportDiag
   for (const asset of assets) {
     const existing = bySource.get(`${asset.kind}:${asset.source}`);
     if (existing) continue;
-    let packagedPath = asset.packagedPath.replace(/\\/gu, '/');
+    let packagedPath = normalizePackagePath(asset.packagedPath);
     if (!isSafeOGrafPackagePath(packagedPath)) {
       diagnostics.push({
         code: 'OGRAF_MISSING_ASSET',
@@ -42,7 +43,7 @@ function uniqueAssetPlans(assets: OGrafAssetPlan[], diagnostics: OGrafExportDiag
 
     const requestedPath = packagedPath;
     let suffixIndex = 0;
-    while (used.has(packagedPath)) {
+    while (used.has(packagedPath.toLowerCase())) {
       const dot = requestedPath.lastIndexOf('.');
       const suffix = `-${hashString(asset.source)}${suffixIndex ? `-${suffixIndex}` : ''}`;
       packagedPath = dot > 0
@@ -53,7 +54,7 @@ function uniqueAssetPlans(assets: OGrafAssetPlan[], diagnostics: OGrafExportDiag
 
     const planned = { ...asset, packagedPath };
     bySource.set(`${asset.kind}:${asset.source}`, planned);
-    used.add(packagedPath);
+    used.add(packagedPath.toLowerCase());
     unique.push(planned);
   }
   return unique;
@@ -111,13 +112,15 @@ function generatedFiles(
 function packageEntryDiagnostics(files: OGrafPackageFile[], diagnostics: OGrafExportDiagnostic[]): void {
   const seen = new Set<string>();
   for (const file of files) {
-    if (!isSafeOGrafPackagePath(file.path)) {
+    const normalizedPath = normalizePackagePath(file.path);
+    const collisionKey = normalizedPath.toLowerCase();
+    if (!isSafeOGrafPackagePath(normalizedPath)) {
       diagnostics.push({ code: 'OGRAF_INVALID_MAIN', severity: 'ERROR', message: `Package file path "${file.path}" is unsafe.`, feature: 'package-path' });
     }
-    if (seen.has(file.path)) {
+    if (seen.has(collisionKey)) {
       diagnostics.push({ code: 'OGRAF_INVALID_MAIN', severity: 'ERROR', message: `Package file path "${file.path}" is duplicated.`, feature: 'package-path' });
     }
-    seen.add(file.path);
+    seen.add(collisionKey);
   }
 }
 export function compileOGrafPackage(sceneData: SceneData, options: OGrafExportOptions = {}): OGrafGeneratedPackage {

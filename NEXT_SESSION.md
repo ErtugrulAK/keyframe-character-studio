@@ -8,38 +8,38 @@ Repository:
 
 Checkout:
 
-`main`
+`feat/windows-path-hardening-v1`
 
-Current main:
+Base:
 
-`258dda3`
+`main@b34879a`
 
 Release tag:
 
-`v1.1.0-public-controls@6351d1a`
+`v1.1.0-public-controls@0a71bd8` (observed in this checkout; unchanged)
+
+## Current feature
+
+Windows Path Hardening V1 is implemented and focused tests pass. Review `docs/KCS_WINDOWS_PATH_HARDENING.md` and `reports/progress_068.md`.
+
+The feature hardens Windows filename components, OGraf package paths, asset paths, browser ZIP entries, filesystem materialization, and standard KCS export download names. It rejects invalid characters, reserved names, traversal, absolute/UNC/drive paths, trailing dots/spaces, and case-insensitive package collisions.
 
 ## Guardrails
 
 - Do not reset hard, force push, delete reports, QA folders, or `.omp/backups/`.
 - Do not modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 - Keep `.omp/config.yml` `memory.backend: mnemopi`.
-- Do not change model roles, provider mappings, or global configuration without approval.
+- Do not change model roles, provider mappings, or global configuration.
 - Keep the OMP tooling branch separate.
 - Do not delete, rename, merge, cherry-pick, or import from `without-mask` without separate approval.
+- Do not merge `feat/windows-path-hardening-v1` into `main` in this task.
 
-## Completed `without-mask` decision
+## Validation status
 
-`origin/without-mask@eb1d9b4` is a standalone root-commit KCS project snapshot with no merge base against `main`. It contains unique source, tests, docs, database artifacts, and wiki/assets content. The audit classification is `ARCHIVE`; the remote branch remains untouched.
-
-Review:
-
-1. `docs/KCS_WITHOUT_MASK_BRANCH_AUDIT.md`
-2. `reports/progress_066.md`
-3. `docs/KCS_BRANCH_STATUS.md`
+- Focused Vitest: PASS — 3 files / 27 tests.
+- TypeScript: PASS.
+- Full lint, full Vitest, build, diff review, commit, and feature-branch push remain.
 
 ## Next action
 
-Move to GitHub Actions/CI. Any later archive rename, bundle archive, deletion, merge, cherry-pick, or selected import for `without-mask` requires explicit approval.
-## CI audit result
-
-GitHub Actions is green on `main@bd41339`; latest run `34822884119` passed. Local CI-equivalent validation also passed. No workflow fix was needed. Review `docs/KCS_CI_STATUS.md` and `reports/progress_067.md` before moving to the next feature track.
+Run `git diff --check`, `npm ci`, `npx tsc --noEmit`, `npm run lint`, `npm test`, `npm run build`, and available OGraf validation. If all pass, commit `fix: harden windows path handling` and push `feat/windows-path-hardening-v1` only.

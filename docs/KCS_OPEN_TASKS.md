@@ -8,7 +8,7 @@
 
 ## Current release state
 
-Public Controls V1 and the reviewed GitHub presentation materials are integrated into `main`. The release tag `v1.1.0-public-controls` targets `6351d1a`; current main is `258dda3`.
+Public Controls V1 and the reviewed GitHub presentation materials are integrated into `main`. The observed current main is `b34879a`; the release tag `v1.1.0-public-controls` resolves to `0a71bd8` in this checkout.
 
 ## `without-mask` decision
 
@@ -25,9 +25,15 @@ Public Controls V1 and the reviewed GitHub presentation materials are integrated
 - Context7 and Playwright MCP checks passed; gated tools remain gated.
 - `memory.backend: mnemopi` and `modelRoles` remain unchanged.
 
+## P2 — Windows path hardening V1
+
+- Feature branch: `feat/windows-path-hardening-v1`.
+- Centralized filename and package-relative path safety policy is implemented.
+- Focused and full validation passes; only the no-manifest `validate:ograf` usage result and pre-existing warnings remain.
+- Review `docs/KCS_WINDOWS_PATH_HARDENING.md` and `reports/progress_068.md`.
+- Commit and push the feature branch without merging it into `main`.
 ## P2 — Non-blocking follow-up
 
-- Windows case/device-name hardening.
 - Font catalog UI and portable-font UX without unowned fallback binaries.
 - Release tag/changelog polishing.
 
@@ -37,6 +43,3 @@ Public Controls V1 and the reviewed GitHub presentation materials are integrated
 - Keep `memory.backend: mnemopi`.
 - Keep model/provider mappings and global config unchanged.
 - Preserve standard OGraf export, legacy single-file export, KCS project export, and KCS Import behavior.
-## CI audit result
-
-GitHub Actions is green on `main@bd41339`, and the local CI-equivalent commands pass. No workflow fix is currently required. See `docs/KCS_CI_STATUS.md` and `reports/progress_067.md`.

@@ -18,6 +18,7 @@
 14. `docs/KCS_DESKTOP_FOLDER_INVENTORY.md` — desktop collection inventory.
 15. `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md` — archive-only cleanup decision.
 16. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` — applied local archive result.
+17. `docs/KCS_WINDOWS_PATH_HARDENING.md` — Windows filename, package-path, ZIP, and OGraf asset safety policy.
 
 ## Reports
 
@@ -31,6 +32,8 @@
 - `reports/progress_064.md` — original presentation branch cleanup result.
 - `reports/progress_065.md` — final checkpoint and Work PC sync handoff.
 - `reports/progress_066.md` — `without-mask` branch audit and archive classification.
+- `reports/progress_067.md` — GitHub Actions / CI audit and no-fix decision.
+- `reports/progress_068.md` — Windows path hardening V1 implementation checkpoint.
 
 `docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free global tooling state. Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 

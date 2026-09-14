@@ -1,4 +1,5 @@
 import type { SceneData } from '../types/composition';
+import { isSafePackageRelativePath, sanitizeFilenameComponent } from '../utils/pathSafety';
 import { validateSceneForOGraf } from './validation';
 import {
   OGRAF_DEFAULT_MAIN,
@@ -26,7 +27,7 @@ export function sanitizeOGrafId(value: string): string {
     .replace(/-+/gu, '-')
     .replace(/^[-.]+|[-.]+$/gu, '')
     .toLowerCase();
-  return sanitized || 'graphic';
+  return sanitizeFilenameComponent(sanitized, 'graphic').toLowerCase();
 }
 
 function getGraphicId(sceneData: SceneData, options: OGrafExportOptions): string {
@@ -68,14 +69,7 @@ function collectCompilerDiagnostics(
 }
 
 export function isSafeOGrafPackagePath(value: string): boolean {
-  const normalized = value.replace(/\\/gu, '/');
-  return Boolean(normalized)
-    && !normalized.startsWith('/')
-    && !/^[a-zA-Z]:/u.test(normalized)
-    && !normalized.split('/').some((segment) => segment === '..' || segment === '' || segment === '.')
-    && !/[?#%]/u.test(normalized)
-    && !/[^\x20-\x7E]/u.test(normalized)
-    && !normalized.endsWith('/');
+  return isSafePackageRelativePath(value);
 }
 
 export interface OGrafManifestCompilation {

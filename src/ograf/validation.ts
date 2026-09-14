@@ -1,4 +1,5 @@
 import type { SceneData, SceneLayer } from '../types/composition';
+import { normalizePackagePath } from '../utils/pathSafety';
 import {
   type OGrafAssetPlan,
   type OGrafDiagnosticCode,
@@ -11,7 +12,6 @@ import {
   type ValidatedOGrafScene,
 } from './types';
 import { resolveOGrafPublicControls } from './publicControls';
-
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_box: true,
   custom_rect: true,
@@ -55,8 +55,8 @@ function isLikelyLocalAsset(value: string): boolean {
 function normalizePackagedPath(source: string, kind: 'image' | 'font', configuredPath?: string): string {
   const extension = source.split(/[?#]/u)[0].split('.').pop()?.toLowerCase() || (kind === 'image' ? 'asset' : 'font');
   const fallback = `assets/${kind}s/${source.split(/[\\/]/u).pop()?.split(/[?#]/u)[0] || `asset.${extension}`}`;
-  const base = configuredPath?.replace(/\\/gu, '/') || fallback;
-  return base.replace(/^\.\//u, '');
+  const base = configuredPath || fallback;
+  return normalizePackagePath(base).replace(/^\.\/+/u, '');
 }
 function validatePublicFields(
   textFields: OGrafPublicTextField[],
@@ -131,9 +131,11 @@ function validateAsset(
     diagnostics.push(diagnostic('OGRAF_ASSET_UNVERIFIED', 'WARNING', `Local ${kind} asset "${source}" has no supplied asset catalog entry; packaging must verify it later.`, layer, kind));
   }
 
+  const packagedPath = normalizePackagedPath(source, kind, catalogEntry?.packagedPath);
+
   return {
     source,
-    packagedPath: normalizePackagedPath(source, kind, catalogEntry?.packagedPath),
+    packagedPath,
     kind,
     ...(catalogEntry?.sourcePath ? { sourcePath: catalogEntry.sourcePath } : {}),
     ...(catalogEntry?.binaryContent ? { binaryContent: catalogEntry.binaryContent } : {}),
@@ -164,9 +166,10 @@ function validateFont(
   }
 
   const safeName = layer.fontFamily.toLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-+|-+$/gu, '') || 'font';
+  const packagedPath = normalizePackagedPath(layer.fontFamily, 'font', entry.packagedPath || `assets/fonts/${safeName}.font`);
   assets.push({
     source,
-    packagedPath: entry.packagedPath || `assets/fonts/${safeName}.font`,
+    packagedPath,
     kind: 'font',
     ...(entry.sourcePath ? { sourcePath: entry.sourcePath } : {}),
     ...(entry.binaryContent ? { binaryContent: entry.binaryContent } : {}),

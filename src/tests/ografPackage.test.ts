@@ -216,6 +216,40 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
     expect(collision.diagnostics.some((diagnostic) => diagnostic.message.includes('duplicated'))).toBe(true);
   });
 
+  test('sanitizes reserved graphic names without changing the package contract', () => {
+    const plan = compileOGrafPackage({ ...makeScene(), name: 'CON' }, {
+      assetCatalog: {
+        'source/logo.png': { kind: 'local', sourcePath: 'logo.png', packagedPath: 'assets/images/logo.png' },
+      },
+    });
+
+    expect(plan.status).toBe('ready-to-materialize');
+    expect(plan.files[0]?.path).toBe('graphic.ograf.json');
+    expect(plan.files.map((file) => file.path)).toContain('scene.kcs');
+  });
+
+  test('blocks reserved asset entries and resolves case-insensitive collisions', () => {
+    const blocked = compileOGrafPackage(makeScene(), {
+      assetCatalog: {
+        'source/logo.png': { kind: 'local', sourcePath: 'logo.png', packagedPath: 'assets/images/CON.png' },
+      },
+    });
+    expect(blocked.status).toBe('blocked');
+    expect(blocked.diagnostics.some((diagnostic) => diagnostic.code === 'OGRAF_MISSING_ASSET')).toBe(true);
+
+    const collision = compileOGrafPackage(makeScene([
+      makeLayer({ id: 'one', imageUrl: 'one.png' }),
+      makeLayer({ id: 'two', imageUrl: 'two.png', zIndex: 1 }),
+    ]), {
+      assetCatalog: {
+        'one.png': { kind: 'local', sourcePath: 'one.png', packagedPath: 'assets/images/Logo.png' },
+        'two.png': { kind: 'local', sourcePath: 'two.png', packagedPath: 'assets/images/logo.PNG' },
+      },
+    });
+    expect(collision.status).toBe('ready-to-materialize');
+    expect(new Set(collision.assets.map((asset) => asset.packagedPath.toLowerCase())).size).toBe(2);
+  });
+
   test('loads and updates declared public text while rejecting undeclared fields', () => {
     const plan = compileOGrafPackage(makeScene([makeLayer({ type: 'custom_text', imageUrl: undefined, textValue: 'Old' })]), {
       publicTextFields: [{ id: 'headline', layerId: 'image-1' }],

@@ -22,3 +22,6 @@ Public-controls work, presentation materials, and the final cleanup state are in
 ## Protected invariants
 
 `main` is release-tagged at `6351d1a` as `v1.1.0-public-controls`. `memory.backend: mnemopi`, model/provider mappings, global OMP configuration, `.omp/backups/`, old QA folders, and the read-only corpus remain unchanged. No product source/package/test files changed in this audit.
+## CI audit update
+
+Current `main@bd41339` has green GitHub Actions CI. The latest `CI Pipeline` run is `34822884119`; historical failures were from older commits and are resolved. No workflow or product source change was required. See `docs/KCS_CI_STATUS.md` and `reports/progress_067.md`.

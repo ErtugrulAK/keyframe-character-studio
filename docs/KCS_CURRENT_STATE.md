@@ -39,3 +39,6 @@ Classification: **ARCHIVE**. The remote branch remains untouched. Future rename,
 
 1. Preserve `without-mask` as an archive candidate unless a later approval changes the decision.
 2. Move to GitHub Actions/CI.
+## GitHub Actions / CI
+
+The checked-in CI workflow is green on `main@bd41339`; latest run `34822884119` passed. Local `npm ci`, TypeScript, lint, Vitest (100 files / 1,437 tests), and build also pass. Historical failed runs were caused by stale errors on older commits and are resolved. No workflow or product-code fix was needed. See `docs/KCS_CI_STATUS.md` and `reports/progress_067.md`.

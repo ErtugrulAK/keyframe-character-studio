@@ -57,3 +57,8 @@ OMP optimization remains on `chore/omp-kcs-config-optimization`:
 - `C:\Users\senmu\Masaüstü\KCS\kcs-ograf-host-compat-qa`
 - `C:\Users\senmu\Masaüstü\KCS\kcs-ograf-downstream-qa`
 - `C:\Users\senmu\Masaüstü\KCS\ograf-graphics` (read-only)
+
+## CI status
+
+- `docs/KCS_CI_STATUS.md` — GitHub Actions inventory, remote status, local reproduction, and diagnosis.
+- `reports/progress_067.md` — CI audit result and no-fix decision.

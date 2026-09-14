@@ -26,3 +26,6 @@ Do not delete, rename, merge, cherry-pick, or import from `without-mask` without
 
 - `docs/KCS_WITHOUT_MASK_BRANCH_AUDIT.md` contains the full evidence and classification.
 - `reports/progress_066.md` records this docs-only audit checkpoint.
+## GitHub Actions / CI audit
+
+The latest GitHub Actions `CI Pipeline` run `34822884119` passed on `main@bd41339`. Local `npm ci`, TypeScript, lint, Vitest (100 files / 1,437 tests), and build passed. Historical failures were stale errors from older commits. No CI or product-code fix was made. Full evidence is in `docs/KCS_CI_STATUS.md` and `reports/progress_067.md`.

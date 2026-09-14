@@ -37,3 +37,6 @@ Public Controls V1 and the reviewed GitHub presentation materials are integrated
 - Keep `memory.backend: mnemopi`.
 - Keep model/provider mappings and global config unchanged.
 - Preserve standard OGraf export, legacy single-file export, KCS project export, and KCS Import behavior.
+## CI audit result
+
+GitHub Actions is green on `main@bd41339`, and the local CI-equivalent commands pass. No workflow fix is currently required. See `docs/KCS_CI_STATUS.md` and `reports/progress_067.md`.

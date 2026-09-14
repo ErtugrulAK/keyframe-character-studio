@@ -38,3 +38,6 @@ The branch includes the accepted V3.4.1, V3.5, V3.6/OGraf Package V2, OGraf V2.1
 ## Current next action
 
 Move to GitHub Actions/CI. Keep `without-mask` and `chore/omp-kcs-config-optimization` separate and preserved unless a later explicit approval changes either decision.
+## GitHub Actions / CI
+
+The checked-in CI workflow is green on `main@bd41339`; latest run `34822884119` passed. Local CI-equivalent validation passes. Historical failures were resolved on later commits. No workflow, source, package, test, branch, or tag change was required. See `docs/KCS_CI_STATUS.md` and `reports/progress_067.md`.

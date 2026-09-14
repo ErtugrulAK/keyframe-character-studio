@@ -8,7 +8,7 @@ Windows-safe filename and package-relative path handling for KCS exports, OGraf 
 
 - Filename components reject Windows-invalid characters and ASCII control characters.
 - Trailing dots and spaces are removed from generated filename components.
-- Reserved device names are rejected case-insensitively, including extensions: `CON`, `PRN`, `AUX`, `NUL`, `CLOCK$`, `COM0`-`COM9`, and `LPT0`-`LPT9`.
+- Reserved device names are rejected case-insensitively, including extensions: `CON`, `PRN`, `AUX`, `NUL`, `CLOCK$`, `COM0`-`COM9`, `LPT0`-`LPT9`, and Windows-equivalent superscript forms `COM¹`-`COM³` / `LPT¹`-`LPT³`.
 - Empty, whitespace-only, dot-only, and reserved generated names use deterministic safe fallbacks.
 - Unicode filename content is preserved by the filename sanitizer where it is otherwise safe.
 - Package-internal paths normalize `\\` to `/`.
@@ -43,7 +43,7 @@ Public Controls V1 image values remain package-relative and are still restricted
 
 ## Tests
 
-- `src/tests/pathSafety.test.ts` covers invalid characters, reserved names, trailing separators, Unicode preservation, slash normalization, traversal, absolute/UNC paths, allowed asset prefixes, and case-insensitive collisions.
+- `src/tests/pathSafety.test.ts` covers invalid characters, reserved names including superscript COM/LPT forms with mixed case and extensions, trailing separators, Unicode preservation, slash normalization, traversal, absolute/UNC paths, allowed asset prefixes, non-ASCII package rejection, and case-insensitive collisions.
 - `src/tests/ografPackage.test.ts` covers reserved graphic fallback, reserved asset rejection, and case-insensitive asset collision handling.
 - Existing OGraf browser ZIP and package tests remain passing.
 

@@ -36,7 +36,7 @@ export function normalizePackagePath(value: string): string {
 }
 
 export function isReservedWindowsName(component: string): boolean {
-  const trimmed = component.trim().replace(/[. ]+$/gu, '');
+  const trimmed = component.normalize('NFKC').trim().replace(/[. ]+$/gu, '');
   const stem = trimmed.split('.')[0]?.toUpperCase() || '';
   return WINDOWS_RESERVED_NAMES[stem] === true;
 }

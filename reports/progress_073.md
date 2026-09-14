@@ -19,7 +19,7 @@ Plain-object maps and property assignment remain vulnerable to integrity/availab
 - Generated runtime maps for transforms, masks, mattes, clip definitions, image/font references, and related IDs use plain objects in several paths; hostile IDs can produce inherited-key cache hits, missing references, or malformed output.
 - `SUPPORTED_LAYER_TYPES[layer.type]` can accept inherited `constructor`/`__proto__` values instead of requiring an own supported key.
 
-Classification: medium-to-high integrity/availability follow-up. No confirmed code execution or global prototype pollution. Implement on a separate feature branch with own-key/null-prototype/Map hardening and hostile-ID regression tests.
+Classification: high-priority integrity/availability blocker for untrusted imported scene JSON. No confirmed code execution or global prototype pollution. Implement on a separate feature branch with own-key/null-prototype/Map hardening and hostile-ID regression tests before any production release.
 
 ### 2. Embedded image MIME allowlist — follow-up required
 

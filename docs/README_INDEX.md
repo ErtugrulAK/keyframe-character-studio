@@ -36,6 +36,12 @@
 - `reports/progress_068.md` — Windows path hardening V1 implementation checkpoint.
 
 `docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free global tooling state. Historical reports remain unchanged and are audit-trail documents, not first-read current state.
+- `reports/progress_075.md` — prototype-key security hardening implementation.
+- `reports/progress_076.md` — prototype-key merge and post-merge validation.
+- `reports/progress_077.md` — security follow-up and release-gate review.
+- `reports/progress_078.md` — isolated OGraf materialization content guards branch.
+- `reports/progress_079.md` — follow-up security state reconciliation.
+- `reports/progress_080.md` — general project health and release-gate review.
 
 ## OGraf docs
 

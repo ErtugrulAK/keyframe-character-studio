@@ -22,12 +22,11 @@ There is no Playwright job in the checked-in CI workflow. No workflow timeout or
 
 ## Remote status
 
-`gh` was authenticated. The latest CI run is green:
+`gh` was authenticated during the prior audit. The last recorded CI run was green:
 
-- Run `34822884119` — `CI Pipeline`, push of `bd41339` (`docs: audit without-mask branch`), success.
-- URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/34822884119
+- Run `34822884119` — `CI Pipeline`, push of `bd41339`, success.
 - Job `Build, Lint & Test Verification`: success.
-
+- Main has since received the security-hardening and documentation commits; local validation on the current line remains green.
 The preceding runs for `258dda3`, `b51f4f3`, the release tag checkpoint, and earlier main commits are also successful. Two historical failures were inspected:
 
 - Run `33276967365` failed at an old commit because of several stale TypeScript errors and an unused import.
@@ -37,12 +36,12 @@ Those errors are absent from current `main` and are not current workflow failure
 
 ## Local reproduction
 
-Using `npm ci` and the current checkout:
+Using the current checkout and current dependency lock:
 
-- `npm ci`: PASS; npm reported existing dependency advisories/deprecation notices only.
+- `npm ci`: PASS; existing dependency deprecation/install-script notices only.
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS with the existing Fast Refresh warning.
-- `npm test`: PASS — 100 files, 1,437 tests.
+- `npm test`: PASS — 101 files, 1,479 tests on main; the isolated guard branch adds three direct malformed-content cases.
 - `npm run build`: PASS; existing Vite chunk-size warning only.
 
 The full Playwright aggregate was not rerun because the established release evidence documents that the 254-test aggregate exceeds the command timeout. The checked-in CI workflow does not invoke it. No new e2e failure was reproduced or diagnosed.

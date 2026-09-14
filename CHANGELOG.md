@@ -5,7 +5,15 @@ All notable changes to **Keyframe Character Studio** will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+- Hardened prototype-sensitive imported OGraf keys, package paths, MIME lookups, and generated runtime maps.
+- Added a separate OGraf materialization guard branch for missing text-file content; it remains pending review and is not part of `main`.
+- Tracked SVG input, matte/mask, hierarchy, sourcePath, and filesystem follow-ups as release blockers.
+
 ---
+
 
 ## [1.0.0] - 2026-08-02
 

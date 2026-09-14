@@ -21,13 +21,19 @@ Plain-object maps and property assignment remain vulnerable to integrity/availab
 
 Classification: medium-to-high integrity/availability follow-up. No confirmed code execution or global prototype pollution. Implement on a separate feature branch with own-key/null-prototype/Map hardening and hostile-ID regression tests.
 
-### 2. Filesystem symlink/junction and TOCTOU risk
+### 2. Embedded image MIME allowlist — follow-up required
+
+`src/ograf/legacyCompatibility.ts` uses a normal object for embedded-image MIME allowlisting. Inherited keys such as `constructor` or `__proto__` can bypass the intended allowlist check and reach embedded-image preparation with an unsupported MIME value. This can weaken SVG sanitization and produce an unsafe portable asset classification.
+
+Classification: high-priority asset-boundary follow-up. Use an explicit own-key allowlist or null-prototype table and add `constructor`, `__proto__`, and `prototype` MIME regression cases. No implementation was made on `main`.
+
+### 3. Filesystem symlink/junction and TOCTOU risk
 
 `src/ograf/packageWriter.ts` performs lexical containment checks before `mkdir`/`writeFile`, but does not canonicalize or no-follow existing output-root descendants. A hostile pre-populated output tree or race can redirect writes through a symlink, junction, or Windows reparse point.
 
 Classification: high conditional filesystem risk when an attacker can control the output tree; latent in the current application because no production route was identified. Implement separately with Windows-aware reparse-point/no-follow handling and direct hostile-tree tests.
 
-### 3. ZIP/materialization parity coverage
+### 4. ZIP/materialization parity coverage
 
 Existing tests cover successful package generation and core path policy, but direct malformed ready-plan cases are under-tested:
 
@@ -39,9 +45,10 @@ Existing tests cover successful package generation and core path policy, but dir
 
 Add deterministic browser ZIP and Node materialization guard tests in the follow-up branch.
 
-### 4. OGraf fixture gap
+### 5. OGraf fixture gap
 
 No committed `*.ograf.json` fixtures exist. `validate:ograf` therefore remains not applicable. Add a deterministic, offline-validatable fixture and invoke the validator explicitly in CI when the fixture policy is approved.
+
 
 ## Existing Warnings
 

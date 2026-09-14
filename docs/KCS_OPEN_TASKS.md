@@ -8,7 +8,7 @@
 
 ## Current release state
 
-Public Controls V1 and the reviewed GitHub presentation materials are integrated into `main`. The observed current main is `b34879a`; the release tag `v1.1.0-public-controls` resolves to `0a71bd8` in this checkout.
+Prototype-sensitive imported-key hardening is integrated into `main@0f321c4`; the release tag `v1.1.0-public-controls` remains unchanged at `0a71bd8` in this checkout. Production release remains conditional on separately tracked security follow-ups.
 
 ## `without-mask` decision
 
@@ -27,11 +27,17 @@ Public Controls V1 and the reviewed GitHub presentation materials are integrated
 
 ## P2 — Windows path hardening V1
 
-- Feature branch: `feat/windows-path-hardening-v1`.
-- Centralized filename and package-relative path safety policy is implemented.
+- The implementation is integrated into `main`; centralized filename and package-relative path safety remains active.
 - Focused and full validation passes; only the no-manifest `validate:ograf` usage result and pre-existing warnings remain.
 - Review `docs/KCS_WINDOWS_PATH_HARDENING.md` and `reports/progress_068.md`.
-- Commit and push the feature branch without merging it into `main`.
+## P1 — Prototype-key security follow-ups
+
+- Numeric/style SVG validation and escaping.
+- Mask/matte mode allowlisting and escaping.
+- OGraf parent-cycle rejection.
+- `sourcePath` trust containment and filesystem symlink/TOCTOU hardening.
+- Imported broadcast-state key hardening and direct malformed-plan materialization tests.
+- Keep these follow-ups separate from the merged narrow patch.
 ## P2 — Non-blocking follow-up
 
 - Font catalog UI and portable-font UX without unowned fallback binaries.

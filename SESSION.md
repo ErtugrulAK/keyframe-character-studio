@@ -1,31 +1,34 @@
 # Current Session
 
-Implemented Windows Path Hardening V1 on `feat/windows-path-hardening-v1` from clean `main@b34879a`.
+## Repository and branch
 
-## Implementation
+Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 
-- Added `src/utils/pathSafety.ts` for Windows-safe filename components, package-relative path validation, slash normalization, reserved device names, and case-insensitive collision detection.
-- Applied the policy to standard KCS export filenames, OGraf IDs, OGraf package assets, browser ZIP entries, and filesystem materialization.
-- Preserved OGraf package structure, public-controls image allow-list behavior, legacy export, runtime generation, and existing import classification.
+Checkout: `main@0f321c4`, synchronized with `origin/main`.
 
-## Tests
+## Completed
 
-- Added `src/tests/pathSafety.test.ts`.
-- Added reserved-name and case-insensitive collision coverage to `src/tests/ografPackage.test.ts`.
-- Focused validation currently passes: 3 test files / 27 tests and TypeScript.
+- Merged `feat/prototype-key-security-hardening` into `main` by fast-forward.
+- Hardened prototype-sensitive imported layer, mask, matte/track-matte, public-field, package-path, MIME, and generated-runtime map handling.
+- Preserved the release tag, `without-mask`, global OMP configuration, model roles, and protected history.
+- Recorded evidence in `reports/progress_075.md` and `reports/progress_076.md`.
+
+## Validation
+
+- Full Vitest: PASS — 101 files / 1,479 tests.
+- TypeScript: PASS.
+- Lint: PASS with the existing Fast Refresh warning.
+- Build: PASS with the existing chunk-size warning.
+- `git diff --check`: PASS.
+- No `*.ograf.json` fixtures exist; `validate:ograf` is not applicable.
+
+## Open security follow-ups
+
+Numeric/style SVG validation and escaping, mask/matte mode allowlisting, parent-cycle rejection, sourcePath containment, filesystem symlink/TOCTOU protection, imported broadcast-state key hardening, and direct malformed-plan materialization tests remain separate work. Do not fold them into the narrow merged patch without a new scoped review.
 
 ## Protected state
 
-- `without-mask` remains ARCHIVE and untouched.
-- OMP/global tooling remains unchanged: `memory.backend: mnemopi`, model roles unchanged, task concurrency `8`.
-- Release tag `v1.1.0-public-controls` remains unchanged at the observed `0a71bd8`.
-- No secrets, commits, or pushes have been made yet.
-
-## Reports
-
-- `docs/KCS_WINDOWS_PATH_HARDENING.md`
-- `reports/progress_068.md`
-
-## Next action
-
-Run full validation, inspect the final diff, then commit and push only `feat/windows-path-hardening-v1`. Do not merge to `main`.
+- Release tag `v1.1.0-public-controls` remains unchanged.
+- `origin/without-mask` remains ARCHIVE and untouched.
+- `.omp/config.yml` and global tooling remain unchanged.
+- No release/tag preparation was performed.

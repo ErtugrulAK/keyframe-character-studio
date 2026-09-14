@@ -2,7 +2,7 @@
 
 ## Release boundary
 
-The accepted Public Controls V1 integration is now in `main@111c101`. The source and integration RC branches remain available. This document does not authorize tag creation or branch deletion.
+The accepted Public Controls V1 integration and subsequent narrow prototype-key security hardening are in `main@0f321c4`. Source and integration RC branches remain available. This document does not authorize tag creation or branch deletion.
 
 ## Accepted milestones
 
@@ -36,21 +36,20 @@ The accepted Public Controls V1 integration is now in `main@111c101`. The source
 
 ## Branches
 
-- `main`: integrated at `111c101`; protected history remains intact.
-- `integration/v6-ui-ograf-release-candidate`: product release-candidate baseline at `4e4c269`.
-- `integration/v6-ui-ograf-public-controls-rc`: integrated source branch at `111c101`.
-- `feat/ograf-public-controls-v1`: source feature branch at `2a6b5dc`.
+- `main`: integrated at `0f321c4`; protected history remains intact.
+- Release tag `v1.1.0-public-controls`: unchanged at `0a71bd8`.
+- `integration/v6-ui-ograf-release-candidate`: preserved product release-candidate baseline.
+- `integration/v6-ui-ograf-public-controls-rc`: preserved integrated source branch.
+- `feat/ograf-public-controls-v1`: preserved source feature branch.
 - `chore/omp-kcs-config-optimization`: separate OMP tooling branch; not included by default.
 
 ## Known warnings and limitations
-
 - Existing Fast Refresh lint warning in `src/context/AnimatorContext.tsx`.
 - Existing Vite chunk-size warning during build.
 - Full Playwright aggregate requires a longer command envelope or the documented shard strategy.
 - OGraf Package → editable KCS Import remains intentionally unimplemented.
 - Native host support for color controls is confirmed by the reported target-host QA, but the fallback metadata remains for compatibility.
-- Windows case/device-name hardening and portable-font UX remain follow-up work.
+- Prototype-key hardening is merged; SVG input, mode, parent-cycle, source-path, filesystem, and broadcast-state security follow-ups remain open.
 
 ## Release decision
-
-Main integration is complete. Release tag/checkpoint creation and optional branch cleanup require separate explicit approval.
+Main integration is complete, including the narrow prototype-key hardening patch. Production release remains conditional on the listed follow-ups. Release tag/checkpoint creation and optional branch cleanup require separate explicit approval.

@@ -36,7 +36,8 @@ export async function materializeOGrafPackage(plan: OGrafGeneratedPackage, outpu
       await writeFile(target, binaryContent);
       materializedFiles.push({ ...file, path: normalizedPath, status: 'generated', binaryContent });
     } else {
-      await writeFile(target, file.content || '', 'utf8');
+      if (file.content === undefined) throw new Error(`Missing text content for packaged file: ${file.path}`);
+      await writeFile(target, file.content, 'utf8');
       materializedFiles.push({ ...file, path: normalizedPath, status: 'generated' });
     }
   }

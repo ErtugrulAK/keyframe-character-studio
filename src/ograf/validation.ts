@@ -1,5 +1,5 @@
 import type { SceneData, SceneLayer } from '../types/composition';
-import { normalizePackagePath } from '../utils/pathSafety';
+import { isPrototypeSensitiveKey, normalizePackagePath } from '../utils/pathSafety';
 import {
   type OGrafAssetPlan,
   type OGrafDiagnosticCode,
@@ -25,6 +25,7 @@ const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_text: true,
   custom_image: true,
 };
+
 
 const LOCAL_ASSET_PATTERN = /^(?:[a-zA-Z]:[\\/]|[./\\]|[^:?#]+$)/;
 
@@ -68,7 +69,11 @@ function validatePublicFields(
   const ids = new Set<string>();
   const layerIds = new Set(layers.map((layer) => layer.id));
   for (const field of [...textFields, ...imageFields, ...colorFields]) {
-    if (!field.id || ids.has(field.id) || !field.layerId || !layerIds.has(field.layerId)) {
+    if (isPrototypeSensitiveKey(field.id)
+      || !field.id
+      || ids.has(field.id)
+      || !field.layerId
+      || !layerIds.has(field.layerId)) {
       diagnostics.push({
         code: 'OGRAF_INVALID_PUBLIC_FIELD',
         severity: 'ERROR',
@@ -177,7 +182,15 @@ function validateFont(
 }
 
 function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnostics: OGrafExportDiagnostic[], assets: OGrafAssetPlan[]): void {
-  if (!SUPPORTED_LAYER_TYPES[layer.type]) {
+  if (isPrototypeSensitiveKey(layer.id)) {
+    diagnostics.push(diagnostic('OGRAF_INVALID_PROJECT', 'ERROR', `Layer id "${layer.id}" is reserved and cannot be imported safely.`, layer, 'layer-id'));
+  }
+  for (const mask of layer.masks || []) {
+    if (isPrototypeSensitiveKey(mask.id)) {
+      diagnostics.push(diagnostic('OGRAF_INVALID_PROJECT', 'ERROR', `Mask id "${mask.id}" is reserved and cannot be imported safely.`, layer, 'mask-id'));
+    }
+  }
+  if (!Object.prototype.hasOwnProperty.call(SUPPORTED_LAYER_TYPES, layer.type)) {
     const code: OGrafDiagnosticCode = layer.type === 'custom_video'
       ? 'OGRAF_UNSUPPORTED_VIDEO'
       : layer.type === 'particle_system'
@@ -284,6 +297,17 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   for (const layer of sceneData.layers || []) {
     const sourceId = layer.trackMatte?.sourceLayerId ?? layer.matte?.sourcePartId;
     if (!sourceId) continue;
+    if (isPrototypeSensitiveKey(sourceId)) {
+      diagnostics.push({
+        code: 'OGRAF_INVALID_TRACK_MATTE',
+        severity: 'ERROR',
+        message: `Track matte source "${sourceId}" for layer "${layer.id}" is reserved and cannot be imported safely.`,
+        layerId: layer.id,
+        layerName: layer.name,
+        feature: 'track-matte',
+      });
+      continue;
+    }
     relationships.set(layer.id, sourceId);
     if (!layerById.has(sourceId)) {
       diagnostics.push({

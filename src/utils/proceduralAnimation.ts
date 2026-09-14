@@ -58,7 +58,9 @@ export function computeProceduralDelta(
 
   if (runtime.appMode === 'broadcast') {
     // ── Broadcast mode ──────────────────────────────────────────────
-    const bState = runtime.broadcast[layer.id] || { state: 'hidden', progress: 0 };
+    const bState = Object.prototype.hasOwnProperty.call(runtime.broadcast, layer.id)
+      ? runtime.broadcast[layer.id]
+      : { state: 'hidden', progress: 0 };
 
     if (targetTrack && targetTrack.visible === false) {
       opacityMul = 0;
@@ -92,7 +94,9 @@ export function computeProceduralDelta(
   }
 
   // ── Live stunts ──────────────────────────────────────────────────
-  const stunt = runtime.liveStunts[layer.id];
+  const stunt = Object.prototype.hasOwnProperty.call(runtime.liveStunts, layer.id)
+    ? runtime.liveStunts[layer.id]
+    : undefined;
   if (stunt) {
     const r = applyStunt(stunt.stunt, stunt.progress, stunt.customPresetId, customPresets);
     x += r.x; y += r.y; rot += r.rot; sx *= r.sx; sy *= r.sy; opacityMul *= r.opacity;

@@ -46,7 +46,7 @@ function decodeDataUrl(source: string): { bytes: Uint8Array; mimeType: string } 
   const match = source.match(/^data:([^;,]+)(;base64)?,([\s\S]*)$/iu);
   if (!match) return undefined;
   const mimeType = match[1].toLowerCase();
-  if (!EMBEDDED_IMAGE_MIME_TYPES[mimeType]) return undefined;
+  if (!Object.prototype.hasOwnProperty.call(EMBEDDED_IMAGE_MIME_TYPES, mimeType)) return undefined;
   try {
     const payload = match[2] ? atob(match[3]) : decodeURIComponent(match[3]);
     const bytes = bytesFromBinaryString(payload);
@@ -63,7 +63,7 @@ async function readBlobUrl(source: string): Promise<{ bytes: Uint8Array; mimeTyp
     if (!response.ok) return undefined;
     const blob = await response.blob();
     const mimeType = (blob.type || response.headers.get('content-type') || '').split(';', 1)[0].trim().toLowerCase();
-    if (!EMBEDDED_IMAGE_MIME_TYPES[mimeType] || blob.size <= 0) return undefined;
+    if (!Object.prototype.hasOwnProperty.call(EMBEDDED_IMAGE_MIME_TYPES, mimeType) || blob.size <= 0) return undefined;
     const bytes = new Uint8Array(await blob.arrayBuffer());
     return bytes.length > 0 && isSafeEmbeddedImage(bytes, mimeType) ? { bytes, mimeType } : undefined;
   } catch {

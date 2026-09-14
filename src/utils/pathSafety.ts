@@ -1,3 +1,8 @@
+const PROTOTYPE_SENSITIVE_KEYS = {
+  ['__proto__']: true,
+  constructor: true,
+  prototype: true,
+} as const;
 const WINDOWS_RESERVED_NAMES: Record<string, true> = {
   CON: true,
   PRN: true,
@@ -42,6 +47,11 @@ export function isReservedWindowsName(component: string): boolean {
   return WINDOWS_RESERVED_NAMES[stem] === true;
 }
 
+export function isPrototypeSensitiveKey(value: string): boolean {
+  return Object.prototype.hasOwnProperty.call(PROTOTYPE_SENSITIVE_KEYS, value);
+}
+
+
 export function sanitizeFilenameComponent(input: string, fallback = 'untitled'): string {
   const sanitized = replaceControlCharacters(input.normalize('NFKC'))
     .replace(WINDOWS_INVALID_FILENAME_CHARACTERS_GLOBAL, '-')
@@ -70,6 +80,7 @@ export function isSafePackageRelativePath(value: string): boolean {
   return segments.every((segment) => segment.length > 0
     && segment !== '.'
     && segment !== '..'
+    && !isPrototypeSensitiveKey(segment)
     && !WINDOWS_INVALID_FILENAME_CHARACTERS.test(segment)
     && !/[. ]$/u.test(segment)
     && !isReservedWindowsName(segment));

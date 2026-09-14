@@ -75,7 +75,7 @@ function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {
   const content = layer.content;
-  const href = options.imageReferences?.[content.imageUrl || ''] || content.imageUrl;
+  const href = options.imageReferences && Object.prototype.hasOwnProperty.call(options.imageReferences, content.imageUrl || '') ? options.imageReferences[content.imageUrl || ''] : content.imageUrl;
   if (!href) return '';
   const width = content.width || 180;
   const height = content.height || 120;

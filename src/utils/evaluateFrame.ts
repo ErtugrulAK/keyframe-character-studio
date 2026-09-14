@@ -63,7 +63,7 @@ export function evaluateFrame(
 
   for (const layer of layers) {
     // Use per-layer frame override for custom_timeline presets
-    const evalFrame = frameOverrides?.[layer.id] ?? frame;
+    const evalFrame = frameOverrides && Object.prototype.hasOwnProperty.call(frameOverrides, layer.id) ? frameOverrides[layer.id] : frame;
     const world = evaluateTransform(layers, tracks, sequenceId, layer.id, evalFrame);
     // Procedural deltas always use the global frame (broadcast progress doesn't change per-layer)
     const delta = computeProceduralDelta(layer, tracks, totalFrames, frame, runtime, customPresets);
@@ -92,7 +92,7 @@ export function evaluateFrame(
     const visible = finalOpacity > 0.001;
 
     const track = tracks.find((candidate) => candidate.partId === layer.id);
-    const layerFrame = frameOverrides?.[layer.id] ?? frame;
+    const layerFrame = frameOverrides && Object.prototype.hasOwnProperty.call(frameOverrides, layer.id) ? frameOverrides[layer.id] : frame;
     const trim = evaluateTrimPath(layer, track, layerFrame, sequenceId || 'Sequence');
     const masks = evaluateLayerMasks(layer, track, layerFrame, sequenceId);
 

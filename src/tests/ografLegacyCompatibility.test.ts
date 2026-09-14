@@ -57,6 +57,15 @@ describe('legacy OGraf asset compatibility', () => {
       expect(plan.diagnostics.some((diagnostic) => diagnostic.severity === 'ERROR' && diagnostic.feature === 'image')).toBe(true);
     }
   });
+  test.each(['constructor', '__proto__', 'prototype'] as const)('rejects prototype-sensitive embedded MIME %s without packaging an asset', async (mimeType) => {
+    const source = `data:${mimeType};base64,${btoa('not an image')}`;
+    const prepared = prepareLegacyOGrafExport(makeScene(makeLayer({ imageUrl: source })));
+    expect(prepared).not.toBeInstanceOf(Promise);
+    const result = prepared instanceof Promise ? await prepared : prepared;
+    expect(result.sceneData.layers[0].imageUrl).toBe(source);
+    expect(Object.keys(result.options.assetCatalog || {})).toHaveLength(0);
+    expect(compileOGrafPackage(result.sceneData, result.options).status).toBe('blocked');
+  });
 
   test('packages a verified local font and blocks an unverified font with remediation', async () => {
     const bytes = new Uint8Array([0, 1, 2, 3]);

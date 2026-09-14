@@ -215,6 +215,19 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
     expect(collision.status).toBe('blocked');
     expect(collision.diagnostics.some((diagnostic) => diagnostic.message.includes('duplicated'))).toBe(true);
   });
+  test('rejects prototype-sensitive packaged asset paths', () => {
+    const plan = compileOGrafPackage(makeScene(), {
+      assetCatalog: {
+        'source/logo.png': {
+          kind: 'local',
+          packagedPath: '__proto__',
+          binaryContent: new Uint8Array([1, 2, 3]),
+        },
+      },
+    });
+    expect(plan.status).toBe('blocked');
+    expect(plan.files.some((file) => file.path === '__proto__')).toBe(false);
+  });
 
   test('sanitizes reserved graphic names without changing the package contract', () => {
     const plan = compileOGrafPackage({ ...makeScene(), name: 'CON' }, {

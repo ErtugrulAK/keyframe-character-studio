@@ -74,6 +74,20 @@ describe('browser OGraf ZIP writer', () => {
     expect(sanitizeOGrafDownloadName(' Ä Project / Demo ')).toBe('a-project-demo');
     expect(sanitizeOGrafDownloadName('')).toBe('graphic');
   });
+  it('rejects a package containing the exact prototype-sensitive __proto__ path', async () => {
+    const plan = compileOGrafPackage(makeScene(makeLayer({ imageUrl: 'assets/source.png' })), {
+      assetCatalog: {
+        'assets/source.png': {
+          kind: 'local',
+          packagedPath: '__proto__',
+          binaryContent: new Uint8Array([1, 2, 3]),
+        },
+      },
+    });
+    expect(plan.status).toBe('blocked');
+    const actualBrowserZip = await vi.importActual('../ograf/browserZip');
+    await expect(actualBrowserZip.createOGrafBrowserZip(plan)).rejects.toThrow('validation failed');
+  });
 });
 
 describe('HeaderBar OGraf export integration', () => {

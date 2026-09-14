@@ -127,6 +127,64 @@ describe('OGraf Export V1 Phase 1', () => {
   test('accepts the supported baseline shape scene', () => {
     expect(errorCodes(makeScene())).toEqual([]);
   });
+  test.each(['constructor', '__proto__', 'prototype'] as const)('blocks prototype-sensitive layer type %s', (type) => {
+    const result = validateSceneForOGraf(makeScene([makeLayer({ type: type as SceneLayer['type'] })]));
+    expect(result.canCompile).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.severity === 'ERROR')).toBe(true);
+  });
+
+  test.each(['constructor', '__proto__', 'prototype'] as const)('rejects prototype-sensitive imported layer id %s', (id) => {
+    const result = validateSceneForOGraf(makeScene([makeLayer({ id })]));
+    expect(result.canCompile).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.severity === 'ERROR')).toBe(true);
+  });
+
+  test.each(['constructor', '__proto__', 'prototype'] as const)('rejects prototype-sensitive matte, mask, and track matte IDs %s', (id) => {
+    const mask = {
+      id,
+      name: 'Hostile mask',
+      mode: 'add',
+      path: { version: 1, coordinateSpace: 'world' as const, closed: true, points: [
+        { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 },
+      ] },
+    } as NonNullable<SceneLayer['masks']>[number];
+    const scene = makeScene([
+      makeLayer({ id: 'source' }),
+      makeLayer({
+        id: 'target',
+        matte: { sourcePartId: id, mode: 'alpha' },
+        masks: [mask],
+        trackMatte: { sourceLayerId: id, mode: 'alpha' },
+      }),
+    ]);
+    const result = validateSceneForOGraf(scene);
+    expect(result.canCompile).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.severity === 'ERROR')).toBe(true);
+  });
+  test.each(['constructor', '__proto__', 'prototype'] as const)('rejects a prototype-sensitive mask id independently %s', (id) => {
+    const mask = {
+      id,
+      name: 'Hostile mask',
+      mode: 'add',
+      path: { version: 1, coordinateSpace: 'world' as const, closed: true, points: [
+        { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 },
+      ] },
+    } as NonNullable<SceneLayer['masks']>[number];
+    const result = validateSceneForOGraf(makeScene([makeLayer({ masks: [mask] })]));
+    expect(result.canCompile).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.feature === 'mask-id')).toBe(true);
+  });
+
+  test.each(['constructor', '__proto__', 'prototype'] as const)('rejects prototype-sensitive public field ID %s at the schema boundary', (id) => {
+    const result = validateSceneForOGraf(makeScene(), {
+      publicTextFields: [{ id, title: 'Hostile', layerId: 'layer-1' }],
+    });
+    expect(result.canCompile).toBe(false);
+    expect(result.diagnostics.some((diagnostic) => diagnostic.severity === 'ERROR')).toBe(true);
+    if (id === '__proto__') {
+      expect(Object.prototype.hasOwnProperty.call(result.publicStateSchema.properties, id)).toBe(false);
+    }
+  });
 
   test.each([
     ['custom_video', 'OGRAF_UNSUPPORTED_VIDEO'],

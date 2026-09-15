@@ -1,6 +1,6 @@
 # KCS Final Pre-Release Verification Handoff Manifest
 
-Final candidate SHA: 3a53734cb179127123b6bccc5bf84b26858f4cc2
+Final candidate SHA: 865117168c69090db36b6221f513b75fba34acfe
 Release readiness: READY WITH WARNINGS FOR USER APPROVAL, pending remote manual release-smoke result
 Terminal output enough: YES for local validation; NO until remote workflow result is obtained
 Next action: run remote release-smoke.yml for the final SHA; if PASS, request release/tag approval

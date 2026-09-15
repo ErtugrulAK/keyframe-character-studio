@@ -2,7 +2,7 @@
 
 ## Candidate
 
-- Final main/origin-main SHA: `3a53734cb179127123b6bccc5bf84b26858f4cc2`
+- Final main/origin-main SHA: `865117168c69090db36b6221f513b75fba34acfe`
 - Package version: private `1.1.0-rc.1`
 - Release readiness: READY WITH WARNINGS FOR USER APPROVAL, pending remote manual release-smoke result
 
@@ -19,7 +19,7 @@ Local validation previously passed, including `npm run qa:release` on the preced
 
 ## Next action
 
-Run the manual `release-smoke.yml` workflow with candidate SHA `3a53734cb179127123b6bccc5bf84b26858f4cc2`. If it passes, request separate explicit user approval for the release/tag prompt. If it fails, do not proceed.
+Run the manual `release-smoke.yml` workflow with candidate SHA `865117168c69090db36b6221f513b75fba34acfe`. If it passes, request separate explicit user approval for the release/tag prompt. If it fails, do not proceed.
 
 ## Included files
 

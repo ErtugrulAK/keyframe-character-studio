@@ -2,7 +2,7 @@
 
 ## Release boundary
 
-The release-readiness blocker work is integrated into `main@3a53734cb179127123b6bccc5bf84b26858f4cc2`. This document does not authorize tag creation, release publication, or branch deletion.
+The release-readiness blocker work is integrated into `main@865117168c69090db36b6221f513b75fba34acfe`. This document does not authorize tag creation, release publication, or branch deletion.
 
 ## Accepted milestones
 

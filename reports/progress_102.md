@@ -2,7 +2,7 @@
 
 ## Candidate
 
-- Final main/origin-main candidate SHA: `3a53734cb179127123b6bccc5bf84b26858f4cc2`
+- Final main/origin-main candidate SHA: `865117168c69090db36b6221f513b75fba34acfe`
 - Blocker branch: `fix/release-readiness-blockers`
 - Merge: fast-forward only; no normal merge commit.
 - Package version: private `1.1.0-rc.1`.
@@ -26,7 +26,7 @@
 - `npm run lint`: PASS with existing Fast Refresh warning at `src/context/AnimatorContext.tsx:655`.
 - `git diff --check`: PASS.
 
-- Remote manual `release-smoke.yml`: PENDING for final candidate SHA `3a53734cb179127123b6bccc5bf84b26858f4cc2`.
+- Remote manual `release-smoke.yml`: PENDING for final candidate SHA `865117168c69090db36b6221f513b75fba34acfe`.
 
 - Review verdict: **READY WITH WARNINGS**.
 - Review findings were corrected before merge: stale CI documentation, stale candidate validation wording, stale changelog blocker wording, and incomplete TOCTOU wording.

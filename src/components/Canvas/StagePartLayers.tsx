@@ -63,7 +63,7 @@ interface StagePartLayersProps {
 }
 
 function toBroadcastRuntime(bs: Record<string, BroadcastObjectState>): Record<string, BroadcastRuntime> {
-  const result: Record<string, BroadcastRuntime> = {};
+  const result: Record<string, BroadcastRuntime> = Object.create(null);
   for (const [id, s] of Object.entries(bs)) {
     result[id] = { state: s.state, progress: s.progress };
   }
@@ -73,7 +73,7 @@ function toBroadcastRuntime(bs: Record<string, BroadcastObjectState>): Record<st
 function toLiveStuntsRuntime(
   ls: Record<string, { stunt: string; progress: number; customPresetId?: string }>,
 ): Record<string, { stunt: string; progress: number; customPresetId?: string }> {
-  const result: Record<string, { stunt: string; progress: number; customPresetId?: string }> = {};
+  const result: Record<string, { stunt: string; progress: number; customPresetId?: string }> = Object.create(null);
   for (const [id, s] of Object.entries(ls)) {
     result[id] = { stunt: s.stunt, progress: s.progress, customPresetId: s.customPresetId };
   }
@@ -110,10 +110,12 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   projectResolution,
 }) => {
   // Build frame overrides for custom_timeline presets
-  const frameOverrides: Record<string, number> = {};
+  const frameOverrides: Record<string, number> = Object.create(null);
   for (const part of sortedParts) {
     if (appMode === 'broadcast') {
-      const bState = broadcastState[part.id] || { state: 'hidden', progress: 0 };
+      const bState = Object.prototype.hasOwnProperty.call(broadcastState, part.id)
+        ? broadcastState[part.id]
+        : { state: 'hidden', progress: 0 };
       if (bState.state === 'animating_in' && part.inAnimPreset === 'custom_timeline') {
         const st = part.inAnimTimelineStart || 0;
         const en = part.inAnimTimelineEnd || 30;

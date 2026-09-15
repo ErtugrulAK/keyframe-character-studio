@@ -410,4 +410,24 @@ describe('OGraf Export V1 Phase 1', () => {
     } as never];
     expect(compileOGrafPackage(scene).status).toBe('ready-to-materialize');
   });
+  test('rejects missing and cyclic layer parents while preserving valid chains', () => {
+    const self = makeLayer({ id: 'self', parentId: 'self' });
+    expect(compileOGrafPackage(makeScene([self])).status).toBe('blocked');
+
+    const a = makeLayer({ id: 'a', parentId: 'b' });
+    const b = makeLayer({ id: 'b', parentId: 'a' });
+    expect(compileOGrafPackage(makeScene([a, b])).status).toBe('blocked');
+
+    const c = makeLayer({ id: 'c', parentId: 'd' });
+    const d = makeLayer({ id: 'd', parentId: 'e' });
+    const e = makeLayer({ id: 'e', parentId: 'c' });
+    expect(compileOGrafPackage(makeScene([c, d, e])).status).toBe('blocked');
+    const missing = makeLayer({ id: 'child', parentId: 'missing' });
+    expect(compileOGrafPackage(makeScene([missing])).status).toBe('ready-to-materialize');
+
+    const root = makeLayer({ id: 'root' });
+    const child = makeLayer({ id: 'child', parentId: 'root' });
+    const grandchild = makeLayer({ id: 'grandchild', parentId: 'child' });
+    expect(compileOGrafPackage(makeScene([root, child, grandchild])).status).toBe('ready-to-materialize');
+  });
 });

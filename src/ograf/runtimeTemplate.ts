@@ -60,6 +60,24 @@ function assertSafeScene(scene) {
     if (layer.matte && layer.matte.mode !== undefined && !['clip', 'alpha', 'luminance'].includes(layer.matte.mode)) throw new Error('Invalid matte mode');
     if (layer.trackMatte && !['alpha', 'luminance'].includes(layer.trackMatte.mode)) throw new Error('Invalid track matte mode');
   }
+  const layerById = new Map((scene.layers || []).map((layer) => [layer.id, layer]));
+  const relationships = new Map();
+  for (const layer of scene.layers || []) {
+    const parentId = layer.parentId || layer.booleanGroupId;
+    if (!parentId) continue;
+    if (parentId === '__proto__' || parentId === 'constructor' || parentId === 'prototype') throw new Error('Invalid layer parent: ' + layer.id);
+    relationships.set(layer.id, parentId);
+  }
+  const visiting = new Set(); const visited = new Set();
+  const visit = (id) => {
+    if (visiting.has(id)) throw new Error('Layer parent cycle detected: ' + id);
+    if (visited.has(id)) return;
+    visiting.add(id);
+    const parentId = relationships.get(id);
+    if (parentId) visit(parentId);
+    visiting.delete(id); visited.add(id);
+  };
+  for (const id of relationships.keys()) visit(id);
   for (const track of scene.tracks || []) {
     for (const keyframe of track.keyframes || []) {
       assertKeyframe(keyframe, 'legacy', false);
@@ -156,6 +174,21 @@ function maskPathD(layer, mask, scene) {
   const radians = layer.transform.rotation * Math.PI / 180;
   return pathD(mask.path, (point) => { const local = mask.path.coordinateSpace === 'normalized' ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height } : point; const x = local.x * layer.transform.scaleX; const y = local.y * layer.transform.scaleY; return { x: scene.width / 2 + layer.transform.x + x * Math.cos(radians) - y * Math.sin(radians), y: scene.height / 2 + layer.transform.y + x * Math.sin(radians) + y * Math.cos(radians) }; });
 }
+function evaluateScene(scene, frame) {
+  const transforms = Object.create(null); const visiting = new Set(); const evaluateTransform = (layer) => { if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id]; const track = scene.tracks.find((item) => item.partId === layer.id); const channels = track && track.channels ? track.channels : {}; let result = { x: channelValue(channels.x, frame, layer.x), y: channelValue(channels.y, frame, layer.y), rotation: channelValue(channels.rotation, frame, layer.rotation), scaleX: channelValue(channels.scaleX, frame, layer.scaleX), scaleY: channelValue(channels.scaleY, frame, layer.scaleY), opacity: channelValue(channels.opacity, frame, layer.opacity) }; if (visiting.has(layer.id)) return result; visiting.add(layer.id); if (layer.parentId || layer.booleanGroupId) { const parentId = layer.parentId || layer.booleanGroupId; const parent = scene.layers.find((item) => item.id === parentId); if (parent) { const parentTransform = evaluateTransform(parent); const radians = parentTransform.rotation * Math.PI / 180; const sx = result.x * parentTransform.scaleX; const sy = result.y * parentTransform.scaleY; result = { x: parentTransform.x + sx * Math.cos(radians) - sy * Math.sin(radians), y: parentTransform.y + sx * Math.sin(radians) + sy * Math.cos(radians), rotation: parentTransform.rotation + result.rotation, scaleX: parentTransform.scaleX * result.scaleX, scaleY: parentTransform.scaleY * result.scaleY, opacity: result.opacity }; } } visiting.delete(layer.id); transforms[layer.id] = result; return result; };
+  return scene.layers.map((layer) => {
+    const track = scene.tracks.find((item) => item.partId === layer.id);
+    const channels = track && track.channels ? track.channels : {};
+    const transformValue = evaluateTransform(layer);
+    const evaluated = { ...layer, transform: transformValue, visible: layer.visible !== false, opacity: layer.visible === false ? 0 : clamp(transformValue.opacity, 0, 1), trimPathEnabled: layer.trimPathEnabled, trimPathStart: channelValue(channels.trimPathStart, frame, layer.trimPathStart === undefined ? 0 : layer.trimPathStart), trimPathEnd: channelValue(channels.trimPathEnd, frame, layer.trimPathEnd === undefined ? 1 : layer.trimPathEnd), trimPathOffset: channelValue(channels.trimPathOffset, frame, layer.trimPathOffset || 0) };
+    evaluated.masks = (layer.masks || []).map((mask) => {
+      const maskTrack = track && track.maskChannels ? { opacity: track.maskChannels[mask.id + ':opacity'], feather: track.maskChannels[mask.id + ':feather'], expansion: track.maskChannels[mask.id + ':expansion'] } : undefined;
+      const pathTrack = track && track.maskPathChannels ? track.maskPathChannels[mask.id + ':path'] : undefined;
+      return { ...mask, opacity: channelValue(maskTrack && maskTrack.opacity, frame, mask.opacity === undefined ? 1 : mask.opacity), feather: channelValue(maskTrack && maskTrack.feather, frame, mask.feather === undefined ? 0 : mask.feather), expansion: channelValue(maskTrack && maskTrack.expansion, frame, mask.expansion === undefined ? 0 : mask.expansion), path: pathChannelValue(pathTrack, frame, mask.path) };
+    });
+    return evaluated;
+  });
+}
 function geometry(layer, props) {
   const attributes = props || ''; const path = layer.path ? localPathD(layer.path) : layer.points && layer.points.length >= 3 ? 'M ' + layer.points.map((point) => point.x + ' ' + point.y).join(' L ') + ' Z' : '';
   if (layer.type === 'custom_freeform') return path ? '<path d="' + escapeXml(path) + '" stroke-linejoin="round"' + attributes + ' />' : '';
@@ -170,25 +203,6 @@ function text(layer, props) { return '<text x="0" y="0" text-anchor="middle" dom
 function image(layer, imageReferences, props) { const width = layer.width || 180; const height = layer.height || 120; const href = imageReferences[layer.imageUrl] || layer.imageUrl || ''; return '<image href="' + escapeXml(resourceUrl(href)) + '" x="' + (-width / 2) + '" y="' + (-height / 2) + '" width="' + width + '" height="' + height + '" preserveAspectRatio="xMidYMid slice"' + (props || '') + ' />'; }
 function content(layer, imageReferences, props) { if (layer.type === 'custom_text') return text(layer, props); if (layer.type === 'custom_image') return image(layer, imageReferences, props); return geometry(layer, props); }
 function transform(scene, layer) { return 'translate(' + (scene.width / 2 + layer.transform.x) + ' ' + (scene.height / 2 + layer.transform.y) + ') rotate(' + layer.transform.rotation + ') scale(' + layer.transform.scaleX + ' ' + layer.transform.scaleY + ')'; }
-function evaluateScene(scene, frame) {
-  const transforms = Object.create(null); const evaluateTransform = (layer) => { if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id]; const track = scene.tracks.find((item) => item.partId === layer.id); const channels = track && track.channels ? track.channels : {}; let result = { x: channelValue(channels.x, frame, layer.x), y: channelValue(channels.y, frame, layer.y), rotation: channelValue(channels.rotation, frame, layer.rotation), scaleX: channelValue(channels.scaleX, frame, layer.scaleX), scaleY: channelValue(channels.scaleY, frame, layer.scaleY), opacity: channelValue(channels.opacity, frame, layer.opacity) }; if (layer.parentId) { const parent = scene.layers.find((item) => item.id === layer.parentId); if (parent && parent.id !== layer.id) { const parentTransform = evaluateTransform(parent); const radians = parentTransform.rotation * Math.PI / 180; const sx = result.x * parentTransform.scaleX; const sy = result.y * parentTransform.scaleY; result = { x: parentTransform.x + sx * Math.cos(radians) - sy * Math.sin(radians), y: parentTransform.y + sx * Math.sin(radians) + sy * Math.cos(radians), rotation: parentTransform.rotation + result.rotation, scaleX: parentTransform.scaleX * result.scaleX, scaleY: parentTransform.scaleY * result.scaleY, opacity: result.opacity }; } } transforms[layer.id] = result; return result; };
-  return scene.layers.map((layer) => {
-    const track = scene.tracks.find((item) => item.partId === layer.id);
-    const channels = track && track.channels ? track.channels : {};
-    const transformValue = evaluateTransform(layer);
-    const evaluated = { ...layer, transform: transformValue, visible: layer.visible !== false, opacity: layer.visible === false ? 0 : clamp(transformValue.opacity, 0, 1), trimPathEnabled: layer.trimPathEnabled, trimPathStart: channelValue(channels.trimPathStart, frame, layer.trimPathStart === undefined ? 0 : layer.trimPathStart), trimPathEnd: channelValue(channels.trimPathEnd, frame, layer.trimPathEnd === undefined ? 1 : layer.trimPathEnd), trimPathOffset: channelValue(channels.trimPathOffset, frame, layer.trimPathOffset || 0) };
-    evaluated.masks = (layer.masks || []).map((mask) => {
-      const maskTrack = track && track.maskChannels ? {
-        opacity: track.maskChannels[mask.id + ':opacity'],
-        feather: track.maskChannels[mask.id + ':feather'],
-        expansion: track.maskChannels[mask.id + ':expansion'],
-      } : undefined;
-      const pathTrack = track && track.maskPathChannels ? track.maskPathChannels[mask.id + ':path'] : undefined;
-      return { ...mask, opacity: channelValue(maskTrack && maskTrack.opacity, frame, mask.opacity === undefined ? 1 : mask.opacity), feather: channelValue(maskTrack && maskTrack.feather, frame, mask.feather === undefined ? 0 : mask.feather), expansion: channelValue(maskTrack && maskTrack.expansion, frame, mask.expansion === undefined ? 0 : mask.expansion), path: pathChannelValue(pathTrack, frame, mask.path) };
-    });
-    return evaluated;
-  });
-}
 function matteRelationship(layer) { if (layer.trackMatte && layer.trackMatte.enabled !== false) return { sourceLayerId: layer.trackMatte.sourceLayerId, mode: layer.trackMatte.mode, inverted: layer.trackMatte.inverted === true, sourceVisible: layer.trackMatte.sourceVisible !== false }; if (layer.trackMatte) return undefined; const matte = layer.matte; if (!matte || (matte.mode || 'clip') === 'clip') return undefined; return { sourceLayerId: matte.sourcePartId, mode: matte.mode || 'alpha', inverted: matte.inverted === true, sourceVisible: true }; }
 function maskDefs(scene, layer) {
   const masks = layer.masks || []; const defs = []; const ids = []; const region = 'M 0 0 H ' + scene.width + ' V ' + scene.height + ' H 0 Z'; let previousId = null;

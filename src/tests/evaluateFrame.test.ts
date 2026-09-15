@@ -86,6 +86,24 @@ describe('evaluateFrame — transforms', () => {
     expect(result.layers[0].transform.y).toBe(60);
     expect(result.layers[0].opacity).toBe(1);
   });
+  test('guards self, short, and long parent cycles while preserving valid chains', () => {
+    const self = makeLayer({ id: 'self', baseTransform: { x: 3, y: 4, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, parentId: 'self' });
+    const a = makeLayer({ id: 'a', baseTransform: { x: 1, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, parentId: 'b' });
+    const b = makeLayer({ id: 'b', baseTransform: { x: 2, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, parentId: 'a' });
+    const c = makeLayer({ id: 'c', baseTransform: { x: 1, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, parentId: 'd' });
+    const d = makeLayer({ id: 'd', baseTransform: { x: 2, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, parentId: 'e' });
+    const e = makeLayer({ id: 'e', baseTransform: { x: 3, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, parentId: 'c' });
+    const root = makeLayer({ id: 'root', baseTransform: { x: 10, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
+    const child = makeLayer({ id: 'child', baseTransform: { x: 5, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, parentId: 'root' });
+    const missing = makeLayer({ id: 'missing-child', baseTransform: { x: 7, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, parentId: 'absent' });
+    const tracks = [self, a, b, c, d, e, root, child, missing].map((part) => makeTrack(part.id));
+    for (const id of ['self', 'a', 'c']) {
+      const result = evaluateTransform([self, a, b, c, d, e, root, child, missing], tracks, 'Sequence', id, 0);
+      expect(Number.isFinite(result.x)).toBe(true);
+    }
+    expect(evaluateTransform([root, child], tracks, 'Sequence', 'child', 0).x).toBe(15);
+    expect(evaluateTransform([missing], [makeTrack('missing-child')], 'Sequence', 'missing-child', 0).x).toBe(7);
+  });
 });
 
 // ─── Keyframe Tests ───────────────────────────────────────────────────

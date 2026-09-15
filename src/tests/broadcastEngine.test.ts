@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   createIdleNamedSequenceRuntime,
   startNamedSequence,
+  syncBroadcastParts,
   tickBroadcastState,
   tickLiveStuntsState,
   tickNamedSequenceRuntime,
@@ -141,5 +142,18 @@ describe('BroadcastEngine Utility', () => {
       expect(tickNamedSequenceRuntime(started, Number.NaN, 30)).toBe(started);
       expect(tickNamedSequenceRuntime(started, -1, 30)).toBe(started);
     });
+  });
+
+  it('keeps prototype-sensitive imported ids as data keys', () => {
+    const parts = [
+      { id: '__proto__', type: 'custom_box' },
+      { id: 'constructor', type: 'custom_box' },
+      { id: 'prototype', type: 'custom_box' },
+    ] as never[];
+    const next = syncBroadcastParts({}, parts);
+    expect(Object.keys(next)).toEqual(['__proto__', 'constructor', 'prototype']);
+    expect(next['__proto__']).toEqual({ state: 'animating_in', progress: 0 });
+    expect(next.constructor).toEqual({ state: 'animating_in', progress: 0 });
+    expect(next.prototype).toEqual({ state: 'animating_in', progress: 0 });
   });
 });

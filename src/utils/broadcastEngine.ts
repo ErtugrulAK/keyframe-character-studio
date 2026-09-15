@@ -67,18 +67,24 @@ export const syncBroadcastParts = (
   parts: CharacterPart[],
 ): Record<string, BroadcastObjectState> => {
   const existing = new Set(Object.keys(prev));
-  const next: Record<string, BroadcastObjectState> = {};
+  const currentIds = new Set(parts.map((part) => part.id));
+  const next: Record<string, BroadcastObjectState> = Object.create(null);
   let changed = false;
   for (const [id, st] of Object.entries(prev)) {
-    if (parts.some((p) => p.id === id)) {
-      next[id] = st;
+    if (currentIds.has(id)) {
+      Object.defineProperty(next, id, { value: st, enumerable: true, configurable: true, writable: true });
     } else {
-      changed = true; // stale state from a previous sequence
+      changed = true;
     }
   }
-  for (const p of parts) {
-    if (!existing.has(p.id)) {
-      next[p.id] = { state: 'animating_in', progress: 0 };
+  for (const id of currentIds) {
+    if (!existing.has(id)) {
+      Object.defineProperty(next, id, {
+        value: { state: 'animating_in', progress: 0 },
+        enumerable: true,
+        configurable: true,
+        writable: true,
+      });
       changed = true;
     }
   }
@@ -92,7 +98,7 @@ export const tickLiveStuntsState = (
   fps: number
 ): Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }> => {
   let changed = false;
-  const next = { ...prevState };
+  const next = Object.assign(Object.create(null), prevState) as Record<string, { stunt: LiveStuntType; progress: number; loop?: boolean; customPresetId?: string }>;
   
   Object.entries(next).forEach(([id, item]) => {
     changed = true;
@@ -130,7 +136,7 @@ export const tickBroadcastState = (
   fps: number
 ): Record<string, BroadcastObjectState> => {
   let changed = false;
-  const nextState = { ...prevState };
+  const nextState = Object.assign(Object.create(null), prevState) as Record<string, BroadcastObjectState>;
 
   Object.entries(nextState).forEach(([id, st]) => {
     if (st.state === 'animating_in' || st.state === 'animating_out') {

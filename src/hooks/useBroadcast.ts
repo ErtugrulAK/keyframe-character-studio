@@ -108,7 +108,7 @@ export const useBroadcast = ({
 
   const triggerAllBroadcastIn = useCallback(() => {
     setBroadcastSessionActivated(true);
-    const nextState: Record<string, BroadcastObjectState> = {};
+    const nextState: Record<string, BroadcastObjectState> = Object.create(null);
     characterPartsRef.current.forEach(p => {
       const track = tracksRef.current.find(t => t.partId === p.id);
       if (!track || track.visible !== false) {
@@ -121,9 +121,9 @@ export const useBroadcast = ({
   const triggerAllBroadcastOut = useCallback(() => {
     setBroadcastSessionActivated(true);
     setBroadcastState(prev => {
-      const nextState = { ...prev };
+      const nextState = Object.assign(Object.create(null), prev) as Record<string, BroadcastObjectState>;
       characterPartsRef.current.forEach(p => {
-        if (nextState[p.id] && nextState[p.id].state !== 'hidden') {
+        if (Object.prototype.hasOwnProperty.call(nextState, p.id) && nextState[p.id].state !== 'hidden') {
           nextState[p.id] = { state: 'animating_out', progress: 0 };
         }
       });

@@ -35,71 +35,62 @@ export function evaluateTransform(
   partId: string,
   frame: number,
 ): WorldTransform {
-  const part = layers.find((p) => p.id === partId);
+  const visiting = new Set<string>();
+  const evaluate = (currentPartId: string): WorldTransform => {
+    const part = layers.find((p) => p.id === currentPartId);
+    const baseTransform: Transform = part
+      ? {
+          maskOffsetX: part.maskOffsetX ?? 0,
+          maskOffsetY: part.maskOffsetY ?? 0,
+          maskScale: part.maskScale ?? 1,
+          maskRotation: part.maskRotation ?? 0,
+          ...part.baseTransform,
+          mask: part.baseTransform?.mask ?? part.mask,
+        }
+      : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, maskOffsetX: 0, maskOffsetY: 0, maskScale: 1, maskRotation: 0 };
 
-  // 1. Base transform (defensive fallback for missing layer)
-  const baseTransform: Transform = part
-    ? {
-        maskOffsetX: part.maskOffsetX ?? 0,
-        maskOffsetY: part.maskOffsetY ?? 0,
-        maskScale: part.maskScale ?? 1,
-        maskRotation: part.maskRotation ?? 0,
-        ...part.baseTransform,
-        mask: part.baseTransform?.mask ?? part.mask,
-      }
-    : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, maskOffsetX: 0, maskOffsetY: 0, maskScale: 1, maskRotation: 0 };
+    const track = tracks.find((t) => t.partId === currentPartId);
+    if (!track) return baseTransform;
+    const activeTmpl = activeTemplateId || 'Sequence';
+    const rawTransform = evaluateKeyframes(track, baseTransform, frame, activeTmpl);
+    let finalComputed = rawTransform;
 
-  const track = tracks.find((t) => t.partId === partId);
-  if (!track) return baseTransform;
-
-  const activeTmpl = activeTemplateId || 'Sequence';
-
-  // 2. Keyframe evaluation
-  const rawTransform = evaluateKeyframes(track, baseTransform, frame, activeTmpl);
-
-  let finalComputed = rawTransform;
-
-  // 3. Anchor point resolution
-  if (part && part.anchor && part.anchor !== 'none') {
-    const ox = part.anchorOffsetX ?? 0;
-    const oy = part.anchorOffsetY ?? 0;
-    const offsets = PART_ANCHOR_OFFSETS[part.anchor] || PART_ANCHOR_OFFSETS['none'];
-    finalComputed = {
-      ...rawTransform,
-      x: offsets.ax + ox,
-      y: offsets.ay + oy,
-    };
-  }
-
-  const relationshipParentId = part?.parentId ?? part?.booleanGroupId;
-  if (part && relationshipParentId) {
-    const parentPart = layers.find((p) => p.id === relationshipParentId);
-    if (parentPart && parentPart.id !== partId) {
-      const parentTransform = evaluateTransform(layers, tracks, activeTemplateId, parentPart.id, frame);
-      const rad = (parentTransform.rotation * Math.PI) / 180;
-      const cos = Math.cos(rad);
-      const sin = Math.sin(rad);
-
-      const scaledChildX = finalComputed.x * parentTransform.scaleX;
-      const scaledChildY = finalComputed.y * parentTransform.scaleY;
-
-      const rotatedChildX = scaledChildX * cos - scaledChildY * sin;
-      const rotatedChildY = scaledChildX * sin + scaledChildY * cos;
-
-      finalComputed = {
-        ...finalComputed,
-        x: parentTransform.x + rotatedChildX,
-        y: parentTransform.y + rotatedChildY,
-        rotation: parentTransform.rotation + finalComputed.rotation,
-        scaleX: parentTransform.scaleX * finalComputed.scaleX,
-        scaleY: parentTransform.scaleY * finalComputed.scaleY,
-        // Container children keep their OWN opacity
-        opacity: finalComputed.opacity,
-      };
+    if (part && part.anchor && part.anchor !== 'none') {
+      const ox = part.anchorOffsetX ?? 0;
+      const oy = part.anchorOffsetY ?? 0;
+      const offsets = PART_ANCHOR_OFFSETS[part.anchor] || PART_ANCHOR_OFFSETS.none;
+      finalComputed = { ...rawTransform, x: offsets.ax + ox, y: offsets.ay + oy };
     }
-  }
+    if (visiting.has(currentPartId)) return finalComputed;
 
-  return finalComputed;
+    visiting.add(currentPartId);
+    const relationshipParentId = part?.parentId ?? part?.booleanGroupId;
+    if (part && relationshipParentId) {
+      const parentPart = layers.find((p) => p.id === relationshipParentId);
+      if (parentPart && parentPart.id !== currentPartId) {
+        const parentTransform = evaluate(parentPart.id);
+        const rad = (parentTransform.rotation * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        const scaledChildX = finalComputed.x * parentTransform.scaleX;
+        const scaledChildY = finalComputed.y * parentTransform.scaleY;
+        const rotatedChildX = scaledChildX * cos - scaledChildY * sin;
+        const rotatedChildY = scaledChildX * sin + scaledChildY * cos;
+        finalComputed = {
+          ...finalComputed,
+          x: parentTransform.x + rotatedChildX,
+          y: parentTransform.y + rotatedChildY,
+          rotation: parentTransform.rotation + finalComputed.rotation,
+          scaleX: parentTransform.scaleX * finalComputed.scaleX,
+          scaleY: parentTransform.scaleY * finalComputed.scaleY,
+          opacity: finalComputed.opacity,
+        };
+      }
+    }
+    visiting.delete(currentPartId);
+    return finalComputed;
+  };
+  return evaluate(partId);
 }
 
 // ─── Keyframe evaluation (pure, extracted from useMath.ts:46-114) ──────

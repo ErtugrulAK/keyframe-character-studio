@@ -537,6 +537,41 @@ function createPublicStateSchema(
   return { type: 'object', properties, additionalProperties: false };
 }
 
+function validateLayerHierarchy(layers: SceneLayer[], diagnostics: OGrafExportDiagnostic[]): void {
+  const layerById = new Map<string, SceneLayer>();
+  for (const layer of layers) layerById.set(layer.id, layer);
+  const relationships = new Map<string, string>();
+  for (const layer of layers) {
+    const parentId = layer.parentId ?? layer.booleanGroupId;
+    if (!parentId) continue;
+    if (isPrototypeSensitiveKey(parentId)) {
+      invalidProject(
+        diagnostics,
+        `Layer parent "${parentId}" for layer "${layer.id}" is reserved.`,
+        layer,
+        'hierarchy',
+      );
+      continue;
+    }
+    if (!layerById.has(parentId)) continue;
+    relationships.set(layer.id, parentId);
+  }
+  const visit = (id: string, visiting: Set<string>, visited: Set<string>): void => {
+    if (visiting.has(id)) {
+      const layer = layerById.get(id);
+      invalidProject(diagnostics, `Layer parent cycle detected at "${id}".`, layer, 'hierarchy');
+      return;
+    }
+    if (visited.has(id)) return;
+    visiting.add(id);
+    const parentId = relationships.get(id);
+    if (parentId) visit(parentId, visiting, visited);
+    visiting.delete(id);
+    visited.add(id);
+  };
+  for (const id of relationships.keys()) visit(id, new Set(), new Set());
+}
+
 export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExportOptions = {}): ValidatedOGrafScene {
   const diagnostics: OGrafExportDiagnostic[] = [];
   const assets: OGrafAssetPlan[] = [];
@@ -553,6 +588,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
     const layer = (sceneData.layers || []).find((candidate) => candidate.id === track.partId);
     if (layer) validateTrackInput(track, diagnostics, layer);
   }
+  validateLayerHierarchy(sceneData.layers || [], diagnostics);
   const publicControls = resolveOGrafPublicControls(sceneData, options, assets);
   validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, sceneData.layers || [], diagnostics);
   const layerById = new Map((sceneData.layers || []).map((layer) => [layer.id, layer]));

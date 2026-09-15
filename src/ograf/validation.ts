@@ -79,6 +79,20 @@ function validateFiniteFields(
   }
 }
 
+function validateRequiredFiniteFields(
+  value: Record<string, unknown>,
+  fields: readonly string[],
+  diagnostics: OGrafExportDiagnostic[],
+  layer: SceneLayer,
+  feature: string,
+): void {
+  for (const field of fields) {
+    if (!isFiniteNumber(value[field])) {
+      invalidProject(diagnostics, `${feature} field "${field}" must be a finite number.`, layer, feature);
+    }
+  }
+}
+
 function validatePathPoints(
   points: unknown,
   diagnostics: OGrafExportDiagnostic[],
@@ -91,7 +105,7 @@ function validatePathPoints(
     return;
   }
   for (const point of points) {
-    if (!point || typeof point !== 'object') {
+    if (!point || typeof point !== 'object' || Array.isArray(point)) {
       invalidProject(diagnostics, `${feature} contains an invalid point.`, layer, feature);
       continue;
     }
@@ -102,12 +116,37 @@ function validatePathPoints(
     for (const handle of ['handleIn', 'handleOut']) {
       const rawHandle = candidate[handle];
       if (rawHandle === undefined) continue;
-      if (!rawHandle || typeof rawHandle !== 'object'
+      if (!rawHandle || typeof rawHandle !== 'object' || Array.isArray(rawHandle)
         || !isFiniteNumber((rawHandle as Record<string, unknown>).x)
         || !isFiniteNumber((rawHandle as Record<string, unknown>).y)) {
         invalidProject(diagnostics, `${feature} handles must contain finite x and y values.`, layer, feature);
       }
     }
+  }
+}
+
+function validateKeyframeMetadata(
+  candidate: Record<string, unknown>,
+  diagnostics: OGrafExportDiagnostic[],
+  layer: SceneLayer,
+  feature: string,
+): void {
+  validateRequiredFiniteFields(candidate, ['frame'], diagnostics, layer, feature);
+  for (const handle of ['bezierIn', 'bezierOut']) {
+    const value = candidate[handle];
+    if (value === undefined) continue;
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      invalidProject(diagnostics, `${feature} ${handle} must be an object with finite x and y values.`, layer, feature);
+      continue;
+    }
+    validateRequiredFiniteFields(value as Record<string, unknown>, ['x', 'y'], diagnostics, layer, feature);
+  }
+  const controlPoints = candidate.bezierControlPoints;
+  if (controlPoints !== undefined
+    && (!Array.isArray(controlPoints)
+      || controlPoints.length !== 4
+      || controlPoints.some((value) => !isFiniteNumber(value)))) {
+    invalidProject(diagnostics, `${feature} bezierControlPoints must contain exactly four finite numbers.`, layer, feature);
   }
 }
 
@@ -123,28 +162,45 @@ function validateKeyframeArray(
     return;
   }
   for (const keyframe of keyframes) {
-    if (!keyframe || typeof keyframe !== 'object') {
+    if (!keyframe || typeof keyframe !== 'object' || Array.isArray(keyframe)) {
       invalidProject(diagnostics, `${feature} contains an invalid keyframe.`, layer, feature);
       continue;
     }
     const candidate = keyframe as Record<string, unknown>;
-    validateFiniteFields(candidate, ['frame', 'value'], diagnostics, layer, feature);
-    if (candidate.bezierIn && typeof candidate.bezierIn === 'object') {
-      validateFiniteFields(candidate.bezierIn as Record<string, unknown>, ['x', 'y'], diagnostics, layer, feature);
-    } else if (candidate.bezierIn !== undefined) {
-      invalidProject(diagnostics, `${feature} bezierIn must contain finite x and y values.`, layer, feature);
+    validateKeyframeMetadata(candidate, diagnostics, layer, feature);
+    validateRequiredFiniteFields(candidate, ['value'], diagnostics, layer, feature);
+  }
+}
+
+function validateLegacyKeyframeArray(
+  keyframes: unknown,
+  diagnostics: OGrafExportDiagnostic[],
+  layer: SceneLayer,
+  feature: string,
+): void {
+  if (keyframes === undefined) return;
+  if (!Array.isArray(keyframes)) {
+    invalidProject(diagnostics, `${feature} must be an array.`, layer, feature);
+    return;
+  }
+  for (const keyframe of keyframes) {
+    if (!keyframe || typeof keyframe !== 'object' || Array.isArray(keyframe)) {
+      invalidProject(diagnostics, `${feature} contains an invalid keyframe.`, layer, feature);
+      continue;
     }
-    if (candidate.bezierOut && typeof candidate.bezierOut === 'object') {
-      validateFiniteFields(candidate.bezierOut as Record<string, unknown>, ['x', 'y'], diagnostics, layer, feature);
-    } else if (candidate.bezierOut !== undefined) {
-      invalidProject(diagnostics, `${feature} bezierOut must contain finite x and y values.`, layer, feature);
+    const candidate = keyframe as Record<string, unknown>;
+    validateKeyframeMetadata(candidate, diagnostics, layer, feature);
+    if (!candidate.transform || typeof candidate.transform !== 'object' || Array.isArray(candidate.transform)) {
+      invalidProject(diagnostics, `${feature} transform must be an object.`, layer, feature);
+      continue;
     }
-    if (Array.isArray(candidate.bezierControlPoints)
-      && candidate.bezierControlPoints.some((value) => !isFiniteNumber(value))) {
-      invalidProject(diagnostics, `${feature} bezier control points must be finite numbers.`, layer, feature);
-    } else if (candidate.bezierControlPoints !== undefined && !Array.isArray(candidate.bezierControlPoints)) {
-      invalidProject(diagnostics, `${feature} bezier control points must be an array.`, layer, feature);
-    }
+    validateRequiredFiniteFields(
+      candidate.transform as Record<string, unknown>,
+      ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'],
+      diagnostics,
+      layer,
+      feature,
+    );
   }
 }
 
@@ -224,7 +280,7 @@ function validateTrackInput(
     return;
   }
   const candidate = track as Record<string, unknown>;
-  validateKeyframeArray(candidate.keyframes, diagnostics, layer, 'track keyframes');
+  validateLegacyKeyframeArray(candidate.keyframes, diagnostics, layer, 'track keyframes');
   for (const [channel, keyframes] of Object.entries(candidate.channels || {})) {
     validateKeyframeArray(keyframes, diagnostics, layer, `track channel "${channel}"`);
   }
@@ -232,19 +288,23 @@ function validateTrackInput(
     validateKeyframeArray(keyframes, diagnostics, layer, `mask channel "${channel}"`);
   }
   for (const [channel, keyframes] of Object.entries(candidate.maskPathChannels || {})) {
-    if (Array.isArray(keyframes)) {
-      for (const keyframe of keyframes) {
-        if (keyframe && typeof keyframe === 'object') {
-          const value = (keyframe as Record<string, unknown>).value;
-          if (value && typeof value === 'object') {
-            validatePathPoints((value as Record<string, unknown>).points, diagnostics, layer, `mask path channel "${channel}"`);
-          } else {
-            invalidProject(diagnostics, `Mask path channel "${channel}" contains an invalid path.`, layer, 'channels');
-          }
-        }
-      }
-    } else {
+    if (!Array.isArray(keyframes)) {
       invalidProject(diagnostics, `Mask path channel "${channel}" must be an array.`, layer, 'channels');
+      continue;
+    }
+    for (const keyframe of keyframes) {
+      if (!keyframe || typeof keyframe !== 'object' || Array.isArray(keyframe)) {
+        invalidProject(diagnostics, `Mask path channel "${channel}" contains an invalid keyframe.`, layer, 'channels');
+        continue;
+      }
+      const pathKeyframe = keyframe as Record<string, unknown>;
+      validateKeyframeMetadata(pathKeyframe, diagnostics, layer, `mask path channel "${channel}"`);
+      const value = pathKeyframe.value;
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        invalidProject(diagnostics, `Mask path channel "${channel}" contains an invalid path.`, layer, 'channels');
+        continue;
+      }
+      validatePathPoints((value as Record<string, unknown>).points, diagnostics, layer, `mask path channel "${channel}"`);
     }
   }
 }

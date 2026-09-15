@@ -302,4 +302,87 @@ describe('OGraf Export V1 Phase 1', () => {
     })]);
     expect(errorCodes(invalidModes)).toContain('OGRAF_INVALID_PROJECT');
   });
+  test('rejects malformed legacy composite keyframe transforms', () => {
+    const values = [Number.NaN, Number.POSITIVE_INFINITY, '0" onload="alert(1)'];
+    for (const x of values) {
+      const scene = makeScene();
+      scene.tracks = [{
+        partId: 'layer-1',
+        keyframes: [{
+          id: 'legacy-1',
+          frame: 0,
+          easing: 'linear',
+          transform: { x, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+        }],
+        channels: {},
+      } as never];
+      expect(compileOGrafPackage(scene).status).toBe('blocked');
+    }
+  });
+
+  test('requires complete finite scalar keyframe metadata', () => {
+    const invalidKeyframes = [
+      { value: 1, easing: 'linear' },
+      { frame: 0, easing: 'linear' },
+      { frame: 0, value: 1, easing: 'linear', bezierIn: {} },
+      { frame: 0, value: 1, easing: 'linear', bezierControlPoints: [0, 1, 2] },
+      { frame: 0, value: 1, easing: 'linear', bezierControlPoints: [0, 1, Number.NaN, 2] },
+    ];
+    for (const keyframe of invalidKeyframes) {
+      const scene = makeScene();
+      scene.tracks = [{
+        partId: 'layer-1',
+        channels: { x: [keyframe] },
+      } as never];
+      expect(compileOGrafPackage(scene).status).toBe('blocked');
+    }
+  });
+
+  test('requires complete finite mask path keyframe metadata', () => {
+    const path = {
+      version: 1 as const,
+      coordinateSpace: 'local' as const,
+      closed: true,
+      points: [{ id: 'p1', x: 0, y: 0 }, { id: 'p2', x: 1, y: 1 }],
+    };
+    const scene = makeScene([makeLayer({
+      masks: [{ id: 'mask-1', name: 'Mask', mode: 'add', path }],
+    })]);
+    scene.tracks = [{
+      partId: 'layer-1',
+      channels: {},
+      maskPathChannels: {
+        'mask-1:path': [{ value: path, easing: 'linear', bezierControlPoints: [0, 1, 2] }],
+      },
+    } as never];
+    expect(compileOGrafPackage(scene).status).toBe('blocked');
+  });
+
+  test('keeps valid legacy, scalar, and mask path keyframes exportable', () => {
+    const path = {
+      version: 1 as const,
+      coordinateSpace: 'local' as const,
+      closed: true,
+      points: [{ id: 'p1', x: 0, y: 0 }, { id: 'p2', x: 1, y: 1 }],
+    };
+    const scene = makeScene([makeLayer({
+      masks: [{ id: 'mask-1', name: 'Mask', mode: 'add', path }],
+    })]);
+    scene.tracks = [{
+      partId: 'layer-1',
+      keyframes: [{
+        id: 'legacy-1',
+        frame: 0,
+        easing: 'linear',
+        transform: { x: -10, y: 0, rotation: 0, scaleX: -1, scaleY: 1, opacity: 1 },
+      }],
+      channels: {
+        x: [{ id: 'x-1', frame: 0, value: 0, easing: 'linear' }],
+      },
+      maskPathChannels: {
+        'mask-1:path': [{ id: 'path-1', frame: 0, value: path, easing: 'linear' }],
+      },
+    } as never];
+    expect(compileOGrafPackage(scene).status).toBe('ready-to-materialize');
+  });
 });

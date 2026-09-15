@@ -54,3 +54,15 @@
 - Patch integration remained single-owner; no subagent edited source.
 - No global OMP configuration, model roles, memory backend, hooks, routing, or references were changed or activated.
 - No secrets were read or written. `without-mask` was not touched.
+
+## Targeted Review Follow-up
+
+- The independent review identified incomplete validation for legacy composite keyframe transforms, missing scalar keyframe fields, mask-path keyframe metadata, and Bézier control-point shape.
+- Legacy composite transforms now require finite `x`, `y`, `rotation`, `scaleX`, `scaleY`, and `opacity`.
+- Scalar and mask-path keyframes now require finite `frame` values; scalar values are required finite numbers.
+- Present temporal handles require finite `x`/`y`; Bézier control points require exactly four finite numbers.
+- Generated runtime validation now covers legacy tracks, scalar channels, mask channels, mask-path metadata, path points, and path handles.
+- Added focused regression coverage for malformed legacy, scalar, and mask-path keyframes plus valid negative/zero and legacy cases.
+- Branch validation: focused OGraf tests PASS (6 files / 93 tests), full Vitest PASS (101 files / 1,488 tests), build PASS, TypeScript PASS, lint PASS with the existing Fast Refresh warning, and `git diff --check` PASS.
+- No release/tag, main merge, global configuration, hook, or routing change was performed in this follow-up.
+- Remaining blockers: parent-cycle protection, broadcast map hardening, Node sourcePath/filesystem trust, mask/matte visual parity, offline OGraf schema fixtures, and final release gates.

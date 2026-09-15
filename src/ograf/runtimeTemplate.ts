@@ -37,6 +37,16 @@ const IMAGE_REFERENCES = Object.fromEntries(${JSON.stringify(Object.entries(imag
 const FONT_REFERENCES = Object.fromEntries(${JSON.stringify(Object.entries(fontReferences))});
 function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 function escapeXml(value) { return String(value).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;').split("'").join('&apos;'); }
+function assertKeyframe(keyframe, path, scalar) {
+  if (!keyframe || typeof keyframe !== 'object' || Array.isArray(keyframe)) throw new Error('Invalid keyframe: ' + path);
+  if (typeof keyframe.frame !== 'number' || !Number.isFinite(keyframe.frame)) throw new Error('Invalid keyframe frame: ' + path);
+  if (scalar && (typeof keyframe.value !== 'number' || !Number.isFinite(keyframe.value))) throw new Error('Invalid keyframe value: ' + path);
+  for (const handle of ['bezierIn', 'bezierOut']) {
+    const value = keyframe[handle];
+    if (value !== undefined && (!value || typeof value !== 'object' || Array.isArray(value) || typeof value.x !== 'number' || !Number.isFinite(value.x) || typeof value.y !== 'number' || !Number.isFinite(value.y))) throw new Error('Invalid keyframe handle: ' + path);
+  }
+  if (keyframe.bezierControlPoints !== undefined && (!Array.isArray(keyframe.bezierControlPoints) || keyframe.bezierControlPoints.length !== 4 || keyframe.bezierControlPoints.some((value) => typeof value !== 'number' || !Number.isFinite(value)))) throw new Error('Invalid keyframe control points: ' + path);
+}
 function assertSafeScene(scene) {
   const fields = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'zIndex'];
   const optional = ['fillOpacity', 'strokeWidth', 'strokeOpacity', 'borderRadius', 'fontSize', 'width', 'height'];
@@ -51,9 +61,22 @@ function assertSafeScene(scene) {
     if (layer.trackMatte && !['alpha', 'luminance'].includes(layer.trackMatte.mode)) throw new Error('Invalid track matte mode');
   }
   for (const track of scene.tracks || []) {
-    for (const keyframes of Object.values(track.channels || {})) {
-      for (const keyframe of keyframes || []) {
-        if (typeof keyframe.value !== 'number' || !Number.isFinite(keyframe.value)) throw new Error('Invalid channel value');
+    for (const keyframe of track.keyframes || []) {
+      assertKeyframe(keyframe, 'legacy', false);
+      if (!keyframe.transform || typeof keyframe.transform !== 'object' || Array.isArray(keyframe.transform)) throw new Error('Invalid legacy transform');
+      for (const field of ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity']) if (typeof keyframe.transform[field] !== 'number' || !Number.isFinite(keyframe.transform[field])) throw new Error('Invalid legacy transform field: ' + field);
+    }
+    for (const keyframes of Object.values(track.channels || {})) for (const keyframe of keyframes || []) assertKeyframe(keyframe, 'channel', true);
+    for (const keyframes of Object.values(track.maskChannels || {})) for (const keyframe of keyframes || []) assertKeyframe(keyframe, 'mask-channel', true);
+    for (const keyframes of Object.values(track.maskPathChannels || {})) for (const keyframe of keyframes || []) {
+      assertKeyframe(keyframe, 'mask-path-channel', false);
+      if (!keyframe.value || typeof keyframe.value !== 'object' || !Array.isArray(keyframe.value.points)) throw new Error('Invalid mask path keyframe');
+      for (const point of keyframe.value.points) {
+        if (!point || typeof point.x !== 'number' || !Number.isFinite(point.x) || typeof point.y !== 'number' || !Number.isFinite(point.y)) throw new Error('Invalid mask path point');
+        for (const handle of ['handleIn', 'handleOut']) {
+          const value = point[handle];
+          if (value !== undefined && (!value || typeof value.x !== 'number' || !Number.isFinite(value.x) || typeof value.y !== 'number' || !Number.isFinite(value.y))) throw new Error('Invalid mask path handle');
+        }
       }
     }
   }

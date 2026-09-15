@@ -25,6 +25,7 @@ Post-merge Vitest, focused existing package/filesystem evidence, `validate:ograf
 
 ## Next scoped work
 
-1. Monitor draft prerelease feedback.
-2. Publish/finalize the GitHub draft only after explicit instruction.
-3. Keep npm publication disabled unless separately approved.
+1. Read `docs/KCS_POST_RC_ROADMAP.md` and `reports/progress_104.md`.
+2. Start only with approved `feat/export-diagnostics-ux`.
+3. Preserve the tag/draft release and request independent review before merge.
+4. Publish/finalize the GitHub draft only after explicit user instruction.

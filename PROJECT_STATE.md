@@ -23,7 +23,8 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ## Remaining work
 
-- Release readiness: **READY WITH WARNINGS**; tag and draft prerelease are created.
+- Post-RC roadmap: `docs/KCS_POST_RC_ROADMAP.md`.
+- Safest first coding task: `feat/export-diagnostics-ux`.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 

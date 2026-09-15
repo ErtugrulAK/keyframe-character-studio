@@ -1,0 +1,37 @@
+name: Release Smoke Gate
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: 'Expected candidate commit SHA (optional; defaults to checked-out SHA)'
+        required: false
+        type: string
+
+jobs:
+  release-smoke:
+    name: Chromium OGraf Release Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.candidate_sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Release Smoke Gate
+        run: npm run qa:release

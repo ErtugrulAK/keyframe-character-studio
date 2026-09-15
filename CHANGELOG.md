@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Release candidate `1.1.0-rc.1` (unreleased)
+- Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.
+- This candidate metadata does not authorize publication or tag creation.
+
 ### Security
 - Hardened prototype-sensitive imported OGraf keys, package paths, MIME lookups, and generated runtime maps.
 - Added a separate OGraf materialization guard branch for missing text-file content; it remains pending review and is not part of `main`.

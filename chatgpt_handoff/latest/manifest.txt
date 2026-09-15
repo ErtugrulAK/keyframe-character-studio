@@ -1,23 +1,27 @@
 # KCS Final Pre-Release Verification Handoff Manifest
 
-Final candidate SHA: 865117168c69090db36b6221f513b75fba34acfe
-Release readiness: READY WITH WARNINGS FOR USER APPROVAL, pending remote manual release-smoke result
-Terminal output enough: YES for local validation; NO until remote workflow result is obtained
-Next action: run remote release-smoke.yml for the final SHA; if PASS, request release/tag approval
+Workflow-tested release code candidate SHA: 46d2a3e59e065816d972dcd56951803951b577f6
+Remote workflow: release-smoke.yml
+Remote run: 34983770238
+Remote URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/34983770238
+Remote status: PASS
+Release readiness: READY WITH WARNINGS FOR USER APPROVAL
+Terminal output enough: YES; remote workflow result is recorded here and in progress_102.md
+Next action: obtain separate explicit approval before release/tag operations
 
 Copied files and reasons:
 - CHANGELOG.md — unreleased 1.1.0-rc.1 candidate metadata
-- KCS_CI_STATUS.md — CI and manual browser gate status
+- KCS_CI_STATUS.md — CI and remote browser-gate status
 - KCS_CURRENT_STATE.md — current security and release state
 - KCS_RELEASE_CANDIDATE_SUMMARY.md — blocker outcomes and readiness status
 - NEXT_SESSION.md — repository guardrails and next action
-- PROJECT_STATE.md — current main SHA and protected state
+- PROJECT_STATE.md — current project state and protected state
 - package-lock.json — synchronized package metadata
 - package.json — private candidate version
 - progress_101.md — blocker resolution and review evidence
-- progress_102.md — post-merge readiness audit
+- progress_102.md — post-merge and remote smoke audit
 - release-smoke.yml — manual full-SHA Chromium gate
-- README.md — handoff scope and next action
+- README.md — handoff scope and remote PASS
 - manifest.txt — this inventory
 
 Not copied: .git, node_modules, .omp files, global OMP configuration, backups, secrets, environment/API-key files, binary caches, and unchanged irrelevant files.

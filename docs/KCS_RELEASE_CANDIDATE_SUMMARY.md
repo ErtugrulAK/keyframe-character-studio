@@ -2,7 +2,7 @@
 
 ## Release boundary
 
-The release-readiness blocker work is integrated into `main@865117168c69090db36b6221f513b75fba34acfe`. This document does not authorize tag creation, release publication, or branch deletion.
+The release-readiness blocker work is integrated into main. Remote `release-smoke.yml` passed for workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`; this documentation update is docs-only. This document does not authorize tag creation, release publication, or branch deletion.
 
 ## Accepted milestones
 
@@ -19,6 +19,7 @@ The release-readiness blocker work is integrated into `main@865117168c69090db36b
 - Build: PASS with existing chunk-size warning.
 - `validate:ograf`: PASS for the committed fixture; network-dependent.
 - `qa:release`: PASS for 2 Chromium tests; manual CI workflow is checked in and requires an explicit candidate SHA.
+- Remote manual `release-smoke.yml`: PASS — run `34983770238` for code candidate `46d2a3e59e065816d972dcd56951803951b577f6`.
 
 ## Accepted blocker constraints
 
@@ -29,4 +30,4 @@ The release-readiness blocker work is integrated into `main@865117168c69090db36b
 
 ## Release decision
 
-**READY WITH WARNINGS FOR USER APPROVAL.** No tag or release was created. Separate explicit user approval remains required for any release/tag operation.
+**READY WITH WARNINGS FOR USER APPROVAL.** The workflow-tested code candidate passed remotely. The final documentation update is docs-only after that run. No tag or release was created; separate explicit user approval remains required.

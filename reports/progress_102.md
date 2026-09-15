@@ -2,7 +2,8 @@
 
 ## Candidate
 
-- Final main/origin-main candidate SHA: `865117168c69090db36b6221f513b75fba34acfe`
+- Workflow-tested release code candidate SHA: `46d2a3e59e065816d972dcd56951803951b577f6`
+- Final documentation HEAD: this post-pass report commit (docs-only after workflow validation).
 - Blocker branch: `fix/release-readiness-blockers`
 - Merge: fast-forward only; no normal merge commit.
 - Package version: private `1.1.0-rc.1`.
@@ -26,7 +27,7 @@
 - `npm run lint`: PASS with existing Fast Refresh warning at `src/context/AnimatorContext.tsx:655`.
 - `git diff --check`: PASS.
 
-- Remote manual `release-smoke.yml`: PENDING for final candidate SHA `865117168c69090db36b6221f513b75fba34acfe`.
+- Remote manual `release-smoke.yml`: PASS — run `34983770238`, https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/34983770238, candidate SHA `46d2a3e59e065816d972dcd56951803951b577f6`.
 
 - Review verdict: **READY WITH WARNINGS**.
 - Review findings were corrected before merge: stale CI documentation, stale candidate validation wording, stale changelog blocker wording, and incomplete TOCTOU wording.
@@ -34,6 +35,8 @@
 ## Release decision
 
 **RELEASE READINESS: READY WITH WARNINGS FOR USER APPROVAL**.
+
+The workflow-tested code candidate passed remotely. The final documentation commit is docs-only and follows that workflow run; the recommended release/tag target is the workflow-tested code candidate SHA above unless the final documentation HEAD is deliberately retested.
 
 Warnings are explicit and operational: hostile concurrent filesystem mutation is outside the supported threat model; schema validation requires network access; and browser validation requires a manually dispatched workflow with Chromium installation. Production release/tag was not created. Separate explicit user approval is required.
 

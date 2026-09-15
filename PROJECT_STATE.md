@@ -2,7 +2,7 @@
 
 ## Current position
 
-The accepted product and security follow-up line, including release-readiness blocker resolution, is integrated into `main@865117168c69090db36b6221f513b75fba34acfe`, synchronized with `origin/main`. No release or tag has been created.
+The accepted product and security follow-up line, including release-readiness blocker resolution, is integrated into main. The workflow-tested release code candidate is `46d2a3e59e065816d972dcd56951803951b577f6`; the final documentation update follows as docs-only. No release or tag has been created.
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
@@ -29,7 +29,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ## Protected state
 
-- `main` and `origin/main` are synchronized at `865117168c69090db36b6221f513b75fba34acfe`.
+- The workflow-tested release code candidate is `46d2a3e59e065816d972dcd56951803951b577f6`; final documentation updates are docs-only.
 - `v1.1.0-public-controls` remains unchanged.
 - `origin/without-mask` remains untouched and classified ARCHIVE.
 - `.omp/config.yml` retains `memory.backend: mnemopi`.

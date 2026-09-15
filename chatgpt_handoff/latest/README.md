@@ -2,25 +2,28 @@
 
 ## Candidate
 
-- Final main/origin-main SHA: `865117168c69090db36b6221f513b75fba34acfe`
+- Workflow-tested release code candidate SHA: `46d2a3e59e065816d972dcd56951803951b577f6`
+- Final documentation HEAD: docs-only commit after the workflow run
 - Package version: private `1.1.0-rc.1`
-- Release readiness: READY WITH WARNINGS FOR USER APPROVAL, pending remote manual release-smoke result
+- Release readiness: READY WITH WARNINGS FOR USER APPROVAL
+
+## Remote release-smoke
+
+- Workflow: `release-smoke.yml`
+- Run: `34983770238`
+- URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/34983770238
+- Candidate SHA: `46d2a3e59e065816d972dcd56951803951b577f6`
+- Result: PASS
+- Chromium tests: 2 passed
 
 ## Scope
 
-This bundle contains the reconciled final candidate documentation and the manual Playwright release-smoke workflow. No production release or tag was created.
-
-## Validation state
-
-Local validation previously passed, including `npm run qa:release` on the preceding code candidate. The remote manual workflow must run against the final main SHA before release/tag approval.
-
-- Terminal output enough: YES for local validation
-- Terminal output enough: NO until remote workflow result is obtained
+This bundle contains the reconciled final candidate documentation and manual Playwright release-smoke evidence. No production release or tag was created.
 
 ## Next action
 
-Run the manual `release-smoke.yml` workflow with candidate SHA `865117168c69090db36b6221f513b75fba34acfe`. If it passes, request separate explicit user approval for the release/tag prompt. If it fails, do not proceed.
+A separate explicit user approval is required before any production release or tag operation. The recommended release/tag target is the workflow-tested code candidate SHA above. The post-pass documentation commit is docs-only.
 
 ## Included files
 
-The bundle includes the current reports, project/release documents, package metadata, and manual workflow. See `manifest.txt` for the complete list and reasons.
+The bundle includes current reports, project/release documents, package metadata, and the manual workflow. See `manifest.txt` for the complete list and reasons.

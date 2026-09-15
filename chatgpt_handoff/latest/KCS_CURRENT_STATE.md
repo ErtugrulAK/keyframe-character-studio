@@ -1,6 +1,6 @@
 # KCS Current State
 
-The accepted KCS product and release-readiness blocker resolution is integrated into `main@0c21e2e6393d71c92944b2be22f8bf91cab47a8f`, synchronized with `origin/main`. No release or tag has been created.
+The accepted KCS product and release-readiness blocker resolution is integrated into main. Remote `release-smoke.yml` passed for workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`; the final documentation update follows as docs-only. No release or tag has been created.
 
 ## Completed security and OGraf work
 
@@ -17,7 +17,7 @@ The accepted KCS product and release-readiness blocker resolution is integrated 
 
 ## Protected state
 
-- `main` and `origin/main` are synchronized at `0c21e2e6393d71c92944b2be22f8bf91cab47a8f`.
+- Workflow-tested release code candidate: `46d2a3e59e065816d972dcd56951803951b577f6`; final documentation update is docs-only.
 - Release tag `v1.1.0-public-controls` remains unchanged.
 - `origin/without-mask` remains untouched and classified ARCHIVE.
 - `.omp/config.yml` retains `memory.backend: mnemopi`.

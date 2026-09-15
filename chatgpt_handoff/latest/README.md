@@ -1,27 +1,26 @@
-# KCS Release Blocker Resolution Handoff
-
-## Scope
-
-This bundle records the release-readiness blocker resolution merged into `main` without creating a production release or tag.
+# KCS Final Pre-Release Verification Handoff
 
 ## Candidate
 
-- Main/origin-main: `0c21e2e6393d71c92944b2be22f8bf91cab47a8f`
-- Candidate version: private `1.1.0-rc.1`
-- Release readiness: READY WITH WARNINGS FOR USER APPROVAL
+- Final main/origin-main SHA: `3a53734cb179127123b6bccc5bf84b26858f4cc2`
+- Package version: private `1.1.0-rc.1`
+- Release readiness: READY WITH WARNINGS FOR USER APPROVAL, pending remote manual release-smoke result
 
-## Included files
+## Scope
 
-The bundle contains the final report, prior decision audit report, release metadata, current-state documents, CI status, the manual Playwright workflow, and package manifests. Relative repository paths are listed in `manifest.txt`.
+This bundle contains the reconciled final candidate documentation and the manual Playwright release-smoke workflow. No production release or tag was created.
 
-## Why these files
+## Validation state
 
-They provide evidence for the four outcomes: accepted SourcePath/output TOCTOU constraints, network-dependent hash-pinned OGraf validation, the manually dispatched Chromium gate, and unreleased candidate metadata.
+Local validation previously passed, including `npm run qa:release` on the preceding code candidate. The remote manual workflow must run against the final main SHA before release/tag approval.
 
-## Validation
-
-Terminal output is sufficient for the local validation results recorded in `reports/progress_102.md`. The manual GitHub Actions browser gate still requires an explicit workflow dispatch with the candidate full SHA.
+- Terminal output enough: YES for local validation
+- Terminal output enough: NO until remote workflow result is obtained
 
 ## Next action
 
-Separate explicit user approval is required before any production release or tag prompt. No tag, release, branch deletion, or `without-mask` change was performed.
+Run the manual `release-smoke.yml` workflow with candidate SHA `3a53734cb179127123b6bccc5bf84b26858f4cc2`. If it passes, request separate explicit user approval for the release/tag prompt. If it fails, do not proceed.
+
+## Included files
+
+The bundle includes the current reports, project/release documents, package metadata, and manual workflow. See `manifest.txt` for the complete list and reasons.

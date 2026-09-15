@@ -2,7 +2,7 @@
 
 ## Candidate
 
-- Main/origin-main candidate SHA: `0c21e2e6393d71c92944b2be22f8bf91cab47a8f`
+- Final main/origin-main candidate SHA: `3a53734cb179127123b6bccc5bf84b26858f4cc2`
 - Blocker branch: `fix/release-readiness-blockers`
 - Merge: fast-forward only; no normal merge commit.
 - Package version: private `1.1.0-rc.1`.
@@ -19,14 +19,14 @@
 - `npm ci`: PASS; existing blocked `sqlite3@6.0.1` install-script warning remains.
 - Focused package/filesystem tests: existing merged evidence in Progress 089 remains PASS; no source behavior changed in this blocker patch.
 - `npm run validate:ograf`: PASS.
-- `npm run qa:release`: PASS; candidate SHA `0c21e2e6393d71c92944b2be22f8bf91cab47a8f`, 2 Chromium tests passed.
+- Local `npm run qa:release`: PASS; previously tested code candidate SHA `0c21e2e6393d71c92944b2be22f8bf91cab47a8f`, 2 Chromium tests passed.
 - `npm test -- --run`: PASS; 101 files / 1,495 tests.
 - `npm run build`: PASS; existing Vite chunk-size warning remains.
 - `npx tsc --noEmit`: PASS.
 - `npm run lint`: PASS with existing Fast Refresh warning at `src/context/AnimatorContext.tsx:655`.
 - `git diff --check`: PASS.
 
-## Independent review
+- Remote manual `release-smoke.yml`: PENDING for final candidate SHA `3a53734cb179127123b6bccc5bf84b26858f4cc2`.
 
 - Review verdict: **READY WITH WARNINGS**.
 - Review findings were corrected before merge: stale CI documentation, stale candidate validation wording, stale changelog blocker wording, and incomplete TOCTOU wording.

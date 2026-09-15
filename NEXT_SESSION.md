@@ -2,7 +2,7 @@
 
 ## Repository state
 
-- Checkout: `main@0c21e2e6393d71c92944b2be22f8bf91cab47a8f`
+- Checkout: `main@3a53734cb179127123b6bccc5bf84b26858f4cc2`
 - Remote: `origin/main` synchronized
 - Release-readiness branch: `fix/release-readiness-blockers`, merged by fast-forward
 - Release tag: `v1.1.0-public-controls`, unchanged

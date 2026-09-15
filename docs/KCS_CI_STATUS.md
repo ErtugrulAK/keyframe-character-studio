@@ -16,11 +16,11 @@ The checked-in `.github/workflows/ci.yml` remains the fast push/PR validation pa
 
 ## Current validation
 
-- Baseline main/origin-main before blocker work: `449ca898a30442e906b802f9824b2ad1dc278e5e`.
+- Final main/origin-main candidate SHA: `3a53734cb179127123b6bccc5bf84b26858f4cc2`.
 - Blocker branch: `fix/release-readiness-blockers`.
 - Full Vitest: PASS — 101 files / 1,495 tests.
 - `validate:ograf`: PASS for the committed fixture.
-- `qa:release`: PASS — candidate `449ca898a30442e906b802f9824b2ad1dc278e5e`, 2 tests.
+- Local `qa:release`: PASS — previously tested code candidate `0c21e2e6393d71c92944b2be22f8bf91cab47a8f`, 2 tests.
 - TypeScript, lint, build, and diff check: PASS with existing warnings.
 
 ## Limitations

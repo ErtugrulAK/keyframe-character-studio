@@ -37,6 +37,27 @@ const IMAGE_REFERENCES = Object.fromEntries(${JSON.stringify(Object.entries(imag
 const FONT_REFERENCES = Object.fromEntries(${JSON.stringify(Object.entries(fontReferences))});
 function clamp(value, min, max) { return Math.min(max, Math.max(min, value)); }
 function escapeXml(value) { return String(value).split('&').join('&amp;').split('<').join('&lt;').split('>').join('&gt;').split('"').join('&quot;').split("'").join('&apos;'); }
+function assertSafeScene(scene) {
+  const fields = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'zIndex'];
+  const optional = ['fillOpacity', 'strokeWidth', 'strokeOpacity', 'borderRadius', 'fontSize', 'width', 'height'];
+  for (const layer of scene.layers || []) {
+    for (const field of fields.concat(optional)) {
+      if (layer[field] !== undefined && (typeof layer[field] !== 'number' || !Number.isFinite(layer[field]))) throw new Error('Invalid numeric scene value: ' + field);
+    }
+    for (const mask of layer.masks || []) {
+      if (!['add', 'subtract', 'intersect', 'difference'].includes(mask.mode)) throw new Error('Invalid mask mode');
+    }
+    if (layer.matte && layer.matte.mode !== undefined && !['clip', 'alpha', 'luminance'].includes(layer.matte.mode)) throw new Error('Invalid matte mode');
+    if (layer.trackMatte && !['alpha', 'luminance'].includes(layer.trackMatte.mode)) throw new Error('Invalid track matte mode');
+  }
+  for (const track of scene.tracks || []) {
+    for (const keyframes of Object.values(track.channels || {})) {
+      for (const keyframe of keyframes || []) {
+        if (typeof keyframe.value !== 'number' || !Number.isFinite(keyframe.value)) throw new Error('Invalid channel value');
+      }
+    }
+  }
+}
 const RUNTIME_ID_CACHE = Object.create(null); const RUNTIME_ID_OWNERS = Object.create(null);
 function runtimeId(...parts) { const logical = JSON.stringify(parts); if (Object.prototype.hasOwnProperty.call(RUNTIME_ID_CACHE, logical)) return RUNTIME_ID_CACHE[logical]; const base = parts.filter((part) => part !== undefined && part !== null && part !== '').map((part) => { const safe = String(part).replace(/[^a-zA-Z0-9_-]/gu, '_'); return safe || '_'; }).join('-').replace(/^[0-9]/u, '_$&'); let id = base || '_'; let suffix = 2; while (Object.prototype.hasOwnProperty.call(RUNTIME_ID_OWNERS, id) && RUNTIME_ID_OWNERS[id] !== logical) id = base + '-' + suffix++; RUNTIME_ID_CACHE[logical] = id; RUNTIME_ID_OWNERS[id] = logical; return id; }
 function cssString(value) { return JSON.stringify(String(value)).split('<').join('\\\\u003c').split('>').join('\\\\u003e'); }
@@ -183,8 +204,8 @@ function trimAttributes(layer) { if (layer.trimPathEnabled !== true) return ''; 
 function renderLayer(scene, layer, maskMap, matteId, hidden) { if (hidden || !layer.visible || layer.opacity <= 0) return ''; const attrs = ' fill="' + escapeXml(layer.fillEnabled === false ? 'none' : layer.fillColor || 'none') + '" fill-opacity="' + (layer.fillOpacity === undefined ? 1 : layer.fillOpacity) + '" stroke="' + escapeXml(layer.strokeEnabled === false ? 'none' : layer.strokeColor || 'none') + '" stroke-opacity="' + (layer.strokeOpacity === undefined ? 1 : layer.strokeOpacity) + '" stroke-width="' + (layer.strokeWidth === undefined ? 1.5 : layer.strokeWidth) + '"' + trimAttributes(layer); const body = layer.type === 'custom_text' ? text(layer, attrs) : layer.type === 'custom_image' ? image(layer, IMAGE_REFERENCES, attrs) : renderShape(layer, attrs); let inner = '<g transform="' + transform(scene, layer) + '">' + body + '</g>'; const ids = (maskMap[layer.id] || []).concat(matteId ? [matteId] : []); ids.slice().reverse().forEach((id) => { inner = '<g mask="url(#' + id + ')">' + inner + '</g>'; }); const clip = layer.matte && (layer.matte.mode || 'clip') === 'clip' ? ' clip-path="url(#' + runtimeId('kcs-clip', layer.matte.sourcePartId) + ')"' : ''; return '<g data-layer-id="' + escapeXml(layer.id) + '" data-z-index="' + layer.zIndex + '" opacity="' + layer.opacity + '"' + clip + '>' + inner + '</g>'; }
 function renderScene(scene, frame, stopped) { const evaluated = evaluateScene(scene, frame); const defs = [clipDefs(scene, evaluated)]; const maskMap = Object.create(null); evaluated.forEach((layer) => { const masks = maskDefs(scene, layer); defs.push(masks.defs); maskMap[layer.id] = masks.ids; }); const matte = matteDefs(scene, evaluated); defs.push(matte.defs); return '<svg xmlns="http://www.w3.org/2000/svg" width="' + scene.width + '" height="' + scene.height + '" viewBox="0 0 ' + scene.width + ' ' + scene.height + '"><style>' + fontStyles() + '</style><defs>' + defs.join('') + '</defs>' + evaluated.map((layer) => renderLayer(scene, layer, maskMap, matte.ids[layer.id], stopped || matte.hidden[layer.id])).join('') + '</svg>'; }
 export default class Graphic extends HTMLElement {
-  constructor() { super(); this._scene = JSON.parse(JSON.stringify(SCENE)); this._currentFrame = 0; this._currentStep = undefined; this._stopped = false; this._raf = null; this._token = 0; this._resolveAction = null; }
   _cancel() { this._token += 1; if (this._resolveAction) { this._resolveAction({ statusCode: 200, statusMessage: 'Superseded' }); this._resolveAction = null; } if (this._raf !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(this._raf); this._raf = null; }
+  constructor() { super(); this._scene = JSON.parse(JSON.stringify(SCENE)); assertSafeScene(this._scene); this._currentFrame = 0; this._currentStep = undefined; this._stopped = false; this._raf = null; this._token = 0; this._resolveAction = null; }
   _render() { this.innerHTML = renderScene(this._scene, this._currentFrame, this._stopped); }
   _applyData(data) {
     if (!data || typeof data !== 'object') return undefined;

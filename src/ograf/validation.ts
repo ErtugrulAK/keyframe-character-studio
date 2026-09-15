@@ -52,6 +52,202 @@ function isExternalAsset(value: string): boolean {
 function isLikelyLocalAsset(value: string): boolean {
   return LOCAL_ASSET_PATTERN.test(value) && !isExternalAsset(value);
 }
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function invalidProject(
+  diagnostics: OGrafExportDiagnostic[],
+  message: string,
+  layer?: SceneLayer,
+  feature?: string,
+): void {
+  diagnostics.push(diagnostic('OGRAF_INVALID_PROJECT', 'ERROR', message, layer, feature));
+}
+
+function validateFiniteFields(
+  value: Record<string, unknown>,
+  fields: readonly string[],
+  diagnostics: OGrafExportDiagnostic[],
+  layer: SceneLayer,
+  feature: string,
+): void {
+  for (const field of fields) {
+    if (value[field] !== undefined && !isFiniteNumber(value[field])) {
+      invalidProject(diagnostics, `${feature} field "${field}" must be a finite number.`, layer, feature);
+    }
+  }
+}
+
+function validatePathPoints(
+  points: unknown,
+  diagnostics: OGrafExportDiagnostic[],
+  layer: SceneLayer,
+  feature: string,
+): void {
+  if (points === undefined) return;
+  if (!Array.isArray(points)) {
+    invalidProject(diagnostics, `${feature} must be an array.`, layer, feature);
+    return;
+  }
+  for (const point of points) {
+    if (!point || typeof point !== 'object') {
+      invalidProject(diagnostics, `${feature} contains an invalid point.`, layer, feature);
+      continue;
+    }
+    const candidate = point as Record<string, unknown>;
+    if (!isFiniteNumber(candidate.x) || !isFiniteNumber(candidate.y)) {
+      invalidProject(diagnostics, `${feature} points must contain finite x and y values.`, layer, feature);
+    }
+    for (const handle of ['handleIn', 'handleOut']) {
+      const rawHandle = candidate[handle];
+      if (rawHandle === undefined) continue;
+      if (!rawHandle || typeof rawHandle !== 'object'
+        || !isFiniteNumber((rawHandle as Record<string, unknown>).x)
+        || !isFiniteNumber((rawHandle as Record<string, unknown>).y)) {
+        invalidProject(diagnostics, `${feature} handles must contain finite x and y values.`, layer, feature);
+      }
+    }
+  }
+}
+
+function validateKeyframeArray(
+  keyframes: unknown,
+  diagnostics: OGrafExportDiagnostic[],
+  layer: SceneLayer,
+  feature: string,
+): void {
+  if (keyframes === undefined) return;
+  if (!Array.isArray(keyframes)) {
+    invalidProject(diagnostics, `${feature} must be an array.`, layer, feature);
+    return;
+  }
+  for (const keyframe of keyframes) {
+    if (!keyframe || typeof keyframe !== 'object') {
+      invalidProject(diagnostics, `${feature} contains an invalid keyframe.`, layer, feature);
+      continue;
+    }
+    const candidate = keyframe as Record<string, unknown>;
+    validateFiniteFields(candidate, ['frame', 'value'], diagnostics, layer, feature);
+    if (candidate.bezierIn && typeof candidate.bezierIn === 'object') {
+      validateFiniteFields(candidate.bezierIn as Record<string, unknown>, ['x', 'y'], diagnostics, layer, feature);
+    } else if (candidate.bezierIn !== undefined) {
+      invalidProject(diagnostics, `${feature} bezierIn must contain finite x and y values.`, layer, feature);
+    }
+    if (candidate.bezierOut && typeof candidate.bezierOut === 'object') {
+      validateFiniteFields(candidate.bezierOut as Record<string, unknown>, ['x', 'y'], diagnostics, layer, feature);
+    } else if (candidate.bezierOut !== undefined) {
+      invalidProject(diagnostics, `${feature} bezierOut must contain finite x and y values.`, layer, feature);
+    }
+    if (Array.isArray(candidate.bezierControlPoints)
+      && candidate.bezierControlPoints.some((value) => !isFiniteNumber(value))) {
+      invalidProject(diagnostics, `${feature} bezier control points must be finite numbers.`, layer, feature);
+    } else if (candidate.bezierControlPoints !== undefined && !Array.isArray(candidate.bezierControlPoints)) {
+      invalidProject(diagnostics, `${feature} bezier control points must be an array.`, layer, feature);
+    }
+  }
+}
+
+function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnostic[]): void {
+  const record = layer as unknown as Record<string, unknown>;
+  validateFiniteFields(
+    record,
+    ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'zIndex'],
+    diagnostics,
+    layer,
+    'layer',
+  );
+  for (const field of ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'zIndex']) {
+    if (!isFiniteNumber(record[field])) {
+      invalidProject(diagnostics, `Layer field "${field}" must be a finite number.`, layer, 'layer');
+    }
+  }
+  validateFiniteFields(
+    record,
+    ['fillOpacity', 'strokeWidth', 'strokeOpacity', 'trimPathStart', 'trimPathEnd', 'trimPathOffset',
+      'shadowBlur', 'shadowOffsetX', 'shadowOffsetY', 'borderRadius', 'fontSize', 'width', 'height',
+      'inAnimDuration', 'outAnimDuration'],
+    diagnostics,
+    layer,
+    'layer',
+  );
+  for (const field of ['id', 'name', 'type', 'fillColor', 'strokeColor', 'textValue', 'fontFamily', 'imageUrl', 'videoUrl']) {
+    if (record[field] !== undefined && typeof record[field] !== 'string') {
+      invalidProject(diagnostics, `Layer field "${field}" must be a string.`, layer, 'layer');
+    }
+  }
+  if (layer.strokeAlignment !== undefined
+    && !['center', 'inside', 'outside'].includes(layer.strokeAlignment)) {
+    invalidProject(diagnostics, `Layer strokeAlignment "${String(layer.strokeAlignment)}" is not supported.`, layer, 'style');
+  }
+  validatePathPoints(record.points, diagnostics, layer, 'layer points');
+  if (record.path && typeof record.path === 'object') {
+    validatePathPoints((record.path as Record<string, unknown>).points, diagnostics, layer, 'layer path');
+  }
+  for (const mask of layer.masks || []) {
+    if (!['add', 'subtract', 'intersect', 'difference'].includes(mask.mode)) {
+      invalidProject(diagnostics, `Mask mode "${String(mask.mode)}" is not supported.`, layer, 'mask');
+    }
+    validateFiniteFields(
+      mask as unknown as Record<string, unknown>,
+      ['feather', 'opacity', 'expansion'],
+      diagnostics,
+      layer,
+      'mask',
+    );
+    validatePathPoints(mask.path?.points, diagnostics, layer, 'mask path');
+  }
+  if (layer.matte) {
+    const mode = layer.matte.mode;
+    if (mode !== undefined && !['clip', 'alpha', 'luminance'].includes(mode)) {
+      invalidProject(diagnostics, `Matte mode "${String(mode)}" is not supported.`, layer, 'matte');
+    }
+    validateFiniteFields(layer.matte as unknown as Record<string, unknown>, ['feather', 'strength'], diagnostics, layer, 'matte');
+    if (layer.matte.gradient) {
+      if (layer.matte.gradient.type !== undefined && !['linear', 'radial'].includes(layer.matte.gradient.type)) {
+        invalidProject(diagnostics, `Matte gradient type "${String(layer.matte.gradient.type)}" is not supported.`, layer, 'matte');
+      }
+      validateFiniteFields(layer.matte.gradient as unknown as Record<string, unknown>, ['angle'], diagnostics, layer, 'matte');
+    }
+  }
+  if (layer.trackMatte && !['alpha', 'luminance'].includes(layer.trackMatte.mode)) {
+    invalidProject(diagnostics, `Track matte mode "${String(layer.trackMatte.mode)}" is not supported.`, layer, 'track-matte');
+  }
+}
+function validateTrackInput(
+  track: unknown,
+  diagnostics: OGrafExportDiagnostic[],
+  layer: SceneLayer,
+): void {
+  if (!track || typeof track !== 'object') {
+    invalidProject(diagnostics, 'Animation track must be an object.', layer, 'channels');
+    return;
+  }
+  const candidate = track as Record<string, unknown>;
+  validateKeyframeArray(candidate.keyframes, diagnostics, layer, 'track keyframes');
+  for (const [channel, keyframes] of Object.entries(candidate.channels || {})) {
+    validateKeyframeArray(keyframes, diagnostics, layer, `track channel "${channel}"`);
+  }
+  for (const [channel, keyframes] of Object.entries(candidate.maskChannels || {})) {
+    validateKeyframeArray(keyframes, diagnostics, layer, `mask channel "${channel}"`);
+  }
+  for (const [channel, keyframes] of Object.entries(candidate.maskPathChannels || {})) {
+    if (Array.isArray(keyframes)) {
+      for (const keyframe of keyframes) {
+        if (keyframe && typeof keyframe === 'object') {
+          const value = (keyframe as Record<string, unknown>).value;
+          if (value && typeof value === 'object') {
+            validatePathPoints((value as Record<string, unknown>).points, diagnostics, layer, `mask path channel "${channel}"`);
+          } else {
+            invalidProject(diagnostics, `Mask path channel "${channel}" contains an invalid path.`, layer, 'channels');
+          }
+        }
+      }
+    } else {
+      invalidProject(diagnostics, `Mask path channel "${channel}" must be an array.`, layer, 'channels');
+    }
+  }
+}
 
 function normalizePackagedPath(source: string, kind: 'image' | 'font', configuredPath?: string): string {
   const extension = source.split(/[?#]/u)[0].split('.').pop()?.toLowerCase() || (kind === 'image' ? 'asset' : 'font');
@@ -182,6 +378,7 @@ function validateFont(
 }
 
 function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnostics: OGrafExportDiagnostic[], assets: OGrafAssetPlan[]): void {
+  validateLayerInput(layer, diagnostics);
   if (isPrototypeSensitiveKey(layer.id)) {
     diagnostics.push(diagnostic('OGRAF_INVALID_PROJECT', 'ERROR', `Layer id "${layer.id}" is reserved and cannot be imported safely.`, layer, 'layer-id'));
   }
@@ -292,6 +489,10 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
   }
 
   for (const layer of sceneData.layers || []) validateLayer(layer, options, diagnostics, assets);
+  for (const track of sceneData.tracks || []) {
+    const layer = (sceneData.layers || []).find((candidate) => candidate.id === track.partId);
+    if (layer) validateTrackInput(track, diagnostics, layer);
+  }
   const publicControls = resolveOGrafPublicControls(sceneData, options, assets);
   validatePublicFields(publicControls.textFields, publicControls.imageFields, publicControls.colorFields, sceneData.layers || [], diagnostics);
   const layerById = new Map((sceneData.layers || []).map((layer) => [layer.id, layer]));

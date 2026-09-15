@@ -28,6 +28,10 @@ function escapeXml(value: string): string {
     .replace(/"/gu, '&quot;')
     .replace(/'/gu, '&apos;');
 }
+function svgNumber(value: number): string {
+  if (!Number.isFinite(value)) throw new Error('SVG numeric value must be finite.');
+  return String(value);
+}
 
 /** One deterministic namespace for every generated SVG identifier. */
 function safeSvgId(value: string): string {
@@ -59,18 +63,18 @@ function renderGeometry(type: string, content: LayerContent, props: SvgAttribute
     return `<path d="${escapeXml(path)}" stroke-linejoin="round"${attributes(props)} />`;
   }
   if (!geometry) return '';
-  if (geometry.kind === 'circle') return `<circle cx="0" cy="0" r="${geometry.r}"${attributes(props)} />`;
+  if (geometry.kind === 'circle') return `<circle cx="0" cy="0" r="${svgNumber(geometry.r)}"${attributes(props)} />`;
   if (geometry.kind === 'rect') {
     const rx = content.borderRadius ?? geometry.rx;
-    return `<rect x="${geometry.x}" y="${geometry.y}" width="${geometry.width}" height="${geometry.height}" rx="${rx}"${attributes(props)} />`;
+    return `<rect x="${svgNumber(geometry.x)}" y="${svgNumber(geometry.y)}" width="${svgNumber(geometry.width)}" height="${svgNumber(geometry.height)}" rx="${svgNumber(rx)}"${attributes(props)} />`;
   }
-  return `<polygon points="${polygonPointsToString(geometry.points)}"${attributes(props)} />`;
+  return `<polygon points="${escapeXml(polygonPointsToString(geometry.points))}"${attributes(props)} />`;
 }
 
 function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
   const content = layer.content;
   const text = content.textValue || 'TEXT';
-  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(content.fillColor || 'none')}" fill-opacity="${content.fillOpacity ?? 1}" stroke="${escapeXml(content.strokeColor || 'none')}" stroke-opacity="${content.strokeOpacity ?? 1}" stroke-width="0.5" font-size="${content.fontSize || 24}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}" vector-effect="non-scaling-stroke"${attributes(props)}>${escapeXml(text)}</text>`;
+  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(content.fillColor || 'none')}" fill-opacity="${svgNumber(content.fillOpacity ?? 1)}" stroke="${escapeXml(content.strokeColor || 'none')}" stroke-opacity="${svgNumber(content.strokeOpacity ?? 1)}" stroke-width="0.5" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}" vector-effect="non-scaling-stroke"${attributes(props)}>${escapeXml(text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {
@@ -79,7 +83,7 @@ function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, prop
   if (!href) return '';
   const width = content.width || 180;
   const height = content.height || 120;
-  return `<image href="${escapeXml(href)}" x="${-width / 2}" y="${-height / 2}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice"${attributes(props)} />`;
+  return `<image href="${escapeXml(href)}" x="${svgNumber(-width / 2)}" y="${svgNumber(-height / 2)}" width="${svgNumber(width)}" height="${svgNumber(height)}" preserveAspectRatio="xMidYMid slice"${attributes(props)} />`;
 }
 
 function renderLayerContent(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {
@@ -96,7 +100,7 @@ function renderTrim(content: LayerContent): SvgAttributes {
 function layerTransform(scene: OGrafEvaluatedScene, layer: EvaluatedLayer): string {
   const centerX = scene.width / 2 + layer.transform.x;
   const centerY = scene.height / 2 + layer.transform.y;
-  return `translate(${centerX} ${centerY}) rotate(${layer.transform.rotation}) scale(${layer.transform.scaleX} ${layer.transform.scaleY})`;
+  return `translate(${svgNumber(centerX)} ${svgNumber(centerY)}) rotate(${svgNumber(layer.transform.rotation)}) scale(${svgNumber(layer.transform.scaleX)} ${svgNumber(layer.transform.scaleY)})`;
 }
 
 function renderShape(layer: EvaluatedLayer): string {
@@ -180,14 +184,14 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
       const shapeId = `${id}-shape`;
       const previousInverse = `${previousId}-inverse`;
       const currentInverse = `${id}-inverse`;
-      definitions.push(`<mask id="${shapeId}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse"><path d="${escapeXml(definition.pathD)}" fill="white" /></mask><mask id="${previousInverse}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" /><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="black" mask="url(#${previousId})" /></mask><mask id="${currentInverse}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" /><path d="${escapeXml(definition.pathD)}" fill="black" /></mask>`);
-      body = `<g mask="url(#${currentInverse})"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" mask="url(#${previousId})" /></g><g mask="url(#${previousInverse})"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" mask="url(#${shapeId})" /></g>`;
+      definitions.push(`<mask id="${shapeId}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse"><path d="${escapeXml(definition.pathD)}" fill="white" /></mask><mask id="${previousInverse}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" /><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="black" mask="url(#${escapeXml(previousId)})" /></mask><mask id="${currentInverse}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse"><rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" /><path d="${escapeXml(definition.pathD)}" fill="black" /></mask>`);
+      body = `<g mask="url(#${escapeXml(currentInverse)})"><rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" mask="url(#${escapeXml(previousId)})" /></g><g mask="url(#${escapeXml(previousInverse)})"><rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" mask="url(#${escapeXml(shapeId)})" /></g>`;
     } else {
       body = effectiveMode === 'intersect'
-        ? `<path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${definition.opacity}" mask="url(#${previousId})" />`
-        : `<rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" mask="url(#${previousId})" /><path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${definition.opacity}" />`;
+        ? `<path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${svgNumber(definition.opacity)}" mask="url(#${escapeXml(previousId)})" />`
+        : `<rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" mask="url(#${escapeXml(previousId)})" /><path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${svgNumber(definition.opacity)}" />`;
     }
-    definitions.push(`${filter}<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha" data-mask-operation="${effectiveMode}">${body}</mask>`);
+    definitions.push(`${filter}<mask id="${escapeXml(id)}" x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha" data-mask-operation="${escapeXml(effectiveMode)}">${body}</mask>`);
     previousId = id;
   });
   return { defs: definitions.join(''), ids: previousId ? [previousId] : [] };

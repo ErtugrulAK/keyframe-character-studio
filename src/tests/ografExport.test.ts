@@ -3,6 +3,7 @@ import type { SceneData, SceneLayer } from '../types/composition';
 import {
   OGRAF_GRAPHICS_SCHEMA_URL,
   compileOGrafManifest,
+  compileOGrafPackage,
   compileOGrafPackagePlan,
   validateSceneForOGraf,
 } from '../ograf';
@@ -276,5 +277,29 @@ describe('OGraf Export V1 Phase 1', () => {
       expect.objectContaining({ path: 'scene.kcs', kind: 'scene', status: 'planned' }),
       expect.objectContaining({ path: 'graphic.mjs', kind: 'runtime', status: 'pending-phase-2' }),
     ]);
+  });
+  test('rejects non-finite and non-numeric layer values before compilation', () => {
+    for (const value of ['0" onload="alert(1)', Number.NaN, Number.POSITIVE_INFINITY, { value: 1 }]) {
+      const result = validateSceneForOGraf(makeScene([makeLayer({ x: value as SceneLayer['x'] })]));
+      expect(result.canCompile).toBe(false);
+      expect(compileOGrafPackage(makeScene([makeLayer({ x: value as SceneLayer['x'] })])).status).toBe('blocked');
+    }
+  });
+
+  test('rejects malformed channel values and unknown mask or matte modes', () => {
+    const channelScene = makeScene();
+    channelScene.tracks = [{
+      partId: 'layer-1',
+      channels: {
+        x: [{ id: 'x-1', frame: 0, value: Number.NaN, easing: 'linear' }],
+      },
+    } as SceneData['tracks'][number]];
+    expect(errorCodes(channelScene)).toContain('OGRAF_INVALID_PROJECT');
+
+    const invalidModes = makeScene([makeLayer({
+      masks: [{ id: 'mask-1', name: 'Mask', mode: 'execute', path: { version: 1, coordinateSpace: 'local', closed: true, points: [] } } as never],
+      matte: { sourcePartId: 'layer-1', mode: 'execute' as never },
+    })]);
+    expect(errorCodes(invalidModes)).toContain('OGRAF_INVALID_PROJECT');
   });
 });

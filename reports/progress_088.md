@@ -60,3 +60,32 @@ No global OMP config, model roles, memory backend, hooks, routing, secrets, Supa
 - `src/ograf/packageWriter.ts`
 - `src/tests/ografPackage.test.ts`
 - Task 1 files listed in `reports/progress_087.md`
+
+## Targeted Follow-up — Blockers Addressed
+
+The follow-up patch is complete:
+
+- `eff4c63` — `fix: close sourcepath filesystem trust blockers`
+- `sourcePath` now opens once, validates the same `FileHandle` with `handle.stat()`, reads from that handle, and closes it in `finally`.
+- Output root creation now walks from the filesystem root one segment at a time, checking every existing/new directory with `lstat` before proceeding.
+- Nested output ancestors are created and checked segment-by-segment.
+- Existing output targets remain overwritable only when they are regular non-symlink files.
+- Symlink source, symlink output root, nested symlink ancestor, and symlink target tests run when the platform permits link creation; all ran successfully on this Windows workstation.
+
+## Updated Review Result
+
+**READY WITH WARNINGS**.
+
+The previous two blockers are closed. Remaining limitation: output writes still use pathname-based `writeFile` after preflight, so a hostile concurrent filesystem mutation can create a residual target TOCTOU window. This is reported honestly and is not claimed as complete OS-level no-follow protection.
+
+Final branch validation:
+
+- Focused package/filesystem suite: 4 files, 88 tests passed.
+- Full Vitest suite: 101 files, 1495 tests passed.
+- `npm ci`: passed; existing blocked `sqlite3@6.0.1` install-script warning remains.
+- `npm run build`: passed.
+- `npx tsc --noEmit`: passed.
+- `npm run lint`: passed with the existing Fast Refresh warning at `src/context/AnimatorContext.tsx:655`.
+- `git diff --check`: passed.
+
+No main merge or release/tag operation occurred before this follow-up merge gate.

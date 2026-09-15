@@ -13,9 +13,9 @@ Resolve or explicitly accept the four release-readiness blockers. No production 
 
 ## Blocker outcomes
 
-1. **SourcePath/output TOCTOU — accepted operational constraint.** Existing source file-handle validation and output ancestor/target checks remain. The residual pathname-write race under hostile concurrent filesystem mutation is not claimed to be eliminated. Release materialization requires a trusted, dedicated output directory; hostile multi-tenant filesystem mutation is outside the supported threat model.
+1. **SourcePath/output TOCTOU — accepted operational constraint.** Existing source file-handle validation and output ancestor/target checks remain. Two residual hostile-concurrency races are not claimed to be eliminated: `lstat → open` on the source pathname and output preflight → pathname write. Release materialization requires trusted, dedicated source ownership and output directories; hostile multi-tenant filesystem mutation is outside the supported threat model.
 2. **OGraf schema validation — accepted network constraint.** The complete discovered remote schema graph remains SHA-256 pinned and fails closed on unknown or mismatched bytes. Validation is not offline-capable because schema bytes are fetched from official URLs. Candidate approval requires network availability and a passing `npm run validate:ograf`.
-3. **Playwright CI browser gate — established as manual workflow.** `.github/workflows/release-smoke.yml` is checked in with `workflow_dispatch`, optional candidate SHA selection, Node 22 setup, dependency installation, Chromium installation, and `npm run qa:release`. It is an explicit release-approval gate rather than an automatic push/PR gate.
+3. **Playwright CI browser gate — established as manual workflow.** `.github/workflows/release-smoke.yml` is checked in with `workflow_dispatch`, a required full candidate SHA, read-only contents permission, resolved-HEAD verification, Node 22 setup, dependency installation, Chromium installation, and `npm run qa:release`. It is an explicit release-approval gate rather than an automatic push/PR gate.
 4. **Release metadata — prepared without release.** `package.json` and `package-lock.json` now use private version `1.1.0-rc.1`. `CHANGELOG.md` retains `[Unreleased]` and records the candidate as unreleased. No package was published.
 
 ## Validation matrix
@@ -31,12 +31,17 @@ Resolve or explicitly accept the four release-readiness blockers. No production 
 - `git diff --check`: PASS.
 - Workflow safety sanity: PASS; no secrets or protected global configuration referenced.
 
+## Independent review
+
+**READY WITH WARNINGS.** Independent review found and this follow-up corrected stale CI documentation, stale candidate-summary validation wording, stale changelog blocker wording, and clarified both residual TOCTOU races. The remaining warnings are intentional operational constraints.
+
 ## Changed files
 
 - `.github/workflows/release-smoke.yml`
 - `CHANGELOG.md`
 - `NEXT_SESSION.md`
 - `PROJECT_STATE.md`
+- `docs/KCS_CI_STATUS.md`
 - `docs/KCS_CURRENT_STATE.md`
 - `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`
 - `package.json`
@@ -45,7 +50,7 @@ Resolve or explicitly accept the four release-readiness blockers. No production 
 
 ## Release decision
 
-**READY WITH WARNINGS FOR INDEPENDENT REVIEW.** The accepted constraints remain material warnings: hostile-concurrency filesystem mutation is unsupported, schema validation requires network access, and the browser gate requires an explicitly dispatched workflow with browser installation. No tag or release was created.
+**READY WITH WARNINGS FOR USER APPROVAL.** The accepted constraints remain material warnings: hostile-concurrency filesystem mutation is unsupported, schema validation requires network access, and the browser gate requires an explicitly dispatched workflow with browser installation. No tag or release was created.
 
 ## Protected invariants
 

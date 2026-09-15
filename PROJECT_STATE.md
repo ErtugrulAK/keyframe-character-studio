@@ -2,36 +2,36 @@
 
 ## Current position
 
-The accepted product line and narrow prototype-key security hardening are integrated into `main@0f321c4`. The release tag `v1.1.0-public-controls` remains unchanged at `0a71bd8`. The `without-mask` branch remains a preserved archive candidate.
+The accepted product and security follow-up line is integrated into `main@1ad3f60`. Tasks 1–6 are complete. Task 7 is the current documentation reconciliation scope; Task 8 remains a release-readiness audit only.
+
+The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
 ## Accepted baseline
 
-Public Controls V1, OGraf package milestones, host compatibility work, presentation documentation, Windows path hardening, and prototype-sensitive imported-key hardening are present in the accepted main line. OMP tooling remains separate.
+Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, and the isolated release smoke gate are present in the accepted main line. OMP tooling remains separate.
 
 ## Validation status
 
 | Area | Status | Evidence |
 |---|---|---|
-| Prototype-key security hardening | MERGED | `reports/progress_075.md`, `reports/progress_076.md` |
-| Full Vitest | PASS | 101 files / 1,479 tests |
+| Full Vitest | PASS | 101 files / 1,495 tests |
+| OGraf fixture validation | PASS | `npm run validate:ograf`; committed minimal fixture |
+| OGraf release smoke | PASS | `npm run qa:release`; candidate `b0d0177`; 2 Playwright tests |
 | TypeScript | PASS | `npx tsc --noEmit` and build typecheck |
 | Lint | PASS | Existing Fast Refresh warning only |
 | Production build | PASS | Existing Vite chunk-size warning only |
-| OGraf fixture validation | N/A | No `*.ograf.json` manifests exist |
 
-## Open security follow-ups
+## Remaining work
 
-Numeric/style SVG validation and escaping; mask/matte mode allowlisting and escaping; OGraf parent-cycle detection; caller-provided sourcePath containment; filesystem symlink/junction/reparse and TOCTOU hardening; imported broadcast-state key handling; and direct malformed-plan materialization tests remain open and must be handled as separate scoped work.
+- Task 7: current-state documentation reconciliation.
+- Task 8: release-readiness decision audit only.
+- Production release/tag remains HOLD; separate explicit approval is required.
 
 ## Protected state
 
-- `main` and `origin/main` are synchronized at `0f321c4`.
+- `main` and `origin/main` are synchronized at `1ad3f60`.
 - `v1.1.0-public-controls` remains unchanged.
 - `origin/without-mask` remains untouched and classified ARCHIVE.
 - `.omp/config.yml` retains `memory.backend: mnemopi`.
 - Model roles, provider mappings, task concurrency, and global OMP configuration remain unchanged.
-- No release tag or production release was prepared.
-
-## Next action
-
-Perform a separate threat-model and implementation review for the listed follow-ups. Do not weaken tests, add retries, or merge broad security changes without scoped validation.
+- No production release or new tag was prepared.

@@ -19,3 +19,11 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_066.md` — `without-mask` branch audit and archive classification.
 - `progress_067.md` — GitHub Actions / CI audit and no-fix decision.
 - `progress_068.md` — Windows path hardening V1 implementation checkpoint.
+- `progress_086.md` — Parent-cycle and broadcast-map hardening patch.
+- `progress_087.md` — Parent-cycle and broadcast-map hardening merge.
+- `progress_088.md` — SourcePath filesystem trust review and blocker history.
+- `progress_089.md` — SourcePath filesystem trust merge.
+- `progress_090.md` — Mask/matte parity patch.
+- `progress_092.md` — Deterministic OGraf fixture/schema gate patch.
+- `progress_094.md` — Full OGraf release smoke gate patch.
+- `progress_096.md` — Local tooling PATH audit.

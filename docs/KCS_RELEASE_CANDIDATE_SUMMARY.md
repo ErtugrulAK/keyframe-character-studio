@@ -2,54 +2,33 @@
 
 ## Release boundary
 
-The accepted Public Controls V1 integration and subsequent narrow prototype-key security hardening are in `main@0f321c4`. Source and integration RC branches remain available. This document does not authorize tag creation or branch deletion.
+Tasks 1–6 are integrated into `main@1ad3f60`. This document does not authorize tag creation, release publication, or branch deletion.
 
 ## Accepted milestones
 
-- V3.4.1: accepted and included in the release-candidate line.
-- V3.5: accepted and included in the release-candidate line.
-- V3.6: accepted and included in the release-candidate line.
-- OGraf Package Export V2: included in the release-candidate line.
-- OGraf V2.1 compliance: included in the release-candidate line.
-- Host compatibility QA: included in the release-candidate line.
-- Public Controls V1: implementation and second target-host QA PASS.
-
-## Public Controls V1
-
-- Text: deterministic visible-layer controls with `headline` compatibility.
-- Image: package-relative enum/default values with `logo.png` and `logo_alt.svg`; runtime allow-list enforcement.
-- Color: fill/stroke controls with standard `format: color` and OGraf `color-rrggbb` metadata.
-- Motion, transform, opacity, trim, mask, and path channels remain authoritative.
-- Target host QA: BASIC PASS, ASSET PASS, COMPOSITING PASS.
-- KCS Import is not part of this host QA; testing used manifest-rooted OGraf folders.
+- Public Controls V1 and OGraf Package Export V2.
+- Windows path, parent-cycle/broadcast, SourcePath/filesystem, and mask/matte parity hardening.
+- Deterministic OGraf fixture/schema validation gate.
+- Isolated full OGraf release smoke gate.
 
 ## Validation status
 
-- AJV manifests: PASS, 3/3.
+- Full Vitest: PASS, 101 files / 1,495 tests.
 - TypeScript: PASS.
-- Vitest: PASS, 100 files / 1,437 tests.
-- Lint: PASS with the existing Fast Refresh warning.
-- Build: PASS with the existing chunk-size warning.
-- V6 QA: PASS, 3/3.
-- Playwright equivalent coverage: PASS, 254/254 via shard 1, shard 2 excluding isolated V-T17, and isolated V-T17.
-- Full aggregate Playwright command: exceeds the 600-second command envelope; no test or timeout weakening was introduced.
-
-## Branches
-
-- `main`: integrated at `0f321c4`; protected history remains intact.
-- Release tag `v1.1.0-public-controls`: unchanged at `0a71bd8`.
-- `integration/v6-ui-ograf-release-candidate`: preserved product release-candidate baseline.
-- `integration/v6-ui-ograf-public-controls-rc`: preserved integrated source branch.
-- `feat/ograf-public-controls-v1`: preserved source feature branch.
-- `chore/omp-kcs-config-optimization`: separate OMP tooling branch; not included by default.
+- Lint: PASS with existing Fast Refresh warning.
+- Build: PASS with existing chunk-size warning.
+- `validate:ograf`: PASS; valid committed fixture accepted and invalid fixture rejected.
+- `qa:release`: PASS; candidate SHA `b0d0177`; 2 Chromium tests passed.
+- Full Playwright aggregate was not required for this targeted smoke gate.
 
 ## Known warnings and limitations
-- Existing Fast Refresh lint warning in `src/context/AnimatorContext.tsx`.
-- Existing Vite chunk-size warning during build.
-- Full Playwright aggregate requires a longer command envelope or the documented shard strategy.
+
+- SourcePath output pathname writes retain a residual hostile-concurrency TOCTOU window.
+- OGraf schema validation verifies the complete discovered remote graph by SHA-256 but still requires network access.
+- MarkItDown and Strix are installed via uv but absent from current PATH; Skill UI was not found.
+- Existing Fast Refresh, Vite chunk-size, and npm sqlite install-script warnings remain.
 - OGraf Package → editable KCS Import remains intentionally unimplemented.
-- Native host support for color controls is confirmed by the reported target-host QA, but the fallback metadata remains for compatibility.
-- Prototype-key hardening is merged; SVG input, mode, parent-cycle, source-path, filesystem, and broadcast-state security follow-ups remain open.
 
 ## Release decision
-Main integration is complete, including the narrow prototype-key hardening patch. Production release remains conditional on the listed follow-ups. Release tag/checkpoint creation and optional branch cleanup require separate explicit approval.
+
+Production release remains **HOLD** pending Task 7 reconciliation and Task 8 release-readiness audit. No tag or release is authorized by this document; separate explicit user approval is required.

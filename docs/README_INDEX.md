@@ -34,6 +34,14 @@
 - `reports/progress_066.md` — `without-mask` branch audit and archive classification.
 - `reports/progress_067.md` — GitHub Actions / CI audit and no-fix decision.
 - `reports/progress_068.md` — Windows path hardening V1 implementation checkpoint.
+- `reports/progress_086.md` — Parent-cycle and broadcast-map hardening patch.
+- `reports/progress_087.md` — Parent-cycle and broadcast-map hardening merge.
+- `reports/progress_088.md` — SourcePath filesystem trust review and blocker history.
+- `reports/progress_089.md` — SourcePath filesystem trust merge.
+- `reports/progress_090.md` — Mask/matte parity patch.
+- `reports/progress_092.md` — Deterministic OGraf fixture/schema gate patch.
+- `reports/progress_094.md` — Full OGraf release smoke gate patch.
+- `reports/progress_096.md` — Local tooling PATH audit.
 
 `docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free global tooling state. Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 - `reports/progress_075.md` — prototype-key security hardening implementation.

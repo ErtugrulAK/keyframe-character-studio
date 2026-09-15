@@ -4,31 +4,38 @@
 
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 
-Checkout: `main@0f321c4`, synchronized with `origin/main`.
+Checkout: `docs/current-state-reconciliation@1ad3f60`, based on synchronized `main`.
 
 ## Completed
 
-- Merged `feat/prototype-key-security-hardening` into `main` by fast-forward.
-- Hardened prototype-sensitive imported layer, mask, matte/track-matte, public-field, package-path, MIME, and generated-runtime map handling.
-- Preserved the release tag, `without-mask`, global OMP configuration, model roles, and protected history.
-- Recorded evidence in `reports/progress_075.md` and `reports/progress_076.md`.
+- Task 1: parent-cycle and broadcast-state map hardening.
+- Task 2: SourcePath/filesystem trust hardening, with residual pathname-write TOCTOU warning.
+- Task 3: canonical/generated OGraf mask filter parity.
+- Task 4: deterministic OGraf fixture validation with complete discovered remote schema hash pinning.
+- Task 5: isolated full OGraf release smoke gate.
+- Task 6: local MarkItDown/Strix/Skill UI PATH audit.
+- Reports: `progress_086.md` through `progress_096.md` preserve detailed evidence.
 
 ## Validation
 
-- Full Vitest: PASS — 101 files / 1,479 tests.
+- Full Vitest: PASS — 101 files / 1,495 tests.
+- Focused OGraf/security suites: PASS.
+- `npm run validate:ograf`: PASS for the committed minimal fixture.
+- `npm run qa:release`: PASS — candidate SHA `b0d0177`; 2 Playwright tests passed.
 - TypeScript: PASS.
 - Lint: PASS with the existing Fast Refresh warning.
-- Build: PASS with the existing chunk-size warning.
+- Build: PASS with the existing Vite chunk-size warning.
 - `git diff --check`: PASS.
-- No `*.ograf.json` fixtures exist; `validate:ograf` is not applicable.
 
-## Open security follow-ups
+## Remaining roadmap
 
-Numeric/style SVG validation and escaping, mask/matte mode allowlisting, parent-cycle rejection, sourcePath containment, filesystem symlink/TOCTOU protection, imported broadcast-state key hardening, and direct malformed-plan materialization tests remain separate work. Do not fold them into the narrow merged patch without a new scoped review.
+- Task 7: reconcile current-state documentation.
+- Task 8: release-readiness decision audit only.
+- Production release/tag remains HOLD pending Task 8 and separate explicit approval.
 
 ## Protected state
 
 - Release tag `v1.1.0-public-controls` remains unchanged.
 - `origin/without-mask` remains ARCHIVE and untouched.
-- `.omp/config.yml` and global tooling remain unchanged.
+- `.omp/config.yml`, global OMP tooling, model roles, and memory backend remain unchanged.
 - No release/tag preparation was performed.

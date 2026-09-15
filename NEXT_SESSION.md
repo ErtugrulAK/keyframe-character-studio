@@ -3,26 +3,28 @@
 ## Repository state
 
 - Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
-- Checkout: `main@0f321c4`
+- Checkout: `main@1ad3f60`
 - Remote: `origin/main` synchronized
-- Release tag: `v1.1.0-public-controls@0a71bd8`, unchanged
+- Release tag: `v1.1.0-public-controls`, unchanged
 
 ## Current result
 
-The narrow prototype-key security hardening patch is merged into `main`. See `reports/progress_075.md` and `reports/progress_076.md`.
+Tasks 1–6 are complete and merged by fast-forward. Evidence is recorded in `reports/progress_086.md` through `reports/progress_096.md`.
+
+Completed follow-ups include mask/matte parity, deterministic `validate:ograf`, the isolated `qa:release` smoke gate, and the read-only local tooling PATH audit.
 
 ## Validation
 
-Full Vitest, TypeScript, lint, production build, and `git diff --check` pass. Existing Fast Refresh and Vite chunk-size warnings remain. No OGraf JSON fixtures exist for `validate:ograf`.
+Full Vitest, focused OGraf/security suites, `validate:ograf`, `qa:release`, TypeScript, lint, production build, and `git diff --check` pass. Existing Fast Refresh, Vite chunk-size, npm install-script, and schema-network warnings remain documented.
 
 ## Guardrails
 
 - Do not reset, force-push, rebase, tag, or delete branches/reports.
 - Do not modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
-- Keep `.omp/config.yml`, model roles, provider mappings, and global tooling unchanged.
+- Keep `.omp/config.yml`, model roles, provider mappings, task concurrency, and global tooling unchanged.
 - Keep `origin/without-mask` untouched and classified ARCHIVE.
-- Do not claim production release readiness while the listed security follow-ups remain open.
+- Production release remains HOLD until Task 8 audit and separate explicit approval.
 
 ## Next scoped work
 
-Audit and plan the remaining SVG input, mask/matte mode, parent-cycle, sourcePath, filesystem, broadcast-state, and malformed-materialization follow-ups independently. Use separate branches for any implementation; do not patch `main` directly.
+Task 7 documentation reconciliation is complete on this line. The next permitted action is Task 8 release-readiness decision audit only; it must not create a tag or release.

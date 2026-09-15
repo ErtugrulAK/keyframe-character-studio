@@ -1,41 +1,31 @@
-# KCS v1.1.0-rc.1 Release Handoff
+# KCS Post-RC Stability Audit Handoff
 
-## Approval
+This handoff was clean-refreshed after the post-RC stability audit.
 
-User explicitly approved release/tag creation: `Release/tag oluşturmayı onaylıyorum.`
+## Scope
 
-## Tag / release
+- Audit/roadmap only; no product source changes.
+- `v1.1.0-rc.1` tag and GitHub draft prerelease were not changed.
+- npm publish was not performed.
+- The first recommended coding task is `feat/export-diagnostics-ux`.
 
-- Tag: `v1.1.0-rc.1`
-- Tag target SHA: `46d2a3e59e065816d972dcd56951803951b577f6`
-- Tag pushed: YES
-- GitHub release: draft prerelease
-- Release URL: https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/untagged-aebd4f0694468b7b4920
-- npm publish: NO; package remains private
+## Included review files
 
-## Remote smoke
-
-- Workflow: `release-smoke.yml`
-- Run: `34983770238`
-- URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/34983770238
-- Candidate SHA: `46d2a3e59e065816d972dcd56951803951b577f6`
-- Result: PASS; 2 Chromium tests passed
+This bundle contains only files selected for ChatGPT review: the post-RC audit, roadmap, current project/release documents, package metadata, README, and CI/release workflows. Omitted files were not deleted from the repository.
 
 ## Validation
 
-Local validation passed: npm ci, validate:ograf, qa:release, Full Vitest (101 files / 1,495 tests), build, TypeScript, lint, and diff check. Existing non-blocking warnings remain documented.
+- `npm run validate:ograf`: PASS.
+- `npm run qa:release`: PASS; 2 Chromium tests.
+- `git diff --check`: PASS.
+- Full Vitest/build were not rerun because this audit changed docs only.
 
-## Accepted warnings
+## Release restrictions
 
-- Hostile concurrent filesystem mutation is unsupported.
-- OGraf schema validation requires network access; offline validation is not claimed.
-- Manual browser workflow requires Chromium installation.
-- Existing React Fast Refresh, Vite chunk-size, and sqlite install-script warnings remain.
+The GitHub draft prerelease must not be published/finalized without explicit user instruction. The tag remains on workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`.
 
 ## Next action
 
-The release is a draft prerelease. Publish or finalize the GitHub draft only with a further explicit user instruction. No npm publication was performed.
+Review `KCS_POST_RC_ROADMAP.md` and `progress_104.md`. Start a separate approved implementation prompt for `feat/export-diagnostics-ux`.
 
-## Included files
-
-See `manifest.txt` for the complete copied-file list.
+Upload the contents of `chatgpt_handoff/latest/` to ChatGPT.

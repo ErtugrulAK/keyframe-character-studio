@@ -1,6 +1,6 @@
 /// <reference types="node" />
-import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join, relative, resolve } from 'node:path';
+import { lstat, mkdir, open, writeFile } from 'node:fs/promises';
+import { dirname, join, parse, relative, resolve } from 'node:path';
 import { normalizePackagePath } from '../utils/pathSafety';
 import { isSafeOGrafPackagePath } from './compiler';
 import type { OGrafGeneratedPackage, OGrafMaterializedPackage, OGrafPackageFile } from './types';
@@ -15,18 +15,43 @@ function assertSafePackagePath(root: string, relativePath: string): string {
   return target;
 }
 async function assertRegularLocalFile(sourcePath: string): Promise<Uint8Array> {
-  const sourceStat = await lstat(sourcePath);
-  if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) {
+  const sourcePathStat = await lstat(sourcePath);
+  if (sourcePathStat.isSymbolicLink()) {
     throw new Error(`Unsafe local asset source: ${sourcePath}`);
   }
-  return readFile(sourcePath);
+  const handle = await open(sourcePath, 'r');
+  try {
+    const handleStat = await handle.stat();
+    if (!handleStat.isFile()) throw new Error(`Unsafe local asset source: ${sourcePath}`);
+    return await handle.readFile();
+  } finally {
+    await handle.close();
+  }
+}
+
+async function ensureSafeDirectorySegment(path: string): Promise<void> {
+  try {
+    await mkdir(path);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+  }
+  const stat = await lstat(path);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
+    throw new Error(`Unsafe output directory: ${path}`);
+  }
 }
 
 async function assertSafeOutputDirectory(outputDirectory: string): Promise<string> {
   const rootPath = resolve(outputDirectory);
-  await mkdir(rootPath, { recursive: true });
+  const filesystemRoot = parse(rootPath).root;
+  let current = filesystemRoot;
+  const segments = relative(filesystemRoot, rootPath).split(/[\\/]/u).filter(Boolean);
+  for (const segment of segments) {
+    current = join(current, segment);
+    await ensureSafeDirectorySegment(current);
+  }
   const rootStat = await lstat(rootPath);
-  if (!rootStat.isDirectory() || rootStat.isSymbolicLink()) {
+  if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
     throw new Error(`Unsafe output directory: ${outputDirectory}`);
   }
   return rootPath;
@@ -37,10 +62,7 @@ async function assertSafeOutputAncestors(rootPath: string, targetDirectory: stri
   let current = rootPath;
   for (const segment of relativeDirectory.split(/[\\/]/u).filter(Boolean)) {
     current = join(current, segment);
-    const currentStat = await lstat(current);
-    if (currentStat.isSymbolicLink() || !currentStat.isDirectory()) {
-      throw new Error(`Unsafe output directory ancestor: ${current}`);
-    }
+    await ensureSafeDirectorySegment(current);
   }
 }
 async function assertSafeOutputTarget(target: string): Promise<void> {
@@ -68,7 +90,6 @@ export async function materializeOGrafPackage(plan: OGrafGeneratedPackage, outpu
     seenPaths.add(collisionKey);
     const target = assertSafePackagePath(rootPath, normalizedPath);
     const targetDirectory = dirname(target);
-    await mkdir(targetDirectory, { recursive: true });
     await assertSafeOutputAncestors(rootPath, targetDirectory);
     await assertSafeOutputTarget(target);
     if (file.kind === 'asset') {

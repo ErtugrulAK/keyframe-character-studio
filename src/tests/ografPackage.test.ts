@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, test } from 'vitest';
@@ -47,6 +47,14 @@ async function makeAsset(): Promise<{ root: string; sourcePath: string }> {
   const sourcePath = join(root, 'logo.png');
   await writeFile(sourcePath, Buffer.from([137, 80, 78, 71]));
   return { root, sourcePath };
+}
+async function tryCreateSymlink(target: string, path: string, type: 'file' | 'dir' | 'junction' = 'file'): Promise<boolean> {
+  try {
+    await symlink(target, path, type);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 describe('OGraf package and realtime Graphic Phase 2B', () => {
@@ -317,5 +325,63 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
 
     const moduleSource = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     expect(moduleSource).toContain('Image value is not a packaged asset');
+  });
+  test('rejects symlinked local asset sources when the platform permits links', async () => {
+    const fixture = await makeAsset();
+    const sourceLink = join(fixture.root, 'source-link.png');
+    try {
+      if (!await tryCreateSymlink(fixture.sourcePath, sourceLink)) return;
+      const plan = compileOGrafPackage(makeScene(), {
+        assetCatalog: {
+          'source/logo.png': { kind: 'local', sourcePath: sourceLink, packagedPath: 'assets/images/logo.png' },
+        },
+      });
+      await expect(materializeOGrafPackage(plan, join(fixture.root, 'output'))).rejects.toThrow(/Unsafe local asset source/u);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects symlinked output roots and nested ancestors when the platform permits links', async () => {
+    const fixture = await makeAsset();
+    const realOutput = join(fixture.root, 'real-output');
+    const rootLink = join(fixture.root, 'output-link');
+    const nestedLink = join(fixture.root, 'nested-link');
+    try {
+      await mkdir(realOutput);
+      const linkType = process.platform === 'win32' ? 'junction' : 'dir';
+      if (!await tryCreateSymlink(realOutput, rootLink, linkType)) return;
+      const plan = compileOGrafPackage(makeScene(), {
+        assetCatalog: {
+          'source/logo.png': { kind: 'local', sourcePath: fixture.sourcePath, packagedPath: 'assets/images/logo.png' },
+        },
+      });
+      await expect(materializeOGrafPackage(plan, rootLink)).rejects.toThrow(/Unsafe output directory/u);
+
+      if (!await tryCreateSymlink(realOutput, nestedLink, linkType)) return;
+      await expect(materializeOGrafPackage(plan, join(nestedLink, 'package'))).rejects.toThrow(/Unsafe output directory/u);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  test('rejects symlinked output targets when the platform permits links', async () => {
+    const fixture = await makeAsset();
+    const output = join(fixture.root, 'output');
+    const target = join(fixture.root, 'target.json');
+    const targetLink = join(output, 'portable-graphic.ograf.json');
+    try {
+      await mkdir(output);
+      await writeFile(target, 'existing');
+      if (!await tryCreateSymlink(target, targetLink)) return;
+      const plan = compileOGrafPackage(makeScene(), {
+        assetCatalog: {
+          'source/logo.png': { kind: 'local', sourcePath: fixture.sourcePath, packagedPath: 'assets/images/logo.png' },
+        },
+      });
+      await expect(materializeOGrafPackage(plan, output)).rejects.toThrow(/Unsafe output target/u);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
   });
 });

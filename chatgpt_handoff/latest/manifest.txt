@@ -1,0 +1,23 @@
+# KCS Release Blocker Resolution Handoff Manifest
+
+Candidate SHA: 0c21e2e6393d71c92944b2be22f8bf91cab47a8f
+Source branch: fix/release-readiness-blockers
+Final branch: main
+Final status: READY WITH WARNINGS FOR USER APPROVAL
+Terminal output enough: YES for local validation; NO for the manual remote browser workflow result
+Next action: obtain explicit user approval before release/tag operations
+
+Copied files:
+- .github/workflows/release-smoke.yml — manual full-SHA Chromium release gate
+- CHANGELOG.md — unreleased 1.1.0-rc.1 candidate metadata
+- NEXT_SESSION.md — current handoff and guardrails
+- PROJECT_STATE.md — current project state and readiness
+- docs/KCS_CI_STATUS.md — CI and manual browser-gate status
+- docs/KCS_CURRENT_STATE.md — current security and release state
+- docs/KCS_RELEASE_CANDIDATE_SUMMARY.md — blocker outcomes and decision
+- package.json — private candidate version and scripts
+- package-lock.json — synchronized candidate version
+- reports/progress_101.md — blocker resolution and independent review
+- reports/progress_102.md — post-merge readiness audit
+
+Not copied: .git, node_modules, .omp files, global OMP configuration, backups, secrets, environment/API-key files, binary caches, and unchanged irrelevant files.

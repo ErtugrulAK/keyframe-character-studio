@@ -177,6 +177,12 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
+    const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
+    const filterId = 'kcs-layer-mask-filter-kcs-ograf-layer-mask-shape-subtract';
+    expect(graphic.innerHTML).toContain(`id="${filterId}"`);
+    expect(graphic.innerHTML).toContain(`filter="url(#${filterId})"`);
+    expect(canonical).toContain(`id="${filterId}"`);
+    expect(canonical).toContain(`filter="url(#${filterId})"`);
     expect(graphic.innerHTML).toContain('fill-opacity="0.2"');
     expect(graphic.innerHTML).toContain('data-mask-operation="subtract"');
     expect(graphic.innerHTML).toContain('fill-opacity="0.25"');

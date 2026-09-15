@@ -171,15 +171,17 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
     const effectiveMode = definition.inverted
       ? definition.mode === 'add' ? 'subtract' : definition.mode === 'subtract' ? 'add' : 'difference'
       : definition.mode;
+    const filterId = safeSvgId(layerMaskFilterId(id));
     const filter = definition.feather > 0 || definition.expansion !== 0
-      ? `<filter id="${safeSvgId(layerMaskFilterId(id))}" filterUnits="userSpaceOnUse"><feMorphology operator="${definition.expansion > 0 ? 'dilate' : 'erode'}" radius="${Math.abs(definition.expansion)}" />${definition.feather > 0 ? `<feGaussianBlur stdDeviation="${definition.feather / 2}" />` : ''}</filter>`
+      ? `<filter id="${filterId}" filterUnits="userSpaceOnUse"><feMorphology operator="${definition.expansion > 0 ? 'dilate' : 'erode'}" radius="${Math.abs(definition.expansion)}" />${definition.feather > 0 ? `<feGaussianBlur stdDeviation="${definition.feather / 2}" />` : ''}</filter>`
       : '';
+    const filterAttribute = definition.feather > 0 || definition.expansion !== 0 ? ` filter="url(#${filterId})"` : '';
     let body: string;
     if (!previousId) {
       const hole = effectiveMode === 'subtract' || effectiveMode === 'difference';
-      body = `<path d="${escapeXml(hole ? `${region} ${definition.pathD}` : definition.pathD)}" fill="white" fill-opacity="${hole ? 1 : definition.opacity}" fill-rule="${hole ? 'evenodd' : 'nonzero'}" />`;
+      body = `<path d="${escapeXml(hole ? `${region} ${definition.pathD}` : definition.pathD)}" fill="white" fill-opacity="${hole ? 1 : definition.opacity}" fill-rule="${hole ? 'evenodd' : 'nonzero'}"${filterAttribute} />`;
     } else if (effectiveMode === 'add') {
-      body = `<rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" mask="url(#${previousId})" /><path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${definition.opacity}" />`;
+      body = `<rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" mask="url(#${previousId})" /><path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${definition.opacity}"${filterAttribute} />`;
     } else if (effectiveMode === 'difference') {
       const shapeId = `${id}-shape`;
       const previousInverse = `${previousId}-inverse`;
@@ -188,8 +190,8 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
       body = `<g mask="url(#${escapeXml(currentInverse)})"><rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" mask="url(#${escapeXml(previousId)})" /></g><g mask="url(#${escapeXml(previousInverse)})"><rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" mask="url(#${escapeXml(shapeId)})" /></g>`;
     } else {
       body = effectiveMode === 'intersect'
-        ? `<path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${svgNumber(definition.opacity)}" mask="url(#${escapeXml(previousId)})" />`
-        : `<rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" mask="url(#${escapeXml(previousId)})" /><path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${svgNumber(definition.opacity)}" />`;
+        ? `<path d="${escapeXml(definition.pathD)}" fill="white" fill-opacity="${svgNumber(definition.opacity)}" mask="url(#${escapeXml(previousId)})"${filterAttribute} />`
+        : `<rect x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" fill="white" mask="url(#${escapeXml(previousId)})" /><path d="${escapeXml(definition.pathD)}" fill="black" fill-opacity="${svgNumber(definition.opacity)}"${filterAttribute} />`;
     }
     definitions.push(`${filter}<mask id="${escapeXml(id)}" x="0" y="0" width="${svgNumber(scene.width)}" height="${svgNumber(scene.height)}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="alpha" data-mask-operation="${escapeXml(effectiveMode)}">${body}</mask>`);
     previousId = id;

@@ -1,27 +1,39 @@
-# KCS Final Pre-Release Verification Handoff Manifest
+# KCS v1.1.0-rc.1 Release Handoff Manifest
 
-Workflow-tested release code candidate SHA: 46d2a3e59e065816d972dcd56951803951b577f6
-Remote workflow: release-smoke.yml
-Remote run: 34983770238
-Remote URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/34983770238
-Remote status: PASS
-Release readiness: READY WITH WARNINGS FOR USER APPROVAL
-Terminal output enough: YES; remote workflow result is recorded here and in progress_102.md
-Next action: obtain separate explicit approval before release/tag operations
+User approval: Release/tag oluşturmayı onaylıyorum.
+Tag: v1.1.0-rc.1
+Tag target SHA: 46d2a3e59e065816d972dcd56951803951b577f6
+Tag pushed: YES
+GitHub release: draft prerelease
+Release URL: https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/untagged-aebd4f0694468b7b4920
+npm publish: NO
 
-Copied files and reasons:
-- CHANGELOG.md — unreleased 1.1.0-rc.1 candidate metadata
-- KCS_CI_STATUS.md — CI and remote browser-gate status
-- KCS_CURRENT_STATE.md — current security and release state
-- KCS_RELEASE_CANDIDATE_SUMMARY.md — blocker outcomes and readiness status
-- NEXT_SESSION.md — repository guardrails and next action
-- PROJECT_STATE.md — current project state and protected state
-- package-lock.json — synchronized package metadata
+Remote smoke:
+- Workflow: release-smoke.yml
+- Run: 34983770238
+- URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/34983770238
+- Candidate SHA: 46d2a3e59e065816d972dcd56951803951b577f6
+- Status: PASS
+
+Accepted warnings:
+- Hostile concurrent filesystem mutation unsupported.
+- OGraf schema validation network-dependent; offline validation not claimed.
+- Manual browser workflow requires Chromium installation.
+- Existing React Fast Refresh, Vite chunk-size, and sqlite install-script warnings remain.
+
+Copied files:
+- progress_103.md — final tag/release report
+- progress_102.md — pre-release audit
+- CHANGELOG.md — unreleased candidate metadata
 - package.json — private candidate version
-- progress_101.md — blocker resolution and review evidence
-- progress_102.md — post-merge and remote smoke audit
-- release-smoke.yml — manual full-SHA Chromium gate
-- README.md — handoff scope and remote PASS
+- package-lock.json — synchronized metadata
+- KCS_RELEASE_CANDIDATE_SUMMARY.md — release decision
+- KCS_CI_STATUS.md — CI and remote smoke evidence
+- KCS_CURRENT_STATE.md — current project state
+- PROJECT_STATE.md — protected state
+- NEXT_SESSION.md — guardrails and next steps
+- release-smoke.yml — manual browser gate
+- README.md — release handoff summary
 - manifest.txt — this inventory
 
-Not copied: .git, node_modules, .omp files, global OMP configuration, backups, secrets, environment/API-key files, binary caches, and unchanged irrelevant files.
+Not copied: .git, node_modules, .omp, global OMP configuration, backups, secrets, environment/API-key files, binary caches, unchanged irrelevant files.

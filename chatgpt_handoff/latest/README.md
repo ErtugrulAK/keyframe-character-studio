@@ -1,29 +1,41 @@
-# KCS Final Pre-Release Verification Handoff
+# KCS v1.1.0-rc.1 Release Handoff
 
-## Candidate
+## Approval
 
-- Workflow-tested release code candidate SHA: `46d2a3e59e065816d972dcd56951803951b577f6`
-- Final documentation HEAD: docs-only commit after the workflow run
-- Package version: private `1.1.0-rc.1`
-- Release readiness: READY WITH WARNINGS FOR USER APPROVAL
+User explicitly approved release/tag creation: `Release/tag oluşturmayı onaylıyorum.`
 
-## Remote release-smoke
+## Tag / release
+
+- Tag: `v1.1.0-rc.1`
+- Tag target SHA: `46d2a3e59e065816d972dcd56951803951b577f6`
+- Tag pushed: YES
+- GitHub release: draft prerelease
+- Release URL: https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/untagged-aebd4f0694468b7b4920
+- npm publish: NO; package remains private
+
+## Remote smoke
 
 - Workflow: `release-smoke.yml`
 - Run: `34983770238`
 - URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/34983770238
 - Candidate SHA: `46d2a3e59e065816d972dcd56951803951b577f6`
-- Result: PASS
-- Chromium tests: 2 passed
+- Result: PASS; 2 Chromium tests passed
 
-## Scope
+## Validation
 
-This bundle contains the reconciled final candidate documentation and manual Playwright release-smoke evidence. No production release or tag was created.
+Local validation passed: npm ci, validate:ograf, qa:release, Full Vitest (101 files / 1,495 tests), build, TypeScript, lint, and diff check. Existing non-blocking warnings remain documented.
+
+## Accepted warnings
+
+- Hostile concurrent filesystem mutation is unsupported.
+- OGraf schema validation requires network access; offline validation is not claimed.
+- Manual browser workflow requires Chromium installation.
+- Existing React Fast Refresh, Vite chunk-size, and sqlite install-script warnings remain.
 
 ## Next action
 
-A separate explicit user approval is required before any production release or tag operation. The recommended release/tag target is the workflow-tested code candidate SHA above. The post-pass documentation commit is docs-only.
+The release is a draft prerelease. Publish or finalize the GitHub draft only with a further explicit user instruction. No npm publication was performed.
 
 ## Included files
 
-The bundle includes current reports, project/release documents, package metadata, and the manual workflow. See `manifest.txt` for the complete list and reasons.
+See `manifest.txt` for the complete copied-file list.

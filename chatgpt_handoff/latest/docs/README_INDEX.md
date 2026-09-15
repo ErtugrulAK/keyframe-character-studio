@@ -1,0 +1,81 @@
+# KCS Documentation Index
+
+## Read this first
+
+1. `docs/README_INDEX.md` — navigation entry point.
+2. `PROJECT_STATE.md` — current main state, QA status, and protected boundaries.
+3. `SESSION.md` — latest implementation, QA, and validation results.
+4. `NEXT_SESSION.md` — exact next action and approval boundary.
+5. `docs/KCS_CURRENT_STATE.md` — consolidated technical current state.
+6. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` — accepted milestones and release boundary.
+7. `docs/KCS_BRANCH_STATUS.md` — branch inclusion and protected lines.
+8. `docs/KCS_OPEN_TASKS.md` — remaining decisions and follow-up work.
+9. `docs/KCS_WITHOUT_MASK_BRANCH_AUDIT.md` — standalone branch evidence and archive classification.
+10. `docs/KCS_BRANCH_CLEANUP_AUDIT.md` — completed safe merged branch audit.
+11. `docs/KCS_MARKDOWN_CLEANUP_AUDIT.md` — markdown inventory and archive-only plan.
+12. `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md` — remaining investigation branch classifications.
+13. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md` — planning-only branch path.
+14. `docs/KCS_DESKTOP_FOLDER_INVENTORY.md` — desktop collection inventory.
+15. `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md` — archive-only cleanup decision.
+16. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` — applied local archive result.
+17. `docs/KCS_WINDOWS_PATH_HARDENING.md` — Windows filename, package-path, ZIP, and OGraf asset safety policy.
+
+## Reports
+
+- `reports/README.md` — report navigation and preservation rules.
+- `reports/progress_057.md` — protected main integration and release validation.
+- `reports/progress_058.md` — post-main cleanup audit and release checkpoint.
+- `reports/progress_059.md` — release tag and safe merged branch cleanup result.
+- `reports/progress_061.md` — safe Copilot branch cleanup result.
+- `reports/progress_062.md` — GitHub presentation import review result.
+- `reports/progress_063.md` — GitHub presentation review merge result.
+- `reports/progress_064.md` — original presentation branch cleanup result.
+- `reports/progress_065.md` — final checkpoint and Work PC sync handoff.
+- `reports/progress_066.md` — `without-mask` branch audit and archive classification.
+- `reports/progress_067.md` — GitHub Actions / CI audit and no-fix decision.
+- `reports/progress_068.md` — Windows path hardening V1 implementation checkpoint.
+- `reports/progress_086.md` — Parent-cycle and broadcast-map hardening patch.
+- `reports/progress_087.md` — Parent-cycle and broadcast-map hardening merge.
+- `reports/progress_088.md` — SourcePath filesystem trust review and blocker history.
+- `reports/progress_089.md` — SourcePath filesystem trust merge.
+- `reports/progress_090.md` — Mask/matte parity patch.
+- `reports/progress_092.md` — Deterministic OGraf fixture/schema gate patch.
+- `reports/progress_094.md` — Full OGraf release smoke gate patch.
+- `reports/progress_096.md` — Local tooling PATH audit.
+
+`docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free global tooling state. Historical reports remain unchanged and are audit-trail documents, not first-read current state.
+- `reports/progress_075.md` — prototype-key security hardening implementation.
+- `reports/progress_076.md` — prototype-key merge and post-merge validation.
+- `reports/progress_077.md` — security follow-up and release-gate review.
+- `reports/progress_078.md` — isolated OGraf materialization content guards branch.
+- `reports/progress_079.md` — follow-up security state reconciliation.
+- `reports/progress_080.md` — general project health and release-gate review.
+
+## OGraf docs
+
+- `docs/research/KCS_OGRAF_V1_COMPLIANCE_AUDIT.md`
+- `docs/research/KCS_OGRAF_PACKAGE_REFERENCE_ANALYSIS.md`
+- `docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md`
+- `docs/design/KCS_OGRAF_PACKAGE_EXPORT_V2_SPEC.md`
+- `docs/design/KCS_OGRAF_PUBLIC_CONTROLS_V1_SPEC.md`
+
+## OMP docs
+
+OMP optimization remains on `chore/omp-kcs-config-optimization`:
+
+- `docs/omp/OMP_KCS_CONFIG_AUDIT.md`
+- `docs/omp/OMP_KCS_OPTIMIZATION_PLAN.md`
+- `docs/omp/OMP_KCS_ROUTING_SMOKE.md`
+- `docs/omp/OMP_KCS_EFFECTIVE_USAGE_GUIDE.md`
+
+## External QA
+
+- `C:\Users\senmu\Masaüstü\KCS\kcs-ograf-public-controls-qa`
+- `C:\Users\senmu\Masaüstü\KCS\kcs-ograf-host-compat-qa`
+- `C:\Users\senmu\Masaüstü\KCS\kcs-ograf-downstream-qa`
+- `C:\Users\senmu\Masaüstü\KCS\ograf-graphics` (read-only)
+
+## CI status
+
+- `docs/KCS_CI_STATUS.md` — GitHub Actions inventory, remote status, local reproduction, and diagnosis.
+- `reports/progress_067.md` — CI audit result and no-fix decision.

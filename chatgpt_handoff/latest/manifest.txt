@@ -1,0 +1,41 @@
+KCS ChatGPT Handoff Manifest
+Generated: 2026-09-15
+Source main: 449ca898a30442e906b802f9824b2ad1dc278e5e
+Source audit branch: docs/release-readiness-audit@b12ee09
+Status: PARTIAL / STOPPED AT TASK 8 — NOT READY
+Files:
+reports/progress_086.md
+reports/progress_087.md
+reports/progress_088.md
+reports/progress_089.md
+reports/progress_090.md
+reports/progress_092.md
+reports/progress_094.md
+reports/progress_096.md
+reports/progress_098.md
+reports/progress_100.md
+src/ograf/svgRenderer.ts
+src/ograf/runtimeTemplate.ts
+src/tests/ografGeneratedParity.test.ts
+scripts/validate-ograf-manifest.mjs
+fixtures/ograf/minimal.ograf.json
+fixtures/ograf/invalid.ograf.json
+.github/workflows/ci.yml
+scripts/run-release-gate.mjs
+package.json
+playwright.config.ts
+e2e/ograf-phase2d-interoperability.spec.ts
+e2e/ograf-editor-export.spec.ts
+SESSION.md
+NEXT_SESSION.md
+PROJECT_STATE.md
+docs/KCS_CURRENT_STATE.md
+docs/KCS_OPEN_TASKS.md
+docs/KCS_RELEASE_CANDIDATE_SUMMARY.md
+docs/KCS_BRANCH_STATUS.md
+docs/KCS_CI_STATUS.md
+docs/README_INDEX.md
+reports/README.md
+README.md
+manifest.txt
+Excluded: .git, node_modules, .omp, backups, secrets/env/API key files, binary caches, unchanged irrelevant files

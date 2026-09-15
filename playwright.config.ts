@@ -1,9 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const isCiRun = Boolean(process.env.CI);
+const isReleaseGateRun = process.env.KCS_RELEASE_GATE === '1';
 const isV6MotionCoreRun = process.env.KCS_V6_QA === '1';
-const isIsolatedQaRun = isV6MotionCoreRun || isCiRun;
-const qaPort = isV6MotionCoreRun ? 5187 : isIsolatedQaRun ? 5188 : 5173;
+const isIsolatedQaRun = isV6MotionCoreRun || isReleaseGateRun || isCiRun;
+const qaPort = isV6MotionCoreRun ? 5187 : isReleaseGateRun ? 5189 : isIsolatedQaRun ? 5188 : 5173;
 const qaHost = '127.0.0.1';
 
 export default defineConfig({

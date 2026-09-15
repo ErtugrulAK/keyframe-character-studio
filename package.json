@@ -15,6 +15,7 @@
     "check": "npm run lint && npx tsc --noEmit && npm test && npm run build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
+    "qa:release": "node scripts/run-release-gate.mjs",
     "qa:v6": "node scripts/run-v6-qa.mjs",
     "validate:ograf": "node scripts/validate-ograf-manifest.mjs"
   },

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://ograf.ebu.io/v1/specification/json-schemas/graphics/schema.json",
+  "id": "com.keyframe-character-studio.invalid",
+  "name": "Invalid OGraf Fixture",
+  "main": "graphic.mjs",
+  "supportsRealTime": "yes",
+  "supportsNonRealTime": false
+}

@@ -180,6 +180,19 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+  test('rejects local asset sources that are not regular files', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'kcs-ograf-source-dir-'));
+    try {
+      const plan = compileOGrafPackage(makeScene(), {
+        assetCatalog: {
+          'source/logo.png': { kind: 'local', sourcePath: root, packagedPath: 'assets/images/logo.png' },
+        },
+      });
+      await expect(materializeOGrafPackage(plan, join(root, 'output'))).rejects.toThrow(/Unsafe local asset source/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 
   test.each(['portable-graphic.ograf.json', 'scene.kcs', 'graphic.mjs'])('rejects missing text content for %s', async (path) => {
     const root = await mkdtemp(join(tmpdir(), 'kcs-ograf-content-'));

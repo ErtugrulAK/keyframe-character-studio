@@ -303,39 +303,58 @@ describe('OGraf Export V1 Phase 1', () => {
     expect(errorCodes(invalidModes)).toContain('OGRAF_INVALID_PROJECT');
   });
   test('rejects malformed legacy composite keyframe transforms', () => {
-    const values = [Number.NaN, Number.POSITIVE_INFINITY, '0" onload="alert(1)'];
-    for (const x of values) {
+    const fields = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const;
+    for (const field of fields) {
       const scene = makeScene();
       scene.tracks = [{
         partId: 'layer-1',
         keyframes: [{
-          id: 'legacy-1',
+          id: `legacy-${field}`,
           frame: 0,
           easing: 'linear',
-          transform: { x, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+          transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, [field]: Number.NaN },
         }],
         channels: {},
       } as never];
       expect(compileOGrafPackage(scene).status).toBe('blocked');
     }
+    const scene = makeScene();
+    scene.tracks = [{
+      partId: 'layer-1',
+      keyframes: [{
+        id: 'legacy-string',
+        frame: 0,
+        easing: 'linear',
+        transform: { x: '0" onload="alert(1)', y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      }],
+      channels: {},
+    } as never];
+    expect(compileOGrafPackage(scene).status).toBe('blocked');
   });
 
-  test('requires complete finite scalar keyframe metadata', () => {
+  test('requires complete finite scalar and mask keyframe metadata', () => {
     const invalidKeyframes = [
       { value: 1, easing: 'linear' },
       { frame: 0, easing: 'linear' },
+      { frame: Number.POSITIVE_INFINITY, value: 1, easing: 'linear' },
       { frame: 0, value: 1, easing: 'linear', bezierIn: {} },
+      { frame: 0, value: 1, easing: 'linear', bezierOut: { x: 0, y: Number.NaN } },
       { frame: 0, value: 1, easing: 'linear', bezierControlPoints: [0, 1, 2] },
+      { frame: 0, value: 1, easing: 'linear', bezierControlPoints: [0, 1, 2, 3, 4] },
       { frame: 0, value: 1, easing: 'linear', bezierControlPoints: [0, 1, Number.NaN, 2] },
     ];
     for (const keyframe of invalidKeyframes) {
       const scene = makeScene();
-      scene.tracks = [{
-        partId: 'layer-1',
-        channels: { x: [keyframe] },
-      } as never];
+      scene.tracks = [{ partId: 'layer-1', channels: { x: [keyframe] } } as never];
       expect(compileOGrafPackage(scene).status).toBe('blocked');
     }
+    const maskScene = makeScene();
+    maskScene.tracks = [{
+      partId: 'layer-1',
+      channels: {},
+      maskChannels: { 'mask-1:opacity': [{ frame: 0, value: Number.NaN, easing: 'linear' }] },
+    } as never];
+    expect(compileOGrafPackage(maskScene).status).toBe('blocked');
   });
 
   test('requires complete finite mask path keyframe metadata', () => {
@@ -345,17 +364,23 @@ describe('OGraf Export V1 Phase 1', () => {
       closed: true,
       points: [{ id: 'p1', x: 0, y: 0 }, { id: 'p2', x: 1, y: 1 }],
     };
-    const scene = makeScene([makeLayer({
-      masks: [{ id: 'mask-1', name: 'Mask', mode: 'add', path }],
-    })]);
-    scene.tracks = [{
-      partId: 'layer-1',
-      channels: {},
-      maskPathChannels: {
-        'mask-1:path': [{ value: path, easing: 'linear', bezierControlPoints: [0, 1, 2] }],
-      },
-    } as never];
-    expect(compileOGrafPackage(scene).status).toBe('blocked');
+    const invalidKeyframes = [
+      { value: path, easing: 'linear' },
+      { frame: 0, value: path, easing: 'linear', bezierIn: { x: 0 } },
+      { frame: 0, value: path, easing: 'linear', bezierOut: { x: 0, y: Number.NaN } },
+      { frame: 0, value: path, easing: 'linear', bezierControlPoints: [0, 1, 2, 3, 4] },
+    ];
+    for (const keyframe of invalidKeyframes) {
+      const scene = makeScene([makeLayer({
+        masks: [{ id: 'mask-1', name: 'Mask', mode: 'add', path }],
+      })]);
+      scene.tracks = [{
+        partId: 'layer-1',
+        channels: {},
+        maskPathChannels: { 'mask-1:path': [keyframe] },
+      } as never];
+      expect(compileOGrafPackage(scene).status).toBe('blocked');
+    }
   });
 
   test('keeps valid legacy, scalar, and mask path keyframes exportable', () => {

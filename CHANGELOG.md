@@ -7,9 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Release candidate `1.1.0-rc.1` (unreleased)
+### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.
-- This candidate metadata does not authorize publication or tag creation.
+- The Git tag and GitHub draft prerelease exist; this changelog entry remains under `[Unreleased]` because the package is private and was not published.
 
 ### Security
 - Hardened prototype-sensitive imported OGraf keys, package paths, MIME lookups, and generated runtime maps.

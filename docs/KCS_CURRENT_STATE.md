@@ -1,6 +1,6 @@
 # KCS Current State
 
-The accepted KCS product and release-readiness blocker resolution is integrated into main. Remote `release-smoke.yml` passed for workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`; the final documentation update follows as docs-only. No release or tag has been created.
+The accepted KCS product and release-readiness blocker resolution is integrated into main. Annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease exist for workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`; no npm publication occurred.
 
 ## Completed security and OGraf work
 
@@ -27,8 +27,11 @@ The accepted KCS product and release-readiness blocker resolution is integrated 
 
 - `package.json` and `package-lock.json` candidate version: `1.1.0-rc.1`.
 - Package remains private.
-- `CHANGELOG.md` retains `[Unreleased]`; the candidate entry is explicitly unreleased.
+- `CHANGELOG.md` retains `[Unreleased]`; the candidate metadata remains unreleased for npm/package purposes.
 
 ## Release decision
 
-- Release readiness: **READY WITH WARNINGS FOR USER APPROVAL**; separate release/tag approval is required.
+- Tag: `v1.1.0-rc.1`, pushed at the workflow-tested code candidate.
+- GitHub release: draft prerelease.
+- Release readiness: **READY WITH WARNINGS**.
+- Publish/finalize the draft only with further explicit user instruction.

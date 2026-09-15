@@ -9,7 +9,7 @@
 
 ## Current result
 
-The four release blockers are resolved or explicitly accepted. Release readiness is **READY WITH WARNINGS FOR USER APPROVAL**. No release or tag has been created.
+The four release blockers are resolved or explicitly accepted. Annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease now exist at the workflow-tested code candidate. No npm publication occurred.
 
 ## Validation
 
@@ -21,11 +21,10 @@ Post-merge Vitest, focused existing package/filesystem evidence, `validate:ograf
 - Do not modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 - Keep `.omp/config.yml`, model roles, provider mappings, task concurrency, and global tooling unchanged.
 - Keep `origin/without-mask` untouched and classified ARCHIVE.
-- Production release remains blocked pending separate explicit user approval.
+- Production draft is not published; publish/finalize requires further explicit user instruction.
 
 ## Next scoped work
 
-1. Run branch validation for the four blocker outcomes.
-2. Complete independent review.
-3. Merge only by fast-forward if the review is READY or READY WITH WARNINGS.
-4. Request separate approval before any release/tag operation.
+1. Monitor draft prerelease feedback.
+2. Publish/finalize the GitHub draft only after explicit instruction.
+3. Keep npm publication disabled unless separately approved.

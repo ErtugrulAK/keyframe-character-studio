@@ -2,7 +2,7 @@
 
 ## Current position
 
-The accepted product and security follow-up line, including release-readiness blocker resolution, is integrated into main. The workflow-tested release code candidate is `46d2a3e59e065816d972dcd56951803951b577f6`; the final documentation update follows as docs-only. No release or tag has been created.
+The accepted product and security follow-up line is integrated into main. Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
@@ -23,13 +23,13 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ## Remaining work
 
-- Release readiness: READY WITH WARNINGS FOR USER APPROVAL.
-- Separate explicit approval remains required for any release/tag operation.
-- No further blocker implementation is required before that approval; operational warnings remain accepted and documented.
+- Release readiness: **READY WITH WARNINGS**; tag and draft prerelease are created.
+- Publish/finalize the GitHub draft only with further explicit user instruction.
+- No npm publication occurred; package remains private at `1.1.0-rc.1`.
 
 ## Protected state
 
-- The workflow-tested release code candidate is `46d2a3e59e065816d972dcd56951803951b577f6`; final documentation updates are docs-only.
+- The current main documentation commits are intentionally newer than the tag target; the tag remains on the workflow-tested code candidate.
 - `v1.1.0-public-controls` remains unchanged.
 - `origin/without-mask` remains untouched and classified ARCHIVE.
 - `.omp/config.yml` retains `memory.backend: mnemopi`.

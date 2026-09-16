@@ -181,6 +181,22 @@ describe('HeaderBar OGraf export integration', () => {
     expect(createZipMock).not.toHaveBeenCalled();
   });
 
+  it('redacts a machine path from an unclassified export failure', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
+    createZipMock.mockRejectedValue(new Error('/home/alice/private/out: permission denied'));
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+
+    await waitFor(() => expect(context.showToast).toHaveBeenCalled());
+    const [message, type, options] = context.showToast.mock.calls[0];
+    expect(type).toBe('error');
+    expect(message).toContain('out: permission denied');
+    expect(message).not.toContain('/home/alice');
+    expect(options.action).toContain('Verify the output location is writable');
+  });
+
   it('surfaces warnings without blocking the export', async () => {
     const scene = makeScene();
     scene.layers = [

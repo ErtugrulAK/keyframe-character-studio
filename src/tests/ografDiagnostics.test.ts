@@ -187,8 +187,20 @@ describe('OGraf export diagnostics remediation', () => {
       'External image asset "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB" is rejected by the default portable export policy.',
       'External image asset "data:image/png (payload omitted)" is rejected by the default portable export policy.',
     ],
+    [
+      'External image asset "data:image/svg+xml,<svg>TOP_SECRET</svg>" is rejected by the default portable export policy.',
+      'External image asset "data:image/svg+xml (payload omitted)" is rejected by the default portable export policy.',
+    ],
   ])('strips URL and embedded-payload secrets from a diagnostic message: %s', (message, expected) => {
     expect(describeOGrafExportDiagnostic(makeDiagnostic({ code: 'OGRAF_EXTERNAL_ASSET_REJECTED', message })).message).toBe(expected);
+  });
+
+  it.each([
+    ['/home/alice/private/logo.png: permission denied', 'logo.png: permission denied'],
+    ['C:\\Users\\alice\\private\\logo.png could not be opened', 'logo.png could not be opened'],
+    ['/var/kcs/out: EACCES', 'out: EACCES'],
+  ])('reduces a machine path that opens the text: %s', (message, expected) => {
+    expect(describeOGrafExportDiagnostic(makeDiagnostic({ message })).message).toBe(expected);
   });
 
   it('redacts a bare machine path used as display context', () => {
@@ -225,6 +237,16 @@ describe('OGraf export diagnostics remediation', () => {
     expect(remediation?.message).not.toContain('C:\\Users');
     expect(remediation?.message).not.toContain('alice');
     expect(remediation?.context).toBeUndefined();
+
+    const permissionFailure = describeOGrafPackageWriteFailure(new OGrafPackageWriteError(
+      'OGRAF_OUTPUT_WRITE_FAILED',
+      "OGraf package output could not be written: EACCES: permission denied, open '/home/alice/private/out'",
+    ));
+
+    expect(permissionFailure?.message).toContain('OGraf package output could not be written');
+    expect(permissionFailure?.message).toContain('out');
+    expect(permissionFailure?.message).not.toContain('/home/alice');
+    expect(permissionFailure?.context).toBeUndefined();
   });
 
   it('gives every package write failure code a stable title and next step', () => {

@@ -5,13 +5,13 @@ import type {
   OGrafPackageWriteFailureCode,
 } from './types';
 
-const OGRAF_DATA_URL_PATTERN = /data:[^\s"'<>]*/giu;
+const OGRAF_DATA_URL_PATTERN = /data:[^\s"']*/giu;
 const OGRAF_URL_PATTERN = /(?:[a-z][a-z0-9+.-]*:)?\/\/[^\s"'<>]*/giu;
 const OGRAF_QUOTED_SPAN_PATTERN = /"[^"]*"|'[^']*'/gu;
 /** A drive, UNC, or leading-slash value whose spaces continue only into further segments. */
 const OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN = /^(?:(?:[a-z]:[\\/]|\\\\)|\/)(?:[^\s"'<>]|\s(?=[^\s"'<>]*[\\/]))*$/iu;
 const OGRAF_UNQUOTED_WINDOWS_PATH_PATTERN = /(?<![\w+.-])(?:[a-z]:[\\/]|\\\\)[^\s"'<>]*(?:\s+[^\s"'<>]*[\\/][^\s"'<>]*)*/giu;
-const OGRAF_UNQUOTED_POSIX_PATH_PATTERN = /(?<=[\s"'<(])\/(?!\/)(?:[^\s"'<>]|\s(?=[^\s"'<>]*\/))+/gu;
+const OGRAF_UNQUOTED_POSIX_PATH_PATTERN = /(?:^|(?<=[\s"'<(]))\/(?!\/)(?:[^\s"'<>]|\s(?=[^\s"'<>]*\/))+/gu;
 
 /**
  * Accepted filesystem constraint. Every trusted-directory surface must state it
@@ -248,8 +248,11 @@ function redactOGrafUrlSecrets(token: string): string {
 
 /** Keeps only the media type of an embedded payload. */
 function redactOGrafDataUrl(token: string): string {
-  const mediaType = token.slice(5).split(/[;,]/u)[0].trim();
-  return mediaType ? `data:${mediaType} (payload omitted)` : 'data: (payload omitted)';
+  const rest = token.slice(5);
+  const mediaType = rest.split(/[;,]/u)[0].trim();
+  // No media parameters or payload left, so the token is already safe.
+  if (!mediaType || mediaType.length === rest.length) return token;
+  return `data:${mediaType} (payload omitted)`;
 }
 
 /**
@@ -266,15 +269,16 @@ export function sanitizeOGrafDiagnosticText(value: string): string {
   if (OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN.test(trimmed)) return sanitizeOGrafPathForDisplay(trimmed);
 
   return value
-    .replace(OGRAF_DATA_URL_PATTERN, redactOGrafDataUrl)
-    .replace(OGRAF_URL_PATTERN, redactOGrafUrlSecrets)
     .replace(OGRAF_QUOTED_SPAN_PATTERN, (span) => {
       const inner = span.slice(1, -1).trim();
+      if (/^data:/iu.test(inner)) return `${span[0]}${redactOGrafDataUrl(inner)}${span[0]}`;
       const looksLikeUrl = inner.startsWith('//') || inner.includes('://');
       return !looksLikeUrl && OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN.test(inner)
         ? `${span[0]}${sanitizeOGrafPathForDisplay(inner)}${span[0]}`
         : span;
     })
+    .replace(OGRAF_DATA_URL_PATTERN, redactOGrafDataUrl)
+    .replace(OGRAF_URL_PATTERN, redactOGrafUrlSecrets)
     .replace(OGRAF_UNQUOTED_WINDOWS_PATH_PATTERN, (match) => sanitizeOGrafPathForDisplay(match))
     .replace(OGRAF_UNQUOTED_POSIX_PATH_PATTERN, (match) => sanitizeOGrafPathForDisplay(match));
 }

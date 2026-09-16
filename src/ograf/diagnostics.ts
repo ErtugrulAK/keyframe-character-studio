@@ -5,8 +5,6 @@ import type {
   OGrafPackageWriteFailureCode,
 } from './types';
 
-const OGRAF_QUOTED_DATA_URL_PATTERN = /data:[\s\S]*?"(?=\s|$)/giu;
-const OGRAF_DATA_URL_PATTERN = /data:[^\s]*/giu;
 const OGRAF_URL_PATTERN = /(?:[a-z][a-z0-9+.-]*:)?\/\/[^\s"'<>]*/giu;
 const OGRAF_QUOTED_SPAN_PATTERN = /"[^"]*"|'[^']*'/gu;
 /** A drive, UNC, or leading-slash value whose spaces continue only into further segments. */
@@ -241,11 +239,11 @@ function redactOGrafUrlSecrets(token: string): string {
   const prefixMatch = token.match(/^(?:[a-z][a-z0-9+.-]*:)?\/\//iu);
   const prefix = prefixMatch ? prefixMatch[0] : '//';
   const withoutQuery = token.slice(prefix.length).split(/[?#]/u)[0];
-  const atIndex = withoutQuery.indexOf('@');
-  const slashIndex = withoutQuery.indexOf('/');
-  const authority = atIndex !== -1 && (slashIndex === -1 || atIndex < slashIndex)
-    ? withoutQuery.slice(atIndex + 1)
-    : withoutQuery;
+  const pathIndex = withoutQuery.indexOf('/');
+  const atIndex = withoutQuery.lastIndexOf('@', pathIndex === -1 ? withoutQuery.length : pathIndex);
+  const authority = atIndex === -1 ? withoutQuery : withoutQuery.slice(atIndex + 1);
+  // A URL with an empty host keeps the machine path in its path component.
+  if (authority.startsWith('/')) return `${prefix}/${sanitizeOGrafPathForDisplay(authority)}`;
   return `${prefix}${authority}`;
 }
 
@@ -264,6 +262,30 @@ function redactOGrafDataUrl(token: string): string {
 }
 
 /**
+ * Redacts every embedded data URL payload. A quoted payload ends at the last quote
+ * of the text, which is the closing quote of the value the message is quoting, so
+ * payloads holding inner quotes and markup are consumed whole.
+ */
+function redactEmbeddedDataUrls(value: string): string {
+  const start = value.indexOf('data:');
+  if (start === -1) return value;
+
+  const openingQuote = value.lastIndexOf('"', start);
+  const closingQuote = value.lastIndexOf('"');
+  let end: number;
+  if (openingQuote !== -1 && closingQuote > start) {
+    end = closingQuote + 1;
+  } else {
+    const whitespace = value.slice(start).search(/\s/u);
+    end = whitespace === -1 ? value.length : start + whitespace;
+  }
+
+  return value.slice(0, start)
+    + redactOGrafDataUrl(value.slice(start, end))
+    + redactEmbeddedDataUrls(value.slice(end));
+}
+
+/**
  * Redacts machine paths and URL secrets from diagnostic text before it reaches a
  * user-facing surface. Authored relative and package-relative paths are preserved.
  *
@@ -276,9 +298,7 @@ export function sanitizeOGrafDiagnosticText(value: string): string {
   const trimmed = value.trim();
   if (OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN.test(trimmed)) return sanitizeOGrafPathForDisplay(trimmed);
 
-  return value
-    .replace(OGRAF_QUOTED_DATA_URL_PATTERN, redactOGrafDataUrl)
-    .replace(OGRAF_DATA_URL_PATTERN, redactOGrafDataUrl)
+  return redactEmbeddedDataUrls(value)
     .replace(OGRAF_QUOTED_SPAN_PATTERN, (span) => {
       const inner = span.slice(1, -1).trim();
       const looksLikeUrl = inner.startsWith('//') || inner.includes('://');

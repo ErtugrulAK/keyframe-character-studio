@@ -101,7 +101,7 @@ async function assertSafeOutputTarget(target: string): Promise<void> {
 function toOutputWriteFailure(error: unknown): OGrafPackageWriteError {
   if (error instanceof OGrafPackageWriteError) return error;
   const detail = error instanceof Error ? error.message : String(error);
-  return new OGrafPackageWriteError('OGRAF_OUTPUT_WRITE_FAILED', `OGraf package output could not be written: ${detail}`);
+  return new OGrafPackageWriteError('OGRAF_OUTPUT_WRITE_FAILED', `OGraf package output could not be written: ${sanitizeOGrafDiagnosticText(detail)}`);
 }
 
 export async function materializeOGrafPackage(plan: OGrafGeneratedPackage, outputDirectory: string): Promise<OGrafMaterializedPackage> {

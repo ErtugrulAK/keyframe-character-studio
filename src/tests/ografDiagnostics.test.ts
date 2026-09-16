@@ -109,6 +109,8 @@ describe('OGraf export diagnostics remediation', () => {
     ["https://alice:PASS'WORD@example.test/logo.png?token=QUERY#FRAGMENT", 'https://example.test/logo.png'],
     ['file:/home/alice/private/logo.png', 'file:(value omitted)'],
     ['Data:text/pl,EMBEDDED_DATA_SECRET', 'data:text/pl (payload omitted)'],
+    ['data:,EMBEDDED_DATA_SECRET', 'data:(payload omitted)'],
+    ['data:;base64,EMBEDDED_DATA_SECRET', 'data:(payload omitted)'],
     ['assets/missing.png', 'assets/missing.png'],
     ['./assets/logo.png', './assets/logo.png'],
     ['custom_video', 'custom_video'],

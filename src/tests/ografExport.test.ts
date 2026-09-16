@@ -263,6 +263,10 @@ describe('OGraf Export V1 Phase 1', () => {
     const payload = messagesFor("Data:text/pl'ain,EMBEDDED_DATA_SECRET");
     expect(payload).toContain('(payload omitted)');
     expect(payload).not.toContain('EMBEDDED_DATA_SECRET');
+
+    const typedlessPayload = messagesFor('data:,EMBEDDED_DATA_SECRET');
+    expect(typedlessPayload).toContain('(payload omitted)');
+    expect(typedlessPayload).not.toContain('EMBEDDED_DATA_SECRET');
   });
 
   test('rejects external image assets by default', () => {

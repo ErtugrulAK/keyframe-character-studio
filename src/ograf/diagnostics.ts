@@ -260,9 +260,11 @@ function redactOGrafDataUrl(token: string): string {
   const body = closingQuote ? token.slice(0, -1) : token;
   const rest = body.slice(5);
   const mediaType = rest.split(/[;,]/u)[0].trim();
-  // No media parameters or payload left, so the token is already safe.
-  if (!mediaType || mediaType.length === rest.length) return token;
-  return `data:${mediaType} (payload omitted)${closingQuote}`;
+  // An empty payload, or a value already reduced to its media type, stays as is.
+  if (mediaType.length === rest.length) return token;
+  return mediaType
+    ? `data:${mediaType} (payload omitted)${closingQuote}`
+    : `data:(payload omitted)${closingQuote}`;
 }
 
 /**

@@ -7,7 +7,7 @@
  * rotated / scaled / parented sources) using evaluateTransform.
  */
 import { describe, it, expect } from 'vitest';
-import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, normalizeGradientStops, canonicalStopsKey, gradientStopsHash, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, textMaskContent, worldToLocal, normalizeGradientType, radialGradientGeometry, matteMaskGradientSuffix, imageMaskContent, buildMatteImageMask, normalizeMediaDimension } from '../utils/matte';
+import { buildMatteClipPath, buildMatteMask, buildMatteMaskFromPath, buildMattePath, buildMatteTextMask, gradientEndpoints, gradientEndpointsLocal, isMatteEligible, normalizeFeather, normalizeStrength, normalizeGradientAngle, normalizeGradient, gradientId, getDefaultGradientStops, normalizeGradientStops, canonicalStopsKey, gradientStopsHash, matteClipPathId, matteMaskId, isMatteActive, resolveMatteMode, resolveMatteSource, textMaskContent, worldToLocal, normalizeGradientType, radialGradientGeometry, matteMaskGradientSuffix, imageMaskContent, buildMatteImageMask, normalizeMediaDimension } from '../utils/matte';
 import type { PartMatte } from '../types/animator';
 import { getShapeGeometry } from '../utils/shapeGeometry';
 import { buildFreeformPath } from '../utils/freeform';
@@ -485,6 +485,27 @@ describe('matte — M15 freeform source (custom_freeform → CharacterPart.point
     const mask = buildMatteMask(source, STATIC_WORLD, 'alpha', false, '#ffffff')!;
     expect(mask.pathD).toBe('M 400 290 L 460 290 L 400 320 Z');
     expect(mask.id).toBe('kcs-mask-src_1-alpha');
+  });
+});
+
+describe('matte — resolveMatteSource', () => {
+  it('prefers the enabled Track Matte V2 relationship', () => {
+    expect(resolveMatteSource({
+      trackMatte: { sourceLayerId: 'v2-source', mode: 'alpha' },
+      matte: { sourcePartId: 'legacy-source', mode: 'clip' },
+    })).toEqual({ sourceId: 'v2-source', kind: 'track' });
+  });
+
+  it('falls back to the legacy matte when V2 names no source', () => {
+    expect(resolveMatteSource({ matte: { sourcePartId: 'legacy-source', mode: 'clip' } }))
+      .toEqual({ sourceId: 'legacy-source', kind: 'legacy' });
+    expect(resolveMatteSource({ trackMatte: { sourceLayerId: '', mode: 'alpha' }, matte: { sourcePartId: 'legacy-source' } }))
+      .toEqual({ sourceId: 'legacy-source', kind: 'legacy' });
+  });
+
+  it('reports nothing for a layer without a relationship', () => {
+    expect(resolveMatteSource({})).toBeUndefined();
+    expect(resolveMatteSource({ matte: { mode: 'alpha' } })).toBeUndefined();
   });
 });
 

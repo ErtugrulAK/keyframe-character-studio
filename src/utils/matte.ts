@@ -12,7 +12,7 @@
  * Geometry comes exclusively from `shapeGeometry.ts` — nothing is hardcoded
  * here. `custom_freeform` (and non-shape types) return null → no clip.
  */
-import type { BodyPartType, CharacterPart, MatteMode } from '../types/animator';
+import type { BodyPartType, CharacterPart, MatteMode, PartMatte, TrackMatteV2 } from '../types/animator';
 import { buildBezierPathD, legacyFreeformPointsToPath } from './bezierPath';
 import type { WorldTransform } from '../types/composition';
 import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
@@ -26,6 +26,27 @@ export interface MatteClipPath {
 /** Deterministic SVG id for a matte source — stable across evaluations. */
 export function matteClipPathId(sourcePartId: string): string {
   return `kcs-clip-${sourcePartId}`;
+}
+
+/** A matte source layer resolved from either relationship model. */
+export interface MatteSourceRef {
+  sourceId: string;
+  /** `track` = Track Matte V2 (`trackMatte`), `legacy` = `matte`. */
+  kind: 'track' | 'legacy';
+}
+
+/**
+ * Resolves which layer a target references as its matte source.
+ *
+ * Display precedence mirrors the Inspector cards and the renderer's
+ * enabled-V2 path: Track Matte V2 wins whenever it names a source, and the
+ * legacy `matte` applies otherwise. Only the persisted fields are read here —
+ * nothing is derived or cached, so the relationship keeps a single owner.
+ */
+export function resolveMatteSource(part: { matte?: PartMatte; trackMatte?: TrackMatteV2 }): MatteSourceRef | undefined {
+  if (part.trackMatte?.sourceLayerId) return { sourceId: part.trackMatte.sourceLayerId, kind: 'track' };
+  if (part.matte?.sourcePartId) return { sourceId: part.matte.sourcePartId, kind: 'legacy' };
+  return undefined;
 }
 
 /**

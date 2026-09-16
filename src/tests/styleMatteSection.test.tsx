@@ -1246,3 +1246,89 @@ describe('StyleMatteSection — V6 layer mask authoring', () => {
     expect(onAddMaskKeyframe).toHaveBeenCalledWith('mask-1', 'opacity', 0.4);
   });
 });
+describe('StyleMatteSection — Track Matte V2 source affordance', () => {
+  function makeV2Part(id: string, type: string, name: string, trackMatte?: CharacterPart['trackMatte']): CharacterPart {
+    return { ...makePart(id, type, name), trackMatte } as CharacterPart;
+  }
+
+  function renderTrackMatte(target: CharacterPart, allParts: CharacterPart[]) {
+    const onPartPropChange = vi.fn();
+    const utils = render(
+      <StyleMatteSection selectedPart={target} characterParts={allParts} onPartPropChange={onPartPropChange} />
+    );
+    fireEvent.click(utils.getByRole('button', { name: 'Expand TRACK MATTE V2' }));
+    return { onPartPropChange, ...utils };
+  }
+
+  it('1. lists every other layer, never the selected one, and falls back to the id label', () => {
+    const target = makeV2Part('tgt', 'custom_box', 'Box');
+    const unnamed = makeV2Part('unnamed', 'custom_circle', '');
+    const { container } = renderTrackMatte(target, [target, STAR, unnamed]);
+
+    const select = screen.getByLabelText('Track matte source') as HTMLSelectElement;
+    expect(Array.from(select.options).map((option) => option.value)).toEqual(['', 'src', 'unnamed']);
+    expect(Array.from(select.options).map((option) => option.textContent)).toEqual(['None', 'Star Part', 'unnamed']);
+    expect(container.querySelectorAll('option[value=tgt]')).toHaveLength(0);
+  });
+
+  it('2. selecting a source writes trackMatte and preserves every existing setting', () => {
+    const target = makeV2Part('tgt', 'custom_box', 'Box', {
+      sourceLayerId: 'src', mode: 'luminance', enabled: false, inverted: true, sourceVisible: false,
+    });
+    const other = makeV2Part('other', 'custom_circle', 'Other');
+    const { onPartPropChange } = renderTrackMatte(target, [target, STAR, other]);
+
+    fireEvent.change(screen.getByLabelText('Track matte source'), { target: { value: 'other' } });
+
+    expect(onPartPropChange).toHaveBeenCalledTimes(1);
+    expect(onPartPropChange).toHaveBeenCalledWith('trackMatte', {
+      sourceLayerId: 'other', mode: 'luminance', enabled: false, inverted: true, sourceVisible: false,
+    });
+  });
+
+  it('3. selecting the first source builds the canonical Track Matte V2 record', () => {
+    const target = makeV2Part('tgt', 'custom_box', 'Box');
+    const { onPartPropChange } = renderTrackMatte(target, [target, STAR]);
+
+    fireEvent.change(screen.getByLabelText('Track matte source'), { target: { value: 'src' } });
+
+    expect(onPartPropChange).toHaveBeenCalledWith('trackMatte', {
+      sourceLayerId: 'src', mode: 'alpha', enabled: true, inverted: false, sourceVisible: true,
+    });
+  });
+
+  it('4. None clears the relationship without touching either layer', () => {
+    const target = makeV2Part('tgt', 'custom_box', 'Box', { sourceLayerId: 'src', mode: 'alpha' });
+    const { onPartPropChange } = renderTrackMatte(target, [target, STAR]);
+
+    fireEvent.change(screen.getByLabelText('Track matte source'), { target: { value: '' } });
+
+    expect(onPartPropChange).toHaveBeenCalledTimes(1);
+    expect(onPartPropChange).toHaveBeenCalledWith('trackMatte', undefined);
+  });
+
+  it('5. a missing saved source stays visible, selects None, and never auto-mutates', () => {
+    const target = makeV2Part('tgt', 'custom_box', 'Box', { sourceLayerId: 'ghost', mode: 'alpha' });
+    const { onPartPropChange } = renderTrackMatte(target, [target, STAR]);
+
+    expect(screen.getByText('Missing source (ghost) — track matte not applied')).toBeTruthy();
+    expect((screen.getByLabelText('Track matte source') as HTMLSelectElement).value).toBe('');
+    expect(onPartPropChange).not.toHaveBeenCalled();
+  });
+
+  it('6. surfaces the existing validator verdict for a matte cycle on the selected layer', () => {
+    const a = makeV2Part('a', 'custom_box', 'A', { sourceLayerId: 'b', mode: 'alpha' });
+    const b = makeV2Part('b', 'custom_circle', 'B', { sourceLayerId: 'a', mode: 'alpha' });
+    renderTrackMatte(a, [a, b]);
+
+    expect(screen.getByText(/Matte cycle detected/)).toBeTruthy();
+  });
+
+  it('7. a non-cyclic relationship reports no cycle warning', () => {
+    const a = makeV2Part('a', 'custom_box', 'A', { sourceLayerId: 'b', mode: 'alpha' });
+    const b = makeV2Part('b', 'custom_circle', 'B');
+    renderTrackMatte(a, [a, b]);
+
+    expect(screen.queryByText(/Matte cycle detected/)).toBeNull();
+  });
+});

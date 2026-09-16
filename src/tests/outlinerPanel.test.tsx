@@ -237,3 +237,48 @@ describe('OutlinerPanel — M22 matte relationship indicator', () => {
     if (iconClass) expect(icon?.className.baseVal).toContain(`lucide-${iconClass}`);
   });
 });
+
+describe('OutlinerPanel — Track Matte V2 relationship indicator', () => {
+  it('1. a Track Matte V2 relationship shows the source layer name', () => {
+    animatorCtx.characterParts = [
+      part('src', 'The Cow', 'custom_circle'),
+      { id: 'tgt', name: 'Box', type: 'custom_box', trackMatte: { sourceLayerId: 'src', mode: 'alpha' } },
+    ];
+    renderPanel();
+
+    expect(screen.getByLabelText('Track matte source: The Cow')).toBeTruthy();
+    expect(screen.getByText('Mask → The Cow')).toBeTruthy();
+  });
+
+  it('2. a missing Track Matte V2 source reports missing instead of crashing', () => {
+    animatorCtx.characterParts = [
+      { id: 'tgt', name: 'Box', type: 'custom_box', trackMatte: { sourceLayerId: 'ghost', mode: 'alpha' } },
+    ];
+    renderPanel();
+
+    expect(screen.getByLabelText('Missing track matte source')).toBeTruthy();
+    expect(screen.getByText('Mask → Missing')).toBeTruthy();
+  });
+
+  it('3. Track Matte V2 wins when a legacy matte is also present', () => {
+    animatorCtx.characterParts = [
+      part('src', 'Legacy Source', 'custom_circle'),
+      part('v2', 'Track Source', 'custom_circle'),
+      { id: 'tgt', name: 'Box', type: 'custom_box', matte: { sourcePartId: 'src' }, trackMatte: { sourceLayerId: 'v2', mode: 'alpha' } },
+    ];
+    renderPanel();
+
+    expect(screen.getByLabelText('Track matte source: Track Source')).toBeTruthy();
+    expect(screen.queryByLabelText('Matte source: Legacy Source')).toBeNull();
+  });
+
+  it('4. an unnamed Track Matte V2 source falls back to its id', () => {
+    animatorCtx.characterParts = [
+      { id: 'unnamed', name: '', type: 'custom_circle' },
+      { id: 'tgt', name: 'Box', type: 'custom_box', trackMatte: { sourceLayerId: 'unnamed', mode: 'alpha' } },
+    ];
+    renderPanel();
+
+    expect(screen.getByLabelText('Track matte source: unnamed')).toBeTruthy();
+  });
+});

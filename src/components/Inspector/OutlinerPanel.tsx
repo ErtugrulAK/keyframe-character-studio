@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { BodyPartType } from '../../types/animator';
 import { booleanOperationLabel } from '../../utils/booleanGeometry';
+import { resolveMatteSource } from '../../utils/matte';
 import {
   SHAPE_ICON_MAP,
   SHAPE_ICON_SIZE,
@@ -87,6 +88,11 @@ export const OutlinerPanel: React.FC = () => {
     const isVisible = track?.editVisible !== false;
     const nextAncestry = new Set(ancestry);
     nextAncestry.add(part.id);
+
+    // Relationship indicator covers both models; precedence comes from the
+    // shared matte authority so the row never disagrees with the Inspector.
+    const matteRelationship = resolveMatteSource(part);
+    const matteSource = matteRelationship ? matteSourcePart(matteRelationship.sourceId) : undefined;
 
     const row = (
       <div
@@ -187,26 +193,26 @@ export const OutlinerPanel: React.FC = () => {
               {booleanOperationLabel(part.booleanOperation)}
             </span>
           )}
-          {part.matte?.sourcePartId && (
+          {matteRelationship && (
             <span
-              title={matteSourcePart(part.matte.sourcePartId)
-                ? `Matte source: ${matteSourcePart(part.matte.sourcePartId)!.name}`
-                : `Missing matte source (${part.matte.sourcePartId})`}
-              aria-label={matteSourcePart(part.matte.sourcePartId)
-                ? `Matte source: ${matteSourcePart(part.matte.sourcePartId)!.name}`
-                : 'Missing matte source'}
+              title={matteSource
+                ? `${matteRelationship.kind === 'track' ? 'Track matte' : 'Matte'} source: ${matteSource.name || matteSource.id}`
+                : `${matteRelationship.kind === 'track' ? 'Missing track matte' : 'Missing matte'} source (${matteRelationship.sourceId})`}
+              aria-label={matteSource
+                ? `${matteRelationship.kind === 'track' ? 'Track matte' : 'Matte'} source: ${matteSource.name || matteSource.id}`
+                : matteRelationship.kind === 'track' ? 'Missing track matte source' : 'Missing matte source'}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: 3,
                 flexShrink: 0,
-                color: matteSourcePart(part.matte.sourcePartId) ? '#00d2ff' : '#f59e0b',
+                color: matteSource ? '#00d2ff' : '#f59e0b',
                 fontSize: 10,
               }}
             >
-              {matteSourcePart(part.matte.sourcePartId) ? <Scissors size={10} /> : <AlertTriangle size={10} />}
+              {matteSource ? <Scissors size={10} /> : <AlertTriangle size={10} />}
                 <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {matteSourcePart(part.matte.sourcePartId) ? `Mask → ${matteSourcePart(part.matte.sourcePartId)!.name}` : 'Mask → Missing'}
+                  {matteSource ? `Mask → ${matteSource.name || matteSource.id}` : 'Mask → Missing'}
                 </span>
             </span>
           )}
@@ -271,7 +277,7 @@ export const OutlinerPanel: React.FC = () => {
   };
 
   // M22 8A — matte source lookup for the outliner indicator. Derived directly
-  // from part.matte.sourcePartId + characterParts (single relationship
+  // from the persisted relationship + characterParts (single relationship
   // authority — no cached/duplicated source state).
   const matteSourcePart = (sourcePartId: string) => characterParts.find((part) => part.id === sourcePartId);
 

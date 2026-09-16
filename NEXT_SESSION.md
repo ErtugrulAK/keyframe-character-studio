@@ -2,7 +2,8 @@
 
 ## Repository state
 
-- Checkout: main at `9fdbf0fe59c28d3d6f07c8ee37081fc93f2ff6db`; `origin/main` synchronized
+- Checkout: main at `9f7114877e111527e8757668237e41fde8388a99` (Task 105 docs/handoff commit); `origin/main` synchronized
+- Task 105 implementation was integrated by fast-forward at `9fdbf0fe59c28d3d6f07c8ee37081fc93f2ff6db`; later docs/handoff-only commits are newer than that integration commit
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
 - `feat/export-diagnostics-ux`: merged by fast-forward and retained
 - Release tag: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged

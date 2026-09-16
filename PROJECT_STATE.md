@@ -4,7 +4,7 @@
 
 The accepted product and security follow-up line is integrated into main. Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Task 105 (export diagnostics remediation UX) is integrated into main at `9fdbf0fe59c28d3d6f07c8ee37081fc93f2ff6db` by fast-forward merge. Blocking OGraf export diagnostics now carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; and user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
+Task 105 (export diagnostics remediation UX) was integrated into main by fast-forward at `9fdbf0fe59c28d3d6f07c8ee37081fc93f2ff6db`. Current `main`/`origin/main` HEAD is `9f7114877e111527e8757668237e41fde8388a99`, which adds docs and handoff commits only and is therefore newer than the integration commit. Blocking OGraf export diagnostics now carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; and user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
@@ -18,7 +18,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 |---|---|---|
 | Full Vitest | PASS | 103 files / 1,557 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf`; committed minimal fixture |
-| OGraf release smoke | PASS | `npm run qa:release`; candidate `9fdbf0f`; 2 Playwright tests |
+| OGraf release smoke | PASS | `npm run qa:release`; run against Task 105 integration commit `9fdbf0f`; 2 Playwright tests |
 | TypeScript | PASS | `npx tsc --noEmit` and build typecheck |
 | Lint | PASS | Existing Fast Refresh warning only |
 | Production build | PASS | Existing Vite chunk-size warning only |

@@ -195,6 +195,7 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
       await expect(materializeOGrafPackage(plan, join(root, 'output'))).rejects.toThrow();
       const failure = await materializationFailure(plan, join(root, 'output'));
       expect(failure.code).toBe('OGRAF_PACKAGE_SOURCE_UNREADABLE');
+      expect(failure.message).toBe('Local asset source could not be read (ENOENT).');
     } finally {
       await rm(root, { recursive: true, force: true });
     }

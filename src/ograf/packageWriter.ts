@@ -3,7 +3,7 @@ import { lstat, mkdir, open, writeFile } from 'node:fs/promises';
 import { dirname, join, parse, relative, resolve } from 'node:path';
 import { normalizePackagePath } from '../utils/pathSafety';
 import { isSafeOGrafPackagePath } from './compiler';
-import { OGrafPackageWriteError, describeOGrafValueForDiagnostics, sanitizeOGrafDiagnosticText } from './diagnostics';
+import { OGrafPackageWriteError, describeOGrafValueForDiagnostics } from './diagnostics';
 import type { OGrafGeneratedPackage, OGrafMaterializedPackage, OGrafPackageFile } from './types';
 
 function assertSafePackagePath(root: string, relativePath: string): string {
@@ -36,17 +36,23 @@ async function readRegularLocalFile(sourcePath: string): Promise<Uint8Array> {
   }
 }
 
+/** Error-number code of a filesystem failure, or a neutral placeholder. */
+function fileSystemFailureReason(error: unknown): string {
+  const code = (error as NodeJS.ErrnoException | undefined)?.code;
+  return typeof code === 'string' && /^[A-Z]+$/u.test(code) ? code : 'unknown error';
+}
+
 /**
  * Filesystem access is an external boundary: unreadable or missing sources become
- * coded failures so the user gets stable guidance instead of a raw OS error.
+ * coded failures. The raw OS message is never forwarded because it embeds the
+ * machine path; only its error code is kept.
  */
 async function assertRegularLocalFile(sourcePath: string): Promise<Uint8Array> {
   try {
     return await readRegularLocalFile(sourcePath);
   } catch (error) {
     if (error instanceof OGrafPackageWriteError) throw error;
-    const detail = error instanceof Error ? error.message : String(error);
-    throw new OGrafPackageWriteError('OGRAF_PACKAGE_SOURCE_UNREADABLE', `Local asset source could not be read: ${sanitizeOGrafDiagnosticText(detail)}`);
+    throw new OGrafPackageWriteError('OGRAF_PACKAGE_SOURCE_UNREADABLE', `Local asset source could not be read (${fileSystemFailureReason(error)}).`);
   }
 }
 
@@ -100,8 +106,7 @@ async function assertSafeOutputTarget(target: string): Promise<void> {
 /** Classifies an unexpected output-side filesystem failure as a coded write failure. */
 function toOutputWriteFailure(error: unknown): OGrafPackageWriteError {
   if (error instanceof OGrafPackageWriteError) return error;
-  const detail = error instanceof Error ? error.message : String(error);
-  return new OGrafPackageWriteError('OGRAF_OUTPUT_WRITE_FAILED', `OGraf package output could not be written: ${sanitizeOGrafDiagnosticText(detail)}`);
+  return new OGrafPackageWriteError('OGRAF_OUTPUT_WRITE_FAILED', `OGraf package output could not be written (${fileSystemFailureReason(error)}).`);
 }
 
 export async function materializeOGrafPackage(plan: OGrafGeneratedPackage, outputDirectory: string): Promise<OGrafMaterializedPackage> {

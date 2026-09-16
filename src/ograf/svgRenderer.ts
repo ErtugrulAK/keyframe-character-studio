@@ -1,3 +1,4 @@
+import { describeOGrafValueForDiagnostics } from './diagnostics';
 import type { CharacterPart } from '../types/animator';
 import type { EvaluatedLayer, LayerContent } from '../types/composition';
 import { buildBezierPathD } from '../utils/bezierPath';
@@ -125,7 +126,7 @@ function renderShape(layer: EvaluatedLayer): string {
     ...renderTrim(content),
   };
   const geometry = renderGeometry(layer.type, content, common);
-  if (!geometry) throw new Error(`Unsupported or invalid SVG geometry for layer "${layer.id}" (${layer.type}).`);
+  if (!geometry) throw new Error(`Unsupported or invalid SVG geometry for layer "${describeOGrafValueForDiagnostics(layer.id)}" (${describeOGrafValueForDiagnostics(layer.type)}).`);
   if (appearance.strokeAlignment === 'center' || !appearance.strokeEnabled || appearance.strokeWidth <= 0) return geometry;
   const maskId = safeSvgId(`${appearance.strokeAlignment}-stroke-${layer.id}`);
   const maskGeometry = renderGeometry(layer.type, content, {
@@ -222,14 +223,14 @@ function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: Evaluate
   const relationship = getMatteRelationship(target);
   if (!relationship) return { defs: '' };
   const source = scene.layers.find((candidate) => candidate.id === relationship.sourceLayerId);
-  if (!source) throw new Error(`Track matte source "${relationship.sourceLayerId}" for layer "${target.id}" was not found.`);
+  if (!source) throw new Error(`Track matte source "${describeOGrafValueForDiagnostics(relationship.sourceLayerId)}" for layer "${describeOGrafValueForDiagnostics(target.id)}" was not found.`);
   const id = safeSvgId(`kcs-ograf-track-matte-${target.id}-${source.id}-${relationship.mode}${relationship.inverted ? '-inverted' : ''}`);
   const sourceContent = renderLayerContent(source, options, {
     fill: relationship.mode === 'luminance' ? (source.content.fillColor || 'white') : 'white',
     stroke: 'none',
     'fill-opacity': source.content.fillOpacity ?? 1,
   });
-  if (!sourceContent) throw new Error(`Track matte source "${source.id}" has no supported SVG content.`);
+  if (!sourceContent) throw new Error(`Track matte source "${describeOGrafValueForDiagnostics(source.id)}" has no supported SVG content.`);
   const sourceShape = `<g transform="${layerTransform(scene, source)}">${sourceContent}</g>`;
   const body = relationship.inverted && relationship.mode === 'alpha'
     ? `<path d="M 0 0 H ${scene.width} V ${scene.height} H 0 Z" fill="white" fill-rule="evenodd" />${sourceShape.replace('fill="white"', 'fill="black"')}`
@@ -254,9 +255,9 @@ function renderClipDefs(scene: OGrafEvaluatedScene, options: OGrafSvgRenderOptio
     const isClip = relationship?.mode === undefined && (target.content.matte?.mode === 'clip' || (!relationship && Boolean(target.content.matte)));
     if (!sourceLayerId || !isClip || renderedSources.has(sourceLayerId)) continue;
     const source = scene.layers.find((layer) => layer.id === sourceLayerId);
-    if (!source) throw new Error(`Clip matte source "${sourceLayerId}" for layer "${target.id}" was not found.`);
+    if (!source) throw new Error(`Clip matte source "${describeOGrafValueForDiagnostics(sourceLayerId)}" for layer "${describeOGrafValueForDiagnostics(target.id)}" was not found.`);
     const sourceGeometry = renderLayerContent(source, options, { fill: 'white', stroke: 'none' });
-    if (!sourceGeometry) throw new Error(`Clip matte source "${source.id}" has no supported SVG content.`);
+    if (!sourceGeometry) throw new Error(`Clip matte source "${describeOGrafValueForDiagnostics(source.id)}" has no supported SVG content.`);
     defs.push(`<clipPath id="kcs-clip-${safeSvgId(source.id)}" clipPathUnits="userSpaceOnUse"><g transform="${layerTransform(scene, source)}">${sourceGeometry}</g></clipPath>`);
   }
   return defs.join('');

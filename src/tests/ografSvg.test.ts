@@ -181,6 +181,14 @@ describe('OGraf standalone SVG Phase 2A', () => {
     expect(svg).toContain('clip-path="url(#kcs-clip-source)"');
   });
 
+  test('does not quote a raw layer id when the geometry is unsupported', () => {
+    const freeform = makeLayer({ id: 'data:,TOP_SECRET', type: 'custom_freeform' });
+    const scene = makeScene([freeform]);
+
+    expect(() => renderOGrafSvg(evaluateOGrafScene(scene, 0))).toThrow(/Unsupported or invalid SVG geometry for layer/u);
+    expect(() => renderOGrafSvg(evaluateOGrafScene(scene, 0))).not.toThrow(/TOP_SECRET/u);
+  });
+
   test('repeated evaluation and render are byte-for-byte deterministic and non-mutating', () => {
     const scene = makeScene([makeLayer({ rotation: 12, scaleX: -1 })]);
     const before = JSON.stringify(scene);

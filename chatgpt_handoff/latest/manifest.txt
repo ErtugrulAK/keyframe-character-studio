@@ -1,34 +1,57 @@
-# KCS Post-RC Stability Audit Handoff Manifest
+# KCS Task 105 Handoff Manifest
 
 Clean refreshed: YES
-Purpose: ChatGPT review of post-RC stability audit and next roadmap
+Purpose: ChatGPT review of the export diagnostics remediation UX task
 Tag/release changed: NO
 Tag: v1.1.0-rc.1
 Tag target SHA: 46d2a3e59e065816d972dcd56951803951b577f6
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
+Main after integration: 9fdbf0fe59c28d3d6f07c8ee37081fc93f2ff6db
 
 Copied files:
-- progress_104.md — evidence-based post-RC audit and 12-task roadmap
-- KCS_POST_RC_ROADMAP.md — concise roadmap, dependency order, validation policy
+- progress_105.md — Task 105 report: scope, implementation, review history, validation matrix
+- progress_104.md — post-RC audit and roadmap baseline
+- KCS_POST_RC_ROADMAP.md — roadmap with task 1 marked completed
 - NEXT_SESSION.md — next-task pointer and guardrails
-- PROJECT_STATE.md — current state and protected invariants
+- PROJECT_STATE.md — current state, validation status, protected invariants
 - KCS_CURRENT_STATE.md — current security/release state
 - KCS_RELEASE_CANDIDATE_SUMMARY.md — release and warning summary
 - KCS_CI_STATUS.md — CI and release-smoke status
-- CHANGELOG.md — package metadata and release-candidate history
+- CHANGELOG.md — package metadata and changelog entries for this task
 - package.json — private package metadata and scripts
 - ci.yml — checked-in CI workflow copy
 - release-smoke.yml — checked-in manual browser gate copy
 - README.md — project summary for review context
+- src__ograf__diagnostics.ts — remediation and value-formatting authority
+- src__ograf__types.ts — diagnostic and package-write failure codes
+- src__ograf__validation.ts — messages built with formatted user values
+- src__ograf__compiler.ts — manifest diagnostics
+- src__ograf__packageCompiler.ts — package diagnostics
+- src__ograf__packageWriter.ts — coded filesystem failures, errno-only messages
+- src__ograf__browserZip.ts — coded browser package failures
+- src__ograf__svgRenderer.ts — formatted renderer failure messages
+- src__hooks__useToast.ts — optional title, action, and duration
+- src__context__AnimatorContext.tsx — single ToastItem type, widened showToast
+- src__components__Toast__ToastPortal.tsx — structured toast card
+- src__components__Header__HeaderBar.tsx — export diagnostics consumer
+- src__tests__ografDiagnostics.test.ts — remediation, formatting, guard tests
+- src__tests__ografBrowserZip.test.tsx — export UI integration tests
+- src__tests__ografExport.test.ts — validator message tests
+- src__tests__ografPackage.test.ts — materialization boundary code tests
+- src__tests__ografSvg.test.ts — renderer message tests
+- src__tests__toastPortal.test.tsx — toast rendering tests
+- src__tests__useToast.test.ts — toast option tests
+- README.md — this handoff's instructions
 - manifest.txt — this inventory
 
 Validation:
+- Full Vitest: PASS; 103 files / 1,557 tests
 - validate:ograf: PASS
 - qa:release: PASS; 2 Chromium tests
-- git diff --check: PASS
-- Full Vitest/build: not rerun; audit changed docs only
+- build / TypeScript / lint / git diff --check: PASS with pre-existing warnings only
+- Independent review: READY
 
-Omitted files were not deleted from the repository. Not copied: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, source files, tests, and unchanged irrelevant files.
+Omitted files were not deleted from the repository. Not copied: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, and unchanged files.
 
 Upload the contents of chatgpt_handoff/latest/ to ChatGPT.

@@ -1,0 +1,300 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { unzipSync } from 'fflate';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
+import { compileOGrafPackage } from '../ograf/packageCompiler';
+import { sanitizeOGrafDownloadName } from '../ograf/browserZip';
+import type { SceneData, SceneLayer } from '../types/composition';
+
+const { context, createZipMock } = vi.hoisted(() => ({
+  context: {
+    exportProject: vi.fn(),
+    importProject: vi.fn(),
+    resetProject: vi.fn(),
+    lastSavedAt: null,
+    triggerManualSave: vi.fn(),
+    showToast: vi.fn(),
+    appMode: 'edit',
+    setAppMode: vi.fn(),
+    sceneTitle: 'My Project / Demo',
+    projectTemplates: [],
+    activeProjectTemplateId: 'default',
+    setActiveProjectTemplateId: vi.fn(),
+    addProjectTemplate: vi.fn(),
+    renameProjectTemplate: vi.fn(),
+    deleteProjectTemplate: vi.fn(),
+    fps: 60,
+    setFps: vi.fn(),
+  },
+  createZipMock: vi.fn(),
+}));
+
+vi.mock('../context/AnimatorContext', () => ({ useAnimator: () => context }));
+vi.mock('../components/Modal/NewItemModal', () => ({ NewItemModal: () => null }));
+vi.mock('../ograf/browserZip', async () => {
+  const actual = await vi.importActual<typeof import('../ograf/browserZip')>('../ograf/browserZip');
+  return { ...actual, createOGrafBrowserZip: createZipMock };
+});
+
+import { HeaderBar } from '../components/Header/HeaderBar';
+
+function makeLayer(overrides: Partial<SceneLayer> = {}): SceneLayer {
+  return {
+    id: 'shape', name: 'Shape', type: 'custom_box', x: 0, y: 0, rotation: 0,
+    scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 0,
+    fillColor: '#fff', strokeColor: '#000', ...overrides,
+  };
+}
+
+function makeScene(layerValue: SceneLayer = makeLayer()): SceneData {
+  return { version: 1, coordinateSystem: 'project-unit-center-v1', name: 'My Project / Demo', width: 320, height: 180, fps: 60, totalFrames: 60, layers: [layerValue], tracks: [] };
+}
+
+afterEach(() => {
+  cleanup();
+  context.showToast.mockClear();
+  context.importProject.mockClear();
+  context.exportProject.mockReset();
+  createZipMock.mockReset();
+});
+
+describe('browser OGraf ZIP writer', () => {
+  it('creates a deterministic ZIP with the validated OGraf package files', async () => {
+    const plan = compileOGrafPackage(makeScene());
+    const actualWriter = await vi.importActual<typeof import('../ograf/browserZip')>('../ograf/browserZip');
+    const first = await actualWriter.createOGrafBrowserZip(plan);
+    const second = await actualWriter.createOGrafBrowserZip(plan);
+    const firstFiles = Object.keys(unzipSync(first.bytes)).sort();
+    expect(first.fileName).toBe('my-project-demo-ograf.zip');
+    expect(first.bytes).toEqual(second.bytes);
+    expect(firstFiles).toEqual(['graphic.mjs', 'my-project-demo.ograf.json', 'scene.kcs']);
+    expect(new TextDecoder().decode(unzipSync(first.bytes)['scene.kcs'])).toContain('project-unit-center-v1');
+  });
+
+  it('sanitizes deterministic download names', () => {
+    expect(sanitizeOGrafDownloadName(' Ä Project / Demo ')).toBe('a-project-demo');
+    expect(sanitizeOGrafDownloadName('')).toBe('graphic');
+  });
+  it('rejects a package containing the exact prototype-sensitive __proto__ path', async () => {
+    const plan = compileOGrafPackage(makeScene(makeLayer({ imageUrl: 'assets/source.png' })), {
+      assetCatalog: {
+        'assets/source.png': {
+          kind: 'local',
+          packagedPath: '__proto__',
+          binaryContent: new Uint8Array([1, 2, 3]),
+        },
+      },
+    });
+    expect(plan.status).toBe('blocked');
+    const actualBrowserZip = await vi.importActual('../ograf/browserZip');
+    await expect(actualBrowserZip.createOGrafBrowserZip(plan)).rejects.toThrow('validation failed');
+  });
+});
+
+describe('HeaderBar OGraf export integration', () => {
+  it('exposes one Export menu with JSON and explicit OGraf choices; Video is absent', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
+    createZipMock.mockResolvedValue({ fileName: 'my-project-demo-ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:ograf'), revokeObjectURL: vi.fn() });
+    const downloads: string[] = [];
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () { downloads.push(this.download); });
+    render(<HeaderBar />);
+    expect(screen.getByRole('button', { name: 'Export', exact: true })).toBeTruthy();
+    expect(screen.queryByText('Export Video')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    expect(screen.getByRole('menuitem', { name: 'JSON', exact: true })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true })).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
+    expect(downloads[0]).toBe('my-project-demo-ograf.zip');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }));
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(2));
+    expect(context.exportProject).toHaveBeenCalledTimes(2);
+    expect(downloads[1]).toBe('my-project-demo.mjs');
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'JSON', exact: true }));
+    expect(context.exportProject).toHaveBeenCalledTimes(3);
+  });
+
+  it('blocks unsupported and missing-asset scenes with actionable diagnostics', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_video', videoUrl: 'video.mp4' }))));
+    const createObjectURL = vi.fn(() => 'blob:should-not-download');
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() });
+    render(<HeaderBar />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+    await waitFor(() => expect(context.showToast).toHaveBeenCalled());
+    expect(context.showToast.mock.calls[0][0]).toContain('custom_video');
+    expect(createObjectURL).not.toHaveBeenCalled();
+
+    cleanup();
+    context.showToast.mockClear();
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_image', imageUrl: 'assets/missing.png' }))));
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+    await waitFor(() => expect(context.showToast).toHaveBeenCalled());
+    expect(context.showToast.mock.calls[0][0]).toContain('asset');
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
+  it('shows a stable title, explanation, and next step for a blocked export', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_video', videoUrl: 'video.mp4' }))));
+    const createObjectURL = vi.fn(() => 'blob:should-not-download');
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() });
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+
+    await waitFor(() => expect(context.showToast).toHaveBeenCalledTimes(1));
+    const [message, type, options] = context.showToast.mock.calls[0];
+    expect(message).toContain('custom_video');
+    expect(type).toBe('error');
+    expect(options.title).toBe('Unsupported video layer [Shape]');
+    expect(options.action).toContain('replace it with an image asset you author outside KCS');
+    expect(options.durationMs).toBeGreaterThan(0);
+    expect(createZipMock).not.toHaveBeenCalled();
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['C:\\Users\\alice\\private\\logo.png', 'logo.png', /C:\\Users|alice/u],
+    ['//user:password@example.test/logo.png?token=secret', 'example.test', /password|token/u],
+    ["https://alice:PASS'WORD@example.test/logo.png?token=QUERY_SECRET#FRAGMENT", 'example.test', /PASS|WORD|QUERY_SECRET|FRAGMENT/u],
+    ['data:application/octet-stream;base64,QUJDREVGRw==', 'data:application/octet-stream', /QUJDREVGRw/u],
+  ])('never exposes machine paths or asset secrets from %s', async (imageUrl, remnant, forbidden) => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_image', imageUrl }))));
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:should-not-download'), revokeObjectURL: vi.fn() });
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+
+    await waitFor(() => expect(context.showToast).toHaveBeenCalled());
+    const emitted = context.showToast.mock.calls.map(([message]) => String(message)).join(' | ');
+    expect(emitted).toContain(remnant);
+    expect(emitted).not.toMatch(forbidden);
+    expect(context.showToast.mock.calls.every(([, type]) => type === 'error')).toBe(true);
+    expect(createZipMock).not.toHaveBeenCalled();
+  });
+
+  it('redacts a machine path from an unclassified export failure', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
+    createZipMock.mockRejectedValue(new Error('/home/alice/private/out: permission denied'));
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+
+    await waitFor(() => expect(context.showToast).toHaveBeenCalled());
+    const [message, type, options] = context.showToast.mock.calls[0];
+    expect(type).toBe('error');
+    expect(message).toContain('out: permission denied');
+    expect(message).not.toContain('/home/alice');
+    expect(options.action).toContain('Verify the output location is writable');
+  });
+
+  it('redacts a machine path from an unclassified legacy export failure', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => { throw new Error('/home/alice/private/out: permission denied'); }),
+      revokeObjectURL: vi.fn(),
+    });
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }));
+
+    await waitFor(() => expect(context.showToast).toHaveBeenCalled());
+    const [message, type, options] = context.showToast.mock.calls[0];
+    expect(type).toBe('error');
+    expect(message).toContain('Could not export OGraf legacy file');
+    expect(message).toContain('out: permission denied');
+    expect(message).not.toContain('/home/alice');
+    expect(options.action).toContain('Verify the output location is writable');
+  });
+
+  it('surfaces warnings without blocking the export', async () => {
+    const scene = makeScene();
+    scene.layers = [
+      makeLayer({ id: 'mask' }),
+      makeLayer({ id: 'target', name: 'Target', matte: { sourcePartId: 'mask', mode: 'clip' } }),
+    ];
+    context.exportProject.mockReturnValue(JSON.stringify(scene));
+    createZipMock.mockResolvedValue({ fileName: 'my-project-demo-ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:ograf'), revokeObjectURL: vi.fn() });
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+
+    await waitFor(() => expect(createZipMock).toHaveBeenCalledTimes(1));
+    const warningCall = context.showToast.mock.calls.find(([, type]) => type === 'info');
+    expect(warningCall?.[0]).toContain('Clip matte approximated [Target]');
+    expect(warningCall?.[2].title).toBe('Export warnings (1)');
+    expect(warningCall?.[2].action).toContain('warnings do not block');
+    expect(context.showToast).toHaveBeenCalledWith('Exported "my-project-demo-ograf.zip"', 'success');
+  });
+
+  it('aggregates duplicate missing-font diagnostics by font root cause', async () => {
+    const firstTextLayer = makeLayer({ id: 'title', name: 'Title', type: 'custom_text', textValue: 'Title', fontFamily: 'Inter' });
+    const scene = makeScene(firstTextLayer);
+    scene.layers = [firstTextLayer, { ...firstTextLayer, id: 'subtitle', name: 'Subtitle', textValue: 'Subtitle' }];
+    context.exportProject.mockReturnValue(JSON.stringify(scene));
+    render(<HeaderBar />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+    await waitFor(() => expect(context.showToast).toHaveBeenCalledTimes(1));
+    expect(context.showToast.mock.calls[0][0]).toContain('Display Title uses Inter');
+  });
+
+
+  it('prevents duplicate concurrent exports while preparation is active', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
+    const { promise: zipPromise, resolve: resolveZip } = Promise.withResolvers<{ fileName: string; bytes: Uint8Array }>();
+    createZipMock.mockReturnValue(zipPromise);
+    render(<HeaderBar />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+    expect(createZipMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    const menuItem = screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }) as HTMLButtonElement;
+    expect(menuItem.disabled).toBe(true);
+    fireEvent.click(menuItem);
+    expect(createZipMock).toHaveBeenCalledTimes(1);
+
+    resolveZip?.({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
+    await waitFor(() => expect(menuItem.disabled).toBe(false));
+  });
+  it('explains when an OGraf manifest is supplied to KCS project import', async () => {
+    render(<HeaderBar />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['{"$schema":"https://ograf.ebu.io/v1/specification/json-schemas/graphics/schema.json"}'], 'graphic.ograf.json', { type: 'application/json' })] } });
+    await waitFor(() => expect(context.showToast).toHaveBeenCalledWith(expect.stringContaining('OGraf graphic manifest/package'), 'error'));
+    expect(context.importProject).not.toHaveBeenCalled();
+  });
+
+  it('imports a KCS scene file through the existing project path', async () => {
+    context.importProject.mockReturnValue(true);
+    render(<HeaderBar />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['{"version":1}'], 'scene.kcs', { type: 'application/json' })] } });
+    await waitFor(() => expect(context.importProject).toHaveBeenCalledWith('{"version":1}', 'scene'));
+    expect(context.showToast).toHaveBeenCalledWith('Imported "scene" as a new Template tab!', 'success');
+  });
+
+  it('explains that an OGraf package requires dedicated package import support', async () => {
+    render(<HeaderBar />);
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [new File(['PK'], 'graphic-ograf.zip', { type: 'application/zip' })] } });
+    await waitFor(() => expect(context.showToast).toHaveBeenCalledWith(expect.stringContaining('KCS project import expects a .kcs project file'), 'error'));
+    expect(context.importProject).not.toHaveBeenCalled();
+  });
+});

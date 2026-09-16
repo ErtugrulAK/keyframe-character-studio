@@ -37,6 +37,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 ## ChatGPT handoff policy
 
 - `chatgpt_handoff/latest/` holds a minimal, task-specific upload bundle, refreshed for each ChatGPT response instead of accumulating context files.
+- `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` merges `latest/OMP_FINAL_RESPONSE.md` and every bundle file into one upload document; prefer it unless ChatGPT asks for separate files.
 - Flattened source and test copies must not live there: the Vitest default include glob picks up files named `src__*test*`, which failed CI runs `35094144225` and `35095655446`.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination.
 

@@ -2,8 +2,13 @@
 
 Minimal, task-specific bundle for the grouped-roadmap orchestration run that produced Milestone A (canvas tangent handles).
 
+## Preferred upload artifact
+
+Upload `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` instead of these individual files: it merges the OMP final response with every file in this folder into one Markdown document. Use the files in this folder only when ChatGPT explicitly asks for separate files.
+
 ## Files
 
+- `OMP_FINAL_RESPONSE.md` — the OMP terminal response for this task
 - `progress_108_canvas_tangent_authoring.md` — what was attempted, the design-review history, the implementation, the validation matrix, and the independent review's five blocking items
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — milestone map (A–F), status, approval gates, and the recommended next prompt
 - `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — the approved design contract (revision 3) the implementation must satisfy

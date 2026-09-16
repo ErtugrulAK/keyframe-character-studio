@@ -20,9 +20,10 @@ Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (7):
+Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
+- OMP_FINAL_RESPONSE.md — the OMP terminal response for this task
 - progress_108_canvas_tangent_authoring.md — orchestration + Milestone A report
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — milestone map, gates, next prompt
 - KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — approved design contract (revision 3)

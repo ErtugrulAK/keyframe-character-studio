@@ -3,7 +3,9 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, expect, test } from 'vitest';
 import type { SceneData, SceneLayer } from '../types/composition';
+import type { OGrafGeneratedPackage } from '../ograf/types';
 import { compileOGrafPackage } from '../ograf/packageCompiler';
+import { OGrafPackageWriteError } from '../ograf/diagnostics';
 import { materializeOGrafPackage } from '../ograf/packageWriter';
 
 function makeLayer(overrides: Partial<SceneLayer> = {}): SceneLayer {
@@ -48,6 +50,13 @@ async function makeAsset(): Promise<{ root: string; sourcePath: string }> {
   await writeFile(sourcePath, Buffer.from([137, 80, 78, 71]));
   return { root, sourcePath };
 }
+/** Runs materialization and returns the coded failure it must raise. */
+async function materializationFailure(plan: OGrafGeneratedPackage, outputDirectory: string): Promise<OGrafPackageWriteError> {
+  const failure = await materializeOGrafPackage(plan, outputDirectory).catch((reason: unknown) => reason);
+  expect(failure).toBeInstanceOf(OGrafPackageWriteError);
+  return failure as OGrafPackageWriteError;
+}
+
 async function tryCreateSymlink(target: string, path: string, type: 'file' | 'dir' | 'junction' = 'file'): Promise<boolean> {
   try {
     await symlink(target, path, type);
@@ -184,6 +193,8 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
         },
       });
       await expect(materializeOGrafPackage(plan, join(root, 'output'))).rejects.toThrow();
+      const failure = await materializationFailure(plan, join(root, 'output'));
+      expect(failure.code).toBe('OGRAF_PACKAGE_SOURCE_UNREADABLE');
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -197,6 +208,8 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
         },
       });
       await expect(materializeOGrafPackage(plan, join(root, 'output'))).rejects.toThrow(/Unsafe local asset source/u);
+      const failure = await materializationFailure(plan, join(root, 'output'));
+      expect(failure.code).toBe('OGRAF_UNSAFE_ASSET_SOURCE');
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -216,6 +229,8 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
       };
 
       await expect(materializeOGrafPackage(malformedPlan, join(root, 'output'))).rejects.toThrow(`Missing text content for packaged file: ${path}`);
+      const failure = await materializationFailure(malformedPlan, join(root, 'output'));
+      expect(failure.code).toBe('OGRAF_MISSING_PACKAGE_SOURCE');
       await expect(readFile(join(root, 'output', path), 'utf8')).rejects.toThrow();
     } finally {
       await rm(root, { recursive: true, force: true });
@@ -337,6 +352,8 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
         },
       });
       await expect(materializeOGrafPackage(plan, join(fixture.root, 'output'))).rejects.toThrow(/Unsafe local asset source/u);
+      const failure = await materializationFailure(plan, join(fixture.root, 'output'));
+      expect(failure.code).toBe('OGRAF_UNSAFE_ASSET_SOURCE');
     } finally {
       await rm(fixture.root, { recursive: true, force: true });
     }
@@ -357,9 +374,13 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
         },
       });
       await expect(materializeOGrafPackage(plan, rootLink)).rejects.toThrow(/Unsafe output directory/u);
+      const rootFailure = await materializationFailure(plan, rootLink);
+      expect(rootFailure.code).toBe('OGRAF_UNSAFE_OUTPUT_DIRECTORY');
 
       if (!await tryCreateSymlink(realOutput, nestedLink, linkType)) return;
       await expect(materializeOGrafPackage(plan, join(nestedLink, 'package'))).rejects.toThrow(/Unsafe output directory/u);
+      const nestedFailure = await materializationFailure(plan, join(nestedLink, 'package'));
+      expect(nestedFailure.code).toBe('OGRAF_UNSAFE_OUTPUT_DIRECTORY');
     } finally {
       await rm(fixture.root, { recursive: true, force: true });
     }
@@ -380,6 +401,8 @@ describe('OGraf package and realtime Graphic Phase 2B', () => {
         },
       });
       await expect(materializeOGrafPackage(plan, output)).rejects.toThrow(/Unsafe output target/u);
+      const failure = await materializationFailure(plan, output);
+      expect(failure.code).toBe('OGRAF_UNSAFE_OUTPUT_TARGET');
     } finally {
       await rm(fixture.root, { recursive: true, force: true });
     }

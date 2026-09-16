@@ -18,6 +18,7 @@ import { prepareLegacyOGrafExport } from '../../ograf/legacyCompatibility';
 import {
   describeOGrafPackageWriteFailure,
   getOGrafExportRemediationReport,
+  sanitizeOGrafDiagnosticText,
   type OGrafDiagnosticRemediation,
 } from '../../ograf/diagnostics';
 import type { OGrafExportDiagnostic } from '../../ograf/types';
@@ -31,6 +32,7 @@ type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?
 const OGRAF_BLOCKING_TOAST_DURATION_MS = 9000;
 const OGRAF_WARNING_TOAST_DURATION_MS = 7000;
 const OGRAF_WARNING_SUMMARY_LIMIT = 2;
+const OGRAF_UNCLASSIFIED_FAILURE_ACTION = 'Verify the output location is writable and every referenced asset still exists, then export again.';
 
 function remediationLabel(remediation: OGrafDiagnosticRemediation): string {
   return remediation.context ? `${remediation.title} [${remediation.context}]` : remediation.title;
@@ -162,7 +164,10 @@ export const HeaderBar: React.FC = () => {
         });
       } else {
         const message = error instanceof Error ? error.message : 'Unexpected OGraf export failure.';
-        showToast(`Could not export OGraf: ${message}`, 'error');
+        showToast(`Could not export OGraf: ${sanitizeOGrafDiagnosticText(message)}`, 'error', {
+          action: OGRAF_UNCLASSIFIED_FAILURE_ACTION,
+          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
+        });
       }
     } finally {
       setIsOGrafExporting(false);
@@ -199,7 +204,10 @@ export const HeaderBar: React.FC = () => {
         });
       } else {
         const message = error instanceof Error ? error.message : 'Unexpected OGraf legacy export failure.';
-        showToast(`Could not export OGraf legacy file: ${message}`, 'error');
+        showToast(`Could not export OGraf legacy file: ${sanitizeOGrafDiagnosticText(message)}`, 'error', {
+          action: OGRAF_UNCLASSIFIED_FAILURE_ACTION,
+          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
+        });
       }
     } finally {
       setIsOGrafExporting(false);

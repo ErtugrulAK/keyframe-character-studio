@@ -9,7 +9,11 @@ import {
   getUniqueOGrafExportWarnings,
   sanitizeOGrafPathForDisplay,
 } from '../ograf/diagnostics';
-import type { OGrafDiagnosticCode, OGrafExportDiagnostic } from '../ograf/types';
+import type {
+  OGrafDiagnosticCode,
+  OGrafExportDiagnostic,
+  OGrafPackageWriteFailureCode,
+} from '../ograf/types';
 
 const ALL_OGRAF_DIAGNOSTIC_CODES: OGrafDiagnosticCode[] = [
   'OGRAF_UNSUPPORTED_SHAPE',
@@ -32,6 +36,17 @@ const ALL_OGRAF_DIAGNOSTIC_CODES: OGrafDiagnosticCode[] = [
   'OGRAF_INVALID_PROJECT',
   'OGRAF_INVALID_PUBLIC_FIELD',
   'OGRAF_INVALID_MAIN',
+];
+
+const ALL_PACKAGE_WRITE_FAILURE_CODES: OGrafPackageWriteFailureCode[] = [
+  'OGRAF_UNSAFE_OUTPUT_DIRECTORY',
+  'OGRAF_UNSAFE_OUTPUT_TARGET',
+  'OGRAF_UNSAFE_ASSET_SOURCE',
+  'OGRAF_UNSAFE_PACKAGE_PATH',
+  'OGRAF_MISSING_PACKAGE_SOURCE',
+  'OGRAF_PACKAGE_SOURCE_UNREADABLE',
+  'OGRAF_OUTPUT_WRITE_FAILED',
+  'OGRAF_BLOCKED_PACKAGE',
 ];
 
 function makeDiagnostic(overrides: Partial<OGrafExportDiagnostic> = {}): OGrafExportDiagnostic {
@@ -124,6 +139,45 @@ describe('OGraf export diagnostics remediation', () => {
     expect(remediation?.action).toContain('concurrent filesystem mutation by other processes is unsupported');
     expect(remediation?.action).toContain('does not claim perfect OS-level protection');
     expect(remediation?.action).toContain(OGRAF_TRUSTED_DIRECTORY_NOTE);
+  });
+
+  it('redacts machine paths and URL secrets from the user-facing message and context', () => {
+    const windowsPath = describeOGrafExportDiagnostic(makeDiagnostic({
+      message: 'Asset "C:\\Users\\alice\\private\\logo.png" uses a machine-absolute path and cannot be packaged portably.',
+    }));
+    expect(windowsPath.message).toBe('Asset "logo.png" uses a machine-absolute path and cannot be packaged portably.');
+
+    const posixPath = describeOGrafExportDiagnostic(makeDiagnostic({
+      message: 'Asset "/home/alice/private/logo.png" uses a machine-absolute path and cannot be packaged portably.',
+    }));
+    expect(posixPath.message).toBe('Asset "logo.png" uses a machine-absolute path and cannot be packaged portably.');
+
+    const credentials = describeOGrafExportDiagnostic(makeDiagnostic({
+      code: 'OGRAF_EXTERNAL_ASSET_REJECTED',
+      message: 'External image asset "https://user:password@example.test/logo.png?token=secret" is rejected by the default portable export policy.',
+    }));
+    expect(credentials.message).toContain('https://example.test/logo.png');
+    expect(credentials.message).not.toContain('password');
+    expect(credentials.message).not.toContain('token');
+
+    const authoredRelativePath = describeOGrafExportDiagnostic(makeDiagnostic({
+      message: 'Image asset "assets/missing.png" cannot be packaged without a verified local source or browser bytes.',
+    }));
+    expect(authoredRelativePath.message).toContain('assets/missing.png');
+
+    const contextFromLayerName = describeOGrafExportDiagnostic(makeDiagnostic({ layerName: 'C:\\Users\\alice\\logo.png' }));
+    expect(contextFromLayerName.context).toBe('logo.png');
+  });
+
+  it('gives every package write failure code a stable title and next step', () => {
+    for (const code of ALL_PACKAGE_WRITE_FAILURE_CODES) {
+      const remediation = describeOGrafPackageWriteFailure(new OGrafPackageWriteError(code, 'Failure without a path detail.'));
+
+      expect(remediation?.code).toBe(code);
+      expect(remediation?.severity).toBe('ERROR');
+      expect(remediation?.title.length).toBeGreaterThan(0);
+      expect(remediation?.action.length).toBeGreaterThan(0);
+    }
   });
 
   it('ignores failures that are not OGraf package write failures', () => {

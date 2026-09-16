@@ -44,6 +44,8 @@ export type OGrafPackageWriteFailureCode =
   | 'OGRAF_UNSAFE_ASSET_SOURCE'
   | 'OGRAF_UNSAFE_PACKAGE_PATH'
   | 'OGRAF_MISSING_PACKAGE_SOURCE'
+  | 'OGRAF_PACKAGE_SOURCE_UNREADABLE'
+  | 'OGRAF_OUTPUT_WRITE_FAILED'
   | 'OGRAF_BLOCKED_PACKAGE';
 
 export interface OGrafAssetCatalogEntry {

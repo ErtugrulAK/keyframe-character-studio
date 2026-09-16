@@ -12,7 +12,8 @@ export interface ToastOptions {
 export interface ToastItem {
   id: string;
   message: string;
-  type: 'success' | 'error' | 'info';
+  /** Optional so the previously exported public shape stays compatible; toasts always set it. */
+  type?: 'success' | 'error' | 'info';
   title?: string;
   action?: string;
 }

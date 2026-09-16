@@ -30,59 +30,59 @@ interface OGrafDiagnosticRemediationTemplate {
 const DIAGNOSTIC_REMEDIATIONS: Record<OGrafDiagnosticCode, OGrafDiagnosticRemediationTemplate> = {
   OGRAF_UNSUPPORTED_SHAPE: {
     title: 'Unsupported shape layer',
-    action: 'Remove the layer, convert it to a supported shape, or bake it into an image asset before exporting again.',
+    action: 'Remove the layer, or convert it to a supported shape layer (box, rectangle, circle, triangle, star, diamond, parallelogram, capsule, freeform, text, or image), then export again.',
   },
   OGRAF_UNSUPPORTED_VIDEO: {
     title: 'Unsupported video layer',
-    action: 'Remove the video layer or replace it with exported image frames; OGraf Export V1 packages images, fonts, and generated runtime files only.',
+    action: 'Remove the layer, or replace it with an image asset you author outside KCS; OGraf Export V1 packages images, fonts, and generated runtime files only.',
   },
   OGRAF_UNSUPPORTED_PARTICLE: {
     title: 'Unsupported particle system',
-    action: 'Remove the particle system, or bake its result into supported shape layers or an image sequence, then export again.',
+    action: 'Remove the layer, or replace it with the supported shape or image layers it should export as, then export again.',
   },
   OGRAF_UNSUPPORTED_CLONER: {
     title: 'Unsupported cloner',
-    action: 'Remove the cloner, or bake its result into individual supported layers, then export again.',
+    action: 'Remove the layer, or replace it with the individual supported layers it should export as, then export again.',
   },
   OGRAF_UNSUPPORTED_BOOLEAN: {
     title: 'Unsupported boolean group',
-    action: 'Dissolve or bake the boolean group into a supported shape, or export the boolean result as an image asset.',
+    action: 'Dissolve the boolean group into its operand layers, adjust them so the exported result still reads correctly, then export again.',
   },
   OGRAF_UNSUPPORTED_ALPHA_MATTE: {
     title: 'Unsupported matte strength',
-    action: 'Set the legacy matte strength back to 1, or bake the matted result into an image asset.',
+    action: 'Set the legacy matte strength back to 1 on this layer, then export again.',
   },
   OGRAF_UNSUPPORTED_LUMINANCE_MATTE: {
     title: 'Unsupported luminance matte',
-    action: 'Switch the legacy matte to clip mode, or bake the matted result into an image asset.',
+    action: 'Switch this layer to clip-mode matte, or remove the legacy matte, then export again.',
   },
   OGRAF_UNSUPPORTED_INVERTED_MATTE: {
     title: 'Unsupported inverted matte',
-    action: 'Turn off matte inversion, or bake the matted result into an image asset.',
+    action: 'Turn off matte inversion on this layer, then export again.',
   },
   OGRAF_UNSUPPORTED_FEATHER_MATTE: {
     title: 'Unsupported matte feather',
-    action: 'Set the legacy matte feather to 0, or bake the feathered result into an image asset.',
+    action: 'Set the legacy matte feather to 0 on this layer, then export again.',
   },
   OGRAF_UNSUPPORTED_GRADIENT_MATTE: {
     title: 'Unsupported matte gradient',
-    action: 'Remove the legacy matte gradient, or bake the matted result into an image asset.',
+    action: 'Remove the legacy matte gradient from this layer, then export again.',
   },
   OGRAF_INVALID_TRACK_MATTE: {
     title: 'Invalid track matte',
-    action: 'Point the track matte at a different existing layer; a layer cannot use itself as its matte source.',
+    action: 'Point the track matte at an existing layer that is not this layer and does not create a matte cycle, then export again.',
   },
   OGRAF_CONDITIONAL_CLIP_MATTE: {
     title: 'Clip matte approximated',
-    action: 'No action required: the clip matte is exported as a portable SVG clipPath. Check the host result if the matte is critical.',
+    action: 'No action required: the clip matte is exported as a portable SVG clipPath. Check the matte in the host if it is critical.',
   },
   OGRAF_UNSUPPORTED_NONDETERMINISTIC_PROCEDURAL: {
     title: 'Unsupported procedural animation',
-    action: 'Replace shake/random animation presets with deterministic keyframes, then export again.',
+    action: 'Replace the shake/random preset on this layer with explicit keyframes, then export again.',
   },
   OGRAF_EXTERNAL_ASSET_REJECTED: {
     title: 'External asset rejected',
-    action: `Re-import the reported file as a local asset and keep it in a trusted dedicated source directory, then export again. ${OGRAF_TRUSTED_DIRECTORY_NOTE}`,
+    action: `Re-import the file as a local asset and keep it in a trusted dedicated source directory, then export again. ${OGRAF_TRUSTED_DIRECTORY_NOTE}`,
   },
   OGRAF_MISSING_ASSET: {
     title: 'Missing or unusable asset',
@@ -94,7 +94,7 @@ const DIAGNOSTIC_REMEDIATIONS: Record<OGrafDiagnosticCode, OGrafDiagnosticRemedi
   },
   OGRAF_FONT_UNVERIFIED: {
     title: 'Font is not portable',
-    action: 'Import or upload the font file so KCS owns a portable copy, switch the layer to a font with an available file, or bake the text into an image asset.',
+    action: 'Import or upload the font file so KCS owns a portable copy, switch the layer to a font that already has a file, or replace the text layer with an image asset.',
   },
   OGRAF_INVALID_PROJECT: {
     title: 'Invalid project data',
@@ -130,6 +130,14 @@ const WRITE_FAILURE_REMEDIATIONS: Record<OGrafPackageWriteFailureCode, OGrafDiag
   OGRAF_MISSING_PACKAGE_SOURCE: {
     title: 'Packaged file has no content',
     action: 'Re-import the reported asset so KCS owns its bytes, then export again.',
+  },
+  OGRAF_PACKAGE_SOURCE_UNREADABLE: {
+    title: 'Asset source could not be read',
+    action: `Confirm the reported asset still exists, is readable, and is a regular file inside a trusted dedicated source directory, then re-import it. ${OGRAF_TRUSTED_DIRECTORY_NOTE}`,
+  },
+  OGRAF_OUTPUT_WRITE_FAILED: {
+    title: 'Package could not be written',
+    action: `Verify the output directory exists, is writable, and stays inside the trusted project directory, then export again. ${OGRAF_TRUSTED_DIRECTORY_NOTE}`,
   },
   OGRAF_BLOCKED_PACKAGE: {
     title: 'Export blocked',
@@ -194,9 +202,9 @@ export function describeOGrafExportDiagnostic(diagnostic: OGrafExportDiagnostic)
     code: diagnostic.code,
     severity: diagnostic.severity,
     title: template.title,
-    message: diagnostic.message,
+    message: sanitizeOGrafDiagnosticText(diagnostic.message),
     action: template.action,
-    ...(context ? { context } : {}),
+    ...(context ? { context: sanitizeOGrafDiagnosticText(context) } : {}),
   };
 }
 
@@ -217,6 +225,18 @@ export function sanitizeOGrafPathForDisplay(value: string): string {
   const segments = trimmed.split(/[\\/]+/u).filter(Boolean);
   if (segments.length === 0) return '';
   return /^(?:[a-z]:[\\/]|[\\/])/iu.test(trimmed) ? segments[segments.length - 1] : segments.join('/');
+}
+
+/**
+ * Redacts machine paths and URL secrets from diagnostic text before it reaches a
+ * user-facing surface. Authored relative and package-relative paths are preserved.
+ */
+export function sanitizeOGrafDiagnosticText(value: string): string {
+  return value
+    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]*@/giu, '$1')
+    .replace(/([a-z][a-z0-9+.-]*:\/\/[^\s?#"']*)[?#][^\s"']*/giu, '$1')
+    .replace(/(?<![\w+.-])(?:[a-z]:[\\/]|\\\\)[^\s"']*/giu, (match) => sanitizeOGrafPathForDisplay(match))
+    .replace(/(?<=[\s"'(])\/(?:[^\s"')]+\/)+[^\s"')]*/gu, (match) => sanitizeOGrafPathForDisplay(match));
 }
 
 /**

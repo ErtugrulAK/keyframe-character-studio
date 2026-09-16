@@ -155,10 +155,27 @@ describe('HeaderBar OGraf export integration', () => {
     expect(message).toContain('custom_video');
     expect(type).toBe('error');
     expect(options.title).toBe('Unsupported video layer [Shape]');
-    expect(options.action).toContain('Remove the video layer');
+    expect(options.action).toContain('replace it with an image asset you author outside KCS');
     expect(options.durationMs).toBeGreaterThan(0);
     expect(createZipMock).not.toHaveBeenCalled();
     expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('never exposes machine paths or URL secrets in export diagnostics', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_image', imageUrl: 'C:\\Users\\alice\\private\\logo.png' }))));
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:should-not-download'), revokeObjectURL: vi.fn() });
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+
+    await waitFor(() => expect(context.showToast).toHaveBeenCalled());
+    const emitted = context.showToast.mock.calls.map(([message]) => String(message)).join(' | ');
+    expect(emitted).toContain('logo.png');
+    expect(emitted).not.toContain('C:\\Users');
+    expect(emitted).not.toContain('alice');
+    expect(context.showToast.mock.calls.every(([, type]) => type === 'error')).toBe(true);
+    expect(createZipMock).not.toHaveBeenCalled();
   });
 
   it('surfaces warnings without blocking the export', async () => {

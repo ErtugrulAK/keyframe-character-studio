@@ -11,6 +11,9 @@ const OGRAF_QUOTED_SPAN_PATTERN = /"[^"]*"|'[^']*'/gu;
 const OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN = /^(?:(?:[a-z]:[\\/]|\\\\)|\/)(?:[^\s"'<>]|\s(?=[^\s"'<>]*[\\/]))*$/iu;
 const OGRAF_UNQUOTED_WINDOWS_PATH_PATTERN = /(?<![\w+.-])(?:[a-z]:[\\/]|\\\\)[^\s"'<>]*(?:\s+[^\s"'<>]*[\\/][^\s"'<>]*)*/giu;
 const OGRAF_UNQUOTED_POSIX_PATH_PATTERN = /(?:^|(?<=[\s"'<(]))\/(?!\/)(?:[^\s"'<>]|\s(?=[^\s"'<>]*\/))+/gu;
+/** Text that still resembles a machine path, URL secret, or embedded payload after redaction. */
+const OGRAF_RESIDUAL_SECRET_PATTERN = /(?:(?<![\w+.-])[a-z]:[\\/]|\\\\|(?:^|[\s"'<(])\/(?!\/)[^\s"'<>]*\/|(?:[a-z][a-z0-9+.-]*:)?\/\/[^\s"'<>]*[@?#]|data:[^\s"'<>]*(?:[;,%]|[^\s"'<>]{60,}))/iu;
+const OGRAF_WITHHELD_VALUE_MESSAGE = 'The reported value is withheld because it cannot be displayed safely.';
 
 /**
  * Accepted filesystem constraint. Every trusted-directory surface must state it
@@ -203,15 +206,16 @@ export function getUniqueOGrafExportWarnings(diagnostics: OGrafExportDiagnostic[
 /** Adds the user-facing title and next step for a single export diagnostic. */
 export function describeOGrafExportDiagnostic(diagnostic: OGrafExportDiagnostic): OGrafDiagnosticRemediation {
   const template = DIAGNOSTIC_REMEDIATIONS[diagnostic.code];
-  const context = diagnostic.layerName || diagnostic.feature;
+  const message = sanitizeOGrafDiagnosticText(diagnostic.message);
+  const context = sanitizeOGrafDiagnosticText(diagnostic.layerName || diagnostic.feature || '');
 
   return {
     code: diagnostic.code,
     severity: diagnostic.severity,
     title: template.title,
-    message: sanitizeOGrafDiagnosticText(diagnostic.message),
+    message: OGRAF_RESIDUAL_SECRET_PATTERN.test(message) ? OGRAF_WITHHELD_VALUE_MESSAGE : message,
     action: template.action,
-    ...(context ? { context: sanitizeOGrafDiagnosticText(context) } : {}),
+    ...(context && !OGRAF_RESIDUAL_SECRET_PATTERN.test(context) ? { context } : {}),
   };
 }
 
@@ -324,17 +328,16 @@ export function describeOGrafPackageWriteFailure(error: unknown): OGrafDiagnosti
   // KCS-owned failures carry a path detail; a wrapped OS message carries a sentence
   // (it always has its own "ERRNO: ..." colon), so it must go through text redaction.
   const detailIsPath = rawDetail.length > 0 && !rawDetail.includes(': ');
-  const detail = detailIsPath
-    ? sanitizeOGrafPathForDisplay(rawDetail)
-    : sanitizeOGrafDiagnosticText(rawDetail);
+  const sanitizedDetail = sanitizeOGrafDiagnosticText(rawDetail);
+  const detail = detailIsPath ? sanitizeOGrafPathForDisplay(sanitizedDetail) : sanitizedDetail;
   const message = sanitizeOGrafDiagnosticText(detail ? `${reason}: ${detail}` : reason);
 
   return {
     code: error.code,
     severity: 'ERROR',
     title: template.title,
-    message,
+    message: OGRAF_RESIDUAL_SECRET_PATTERN.test(message) ? OGRAF_WITHHELD_VALUE_MESSAGE : message,
     action: template.action,
-    ...(detailIsPath && detail ? { context: detail } : {}),
+    ...(detailIsPath && detail && !OGRAF_RESIDUAL_SECRET_PATTERN.test(detail) ? { context: detail } : {}),
   };
 }

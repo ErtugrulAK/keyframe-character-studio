@@ -232,6 +232,28 @@ describe('OGraf export diagnostics remediation', () => {
     expect(describeOGrafExportDiagnostic(makeDiagnostic({ layerName: 'C:\\Users\\alice\\logo.png' })).context).toBe('logo.png');
   });
 
+  it('withholds a value that cannot be displayed safely', () => {
+    const remediation = describeOGrafExportDiagnostic(makeDiagnostic({
+      message: 'Asset "data:image/svg%2C%3Csvg%20onload%3Dalert(1)%3E" is not a supported local asset reference.',
+      layerName: 'data:image/svg%2C%3Csvg%20onload%3Dalert(1)%3E',
+    }));
+
+    expect(remediation.message).not.toContain('onload');
+    expect(remediation.message).toContain('withheld');
+    expect(remediation.title.length).toBeGreaterThan(0);
+    expect(remediation.action.length).toBeGreaterThan(0);
+    expect(remediation.context).toBeUndefined();
+
+    const writeFailure = describeOGrafPackageWriteFailure(new OGrafPackageWriteError(
+      'OGRAF_UNSAFE_OUTPUT_TARGET',
+      'Unsafe output target: data:image/svg%2C%3Csvg%20onload%3Dalert(1)%3E',
+    ));
+
+    expect(writeFailure?.message).toContain('withheld');
+    expect(writeFailure?.message).not.toContain('onload');
+    expect(writeFailure?.context).toBeUndefined();
+  });
+
   it('keeps authored relative and package-relative paths readable', () => {
     const relative = describeOGrafExportDiagnostic(makeDiagnostic({
       message: 'Image asset "assets/missing.png" cannot be packaged without a verified local source or browser bytes.',

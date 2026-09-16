@@ -260,7 +260,7 @@ describe('OutlinerPanel — Track Matte V2 relationship indicator', () => {
     expect(screen.getByText('Mask → Missing')).toBeTruthy();
   });
 
-  it('3. Track Matte V2 wins when a legacy matte is also present', () => {
+  it('3. Track Matte V2 wins when an enabled legacy matte is also present', () => {
     animatorCtx.characterParts = [
       part('src', 'Legacy Source', 'custom_circle'),
       part('v2', 'Track Source', 'custom_circle'),
@@ -272,7 +272,30 @@ describe('OutlinerPanel — Track Matte V2 relationship indicator', () => {
     expect(screen.queryByLabelText('Matte source: Legacy Source')).toBeNull();
   });
 
-  it('4. an unnamed Track Matte V2 source falls back to its id', () => {
+  it('4. a disabled Track Matte V2 falls back to the legacy matte the stage renders', () => {
+    animatorCtx.characterParts = [
+      part('src', 'Legacy Source', 'custom_circle'),
+      part('v2', 'Track Source', 'custom_circle'),
+      { id: 'tgt', name: 'Box', type: 'custom_box', matte: { sourcePartId: 'src' }, trackMatte: { sourceLayerId: 'v2', mode: 'alpha', enabled: false } },
+    ];
+    renderPanel();
+
+    expect(screen.getByLabelText('Matte source: Legacy Source')).toBeTruthy();
+    expect(screen.queryByLabelText('Track matte source: Track Source')).toBeNull();
+  });
+
+  it('5. a disabled relationship renders no indicator at all', () => {
+    animatorCtx.characterParts = [
+      part('src', 'Src', 'custom_circle'),
+      { id: 'tgt', name: 'Box', type: 'custom_box', trackMatte: { sourceLayerId: 'src', mode: 'alpha', enabled: false } },
+    ];
+    renderPanel();
+
+    expect(screen.queryByLabelText(/Matte source/)).toBeNull();
+    expect(screen.queryByText('Mask → Src')).toBeNull();
+  });
+
+  it('6. an unnamed Track Matte V2 source falls back to its id', () => {
     animatorCtx.characterParts = [
       { id: 'unnamed', name: '', type: 'custom_circle' },
       { id: 'tgt', name: 'Box', type: 'custom_box', trackMatte: { sourceLayerId: 'unnamed', mode: 'alpha' } },

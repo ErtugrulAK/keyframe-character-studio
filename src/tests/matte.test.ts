@@ -489,21 +489,27 @@ describe('matte — M15 freeform source (custom_freeform → CharacterPart.point
 });
 
 describe('matte — resolveMatteSource', () => {
-  it('prefers the enabled Track Matte V2 relationship', () => {
+  it('prefers Track Matte V2 when it names an enabled source', () => {
     expect(resolveMatteSource({
-      trackMatte: { sourceLayerId: 'v2-source', mode: 'alpha' },
+      trackMatte: { sourceLayerId: 'v2-source', mode: 'alpha', enabled: true },
       matte: { sourcePartId: 'legacy-source', mode: 'clip' },
     })).toEqual({ sourceId: 'v2-source', kind: 'track' });
+    expect(resolveMatteSource({ trackMatte: { sourceLayerId: 'v2-source', mode: 'alpha' } }))
+      .toEqual({ sourceId: 'v2-source', kind: 'track' });
   });
 
-  it('falls back to the legacy matte when V2 names no source', () => {
-    expect(resolveMatteSource({ matte: { sourcePartId: 'legacy-source', mode: 'clip' } }))
-      .toEqual({ sourceId: 'legacy-source', kind: 'legacy' });
+  it('falls back to the legacy matte when Track Matte V2 is disabled or unnamed', () => {
+    expect(resolveMatteSource({
+      trackMatte: { sourceLayerId: 'v2-source', mode: 'alpha', enabled: false },
+      matte: { sourcePartId: 'legacy-source', mode: 'clip' },
+    })).toEqual({ sourceId: 'legacy-source', kind: 'legacy' });
     expect(resolveMatteSource({ trackMatte: { sourceLayerId: '', mode: 'alpha' }, matte: { sourcePartId: 'legacy-source' } }))
       .toEqual({ sourceId: 'legacy-source', kind: 'legacy' });
   });
 
-  it('reports nothing for a layer without a relationship', () => {
+  it('reports nothing for a disabled relationship or a layer without one', () => {
+    expect(resolveMatteSource({ trackMatte: { sourceLayerId: 'v2-source', mode: 'alpha', enabled: false } })).toBeUndefined();
+    expect(resolveMatteSource({ matte: { sourcePartId: 'legacy-source', mode: 'clip', enabled: false } })).toBeUndefined();
     expect(resolveMatteSource({})).toBeUndefined();
     expect(resolveMatteSource({ matte: { mode: 'alpha' } })).toBeUndefined();
   });

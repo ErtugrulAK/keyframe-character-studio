@@ -1316,19 +1316,14 @@ describe('StyleMatteSection — Track Matte V2 source affordance', () => {
     expect(onPartPropChange).not.toHaveBeenCalled();
   });
 
-  it('6. surfaces the existing validator verdict for a matte cycle on the selected layer', () => {
-    const a = makeV2Part('a', 'custom_box', 'A', { sourceLayerId: 'b', mode: 'alpha' });
-    const b = makeV2Part('b', 'custom_circle', 'B', { sourceLayerId: 'a', mode: 'alpha' });
-    renderTrackMatte(a, [a, b]);
+  it('6. a disabled Track Matte V2 relation keeps the card usable and preserves its settings', () => {
+    const target = makeV2Part('tgt', 'custom_box', 'Box', { sourceLayerId: 'src', mode: 'alpha', enabled: false });
+    const { onPartPropChange } = renderTrackMatte(target, [target, STAR]);
 
-    expect(screen.getByText(/Matte cycle detected/)).toBeTruthy();
-  });
-
-  it('7. a non-cyclic relationship reports no cycle warning', () => {
-    const a = makeV2Part('a', 'custom_box', 'A', { sourceLayerId: 'b', mode: 'alpha' });
-    const b = makeV2Part('b', 'custom_circle', 'B');
-    renderTrackMatte(a, [a, b]);
-
-    expect(screen.queryByText(/Matte cycle detected/)).toBeNull();
+    expect((screen.getByLabelText('Track matte source') as HTMLSelectElement).value).toBe('src');
+    fireEvent.change(screen.getByLabelText('Track matte source'), { target: { value: 'src' } });
+    expect(onPartPropChange).toHaveBeenCalledWith('trackMatte', {
+      sourceLayerId: 'src', mode: 'alpha', enabled: false, inverted: false, sourceVisible: true,
+    });
   });
 });

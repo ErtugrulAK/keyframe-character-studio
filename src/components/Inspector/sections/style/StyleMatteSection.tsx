@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { BezierPath, CharacterPart, LayerMask, LayerMaskChannelProperty, MatteMode, PartMatte } from '../../../../types/animator';
 import { BezierPathEditor } from '../../BezierPathEditor';
 import { createBezierPath } from '../../../../utils/bezierPath';
 import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../../../../utils/matte';
 import type { MatteGradientStop } from '../../../../utils/matte';
-import { validateCritical } from '../../../../utils/validateScene';
 import { StyleCard } from './StyleCard';
 interface StyleMatteSectionProps {
   selectedPart: CharacterPart;
@@ -310,14 +309,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   const trackMatteSourceMissing = !!trackMatte && !characterParts.some((part) => part.id === trackMatte.sourceLayerId);
   const trackMatteSources = characterParts.filter((part) => part.id !== selectedPart.id);
   const setTrackMatte = (next: CharacterPart['trackMatte'] | undefined) => onPartPropChange('trackMatte', next);
-  // Cycle detection stays in the existing validator (validateCritical, the same
-  // authority the stage uses); the card only surfaces its verdict for this layer
-  // so a blocked OGraf export is never a surprise.
-  const trackMatteCycle = useMemo(
-    () => validateCritical({ layers: characterParts })
-      .some((error) => error.type === 'TRACK_MATTE_CYCLE' && error.layerId === selectedPart.id),
-    [characterParts, selectedPart.id],
-  );
 
   return (
     <>
@@ -639,11 +630,6 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
         {trackMatteSourceMissing && (
           <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b' }}>
             Missing source ({trackMatte!.sourceLayerId}) — track matte not applied
-          </div>
-        )}
-        {trackMatte && !trackMatteSourceMissing && trackMatteCycle && (
-          <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b' }}>
-            Matte cycle detected — OGraf export stays blocked until the source chain no longer points back at this layer.
           </div>
         )}
         {trackMatte && !trackMatteSourceMissing && (

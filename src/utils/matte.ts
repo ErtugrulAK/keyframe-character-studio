@@ -36,16 +36,18 @@ export interface MatteSourceRef {
 }
 
 /**
- * Resolves which layer a target references as its matte source.
+ * Resolves which layer a target actually renders its matte from.
  *
- * Display precedence mirrors the Inspector cards and the renderer's
- * enabled-V2 path: Track Matte V2 wins whenever it names a source, and the
- * legacy `matte` applies otherwise. Only the persisted fields are read here —
+ * Mirrors the render path exactly: Track Matte V2 applies while it names a
+ * source and is not disabled, otherwise the legacy `matte` applies when it
+ * names a source and is not disabled. Only the persisted fields are read here;
  * nothing is derived or cached, so the relationship keeps a single owner.
  */
 export function resolveMatteSource(part: { matte?: PartMatte; trackMatte?: TrackMatteV2 }): MatteSourceRef | undefined {
-  if (part.trackMatte?.sourceLayerId) return { sourceId: part.trackMatte.sourceLayerId, kind: 'track' };
-  if (part.matte?.sourcePartId) return { sourceId: part.matte.sourcePartId, kind: 'legacy' };
+  const track = part.trackMatte;
+  if (track?.sourceLayerId && track.enabled !== false) return { sourceId: track.sourceLayerId, kind: 'track' };
+  const legacy = part.matte;
+  if (legacy?.sourcePartId && legacy.enabled !== false) return { sourceId: legacy.sourcePartId, kind: 'legacy' };
   return undefined;
 }
 

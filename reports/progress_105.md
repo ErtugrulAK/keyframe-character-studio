@@ -191,27 +191,39 @@ Resolution in commits `26e8f1b` and `425e0e7`:
 
 Pass 6 — verdict `BLOCKED`. Three further variants were reported: a URL whose userinfo contains an apostrophe (`https://alice:PASS'WORD@host/...`), a mixed-case `Data:` scheme, and a single-slash `file:/...` URI. All three are forms the redactor's quote-delimited token patterns do not cover.
 
-Decision: the merge gate was not passed. Text-level redaction of user-authored values is heuristic by nature, and each round closes the reported forms while another quote or case variant surfaces. The airtight fix is structural — stop placing raw user-authored values into diagnostic messages at their source (`validation.ts`, `packageCompiler.ts`, `packageWriter.ts`) and format a safe rendering there — but that changes the diagnostic message text the authority produces and lies outside this task's approved change list. The work is therefore complete, validated, and unmerged, pending a scope decision.
+Resolution — approved structural change in commit `8088a2f`:
 
-Important context for that decision: none of the remaining forms is a regression. On the base commit `5ee6592` `HeaderBar` passed `diagnostic.message` to `showToast` unredacted, so every residual case behaves exactly as it did before this task; the common machine-path, credential-URL, and embedded-payload forms are now redacted where they previously were not.
+- The user approved replacing heuristic text redaction with formatting at the source. New `describeOGrafValueForDiagnostics` renders a user-authored value safely: `data:` payloads keep only the media type, absolute and protocol-relative URLs lose userinfo, query, and fragment (an empty-host URL keeps only a basename), machine-absolute paths (drive, UNC, leading slash) become their final segment, opaque URIs such as `file:` or `mailto:` become `<scheme>:(value omitted)`, and everything else is returned unchanged.
+- Every diagnostic-message and package-write-error construction site that quotes a user-authored value now uses that formatter: `validation.ts` (asset sources, font family, layer/mask/parent/track-matte ids, channel names, layer type, mode values, stroke alignment, public field ids), `compiler.ts` (public field id, manifest main path), `packageCompiler.ts` (image URL, packaged paths, package file paths), `packageWriter.ts` and `browserZip.ts` (thrown paths, with the wrapped OS detail additionally passing through `sanitizeOGrafDiagnosticText`).
+- The earlier redaction passes and the residual-risk guard stay in place as defense in depth for unclassified errors, so a value that somehow arrives unformatted is still not forwarded.
+- Regression coverage: a table-driven formatter test (13 forms), a validator-level test proving the credential URL, machine path, and mixed-case data URL never appear in produced diagnostics, and a `HeaderBar` row for the apostrophe-credential URL.
 
-Pass 6 detail — final merge-decision review: `BLOCKED`, merge withheld.
+Pass 7 — verdict `BLOCKED`. Two findings: the output-side wrapped OS detail still forwarded the raw OS message (defeatable by an apostrophe in a directory name), and `svgRenderer.ts` threw messages quoting raw layer ids.
+
+Resolution in commits `984450c` and `8d240de`:
+
+- `redactOGrafDataUrl` now omits payloads for data URLs without a media type (`data:,SECRET`, `data:;base64,SECRET`).
+- The package writer no longer forwards raw OS text at all: `fileSystemFailureReason` keeps only the errno code, so the source boundary reads `Local asset source could not be read (ENOENT).` and the output boundary reads `OGraf package output could not be written (EACCES).` This removes the raw-OS-message class instead of redacting it.
+- `svgRenderer.ts` routes its five raw layer/matte-source id interpolations through `describeOGrafValueForDiagnostics`.
+- New tests: a boundary assertion pinning the exact missing-source message, and an SVG test proving a layer id of `data:,TOP_SECRET` never appears in the thrown message.
+
+Pass 8 — merge-decision review: `READY`. Zero critical, high, medium, or low findings. Both round-7 items confirmed CLOSED, the construction-site audit confirmed complete for `validation.ts`, `compiler.ts`, `packageCompiler.ts`, `packageWriter.ts`, `browserZip.ts`, `svgRenderer.ts`, and `evaluation.ts`, and the reviewer independently verified that ordinary wording, authored relative paths, remediation actionability, and the absence of any new validation/evaluation authority all hold. Reviewer recommendation: merge gate approved.
 
 ## Validation evidence for the fix commits
 
 | Check | Command | Result |
 |---|---|---|
-| Focused tests | `npx vitest run src/tests/ografDiagnostics.test.ts src/tests/ografBrowserZip.test.tsx src/tests/ografPackage.test.ts src/tests/toastPortal.test.tsx src/tests/useToast.test.ts` | PASS — 5 files / 78 tests |
-| Full Vitest | `npm test` | PASS — 103 files / 1539 tests |
-| Release gate | `npm run qa:release` | PASS — candidate `425e0e7` lineage, 2 Chromium tests passed |
+| Focused tests | `npx vitest run src/tests/ografDiagnostics.test.ts src/tests/ografExport.test.ts src/tests/ografBrowserZip.test.tsx src/tests/ografPackage.test.ts src/tests/ografSvg.test.ts src/tests/ografGeneratedParity.test.ts src/tests/ografV6Parity.test.ts src/tests/ografLegacyCompatibility.test.ts` | PASS — 8 files / 159 tests |
+| Full Vitest | `npm test` | PASS — 103 files / 1557 tests |
+| Release gate | `npm run qa:release` | PASS — candidate `8d240de`, 2 Chromium tests passed |
 | Production build / TypeScript / lint / `git diff --check` | `npm run build`, `npx tsc --noEmit`, `npm run lint`, `git diff --check` | PASS — existing warnings only |
-| UI verification | Vite dev server + headless Chromium, text layer without a portable font | PASS — blocking card rendered with title, explanation, and next step; no download |
+| UI verification | Vite dev server + headless Chromium, text layer without a portable font | PASS — blocking card rendered with title, explanation, and next step after the structural change; no download |
 
 ## Merge/push status
 
-- `feat/export-diagnostics-ux`: `828f3fb` (feature), `b80267c`, `5efdd1f`, `ec2fe4c`, `d8f213c`, `26e8f1b`, `425e0e7` (review fixes), plus this docs commit.
-- **Not merged and not pushed.** The independent review remained `BLOCKED` at the merge gate, so `main` is untouched and the branch is retained.
-- No normal merge commit, rebase, force push, tag change, release change, or npm publish occurred.
+- `feat/export-diagnostics-ux`: `828f3fb` (feature), `b80267c`, `5efdd1f`, `ec2fe4c`, `d8f213c`, `26e8f1b`, `425e0e7`, `984450c`, `8d240de` (review fixes), `f49c698` and the report update (docs).
+- Final review verdict `READY`; the branch is fast-forward merged into `main` and pushed to `origin/main`, with no normal merge commit, rebase, or force push.
+- Branch is retained; nothing is deleted.
 
 ## Next recommended task
 

@@ -31,6 +31,12 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 
+## ChatGPT handoff policy
+
+- `chatgpt_handoff/latest/` holds a minimal, task-specific upload bundle, refreshed for each ChatGPT response instead of accumulating context files.
+- Flattened source and test copies must not live there: the Vitest default include glob picks up files named `src__*test*`, which failed CI runs `35094144225` and `35095655446`.
+- `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination.
+
 ## Protected state
 
 - The current main documentation commits are intentionally newer than the tag target; the tag remains on the workflow-tested code candidate.

@@ -26,6 +26,13 @@ Post-merge full Vitest (103 files / 1557 tests), `validate:ograf`, `qa:release` 
 - Keep `origin/without-mask` untouched and classified ARCHIVE.
 - Production draft is not published; publish/finalize requires further explicit user instruction.
 
+## ChatGPT handoff policy
+
+- `chatgpt_handoff/latest/` is a per-response, task-specific upload bundle: clean it first, then place only the files that this specific ChatGPT conversation needs.
+- Never store flattened source or test copies there. Those copies are separate files, and the ones named `src__*test*` are picked up by the Vitest default include glob, which breaks CI.
+- `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset folder, not a handoff dump. Never copy the bundle there unless the user explicitly asks.
+- Omitted files are never deleted from the repository; they simply are not part of the bundle.
+
 ## Next scoped work
 
 1. Read `docs/KCS_POST_RC_ROADMAP.md` and `reports/progress_105.md`.

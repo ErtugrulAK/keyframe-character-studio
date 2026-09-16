@@ -1,49 +1,25 @@
-# KCS Task 105 Handoff (clean-refreshed) — Export Diagnostics Remediation UX
+# KCS Minimal ChatGPT Upload Bundle — Task 106B
 
-This handoff was clean-refreshed after Task 105 was integrated into `main` and after the Task 106 handoff/staging reconciliation.
+This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this conversation only.
 
-## Scope
+## What this bundle is for
 
-- Task 105 delivers user-actionable OGraf export diagnostics: a stable title, the failing layer or feature, and a concrete next step for every blocking diagnostic, plus grouped non-blocking warnings.
-- User-authored values are formatted at every construction site, so machine paths, URL credentials and query secrets, embedded data payloads, and raw OS error text no longer reach a diagnostic, a thrown error, or a toast.
-- Task 106 reconciled documentation and the staging folder only; it changed no product code.
-- `v1.1.0-rc.1` tag and GitHub draft prerelease were not changed; npm publish was not performed.
+Task 106B: correct the ChatGPT handoff policy, clean `C:\Users\ertugrul.ak\Desktop\KCS`, and report the GitHub CI failure investigation.
 
-## Commit and tag map
+## What it deliberately does NOT include
 
-| Meaning | SHA |
-|---|---|
-| Current `main` = `origin/main` HEAD (docs/handoff commits) | `9f7114877e111527e8757668237e41fde8388a99` |
-| Task 105 implementation/integration commit (fast-forward) | `9fdbf0fe59c28d3d6f07c8ee37081fc93f2ff6db` |
-| Task 105 feature commit | `828f3fb` (`feat: improve export diagnostics remediation UX`) |
-| `v1.1.0-rc.1` tag target (workflow-tested release code candidate) | `46d2a3e59e065816d972dcd56951803951b577f6` |
+- Task 105 source and test files (flattened copies). Those copies were the root cause of the failing CI runs: the files named `src__*test*` matched the Vitest default include glob and failed to resolve their imports from `chatgpt_handoff/latest/`. They also exist in the repository under `src/`, so they are not needed here.
+- `package.json`, `ci.yml`, `release-smoke.yml`, `CHANGELOG.md`, and the older release/current-state documents. They belong to earlier bundles and are unchanged by this task.
+- Old reports, QA output, archives, assets, screenshots, zip files, secrets, and caches.
 
-The tag intentionally stays on the workflow-tested code candidate; later documentation and handoff commits are newer than both the tag target and the implementation commit and must not move it.
+Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
-## Included review files
+## Desktop note
 
-This bundle contains the Task 106 cleanup report, the Task 105 report, the post-RC roadmap, current project/release documents, package metadata, CI and release workflows, README, and every source and test file changed by Task 105 (flattened with `src__` path prefixes).
+`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not the handoff dump. The 35 handoff files that were accidentally copied there have been moved into `_archive_chatgpt_handoff_dump_20260916-123414`, and no bundle is copied back there by default.
 
-Original file timestamps are preserved by the copy, so some files may look older than this refresh; timestamps alone do not indicate staleness. The authoritative inventory is `manifest.txt`.
+## How to use it
 
-Omitted files were not deleted from the repository. Not copied: `.git`, `node_modules`, `.omp`, backups, secrets and environment files, binary caches, and unchanged files.
-
-## Validation
-
-- Full Vitest: PASS (103 files / 1,557 tests) at the Task 105 integration commit.
-- `npm run validate:ograf`: PASS.
-- `npm run qa:release`: PASS (2 Chromium tests).
-- `npm run build`, `npx tsc --noEmit`, `npm run lint`, `git diff --check`: PASS with the pre-existing Fast Refresh, Vite chunk-size, and npm install-script warnings only.
-- Independent review at the Task 105 merge gate: `READY`.
-- UI verification: the blocking export card renders title, explanation, and next step, and no download occurs on a blocked export.
-- `docs/KCS_CI_STATUS.md` documents the tag-time release-candidate CI snapshot (101 files / 1,495 tests) and is included as historical context; the current numbers are the ones above.
-
-## Release restrictions
-
-The GitHub draft prerelease must not be published or finalized without explicit user instruction, the tag must not move, and npm publish must not be performed. The tag remains on workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`.
-
-## Next action
-
-Review `reports/progress_105.md` and `docs/KCS_POST_RC_ROADMAP.md`. The next candidate is roadmap item 2, the track-matte source selection affordance (`feat/track-matte-source-picker`).
+Upload only the files in this folder when ChatGPT needs this cleanup and CI context. For a new task, clean this folder first and place only the files that task needs.
 
 Upload the contents of `chatgpt_handoff/latest/` to ChatGPT.

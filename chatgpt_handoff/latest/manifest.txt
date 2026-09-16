@@ -1,70 +1,38 @@
-# KCS Handoff Manifest — Task 105 Export Diagnostics Remediation UX
+# KCS ChatGPT Upload Manifest — Task 106B
 
 Clean refreshed: YES
-Refresh performed: 2026-09-16 (Task 106 handoff/staging reconciliation)
-Old timestamps may appear because copied files preserve their original modification times; timestamps alone do not mean stale. This manifest is the authoritative inventory.
+Bundle purpose: Task 106B — handoff policy correction, Desktop KCS cleanup, and GitHub CI failure investigation
+Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current main / origin HEAD: 9f7114877e111527e8757668237e41fde8388a99
-Task 105 implementation/integration commit: 9fdbf0fe59c28d3d6f07c8ee37081fc93f2ff6db
-Task 105 feature commit: 828f3fb
-Task 105 docs/handoff commits: f49c698, 9fdbf0f, 9f71148 (plus this Task 106 docs commit)
+Current main / origin HEAD: a32df841f93e3b234e2d0c62dc6f4de05077c02c
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Why the SHAs differ: the tag intentionally sits on the workflow-tested release code candidate, the implementation commit is where Task 105 entered main by fast-forward, and the current HEAD adds docs/handoff-only commits on top. No repository-state commit moved the tag.
+CI failure status:
+- Failing workflow: CI Pipeline — Build, Lint & Test Verification — Run Unit & Integration Tests (Vitest)
+- Failing runs: 35094144225 (9f71148), 35095655446 (a32df84, current main)
+- Run URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/35095655446
+- Root cause: flattened test copies committed under chatgpt_handoff/latest (src__tests__*.test.ts / .test.tsx) matched the Vitest default include glob and failed to resolve their relative imports.
+- Resolution: the minimal bundle no longer contains any source or test copies, so no test-matching file remains under chatgpt_handoff/.
+- Local validation after the fix: full Vitest PASS (103 files / 1,557 tests), lint PASS, tsc PASS, validate:ograf PASS, build PASS, git diff --check PASS.
 
-Copied files (35):
-- progress_106_handoff_cleanup.md — Task 106 handoff/staging cleanup and asset visibility audit
-- progress_105.md — Task 105 report: scope, implementation, review history, validation matrix
-- progress_104.md — post-RC stability audit and roadmap baseline
-- KCS_POST_RC_ROADMAP.md — roadmap with task 1 marked completed
-- NEXT_SESSION.md — next-task pointer and guardrails
-- PROJECT_STATE.md — current state, validation status, protected invariants
-- KCS_CURRENT_STATE.md — current security/release state
-- KCS_RELEASE_CANDIDATE_SUMMARY.md — release and warning summary
-- KCS_CI_STATUS.md — tag-time CI and release-smoke status (historical snapshot)
-- CHANGELOG.md — package metadata and changelog entries for Task 105
-- package.json — private package metadata and scripts
-- ci.yml — checked-in CI workflow copy
-- release-smoke.yml — checked-in manual browser gate copy
-- README.md — this handoff's instructions
-- PROJECT_README.md — the repository README for review context
-- src__ograf__diagnostics.ts — remediation and value-formatting authority
-- src__ograf__types.ts — diagnostic and package-write failure codes
-- src__ograf__validation.ts — messages built with formatted user values
-- src__ograf__compiler.ts — manifest diagnostics
-- src__ograf__packageCompiler.ts — package diagnostics
-- src__ograf__packageWriter.ts — coded filesystem failures, errno-only messages
-- src__ograf__browserZip.ts — coded browser package failures
-- src__ograf__svgRenderer.ts — formatted renderer failure messages
-- src__hooks__useToast.ts — optional title, action, and duration
-- src__context__AnimatorContext.tsx — single ToastItem type, widened showToast
-- src__components__Toast__ToastPortal.tsx — structured toast card
-- src__components__Header__HeaderBar.tsx — export diagnostics consumer
-- src__tests__ografDiagnostics.test.ts — remediation, formatting, guard tests
-- src__tests__ografBrowserZip.test.tsx — export UI integration tests
-- src__tests__ografExport.test.ts — validator message tests
-- src__tests__ografPackage.test.ts — materialization boundary code tests
-- src__tests__ografSvg.test.ts — renderer message tests
-- src__tests__toastPortal.test.tsx — toast rendering tests
-- src__tests__useToast.test.ts — toast option tests
+Copied files (5):
+- README.md — bundle instructions and policy
+- manifest.txt — this inventory
+- progress_106b_handoff_policy_ci.md — CI investigation, corrected policy, Desktop KCS cleanup, validation
+- NEXT_SESSION.md — next action plus the ChatGPT handoff policy
+- PROJECT_STATE.md — current state plus the handoff policy note
 
-Intentionally included older-context files:
-- progress_104.md — the pre-Task-105 audit baseline the roadmap was derived from
-- KCS_CI_STATUS.md — the release-candidate CI snapshot taken at the tag, not the current test count
-- KCS_CURRENT_STATE.md, KCS_RELEASE_CANDIDATE_SUMMARY.md — consolidated release/security context
-- ci.yml, release-smoke.yml — the checked-in workflows behind the release gate
+Explicitly omitted categories:
+- Task 105 source and test files (they exist under src/ and caused the CI failure as flattened copies)
+- package.json, ci.yml, release-smoke.yml, CHANGELOG.md
+- progress_104.md, progress_105.md, progress_106_handoff_cleanup.md, KCS_POST_RC_ROADMAP.md, KCS_CURRENT_STATE.md, KCS_RELEASE_CANDIDATE_SUMMARY.md, KCS_CI_STATUS.md, PROJECT_README.md
+- QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches, backups
 
-Omitted files were not deleted from the repository. Not copied: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, unchanged source files, and QA output folders.
+Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches.
 
-Validation:
-- Full Vitest: PASS; 103 files / 1,557 tests (at the Task 105 integration commit)
-- validate:ograf: PASS
-- qa:release: PASS; 2 Chromium tests
-- build / TypeScript / lint / git diff --check: PASS with pre-existing warnings only
-- Independent review: READY at the Task 105 merge gate
-- Task 106 changed documentation and the handoff bundle only; no product code changed
+Desktop staging note: `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace. The 35 handoff files accidentally copied there were moved to `_archive_chatgpt_handoff_dump_20260916-123414`; the user's `KCS ASSET`, `KCS BASIC`, `KCS COMPOSITING`, and `kcs-safe-backups` folders were preserved untouched, and no bundle was copied back.
 
 Upload the contents of chatgpt_handoff/latest/ to ChatGPT.

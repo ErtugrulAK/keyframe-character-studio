@@ -57,6 +57,8 @@ No source, test, package, or workflow defect is involved: the real suite (103 fi
 
 The CI failure was reproduced locally by the same seven `chatgpt_handoff/latest/src__tests__*` files before cleanup, and disappeared once the bundle contained no test-matching files.
 
+Verification after the fix: push of `703829cd58d6ba00828d9b81325b7de52bf4076f` triggered run `35096702385` (https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/35096702385), which completed with `success`; the Vitest step, static analysis, type check, OGraf fixture validation, and production bundle build all passed.
+
 ### Fix needed
 
 The fix is the corrected handoff policy itself: the minimal bundle no longer contains flattened source or test copies, so no test-matching file exists under `chatgpt_handoff/`. No source, test, package, or workflow edit was needed, and none was made.
@@ -72,13 +74,12 @@ The fix is the corrected handoff policy itself: the minimal bundle no longer con
 ## 4. Repository `chatgpt_handoff/latest` minimal refresh result
 
 - Path verified inside the repository root and ending with `chatgpt_handoff/latest`; all previous children were deleted and the folder itself was kept.
-- The folder went from 35 files (15 documents + 19 flattened source/test copies + instructions/manifest) to 6 files:
-  - `README.md` — bundle instructions
+- The folder went from 35 files (15 documents + 19 flattened source/test copies + instructions/manifest) to 5 files:
+  - `README.md` — bundle instructions and policy
   - `manifest.txt` — inventory, purpose, omitted categories, CI status, SHA map
   - `progress_106b_handoff_policy_ci.md` — this report
-  - `progress_106_handoff_cleanup.md` — the Task 106 cleanup context this task corrects
   - `NEXT_SESSION.md`, `PROJECT_STATE.md` — current next action and state
-- Removed from the bundle: all 19 flattened Task 105 source/test copies, `progress_104.md`, `progress_105.md`, `KCS_POST_RC_ROADMAP.md`, `KCS_CURRENT_STATE.md`, `KCS_RELEASE_CANDIDATE_SUMMARY.md`, `KCS_CI_STATUS.md`, `CHANGELOG.md`, `package.json`, `ci.yml`, `release-smoke.yml`, and `PROJECT_README.md`. None of those files were deleted from the repository.
+- Removed from the bundle: all 19 flattened Task 105 source/test copies, `progress_104.md`, `progress_105.md`, `progress_106_handoff_cleanup.md`, `KCS_POST_RC_ROADMAP.md`, `KCS_CURRENT_STATE.md`, `KCS_RELEASE_CANDIDATE_SUMMARY.md`, `KCS_CI_STATUS.md`, `CHANGELOG.md`, `package.json`, `ci.yml`, `release-smoke.yml`, and `PROJECT_README.md`. None of those files were deleted from the repository.
 - No test-matching file remains anywhere under `chatgpt_handoff/`, which is what restores CI.
 
 ## 5. Desktop KCS cleanup result

@@ -16,6 +16,7 @@ CI failure status:
 - Run URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/35095655446
 - Root cause: flattened test copies committed under chatgpt_handoff/latest (src__tests__*.test.ts / .test.tsx) matched the Vitest default include glob and failed to resolve their relative imports.
 - Resolution: the minimal bundle no longer contains any source or test copies, so no test-matching file remains under chatgpt_handoff/.
+- Verified green run: 35096702385 (https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/35096702385) at 703829c — success, all steps passed.
 - Local validation after the fix: full Vitest PASS (103 files / 1,557 tests), lint PASS, tsc PASS, validate:ograf PASS, build PASS, git diff --check PASS.
 
 Copied files (5):

@@ -21,8 +21,8 @@ Out of scope (unchanged): matte geometry/modes, legacy matte field semantics, OG
 
 Discovery showed the Track Matte V2 **card** already existed (source select with `None`, self-excluded candidate list, missing-source warning, mode/enabled/inverted/sourceVisible controls, per-field preservation). Task 107 therefore closed the remaining authoring gaps instead of rebuilding the card:
 
-1. **Relationship resolution now has one display authority.** `resolveMatteSource` was added to the existing matte utility (`src/utils/matte.ts`). It returns `{ sourceId, kind: 'track' | 'legacy' }` and mirrors the render path exactly: Track Matte V2 applies while it names a source and is not disabled, otherwise the legacy `matte` applies under the same condition. Only persisted fields are read.
-2. **The outliner indicator covers both models and only shows what actually renders.** The row indicator previously derived from `part.matte?.sourcePartId` only, so a layer whose relationship lived in `trackMatte` showed nothing. It now renders for either model through the shared helper, names the model in its accessible label (`Track matte source: X` / `Missing track matte source`), and falls back to the layer id when a name is empty. Legacy labels are byte-for-byte unchanged, and a disabled relationship (V2 or legacy) shows no indicator because nothing is applied.
+1. **Relationship resolution now has one display authority.** `resolveMatteSource` was added to the existing matte utility (`src/utils/matte.ts`). It returns `{ sourceId, kind: 'track' | 'legacy' }` and mirrors the render path exactly: an enabled Track Matte V2 record is authoritative even when it does not name a usable source (the stage then selects it and applies nothing instead of falling back), the legacy `matte` applies only when Track Matte V2 is absent or disabled and it names a source while not being disabled, and otherwise no relationship is reported. Only persisted fields are read.
+2. **The outliner indicator covers both models and follows the effective relationship.** The row indicator previously derived from `part.matte?.sourcePartId` only, so a layer whose relationship lived in `trackMatte` showed nothing. It now renders whatever the stage selects, through the shared helper: a resolvable source shows `Mask → <name>`, an enabled V2 whose source cannot be resolved shows the missing indicator (which is exactly the case where the stage applies no matte), and a disabled relationship shows nothing. It names the model in its accessible label (`Track matte source: X` / `Missing track matte source`), omits empty parentheses when the id is empty, and falls back to the layer id when a name is empty. Legacy labels are byte-for-byte unchanged.
 3. **Candidate labels fall back to ids** in both the legacy and the V2 source selects, so an unnamed layer is still selectable and identifiable.
 4. **Accessibility/test seam:** the V2 source select gained `aria-label="Track matte source"` (consistent with the existing `aria-label="Inverted"` / `"Feather"` controls in the same card).
 
@@ -35,7 +35,7 @@ Behaviour intentionally left unchanged: selecting a source writes the same field
 | Concern | Authority | Used for |
 |---|---|---|
 | Relationship state | `CharacterPart.trackMatte` (V2), `CharacterPart.matte` (legacy) | the only persisted relationship fields |
-| Relationship precedence | new `resolveMatteSource` in `src/utils/matte.ts`, mirroring `StagePartLayers.getEffectiveMatte` plus the `isMatteActive` gates at both render sites | outliner indicator |
+| Relationship precedence | new `resolveMatteSource` in `src/utils/matte.ts`, mirroring `StagePartLayers.getEffectiveMatte` plus the `isMatteActive` gates at both render sites (enabled V2 stays authoritative even without a usable source) | outliner indicator |
 | Edit + history | `onPartPropChange` → `handlePartPropChange` (existing single history path) | every write |
 | Cycle / missing detection | `validateCritical` (canvas safety) and `src/ograf/validation.ts` (export) — both untouched; neither is re-implemented in the UI | not surfaced by this change (see non-goal) |
 | Eligibility (legacy card) | `isMatteEligible` | unchanged source list |
@@ -60,7 +60,7 @@ Tests:
 
 ## User-facing behavior added
 
-- A layer whose relationship lives in Track Matte V2 now shows it in the outliner (`Mask → <source name>`, with an accessible label naming the model), including the missing-source state; a disabled relationship shows nothing, because nothing is applied.
+- A layer whose relationship lives in Track Matte V2 now shows it in the outliner (`Mask → <source name>`, with an accessible label naming the model), including the missing-source state that the stage renders as "no matte applied"; a disabled relationship shows nothing, because nothing is applied.
 - Unnamed layers are selectable and identifiable in both source pickers (id fallback).
 - No change to how a matte is chosen, cleared, rendered, validated, exported, or undone.
 
@@ -117,7 +117,13 @@ No new warning was introduced.
 
 ## Independent review result
 
-Single independent review pass executed on the branch diff before the merge gate; verdict and findings are recorded in the merge summary below.
+Three independent review rounds ran on this branch; the merge gate opened only after the third round's findings were addressed.
+
+- Round 1 — `BLOCKED`: `resolveMatteSource` ignored `enabled`, so the outliner could name a V2 source while the stage rendered the legacy matte; and a new cycle warning surfaced only a narrower graph than the export validator.
+- Round 2 (commit `ebc4b93`) — `BLOCKED`: `enabled` was honoured and the partial cycle warning was removed (deeper cycles deliberately stay with the export validator), but an enabled V2 record with an empty/unusable source plus a legacy matte still diverged, because the resolver fell back to legacy while the stage selected the V2 record and applied nothing.
+- Round 3 (commit `d3775cb`) — behaviour CLOSED: an enabled V2 record is authoritative regardless of whether it names a usable source; the resolver/stage/outliner parity matrix was confirmed for all eight combinations; the two new `matteRender` tests were confirmed to fail if either side regressed to the divergent behaviour. The remaining finding was documentation-only (the summary still described the round-2 precedence and over-claimed indicator parity), and those sentences were corrected in this report.
+
+No runtime finding remained open at the merge gate.
 
 ## Merge/push status
 

@@ -191,6 +191,18 @@ describe('OGraf export diagnostics remediation', () => {
       'External image asset "data:image/svg+xml,<svg>TOP_SECRET</svg>" is rejected by the default portable export policy.',
       'External image asset "data:image/svg+xml (payload omitted)" is rejected by the default portable export policy.',
     ],
+    [
+      'External image asset "data:image/svg+xml,<svg id="TOP_SECRET"/>" is rejected by the default portable export policy.',
+      'External image asset "data:image/svg+xml (payload omitted)" is rejected by the default portable export policy.',
+    ],
+    [
+      'External image asset "data:image/svg+xml,<svg onload="alert(1)">SECRET</svg>" is rejected by the default portable export policy.',
+      'External image asset "data:image/svg+xml (payload omitted)" is rejected by the default portable export policy.',
+    ],
+    [
+      'External image asset "https://example.test?email=alice@private.test&token=TOP_SECRET" is rejected by the default portable export policy.',
+      'External image asset "https://example.test" is rejected by the default portable export policy.',
+    ],
   ])('strips URL and embedded-payload secrets from a diagnostic message: %s', (message, expected) => {
     expect(describeOGrafExportDiagnostic(makeDiagnostic({ code: 'OGRAF_EXTERNAL_ASSET_REJECTED', message })).message).toBe(expected);
   });

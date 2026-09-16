@@ -197,6 +197,26 @@ describe('HeaderBar OGraf export integration', () => {
     expect(options.action).toContain('Verify the output location is writable');
   });
 
+  it('redacts a machine path from an unclassified legacy export failure', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
+    vi.stubGlobal('URL', {
+      createObjectURL: vi.fn(() => { throw new Error('/home/alice/private/out: permission denied'); }),
+      revokeObjectURL: vi.fn(),
+    });
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }));
+
+    await waitFor(() => expect(context.showToast).toHaveBeenCalled());
+    const [message, type, options] = context.showToast.mock.calls[0];
+    expect(type).toBe('error');
+    expect(message).toContain('Could not export OGraf legacy file');
+    expect(message).toContain('out: permission denied');
+    expect(message).not.toContain('/home/alice');
+    expect(options.action).toContain('Verify the output location is writable');
+  });
+
   it('surfaces warnings without blocking the export', async () => {
     const scene = makeScene();
     scene.layers = [

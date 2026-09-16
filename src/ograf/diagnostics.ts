@@ -5,7 +5,8 @@ import type {
   OGrafPackageWriteFailureCode,
 } from './types';
 
-const OGRAF_DATA_URL_PATTERN = /data:[^\s"']*/giu;
+const OGRAF_QUOTED_DATA_URL_PATTERN = /data:[\s\S]*?"(?=\s|$)/giu;
+const OGRAF_DATA_URL_PATTERN = /data:[^\s]*/giu;
 const OGRAF_URL_PATTERN = /(?:[a-z][a-z0-9+.-]*:)?\/\/[^\s"'<>]*/giu;
 const OGRAF_QUOTED_SPAN_PATTERN = /"[^"]*"|'[^']*'/gu;
 /** A drive, UNC, or leading-slash value whose spaces continue only into further segments. */
@@ -239,20 +240,27 @@ export function sanitizeOGrafPathForDisplay(value: string): string {
 function redactOGrafUrlSecrets(token: string): string {
   const prefixMatch = token.match(/^(?:[a-z][a-z0-9+.-]*:)?\/\//iu);
   const prefix = prefixMatch ? prefixMatch[0] : '//';
-  let rest = token.slice(prefix.length);
-  const atIndex = rest.indexOf('@');
-  const slashIndex = rest.indexOf('/');
-  if (atIndex !== -1 && (slashIndex === -1 || atIndex < slashIndex)) rest = rest.slice(atIndex + 1);
-  return `${prefix}${rest.split(/[?#]/u)[0]}`;
+  const withoutQuery = token.slice(prefix.length).split(/[?#]/u)[0];
+  const atIndex = withoutQuery.indexOf('@');
+  const slashIndex = withoutQuery.indexOf('/');
+  const authority = atIndex !== -1 && (slashIndex === -1 || atIndex < slashIndex)
+    ? withoutQuery.slice(atIndex + 1)
+    : withoutQuery;
+  return `${prefix}${authority}`;
 }
 
-/** Keeps only the media type of an embedded payload. */
+/**
+ * Keeps only the media type of an embedded payload. A trailing quote that delimits
+ * the value in the surrounding message is preserved.
+ */
 function redactOGrafDataUrl(token: string): string {
-  const rest = token.slice(5);
+  const closingQuote = /["']$/u.test(token) ? token.slice(-1) : '';
+  const body = closingQuote ? token.slice(0, -1) : token;
+  const rest = body.slice(5);
   const mediaType = rest.split(/[;,]/u)[0].trim();
   // No media parameters or payload left, so the token is already safe.
   if (!mediaType || mediaType.length === rest.length) return token;
-  return `data:${mediaType} (payload omitted)`;
+  return `data:${mediaType} (payload omitted)${closingQuote}`;
 }
 
 /**
@@ -269,15 +277,15 @@ export function sanitizeOGrafDiagnosticText(value: string): string {
   if (OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN.test(trimmed)) return sanitizeOGrafPathForDisplay(trimmed);
 
   return value
+    .replace(OGRAF_QUOTED_DATA_URL_PATTERN, redactOGrafDataUrl)
+    .replace(OGRAF_DATA_URL_PATTERN, redactOGrafDataUrl)
     .replace(OGRAF_QUOTED_SPAN_PATTERN, (span) => {
       const inner = span.slice(1, -1).trim();
-      if (/^data:/iu.test(inner)) return `${span[0]}${redactOGrafDataUrl(inner)}${span[0]}`;
       const looksLikeUrl = inner.startsWith('//') || inner.includes('://');
       return !looksLikeUrl && OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN.test(inner)
         ? `${span[0]}${sanitizeOGrafPathForDisplay(inner)}${span[0]}`
         : span;
     })
-    .replace(OGRAF_DATA_URL_PATTERN, redactOGrafDataUrl)
     .replace(OGRAF_URL_PATTERN, redactOGrafUrlSecrets)
     .replace(OGRAF_UNQUOTED_WINDOWS_PATH_PATTERN, (match) => sanitizeOGrafPathForDisplay(match))
     .replace(OGRAF_UNQUOTED_POSIX_PATH_PATTERN, (match) => sanitizeOGrafPathForDisplay(match));

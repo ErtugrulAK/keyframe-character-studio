@@ -14,6 +14,7 @@
 | Priority | Task | Status | Evidence |
 |---|---|---|---|
 | 1 | Export diagnostics remediation UX | Completed | `reports/progress_105.md`; branch `feat/export-diagnostics-ux` |
+| 2 | Track-matte source selection affordance | Completed | `reports/progress_107.md`; branch `feat/track-matte-source-picker` |
 
 ## Recommended roadmap
 

@@ -1,39 +1,36 @@
-# KCS ChatGPT Upload Manifest — Task 106B
+# KCS ChatGPT Upload Manifest — Task 107
 
 Clean refreshed: YES
-Bundle purpose: Task 106B — handoff policy correction, Desktop KCS cleanup, and GitHub CI failure investigation
+Bundle purpose: Task 107 — track-matte source selection affordance
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current main / origin HEAD: a32df841f93e3b234e2d0c62dc6f4de05077c02c
-v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6
+Current main / origin HEAD: aa37b5d (Task 107 fast-forward merge; later docs commits may be newer)
+Task 107 branch: feat/track-matte-source-picker
+Task 107 commits: 1390acd (feat), ebc4b93, d3775cb, aa37b5d (review fixes and report corrections)
+v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-CI failure status:
-- Failing workflow: CI Pipeline — Build, Lint & Test Verification — Run Unit & Integration Tests (Vitest)
-- Failing runs: 35094144225 (9f71148), 35095655446 (a32df84, current main)
-- Run URL: https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/35095655446
-- Root cause: flattened test copies committed under chatgpt_handoff/latest (src__tests__*.test.ts / .test.tsx) matched the Vitest default include glob and failed to resolve their relative imports.
-- Resolution: the minimal bundle no longer contains any source or test copies, so no test-matching file remains under chatgpt_handoff/.
-- Verified green run: 35096702385 (https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/35096702385) at 703829c — success, all steps passed.
-- Local validation after the fix: full Vitest PASS (103 files / 1,557 tests), lint PASS, tsc PASS, validate:ograf PASS, build PASS, git diff --check PASS.
-
 Copied files (5):
-- README.md — bundle instructions and policy
+- README.md — bundle instructions
 - manifest.txt — this inventory
-- progress_106b_handoff_policy_ci.md — CI investigation, corrected policy, Desktop KCS cleanup, validation
-- NEXT_SESSION.md — next action plus the ChatGPT handoff policy
-- PROJECT_STATE.md — current state plus the handoff policy note
+- progress_107.md — Task 107 report (scope, implementation, three review rounds, validation, UI verification)
+- NEXT_SESSION.md — current state plus the next scoped task
+- PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
-Explicitly omitted categories:
-- Task 105 source and test files (they exist under src/ and caused the CI failure as flattened copies)
+Omitted categories:
+- Source and test files (they live under src/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
 - package.json, ci.yml, release-smoke.yml, CHANGELOG.md
-- progress_104.md, progress_105.md, progress_106_handoff_cleanup.md, KCS_POST_RC_ROADMAP.md, KCS_CURRENT_STATE.md, KCS_RELEASE_CANDIDATE_SUMMARY.md, KCS_CI_STATUS.md, PROJECT_README.md
-- QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches, backups
+- progress_104.md, progress_105.md, progress_106_handoff_cleanup.md, progress_106b_handoff_policy_ci.md, KCS_POST_RC_ROADMAP.md, KCS_CURRENT_STATE.md, KCS_RELEASE_CANDIDATE_SUMMARY.md, KCS_CI_STATUS.md, PROJECT_README.md
+- QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
-Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches.
+Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`.
 
-Desktop staging note: `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace. The 35 handoff files accidentally copied there were moved to `_archive_chatgpt_handoff_dump_20260916-123414`; the user's `KCS ASSET`, `KCS BASIC`, `KCS COMPOSITING`, and `kcs-safe-backups` folders were preserved untouched, and no bundle was copied back.
+Validation at this revision:
+- Focused Vitest: PASS — 4 files / 412 tests
+- Full Vitest: PASS — 103 files / 1,575 tests
+- validate:ograf, qa:release (2 Chromium tests), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
+- Independent review: READY at the merge gate (three rounds; round-2 runtime finding closed with an eight-case parity matrix, round-3 documentation finding closed)
 
 Upload the contents of chatgpt_handoff/latest/ to ChatGPT.

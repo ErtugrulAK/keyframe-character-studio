@@ -2,10 +2,10 @@
 
 ## Repository state
 
-- Checkout: main at `9f7114877e111527e8757668237e41fde8388a99` (Task 105 docs/handoff commit); `origin/main` synchronized
-- Task 105 implementation was integrated by fast-forward at `9fdbf0fe59c28d3d6f07c8ee37081fc93f2ff6db`; later docs/handoff-only commits are newer than that integration commit
+- Checkout: main at the Task 107 merge commit; `origin/main` synchronized
+- Task 107 implementation is integrated by fast-forward; the track-matte source relation is now visible in the outliner and authorable from the existing Track Matte V2 card
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
-- `feat/export-diagnostics-ux`: merged by fast-forward and retained
+- `feat/export-diagnostics-ux` and `feat/track-matte-source-picker`: merged by fast-forward and retained
 - Release tag: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
 
 ## Current result
@@ -35,7 +35,7 @@ Post-merge full Vitest (103 files / 1557 tests), `validate:ograf`, `qa:release` 
 
 ## Next scoped work
 
-1. Read `docs/KCS_POST_RC_ROADMAP.md` and `reports/progress_105.md`.
-2. Next candidate: roadmap item 2, the track-matte source selection affordance (`feat/track-matte-source-picker`).
+1. Read `docs/KCS_POST_RC_ROADMAP.md` and `reports/progress_107.md`.
+2. Next candidate: roadmap item 3, direct canvas tangent handles (`feat/canvas-tangent-authoring`) — start with the design contract it needs (coordinate transforms, topology, selection, undo, keyboard) before coding.
 3. Preserve the tag/draft release and request independent review before merge.
 4. Publish/finalize the GitHub draft only after explicit user instruction.

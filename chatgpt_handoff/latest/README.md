@@ -1,25 +1,25 @@
-# KCS Minimal ChatGPT Upload Bundle — Task 106B
+# KCS Minimal ChatGPT Upload Bundle — Task 107
 
-This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this conversation only.
+This is a minimal, task-specific ChatGPT upload bundle for Task 107 only. It was clean-refreshed for this task.
 
-## What this bundle is for
+## What this bundle covers
 
-Task 106B: correct the ChatGPT handoff policy, clean `C:\Users\ertugrul.ak\Desktop\KCS`, and report the GitHub CI failure investigation.
+Track-matte source selection affordance: the matte source relationship is resolved by one shared helper that mirrors the rendered result, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation; unnamed layers fall back to their ids in both source pickers.
 
-## What it deliberately does NOT include
+## Files
 
-- Task 105 source and test files (flattened copies). Those copies were the root cause of the failing CI runs: the files named `src__*test*` matched the Vitest default include glob and failed to resolve their imports from `chatgpt_handoff/latest/`. They also exist in the repository under `src/`, so they are not needed here.
-- `package.json`, `ci.yml`, `release-smoke.yml`, `CHANGELOG.md`, and the older release/current-state documents. They belong to earlier bundles and are unchanged by this task.
-- Old reports, QA output, archives, assets, screenshots, zip files, secrets, and caches.
+- `progress_107.md` — full Task 107 report: scope, implementation, review rounds, validation matrix, UI verification
+- `NEXT_SESSION.md` — current state and the next scoped task
+- `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
+
+## Deliberately not included
+
+Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI (runs `35094144225` and `35095655446`), and the real files live under `src/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
-## Desktop note
+## Staging note
 
-`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not the handoff dump. The 35 handoff files that were accidentally copied there have been moved into `_archive_chatgpt_handoff_dump_20260916-123414`, and no bundle is copied back there by default.
-
-## How to use it
-
-Upload only the files in this folder when ChatGPT needs this cleanup and CI context. For a new task, clean this folder first and place only the files that task needs.
+`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be.
 
 Upload the contents of `chatgpt_handoff/latest/` to ChatGPT.

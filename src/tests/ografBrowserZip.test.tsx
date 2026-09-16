@@ -161,8 +161,12 @@ describe('HeaderBar OGraf export integration', () => {
     expect(createObjectURL).not.toHaveBeenCalled();
   });
 
-  it('never exposes machine paths or URL secrets in export diagnostics', async () => {
-    context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_image', imageUrl: 'C:\\Users\\alice\\private\\logo.png' }))));
+  it.each([
+    ['C:\\Users\\alice\\private\\logo.png', 'logo.png', /C:\\Users|alice/u],
+    ['//user:password@example.test/logo.png?token=secret', 'example.test', /password|token/u],
+    ['data:application/octet-stream;base64,QUJDREVGRw==', 'data:application/octet-stream', /QUJDREVGRw/u],
+  ])('never exposes machine paths or asset secrets from %s', async (imageUrl, remnant, forbidden) => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_image', imageUrl }))));
     vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:should-not-download'), revokeObjectURL: vi.fn() });
 
     render(<HeaderBar />);
@@ -171,9 +175,8 @@ describe('HeaderBar OGraf export integration', () => {
 
     await waitFor(() => expect(context.showToast).toHaveBeenCalled());
     const emitted = context.showToast.mock.calls.map(([message]) => String(message)).join(' | ');
-    expect(emitted).toContain('logo.png');
-    expect(emitted).not.toContain('C:\\Users');
-    expect(emitted).not.toContain('alice');
+    expect(emitted).toContain(remnant);
+    expect(emitted).not.toMatch(forbidden);
     expect(context.showToast.mock.calls.every(([, type]) => type === 'error')).toBe(true);
     expect(createZipMock).not.toHaveBeenCalled();
   });

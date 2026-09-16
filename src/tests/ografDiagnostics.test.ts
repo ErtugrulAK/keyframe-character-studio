@@ -141,32 +141,90 @@ describe('OGraf export diagnostics remediation', () => {
     expect(remediation?.action).toContain(OGRAF_TRUSTED_DIRECTORY_NOTE);
   });
 
-  it('redacts machine paths and URL secrets from the user-facing message and context', () => {
-    const windowsPath = describeOGrafExportDiagnostic(makeDiagnostic({
-      message: 'Asset "C:\\Users\\alice\\private\\logo.png" uses a machine-absolute path and cannot be packaged portably.',
-    }));
-    expect(windowsPath.message).toBe('Asset "logo.png" uses a machine-absolute path and cannot be packaged portably.');
+  it.each([
+    [
+      'Asset "C:\\Users\\alice\\private\\logo.png" uses a machine-absolute path and cannot be packaged portably.',
+      'Asset "logo.png" uses a machine-absolute path and cannot be packaged portably.',
+    ],
+    [
+      'Asset "C:\\Users\\Alice Smith\\private\\logo.png" uses a machine-absolute path and cannot be packaged portably.',
+      'Asset "logo.png" uses a machine-absolute path and cannot be packaged portably.',
+    ],
+    [
+      'Asset "\\\\server\\share\\private folder\\logo.png" uses a machine-absolute path and cannot be packaged portably.',
+      'Asset "logo.png" uses a machine-absolute path and cannot be packaged portably.',
+    ],
+    [
+      'Asset "/home/alice/private/logo.png" uses a machine-absolute path and cannot be packaged portably.',
+      'Asset "logo.png" uses a machine-absolute path and cannot be packaged portably.',
+    ],
+    [
+      'Asset "/home/Alice Smith/private/logo.png" uses a machine-absolute path and cannot be packaged portably.',
+      'Asset "logo.png" uses a machine-absolute path and cannot be packaged portably.',
+    ],
+    [
+      'Asset "/secret.png" uses a machine-absolute path and cannot be packaged portably.',
+      'Asset "secret.png" uses a machine-absolute path and cannot be packaged portably.',
+    ],
+  ])('reduces a machine path in a diagnostic message to its final segment: %s', (message, expected) => {
+    expect(describeOGrafExportDiagnostic(makeDiagnostic({ message })).message).toBe(expected);
+  });
 
-    const posixPath = describeOGrafExportDiagnostic(makeDiagnostic({
-      message: 'Asset "/home/alice/private/logo.png" uses a machine-absolute path and cannot be packaged portably.',
-    }));
-    expect(posixPath.message).toBe('Asset "logo.png" uses a machine-absolute path and cannot be packaged portably.');
+  it.each([
+    [
+      'External image asset "https://user:password@example.test/logo.png?token=secret" is rejected by the default portable export policy.',
+      'External image asset "https://example.test/logo.png" is rejected by the default portable export policy.',
+    ],
+    [
+      'External image asset "//user:password@example.test?token=secret" is rejected by the default portable export policy.',
+      'External image asset "//example.test" is rejected by the default portable export policy.',
+    ],
+    [
+      'External image asset "https://example.test/logo.png#access_token" is rejected by the default portable export policy.',
+      'External image asset "https://example.test/logo.png" is rejected by the default portable export policy.',
+    ],
+    [
+      'External image asset "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB" is rejected by the default portable export policy.',
+      'External image asset "data:image/png (payload omitted)" is rejected by the default portable export policy.',
+    ],
+  ])('strips URL and embedded-payload secrets from a diagnostic message: %s', (message, expected) => {
+    expect(describeOGrafExportDiagnostic(makeDiagnostic({ code: 'OGRAF_EXTERNAL_ASSET_REJECTED', message })).message).toBe(expected);
+  });
 
-    const credentials = describeOGrafExportDiagnostic(makeDiagnostic({
-      code: 'OGRAF_EXTERNAL_ASSET_REJECTED',
-      message: 'External image asset "https://user:password@example.test/logo.png?token=secret" is rejected by the default portable export policy.',
-    }));
-    expect(credentials.message).toContain('https://example.test/logo.png');
-    expect(credentials.message).not.toContain('password');
-    expect(credentials.message).not.toContain('token');
+  it('redacts a bare machine path used as display context', () => {
+    expect(describeOGrafExportDiagnostic(makeDiagnostic({ layerName: '/home/alice/private/logo.png' })).context).toBe('logo.png');
+    expect(describeOGrafExportDiagnostic(makeDiagnostic({ layerName: 'C:\\Users\\alice\\logo.png' })).context).toBe('logo.png');
+  });
 
-    const authoredRelativePath = describeOGrafExportDiagnostic(makeDiagnostic({
+  it('keeps authored relative and package-relative paths readable', () => {
+    const relative = describeOGrafExportDiagnostic(makeDiagnostic({
       message: 'Image asset "assets/missing.png" cannot be packaged without a verified local source or browser bytes.',
     }));
-    expect(authoredRelativePath.message).toContain('assets/missing.png');
+    expect(relative.message).toContain('assets/missing.png');
 
-    const contextFromLayerName = describeOGrafExportDiagnostic(makeDiagnostic({ layerName: 'C:\\Users\\alice\\logo.png' }));
-    expect(contextFromLayerName.context).toBe('logo.png');
+    const packaged = describeOGrafExportDiagnostic(makeDiagnostic({
+      message: 'Packaged asset path "assets/images/logo.png" escapes the package root.',
+    }));
+    expect(packaged.message).toContain('assets/images/logo.png');
+
+    const fontMessage = describeOGrafExportDiagnostic(makeDiagnostic({
+      code: 'OGRAF_FONT_UNVERIFIED',
+      message: 'Display Title uses Inter, but KCS has no portable font file for this font.',
+    }));
+    expect(fontMessage.message).toBe('Display Title uses Inter, but KCS has no portable font file for this font.');
+  });
+
+  it('redacts a machine path inside a wrapped filesystem failure message', () => {
+    const remediation = describeOGrafPackageWriteFailure(new OGrafPackageWriteError(
+      'OGRAF_PACKAGE_SOURCE_UNREADABLE',
+      "Local asset source could not be read: ENOENT: no such file or directory, lstat 'C:\\Users\\alice\\private\\logo.png'",
+    ));
+
+    expect(remediation?.message).toContain('Local asset source could not be read');
+    expect(remediation?.message).toContain('logo.png');
+    expect(remediation?.message).not.toContain('C:\\Users');
+    expect(remediation?.message).not.toContain('alice');
+    expect(remediation?.context).toBeUndefined();
   });
 
   it('gives every package write failure code a stable title and next step', () => {

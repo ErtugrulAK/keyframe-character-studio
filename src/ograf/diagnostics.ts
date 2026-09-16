@@ -5,6 +5,14 @@ import type {
   OGrafPackageWriteFailureCode,
 } from './types';
 
+const OGRAF_DATA_URL_PATTERN = /data:[^\s"'<>]*/giu;
+const OGRAF_URL_PATTERN = /(?:[a-z][a-z0-9+.-]*:)?\/\/[^\s"'<>]*/giu;
+const OGRAF_QUOTED_SPAN_PATTERN = /"[^"]*"|'[^']*'/gu;
+/** A drive, UNC, or leading-slash value whose spaces continue only into further segments. */
+const OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN = /^(?:(?:[a-z]:[\\/]|\\\\)|\/)(?:[^\s"'<>]|\s(?=[^\s"'<>]*[\\/]))*$/iu;
+const OGRAF_UNQUOTED_WINDOWS_PATH_PATTERN = /(?<![\w+.-])(?:[a-z]:[\\/]|\\\\)[^\s"'<>]*(?:\s+[^\s"'<>]*[\\/][^\s"'<>]*)*/giu;
+const OGRAF_UNQUOTED_POSIX_PATH_PATTERN = /(?<=[\s"'<(])\/(?!\/)(?:[^\s"'<>]|\s(?=[^\s"'<>]*\/))+/gu;
+
 /**
  * Accepted filesystem constraint. Every trusted-directory surface must state it
  * without claiming protection KCS does not provide.
@@ -227,16 +235,48 @@ export function sanitizeOGrafPathForDisplay(value: string): string {
   return /^(?:[a-z]:[\\/]|[\\/])/iu.test(trimmed) ? segments[segments.length - 1] : segments.join('/');
 }
 
+/** Strips credentials, query, and fragment secrets from an absolute or protocol-relative URL. */
+function redactOGrafUrlSecrets(token: string): string {
+  const prefixMatch = token.match(/^(?:[a-z][a-z0-9+.-]*:)?\/\//iu);
+  const prefix = prefixMatch ? prefixMatch[0] : '//';
+  let rest = token.slice(prefix.length);
+  const atIndex = rest.indexOf('@');
+  const slashIndex = rest.indexOf('/');
+  if (atIndex !== -1 && (slashIndex === -1 || atIndex < slashIndex)) rest = rest.slice(atIndex + 1);
+  return `${prefix}${rest.split(/[?#]/u)[0]}`;
+}
+
+/** Keeps only the media type of an embedded payload. */
+function redactOGrafDataUrl(token: string): string {
+  const mediaType = token.slice(5).split(/[;,]/u)[0].trim();
+  return mediaType ? `data:${mediaType} (payload omitted)` : 'data: (payload omitted)';
+}
+
 /**
  * Redacts machine paths and URL secrets from diagnostic text before it reaches a
  * user-facing surface. Authored relative and package-relative paths are preserved.
+ *
+ * A path is redacted when it is machine-absolute: a drive, UNC, or leading-slash
+ * prefix. Spaces inside such a path are kept only while a further separator follows,
+ * so ordinary message words are never swallowed, and quoted spans are redacted
+ * wholesale, which covers paths whose own segments contain spaces.
  */
 export function sanitizeOGrafDiagnosticText(value: string): string {
+  const trimmed = value.trim();
+  if (OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN.test(trimmed)) return sanitizeOGrafPathForDisplay(trimmed);
+
   return value
-    .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\s/@]*@/giu, '$1')
-    .replace(/([a-z][a-z0-9+.-]*:\/\/[^\s?#"']*)[?#][^\s"']*/giu, '$1')
-    .replace(/(?<![\w+.-])(?:[a-z]:[\\/]|\\\\)[^\s"']*/giu, (match) => sanitizeOGrafPathForDisplay(match))
-    .replace(/(?<=[\s"'(])\/(?:[^\s"')]+\/)+[^\s"')]*/gu, (match) => sanitizeOGrafPathForDisplay(match));
+    .replace(OGRAF_DATA_URL_PATTERN, redactOGrafDataUrl)
+    .replace(OGRAF_URL_PATTERN, redactOGrafUrlSecrets)
+    .replace(OGRAF_QUOTED_SPAN_PATTERN, (span) => {
+      const inner = span.slice(1, -1).trim();
+      const looksLikeUrl = inner.startsWith('//') || inner.includes('://');
+      return !looksLikeUrl && OGRAF_WHOLE_ABSOLUTE_PATH_PATTERN.test(inner)
+        ? `${span[0]}${sanitizeOGrafPathForDisplay(inner)}${span[0]}`
+        : span;
+    })
+    .replace(OGRAF_UNQUOTED_WINDOWS_PATH_PATTERN, (match) => sanitizeOGrafPathForDisplay(match))
+    .replace(OGRAF_UNQUOTED_POSIX_PATH_PATTERN, (match) => sanitizeOGrafPathForDisplay(match));
 }
 
 /**
@@ -247,10 +287,15 @@ export function describeOGrafPackageWriteFailure(error: unknown): OGrafDiagnosti
   if (!(error instanceof OGrafPackageWriteError)) return null;
   const template = WRITE_FAILURE_REMEDIATIONS[error.code];
   const separator = error.message.indexOf(': ');
-  const detail = separator === -1 ? '' : sanitizeOGrafPathForDisplay(error.message.slice(separator + 2));
-  const message = separator === -1
-    ? error.message
-    : `${error.message.slice(0, separator)}${detail ? `: ${detail}` : ''}`;
+  const reason = (separator === -1 ? error.message : error.message.slice(0, separator)).trim();
+  const rawDetail = separator === -1 ? '' : error.message.slice(separator + 2).trim();
+  // KCS-owned failures carry a path detail; a wrapped OS message carries a sentence
+  // (it always has its own "ERRNO: ..." colon), so it must go through text redaction.
+  const detailIsPath = rawDetail.length > 0 && !rawDetail.includes(': ');
+  const detail = detailIsPath
+    ? sanitizeOGrafPathForDisplay(rawDetail)
+    : sanitizeOGrafDiagnosticText(rawDetail);
+  const message = sanitizeOGrafDiagnosticText(detail ? `${reason}: ${detail}` : reason);
 
   return {
     code: error.code,
@@ -258,6 +303,6 @@ export function describeOGrafPackageWriteFailure(error: unknown): OGrafDiagnosti
     title: template.title,
     message,
     action: template.action,
-    ...(detail ? { context: detail } : {}),
+    ...(detailIsPath && detail ? { context: detail } : {}),
   };
 }

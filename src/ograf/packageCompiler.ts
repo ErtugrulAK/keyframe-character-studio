@@ -1,6 +1,7 @@
 import type { SceneData } from '../types/composition';
 import { normalizePackagePath } from '../utils/pathSafety';
 import { compileOGrafManifest, isSafeOGrafPackagePath, sanitizeOGrafId } from './compiler';
+import { describeOGrafValueForDiagnostics } from './diagnostics';
 import { generateGraphicModule } from './runtimeTemplate';
 import { validateSceneForOGraf } from './validation';
 import type {
@@ -35,7 +36,7 @@ function uniqueAssetPlans(assets: OGrafAssetPlan[], diagnostics: OGrafExportDiag
       diagnostics.push({
         code: 'OGRAF_MISSING_ASSET',
         severity: 'ERROR',
-        message: `Packaged asset path "${packagedPath}" escapes the package root.`,
+        message: `Packaged asset path "${describeOGrafValueForDiagnostics(packagedPath)}" escapes the package root.`,
         feature: 'asset-path',
       });
       packagedPath = `assets/${asset.kind}s/${hashString(asset.source)}`;
@@ -68,7 +69,7 @@ function packageAssetDiagnostics(sceneData: SceneData, options: OGrafExportOptio
         diagnostics.push({
           code: entry?.kind === 'external' ? 'OGRAF_EXTERNAL_ASSET_REJECTED' : 'OGRAF_MISSING_ASSET',
           severity: 'ERROR',
-          message: `Image asset "${layer.imageUrl}" cannot be packaged without a verified local source or browser bytes.`,
+          message: `Image asset "${describeOGrafValueForDiagnostics(layer.imageUrl)}" cannot be packaged without a verified local source or browser bytes.`,
           layerId: layer.id,
           layerName: layer.name,
           feature: 'image',
@@ -78,7 +79,7 @@ function packageAssetDiagnostics(sceneData: SceneData, options: OGrafExportOptio
   }
   for (const asset of assets) {
     if ((asset.sourcePath || asset.binaryContent) && !isSafeOGrafPackagePath(asset.packagedPath)) {
-      diagnostics.push({ code: 'OGRAF_MISSING_ASSET', severity: 'ERROR', message: `Asset path "${asset.packagedPath}" is unsafe.`, feature: 'asset-path' });
+      diagnostics.push({ code: 'OGRAF_MISSING_ASSET', severity: 'ERROR', message: `Asset path "${describeOGrafValueForDiagnostics(asset.packagedPath)}" is unsafe.`, feature: 'asset-path' });
     }
   }
 }
@@ -115,10 +116,10 @@ function packageEntryDiagnostics(files: OGrafPackageFile[], diagnostics: OGrafEx
     const normalizedPath = normalizePackagePath(file.path);
     const collisionKey = normalizedPath.toLowerCase();
     if (!isSafeOGrafPackagePath(normalizedPath)) {
-      diagnostics.push({ code: 'OGRAF_INVALID_MAIN', severity: 'ERROR', message: `Package file path "${file.path}" is unsafe.`, feature: 'package-path' });
+      diagnostics.push({ code: 'OGRAF_INVALID_MAIN', severity: 'ERROR', message: `Package file path "${describeOGrafValueForDiagnostics(file.path)}" is unsafe.`, feature: 'package-path' });
     }
     if (seen.has(collisionKey)) {
-      diagnostics.push({ code: 'OGRAF_INVALID_MAIN', severity: 'ERROR', message: `Package file path "${file.path}" is duplicated.`, feature: 'package-path' });
+      diagnostics.push({ code: 'OGRAF_INVALID_MAIN', severity: 'ERROR', message: `Package file path "${describeOGrafValueForDiagnostics(file.path)}" is duplicated.`, feature: 'package-path' });
     }
     seen.add(collisionKey);
   }

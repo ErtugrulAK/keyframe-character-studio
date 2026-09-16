@@ -1,6 +1,7 @@
 import type { SceneData } from '../types/composition';
 import { isSafePackageRelativePath, sanitizeFilenameComponent } from '../utils/pathSafety';
 import { validateSceneForOGraf } from './validation';
+import { describeOGrafValueForDiagnostics } from './diagnostics';
 import {
   OGRAF_DEFAULT_MAIN,
   OGRAF_DEFAULT_VERSION,
@@ -51,7 +52,7 @@ function collectCompilerDiagnostics(
       diagnostics.push({
         code: 'OGRAF_INVALID_PUBLIC_FIELD',
         severity: 'ERROR',
-        message: `Public field "${field.id}" must not contain a slash.`,
+        message: `Public field "${describeOGrafValueForDiagnostics(field.id)}" must not contain a slash.`,
         feature: 'public-state',
       });
     }
@@ -61,7 +62,7 @@ function collectCompilerDiagnostics(
     diagnostics.push({
       code: 'OGRAF_INVALID_MAIN',
       severity: 'ERROR',
-      message: `Manifest main path "${main}" must be a safe package-relative file path.`,
+      message: `Manifest main path "${describeOGrafValueForDiagnostics(main)}" must be a safe package-relative file path.`,
       feature: 'manifest',
     });
   }

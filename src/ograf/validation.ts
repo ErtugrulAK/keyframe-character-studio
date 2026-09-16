@@ -12,6 +12,7 @@ import {
   type ValidatedOGrafScene,
 } from './types';
 import { resolveOGrafPublicControls } from './publicControls';
+import { describeOGrafValueForDiagnostics } from './diagnostics';
 const SUPPORTED_LAYER_TYPES: Record<string, true> = {
   custom_box: true,
   custom_rect: true,
@@ -234,7 +235,7 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
   }
   if (layer.strokeAlignment !== undefined
     && !['center', 'inside', 'outside'].includes(layer.strokeAlignment)) {
-    invalidProject(diagnostics, `Layer strokeAlignment "${String(layer.strokeAlignment)}" is not supported.`, layer, 'style');
+    invalidProject(diagnostics, `Layer strokeAlignment "${describeOGrafValueForDiagnostics(String(layer.strokeAlignment))}" is not supported.`, layer, 'style');
   }
   validatePathPoints(record.points, diagnostics, layer, 'layer points');
   if (record.path && typeof record.path === 'object') {
@@ -242,7 +243,7 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
   }
   for (const mask of layer.masks || []) {
     if (!['add', 'subtract', 'intersect', 'difference'].includes(mask.mode)) {
-      invalidProject(diagnostics, `Mask mode "${String(mask.mode)}" is not supported.`, layer, 'mask');
+      invalidProject(diagnostics, `Mask mode "${describeOGrafValueForDiagnostics(String(mask.mode))}" is not supported.`, layer, 'mask');
     }
     validateFiniteFields(
       mask as unknown as Record<string, unknown>,
@@ -256,18 +257,18 @@ function validateLayerInput(layer: SceneLayer, diagnostics: OGrafExportDiagnosti
   if (layer.matte) {
     const mode = layer.matte.mode;
     if (mode !== undefined && !['clip', 'alpha', 'luminance'].includes(mode)) {
-      invalidProject(diagnostics, `Matte mode "${String(mode)}" is not supported.`, layer, 'matte');
+      invalidProject(diagnostics, `Matte mode "${describeOGrafValueForDiagnostics(String(mode))}" is not supported.`, layer, 'matte');
     }
     validateFiniteFields(layer.matte as unknown as Record<string, unknown>, ['feather', 'strength'], diagnostics, layer, 'matte');
     if (layer.matte.gradient) {
       if (layer.matte.gradient.type !== undefined && !['linear', 'radial'].includes(layer.matte.gradient.type)) {
-        invalidProject(diagnostics, `Matte gradient type "${String(layer.matte.gradient.type)}" is not supported.`, layer, 'matte');
+        invalidProject(diagnostics, `Matte gradient type "${describeOGrafValueForDiagnostics(String(layer.matte.gradient.type))}" is not supported.`, layer, 'matte');
       }
       validateFiniteFields(layer.matte.gradient as unknown as Record<string, unknown>, ['angle'], diagnostics, layer, 'matte');
     }
   }
   if (layer.trackMatte && !['alpha', 'luminance'].includes(layer.trackMatte.mode)) {
-    invalidProject(diagnostics, `Track matte mode "${String(layer.trackMatte.mode)}" is not supported.`, layer, 'track-matte');
+    invalidProject(diagnostics, `Track matte mode "${describeOGrafValueForDiagnostics(String(layer.trackMatte.mode))}" is not supported.`, layer, 'track-matte');
   }
 }
 function validateTrackInput(
@@ -282,29 +283,29 @@ function validateTrackInput(
   const candidate = track as Record<string, unknown>;
   validateLegacyKeyframeArray(candidate.keyframes, diagnostics, layer, 'track keyframes');
   for (const [channel, keyframes] of Object.entries(candidate.channels || {})) {
-    validateKeyframeArray(keyframes, diagnostics, layer, `track channel "${channel}"`);
+    validateKeyframeArray(keyframes, diagnostics, layer, `track channel "${describeOGrafValueForDiagnostics(channel)}"`);
   }
   for (const [channel, keyframes] of Object.entries(candidate.maskChannels || {})) {
-    validateKeyframeArray(keyframes, diagnostics, layer, `mask channel "${channel}"`);
+    validateKeyframeArray(keyframes, diagnostics, layer, `mask channel "${describeOGrafValueForDiagnostics(channel)}"`);
   }
   for (const [channel, keyframes] of Object.entries(candidate.maskPathChannels || {})) {
     if (!Array.isArray(keyframes)) {
-      invalidProject(diagnostics, `Mask path channel "${channel}" must be an array.`, layer, 'channels');
+      invalidProject(diagnostics, `Mask path channel "${describeOGrafValueForDiagnostics(channel)}" must be an array.`, layer, 'channels');
       continue;
     }
     for (const keyframe of keyframes) {
       if (!keyframe || typeof keyframe !== 'object' || Array.isArray(keyframe)) {
-        invalidProject(diagnostics, `Mask path channel "${channel}" contains an invalid keyframe.`, layer, 'channels');
+        invalidProject(diagnostics, `Mask path channel "${describeOGrafValueForDiagnostics(channel)}" contains an invalid keyframe.`, layer, 'channels');
         continue;
       }
       const pathKeyframe = keyframe as Record<string, unknown>;
-      validateKeyframeMetadata(pathKeyframe, diagnostics, layer, `mask path channel "${channel}"`);
+      validateKeyframeMetadata(pathKeyframe, diagnostics, layer, `mask path channel "${describeOGrafValueForDiagnostics(channel)}"`);
       const value = pathKeyframe.value;
       if (!value || typeof value !== 'object' || Array.isArray(value)) {
-        invalidProject(diagnostics, `Mask path channel "${channel}" contains an invalid path.`, layer, 'channels');
+        invalidProject(diagnostics, `Mask path channel "${describeOGrafValueForDiagnostics(channel)}" contains an invalid path.`, layer, 'channels');
         continue;
       }
-      validatePathPoints((value as Record<string, unknown>).points, diagnostics, layer, `mask path channel "${channel}"`);
+      validatePathPoints((value as Record<string, unknown>).points, diagnostics, layer, `mask path channel "${describeOGrafValueForDiagnostics(channel)}"`);
     }
   }
 }
@@ -333,7 +334,7 @@ function validatePublicFields(
       diagnostics.push({
         code: 'OGRAF_INVALID_PUBLIC_FIELD',
         severity: 'ERROR',
-        message: `Public field "${field.id || '<empty>'}" must have a unique id and a valid layerId.`,
+        message: `Public field "${describeOGrafValueForDiagnostics(field.id)}" must have a unique id and a valid layerId.`,
         ...(field.layerId ? { layerId: field.layerId } : {}),
         feature: 'public-state',
       });
@@ -354,7 +355,7 @@ function validateAsset(
       diagnostics.push(diagnostic(
         'OGRAF_EXTERNAL_ASSET_REJECTED',
         'ERROR',
-        `External ${kind} asset "${source}" is rejected by the default portable export policy.`,
+        `External ${kind} asset "${describeOGrafValueForDiagnostics(source)}" is rejected by the default portable export policy.`,
         layer,
         kind,
       ));
@@ -363,7 +364,7 @@ function validateAsset(
     diagnostics.push(diagnostic(
       'OGRAF_ASSET_UNVERIFIED',
       'WARNING',
-      `External ${kind} asset "${source}" is allowed explicitly but is not portable without network access.`,
+      `External ${kind} asset "${describeOGrafValueForDiagnostics(source)}" is allowed explicitly but is not portable without network access.`,
       layer,
       kind,
     ));
@@ -371,25 +372,25 @@ function validateAsset(
   }
 
   if (!isLikelyLocalAsset(source)) {
-    diagnostics.push(diagnostic('OGRAF_MISSING_ASSET', 'ERROR', `Asset "${source}" is not a supported local asset reference.`, layer, kind));
+    diagnostics.push(diagnostic('OGRAF_MISSING_ASSET', 'ERROR', `Asset "${describeOGrafValueForDiagnostics(source)}" is not a supported local asset reference.`, layer, kind));
     return undefined;
   }
   if (/^(?:[a-z]:[\\/]|[\\/])/iu.test(source)) {
-    diagnostics.push(diagnostic('OGRAF_MISSING_ASSET', 'ERROR', `Asset "${source}" uses a machine-absolute path and cannot be packaged portably.`, layer, kind));
+    diagnostics.push(diagnostic('OGRAF_MISSING_ASSET', 'ERROR', `Asset "${describeOGrafValueForDiagnostics(source)}" uses a machine-absolute path and cannot be packaged portably.`, layer, kind));
     return undefined;
   }
 
   const catalogEntry = options.assetCatalog?.[source];
   if (catalogEntry?.kind === 'missing') {
-    diagnostics.push(diagnostic('OGRAF_MISSING_ASSET', 'ERROR', `Local ${kind} asset "${source}" is marked missing.`, layer, kind));
+    diagnostics.push(diagnostic('OGRAF_MISSING_ASSET', 'ERROR', `Local ${kind} asset "${describeOGrafValueForDiagnostics(source)}" is marked missing.`, layer, kind));
     return undefined;
   }
   if (catalogEntry?.kind === 'external' && !options.allowExternalResources) {
-    diagnostics.push(diagnostic('OGRAF_EXTERNAL_ASSET_REJECTED', 'ERROR', `Asset "${source}" is marked external and external resources are disabled.`, layer, kind));
+    diagnostics.push(diagnostic('OGRAF_EXTERNAL_ASSET_REJECTED', 'ERROR', `Asset "${describeOGrafValueForDiagnostics(source)}" is marked external and external resources are disabled.`, layer, kind));
     return undefined;
   }
   if (!catalogEntry) {
-    diagnostics.push(diagnostic('OGRAF_ASSET_UNVERIFIED', 'WARNING', `Local ${kind} asset "${source}" has no supplied asset catalog entry; packaging must verify it later.`, layer, kind));
+    diagnostics.push(diagnostic('OGRAF_ASSET_UNVERIFIED', 'WARNING', `Local ${kind} asset "${describeOGrafValueForDiagnostics(source)}" has no supplied asset catalog entry; packaging must verify it later.`, layer, kind));
   }
 
   const packagedPath = normalizePackagedPath(source, kind, catalogEntry?.packagedPath);
@@ -419,7 +420,7 @@ function validateFont(
     diagnostics.push(diagnostic(
       'OGRAF_FONT_UNVERIFIED',
       options.requirePortableAssets ? 'ERROR' : 'WARNING',
-      `Display ${layer.name} uses ${layer.fontFamily}, but KCS has no portable font file for this font. Import/upload the font file or choose a portable font before OGraf export.`,
+      `Display ${describeOGrafValueForDiagnostics(layer.name)} uses ${describeOGrafValueForDiagnostics(layer.fontFamily)}, but KCS has no portable font file for this font. Import/upload the font file or choose a portable font before OGraf export.`,
       layer,
       'font',
     ));
@@ -440,11 +441,11 @@ function validateFont(
 function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnostics: OGrafExportDiagnostic[], assets: OGrafAssetPlan[]): void {
   validateLayerInput(layer, diagnostics);
   if (isPrototypeSensitiveKey(layer.id)) {
-    diagnostics.push(diagnostic('OGRAF_INVALID_PROJECT', 'ERROR', `Layer id "${layer.id}" is reserved and cannot be imported safely.`, layer, 'layer-id'));
+    diagnostics.push(diagnostic('OGRAF_INVALID_PROJECT', 'ERROR', `Layer id "${describeOGrafValueForDiagnostics(layer.id)}" is reserved and cannot be imported safely.`, layer, 'layer-id'));
   }
   for (const mask of layer.masks || []) {
     if (isPrototypeSensitiveKey(mask.id)) {
-      diagnostics.push(diagnostic('OGRAF_INVALID_PROJECT', 'ERROR', `Mask id "${mask.id}" is reserved and cannot be imported safely.`, layer, 'mask-id'));
+      diagnostics.push(diagnostic('OGRAF_INVALID_PROJECT', 'ERROR', `Mask id "${describeOGrafValueForDiagnostics(mask.id)}" is reserved and cannot be imported safely.`, layer, 'mask-id'));
     }
   }
   if (!Object.prototype.hasOwnProperty.call(SUPPORTED_LAYER_TYPES, layer.type)) {
@@ -455,7 +456,7 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
         : layer.type === 'mograph_cloner'
           ? 'OGRAF_UNSUPPORTED_CLONER'
           : 'OGRAF_UNSUPPORTED_SHAPE';
-    diagnostics.push(diagnostic(code, 'ERROR', `Layer type "${layer.type}" is not supported by OGraf Export V1.`, layer, layer.type));
+    diagnostics.push(diagnostic(code, 'ERROR', `Layer type "${describeOGrafValueForDiagnostics(layer.type)}" is not supported by OGraf Export V1.`, layer, layer.type));
   }
 
   if (layer.booleanOperation || layer.booleanOperandIds?.length || layer.booleanGroupId) {
@@ -547,7 +548,7 @@ function validateLayerHierarchy(layers: SceneLayer[], diagnostics: OGrafExportDi
     if (isPrototypeSensitiveKey(parentId)) {
       invalidProject(
         diagnostics,
-        `Layer parent "${parentId}" for layer "${layer.id}" is reserved.`,
+        `Layer parent "${describeOGrafValueForDiagnostics(parentId)}" for layer "${describeOGrafValueForDiagnostics(layer.id)}" is reserved.`,
         layer,
         'hierarchy',
       );
@@ -559,7 +560,7 @@ function validateLayerHierarchy(layers: SceneLayer[], diagnostics: OGrafExportDi
   const visit = (id: string, visiting: Set<string>, visited: Set<string>): void => {
     if (visiting.has(id)) {
       const layer = layerById.get(id);
-      invalidProject(diagnostics, `Layer parent cycle detected at "${id}".`, layer, 'hierarchy');
+      invalidProject(diagnostics, `Layer parent cycle detected at "${describeOGrafValueForDiagnostics(id)}".`, layer, 'hierarchy');
       return;
     }
     if (visited.has(id)) return;
@@ -600,7 +601,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
       diagnostics.push({
         code: 'OGRAF_INVALID_TRACK_MATTE',
         severity: 'ERROR',
-        message: `Track matte source "${sourceId}" for layer "${layer.id}" is reserved and cannot be imported safely.`,
+        message: `Track matte source "${describeOGrafValueForDiagnostics(sourceId)}" for layer "${describeOGrafValueForDiagnostics(layer.id)}" is reserved and cannot be imported safely.`,
         layerId: layer.id,
         layerName: layer.name,
         feature: 'track-matte',
@@ -612,7 +613,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
       diagnostics.push({
         code: 'OGRAF_INVALID_TRACK_MATTE',
         severity: 'ERROR',
-        message: `Track matte source "${sourceId}" for layer "${layer.id}" was not found.`,
+        message: `Track matte source "${describeOGrafValueForDiagnostics(sourceId)}" for layer "${describeOGrafValueForDiagnostics(layer.id)}" was not found.`,
         layerId: layer.id,
         layerName: layer.name,
         feature: 'track-matte',
@@ -625,7 +626,7 @@ export function validateSceneForOGraf(sceneData: SceneData, options: OGrafExport
       diagnostics.push({
         code: 'OGRAF_INVALID_TRACK_MATTE',
         severity: 'ERROR',
-        message: `Track matte cycle detected at layer "${id}".`,
+        message: `Track matte cycle detected at layer "${describeOGrafValueForDiagnostics(id)}".`,
         ...(layer ? { layerId: layer.id, layerName: layer.name } : {}),
         feature: 'track-matte',
       });

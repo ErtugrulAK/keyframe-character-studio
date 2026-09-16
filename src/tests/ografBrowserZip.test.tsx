@@ -164,6 +164,7 @@ describe('HeaderBar OGraf export integration', () => {
   it.each([
     ['C:\\Users\\alice\\private\\logo.png', 'logo.png', /C:\\Users|alice/u],
     ['//user:password@example.test/logo.png?token=secret', 'example.test', /password|token/u],
+    ["https://alice:PASS'WORD@example.test/logo.png?token=QUERY_SECRET#FRAGMENT", 'example.test', /PASS|WORD|QUERY_SECRET|FRAGMENT/u],
     ['data:application/octet-stream;base64,QUJDREVGRw==', 'data:application/octet-stream', /QUJDREVGRw/u],
   ])('never exposes machine paths or asset secrets from %s', async (imageUrl, remnant, forbidden) => {
     context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_image', imageUrl }))));

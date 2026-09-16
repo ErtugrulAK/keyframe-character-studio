@@ -245,6 +245,26 @@ describe('OGraf Export V1 Phase 1', () => {
     ]);
   });
 
+  test('quotes user-authored asset references without machine paths, credentials, or payloads', () => {
+    const messagesFor = (imageUrl: string) => validateSceneForOGraf(makeScene([
+      makeLayer({ type: 'custom_image', imageUrl }),
+    ])).diagnostics.map((diagnostic) => diagnostic.message).join(' | ');
+
+    const credentials = messagesFor("https://alice:PASS'WORD@example.test/logo.png?token=QUERY_SECRET#FRAGMENT");
+    expect(credentials).toContain('https://example.test/logo.png');
+    expect(credentials).not.toContain('PASS');
+    expect(credentials).not.toContain('QUERY_SECRET');
+    expect(credentials).not.toContain('FRAGMENT');
+
+    const machinePath = messagesFor('C:\\Users\\alice\\private\\logo.png');
+    expect(machinePath).toContain('"logo.png"');
+    expect(machinePath).not.toContain('alice');
+
+    const payload = messagesFor("Data:text/pl'ain,EMBEDDED_DATA_SECRET");
+    expect(payload).toContain('(payload omitted)');
+    expect(payload).not.toContain('EMBEDDED_DATA_SECRET');
+  });
+
   test('rejects external image assets by default', () => {
     expect(errorCodes(makeScene([makeLayer({ type: 'custom_image', imageUrl: 'https://example.com/image.png' })]))).toContain('OGRAF_EXTERNAL_ASSET_REJECTED');
   });

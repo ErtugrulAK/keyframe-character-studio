@@ -4,6 +4,7 @@ import {
   OGrafPackageWriteError,
   describeOGrafExportDiagnostic,
   describeOGrafPackageWriteFailure,
+  describeOGrafValueForDiagnostics,
   getOGrafExportRemediationReport,
   getUniqueOGrafExportErrors,
   getUniqueOGrafExportWarnings,
@@ -97,6 +98,24 @@ describe('OGraf export diagnostics remediation', () => {
     expect(report.blocking).toEqual([]);
     expect(report.warnings).toHaveLength(1);
     expect(report.warnings[0].action).toContain('No action required');
+  });
+
+  it.each([
+    ['C:\\Users\\alice\\private\\logo.png', 'logo.png'],
+    ['C:/Users/Alice Smith/private/logo.png', 'logo.png'],
+    ['\\\\server\\share\\private folder\\logo.png', 'logo.png'],
+    ['/home/alice/private/logo.png', 'logo.png'],
+    ['//user:password@example.test/logo.png?token=secret', '//example.test/logo.png'],
+    ["https://alice:PASS'WORD@example.test/logo.png?token=QUERY#FRAGMENT", 'https://example.test/logo.png'],
+    ['file:/home/alice/private/logo.png', 'file:(value omitted)'],
+    ['Data:text/pl,EMBEDDED_DATA_SECRET', 'data:text/pl (payload omitted)'],
+    ['assets/missing.png', 'assets/missing.png'],
+    ['./assets/logo.png', './assets/logo.png'],
+    ['custom_video', 'custom_video'],
+    ['Inter', 'Inter'],
+    ['', '<empty>'],
+  ])('renders a diagnostic value safely: %s', (value, expected) => {
+    expect(describeOGrafValueForDiagnostics(value)).toBe(expected);
   });
 
   it('prefers the layer name as display context and falls back to the feature', () => {

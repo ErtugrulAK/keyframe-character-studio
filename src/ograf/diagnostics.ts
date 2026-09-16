@@ -232,7 +232,7 @@ export function getOGrafExportRemediationReport(diagnostics: OGrafExportDiagnost
  * segment, package-relative paths are kept as authored.
  */
 export function sanitizeOGrafPathForDisplay(value: string): string {
-  const trimmed = value.trim();
+  const trimmed = value.trim().split(/[?#]/u)[0];
   const segments = trimmed.split(/[\\/]+/u).filter(Boolean);
   if (segments.length === 0) return '';
   return /^(?:[a-z]:[\\/]|[\\/])/iu.test(trimmed) ? segments[segments.length - 1] : segments.join('/');
@@ -287,6 +287,27 @@ function redactEmbeddedDataUrls(value: string): string {
   return value.slice(0, start)
     + redactOGrafDataUrl(value.slice(start, end))
     + redactEmbeddedDataUrls(value.slice(end));
+}
+
+/**
+ * Renders a user-authored reference so a diagnostic can quote it without carrying a
+ * machine path, URL credentials, query secrets, or an embedded payload.
+ */
+export function describeOGrafValueForDiagnostics(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return '<empty>';
+  if (/^data:/iu.test(trimmed)) return redactOGrafDataUrl(trimmed);
+  if (trimmed.startsWith('//')) return redactOGrafUrlSecrets(trimmed);
+  // A drive letter is not a URI scheme, so machine paths are checked before schemes.
+  if (/^(?:[a-z]:[\\/]|\\\\|[\\/])/iu.test(trimmed)) return sanitizeOGrafPathForDisplay(trimmed);
+
+  const schemeMatch = trimmed.match(/^[a-z][a-z0-9+.-]*:/iu);
+  if (schemeMatch) {
+    return trimmed.slice(schemeMatch[0].length).startsWith('//')
+      ? redactOGrafUrlSecrets(trimmed)
+      : `${schemeMatch[0]}(value omitted)`;
+  }
+  return trimmed;
 }
 
 /**

@@ -35,6 +35,32 @@ describe('useToast Hook', () => {
     expect(result.current.toasts.length).toBe(0);
   });
 
+  it('carries an optional title and next step with a custom duration', () => {
+    const { result } = renderHook(() => useToast());
+
+    act(() => {
+      result.current.showToast('Export blocked.', 'error', {
+        title: 'Unsupported video layer',
+        action: 'Remove the video layer.',
+        durationMs: 9000,
+      });
+    });
+
+    expect(result.current.toasts.length).toBe(1);
+    expect(result.current.toasts[0].title).toBe('Unsupported video layer');
+    expect(result.current.toasts[0].action).toBe('Remove the video layer.');
+
+    act(() => {
+      vi.advanceTimersByTime(3200);
+    });
+    expect(result.current.toasts.length).toBe(1);
+
+    act(() => {
+      vi.advanceTimersByTime(5800);
+    });
+    expect(result.current.toasts.length).toBe(0);
+  });
+
   it('allows manual removal of a toast', () => {
     const { result } = renderHook(() => useToast());
 

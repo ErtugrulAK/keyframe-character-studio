@@ -15,9 +15,61 @@ import { InlineRename } from '../Shared/InlineRename';
 import { compileOGrafPackage } from '../../ograf/packageCompiler';
 import { createOGrafBrowserZip, sanitizeOGrafDownloadName } from '../../ograf/browserZip';
 import { prepareLegacyOGrafExport } from '../../ograf/legacyCompatibility';
-import { getUniqueOGrafExportErrors } from '../../ograf/diagnostics';
+import {
+  describeOGrafPackageWriteFailure,
+  getOGrafExportRemediationReport,
+  type OGrafDiagnosticRemediation,
+} from '../../ograf/diagnostics';
+import type { OGrafExportDiagnostic } from '../../ograf/types';
+import type { ToastOptions } from '../../hooks/useToast';
 import type { SceneData } from '../../types/composition';
 import './HeaderBar.css';
+
+type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
+
+/** Diagnostics that carry a next step stay visible longer than plain notifications. */
+const OGRAF_BLOCKING_TOAST_DURATION_MS = 9000;
+const OGRAF_WARNING_TOAST_DURATION_MS = 7000;
+const OGRAF_WARNING_SUMMARY_LIMIT = 2;
+
+function remediationLabel(remediation: OGrafDiagnosticRemediation): string {
+  return remediation.context ? `${remediation.title} [${remediation.context}]` : remediation.title;
+}
+
+/**
+ * Reports export diagnostics to the user and tells the caller whether export must
+ * stop. Blocking diagnostics never reach the success path; warnings never block.
+ */
+function notifyOGrafDiagnostics(showToast: ShowToast, diagnostics: OGrafExportDiagnostic[]): boolean {
+  const report = getOGrafExportRemediationReport(diagnostics);
+
+  if (report.hasBlocking) {
+    report.blocking.forEach((remediation) => {
+      showToast(remediation.message, 'error', {
+        title: remediationLabel(remediation),
+        action: remediation.action,
+        durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
+      });
+    });
+    return true;
+  }
+
+  if (report.warnings.length > 0) {
+    const listed = report.warnings.slice(0, OGRAF_WARNING_SUMMARY_LIMIT);
+    const hiddenCount = report.warnings.length - listed.length;
+    showToast(
+      listed.map((remediation) => `${remediationLabel(remediation)} — ${remediation.message}`).join(' '),
+      'info',
+      {
+        title: `Export warnings (${report.warnings.length})`,
+        action: `Export continued; warnings do not block the package${hiddenCount > 0 ? ` (${hiddenCount} more not listed)` : ''}.`,
+        durationMs: OGRAF_WARNING_TOAST_DURATION_MS,
+      },
+    );
+  }
+
+  return false;
+}
 
 export const HeaderBar: React.FC = () => {
   const {
@@ -87,14 +139,7 @@ export const HeaderBar: React.FC = () => {
       const preparation = prepareLegacyOGrafExport(sceneData);
       const prepared = preparation instanceof Promise ? await preparation : preparation;
       const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
-      const errors = getUniqueOGrafExportErrors(plan.diagnostics);
-      if (errors.length > 0) {
-        errors.forEach((diagnostic) => {
-          const location = diagnostic.layerName ? ` [${diagnostic.layerName}]` : '';
-          showToast(`${diagnostic.message}${location}`, 'error');
-        });
-        return;
-      }
+      if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
 
       const archive = await createOGrafBrowserZip(plan);
       const blob = new Blob([new Uint8Array(archive.bytes).buffer as ArrayBuffer], { type: 'application/zip' });
@@ -108,8 +153,17 @@ export const HeaderBar: React.FC = () => {
       URL.revokeObjectURL(url);
       showToast(`Exported "${archive.fileName}"`, 'success');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unexpected OGraf export failure.';
-      showToast(`Could not export OGraf: ${message}`, 'error');
+      const remediation = describeOGrafPackageWriteFailure(error);
+      if (remediation) {
+        showToast(remediation.message, 'error', {
+          title: remediationLabel(remediation),
+          action: remediation.action,
+          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
+        });
+      } else {
+        const message = error instanceof Error ? error.message : 'Unexpected OGraf export failure.';
+        showToast(`Could not export OGraf: ${message}`, 'error');
+      }
     } finally {
       setIsOGrafExporting(false);
     }
@@ -122,11 +176,7 @@ export const HeaderBar: React.FC = () => {
       const preparation = prepareLegacyOGrafExport(sceneData);
       const prepared = preparation instanceof Promise ? await preparation : preparation;
       const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
-      const errors = getUniqueOGrafExportErrors(plan.diagnostics);
-      if (errors.length > 0) {
-        errors.forEach((diagnostic) => showToast(`${diagnostic.message}${diagnostic.layerName ? ` [${diagnostic.layerName}]` : ''}`, 'error'));
-        return;
-      }
+      if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
       const runtime = plan.files.find((file) => file.kind === 'runtime' && file.content !== undefined);
       if (!runtime?.content) throw new Error('Generated OGraf runtime is unavailable.');
       const fileName = `${sanitizeOGrafDownloadName(plan.manifest.name)}.mjs`;
@@ -140,8 +190,17 @@ export const HeaderBar: React.FC = () => {
       URL.revokeObjectURL(url);
       showToast(`Exported "${fileName}"`, 'success');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unexpected OGraf legacy export failure.';
-      showToast(`Could not export OGraf legacy file: ${message}`, 'error');
+      const remediation = describeOGrafPackageWriteFailure(error);
+      if (remediation) {
+        showToast(remediation.message, 'error', {
+          title: remediationLabel(remediation),
+          action: remediation.action,
+          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
+        });
+      } else {
+        const message = error instanceof Error ? error.message : 'Unexpected OGraf legacy export failure.';
+        showToast(`Could not export OGraf legacy file: ${message}`, 'error');
+      }
     } finally {
       setIsOGrafExporting(false);
     }

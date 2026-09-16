@@ -59,7 +59,13 @@ export const ToastPortal: React.FC<ToastPortalProps> = ({ toasts, removeToast })
             {t.type === 'success' && <CheckCircle2 size={18} className="text-teal" />}
             {t.type === 'error' && <AlertCircle size={18} className="text-red" />}
             {t.type === 'info' && <Sparkles size={18} className="text-cyan" />}
-            <span style={{ fontSize: 13, fontWeight: 700 }}>{t.message}</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              {t.title && <span style={{ fontSize: 13, fontWeight: 700 }}>{t.title}</span>}
+              <span style={{ fontSize: t.title ? 12 : 13, fontWeight: t.title ? 600 : 700, opacity: t.title ? 0.92 : 1 }}>
+                {t.message}
+              </span>
+              {t.action && <span style={{ fontSize: 11.5, fontWeight: 600, color: '#00d2ff' }}>{t.action}</span>}
+            </div>
           </div>
           <button
             className="btn-icon"

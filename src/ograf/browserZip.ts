@@ -1,6 +1,7 @@
 import { zipSync } from 'fflate';
 import { normalizePackagePath } from '../utils/pathSafety';
 import { isSafeOGrafPackagePath, sanitizeOGrafId } from './compiler';
+import { OGrafPackageWriteError } from './diagnostics';
 import type { OGrafGeneratedPackage } from './types';
 
 export interface OGrafBrowserZip {
@@ -19,7 +20,7 @@ function textBytes(value: string): Uint8Array {
 export async function createOGrafBrowserZip(plan: OGrafGeneratedPackage): Promise<OGrafBrowserZip> {
   await Promise.resolve();
   if (plan.status === 'blocked') {
-    throw new Error('OGraf package validation failed.');
+    throw new OGrafPackageWriteError('OGRAF_BLOCKED_PACKAGE', 'OGraf package validation failed.');
   }
 
   const files: Record<string, Uint8Array> = {};
@@ -28,16 +29,18 @@ export async function createOGrafBrowserZip(plan: OGrafGeneratedPackage): Promis
     const normalizedPath = normalizePackagePath(file.path);
     const collisionKey = normalizedPath.toLowerCase();
     if (!isSafeOGrafPackagePath(normalizedPath) || seenPaths.has(collisionKey)) {
-      throw new Error(`Unsafe or duplicate package path: ${file.path}`);
+      throw new OGrafPackageWriteError('OGRAF_UNSAFE_PACKAGE_PATH', `Unsafe or duplicate package path: ${file.path}`);
     }
     seenPaths.add(collisionKey);
     if (file.kind === 'asset') {
-      if (!file.binaryContent) throw new Error(`Asset "${file.path}" is not available in the browser package plan.`);
+      if (!file.binaryContent) {
+        throw new OGrafPackageWriteError('OGRAF_MISSING_PACKAGE_SOURCE', `Asset "${file.path}" is not available in the browser package plan.`);
+      }
       files[normalizedPath] = file.binaryContent;
     } else if (file.content !== undefined) {
       files[normalizedPath] = textBytes(file.content);
     } else {
-      throw new Error(`Package file "${file.path}" has no generated content.`);
+      throw new OGrafPackageWriteError('OGRAF_MISSING_PACKAGE_SOURCE', `Package file "${file.path}" has no generated content.`);
     }
   }
 

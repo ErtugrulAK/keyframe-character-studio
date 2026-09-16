@@ -141,6 +141,48 @@ describe('HeaderBar OGraf export integration', () => {
     expect(context.showToast.mock.calls[0][0]).toContain('asset');
     expect(createObjectURL).not.toHaveBeenCalled();
   });
+  it('shows a stable title, explanation, and next step for a blocked export', async () => {
+    context.exportProject.mockReturnValue(JSON.stringify(makeScene(makeLayer({ type: 'custom_video', videoUrl: 'video.mp4' }))));
+    const createObjectURL = vi.fn(() => 'blob:should-not-download');
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL: vi.fn() });
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+
+    await waitFor(() => expect(context.showToast).toHaveBeenCalledTimes(1));
+    const [message, type, options] = context.showToast.mock.calls[0];
+    expect(message).toContain('custom_video');
+    expect(type).toBe('error');
+    expect(options.title).toBe('Unsupported video layer [Shape]');
+    expect(options.action).toContain('Remove the video layer');
+    expect(options.durationMs).toBeGreaterThan(0);
+    expect(createZipMock).not.toHaveBeenCalled();
+    expect(createObjectURL).not.toHaveBeenCalled();
+  });
+
+  it('surfaces warnings without blocking the export', async () => {
+    const scene = makeScene();
+    scene.layers = [
+      makeLayer({ id: 'mask' }),
+      makeLayer({ id: 'target', name: 'Target', matte: { sourcePartId: 'mask', mode: 'clip' } }),
+    ];
+    context.exportProject.mockReturnValue(JSON.stringify(scene));
+    createZipMock.mockResolvedValue({ fileName: 'my-project-demo-ograf.zip', bytes: new Uint8Array([80, 75, 3, 4]) });
+    vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:ograf'), revokeObjectURL: vi.fn() });
+
+    render(<HeaderBar />);
+    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
+
+    await waitFor(() => expect(createZipMock).toHaveBeenCalledTimes(1));
+    const warningCall = context.showToast.mock.calls.find(([, type]) => type === 'info');
+    expect(warningCall?.[0]).toContain('Clip matte approximated [Target]');
+    expect(warningCall?.[2].title).toBe('Export warnings (1)');
+    expect(warningCall?.[2].action).toContain('warnings do not block');
+    expect(context.showToast).toHaveBeenCalledWith('Exported "my-project-demo-ograf.zip"', 'success');
+  });
+
   it('aggregates duplicate missing-font diagnostics by font root cause', async () => {
     const firstTextLayer = makeLayer({ id: 'title', name: 'Title', type: 'custom_text', textValue: 'Title', fontFamily: 'Inter' });
     const scene = makeScene(firstTextLayer);

@@ -37,6 +37,15 @@ export interface OGrafExportDiagnostic {
   feature?: string;
 }
 
+/** Stable failure classes raised by the OGraf package materialization boundaries. */
+export type OGrafPackageWriteFailureCode =
+  | 'OGRAF_UNSAFE_OUTPUT_DIRECTORY'
+  | 'OGRAF_UNSAFE_OUTPUT_TARGET'
+  | 'OGRAF_UNSAFE_ASSET_SOURCE'
+  | 'OGRAF_UNSAFE_PACKAGE_PATH'
+  | 'OGRAF_MISSING_PACKAGE_SOURCE'
+  | 'OGRAF_BLOCKED_PACKAGE';
+
 export interface OGrafAssetCatalogEntry {
   kind: 'local' | 'external' | 'missing';
   packagedPath?: string;

@@ -24,12 +24,6 @@ import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
 import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/keyframeDuplicate';
 import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/keyframeCopyPaste';
-
-export interface ToastItem {
-  id: string;
-  message: string;
-  type?: 'success' | 'error' | 'info';
-}
 import { useHistory } from '../hooks/useHistory';
 import { useBroadcast } from '../hooks/useBroadcast';
 import type { NamedSequenceRuntimeState } from '../utils/broadcastEngine';
@@ -39,10 +33,12 @@ import { useTimeline } from '../hooks/useTimeline';
 import { useTemplates } from '../hooks/useTemplates';
 import { useMath } from '../hooks/useMath';
 import { useSerialization } from '../hooks/useSerialization';
-import { useToast } from '../hooks/useToast';
+import { useToast, type ToastOptions } from '../hooks/useToast';
 import { usePresets, type SavePresetInput, type UpdatePresetInput } from '../hooks/usePresets';
 import { useProjectState } from '../hooks/useProjectState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+
+export type { ToastItem } from '../hooks/useToast';
 
 interface AnimatorContextType {
   currentFrame: number;
@@ -150,7 +146,7 @@ interface AnimatorContextType {
   // M28 — paste a copied keyframe frame-group onto `trackId` at `frame` (28A pure helper)
   pasteKeyframeClipboard: (trackId: string, frame: number, payload: KeyframeCopyPayload) => void;
   applyMotionTransition: (partId: string, transitionType: string) => void;
-  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  showToast: (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
   isScaleLocked: boolean;
   setIsScaleLocked: (locked: boolean) => void;
   addPropertyKeyframe: (trackId: string, channel: AnimationChannel, frame: number, value: number, easing?: EasingType) => void;

@@ -3,26 +3,33 @@ import { lstat, mkdir, open, writeFile } from 'node:fs/promises';
 import { dirname, join, parse, relative, resolve } from 'node:path';
 import { normalizePackagePath } from '../utils/pathSafety';
 import { isSafeOGrafPackagePath } from './compiler';
+import { OGrafPackageWriteError } from './diagnostics';
 import type { OGrafGeneratedPackage, OGrafMaterializedPackage, OGrafPackageFile } from './types';
 
 function assertSafePackagePath(root: string, relativePath: string): string {
   const normalized = normalizePackagePath(relativePath);
-  if (!isSafeOGrafPackagePath(normalized)) throw new Error(`Unsafe package path: ${relativePath}`);
+  if (!isSafeOGrafPackagePath(normalized)) {
+    throw new OGrafPackageWriteError('OGRAF_UNSAFE_PACKAGE_PATH', `Unsafe package path: ${relativePath}`);
+  }
   const rootPath = resolve(root);
   const target = resolve(rootPath, normalized);
   const targetRelative = target === rootPath ? '' : target.slice(rootPath.length + 1);
-  if (!targetRelative || targetRelative.startsWith('..')) throw new Error(`Package path escapes output directory: ${relativePath}`);
+  if (!targetRelative || targetRelative.startsWith('..')) {
+    throw new OGrafPackageWriteError('OGRAF_UNSAFE_PACKAGE_PATH', `Package path escapes output directory: ${relativePath}`);
+  }
   return target;
 }
 async function assertRegularLocalFile(sourcePath: string): Promise<Uint8Array> {
   const sourcePathStat = await lstat(sourcePath);
   if (sourcePathStat.isSymbolicLink()) {
-    throw new Error(`Unsafe local asset source: ${sourcePath}`);
+    throw new OGrafPackageWriteError('OGRAF_UNSAFE_ASSET_SOURCE', `Unsafe local asset source: ${sourcePath}`);
   }
   const handle = await open(sourcePath, 'r');
   try {
     const handleStat = await handle.stat();
-    if (!handleStat.isFile()) throw new Error(`Unsafe local asset source: ${sourcePath}`);
+    if (!handleStat.isFile()) {
+      throw new OGrafPackageWriteError('OGRAF_UNSAFE_ASSET_SOURCE', `Unsafe local asset source: ${sourcePath}`);
+    }
     return await handle.readFile();
   } finally {
     await handle.close();
@@ -37,7 +44,7 @@ async function ensureSafeDirectorySegment(path: string): Promise<void> {
   }
   const stat = await lstat(path);
   if (stat.isSymbolicLink() || !stat.isDirectory()) {
-    throw new Error(`Unsafe output directory: ${path}`);
+    throw new OGrafPackageWriteError('OGRAF_UNSAFE_OUTPUT_DIRECTORY', `Unsafe output directory: ${path}`);
   }
 }
 
@@ -52,7 +59,7 @@ async function assertSafeOutputDirectory(outputDirectory: string): Promise<strin
   }
   const rootStat = await lstat(rootPath);
   if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) {
-    throw new Error(`Unsafe output directory: ${outputDirectory}`);
+    throw new OGrafPackageWriteError('OGRAF_UNSAFE_OUTPUT_DIRECTORY', `Unsafe output directory: ${outputDirectory}`);
   }
   return rootPath;
 }
@@ -69,7 +76,7 @@ async function assertSafeOutputTarget(target: string): Promise<void> {
   try {
     const targetStat = await lstat(target);
     if (targetStat.isSymbolicLink() || !targetStat.isFile()) {
-      throw new Error(`Unsafe output target: ${target}`);
+      throw new OGrafPackageWriteError('OGRAF_UNSAFE_OUTPUT_TARGET', `Unsafe output target: ${target}`);
     }
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
@@ -86,7 +93,9 @@ export async function materializeOGrafPackage(plan: OGrafGeneratedPackage, outpu
   for (const file of plan.files) {
     const normalizedPath = normalizePackagePath(file.path);
     const collisionKey = normalizedPath.toLowerCase();
-    if (seenPaths.has(collisionKey)) throw new Error(`Duplicate package path: ${file.path}`);
+    if (seenPaths.has(collisionKey)) {
+      throw new OGrafPackageWriteError('OGRAF_UNSAFE_PACKAGE_PATH', `Duplicate package path: ${file.path}`);
+    }
     seenPaths.add(collisionKey);
     const target = assertSafePackagePath(rootPath, normalizedPath);
     const targetDirectory = dirname(target);
@@ -94,12 +103,16 @@ export async function materializeOGrafPackage(plan: OGrafGeneratedPackage, outpu
     await assertSafeOutputTarget(target);
     if (file.kind === 'asset') {
       const asset = plan.assets.find((candidate) => normalizePackagePath(candidate.packagedPath) === normalizedPath);
-      if (!asset?.sourcePath && !asset?.binaryContent) throw new Error(`Missing local source or browser bytes for packaged asset: ${file.path}`);
+      if (!asset?.sourcePath && !asset?.binaryContent) {
+        throw new OGrafPackageWriteError('OGRAF_MISSING_PACKAGE_SOURCE', `Missing local source or browser bytes for packaged asset: ${file.path}`);
+      }
       const binaryContent = asset.binaryContent || await assertRegularLocalFile(asset.sourcePath as string);
       await writeFile(target, binaryContent);
       materializedFiles.push({ ...file, path: normalizedPath, status: 'generated', binaryContent });
     } else {
-      if (file.content === undefined) throw new Error(`Missing text content for packaged file: ${file.path}`);
+      if (file.content === undefined) {
+        throw new OGrafPackageWriteError('OGRAF_MISSING_PACKAGE_SOURCE', `Missing text content for packaged file: ${file.path}`);
+      }
       await writeFile(target, file.content, 'utf8');
       materializedFiles.push({ ...file, path: normalizedPath, status: 'generated' });
     }

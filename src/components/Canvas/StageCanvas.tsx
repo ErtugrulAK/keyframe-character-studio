@@ -5,11 +5,12 @@ import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { clientToSVGPoint, clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
-import { buildFreeformPath, getFreeformVertexWorldPositions, normalizeClosedPoints, normalizeFreeformPoints } from '../../utils/freeform';
+import { buildFreeformPath, normalizeFreeformPoints, resolveFreeformPath } from '../../utils/freeform';
 import { worldToContainerLocal } from '../../utils/containerMath';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
+import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { ShapeCreationPreview } from './ShapeCreationPreview';
 import { SelectionGizmo } from './SelectionGizmo';
 import { StagePartLayers } from './StagePartLayers';
@@ -42,6 +43,7 @@ export const StageCanvas: React.FC = () => {
     broadcastSessionActivated,
     namedSequenceRuntime,
     tracks,
+    setCharacterParts,
     setFocusModeNodeId,
     startBatchInteraction,
     endBatchInteraction,
@@ -934,32 +936,6 @@ export const StageCanvas: React.FC = () => {
                 pointerEvents="none"
               />
 
-              {/* Freeform vertex markers (numbered, matching the inspector vertex list) */}
-              {selectedPart?.type === 'custom_freeform' &&
-                !selectedPart.booleanOperandIds?.length &&
-                selectedTransform &&
-                appMode !== 'broadcast' &&
-                selectedPart.points &&
-                selectedPart.points.length > 0 && (
-                  <g pointerEvents="none">
-                    {getFreeformVertexWorldPositions(
-                      normalizeClosedPoints(selectedPart.points),
-                      EDITOR_CAMERA_CENTER.x + selectedTransform.x,
-                      EDITOR_CAMERA_CENTER.y + selectedTransform.y,
-                      selectedTransform.scaleX,
-                      selectedTransform.scaleY,
-                      selectedTransform.rotation
-                    ).map((v, i) => (
-                      <g key={`vm-${i}`} data-testid="freeform-vertex-marker" transform={`translate(${v.x}, ${v.y})`}>
-                        <circle r={7 * zScale} fill="#0f172a" stroke="#38bdf8" strokeWidth={1.2 * zScale} />
-                        <text y={3 * zScale} fontSize={8.5 * zScale} fontWeight={700} textAnchor="middle" fill="#7dd3fc" style={{ userSelect: 'none' }}>
-                          {i + 1}
-                        </text>
-                      </g>
-                    ))}
-                  </g>
-                )}
-
               {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden) */}
               {appMode !== 'broadcast' && (
                 <SelectionGizmo
@@ -978,6 +954,38 @@ export const StageCanvas: React.FC = () => {
                   outputOrigin={EDITOR_CAMERA_CENTER}
                 />
               )}
+
+              {/* Direct tangent-handle authoring for the selected freeform layer */}
+              {appMode !== 'broadcast' &&
+                activeTool === 'select' &&
+                !isDragging &&
+                selectedPartIds.length === 1 &&
+                selectedPart?.type === 'custom_freeform' &&
+                !selectedPart.booleanOperation &&
+                !selectedPart.booleanOperandIds?.length &&
+                !selectedPart.booleanGroupId &&
+                tracks.find((track) => track.partId === selectedPart.id)?.editVisible !== false &&
+                selectedPart.trimPathEnabled !== true &&
+                selectedTransform &&
+                selectedTransform.scaleX !== 0 &&
+                selectedTransform.scaleY !== 0 &&
+                resolveFreeformPath(selectedPart)?.coordinateSpace === 'local' &&
+                (resolveFreeformPath(selectedPart)?.points.length ?? 0) >= 2 && (
+                  <FreeformTangentOverlay
+                    part={selectedPart}
+                    transform={selectedTransform}
+                    zScale={zScale}
+                    toWorld={clientToSVG}
+                    outputOrigin={EDITOR_CAMERA_CENTER}
+                    onPathChange={(nextPath) => {
+                      setCharacterParts((previous) => previous.map((part) => (
+                        part.id === selectedPart.id ? { ...part, path: nextPath } : part
+                      )));
+                    }}
+                    onBatchStart={startBatchInteraction}
+                    onBatchEnd={endBatchInteraction}
+                  />
+                )}
             </>
           );
         })()}

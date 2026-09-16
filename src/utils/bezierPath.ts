@@ -7,6 +7,9 @@ import type {
   PathHandle,
 } from '../types/animator';
 
+const HANDLE_REACH_RATIO = 0.25;
+const HANDLE_CHORD_EPSILON = 1e-6;
+
 export interface PathPoint {
   x: number;
   y: number;
@@ -207,6 +210,56 @@ export const pathToLegacyMaskPoints = (path: BezierPath | undefined): MaskPoint[
     ...(handleIn ? { handleIn: { ...handleIn } } : {}),
     ...(handleOut ? { handleOut: { ...handleOut } } : {}),
   }));
+
+/**
+ * Deterministic neighbour-based tangent handles for one vertex.
+ *
+ * Used by the canvas tangent overlay when a vertex is made smooth: the chord
+ * through the vertex points at the average of its neighbours, and the handles
+ * reach a quarter of the shortest neighbour span. Degenerate topology keeps a
+ * single deterministic answer (unit horizontal direction, zero reach when the
+ * vertex has no neighbour). Existing handles are never overwritten — a missing
+ * counterpart is mirrored from the one that exists.
+ */
+export const initializeSmoothHandles = (path: BezierPath, index: number): BezierPath => {
+  const points = path.points;
+  const vertex = points[index];
+  if (!vertex) return path;
+
+  const previousIndex = index > 0 ? index - 1 : path.closed ? points.length - 1 : -1;
+  const nextIndex = index < points.length - 1 ? index + 1 : path.closed ? 0 : -1;
+  const previous = previousIndex >= 0 && previousIndex !== index ? points[previousIndex] : undefined;
+  const next = nextIndex >= 0 && nextIndex !== index ? points[nextIndex] : undefined;
+
+  const magnitudeOf = (vector: PathPoint): number => Math.hypot(vector.x, vector.y);
+  const spanFromVertex = (point: PathPoint): number => Math.hypot(point.x - vertex.x, point.y - vertex.y);
+
+  const chord = previous && next ? { x: next.x - previous.x, y: next.y - previous.y } : undefined;
+  const leading = next ? { x: next.x - vertex.x, y: next.y - vertex.y } : undefined;
+  const trailing = previous ? { x: vertex.x - previous.x, y: vertex.y - previous.y } : undefined;
+  const raw = (chord && magnitudeOf(chord) > HANDLE_CHORD_EPSILON ? chord : undefined)
+    ?? (leading && magnitudeOf(leading) > HANDLE_CHORD_EPSILON ? leading : undefined)
+    ?? (trailing && magnitudeOf(trailing) > HANDLE_CHORD_EPSILON ? trailing : undefined)
+    ?? { x: 1, y: 0 };
+  const magnitude = magnitudeOf(raw) || 1;
+  const direction = { x: raw.x / magnitude, y: raw.y / magnitude };
+
+  const spans = [previous ? spanFromVertex(previous) : undefined, next ? spanFromVertex(next) : undefined]
+    .filter((span): span is number => span !== undefined);
+  const reach = spans.length > 0 ? HANDLE_REACH_RATIO * Math.min(...spans) : 0;
+
+  const mirroredIn = vertex.handleOut ? { x: 2 * vertex.x - vertex.handleOut.x, y: 2 * vertex.y - vertex.handleOut.y } : undefined;
+  const mirroredOut = vertex.handleIn ? { x: 2 * vertex.x - vertex.handleIn.x, y: 2 * vertex.y - vertex.handleIn.y } : undefined;
+  const handleIn = vertex.handleIn ?? mirroredIn ?? { x: vertex.x - direction.x * reach, y: vertex.y - direction.y * reach };
+  const handleOut = vertex.handleOut ?? mirroredOut ?? { x: vertex.x + direction.x * reach, y: vertex.y + direction.y * reach };
+
+  return {
+    ...path,
+    points: points.map((point, pointIndex) => (pointIndex === index
+      ? { ...point, kind: 'smooth', handleIn, handleOut }
+      : point)),
+  };
+};
 
 export const sampleBezierPath = (path: BezierPath | undefined, samplesPerSegment = 16): PathPoint[] => {
   if (!path || path.points.length < 2) return [];

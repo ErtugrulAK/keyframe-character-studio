@@ -1,10 +1,15 @@
-import type { FreeformPoint } from '../types/animator';
-import { buildBezierPathD, createBezierPath } from './bezierPath';
+import type { BezierPath, FreeformPoint } from '../types/animator';
+import { buildBezierPathD, createBezierPath, legacyFreeformPointsToPath } from './bezierPath';
 
 /**
  * Pure helpers for the freeform drawing feature.
  * Free of React dependencies and independently testable.
  */
+
+/** The path a freeform layer actually renders: the canonical path when it exists,
+ *  otherwise the legacy points converted to a local closed path. */
+export const resolveFreeformPath = (part: { path?: BezierPath; points?: FreeformPoint[] }): BezierPath | undefined =>
+  part.path ?? legacyFreeformPointsToPath(part.points, true);
 
 export const MIN_FREEFORM_POINTS = 3;
 

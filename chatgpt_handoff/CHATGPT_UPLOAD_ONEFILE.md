@@ -9,8 +9,9 @@
 - It is not an archive.
 - Old task sections are not appended or preserved.
 - It is generated only from `chatgpt_handoff/latest/` plus `latest/OMP_FINAL_RESPONSE.md`.
-- Source and test files are intentionally omitted: flattened copies named `src__*test*` matched Vitest’s include glob and broke CI (runs 35094144225, 35095655446). Quoted policy wording names them but contains no code.
-- `C:Usersertugrul.akDesktopKCS` is the user’s project/asset workspace, not a handoff destination; nothing was copied there.
+- Source and test files are intentionally omitted: flattened copies named `src__*test*` matched Vitest's include glob and broke CI (runs 35094144225, 35095655446). Quoted policy wording names them but contains no code.
+- `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination; nothing was copied there. `C:\Users\ertugrul.ak\Desktop\ograf-graphics` is also untouched by this workflow.
+- The repository root is `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`; the bundle folder is `chatgpt_handoff\latest` and this artifact is `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
 - If a historical handoff archive is ever needed, it is a separate explicitly named file under `chatgpt_handoff/archive/`, created only after user approval.
 
 ---

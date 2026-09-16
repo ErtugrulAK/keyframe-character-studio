@@ -14,7 +14,7 @@ import { renderToString } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
 import { StagePartLayers } from '../components/Canvas/StagePartLayers';
 import { makeEmptyChannels } from '../utils/defaults';
-import { matteClipPathId, buildMatteClipPath } from '../utils/matte';
+import { matteClipPathId, buildMatteClipPath, resolveMatteSource } from '../utils/matte';
 import { evaluateTransform } from '../utils/evaluateTransform';
 import type { CharacterPart, Track } from '../types/animator';
 
@@ -410,6 +410,29 @@ describe('StagePartLayers — track matte render', () => {
     // Same evaluated world transform (rotate 45 + scale 2×0.5) → identical
     // geometry whether consumed by clipPath or by a feathered mask.
     expect(maskD).toBe(expectedClipPath);
+  });
+
+  it('M107: an enabled Track Matte V2 suppresses the legacy matte even when its source is unusable', () => {
+    const legacySource = makePart('legacy', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'legacy', mode: 'clip' });
+    // A V2 record that names no usable source still wins on the stage.
+    target.trackMatte = { sourceLayerId: '', mode: 'alpha', enabled: true };
+    const html = renderStage([legacySource, target]);
+
+    // Stage: the V2 record is selected and the unusable id applies nothing.
+    expect(html).not.toContain(`clip-path="url(#${matteClipPathId('legacy')})"`);
+    // The indicator authority must agree with the stage: no legacy fallback.
+    expect(resolveMatteSource(target)).toEqual({ sourceId: '', kind: 'track' });
+  });
+
+  it('M107: a disabled Track Matte V2 lets the legacy matte render, and both authorities agree', () => {
+    const legacySource = makePart('legacy', 'custom_box');
+    const target = makePart('tgt', 'custom_circle', { sourcePartId: 'legacy', mode: 'clip' });
+    target.trackMatte = { sourceLayerId: 'ghost', mode: 'alpha', enabled: false };
+    const html = renderStage([legacySource, target]);
+
+    expect(html).toContain(`clip-path="url(#${matteClipPathId('legacy')})"`);
+    expect(resolveMatteSource(target)).toEqual({ sourceId: 'legacy', kind: 'legacy' });
   });
 });
 

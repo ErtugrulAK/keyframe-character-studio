@@ -38,14 +38,19 @@ export interface MatteSourceRef {
 /**
  * Resolves which layer a target actually renders its matte from.
  *
- * Mirrors the render path exactly: Track Matte V2 applies while it names a
- * source and is not disabled, otherwise the legacy `matte` applies when it
- * names a source and is not disabled. Only the persisted fields are read here;
- * nothing is derived or cached, so the relationship keeps a single owner.
+ * Mirrors the render path exactly, including its fallback rules:
+ * - an enabled Track Matte V2 record is authoritative even when it does not name
+ *   a usable source, so it suppresses the legacy matte (`StagePartLayers`
+ *   `getEffectiveMatte` returns the V2 record and the missing source then applies
+ *   nothing);
+ * - otherwise the legacy `matte` applies when it names a source and is not
+ *   disabled (the render sites additionally gate on `isMatteActive`);
+ * - otherwise nothing is applied and no relationship is reported.
+ * Only the persisted fields are read here; nothing is derived or cached.
  */
 export function resolveMatteSource(part: { matte?: PartMatte; trackMatte?: TrackMatteV2 }): MatteSourceRef | undefined {
   const track = part.trackMatte;
-  if (track?.sourceLayerId && track.enabled !== false) return { sourceId: track.sourceLayerId, kind: 'track' };
+  if (track && track.enabled !== false) return { sourceId: track.sourceLayerId ?? '', kind: 'track' };
   const legacy = part.matte;
   if (legacy?.sourcePartId && legacy.enabled !== false) return { sourceId: legacy.sourcePartId, kind: 'legacy' };
   return undefined;

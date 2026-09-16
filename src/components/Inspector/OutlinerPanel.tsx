@@ -197,7 +197,7 @@ export const OutlinerPanel: React.FC = () => {
             <span
               title={matteSource
                 ? `${matteRelationship.kind === 'track' ? 'Track matte' : 'Matte'} source: ${matteSource.name || matteSource.id}`
-                : `${matteRelationship.kind === 'track' ? 'Missing track matte' : 'Missing matte'} source (${matteRelationship.sourceId})`}
+                : `${matteRelationship.kind === 'track' ? 'Missing track matte' : 'Missing matte'} source${matteRelationship.sourceId ? ` (${matteRelationship.sourceId})` : ''}`}
               aria-label={matteSource
                 ? `${matteRelationship.kind === 'track' ? 'Track matte' : 'Matte'} source: ${matteSource.name || matteSource.id}`
                 : matteRelationship.kind === 'track' ? 'Missing track matte source' : 'Missing matte source'}

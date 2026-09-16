@@ -498,13 +498,22 @@ describe('matte — resolveMatteSource', () => {
       .toEqual({ sourceId: 'v2-source', kind: 'track' });
   });
 
-  it('falls back to the legacy matte when Track Matte V2 is disabled or unnamed', () => {
+  it('falls back to the legacy matte only when Track Matte V2 is absent or disabled', () => {
     expect(resolveMatteSource({
       trackMatte: { sourceLayerId: 'v2-source', mode: 'alpha', enabled: false },
       matte: { sourcePartId: 'legacy-source', mode: 'clip' },
     })).toEqual({ sourceId: 'legacy-source', kind: 'legacy' });
-    expect(resolveMatteSource({ trackMatte: { sourceLayerId: '', mode: 'alpha' }, matte: { sourcePartId: 'legacy-source' } }))
+    expect(resolveMatteSource({ matte: { sourcePartId: 'legacy-source', mode: 'clip' } }))
       .toEqual({ sourceId: 'legacy-source', kind: 'legacy' });
+  });
+
+  it('keeps an enabled Track Matte V2 authoritative even when it names no usable source', () => {
+    // The stage selects the V2 record, then applies nothing for the unusable id —
+    // it never falls back to the legacy matte, so the indicator must not either.
+    expect(resolveMatteSource({
+      trackMatte: { sourceLayerId: '', mode: 'alpha', enabled: true },
+      matte: { sourcePartId: 'legacy-source', mode: 'clip' },
+    })).toEqual({ sourceId: '', kind: 'track' });
   });
 
   it('reports nothing for a disabled relationship or a layer without one', () => {

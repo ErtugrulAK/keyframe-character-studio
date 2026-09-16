@@ -28,8 +28,9 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ## Remaining work
 
-- Post-RC roadmap: `docs/KCS_POST_RC_ROADMAP.md`; tasks 1 and 2 are completed, task 3 is the next candidate.
-- Next coding task: direct canvas tangent handles (`feat/canvas-tangent-authoring`), starting with the design contract it needs.
+- Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed.
+- Milestone A (canvas tangent handles) is implemented and validated on `feat/canvas-tangent-authoring` (`c7ae7bc`) but **not merged**: the independent review returned BLOCKED with five concrete items, listed in `reports/progress_108_canvas_tangent_authoring.md`.
+- Milestones B–F are planned only; dependency/workflow/release changes require explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 

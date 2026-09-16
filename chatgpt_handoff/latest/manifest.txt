@@ -1,36 +1,40 @@
-# KCS ChatGPT Upload Manifest — Task 107
+# KCS ChatGPT Upload Manifest — Milestone A / Orchestration
 
 Clean refreshed: YES
-Bundle purpose: Task 107 — track-matte source selection affordance
+Bundle purpose: grouped-roadmap orchestration run — Milestone A (canvas tangent handles) design, implementation, validation, and the blocking review outcome
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current main / origin HEAD: aa37b5d (Task 107 fast-forward merge; later docs commits may be newer)
-Task 107 branch: feat/track-matte-source-picker
-Task 107 commits: 1390acd (feat), ebc4b93, d3775cb, aa37b5d (review fixes and report corrections)
+Current main / origin HEAD: d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72 (unchanged this run)
+Milestones attempted: A (canvas tangent handles)
+Milestones completed and merged this run: none — Milestone A is implemented and validated but the independent review returned BLOCKED
+Branches: feat/canvas-tangent-authoring @ c7ae7bc (unmerged, retained)
+Commits this run (branch only): c7ae7bc `feat: add direct canvas tangent handle authoring`
+Docs commits on main: the orchestrator close-out commit carrying this bundle
+
+Validation summary (branch revision c7ae7bc): full Vitest PASS 105 files / 1,588 tests; focused PASS 3 files / 18 tests; validate:ograf PASS; qa:release PASS (2 Chromium tests); build, TypeScript, lint, git diff --check PASS with only the pre-existing Fast Refresh and Vite chunk-size warnings.
+CI status: main CI green (run 35103238439 at d3aa135); no CI run for the unmerged branch.
+Review status: independent merge-gate review BLOCKED with five items (verification matrix, legacy point normalization, selection model, Escape lifecycle, smooth-handle-at-anchor edge).
+
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (5):
+Copied files (7):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- progress_107.md — Task 107 report (scope, implementation, three review rounds, validation, UI verification)
-- NEXT_SESSION.md — current state plus the next scoped task
-- PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
+- progress_108_canvas_tangent_authoring.md — orchestration + Milestone A report
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — milestone map, gates, next prompt
+- KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — approved design contract (revision 3)
+- NEXT_SESSION.md — current state and next action
+- PROJECT_STATE.md — project state, validation, handoff policy
 
 Omitted categories:
-- Source and test files (they live under src/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
+- Source and test files (they live under src/; flattened test copies break CI)
 - package.json, ci.yml, release-smoke.yml, CHANGELOG.md
-- progress_104.md, progress_105.md, progress_106_handoff_cleanup.md, progress_106b_handoff_policy_ci.md, KCS_POST_RC_ROADMAP.md, KCS_CURRENT_STATE.md, KCS_RELEASE_CANDIDATE_SUMMARY.md, KCS_CI_STATUS.md, PROJECT_README.md
+- progress_104.md … progress_107.md and the current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
-Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`.
-
-Validation at this revision:
-- Focused Vitest: PASS — 4 files / 412 tests
-- Full Vitest: PASS — 103 files / 1,575 tests
-- validate:ograf, qa:release (2 Chromium tests), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
-- Independent review: READY at the merge gate (three rounds; round-2 runtime finding closed with an eight-case parity matrix, round-3 documentation finding closed)
+Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Upload the contents of chatgpt_handoff/latest/ to ChatGPT.

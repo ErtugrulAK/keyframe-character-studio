@@ -35,7 +35,8 @@ Post-merge full Vitest (103 files / 1557 tests), `validate:ograf`, `qa:release` 
 
 ## Next scoped work
 
-1. Read `docs/KCS_POST_RC_ROADMAP.md` and `reports/progress_107.md`.
-2. Next candidate: roadmap item 3, direct canvas tangent handles (`feat/canvas-tangent-authoring`) — start with the design contract it needs (coordinate transforms, topology, selection, undo, keyboard) before coding.
-3. Preserve the tag/draft release and request independent review before merge.
-4. Publish/finalize the GitHub draft only after explicit user instruction.
+1. Read `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md`.
+2. Finish Milestone A on the existing branch `feat/canvas-tangent-authoring` (`c7ae7bc`): close the five review items listed in the report, then run one focused re-review and fast-forward merge if READY.
+3. Milestones B (graph accessibility) and C (export onboarding) follow only after A is merged or explicitly deferred.
+4. Preserve the tag/draft release and request independent review before every merge.
+5. Publish/finalize the GitHub draft only after explicit user instruction.

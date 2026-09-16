@@ -9,6 +9,12 @@
 - Current main documentation may be newer than the tag target; the tag must not move.
 - Accepted warnings remain: hostile filesystem concurrency is unsupported, schema validation is network-dependent, Chromium installation is manual, and existing React/Vite/sqlite warnings are non-blocking.
 
+## Task status
+
+| Priority | Task | Status | Evidence |
+|---|---|---|---|
+| 1 | Export diagnostics remediation UX | Completed | `reports/progress_105.md`; branch `feat/export-diagnostics-ux` |
+
 ## Recommended roadmap
 
 | Priority | Task | Risk | Dependency/order | Validation |
@@ -28,9 +34,9 @@
 
 ## Safest first coding task
 
-**Export diagnostics remediation UX**.
+**Export diagnostics remediation UX** — completed in Task 105 (`reports/progress_105.md`, branch `feat/export-diagnostics-ux`). Roadmap item 2, the track-matte source selection affordance, is the next candidate.
 
-Why first:
+Why it was first:
 
 - Extends the existing diagnostic authority instead of creating a parallel validator.
 - Narrower than import, filesystem, or interchange work.
@@ -38,7 +44,7 @@ Why first:
 - Can preserve package/runtime behavior while changing only user-facing remediation.
 - Clear acceptance boundary: every blocking diagnostic has a stable message, actionable next step, and no false “export succeeded” state.
 
-Suggested branch: `feat/export-diagnostics-ux`.
+Delivered branch: `feat/export-diagnostics-ux`.
 
 ## Task policy
 

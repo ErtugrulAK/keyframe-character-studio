@@ -4,6 +4,8 @@ Clean refreshed: YES
 Bundle purpose: grouped-roadmap orchestration run — Milestone A (canvas tangent handles) design, implementation, validation, and the blocking review outcome
 Bundle scope: minimal and task-specific; this folder is not an archive
 
+One-file upload artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive. If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval.
+
 Current main / origin HEAD: d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72 (unchanged this run)
 Milestones attempted: A (canvas tangent handles)
 Milestones completed and merged this run: none — Milestone A is implemented and validated but the independent review returned BLOCKED

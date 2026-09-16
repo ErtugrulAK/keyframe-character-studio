@@ -29,7 +29,7 @@ Post-merge full Vitest (103 files / 1557 tests), `validate:ograf`, `qa:release` 
 ## ChatGPT handoff policy
 
 - `chatgpt_handoff/latest/` is a per-response, task-specific upload bundle: clean it first, then place only the files that this specific ChatGPT conversation needs.
-- Preferred upload artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`, generated from the bundle plus `latest/OMP_FINAL_RESPONSE.md`; upload that single file unless ChatGPT asks for separate files.
+- Preferred upload artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive. If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval. The default ChatGPT upload is always this one file.
 - Never store flattened source or test copies there. Those copies are separate files, and the ones named `src__*test*` are picked up by the Vitest default include glob, which breaks CI.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset folder, not a handoff dump. Never copy the bundle there unless the user explicitly asks.
 - Omitted files are never deleted from the repository; they simply are not part of the bundle.

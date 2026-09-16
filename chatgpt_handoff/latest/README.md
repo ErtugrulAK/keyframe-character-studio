@@ -2,9 +2,14 @@
 
 Minimal, task-specific bundle for the grouped-roadmap orchestration run that produced Milestone A (canvas tangent handles).
 
-## Preferred upload artifact
+## Preferred upload artifact — regenerated, never appended
 
-Upload `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` instead of these individual files: it merges the OMP final response with every file in this folder into one Markdown document. Use the files in this folder only when ChatGPT explicitly asks for separate files.
+`chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive.
+
+- If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval.
+- The default upload to ChatGPT is always the current one-file artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+
+Use the individual files in this folder only when ChatGPT explicitly asks for separate files.
 
 ## Files
 

@@ -4,11 +4,14 @@
 
 ## 0. Upload Instructions
 
-- This single Markdown file merges the OMP final response and the minimal `chatgpt_handoff/latest/` bundle.
-- Upload this one file to ChatGPT instead of uploading multiple handoff files.
-- Source and test files are intentionally omitted: flattened copies named `src__*test*` matched Vitest’s include glob and broke CI (runs 35094144225, 35095655446).
+- This file is always the latest current handoff.
+- It is overwritten/rebuilt for every new task; the previous file is deleted before writing.
+- It is not an archive.
+- Old task sections are not appended or preserved.
+- It is generated only from `chatgpt_handoff/latest/` plus `latest/OMP_FINAL_RESPONSE.md`.
+- Source and test files are intentionally omitted: flattened copies named `src__*test*` matched Vitest’s include glob and broke CI (runs 35094144225, 35095655446). Quoted policy wording names them but contains no code.
 - `C:Usersertugrul.akDesktopKCS` is the user’s project/asset workspace, not a handoff destination; nothing was copied there.
-- Generated from `chatgpt_handoff/latest/` only; no repository source, test, package, or workflow file is merged into this document. Quoted policy wording mentions `src__*test*` by name but contains no code.
+- If a historical handoff archive is ever needed, it is a separate explicitly named file under `chatgpt_handoff/archive/`, created only after user approval.
 
 ---
 
@@ -101,6 +104,8 @@ Clean refreshed: YES
 Bundle purpose: grouped-roadmap orchestration run — Milestone A (canvas tangent handles) design, implementation, validation, and the blocking review outcome
 Bundle scope: minimal and task-specific; this folder is not an archive
 
+One-file upload artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive. If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval.
+
 Current main / origin HEAD: d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72 (unchanged this run)
 Milestones attempted: A (canvas tangent handles)
 Milestones completed and merged this run: none — Milestone A is implemented and validated but the independent review returned BLOCKED
@@ -145,9 +150,14 @@ Upload the contents of chatgpt_handoff/latest/ to ChatGPT.
 
 Minimal, task-specific bundle for the grouped-roadmap orchestration run that produced Milestone A (canvas tangent handles).
 
-### Preferred upload artifact
+### Preferred upload artifact — regenerated, never appended
 
-Upload `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` instead of these individual files: it merges the OMP final response with every file in this folder into one Markdown document. Use the files in this folder only when ChatGPT explicitly asks for separate files.
+`chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive.
+
+- If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval.
+- The default upload to ChatGPT is always the current one-file artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+
+Use the individual files in this folder only when ChatGPT explicitly asks for separate files.
 
 ### Files
 
@@ -305,7 +315,7 @@ Post-merge full Vitest (103 files / 1557 tests), `validate:ograf`, `qa:release` 
 ### ChatGPT handoff policy
 
 - `chatgpt_handoff/latest/` is a per-response, task-specific upload bundle: clean it first, then place only the files that this specific ChatGPT conversation needs.
-- Preferred upload artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`, generated from the bundle plus `latest/OMP_FINAL_RESPONSE.md`; upload that single file unless ChatGPT asks for separate files.
+- Preferred upload artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive. If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval. The default ChatGPT upload is always this one file.
 - Never store flattened source or test copies there. Those copies are separate files, and the ones named `src__*test*` are picked up by the Vitest default include glob, which breaks CI.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset folder, not a handoff dump. Never copy the bundle there unless the user explicitly asks.
 - Omitted files are never deleted from the repository; they simply are not part of the bundle.
@@ -361,7 +371,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 ### ChatGPT handoff policy
 
 - `chatgpt_handoff/latest/` holds a minimal, task-specific upload bundle, refreshed for each ChatGPT response instead of accumulating context files.
-- `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` merges `latest/OMP_FINAL_RESPONSE.md` and every bundle file into one upload document; prefer it unless ChatGPT asks for separate files.
+- `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive. A historical handoff archive, if ever needed, is a separate explicitly named file under `chatgpt_handoff/archive/` and only after user approval.
 - Flattened source and test copies must not live there: the Vitest default include glob picks up files named `src__*test*`, which failed CI runs `35094144225` and `35095655446`.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination.
 
@@ -610,11 +620,11 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — 15997 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 5344 bytes
-- `NEXT_SESSION.md` — 3458 bytes
+- `NEXT_SESSION.md` — 3844 bytes
 - `OMP_FINAL_RESPONSE.md` — 5496 bytes
-- `PROJECT_STATE.md` — 4564 bytes
-- `README.md` — 2140 bytes
-- `manifest.txt` — 2732 bytes
+- `PROJECT_STATE.md` — 4880 bytes
+- `README.md` — 2633 bytes
+- `manifest.txt` — 3265 bytes
 - `progress_108_canvas_tangent_authoring.md` — 9091 bytes
 
 - Source/test copies present: NO

@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Plus,
   ChevronDown,
+  HelpCircle,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -19,10 +20,12 @@ import {
   describeOGrafPackageWriteFailure,
   getOGrafExportRemediationReport,
   sanitizeOGrafDiagnosticText,
+  summarizeOGrafExportReadiness,
   type OGrafDiagnosticRemediation,
 } from '../../ograf/diagnostics';
 import type { OGrafExportDiagnostic } from '../../ograf/types';
 import type { ToastOptions } from '../../hooks/useToast';
+import { FirstExportGuide } from './FirstExportGuide';
 import type { SceneData } from '../../types/composition';
 import './HeaderBar.css';
 
@@ -98,8 +101,53 @@ export const HeaderBar: React.FC = () => {
   const [editingTmplName, setEditingTmplName] = useState<string>('');
   const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<{ id: string; name: string } | null>(null);
   const [isOGrafExporting, setIsOGrafExporting] = useState<boolean>(false);
+  const [isFirstExportGuideOpen, setIsFirstExportGuideOpen] = useState<boolean>(false);
+  const [isCheckingOGrafReadiness, setIsCheckingOGrafReadiness] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
+
+  /**
+   * The one OGraf compile path: the package export, the legacy single-file
+   * export, and the first-export readiness check all compile the current scene
+   * through it, so the check can never disagree with the export.
+   */
+  const compileOGrafPlan = async () => {
+    const sceneData = JSON.parse(exportProject()) as SceneData;
+    const preparation = prepareLegacyOGrafExport(sceneData);
+    const prepared = preparation instanceof Promise ? await preparation : preparation;
+    return compileOGrafPackage(prepared.sceneData, prepared.options);
+  };
+
+  const handleCheckOGrafReadiness = async () => {
+    if (isCheckingOGrafReadiness) return;
+    setIsCheckingOGrafReadiness(true);
+    try {
+      const plan = await compileOGrafPlan();
+      const readiness = summarizeOGrafExportReadiness(plan.diagnostics, sanitizeOGrafDownloadName(plan.manifest.name));
+      showToast(readiness.message, readiness.status === 'blocked' ? 'error' : readiness.status === 'warnings' ? 'info' : 'success', {
+        title: readiness.title,
+        action: readiness.action,
+        durationMs: readiness.status === 'blocked' ? OGRAF_BLOCKING_TOAST_DURATION_MS : OGRAF_WARNING_TOAST_DURATION_MS,
+      });
+    } catch (error) {
+      const remediation = describeOGrafPackageWriteFailure(error);
+      if (remediation) {
+        showToast(remediation.message, 'error', {
+          title: remediationLabel(remediation),
+          action: remediation.action,
+          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
+        });
+      } else {
+        const message = error instanceof Error ? error.message : 'Unexpected OGraf export failure.';
+        showToast(`Could not check OGraf export: ${sanitizeOGrafDiagnosticText(message)}`, 'error', {
+          action: OGRAF_UNCLASSIFIED_FAILURE_ACTION,
+          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
+        });
+      }
+    } finally {
+      setIsCheckingOGrafReadiness(false);
+    }
+  };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [timeAgoStr, setTimeAgoStr] = useState<string>('Not saved yet');
@@ -137,10 +185,7 @@ export const HeaderBar: React.FC = () => {
     if (isOGrafExporting) return;
     setIsOGrafExporting(true);
     try {
-      const sceneData = JSON.parse(exportProject()) as SceneData;
-      const preparation = prepareLegacyOGrafExport(sceneData);
-      const prepared = preparation instanceof Promise ? await preparation : preparation;
-      const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
+      const plan = await compileOGrafPlan();
       if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
 
       const archive = await createOGrafBrowserZip(plan);
@@ -177,10 +222,7 @@ export const HeaderBar: React.FC = () => {
     if (isOGrafExporting) return;
     setIsOGrafExporting(true);
     try {
-      const sceneData = JSON.parse(exportProject()) as SceneData;
-      const preparation = prepareLegacyOGrafExport(sceneData);
-      const prepared = preparation instanceof Promise ? await preparation : preparation;
-      const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
+      const plan = await compileOGrafPlan();
       if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
       const runtime = plan.files.find((file) => file.kind === 'runtime' && file.content !== undefined);
       if (!runtime?.content) throw new Error('Generated OGraf runtime is unavailable.');
@@ -457,6 +499,27 @@ export const HeaderBar: React.FC = () => {
                 >
                   OGraf Single File (Legacy)
                 </button>
+              </div>
+            )}
+          </div>
+
+          <div style={{ position: 'relative' }}>
+            <button
+              className="header-action-btn"
+              onClick={() => setIsFirstExportGuideOpen((open) => !open)}
+              aria-expanded={isFirstExportGuideOpen}
+              aria-controls="first-export-guide"
+              aria-label="First export help"
+              title="First export help"
+            >
+              <HelpCircle size={14} />
+            </button>
+            {isFirstExportGuideOpen && (
+              <div id="first-export-guide">
+                <FirstExportGuide
+                  onCheckReadiness={() => { void handleCheckOGrafReadiness(); }}
+                  isChecking={isCheckingOGrafReadiness}
+                />
               </div>
             )}
           </div>

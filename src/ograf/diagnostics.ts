@@ -228,6 +228,62 @@ export function getOGrafExportRemediationReport(diagnostics: OGrafExportDiagnost
 }
 
 /**
+ * Pre-flight answer for the first-export guidance: what the existing diagnostics
+ * authority already says about the current scene, expressed as one user-facing
+ * status. This reads the same report the export handlers use, so the check and
+ * the export can never disagree, and it never implies that a package was written.
+ */
+export interface OGrafExportReadiness {
+  status: 'ready' | 'warnings' | 'blocked';
+  /** Stable short title, same shape as a diagnostic title. */
+  title: string;
+  message: string;
+  action: string;
+  /** The blocking finding the user has to fix first, when there is one. */
+  blocking?: OGrafDiagnosticRemediation;
+}
+
+/** Copy for the readiness check. The package name is shown, never claimed as written. */
+const OGRAF_READINESS_ACTION = 'Choose "OGraf Package" in the Export menu to write the archive.';
+
+export function summarizeOGrafExportReadiness(
+  diagnostics: OGrafExportDiagnostic[],
+  /** Already sanitized archive base name (no extension); the caller owns that authority. */
+  packageBaseName?: string,
+): OGrafExportReadiness {
+  const report = getOGrafExportRemediationReport(diagnostics);
+  // Same naming rule as the ZIP writer in ./browserZip: <sanitized name>-ograf.zip.
+  const target = packageBaseName ? `${packageBaseName}-ograf.zip` : 'the -ograf.zip archive';
+
+  if (report.hasBlocking) {
+    const blocking = report.blocking[0];
+    return {
+      status: 'blocked',
+      title: `Export blocked: ${blocking.title}`,
+      message: blocking.context ? `${blocking.context}: ${blocking.message}` : blocking.message,
+      action: blocking.action,
+      blocking,
+    };
+  }
+
+  if (report.warnings.length > 0) {
+    return {
+      status: 'warnings',
+      title: `Ready to export with ${report.warnings.length} warning${report.warnings.length === 1 ? '' : 's'}`,
+      message: `No blocking problem was found. Exporting writes ${target}; warnings do not block the package.`,
+      action: OGRAF_READINESS_ACTION,
+    };
+  }
+
+  return {
+    status: 'ready',
+    title: 'Ready to export',
+    message: `No blocking problem was found. Exporting writes ${target} with the generated runtime.`,
+    action: OGRAF_READINESS_ACTION,
+  };
+}
+
+/**
  * Returns a display-safe path: machine-absolute paths are reduced to their final
  * segment, package-relative paths are kept as authored.
  */

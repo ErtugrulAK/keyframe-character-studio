@@ -27,8 +27,8 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. Start **Milestone C — first export / onboarding flow (roadmap item 5)** — the current next action; Milestone B is merged (see below). Read `reports/progress_109_graph_accessibility_start.md`, then `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md` for the Milestone A precedents. Implementation briefly: keyboard reachability and screen-reader labelling for the graph/path editing surfaces that already exist (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections). No graph-engine rewrite, no broad style churn, reuse the existing graph/value/channel authorities; focused a11y tests + one Playwright smoke + full validation + independent review; stop if the work grows beyond narrow UI/accessibility.
-2. Milestone C (first export / onboarding flow) follows only after B, and D–F stay plan-only; dependency, workflow, and release changes need explicit approval.
+1. Start **Milestone C — first export / onboarding flow (roadmap item 5)** — the current next action. Read `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, then `reports/progress_109_graph_accessibility.md` and `reports/progress_108_canvas_tangent_authoring.md` for the merged-milestone precedents. Scope: a short first-successful-OGraf-export path for new users, reusing the Task 105 export diagnostics, the existing export UI, and the existing templates; no host/vendor contract invention, no OGraf package format change, no new dependency, and no package/workflow/release change. Recommended branch: `feat/export-onboarding`.
+2. Milestones D–F stay plan-only; **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work, and all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
 

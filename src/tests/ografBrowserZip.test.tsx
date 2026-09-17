@@ -262,7 +262,9 @@ describe('HeaderBar OGraf export integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
-    expect(createZipMock).toHaveBeenCalledTimes(1);
+    // The shared compile path is awaited, so the writer runs on the next
+    // microtask; the contract under test is "exactly once", not synchronicity.
+    await waitFor(() => expect(createZipMock).toHaveBeenCalledTimes(1));
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     const menuItem = screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }) as HTMLButtonElement;

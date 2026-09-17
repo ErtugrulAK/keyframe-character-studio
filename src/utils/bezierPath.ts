@@ -261,6 +261,15 @@ export const initializeSmoothHandles = (path: BezierPath, index: number): Bezier
   const mirroredIn = vertex.handleOut ? { x: 2 * vertex.x - vertex.handleOut.x, y: 2 * vertex.y - vertex.handleOut.y } : undefined;
   const mirroredOut = vertex.handleIn ? { x: 2 * vertex.x - vertex.handleIn.x, y: 2 * vertex.y - vertex.handleIn.y } : undefined;
 
+  // A vertex that is itself not finite cannot anchor a computed handle: the
+  // vertex keeps its existing handles and gains no new ones.
+  if (!Number.isFinite(vertex.x) || !Number.isFinite(vertex.y)) {
+    return {
+      ...path,
+      points: points.map((point, pointIndex) => (pointIndex === index ? { ...point, kind: 'smooth' } : point)),
+    };
+  }
+
   // First finite candidate wins; when even the reach cannot be represented at
   // this coordinate magnitude the handle degenerates onto the vertex.
   const pickHandle = (...candidates: (PathPoint | undefined)[]): PathPoint => {

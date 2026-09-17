@@ -129,4 +129,21 @@ describe('initializeSmoothHandles', () => {
     expect(Number.isFinite(vertex.handleOut!.y)).toBe(true);
     expect(second.points[1]).toEqual(vertex);
   });
+  it('writes no computed handles for a vertex that is itself not finite', () => {
+    const path = createBezierPath([{ x: Infinity, y: 0 }, { x: 0, y: 0 }], 'local', false);
+
+    const vertex = initializeSmoothHandles(path, 0).points[0];
+    expect(vertex.kind).toBe('smooth');
+    expect(vertex.handleIn).toBeUndefined();
+    expect(vertex.handleOut).toBeUndefined();
+  });
+
+  it('keeps the existing handles of a vertex that is itself not finite', () => {
+    const path = createBezierPath([{ x: Infinity, y: 0 }, { x: 0, y: 0 }], 'local', false);
+    path.points[0] = { ...path.points[0], handleOut: { x: 5, y: 0 } };
+
+    const vertex = initializeSmoothHandles(path, 0).points[0];
+    expect(vertex.handleOut).toEqual({ x: 5, y: 0 });
+    expect(vertex.handleIn).toBeUndefined();
+  });
 });

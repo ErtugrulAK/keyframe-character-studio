@@ -17,6 +17,7 @@ const VERTEX_SELECTED_FILL = '#38bdf8';
 const VERTEX_LABEL_FILL = '#7dd3fc';
 const VERTEX_SELECTED_LABEL_FILL = '#0f172a';
 const HANDLE_FILL = '#facc15';
+const HANDLE_SELECTED_FILL = '#f97316';
 
 type HandleKind = 'in' | 'out';
 const HANDLE_KEY: Record<HandleKind, 'handleIn' | 'handleOut'> = { in: 'handleIn', out: 'handleOut' };
@@ -41,6 +42,9 @@ export interface FreeformTangentOverlayProps {
   outputOrigin?: CoordinatePoint;
 }
 
+/** Below this length a dragged handle vector is treated as zero. */
+const HANDLE_VECTOR_EPSILON = 1e-6;
+
 /** Moves one handle, keeping the counterpart mirrored for smooth vertices. */
 const withMovedHandle = (
   vertex: BezierVertex,
@@ -49,17 +53,22 @@ const withMovedHandle = (
 ): BezierVertex => {
   if (vertex.kind !== 'smooth') return { ...vertex, [HANDLE_KEY[handle]]: next };
 
-  const counterpart = vertex[HANDLE_KEY[handle === 'out' ? 'in' : 'out']];
+  const counterpartKey = HANDLE_KEY[handle === 'out' ? 'in' : 'out'];
+  const counterpart = vertex[counterpartKey];
   if (!counterpart) return { ...vertex, [HANDLE_KEY[handle]]: next };
 
   const dx = handle === 'out' ? next.x - vertex.x : vertex.x - next.x;
   const dy = handle === 'out' ? next.y - vertex.y : vertex.y - next.y;
-  const length = Math.hypot(dx, dy) || 1;
+  const length = Math.hypot(dx, dy);
+  // A handle dragged exactly onto its anchor carries no direction, so the
+  // counterpart keeps its own length and direction instead of collapsing.
+  if (length <= HANDLE_VECTOR_EPSILON) return { ...vertex, [HANDLE_KEY[handle]]: next };
+
   const counterpartLength = Math.hypot(counterpart.x - vertex.x, counterpart.y - vertex.y);
   const mirrored = handle === 'out'
     ? { x: vertex.x - (dx / length) * counterpartLength, y: vertex.y - (dy / length) * counterpartLength }
     : { x: vertex.x + (dx / length) * counterpartLength, y: vertex.y + (dy / length) * counterpartLength };
-  return { ...vertex, [HANDLE_KEY[handle]]: next, [HANDLE_KEY[handle === 'out' ? 'in' : 'out']]: mirrored };
+  return { ...vertex, [HANDLE_KEY[handle]]: next, [counterpartKey]: mirrored };
 };
 
 /**
@@ -81,8 +90,57 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
 }) => {
   const path = resolveFreeformPath(part);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedHandle, setSelectedHandle] = useState<HandleKind | null>(null);
+  const [isDraggingHandle, setIsDraggingHandle] = useState<boolean>(false);
+  const [pendingCancel, setPendingCancel] = useState<boolean>(false);
   const dragRef = useRef<DragState | null>(null);
-  const pendingCancelRef = useRef<boolean>(false);
+  const partIdRef = useRef<string>(part.id);
+  const vertexCount = path?.points.length ?? 0;
+
+  // The overlay owns a selection only for the layer it is showing: switching
+  // layer or losing a vertex resets it instead of carrying a stale index over.
+  useEffect(() => {
+    if (partIdRef.current === part.id && selectedIndex !== null && selectedIndex >= vertexCount) {
+      setSelectedIndex(null);
+      setSelectedHandle(null);
+      return;
+    }
+    if (partIdRef.current !== part.id) {
+      partIdRef.current = part.id;
+      setSelectedIndex(null);
+      setSelectedHandle(null);
+    }
+  }, [part.id, selectedIndex, vertexCount]);
+
+  // Escape cancels an in-flight drag. The rollback is written first and the batch
+  // is closed by the effect below once the write has committed, so history never
+  // captures the mid-drag snapshot — including a drag that never moved.
+  useEffect(() => {
+    if (!isDraggingHandle) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      const drag = dragRef.current;
+      if (!drag || event.key !== 'Escape') return;
+      event.preventDefault();
+      dragRef.current = null;
+      setIsDraggingHandle(false);
+      setPendingCancel(true);
+      onPathChange(drag.initialPath);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [isDraggingHandle, onPathChange]);
+
+  useEffect(() => {
+    if (!pendingCancel) return;
+    setPendingCancel(false);
+    onBatchEnd();
+  }, [pendingCancel, onBatchEnd]);
+
+  useEffect(() => () => {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    onBatchEnd();
+  }, [onBatchEnd]);
 
   const worldTransform = {
     x: transform.x,
@@ -104,34 +162,6 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     transform.rotation,
   );
 
-  // Escape cancels an in-flight drag. The rollback is written first; the batch is
-  // closed by the effect below, after the rollback has been committed, so history
-  // never captures the mid-drag snapshot.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const drag = dragRef.current;
-      if (!drag || event.key !== 'Escape') return;
-      event.preventDefault();
-      dragRef.current = null;
-      pendingCancelRef.current = true;
-      onPathChange(drag.initialPath);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [onPathChange]);
-
-  useEffect(() => {
-    if (!pendingCancelRef.current) return;
-    pendingCancelRef.current = false;
-    onBatchEnd();
-  }, [path, onBatchEnd]);
-
-  useEffect(() => () => {
-    if (!dragRef.current) return;
-    dragRef.current = null;
-    onBatchEnd();
-  }, [onBatchEnd]);
-
   if (!path || path.points.length < 2) return null;
 
   const vertices = worldOf(path.points);
@@ -141,6 +171,9 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     const { svgX, svgY } = toWorld(event.clientX, event.clientY);
     dragRef.current = { handle, index, initialPath: path, startLocal: toLocal({ x: svgX, y: svgY }) };
     (event.currentTarget as Element).setPointerCapture?.(event.pointerId);
+    setSelectedIndex(index);
+    setSelectedHandle(handle);
+    setIsDraggingHandle(true);
     onBatchStart();
   };
 
@@ -169,6 +202,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     event.stopPropagation();
     (event.currentTarget as Element).releasePointerCapture?.(event.pointerId);
     dragRef.current = null;
+    setIsDraggingHandle(false);
     onBatchEnd();
   };
 
@@ -194,6 +228,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     if (!source) return null;
     const world = worldOf([source])[0];
     if (!world) return null;
+    const isSelectedHandle = selectedHandle === handle;
     return (
       <g key={`handle-${handle}-${index}`}>
         <line
@@ -207,6 +242,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
         />
         <circle
           data-testid={`freeform-tangent-handle-${handle}`}
+          data-selected={isSelectedHandle}
           cx={world.x}
           cy={world.y}
           r={HANDLE_HIT_RADIUS * zScale}
@@ -221,7 +257,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
           cx={world.x}
           cy={world.y}
           r={HANDLE_RADIUS * zScale}
-          fill={HANDLE_FILL}
+          fill={isSelectedHandle ? HANDLE_SELECTED_FILL : HANDLE_FILL}
           stroke={VERTEX_FILL}
           strokeWidth={MARKER_STROKE * zScale}
           pointerEvents="none"
@@ -249,6 +285,7 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
               style={{ cursor: 'pointer' }}
               onPointerDown={(event) => {
                 event.stopPropagation();
+                setSelectedHandle(null);
                 selectVertex(index);
               }}
               onDoubleClick={(event) => toggleKind(event, index)}

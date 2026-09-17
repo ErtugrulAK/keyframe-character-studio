@@ -5,12 +5,13 @@ import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { clientToSVGPoint, clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
-import { buildFreeformPath, normalizeFreeformPoints, resolveFreeformPath } from '../../utils/freeform';
+import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
 import { worldToContainerLocal } from '../../utils/containerMath';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
+import { isFreeformTangentOverlayEligible } from '../../utils/freeformTangentEligibility';
 import { ShapeCreationPreview } from './ShapeCreationPreview';
 import { SelectionGizmo } from './SelectionGizmo';
 import { StagePartLayers } from './StagePartLayers';
@@ -956,36 +957,30 @@ export const StageCanvas: React.FC = () => {
               )}
 
               {/* Direct tangent-handle authoring for the selected freeform layer */}
-              {appMode !== 'broadcast' &&
-                activeTool === 'select' &&
-                !isDragging &&
-                selectedPartIds.length === 1 &&
-                selectedPart?.type === 'custom_freeform' &&
-                !selectedPart.booleanOperation &&
-                !selectedPart.booleanOperandIds?.length &&
-                !selectedPart.booleanGroupId &&
-                tracks.find((track) => track.partId === selectedPart.id)?.editVisible !== false &&
-                selectedPart.trimPathEnabled !== true &&
-                selectedTransform &&
-                selectedTransform.scaleX !== 0 &&
-                selectedTransform.scaleY !== 0 &&
-                resolveFreeformPath(selectedPart)?.coordinateSpace === 'local' &&
-                (resolveFreeformPath(selectedPart)?.points.length ?? 0) >= 2 && (
-                  <FreeformTangentOverlay
-                    part={selectedPart}
-                    transform={selectedTransform}
-                    zScale={zScale}
-                    toWorld={clientToSVG}
-                    outputOrigin={EDITOR_CAMERA_CENTER}
-                    onPathChange={(nextPath) => {
-                      setCharacterParts((previous) => previous.map((part) => (
-                        part.id === selectedPart.id ? { ...part, path: nextPath } : part
-                      )));
-                    }}
-                    onBatchStart={startBatchInteraction}
-                    onBatchEnd={endBatchInteraction}
-                  />
-                )}
+              {selectedPart && selectedTransform && isFreeformTangentOverlayEligible({
+                appMode,
+                activeTool,
+                selectedPartIds,
+                selectedPart,
+                selectedTransform,
+                tracks,
+                isDragging,
+              }) && (
+                <FreeformTangentOverlay
+                  part={selectedPart}
+                  transform={selectedTransform}
+                  zScale={zScale}
+                  toWorld={clientToSVG}
+                  outputOrigin={EDITOR_CAMERA_CENTER}
+                  onPathChange={(nextPath) => {
+                    setCharacterParts((previous) => previous.map((part) => (
+                      part.id === selectedPart.id ? { ...part, path: nextPath } : part
+                    )));
+                  }}
+                  onBatchStart={startBatchInteraction}
+                  onBatchEnd={endBatchInteraction}
+                />
+              )}
             </>
           );
         })()}

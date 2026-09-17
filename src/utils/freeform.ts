@@ -7,9 +7,10 @@ import { buildBezierPathD, createBezierPath, legacyFreeformPointsToPath } from '
  */
 
 /** The path a freeform layer actually renders: the canonical path when it exists,
- *  otherwise the legacy points converted to a local closed path. */
+ *  otherwise the legacy points normalized and converted to a local closed path
+ *  (a repeated closing vertex is dropped, exactly like the render branch does). */
 export const resolveFreeformPath = (part: { path?: BezierPath; points?: FreeformPoint[] }): BezierPath | undefined =>
-  part.path ?? legacyFreeformPointsToPath(part.points, true);
+  part.path ?? legacyFreeformPointsToPath(normalizeClosedPoints(part.points ?? []), true);
 
 export const MIN_FREEFORM_POINTS = 3;
 

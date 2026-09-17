@@ -41,7 +41,8 @@ Rules:
 
 ## 4. Path representation, materialization, and byte expectations
 
-- The overlay edits the **effective path**: `part.path ?? legacyFreeformPointsToPath(normalizeClosedPoints(part.points), true)`.
+- The overlay edits the **effective path**: `part.path ?? legacyFreeformPointsToPath(normalizeClosedPoints(part.points ?? []), true)`.
+- **Legacy normalization.** For a points-only layer the legacy array is normalized before conversion, so a repeated closing vertex (within `1e-6`) becomes a single vertex instead of a degenerate one. If normalization leaves fewer than two points the effective path is `undefined` and the overlay stays hidden. The canvas and OGraf render branches are **not** changed by this milestone: they still draw `part.path ?? legacyFreeformPointsToPath(part.points)` without normalization, so a points-only layer that carries a duplicate closing vertex is drawn with a zero-length closing edge while the overlay edits the normalized topology. The two shapes are visually identical; after the first handle edit the layer has a canonical (normalized) path, so its `d` string changes once. Canonical-path layers are unaffected and byte-identical.
 - **Clone-on-write invariant:** if `part.path` exists, every write clones that path and changes only the dragged handle. Legacy `points` are never rebuilt into `path` while a canonical path exists — doing so with raw legacy points would discard curves and produce a visible geometry jump and export change.
 - **Materialization** happens only when `part.path === undefined`: the first handle edit materializes the canonical path from `legacyFreeformPointsToPath(normalizeClosedPoints(part.points), true)` — that helper always yields `coordinateSpace: 'local'` and `closed: true`, which is exactly what the renderer already draws today. `CharacterPart` has no `closed` field of its own; an existing canonical path keeps its own `closed` and `coordinateSpace` values untouched. `part.points` is preserved unchanged.
 - **Data expectations:** after the first write the scene JSON gains a `path` field and the rendered SVG/OGraf output legitimately changes when handles change. Byte-identical output is only claimed for layers whose canonical path is left untouched.
@@ -51,6 +52,7 @@ Rules:
 
 - Dragging `handleOut` writes only `handleOut`; dragging `handleIn` writes only `handleIn`. The other handle, the vertex position, and the vertex `id` are untouched by a handle drag.
 - `smooth` vertices keep mirrored handles: dragging one handle mirrors the other around the vertex with the opposite direction and the other handle's existing length.
+- **Zero-length drag vector.** If the dragged handle sits on its anchor (vector length `<= 1e-6`) it carries no direction, so the counterpart is left **unchanged** rather than mirrored from a fabricated unit vector; the dragged handle is still written. This keeps the counterpart non-zero, deterministic, and free of `NaN`/`Infinity` (the initializer in §8 always produces a non-zero reach for a multi-vertex path, so a fresh smooth vertex can never start from this state).
 - `corner` vertices (and vertices whose `kind` is absent, treated as `corner`) move only the dragged handle.
 - A handle is never created implicitly by a drag; creation is the explicit smooth action in §7.
 
@@ -75,12 +77,15 @@ The overlay renders only when **all** of these hold:
 - `trimPathEnabled !== true` (trim length is computed from legacy `points`, so a curve-edited path would render a mismatched trim);
 - `scaleX` and `scaleY` are non-zero.
 
+This list lives in one pure predicate, `isFreeformTangentOverlayEligible` (`src/utils/freeformTangentEligibility.ts`). `StageCanvas` forwards its existing state into that helper and renders the overlay on the result; the guard matrix is unit-tested row by row, so the runtime condition and the tests cannot drift apart.
+
 Normal `parentId` children are supported, because `getComputedTransform` already composes the parent chain.
 
-Selection state is overlay-local: `selectedVertexIndex` and `selectedHandle: 'in' | 'out' | null`.
+Selection state is overlay-local: `selectedIndex: number | null` and `selectedHandle: 'in' | 'out' | null`.
 
-- Vertex markers are always drawn for an eligible layer; handles (and their lines to the vertex) are drawn only for the selected vertex.
-- Clicking a vertex selects it and clears the handle selection. Clicking empty canvas clears the overlay selection only.
+- Vertex markers are always drawn for an eligible layer; handles (and their lines to the vertex) are drawn only for the selected vertex, with the selected handle rendered in the highlight colour and exposed as `data-selected`.
+- Clicking a vertex selects that vertex and clears the handle selection. Clicking a handle selects the handle (and the vertex it belongs to).
+- **Empty canvas:** the stage's own pointer-down on empty canvas clears the app layer selection, exactly as before this milestone. That unmounts the overlay, so the overlay needs no separate empty-canvas handler and does **not** deselect the layer by itself. The overlay drops its own selection when the shown part changes (another layer selected) or when the selected vertex index no longer exists after a topology change.
 - Double-clicking a vertex toggles `corner ↔ smooth`. Switching to `smooth` materializes missing handles through the deterministic initializer in §8; switching to `corner` keeps existing handle positions and only changes `kind`.
 - Multi-vertex selection is out of scope.
 
@@ -104,14 +109,14 @@ Selection state is overlay-local: `selectedVertexIndex` and `selectedHandle: 'in
 - Markers are sized in screen units through the existing pattern: radius `7 * zScale` like today's markers, with a larger grab radius (`~9 * zScale`). `zScale` is the same value passed to `SelectionGizmo`.
 - The overlay group renders **after** the artboard/border layers and **above** the transform gizmo so handles win the pointer over the gizmo's and the matte hit area's transparent regions. Pointer handlers stop propagation so a handle drag never starts a translate/rotate/scale/marquee interaction.
 - Pointer capture is taken on `pointerdown` and released on `pointerup`/`pointercancel`, so a drag that leaves the marker keeps tracking and ends deterministically.
-- The overlay owns no global keyboard shortcut. Only while a drag is active does it listen for `Escape` to cancel; that listener is removed when the drag ends. `v1` has **no** arrow-key nudging.
+- The overlay owns no global keyboard shortcut. Its `keydown` listener for `Escape` is registered in an effect that runs **only while a drag is in flight** and is removed as soon as the drag ends (commit or cancel), so an idle overlay never consumes `Escape` and the stage's own `Escape` handling is untouched. `v1` has **no** arrow-key nudging.
 
 ## 10. Drag lifecycle and undo
 
 - `pointerdown` on a handle: `startBatchInteraction()`, remember the initial path and the local start point in a ref, enter drag mode.
 - `pointermove`: compute the local delta per §3 from the initial path, write the new path through `setCharacterParts` (each live move updates only the selected part's `path`).
 - `pointerup`: `endBatchInteraction()`. `pointercancel` behaves the same way — the drag commits its last written value, exactly like `StageCanvas.handlePointerCancel` already does for the transform drags.
-- **Escape during an active drag** is the only rollback path, and it is ordered so that history cannot capture a mid-drag snapshot: set `pendingCancelRef`, write the initial path back through `setCharacterParts`, clear the drag mode, and let a **post-commit effect** call `endBatchInteraction()` once and clear the flag. `useHistory.endBatchInteraction` reads `characterPartsRef.current`, which only syncs on render, so ending the batch inside the same handler could commit the mid-drag value — the effect runs after the rollback has been committed, which makes the batch's start and end snapshots identical and therefore records no entry.
+- **Escape during an active drag** is the only rollback path, and it is ordered so that history cannot capture a mid-drag snapshot: clear the drag ref, leave drag mode, set the `pendingCancel` **state**, and write the initial path back through `setCharacterParts`; the **post-commit effect** keyed on `pendingCancel` then calls `endBatchInteraction()` once and clears the flag. A state flag (not the path value) drives the effect, so a cancelling `pointerdown` that never moved — where the path never changes — still closes the batch. `useHistory.endBatchInteraction` reads `characterPartsRef.current`, which only syncs on render, so ending the batch inside the same handler could commit the mid-drag value — the effect runs after the rollback has been committed, which makes the batch's start and end snapshots identical and therefore records no entry.
 - Because rollback is triggered by a keyboard event and not by a pointer event, no global `mouseup` can end the batch before the rollback commits. `endBatchInteraction` is idempotent, so a later stray end is a no-op.
 - Result: one history entry per completed drag; a cancelled drag leaves no entry and restores the previous handles.
 
@@ -124,14 +129,19 @@ Selection state is overlay-local: `selectedVertexIndex` and `selectedHandle: 'in
 
 ## 12. Tests
 
-- **Unit (`bezierPath`)**: the §8 initializer for regular rings, closed/open paths, two-point paths, coincident neighbours, and partial-smooth vertices; mirroring preserves the counterpart length.
-- **Unit (overlay geometry)**: absolute inverse-map delta under rotation, non-uniform scale, and negative scale with the real `outputOrigin`; the resulting handle lands exactly where the pointer is.
-- **Component (overlay)**: markers render only for an eligible freeform layer; handles appear only for the selected vertex; a drag writes a single `path` value whose other vertices are byte-identical; Escape rolls back; double-click toggles corner/smooth and creates mirrored handles.
-- **Guards**: boolean owner, boolean operand, edit-hidden layer, non-select tool, broadcast mode, active drag, normalized-space path, trim-enabled layer, and zero-scale transform all render no overlay.
-- **Materialization**: points-only layer gains a `local` path on first edit with unchanged anchors; a layer that already has both `path` and `points` keeps its canonical path (no legacy rebuild); a path-only layer round-trips unchanged until edited.
-- **History**: one entry per drag, undo restores the previous handles, redo reapplies, cancelled drag adds no entry.
-- **Serialization/export**: the materialized path survives `exportProject`/import; an untouched canonical freeform path still produces byte-identical OGraf SVG.
-- **Manual smoke**: drag a handle in the running editor, confirm live rendering, undo, and that gizmo/marquee/shape tools still work.
+Implemented coverage (file → focus):
+
+| File | Tests | Focus |
+|---|---|---|
+| `src/tests/freeformTangentEligibility.test.ts` | 23 | every guard of §7 row by row, canonical-path priority, negative/non-uniform scale, unrelated-track control |
+| `src/tests/freeformTangentPersistence.test.ts` | 6 | legacy normalization (repeated closing vertex, `<2` points), canonical pass-through with identical `d`, no mutation of `part.points`, materialized path through the import sanitizer |
+| `src/tests/freeformTangentOverlay.test.tsx` | 19 | §3 coordinate parity under identity/rotation/non-uniform/negative scale with the real `EDITOR_CAMERA_CENTER`; marker/handle visibility; untouched neighbouring vertex; smooth mirroring and the zero-length drag vector; Escape with and without a move; `pointercancel`; selection model incl. layer switch and topology shrink; canonical priority; points-only materialization |
+| `src/tests/freeformTangentHistory.test.tsx` | 3 | real `useHistory`: one entry per drag, undo/redo, no entry for Escape, `pointerdown`+Escape with no move, `pointercancel` commit |
+| `src/tests/bezierTangentHandles.test.ts` | 7 | §8 initializer (rings, open/closed, coincident neighbours, partial smooth, mirroring length) |
+
+Manual/runtime evidence: a throwaway Playwright smoke against the running editor (markers, live drag with 1:1 pointer tracking, `Ctrl+Z`/`Ctrl+Shift+Z`, `Escape` cancel with no history entry) plus the existing interaction e2e specs (`canvas-interaction-v1`, `interactive-shape-creation-v1`, `editor-interaction-regressions`).
+
+Not covered by an automated test, only by the pipeline: byte-level OGraf output for a points-only layer that carries a degenerate closing vertex (§4) — the render authorities are unchanged, so their output is out of this milestone's scope.
 
 ## 13. Non-goals
 

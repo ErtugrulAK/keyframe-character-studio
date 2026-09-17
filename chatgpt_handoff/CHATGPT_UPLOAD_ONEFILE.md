@@ -36,7 +36,7 @@ This file is the OMP final response for the Option A warning-maintenance task. I
 | W3 | `src/tests/setup.ts` returns `null` from `HTMLCanvasElement.getContext` (jsdom's own outcome without the log); for download links the click event is still dispatched (listeners and `preventDefault` keep working) while the link temporarily points at a same-document fragment and its href is restored in a `finally` block | full-run `grep -c "Not implemented"`: **0** (was 6: 3 canvas, 3 navigation); `src/tests/setupStubs.test.ts` pins the semantics in 5 cases |
 | W4 | The `[appMode]` viewport effect needs no suppression (refs + stable setters only); the mouse-move callback now reads the later-declared `handleMouseUp` through a latest-ref, so its dependency array is complete | `npm run lint` clean; `npx tsc --noEmit` PASS; pointer paths exercised in a real browser |
 | W5 | New `.gitattributes` (`* text=auto eol=lf` + binary guards) | scripted git runs no longer print the per-file CRLF warning |
-| D9-2 | `scripts/check-state-consistency.mjs` fails an active claim that a roadmap item has not started / has not yet begun / is not implemented yet; four focused cases added to `src/tests/stateConsistencyCheck.test.ts` (three negative — one per variant — and one truthful-state guard) | checker PASS; the new cases pass (file total 29 tests) |
+| D9-2 | `scripts/check-state-consistency.mjs` fails an active claim that a roadmap item has not started / has not yet begun / is not implemented yet; four focused cases added to `src/tests/stateConsistencyCheck.test.ts` (three negative — one per variant — and one truthful-state guard) | checker PASS; the new cases pass (file total 30 tests) |
 | D9-1 | npm 12 blocks `sqlite3`'s install script ("not covered by allowScripts"), so the NAPI prebuild was never extracted; ran the package's own install command inside `node_modules/sqlite3` | `require('sqlite3')` loads; `node server/index.js` serves `GET /api/health` → **200** |
 
 ## 3) VALIDATION
@@ -80,7 +80,7 @@ Clean refreshed: YES
 Bundle purpose: Milestone D item 9, Option A warning maintenance plus the local SQLite binding repair
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/warning-maintenance — one commit on top of main bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4; awaiting independent review and the user's merge decision
+Branch: chore/warning-maintenance — four commits on top of main bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4 (e800fd0 implementation, d19bab6 review fixes, then two documentation-only commits that record the release-gate revision); awaiting the user merge decision
 Implementation report: reports/progress_113_warning_maintenance.md
 Items implemented: W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 dependency arrays, W5 .gitattributes, D9-2 checker rule, D9-1 local binding repair
 Dependencies updated: NO (package.json, package-lock.json and workflows are byte-identical to main)
@@ -290,7 +290,7 @@ Milestones A, B and C are merged into `main`, and Milestone D is the active mile
 - Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.
 - Milestone C — first export / onboarding (`c2dcb22`): opt-in "First export help" panel, readiness check reading the same OGraf diagnostics authority as the export, one shared compile path for readiness and both export actions.
 - Milestone D item 6 — state consistency check (`b91e8b9`, CI follow-up `be76df9`): `node scripts/check-state-consistency.mjs`.
-- Milestone D item 9 — dependency and warning maintenance: **audited on `chore/dependency-warning-audit`, report only** (`reports/progress_112_dependency_warning_audit.md`). Nothing was installed, updated, or rewritten: `package.json`, `package-lock.json`, `.github/workflows/**`, source and tests are untouched. Recorded findings: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; across two toolchain groups / three package names a newer major is available — `typescript` 6→7 and the Vitest pair `vitest` + `@vitest/coverage-v8` 4→5), `npm audit` 7 findings (6 moderate, 1 high; only `qs` and `undici` moderate in the production tree), 7 catalogued warnings, plus D9-1 (the REST API cannot start in this working copy because the NAPI `sqlite3` binding is missing from `node_modules`; the editor is API-independent and was verified live), D9-2 (the state checker does not catch stale item-level status claims) and D9-3 (`@types/node`'s `latest` tag is behind the installed major).
+- Milestone D item 9 — dependency and warning maintenance: **the audit is complete** (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and **the approved Option A is implemented on `chore/warning-maintenance`** (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule, plus the local SQLite binding repair — the API starts again and `GET /api/health` returns 200 in this working copy. `package.json`, `package-lock.json`, `.github/workflows/**` and every dependency version are unchanged. Audit findings that remain open by decision: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; across two toolchain groups / three package names a newer major is available — `typescript` 6→7 and the Vitest pair `vitest` + `@vitest/coverage-v8` 4→5), `npm audit` 7 findings (6 moderate, 1 high; only `qs` and `undici` moderate in the production tree), the `engines` declaration and the npm-12 `allowScripts` pin. The branch is not merged: it is subject to the user merge decision.
 
 The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease exist at the workflow-tested code candidate; nothing was published, finalized, or pushed to npm.
 
@@ -562,11 +562,11 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 8448 bytes
-- `NEXT_SESSION.md` — 8502 bytes
+- `NEXT_SESSION.md` — 8670 bytes
 - `OMP_FINAL_RESPONSE.md` — 5297 bytes
 - `PROJECT_STATE.md` — 11694 bytes
 - `README.md` — 2620 bytes
-- `manifest.txt` — 3537 bytes
+- `manifest.txt` — 3636 bytes
 - `progress_113_warning_maintenance.md` — 11298 bytes
 
 - Source/test copies present: NO

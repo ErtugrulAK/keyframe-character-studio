@@ -4,7 +4,7 @@ Clean refreshed: YES
 Bundle purpose: Milestone D item 9, Option A warning maintenance plus the local SQLite binding repair
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/warning-maintenance — one commit on top of main bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4; awaiting independent review and the user's merge decision
+Branch: chore/warning-maintenance — four commits on top of main bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4 (e800fd0 implementation, d19bab6 review fixes, then two documentation-only commits that record the release-gate revision); awaiting the user merge decision
 Implementation report: reports/progress_113_warning_maintenance.md
 Items implemented: W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 dependency arrays, W5 .gitattributes, D9-2 checker rule, D9-1 local binding repair
 Dependencies updated: NO (package.json, package-lock.json and workflows are byte-identical to main)

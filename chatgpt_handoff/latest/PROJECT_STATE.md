@@ -49,3 +49,10 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - `.omp/config.yml` retains `memory.backend: mnemopi`.
 - Model roles, provider mappings, task concurrency, and global OMP configuration remain unchanged.
 - Candidate package version is `1.1.0-rc.1`; package remains private and unreleased.
+
+## Milestone A status (canvas tangent authoring) — blocker-closing pass
+
+- Branch: `feat/canvas-tangent-authoring` (local-only, not pushed), commits `c7ae7bc` (feature), `0114098` (review blockers), `b3396ec` (non-finite handle math + serializer round-trip proof), `eb1f1a1` (documentation corrections)
+- All five review blockers are closed; validation is green (`npm test` 108 files / 1635 tests, build, TypeScript, lint, `validate:ograf`, `qa:release`, permanent Playwright smoke `e2e/canvas-tangent-authoring.spec.ts`)
+- **Not merged:** `main` advanced with docs-only commits after the branch point, so the branch and `main` have diverged and a fast-forward merge is impossible in either direction. No rebase, no merge commit, and no force push was performed. An explicit decision is required (replay/cherry-pick onto current `main`, or an approved merge/rebase exception).
+- `main` = `origin/main` = `312a0d771123b2b64f9b6f5779f873b439eedab5`, unchanged by this work.

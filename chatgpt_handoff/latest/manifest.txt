@@ -1,22 +1,13 @@
-# KCS ChatGPT Upload Manifest — Milestone A / Orchestration
+# KCS ChatGPT Upload Manifest — Milestone A (Canvas Tangent Authoring)
 
 Clean refreshed: YES
-Bundle purpose: grouped-roadmap orchestration run — Milestone A (canvas tangent handles) design, implementation, validation, and the blocking review outcome
+Bundle purpose: Milestone A (direct canvas tangent handle authoring) — blocker-closing pass
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-One-file upload artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive. If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval.
-
-Current main / origin HEAD: d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72 (unchanged this run)
-Milestones attempted: A (canvas tangent handles)
-Milestones completed and merged this run: none — Milestone A is implemented and validated but the independent review returned BLOCKED
-Branches: feat/canvas-tangent-authoring @ c7ae7bc (unmerged, retained)
-Commits this run (branch only): c7ae7bc `feat: add direct canvas tangent handle authoring`
-Docs commits on main: the orchestrator close-out commit carrying this bundle
-
-Validation summary (branch revision c7ae7bc): full Vitest PASS 105 files / 1,588 tests; focused PASS 3 files / 18 tests; validate:ograf PASS; qa:release PASS (2 Chromium tests); build, TypeScript, lint, git diff --check PASS with only the pre-existing Fast Refresh and Vite chunk-size warnings.
-CI status: main CI green (run 35103238439 at d3aa135); no CI run for the unmerged branch.
-Review status: independent merge-gate review BLOCKED with five items (verification matrix, legacy point normalization, selection model, Escape lifecycle, smooth-handle-at-anchor edge).
-
+Current main / origin HEAD: 312a0d7 (one-file handoff audit; later docs commits may be newer)
+Milestone A branch: feat/canvas-tangent-authoring (local only, no remote counterpart, NOT merged)
+Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027 (final report)
+Ancestry: main and the branch diverged (4 commits each way) — fast-forward merge impossible; no rebase, no merge commit, no force push performed
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -25,19 +16,25 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the OMP terminal response for this task
-- progress_108_canvas_tangent_authoring.md — orchestration + Milestone A report
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — milestone map, gates, next prompt
-- KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — approved design contract (revision 3)
-- NEXT_SESSION.md — current state and next action
-- PROJECT_STATE.md — project state, validation, handoff policy
+- OMP_FINAL_RESPONSE.md — the final task response (blockers, validation, review rounds, merge evidence)
+- progress_108_canvas_tangent_authoring.md — orchestration report plus the blocker-closing pass (verification matrix, validation, review rounds, deviations)
+- KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — design contract, updated where the implementation forced wording
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — grouped roadmap plan with the current Milestone A row
+- NEXT_SESSION.md — repository state and the pending merge decision
+- PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
 Omitted categories:
-- Source and test files (they live under src/; flattened test copies break CI)
-- package.json, ci.yml, release-smoke.yml, CHANGELOG.md
-- progress_104.md … progress_107.md and the current-state/release documents
-- QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
+- Source and test files (they live under src/ and e2e/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
+- package.json, ci.yml, release-smoke.yml, CHANGELOG.md (the milestone is not merged, so there is no released user-facing change to record)
+- older progress reports, current-state/release documents, QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
+
+Validation at this revision:
+- Focused Vitest: PASS — 7 files / 165 tests
+- Full Vitest: PASS — 108 files / 1,641 tests
+- validate:ograf, qa:release (2 Chromium tests), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
+- Real-browser smoke: PASS — e2e/canvas-tangent-authoring.spec.ts (not part of CI or the release gate)
+- Independent review: READY at round 6 (six rounds; round-6 verdict READY with no new defect and no remaining over-claim)
 
 Upload the contents of chatgpt_handoff/latest/ to ChatGPT.

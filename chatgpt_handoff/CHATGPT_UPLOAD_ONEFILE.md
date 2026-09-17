@@ -5,119 +5,118 @@
 ## 0. Upload Instructions
 
 - This file is always the latest current handoff.
-- It is overwritten/rebuilt for every new task; the previous file is deleted before writing.
-- It is not an archive.
-- Old task sections are not appended or preserved.
+- It is overwritten/rebuilt for every task; the previous file is deleted before writing.
+- It is not an archive, and old task sections are never appended or preserved.
 - It is generated only from `chatgpt_handoff/latest/` plus `latest/OMP_FINAL_RESPONSE.md`.
-- Source and test files are intentionally omitted: flattened copies named `src__*test*` matched Vitest's include glob and broke CI (runs 35094144225, 35095655446). Quoted policy wording names them but contains no code.
-- `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination; nothing was copied there. `C:\Users\ertugrul.ak\Desktop\ograf-graphics` is also untouched by this workflow.
 - The repository root is `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`; the bundle folder is `chatgpt_handoff\latest` and this artifact is `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
-- If a historical handoff archive is ever needed, it is a separate explicitly named file under `chatgpt_handoff/archive/`, created only after user approval.
+- `C:\Users\ertugrul.ak\Desktop\KCS` is the user project/asset workspace, not a handoff destination; nothing was copied there.
+- `C:\Users\ertugrul.ak\Desktop\ograf-graphics` is untouched by this workflow.
 
 ---
 
 ## 1. OMP Final Response
 
-## OMP Final Response — Grouped Roadmap Orchestration Run (Milestone A)
+## KCS Milestone A — Final Response (blocker-closing pass)
 
-Task: grouped post-RC roadmap orchestration; Milestone A (canvas tangent handles) design, implementation, validation, review.
-Repo state at that response: `main` = `origin/main` = `449ed83648a752d218956b6bc270acf0a7c45455`; branch `feat/canvas-tangent-authoring` @ `c7ae7bc` (unmerged).
-
----
-
-Orkestratör turu tamamlandı; Milestone A tasarım + uygulama + doğrulama olarak hazır, ancak bağımsız inceleme BLOCKED verdiği için **merge edilmedi**.
+This file is the OMP final response for the Milestone A blocker-closing task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ### 1) OVERALL RESULT
 
-- **Status:** Orkestratör turu tamamlandı; Milestone A uygulandı ama merge edilmedi (review BLOCKED)
-- **Goal review completed?:** Evet
-- **Milestones attempted:** A (Canvas path authoring UX — tangent handles)
-- **Milestones completed (merged):** Yok — A merge kapısını geçemedi
-- **Milestones stopped/skipped ve neden:** A → inceleme BLOCKED (5 madde: doğrulama matrisi, legacy nokta normalizasyonu, §7 seçim modeli, Escape yaşam döngüsü, anchor'a sürüklenen smooth handle kenarı). B/C başlatılmadı (A merge edilmeden zincir ilerletilmedi). D/E/F yalnızca plan (paket/workflow/yüksek risk onay kapısı).
-- **Branches:** `feat/canvas-tangent-authoring` @ `c7ae7bc` (korundu, merge edilmedi)
-- **Commits:** `c7ae7bc` (feature, branch) + `449ed83` (docs, main)
-- **Merge/push:** Merge YOK; docs commit main'e push edildi
-- **Working tree:** Temiz
-- **main == origin/main:** Evet — `449ed83648a752d218956b6bc270acf0a7c45455`
+- **Status:** Milestone A implemented, all five review blockers closed, six review rounds run, **final verdict READY**. **NOT MERGED.**
+- **Branch:** `feat/canvas-tangent-authoring` (local only, no remote counterpart)
+- **Starting branch commit:** `c7ae7bc` (feature)
+- **New commits:** `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216`, `b0e1027`
+- **Review blocker status:** 1 (verification matrix) CLOSED · 2 (legacy normalization) CLOSED · 3 (selection model) CLOSED · 4 (Escape/batch lifecycle) CLOSED · 5 (smooth-handle edge + extreme coordinates) CLOSED
+- **Merge:** **not performed** — fast-forward is impossible in either direction (see §6)
+- **Push:** none (the feature branch has no remote; `main` was not pushed)
+- **`main == origin/main`:** yes, `312a0d771123b2b64f9b6f5779f873b439eedab5`, untouched
+- **Working tree:** clean
 
-### 2) GOAL ASSESSMENT
+### 2) BLOCKERS CLOSED
 
-- **KCS şu an iyi yapabildiği:** Export hattı (actionable diagnostics + hardening), matte ilişki yazımı ve görünürlüğü, OGraf paket üretimi/QA kapısı, sürdürülebilir CI + minimal handoff disiplini.
-- **Kullanıcı/ürün hedeflerini hâlâ engelleyen:** Doğrudan canvas üzerinde eğri/tangent yazımı (Milestone A merge edilmedi), grafik/keyboard erişilebilirliği (B), ilk-export onboarding (C).
-- **Gruplama geçerli miydi:** Evet; A ayrılabilir bir milestone olarak çalıştı. Tek düzeltme: madde 9 (bağımlılık/uyarı bakımı) madde 6'nın mekanik devamı değil, ayrı onay kapısı gerektiriyor.
-- **Yeniden gruplama önerisi:** Yok; A tamamlanınca B ve C sırayla, D/E/F plan-only olarak kalmalı.
+1. **Verification matrix (HIGH)** — CLOSED. Coordinate parity migrated to the real `EDITOR_CAMERA_CENTER` in five transform rows; the whole eligibility guard chain extracted to the pure `isFreeformTangentOverlayEligible` predicate with an 18-row guard matrix; canonical-path priority covered by unit and component tests; real `useHistory` entry counts; a genuine `exportProject()` → `importProject()` round-trip of a materialized path; OGraf/SVG parity argued structurally (render authorities untouched, canonical pass-through asserted by object identity and `d`); a permanent real-browser smoke spec.
+2. **Legacy points normalization (MEDIUM)** — CLOSED. `resolveFreeformPath = part.path ?? legacyFreeformPointsToPath(normalizeClosedPoints(part.points ?? []), true)`, with tests for the repeated closing vertex, the `< 2` points case, canonical priority, and no mutation of `part.points`.
+3. **Selection model (MEDIUM)** — CLOSED. Separate vertex and handle selection, vertex click clears the handle selection, handle click selects it (highlighted and exposed as `data-selected`), reset on layer change and on a vanished vertex index. The empty-canvas behaviour is documented as the existing stage authority rather than a second selection authority.
+4. **Escape lifecycle (MEDIUM)** — CLOSED. The Escape listener exists only while a drag is in flight; the batch is closed by a state-driven post-commit effect, so `pointerdown` + Escape with no move closes the batch; `pointercancel` commits through the same path as `pointerup`; the unmount cleanup is bound to unmount only.
+5. **Smooth-handle-at-anchor and extreme coordinates (MEDIUM)** — CLOSED. Dragging onto the anchor keeps the counterpart's own length; a non-finite pointer result is dropped; an overflowing dragged vector or mirror leaves the counterpart untouched; the smooth initializer walks mirror → direction-and-reach → degenerate-onto-vertex and computes nothing for a vertex whose own coordinates are not finite.
 
-### 3) MILESTONE DETAILS — A
+### 3) USER-FACING BEHAVIOUR
 
-- **Goal:** Seçili freeform katman için doğrudan canvas'ta tangent handle yazımı; yeni geometri motoru yok.
-- **Design:** `docs/KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — 2 ADVISOR/SLOW turu (rev1 BLOCKED → rev2 → rev3'te tüm mekanik maddeler sabitlendi).
-- **Changes:** `src/utils/bezierPath.ts` (`initializeSmoothHandles`), `src/utils/freeform.ts` (`resolveFreeformPath`), yeni `FreeformTangentOverlay.tsx`, `StageCanvas.tsx` bağlama + eligibility guard'ları, 2 yeni test dosyası.
-- **Files changed:** 7 (2 yeni kaynak, 2 değişen kaynak, 2 yeni test, 1 sözleşme dokümanı)
-- **Tests:** 13 yeni (7 initializer + 6 overlay)
-- **Review:** **BLOCKED** — HIGH: doğrulama matrisi eksik (gerçek origin/rotation/scale parity, guard davranışları, gerçek history undo/redo, serialization/OGraf parity, manuel smoke) ve bir test adı doğrulamadığını iddia ediyor; MEDIUM: legacy `points` normalizasyonu yok, §7 seçim modeli eksik, Escape listener/batch yaşam döngüsü, anchor'a sürüklenen smooth handle kenarı.
-- **Merge:** Yapılmadı (kural gereği BLOCKED'da merge yok)
-- **CI:** main yeşil — run `35107541766` @ `449ed83` success; branch için CI koşusu yok
+- **What it does:** selecting a single freeform layer in edit mode with the select tool shows its vertices on the stage; clicking a vertex shows its Bezier tangent handles; dragging a handle reshapes the rendered path live.
+- **How to use it:** select the layer, click a vertex, drag the round handle; double-click a vertex to toggle corner ↔ smooth (creating symmetric handles from neighbour geometry).
+- **Undo:** one history entry per completed drag (`Ctrl+Z` / `Ctrl+Shift+Z`).
+- **Escape:** cancels an in-flight drag, restores the previous handles, and records no history entry.
+- **Unsupported:** boolean owners/operands, trim-enabled layers, normalized-space paths, hidden layers, multi-selection, broadcast mode, and layers with zero scale show no overlay; vertex add/remove, multi-vertex transforms, keyboard nudging, and handle constraints are out of scope.
 
-### 4) VALIDATION SUMMARY
+### 4) VALIDATION
 
-- **Focused tests:** PASS — 3 dosya / 18 test
-- **validate:ograf:** PASS
-- **qa:release:** PASS — 2 Chromium testi
-- **Full Vitest:** PASS — 105 dosya / 1.588 test
-- **Build:** PASS (mevcut Vite chunk-size uyarısı)
-- **TypeScript:** PASS
-- **Lint:** PASS (yalnızca mevcut `AnimatorContext` Fast Refresh uyarısı)
-- **diff check:** PASS
-- **GitHub CI:** `35107541766` success (main docs commit)
+| Check | Result |
+|---|---|
+| Focused suites (7 files) | 165 passed |
+| Full Vitest | 108 files / 1641 tests passed |
+| `validate:ograf` | PASS |
+| `qa:release` (release gate) | PASS — 2 Chromium tests |
+| `npm run build` | PASS |
+| `npx tsc --noEmit` | clean |
+| `npm run lint` | clean (pre-existing `react-refresh` warning only) |
+| `npx playwright test e2e/canvas-tangent-authoring.spec.ts` | PASS — permanent real-browser smoke |
+| Existing interaction e2e (`canvas-interaction-v1`, `interactive-shape-creation-v1`, `editor-interaction-regressions`) | 9 passed |
+| `git diff --check` | clean |
 
-### 5) RELEASE SAFETY
+Coverage: coordinate matrix · guard matrix · canonical priority · real history · serialization/import · OGraf parity (structural) · manual/real-browser smoke.
 
-- **v1.1.0-rc.1 tag target:** `46d2a3e59e065816d972dcd56951803951b577f6` (değişmedi)
-- **tag moved/deleted/created:** Hayır · **draft release publish/finalize:** Hayır · **npm publish:** Hayır
-- **without-mask:** dokunulmadı · **global OMP config/modelRoles:** dokunulmadı
-- **Desktop\KCS:** dokunulmadı (kopya yapılmadı) · **secrets:** yazdırılmadı
+### 5) REVIEW
 
-### 6) HANDOFF POLICY
+- Round 1 (`c7ae7bc`) — BLOCKED, 5 findings.
+- Round 2 (`0114098`) — BLOCKED: serializer round-trip evidence missing, an overflow path could still write `NaN`, six documentation over-claims.
+- Round 3 (`eb1f1a1`) — BLOCKED: the initializer could store an overflowing mirror; an overflowing dragged length collapsed the counterpart; one of the new tests selected the wrong vertex.
+- Round 4 (`469c070`) — BLOCKED: the initializer's *final* fallback was unvalidated (finite inputs could still produce `Infinity`); the bogus test confirmed.
+- Round 5 (`e40b808`) — BLOCKED: both named defects CLOSED and verified against the exact pre-fix failing assertions; one new medium finding — the degenerate fallback copied a non-finite *anchor* into new handles.
+- **Round 6 (`ffaf216`) — READY.** No new defect, no remaining over-claim; the only residual note is that existing non-finite handles arriving from an unsanitized legacy import are preserved by design.
 
-- **chatgpt_handoff/latest dosya sayısı:** 7 (`README.md`, `manifest.txt`, `progress_108_canvas_tangent_authoring.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`)
-- **Source/test kopyaları var mı:** Hayır (test-glob eşleşmesi 0)
-- **Desktop\KCS'ye kopyalandı mı:** Hayır
-- **Files included:** yukarıdaki 7 dosya
+Fixes after review: the finite-anchor precondition plus its two tests, and the documentation scoped to "the writers never compute a non-finite handle" with overflow-freedom and imported-value repair explicitly not claimed.
 
-### 7) NEXT ACTION
+### 6) RELEASE SAFETY
 
-- **Recommended next milestone/task:** `feat/canvas-tangent-authoring` üzerinde Milestone A'yı bitirmek — raporun 7. bölümündeki 5 maddeyi kapatmak, doğrulama matrisini kurmak, tek odaklı re-review almak ve READY ise fast-forward merge etmek.
-- **Kullanıcı onayı gerekiyor mu:** Milestone A tamamlama turu için hayır (mevcut branch + onaylı sözleşme kapsamında). B/C'ye geçiş veya D/E/F (paket/workflow/bağımlılık/yüksek risk) için **evet**.
+- `v1.1.0-rc.1` tag target: `46d2a3e59e065816d972dcd56951803951b577f6` — unchanged
+- Tag / release / npm: no tag create-move-delete, no release publish or edit, no npm publish (package stays private at `1.1.0-rc.1`)
+- `without-mask`: untouched
+- OMP config: model roles, providers, `memory.backend: mnemopi`, `task.maxConcurrency: 8` — unchanged
+- `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics`: untouched, nothing copied
+- Secrets: none printed or copied
+- `main` / `origin/main`: `312a0d771123b2b64f9b6f5779f873b439eedab5`, CI run `35114602866` success, unchanged by this work
 
-**Upload the contents of chatgpt_handoff/latest/ to ChatGPT.**
+**Merge blocking evidence:** `git merge-base --is-ancestor main feat/canvas-tangent-authoring` fails and the reverse also fails; `git rev-list --left-right --count main...feat/canvas-tangent-authoring` = `4  4` (main has four docs/handoff commits the branch lacks; the branch has eight commits main lacks). No rebase, no merge commit, and no force push were performed.
 
----
+**Options that need your approval:** (1) replay the branch's changes as new commits on a fresh branch from current `main`, then fast-forward `main`; (2) explicitly approve a controlled `--no-ff` merge or a rebase.
 
-Note: this file records the OMP terminal response for that task verbatim. The one-file handoff policy introduced afterwards supersedes the upload instruction at the end of the recorded response.
+### 7) HANDOFF
+
+- `chatgpt_handoff/latest/`: 8 files (README, manifest, this final response, progress 108, the contract, the roadmap plan, next session, project state)
+- One-file rebuilt from scratch, no append
+- Source/test copies present: NO · Test-glob matching files present: NO · Desktop\KCS copied: NO
+- Malformed Windows paths: zero collapsed-backslash paths in the one-file (the three patterns the handoff policy names were scanned and matched nothing outside this sentence)
+
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
+
+### NEXT ACTION
+
+The milestone itself is finished and READY. The only open decision is the merge strategy for `main` (see §6): approve the replay option or a controlled merge/rebase exception. After that, the next roadmap milestone is **B (graph + keyboard accessibility, roadmap item 4)**, which is untouched and still plan-only.
 
 ---
 
 ## 2. Handoff Manifest
 
-## KCS ChatGPT Upload Manifest — Milestone A / Orchestration
+## KCS ChatGPT Upload Manifest — Milestone A (Canvas Tangent Authoring)
 
 Clean refreshed: YES
-Bundle purpose: grouped-roadmap orchestration run — Milestone A (canvas tangent handles) design, implementation, validation, and the blocking review outcome
+Bundle purpose: Milestone A (direct canvas tangent handle authoring) — blocker-closing pass
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-One-file upload artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive. If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval.
-
-Current main / origin HEAD: d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72 (unchanged this run)
-Milestones attempted: A (canvas tangent handles)
-Milestones completed and merged this run: none — Milestone A is implemented and validated but the independent review returned BLOCKED
-Branches: feat/canvas-tangent-authoring @ c7ae7bc (unmerged, retained)
-Commits this run (branch only): c7ae7bc `feat: add direct canvas tangent handle authoring`
-Docs commits on main: the orchestrator close-out commit carrying this bundle
-
-Validation summary (branch revision c7ae7bc): full Vitest PASS 105 files / 1,588 tests; focused PASS 3 files / 18 tests; validate:ograf PASS; qa:release PASS (2 Chromium tests); build, TypeScript, lint, git diff --check PASS with only the pre-existing Fast Refresh and Vite chunk-size warnings.
-CI status: main CI green (run 35103238439 at d3aa135); no CI run for the unmerged branch.
-Review status: independent merge-gate review BLOCKED with five items (verification matrix, legacy point normalization, selection model, Escape lifecycle, smooth-handle-at-anchor edge).
-
+Current main / origin HEAD: 312a0d7 (one-file handoff audit; later docs commits may be newer)
+Milestone A branch: feat/canvas-tangent-authoring (local only, no remote counterpart, NOT merged)
+Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027 (final report)
+Ancestry: main and the branch diverged (4 commits each way) — fast-forward merge impossible; no rebase, no merge commit, no force push performed
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -126,20 +125,26 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the OMP terminal response for this task
-- progress_108_canvas_tangent_authoring.md — orchestration + Milestone A report
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — milestone map, gates, next prompt
-- KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — approved design contract (revision 3)
-- NEXT_SESSION.md — current state and next action
-- PROJECT_STATE.md — project state, validation, handoff policy
+- OMP_FINAL_RESPONSE.md — the final task response (blockers, validation, review rounds, merge evidence)
+- progress_108_canvas_tangent_authoring.md — orchestration report plus the blocker-closing pass (verification matrix, validation, review rounds, deviations)
+- KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — design contract, updated where the implementation forced wording
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — grouped roadmap plan with the current Milestone A row
+- NEXT_SESSION.md — repository state and the pending merge decision
+- PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
 Omitted categories:
-- Source and test files (they live under src/; flattened test copies break CI)
-- package.json, ci.yml, release-smoke.yml, CHANGELOG.md
-- progress_104.md … progress_107.md and the current-state/release documents
-- QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
+- Source and test files (they live under src/ and e2e/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
+- package.json, ci.yml, release-smoke.yml, CHANGELOG.md (the milestone is not merged, so there is no released user-facing change to record)
+- older progress reports, current-state/release documents, QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
+
+Validation at this revision:
+- Focused Vitest: PASS — 7 files / 165 tests
+- Full Vitest: PASS — 108 files / 1,641 tests
+- validate:ograf, qa:release (2 Chromium tests), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
+- Real-browser smoke: PASS — e2e/canvas-tangent-authoring.spec.ts (not part of CI or the release gate)
+- Independent review: READY at round 6 (six rounds; round-6 verdict READY with no new defect and no remaining over-claim)
 
 Upload the contents of chatgpt_handoff/latest/ to ChatGPT.
 
@@ -147,41 +152,31 @@ Upload the contents of chatgpt_handoff/latest/ to ChatGPT.
 
 ## 3. Bundle README
 
-## KCS Minimal ChatGPT Upload Bundle — Milestone A / Orchestration
+## KCS Minimal ChatGPT Upload Bundle — Milestone A (Canvas Tangent Authoring)
 
-Minimal, task-specific bundle for the grouped-roadmap orchestration run that produced Milestone A (canvas tangent handles).
+This is a minimal, task-specific ChatGPT upload bundle for the Milestone A blocker-closing pass. It was clean-refreshed for this task.
 
-### Preferred upload artifact — regenerated, never appended
+### What this bundle covers
 
-`chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive.
-
-- If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval.
-- The default upload to ChatGPT is always the current one-file artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
-
-Use the individual files in this folder only when ChatGPT explicitly asks for separate files.
+Direct Bezier tangent-handle authoring on the stage canvas for the selected freeform layer, and the pass that closed all five findings of the independent review: the verification matrix (coordinate parity, eligibility guard matrix, canonical-path priority, real history, serialization round-trip, OGraf parity, real-browser smoke), legacy points normalization, the overlay selection model, the Escape/batch lifecycle, and the smooth-handle-at-anchor edge including a non-finite overflow guard.
 
 ### Files
 
-- `OMP_FINAL_RESPONSE.md` — the OMP terminal response for this task
-- `progress_108_canvas_tangent_authoring.md` — what was attempted, the design-review history, the implementation, the validation matrix, and the independent review's five blocking items
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — milestone map (A–F), status, approval gates, and the recommended next prompt
-- `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — the approved design contract (revision 3) the implementation must satisfy
-- `NEXT_SESSION.md` — current state and the exact next action
+- `progress_108_canvas_tangent_authoring.md` — the full report: orchestration record, implementation, blocker-closing pass, verification matrix, validation table, review rounds, deviations
+- `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — the design contract, updated where the implementation forced wording (normalization, non-finite policy, eligibility helper, selection model, Escape scope, test matrix)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the grouped roadmap plan with the current Milestone A status row
+- `NEXT_SESSION.md` — repository state plus the Milestone A status and the merge decision that is pending
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
 
 ### Deliberately not included
 
-Source and test files are intentionally omitted: flattened copies named `src__*test*` matched Vitest's default include glob and broke CI (runs `35094144225`, `35095655446`), and the real files live under `src/`. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, QA output, assets, archives, and caches. Omitted files were not deleted from the repository.
+Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, `CHANGELOG.md` (the milestone is not merged, so there is no released user-facing change to record), QA output, assets, archives, and caches.
 
-### Status at this stop point
-
-- `main` is unchanged at `d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72`, CI green.
-- Milestone A is implemented and fully validated on branch `feat/canvas-tangent-authoring` (`c7ae7bc`) but **not merged**, because the independent review returned BLOCKED with five concrete items.
-- No release, tag, or npm change.
+Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
 ### Staging note
 
-`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination; nothing was copied there.
+`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be.
 
 Upload the contents of `chatgpt_handoff/latest/` to ChatGPT.
 
@@ -189,7 +184,7 @@ Upload the contents of `chatgpt_handoff/latest/` to ChatGPT.
 
 ## 4. Progress Report
 
-Current milestone report (Milestone A / orchestration run).
+Milestone A report: orchestration record plus the blocker-closing pass.
 
 ## Progress 108 — Canvas Tangent Authoring (Milestone A) + Grouped Roadmap Orchestration
 
@@ -255,7 +250,7 @@ Budget note: the prompt allows one review plus one re-review after BLOCKED; a th
 
 ### 7. Independent review — BLOCKED
 
-One independent merge-gate review ran on `d3aa135..c7ae7bc`. Verdict: **BLOCKED**, with these required items before merge:
+One independent merge-gate review ran on `d3aa135..c7ae7bc`. Verdict: **BLOCKED**, with these required items before merge. **Update (blocker-closing pass, §11): all five items were closed; see §11 for the evidence per item.**
 
 1. **HIGH — verification matrix incomplete.** The contract requires coordinate parity at the real `EDITOR_CAMERA_CENTER` with rotation, non-uniform, and negative scale; behavior tests for every `StageCanvas` eligibility guard; canonical-path priority; real `useHistory` undo/redo/cancel entry counts; serialization/import and OGraf byte-parity; and a manual editor smoke. The branch has focused unit/component tests only, and one test name ("leaves other vertices identical") over-claims what it asserts.
 2. **MEDIUM — legacy normalization missing.** `resolveFreeformPath` uses raw `part.points`; the contract pins `normalizeClosedPoints(points)`, so a legacy layer whose closing vertex repeats the first vertex would show an extra marker and materialize a duplicate vertex into the canonical path.
@@ -280,6 +275,167 @@ The orchestrator policy allows fixing in scope and running one more focused revi
 ### 10. Next recommended action
 
 Finish Milestone A on the existing branch by closing the review's five items, then run one focused re-review and merge by fast-forward. `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` records the milestone plan, the approval gates, and the recommended next prompt.
+
+### 11. Blocker-closing pass (this session)
+
+#### Branch
+
+- Branch: `feat/canvas-tangent-authoring`
+- Milestone A feature commit: `c7ae7bc` — `feat: add direct canvas tangent handle authoring`
+- Blocker-fix commits: `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216` (code fixes, test corrections, documentation scoping)
+- Baseline `main` at branch point: `d3aa135`
+- Current `main` / `origin/main`: `312a0d771123b2b64f9b6f5779f873b439eedab5`
+- Ancestry: `main` and the branch **diverged** (main advanced with four docs/handoff commits after `d3aa135`), so a fast-forward merge is not possible in either direction. No rebase, no merge commit, no force push was performed.
+
+#### Blocker status
+
+| # | Review finding | Status | Evidence |
+|---|---|---|---|
+| 1 | HIGH — verification matrix incomplete (coordinate parity, guard matrix, canonical-path priority, real history, serialization/import, OGraf parity, manual smoke) | **CLOSED** | §Verification matrix below; new `freeformTangentEligibility.test.ts` (23), `freeformTangentPersistence.test.ts` (6), `freeformTangentHistory.test.tsx` (3), overlay suite grown to 19; guarded render condition extracted to `src/utils/freeformTangentEligibility.ts` |
+| 2 | MEDIUM — legacy points normalization missing in `resolveFreeformPath` | **CLOSED** | `src/utils/freeform.ts`: `part.path ?? legacyFreeformPointsToPath(normalizeClosedPoints(part.points ?? []), true)`; tests cover repeated closing vertex, `<2` points → `undefined`, canonical-path priority, no mutation of `part.points` |
+| 3 | MEDIUM — §7 selection model incomplete | **CLOSED** | overlay holds `selectedIndex` + `selectedHandle` + an in-flight drag flag; clicking a vertex clears the handle selection, clicking a handle selects it (rendered highlighted via `data-selected`); switching layer or losing the selected vertex resets the overlay selection; empty-canvas behaviour documented (see Deviations) |
+| 4 | MEDIUM — Escape lifecycle / batch close | **CLOSED** | `Escape` listener is installed **only** while a drag is in flight and removed when it ends; the batch is closed by a state-driven post-commit effect (`pendingCancel`), so a `pointerdown` with no `pointermove` still closes the batch |
+| 5 | MEDIUM — smooth-handle-at-anchor collapse (`Math.hypot(...) || 1`) | **CLOSED** | Drag: a vector `<= 1e-6` keeps the counterpart's own length/direction, a non-finite pointer result is dropped, a non-finite (overflowing) dragged length leaves the counterpart untouched, and a non-finite mirror leaves the counterpart untouched. Smooth toggle: the §8 initializer computes finite handles only — non-finite mirror → direction-and-reach handle; non-finite fallback → degenerate onto the vertex; overflowing span → zero reach; overflowing chord → `{x: 1, y: 0}`; a vertex whose own coordinates are not finite gains no computed handles. Exact scope: **no writer computes a non-finite handle** — the drag refuses non-finite output, and the smooth toggle computes handles only for a finite vertex; existing handles (including ones from an unsanitized legacy import) are passed through, and the arithmetic is not claimed to be overflow-free. Tests: `1.7e308` counterpart, `1.7e308` dragged vector, `1e308` mirror overflow (selected vertex = the huge one), overflowing chord with an unrepresentable reach, and a non-finite vertex gaining no handles. |
+
+#### Verification matrix
+
+#### A. Coordinate parity (real origin, real transform)
+
+Overlay suite `FreeformTangentOverlay coordinate mapping`, `outputOrigin = EDITOR_CAMERA_CENTER` (the production constant), one row per transform: identity, rotation-only, non-uniform scale, negative `scaleX`, and rotation + non-uniform + negative scale + offset.
+
+For each row the test drags the out-handle through the stage pointer mapper by a screen delta and requires the handle's world position to move by exactly that delta (± 1e-6 local / < 2 px in the browser run). The delta is produced by the implementation's separate inverse-mapping of the *start* and *current* pointer points (`worldToLocal` on each, difference of the two locals), so a raw world delta reaching `worldToLocal` would fail this row.
+
+#### B. Eligibility guard matrix
+
+`src/tests/freeformTangentEligibility.test.ts` — 23 tests. One positive case, one legacy-points-only positive case, two negative-control positives (unrelated hidden track, negative/non-uniform scale), and 18 guard rows, each asserting the predicate is `false`:
+
+broadcast mode · non-select tool · active stage drag · empty selection · multi-selection · missing selected part · non-freeform type · boolean owner · boolean operands · boolean operand child · edit-hidden track · trim enabled · missing evaluated transform · `scaleX === 0` · `scaleY === 0` · normalized-space path · single-vertex path · fewer than two legacy points.
+
+Plus canonical priority (path present while legacy points are unusable → eligible) and the inverse case.
+
+The guard list is no longer inline JSX: `StageCanvas` calls `isFreeformTangentOverlayEligible({...})`, so the matrix and the runtime condition are the same code.
+
+#### C. Canonical-path priority
+
+- Unit: `resolveFreeformPath` returns the *same object* when `part.path` exists, and `buildBezierPathD(resolved) === buildBezierPathD(part.path)` even when legacy `points` disagree.
+- Component: with `path` and differing legacy `points` the overlay renders exactly the path's 3 markers at the path's anchors (legacy points would produce 4 different anchors).
+- Clone-on-write: the untouched-vertex test reads the neighbouring smooth vertex's handles after a drag and requires `26/0` and `14/0` — its own values — while the dragged vertex's handle holds the pointer value.
+
+#### D. Real history
+
+`src/tests/freeformTangentHistory.test.tsx` wires the overlay to the real `useHistory` (same `startBatchInteraction` / `endBatchInteraction` wiring `StageCanvas` uses):
+
+| Action | Expected | Result |
+|---|---|---|
+| completed drag | exactly one undo entry; undo restores the previous handle; redo reapplies | PASS |
+| drag then `Escape` | path restored, **no** entry added (one undo returns to the pre-drag state, then `canUndo === false`) | PASS |
+| `pointerdown` then `Escape`, no move | batch closed, no entry (`canUndo === false`), path unchanged | PASS |
+| `pointercancel` after a move | last value committed, one entry, undo restores | PASS |
+
+#### E. Serialization / import
+
+`src/tests/freeformTangentPersistence.test.ts`:
+
+- A points-only layer materializes a `local`, closed path whose anchors are exactly the normalized legacy polygon and whose `d` equals the normalized `legacyFreeformPointsToPath` output.
+- The materialized path (after `initializeSmoothHandles`) survives `JSON` round-trip **and** the import sanitizer `normalizeBezierPath(..., 'local')` unchanged (`toEqual` + identical `d`).
+- `part.points` identity and the whole part object are unchanged by resolution (no hidden rebuild while a canonical path exists).
+- **Real serializer round-trip (added after the first review round):** `src/tests/useSerialization.test.ts` → `Milestone A: a materialized freeform path survives export → import with its handles and legacy points` runs the real authority (`exportProject()` → `importProject()`), then asserts the restored part keeps the canonical path (`toEqual` of the whole path, `handleOut`, `kind: 'smooth'`, identical `d`) **and** the legacy `points` array next to it.
+
+#### F. OGraf / SVG byte parity
+
+- No file under `src/ograf/`, `ShapePartRenderers.tsx`, `StagePartLayers.tsx`, `bounds.ts`, `evaluateFrame`, or the matte authority is modified by this pass.
+- For a **canonical** freeform path, `resolveFreeformPath` returns the identical object, so every render authority that reads `content.path` emits the identical `d` before and after this milestone. What the tests assert is exactly this: object identity plus `buildBezierPathD(resolveFreeformPath(part)) === buildBezierPathD(part.path)` in `freeformTangentPersistence.test.ts`. The renderers themselves are **not** called by that test — OGraf's canonical-path output is pinned by the existing, unchanged `src/tests/ografSvg.test.ts` (`d` for a canonical freeform layer), and Canvas/matte resolution is unchanged code, so the parity argument is structural rather than a new byte-diff assertion.
+- `npm run validate:ograf` PASS and the OGraf suite in the full run PASS.
+- Not claimed: byte parity for an *edited* handle (edits legitimately change geometry) and for a points-only layer **after** its first edit (documented deviation below).
+
+#### G. Manual editor smoke (real Chromium, real app)
+
+Throwaway Playwright spec (deleted after the run) seeded a scene with a canonical-path freeform layer plus a rect layer, then asserted against the live DOM:
+
+| Step | Result |
+|---|---|
+| no selection → overlay absent; select layer → overlay present with 3 markers | PASS |
+| click a vertex → its two handles appear | PASS |
+| drag the out-handle 90/−60 px → rendered `d` changes and the handle follows the pointer within 2 px | PASS |
+| `Ctrl+Z` → `d` restored byte-for-byte; `Ctrl+Shift+Z` → `d` reapplied | PASS |
+| drag then `Escape` → `d` restored; the following `Ctrl+Z` steps over the *previous* action (no entry for the cancelled drag) | PASS |
+| switching the selected layer away → overlay removed, back → re-rendered | PASS |
+
+The smoke is now a **permanent, re-runnable spec** instead of a throwaway one: `e2e/canvas-tangent-authoring.spec.ts` (seeds the scene through the autosave key, asserts the same table above, writes `test-results/tangent-authoring-handles.png` and `test-results/tangent-authoring-eligibility.png`). `test-results/` is not tracked, so the screenshots are regenerated by running the spec; the spec itself is the auditable artefact. It is not part of CI or the release gate (neither runs this file).
+
+Existing interaction e2e specs re-run on the branch for the "not obviously broken" part of the requirement: `canvas-interaction-v1.spec.ts` (gizmo corner resize, cursor-anchored zoom, marquee selection), `interactive-shape-creation-v1.spec.ts` (shape tools incl. Escape cancel), `editor-interaction-regressions.spec.ts` (mirror duplicate keeps the selection gizmo aligned) — **9 passed**.
+
+Note recorded during the smoke: a `custom_freeform` layer intentionally renders no transform gizmo (`SelectionGizmo` skips `TransformGizmo` for freeform parts), so the gizmo check uses the rect layer. This is pre-existing behaviour, unchanged here.
+
+#### Changed files
+
+| File | Change |
+|---|---|
+| `src/utils/freeformTangentEligibility.ts` | **new** — pure eligibility predicate (single guard authority) |
+| `src/utils/freeform.ts` | `resolveFreeformPath` normalizes legacy points |
+| `src/components/Canvas/StageCanvas.tsx` | inline guard chain replaced by the helper call; unused import removed |
+| `src/components/Canvas/overlays/FreeformTangentOverlay.tsx` | selection model (vertex + handle state, layer/topology reset), state-driven Escape/batch close, drag-scoped key listener, zero-length handle guard, `data-selected` marker on the handle hit target |
+| `src/tests/freeformTangentEligibility.test.ts` | **new** — 23 guard/priority tests |
+| `src/tests/freeformTangentPersistence.test.ts` | **new** — 6 normalization/materialization/parity tests |
+| `src/tests/freeformTangentHistory.test.tsx` | **new** — 3 real-`useHistory` tests |
+| `src/tests/freeformTangentOverlay.test.tsx` | rewritten — 19 tests (coordinate matrix, selection model, Escape/pointercancel, smooth-at-anchor, canonical priority) |
+| `docs/KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` | §4/§5/§7/§9/§10/§12 clarified where the implementation forced wording |
+| `reports/progress_108_canvas_tangent_authoring.md` | this report |
+
+Removed claim: the previous test name "leaves other vertices identical" asserted only the dragged vertex in one direction; the test was renamed and now reads the neighbouring smooth vertex's `handleOut`/`handleIn` after the drag.
+
+#### Validation
+
+| Command | Result |
+|---|---|
+| `npx vitest run` on the tangent/path suites + `useSerialization` | 165 passed (19 files) |
+| Focused per-file counts | eligibility 23 · persistence 6 · overlay 21 · history 3 · initializer 12 · bezierPath 5 · useSerialization 95 |
+| `npm test` (full suite) | 108 files / 1641 tests passed |
+| `npm run validate:ograf` | PASS (`fixtures/ograf/minimal.ograf.json` valid) |
+| `npm run qa:release` | PASS — release gate 2/2, candidate SHA resolved from HEAD |
+| `npm run build` | PASS (`tsc -b && vite build`) |
+| `npx tsc --noEmit` | clean |
+| `npm run lint` | clean (one pre-existing `react-refresh` warning in `AnimatorContext.tsx`) |
+| `git diff --check` | clean |
+| `npx playwright test e2e/canvas-tangent-authoring.spec.ts` | PASS — permanent real-browser smoke (1 test) |
+
+#### Deviations and limits (disclosed, not hidden)
+
+1. **Empty-canvas click.** The contract §7 wording said an empty-canvas click must clear only the overlay-local selection. The stage already clears the *app* layer selection on an empty-canvas pointer-down — existing behaviour that this milestone must not change — and that necessarily unmounts the overlay. The contract was corrected to state the actual, pre-existing behaviour instead of adding a second selection authority.
+2. **Legacy points-only layers and the degenerate closing vertex.** `normalizeClosedPoints` drops a repeated closing vertex, so for a points-only layer that carries one, the overlay shows/edits the normalized topology while the modern canvas and OGraf render branches (`part.path ?? legacyFreeformPointsToPath(part.points)`) still draw the duplicated, zero-length closing edge (the legacy/non-modern canvas branch already normalizes: `ShapePartRenderers.tsx:345-348`). A scene imported through `src/utils/v6Migration.ts` materializes a canonical path from the raw legacy points, so such a layer never reaches the overlay's normalization step at all — pre-existing migration behaviour, outside this milestone's scope. The shapes are visually identical (the extra edge has zero length), but after the first handle edit the materialized canonical path is the normalized one, so the `d` string of that layer changes (an edited layer, so F's parity claim does not apply). Canonical-path layers are unaffected. Recorded in the contract §4.
+3. **`resolveFreeformPath` with two coincident legacy points** now returns `undefined` (normalization leaves one point) instead of a degenerate 2-point path, so the overlay stays hidden. Defence, not a behaviour loss: a 2-point "polygon" was never renderable as a closed shape.
+4. **Extreme coordinates are refused, not repaired.** Individually finite coordinates near the double-precision limit can overflow the mirror/normalization arithmetic. The drag writer refuses non-finite output (the counterpart keeps its value); the §8 initializer refuses it too, falling back to the direction-and-reach handle and then to a zero-length handle at the vertex, and a vertex whose own coordinates are not finite gains no computed handles. Both are pinned by tests, and both tests fail on the pre-fix code (verified by replaying the old expressions). A non-finite value that a user scene already contains is preserved as-is: the versioned SceneData import sanitizes handles, the legacy `AnimationProject` import does not, and repairing that path is outside this milestone.
+5. **Merge is not ff-possible on this branch base.** See §Branch. Awaiting an explicit decision.
+
+##### Independent review rounds
+
+| Round | Scope | Verdict | Outcome |
+|---|---|---|---|
+| 1 | `d3aa135..c7ae7bc` (the original implementation) | BLOCKED | the five findings closed in this pass |
+| 2 | `c7ae7bc..0114098` (this pass) | BLOCKED | blockers 2/3/4 CLOSED; two gaps remained: (a) no real `exportProject()` → `importProject()` round-trip of a materialized path — the new test in `useSerialization.test.ts` closes it; (b) `Math.hypot` overflow on individually-finite imported coordinates could still write `Infinity`/`NaN` — closed by the non-finite policy in §5 plus the `1.7e308` counterpart test. Six documentation over-claims were also corrected (round-trip wording, renderer-parity wording, the NaN/Infinity claim, the initializer reach claim, screenshot paths now replaced by a permanent spec, and the points-only render generalization). |
+| 3 | `0114098..eb1f1a1` (fix commits) | BLOCKED | blocker 1 CLOSED (real `exportProject()` → `importProject()` round-trip); blocker 5 still OPEN, with two extreme-coordinate paths named: the §8 initializer could store an overflowing mirror, and a dragged vector whose `hypot` overflows collapsed the counterpart onto the anchor (both finite-input arithmetic, not regressions of this milestone). Both are now guarded and covered by tests, and the five remaining documentation over-claims were rewritten to their exact scope. |
+| 4 | `71e4290` / `469c070` (extreme-coordinate fixes) | BLOCKED | the drag side CLOSED; the initializer guard was incomplete — the *final* direction-and-reach fallback was still unvalidated, and one newly added test selected the wrong vertex so it passed on the pre-fix code. Both are fixed: the initializer now walks mirror → direction-and-reach → degenerate-onto-vertex, and the two regression tests were corrected/added and verified to fail pre-fix. |
+| 5 | `e40b808` (initializer fallback + tests) | BLOCKED | both named defects CLOSED, verified with the exact pre-fix failing assertions; one new medium finding: the degenerate fallback copied a non-finite *vertex* into new handles. Fixed by a finite-anchor precondition (a non-finite vertex gains no computed handles) plus two tests, and the contract/report wording scoped to exactly that. |
+| 6 | `ffaf216` (finite-anchor guard + wording scoping) | **READY** | the guard closes the round-5 reproduction, both earlier defects stay CLOSED, no new defect, documentation matches the code, residual note only: existing non-finite handles are pass-through by design. |
+
+Self-found hardening during round 2: the unmount cleanup that closes an open batch was bound to `onBatchEnd`'s identity, so a re-created callback during a drag could have closed the batch early and split one drag into several history entries. It now reads the latest callback through a ref and is bound to unmount only.
+
+### Merge status
+
+**NOT MERGED — fast-forward impossible; awaiting an explicit decision.**
+
+Evidence (`git merge-base --is-ancestor` in both directions, then `git rev-list --left-right --count main...feat/canvas-tangent-authoring`):
+
+- `main` is **not** an ancestor of the branch and the branch is **not** an ancestor of `main`
+- divergence: `4  4` — `main` has 4 commits the branch lacks (`449ed83`, `05418f1`, `9e52ca5`, `312a0d7`: docs/handoff only), the branch has 4 code+docs commits `main` lacks
+- therefore `git merge --ff-only feat/canvas-tangent-authoring` on `main` fails, and `git merge --ff-only main` on the branch fails as well
+
+Per the protected rules (no rebase, no normal merge commit, no force push) nothing was attempted. Safe options, both needing explicit approval:
+
+1. **Replay onto current `main` (no history rewrite):** create a new branch from `main`, re-apply this branch's changes as new commits (for example `git checkout feat/canvas-tangent-authoring -- <paths>` per logical group, or `git cherry-pick` the four commits), then `git merge --ff-only` that branch into `main`. `chatgpt_handoff/**` should be resolved in favour of the newest content (this branch's refresh).
+2. **Approved exception:** a controlled `git merge --no-ff` on `main`, or an approved rebase of the branch onto `main`, which the standing rules currently forbid.
+
+`main`, `origin/main`, the `v1.1.0-rc.1` tag target, the draft GitHub release, and npm were not touched: no push of any kind was performed (the feature branch has no remote counterpart).
 
 ---
 
@@ -328,6 +484,13 @@ Post-merge full Vitest (103 files / 1557 tests), `validate:ograf`, `qa:release` 
 3. Milestones B (graph accessibility) and C (export onboarding) follow only after A is merged or explicitly deferred.
 4. Preserve the tag/draft release and request independent review before every merge.
 5. Publish/finalize the GitHub draft only after explicit user instruction.
+
+### Milestone A status (canvas tangent authoring) — blocker-closing pass
+
+- Branch: `feat/canvas-tangent-authoring` (local-only, not pushed), commits `c7ae7bc` (feature), `0114098` (review blockers), `b3396ec` (non-finite handle math + serializer round-trip proof), `eb1f1a1` (documentation corrections)
+- All five review blockers are closed; validation is green (`npm test` 108 files / 1635 tests, build, TypeScript, lint, `validate:ograf`, `qa:release`, permanent Playwright smoke `e2e/canvas-tangent-authoring.spec.ts`)
+- **Not merged:** `main` advanced with docs-only commits after the branch point, so the branch and `main` have diverged and a fast-forward merge is impossible in either direction. No rebase, no merge commit, and no force push was performed. An explicit decision is required (replay/cherry-pick onto current `main`, or an approved merge/rebase exception).
+- `main` = `origin/main` = `312a0d771123b2b64f9b6f5779f873b439eedab5`, unchanged by this work.
 
 ---
 
@@ -385,6 +548,13 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Model roles, provider mappings, task concurrency, and global OMP configuration remain unchanged.
 - Candidate package version is `1.1.0-rc.1`; package remains private and unreleased.
 
+### Milestone A status (canvas tangent authoring) — blocker-closing pass
+
+- Branch: `feat/canvas-tangent-authoring` (local-only, not pushed), commits `c7ae7bc` (feature), `0114098` (review blockers), `b3396ec` (non-finite handle math + serializer round-trip proof), `eb1f1a1` (documentation corrections)
+- All five review blockers are closed; validation is green (`npm test` 108 files / 1635 tests, build, TypeScript, lint, `validate:ograf`, `qa:release`, permanent Playwright smoke `e2e/canvas-tangent-authoring.spec.ts`)
+- **Not merged:** `main` advanced with docs-only commits after the branch point, so the branch and `main` have diverged and a fast-forward merge is impossible in either direction. No rebase, no merge commit, and no force push was performed. An explicit decision is required (replay/cherry-pick onto current `main`, or an approved merge/rebase exception).
+- `main` = `origin/main` = `312a0d771123b2b64f9b6f5779f873b439eedab5`, unchanged by this work.
+
 ---
 
 ## 7. Optional Current Design/Roadmap Docs
@@ -434,7 +604,8 @@ Rules:
 
 ### 4. Path representation, materialization, and byte expectations
 
-- The overlay edits the **effective path**: `part.path ?? legacyFreeformPointsToPath(normalizeClosedPoints(part.points), true)`.
+- The overlay edits the **effective path**: `part.path ?? legacyFreeformPointsToPath(normalizeClosedPoints(part.points ?? []), true)`.
+- **Legacy normalization.** For a points-only layer the legacy array is normalized before conversion, so a repeated closing vertex (within `1e-6`) becomes a single vertex instead of a degenerate one. If normalization leaves fewer than two points the effective path is `undefined` and the overlay stays hidden. The render branches are **not** changed by this milestone: the modern canvas branch (`ShapePartRenderers.tsx`) and the OGraf branch still draw `part.path ?? legacyFreeformPointsToPath(part.points)` / `buildFreeformPath(part.points)` without normalization, while the non-modern canvas branch already normalizes. A points-only layer that carries a duplicate closing vertex is therefore drawn with a zero-length closing edge by the former while the overlay edits the normalized topology. The two shapes are visually identical; after the first handle edit the layer has a canonical (normalized) path, so its `d` string changes once. Canonical-path layers are unaffected and byte-identical.
 - **Clone-on-write invariant:** if `part.path` exists, every write clones that path and changes only the dragged handle. Legacy `points` are never rebuilt into `path` while a canonical path exists — doing so with raw legacy points would discard curves and produce a visible geometry jump and export change.
 - **Materialization** happens only when `part.path === undefined`: the first handle edit materializes the canonical path from `legacyFreeformPointsToPath(normalizeClosedPoints(part.points), true)` — that helper always yields `coordinateSpace: 'local'` and `closed: true`, which is exactly what the renderer already draws today. `CharacterPart` has no `closed` field of its own; an existing canonical path keeps its own `closed` and `coordinateSpace` values untouched. `part.points` is preserved unchanged.
 - **Data expectations:** after the first write the scene JSON gains a `path` field and the rendered SVG/OGraf output legitimately changes when handles change. Byte-identical output is only claimed for layers whose canonical path is left untouched.
@@ -442,8 +613,10 @@ Rules:
 
 ### 5. Handle semantics
 
-- Dragging `handleOut` writes only `handleOut`; dragging `handleIn` writes only `handleIn`. The other handle, the vertex position, and the vertex `id` are untouched by a handle drag.
+- A handle drag writes the dragged handle; on a `smooth` vertex it also writes the mirrored counterpart (next bullet). For a `corner` vertex only the dragged handle changes. The vertex position and the vertex `id` are never touched by a handle drag.
 - `smooth` vertices keep mirrored handles: dragging one handle mirrors the other around the vertex with the opposite direction and the other handle's existing length.
+- **Zero-length drag vector.** If the dragged handle sits on its anchor (vector length `<= 1e-6`) it carries no direction, so the counterpart is left **unchanged** rather than mirrored from a fabricated unit vector; the dragged handle is still written.
+- **Extreme-coordinate policy.** Each writer refuses non-finite output instead of storing it: a non-finite pointer result is dropped; a dragged vector whose `Math.hypot` length is not finite leaves the counterpart untouched (its normalized direction would be unusable); a mirror result that is not finite (reachable from individually finite coordinates that overflow the arithmetic, e.g. a counterpart at `±1.7e308`) leaves the counterpart at its previous value. The §8 initializer applies the same rule, as a ladder: a non-finite mirror is replaced by the direction-and-reach handle, a non-finite fallback handle degenerates onto the vertex, an overflowing span falls back to the documented zero reach, and an overflowing chord falls back to the documented `{x: 1, y: 0}` direction. The guarantee carried here is **the writers never compute a non-finite handle**: the drag refuses non-finite output, and the smooth toggle computes handles only for a vertex whose own coordinates are finite (a non-finite vertex gains no handles and keeps the ones it has). It is not claimed that the arithmetic cannot overflow, nor that a value already present in imported data is repaired (the versioned SceneData import sanitizes handles, the legacy `AnimationProject` import does not, and existing handles are passed through untouched).
 - `corner` vertices (and vertices whose `kind` is absent, treated as `corner`) move only the dragged handle.
 - A handle is never created implicitly by a drag; creation is the explicit smooth action in §7.
 
@@ -468,12 +641,15 @@ The overlay renders only when **all** of these hold:
 - `trimPathEnabled !== true` (trim length is computed from legacy `points`, so a curve-edited path would render a mismatched trim);
 - `scaleX` and `scaleY` are non-zero.
 
+This list lives in one pure predicate, `isFreeformTangentOverlayEligible` (`src/utils/freeformTangentEligibility.ts`). `StageCanvas` forwards its existing state into that helper and renders the overlay on the result; the guard matrix is unit-tested row by row, so the runtime condition and the tests cannot drift apart.
+
 Normal `parentId` children are supported, because `getComputedTransform` already composes the parent chain.
 
-Selection state is overlay-local: `selectedVertexIndex` and `selectedHandle: 'in' | 'out' | null`.
+Selection state is overlay-local: `selectedIndex: number | null` and `selectedHandle: 'in' | 'out' | null`.
 
-- Vertex markers are always drawn for an eligible layer; handles (and their lines to the vertex) are drawn only for the selected vertex.
-- Clicking a vertex selects it and clears the handle selection. Clicking empty canvas clears the overlay selection only.
+- Vertex markers are always drawn for an eligible layer; handles (and their lines to the vertex) are drawn only for the selected vertex, with the selected handle rendered in the highlight colour and exposed as `data-selected`.
+- Clicking a vertex selects that vertex and clears the handle selection. Clicking a handle selects the handle (and the vertex it belongs to).
+- **Empty canvas:** the stage's own pointer-down on empty canvas clears the app layer selection, exactly as before this milestone. That unmounts the overlay, so the overlay needs no separate empty-canvas handler and does **not** deselect the layer by itself. The overlay drops its own selection when the shown part changes (another layer selected) or when the selected vertex index no longer exists after a topology change.
 - Double-clicking a vertex toggles `corner ↔ smooth`. Switching to `smooth` materializes missing handles through the deterministic initializer in §8; switching to `corner` keeps existing handle positions and only changes `kind`.
 - Multi-vertex selection is out of scope.
 
@@ -482,29 +658,30 @@ Selection state is overlay-local: `selectedVertexIndex` and `selectedHandle: 'in
 `createBezierPath` produces corner vertices without handles, so a neighbour-based initializer is required. It is a small **pure** helper added to the canonical `src/utils/bezierPath.ts` and unit-tested there. Exact algorithm for vertex `index` of `path`:
 
 1. **Neighbours.** `previous` = `points[index - 1]`, or `points[n - 1]` when `index === 0 && path.closed`. `next` = `points[index + 1]`, or `points[0]` when `index === n - 1 && path.closed`. For an open path the endpoints therefore have only one neighbour.
-2. **Direction (always a unit vector).** With `ε = 1e-6`:
+2. **Direction.** With `ε = 1e-6`, and a unit vector whenever the chosen chord is finite and non-overflowing:
    - if both neighbours exist and `|next - previous| > ε` → `unit(next - previous)`;
    - else if `next` exists and `|next - v| > ε` → `unit(next - v)`;
    - else if `previous` exists and `|v - previous| > ε` → `unit(v - previous)`;
    - else → `{ x: 1, y: 0 }`.
    A zero chord never produces a zero-length handle on its own; it only selects the next rule in this list. The direction is normalized before it is scaled, so handle length is never multiplied by an unnormalized chord.
-3. **Reach.** `reach = 0.25 × min` of the distances that exist (`|v - previous|` and/or `|v - next|`); `reach = 0` only when the vertex has no neighbour at all (a single-point path, which is ineligible anyway).
+3. **Reach.** `reach = 0.25 × min` of the distances that exist (`|v - previous|` and/or `|v - next|`); the `ε` of step 2 only *selects* the direction rule, it does not clamp the reach. Exactly coincident neighbours therefore give `reach = 0` and coincident zero-length handles (the case `src/tests/bezierTangentHandles.test.ts` pins), while a very short span such as `5e-7` still yields its own small non-zero reach. An overflowing span is not representable, so `reach` falls back to `0`.
 4. **Handles.** `handleIn = v − direction × reach`, `handleOut = v + direction × reach` — mirrored, opposite directions, equal length.
-5. **Partial-smooth repair.** The **double-click smooth action** is the only writer that creates handles, and it is what repairs a `smooth` vertex that has only one handle: it keeps the existing handle exactly where it is and sets the missing counterpart to the exact mirror of the existing one around the vertex (same length, opposite direction). When both handles already exist, they are left untouched; when neither exists, both come from steps 1–4. A handle drag never creates handles (§5).
+5. **Non-finite refusal.** Every handle the initializer *computes* is finite, for a vertex whose own coordinates are finite: a mirror that is not finite is dropped in favour of the step 1–4 handle, and when even that handle overflows the coordinate magnitude it degenerates onto the vertex (zero reach). A vertex that is itself not finite gains no computed handles at all and keeps whatever handles it already had — as does any existing handle, including one that arrived non-finite from an unsanitized legacy import (§5).
+6. **Partial-smooth repair.** The **double-click smooth action** is the only writer that creates handles, and it is what repairs a `smooth` vertex that has only one handle: it keeps the existing handle exactly where it is and sets the missing counterpart to the exact mirror of the existing one around the vertex (same length, opposite direction). When both handles already exist, they are left untouched; when neither exists, both come from steps 1–4. A handle drag never creates handles (§5).
 
 ### 9. Hit testing, rendering order, and event ownership
 
 - Markers are sized in screen units through the existing pattern: radius `7 * zScale` like today's markers, with a larger grab radius (`~9 * zScale`). `zScale` is the same value passed to `SelectionGizmo`.
 - The overlay group renders **after** the artboard/border layers and **above** the transform gizmo so handles win the pointer over the gizmo's and the matte hit area's transparent regions. Pointer handlers stop propagation so a handle drag never starts a translate/rotate/scale/marquee interaction.
 - Pointer capture is taken on `pointerdown` and released on `pointerup`/`pointercancel`, so a drag that leaves the marker keeps tracking and ends deterministically.
-- The overlay owns no global keyboard shortcut. Only while a drag is active does it listen for `Escape` to cancel; that listener is removed when the drag ends. `v1` has **no** arrow-key nudging.
+- The overlay owns no global keyboard shortcut. Its `keydown` listener for `Escape` is registered in an effect that runs **only while a drag is in flight** and is removed as soon as the drag ends (commit or cancel), so an idle overlay never consumes `Escape` and the stage's own `Escape` handling is untouched. `v1` has **no** arrow-key nudging.
 
 ### 10. Drag lifecycle and undo
 
 - `pointerdown` on a handle: `startBatchInteraction()`, remember the initial path and the local start point in a ref, enter drag mode.
 - `pointermove`: compute the local delta per §3 from the initial path, write the new path through `setCharacterParts` (each live move updates only the selected part's `path`).
 - `pointerup`: `endBatchInteraction()`. `pointercancel` behaves the same way — the drag commits its last written value, exactly like `StageCanvas.handlePointerCancel` already does for the transform drags.
-- **Escape during an active drag** is the only rollback path, and it is ordered so that history cannot capture a mid-drag snapshot: set `pendingCancelRef`, write the initial path back through `setCharacterParts`, clear the drag mode, and let a **post-commit effect** call `endBatchInteraction()` once and clear the flag. `useHistory.endBatchInteraction` reads `characterPartsRef.current`, which only syncs on render, so ending the batch inside the same handler could commit the mid-drag value — the effect runs after the rollback has been committed, which makes the batch's start and end snapshots identical and therefore records no entry.
+- **Escape during an active drag** is the only rollback path, and it is ordered so that history cannot capture a mid-drag snapshot: clear the drag ref, leave drag mode, set the `pendingCancel` **state**, and write the initial path back through `setCharacterParts`; the **post-commit effect** keyed on `pendingCancel` then calls `endBatchInteraction()` once and clears the flag. A state flag (not the path value) drives the effect, so a cancelling `pointerdown` that never moved — where the path never changes — still closes the batch. `useHistory.endBatchInteraction` reads `characterPartsRef.current`, which only syncs on render, so ending the batch inside the same handler could commit the mid-drag value — the effect runs after the rollback has been committed, which makes the batch's start and end snapshots identical and therefore records no entry.
 - Because rollback is triggered by a keyboard event and not by a pointer event, no global `mouseup` can end the batch before the rollback commits. `endBatchInteraction` is idempotent, so a later stray end is a no-op.
 - Result: one history entry per completed drag; a cancelled drag leaves no entry and restores the previous handles.
 
@@ -517,14 +694,20 @@ Selection state is overlay-local: `selectedVertexIndex` and `selectedHandle: 'in
 
 ### 12. Tests
 
-- **Unit (`bezierPath`)**: the §8 initializer for regular rings, closed/open paths, two-point paths, coincident neighbours, and partial-smooth vertices; mirroring preserves the counterpart length.
-- **Unit (overlay geometry)**: absolute inverse-map delta under rotation, non-uniform scale, and negative scale with the real `outputOrigin`; the resulting handle lands exactly where the pointer is.
-- **Component (overlay)**: markers render only for an eligible freeform layer; handles appear only for the selected vertex; a drag writes a single `path` value whose other vertices are byte-identical; Escape rolls back; double-click toggles corner/smooth and creates mirrored handles.
-- **Guards**: boolean owner, boolean operand, edit-hidden layer, non-select tool, broadcast mode, active drag, normalized-space path, trim-enabled layer, and zero-scale transform all render no overlay.
-- **Materialization**: points-only layer gains a `local` path on first edit with unchanged anchors; a layer that already has both `path` and `points` keeps its canonical path (no legacy rebuild); a path-only layer round-trips unchanged until edited.
-- **History**: one entry per drag, undo restores the previous handles, redo reapplies, cancelled drag adds no entry.
-- **Serialization/export**: the materialized path survives `exportProject`/import; an untouched canonical freeform path still produces byte-identical OGraf SVG.
-- **Manual smoke**: drag a handle in the running editor, confirm live rendering, undo, and that gizmo/marquee/shape tools still work.
+Implemented coverage (file → focus):
+
+| File | Tests | Focus |
+|---|---|---|
+| `src/tests/freeformTangentEligibility.test.ts` | 23 | every guard of §7 row by row, canonical-path priority, negative/non-uniform scale, unrelated-track control |
+| `src/tests/freeformTangentPersistence.test.ts` | 6 | legacy normalization (repeated closing vertex, `<2` points), canonical pass-through with identical `d`, no mutation of `part.points`, materialized path through the import sanitizer |
+| `src/tests/freeformTangentOverlay.test.tsx` | 21 | §3 coordinate parity under identity/rotation/non-uniform/negative scale with the real `EDITOR_CAMERA_CENTER`; marker/handle visibility; untouched neighbouring vertex; smooth mirroring, the zero-length drag vector (§5), the overflowing counterpart and the overflowing dragged vector (§5); Escape with and without a move; `pointercancel`; selection model incl. layer switch and topology shrink; canonical priority; points-only materialization |
+| `src/tests/freeformTangentHistory.test.tsx` | 3 | real `useHistory`: one entry per drag, undo/redo, no entry for Escape, `pointerdown`+Escape with no move, `pointercancel` commit |
+| `src/tests/useSerialization.test.ts` | 95 (1 added) | the materialized canonical path survives the real `exportProject()` → `importProject()` round-trip together with the legacy `points` |
+| `src/tests/bezierTangentHandles.test.ts` | 12 | §8 initializer (rings, open/closed, coincident neighbours, partial smooth, mirroring length) plus the non-finite refusal cases (overflowing mirror at the selected vertex, overflowing chord combined with an unrepresentable reach) |
+
+Manual/runtime evidence: the permanent Playwright spec `e2e/canvas-tangent-authoring.spec.ts` (markers/handles, live drag with 1:1 pointer tracking, `Ctrl+Z`/`Ctrl+Shift+Z`, `Escape` cancel with no history entry, overlay follows the selection) plus the existing interaction e2e specs (`canvas-interaction-v1`, `interactive-shape-creation-v1`, `editor-interaction-regressions`).
+
+Not covered by an automated test: byte-level OGraf output for a points-only layer that carries a degenerate closing vertex (§4) — the render authorities are unchanged, so their output is out of this milestone's scope. OGraf's canonical-path `d` stays pinned by the existing `src/tests/ografSvg.test.ts`.
 
 ### 13. Non-goals
 
@@ -550,7 +733,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Main stays at `d3aa1
 
 | Milestone | Roadmap items | Branch | Status |
 |---|---|---|---|
-| A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` @ `c7ae7bc` | Implemented + validated; independent review BLOCKED; **not merged** |
+| A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` @ `eb1f1a1` | Implemented + validated; all five review blockers closed and re-reviewed; **not merged** (branch and `main` diverged: no fast-forward) |
 | B — Graph + keyboard accessibility | 4 | — | Not started |
 | C — First export / onboarding flow | 5 | — | Not started |
 | D — State / CI / warning hygiene | 6, 9 | — | Plan only |
@@ -619,14 +802,14 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — 15997 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 5344 bytes
-- `NEXT_SESSION.md` — 3844 bytes
-- `OMP_FINAL_RESPONSE.md` — 5496 bytes
-- `PROJECT_STATE.md` — 4880 bytes
-- `README.md` — 2633 bytes
-- `manifest.txt` — 3265 bytes
-- `progress_108_canvas_tangent_authoring.md` — 9091 bytes
+- `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — 21519 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 5411 bytes
+- `NEXT_SESSION.md` — 4776 bytes
+- `OMP_FINAL_RESPONSE.md` — 8178 bytes
+- `PROJECT_STATE.md` — 5804 bytes
+- `README.md` — 2278 bytes
+- `manifest.txt` — 2924 bytes
+- `progress_108_canvas_tangent_authoring.md` — 29177 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

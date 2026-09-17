@@ -107,7 +107,7 @@ function makeFixture(overrides: Record<string, string> = {}): string {
 function makeGitFixture(options: { tagTarget?: string | null; originMainMatches?: boolean } = {}): string {
   const root = makeFixture();
   const run = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
-  run('init', '-q');
+  run('init', '-q', '-b', 'main');
   run('config', 'user.email', 'check@example.com');
   run('config', 'user.name', 'Check Fixture');
   run('add', '-A');
@@ -168,12 +168,24 @@ describe('check-state-consistency — text rules', () => {
   });
 
   it('fails when a merged milestone is no longer marked MERGED', () => {
+    // Both copies change together so only the MERGED rule can fail.
+    const unmerged = ROADMAP.replace('| C — First export / onboarding flow | 5 | `feat/c` | **MERGED** at `c2dcb22` |', '| C — First export / onboarding flow | 5 | `feat/c` | Implemented, merge pending |');
     const { status, output } = runCheck(makeFixture({
-      'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP.replace('| C — First export / onboarding flow | 5 | `feat/c` | **MERGED** at `c2dcb22` |', '| C — First export / onboarding flow | 5 | `feat/c` | Implemented, merge pending |'),
+      'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': unmerged,
+      'chatgpt_handoff/latest/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': unmerged,
     }));
 
     expect(status).toBe(1);
-    expect(output).toContain('roadmap status rows');
+    expect(output).toContain('milestone C is not marked MERGED');
+  });
+
+  it('fails when the bundle is missing a mirrored document', () => {
+    const root = makeFixture();
+    rmSync(path.join(root, 'chatgpt_handoff', 'latest', 'NEXT_SESSION.md'));
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(1);
+    expect(output).toContain('the bundle must carry a copy of NEXT_SESSION.md');
   });
 
   it('fails when the plan-only milestone rows are missing or not plan-only', () => {

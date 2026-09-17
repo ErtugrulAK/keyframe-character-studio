@@ -19,7 +19,7 @@ Two live instances of the failure class, both fixed in this task:
 
 | Check | Result |
 |---|---|
-| `node scripts/check-state-consistency.mjs` | PASS (33 checks) |
+| `node scripts/check-state-consistency.mjs` | PASS |
 | `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS (see the report for the count) |
 | `npm run validate:ograf` / `npm run qa:release` | PASS / PASS (2 Chromium tests) |
 | `npm test` | PASS |

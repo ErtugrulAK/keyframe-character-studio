@@ -57,7 +57,8 @@ const STALE_ACTIVE_PATTERNS = [
   { pattern: /NOT MERGED/u, reason: 'says a milestone is not merged; update the status or mark the section historical' },
   { pattern: /awaiting the user'?s decision/u, reason: 'says a decision is still pending; update the next action' },
   { pattern: /awaiting (?:the review gate and a )?(?:review gate and )?merge/u, reason: 'says a merge is still pending' },
-  { pattern: /implemented on `feat\/export-onboarding`, awaiting/u, reason: 'stale Milestone C pre-merge status' },
+  { pattern: /implemented on `feat\/export-onboarding`, awaits?ing?/u, reason: 'stale Milestone C pre-merge status' },
+  { pattern: /awaits the merge decision/u, reason: 'stale pending-merge claim' },
   { pattern: /plan-only, not started/u, reason: 'stale "not started" status for a started/merged milestone' },
   { pattern: /milestones B–F are unchanged/u, reason: 'stale roadmap intro phrase that contradicted its own table' },
 ];
@@ -402,10 +403,13 @@ function checkBundleMirrors(root) {
   for (const { root: source, bundle } of MIRRORED_DOCS) {
     const sourceText = readText(root, source);
     const bundleText = readText(root, bundle);
-    if (bundleText === null) continue;
-    checked += 1;
     if (sourceText === null) {
-      problems.push(`${bundle} has no source document ${source}`);
+      pass(`mirror skipped (${source})`, 'the root document does not exist');
+      continue;
+    }
+    checked += 1;
+    if (bundleText === null) {
+      problems.push(`${bundle} is missing: the bundle must carry a copy of ${source}`);
       continue;
     }
     const normalized = (value) => value.replace(/\r\n/gu, '\n').trim();

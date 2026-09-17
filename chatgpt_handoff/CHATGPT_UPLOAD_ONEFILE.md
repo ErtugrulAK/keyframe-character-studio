@@ -38,7 +38,7 @@ Two live instances of the failure class, both fixed in this task:
 
 | Check | Result |
 |---|---|
-| `node scripts/check-state-consistency.mjs` | PASS (33 checks) |
+| `node scripts/check-state-consistency.mjs` | PASS |
 | `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS (see the report for the count) |
 | `npm run validate:ograf` / `npm run qa:release` | PASS / PASS (2 Chromium tests) |
 | `npm test` | PASS |
@@ -218,10 +218,10 @@ Docs/state after the merge (this branch): `docs/KCS_GROUPED_ROADMAP_EXECUTION_PL
 | Command | Result |
 |---|---|
 | `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
-| `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS — 23 tests |
+| `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS — 24 tests (also PASS with `init.defaultBranch=master` forced, for CI parity) |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium tests |
-| `npm test` | PASS — 113 files / 1,688 tests |
+| `npm test` | PASS — 113 files / 1,689 tests |
 | `npm run build` | PASS |
 | `npx tsc --noEmit` | clean |
 | `npm run lint` | clean (pre-existing `AnimatorContext` Fast Refresh warning only) |
@@ -254,7 +254,15 @@ Docs/state after the merge (this branch): `docs/KCS_GROUPED_ROADMAP_EXECUTION_PL
 | Upload/bundle checks skipped missing required documents, missed equivalent upload phrasings and did not recurse | medium | Required bundle documents are enforced; the forbidden-instruction and target checks run on active (non-historical) lines; the bundle walk is recursive and case-insensitive |
 | Crash paths on a missing bundle or a non-directory `latest` | low | The whole run is wrapped, and the failure is reported as a FAIL with a message instead of a stack trace |
 
-Round 2 (review-fix commit) verdict: _recorded in the final handoff._
+**Round 2 (`32f714e`) — READY WITH WARNINGS.** All seven round-1 findings were confirmed CLOSED, with the test isolation verified by mutation (deleting the mirror rule or the first-item regex turns the matching case red) and the feature-branch run confirmed (the checker passes on the branch and still fails on a genuinely diverged `main`). Five new defects were filed and are fixed in the follow-up commit:
+
+| Finding | Severity | Resolution |
+|---|---|---|
+| The A/B/C `MERGED` loop had no deletion-sensitive test (its case passed via a co-firing rule) | medium | That case now changes both roadmap copies together and asserts the rule's own message (`milestone C is not marked MERGED`) |
+| The git fixture relied on the machine's `init.defaultBranch`, so the case would fail on a `master`-default CI runner | medium | The fixture pins `git init -b main`; the suite was re-run with `init.defaultBranch=master` forced and passes |
+| The mirror rule skipped absent copies, so a bundle that silently dropped a mirrored document still passed | medium | A missing copy is now a failure ("the bundle must carry a copy of …") |
+| The roadmap's historical note still said Milestone C awaits the merge decision, and the blacklist pattern did not match the live wording | low | The note now records the merge, and the pattern covers both wordings |
+| The one-file's final response said "PASS (33 checks)" while the run reports 35 | low | The final response states PASS without a brittle count; the exact count lives in this report's validation matrix |
 
 ### Merge/push status
 
@@ -608,7 +616,7 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 "KCS MILESTONE D ITEM 9 — DEPENDENCY AND WARNING MAINTENANCE (approval-gated). Present the proposed dependency deltas and the warning inventory first; do not edit `package.json`, the lockfile, or the workflows without explicit approval. If item 9 is postponed, the alternative is Milestone E planning (OGraf QA / schema hardening study, items 7 and 8), which needs a licensing/size decision before implementation."
 
-Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was implemented on `feat/export-onboarding` and awaits the merge decision (see `reports/progress_110_export_onboarding.md`).
+Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
 ### CHANGELOG.md
 
@@ -686,14 +694,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6083 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 7218 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 7275 bytes
 - `NEXT_SESSION.md` — 6979 bytes
-- `OMP_FINAL_RESPONSE.md` — 5475 bytes
+- `OMP_FINAL_RESPONSE.md` — 5463 bytes
 - `PROJECT_STATE.md` — 8758 bytes
 - `README.md` — 2214 bytes
 - `manifest.txt` — 2729 bytes
 - `progress_110_export_onboarding.md` — 14691 bytes
-- `progress_111_state_hygiene_gate.md` — 11005 bytes
+- `progress_111_state_hygiene_gate.md` — 12551 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

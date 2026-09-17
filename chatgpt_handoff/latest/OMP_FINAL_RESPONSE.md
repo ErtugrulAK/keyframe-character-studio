@@ -4,8 +4,8 @@ This file is the OMP final response for the Milestone D item 6 task. It is copie
 
 ## 1) RESULT
 
-- **Status:** item 6 implemented and validated on `chore/state-hygiene-gate`; item 9 (dependency/warning maintenance) is **not started and approval-gated**. Not merged at the time of writing — the merge gate follows the review round recorded below.
-- **Check:** `scripts/check-state-consistency.mjs` — run `node scripts/check-state-consistency.mjs` (add `--quiet` for CI-style output; `--root <dir>` points it at a fixture).
+- **Status:** item 6 implemented, reviewed (round 1 BLOCKED → round 2 READY WITH WARNINGS → round 3 READY WITH WARNINGS), and **MERGED into `main`** by fast-forward at `b91e8b9`, with the CI follow-up fix `be76df9`. Item 9 (dependency/warning maintenance) is **not started and approval-gated**.
+- **Check (merged):** `scripts/check-state-consistency.mjs` — run `node scripts/check-state-consistency.mjs` (add `--quiet` for CI-style output; `--root <dir>` points it at a fixture).
 - **What it verifies:** `main` vs `origin/main`; the `v1.1.0-rc.1` tag target (`46d2a3e59e065816d972dcd56951803951b577f6`); the Milestone A/B/C integration commits as ancestors of `HEAD`; the roadmap table (A/B/C `MERGED`, exactly one `NEXT`, E/F plan-only) in both the root file and its bundle copy; the first "Next scoped work" item in `NEXT_SESSION.md` and in its bundle copy naming the roadmap's `NEXT` milestone; bundle copies matching their root documents byte-for-byte; no active stale phrasing — wording that reports a milestone as unmerged, a merge or decision as still pending, the retired Milestone C pre-merge sentence, a started milestone as not started, or the retired roadmap intro sentence — in the root state documents, the one-file or any bundle document, with matches under a *historical* heading tolerated; the handoff instructing "Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`" and never the whole `latest/` folder; the bundle carrying no `src__*`, `*.test.*`/`*.spec.*` or binary copies (recursive check); and no collapsed Windows paths (a drive letter followed directly by a path segment) or secret markers.
 - **What it intentionally does not do:** no network, no dependency, no install, no repo mutation, no `package.json`/lockfile/workflow change, no application behaviour change, and no claim to parse arbitrary prose — it checks known documents and known phrases.
 
@@ -19,7 +19,7 @@ Two live instances of the failure class, both fixed in this task:
 
 | Check | Result |
 |---|---|
-| `node scripts/check-state-consistency.mjs` | PASS |
+| `node scripts/check-state-consistency.mjs` | PASS (on merged `main`) |
 | `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS (see the report for the count) |
 | `npm run validate:ograf` / `npm run qa:release` | PASS / PASS (2 Chromium tests) |
 | `npm test` | PASS |
@@ -37,6 +37,10 @@ Two live instances of the failure class, both fixed in this task:
 - Tag / release / npm: no tag change, no draft-release edit or publish, no npm publish
 - `package.json`, lockfile, workflows and dependencies: unchanged (item 9 not started)
 - `without-mask`, OMP configuration (`memory.backend: mnemopi`, `task.maxConcurrency: 8`), `C:\Users\ertugrul.ak\Desktop\KCS` and `ograf-graphics`: untouched; no secrets handled
+
+## 5b) CI INCIDENT AND FIX
+
+The first CI run on the merge commit failed, and the root cause was inside the new check: the document parsers assumed LF endings (a CRLF checkout could not find the next-work section) and CI checks out a shallow repository without the release tag or the milestone history, which the check reported as failures. `be76df9` normalises line endings in the reader and reports the tag/ancestry checks as skipped in a shallow checkout; both behaviours are pinned by new tests. CI is green again on `be76df9` (run `35227713136`).
 
 ## 6) HANDOFF
 

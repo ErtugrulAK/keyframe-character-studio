@@ -4,7 +4,7 @@ Clean refreshed: YES
 Bundle purpose: Milestone D item 6 — state consistency check (docs/tooling); item 9 remains approval-gated
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/state-hygiene-gate (feature branch under review; main is at or newer than ec3fa5c)
+Branch: chore/state-hygiene-gate — MERGED into main by fast-forward at b91e8b9; CI follow-up fix be76df9; main is at or newer than be76df9
 Check command: node scripts/check-state-consistency.mjs
 Item 9: dependency/warning maintenance — NOT started, requires explicit user approval before any package.json, lockfile or workflow edit
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
@@ -31,10 +31,11 @@ Omitted categories:
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- node scripts/check-state-consistency.mjs: PASS
+- node scripts/check-state-consistency.mjs: PASS (34 checks; two git checks become skips in a shallow checkout)
 - Focused Vitest (src/tests/stateConsistencyCheck.test.ts): PASS
 - validate:ograf, qa:release (2 Chromium tests), full Vitest, build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
-- Independent review: round 1 BLOCKED (2 high, 4 medium, 1 low) → fixes applied → focused re-review recorded in the report
+- Independent review: round 1 BLOCKED (2 high, 4 medium, 1 low) → round 2 READY WITH WARNINGS (5 low/medium defects) → round 3 READY WITH WARNINGS (all closed)
+- CI: run 35227283023 failed on the merge commit (CRLF parsing + shallow checkout) → fixed in be76df9 → run 35227713136 success
 
 Next: item 9 requires explicit user approval; otherwise Milestone E planning (OGraf QA / schema hardening study).
 

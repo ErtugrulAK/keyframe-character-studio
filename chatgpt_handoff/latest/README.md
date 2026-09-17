@@ -4,7 +4,7 @@ This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed f
 
 ## What this bundle covers
 
-Milestone D item 6: `scripts/check-state-consistency.mjs`, a check that fails when the live documents and the handoff bundle drift away from the real repository state (tag target, milestone commits, roadmap status, next action, upload instruction, bundle hygiene, collapsed paths, secret markers). Item 9 stays approval-gated and untouched.
+Milestone D item 6 (merged): `scripts/check-state-consistency.mjs`, a check that fails when the live documents and the handoff bundle drift away from the real repository state (tag target, milestone commits, roadmap status, next action, bundle/root parity, upload instruction, bundle hygiene, collapsed paths, secret markers). It is CRLF-safe and skips the tag/ancestry checks in a shallow checkout. Item 9 stays approval-gated and untouched.
 
 ## Files
 

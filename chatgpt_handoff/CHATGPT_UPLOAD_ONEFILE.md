@@ -23,8 +23,8 @@ This file is the OMP final response for the Milestone D item 6 task. It is copie
 
 ### 1) RESULT
 
-- **Status:** item 6 implemented and validated on `chore/state-hygiene-gate`; item 9 (dependency/warning maintenance) is **not started and approval-gated**. Not merged at the time of writing — the merge gate follows the review round recorded below.
-- **Check:** `scripts/check-state-consistency.mjs` — run `node scripts/check-state-consistency.mjs` (add `--quiet` for CI-style output; `--root <dir>` points it at a fixture).
+- **Status:** item 6 implemented, reviewed (round 1 BLOCKED → round 2 READY WITH WARNINGS → round 3 READY WITH WARNINGS), and **MERGED into `main`** by fast-forward at `b91e8b9`, with the CI follow-up fix `be76df9`. Item 9 (dependency/warning maintenance) is **not started and approval-gated**.
+- **Check (merged):** `scripts/check-state-consistency.mjs` — run `node scripts/check-state-consistency.mjs` (add `--quiet` for CI-style output; `--root <dir>` points it at a fixture).
 - **What it verifies:** `main` vs `origin/main`; the `v1.1.0-rc.1` tag target (`46d2a3e59e065816d972dcd56951803951b577f6`); the Milestone A/B/C integration commits as ancestors of `HEAD`; the roadmap table (A/B/C `MERGED`, exactly one `NEXT`, E/F plan-only) in both the root file and its bundle copy; the first "Next scoped work" item in `NEXT_SESSION.md` and in its bundle copy naming the roadmap's `NEXT` milestone; bundle copies matching their root documents byte-for-byte; no active stale phrasing — wording that reports a milestone as unmerged, a merge or decision as still pending, the retired Milestone C pre-merge sentence, a started milestone as not started, or the retired roadmap intro sentence — in the root state documents, the one-file or any bundle document, with matches under a *historical* heading tolerated; the handoff instructing "Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`" and never the whole `latest/` folder; the bundle carrying no `src__*`, `*.test.*`/`*.spec.*` or binary copies (recursive check); and no collapsed Windows paths (a drive letter followed directly by a path segment) or secret markers.
 - **What it intentionally does not do:** no network, no dependency, no install, no repo mutation, no `package.json`/lockfile/workflow change, no application behaviour change, and no claim to parse arbitrary prose — it checks known documents and known phrases.
 
@@ -38,7 +38,7 @@ Two live instances of the failure class, both fixed in this task:
 
 | Check | Result |
 |---|---|
-| `node scripts/check-state-consistency.mjs` | PASS |
+| `node scripts/check-state-consistency.mjs` | PASS (on merged `main`) |
 | `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS (see the report for the count) |
 | `npm run validate:ograf` / `npm run qa:release` | PASS / PASS (2 Chromium tests) |
 | `npm test` | PASS |
@@ -56,6 +56,10 @@ Two live instances of the failure class, both fixed in this task:
 - Tag / release / npm: no tag change, no draft-release edit or publish, no npm publish
 - `package.json`, lockfile, workflows and dependencies: unchanged (item 9 not started)
 - `without-mask`, OMP configuration (`memory.backend: mnemopi`, `task.maxConcurrency: 8`), `C:\Users\ertugrul.ak\Desktop\KCS` and `ograf-graphics`: untouched; no secrets handled
+
+### 5b) CI INCIDENT AND FIX
+
+The first CI run on the merge commit failed, and the root cause was inside the new check: the document parsers assumed LF endings (a CRLF checkout could not find the next-work section) and CI checks out a shallow repository without the release tag or the milestone history, which the check reported as failures. `be76df9` normalises line endings in the reader and reports the tag/ancestry checks as skipped in a shallow checkout; both behaviours are pinned by new tests. CI is green again on `be76df9` (run `35227713136`).
 
 ### 6) HANDOFF
 
@@ -80,7 +84,7 @@ Clean refreshed: YES
 Bundle purpose: Milestone D item 6 — state consistency check (docs/tooling); item 9 remains approval-gated
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/state-hygiene-gate (feature branch under review; main is at or newer than ec3fa5c)
+Branch: chore/state-hygiene-gate — MERGED into main by fast-forward at b91e8b9; CI follow-up fix be76df9; main is at or newer than be76df9
 Check command: node scripts/check-state-consistency.mjs
 Item 9: dependency/warning maintenance — NOT started, requires explicit user approval before any package.json, lockfile or workflow edit
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
@@ -107,10 +111,11 @@ Omitted categories:
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- node scripts/check-state-consistency.mjs: PASS
+- node scripts/check-state-consistency.mjs: PASS (34 checks; two git checks become skips in a shallow checkout)
 - Focused Vitest (src/tests/stateConsistencyCheck.test.ts): PASS
 - validate:ograf, qa:release (2 Chromium tests), full Vitest, build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
-- Independent review: round 1 BLOCKED (2 high, 4 medium, 1 low) → fixes applied → focused re-review recorded in the report
+- Independent review: round 1 BLOCKED (2 high, 4 medium, 1 low) → round 2 READY WITH WARNINGS (5 low/medium defects) → round 3 READY WITH WARNINGS (all closed)
+- CI: run 35227283023 failed on the merge commit (CRLF parsing + shallow checkout) → fixed in be76df9 → run 35227713136 success
 
 Next: item 9 requires explicit user approval; otherwise Milestone E planning (OGraf QA / schema hardening study).
 
@@ -126,7 +131,7 @@ This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed f
 
 ### What this bundle covers
 
-Milestone D item 6: `scripts/check-state-consistency.mjs`, a check that fails when the live documents and the handoff bundle drift away from the real repository state (tag target, milestone commits, roadmap status, next action, upload instruction, bundle hygiene, collapsed paths, secret markers). Item 9 stays approval-gated and untouched.
+Milestone D item 6 (merged): `scripts/check-state-consistency.mjs`, a check that fails when the live documents and the handoff bundle drift away from the real repository state (tag target, milestone commits, roadmap status, next action, bundle/root parity, upload instruction, bundle hygiene, collapsed paths, secret markers). It is CRLF-safe and skips the tag/ancestry checks in a shallow checkout. Item 9 stays approval-gated and untouched.
 
 ### Files
 
@@ -157,7 +162,7 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Progress Report
 
-Item 6 report plus the current milestone (C) report.
+Item 6 report (merged) plus the current milestone (C) report.
 
 ## Progress 111 — Milestone D, Item 6: State Consistency Check
 
@@ -203,7 +208,7 @@ The script's first real run immediately caught a live instance of the drift it e
 | File | Change |
 |---|---|
 | `scripts/check-state-consistency.mjs` | **new** — the consistency check (Node built-ins only) |
-| `src/tests/stateConsistencyCheck.test.ts` | **new** — 24 tests: consistent fixture passes, stale active claim fails, historical section tolerated, roadmap status enforced, next-action cross-check, upload instruction, bundle hygiene, collapsed path, secret marker, and the real repository passes |
+| `src/tests/stateConsistencyCheck.test.ts` | **new** — 26 tests: consistent fixture passes, stale active claim fails, historical section tolerated, roadmap status enforced, next-action cross-check, upload instruction, bundle hygiene, collapsed path, secret marker, and the real repository passes |
 | `reports/progress_110_export_onboarding.md` | the stale line the check caught (a file-change cell still described the merge as pending) now records the merged state |
 | `chatgpt_handoff/latest/**`, `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` | the bundle documents re-synced/rewritten for item 6 and the one-file rebuilt, so the shipped artifact passes its own check (the bundle copies of the root documents must now match byte-for-byte) |
 
@@ -218,10 +223,10 @@ Docs/state after the merge (this branch): `docs/KCS_GROUPED_ROADMAP_EXECUTION_PL
 | Command | Result |
 |---|---|
 | `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
-| `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS — 24 tests (also PASS with `init.defaultBranch=master` forced, for CI parity) |
+| `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS — 26 tests (24 rules + CRLF and shallow-clone portability; also PASS with `init.defaultBranch=master` forced, for CI parity) |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium tests |
-| `npm test` | PASS — 113 files / 1,689 tests |
+| `npm test` | PASS — 113 files / 1,691 tests |
 | `npm run build` | PASS |
 | `npx tsc --noEmit` | clean |
 | `npm run lint` | clean (pre-existing `AnimatorContext` Fast Refresh warning only) |
@@ -266,7 +271,12 @@ Docs/state after the merge (this branch): `docs/KCS_GROUPED_ROADMAP_EXECUTION_PL
 
 ### Merge/push status
 
-_Pending — recorded after the review gate._
+**MERGED into `main` by fast-forward** at `b91e8b929365bc97530951f5bbb36875056a11ff`, then one follow-up fix commit `be76df9` (`fix: make the state check CRLF- and shallow-clone-safe`).
+
+- Integration: `git merge --ff-only chore/state-hygiene-gate` moved `main` from `ec3fa5c` to `b91e8b9`; no merge commit, no rebase, no force push, no history rewrite
+- **CI incident and root cause:** the first CI run on the merge commit failed. Two portability defects in the new check, both found and fixed in `be76df9`: (a) the document parsers assumed LF line endings, so a CRLF checkout could not find the "Next scoped work" section — `readText` now normalises line endings once for every parser; (b) CI checks out a **shallow** repository (`actions/checkout` defaults to `fetch-depth: 1`), so the release tag and the three milestone commits are absent and the check reported them as failures — it now detects a shallow checkout and reports those checks as skipped instead. Both behaviours are pinned by new tests (a CRLF fixture and a `git clone --depth 1` fixture with the tag removed).
+- CI after the fix: run `35227713136` at `be76df9` — **success**
+- The check itself passes on merged `main` (`node scripts/check-state-consistency.mjs` → PASS, 34 checks; the count differs from the branch run because two git checks become skips in a shallow checkout)
 
 ### Next recommended task
 
@@ -407,7 +417,7 @@ The round-4 item was fixed in `9db62f3`. Two later gate reviews (`225cf1e`, then
 
 ### Repository state
 
-- Checkout: `main` at or newer than the Milestone C merge commit `c2dcb22352f1f4ad9102624309a0d92cf206046b`; `origin/main` is synchronized. The feature branch `feat/export-onboarding` is retained as the review artefact.
+- Checkout: `main` at or newer than the Milestone D item 6 merge commit `b91e8b929365bc97530951f5bbb36875056a11ff` (follow-up `be76df9`); `origin/main` is synchronized. The feature branches `feat/export-onboarding` and `chore/state-hygiene-gate` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -432,7 +442,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ### Next scoped work
 
-1. **Milestone D item 6 is implemented** on `chore/state-hygiene-gate`: run `node scripts/check-state-consistency.mjs` (it fails when live docs contradict the tag/`main` SHA, when the roadmap and next action disagree, or when the handoff bundle drifts) — the current next decision is **item 9 (dependency and warning maintenance), which needs explicit user approval before any `package.json`, lockfile, or workflow edit**. If item 9 is postponed, move to Milestone E planning (OGraf QA / schema hardening study, items 7 and 8).
+1. **Milestone D item 6 is merged** (`b91e8b9`, CI follow-up `be76df9`): run `node scripts/check-state-consistency.mjs` before every handoff — it fails when live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when a bundle copy drifts from its root document, or when the bundle carries source/test copies, collapsed paths or secrets. The current next decision is **item 9 (dependency and warning maintenance), which needs explicit user approval before any `package.json`, lockfile, or workflow edit**; if item 9 is postponed, move to Milestone E planning (OGraf QA / schema hardening study, items 7 and 8).
 2. Milestones D–F stay plan-only; **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work, and all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -536,7 +546,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- **Milestone D item 6 — state consistency check — implemented** on `chore/state-hygiene-gate`: `node scripts/check-state-consistency.mjs` fails when the live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when the handoff upload instruction is superseded, or when the bundle carries source/test/binary copies, collapsed Windows paths or secret markers (see `reports/progress_111_state_hygiene_gate.md`).
+- **Milestone D item 6 — state consistency check — MERGED** at `b91e8b9` (follow-up `be76df9`): `node scripts/check-state-consistency.mjs` fails when the live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when the handoff upload instruction is superseded, or when the bundle carries source/test/binary copies, collapsed Windows paths or secret markers (see `reports/progress_111_state_hygiene_gate.md`).
 - **Item 9 (dependency and warning maintenance) is not started and requires explicit user approval** before any `package.json`, lockfile, or workflow edit. Otherwise the next planning step is Milestone E.
 
 ---
@@ -547,7 +557,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ## KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) is implemented on `chore/state-hygiene-gate` while item 9 stays behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestones E–F remain plan-only.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9 stays behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestones E–F remain plan-only.
 
 ### Milestone map and status
 
@@ -556,7 +566,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
-| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate` | **NEXT** — item 6 implemented (`scripts/check-state-consistency.mjs`, report `reports/progress_111_state_hygiene_gate.md`); **item 9 requires explicit approval** (package/lockfile/workflow) and is not started |
+| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate` | **NEXT** — **item 6 MERGED** (`scripts/check-state-consistency.mjs`, run `node scripts/check-state-consistency.mjs`); **item 9 requires explicit approval** (package/lockfile/workflow) and is not started |
 | E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
 | F — Architecture exploration only | 10, 11, 12 | — | Plan only |
 
@@ -693,15 +703,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 6083 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 7275 bytes
-- `NEXT_SESSION.md` — 6979 bytes
-- `OMP_FINAL_RESPONSE.md` — 5463 bytes
+- `CHANGELOG.md` — 6149 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 7288 bytes
+- `NEXT_SESSION.md` — 7154 bytes
+- `OMP_FINAL_RESPONSE.md` — 6091 bytes
 - `PROJECT_STATE.md` — 8758 bytes
-- `README.md` — 2214 bytes
-- `manifest.txt` — 2729 bytes
-- `progress_110_export_onboarding.md` — 14691 bytes
-- `progress_111_state_hygiene_gate.md` — 12569 bytes
+- `README.md` — 2316 bytes
+- `manifest.txt` — 3005 bytes
+- `progress_110_export_onboarding.md` — 14815 bytes
+- `progress_111_state_hygiene_gate.md` — 13926 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

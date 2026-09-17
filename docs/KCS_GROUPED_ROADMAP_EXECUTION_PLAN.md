@@ -1,6 +1,6 @@
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) is implemented on `chore/state-hygiene-gate` while item 9 stays behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestones E–F remain plan-only.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9 stays behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestones E–F remain plan-only.
 
 ## Milestone map and status
 
@@ -9,7 +9,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
-| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate` | **NEXT** — item 6 implemented (`scripts/check-state-consistency.mjs`, report `reports/progress_111_state_hygiene_gate.md`); **item 9 requires explicit approval** (package/lockfile/workflow) and is not started |
+| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate` | **NEXT** — **item 6 MERGED** (`scripts/check-state-consistency.mjs`, run `node scripts/check-state-consistency.mjs`); **item 9 requires explicit approval** (package/lockfile/workflow) and is not started |
 | E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
 | F — Architecture exploration only | 10, 11, 12 | — | Plan only |
 

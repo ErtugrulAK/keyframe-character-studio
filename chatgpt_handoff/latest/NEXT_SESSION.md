@@ -2,7 +2,7 @@
 
 ## Repository state
 
-- Checkout: `main` at or newer than the Milestone C merge commit `c2dcb22352f1f4ad9102624309a0d92cf206046b`; `origin/main` is synchronized. The feature branch `feat/export-onboarding` is retained as the review artefact.
+- Checkout: `main` at or newer than the Milestone D item 6 merge commit `b91e8b929365bc97530951f5bbb36875056a11ff` (follow-up `be76df9`); `origin/main` is synchronized. The feature branches `feat/export-onboarding` and `chore/state-hygiene-gate` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -27,7 +27,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. **Milestone D item 6 is implemented** on `chore/state-hygiene-gate`: run `node scripts/check-state-consistency.mjs` (it fails when live docs contradict the tag/`main` SHA, when the roadmap and next action disagree, or when the handoff bundle drifts) — the current next decision is **item 9 (dependency and warning maintenance), which needs explicit user approval before any `package.json`, lockfile, or workflow edit**. If item 9 is postponed, move to Milestone E planning (OGraf QA / schema hardening study, items 7 and 8).
+1. **Milestone D item 6 is merged** (`b91e8b9`, CI follow-up `be76df9`): run `node scripts/check-state-consistency.mjs` before every handoff — it fails when live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when a bundle copy drifts from its root document, or when the bundle carries source/test copies, collapsed paths or secrets. The current next decision is **item 9 (dependency and warning maintenance), which needs explicit user approval before any `package.json`, lockfile, or workflow edit**; if item 9 is postponed, move to Milestone E planning (OGraf QA / schema hardening study, items 7 and 8).
 2. Milestones D–F stay plan-only; **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work, and all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.

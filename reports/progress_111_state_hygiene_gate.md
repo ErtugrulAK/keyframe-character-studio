@@ -42,7 +42,7 @@ The script's first real run immediately caught a live instance of the drift it e
 | File | Change |
 |---|---|
 | `scripts/check-state-consistency.mjs` | **new** — the consistency check (Node built-ins only) |
-| `src/tests/stateConsistencyCheck.test.ts` | **new** — 24 tests: consistent fixture passes, stale active claim fails, historical section tolerated, roadmap status enforced, next-action cross-check, upload instruction, bundle hygiene, collapsed path, secret marker, and the real repository passes |
+| `src/tests/stateConsistencyCheck.test.ts` | **new** — 26 tests: consistent fixture passes, stale active claim fails, historical section tolerated, roadmap status enforced, next-action cross-check, upload instruction, bundle hygiene, collapsed path, secret marker, and the real repository passes |
 | `reports/progress_110_export_onboarding.md` | the stale line the check caught (a file-change cell still described the merge as pending) now records the merged state |
 | `chatgpt_handoff/latest/**`, `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` | the bundle documents re-synced/rewritten for item 6 and the one-file rebuilt, so the shipped artifact passes its own check (the bundle copies of the root documents must now match byte-for-byte) |
 
@@ -57,10 +57,10 @@ Docs/state after the merge (this branch): `docs/KCS_GROUPED_ROADMAP_EXECUTION_PL
 | Command | Result |
 |---|---|
 | `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
-| `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS — 24 tests (also PASS with `init.defaultBranch=master` forced, for CI parity) |
+| `npx vitest run src/tests/stateConsistencyCheck.test.ts` | PASS — 26 tests (24 rules + CRLF and shallow-clone portability; also PASS with `init.defaultBranch=master` forced, for CI parity) |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium tests |
-| `npm test` | PASS — 113 files / 1,689 tests |
+| `npm test` | PASS — 113 files / 1,691 tests |
 | `npm run build` | PASS |
 | `npx tsc --noEmit` | clean |
 | `npm run lint` | clean (pre-existing `AnimatorContext` Fast Refresh warning only) |
@@ -105,7 +105,12 @@ Docs/state after the merge (this branch): `docs/KCS_GROUPED_ROADMAP_EXECUTION_PL
 
 ## Merge/push status
 
-_Pending — recorded after the review gate._
+**MERGED into `main` by fast-forward** at `b91e8b929365bc97530951f5bbb36875056a11ff`, then one follow-up fix commit `be76df9` (`fix: make the state check CRLF- and shallow-clone-safe`).
+
+- Integration: `git merge --ff-only chore/state-hygiene-gate` moved `main` from `ec3fa5c` to `b91e8b9`; no merge commit, no rebase, no force push, no history rewrite
+- **CI incident and root cause:** the first CI run on the merge commit failed. Two portability defects in the new check, both found and fixed in `be76df9`: (a) the document parsers assumed LF line endings, so a CRLF checkout could not find the "Next scoped work" section — `readText` now normalises line endings once for every parser; (b) CI checks out a **shallow** repository (`actions/checkout` defaults to `fetch-depth: 1`), so the release tag and the three milestone commits are absent and the check reported them as failures — it now detects a shallow checkout and reports those checks as skipped instead. Both behaviours are pinned by new tests (a CRLF fixture and a `git clone --depth 1` fixture with the tag removed).
+- CI after the fix: run `35227713136` at `be76df9` — **success**
+- The check itself passes on merged `main` (`node scripts/check-state-consistency.mjs` → PASS, 34 checks; the count differs from the branch run because two git checks become skips in a shallow checkout)
 
 ## Next recommended task
 

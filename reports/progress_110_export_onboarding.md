@@ -48,7 +48,7 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 | `src/tests/ografBrowserZip.test.tsx` | one timing assertion now awaits the shared compile path (contract unchanged: exactly one writer call) |
 | `e2e/export-onboarding.spec.ts` | **new** — real-browser first-export journey |
 | `NEXT_SESSION.md` | the stale "Milestone C" section now describes Milestone C (it had described Milestone B work), records the branch state instead of "not started", and the checkout line names this branch |
-| `PROJECT_STATE.md` | remaining work records Milestone C as implemented on this branch and awaiting merge |
+| `PROJECT_STATE.md` | remaining work and the milestone block record Milestone C: implemented on this branch, merged at `c2dcb22` after the gate |
 | `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` | Milestone C's row records the implemented/merge-pending state, the recommended next prompt points at Milestone D, and the intro sentence now states A and B merged, C pending, D–F plan-only |
 | `reports/progress_110_export_onboarding.md` | this report |
 | `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` | the one-file upload artifact, rebuilt from scratch |

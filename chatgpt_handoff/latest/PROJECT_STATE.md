@@ -2,11 +2,11 @@
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into main, and the grouped post-RC roadmap has completed its first milestone.
+The accepted product and security follow-up line is integrated into main, and the grouped post-RC roadmap has completed milestones A, B, C and Milestone D item 6.
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at or newer than the Milestone A integration commit `077911b469bf7026364c0335e748114bf8df05c0` (a state-reconciliation docs commit follows it):
+Current `main` / `origin/main` is at `bcf92413ebc23868344c43a83f1c0f9318d3e4e7` (Milestones A, B, C and Milestone D item 6 merged). Milestone D item 9 (dependency and warning maintenance) is **audited, report only**, on branch `chore/dependency-warning-audit`; nothing in `package.json`, `package-lock.json`, `.github/workflows/**`, `src/**`, `e2e/**`, `scripts/**` or `server/**` was changed by it.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -24,21 +24,22 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 108 files / 1,641 tests |
+| Full Vitest | PASS | 113 files / 1,691 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf`; committed minimal fixture |
-| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests at `077911b` |
-| Real-browser milestone smoke | PASS | `e2e/canvas-tangent-authoring.spec.ts` (not part of CI or the release gate) |
+| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests at `a410605` on the audit branch (earlier run at `bcf9241` on `main`) |
+| Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
+| State consistency | PASS | `node scripts/check-state-consistency.mjs` (34 checks on `main`, 33 with the audit branch's bundle in place) |
 | TypeScript | PASS | `npx tsc --noEmit` and build typecheck |
 | Lint | PASS | Existing Fast Refresh warning only |
-| Production build | PASS | Existing Vite chunk-size warning only |
-| Independent review | PASS | Milestone A `READY` in round 6 of six review rounds |
+| Production build | PASS | Existing Vite chunk-size advisory only (JS 621.99 kB / 182.39 kB gzip) |
+| Independent review | PASS (with a documented gap) | Milestone A `READY` in round 6 of six rounds; the item-9 audit revision is under re-review, and the checker's item-level false negative is recorded as D9-2 |
 | CI on `main` | PASS | runs `35206117254` (Milestone A merge) and `35207913453` (state reconciliation) |
 
 ## Remaining work
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Next: Milestone D (state / CI / warning hygiene, items 6 and 9)** — item 6 can start as documentation/tooling; **item 9 (dependency/package/workflow) requires explicit approval**; D–F otherwise stay plan-only.
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Next: Milestone D (state / CI / warning hygiene, items 6 and 9)** — item 6 is merged; item 9 is audited (report only, `reports/progress_112_dependency_warning_audit.md`) and awaits the Option A–D decision before any `package.json`, lockfile, or workflow change; E–F otherwise stay plan-only.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -68,4 +69,4 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
 - **Milestone D item 6 — state consistency check — MERGED** at `b91e8b9` (follow-up `be76df9`): `node scripts/check-state-consistency.mjs` fails when the live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when the handoff upload instruction is superseded, or when the bundle carries source/test/binary copies, collapsed Windows paths or secret markers (see `reports/progress_111_state_hygiene_gate.md`).
-- **Item 9 (dependency and warning maintenance) is not started and requires explicit user approval** before any `package.json`, lockfile, or workflow edit. Otherwise the next planning step is Milestone E.
+- **Item 9 (dependency and warning maintenance) — AUDIT COMPLETE, report only** (`reports/progress_112_dependency_warning_audit.md`): 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; majors available for TypeScript 6→7 and Vitest 4→5), `npm audit` 7 findings (6 moderate, 1 high; only `qs` and `undici` are moderate in the production tree), and 7 catalogued warnings (Fast Refresh export warning, Vite chunk-size advisory at 621.99 kB / 182.39 kB gzip, jsdom canvas/navigation noise, two `react-hooks/exhaustive-deps` suppressions, CRLF noise, `NO_COLOR`/`FORCE_COLOR` env noise). Recorded environment findings: **D9-1** — the REST API does not start in this working copy because the NAPI `sqlite3` binding is missing from `node_modules` (`node server/index.js` exits 1 at module load; "Auto-Fallback / In-Memory Mode" is only the PostgreSQL health log, not a database fallback); the editor is API-independent and was verified live in a browser. **D9-2** — the item-6 state checker does not catch stale item-level status claims. **D9-3** — `@types/node`'s `latest` tag sits behind the installed major. No `package.json`, lockfile, workflow, source, or test change was made; **the next decision is Option A (source/test/docs-only warning fixes), Option B (patch/minor updates plus a bounded `npm audit fix`), Option C (TypeScript 7 / Vitest 5 majors on their own branch), or Option D (defer and start Milestone E)**, with the local `npm rebuild sqlite3` repair as a separate approval-gated item.

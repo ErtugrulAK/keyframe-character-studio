@@ -2,7 +2,7 @@
 
 ## Repository state
 
-- Checkout: `main` at or newer than the Milestone D item 6 merge commit `b91e8b929365bc97530951f5bbb36875056a11ff` (follow-up `be76df9`); `origin/main` is synchronized. The feature branches `feat/export-onboarding` and `chore/state-hygiene-gate` are retained as review artefacts.
+- Checkout: branch `chore/dependency-warning-audit` (audit commit `a410605`, one commit on top of `main`); `main` is at `bcf92413ebc23868344c43a83f1c0f9318d3e4e7` and matches `origin/main`. The feature branches `feat/export-onboarding` and `chore/state-hygiene-gate` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -11,24 +11,24 @@
 
 ## Current result
 
-Milestone A — direct canvas tangent handle authoring — is merged and live in `main`:
+Milestones A, B and C are merged into `main`, and Milestone D is the active milestone:
 
-- Selecting a single freeform layer in edit mode shows its vertices on the stage; clicking a vertex reveals its Bezier tangent handles; dragging a handle reshapes the rendered path live; double-clicking a vertex toggles corner ↔ smooth with neighbour-derived symmetric handles.
-- One history entry per completed drag; `Escape` cancels an in-flight drag, restores the previous handles, and records nothing.
-- Out of scope (unchanged): vertex add/remove, multi-vertex transforms, keyboard nudging, handle constraints, boolean or trim-enabled freeform layers, broadcast mode.
-- Integration: branch `feat/canvas-tangent-authoring` was replayed onto current `main` as `feat/canvas-tangent-authoring-replay` and fast-forward merged; no rebase, no merge commit, no force push, no history rewrite. Documentation/handoff conflicts were resolved in favour of the newest content, and `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` (which only exists on `main`) was preserved and updated.
-- Review: six independent rounds; the final verdict was `READY` with all five findings closed (verification matrix, legacy points normalization, selection model, Escape/batch lifecycle, smooth-handle/extreme-coordinate edge).
+- Milestone A — canvas tangent authoring (`077911b`): vertex selection shows Bezier handles on the stage, dragging reshapes the path live, one history entry per completed drag, `Escape` cancels.
+- Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.
+- Milestone C — first export / onboarding (`c2dcb22`): opt-in "First export help" panel, readiness check reading the same OGraf diagnostics authority as the export, one shared compile path for readiness and both export actions.
+- Milestone D item 6 — state consistency check (`b91e8b9`, CI follow-up `be76df9`): `node scripts/check-state-consistency.mjs`.
+- Milestone D item 9 — dependency and warning maintenance: **audited on `chore/dependency-warning-audit`, report only** (`reports/progress_112_dependency_warning_audit.md`). Nothing was installed, updated, or rewritten: `package.json`, `package-lock.json`, `.github/workflows/**`, source and tests are untouched. Recorded findings: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; majors available for `typescript` 6→7 and `vitest` 4→5), `npm audit` 7 findings (6 moderate, 1 high; only `qs` and `undici` moderate in the production tree), 7 catalogued warnings, plus D9-1 (the REST API cannot start in this working copy because the NAPI `sqlite3` binding is missing from `node_modules`; the editor is API-independent and was verified live), D9-2 (the state checker does not catch stale item-level status claims) and D9-3 (`@types/node`'s `latest` tag is behind the installed major).
 
 The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease exist at the workflow-tested code candidate; nothing was published, finalized, or pushed to npm.
 
 ## Validation
 
-Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `077911b`), `npm run build`, `npx tsc --noEmit`, `npm run lint`, `git diff --check`, the permanent real-browser spec `e2e/canvas-tangent-authoring.spec.ts`, and CI run `35206117254` on `main` all pass. Existing Fast Refresh, Vite chunk-size, and npm install-script warnings remain.
+Full Vitest (113 files / 1,691 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `a410605`), `npm run build`, `npx tsc --noEmit`, `npm run lint`, `git diff --check`, `node scripts/check-state-consistency.mjs` (34 checks) and a live browser smoke (editor with port 5000 closed: layer authoring, readiness check, real export) all pass. Existing warnings remain: the Fast Refresh export warning, the Vite chunk-size advisory (621.99 kB / 182.39 kB gzip), jsdom canvas/navigation noise, two `react-hooks/exhaustive-deps` suppressions, git CRLF noise and the `NO_COLOR`/`FORCE_COLOR` env warning — all catalogued in `reports/progress_112_dependency_warning_audit.md`.
 
 ## Next scoped work
 
-1. **Milestone D item 6 is merged** (`b91e8b9`, CI follow-up `be76df9`): run `node scripts/check-state-consistency.mjs` before every handoff — it fails when live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when a bundle copy drifts from its root document, or when the bundle carries source/test copies, collapsed paths or secrets. **Milestone D item 9 is audited and merged as a report only** (`reports/progress_112_dependency_warning_audit.md`): 20 outdated packages (7 patch / 11 minor / 2 major), 7 `npm audit` findings (6 moderate, 1 high; 2 moderate production), 7 catalogued warnings, plus the Node 24 `sqlite3` binding/`engines` finding. **The open decision is: Option A — fix warnings with source/test/docs-only changes; Option B — patch/minor updates plus a bounded `npm audit fix` (needs approval for `package.json`/lockfile); Option C — TypeScript 7 / Vitest 5 majors on their own branch; Option D — defer and start Milestone E planning (OGraf QA / schema hardening, items 7 and 8).** No `package.json`/lockfile/workflow change happens without explicit approval.
-2. Milestones D–F stay plan-only; **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work, and all release/tag/draft-release changes need explicit approval.
+1. **Milestone D item 6 is merged** (`b91e8b9`, CI follow-up `be76df9`): run `node scripts/check-state-consistency.mjs` before every handoff — it fails when live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when a bundle copy drifts from its root document, or when the bundle carries source/test copies, collapsed paths or secrets. **Milestone D item 9 is audited** on `chore/dependency-warning-audit` (`reports/progress_112_dependency_warning_audit.md`) and awaits the decision: **Option A** — fix the catalogued warnings with source/test/docs-only changes (W1 lint split, W3 test-setup stubs, W4 dependency arrays, W5 `.gitattributes`, W2 code splitting, D9-2 checker pattern); **Option B** — patch/minor updates plus a bounded `npm audit fix` (needs approval for `package.json`/lockfile); **Option C** — TypeScript 7 / Vitest 5 majors on their own branch; **Option D** — defer and start Milestone E planning (OGraf QA / schema hardening, items 7 and 8). No `package.json`/lockfile/workflow change happens without explicit approval; the local `npm rebuild sqlite3` repair (D9-1) is also approval-gated.
+2. Milestones E–F stay plan-only, and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
 

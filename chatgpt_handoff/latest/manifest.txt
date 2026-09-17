@@ -1,42 +1,50 @@
-# KCS ChatGPT Upload Manifest — Milestone D Item 6 (State Consistency Check)
+# KCS ChatGPT Upload Manifest — Milestone D Item 9 (Dependency and Warning Maintenance Audit)
 
 Clean refreshed: YES
-Bundle purpose: Milestone D item 6 — state consistency check (docs/tooling); item 9 remains approval-gated
+Bundle purpose: Milestone D item 9 — dependency and warning maintenance AUDIT (report only); implementation stays approval-gated
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/state-hygiene-gate — MERGED into main by fast-forward at b91e8b9; CI follow-up fix be76df9; main is at or newer than be76df9
-Check command: node scripts/check-state-consistency.mjs
-Item 9: dependency/warning maintenance — NOT started, requires explicit user approval before any package.json, lockfile or workflow edit
+Branch: chore/dependency-warning-audit — docs commits on top of main bcf92413ebc23868344c43a83f1c0f9318d3e4e7
+Audit report: reports/progress_112_dependency_warning_audit.md
+Item 9: dependency/warning maintenance — AUDITED, no package.json, lockfile, workflow, source or test change; the Option A–D decision needs explicit user approval
+Outdated packages: 20 grouped rows over 21 package names (7 patch, 12 minor, 1 with no wanted update; majors available for typescript 6→7 and vitest 4→5)
+npm audit: 7 findings (6 moderate, 1 high); production tree only: 2 moderate (qs, undici)
+Warnings catalogued: 7 (W1 Fast Refresh export warning, W2 Vite chunk-size advisory 621.99 kB / 182.39 kB gzip, W3 jsdom canvas/navigation noise — 6 messages, W4 two react-hooks/exhaustive-deps suppressions, W5 git CRLF noise under core.autocrlf=true, W6 e2e/** outside the Vitest glob by design, W7 NO_COLOR/FORCE_COLOR env warning)
+Extra findings: D9-1 the REST API cannot start in this working copy (NAPI sqlite3 binding missing from node_modules; no in-memory fallback exists; the Node 24 ABI is not the cause); D9-2 the state checker does not catch stale item-level status claims; D9-3 @types/node latest tag sits behind the installed major
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (9):
-- README.md — bundle instructions
+Copied files (8):
+- README.md — bundle instructions and review status
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-6 final response
-- progress_111_state_hygiene_gate.md — the item-6 report
-- progress_110_export_onboarding.md — the Milestone C report (current milestone record)
+- OMP_FINAL_RESPONSE.md — the item-9 final response
+- progress_112_dependency_warning_audit.md — the item-9 audit report
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source and test files (the check lives at scripts/check-state-consistency.mjs in the repository; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
-- package.json, ci.yml, release-smoke.yml, older reports, design contracts, current-state/release documents
+- Source, test, package.json, package-lock.json, ci.yml, release-smoke.yml files (the audit inspected them read-only; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
+- Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- node scripts/check-state-consistency.mjs: PASS (34 checks; two git checks become skips in a shallow checkout)
-- Focused Vitest (src/tests/stateConsistencyCheck.test.ts): PASS
-- validate:ograf, qa:release (2 Chromium tests), full Vitest, build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
-- Independent review: round 1 BLOCKED (2 high, 4 medium, 1 low) → round 2 READY WITH WARNINGS (5 low/medium defects) → round 3 READY WITH WARNINGS (all closed)
-- CI: run 35227283023 failed on the merge commit (CRLF parsing + shallow checkout) → fixed in be76df9 → run 35227713136 success
+- npm test: PASS — Test Files 113 passed (113), Tests 1691 passed (1691); jsdom canvas/navigation noise only
+- npm run lint: PASS — one warning (react only-export-components in src/context/AnimatorContext.tsx)
+- npm run build: PASS — one advisory (chunk larger than 500 kB; JS 621.99 kB, gzip 182.39 kB)
+- npx tsc --noEmit: PASS (clean)
+- npm run validate:ograf: PASS — fixtures/ograf/minimal.ograf.json valid; npm run qa:release: PASS (2 Chromium tests, candidate SHA a410605)
+- node scripts/check-state-consistency.mjs: PASS; git diff --check: clean
+- node server/index.js (live probe): FAILS at module load — Could not locate the bindings file (D9-1); recorded, not repaired
+- Live browser smoke: PASS — editor loaded with port 5000 closed, rectangle layer drawn, readiness check "Ready to export", export produced template-ograf.zip
+- Read-only informational runs: npm outdated --long, npm audit, npm audit --omit=dev, npm ls --depth=0
+- Independent review: round 1 BLOCKED (3 high, 3 medium, 1 low) → all findings closed by rewriting the affected sections (§12 of the report) → round 2 verdict recorded in OMP_FINAL_RESPONSE.md
 
-Next: item 9 requires explicit user approval; otherwise Milestone E planning (OGraf QA / schema hardening study).
+Next: the user picks Option A (source/test/docs-only warning fixes), Option B (patch/minor updates plus a bounded npm audit fix), Option C (TypeScript 7 / Vitest 5 majors on their own branch) or Option D (defer to Milestone E planning); the local npm rebuild sqlite3 repair (D9-1) is a separate approval-gated item.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

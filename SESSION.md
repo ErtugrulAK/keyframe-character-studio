@@ -20,13 +20,14 @@ Checkout: `chore/dependency-warning-audit`, based on synchronized `main` at `bcf
 ## Environment note (recorded by the audit)
 
 - Node `v24.18.0` (ABI 137) with npm `12.0.2`; `package.json` declares no `engines` range.
-- The backend cannot load the native `sqlite3` binding under Node 24 (`require('sqlite3')` → "Could not locate the bindings file"), so `node server/index.js` runs in Auto-Fallback / In-Memory mode. The frontend is unaffected: the editor was verified live in a browser (rectangle layer drawn, transform gizmo, timeline lane, readiness check "Ready to export", and a real export producing `template-ograf.zip`).
+- **D9-1:** `node server/index.js` exits `1` at module load — `Error: Could not locate the bindings file` — because `node_modules/sqlite3` has no `.node` file and no `lib/binding` directory, while the matching NAPI prebuild sits unused in the npm cache (`bc594a-sqlite3-v6.0.1-napi-v6-win32-x64.tar.gz`). `sqlite3@6.0.1` uses NAPI prebuilds, so the Node 24 ABI is not the cause, and "Auto-Fallback / In-Memory Mode" (`server/db/index.js:36-37`) is only the PostgreSQL health log — there is no in-memory database fallback. Repair (`npm rebuild sqlite3`) is approval-gated and was not run.
+- The editor is API-independent in this working copy (`src` has no REST client; persistence is local in `src/hooks/useSerialization.ts`, `src/hooks/usePresets.ts`) and was verified live in a browser with port 5000 closed: rectangle layer drawn, transform gizmo, timeline lane, readiness check "Ready to export", and a real export producing `template-ograf.zip`.
 
 ## Validation
 
-- Full Vitest: PASS (jsdom canvas/navigation noise only).
+- Full Vitest: PASS — 113 files / 1,691 tests (jsdom canvas/navigation noise only).
 - `npm run validate:ograf`: PASS for the committed minimal fixture.
-- `npm run qa:release`: PASS — release gate for candidate SHA `bcf92413ebc23868344c43a83f1c0f9318d3e4e7`.
+- `npm run qa:release`: PASS — 2 Chromium tests; latest run at candidate SHA `a410605d8cd95bde474438c359e0abdf1651508f` on the audit branch (an earlier run in the same session passed for `bcf92413ebc23868344c43a83f1c0f9318d3e4e7` on `main`).
 - TypeScript (`npx tsc --noEmit`): PASS.
 - Lint: PASS with the existing Fast Refresh warning.
 - Build: PASS with the existing Vite chunk-size advisory (621.99 kB / 182.39 kB gzip).
@@ -35,7 +36,9 @@ Checkout: `chore/dependency-warning-audit`, based on synchronized `main` at `bcf
 
 ## Open decision
 
-Milestone D item 9 needs one of: Option A (source/test/docs-only warning fixes), Option B (patch/minor updates plus a bounded `npm audit fix`), Option C (TypeScript 7 / Vitest 5 majors on their own branch), or Option D (defer and start Milestone E planning). Any `package.json`, lockfile, or workflow edit requires explicit approval.
+Milestone D item 9 needs one of: Option A (source/test/docs-only warning fixes — W1, W3, W4, W5, W2, D9-2), Option B (patch/minor updates plus a bounded `npm audit fix`), Option C (TypeScript 7 / Vitest 5 majors on their own branch), or Option D (defer and start Milestone E planning). Any `package.json`, lockfile, or workflow edit requires explicit approval, as does the separate local repair `npm rebuild sqlite3` (D9-1) that would let the REST API start in this working copy.
+
+The audit report `reports/progress_112_dependency_warning_audit.md` §12 records the independent review: round 1 returned BLOCKED (three high, three medium, one low finding), all findings were closed by rewriting the affected sections, and round 2 is the re-review of this corrected revision.
 
 ## Protected state
 

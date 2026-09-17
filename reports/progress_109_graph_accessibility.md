@@ -44,7 +44,7 @@ No new graph engine, evaluator, timeline mutation, shortcut registry, state stor
 | `src/components/Inspector/sections/transform/SelectedKeyframeSection.tsx` | `role="group"` + frame-aware `aria-label`; input labels unchanged |
 | `src/components/Timeline/SequencerTimeline.css` | `:focus-visible` for `.keyframe-diamond` and `.ue-prop-diamond` |
 | `src/kcsEditorTheme.css` | `:focus-visible` for `.temporal-graph-svg circle` |
-| `src/tests/timelineKeyframeA11y.test.tsx` | **new** — 7 tests for the diamond contract |
+| `src/tests/timelineKeyframeA11y.test.tsx` | **new** — 8 tests for the diamond contract |
 | `src/tests/TemporalGraphPanel.test.tsx` | updated to the group semantics + 3 new keyboard/decorative tests |
 | `src/tests/selectedKeyframeSection.test.tsx` | added the group-label test (existing label assertions kept) |
 | `e2e/graph-accessibility.spec.ts` | **new** — real-browser keyboard smoke (2 tests) |
@@ -63,7 +63,7 @@ No new graph engine, evaluator, timeline mutation, shortcut registry, state stor
 
 | File | Tests | Focus |
 |---|---|---|
-| `src/tests/timelineKeyframeA11y.test.tsx` | 8 | labelled focusable diamonds, `aria-pressed`, Enter/Space activation with keyframe + frame + part assertions, arrow walk with consumed end stops, a lone-diamond lane, mouse click regression, channel-lane labels with values and local activation, legacy composite labels with frame jump |
+| `src/tests/timelineKeyframeA11y.test.tsx` | 8 | labelled focusable diamonds, `aria-pressed`, Enter/Space activation (keyframe + frame on both keys, part selection asserted on Enter), arrow walk in both directions with end stops and a lone diamond (key cancellation asserted for the right end and the lone case), mouse click regression, channel-lane labels with values and local activation, legacy composite labels with frame jump |
 | `src/tests/TemporalGraphPanel.test.tsx` | 6 (2 added, 1 rewritten from the old `role="img"` assertions) | group semantics + hidden decoration + focusable labelled points + `aria-describedby` keyboard contract + ArrowUp/ArrowDown editing + speed-graph read-only + handle inputs |
 | `src/tests/selectedKeyframeSection.test.tsx` | 19 (1 added) | existing value/pipeline coverage plus the frame-scoped group label |
 | `e2e/graph-accessibility.spec.ts` | 2 | real Chromium: Tab traversal reaches a diamond, the painted focus ring (`outline-style`/`outline-width`) is asserted, the arrow walk moves focus in frame order, `Enter` selects and opens the selected-keyframe panel, mouse click still selects, no console errors; and — through the Curve Studio control, with no early-exit path — the graph group, its Tab-reachable keyframe point, its painted ring, its ArrowUp edit and its three `aria-hidden` decorations |
@@ -102,9 +102,9 @@ Round 1 (`eece046`) returned **BLOCKED** with three findings and six documentati
 | The graph Playwright test could pass without opening the graph (it returned early when the graph was not mounted) | medium | The test now opens the Curve Studio modal through its own control, asserts the labelled group, Tab-reaches the keyframe point, asserts the painted focus ring, edits with `ArrowUp`, and checks the three `aria-hidden` decorations — there is no early exit |
 | `ArrowLeft`/`ArrowRight` at the lane ends returned before `preventDefault`/`stopPropagation`, leaving the key unconsumed (timeline scroll) | low | The lane now consumes the arrow before resolving the neighbour; two tests dispatch a cancelable event and assert `defaultPrevented` |
 | The focus-ring assertion only checked `:focus-visible`, not the painted style | low | Both smoke tests now read the computed `outline-style` / `outline-width` from the focused element |
-| Over-claims: universal click parity, "graph E2E PASS" wording, glow on the graph ring, incomplete test-coverage wording, "mouse entirely unchanged", changed-file list and test counts | documentation | The report now states the exact per-renderer activation effects, the graph outline (no glow), the strengthened assertions, the channel-diamond click addition, and the real test counts, and it lists itself in the changed-files table |
+| Over-claims: universal click parity, "graph E2E PASS" wording, glow on the graph ring, incomplete test-coverage wording, "mouse entirely unchanged", changed-file list and test counts | documentation | The report now states the exact per-renderer activation effects, the graph outline (no glow), the strengthened assertions, the channel-diamond click addition, and the real test counts, and it lists itself in the changed-files table. Round 2 accepted every code finding as CLOSED and returned the documentation notes above, which this correction addresses (the counts now match the file: 8 tests in `timelineKeyframeA11y.test.tsx`, 6 in `TemporalGraphPanel.test.tsx`, 19+1 in `selectedKeyframeSection.test.tsx`, 2 in the Playwright spec). |
 
-Round 2 (review-fix commit) verdict: _recorded in the final handoff._
+Round 2 (`e1b8400`) verdict: **READY WITH WARNINGS** — all three defects CLOSED (the graph smoke cannot pass without the graph semantics, the arrow keys are consumed at lane ends and on a lone diamond, the focus-ring assertions read the painted style). The only remaining findings were documentation notes about test counts and coverage wording, corrected in the follow-up docs commit; the reviewer also observed that deleting only the component-specific focus rules would not fail the smoke because the global `[role='button']:focus-visible` rule in `src/index.css` paints an equivalent 2 px ring — the visual contract holds either way, the assertion proves the computed result rather than a particular selector.
 
 ## Merge/push status
 

@@ -27,3 +27,12 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_092.md` — Deterministic OGraf fixture/schema gate patch.
 - `progress_094.md` — Full OGraf release smoke gate patch.
 - `progress_096.md` — Local tooling PATH audit.
+- `progress_105.md` — export diagnostics remediation UX.
+- `progress_106_handoff_cleanup.md` — Task 105 handoff cleanup, desktop staging cleanup, and asset visibility audit.
+- `progress_106b_handoff_policy_ci.md` — handoff policy correction, desktop KCS cleanup, and GitHub CI failure investigation.
+- `progress_107.md` — track-matte source selection affordance.
+- `progress_108_canvas_tangent_authoring.md` — canvas tangent authoring (Milestone A) and grouped roadmap orchestration.
+- `progress_109_graph_accessibility_start.md` / `progress_109_graph_accessibility.md` — Milestone B (graph + keyboard accessibility) start note and result.
+- `progress_110_export_onboarding.md` — Milestone C: first export / onboarding flow.
+- `progress_111_state_hygiene_gate.md` — Milestone D item 6: state consistency check.
+- `progress_112_dependency_warning_audit.md` — Milestone D item 9: dependency and warning maintenance audit (report only; no package/lock/workflow change).

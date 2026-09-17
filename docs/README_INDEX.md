@@ -42,6 +42,13 @@
 - `reports/progress_092.md` — Deterministic OGraf fixture/schema gate patch.
 - `reports/progress_094.md` — Full OGraf release smoke gate patch.
 - `reports/progress_096.md` — Local tooling PATH audit.
+- `reports/progress_105.md` — export diagnostics remediation UX.
+- `reports/progress_107.md` — track-matte source selection affordance.
+- `reports/progress_108_canvas_tangent_authoring.md` — canvas tangent authoring (Milestone A).
+- `reports/progress_109_graph_accessibility.md` — Milestone B: graph and keyboard accessibility.
+- `reports/progress_110_export_onboarding.md` — Milestone C: first export / onboarding flow.
+- `reports/progress_111_state_hygiene_gate.md` — Milestone D item 6: state consistency check.
+- `reports/progress_112_dependency_warning_audit.md` — Milestone D item 9: dependency and warning maintenance audit (report only).
 
 `docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free global tooling state. Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 - `reports/progress_075.md` — prototype-key security hardening implementation.

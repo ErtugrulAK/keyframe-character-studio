@@ -6,7 +6,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` HEAD is `077911b469bf7026364c0335e748114bf8df05c0`:
+Current `main` / `origin/main` is at or newer than the Milestone A integration commit `077911b469bf7026364c0335e748114bf8df05c0` (a state-reconciliation docs commit follows it):
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -32,7 +32,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 | Lint | PASS | Existing Fast Refresh warning only |
 | Production build | PASS | Existing Vite chunk-size warning only |
 | Independent review | PASS | Milestone A `READY` in round 6 of six review rounds |
-| CI on `main` | PASS | run `35206117254` at `077911b` |
+| CI on `main` | PASS | runs `35206117254` (Milestone A merge) and `35207913453` (state reconciliation) |
 
 ## Remaining work
 

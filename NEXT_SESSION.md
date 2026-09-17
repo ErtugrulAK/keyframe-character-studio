@@ -2,7 +2,7 @@
 
 ## Repository state
 
-- Checkout: `main` at `077911b469bf7026364c0335e748114bf8df05c0`; `origin/main` synchronized
+- Checkout: `main` at or newer than the Milestone A integration commit `077911b469bf7026364c0335e748114bf8df05c0` (a state-reconciliation docs commit follows it); `origin/main` synchronized
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`

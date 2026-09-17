@@ -237,7 +237,7 @@ Self-found hardening during round 2: the unmount cleanup that closes an open bat
 **MERGED into `main` by fast-forward** (approved replay strategy).
 
 - Replay branch: `feat/canvas-tangent-authoring-replay`, created from `main` at `312a0d771123b2b64f9b6f5779f873b439eedab5`, carrying the eleven milestone commits re-applied on top of current `main` (same messages, new hashes `d1b396a` … `1ed65e0`, plus the final state commit)
-- Final `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0`; CI run `35206117254` success
+- Final `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0` (Milestone A integration commit; a docs state-reconciliation commit follows it); CI runs `35206117254` and `35207913453` success
 - The original branch `feat/canvas-tangent-authoring` stays as the review artefact and was not rewritten
 - Conflicts were limited to documentation/handoff files and were resolved in favour of the branch content (the newest), except `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which exists only on `main` and was preserved and updated
 - No rebase, no merge commit, no force push, no history rewrite: `main` is a strict superset of its previous state

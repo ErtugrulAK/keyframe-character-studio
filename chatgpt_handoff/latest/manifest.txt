@@ -1,13 +1,13 @@
 # KCS ChatGPT Upload Manifest — Milestone A (Canvas Tangent Authoring)
 
 Clean refreshed: YES
-Bundle purpose: Milestone A (direct canvas tangent handle authoring) — blocker-closing pass
+Bundle purpose: Milestone A (direct canvas tangent handle authoring) — blocker-closing pass, six review rounds, and the final integration into main
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current main / origin HEAD: 312a0d7 (one-file handoff audit; later docs commits may be newer)
+Current main / origin HEAD: at or newer than the Milestone A integration commit 077911b (a state-reconciliation docs commit follows it; later docs commits may be newer still)
 Milestone A branch: feat/canvas-tangent-authoring (review artefact) replayed as feat/canvas-tangent-authoring-replay and MERGED into main by fast-forward (main = origin/main = 077911b)
-Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027 (final report)
-Integration: replay branch created from main at 312a0d7, milestone commits re-applied, fast-forward merged; no rebase, no merge commit, no force push, no history rewrite
+Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027, b72db0a, f15ac93 (final report and handoff); replayed on main as bd922a6 ... 1ed65e0
+Integration: replay branch created from main at 312a0d7, milestone commits re-applied, fast-forward merged into main (077911b) and pushed; CI run 35206117254 success; no rebase, no merge commit, no force push, no history rewrite
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized

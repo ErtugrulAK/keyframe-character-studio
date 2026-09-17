@@ -29,7 +29,7 @@ This file is the OMP final response for the Milestone A blocker-closing task. It
 - **Review blocker status:** 1 (verification matrix) CLOSED · 2 (legacy normalization) CLOSED · 3 (selection model) CLOSED · 4 (Escape/batch lifecycle) CLOSED · 5 (smooth-handle edge + extreme coordinates) CLOSED
 - **Merge:** **performed** — the branch was replayed onto current `main` (`312a0d7`) as `feat/canvas-tangent-authoring-replay` and fast-forward merged to `077911b`, then pushed (approved replay strategy, see §6)
 - **Push:** `git push origin main` → `312a0d7..077911b`
-- **`main == origin/main`:** yes, `077911b469bf7026364c0335e748114bf8df05c0` (post-merge)
+- **`main == origin/main`:** yes, at or newer than the integration commit `077911b469bf7026364c0335e748114bf8df05c0` (a docs state-reconciliation commit follows it)
 - **Working tree:** clean
 
 ### 2) BLOCKERS CLOSED
@@ -84,7 +84,7 @@ Fixes after review: the finite-anchor precondition plus its two tests, and the d
 - OMP config: model roles, providers, `memory.backend: mnemopi`, `task.maxConcurrency: 8` — unchanged
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics`: untouched, nothing copied
 - Secrets: none printed or copied
-- `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0`; CI run `35206117254` success
+- `main` / `origin/main`: at or newer than `077911b469bf7026364c0335e748114bf8df05c0`; CI runs `35206117254` (merge) and `35207913453` (state reconciliation) success
 
 **Integration record:** the replay branch `feat/canvas-tangent-authoring-replay` was created from `main` at `312a0d7`, the eleven milestone commits were re-applied on it (documentation/handoff conflicts resolved in favour of the newest branch content; `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which only exists on `main`, was preserved and updated), and `main` was fast-forwarded to that tip and pushed. `main` is a strict superset of its previous state; the original branch is kept as the review artefact.
 
@@ -112,13 +112,13 @@ Nothing is pending for Milestone A. The next roadmap milestone is **B (graph + k
 ## KCS ChatGPT Upload Manifest — Milestone A (Canvas Tangent Authoring)
 
 Clean refreshed: YES
-Bundle purpose: Milestone A (direct canvas tangent handle authoring) — blocker-closing pass
+Bundle purpose: Milestone A (direct canvas tangent handle authoring) — blocker-closing pass, six review rounds, and the final integration into main
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current main / origin HEAD: 312a0d7 (one-file handoff audit; later docs commits may be newer)
+Current main / origin HEAD: at or newer than the Milestone A integration commit 077911b (a state-reconciliation docs commit follows it; later docs commits may be newer still)
 Milestone A branch: feat/canvas-tangent-authoring (review artefact) replayed as feat/canvas-tangent-authoring-replay and MERGED into main by fast-forward (main = origin/main = 077911b)
-Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027 (final report)
-Integration: replay branch created from main at 312a0d7, milestone commits re-applied, fast-forward merged; no rebase, no merge commit, no force push, no history rewrite
+Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027, b72db0a, f15ac93 (final report and handoff); replayed on main as bd922a6 ... 1ed65e0
+Integration: replay branch created from main at 312a0d7, milestone commits re-applied, fast-forward merged into main (077911b) and pushed; CI run 35206117254 success; no rebase, no merge commit, no force push, no history rewrite
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -428,7 +428,7 @@ Self-found hardening during round 2: the unmount cleanup that closes an open bat
 **MERGED into `main` by fast-forward** (approved replay strategy).
 
 - Replay branch: `feat/canvas-tangent-authoring-replay`, created from `main` at `312a0d771123b2b64f9b6f5779f873b439eedab5`, carrying the eleven milestone commits re-applied on top of current `main` (same messages, new hashes `d1b396a` … `1ed65e0`, plus the final state commit)
-- Final `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0`; CI run `35206117254` success
+- Final `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0` (Milestone A integration commit; a docs state-reconciliation commit follows it); CI runs `35206117254` and `35207913453` success
 - The original branch `feat/canvas-tangent-authoring` stays as the review artefact and was not rewritten
 - Conflicts were limited to documentation/handoff files and were resolved in favour of the branch content (the newest), except `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which exists only on `main` and was preserved and updated
 - No rebase, no merge commit, no force push, no history rewrite: `main` is a strict superset of its previous state
@@ -442,7 +442,7 @@ Self-found hardening during round 2: the unmount cleanup that closes an open bat
 
 ### Repository state
 
-- Checkout: `main` at `077911b469bf7026364c0335e748114bf8df05c0`; `origin/main` synchronized
+- Checkout: `main` at or newer than the Milestone A integration commit `077911b469bf7026364c0335e748114bf8df05c0` (a state-reconciliation docs commit follows it); `origin/main` synchronized
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -502,7 +502,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` HEAD is `077911b469bf7026364c0335e748114bf8df05c0`:
+Current `main` / `origin/main` is at or newer than the Milestone A integration commit `077911b469bf7026364c0335e748114bf8df05c0` (a state-reconciliation docs commit follows it):
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -528,7 +528,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 | Lint | PASS | Existing Fast Refresh warning only |
 | Production build | PASS | Existing Vite chunk-size warning only |
 | Independent review | PASS | Milestone A `READY` in round 6 of six review rounds |
-| CI on `main` | PASS | run `35206117254` at `077911b` |
+| CI on `main` | PASS | runs `35206117254` (Milestone A merge) and `35207913453` (state reconciliation) |
 
 ### Remaining work
 
@@ -804,12 +804,12 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — 21680 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 5662 bytes
-- `NEXT_SESSION.md` — 5472 bytes
-- `OMP_FINAL_RESPONSE.md` — 8908 bytes
-- `PROJECT_STATE.md` — 5902 bytes
+- `NEXT_SESSION.md` — 5569 bytes
+- `OMP_FINAL_RESPONSE.md` — 9050 bytes
+- `PROJECT_STATE.md` — 6046 bytes
 - `README.md` — 2331 bytes
-- `manifest.txt` — 3127 bytes
-- `progress_108_canvas_tangent_authoring.md` — 29332 bytes
+- `manifest.txt` — 3394 bytes
+- `progress_108_canvas_tangent_authoring.md` — 29431 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

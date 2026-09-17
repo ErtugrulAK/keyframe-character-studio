@@ -11,7 +11,7 @@ This file is the OMP final response for the Milestone A blocker-closing task. It
 - **Review blocker status:** 1 (verification matrix) CLOSED · 2 (legacy normalization) CLOSED · 3 (selection model) CLOSED · 4 (Escape/batch lifecycle) CLOSED · 5 (smooth-handle edge + extreme coordinates) CLOSED
 - **Merge:** **performed** — the branch was replayed onto current `main` (`312a0d7`) as `feat/canvas-tangent-authoring-replay` and fast-forward merged to `077911b`, then pushed (approved replay strategy, see §6)
 - **Push:** `git push origin main` → `312a0d7..077911b`
-- **`main == origin/main`:** yes, `077911b469bf7026364c0335e748114bf8df05c0` (post-merge)
+- **`main == origin/main`:** yes, at or newer than the integration commit `077911b469bf7026364c0335e748114bf8df05c0` (a docs state-reconciliation commit follows it)
 - **Working tree:** clean
 
 ## 2) BLOCKERS CLOSED
@@ -66,7 +66,7 @@ Fixes after review: the finite-anchor precondition plus its two tests, and the d
 - OMP config: model roles, providers, `memory.backend: mnemopi`, `task.maxConcurrency: 8` — unchanged
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics`: untouched, nothing copied
 - Secrets: none printed or copied
-- `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0`; CI run `35206117254` success
+- `main` / `origin/main`: at or newer than `077911b469bf7026364c0335e748114bf8df05c0`; CI runs `35206117254` (merge) and `35207913453` (state reconciliation) success
 
 **Integration record:** the replay branch `feat/canvas-tangent-authoring-replay` was created from `main` at `312a0d7`, the eleven milestone commits were re-applied on it (documentation/handoff conflicts resolved in favour of the newest branch content; `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which only exists on `main`, was preserved and updated), and `main` was fast-forwarded to that tip and pushed. `main` is a strict superset of its previous state; the original branch is kept as the review artefact.
 

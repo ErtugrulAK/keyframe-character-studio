@@ -255,6 +255,14 @@ describe('M29 29A — metadata / safety', () => {
     expect(screen.getByLabelText('Keyframe Rotation')).toBeTruthy();
   });
 
+  it('26b. the section groups its controls under a label that carries the frame (Milestone B)', () => {
+    renderSection({ track: xRotTrack(), selectedKeyframeId: 'x_20', currentFrame: 20 });
+    const group = screen.getByRole('group');
+    expect(group.getAttribute('aria-label')).toBe('Selected keyframe at frame 20, 2 channels');
+    // The controls stay inside the group, so their labels are not ambiguous.
+    expect(group.contains(screen.getByLabelText('Keyframe Location X'))).toBe(true);
+  });
+
   it('27. existing transform controls unaffected (section is additive — hidden without selection)', () => {
     const { container } = renderSection({ track: xRotTrack(), selectedKeyframeId: null, currentFrame: 20 });
     expect(container.querySelector('.panel-card')).toBeNull();

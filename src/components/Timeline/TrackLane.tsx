@@ -35,6 +35,45 @@ interface TrackLaneProps {
  * keyframe diamonds and span bars, plus the channel lanes (trajectory lines
  * and property diamonds) when the track is expanded.
  */
+
+/** Diamonds that participate in the local arrow-key focus walk inside one lane. */
+const LANE_DIAMOND_SELECTOR = '.keyframe-diamond, .ue-prop-diamond';
+
+/**
+ * Keyboard contract for a timeline diamond: focusable button semantics, an
+ * accessible name, the selected state, Enter/Space activation, and a local
+ * ArrowLeft/ArrowRight focus walk across the diamonds of the same lane.
+ * The walk is DOM-sibling based on purpose: diamonds are rendered in frame
+ * order inside one absolutely positioned lane, so focus order equals time order.
+ */
+const diamondKeyboardProps = (
+  label: string,
+  isSelected: boolean,
+  onActivate: () => void,
+): React.HTMLAttributes<HTMLDivElement> => ({
+  role: 'button',
+  tabIndex: 0,
+  'aria-label': label,
+  'aria-pressed': isSelected,
+  onKeyDown: (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      event.stopPropagation();
+      onActivate();
+      return;
+    }
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const lane = event.currentTarget.parentElement;
+    if (!lane) return;
+    const diamonds = Array.from(lane.querySelectorAll<HTMLElement>(LANE_DIAMOND_SELECTOR));
+    const next = diamonds[diamonds.indexOf(event.currentTarget) + (event.key === 'ArrowLeft' ? -1 : 1)];
+    if (!next) return;
+    event.preventDefault();
+    event.stopPropagation();
+    next.focus();
+  },
+});
+
 export const TrackLane: React.FC<TrackLaneProps> = ({
   track,
   isSelected,
@@ -173,11 +212,17 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               key={keyframe.id}
               className={`ue-prop-diamond ${selectedKeyframeId === keyframe.id ? 'selected' : ''}`}
               style={{ left: `${keyframe.frame * frameWidth}px`, '--diamond-color': meta.color } as React.CSSProperties}
+              onClick={(e) => { e.stopPropagation(); onSelectKeyframe(keyframe.id); onSetFrame(keyframe.frame); }}
               onMouseDown={(e) => { e.stopPropagation(); onStartDragPKf({ trackId: track.id, channel: ch, keyframeId: keyframe.id }); onSelectKeyframe(keyframe.id); onSetFrame(keyframe.frame); }}
               onMouseEnter={() => onHoverKf({ frame: keyframe.frame, label: `${meta.label}: ${valueLabel}` })}
               onMouseLeave={() => onHoverKf(null)}
               onContextMenu={(e) => openKfMenu(e, keyframe.frame, onDelete)}
               title={`${meta.label} = ${valueLabel} @ F${keyframe.frame} (Right-click: menu)`}
+              {...diamondKeyboardProps(
+                `Keyframe at frame ${keyframe.frame}, ${meta.label}, value ${valueLabel}`,
+                selectedKeyframeId === keyframe.id,
+                () => { onSelectKeyframe(keyframe.id); onSetFrame(keyframe.frame); },
+              )}
             />
           );
         })}
@@ -246,11 +291,16 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               onMouseLeave={() => onHoverKf(null)}
               onContextMenu={(e) => openKfMenu(e, group.frame, () => handleDeleteGroup(e, group.frame))}
               title={`[${track.name}] Frame: ${group.frame} | ${group.channels.join(', ')} | ${group.easing} (Right-click: menu)`}
+              {...diamondKeyboardProps(
+                `Keyframe at frame ${group.frame}, ${track.name}, channels ${group.channels.join(', ')}, ${group.easing}`,
+                isKfSelected,
+                () => { onSelectKeyframe(representativeId); onSelectPart(track.partId, false); onSetFrame(group.frame); },
+              )}
             >
               <div className="diamond-inner" style={{ backgroundColor: track.color }} />
             </div>
           );
-        }) : activeKfs.map((kf) => {
+        }) : sortedKfs.map((kf) => {
           const isKfSelected = selectedKeyframeId === kf.id;
           return (
             <div
@@ -263,6 +313,11 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               onMouseLeave={() => onHoverKf(null)}
               onContextMenu={(e) => openKfMenu(e, kf.frame, () => onDeleteKeyframe(track.id, kf.id))}
               title={`[${track.name}] Frame: ${kf.frame} | ${kf.easing} (Right-click: menu)`}
+              {...diamondKeyboardProps(
+                `Keyframe at frame ${kf.frame}, ${track.name}, ${kf.easing}`,
+                isKfSelected,
+                () => { onSelectKeyframe(kf.id); onSelectPart(track.partId, false); onSetFrame(kf.frame); },
+              )}
             >
               <div className="diamond-inner" style={{ backgroundColor: track.color }} />
             </div>

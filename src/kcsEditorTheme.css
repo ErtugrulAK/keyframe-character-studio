@@ -932,6 +932,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   opacity: .92;
 }
 
+/* The graph keyframe points are keyboard operable: keep their focus ring visible. */
+.temporal-graph-svg circle:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
 .temporal-graph-panel-speed .input-control {
   display: none;
 }

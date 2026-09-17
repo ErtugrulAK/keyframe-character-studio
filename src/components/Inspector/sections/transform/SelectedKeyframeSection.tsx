@@ -81,7 +81,12 @@ export const SelectedKeyframeSection: React.FC<SelectedKeyframeSectionProps> = (
   };
 
   return (
-    <div className="panel-card" style={{ marginBottom: 10, borderColor: '#10b981' }}>
+    <div
+      className="panel-card"
+      role="group"
+      aria-label={`Selected keyframe at frame ${selected.frame}, ${channels.length} channel${channels.length === 1 ? '' : 's'}`}
+      style={{ marginBottom: 10, borderColor: '#10b981' }}
+    >
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <div style={{ fontSize: 9, fontWeight: 700, color: '#10b981', letterSpacing: '0.6px' }}>
           SELECTED KEYFRAME @ FRAME {selected.frame}

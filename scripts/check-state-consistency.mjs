@@ -131,7 +131,9 @@ function readText(root, relative) {
   try {
     const absolute = path.join(root, relative);
     if (!existsSync(absolute) || !statSync(absolute).isFile()) return null;
-    return readFileSync(absolute, 'utf8');
+    // Line endings are normalised here so every parser sees the same text on a
+    // Windows (CRLF) checkout and on a POSIX one.
+    return readFileSync(absolute, 'utf8').replace(/\r\n/gu, '\n');
   } catch {
     return null;
   }
@@ -278,7 +280,9 @@ function checkNextAction(root, nextMilestone) {
     }
   }
   if (checked === 0) {
-    fail('next action', 'no NEXT_SESSION.md to check');
+    fail('next action', problems.length === 0
+      ? 'no NEXT_SESSION.md to check'
+      : 'no parseable first item in the "Next scoped work" section');
     return;
   }
   if (problems.length === 0) pass('next action matches the roadmap NEXT milestone', `Milestone ${nextMilestone} in ${checked} document(s)`);
@@ -340,6 +344,10 @@ function checkGitFacts(root) {
     pass('git checks skipped', 'the checked root is not a git repository (fixture mode)');
     return;
   }
+  // A shallow CI checkout (actions/checkout defaults to fetch-depth: 1) has no
+  // tags and no older history, so those checks are reported as skipped instead
+  // of failing on facts the checkout simply does not contain.
+  const shallow = git(['rev-parse', '--is-shallow-repository'], root) === 'true';
   const head = git(['rev-parse', 'HEAD'], root);
   const branch = git(['rev-parse', '--abbrev-ref', 'HEAD'], root);
   const mainRef = git(['rev-parse', 'main'], root);
@@ -368,13 +376,16 @@ function checkGitFacts(root) {
   }
 
   const tagTarget = git(['rev-parse', `${EXPECTED_RC_TAG}^{commit}`], root);
-  if (!tagTarget) fail('release tag present', `${EXPECTED_RC_TAG} not found`);
+  if (shallow && !tagTarget) {
+    pass('release tag check skipped', 'shallow checkout: the tag is not fetched here');
+  } else if (!tagTarget) fail('release tag present', `${EXPECTED_RC_TAG} not found`);
   else if (tagTarget === EXPECTED_RC_TAG_TARGET) pass('release tag target unchanged', EXPECTED_RC_TAG_TARGET);
   else fail('release tag target changed', `${EXPECTED_RC_TAG} points at ${tagTarget}, expected ${EXPECTED_RC_TAG_TARGET}`);
 
   for (const { label, sha } of REQUIRED_MILESTONE_COMMITS) {
     if (git(['rev-parse', `${sha}^{commit}`], root) === null) {
-      fail(`${label} commit reachable`, `${sha.slice(0, 12)} not found in this checkout`);
+      if (shallow) pass(`${label} ancestry check skipped`, 'shallow checkout: the commit is not fetched here');
+      else fail(`${label} commit reachable`, `${sha.slice(0, 12)} not found in this checkout`);
       continue;
     }
     if (git(['merge-base', '--is-ancestor', sha, 'HEAD'], root) !== null) {

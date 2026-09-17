@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -365,6 +365,44 @@ describe('check-state-consistency — git rules', () => {
 
     expect(status).toBe(1);
     expect(output).toContain('main and origin/main differ');
+  });
+});
+
+describe('check-state-consistency — portability', () => {
+  it('parses a Windows (CRLF) checkout exactly like a POSIX one', () => {
+    const root = makeFixture();
+    for (const relative of ['NEXT_SESSION.md', 'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md']) {
+      const absolute = path.join(root, relative);
+      writeFileSync(absolute, readFileSync(absolute, 'utf8').replace(/\n/gu, '\r\n'), 'utf8');
+    }
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(0);
+    expect(output).toContain('KCS state consistency: PASS');
+  });
+
+  it('reports the tag and ancestry checks as skipped in a shallow checkout instead of failing', () => {
+    const source = makeFixture();
+    const run = (...args: string[]) => execFileSync('git', args, { cwd: source, encoding: 'utf8' });
+    run('init', '-q', '-b', 'main');
+    run('config', 'user.email', 'check@example.com');
+    run('config', 'user.name', 'Check Fixture');
+    run('add', '-A');
+    run('commit', '-q', '-m', 'fixture');
+    run('tag', 'v1.1.0-rc.1');
+    const cloneParent = mkdtempSync(path.join(tmpdir(), 'kcs-clone-'));
+    dirs.push(cloneParent);
+    const clone = path.join(cloneParent, 'shallow');
+    execFileSync('git', ['clone', '-q', '--depth', '1', `file://${source.replace(/\\/gu, '/')}`, clone], { encoding: 'utf8' });
+    // A local clone copies the fixture's refs, so drop the tag to reproduce the
+    // CI situation: a shallow checkout without tags or older history.
+    execFileSync('git', ['tag', '-d', 'v1.1.0-rc.1'], { cwd: clone, encoding: 'utf8' });
+
+    const { status, output } = runCheck(clone);
+
+    expect(status).toBe(0);
+    expect(output).toContain('shallow checkout');
+    expect(output).toContain('KCS state consistency: PASS');
   });
 });
 

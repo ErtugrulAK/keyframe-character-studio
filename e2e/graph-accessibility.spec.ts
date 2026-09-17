@@ -82,8 +82,16 @@ test.describe('Milestone B — keyboard accessibility', () => {
     const pressed = await page.evaluate(() => document.activeElement?.getAttribute('aria-pressed'));
     expect(pressed === 'true' || pressed === 'false').toBe(true);
 
-    // 3. The focus ring is visible on the focused diamond.
+    // 3. The focus ring is really painted: the stylesheet rule must reach the element.
     expect(await page.evaluate(() => document.activeElement?.matches(':focus-visible') ?? false)).toBe(true);
+    const focusRing = await page.evaluate(() => {
+      const active = document.activeElement as HTMLElement | null;
+      if (!active) return null;
+      const style = getComputedStyle(active);
+      return { style: style.outlineStyle, width: style.outlineWidth, color: style.outlineColor };
+    });
+    expect(focusRing?.style).toBe('solid');
+    expect(Number.parseFloat(focusRing?.width ?? '0')).toBeGreaterThanOrEqual(2);
 
     // 4. ArrowRight walks the lane forward, ArrowLeft walks back: focus moves in frame order.
     await page.keyboard.press('ArrowRight');
@@ -111,17 +119,34 @@ test.describe('Milestone B — keyboard accessibility', () => {
     await seed(page);
     await page.locator('.actor-node', { hasText: 'Part A' }).click();
 
-    // The graph lives in the Inspector once a part with keyframes is selected.
+    // The graph lives in the Curve Studio modal: open it through its own control,
+    // so this test fails if the graph semantics regress.
+    await page.getByTitle('Open Expanded Pro Cubic Bezier Motion Curve Studio Modal').click();
     const graphGroup = page.getByRole('group', { name: 'Value Graph' });
-    if (await graphGroup.count() === 0) {
-      test.info().annotations.push({ type: 'note', description: 'Value graph not mounted in this layout; timeline keyboard coverage above is the primary evidence.' });
-      return;
-    }
+    await expect(graphGroup).toBeVisible({ timeout: 10000 });
+
     const point = page.getByRole('button', { name: /Keyframe at frame 0, value/ });
     await expect(point).toHaveCount(1);
-    await point.focus();
+
+    // Reach the graph point with the keyboard only, then confirm the real ring.
+    let reached = false;
+    for (let press = 0; press < 40 && !reached; press += 1) {
+      await page.keyboard.press('Tab');
+      reached = await page.evaluate(() => (document.activeElement?.getAttribute('aria-label') ?? '').startsWith('Keyframe at frame 0, value'));
+    }
+    expect(reached, 'Tab traversal must reach the graph keyframe point').toBe(true);
+    const ring = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement as Element);
+      return { outline: style.outlineStyle, width: Number.parseFloat(style.outlineWidth) };
+    });
+    expect(ring.outline).toBe('solid');
+    expect(ring.width).toBeGreaterThanOrEqual(2);
+
     const before = await point.getAttribute('aria-label');
     await page.keyboard.press('ArrowUp');
     await expect.poll(async () => point.getAttribute('aria-label')).not.toBe(before);
+
+    // Decorative geometry stays out of the accessibility tree.
+    await expect(graphGroup.locator('[aria-hidden="true"]')).toHaveCount(3);
   });
 });

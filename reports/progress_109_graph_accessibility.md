@@ -15,7 +15,7 @@ Out of scope (unchanged): graph engine or interpolation math, timeline/keyframe 
 
 ## Implementation summary
 
-1. **Timeline keyframe diamonds became real keyboard controls.** Both diamond renderers in `TrackLane` (canonical frame-group `keyframe-diamond`, legacy composite diamond, and the expanded-lane `ue-prop-diamond`) now get a shared `diamondKeyboardProps` contract: `role="button"`, `tabIndex={0}`, an accessible name carrying frame + track + channel/property + easing/value, `aria-pressed` for the selected keyframe, `Enter`/`Space` activation that runs exactly the existing selection side effects, and a local `ArrowLeft`/`ArrowRight` focus walk across the diamonds of the same lane. The legacy lane now renders from `sortedKfs` (already computed) so DOM order — and therefore the arrow walk and tab order — matches frame order; the diamonds are absolutely positioned, so this changes no pixel.
+1. **Timeline keyframe diamonds became real keyboard controls.** Both diamond renderers in `TrackLane` (canonical frame-group `keyframe-diamond`, legacy composite diamond, and the expanded-lane `ue-prop-diamond`) now get a shared `diamondKeyboardProps` contract: `role="button"`, `tabIndex={0}`, an accessible name carrying frame + track + channel/property + easing/value, `aria-pressed` for the selected keyframe, `Enter`/`Space` activation that runs the existing selection side effects (select keyframe + move playhead, and for the parent lane also select the part; the channel-lane diamond previously had no `click` handler at all, so its keyboard path mirrors what its own `mousedown` does), and a local `ArrowLeft`/`ArrowRight` focus walk across the diamonds of the same lane. The legacy lane now renders from `sortedKfs` (already computed) so DOM order — and therefore the arrow walk and tab order — matches frame order; the diamonds are absolutely positioned, so this changes no pixel.
 2. **The value graph stopped hiding its own controls.** `TemporalGraphPanel`'s SVG carried `role="img"`, which removes its descendants from the accessibility tree while the keyframe points inside it are focusable. It is now a labelled `group` (`aria-labelledby` → the visible "Value Graph"/"Speed Graph" title, `aria-describedby` → the helper text), the decorative axes and curve are `aria-hidden="true"`, and each keyframe point's label now states its frame and value and how to change it with the keyboard. The helper text states the keyboard contract.
 3. **The selected-keyframe section is a labelled group.** `SelectedKeyframeSection` now exposes `role="group"` with `aria-label="Selected keyframe at frame N, M channels"`, so its per-channel inputs (`Keyframe Location X`, `Keyframe Rotation`, …) are unambiguous without changing their existing labels.
 4. **Focus visibility on the new controls.** Added `:focus-visible` rules in the existing stylesheets for `.keyframe-diamond`, `.ue-prop-diamond`, and the graph's keyframe points, using the same `--accent-cyan` / `--accent-teal-glow` tokens the rest of the editor uses.
@@ -48,34 +48,35 @@ No new graph engine, evaluator, timeline mutation, shortcut registry, state stor
 | `src/tests/TemporalGraphPanel.test.tsx` | updated to the group semantics + 3 new keyboard/decorative tests |
 | `src/tests/selectedKeyframeSection.test.tsx` | added the group-label test (existing label assertions kept) |
 | `e2e/graph-accessibility.spec.ts` | **new** — real-browser keyboard smoke (2 tests) |
+| `reports/progress_109_graph_accessibility.md` | this report |
 
 ## User-facing behavior
 
 - **Graph keyboard behavior:** the value graph's keyframe points are reachable with `Tab`, announce frame + value + "use the Up and Down arrow keys to change it", and `ArrowUp`/`ArrowDown` change the value through the existing callback (unchanged math, unchanged drag behavior). The speed graph stays read-only and exposes no points.
-- **Keyframe row behavior:** each keyframe diamond is a `button` in the tab order, announced as e.g. "Keyframe at frame 12, Track a, channels x, easeInOut" (canonical) or "Keyframe at frame 12, Location X, value 140.00" (expanded channel lanes). `Enter` or `Space` performs exactly the previous click action: select the keyframe, select the part, move the playhead. `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and stop at the ends. Mouse click and drag are unchanged.
+- **Keyframe row behavior:** each keyframe diamond is a `button` in the tab order, announced as e.g. "Keyframe at frame 12, Track a, channels x, easeInOut" (canonical) or "Keyframe at frame 12, Location X, value 140.00" (expanded channel lanes). `Enter` or `Space` selects that keyframe and moves the playhead to its frame; on the parent lane it also selects the part, exactly like the existing click. The channel-lane diamond had no click handler before, so its keyboard path mirrors its own mousedown selection without starting a drag. `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order, stop at the ends, and consume the key there so the timeline never scrolls. Mouse click and drag behave as before (the channel diamond gained a click handler that repeats the same selection/frame result as its mousedown).
 - **Selected-keyframe section behavior:** the panel is announced as a group scoped to the selected frame; its numeric inputs keep their existing labels and pipeline.
 - **Screen-reader semantics:** the graph is a labelled group instead of an image (its controls are no longer hidden); decorative SVG geometry is `aria-hidden`; the selected keyframe is exposed via `aria-pressed`; no control is left unnamed.
-- **Focus visibility:** diamonds and graph points show a cyan focus ring with a glow on `:focus-visible` (keyboard only; mouse focus stays unchanged).
+- **Focus visibility:** timeline diamonds show a cyan `outline` plus a soft glow on `:focus-visible`; graph keyframe points show a cyan `outline` on `:focus-visible`. Both are keyboard-only states; mouse focus is unchanged. The real-browser smoke asserts the painted `outline-style`/`outline-width`, not just the pseudo-class.
 - **Unsupported/out-of-scope:** no roving-tabindex manager (every diamond is normally tabbable), no keyframe add/delete/nudge shortcuts, no arrow-key scrubbing of the playhead, no timeline restructure, no new shortcut registry, no change to Escape semantics.
 
 ## Tests added/updated
 
 | File | Tests | Focus |
 |---|---|---|
-| `src/tests/timelineKeyframeA11y.test.tsx` | 7 | labelled focusable diamonds, `aria-pressed`, Enter/Space activation, arrow walk with end stops, mouse click regression, channel-lane labels with values, legacy composite labels |
-| `src/tests/TemporalGraphPanel.test.tsx` | 6 | group semantics + hidden decoration + focusable labelled points + `aria-describedby` keyboard contract + ArrowUp/ArrowDown editing + speed-graph read-only + handle inputs |
+| `src/tests/timelineKeyframeA11y.test.tsx` | 8 | labelled focusable diamonds, `aria-pressed`, Enter/Space activation with keyframe + frame + part assertions, arrow walk with consumed end stops, a lone-diamond lane, mouse click regression, channel-lane labels with values and local activation, legacy composite labels with frame jump |
+| `src/tests/TemporalGraphPanel.test.tsx` | 6 (2 added, 1 rewritten from the old `role="img"` assertions) | group semantics + hidden decoration + focusable labelled points + `aria-describedby` keyboard contract + ArrowUp/ArrowDown editing + speed-graph read-only + handle inputs |
 | `src/tests/selectedKeyframeSection.test.tsx` | 19 (1 added) | existing value/pipeline coverage plus the frame-scoped group label |
-| `e2e/graph-accessibility.spec.ts` | 2 | real Chromium: Tab traversal reaches a diamond, `:focus-visible` matches, arrow walk moves focus in frame order, `Enter` selects and opens the selected-keyframe panel, mouse click still selects, no console errors; plus the graph group and its keyboard point editing |
+| `e2e/graph-accessibility.spec.ts` | 2 | real Chromium: Tab traversal reaches a diamond, the painted focus ring (`outline-style`/`outline-width`) is asserted, the arrow walk moves focus in frame order, `Enter` selects and opens the selected-keyframe panel, mouse click still selects, no console errors; and — through the Curve Studio control, with no early-exit path — the graph group, its Tab-reachable keyframe point, its painted ring, its ArrowUp edit and its three `aria-hidden` decorations |
 
 ## Validation matrix
 
 | Command | Result |
 |---|---|
-| Focused Vitest (`timelineKeyframeA11y`, `TemporalGraphPanel`, `selectedKeyframeSection`) | PASS — 3 files / 34 tests |
+| Focused Vitest (`timelineKeyframeA11y`, `TemporalGraphPanel`, `selectedKeyframeSection`) | PASS — 3 files / 35 tests |
 | `npx playwright test e2e/graph-accessibility.spec.ts` | PASS — 2 tests |
-| Full Vitest (`npm test`) | PASS — 109 files / 1,651 tests |
+| Full Vitest (`npm test`) | PASS — 109 files / 1,652 tests |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests at `beb4b49` |
+| `npm run qa:release` | PASS — 2 Chromium tests (candidate resolved from HEAD) |
 | `npm run build` | PASS |
 | `npx tsc --noEmit` | clean |
 | `npm run lint` | clean (pre-existing `AnimatorContext` Fast Refresh warning only) |
@@ -89,16 +90,27 @@ No new graph engine, evaluator, timeline mutation, shortcut registry, state stor
 
 - No change to the evaluator, interpolation, keyframe/channel model, timeline mutation utilities, `useKeyboardShortcuts`, serialization, OGraf export/runtime, or any package/workflow file.
 - No new dependency, state store, event bus, shortcut registry, or UI framework.
-- Mouse interactions (diamond click select, drag to move a keyframe, context menus) behave as before.
+- Mouse interactions behave as before: parent-lane and legacy diamond click/drag/context-menu handlers are byte-identical, and the channel diamond keeps its mousedown drag plus gains a click that produces the same selection/frame result.
 - Tag `v1.1.0-rc.1`, the draft GitHub release, npm metadata, `without-mask`, global OMP configuration, `C:\Users\ertugrul.ak\Desktop\KCS`, and `ograf-graphics` are untouched.
 
 ## Independent review result
 
-_Pending — recorded after the review round below._
+Round 1 (`eece046`) returned **BLOCKED** with three findings and six documentation over-claims; all were addressed in the review-fix commit:
+
+| Finding | Severity | Resolution |
+|---|---|---|
+| The graph Playwright test could pass without opening the graph (it returned early when the graph was not mounted) | medium | The test now opens the Curve Studio modal through its own control, asserts the labelled group, Tab-reaches the keyframe point, asserts the painted focus ring, edits with `ArrowUp`, and checks the three `aria-hidden` decorations — there is no early exit |
+| `ArrowLeft`/`ArrowRight` at the lane ends returned before `preventDefault`/`stopPropagation`, leaving the key unconsumed (timeline scroll) | low | The lane now consumes the arrow before resolving the neighbour; two tests dispatch a cancelable event and assert `defaultPrevented` |
+| The focus-ring assertion only checked `:focus-visible`, not the painted style | low | Both smoke tests now read the computed `outline-style` / `outline-width` from the focused element |
+| Over-claims: universal click parity, "graph E2E PASS" wording, glow on the graph ring, incomplete test-coverage wording, "mouse entirely unchanged", changed-file list and test counts | documentation | The report now states the exact per-renderer activation effects, the graph outline (no glow), the strengthened assertions, the channel-diamond click addition, and the real test counts, and it lists itself in the changed-files table |
+
+Round 2 (review-fix commit) verdict: _recorded in the final handoff._
 
 ## Merge/push status
 
 _Pending — recorded after the review gate._
+
+Known residual risks (accepted, no AT matrix was run): the derived speed graph changes from an `img` graphic to a named group with no focusable content, so its screen-reader announcement is reasoned rather than measured; `aria-pressed` carries toggle semantics while activation only selects; `Shift`+`Enter`/`Shift`+`Space` does not forward the shift-modifier part-selection behaviour that a shift-click performs.
 
 ## Next recommended task
 

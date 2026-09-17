@@ -80,12 +80,13 @@ describe('TrackLane keyframe diamonds — keyboard accessibility', () => {
     expect(selected[0].getAttribute('aria-label')).toContain('frame 12');
   });
 
-  it('activates the focused diamond with Enter and with Space', () => {
-    const { onSelectKeyframe, onSetFrame } = renderLane(makeTrack());
+  it('activates the focused diamond with Enter and with Space, selecting the part too', () => {
+    const { onSelectKeyframe, onSetFrame, onSelectPart } = renderLane(makeTrack());
 
     fireEvent.keyDown(diamonds()[1], { key: 'Enter' });
     expect(onSelectKeyframe).toHaveBeenCalledWith('x12');
     expect(onSetFrame).toHaveBeenCalledWith(12);
+    expect(onSelectPart).toHaveBeenCalledWith('p1', false);
 
     onSelectKeyframe.mockClear();
     onSetFrame.mockClear();
@@ -106,8 +107,11 @@ describe('TrackLane keyframe diamonds — keyboard accessibility', () => {
     fireEvent.keyDown(buttons[1], { key: 'ArrowRight' });
     expect(document.activeElement).toBe(buttons[2]);
     // The walk does not wrap and does not move focus off the lane.
-    fireEvent.keyDown(buttons[2], { key: 'ArrowRight' });
+    const atEnd = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    buttons[2].dispatchEvent(atEnd);
     expect(document.activeElement).toBe(buttons[2]);
+    // The lane consumes the arrow even at its ends, so the timeline never scrolls.
+    expect(atEnd.defaultPrevented).toBe(true);
 
     fireEvent.keyDown(buttons[2], { key: 'ArrowLeft' });
     expect(document.activeElement).toBe(buttons[1]);
@@ -124,12 +128,30 @@ describe('TrackLane keyframe diamonds — keyboard accessibility', () => {
     expect(onSetFrame).toHaveBeenCalledWith(12);
   });
 
-  it('labels the expanded channel-lane diamonds with their property and value', () => {
-    renderLane(makeTrack(), { expanded: true });
+  it('labels the expanded channel-lane diamonds and activates them without touching the part', () => {
+    const { onSelectKeyframe, onSetFrame, onSelectPart } = renderLane(makeTrack(), { expanded: true });
 
     const propertyDiamond = screen.getByRole('button', { name: 'Keyframe at frame 12, Location X, value 140.00' });
     expect(propertyDiamond.className).toContain('ue-prop-diamond');
+    expect(propertyDiamond.getAttribute('tabindex')).toBe('0');
+
     fireEvent.keyDown(propertyDiamond, { key: 'Enter' });
+    expect(onSelectKeyframe).toHaveBeenCalledWith('x12');
+    expect(onSetFrame).toHaveBeenCalledWith(12);
+    // The channel lane is a different level: activation stays local to it.
+    expect(onSelectPart).not.toHaveBeenCalled();
+  });
+
+  it('keeps focus on a lone diamond and consumes the arrow keys there', () => {
+    const lone = makeTrack({ channels: { ...makeEmptyChannels(), x: [frame('only', 7, 42)] } });
+    renderLane(lone);
+
+    const button = screen.getByRole('button', { name: /^Keyframe at frame 7/ });
+    button.focus();
+    const right = new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true });
+    button.dispatchEvent(right);
+    expect(document.activeElement).toBe(button);
+    expect(right.defaultPrevented).toBe(true);
   });
 
   it('labels legacy composite diamonds and still activates them', () => {
@@ -139,10 +161,11 @@ describe('TrackLane keyframe diamonds — keyboard accessibility', () => {
         { id: 'k0', frame: 3, transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }, easing: 'ease-in' },
       ],
     });
-    const { onSelectKeyframe } = renderLane(legacy);
+    const { onSelectKeyframe, onSetFrame } = renderLane(legacy);
 
     const button = screen.getByRole('button', { name: 'Keyframe at frame 3, Body, ease-in' });
     fireEvent.keyDown(button, { key: 'Enter' });
     expect(onSelectKeyframe).toHaveBeenCalledWith('k0');
+    expect(onSetFrame).toHaveBeenCalledWith(3);
   });
 });

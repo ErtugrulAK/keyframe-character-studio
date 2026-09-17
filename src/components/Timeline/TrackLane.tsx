@@ -63,14 +63,15 @@ const diamondKeyboardProps = (
       return;
     }
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    // The key belongs to the lane walk even at its ends: consume it so the
+    // browser does not scroll the timeline and no outer handler sees it.
+    event.preventDefault();
+    event.stopPropagation();
     const lane = event.currentTarget.parentElement;
     if (!lane) return;
     const diamonds = Array.from(lane.querySelectorAll<HTMLElement>(LANE_DIAMOND_SELECTOR));
     const next = diamonds[diamonds.indexOf(event.currentTarget) + (event.key === 'ArrowLeft' ? -1 : 1)];
-    if (!next) return;
-    event.preventDefault();
-    event.stopPropagation();
-    next.focus();
+    next?.focus();
   },
 });
 

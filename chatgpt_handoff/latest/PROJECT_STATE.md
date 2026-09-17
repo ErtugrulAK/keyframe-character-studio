@@ -50,9 +50,11 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Model roles, provider mappings, task concurrency, and global OMP configuration remain unchanged.
 - Candidate package version is `1.1.0-rc.1`; package remains private and unreleased.
 
-## Milestone A status (canvas tangent authoring) — blocker-closing pass
+## Milestone A merged — direct canvas tangent handle authoring
 
-- Branch: `feat/canvas-tangent-authoring` (local-only, not pushed), commits `c7ae7bc` (feature), `0114098` (review blockers), `b3396ec` (non-finite handle math + serializer round-trip proof), `eb1f1a1` (documentation corrections)
-- All five review blockers are closed; validation is green (`npm test` 108 files / 1635 tests, build, TypeScript, lint, `validate:ograf`, `qa:release`, permanent Playwright smoke `e2e/canvas-tangent-authoring.spec.ts`)
-- **Not merged:** `main` advanced with docs-only commits after the branch point, so the branch and `main` have diverged and a fast-forward merge is impossible in either direction. No rebase, no merge commit, and no force push was performed. An explicit decision is required (replay/cherry-pick onto current `main`, or an approved merge/rebase exception).
-- `main` = `origin/main` = `312a0d771123b2b64f9b6f5779f873b439eedab5`, unchanged by this work.
+- Branch `feat/canvas-tangent-authoring-replay` was fast-forward-merged into `main`; the milestone is now part of `main` (no merge commit, no rebase, no history rewrite).
+- What it adds: selecting a single freeform layer in edit mode shows its vertices on the stage; clicking a vertex shows its Bezier tangent handles; dragging a handle reshapes the rendered path live; double-click toggles corner ↔ smooth with neighbour-derived symmetric handles. One undo entry per drag; `Escape` cancels a drag and records nothing.
+- Review: six rounds; final verdict READY (five findings closed: verification matrix, legacy points normalization, selection model, Escape/batch lifecycle, smooth-handle/extreme-coordinate edge).
+- Validation: 108 files / 1,641 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the permanent real-browser spec `e2e/canvas-tangent-authoring.spec.ts`.
+- Still out of scope: vertex add/remove, multi-vertex transforms, keyboard nudging, handle constraints, boolean/trim-enabled freeform layers.
+- Next roadmap milestone: **B — graph + keyboard accessibility (item 4)**; untouched.

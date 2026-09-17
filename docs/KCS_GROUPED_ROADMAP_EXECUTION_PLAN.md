@@ -1,12 +1,12 @@
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Main stays at `d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72`; nothing from this run is merged.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestones B–F are unchanged.
 
 ## Milestone map and status
 
 | Milestone | Roadmap items | Branch | Status |
 |---|---|---|---|
-| A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` @ `c7ae7bc` | Implemented + validated; independent review BLOCKED; **not merged** |
+| A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | — | Not started |
 | C — First export / onboarding flow | 5 | — | Not started |
 | D — State / CI / warning hygiene | 6, 9 | — | Plan only |
@@ -15,7 +15,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Main stays at `d3aa1
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
-## Milestone A — remaining work before merge
+## Milestone A — remaining work before merge (all items closed; kept as the historical list)
 
 From `reports/progress_108_canvas_tangent_authoring.md` §7:
 

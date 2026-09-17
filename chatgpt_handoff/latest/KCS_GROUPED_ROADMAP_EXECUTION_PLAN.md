@@ -6,7 +6,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Main stays at `d3aa1
 
 | Milestone | Roadmap items | Branch | Status |
 |---|---|---|---|
-| A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` @ `eb1f1a1` | Implemented + validated; all five review blockers closed and re-reviewed; **not merged** (branch and `main` diverged: no fast-forward) |
+| A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | — | Not started |
 | C — First export / onboarding flow | 5 | — | Not started |
 | D — State / CI / warning hygiene | 6, 9 | — | Plan only |

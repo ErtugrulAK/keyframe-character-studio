@@ -9,7 +9,7 @@ This file is the OMP final response for the Milestone A blocker-closing task. It
 - **Starting branch commit:** `c7ae7bc` (feature)
 - **New commits:** `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216`, `b0e1027`
 - **Review blocker status:** 1 (verification matrix) CLOSED · 2 (legacy normalization) CLOSED · 3 (selection model) CLOSED · 4 (Escape/batch lifecycle) CLOSED · 5 (smooth-handle edge + extreme coordinates) CLOSED
-- **Merge:** **not performed** — fast-forward is impossible in either direction (see §6)
+- **Merge:** **performed** — the branch was replayed onto current `main` and fast-forward merged (approved replay strategy, see §6)
 - **Push:** none (the feature branch has no remote; `main` was not pushed)
 - **`main == origin/main`:** yes, `312a0d771123b2b64f9b6f5779f873b439eedab5`, untouched
 - **Working tree:** clean
@@ -68,9 +68,11 @@ Fixes after review: the finite-anchor precondition plus its two tests, and the d
 - Secrets: none printed or copied
 - `main` / `origin/main`: `312a0d771123b2b64f9b6f5779f873b439eedab5`, CI run `35114602866` success, unchanged by this work
 
-**Merge blocking evidence:** `git merge-base --is-ancestor main feat/canvas-tangent-authoring` fails and the reverse also fails; `git rev-list --left-right --count main...feat/canvas-tangent-authoring` = `4  4` (main has four docs/handoff commits the branch lacks; the branch has eight commits main lacks). No rebase, no merge commit, and no force push were performed.
+**Integration record:** the replay branch `feat/canvas-tangent-authoring-replay` was created from `main` at `312a0d7`, the eleven milestone commits were re-applied on it (documentation/handoff conflicts resolved in favour of the newest branch content; `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which only exists on `main`, was preserved and updated), and `main` was fast-forwarded to that tip and pushed. `main` is a strict superset of its previous state; the original branch is kept as the review artefact.
 
-**Options that need your approval:** (1) replay the branch's changes as new commits on a fresh branch from current `main`, then fast-forward `main`; (2) explicitly approve a controlled `--no-ff` merge or a rebase.
+**Merge blocking evidence (historical, before the replay):** `git merge-base --is-ancestor main feat/canvas-tangent-authoring` fails and the reverse also fails; `git rev-list --left-right --count main...feat/canvas-tangent-authoring` = `4  4` (main has four docs/handoff commits the branch lacks; the branch has eight commits main lacks). No rebase, no merge commit, and no force push were performed.
+
+**Decision taken:** option (1), the replay, approved by the user.
 
 ## 7) HANDOFF
 
@@ -83,4 +85,4 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
 ## NEXT ACTION
 
-The milestone itself is finished and READY. The only open decision is the merge strategy for `main` (see §6): approve the replay option or a controlled merge/rebase exception. After that, the next roadmap milestone is **B (graph + keyboard accessibility, roadmap item 4)**, which is untouched and still plan-only.
+Nothing is pending for Milestone A. The next roadmap milestone is **B (graph + keyboard accessibility, roadmap item 4)**, which is untouched and still plan-only.

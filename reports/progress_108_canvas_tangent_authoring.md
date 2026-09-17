@@ -234,17 +234,10 @@ Self-found hardening during round 2: the unmount cleanup that closes an open bat
 
 ## Merge status
 
-**NOT MERGED — fast-forward impossible; awaiting an explicit decision.**
+**MERGED into `main` by fast-forward** (approved replay strategy).
 
-Evidence (`git merge-base --is-ancestor` in both directions, then `git rev-list --left-right --count main...feat/canvas-tangent-authoring`):
-
-- `main` is **not** an ancestor of the branch and the branch is **not** an ancestor of `main`
-- divergence: `4  4` — `main` has 4 commits the branch lacks (`449ed83`, `05418f1`, `9e52ca5`, `312a0d7`: docs/handoff only), the branch has 4 code+docs commits `main` lacks
-- therefore `git merge --ff-only feat/canvas-tangent-authoring` on `main` fails, and `git merge --ff-only main` on the branch fails as well
-
-Per the protected rules (no rebase, no normal merge commit, no force push) nothing was attempted. Safe options, both needing explicit approval:
-
-1. **Replay onto current `main` (no history rewrite):** create a new branch from `main`, re-apply this branch's ten commits as new commits on it (for example `git checkout feat/canvas-tangent-authoring -- <paths>` per logical group, or `git cherry-pick c7ae7bc^..feat/canvas-tangent-authoring`), then `git merge --ff-only` that branch into `main`. `chatgpt_handoff/**` should be resolved in favour of the newest content (this branch's refresh).
-2. **Approved exception:** a controlled `git merge --no-ff` on `main`, or an approved rebase of the branch onto `main`, which the standing rules currently forbid.
-
-`main`, `origin/main`, the `v1.1.0-rc.1` tag target, the draft GitHub release, and npm were not touched: no push of any kind was performed (the feature branch has no remote counterpart).
+- Replay branch: `feat/canvas-tangent-authoring-replay`, created from `main` at `312a0d771123b2b64f9b6f5779f873b439eedab5`, carrying the eleven milestone commits re-applied on top of current `main`
+- The original branch `feat/canvas-tangent-authoring` stays as the review artefact and was not rewritten
+- Conflicts were limited to documentation/handoff files and were resolved in favour of the branch content (the newest), except `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which exists only on `main` and was preserved and updated
+- No rebase, no merge commit, no force push, no history rewrite: `main` is a strict superset of its previous state
+- `v1.1.0-rc.1` tag target, the draft GitHub release, and npm are untouched

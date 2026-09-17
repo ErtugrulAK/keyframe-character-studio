@@ -49,3 +49,12 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - `.omp/config.yml` retains `memory.backend: mnemopi`.
 - Model roles, provider mappings, task concurrency, and global OMP configuration remain unchanged.
 - Candidate package version is `1.1.0-rc.1`; package remains private and unreleased.
+
+## Milestone A merged — direct canvas tangent handle authoring
+
+- Branch `feat/canvas-tangent-authoring-replay` was fast-forward-merged into `main`; the milestone is now part of `main` (no merge commit, no rebase, no history rewrite).
+- What it adds: selecting a single freeform layer in edit mode shows its vertices on the stage; clicking a vertex shows its Bezier tangent handles; dragging a handle reshapes the rendered path live; double-click toggles corner ↔ smooth with neighbour-derived symmetric handles. One undo entry per drag; `Escape` cancels a drag and records nothing.
+- Review: six rounds; final verdict READY (five findings closed: verification matrix, legacy points normalization, selection model, Escape/batch lifecycle, smooth-handle/extreme-coordinate edge).
+- Validation: 108 files / 1,641 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the permanent real-browser spec `e2e/canvas-tangent-authoring.spec.ts`.
+- Still out of scope: vertex add/remove, multi-vertex transforms, keyboard nudging, handle constraints, boolean/trim-enabled freeform layers.
+- Next roadmap milestone: **B — graph + keyboard accessibility (item 4)**; untouched.

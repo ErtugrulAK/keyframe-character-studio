@@ -3,9 +3,10 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import type { SceneData, SceneLayer } from '../types/composition';
 
 /**
- * Milestone C — HeaderBar first-export flow: the guidance panel runs the same
- * OGraf pipeline the export uses, so the readiness answer and the export can
- * never disagree, and a blocked scene can never be reported ready.
+ * Milestone C — HeaderBar first-export flow: the guidance panel compiles the
+ * scene through the same OGraf pipeline the export uses, so the readiness answer
+ * matches the diagnostics of that compile, a scene with a blocking finding is
+ * never summarised as ready, and the check never writes a package.
  */
 
 const { context, createZipMock } = vi.hoisted(() => ({

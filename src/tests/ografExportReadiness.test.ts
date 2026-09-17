@@ -4,7 +4,8 @@ import type { OGrafExportDiagnostic } from '../ograf/types';
 
 /**
  * Milestone C — the first-export readiness check reads the SAME diagnostics
- * authority the export uses, so a blocked export can never be reported ready.
+ * authority the export reads, so a diagnostics set with a blocking finding is
+ * never summarised as ready (and the export reports it as blocked too).
  */
 
 const error = (overrides: Partial<OGrafExportDiagnostic> = {}): OGrafExportDiagnostic => ({

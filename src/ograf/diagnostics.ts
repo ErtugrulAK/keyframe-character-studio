@@ -229,9 +229,11 @@ export function getOGrafExportRemediationReport(diagnostics: OGrafExportDiagnost
 
 /**
  * Pre-flight answer for the first-export guidance: what the existing diagnostics
- * authority already says about the current scene, expressed as one user-facing
- * status. This reads the same report the export handlers use, so the check and
- * the export can never disagree, and it never implies that a package was written.
+ * authority already says about the scene it was given, expressed as one
+ * user-facing status. It reads the same report the export handlers read, so a
+ * summary cannot contradict the diagnostics of that same compile; a scene that
+ * changed afterwards is recompiled when the export runs, and it never implies
+ * that a package was written.
  */
 export interface OGrafExportReadiness {
   status: 'ready' | 'warnings' | 'blocked';

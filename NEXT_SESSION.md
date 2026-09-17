@@ -27,7 +27,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. Land **Milestone C — first export / onboarding flow (roadmap item 5)**: it is implemented on `feat/export-onboarding` (branch commit `73b22a2`, report `reports/progress_110_export_onboarding.md`) and awaits the review gate and a fast-forward merge. Nothing else needs to be built for it. Scope recap: a short first-successful-OGraf-export path for new users, reusing the Task 105 export diagnostics, the existing export UI, and the existing project templates; no host/vendor contract invention, no OGraf package format change, no new dependency, no package/workflow/release change.
+1. Land **Milestone C — first export / onboarding flow (roadmap item 5)**: it is implemented on `feat/export-onboarding` (see `reports/progress_110_export_onboarding.md` for the commit list and evidence) and awaits the review gate and a fast-forward merge. Nothing else needs to be built for it. Scope recap: a short first-successful-OGraf-export path for new users, reusing the Task 105 export diagnostics and the existing export UI. No template/sample affordance was added (the app has no starter-scene machinery), and there is no host/vendor contract invention, no OGraf package format change, no new dependency, and no package/workflow/release change.
 2. Milestones D–F stay plan-only; **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work, and all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.

@@ -186,7 +186,9 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 ### Branch
 
 - Implementation branch: `feat/export-onboarding`
-- Commits: `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping)
+- Commits on this branch: `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit-list provenance), `d23e867` (handoff refresh), plus any later documentation commit
+- Branch tip: whatever `feat/export-onboarding`'s HEAD is at merge time — the milestone deliberately does not record a "final" tip SHA in its own documents, because writing one creates the commit that invalidates it
+- Merge-candidate content: the twelve paths in `f5dbb3f..feat/export-onboarding` (product, tests, e2e, report, state docs and the handoff bundle)
 - Feature commit message: `feat: add first export onboarding flow`
 - Baseline `main`: `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5` (Milestones A and B merged, `main == origin/main`)
 - `v1.1.0-rc.1` tag target (unchanged): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -270,11 +272,23 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 
 ### Independent review result
 
-_Pending — recorded after the review round below._
+| Round | Scope | Verdict | Outcome |
+|---|---|---|---|
+| 1 | `73b22a2` (feature) | BLOCKED | the guide naming and the handoff state were wrong, plus four documentation over-claims about what the check guarantees |
+| 2 | `ba9837e` (round-1 fixes) | BLOCKED | the guide naming was CLOSED; only documentation consistency remained (checkout line, stale "plan-only" claims, a missing changed-files row, two absolute copy claims) |
+| 3 | `31cb407` (round-2 fixes) | BLOCKED | all five round-2 items CLOSED, no protected change, no functional regression; the same absolute guarantee survived in the presenter comment and two test headers, and the handoff still claimed template reuse |
+| 4 | `6d8371d` (round-3 fixes) | BLOCKED | items 1–3 CLOSED; the only remaining item was that this report's Branch section did not list the commits the handoff pointed at |
+
+The documentation item from round 4 was fixed in `9db62f3` (commit list recorded above). No further review round was run: the merge gate requires READY / READY WITH WARNINGS, and the functional contract has been closed and unchanged since round 2 — the remaining findings were documentation provenance, not behaviour. **Decision requested from the user: merge Milestone C as reviewed (functional gate satisfied, documentation items closed by reading), or run one more review round first.**
 
 ### Merge/push status
 
-_Pending — recorded after the review gate._
+**NOT MERGED — awaiting the user's decision** (the round-4 review verdict was BLOCKED on a documentation-provenance item that was then fixed without a further review round).
+
+- Branch `feat/export-onboarding` (HEAD at merge time; the commit list is in the Branch section above)
+- `main` is still at `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`; `main == origin/main`; nothing was pushed
+- Fast-forward feasibility checked and valid: `main` is an ancestor of the branch, so `git merge --ff-only feat/export-onboarding` remains available whenever the merge is approved
+- No rebase, no merge commit, no force push, no history rewrite, no tag/draft-release/npm change
 
 ### Next recommended task
 
@@ -578,7 +592,7 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `PROJECT_STATE.md` — 8048 bytes
 - `README.md` — 2227 bytes
 - `manifest.txt` — 3048 bytes
-- `progress_110_export_onboarding.md` — 10712 bytes
+- `progress_110_export_onboarding.md` — 13003 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

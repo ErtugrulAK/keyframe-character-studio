@@ -108,7 +108,7 @@ The documentation item from round 4 was fixed in `9db62f3` (commit list recorded
 
 **NOT MERGED — awaiting the user's decision** (the round-4 review verdict was BLOCKED on a documentation-provenance item that was then fixed without a further review round).
 
-- Branch `feat/export-onboarding` tip: `9db62f3` (commits `73b22a2`, `ba9837e`, `31cb407`, `6d8371d`, `9db62f3`)
+- Branch `feat/export-onboarding` (HEAD at merge time; the commit list is in the Branch section above)
 - `main` is still at `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`; `main == origin/main`; nothing was pushed
 - Fast-forward feasibility checked and valid: `main` is an ancestor of the branch, so `git merge --ff-only feat/export-onboarding` remains available whenever the merge is approved
 - No rebase, no merge commit, no force push, no history rewrite, no tag/draft-release/npm change

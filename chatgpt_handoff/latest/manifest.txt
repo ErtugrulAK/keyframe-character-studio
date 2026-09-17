@@ -1,43 +1,41 @@
-# KCS ChatGPT Upload Manifest — Milestone C (First Export / Onboarding Flow) — MERGED
+# KCS ChatGPT Upload Manifest — Milestone D Item 6 (State Consistency Check)
 
 Clean refreshed: YES
-Bundle purpose: Milestone C — first export / onboarding flow — merged into main after a READY WITH WARNINGS gate
+Bundle purpose: Milestone D item 6 — state consistency check (docs/tooling); item 9 remains approval-gated
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current main / origin HEAD: 5e739aa (post-merge documentation commit over the Milestone C merge commit c2dcb22); later docs commits may be newer
-Milestone C integration commit: c2dcb22352f1f4ad9102624309a0d92cf206046b (fast-forward merge; no merge commit, no rebase, no force push)
-Milestone C commits (branch feat/export-onboarding, retained as the review artefact): 73b22a2 (feature), ba9837e, 31cb407, 6d8371d, 9db62f3, d23e867, ebc718f, 225cf1e, 6ae8a8e, c2dcb22
-Earlier milestones: A replayed and merged at 077911b; B merged at 96e8f9d
+Branch: chore/state-hygiene-gate (feature branch under review; main is at or newer than ec3fa5c)
+Check command: node scripts/check-state-consistency.mjs
+Item 9: dependency/warning maintenance — NOT started, requires explicit user approval before any package.json, lockfile or workflow edit
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (8):
+Copied files (9):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the Milestone C final response
-- progress_110_export_onboarding.md — the Milestone C report (merged status)
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan; A/B/C merged, D next and approval-gated
-- CHANGELOG.md — repository changelog with the Milestone C entry
-- NEXT_SESSION.md — repository state with Milestone D as the next scoped work
-- PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
+- OMP_FINAL_RESPONSE.md — the item-6 final response
+- progress_111_state_hygiene_gate.md — the item-6 report
+- progress_110_export_onboarding.md — the Milestone C report (current milestone record)
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
+- CHANGELOG.md — changelog (copy of the root document)
+- NEXT_SESSION.md — current state and next action (copy of the root document)
+- PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source and test files (they live under src/ and e2e/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
+- Source and test files (the check lives at scripts/check-state-consistency.mjs in the repository; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
 - package.json, ci.yml, release-smoke.yml, older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
-Validation at the merge candidate (each command run separately):
-- Focused Vitest: PASS — 3 files / 13 tests
-- Playwright smoke: PASS — e2e/export-onboarding.spec.ts (1 test; not part of CI or the release gate)
-- Full Vitest: PASS — 112 files / 1,665 tests
-- validate:ograf, qa:release (2 Chromium tests, candidate c2dcb22), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
-- Independent review: six rounds; final gate verdict READY WITH WARNINGS (all eight merge-gate checks closed)
-- CI: run 35222589827 at c2dcb22 success
+Validation at this revision (each command run separately):
+- node scripts/check-state-consistency.mjs: PASS
+- Focused Vitest (src/tests/stateConsistencyCheck.test.ts): PASS
+- validate:ograf, qa:release (2 Chromium tests), full Vitest, build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
+- Independent review: round 1 BLOCKED (2 high, 4 medium, 1 low) → fixes applied → focused re-review recorded in the report
 
-Next milestone: D — state / CI / warning hygiene (items 6 and 9). Item 6 (documentation/tooling) can start without further approval; item 9 (dependency/package/workflow) requires explicit user approval.
+Next: item 9 requires explicit user approval; otherwise Milestone E planning (OGraf QA / schema hardening study).
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

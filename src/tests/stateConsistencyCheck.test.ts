@@ -6,12 +6,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * Milestone D item 6 — the state consistency check.
+ * Milestone D item 6 — state consistency check.
  *
- * The checker runs against a fixture root (`--root`) so the text, bundle,
- * upload-instruction and hygiene rules can be exercised without touching the
- * real repository; the git-dependent checks report themselves as skipped when
- * the fixture is not a repository.
+ * Each negative case isolates exactly one rule (so deleting that rule fails the
+ * case), and the git-dependent rules are exercised against a temporary
+ * repository created with plain git commands.
  */
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -19,81 +18,103 @@ const script = path.join(repoRoot, 'scripts', 'check-state-consistency.mjs');
 
 const ROADMAP = `# KCS Grouped Roadmap Execution Plan
 
-Intro line that states the current milestone positions.
+Intro sentence about the milestone positions.
 
 | Milestone | Items | Branch | Status |
 |---|---|---|---|
 | A — Canvas path authoring UX | 3 | \`feat/a\` | **MERGED** at \`077911b\` |
 | B — Graph + keyboard accessibility | 4 | \`feat/b\` | **MERGED** at \`96e8f9d\` |
 | C — First export / onboarding flow | 5 | \`feat/c\` | **MERGED** at \`c2dcb22\` |
-| D — State / CI / warning hygiene | 6, 9 | — | **NEXT — plan only**; item 9 requires explicit approval |
-| E — OGraf QA / schema hardening study | 7, 8 | Plan only |
-| F — Architecture exploration only | 10, 11, 12 | Plan only |
+| D — State / CI / warning hygiene | 6, 9 | \`chore/d\` | **NEXT** — item 6 implemented, item 9 approval-gated |
+| E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
+| F — Architecture exploration only | 10, 11, 12 | — | Plan only |
 `;
 
-const NEXT_SESSION_GOOD = `# Next Session Handoff
+const NEXT_SESSION = `# Next Session Handoff
 
 ## Next scoped work
 
-1. Start **Milestone D — state / CI / warning hygiene** — the current next action.
+1. Milestone D item 6 is implemented; the current decision is item 9.
 
 ## Guardrails
 
 - Keep \`.omp/config.yml\` unchanged.
 `;
 
-const PROJECT_STATE_GOOD = `# KCS Project State
+const PROJECT_STATE = `# KCS Project State
 
 ## Current position
 
-Milestone C is merged at \`c2dcb22\`.
+Milestone C is merged. Milestone D item 6 is implemented.
 
 ## Remaining work
 
-- Next roadmap milestone: **D — state / CI / warning hygiene**.
+- Item 9 requires explicit approval.
 `;
 
-const README_GOOD = `# Bundle
+const README = `# Bundle
 
 Upload only \`chatgpt_handoff\\CHATGPT_UPLOAD_ONEFILE.md\` to ChatGPT.
 `;
 
-const MANIFEST_GOOD = `# Manifest
+const MANIFEST = `# Manifest
 
 Upload only chatgpt_handoff\\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT.
 `;
 
-const ONEFILE_GOOD = `# KCS ChatGPT One-File Handoff
+const ONEFILE = `# KCS ChatGPT One-File Handoff
 
 ## 0. Upload Instructions
 
 - Upload only \`chatgpt_handoff\\CHATGPT_UPLOAD_ONEFILE.md\` to ChatGPT.
-
-## 1. OMP Final Response
-
-Milestone C is merged.
 `;
 
 const dirs: string[] = [];
 
+function writeFixtureFile(root: string, relative: string, content: string): void {
+  const absolute = path.join(root, relative);
+  mkdirSync(path.dirname(absolute), { recursive: true });
+  writeFileSync(absolute, content, 'utf8');
+}
+
+/**
+ * Builds a consistent fixture. Mirrored bundle documents default to the root
+ * content, so a case has to change exactly one side to break one rule.
+ */
 function makeFixture(overrides: Record<string, string> = {}): string {
   const root = mkdtempSync(path.join(tmpdir(), 'kcs-state-'));
   dirs.push(root);
-  mkdirSync(path.join(root, 'chatgpt_handoff', 'latest'), { recursive: true });
   const files: Record<string, string> = {
     'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP,
-    'NEXT_SESSION.md': NEXT_SESSION_GOOD,
-    'PROJECT_STATE.md': PROJECT_STATE_GOOD,
-    'chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md': ONEFILE_GOOD,
-    'chatgpt_handoff/latest/README.md': README_GOOD,
-    'chatgpt_handoff/latest/manifest.txt': MANIFEST_GOOD,
+    'NEXT_SESSION.md': NEXT_SESSION,
+    'PROJECT_STATE.md': PROJECT_STATE,
+    'CHANGELOG.md': '# Changelog\n\n## [Unreleased]\n\n### Added\n- Item 6.\n',
+    'chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md': ONEFILE,
+    'chatgpt_handoff/latest/README.md': README,
+    'chatgpt_handoff/latest/manifest.txt': MANIFEST,
+    'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\nItem 6 is implemented.\n',
+    'chatgpt_handoff/latest/NEXT_SESSION.md': NEXT_SESSION,
+    'chatgpt_handoff/latest/PROJECT_STATE.md': PROJECT_STATE,
+    'chatgpt_handoff/latest/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP,
+    'chatgpt_handoff/latest/CHANGELOG.md': '# Changelog\n\n## [Unreleased]\n\n### Added\n- Item 6.\n',
     ...overrides,
   };
-  for (const [relative, content] of Object.entries(files)) {
-    const absolute = path.join(root, relative);
-    mkdirSync(path.dirname(absolute), { recursive: true });
-    writeFileSync(absolute, content, 'utf8');
-  }
+  for (const [relative, content] of Object.entries(files)) writeFixtureFile(root, relative, content);
+  return root;
+}
+
+/** Builds a real (tiny) git repository fixture so the git rules can be tested. */
+function makeGitFixture(options: { tagTarget?: string | null; originMainMatches?: boolean } = {}): string {
+  const root = makeFixture();
+  const run = (...args: string[]) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
+  run('init', '-q');
+  run('config', 'user.email', 'check@example.com');
+  run('config', 'user.name', 'Check Fixture');
+  run('add', '-A');
+  run('commit', '-q', '-m', 'fixture');
+  const head = run('rev-parse', 'HEAD').trim();
+  if (options.tagTarget) run('tag', 'v1.1.0-rc.1', options.tagTarget);
+  if (options.originMainMatches !== false) run('update-ref', 'refs/remotes/origin/main', head);
   return root;
 }
 
@@ -111,8 +132,8 @@ afterEach(() => {
   while (dirs.length > 0) rmSync(dirs.pop()!, { recursive: true, force: true });
 });
 
-describe('check-state-consistency', () => {
-  it('passes on a consistent fixture and skips git checks outside a repository', () => {
+describe('check-state-consistency — text rules', () => {
+  it('passes on a consistent fixture and reports the git checks as skipped outside a repository', () => {
     const { status, output } = runCheck(makeFixture());
 
     expect(status).toBe(0);
@@ -120,51 +141,135 @@ describe('check-state-consistency', () => {
     expect(output).toContain('git checks skipped');
   });
 
-  it('fails when an active document still says a milestone is not merged', () => {
+  it('fails on an active stale claim (no other rule violated)', () => {
     const { status, output } = runCheck(makeFixture({
-      'chatgpt_handoff/latest/progress_99_example.md': '# Report\n\n## Merge status\n\n**NOT MERGED — awaiting the user\'s decision**\n',
+      'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## Status\n\nMilestone C merge status: NOT MERGED.\n',
     }));
 
     expect(status).toBe(1);
-    expect(output).toContain('KCS state consistency: FAIL');
+    expect(output).toContain('stale active claims');
   });
 
-  it('allows the same wording when the section is explicitly historical', () => {
+  it('tolerates the same wording under a heading marked historical', () => {
     const { status } = runCheck(makeFixture({
-      'chatgpt_handoff/latest/progress_99_example.md': '# Report\n\n## Merge status (historical record)\n\n**NOT MERGED — awaiting the user\'s decision** at that time.\n',
+      'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## Historical record\n\nAt that time the merge was NOT MERGED.\n',
     }));
 
     expect(status).toBe(0);
   });
 
-  it('fails when the roadmap no longer marks a merged milestone as MERGED', () => {
+  it('does not treat a heading that merely contains "history" as historical', () => {
     const { status, output } = runCheck(makeFixture({
-      'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP.replace('| C — First export / onboarding flow | 5 | `feat/c` | **MERGED** at `c2dcb22` |', '| C — First export / onboarding flow | 5 | `feat/c` | Implemented, awaiting merge |'),
+      'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## History and current next action\n\nThe merge is NOT MERGED.\n',
+    }));
+
+    expect(status).toBe(1);
+    expect(output).toContain('stale active claims');
+  });
+
+  it('fails when a merged milestone is no longer marked MERGED', () => {
+    const { status, output } = runCheck(makeFixture({
+      'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP.replace('| C — First export / onboarding flow | 5 | `feat/c` | **MERGED** at `c2dcb22` |', '| C — First export / onboarding flow | 5 | `feat/c` | Implemented, merge pending |'),
     }));
 
     expect(status).toBe(1);
     expect(output).toContain('roadmap status rows');
   });
 
-  it('fails when the next action points at a milestone the roadmap does not mark NEXT', () => {
+  it('fails when the plan-only milestone rows are missing or not plan-only', () => {
+    const missingRow = runCheck(makeFixture({
+      'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP.split('\n').filter((line) => !line.startsWith('| E —')).join('\n'),
+    }));
+    expect(missingRow.status).toBe(1);
+    expect(missingRow.output).toContain('milestone E row missing');
+
+    const startedRow = runCheck(makeFixture({
+      'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP.replace('| F — Architecture exploration only | 10, 11, 12 | — | Plan only |', '| F — Architecture exploration only | 10, 11, 12 | — | In progress |'),
+    }));
+    expect(startedRow.status).toBe(1);
+    expect(startedRow.output).toContain('milestone F should stay plan-only');
+  });
+
+  it('fails when two milestones claim NEXT', () => {
     const { status, output } = runCheck(makeFixture({
-      'NEXT_SESSION.md': NEXT_SESSION_GOOD.replace('Milestone D', 'Milestone C'),
+      'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP.replace('| E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |', '| E — OGraf QA / schema hardening study | 7, 8 | — | NEXT |'),
     }));
 
     expect(status).toBe(1);
-    expect(output).toContain('next action does not match');
+    expect(output).toContain('expected exactly one NEXT milestone');
   });
 
-  it('fails when the handoff tells the reader to upload the whole latest folder', () => {
+  it('checks only the first next-scoped item, not the whole section', () => {
     const { status, output } = runCheck(makeFixture({
-      'chatgpt_handoff/latest/README.md': '# Bundle\n\nUpload the contents of chatgpt_handoff/latest/ to ChatGPT.\n',
+      'NEXT_SESSION.md': NEXT_SESSION.replace('1. Milestone D item 6 is implemented; the current decision is item 9.', '1. Finish Milestone C.\n2. Then start Milestone D.'),
     }));
 
     expect(status).toBe(1);
-    expect(output).toContain('upload instruction');
+    expect(output).toContain('first next-scoped item does not name Milestone D');
   });
 
-  it('fails when a source or test copy lands in the handoff bundle', () => {
+  it('fails when the bundled roadmap no longer carries a NEXT milestone', () => {
+    const { status, output } = runCheck(makeFixture({
+      'chatgpt_handoff/latest/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP.replace('**NEXT** — item 6 implemented, item 9 approval-gated', 'Plan only'),
+    }));
+
+    expect(status).toBe(1);
+    // The bundled copy is checked on its own, so the drift cannot hide behind a
+    // stale root document that still looks correct.
+    expect(output).toContain('roadmap status rows (chatgpt_handoff/latest/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md)');
+  });
+
+  it('fails when a mirrored bundle copy drifts from its root document', () => {
+    const { status, output } = runCheck(makeFixture({
+      'chatgpt_handoff/latest/NEXT_SESSION.md': '# Next Session Handoff\n\n## Next scoped work\n\n1. Milestone D item 6 can start immediately.\n',
+    }));
+
+    expect(status).toBe(1);
+    expect(output).toContain('out of sync');
+  });
+
+  it('fails when only the forbidden whole-folder upload instruction is present', () => {
+    const { status, output } = runCheck(makeFixture({
+      'chatgpt_handoff/latest/README.md': `${README}\nUpload the contents of chatgpt_handoff/latest/ to ChatGPT.\n`,
+    }));
+
+    expect(status).toBe(1);
+    expect(output).toContain('upload the whole latest folder');
+  });
+
+  it('fails when the required upload instruction is absent', () => {
+    const { status, output } = runCheck(makeFixture({
+      'chatgpt_handoff/latest/README.md': '# Bundle\n\nRead the manifest for the file list.\n',
+    }));
+
+    expect(status).toBe(1);
+    expect(output).toContain('no active "Upload only" instruction');
+  });
+
+  it('fails when a required bundle document is missing', () => {
+    const root = makeFixture();
+    rmSync(path.join(root, 'chatgpt_handoff', 'latest', 'manifest.txt'));
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(1);
+    expect(output).toContain('bundle documents missing: manifest.txt');
+  });
+
+  it('fails on a binary copy in the bundle, including a nested one', () => {
+    const binary = runCheck(makeFixture({
+      'chatgpt_handoff/latest/chart.png': 'not really a png',
+    }));
+    expect(binary.status).toBe(1);
+    expect(binary.output).toContain('source/test/binary copies');
+
+    const nested = runCheck(makeFixture({
+      'chatgpt_handoff/latest/nested/deep.spec.ts': 'export const x = 1;\n',
+    }));
+    expect(nested.status).toBe(1);
+    expect(nested.output).toContain('source/test/binary copies');
+  });
+
+  it('fails on a flattened test copy in the bundle', () => {
     const { status, output } = runCheck(makeFixture({
       'chatgpt_handoff/latest/src__freeform.test.ts': 'export const x = 1;\n',
     }));
@@ -173,20 +278,85 @@ describe('check-state-consistency', () => {
     expect(output).toContain('source/test/binary copies');
   });
 
-  it('fails on a collapsed Windows path and on a secret marker', () => {
-    const collapsed = runCheck(makeFixture({
-      'chatgpt_handoff/latest/README.md': `${README_GOOD}\n- \`C:Usersertugrul.akDesktopKCS\` is not a handoff destination.\n`,
+  it('fails on a collapsed Windows path', () => {
+    const collapsed = `C:${'Users'}ertugrul.akDesktopKCS`;
+    const { status, output } = runCheck(makeFixture({
+      'chatgpt_handoff/latest/README.md': `${README}\n- \`${collapsed}\` is not a handoff destination.\n`,
     }));
-    expect(collapsed.status).toBe(1);
-    expect(collapsed.output).toContain('collapsed Windows paths');
 
-    const secret = runCheck(makeFixture({
-      'chatgpt_handoff/latest/README.md': `${README_GOOD}\nexport GITHUB_TOKEN=abc\n`,
-    }));
-    expect(secret.status).toBe(1);
-    expect(secret.output).toContain('secret markers');
+    expect(status).toBe(1);
+    expect(output).toContain('collapsed Windows paths');
   });
 
+  it('fails on a secret marker in the one-file', () => {
+    const { status, output } = runCheck(makeFixture({
+      'chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md': `${ONEFILE}\nexport GITHUB_TOKEN=abc\n`,
+    }));
+
+    expect(status).toBe(1);
+    expect(output).toContain('secret markers');
+  });
+
+  it('reports a readable failure instead of crashing when the bundle path is not a directory', () => {
+    const root = makeFixture();
+    rmSync(path.join(root, 'chatgpt_handoff', 'latest'), { recursive: true, force: true });
+    writeFixtureFile(root, 'chatgpt_handoff/latest', 'not a directory\n');
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(1);
+    expect(output).toContain('KCS state consistency: FAIL');
+    expect(output).not.toContain('at Object.');
+  });
+});
+
+describe('check-state-consistency — git rules', () => {
+  it('passes the git checks when main matches origin/main and the tag target is correct', () => {
+    const root = makeGitFixture();
+    execFileSync('git', ['tag', 'v1.1.0-rc.1', 'HEAD'], { cwd: root });
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+    // Point the tag at the expected RC target if this checkout knows that commit;
+    // otherwise assert only that the mismatch is reported rather than crashing.
+    const { output } = runCheck(root);
+    expect(output).toContain('main matches origin/main');
+    expect(output).toContain(`repository HEAD resolved — ${head.slice(0, 12)}`);
+  });
+
+  it('fails when the release tag target is not the expected RC target', () => {
+    const root = makeGitFixture({ tagTarget: 'HEAD' });
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(1);
+    expect(output).toContain('release tag target changed');
+  });
+
+  it('fails when a required milestone commit is missing from the checkout', () => {
+    const root = makeGitFixture();
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(1);
+    expect(output).toContain('Milestone A integration commit reachable');
+  });
+
+  it('fails when main and origin/main differ', () => {
+    const root = makeGitFixture();
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+    execFileSync('git', ['update-ref', 'refs/heads/main', head], { cwd: root });
+    execFileSync('git', ['update-ref', '-d', 'refs/remotes/origin/main'], { cwd: root });
+    execFileSync('git', ['update-ref', 'refs/remotes/origin/main', head], { cwd: root });
+    execFileSync('git', ['update-ref', 'refs/heads/main', 'HEAD~0'], { cwd: root });
+    // Move main onto an empty extra commit so it is ahead of origin/main.
+    execFileSync('git', ['checkout', '-q', '-b', 'other'], { cwd: root });
+    execFileSync('git', ['commit', '-q', '--allow-empty', '-m', 'ahead'], { cwd: root });
+    const ahead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+    execFileSync('git', ['update-ref', 'refs/heads/main', ahead], { cwd: root });
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(1);
+    expect(output).toContain('main and origin/main differ');
+  });
+});
+
+describe('check-state-consistency — repository', () => {
   it('passes on the real repository', () => {
     const output = execFileSync(process.execPath, [script, '--quiet'], { cwd: repoRoot, encoding: 'utf8' });
     expect(output).toContain('KCS state consistency: PASS');

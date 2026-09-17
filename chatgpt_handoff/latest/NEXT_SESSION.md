@@ -27,7 +27,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. Start **Milestone D — state / CI / warning hygiene (roadmap items 6 and 9)** — the current next action; Milestone C is merged (see the block below). Item 6 is documentation/tooling (a check that fails when live docs contradict the tag/main SHA) and can start immediately; **item 9 (dependency and warning maintenance) needs explicit user approval before any `package.json`, lockfile, or workflow edit**.
+1. **Milestone D item 6 is implemented** on `chore/state-hygiene-gate`: run `node scripts/check-state-consistency.mjs` (it fails when live docs contradict the tag/`main` SHA, when the roadmap and next action disagree, or when the handoff bundle drifts) — the current next decision is **item 9 (dependency and warning maintenance), which needs explicit user approval before any `package.json`, lockfile, or workflow edit**. If item 9 is postponed, move to Milestone E planning (OGraf QA / schema hardening study, items 7 and 8).
 2. Milestones D–F stay plan-only; **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work, and all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.

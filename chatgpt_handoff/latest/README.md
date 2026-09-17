@@ -1,24 +1,27 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone C (First Export / Onboarding Flow) — MERGED
+# KCS Minimal ChatGPT Upload Bundle — Milestone D Item 6 (State Consistency Check)
 
-This is a minimal, task-specific ChatGPT upload bundle for Milestone C. It was clean-refreshed for this task and now records the merged state.
+This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-Milestone C is merged into `main`: an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path behind the readiness check and both export actions. The milestone took six review rounds; the final gate verdict was READY WITH WARNINGS. The next milestone is D (state / CI / warning hygiene), whose dependency/workflow part is approval-gated.
+Milestone D item 6: `scripts/check-state-consistency.mjs`, a check that fails when the live documents and the handoff bundle drift away from the real repository state (tag target, milestone commits, roadmap status, next action, upload instruction, bundle hygiene, collapsed paths, secret markers). Item 9 stays approval-gated and untouched.
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — the final task response (review verdict, status, validation, behaviour, release safety, next action)
-- `progress_110_export_onboarding.md` — the Milestone C report (implementation, authorities reused, files changed, behaviour, tests, validation matrix, review rounds, residual risks, merged status)
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan: A, B and C merged, D next with its approval gate
-- `CHANGELOG.md` — the repository changelog with the Milestone C entry under Unreleased
-- `NEXT_SESSION.md` — repository state with Milestone D as the next scoped work
+- `OMP_FINAL_RESPONSE.md` — the final response for this task
+- `progress_111_state_hygiene_gate.md` — the item-6 report (scope, checks, files, tests, validation, review, merge status)
+- `progress_110_export_onboarding.md` — the Milestone C report (kept as the current milestone record)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan with the item-6/item-9 status
+- `CHANGELOG.md` — the repository changelog
+- `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
 - `manifest.txt` — this bundle's inventory
 
+`NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` are byte-for-byte copies of their root documents, and `node scripts/check-state-consistency.mjs` fails when a copy drifts.
+
 ## Deliberately not included
 
-Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source and test files are intentionally omitted (the check itself lives at `scripts/check-state-consistency.mjs` in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 

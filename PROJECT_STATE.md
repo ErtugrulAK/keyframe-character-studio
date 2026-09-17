@@ -67,4 +67,4 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; plan-only, not started.
+- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; implemented on `feat/export-onboarding`, awaiting the review gate and merge.

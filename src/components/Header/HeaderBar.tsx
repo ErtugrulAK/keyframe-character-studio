@@ -109,7 +109,8 @@ export const HeaderBar: React.FC = () => {
   /**
    * The one OGraf compile path: the package export, the legacy single-file
    * export, and the first-export readiness check all compile the current scene
-   * through it, so the check can never disagree with the export.
+   * through it, so the check and the export always read the same diagnostics
+   * authority for whatever the scene is at the moment each one runs.
    */
   const compileOGrafPlan = async () => {
     const sceneData = JSON.parse(exportProject()) as SceneData;

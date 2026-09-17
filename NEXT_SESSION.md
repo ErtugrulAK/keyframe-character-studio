@@ -2,7 +2,7 @@
 
 ## Repository state
 
-- Checkout: `main` at or newer than the Milestone A integration commit `077911b469bf7026364c0335e748114bf8df05c0` (a state-reconciliation docs commit follows it); `origin/main` synchronized
+- Checkout: `feat/export-onboarding` (Milestone C merge candidate) on top of `main` at or newer than `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`; `origin/main` is synchronized and this branch is not pushed yet
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -56,4 +56,4 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; plan-only, not started.
+- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; implemented on this branch, awaiting the review gate and merge (see the next-scoped-work list above).

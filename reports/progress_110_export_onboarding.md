@@ -44,7 +44,8 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 | `src/tests/firstExportFlow.test.tsx` | **new** — 5 tests for the HeaderBar first-export flow |
 | `src/tests/ografBrowserZip.test.tsx` | one timing assertion now awaits the shared compile path (contract unchanged: exactly one writer call) |
 | `e2e/export-onboarding.spec.ts` | **new** — real-browser first-export journey |
-| `NEXT_SESSION.md` | the stale "Milestone C" section now describes Milestone C (it had described Milestone B work) and records the branch state instead of "not started" |
+| `NEXT_SESSION.md` | the stale "Milestone C" section now describes Milestone C (it had described Milestone B work), records the branch state instead of "not started", and the checkout line names this branch |
+| `PROJECT_STATE.md` | remaining work records Milestone C as implemented on this branch and awaiting merge |
 | `reports/progress_110_export_onboarding.md` | this report |
 
 ## User-facing behavior

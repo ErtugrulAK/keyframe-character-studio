@@ -42,7 +42,7 @@ The script's first real run immediately caught a live instance of the drift it e
 | File | Change |
 |---|---|
 | `scripts/check-state-consistency.mjs` | **new** — the consistency check (Node built-ins only) |
-| `src/tests/stateConsistencyCheck.test.ts` | **new** — 9 tests: consistent fixture passes, stale active claim fails, historical section tolerated, roadmap status enforced, next-action cross-check, upload instruction, bundle hygiene, collapsed path, secret marker, and the real repository passes |
+| `src/tests/stateConsistencyCheck.test.ts` | **new** — 24 tests: consistent fixture passes, stale active claim fails, historical section tolerated, roadmap status enforced, next-action cross-check, upload instruction, bundle hygiene, collapsed path, secret marker, and the real repository passes |
 | `reports/progress_110_export_onboarding.md` | the stale line the check caught (a file-change cell still described the merge as pending) now records the merged state |
 | `chatgpt_handoff/latest/**`, `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` | the bundle documents re-synced/rewritten for item 6 and the one-file rebuilt, so the shipped artifact passes its own check (the bundle copies of the root documents must now match byte-for-byte) |
 
@@ -50,7 +50,7 @@ Docs/state after the merge (this branch): `docs/KCS_GROUPED_ROADMAP_EXECUTION_PL
 
 ## Tests added/updated
 
-`src/tests/stateConsistencyCheck.test.ts` (23 tests) runs the real script against temporary fixture roots (`--root`), with each negative case isolating exactly one rule so deleting that rule fails the case: active stale claim vs historical heading vs a heading that merely contains "history", a merged milestone losing `MERGED`, missing/started E/F rows, two NEXT milestones, first-item-only next-action parsing, bundle/root roadmap disagreement, mirror drift, the forbidden whole-folder upload instruction, a missing required instruction, a missing bundle document, a binary copy, a nested spec copy, a flattened test copy, a collapsed Windows path, a secret marker, and a non-directory bundle path (reported, not crashed). The git rules run against a temporary repository created with plain git (`git init`, tag, `update-ref`): tag-target mismatch, a missing milestone commit, and `main` diverging from `origin/main`. Git checks report themselves as skipped in the text fixtures, which is stated rather than implied.
+`src/tests/stateConsistencyCheck.test.ts` (24 tests) runs the real script against temporary fixture roots (`--root`), with each negative case isolating exactly one rule so deleting that rule fails the case: active stale claim vs historical heading vs a heading that merely contains "history", a merged milestone losing `MERGED`, missing/started E/F rows, two NEXT milestones, first-item-only next-action parsing, bundled-roadmap drift, mirror drift, a missing mirrored copy, the forbidden whole-folder upload instruction, a missing required instruction, a missing bundle document, a binary copy, a nested spec copy, a flattened test copy, a collapsed Windows path, a secret marker, and a non-directory bundle path (reported, not crashed). The git rules run against a temporary repository created with plain git (`git init`, tag, `update-ref`): tag-target mismatch, a missing milestone commit, and `main` diverging from `origin/main`. Git checks report themselves as skipped in the text fixtures, which is stated rather than implied.
 
 ## Validation matrix
 

@@ -52,7 +52,8 @@ Rules:
 
 - Dragging `handleOut` writes only `handleOut`; dragging `handleIn` writes only `handleIn`. The other handle, the vertex position, and the vertex `id` are untouched by a handle drag.
 - `smooth` vertices keep mirrored handles: dragging one handle mirrors the other around the vertex with the opposite direction and the other handle's existing length.
-- **Zero-length drag vector.** If the dragged handle sits on its anchor (vector length `<= 1e-6`) it carries no direction, so the counterpart is left **unchanged** rather than mirrored from a fabricated unit vector; the dragged handle is still written. This keeps the counterpart non-zero, deterministic, and free of `NaN`/`Infinity` (the initializer in §8 always produces a non-zero reach for a multi-vertex path, so a fresh smooth vertex can never start from this state).
+- **Zero-length drag vector.** If the dragged handle sits on its anchor (vector length `<= 1e-6`) it carries no direction, so the counterpart is left **unchanged** rather than mirrored from a fabricated unit vector; the dragged handle is still written.
+- **Non-finite policy.** A pointer result that is not finite is never written into the path. A mirror result that is not finite — reachable from imported coordinates that are individually finite but overflow the mirror arithmetic, e.g. a counterpart at `±1.7e308` — leaves the counterpart at its previous value and only writes the dragged handle. The guarantee is therefore *no non-finite value reaches the path*, not that the arithmetic cannot overflow.
 - `corner` vertices (and vertices whose `kind` is absent, treated as `corner`) move only the dragged handle.
 - A handle is never created implicitly by a drag; creation is the explicit smooth action in §7.
 
@@ -100,7 +101,7 @@ Selection state is overlay-local: `selectedIndex: number | null` and `selectedHa
    - else if `previous` exists and `|v - previous| > ε` → `unit(v - previous)`;
    - else → `{ x: 1, y: 0 }`.
    A zero chord never produces a zero-length handle on its own; it only selects the next rule in this list. The direction is normalized before it is scaled, so handle length is never multiplied by an unnormalized chord.
-3. **Reach.** `reach = 0.25 × min` of the distances that exist (`|v - previous|` and/or `|v - next|`); `reach = 0` only when the vertex has no neighbour at all (a single-point path, which is ineligible anyway).
+3. **Reach.** `reach = 0.25 × min` of the distances that exist (`|v - previous|` and/or `|v - next|`). `reach` is therefore `0` whenever the chosen neighbour coincides with `v` (`|next - v| <= 1e-6` and/or `|v - previous| <= 1e-6`), which yields coincident, zero-length handles — deterministic, and exactly what `src/tests/bezierTangentHandles.test.ts` expects for coincident neighbours.
 4. **Handles.** `handleIn = v − direction × reach`, `handleOut = v + direction × reach` — mirrored, opposite directions, equal length.
 5. **Partial-smooth repair.** The **double-click smooth action** is the only writer that creates handles, and it is what repairs a `smooth` vertex that has only one handle: it keeps the existing handle exactly where it is and sets the missing counterpart to the exact mirror of the existing one around the vertex (same length, opposite direction). When both handles already exist, they are left untouched; when neither exists, both come from steps 1–4. A handle drag never creates handles (§5).
 
@@ -135,13 +136,14 @@ Implemented coverage (file → focus):
 |---|---|---|
 | `src/tests/freeformTangentEligibility.test.ts` | 23 | every guard of §7 row by row, canonical-path priority, negative/non-uniform scale, unrelated-track control |
 | `src/tests/freeformTangentPersistence.test.ts` | 6 | legacy normalization (repeated closing vertex, `<2` points), canonical pass-through with identical `d`, no mutation of `part.points`, materialized path through the import sanitizer |
-| `src/tests/freeformTangentOverlay.test.tsx` | 19 | §3 coordinate parity under identity/rotation/non-uniform/negative scale with the real `EDITOR_CAMERA_CENTER`; marker/handle visibility; untouched neighbouring vertex; smooth mirroring and the zero-length drag vector; Escape with and without a move; `pointercancel`; selection model incl. layer switch and topology shrink; canonical priority; points-only materialization |
+| `src/tests/freeformTangentOverlay.test.tsx` | 20 | §3 coordinate parity under identity/rotation/non-uniform/negative scale with the real `EDITOR_CAMERA_CENTER`; marker/handle visibility; untouched neighbouring vertex; smooth mirroring, the zero-length drag vector (§5), and the overflowing-counterpart guard (§5); Escape with and without a move; `pointercancel`; selection model incl. layer switch and topology shrink; canonical priority; points-only materialization |
 | `src/tests/freeformTangentHistory.test.tsx` | 3 | real `useHistory`: one entry per drag, undo/redo, no entry for Escape, `pointerdown`+Escape with no move, `pointercancel` commit |
+| `src/tests/useSerialization.test.ts` | 95 (1 added) | the materialized canonical path survives the real `exportProject()` → `importProject()` round-trip together with the legacy `points` |
 | `src/tests/bezierTangentHandles.test.ts` | 7 | §8 initializer (rings, open/closed, coincident neighbours, partial smooth, mirroring length) |
 
-Manual/runtime evidence: a throwaway Playwright smoke against the running editor (markers, live drag with 1:1 pointer tracking, `Ctrl+Z`/`Ctrl+Shift+Z`, `Escape` cancel with no history entry) plus the existing interaction e2e specs (`canvas-interaction-v1`, `interactive-shape-creation-v1`, `editor-interaction-regressions`).
+Manual/runtime evidence: the permanent Playwright spec `e2e/canvas-tangent-authoring.spec.ts` (markers/handles, live drag with 1:1 pointer tracking, `Ctrl+Z`/`Ctrl+Shift+Z`, `Escape` cancel with no history entry, overlay follows the selection) plus the existing interaction e2e specs (`canvas-interaction-v1`, `interactive-shape-creation-v1`, `editor-interaction-regressions`).
 
-Not covered by an automated test, only by the pipeline: byte-level OGraf output for a points-only layer that carries a degenerate closing vertex (§4) — the render authorities are unchanged, so their output is out of this milestone's scope.
+Not covered by an automated test: byte-level OGraf output for a points-only layer that carries a degenerate closing vertex (§4) — the render authorities are unchanged, so their output is out of this milestone's scope. OGraf's canonical-path `d` stays pinned by the existing `src/tests/ografSvg.test.ts`.
 
 ## 13. Non-goals
 

@@ -68,7 +68,7 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 | TypeScript | `npx tsc --noEmit` | PASS |
 | Build | `npm run build` | PASS — no chunk-size advisory; largest chunk 382.19 kB |
 | OGraf fixture | `npm run validate:ograf` | PASS |
-| Release gate | `npm run qa:release` | PASS — 2 Chromium tests |
+| Release gate | `npm run qa:release` | PASS — 2 Chromium tests, candidate SHA `d19bab6` (this branch's source revision; the commits after it are documentation only) |
 | State consistency | `node scripts/check-state-consistency.mjs` | PASS |
 | Backend probe | `node server/index.js` + `curl /api/health` | PASS — HTTP 200 (repair verified) |
 | Built-app smoke | `vite preview` + real browser | PASS — editor loads from the split chunks, layer drawn, transform gizmo, inspector, timeline lane |

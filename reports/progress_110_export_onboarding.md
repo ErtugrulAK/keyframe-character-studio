@@ -9,7 +9,8 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 ## Branch
 
 - Implementation branch: `feat/export-onboarding`
-- Feature commit: `feat: add first export onboarding flow`
+- Commits: `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping)
+- Feature commit message: `feat: add first export onboarding flow`
 - Baseline `main`: `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5` (Milestones A and B merged, `main == origin/main`)
 - `v1.1.0-rc.1` tag target (unchanged): `46d2a3e59e065816d972dcd56951803951b577f6`
 

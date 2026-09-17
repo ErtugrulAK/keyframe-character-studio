@@ -43,7 +43,7 @@ export const FirstExportGuide: React.FC<FirstExportGuideProps> = ({ onCheckReadi
     <ol style={{ margin: '0 0 8px 16px', padding: 0 }}>
       <li>Keep at least one visible layer in the scene.</li>
       <li>Run the readiness check below to see what would block an export.</li>
-      <li>Choose &quot;OGraf Package&quot; in the Export menu to write the .ograf.zip archive.</li>
+      <li>Choose &quot;OGraf Package&quot; in the Export menu to write the -ograf.zip archive for this scene.</li>
     </ol>
     <p style={{ margin: '0 0 8px' }}>
       Nothing is written until you export. The check reads the same diagnostics the export uses, so a blocked export can never look ready.

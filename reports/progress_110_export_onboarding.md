@@ -2,7 +2,7 @@
 
 ## Scope
 
-Roadmap item 5 (Milestone C of `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`): give a new user a short, safe path to a first successful OGraf export, reusing the Task 105 diagnostics authority and the existing export UI.
+Roadmap item 5 (Milestone C of `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`): give a new user a short, safe path to a first successful OGraf export, reusing the Task 105 diagnostics authority and the existing export UI. The downloadable archive is named `<sanitized scene name>-ograf.zip` by the existing writer; the package format it contains (OGraf V1) is untouched.
 
 Out of scope (unchanged): export engine, package materializer, OGraf package format (`.ograf.zip` and the runtime), host/vendor contracts, dependency/package/workflow/release changes, a forced wizard, telemetry, and any new persistence flag.
 
@@ -15,8 +15,8 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 
 ## Implementation summary
 
-1. **One OGraf compile path in `HeaderBar`.** `compileOGrafPlan()` now owns `exportProject()` → `prepareLegacyOGrafExport()` → `compileOGrafPackage()`. The package export, the legacy single-file export, and the new readiness check all call it, so the check can never disagree with what an export would do. (Previously the same three lines were duplicated in both export handlers.)
-2. **Pre-flight readiness summarizer.** `summarizeOGrafExportReadiness(diagnostics, packageBaseName?)` was added to the existing Task 105 authority (`src/ograf/diagnostics.ts`). It reads `getOGrafExportRemediationReport` and returns one status: `blocked` (carrying the first blocking remediation and its concrete next step), `warnings` (explicitly "warnings do not block"), or `ready`. It names the archive the writer would produce (`<sanitized name>-ograf.zip`, the same rule as `browserZip`) and never claims that a package was written. No second diagnostics system: it is a presenter over the existing report.
+1. **One OGraf compile path in `HeaderBar`.** `compileOGrafPlan()` now owns `exportProject()` → `prepareLegacyOGrafExport()` → `compileOGrafPackage()`. The package export, the legacy single-file export, and the new readiness check all call it, so the check reads the same diagnostics the export reads. (Previously the same three lines were duplicated in both export handlers.) The check is a summary rather than a copy of the export: it reports the first blocking finding and the warning count, while the export reports every blocking toast and the warning details, and it can still fail later during ZIP materialization — and a scene edited between the check and the export is recompiled at export time.
+2. **Pre-flight readiness summarizer.** `summarizeOGrafExportReadiness(diagnostics, packageBaseName?)` was added to the existing Task 105 authority (`src/ograf/diagnostics.ts`). It reads `getOGrafExportRemediationReport` and returns one status: `blocked` (carrying the first blocking remediation and its concrete next step), `warnings` (explicitly "warnings do not block", with the deduplicated root-cause count), or `ready`. It names the archive the writer would produce (`<sanitized name>-ograf.zip`, the same rule as `browserZip`) and never claims that a package was written. No second diagnostics system: it is a presenter over the existing report.
 3. **First-export guidance panel.** `src/components/Header/FirstExportGuide.tsx` is a compact, opt-in panel behind a labelled header button ("First export help"): three steps (keep a visible layer, run the readiness check, choose "OGraf Package" in the Export menu), the statement that nothing is written until you export, and a labelled "Check export readiness" button with its running state. It blocks nothing, opens nothing automatically, and is rendered outside the existing `role="menu"` so the export menu semantics stay intact.
 4. **Readiness result routing.** `handleCheckOGrafReadiness` compiles the current scene and routes the summary through the existing toast surface with Task 105's title/action model: blocked → error toast with the blocking title and next step (long duration); warnings → info toast; ready → success toast. Failures reuse `describeOGrafPackageWriteFailure` and the sanitizer, exactly like the export handlers.
 5. **No template/sample affordance was added** because no starter-scene or sample-scene machinery exists in the app (the project templates are motion-sequence records, not scene starters). Inventing one would have been new machinery outside this milestone; the guidance therefore points at the existing surfaces instead.
@@ -44,13 +44,14 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 | `src/tests/firstExportFlow.test.tsx` | **new** — 5 tests for the HeaderBar first-export flow |
 | `src/tests/ografBrowserZip.test.tsx` | one timing assertion now awaits the shared compile path (contract unchanged: exactly one writer call) |
 | `e2e/export-onboarding.spec.ts` | **new** — real-browser first-export journey |
+| `NEXT_SESSION.md` | the stale "Milestone C" section now describes Milestone C (it had described Milestone B work) and records the branch state instead of "not started" |
 | `reports/progress_110_export_onboarding.md` | this report |
 
 ## User-facing behavior
 
 - **First-export/onboarding behavior:** a labelled "First export help" button next to Export opens a compact panel with the three steps, the "nothing is written until you export" statement, and a readiness button. Nothing opens automatically and nothing is persisted.
-- **Diagnostics behavior:** the readiness check reports exactly what the export would report: a blocking finding shows Task 105's stable title, context, message, and concrete next step; warnings show the grouped "does not block" wording; a clean scene shows "Ready to export".
-- **Success/blocked behavior:** blocked never shows ready — the summary is derived from the same report the export handler uses before it writes anything, and the blocked branch returns no archive name. Success language ("Exported …") remains exclusive to the actual export handlers.
+- **Diagnostics behavior:** the readiness check reports from the same diagnostics authority the export uses: the first blocking finding shows Task 105's stable title, context, message, and concrete next step; warnings show a "does not block" summary with their count; a clean scene shows "Ready to export". Blockers beyond the first are not enumerated by the check (the export reports them all).
+- **Success/blocked behavior:** blocked never shows ready — the summary is derived from the same report the export handler reads before it writes anything, and the blocked branch carries no archive name. Success language ("Exported …") remains exclusive to the actual export handlers, which are the only writers.
 - **Accessibility:** the panel is a `role="group"` named "First export help", the trigger exposes `aria-expanded`/`aria-controls`, the readiness button has an explicit accessible name and a disabled/running state, and the existing export menu keeps its `role="menu"`/`menuitem` structure.
 - **Unsupported/out-of-scope:** no wizard, no forced first-run experience, no sample-scene generator, no host/vendor destination, no change to `.ograf.zip` shape or the generated runtime, no new dependency, no telemetry, no release/publish change.
 
@@ -86,7 +87,7 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 
 - No export engine, package materializer, OGraf package/runtime format, host or vendor contract, dependency, workflow, release, or publishing change.
 - `.ograf.zip` naming and contents come from the unchanged `compileOGrafPackage` + `createOGrafBrowserZip` path; the readiness check only reads diagnostics and never writes.
-- `main` advanced only by this branch; the tag `v1.1.0-rc.1`, the draft release, npm metadata, `without-mask`, global OMP configuration, `C:\Users\ertugrul.ak\Desktop\KCS`, and `ograf-graphics` are untouched.
+- This branch changes only the files listed above; nothing has been merged or pushed yet, and the tag `v1.1.0-rc.1`, the draft release, npm metadata, `without-mask`, global OMP configuration, `C:\Users\ertugrul.ak\Desktop\KCS`, and `ograf-graphics` are untouched.
 
 ## Independent review result
 

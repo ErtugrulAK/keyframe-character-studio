@@ -38,7 +38,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Next: Milestone C (first export / onboarding flow, item 5)** — not started, plan-only; D–F stay plan-only. Dependency, workflow, and release changes require explicit approval.
+- **Milestone C (first export / onboarding flow, item 5)** — implemented on `feat/export-onboarding` and awaiting the review gate and a fast-forward merge; **D–F stay plan-only**. Dependency/package/workflow and release changes require explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.

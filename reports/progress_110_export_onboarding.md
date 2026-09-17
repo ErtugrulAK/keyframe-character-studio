@@ -9,7 +9,9 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 ## Branch
 
 - Implementation branch: `feat/export-onboarding`
-- Commits: `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping)
+- Commits on this branch: `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit-list provenance), `d23e867` (handoff refresh), plus any later documentation commit
+- Branch tip: whatever `feat/export-onboarding`'s HEAD is at merge time — the milestone deliberately does not record a "final" tip SHA in its own documents, because writing one creates the commit that invalidates it
+- Merge-candidate content: the twelve paths in `f5dbb3f..feat/export-onboarding` (product, tests, e2e, report, state docs and the handoff bundle)
 - Feature commit message: `feat: add first export onboarding flow`
 - Baseline `main`: `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5` (Milestones A and B merged, `main == origin/main`)
 - `v1.1.0-rc.1` tag target (unchanged): `46d2a3e59e065816d972dcd56951803951b577f6`

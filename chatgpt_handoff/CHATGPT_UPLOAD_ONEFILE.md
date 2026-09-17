@@ -24,8 +24,8 @@ This file is the OMP final response for the Milestone C task at its stop point. 
 ### 1) RESULT
 
 - **Status:** Milestone C is **implemented, validated, and functionally reviewed — NOT MERGED.** The merge gate requires a READY / READY WITH WARNINGS verdict; the last review round returned BLOCKED on a documentation-provenance item that was then fixed and verified by reading, so the merge decision is the user's.
-- **Branch:** `feat/export-onboarding` (tip `9db62f38834d495e344a66207849c0c0e913ca3d`)
-- **Commits:** `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit list)
+- **Branch:** `feat/export-onboarding` (its HEAD at merge time; this milestone does not pin its own tip SHA, because recording one creates the commit that invalidates it)
+- **Commits:** `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit-list provenance), `d23e867` (handoff refresh) and any later documentation commit — the report's Branch section is the authority
 - **Merge:** not performed. `main` is an ancestor of the branch, so `git merge --ff-only feat/export-onboarding` is available whenever the merge is approved
 - **Push:** none. `main` = `origin/main` = `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`, untouched
 - **Working tree:** clean on the branch
@@ -98,8 +98,8 @@ Clean refreshed: YES
 Bundle purpose: Milestone C — first export / onboarding flow — implemented, validated, functionally reviewed; merge awaiting the user's decision
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current branch: feat/export-onboarding (tip 9db62f38834d495e344a66207849c0c0e913ca3d) — NOT merged, NOT pushed
-Milestone C commits: 73b22a2 (feature), ba9837e (round-1 review fixes), 31cb407 (round-2 consistency fixes), 6d8371d (round-3 claim scoping), 9db62f3 (commit list)
+Current branch: feat/export-onboarding (HEAD at merge time) — NOT merged, NOT pushed
+Milestone C commits: 73b22a2 (feature), ba9837e (round-1 review fixes), 31cb407 (round-2 consistency fixes), 6d8371d (round-3 claim scoping), 9db62f3 (commit-list provenance), d23e867 (handoff refresh) and any later documentation commit
 main / origin/main: f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5 (untouched; fast-forward merge available on approval)
 Milestone A integration commit: 077911b (ancestor of main); Milestone B merge: 96e8f9d (ancestor of main)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
@@ -173,7 +173,7 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Progress Report
 
-Milestone C report (implemented; merge awaiting decision).
+Milestone C report (implemented; merge awaiting the decision).
 
 ## Progress 110 — Milestone C: First Export / Onboarding Flow
 
@@ -572,13 +572,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 5349 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 6547 bytes
-- `NEXT_SESSION.md` — 7170 bytes
-- `OMP_FINAL_RESPONSE.md` — 7272 bytes
-- `PROJECT_STATE.md` — 7978 bytes
-- `README.md` — 2198 bytes
-- `manifest.txt` — 3001 bytes
-- `progress_110_export_onboarding.md` — 10608 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 6619 bytes
+- `NEXT_SESSION.md` — 7229 bytes
+- `OMP_FINAL_RESPONSE.md` — 7479 bytes
+- `PROJECT_STATE.md` — 8048 bytes
+- `README.md` — 2227 bytes
+- `manifest.txt` — 3048 bytes
+- `progress_110_export_onboarding.md` — 10712 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

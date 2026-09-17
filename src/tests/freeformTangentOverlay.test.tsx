@@ -180,6 +180,33 @@ describe('FreeformTangentOverlay', () => {
     expect(Number.isFinite(Number(incoming.getAttribute('cy')))).toBe(true);
   });
 
+  it('keeps the counterpart unchanged when the mirror arithmetic overflows to a non-finite value', () => {
+    const huge = { x: 1.7e308, y: 1.7e308 };
+    const part = makePart({
+      path: makePath([
+        { id: 'a', x: 0, y: 0, handleOut: { x: 6, y: 0 }, handleIn: huge, kind: 'smooth' },
+        { id: 'b', x: 20, y: 0 },
+        { id: 'c', x: 20, y: 20 },
+      ]),
+    });
+    render(<Harness initialPart={part} />);
+
+    openHandlesFor(0);
+    const handle = screen.getByTestId('freeform-tangent-handle-out');
+    fireEvent.pointerDown(handle, { clientX: 6, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 8, clientY: 0, pointerId: 1 });
+    fireEvent.pointerUp(handle, { clientX: 8, clientY: 0, pointerId: 1 });
+
+    expect(attributeOf('freeform-tangent-handle-out', 'cx')).toBeCloseTo(8, 6);
+    // Math.hypot(1.7e308, 1.7e308) is Infinity, so the counterpart must keep its
+    // previous value instead of gaining Infinity/NaN.
+    const incoming = screen.getByTestId('freeform-tangent-handle-in');
+    expect(Number.isFinite(Number(incoming.getAttribute('cx')))).toBe(true);
+    expect(Number.isFinite(Number(incoming.getAttribute('cy')))).toBe(true);
+    expect(Number(incoming.getAttribute('cx'))).toBe(1.7e308);
+    expect(Number(incoming.getAttribute('cy'))).toBe(1.7e308);
+  });
+
   it('rolls the drag back on Escape and closes the batch once', () => {
     const onBatchEnd = vi.fn();
     const part = makePart({

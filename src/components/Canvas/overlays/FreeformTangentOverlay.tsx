@@ -51,24 +51,31 @@ const withMovedHandle = (
   handle: HandleKind,
   next: { x: number; y: number },
 ): BezierVertex => {
-  if (vertex.kind !== 'smooth') return { ...vertex, [HANDLE_KEY[handle]]: next };
+  const key = HANDLE_KEY[handle];
+  // A non-finite pointer result is never written into the path.
+  if (!Number.isFinite(next.x) || !Number.isFinite(next.y)) return vertex;
+  if (vertex.kind !== 'smooth') return { ...vertex, [key]: next };
 
   const counterpartKey = HANDLE_KEY[handle === 'out' ? 'in' : 'out'];
   const counterpart = vertex[counterpartKey];
-  if (!counterpart) return { ...vertex, [HANDLE_KEY[handle]]: next };
+  if (!counterpart) return { ...vertex, [key]: next };
 
   const dx = handle === 'out' ? next.x - vertex.x : vertex.x - next.x;
   const dy = handle === 'out' ? next.y - vertex.y : vertex.y - next.y;
   const length = Math.hypot(dx, dy);
   // A handle dragged exactly onto its anchor carries no direction, so the
   // counterpart keeps its own length and direction instead of collapsing.
-  if (length <= HANDLE_VECTOR_EPSILON) return { ...vertex, [HANDLE_KEY[handle]]: next };
+  if (length <= HANDLE_VECTOR_EPSILON) return { ...vertex, [key]: next };
 
   const counterpartLength = Math.hypot(counterpart.x - vertex.x, counterpart.y - vertex.y);
   const mirrored = handle === 'out'
     ? { x: vertex.x - (dx / length) * counterpartLength, y: vertex.y - (dy / length) * counterpartLength }
     : { x: vertex.x + (dx / length) * counterpartLength, y: vertex.y + (dy / length) * counterpartLength };
-  return { ...vertex, [HANDLE_KEY[handle]]: next, [counterpartKey]: mirrored };
+  // Imported coordinates may be finite yet overflow the mirror arithmetic
+  // (for example a counterpart at ±1.7e308 makes the hypot infinite). The
+  // counterpart then keeps its previous value instead of gaining NaN/Infinity.
+  if (!Number.isFinite(mirrored.x) || !Number.isFinite(mirrored.y)) return { ...vertex, [key]: next };
+  return { ...vertex, [key]: next, [counterpartKey]: mirrored };
 };
 
 /**
@@ -136,11 +143,18 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
     onBatchEnd();
   }, [pendingCancel, onBatchEnd]);
 
+  // Latest batch-ender, so the unmount cleanup below is bound to unmount only:
+  // a re-created callback identity mid-drag must not close the open batch early.
+  const onBatchEndRef = useRef(onBatchEnd);
+  useEffect(() => {
+    onBatchEndRef.current = onBatchEnd;
+  }, [onBatchEnd]);
+
   useEffect(() => () => {
     if (!dragRef.current) return;
     dragRef.current = null;
-    onBatchEnd();
-  }, [onBatchEnd]);
+    onBatchEndRef.current();
+  }, []);
 
   const worldTransform = {
     x: transform.x,

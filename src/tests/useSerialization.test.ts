@@ -6,6 +6,8 @@ import { makeEmptyChannels } from '../utils/defaults';
 import { applyTransitionToTrackCanonicalMutator } from '../utils/trackMutations';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
 import { normalizeFeather, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../utils/matte';
+import { resolveFreeformPath } from '../utils/freeform';
+import { buildBezierPathD, initializeSmoothHandles } from '../utils/bezierPath';
 
 describe('useSerialization Hook', () => {
   const mockSetFps = vi.fn();
@@ -2237,6 +2239,40 @@ describe('useSerialization — M21 image matte serialization contract', () => {
       sourceVisible: false,
     });
     expect(exported.tracks[0].maskChannels['mask-1:opacity'][0].value).toBe(0.75);
+  });
+
+  // ─── Milestone A: materialized freeform tangent path round-trip ─────
+
+  it('Milestone A: a materialized freeform path survives export \u2192 import with its handles and legacy points', () => {
+    const legacyPoints = [{ x: 0, y: 0 }, { x: 20, y: 0 }, { x: 20, y: 20 }, { x: 0, y: 0 }];
+    // Same resolution the overlay uses for a points-only layer, then the same
+    // first handle edit: the canonical path the editor materializes.
+    const materialized = initializeSmoothHandles(resolveFreeformPath({ points: legacyPoints })!, 0);
+    const part = {
+      id: 'ff-a',
+      type: 'custom_freeform',
+      name: 'Free A',
+      zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      fillColor: '#22d3ee',
+      points: legacyPoints,
+      path: materialized,
+    } as any;
+
+    const { result } = renderSerializationWithPart(part);
+    const exported = result.current.exportProject();
+    expect(JSON.parse(exported).layers[0].path.coordinateSpace).toBe('local');
+
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported)).toBe(true);
+    const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === 'ff-a')!;
+
+    expect(restored.path).toEqual(materialized);
+    expect(restored.path?.points[0].handleOut).toEqual(materialized.points[0].handleOut);
+    expect(restored.path?.points[0].kind).toBe('smooth');
+    expect(buildBezierPathD(restored.path!)).toBe(buildBezierPathD(materialized));
+    // The legacy array is preserved next to the canonical path.
+    expect(restored.points).toEqual(legacyPoints);
   });
 
 });

@@ -126,7 +126,7 @@ describe('FreeformTangentOverlay history integration', () => {
     expect(screen.getByTestId('can-undo').textContent).toBe('false');
   });
 
-  it('creates exactly one undo entry for pointercancel and for a pointerdown followed by Escape with no move', () => {
+  it('records nothing for a pointerdown followed by Escape with no move, then one entry for a pointercancel commit', () => {
     render(<HistoryHarness />);
     selectVertexZero();
 

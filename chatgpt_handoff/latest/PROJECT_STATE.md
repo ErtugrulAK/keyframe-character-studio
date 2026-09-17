@@ -26,7 +26,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 |---|---|---|
 | Full Vitest | PASS | 114 files / 1,700 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf`; committed minimal fixture |
-| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests (latest run at `bb3cac9` on `main`) |
+| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
 | State consistency | PASS | `node scripts/check-state-consistency.mjs` — 33 checks on this branch with its bundle, 34 on the earlier `main` run (the total scales with the number of bundle documents scanned) |
 | TypeScript | PASS | `npx tsc --noEmit` and build typecheck |

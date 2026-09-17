@@ -30,7 +30,7 @@ Checkout: `chore/warning-maintenance` (the approved Option A warning maintenance
 - `npm run lint`: **clean** (the Fast Refresh warning is gone).
 - `npx tsc --noEmit`: PASS.
 - `npm run build`: PASS with **no** chunk-size advisory (largest chunk 382.19 kB; react-vendor 189.64 kB, geometry 36.09 kB, icons 14.30 kB).
-- `npm run validate:ograf`: PASS. `npm run qa:release`: PASS — 2 Chromium tests at candidate SHA `bb3cac9`.
+- `npm run validate:ograf`: PASS. `npm run qa:release`: PASS — 2 Chromium tests at candidate SHA `d19bab6`.
 - `node scripts/check-state-consistency.mjs`: PASS.
 - Built-app smoke (`vite preview` + real browser): editor loads from the split chunks, layer authored, transform gizmo, inspector and timeline lane present.
 

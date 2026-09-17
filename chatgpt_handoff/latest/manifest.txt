@@ -38,7 +38,7 @@ Validation at this revision (each command run separately):
 - npm test: PASS — 114 files / 1,700 tests; 0 jsdom "Not implemented" lines (was 6)
 - npm run lint: clean (the Fast Refresh export warning is gone); npx tsc --noEmit: PASS
 - npm run build: PASS — no chunk-size advisory (app 382.19 kB, react-vendor 189.64 kB, geometry 36.09 kB, icons 14.30 kB)
-- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests, candidate SHA bb3cac9)
+- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests, candidate SHA d19bab6)
 - node scripts/check-state-consistency.mjs: PASS
 - node server/index.js + curl /api/health: PASS — HTTP 200
 - vite preview + real browser: PASS — editor loads from the split chunks, layer authored, gizmo, inspector, timeline lane

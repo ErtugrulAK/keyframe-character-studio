@@ -114,7 +114,7 @@ Validation at this revision (each command run separately):
 - npm test: PASS — 114 files / 1,700 tests; 0 jsdom "Not implemented" lines (was 6)
 - npm run lint: clean (the Fast Refresh export warning is gone); npx tsc --noEmit: PASS
 - npm run build: PASS — no chunk-size advisory (app 382.19 kB, react-vendor 189.64 kB, geometry 36.09 kB, icons 14.30 kB)
-- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests, candidate SHA bb3cac9)
+- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests, candidate SHA d19bab6)
 - node scripts/check-state-consistency.mjs: PASS
 - node server/index.js + curl /api/health: PASS — HTTP 200
 - vite preview + real browser: PASS — editor loads from the split chunks, layer authored, gizmo, inspector, timeline lane
@@ -296,7 +296,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (114 files / 1,700 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `bb3cac9`), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `chore/warning-maintenance`. The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
+Full Vitest (114 files / 1,700 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `chore/warning-maintenance`. The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
 
 ## Next scoped work
 
@@ -363,7 +363,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 |---|---|---|
 | Full Vitest | PASS | 114 files / 1,700 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf`; committed minimal fixture |
-| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests (latest run at `bb3cac9` on `main`) |
+| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
 | State consistency | PASS | `node scripts/check-state-consistency.mjs` — 33 checks on this branch with its bundle, 34 on the earlier `main` run (the total scales with the number of bundle documents scanned) |
 | TypeScript | PASS | `npx tsc --noEmit` and build typecheck |
@@ -562,9 +562,9 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 8448 bytes
-- `NEXT_SESSION.md` — 8433 bytes
+- `NEXT_SESSION.md` — 8502 bytes
 - `OMP_FINAL_RESPONSE.md` — 5297 bytes
-- `PROJECT_STATE.md` — 11627 bytes
+- `PROJECT_STATE.md` — 11694 bytes
 - `README.md` — 2620 bytes
 - `manifest.txt` — 3537 bytes
 - `progress_113_warning_maintenance.md` — 11196 bytes

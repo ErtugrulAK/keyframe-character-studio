@@ -17,47 +17,51 @@
 
 ## 1. OMP Final Response
 
-## KCS Milestone B — Final Response (Graph + Keyboard Accessibility)
+## KCS Milestone C — Final Response (First Export / Onboarding Flow)
 
-This file is the OMP final response for the Milestone B task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+This file is the OMP final response for the Milestone C task at its stop point. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
-### 1) OVERALL RESULT
+### 1) RESULT
 
-- **Status:** Milestone B implemented, reviewed, and **MERGED** into `main`.
-- **Branch:** `feat/graph-accessibility` (kept locally as the review artefact)
-- **Commits:** `eece046` (feature), `e1b8400` (review fixes), `96e8f9d` (documentation correction)
-- **Merge:** fast-forward into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` — no merge commit, no rebase, no force push
-- **Push:** `git push origin main` → `beb4b49..96e8f9d`
-- **`main == origin/main`:** yes (or newer, once the post-merge documentation commit lands)
-- **Working tree:** clean
+- **Status:** Milestone C is **implemented, validated, and functionally reviewed — NOT MERGED.** The merge gate requires a READY / READY WITH WARNINGS verdict; the last review round returned BLOCKED on a documentation-provenance item that was then fixed and verified by reading, so the merge decision is the user's.
+- **Branch:** `feat/export-onboarding` (tip `9db62f38834d495e344a66207849c0c0e913ca3d`)
+- **Commits:** `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit list)
+- **Merge:** not performed. `main` is an ancestor of the branch, so `git merge --ff-only feat/export-onboarding` is available whenever the merge is approved
+- **Push:** none. `main` = `origin/main` = `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`, untouched
+- **Working tree:** clean on the branch
 
 ### 2) USER-FACING BEHAVIOR
 
-- **Graph keyboard behavior:** the value graph is a labelled group whose keyframe points are reachable with `Tab` and announced as "Keyframe at frame N, value V, use the Up and Down arrow keys to change it"; `ArrowUp`/`ArrowDown` edit the value through the existing callback. The derived speed graph stays read-only and exposes no points.
-- **Keyframe row behavior:** every timeline diamond is a named button in the tab order ("Keyframe at frame 12, Track a, channels x, easeInOut" on the parent lane, "Keyframe at frame 12, Location X, value 140.00" on expanded channel lanes). `Enter`/`Space` selects that keyframe and moves the playhead (and selects the part on the parent lane). `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order, stop at the ends, and consume the key there so the timeline never scrolls.
-- **Selected-keyframe section behavior:** exposed as a group labelled with its frame ("Selected keyframe at frame 20, 2 channels"); its numeric inputs keep their existing labels and pipeline.
-- **Screen-reader semantics:** the graph is no longer `role="img"` (which used to hide its own focusable controls); decorative axes and the curve are `aria-hidden`; the selected keyframe is exposed with `aria-pressed`; no control is left unnamed.
-- **Focus visibility:** a cyan outline (plus a soft glow on the timeline diamonds) on `:focus-visible`; keyboard-only, mouse focus unchanged.
-- **Unsupported/out-of-scope:** no roving-tabindex manager, no keyframe add/delete/nudge shortcuts, no playhead scrubbing keys, no timeline restructure, no new shortcut registry, no change to `Escape` semantics; `Shift`+`Enter`/`Shift`+`Space` does not reproduce the shift-click part-selection modifier.
+- **First-export/onboarding behavior:** a labelled "First export help" button next to Export opens a compact, opt-in panel with three steps (keep a visible layer, run the readiness check, choose "OGraf Package" in the Export menu), the statement that nothing is written until you export, and a labelled "Check export readiness" button with its running state. Nothing opens automatically; nothing is persisted; existing users are never interrupted.
+- **Diagnostics behavior:** the readiness check compiles the current scene through the same OGraf path the export uses and summarises the existing Task 105 remediation report: the first blocking finding shows its stable title, context, message, and concrete next step (error toast, long duration); warnings show a "does not block" summary with their deduplicated count (info toast); a clean scene shows "Ready to export" naming the archive the writer would produce (`<sanitized scene name>-ograf.zip`).
+- **Success/blocked behavior:** blocked never shows ready, and the check carries no archive name in that branch. Success language ("Exported …") remains exclusive to the actual export handlers, which are the only writers; a scene edited after the check is recompiled when the export runs, and ZIP materialization can still fail at export time.
+- **Accessibility:** the panel is a `role="group"` named "First export help"; the trigger exposes `aria-expanded`/`aria-controls`; the readiness button has an explicit accessible name and a disabled/running state; the existing export menu keeps its `role="menu"` and three `menuitem`s.
+- **Unsupported/out-of-scope:** no wizard, no forced first-run flow, no sample-scene generator (the app has no starter-scene machinery), no host/vendor destination, no change to the OGraf package format or the generated runtime, no new dependency, no telemetry, no release/publish change.
 
 ### 3) VALIDATION
 
+Each command was run separately (the earlier timeout came from one long chained command).
+
 | Check | Result |
 |---|---|
-| Focused Vitest (3 a11y/graph/keyframe files) | PASS — 35 tests |
-| Playwright smoke `e2e/graph-accessibility.spec.ts` | PASS — 2 tests |
-| Full Vitest | PASS — 109 files / 1,652 tests |
+| Focused Vitest (`ografExportReadiness`, `firstExportGuide`, `firstExportFlow`) | PASS — 3 files / 13 tests |
+| Playwright smoke `e2e/export-onboarding.spec.ts` | PASS — 1 test |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests |
-| `npm run build` / `npx tsc --noEmit` / `npm run lint` | PASS / clean / clean (pre-existing Fast Refresh warning only) |
+| `npm run qa:release` | PASS — 2 Chromium tests (candidate from HEAD) |
+| Full Vitest (`npm test`) | PASS — 112 files / 1,665 tests |
+| `npm run build` | PASS |
+| `npx tsc --noEmit` | clean |
+| `npm run lint` | clean (pre-existing `AnimatorContext` Fast Refresh warning only) |
 | `git diff --check` | clean |
-| GitHub CI | run for the merge commit on `main` — see the repository run list |
 
 ### 4) REVIEW
 
-- **Round 1 (`eece046`) — BLOCKED:** the graph Playwright test could pass without mounting the graph (early return); the arrow keys were not consumed at lane ends; the focus-ring assertion did not read the painted style; plus six documentation over-claims.
-- **Round 2 (`e1b8400`) — READY WITH WARNINGS:** all three defects CLOSED (the graph smoke now opens the Curve Studio, Tab-reaches the point, asserts the computed outline, edits with `ArrowUp` and checks the `aria-hidden` decorations; the lane consumes the arrows at its ends and on a lone diamond; both smokes read computed styles). The only remaining findings were documentation notes (test counts and coverage wording), corrected in `96e8f9d`.
-- **Residual risks recorded:** the derived speed graph changed from an `img` graphic to a named group with no focusable content (reasoned, not measured with a real AT matrix); `aria-pressed` carries toggle semantics while activation only selects; the global `[role='button']:focus-visible` rule would paint an equivalent ring even without the component-specific rules.
+- **Round 1 (`73b22a2`) — BLOCKED:** the guide named the archive wrongly, the handoff state was wrong, and four documentation over-claims described what the readiness check guarantees.
+- **Round 2 (`ba9837e`) — BLOCKED:** guide naming CLOSED; only documentation consistency remained (checkout line, stale "plan-only" claims, a missing changed-files row, two absolute copy claims).
+- **Round 3 (`31cb407`) — BLOCKED:** all five round-2 items CLOSED, `no_protected_changes: true`, no functional regression; the same absolute guarantee survived in the presenter comment and two test headers, and the handoff still claimed template reuse.
+- **Round 4 (`6d8371d`) — BLOCKED:** items 1–3 CLOSED; the only remaining item was that the report's Branch section did not list the commits the handoff pointed at — fixed in `9db62f3` and verified by reading.
+- **Functional contract (closed and unchanged since round 2):** one compile path used by readiness/package export/legacy export; readiness returns blocked when the report has blocking findings and never writes; readiness success is a pre-flight answer, not an export claim; the guidance is opt-in, accessible, and rendered outside the export menu; the export menu semantics and its existing tests are intact.
+- **Residual risks:** the readiness answer is point-in-time (a scene can change between check and export, and ZIP materialization can still fail); the real-browser smoke covers the ready path while blocked/warning paths are covered by component tests; `aria`/copy wording was reviewed by reading, without a screen-reader matrix.
 
 ### 5) RELEASE SAFETY
 
@@ -67,34 +71,37 @@ This file is the OMP final response for the Milestone B task. It is copied into 
 - OMP config: model roles, provider mappings, `memory.backend: mnemopi`, `task.maxConcurrency: 8` — unchanged
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics`: untouched, nothing copied
 - Secrets: none printed or copied
-- Protected authorities: evaluator, interpolation, keyframe/channel model, timeline mutation utilities, `useKeyboardShortcuts`, serialization, OGraf, and package/workflow files are unchanged
+- Protected authorities: no host/vendor contract, OGraf package/runtime format, compiler, validator, ZIP writer, dependency, `package.json`/lockfile, workflow, or release automation change
 
 ### 6) HANDOFF
 
-- `chatgpt_handoff/latest/`: 8 files — `README.md`, `manifest.txt`, `OMP_FINAL_RESPONSE.md`, `progress_109_graph_accessibility.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md`
+- `chatgpt_handoff/latest/`: 8 files — `README.md`, `manifest.txt`, `OMP_FINAL_RESPONSE.md`, `progress_110_export_onboarding.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md`
 - One-file rebuilt from scratch; source/test copies: NO; test-glob matching files: NO; `Desktop\KCS` copied: NO; secrets: NO; malformed Windows paths: zero
+- These handoff files are committed on the feature branch (not on `main`, which is untouched until the merge is approved)
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
 ### 7) NEXT ACTION
 
-**Milestone C — first export / onboarding flow (roadmap item 5).** Scope: a short "first successful OGraf export" path for new users, reusing the Task 105 export diagnostics, the existing templates, and the existing export UI. Hard boundary: no host/vendor contract invention, no OGraf package format change, no new dependency, no package/workflow/release change. Recommended branch: `feat/export-onboarding`. No user approval is needed to start while the scope stays narrow UI/UX; explicit approval is required for package, workflow, dependency, or release changes.
+**Decision needed: approve the Milestone C merge (fast-forward available), or request one more review round.**
+
+- If approved: `git switch main`, `git merge --ff-only feat/export-onboarding`, `git push origin main`, then the post-merge state docs and the handoff refresh for `main`.
+- Next roadmap milestone afterwards: **Milestone D — state / CI / warning hygiene (items 6 and 9)**. Item 6 (current-state consistency check) is documentation/tooling; **item 9 (dependency and warning maintenance) requires explicit user approval because it touches `package.json`/`package-lock.json` and the workflows.**
 
 ---
 
 ## 2. Handoff Manifest
 
-## KCS ChatGPT Upload Manifest — Milestone B (Graph + Keyboard Accessibility)
+## KCS ChatGPT Upload Manifest — Milestone C (First Export / Onboarding Flow)
 
 Clean refreshed: YES
-Bundle purpose: Milestone B — graph + keyboard accessibility — merged, reviewed, and validated
+Bundle purpose: Milestone C — first export / onboarding flow — implemented, validated, functionally reviewed; merge awaiting the user's decision
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current main / origin HEAD: 96e8f9d0313cb81752c04fe58d6e7d00d700a6f4 (Milestone B merge is 96e8f9d; a post-merge documentation commit follows it)
-Milestone B branch: feat/graph-accessibility (local review artefact), merged into main by fast-forward
-Milestone B commits: eece046 (feature), e1b8400 (review fixes), 96e8f9d (documentation correction)
-Ancestry: main was a strict superset after the merge; no rebase, no merge commit, no force push, no history rewrite
-Milestone A integration commit: 077911b (unchanged, still an ancestor of main)
+Current branch: feat/export-onboarding (tip 9db62f38834d495e344a66207849c0c0e913ca3d) — NOT merged, NOT pushed
+Milestone C commits: 73b22a2 (feature), ba9837e (round-1 review fixes), 31cb407 (round-2 consistency fixes), 6d8371d (round-3 claim scoping), 9db62f3 (commit list)
+main / origin/main: f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5 (untouched; fast-forward merge available on approval)
+Milestone A integration commit: 077911b (ancestor of main); Milestone B merge: 96e8f9d (ancestor of main)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -103,11 +110,11 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the Milestone B final response
-- progress_109_graph_accessibility.md — the Milestone B report (implementation, behaviour, tests, validation, review rounds, residual risks, merge status)
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan: A and B merged, C next
-- CHANGELOG.md — repository changelog with the Milestone B entry
-- NEXT_SESSION.md — repository state with Milestone C as the next scoped work
+- OMP_FINAL_RESPONSE.md — the Milestone C final response
+- progress_110_export_onboarding.md — the Milestone C report
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan and approval gates
+- CHANGELOG.md — repository changelog
+- NEXT_SESSION.md — repository state and the current action
 - PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
 Omitted categories:
@@ -117,14 +124,14 @@ Omitted categories:
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
-Validation at this revision:
-- Focused Vitest: PASS — 3 files / 35 tests
-- Real-browser smoke: PASS — e2e/graph-accessibility.spec.ts (2 tests; not part of CI or the release gate)
-- Full Vitest: PASS — 109 files / 1,652 tests
+Validation at this revision (each command run separately):
+- Focused Vitest: PASS — 3 files / 13 tests
+- Playwright smoke: PASS — e2e/export-onboarding.spec.ts (1 test; not part of CI or the release gate)
+- Full Vitest: PASS — 112 files / 1,665 tests
 - validate:ograf, qa:release (2 Chromium tests), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
-- Independent review: round 1 BLOCKED (3 findings, 6 over-claims) → all closed → round 2 READY WITH WARNINGS (documentation notes corrected)
+- Independent review: round 1 BLOCKED → round 2 BLOCKED (documentation only) → round 3 BLOCKED (documentation only) → round 4 BLOCKED (one documentation-provenance item, fixed in 9db62f3)
 
-Next milestone: C — first export / onboarding flow (item 5); recommended branch feat/export-onboarding.
+Next milestone after the merge decision: D — state / CI / warning hygiene (items 6 and 9); the dependency/package/workflow part needs explicit approval.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -132,27 +139,27 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-## KCS Minimal ChatGPT Upload Bundle — Milestone B (Graph + Keyboard Accessibility)
+## KCS Minimal ChatGPT Upload Bundle — Milestone C (First Export / Onboarding Flow)
 
-This is a minimal, task-specific ChatGPT upload bundle for Milestone B. It was clean-refreshed for this task.
+This is a minimal, task-specific ChatGPT upload bundle for Milestone C. It was clean-refreshed for this task.
 
 ### What this bundle covers
 
-Milestone B is merged: the timeline keyframe diamonds and the value graph are keyboard operable and screen-reader labelled, decorative geometry is hidden from assistive technology, and focus rings were added — with the review rounds and the validation evidence behind it. The next roadmap milestone (C — first export / onboarding flow) is scoped.
+Milestone C adds an opt-in first-export path: a compact "First export help" panel behind a labelled header button, a readiness check that reads the same OGraf diagnostics authority the export reads, and guidance that never claims a package was written. The milestone is implemented, validated, and functionally reviewed; the merge is awaiting the user's decision (see `OMP_FINAL_RESPONSE.md` §7).
 
 ### Files
 
-- `OMP_FINAL_RESPONSE.md` — the final task response (result, behaviour, validation, review, release safety, next action)
-- `progress_109_graph_accessibility.md` — the Milestone B report: scope, implementation, authorities reused, files changed, behaviour, tests, validation matrix, review rounds, residual risks, merge status
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan; Milestone A and B are MERGED and Milestone C is next
-- `CHANGELOG.md` — the repository changelog with the Milestone B entry under Unreleased
-- `NEXT_SESSION.md` — repository state with Milestone C as the first next scoped work
+- `OMP_FINAL_RESPONSE.md` — the final task response (result, behaviour, validation, review rounds, release safety, the merge decision, next action)
+- `progress_110_export_onboarding.md` — the Milestone C report: scope, implementation, authorities reused, files changed, behaviour, tests, validation matrix, review rounds, residual risks, merge status
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan (Milestones A and B merged; C implemented on a branch and awaiting the merge decision)
+- `CHANGELOG.md` — the repository changelog
+- `NEXT_SESSION.md` — repository state with the Milestone C merge decision as the current action
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
 - `manifest.txt` — this bundle's inventory
 
 ### Deliberately not included
 
-Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, design contracts, QA output, assets, archives, and caches.
+Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
@@ -160,93 +167,92 @@ Omitted files were not deleted from the repository; they are simply not part of 
 
 `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be.
 
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in this folder are its sources; uploading the whole folder is no longer the default.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in this folder are its sources.
 
 ---
 
 ## 4. Progress Report
 
-Milestone B report (merged).
+Milestone C report (implemented; merge awaiting decision).
 
-## Progress 109 — Milestone B: Graph + Keyboard Accessibility
+## Progress 110 — Milestone C: First Export / Onboarding Flow
 
 ### Scope
 
-Roadmap item 4 (Milestone B of `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`): make the existing graph and keyframe surfaces usable without a mouse and correctly labelled for assistive technology — no graph-engine, evaluator, timeline-mutation, shortcut-registry, state-store, or package change.
+Roadmap item 5 (Milestone C of `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`): give a new user a short, safe path to a first successful OGraf export, reusing the Task 105 diagnostics authority and the existing export UI. The downloadable archive is named `<sanitized scene name>-ograf.zip` by the existing writer; the package format it contains (OGraf V1) is untouched.
 
-Out of scope (unchanged): graph engine or interpolation math, timeline/keyframe model, drag behaviour redesign, new keyboard shortcut registry, broad style churn, new dependencies, release/package/workflow changes, Milestone C onboarding.
+Out of scope (unchanged): export engine, package materializer, OGraf package format (`.ograf.zip` and the runtime), host/vendor contracts, dependency/package/workflow/release changes, a forced wizard, telemetry, and any new persistence flag.
 
 ### Branch
 
-- Implementation branch: `feat/graph-accessibility`
-- Feature commit: `feat: improve graph keyboard accessibility`
-- Baseline `main`: `beb4b495aa6c47930d4eefe0f2140580d1ae8e9c` (Milestone A merged, `main == origin/main`)
+- Implementation branch: `feat/export-onboarding`
+- Commits: `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping)
+- Feature commit message: `feat: add first export onboarding flow`
+- Baseline `main`: `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5` (Milestones A and B merged, `main == origin/main`)
 - `v1.1.0-rc.1` tag target (unchanged): `46d2a3e59e065816d972dcd56951803951b577f6`
 
 ### Implementation summary
 
-1. **Timeline keyframe diamonds became real keyboard controls.** Both diamond renderers in `TrackLane` (canonical frame-group `keyframe-diamond`, legacy composite diamond, and the expanded-lane `ue-prop-diamond`) now get a shared `diamondKeyboardProps` contract: `role="button"`, `tabIndex={0}`, an accessible name carrying frame + track + channel/property + easing/value, `aria-pressed` for the selected keyframe, `Enter`/`Space` activation that runs the existing selection side effects (select keyframe + move playhead, and for the parent lane also select the part; the channel-lane diamond previously had no `click` handler at all, so its keyboard path mirrors what its own `mousedown` does), and a local `ArrowLeft`/`ArrowRight` focus walk across the diamonds of the same lane. The legacy lane now renders from `sortedKfs` (already computed) so DOM order — and therefore the arrow walk and tab order — matches frame order; the diamonds are absolutely positioned, so this changes no pixel.
-2. **The value graph stopped hiding its own controls.** `TemporalGraphPanel`'s SVG carried `role="img"`, which removes its descendants from the accessibility tree while the keyframe points inside it are focusable. It is now a labelled `group` (`aria-labelledby` → the visible "Value Graph"/"Speed Graph" title, `aria-describedby` → the helper text), the decorative axes and curve are `aria-hidden="true"`, and each keyframe point's label now states its frame and value and how to change it with the keyboard. The helper text states the keyboard contract.
-3. **The selected-keyframe section is a labelled group.** `SelectedKeyframeSection` now exposes `role="group"` with `aria-label="Selected keyframe at frame N, M channels"`, so its per-channel inputs (`Keyframe Location X`, `Keyframe Rotation`, …) are unambiguous without changing their existing labels.
-4. **Focus visibility on the new controls.** Added `:focus-visible` rules in the existing stylesheets for `.keyframe-diamond`, `.ue-prop-diamond`, and the graph's keyframe points, using the same `--accent-cyan` / `--accent-teal-glow` tokens the rest of the editor uses.
+1. **One OGraf compile path in `HeaderBar`.** `compileOGrafPlan()` now owns `exportProject()` → `prepareLegacyOGrafExport()` → `compileOGrafPackage()`. The package export, the legacy single-file export, and the new readiness check all call it, so the check reads the same diagnostics the export reads. (Previously the same three lines were duplicated in both export handlers.) The check is a summary rather than a copy of the export: it reports the first blocking finding and the warning count, while the export reports every blocking toast and the warning details, and it can still fail later during ZIP materialization — and a scene edited between the check and the export is recompiled at export time.
+2. **Pre-flight readiness summarizer.** `summarizeOGrafExportReadiness(diagnostics, packageBaseName?)` was added to the existing Task 105 authority (`src/ograf/diagnostics.ts`). It reads `getOGrafExportRemediationReport` and returns one status: `blocked` (carrying the first blocking remediation and its concrete next step), `warnings` (explicitly "warnings do not block", with the deduplicated root-cause count), or `ready`. It names the archive the writer would produce (`<sanitized name>-ograf.zip`, the same rule as `browserZip`) and never claims that a package was written. No second diagnostics system: it is a presenter over the existing report.
+3. **First-export guidance panel.** `src/components/Header/FirstExportGuide.tsx` is a compact, opt-in panel behind a labelled header button ("First export help"): three steps (keep a visible layer, run the readiness check, choose "OGraf Package" in the Export menu), the statement that nothing is written until you export, and a labelled "Check export readiness" button with its running state. It blocks nothing, opens nothing automatically, and is rendered outside the existing `role="menu"` so the export menu semantics stay intact.
+4. **Readiness result routing.** `handleCheckOGrafReadiness` compiles the current scene and routes the summary through the existing toast surface with Task 105's title/action model: blocked → error toast with the blocking title and next step (long duration); warnings → info toast; ready → success toast. Failures reuse `describeOGrafPackageWriteFailure` and the sanitizer, exactly like the export handlers.
+5. **No template/sample affordance was added** because no starter-scene or sample-scene machinery exists in the app (the project templates are motion-sequence records, not scene starters). Inventing one would have been new machinery outside this milestone; the guidance therefore points at the existing surfaces instead.
 
 ### Existing authorities reused
 
 | Concern | Authority | Reused for |
 |---|---|---|
-| Timeline lane rendering | `src/components/Timeline/TrackLane.tsx` | the only keyframe diamond renderer; no new timeline component |
-| Keyframe selection + playhead | `onSelectKeyframe` / `onSetFrame` / `onSelectPart` props fed by `SequencerTimeline` | every keyboard activation path |
-| Frame grouping + ordering | `groupChannelKeyframesByFrame`, the lane's existing `sortedKfs`/`chKfs` | accessible labels and the arrow walk order |
-| Channel metadata | `CHANNEL_META` (`timelineConstants`) | property names in labels |
-| Graph panels | `src/components/Inspector/TemporalGraphPanel.tsx` (existing keyframe drag + arrow editing) | the graph surface, unchanged math |
-| Selected-keyframe editor | `SelectedKeyframeSection` + `SmartNumberInput` + `updateCurrentTransform` | unchanged value pipeline |
-| Global shortcuts | `src/hooks/useKeyboardShortcuts.ts` (untouched) | keyboard activation stops propagation, so no global handler is hijacked |
-| Design system | `docs/design/KCS_DESIGN_SYSTEM.md`, existing `:focus-visible` rules | focus ring tokens and behaviour |
-
-No new graph engine, evaluator, timeline mutation, shortcut registry, state store, dependency, or package/workflow change.
+| Export pipeline | `compileOGrafPackage`, `prepareLegacyOGrafExport`, `exportProject()` | the single compile path behind export, legacy export, and the check |
+| Diagnostics + remediation | `src/ograf/diagnostics.ts` — `getOGrafExportRemediationReport`, `describeOGrafExportDiagnostic`, `describeOGrafPackageWriteFailure`, `sanitizeOGrafDiagnosticText` | the readiness summary and every failure message |
+| Archive naming | `sanitizeOGrafDownloadName` + `browserZip`'s `<name>-ograf.zip` rule | the name quoted by the readiness message |
+| Notifications | `showToast` from `useToast` via the animator context | readiness and export results |
+| Export UI | the existing Header export menu (`role="menu"`, three `menuitem`s) | untouched; the guide is a sibling panel |
+| Templates | `projectTemplates` + the existing new-template modal | untouched (no starter-scene capability exists) |
 
 ### Files changed
 
 | File | Change |
 |---|---|
-| `src/components/Timeline/TrackLane.tsx` | `diamondKeyboardProps` contract (role, name, selected state, Enter/Space, arrow walk) applied to the three diamond renderers; legacy lane iterates `sortedKfs` |
-| `src/components/Inspector/TemporalGraphPanel.tsx` | SVG `role="img"` → labelled `group`; decorative geometry `aria-hidden`; richer keyframe-point labels; helper text now states the arrow-key contract |
-| `src/components/Inspector/sections/transform/SelectedKeyframeSection.tsx` | `role="group"` + frame-aware `aria-label`; input labels unchanged |
-| `src/components/Timeline/SequencerTimeline.css` | `:focus-visible` for `.keyframe-diamond` and `.ue-prop-diamond` |
-| `src/kcsEditorTheme.css` | `:focus-visible` for `.temporal-graph-svg circle` |
-| `src/tests/timelineKeyframeA11y.test.tsx` | **new** — 8 tests for the diamond contract |
-| `src/tests/TemporalGraphPanel.test.tsx` | updated to the group semantics + 3 new keyboard/decorative tests |
-| `src/tests/selectedKeyframeSection.test.tsx` | added the group-label test (existing label assertions kept) |
-| `e2e/graph-accessibility.spec.ts` | **new** — real-browser keyboard smoke (2 tests) |
-| `reports/progress_109_graph_accessibility.md` | this report |
+| `src/ograf/diagnostics.ts` | new `summarizeOGrafExportReadiness` + `OGrafExportReadiness` (presenter over the existing remediation report) |
+| `src/components/Header/FirstExportGuide.tsx` | **new** — the opt-in first-export guidance panel |
+| `src/components/Header/HeaderBar.tsx` | shared `compileOGrafPlan`; the guidance button + panel; `handleCheckOGrafReadiness`; both export handlers now use the shared path |
+| `src/tests/ografExportReadiness.test.ts` | **new** — 5 tests for the readiness summary |
+| `src/tests/firstExportGuide.test.tsx` | **new** — 3 tests for the guidance panel |
+| `src/tests/firstExportFlow.test.tsx` | **new** — 5 tests for the HeaderBar first-export flow |
+| `src/tests/ografBrowserZip.test.tsx` | one timing assertion now awaits the shared compile path (contract unchanged: exactly one writer call) |
+| `e2e/export-onboarding.spec.ts` | **new** — real-browser first-export journey |
+| `NEXT_SESSION.md` | the stale "Milestone C" section now describes Milestone C (it had described Milestone B work), records the branch state instead of "not started", and the checkout line names this branch |
+| `PROJECT_STATE.md` | remaining work records Milestone C as implemented on this branch and awaiting merge |
+| `reports/progress_110_export_onboarding.md` | this report |
 
 ### User-facing behavior
 
-- **Graph keyboard behavior:** the value graph's keyframe points are reachable with `Tab`, announce frame + value + "use the Up and Down arrow keys to change it", and `ArrowUp`/`ArrowDown` change the value through the existing callback (unchanged math, unchanged drag behavior). The speed graph stays read-only and exposes no points.
-- **Keyframe row behavior:** each keyframe diamond is a `button` in the tab order, announced as e.g. "Keyframe at frame 12, Track a, channels x, easeInOut" (canonical) or "Keyframe at frame 12, Location X, value 140.00" (expanded channel lanes). `Enter` or `Space` selects that keyframe and moves the playhead to its frame; on the parent lane it also selects the part, exactly like the existing click. The channel-lane diamond had no click handler before, so its keyboard path mirrors its own mousedown selection without starting a drag. `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order, stop at the ends, and consume the key there so the timeline never scrolls. Mouse click and drag behave as before (the channel diamond gained a click handler that repeats the same selection/frame result as its mousedown).
-- **Selected-keyframe section behavior:** the panel is announced as a group scoped to the selected frame; its numeric inputs keep their existing labels and pipeline.
-- **Screen-reader semantics:** the graph is a labelled group instead of an image (its controls are no longer hidden); decorative SVG geometry is `aria-hidden`; the selected keyframe is exposed via `aria-pressed`; no control is left unnamed.
-- **Focus visibility:** timeline diamonds show a cyan `outline` plus a soft glow on `:focus-visible`; graph keyframe points show a cyan `outline` on `:focus-visible`. Both are keyboard-only states; mouse focus is unchanged. The real-browser smoke asserts the painted `outline-style`/`outline-width`, not just the pseudo-class.
-- **Unsupported/out-of-scope:** no roving-tabindex manager (every diamond is normally tabbable), no keyframe add/delete/nudge shortcuts, no arrow-key scrubbing of the playhead, no timeline restructure, no new shortcut registry, no change to Escape semantics.
+- **First-export/onboarding behavior:** a labelled "First export help" button next to Export opens a compact panel with the three steps, the "nothing is written until you export" statement, and a readiness button. Nothing opens automatically and nothing is persisted.
+- **Diagnostics behavior:** the readiness check reports from the same diagnostics authority the export uses: the first blocking finding shows Task 105's stable title, context, message, and concrete next step; warnings show a "does not block" summary with their count; a clean scene shows "Ready to export". Blockers beyond the first are not enumerated by the check (the export reports them all).
+- **Success/blocked behavior:** blocked never shows ready — the summary is derived from the same report the export handler reads before it writes anything, and the blocked branch carries no archive name. Success language ("Exported …") remains exclusive to the actual export handlers, which are the only writers.
+- **Accessibility:** the panel is a `role="group"` named "First export help", the trigger exposes `aria-expanded`/`aria-controls`, the readiness button has an explicit accessible name and a disabled/running state, and the existing export menu keeps its `role="menu"`/`menuitem` structure.
+- **Unsupported/out-of-scope:** no wizard, no forced first-run experience, no sample-scene generator, no host/vendor destination, no change to `.ograf.zip` shape or the generated runtime, no new dependency, no telemetry, no release/publish change.
 
 ### Tests added/updated
 
 | File | Tests | Focus |
 |---|---|---|
-| `src/tests/timelineKeyframeA11y.test.tsx` | 8 | labelled focusable diamonds, `aria-pressed`, Enter/Space activation (keyframe + frame on both keys, part selection asserted on Enter), arrow walk in both directions with end stops and a lone diamond (key cancellation asserted for the right end and the lone case), mouse click regression, channel-lane labels with values and local activation, legacy composite labels with frame jump |
-| `src/tests/TemporalGraphPanel.test.tsx` | 6 (2 added, 1 rewritten from the old `role="img"` assertions) | group semantics + hidden decoration + focusable labelled points + `aria-describedby` keyboard contract + ArrowUp/ArrowDown editing + speed-graph read-only + handle inputs |
-| `src/tests/selectedKeyframeSection.test.tsx` | 19 (1 added) | existing value/pipeline coverage plus the frame-scoped group label |
-| `e2e/graph-accessibility.spec.ts` | 2 | real Chromium: Tab traversal reaches a diamond, the painted focus ring (`outline-style`/`outline-width`) is asserted, the arrow walk moves focus in frame order, `Enter` selects and opens the selected-keyframe panel, mouse click still selects, no console errors; and — through the Curve Studio control, with no early-exit path — the graph group, its Tab-reachable keyframe point, its painted ring, its ArrowUp edit and its three `aria-hidden` decorations |
+| `src/tests/ografExportReadiness.test.ts` | 5 | ready copy names the real archive; blocked never says ready and carries the remediation + next step; warnings stay non-blocking; root-cause dedupe and plural wording; no-name fallback |
+| `src/tests/firstExportGuide.test.tsx` | 3 | group name + steps; labelled readiness action with running state; never renders success/completion wording |
+| `src/tests/firstExportFlow.test.tsx` | 5 | guide hidden until asked, no writer call; ready path (success toast, no archive written); unsupported layer → blocked toast with next step, no writer call; clip-matte warning path; the existing export still works after a check |
+| `src/tests/ografBrowserZip.test.tsx` | 18 (1 timing update) | existing export/ZIP coverage, now awaiting the shared compile path |
+| `e2e/export-onboarding.spec.ts` | 1 | real Chromium: guidance opens/closes, readiness reports "Ready to export" without any "Exported" toast, then the real export downloads a `-ograf.zip` archive and shows the success toast, with no console errors |
 
 ### Validation matrix
 
 | Command | Result |
 |---|---|
-| Focused Vitest (`timelineKeyframeA11y`, `TemporalGraphPanel`, `selectedKeyframeSection`) | PASS — 3 files / 35 tests |
-| `npx playwright test e2e/graph-accessibility.spec.ts` | PASS — 2 tests |
-| Full Vitest (`npm test`) | PASS — 109 files / 1,652 tests |
+| Focused Vitest (`ografExportReadiness`, `firstExportGuide`, `firstExportFlow`) | PASS — 3 files / 13 tests |
+| `npx playwright test e2e/export-onboarding.spec.ts` | PASS — 1 test |
+| Full Vitest (`npm test`) | PASS — 112 files / 1,665 tests |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests (candidate resolved from HEAD) |
+| `npm run qa:release` | PASS — 2 Chromium tests |
 | `npm run build` | PASS |
 | `npx tsc --noEmit` | clean |
 | `npm run lint` | clean (pre-existing `AnimatorContext` Fast Refresh warning only) |
@@ -254,37 +260,25 @@ No new graph engine, evaluator, timeline mutation, shortcut registry, state stor
 
 ### Known warnings
 
-- Pre-existing: `react(only-export-components)` in `AnimatorContext.tsx`, Vite chunk-size advisory, the `e2e` folder is outside the Vitest `include` glob.
+- Pre-existing only: the `AnimatorContext` Fast Refresh warning, the Vite chunk-size advisory, and the `e2e` folder being outside the Vitest include glob.
 
 ### Protected invariants
 
-- No change to the evaluator, interpolation, keyframe/channel model, timeline mutation utilities, `useKeyboardShortcuts`, serialization, OGraf export/runtime, or any package/workflow file.
-- No new dependency, state store, event bus, shortcut registry, or UI framework.
-- Mouse interactions behave as before: parent-lane and legacy diamond click/drag/context-menu handlers are byte-identical, and the channel diamond keeps its mousedown drag plus gains a click that produces the same selection/frame result.
-- Tag `v1.1.0-rc.1`, the draft GitHub release, npm metadata, `without-mask`, global OMP configuration, `C:\Users\ertugrul.ak\Desktop\KCS`, and `ograf-graphics` are untouched.
+- No export engine, package materializer, OGraf package/runtime format, host or vendor contract, dependency, workflow, release, or publishing change.
+- `.ograf.zip` naming and contents come from the unchanged `compileOGrafPackage` + `createOGrafBrowserZip` path; the readiness check only reads diagnostics and never writes.
+- This branch changes only the files listed above; nothing has been merged or pushed yet, and the tag `v1.1.0-rc.1`, the draft release, npm metadata, `without-mask`, global OMP configuration, `C:\Users\ertugrul.ak\Desktop\KCS`, and `ograf-graphics` are untouched.
 
 ### Independent review result
 
-Round 1 (`eece046`) returned **BLOCKED** with three findings and six documentation over-claims; all were addressed in the review-fix commit:
-
-| Finding | Severity | Resolution |
-|---|---|---|
-| The graph Playwright test could pass without opening the graph (it returned early when the graph was not mounted) | medium | The test now opens the Curve Studio modal through its own control, asserts the labelled group, Tab-reaches the keyframe point, asserts the painted focus ring, edits with `ArrowUp`, and checks the three `aria-hidden` decorations — there is no early exit |
-| `ArrowLeft`/`ArrowRight` at the lane ends returned before `preventDefault`/`stopPropagation`, leaving the key unconsumed (timeline scroll) | low | The lane now consumes the arrow before resolving the neighbour; two tests dispatch a cancelable event and assert `defaultPrevented` |
-| The focus-ring assertion only checked `:focus-visible`, not the painted style | low | Both smoke tests now read the computed `outline-style` / `outline-width` from the focused element |
-| Over-claims: universal click parity, "graph E2E PASS" wording, glow on the graph ring, incomplete test-coverage wording, "mouse entirely unchanged", changed-file list and test counts | documentation | The report now states the exact per-renderer activation effects, the graph outline (no glow), the strengthened assertions, the channel-diamond click addition, and the real test counts, and it lists itself in the changed-files table. Round 2 accepted every code finding as CLOSED and returned the documentation notes above, which this correction addresses (the counts now match the file: 8 tests in `timelineKeyframeA11y.test.tsx`, 6 in `TemporalGraphPanel.test.tsx`, 19+1 in `selectedKeyframeSection.test.tsx`, 2 in the Playwright spec). |
-
-Round 2 (`e1b8400`) verdict: **READY WITH WARNINGS** — all three defects CLOSED (the graph smoke cannot pass without the graph semantics, the arrow keys are consumed at lane ends and on a lone diamond, the focus-ring assertions read the painted style). The only remaining findings were documentation notes about test counts and coverage wording, corrected in the follow-up docs commit; the reviewer also observed that deleting only the component-specific focus rules would not fail the smoke because the global `[role='button']:focus-visible` rule in `src/index.css` paints an equivalent 2 px ring — the visual contract holds either way, the assertion proves the computed result rather than a particular selector.
+_Pending — recorded after the review round below._
 
 ### Merge/push status
 
-**MERGED into `main` by fast-forward** at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` and pushed (`beb4b49..96e8f9d`). The branch `feat/graph-accessibility` carried three commits (`eece046` feature, `e1b8400` review fixes, `96e8f9d` documentation correction); `main` was a strict superset afterwards. No rebase, no merge commit, no force push, no history rewrite. Tag `v1.1.0-rc.1`, the draft release, and npm are untouched.
-
-Known residual risks (accepted, no AT matrix was run): the derived speed graph changes from an `img` graphic to a named group with no focusable content, so its screen-reader announcement is reasoned rather than measured; `aria-pressed` carries toggle semantics while activation only selects; `Shift`+`Enter`/`Shift`+`Space` does not forward the shift-modifier part-selection behaviour that a shift-click performs.
+_Pending — recorded after the review gate._
 
 ### Next recommended task
 
-Milestone C — first export / onboarding flow (roadmap item 5), reusing the Task 105 diagnostics and the existing export UI; no host/vendor contract invention and no package format change.
+Milestone D — state / CI / warning hygiene (roadmap items 6 and 9). Item 6 (current-state consistency check) is documentation/tooling; **item 9 (dependency and warning maintenance) requires explicit user approval because it touches `package.json`/`package-lock.json`.**
 
 ---
 
@@ -294,7 +288,7 @@ Milestone C — first export / onboarding flow (roadmap item 5), reusing the Tas
 
 ### Repository state
 
-- Checkout: `main` at or newer than the Milestone A integration commit `077911b469bf7026364c0335e748114bf8df05c0` (a state-reconciliation docs commit follows it); `origin/main` synchronized
+- Checkout: `feat/export-onboarding` (Milestone C merge candidate) on top of `main` at or newer than `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`; `origin/main` is synchronized and this branch is not pushed yet
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -319,8 +313,8 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ### Next scoped work
 
-1. Start **Milestone C — first export / onboarding flow (roadmap item 5)** — the current next action; Milestone B is merged (see below). Read `reports/progress_109_graph_accessibility_start.md`, then `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md` for the Milestone A precedents. Implementation briefly: keyboard reachability and screen-reader labelling for the graph/path editing surfaces that already exist (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections). No graph-engine rewrite, no broad style churn, reuse the existing graph/value/channel authorities; focused a11y tests + one Playwright smoke + full validation + independent review; stop if the work grows beyond narrow UI/accessibility.
-2. Milestone C (first export / onboarding flow) follows only after B, and D–F stay plan-only; dependency, workflow, and release changes need explicit approval.
+1. Land **Milestone C — first export / onboarding flow (roadmap item 5)**: it is implemented on `feat/export-onboarding` (see `reports/progress_110_export_onboarding.md` for the commit list and evidence) and awaits the review gate and a fast-forward merge. Nothing else needs to be built for it. Scope recap: a short first-successful-OGraf-export path for new users, reusing the Task 105 export diagnostics and the existing export UI. No template/sample affordance was added (the app has no starter-scene machinery), and there is no host/vendor contract invention, no OGraf package format change, no new dependency, and no package/workflow/release change.
+2. Milestones D–F stay plan-only; **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work, and all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
 
@@ -348,7 +342,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; plan-only, not started.
+- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; implemented on this branch, awaiting the review gate and merge (see the next-scoped-work list above).
 
 ---
 
@@ -394,7 +388,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Next: Milestone C (first export / onboarding flow, item 5)** — not started, plan-only; D–F stay plan-only. Dependency, workflow, and release changes require explicit approval.
+- **Milestone C (first export / onboarding flow, item 5)** — implemented on `feat/export-onboarding` and awaiting the review gate and a fast-forward merge; **D–F stay plan-only**. Dependency/package/workflow and release changes require explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -423,7 +417,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; plan-only, not started.
+- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; implemented on `feat/export-onboarding`, awaiting the review gate and merge.
 
 ---
 
@@ -441,7 +435,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 |---|---|---|---|
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
-| C — First export / onboarding flow | 5 | — | **NEXT — not started** |
+| C — First export / onboarding flow | 5 | `feat/export-onboarding` | Implemented and validated; four review rounds closed the functional contract, the last round left one documentation-provenance item (fixed) — **merge awaiting the user's decision** |
 | D — State / CI / warning hygiene | 6, 9 | — | Plan only |
 | E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
 | F — Architecture exploration only | 10, 11, 12 | — | Plan only |
@@ -500,9 +494,9 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 ### Recommended next prompt
 
-"KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW. On a new `feat/export-onboarding` branch, add a short first-successful-OGraf-export path for new users, reusing the Task 105 export diagnostics, the existing templates, and the existing export UI: no host/vendor contract invention, no OGraf package format change, no new dependency, and no package/workflow/release change. Add focused tests plus one Playwright smoke, run the full validation set, then one focused independent review before any merge."
+"KCS MILESTONE D — STATE / CI / WARNING HYGIENE (items 6 and 9). Item 6 is a documentation/tooling task (a check that fails when live docs contradict the tag/main SHA); item 9 (dependency and warning maintenance) requires explicit user approval before any `package.json`/lockfile/workflow edit. Add focused tests, run the full validation set, then one focused independent review before any merge."
 
-Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`), and "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`).
+Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was implemented on `feat/export-onboarding` and awaits the merge decision (see `reports/progress_110_export_onboarding.md`).
 
 ### CHANGELOG.md
 
@@ -578,13 +572,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 5349 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 6295 bytes
-- `NEXT_SESSION.md` — 7129 bytes
-- `OMP_FINAL_RESPONSE.md` — 6014 bytes
-- `PROJECT_STATE.md` — 7850 bytes
-- `README.md` — 2179 bytes
-- `manifest.txt` — 3017 bytes
-- `progress_109_graph_accessibility.md` — 14343 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 6547 bytes
+- `NEXT_SESSION.md` — 7170 bytes
+- `OMP_FINAL_RESPONSE.md` — 7272 bytes
+- `PROJECT_STATE.md` — 7978 bytes
+- `README.md` — 2198 bytes
+- `manifest.txt` — 3001 bytes
+- `progress_110_export_onboarding.md` — 10608 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

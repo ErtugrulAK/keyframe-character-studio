@@ -8,7 +8,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 |---|---|---|---|
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
-| C — First export / onboarding flow | 5 | — | **NEXT — not started** |
+| C — First export / onboarding flow | 5 | `feat/export-onboarding` | Implemented and validated; four review rounds closed the functional contract, the last round left one documentation-provenance item (fixed) — **merge awaiting the user's decision** |
 | D — State / CI / warning hygiene | 6, 9 | — | Plan only |
 | E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
 | F — Architecture exploration only | 10, 11, 12 | — | Plan only |
@@ -67,6 +67,6 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 ## Recommended next prompt
 
-"KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW. On a new `feat/export-onboarding` branch, add a short first-successful-OGraf-export path for new users, reusing the Task 105 export diagnostics, the existing templates, and the existing export UI: no host/vendor contract invention, no OGraf package format change, no new dependency, and no package/workflow/release change. Add focused tests plus one Playwright smoke, run the full validation set, then one focused independent review before any merge."
+"KCS MILESTONE D — STATE / CI / WARNING HYGIENE (items 6 and 9). Item 6 is a documentation/tooling task (a check that fails when live docs contradict the tag/main SHA); item 9 (dependency and warning maintenance) requires explicit user approval before any `package.json`/lockfile/workflow edit. Add focused tests, run the full validation set, then one focused independent review before any merge."
 
-Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`), and "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`).
+Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was implemented on `feat/export-onboarding` and awaits the merge decision (see `reports/progress_110_export_onboarding.md`).

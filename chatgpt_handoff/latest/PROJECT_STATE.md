@@ -38,7 +38,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5)** — implemented on `feat/export-onboarding` and awaiting the review gate and a fast-forward merge; **D–F stay plan-only**. Dependency/package/workflow and release changes require explicit approval.
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Next: Milestone D (state / CI / warning hygiene, items 6 and 9)** — item 6 can start as documentation/tooling; **item 9 (dependency/package/workflow) requires explicit approval**; D–F otherwise stay plan-only.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -67,4 +67,4 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; implemented on `feat/export-onboarding`, awaiting the review gate and merge.
+- Next roadmap milestone: **D — state / CI / warning hygiene (items 6 and 9)**; Milestone C is merged (see the report).

@@ -1,18 +1,18 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone C (First Export / Onboarding Flow)
+# KCS Minimal ChatGPT Upload Bundle — Milestone C (First Export / Onboarding Flow) — MERGED
 
-This is a minimal, task-specific ChatGPT upload bundle for Milestone C. It was clean-refreshed for this task.
+This is a minimal, task-specific ChatGPT upload bundle for Milestone C. It was clean-refreshed for this task and now records the merged state.
 
 ## What this bundle covers
 
-Milestone C adds an opt-in first-export path: a compact "First export help" panel behind a labelled header button, a readiness check that reads the same OGraf diagnostics authority the export reads, and guidance that never claims a package was written. The milestone is implemented, validated, and functionally reviewed; the merge is awaiting the user's decision (see `OMP_FINAL_RESPONSE.md` §7).
+Milestone C is merged into `main`: an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path behind the readiness check and both export actions. The milestone took six review rounds; the final gate verdict was READY WITH WARNINGS. The next milestone is D (state / CI / warning hygiene), whose dependency/workflow part is approval-gated.
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — the final task response (result, behaviour, validation, review rounds, release safety, the merge decision, next action)
-- `progress_110_export_onboarding.md` — the Milestone C report: scope, implementation, authorities reused, files changed, behaviour, tests, validation matrix, review rounds, residual risks, merge status
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan (Milestones A and B merged; C implemented on a branch and awaiting the merge decision)
-- `CHANGELOG.md` — the repository changelog
-- `NEXT_SESSION.md` — repository state with the Milestone C merge decision as the current action
+- `OMP_FINAL_RESPONSE.md` — the final task response (review verdict, status, validation, behaviour, release safety, next action)
+- `progress_110_export_onboarding.md` — the Milestone C report (implementation, authorities reused, files changed, behaviour, tests, validation matrix, review rounds, residual risks, merged status)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan: A, B and C merged, D next with its approval gate
+- `CHANGELOG.md` — the repository changelog with the Milestone C entry under Unreleased
+- `NEXT_SESSION.md` — repository state with Milestone D as the next scoped work
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
 - `manifest.txt` — this bundle's inventory
 

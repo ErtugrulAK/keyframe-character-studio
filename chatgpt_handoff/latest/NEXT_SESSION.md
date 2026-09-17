@@ -2,7 +2,7 @@
 
 ## Repository state
 
-- Checkout: `feat/export-onboarding` (Milestone C merge candidate) on top of `main` at or newer than `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`; `origin/main` is synchronized and this branch is not pushed yet
+- Checkout: `main` at or newer than the Milestone C merge commit `c2dcb22352f1f4ad9102624309a0d92cf206046b`; `origin/main` is synchronized. The feature branch `feat/export-onboarding` is retained as the review artefact.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -27,7 +27,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. Land **Milestone C — first export / onboarding flow (roadmap item 5)**: it is implemented on `feat/export-onboarding` (see `reports/progress_110_export_onboarding.md` for the commit list and evidence) and awaits the review gate and a fast-forward merge. Nothing else needs to be built for it. Scope recap: a short first-successful-OGraf-export path for new users, reusing the Task 105 export diagnostics and the existing export UI. No template/sample affordance was added (the app has no starter-scene machinery), and there is no host/vendor contract invention, no OGraf package format change, no new dependency, and no package/workflow/release change.
+1. Start **Milestone D — state / CI / warning hygiene (roadmap items 6 and 9)** — the current next action; Milestone C is merged (see the block below). Item 6 is documentation/tooling (a check that fails when live docs contradict the tag/main SHA) and can start immediately; **item 9 (dependency and warning maintenance) needs explicit user approval before any `package.json`, lockfile, or workflow edit**.
 2. Milestones D–F stay plan-only; **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work, and all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -56,4 +56,4 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; implemented on this branch, awaiting the review gate and merge (see the next-scoped-work list above).
+- Next roadmap milestone: **D — state / CI / warning hygiene (items 6 and 9)**; Milestone C is merged.

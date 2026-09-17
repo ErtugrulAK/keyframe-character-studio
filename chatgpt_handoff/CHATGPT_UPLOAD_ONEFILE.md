@@ -19,89 +19,85 @@
 
 ## KCS Milestone C — Final Response (First Export / Onboarding Flow)
 
-This file is the OMP final response for the Milestone C task at its stop point. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+This file is the OMP final response for the Milestone C task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
-### 1) RESULT
+### 1) FINAL REVIEW
 
-- **Status:** Milestone C is **implemented, validated, and functionally reviewed — NOT MERGED (pre-merge state).** The two documentation-provenance blockers (roadmap intro contradiction and the report's path/commit inventory) were approved and closed in `6ae8a8e`, and the same corrections were propagated to this bundle; the merge awaits the final gate verdict.
-- **Branch:** `feat/export-onboarding` (its HEAD at merge time; this milestone does not pin its own tip SHA, because recording one creates the commit that invalidates it)
-- **Commits:** `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit-list provenance), `d23e867` (handoff refresh), `ebc718f` (stable provenance wording), `225cf1e` (dropped the last pinned tip), `6ae8a8e` (closed the two provenance blockers) and any later documentation commit — the report's Branch section is the authority
-- **Merge:** not performed. `main` is an ancestor of the branch, so `git merge --ff-only feat/export-onboarding` is available whenever the merge is approved
-- **Push:** none. `main` = `origin/main` = `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`, untouched
-- **Working tree:** clean on the branch
+- **Verdict:** READY WITH WARNINGS — all eight merge-gate checks closed, `fix_scope_respected` and `protected_rules_intact` both true.
+- **Warnings / residual risks (not blockers):** the readiness answer is point-in-time (a scene changed after the check is recompiled when the export runs, and ZIP materialization can still fail at export time); the real-browser smoke covers the ready/download path while the blocked and warning paths are covered by component tests; ARIA/copy were reviewed by reading, without a screen-reader matrix.
+- **Blocker history:** six review rounds — round 1 functional (guide naming, handoff state, four over-claims), rounds 2–5 documentation consistency and provenance, round 6 READY WITH WARNINGS after the two approved documentation blockers were closed in `6ae8a8e` and propagated to this bundle in `c2dcb22`.
 
-### 2) USER-FACING BEHAVIOR
+### 2) MILESTONE C STATUS
 
-- **First-export/onboarding behavior:** a labelled "First export help" button next to Export opens a compact, opt-in panel with three steps (keep a visible layer, run the readiness check, choose "OGraf Package" in the Export menu), the statement that nothing is written until you export, and a labelled "Check export readiness" button with its running state. Nothing opens automatically; nothing is persisted; existing users are never interrupted.
-- **Diagnostics behavior:** the readiness check compiles the current scene through the same OGraf path the export uses and summarises the existing Task 105 remediation report: the first blocking finding shows its stable title, context, message, and concrete next step (error toast, long duration); warnings show a "does not block" summary with their deduplicated count (info toast); a clean scene shows "Ready to export" naming the archive the writer would produce (`<sanitized scene name>-ograf.zip`).
-- **Success/blocked behavior:** blocked never shows ready, and the check carries no archive name in that branch. Success language ("Exported …") remains exclusive to the actual export handlers, which are the only writers; a scene edited after the check is recompiled when the export runs, and ZIP materialization can still fail at export time.
-- **Accessibility:** the panel is a `role="group"` named "First export help"; the trigger exposes `aria-expanded`/`aria-controls`; the readiness button has an explicit accessible name and a disabled/running state; the existing export menu keeps its `role="menu"` and three `menuitem`s.
-- **Unsupported/out-of-scope:** no wizard, no forced first-run flow, no sample-scene generator (the app has no starter-scene machinery), no host/vendor destination, no change to the OGraf package format or the generated runtime, no new dependency, no telemetry, no release/publish change.
+- **Merged:** yes — fast-forward merge, no merge commit, no rebase, no force push, no history rewrite
+- **Integration commit (`main`):** `c2dcb22352f1f4ad9102624309a0d92cf206046b`; a post-merge documentation commit follows it
+- **Feature branch:** `feat/export-onboarding` — commits `73b22a2` (feature), `ba9837e`, `31cb407`, `6d8371d`, `9db62f3`, `d23e867`, `ebc718f`, `225cf1e`, `6ae8a8e`, `c2dcb22`; retained locally as the review artefact
+- **Push:** `git push origin main` (`f5dbb3f..c2dcb22`, then the post-merge docs commit)
+- **`main == origin/main`:** yes · **CI:** run `35222589827` at `c2dcb22` success
 
 ### 3) VALIDATION
 
-Each command was run separately (the earlier timeout came from one long chained command).
+Each command was run separately on the merge candidate.
 
 | Check | Result |
 |---|---|
 | Focused Vitest (`ografExportReadiness`, `firstExportGuide`, `firstExportFlow`) | PASS — 3 files / 13 tests |
 | Playwright smoke `e2e/export-onboarding.spec.ts` | PASS — 1 test |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests (candidate from HEAD) |
+| `npm run qa:release` | PASS — 2 Chromium tests (candidate `c2dcb22`) |
 | Full Vitest (`npm test`) | PASS — 112 files / 1,665 tests |
 | `npm run build` | PASS |
 | `npx tsc --noEmit` | clean |
 | `npm run lint` | clean (pre-existing `AnimatorContext` Fast Refresh warning only) |
 | `git diff --check` | clean |
+| GitHub CI on the merge commit | success (`35222589827`) |
 
-### 4) REVIEW
+### 4) USER-FACING BEHAVIOR
 
-- **Round 1 (`73b22a2`) — BLOCKED:** the guide named the archive wrongly, the handoff state was wrong, and four documentation over-claims described what the readiness check guarantees.
-- **Round 2 (`ba9837e`) — BLOCKED:** guide naming CLOSED; only documentation consistency remained (checkout line, stale "plan-only" claims, a missing changed-files row, two absolute copy claims).
-- **Round 3 (`31cb407`) — BLOCKED:** all five round-2 items CLOSED, `no_protected_changes: true`, no functional regression; the same absolute guarantee survived in the presenter comment and two test headers, and the handoff still claimed template reuse.
-- **Round 4 (`6d8371d`) — BLOCKED:** items 1–3 CLOSED; the only remaining item was that the report's Branch section did not list the commits the handoff pointed at — fixed in `9db62f3` and verified by reading.
-- **Functional contract (closed and unchanged since round 2):** one compile path used by readiness/package export/legacy export; readiness returns blocked when the report has blocking findings and never writes; readiness success is a pre-flight answer, not an export claim; the guidance is opt-in, accessible, and rendered outside the export menu; the export menu semantics and its existing tests are intact.
-- **Residual risks:** the readiness answer is point-in-time (a scene can change between check and export, and ZIP materialization can still fail); the real-browser smoke covers the ready path while blocked/warning paths are covered by component tests; `aria`/copy wording was reviewed by reading, without a screen-reader matrix.
+- **First-export guidance:** a labelled "First export help" button next to Export opens a compact, opt-in panel with three steps (keep a visible layer, run the readiness check, choose "OGraf Package" in the Export menu), the statement that nothing is written until you export, and a labelled "Check export readiness" button with its running state. Nothing opens automatically; nothing is persisted; existing users are never interrupted.
+- **Readiness diagnostics:** the check compiles the current scene through the same OGraf path the export uses and summarises the existing Task 105 remediation report — the first blocking finding shows its stable title, context, message and concrete next step (error toast); warnings show a "does not block" summary with their deduplicated count (info toast); a clean scene shows "Ready to export" naming the archive the writer would produce (`<sanitized scene name>-ograf.zip`).
+- **Success/blocked behavior:** blocked never shows ready and carries no archive name; success language ("Exported …") remains exclusive to the actual export handlers.
+- **Accessibility:** the panel is a `role="group"` named "First export help"; the trigger exposes `aria-expanded`/`aria-controls`; the readiness button has an explicit accessible name and a disabled/running state; the existing export menu keeps its `role="menu"` and three `menuitem`s.
+- **Out of scope:** no wizard, no forced first-run flow, no sample-scene generator, no host/vendor destination, no OGraf package-format or runtime change, no new dependency, no telemetry, no release/publish change.
 
 ### 5) RELEASE SAFETY
 
 - `v1.1.0-rc.1` tag target: `46d2a3e59e065816d972dcd56951803951b577f6` — unchanged
 - Tag / release / npm: no tag create-move-delete, no draft-release edit or publish, no npm publish (package stays private at `1.1.0-rc.1`)
-- `without-mask`: untouched
-- OMP config: model roles, provider mappings, `memory.backend: mnemopi`, `task.maxConcurrency: 8` — unchanged
+- `without-mask`: untouched · OMP config: model roles, providers, `memory.backend: mnemopi`, `task.maxConcurrency: 8` unchanged
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics`: untouched, nothing copied
 - Secrets: none printed or copied
-- Protected authorities: no host/vendor contract, OGraf package/runtime format, compiler, validator, ZIP writer, dependency, `package.json`/lockfile, workflow, or release automation change
+- Protected authorities: no host/vendor contract, package/runtime format, compiler, validator, ZIP writer, dependency, `package.json`/lockfile, workflow, or release-automation change
 
 ### 6) HANDOFF
 
-- `chatgpt_handoff/latest/`: 8 files — `README.md`, `manifest.txt`, `OMP_FINAL_RESPONSE.md`, `progress_110_export_onboarding.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md`
+- `chatgpt_handoff/latest/`: 8 files — `README.md`, `manifest.txt`, this final response, `progress_110_export_onboarding.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md`
 - One-file rebuilt from scratch; source/test copies: NO; test-glob matching files: NO; `Desktop\KCS` copied: NO; secrets: NO; malformed Windows paths: zero
-- These handoff files are committed on the feature branch (not on `main`, which is untouched until the merge is approved)
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
-### 7) NEXT ACTION
+### 7) NEXT
 
-**Decision needed: approve the Milestone C merge (fast-forward available), or request one more review round.**
+**Milestone D — state / CI / warning hygiene (roadmap items 6 and 9).**
 
-- If approved: `git switch main`, `git merge --ff-only feat/export-onboarding`, `git push origin main`, then the post-merge state docs and the handoff refresh for `main`.
-- Next roadmap milestone afterwards: **Milestone D — state / CI / warning hygiene (items 6 and 9)**. Item 6 (current-state consistency check) is documentation/tooling; **item 9 (dependency and warning maintenance) requires explicit user approval because it touches `package.json`/`package-lock.json` and the workflows.**
+- **Item 6** (current-state consistency check: a check that fails when live docs contradict the tag/`main` SHA) is documentation/tooling and can start without further approval; recommended branch `chore/state-hygiene-gate`.
+- **Item 9** (dependency and warning maintenance) **requires explicit user approval** before editing `package.json`, the lockfile, or the workflows — present the proposed dependency deltas and warning inventory first.
+- Validation gate for D: focused tests, one Playwright smoke where relevant, the full set (`npm test`, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`), then one focused independent review before any merge.
 
 ---
 
 ## 2. Handoff Manifest
 
-## KCS ChatGPT Upload Manifest — Milestone C (First Export / Onboarding Flow)
+## KCS ChatGPT Upload Manifest — Milestone C (First Export / Onboarding Flow) — MERGED
 
 Clean refreshed: YES
-Bundle purpose: Milestone C — first export / onboarding flow — implemented, validated, functionally reviewed; merge awaiting the user's decision
+Bundle purpose: Milestone C — first export / onboarding flow — merged into main after a READY WITH WARNINGS gate
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current branch: feat/export-onboarding (HEAD at merge time) — NOT merged, NOT pushed
-Milestone C commits: 73b22a2 (feature), ba9837e (round-1 review fixes), 31cb407 (round-2 consistency fixes), 6d8371d (round-3 claim scoping), 9db62f3 (commit-list provenance), d23e867 (handoff refresh), ebc718f (stable provenance wording), 225cf1e (dropped the last pinned tip), 6ae8a8e (closed the two provenance blockers) and any later documentation commit
-main / origin/main: f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5 (untouched; fast-forward merge available on approval)
-Milestone A integration commit: 077911b (ancestor of main); Milestone B merge: 96e8f9d (ancestor of main)
+Current main / origin HEAD: 5e739aa (post-merge documentation commit over the Milestone C merge commit c2dcb22); later docs commits may be newer
+Milestone C integration commit: c2dcb22352f1f4ad9102624309a0d92cf206046b (fast-forward merge; no merge commit, no rebase, no force push)
+Milestone C commits (branch feat/export-onboarding, retained as the review artefact): 73b22a2 (feature), ba9837e, 31cb407, 6d8371d, 9db62f3, d23e867, ebc718f, 225cf1e, 6ae8a8e, c2dcb22
+Earlier milestones: A replayed and merged at 077911b; B merged at 96e8f9d
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -111,10 +107,10 @@ Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
 - OMP_FINAL_RESPONSE.md — the Milestone C final response
-- progress_110_export_onboarding.md — the Milestone C report
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan and approval gates
-- CHANGELOG.md — repository changelog
-- NEXT_SESSION.md — repository state and the current action
+- progress_110_export_onboarding.md — the Milestone C report (merged status)
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan; A/B/C merged, D next and approval-gated
+- CHANGELOG.md — repository changelog with the Milestone C entry
+- NEXT_SESSION.md — repository state with Milestone D as the next scoped work
 - PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
 Omitted categories:
@@ -124,14 +120,15 @@ Omitted categories:
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
-Validation at this revision (each command run separately):
+Validation at the merge candidate (each command run separately):
 - Focused Vitest: PASS — 3 files / 13 tests
 - Playwright smoke: PASS — e2e/export-onboarding.spec.ts (1 test; not part of CI or the release gate)
 - Full Vitest: PASS — 112 files / 1,665 tests
-- validate:ograf, qa:release (2 Chromium tests), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
-- Independent review: round 1 BLOCKED → round 2 BLOCKED (documentation only) → round 3 BLOCKED (documentation only) → round 4 BLOCKED (one documentation-provenance item, fixed in 9db62f3)
+- validate:ograf, qa:release (2 Chromium tests, candidate c2dcb22), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
+- Independent review: six rounds; final gate verdict READY WITH WARNINGS (all eight merge-gate checks closed)
+- CI: run 35222589827 at c2dcb22 success
 
-Next milestone after the merge decision: D — state / CI / warning hygiene (items 6 and 9); the dependency/package/workflow part needs explicit approval.
+Next milestone: D — state / CI / warning hygiene (items 6 and 9). Item 6 (documentation/tooling) can start without further approval; item 9 (dependency/package/workflow) requires explicit user approval.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -139,21 +136,21 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-## KCS Minimal ChatGPT Upload Bundle — Milestone C (First Export / Onboarding Flow)
+## KCS Minimal ChatGPT Upload Bundle — Milestone C (First Export / Onboarding Flow) — MERGED
 
-This is a minimal, task-specific ChatGPT upload bundle for Milestone C. It was clean-refreshed for this task.
+This is a minimal, task-specific ChatGPT upload bundle for Milestone C. It was clean-refreshed for this task and now records the merged state.
 
 ### What this bundle covers
 
-Milestone C adds an opt-in first-export path: a compact "First export help" panel behind a labelled header button, a readiness check that reads the same OGraf diagnostics authority the export reads, and guidance that never claims a package was written. The milestone is implemented, validated, and functionally reviewed; the merge is awaiting the user's decision (see `OMP_FINAL_RESPONSE.md` §7).
+Milestone C is merged into `main`: an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path behind the readiness check and both export actions. The milestone took six review rounds; the final gate verdict was READY WITH WARNINGS. The next milestone is D (state / CI / warning hygiene), whose dependency/workflow part is approval-gated.
 
 ### Files
 
-- `OMP_FINAL_RESPONSE.md` — the final task response (result, behaviour, validation, review rounds, release safety, the merge decision, next action)
-- `progress_110_export_onboarding.md` — the Milestone C report: scope, implementation, authorities reused, files changed, behaviour, tests, validation matrix, review rounds, residual risks, merge status
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan (Milestones A and B merged; C implemented on a branch and awaiting the merge decision)
-- `CHANGELOG.md` — the repository changelog
-- `NEXT_SESSION.md` — repository state with the Milestone C merge decision as the current action
+- `OMP_FINAL_RESPONSE.md` — the final task response (review verdict, status, validation, behaviour, release safety, next action)
+- `progress_110_export_onboarding.md` — the Milestone C report (implementation, authorities reused, files changed, behaviour, tests, validation matrix, review rounds, residual risks, merged status)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan: A, B and C merged, D next with its approval gate
+- `CHANGELOG.md` — the repository changelog with the Milestone C entry under Unreleased
+- `NEXT_SESSION.md` — repository state with Milestone D as the next scoped work
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
 - `manifest.txt` — this bundle's inventory
 
@@ -173,7 +170,7 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Progress Report
 
-Milestone C report (implemented; merge awaiting the final gate verdict).
+Milestone C report (merged).
 
 ## Progress 110 — Milestone C: First Export / Onboarding Flow
 
@@ -285,21 +282,20 @@ Those nine `chatgpt_handoff/**` paths are documentation artefacts by policy (the
 | 2 | `ba9837e` (round-1 fixes) | BLOCKED | the guide naming was CLOSED; only documentation consistency remained (checkout line, stale "plan-only" claims, a missing changed-files row, two absolute copy claims) |
 | 3 | `31cb407` (round-2 fixes) | BLOCKED | all five round-2 items CLOSED, no protected change, no functional regression; the same absolute guarantee survived in the presenter comment and two test headers, and the handoff still claimed template reuse |
 | 4 | `6d8371d` (round-3 fixes) | BLOCKED | items 1–3 CLOSED; the only remaining item was that this report's Branch section did not list the commits the handoff pointed at |
+| 5 | `225cf1e` | BLOCKED | a gate review on that revision named two documentation blockers: this file's path/commit inventory and the roadmap intro sentence contradicting its own table |
+| 6 | `c2dcb22` (after `6ae8a8e` + the bundle re-sync) | **READY WITH WARNINGS** | all eight merge-gate checks CLOSED; `fix_scope_respected` and `protected_rules_intact` both true |
 
-The documentation item from round 4 was fixed in `9db62f3` (commit list recorded above). No further review round was run: the merge gate requires READY / READY WITH WARNINGS, and the functional contract has been closed and unchanged since round 2 — the remaining findings were documentation provenance, not behaviour. **Decision requested from the user: merge Milestone C as reviewed (functional gate satisfied, documentation items closed by reading), or run one more review round first.**
+The round-4 item was fixed in `9db62f3`. Two later gate reviews (`225cf1e`, then `c2dcb22`) named and then cleared the last two documentation blockers — the report's own path/commit inventory and the roadmap intro sentence that contradicted its table — and the approved fix landed in `6ae8a8e`, propagated to the handoff bundle in `c2dcb22`. The final gate verdict on `c2dcb22` was **READY WITH WARNINGS**, and the milestone was then fast-forward merged.
 
 ### Merge/push status
 
-**NOT MERGED — awaiting the user's decision** (the round-4 review verdict was BLOCKED on a documentation-provenance item that was then fixed without a further review round).
+**MERGED into `main` by fast-forward** at `c2dcb22352f1f4ad9102624309a0d92cf206046b`.
 
-- Branch `feat/export-onboarding` (HEAD at merge time; the commit list is in the Branch section above)
-- `main` is still at `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`; `main == origin/main`; nothing was pushed
-- Fast-forward feasibility checked and valid: `main` is an ancestor of the branch, so `git merge --ff-only feat/export-onboarding` remains available whenever the merge is approved
-- No rebase, no merge commit, no force push, no history rewrite, no tag/draft-release/npm change
-
-### Next recommended task
-
-Milestone D — state / CI / warning hygiene (roadmap items 6 and 9). Item 6 (current-state consistency check) is documentation/tooling; **item 9 (dependency and warning maintenance) requires explicit user approval because it touches `package.json`/`package-lock.json`.**
+- Final gate review verdict: **READY WITH WARNINGS** — all eight merge-gate checks CLOSED; the residual notes are the point-in-time nature of the readiness answer and the smoke covering the ready path while blocked/warning paths stay in component tests
+- The two approved documentation blockers were closed in `6ae8a8e` and propagated to the handoff bundle in `c2dcb22`
+- Integration: `git merge --ff-only feat/export-onboarding` moved `main` from `f5dbb3f` to `c2dcb22352f1f4ad9102624309a0d92cf206046b`; no merge commit, no rebase, no force push, no history rewrite
+- Push: `git push origin main` (`f5dbb3f..c2dcb22`); CI run `35222589827` success
+- A post-merge documentation commit follows the merge commit, so `main` is at or newer than `c2dcb22352f1f4ad9102624309a0d92cf206046b`
 
 ---
 
@@ -309,7 +305,7 @@ Milestone D — state / CI / warning hygiene (roadmap items 6 and 9). Item 6 (cu
 
 ### Repository state
 
-- Checkout: `feat/export-onboarding` (Milestone C merge candidate) on top of `main` at or newer than `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`; `origin/main` is synchronized and this branch is not pushed yet
+- Checkout: `main` at or newer than the Milestone C merge commit `c2dcb22352f1f4ad9102624309a0d92cf206046b`; `origin/main` is synchronized. The feature branch `feat/export-onboarding` is retained as the review artefact.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -334,7 +330,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ### Next scoped work
 
-1. Land **Milestone C — first export / onboarding flow (roadmap item 5)**: it is implemented on `feat/export-onboarding` (see `reports/progress_110_export_onboarding.md` for the commit list and evidence) and awaits the review gate and a fast-forward merge. Nothing else needs to be built for it. Scope recap: a short first-successful-OGraf-export path for new users, reusing the Task 105 export diagnostics and the existing export UI. No template/sample affordance was added (the app has no starter-scene machinery), and there is no host/vendor contract invention, no OGraf package format change, no new dependency, and no package/workflow/release change.
+1. Start **Milestone D — state / CI / warning hygiene (roadmap items 6 and 9)** — the current next action; Milestone C is merged (see the block below). Item 6 is documentation/tooling (a check that fails when live docs contradict the tag/main SHA) and can start immediately; **item 9 (dependency and warning maintenance) needs explicit user approval before any `package.json`, lockfile, or workflow edit**.
 2. Milestones D–F stay plan-only; **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work, and all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -363,7 +359,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; implemented on this branch, awaiting the review gate and merge (see the next-scoped-work list above).
+- Next roadmap milestone: **D — state / CI / warning hygiene (items 6 and 9)**; Milestone C is merged.
 
 ---
 
@@ -409,7 +405,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5)** — implemented on `feat/export-onboarding` and awaiting the review gate and a fast-forward merge; **D–F stay plan-only**. Dependency/package/workflow and release changes require explicit approval.
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Next: Milestone D (state / CI / warning hygiene, items 6 and 9)** — item 6 can start as documentation/tooling; **item 9 (dependency/package/workflow) requires explicit approval**; D–F otherwise stay plan-only.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -438,7 +434,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; implemented on `feat/export-onboarding`, awaiting the review gate and merge.
+- Next roadmap milestone: **D — state / CI / warning hygiene (items 6 and 9)**; Milestone C is merged (see the report).
 
 ---
 
@@ -448,7 +444,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ## KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C is implemented on `feat/export-onboarding` and awaiting the merge decision (see `reports/progress_110_export_onboarding.md`); milestones D–F remain plan-only.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestones D–F remain plan-only.
 
 ### Milestone map and status
 
@@ -456,8 +452,8 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 |---|---|---|---|
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
-| C — First export / onboarding flow | 5 | `feat/export-onboarding` | Implemented and validated; four review rounds closed the functional contract, the last round left one documentation-provenance item (fixed) — **merge awaiting the user's decision** |
-| D — State / CI / warning hygiene | 6, 9 | — | Plan only |
+| C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
+| D — State / CI / warning hygiene | 6, 9 | — | **NEXT — plan only**; item 6 can start as documentation/tooling, **item 9 requires explicit approval** (package/lockfile/workflow) |
 | E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
 | F — Architecture exploration only | 10, 11, 12 | — | Plan only |
 
@@ -515,7 +511,7 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 ### Recommended next prompt
 
-"KCS MILESTONE D — STATE / CI / WARNING HYGIENE (items 6 and 9). Item 6 is a documentation/tooling task (a check that fails when live docs contradict the tag/main SHA); item 9 (dependency and warning maintenance) requires explicit user approval before any `package.json`/lockfile/workflow edit. Add focused tests, run the full validation set, then one focused independent review before any merge."
+"KCS MILESTONE D — STATE / CI / WARNING HYGIENE (items 6 and 9). Item 6 can start without further approval (documentation/tooling: a check that fails when live docs contradict the tag/main SHA); item 9 (dependency and warning maintenance) requires explicit user approval before any `package.json`, lockfile, or workflow edit. Add focused tests, run the full validation set, then one focused independent review before any merge."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was implemented on `feat/export-onboarding` and awaits the merge decision (see `reports/progress_110_export_onboarding.md`).
 
@@ -531,6 +527,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### [Unreleased]
 
 #### Added
+- A first-export path for new users: a labelled "First export help" panel next to Export lists the three steps, offers a readiness check that reports what would block an OGraf export (reusing the existing export diagnostics), and states that nothing is written until you export. The readiness answer is a pre-flight summary; a scene changed afterwards is recompiled when the export runs.
 - The timeline keyframe diamonds are keyboard operable: each one is a named button in the tab order, `Enter`/`Space` selects the keyframe and moves the playhead (and selects the part on the parent lane), and `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order.
 - The value graph's keyframe points are announced with their frame and value, and its decorative axes and curve stay out of the accessibility tree; the selected-keyframe panel is exposed as a group scoped to its frame.
 - Bezier tangent handles can be authored directly on the stage: select a single freeform layer, click a vertex to reveal its handles, drag a handle to reshape the path live, and double-click a vertex to toggle corner ↔ smooth. Each drag is a single undo step and `Escape` cancels one without recording history.
@@ -592,14 +589,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 5349 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 6817 bytes
-- `NEXT_SESSION.md` — 7229 bytes
-- `OMP_FINAL_RESPONSE.md` — 7654 bytes
-- `PROJECT_STATE.md` — 8048 bytes
-- `README.md` — 2227 bytes
-- `manifest.txt` — 3170 bytes
-- `progress_110_export_onboarding.md` — 14406 bytes
+- `CHANGELOG.md` — 5737 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 6937 bytes
+- `NEXT_SESSION.md` — 6860 bytes
+- `OMP_FINAL_RESPONSE.md` — 6018 bytes
+- `PROJECT_STATE.md` — 8230 bytes
+- `README.md` — 2238 bytes
+- `manifest.txt` — 3138 bytes
+- `progress_110_export_onboarding.md` — 14653 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

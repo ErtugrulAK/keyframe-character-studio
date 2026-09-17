@@ -73,21 +73,44 @@ describe('initializeSmoothHandles', () => {
     expect(next.version).toBe(1);
   });
   it('refuses to write a non-finite mirrored handle when the mirror overflows', () => {
-    // anchor (1e308,0) with handleOut (-1e308,0): the mirror of handleOut is
-    // 2 * 1e308 - (-1e308) = Infinity, so it must not become the new handleIn.
+    // Selected vertex IS the huge one: vertex (1e308,0) with handleOut (-1e308,0).
+    // Its mirror is 2 * 1e308 - (-1e308) = Infinity, so it must not become handleIn.
     const path = legacyFreeformPointsToPath([
       { x: 0, y: 0 },
       { x: 1e308, y: 0 },
       { x: 20, y: 20 },
     ], true)!;
-    path.points[2] = { ...path.points[2], handleOut: { x: -1e308, y: 0 } };
+    path.points[1] = { ...path.points[1], handleOut: { x: -1e308, y: 0 } };
 
-    const vertex = initializeSmoothHandles(path, 2).points[2];
+    const vertex = initializeSmoothHandles(path, 1).points[1];
     expect(vertex.kind).toBe('smooth');
     expect(Number.isFinite(vertex.handleIn!.x)).toBe(true);
     expect(Number.isFinite(vertex.handleIn!.y)).toBe(true);
+    // The mirror is unusable, so handleIn comes from the direction-and-reach rule:
+    // finite, inside the vertex→previous span, on the chord side of the vertex.
+    expect(vertex.handleIn!.x).toBeLessThan(1e308);
+    expect(vertex.handleIn!.x).toBeGreaterThan(0);
+    expect(vertex.handleIn!.y).toBeLessThan(0);
     // The existing handle is preserved untouched.
     expect(vertex.handleOut).toEqual({ x: -1e308, y: 0 });
+  });
+
+  it('degenerates onto the vertex when even the reach cannot be represented', () => {
+    // Over the double range: the chord is Infinity and vertex.x + reach overflows,
+    // so the handle must stay at the vertex instead of becoming Infinity.
+    const path = legacyFreeformPointsToPath([
+      { x: -1e308, y: 0 },
+      { x: 1.7e308, y: 0 },
+      { x: 1e308, y: 0 },
+    ], true)!;
+
+    const first = initializeSmoothHandles(path, 1);
+    const second = initializeSmoothHandles(path, 1);
+    const vertex = first.points[1];
+    expect(vertex.handleOut).toEqual({ x: 1.7e308, y: 0 });
+    expect(Number.isFinite(vertex.handleIn!.x)).toBe(true);
+    expect(Number.isFinite(vertex.handleOut!.x)).toBe(true);
+    expect(second.points[1]).toEqual(vertex);
   });
 
   it('stays finite and deterministic when the neighbour chord overflows', () => {

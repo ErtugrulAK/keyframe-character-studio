@@ -260,8 +260,24 @@ export const initializeSmoothHandles = (path: BezierPath, index: number): Bezier
 
   const mirroredIn = vertex.handleOut ? { x: 2 * vertex.x - vertex.handleOut.x, y: 2 * vertex.y - vertex.handleOut.y } : undefined;
   const mirroredOut = vertex.handleIn ? { x: 2 * vertex.x - vertex.handleIn.x, y: 2 * vertex.y - vertex.handleIn.y } : undefined;
-  const handleIn = vertex.handleIn ?? (isFinitePoint(mirroredIn) ? mirroredIn : { x: vertex.x - direction.x * reach, y: vertex.y - direction.y * reach });
-  const handleOut = vertex.handleOut ?? (isFinitePoint(mirroredOut) ? mirroredOut : { x: vertex.x + direction.x * reach, y: vertex.y + direction.y * reach });
+
+  // First finite candidate wins; when even the reach cannot be represented at
+  // this coordinate magnitude the handle degenerates onto the vertex.
+  const pickHandle = (...candidates: (PathPoint | undefined)[]): PathPoint => {
+    for (const candidate of candidates) {
+      if (isFinitePoint(candidate)) return candidate;
+    }
+    return { x: vertex.x, y: vertex.y };
+  };
+
+  const handleIn = vertex.handleIn ?? pickHandle(
+    mirroredIn,
+    { x: vertex.x - direction.x * reach, y: vertex.y - direction.y * reach },
+  );
+  const handleOut = vertex.handleOut ?? pickHandle(
+    mirroredOut,
+    { x: vertex.x + direction.x * reach, y: vertex.y + direction.y * reach },
+  );
 
   return {
     ...path,

@@ -1,6 +1,6 @@
 # KCS Minimal ChatGPT Upload Bundle — Milestone A (Canvas Tangent Authoring)
 
-This is a minimal, task-specific ChatGPT upload bundle for the Milestone A blocker-closing pass. It was clean-refreshed for this task.
+This is a minimal, task-specific ChatGPT upload bundle for Milestone A (direct canvas tangent handle authoring): the blocker-closing pass, the review rounds, and the final integration into `main`. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
@@ -11,12 +11,12 @@ Direct Bezier tangent-handle authoring on the stage canvas for the selected free
 - `progress_108_canvas_tangent_authoring.md` — the full report: orchestration record, implementation, blocker-closing pass, verification matrix, validation table, review rounds, deviations
 - `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — the design contract, updated where the implementation forced wording (normalization, non-finite policy, eligibility helper, selection model, Escape scope, test matrix)
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the grouped roadmap plan with the current Milestone A status row
-- `NEXT_SESSION.md` — repository state plus the Milestone A status and the merge decision that is pending
+- `NEXT_SESSION.md` — repository state plus the merged Milestone A status
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
 
 ## Deliberately not included
 
-Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, `CHANGELOG.md` (the milestone is not merged, so there is no released user-facing change to record), QA output, assets, archives, and caches.
+Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, `CHANGELOG.md` (its Unreleased entry for Milestone A is recorded in the repository), QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 

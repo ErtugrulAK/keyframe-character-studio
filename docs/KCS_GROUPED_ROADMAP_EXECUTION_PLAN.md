@@ -15,7 +15,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
-## Milestone A — remaining work before merge (all items closed; kept as the historical list)
+## Milestone A — the blocker list that was closed (historical record)
 
 From `reports/progress_108_canvas_tangent_authoring.md` §7:
 
@@ -25,7 +25,7 @@ From `reports/progress_108_canvas_tangent_authoring.md` §7:
 4. Build the contract's verification matrix: real-origin coordinate parity under rotation/non-uniform/negative scale; behaviour tests for every `StageCanvas` eligibility guard (extract the guard list into a pure predicate so it is testable); canonical-path priority; real `useHistory` undo/redo/cancel entry counts; serialization/import round-trip of a materialized path; OGraf byte-parity for an untouched canonical path; one manual editor smoke.
 5. Decide the smooth-handle-at-anchor edge: dragging a handle exactly onto its anchor must not silently collapse the counterpart (`Math.hypot(...) || 1`).
 
-Then: one focused re-review, fast-forward merge, push, CI check, report update, minimal handoff refresh.
+All five items were closed, the focused re-review and its follow-up rounds returned READY, and the milestone was replayed and fast-forward merged into `main` (`077911b`) with a green CI run. This list is history, not open work.
 
 ## Milestone B — Graph + keyboard accessibility (roadmap item 4)
 

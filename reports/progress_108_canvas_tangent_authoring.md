@@ -2,7 +2,7 @@
 
 ## 1. Scope
 
-Grouped-roadmap orchestration with Milestone A (roadmap item 3, direct canvas tangent handles) as the first milestone. The goal review, milestone grouping, design contract, design review, implementation, and validation all ran; the milestone was **not merged** because the independent merge-gate review returned BLOCKED with a concrete remaining-work list.
+Grouped-roadmap orchestration with Milestone A (roadmap item 3, direct canvas tangent handles) as the first milestone. The goal review, milestone grouping, design contract, design review, implementation, and validation all ran. At the end of that orchestration run the milestone was **not merged** because the independent merge-gate review returned BLOCKED with a concrete remaining-work list; §11 records the later blocker-closing pass and its Merge status the final integration. **Milestone A is merged into `main`.**
 
 ## 2. Repo preflight state
 
@@ -18,7 +18,7 @@ Remaining roadmap items were grouped as instructed:
 
 | Milestone | Roadmap items | Status this run |
 |---|---|---|
-| A — Canvas path authoring UX (tangent handles) | 3 | Implemented and validated on a branch; **not merged** (review BLOCKED) |
+| A — Canvas path authoring UX (tangent handles) | 3 | Implemented and validated on a branch; **not merged** at that point (review BLOCKED) → five findings later closed, review READY, milestone **merged** (see Merge status) |
 | B — Graph + keyboard accessibility | 4 | Not started |
 | C — First export / onboarding flow | 5 | Not started |
 | D — State / CI / warning hygiene | 6, 9 | Plan only (needs approval for dependency work) |
@@ -72,14 +72,14 @@ One independent merge-gate review ran on `d3aa135..c7ae7bc`. Verdict: **BLOCKED*
 
 Reviewer conclusion: merge is blocked until those are closed; the reviewer explicitly confirmed the reused authorities, the coordinate/delta rule, the initializer, the pointer-ownership order, and that no parallel engine or protected-authority change was introduced.
 
-## 8. Stop rationale
+## 8. Stop rationale (at the orchestration stop point — superseded by the Merge status section below)
 
-The orchestrator policy allows fixing in scope and running one more focused review, but also requires stopping when a milestone turns broad. Here the remaining work is a coherent batch (two small code fixes, selection/lifecycle behaviour, and a real verification matrix including history and export parity) that is larger than the increment itself. Stopping keeps `main` green and unchanged, leaves the design contract and the implementation available for the next session, and avoids merging an unverified increment. No package, workflow, dependency, or release change was made, and `chatgpt_handoff/latest/` was not given source or test copies.
+The orchestrator policy allows fixing in scope and running one more focused review, but also requires stopping when a milestone turns broad. Here the remaining work is a coherent batch (two small code fixes, selection/lifecycle behaviour, and a real verification matrix including history and export parity) that is larger than the increment itself. Stopping kept `main` green and unchanged at that point, left the design contract and the implementation available for the next session, and avoided merging an unverified increment. No package, workflow, dependency, or release change was made, and `chatgpt_handoff/latest/` was not given source or test copies.
 
 ## 9. Protected invariants
 
 - Tag `v1.1.0-rc.1` target unchanged; draft release not published/finalized; no npm publish; no branch deleted.
-- `main` untouched (`d3aa135…`); CI on `main` green.
+- `main` untouched **during the orchestration run** (`d3aa135…`); CI on `main` green. (Milestone A was merged into `main` later — see Merge status.)
 - No new matte/rendering/evaluation/timing/package/state engine; `ShapePartRenderers`, `evaluateFrame`, `StagePartLayers`, matte authority, `bounds.ts`, and `src/ograf/**` untouched.
 - `without-mask`, global OMP configuration (model roles, provider mappings, `memory.backend: mnemopi`, `task.maxConcurrency: 8`) untouched.
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics` untouched; no secrets handled.
@@ -92,12 +92,12 @@ Finish Milestone A on the existing branch by closing the review's five items, th
 
 ### Branch
 
-- Branch: `feat/canvas-tangent-authoring`
+- Branch: `feat/canvas-tangent-authoring` (kept as the review artefact; replayed as `feat/canvas-tangent-authoring-replay`, whose commits carry new hashes `d1b396a` … `1ed65e0`)
 - Milestone A feature commit: `c7ae7bc` — `feat: add direct canvas tangent handle authoring`
 - Blocker-fix commits: `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216` (code fixes, test corrections, documentation scoping)
 - Baseline `main` at branch point: `d3aa135`
-- Current `main` / `origin/main`: `312a0d771123b2b64f9b6f5779f873b439eedab5`
-- Ancestry: `main` and the branch **diverged** (main advanced with four docs/handoff commits after `d3aa135`), so a fast-forward merge is not possible in either direction. No rebase, no merge commit, no force push was performed.
+- `main` / `origin/main` before the replay: `312a0d771123b2b64f9b6f5779f873b439eedab5`; after the merge: `077911b469bf7026364c0335e748114bf8df05c0`
+- Pre-merge ancestry: `main` and the branch **diverged** (main advanced with four docs/handoff commits after `d3aa135`), so a direct fast-forward was impossible. No rebase, no merge commit, and no force push were performed; the approved replay resolved it (see Merge status).
 
 ### Blocker status
 
@@ -236,7 +236,8 @@ Self-found hardening during round 2: the unmount cleanup that closes an open bat
 
 **MERGED into `main` by fast-forward** (approved replay strategy).
 
-- Replay branch: `feat/canvas-tangent-authoring-replay`, created from `main` at `312a0d771123b2b64f9b6f5779f873b439eedab5`, carrying the eleven milestone commits re-applied on top of current `main`
+- Replay branch: `feat/canvas-tangent-authoring-replay`, created from `main` at `312a0d771123b2b64f9b6f5779f873b439eedab5`, carrying the eleven milestone commits re-applied on top of current `main` (same messages, new hashes `d1b396a` … `1ed65e0`, plus the final state commit)
+- Final `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0`; CI run `35206117254` success
 - The original branch `feat/canvas-tangent-authoring` stays as the review artefact and was not rewritten
 - Conflicts were limited to documentation/handoff files and were resolved in favour of the branch content (the newest), except `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which exists only on `main` and was preserved and updated
 - No rebase, no merge commit, no force push, no history rewrite: `main` is a strict superset of its previous state

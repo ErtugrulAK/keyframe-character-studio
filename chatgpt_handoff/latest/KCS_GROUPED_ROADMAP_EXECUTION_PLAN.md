@@ -1,6 +1,6 @@
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Main stays at `d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72`; nothing from this run is merged.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestones B–F are unchanged.
 
 ## Milestone map and status
 
@@ -15,7 +15,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Main stays at `d3aa1
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
-## Milestone A — remaining work before merge
+## Milestone A — the blocker list that was closed (historical record)
 
 From `reports/progress_108_canvas_tangent_authoring.md` §7:
 
@@ -25,7 +25,7 @@ From `reports/progress_108_canvas_tangent_authoring.md` §7:
 4. Build the contract's verification matrix: real-origin coordinate parity under rotation/non-uniform/negative scale; behaviour tests for every `StageCanvas` eligibility guard (extract the guard list into a pure predicate so it is testable); canonical-path priority; real `useHistory` undo/redo/cancel entry counts; serialization/import round-trip of a materialized path; OGraf byte-parity for an untouched canonical path; one manual editor smoke.
 5. Decide the smooth-handle-at-anchor edge: dragging a handle exactly onto its anchor must not silently collapse the counterpart (`Math.hypot(...) || 1`).
 
-Then: one focused re-review, fast-forward merge, push, CI check, report update, minimal handoff refresh.
+All five items were closed, the focused re-review and its follow-up rounds returned READY, and the milestone was replayed and fast-forward merged into `main` (`077911b`) with a green CI run. This list is history, not open work.
 
 ## Milestone B — Graph + keyboard accessibility (roadmap item 4)
 

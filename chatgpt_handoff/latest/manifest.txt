@@ -5,7 +5,7 @@ Bundle purpose: Milestone A (direct canvas tangent handle authoring) — blocker
 Bundle scope: minimal and task-specific; this folder is not an archive
 
 Current main / origin HEAD: 312a0d7 (one-file handoff audit; later docs commits may be newer)
-Milestone A branch: feat/canvas-tangent-authoring (review artefact) replayed as feat/canvas-tangent-authoring-replay and MERGED into main by fast-forward
+Milestone A branch: feat/canvas-tangent-authoring (review artefact) replayed as feat/canvas-tangent-authoring-replay and MERGED into main by fast-forward (main = origin/main = 077911b)
 Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027 (final report)
 Integration: replay branch created from main at 312a0d7, milestone commits re-applied, fast-forward merged; no rebase, no merge commit, no force push, no history rewrite
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
@@ -20,12 +20,12 @@ Copied files (8):
 - progress_108_canvas_tangent_authoring.md — orchestration report plus the blocker-closing pass (verification matrix, validation, review rounds, deviations)
 - KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — design contract, updated where the implementation forced wording
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — grouped roadmap plan with the current Milestone A row
-- NEXT_SESSION.md — repository state and the pending merge decision
+- NEXT_SESSION.md — repository state with the merged Milestone A status
 - PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
 Omitted categories:
 - Source and test files (they live under src/ and e2e/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
-- package.json, ci.yml, release-smoke.yml, CHANGELOG.md (the milestone is not merged, so there is no released user-facing change to record)
+- package.json, ci.yml, release-smoke.yml, CHANGELOG.md (the repository changelog carries the Milestone A entry)
 - older progress reports, current-state/release documents, QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

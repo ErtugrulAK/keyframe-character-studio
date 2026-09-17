@@ -22,14 +22,14 @@ This file is the OMP final response for the Milestone A blocker-closing task. It
 
 ### 1) OVERALL RESULT
 
-- **Status:** Milestone A implemented, all five review blockers closed, six review rounds run, **final verdict READY**. **NOT MERGED.**
-- **Branch:** `feat/canvas-tangent-authoring` (local only, no remote counterpart)
+- **Status:** Milestone A implemented, all five review blockers closed, six review rounds run, final verdict **READY**, and **MERGED into `main`** (fast-forward after an approved replay).
+- **Branches:** `feat/canvas-tangent-authoring` (review artefact, kept) → replayed as `feat/canvas-tangent-authoring-replay` → fast-forward merged into `main`
 - **Starting branch commit:** `c7ae7bc` (feature)
-- **New commits:** `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216`, `b0e1027`
+- **New commits:** on the original branch `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216`, `b0e1027`, `b72db0a`, `f15ac93`; replayed on `main` as `bd922a6` … `1ed65e0` plus the state commit `077911b` (replays carry new hashes by construction)
 - **Review blocker status:** 1 (verification matrix) CLOSED · 2 (legacy normalization) CLOSED · 3 (selection model) CLOSED · 4 (Escape/batch lifecycle) CLOSED · 5 (smooth-handle edge + extreme coordinates) CLOSED
-- **Merge:** **performed** — the branch was replayed onto current `main` and fast-forward merged (approved replay strategy, see §6)
-- **Push:** none (the feature branch has no remote; `main` was not pushed)
-- **`main == origin/main`:** yes, `312a0d771123b2b64f9b6f5779f873b439eedab5`, untouched
+- **Merge:** **performed** — the branch was replayed onto current `main` (`312a0d7`) as `feat/canvas-tangent-authoring-replay` and fast-forward merged to `077911b`, then pushed (approved replay strategy, see §6)
+- **Push:** `git push origin main` → `312a0d7..077911b`
+- **`main == origin/main`:** yes, `077911b469bf7026364c0335e748114bf8df05c0` (post-merge)
 - **Working tree:** clean
 
 ### 2) BLOCKERS CLOSED
@@ -84,13 +84,13 @@ Fixes after review: the finite-anchor precondition plus its two tests, and the d
 - OMP config: model roles, providers, `memory.backend: mnemopi`, `task.maxConcurrency: 8` — unchanged
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics`: untouched, nothing copied
 - Secrets: none printed or copied
-- `main` / `origin/main`: `312a0d771123b2b64f9b6f5779f873b439eedab5`, CI run `35114602866` success, unchanged by this work
+- `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0`; CI run `35206117254` success
 
 **Integration record:** the replay branch `feat/canvas-tangent-authoring-replay` was created from `main` at `312a0d7`, the eleven milestone commits were re-applied on it (documentation/handoff conflicts resolved in favour of the newest branch content; `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which only exists on `main`, was preserved and updated), and `main` was fast-forwarded to that tip and pushed. `main` is a strict superset of its previous state; the original branch is kept as the review artefact.
 
-**Merge blocking evidence (historical, before the replay):** `git merge-base --is-ancestor main feat/canvas-tangent-authoring` fails and the reverse also fails; `git rev-list --left-right --count main...feat/canvas-tangent-authoring` = `4  4` (main has four docs/handoff commits the branch lacks; the branch has eight commits main lacks). No rebase, no merge commit, and no force push were performed.
+**Integration evidence:** before the replay the two lines had diverged (`git rev-list --left-right --count main...feat/canvas-tangent-authoring` = `4  10`), so a direct fast-forward was impossible; after the replay `git merge-base --is-ancestor main feat/canvas-tangent-authoring-replay` succeeded and `git merge --ff-only` moved `main` from `312a0d7` to `077911b`. No rebase, no merge commit, no force push, and no history rewrite were performed.
 
-**Decision taken:** option (1), the replay, approved by the user.
+**Decision taken:** option (1), the replay, approved by the user and completed on 2026-09-17 (final `main` = `077911b`).
 
 ### 7) HANDOFF
 
@@ -116,7 +116,7 @@ Bundle purpose: Milestone A (direct canvas tangent handle authoring) — blocker
 Bundle scope: minimal and task-specific; this folder is not an archive
 
 Current main / origin HEAD: 312a0d7 (one-file handoff audit; later docs commits may be newer)
-Milestone A branch: feat/canvas-tangent-authoring (review artefact) replayed as feat/canvas-tangent-authoring-replay and MERGED into main by fast-forward
+Milestone A branch: feat/canvas-tangent-authoring (review artefact) replayed as feat/canvas-tangent-authoring-replay and MERGED into main by fast-forward (main = origin/main = 077911b)
 Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027 (final report)
 Integration: replay branch created from main at 312a0d7, milestone commits re-applied, fast-forward merged; no rebase, no merge commit, no force push, no history rewrite
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
@@ -131,12 +131,12 @@ Copied files (8):
 - progress_108_canvas_tangent_authoring.md — orchestration report plus the blocker-closing pass (verification matrix, validation, review rounds, deviations)
 - KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — design contract, updated where the implementation forced wording
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — grouped roadmap plan with the current Milestone A row
-- NEXT_SESSION.md — repository state and the pending merge decision
+- NEXT_SESSION.md — repository state with the merged Milestone A status
 - PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
 Omitted categories:
 - Source and test files (they live under src/ and e2e/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
-- package.json, ci.yml, release-smoke.yml, CHANGELOG.md (the milestone is not merged, so there is no released user-facing change to record)
+- package.json, ci.yml, release-smoke.yml, CHANGELOG.md (the repository changelog carries the Milestone A entry)
 - older progress reports, current-state/release documents, QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
@@ -157,7 +157,7 @@ Upload the contents of chatgpt_handoff/latest/ to ChatGPT.
 
 ## KCS Minimal ChatGPT Upload Bundle — Milestone A (Canvas Tangent Authoring)
 
-This is a minimal, task-specific ChatGPT upload bundle for the Milestone A blocker-closing pass. It was clean-refreshed for this task.
+This is a minimal, task-specific ChatGPT upload bundle for Milestone A (direct canvas tangent handle authoring): the blocker-closing pass, the review rounds, and the final integration into `main`. It was clean-refreshed for this task.
 
 ### What this bundle covers
 
@@ -168,12 +168,12 @@ Direct Bezier tangent-handle authoring on the stage canvas for the selected free
 - `progress_108_canvas_tangent_authoring.md` — the full report: orchestration record, implementation, blocker-closing pass, verification matrix, validation table, review rounds, deviations
 - `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — the design contract, updated where the implementation forced wording (normalization, non-finite policy, eligibility helper, selection model, Escape scope, test matrix)
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the grouped roadmap plan with the current Milestone A status row
-- `NEXT_SESSION.md` — repository state plus the Milestone A status and the merge decision that is pending
+- `NEXT_SESSION.md` — repository state plus the merged Milestone A status
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
 
 ### Deliberately not included
 
-Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, `CHANGELOG.md` (the milestone is not merged, so there is no released user-facing change to record), QA output, assets, archives, and caches.
+Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, `CHANGELOG.md` (its Unreleased entry for Milestone A is recorded in the repository), QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
@@ -187,13 +187,13 @@ Upload the contents of `chatgpt_handoff/latest/` to ChatGPT.
 
 ## 4. Progress Report
 
-Milestone A report: orchestration record plus the blocker-closing pass.
+Milestone A report: orchestration record, blocker-closing pass, review rounds, and the final integration.
 
 ## Progress 108 — Canvas Tangent Authoring (Milestone A) + Grouped Roadmap Orchestration
 
 ### 1. Scope
 
-Grouped-roadmap orchestration with Milestone A (roadmap item 3, direct canvas tangent handles) as the first milestone. The goal review, milestone grouping, design contract, design review, implementation, and validation all ran; the milestone was **not merged** because the independent merge-gate review returned BLOCKED with a concrete remaining-work list.
+Grouped-roadmap orchestration with Milestone A (roadmap item 3, direct canvas tangent handles) as the first milestone. The goal review, milestone grouping, design contract, design review, implementation, and validation all ran. At the end of that orchestration run the milestone was **not merged** because the independent merge-gate review returned BLOCKED with a concrete remaining-work list; §11 records the later blocker-closing pass and its Merge status the final integration. **Milestone A is merged into `main`.**
 
 ### 2. Repo preflight state
 
@@ -209,7 +209,7 @@ Remaining roadmap items were grouped as instructed:
 
 | Milestone | Roadmap items | Status this run |
 |---|---|---|
-| A — Canvas path authoring UX (tangent handles) | 3 | Implemented and validated on a branch; **not merged** (review BLOCKED) |
+| A — Canvas path authoring UX (tangent handles) | 3 | Implemented and validated on a branch; **not merged** at that point (review BLOCKED) → five findings later closed, review READY, milestone **merged** (see Merge status) |
 | B — Graph + keyboard accessibility | 4 | Not started |
 | C — First export / onboarding flow | 5 | Not started |
 | D — State / CI / warning hygiene | 6, 9 | Plan only (needs approval for dependency work) |
@@ -263,14 +263,14 @@ One independent merge-gate review ran on `d3aa135..c7ae7bc`. Verdict: **BLOCKED*
 
 Reviewer conclusion: merge is blocked until those are closed; the reviewer explicitly confirmed the reused authorities, the coordinate/delta rule, the initializer, the pointer-ownership order, and that no parallel engine or protected-authority change was introduced.
 
-### 8. Stop rationale
+### 8. Stop rationale (at the orchestration stop point — superseded by the Merge status section below)
 
-The orchestrator policy allows fixing in scope and running one more focused review, but also requires stopping when a milestone turns broad. Here the remaining work is a coherent batch (two small code fixes, selection/lifecycle behaviour, and a real verification matrix including history and export parity) that is larger than the increment itself. Stopping keeps `main` green and unchanged, leaves the design contract and the implementation available for the next session, and avoids merging an unverified increment. No package, workflow, dependency, or release change was made, and `chatgpt_handoff/latest/` was not given source or test copies.
+The orchestrator policy allows fixing in scope and running one more focused review, but also requires stopping when a milestone turns broad. Here the remaining work is a coherent batch (two small code fixes, selection/lifecycle behaviour, and a real verification matrix including history and export parity) that is larger than the increment itself. Stopping kept `main` green and unchanged at that point, left the design contract and the implementation available for the next session, and avoided merging an unverified increment. No package, workflow, dependency, or release change was made, and `chatgpt_handoff/latest/` was not given source or test copies.
 
 ### 9. Protected invariants
 
 - Tag `v1.1.0-rc.1` target unchanged; draft release not published/finalized; no npm publish; no branch deleted.
-- `main` untouched (`d3aa135…`); CI on `main` green.
+- `main` untouched **during the orchestration run** (`d3aa135…`); CI on `main` green. (Milestone A was merged into `main` later — see Merge status.)
 - No new matte/rendering/evaluation/timing/package/state engine; `ShapePartRenderers`, `evaluateFrame`, `StagePartLayers`, matte authority, `bounds.ts`, and `src/ograf/**` untouched.
 - `without-mask`, global OMP configuration (model roles, provider mappings, `memory.backend: mnemopi`, `task.maxConcurrency: 8`) untouched.
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics` untouched; no secrets handled.
@@ -283,12 +283,12 @@ Finish Milestone A on the existing branch by closing the review's five items, th
 
 #### Branch
 
-- Branch: `feat/canvas-tangent-authoring`
+- Branch: `feat/canvas-tangent-authoring` (kept as the review artefact; replayed as `feat/canvas-tangent-authoring-replay`, whose commits carry new hashes `d1b396a` … `1ed65e0`)
 - Milestone A feature commit: `c7ae7bc` — `feat: add direct canvas tangent handle authoring`
 - Blocker-fix commits: `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216` (code fixes, test corrections, documentation scoping)
 - Baseline `main` at branch point: `d3aa135`
-- Current `main` / `origin/main`: `312a0d771123b2b64f9b6f5779f873b439eedab5`
-- Ancestry: `main` and the branch **diverged** (main advanced with four docs/handoff commits after `d3aa135`), so a fast-forward merge is not possible in either direction. No rebase, no merge commit, no force push was performed.
+- `main` / `origin/main` before the replay: `312a0d771123b2b64f9b6f5779f873b439eedab5`; after the merge: `077911b469bf7026364c0335e748114bf8df05c0`
+- Pre-merge ancestry: `main` and the branch **diverged** (main advanced with four docs/handoff commits after `d3aa135`), so a direct fast-forward was impossible. No rebase, no merge commit, and no force push were performed; the approved replay resolved it (see Merge status).
 
 #### Blocker status
 
@@ -427,7 +427,8 @@ Self-found hardening during round 2: the unmount cleanup that closes an open bat
 
 **MERGED into `main` by fast-forward** (approved replay strategy).
 
-- Replay branch: `feat/canvas-tangent-authoring-replay`, created from `main` at `312a0d771123b2b64f9b6f5779f873b439eedab5`, carrying the eleven milestone commits re-applied on top of current `main`
+- Replay branch: `feat/canvas-tangent-authoring-replay`, created from `main` at `312a0d771123b2b64f9b6f5779f873b439eedab5`, carrying the eleven milestone commits re-applied on top of current `main` (same messages, new hashes `d1b396a` … `1ed65e0`, plus the final state commit)
+- Final `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0`; CI run `35206117254` success
 - The original branch `feat/canvas-tangent-authoring` stays as the review artefact and was not rewritten
 - Conflicts were limited to documentation/handoff files and were resolved in favour of the branch content (the newest), except `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which exists only on `main` and was preserved and updated
 - No rebase, no merge commit, no force push, no history rewrite: `main` is a strict superset of its previous state
@@ -441,25 +442,40 @@ Self-found hardening during round 2: the unmount cleanup that closes an open bat
 
 ### Repository state
 
-- Checkout: main at the Task 107 merge commit; `origin/main` synchronized
-- Task 107 implementation is integrated by fast-forward; the track-matte source relation is now visible in the outliner and authorable from the existing Track Matte V2 card
+- Checkout: `main` at `077911b469bf7026364c0335e748114bf8df05c0`; `origin/main` synchronized
+- Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
+- Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
-- `feat/export-diagnostics-ux` and `feat/track-matte-source-picker`: merged by fast-forward and retained
-- Release tag: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
+- Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
+- Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (identical to `main`; deleting it needs approval)
 
 ### Current result
 
-The four release blockers are resolved or explicitly accepted. Annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease exist at the workflow-tested code candidate. No npm publication occurred.
+Milestone A — direct canvas tangent handle authoring — is merged and live in `main`:
 
-Task 105 delivered export diagnostics remediation UX: blocking diagnostics now report a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; and user-authored values no longer reach diagnostics, thrown errors, or toasts raw — a canonical formatter renders machine paths, URL credentials/query, and embedded payloads safely at every construction site.
+- Selecting a single freeform layer in edit mode shows its vertices on the stage; clicking a vertex reveals its Bezier tangent handles; dragging a handle reshapes the rendered path live; double-clicking a vertex toggles corner ↔ smooth with neighbour-derived symmetric handles.
+- One history entry per completed drag; `Escape` cancels an in-flight drag, restores the previous handles, and records nothing.
+- Out of scope (unchanged): vertex add/remove, multi-vertex transforms, keyboard nudging, handle constraints, boolean or trim-enabled freeform layers, broadcast mode.
+- Integration: branch `feat/canvas-tangent-authoring` was replayed onto current `main` as `feat/canvas-tangent-authoring-replay` and fast-forward merged; no rebase, no merge commit, no force push, no history rewrite. Documentation/handoff conflicts were resolved in favour of the newest content, and `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` (which only exists on `main`) was preserved and updated.
+- Review: six independent rounds; the final verdict was `READY` with all five findings closed (verification matrix, legacy points normalization, selection model, Escape/batch lifecycle, smooth-handle/extreme-coordinate edge).
+
+The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease exist at the workflow-tested code candidate; nothing was published, finalized, or pushed to npm.
 
 ### Validation
 
-Post-merge full Vitest (103 files / 1557 tests), `validate:ograf`, `qa:release` (2 Chromium tests), TypeScript, lint, production build, and `git diff --check` passed, plus an independent review pass that returned `READY`. Existing Fast Refresh, Vite chunk-size, npm install-script, and schema-network warnings remain.
+Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `077911b`), `npm run build`, `npx tsc --noEmit`, `npm run lint`, `git diff --check`, the permanent real-browser spec `e2e/canvas-tangent-authoring.spec.ts`, and CI run `35206117254` on `main` all pass. Existing Fast Refresh, Vite chunk-size, and npm install-script warnings remain.
+
+### Next scoped work
+
+1. Read `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md`.
+2. Start **Milestone B — graph + keyboard accessibility (roadmap item 4)**: keyboard reachability and screen-reader labelling for the graph/path editing surfaces that already exist (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections). No graph-engine rewrite, no broad style churn, reuse the existing graph/value/channel authorities; focused a11y tests + one Playwright smoke + full validation + independent review; stop if the work grows beyond narrow UI/accessibility.
+3. Milestone C (first export / onboarding flow) follows only after B, and D–F stay plan-only; dependency, workflow, and release changes need explicit approval.
+4. Preserve the tag and draft release, and run an independent review before every merge.
+5. Publish/finalize the GitHub draft only with further explicit user instruction.
 
 ### Guardrails
 
-- Do not reset, force-push, rebase, tag, or delete branches/reports.
+- Do not reset, force-push, rebase, tag, or delete branches/reports. Integrate by fast-forward, or by an approved replay.
 - Do not modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 - Keep `.omp/config.yml`, model roles, provider mappings, task concurrency, and global tooling unchanged.
 - Keep `origin/without-mask` untouched and classified ARCHIVE.
@@ -469,26 +485,10 @@ Post-merge full Vitest (103 files / 1557 tests), `validate:ograf`, `qa:release` 
 
 - `chatgpt_handoff/latest/` is a per-response, task-specific upload bundle: clean it first, then place only the files that this specific ChatGPT conversation needs.
 - Preferred upload artifact: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive. If a historical handoff archive is ever needed, create a separate explicitly named archive file under `chatgpt_handoff/archive/` only after user approval. The default ChatGPT upload is always this one file.
+- Handoff documents must state one current truth: never append a correction block on top of stale sections — rewrite the stale section instead.
 - Never store flattened source or test copies there. Those copies are separate files, and the ones named `src__*test*` are picked up by the Vitest default include glob, which breaks CI.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset folder, not a handoff dump. Never copy the bundle there unless the user explicitly asks.
 - Omitted files are never deleted from the repository; they simply are not part of the bundle.
-
-### Next scoped work
-
-1. Read `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md`.
-2. Finish Milestone A on the existing branch `feat/canvas-tangent-authoring` (`c7ae7bc`): close the five review items listed in the report, then run one focused re-review and fast-forward merge if READY.
-3. Milestones B (graph accessibility) and C (export onboarding) follow only after A is merged or explicitly deferred.
-4. Preserve the tag/draft release and request independent review before every merge.
-5. Publish/finalize the GitHub draft only after explicit user instruction.
-
-### Milestone A merged — direct canvas tangent handle authoring
-
-- Branch `feat/canvas-tangent-authoring-replay` was fast-forward-merged into `main`; the milestone is now part of `main` (no merge commit, no rebase, no history rewrite).
-- What it adds: selecting a single freeform layer in edit mode shows its vertices on the stage; clicking a vertex shows its Bezier tangent handles; dragging a handle reshapes the rendered path live; double-click toggles corner ↔ smooth with neighbour-derived symmetric handles. One undo entry per drag; `Escape` cancels a drag and records nothing.
-- Review: six rounds; final verdict READY (five findings closed: verification matrix, legacy points normalization, selection model, Escape/batch lifecycle, smooth-handle/extreme-coordinate edge).
-- Validation: 108 files / 1,641 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the permanent real-browser spec `e2e/canvas-tangent-authoring.spec.ts`.
-- Still out of scope: vertex add/remove, multi-vertex transforms, keyboard nudging, handle constraints, boolean/trim-enabled freeform layers.
-- Next roadmap milestone: **B — graph + keyboard accessibility (item 4)**; untouched.
 
 ---
 
@@ -498,42 +498,51 @@ Post-merge full Vitest (103 files / 1557 tests), `validate:ograf`, `qa:release` 
 
 ### Current position
 
-The accepted product and security follow-up line is integrated into main. Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
+The accepted product and security follow-up line is integrated into main, and the grouped post-RC roadmap has completed its first milestone.
 
-Task 105 (export diagnostics remediation UX) was integrated into main by fast-forward at `9fdbf0fe59c28d3d6f07c8ee37081fc93f2ff6db`. Current `main`/`origin/main` HEAD is `9f7114877e111527e8757668237e41fde8388a99`, which adds docs and handoff commits only and is therefore newer than the integration commit. Blocking OGraf export diagnostics now carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; and user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
+Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Task 107 (track-matte source selection affordance) is integrated into main by fast-forward. The matte source relation, whichever model holds it, is now resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps the existing self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers. No new matte, rendering, evaluator, validation, or state engine was introduced, and the canvas/export validators were left untouched.
+Current `main` / `origin/main` HEAD is `077911b469bf7026364c0335e748114bf8df05c0`:
+
+- Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
+- Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
+- **Milestone A (canvas tangent handle authoring) — MERGED.** Selecting a single freeform layer in edit mode shows its vertices on the stage; clicking a vertex reveals its Bezier tangent handles; dragging a handle reshapes the rendered path live; double-clicking a vertex toggles corner ↔ smooth with neighbour-derived symmetric handles. One history entry per completed drag; `Escape` cancels a drag without recording one.
+  - Integration path: the original branch `feat/canvas-tangent-authoring` was reviewed across six rounds (final verdict `READY`, all five findings closed) and replayed onto current `main` as `feat/canvas-tangent-authoring-replay`, then fast-forward merged. No rebase, no merge commit, no force push, no history rewrite.
+  - Not covered: vertex add/remove, multi-vertex transforms, keyboard nudging, handle constraints, boolean or trim-enabled freeform layers, broadcast mode.
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
 ### Accepted baseline
 
-Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, and the track-matte source selection affordance are present in the accepted main line. OMP tooling remains separate.
+Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
 
 ### Validation status
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 103 files / 1,575 tests |
+| Full Vitest | PASS | 108 files / 1,641 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf`; committed minimal fixture |
-| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests |
+| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests at `077911b` |
+| Real-browser milestone smoke | PASS | `e2e/canvas-tangent-authoring.spec.ts` (not part of CI or the release gate) |
 | TypeScript | PASS | `npx tsc --noEmit` and build typecheck |
 | Lint | PASS | Existing Fast Refresh warning only |
 | Production build | PASS | Existing Vite chunk-size warning only |
-| Independent review | PASS | `READY` at the Task 107 merge gate (three review rounds) |
+| Independent review | PASS | Milestone A `READY` in round 6 of six review rounds |
+| CI on `main` | PASS | run `35206117254` at `077911b` |
 
 ### Remaining work
 
-- Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed.
-- Milestone A (canvas tangent handles) is implemented and validated on `feat/canvas-tangent-authoring` (`c7ae7bc`) but **not merged**: the independent review returned BLOCKED with five concrete items, listed in `reports/progress_108_canvas_tangent_authoring.md`.
-- Milestones B–F are planned only; dependency/workflow/release changes require explicit approval.
+- Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
+- Milestone B (graph + keyboard accessibility, item 4) is the next scoped milestone and is not started; C follows it, and D–F stay plan-only. Dependency, workflow, and release changes require explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
+- Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
 
 ### ChatGPT handoff policy
 
 - `chatgpt_handoff/latest/` holds a minimal, task-specific upload bundle, refreshed for each ChatGPT response instead of accumulating context files.
 - `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` is regenerated from scratch for each task/milestone. Before writing it, delete or overwrite the old file. Build it only from the current `chatgpt_handoff/latest/` bundle plus `latest/OMP_FINAL_RESPONSE.md`. Do not append old content, do not preserve previous task sections, and do not use it as an archive. A historical handoff archive, if ever needed, is a separate explicitly named file under `chatgpt_handoff/archive/` and only after user approval.
+- Every handoff document states one current truth: a correction is never appended on top of a stale section — the stale section is rewritten.
 - Flattened source and test copies must not live there: the Vitest default include glob picks up files named `src__*test*`, which failed CI runs `35094144225` and `35095655446`.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination.
 
@@ -545,15 +554,6 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - `.omp/config.yml` retains `memory.backend: mnemopi`.
 - Model roles, provider mappings, task concurrency, and global OMP configuration remain unchanged.
 - Candidate package version is `1.1.0-rc.1`; package remains private and unreleased.
-
-### Milestone A merged — direct canvas tangent handle authoring
-
-- Branch `feat/canvas-tangent-authoring-replay` was fast-forward-merged into `main`; the milestone is now part of `main` (no merge commit, no rebase, no history rewrite).
-- What it adds: selecting a single freeform layer in edit mode shows its vertices on the stage; clicking a vertex shows its Bezier tangent handles; dragging a handle reshapes the rendered path live; double-click toggles corner ↔ smooth with neighbour-derived symmetric handles. One undo entry per drag; `Escape` cancels a drag and records nothing.
-- Review: six rounds; final verdict READY (five findings closed: verification matrix, legacy points normalization, selection model, Escape/batch lifecycle, smooth-handle/extreme-coordinate edge).
-- Validation: 108 files / 1,641 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the permanent real-browser spec `e2e/canvas-tangent-authoring.spec.ts`.
-- Still out of scope: vertex add/remove, multi-vertex transforms, keyboard nudging, handle constraints, boolean/trim-enabled freeform layers.
-- Next roadmap milestone: **B — graph + keyboard accessibility (item 4)**; untouched.
 
 ---
 
@@ -727,7 +727,7 @@ Not covered by an automated test: byte-level OGraf output for a points-only laye
 
 ## KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Main stays at `d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72`; nothing from this run is merged.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestones B–F are unchanged.
 
 ### Milestone map and status
 
@@ -742,7 +742,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Main stays at `d3aa1
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
-### Milestone A — remaining work before merge
+### Milestone A — the blocker list that was closed (historical record)
 
 From `reports/progress_108_canvas_tangent_authoring.md` §7:
 
@@ -752,7 +752,7 @@ From `reports/progress_108_canvas_tangent_authoring.md` §7:
 4. Build the contract's verification matrix: real-origin coordinate parity under rotation/non-uniform/negative scale; behaviour tests for every `StageCanvas` eligibility guard (extract the guard list into a pure predicate so it is testable); canonical-path priority; real `useHistory` undo/redo/cancel entry counts; serialization/import round-trip of a materialized path; OGraf byte-parity for an untouched canonical path; one manual editor smoke.
 5. Decide the smooth-handle-at-anchor edge: dragging a handle exactly onto its anchor must not silently collapse the counterpart (`Math.hypot(...) || 1`).
 
-Then: one focused re-review, fast-forward merge, push, CI check, report update, minimal handoff refresh.
+All five items were closed, the focused re-review and its follow-up rounds returned READY, and the milestone was replayed and fast-forward merged into `main` (`077911b`) with a green CI run. This list is history, not open work.
 
 ### Milestone B — Graph + keyboard accessibility (roadmap item 4)
 
@@ -803,13 +803,13 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` — 21680 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 5433 bytes
-- `NEXT_SESSION.md` — 5015 bytes
-- `OMP_FINAL_RESPONSE.md` — 8465 bytes
-- `PROJECT_STATE.md` — 6043 bytes
-- `README.md` — 2305 bytes
-- `manifest.txt` — 3119 bytes
-- `progress_108_canvas_tangent_authoring.md` — 28433 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 5662 bytes
+- `NEXT_SESSION.md` — 5472 bytes
+- `OMP_FINAL_RESPONSE.md` — 8908 bytes
+- `PROJECT_STATE.md` — 5902 bytes
+- `README.md` — 2331 bytes
+- `manifest.txt` — 3127 bytes
+- `progress_108_canvas_tangent_authoring.md` — 29332 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

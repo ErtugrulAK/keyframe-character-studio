@@ -4,14 +4,14 @@ This file is the OMP final response for the Milestone A blocker-closing task. It
 
 ## 1) OVERALL RESULT
 
-- **Status:** Milestone A implemented, all five review blockers closed, six review rounds run, **final verdict READY**. **NOT MERGED.**
-- **Branch:** `feat/canvas-tangent-authoring` (local only, no remote counterpart)
+- **Status:** Milestone A implemented, all five review blockers closed, six review rounds run, final verdict **READY**, and **MERGED into `main`** (fast-forward after an approved replay).
+- **Branches:** `feat/canvas-tangent-authoring` (review artefact, kept) → replayed as `feat/canvas-tangent-authoring-replay` → fast-forward merged into `main`
 - **Starting branch commit:** `c7ae7bc` (feature)
-- **New commits:** `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216`, `b0e1027`
+- **New commits:** on the original branch `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216`, `b0e1027`, `b72db0a`, `f15ac93`; replayed on `main` as `bd922a6` … `1ed65e0` plus the state commit `077911b` (replays carry new hashes by construction)
 - **Review blocker status:** 1 (verification matrix) CLOSED · 2 (legacy normalization) CLOSED · 3 (selection model) CLOSED · 4 (Escape/batch lifecycle) CLOSED · 5 (smooth-handle edge + extreme coordinates) CLOSED
-- **Merge:** **performed** — the branch was replayed onto current `main` and fast-forward merged (approved replay strategy, see §6)
-- **Push:** none (the feature branch has no remote; `main` was not pushed)
-- **`main == origin/main`:** yes, `312a0d771123b2b64f9b6f5779f873b439eedab5`, untouched
+- **Merge:** **performed** — the branch was replayed onto current `main` (`312a0d7`) as `feat/canvas-tangent-authoring-replay` and fast-forward merged to `077911b`, then pushed (approved replay strategy, see §6)
+- **Push:** `git push origin main` → `312a0d7..077911b`
+- **`main == origin/main`:** yes, `077911b469bf7026364c0335e748114bf8df05c0` (post-merge)
 - **Working tree:** clean
 
 ## 2) BLOCKERS CLOSED
@@ -66,13 +66,13 @@ Fixes after review: the finite-anchor precondition plus its two tests, and the d
 - OMP config: model roles, providers, `memory.backend: mnemopi`, `task.maxConcurrency: 8` — unchanged
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics`: untouched, nothing copied
 - Secrets: none printed or copied
-- `main` / `origin/main`: `312a0d771123b2b64f9b6f5779f873b439eedab5`, CI run `35114602866` success, unchanged by this work
+- `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0`; CI run `35206117254` success
 
 **Integration record:** the replay branch `feat/canvas-tangent-authoring-replay` was created from `main` at `312a0d7`, the eleven milestone commits were re-applied on it (documentation/handoff conflicts resolved in favour of the newest branch content; `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which only exists on `main`, was preserved and updated), and `main` was fast-forwarded to that tip and pushed. `main` is a strict superset of its previous state; the original branch is kept as the review artefact.
 
-**Merge blocking evidence (historical, before the replay):** `git merge-base --is-ancestor main feat/canvas-tangent-authoring` fails and the reverse also fails; `git rev-list --left-right --count main...feat/canvas-tangent-authoring` = `4  4` (main has four docs/handoff commits the branch lacks; the branch has eight commits main lacks). No rebase, no merge commit, and no force push were performed.
+**Integration evidence:** before the replay the two lines had diverged (`git rev-list --left-right --count main...feat/canvas-tangent-authoring` = `4  10`), so a direct fast-forward was impossible; after the replay `git merge-base --is-ancestor main feat/canvas-tangent-authoring-replay` succeeded and `git merge --ff-only` moved `main` from `312a0d7` to `077911b`. No rebase, no merge commit, no force push, and no history rewrite were performed.
 
-**Decision taken:** option (1), the replay, approved by the user.
+**Decision taken:** option (1), the replay, approved by the user and completed on 2026-09-17 (final `main` = `077911b`).
 
 ## 7) HANDOFF
 

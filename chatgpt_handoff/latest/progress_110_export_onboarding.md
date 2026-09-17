@@ -9,9 +9,9 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 ## Branch
 
 - Implementation branch: `feat/export-onboarding`
-- Commits on this branch: `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit-list provenance), `d23e867` (handoff refresh), plus any later documentation commit
+- Commits on this branch: `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit-list provenance), `d23e867` (handoff refresh), `ebc718f` (stable provenance wording), `225cf1e` (dropped the last pinned branch tip), plus any later documentation commit
 - Branch tip: whatever `feat/export-onboarding`'s HEAD is at merge time — the milestone deliberately does not record a "final" tip SHA in its own documents, because writing one creates the commit that invalidates it
-- Merge-candidate content: the twelve paths in `f5dbb3f..feat/export-onboarding` (product, tests, e2e, report, state docs and the handoff bundle)
+- Merge-candidate diff: **21 paths** in `f5dbb3f..feat/export-onboarding` — 3 product files, 4 test files, 1 e2e spec, this report, 3 root plan/state documents and 9 committed handoff artefacts (the full grouping is listed under "Files changed")
 - Feature commit message: `feat: add first export onboarding flow`
 - Baseline `main`: `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5` (Milestones A and B merged, `main == origin/main`)
 - `v1.1.0-rc.1` tag target (unchanged): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -49,7 +49,14 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 | `e2e/export-onboarding.spec.ts` | **new** — real-browser first-export journey |
 | `NEXT_SESSION.md` | the stale "Milestone C" section now describes Milestone C (it had described Milestone B work), records the branch state instead of "not started", and the checkout line names this branch |
 | `PROJECT_STATE.md` | remaining work records Milestone C as implemented on this branch and awaiting merge |
+| `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` | Milestone C's row records the implemented/merge-pending state, the recommended next prompt points at Milestone D, and the intro sentence now states A and B merged, C pending, D–F plan-only |
 | `reports/progress_110_export_onboarding.md` | this report |
+| `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` | the one-file upload artifact, rebuilt from scratch |
+| `chatgpt_handoff/latest/README.md`, `manifest.txt`, `OMP_FINAL_RESPONSE.md` | handoff documents for this task (instructions, inventory, final response) |
+| `chatgpt_handoff/latest/progress_110_export_onboarding.md` (added), `progress_109_graph_accessibility.md` (removed) | the refreshed bundle content: this task's report replaces the previous milestone report |
+| `chatgpt_handoff/latest/NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` | re-synced copies of the root documents listed above |
+
+Those nine `chatgpt_handoff/**` paths are documentation artefacts by policy (the handoff bundle); no source or test file is copied into the bundle. They are listed for completeness, not as product changes.
 
 ## User-facing behavior
 
@@ -91,7 +98,7 @@ Out of scope (unchanged): export engine, package materializer, OGraf package for
 
 - No export engine, package materializer, OGraf package/runtime format, host or vendor contract, dependency, workflow, release, or publishing change.
 - `.ograf.zip` naming and contents come from the unchanged `compileOGrafPackage` + `createOGrafBrowserZip` path; the readiness check only reads diagnostics and never writes.
-- This branch changes only the files listed above; nothing has been merged or pushed yet, and the tag `v1.1.0-rc.1`, the draft release, npm metadata, `without-mask`, global OMP configuration, `C:\Users\ertugrul.ak\Desktop\KCS`, and `ograf-graphics` are untouched.
+- This branch changes only the 21 paths inventoried above (3 product files, 4 test files, 1 e2e spec, this report, 3 root plan/state documents, and 9 documentation-only handoff artefacts); nothing has been merged or pushed yet, and the tag `v1.1.0-rc.1`, the draft release, npm metadata, `without-mask`, global OMP configuration, `C:\Users\ertugrul.ak\Desktop\KCS`, and `ograf-graphics` are untouched.
 
 ## Independent review result
 

@@ -4,9 +4,9 @@ This file is the OMP final response for the Milestone C task at its stop point. 
 
 ## 1) RESULT
 
-- **Status:** Milestone C is **implemented, validated, and functionally reviewed — NOT MERGED.** The merge gate requires a READY / READY WITH WARNINGS verdict; the last review round returned BLOCKED on a documentation-provenance item that was then fixed and verified by reading, so the merge decision is the user's.
+- **Status:** Milestone C is **implemented, validated, and functionally reviewed — NOT MERGED (pre-merge state).** The two documentation-provenance blockers (roadmap intro contradiction and the report's path/commit inventory) were approved and closed in `6ae8a8e`, and the same corrections were propagated to this bundle; the merge awaits the final gate verdict.
 - **Branch:** `feat/export-onboarding` (its HEAD at merge time; this milestone does not pin its own tip SHA, because recording one creates the commit that invalidates it)
-- **Commits:** `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit-list provenance), `d23e867` (handoff refresh) and any later documentation commit — the report's Branch section is the authority
+- **Commits:** `73b22a2` (feature), `ba9837e` (round-1 review fixes), `31cb407` (round-2 consistency fixes), `6d8371d` (round-3 claim scoping), `9db62f3` (commit-list provenance), `d23e867` (handoff refresh), `ebc718f` (stable provenance wording), `225cf1e` (dropped the last pinned tip), `6ae8a8e` (closed the two provenance blockers) and any later documentation commit — the report's Branch section is the authority
 - **Merge:** not performed. `main` is an ancestor of the branch, so `git merge --ff-only feat/export-onboarding` is available whenever the merge is approved
 - **Push:** none. `main` = `origin/main` = `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`, untouched
 - **Working tree:** clean on the branch

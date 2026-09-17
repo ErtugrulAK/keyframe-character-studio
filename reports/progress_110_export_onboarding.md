@@ -108,18 +108,17 @@ Those nine `chatgpt_handoff/**` paths are documentation artefacts by policy (the
 | 2 | `ba9837e` (round-1 fixes) | BLOCKED | the guide naming was CLOSED; only documentation consistency remained (checkout line, stale "plan-only" claims, a missing changed-files row, two absolute copy claims) |
 | 3 | `31cb407` (round-2 fixes) | BLOCKED | all five round-2 items CLOSED, no protected change, no functional regression; the same absolute guarantee survived in the presenter comment and two test headers, and the handoff still claimed template reuse |
 | 4 | `6d8371d` (round-3 fixes) | BLOCKED | items 1–3 CLOSED; the only remaining item was that this report's Branch section did not list the commits the handoff pointed at |
+| 5 | `225cf1e` | BLOCKED | a gate review on that revision named two documentation blockers: this file's path/commit inventory and the roadmap intro sentence contradicting its own table |
+| 6 | `c2dcb22` (after `6ae8a8e` + the bundle re-sync) | **READY WITH WARNINGS** | all eight merge-gate checks CLOSED; `fix_scope_respected` and `protected_rules_intact` both true |
 
-The documentation item from round 4 was fixed in `9db62f3` (commit list recorded above). No further review round was run: the merge gate requires READY / READY WITH WARNINGS, and the functional contract has been closed and unchanged since round 2 — the remaining findings were documentation provenance, not behaviour. **Decision requested from the user: merge Milestone C as reviewed (functional gate satisfied, documentation items closed by reading), or run one more review round first.**
+The round-4 item was fixed in `9db62f3`. Two later gate reviews (`225cf1e`, then `c2dcb22`) named and then cleared the last two documentation blockers — the report's own path/commit inventory and the roadmap intro sentence that contradicted its table — and the approved fix landed in `6ae8a8e`, propagated to the handoff bundle in `c2dcb22`. The final gate verdict on `c2dcb22` was **READY WITH WARNINGS**, and the milestone was then fast-forward merged.
 
 ## Merge/push status
 
-**NOT MERGED — awaiting the user's decision** (the round-4 review verdict was BLOCKED on a documentation-provenance item that was then fixed without a further review round).
+**MERGED into `main` by fast-forward** at `c2dcb22352f1f4ad9102624309a0d92cf206046b`.
 
-- Branch `feat/export-onboarding` (HEAD at merge time; the commit list is in the Branch section above)
-- `main` is still at `f5dbb3f8ef16a48d9ade89d4e1c9a48536e672d5`; `main == origin/main`; nothing was pushed
-- Fast-forward feasibility checked and valid: `main` is an ancestor of the branch, so `git merge --ff-only feat/export-onboarding` remains available whenever the merge is approved
-- No rebase, no merge commit, no force push, no history rewrite, no tag/draft-release/npm change
-
-## Next recommended task
-
-Milestone D — state / CI / warning hygiene (roadmap items 6 and 9). Item 6 (current-state consistency check) is documentation/tooling; **item 9 (dependency and warning maintenance) requires explicit user approval because it touches `package.json`/`package-lock.json`.**
+- Final gate review verdict: **READY WITH WARNINGS** — all eight merge-gate checks CLOSED; the residual notes are the point-in-time nature of the readiness answer and the smoke covering the ready path while blocked/warning paths stay in component tests
+- The two approved documentation blockers were closed in `6ae8a8e` and propagated to the handoff bundle in `c2dcb22`
+- Integration: `git merge --ff-only feat/export-onboarding` moved `main` from `f5dbb3f` to `c2dcb22352f1f4ad9102624309a0d92cf206046b`; no merge commit, no rebase, no force push, no history rewrite
+- Push: `git push origin main` (`f5dbb3f..c2dcb22`); CI run `35222589827` success
+- A post-merge documentation commit follows the merge commit, so `main` is at or newer than `c2dcb22352f1f4ad9102624309a0d92cf206046b`

@@ -17,61 +17,84 @@
 
 ## 1. OMP Final Response
 
-## KCS Pre-Milestone-B Handoff Cleanup — Final Response
+## KCS Milestone B — Final Response (Graph + Keyboard Accessibility)
 
-This file is the OMP final response for the pre-Milestone-B handoff consistency task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+This file is the OMP final response for the Milestone B task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
-### 1) RESULT
+### 1) OVERALL RESULT
 
-- **Milestone A actual status:** **MERGED and PUSHED.** The milestone content is on `main` under the replayed hashes `d1b396a` … `1ed65e0`, with integration commit `077911b469bf7026364c0335e748114bf8df05c0` verified as an ancestor of `main`. Review verdict READY (six rounds).
-- **`main` / `origin/main`:** `07d8f8dddf3fbe9820e6dccd728676b51c6d397f` (synchronized; working tree clean)
-- **CI:** runs `35206117254` (Milestone A merge), `35207913453` (state reconciliation), and `35208109947` (final wording) — all **success**
-- **Stale current-action text fixed:** yes — the orchestration-era "finish Milestone A" action and the "Milestone A COMPLETION" recommended prompt were replaced by Milestone B; the old text is kept only as an explicitly labelled historical line
-- **Upload instruction fixed:** yes — every handoff document now says to upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`
+- **Status:** Milestone B implemented, reviewed, and **MERGED** into `main`.
+- **Branch:** `feat/graph-accessibility` (kept locally as the review artefact)
+- **Commits:** `eece046` (feature), `e1b8400` (review fixes), `96e8f9d` (documentation correction)
+- **Merge:** fast-forward into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` — no merge commit, no rebase, no force push
+- **Push:** `git push origin main` → `beb4b49..96e8f9d`
+- **`main == origin/main`:** yes (or newer, once the post-merge documentation commit lands)
+- **Working tree:** clean
 
-### 2) HANDOFF
+### 2) USER-FACING BEHAVIOR
 
-- **`chatgpt_handoff/latest/` file count:** 8 — `README.md`, `manifest.txt`, `OMP_FINAL_RESPONSE.md`, `progress_108_canvas_tangent_authoring.md`, `progress_109_graph_accessibility_start.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`
-- **One-file rebuilt:** yes, from scratch (no append, no previous task sections)
-- **Source/test copies present:** NO · **Test-glob matching files present:** NO · **`Desktop\KCS` copied:** NO
-- **Secrets:** none present
-- **Malformed Windows paths:** zero — no collapsed-backslash Windows path survived the rebuild (the three patterns the handoff policy names were scanned and matched nothing outside this sentence)
-- **Upload instruction:** upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT
+- **Graph keyboard behavior:** the value graph is a labelled group whose keyframe points are reachable with `Tab` and announced as "Keyframe at frame N, value V, use the Up and Down arrow keys to change it"; `ArrowUp`/`ArrowDown` edit the value through the existing callback. The derived speed graph stays read-only and exposes no points.
+- **Keyframe row behavior:** every timeline diamond is a named button in the tab order ("Keyframe at frame 12, Track a, channels x, easeInOut" on the parent lane, "Keyframe at frame 12, Location X, value 140.00" on expanded channel lanes). `Enter`/`Space` selects that keyframe and moves the playhead (and selects the part on the parent lane). `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order, stop at the ends, and consume the key there so the timeline never scrolls.
+- **Selected-keyframe section behavior:** exposed as a group labelled with its frame ("Selected keyframe at frame 20, 2 channels"); its numeric inputs keep their existing labels and pipeline.
+- **Screen-reader semantics:** the graph is no longer `role="img"` (which used to hide its own focusable controls); decorative axes and the curve are `aria-hidden`; the selected keyframe is exposed with `aria-pressed`; no control is left unnamed.
+- **Focus visibility:** a cyan outline (plus a soft glow on the timeline diamonds) on `:focus-visible`; keyboard-only, mouse focus unchanged.
+- **Unsupported/out-of-scope:** no roving-tabindex manager, no keyframe add/delete/nudge shortcuts, no playhead scrubbing keys, no timeline restructure, no new shortcut registry, no change to `Escape` semantics; `Shift`+`Enter`/`Shift`+`Space` does not reproduce the shift-click part-selection modifier.
 
-### 3) RELEASE SAFETY
+### 3) VALIDATION
+
+| Check | Result |
+|---|---|
+| Focused Vitest (3 a11y/graph/keyframe files) | PASS — 35 tests |
+| Playwright smoke `e2e/graph-accessibility.spec.ts` | PASS — 2 tests |
+| Full Vitest | PASS — 109 files / 1,652 tests |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium tests |
+| `npm run build` / `npx tsc --noEmit` / `npm run lint` | PASS / clean / clean (pre-existing Fast Refresh warning only) |
+| `git diff --check` | clean |
+| GitHub CI | run for the merge commit on `main` — see the repository run list |
+
+### 4) REVIEW
+
+- **Round 1 (`eece046`) — BLOCKED:** the graph Playwright test could pass without mounting the graph (early return); the arrow keys were not consumed at lane ends; the focus-ring assertion did not read the painted style; plus six documentation over-claims.
+- **Round 2 (`e1b8400`) — READY WITH WARNINGS:** all three defects CLOSED (the graph smoke now opens the Curve Studio, Tab-reaches the point, asserts the computed outline, edits with `ArrowUp` and checks the `aria-hidden` decorations; the lane consumes the arrows at its ends and on a lone diamond; both smokes read computed styles). The only remaining findings were documentation notes (test counts and coverage wording), corrected in `96e8f9d`.
+- **Residual risks recorded:** the derived speed graph changed from an `img` graphic to a named group with no focusable content (reasoned, not measured with a real AT matrix); `aria-pressed` carries toggle semantics while activation only selects; the global `[role='button']:focus-visible` rule would paint an equivalent ring even without the component-specific rules.
+
+### 5) RELEASE SAFETY
 
 - `v1.1.0-rc.1` tag target: `46d2a3e59e065816d972dcd56951803951b577f6` — unchanged
 - Tag / release / npm: no tag create-move-delete, no draft-release edit or publish, no npm publish (package stays private at `1.1.0-rc.1`)
 - `without-mask`: untouched
 - OMP config: model roles, provider mappings, `memory.backend: mnemopi`, `task.maxConcurrency: 8` — unchanged
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics`: untouched, nothing copied
-- Source/test/package/workflow changes in this task: **none** (docs/handoff only)
+- Secrets: none printed or copied
+- Protected authorities: evaluator, interpolation, keyframe/channel model, timeline mutation utilities, `useKeyboardShortcuts`, serialization, OGraf, and package/workflow files are unchanged
 
-### 4) NEXT TASK
+### 6) HANDOFF
 
-**Milestone B — graph + keyboard accessibility (roadmap item 4).**
+- `chatgpt_handoff/latest/`: 8 files — `README.md`, `manifest.txt`, `OMP_FINAL_RESPONSE.md`, `progress_109_graph_accessibility.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md`
+- One-file rebuilt from scratch; source/test copies: NO; test-glob matching files: NO; `Desktop\KCS` copied: NO; secrets: NO; malformed Windows paths: zero
 
-- Start note: `reports/progress_109_graph_accessibility_start.md` (in this bundle as `progress_109_graph_accessibility_start.md`)
-- Recommended branch: `feat/graph-accessibility`
-- Scope: keyboard reachability and screen-reader labelling for the existing graph/path editing surfaces (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections), reusing the existing graph/value/channel authorities
-- Hard boundary: no graph engine or evaluator rewrite, no new state store, no broad style churn, no dependency/package/workflow/release change
-- Validation gate: focused a11y tests + one Playwright keyboard smoke, then `npm test`, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, then one focused independent review before any merge
-- Approval: none needed to start Milestone B while the scope stays narrow UI/accessibility; explicit approval is required for package, workflow, dependency, or release changes
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
+
+### 7) NEXT ACTION
+
+**Milestone C — first export / onboarding flow (roadmap item 5).** Scope: a short "first successful OGraf export" path for new users, reusing the Task 105 export diagnostics, the existing templates, and the existing export UI. Hard boundary: no host/vendor contract invention, no OGraf package format change, no new dependency, no package/workflow/release change. Recommended branch: `feat/export-onboarding`. No user approval is needed to start while the scope stays narrow UI/UX; explicit approval is required for package, workflow, dependency, or release changes.
 
 ---
 
 ## 2. Handoff Manifest
 
-## KCS ChatGPT Upload Manifest — Pre-Milestone-B State
+## KCS ChatGPT Upload Manifest — Milestone B (Graph + Keyboard Accessibility)
 
 Clean refreshed: YES
-Bundle purpose: pre-Milestone-B state — Milestone A merged and verified, Milestone B (graph + keyboard accessibility) scoped as the next milestone
+Bundle purpose: Milestone B — graph + keyboard accessibility — merged, reviewed, and validated
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current main / origin HEAD: at or newer than the Milestone A integration commit 077911b (a state-reconciliation docs commit follows it; later docs commits may be newer still)
-Milestone A branch: feat/canvas-tangent-authoring (review artefact) replayed as feat/canvas-tangent-authoring-replay and MERGED into main by fast-forward (main = origin/main = 077911b)
-Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027, b72db0a, f15ac93 (final report and handoff); replayed on main as bd922a6 ... 1ed65e0
-Integration: replay branch created from main at 312a0d7, milestone commits re-applied, fast-forward merged into main (077911b) and pushed; CI run 35206117254 success; no rebase, no merge commit, no force push, no history rewrite
+Current main / origin HEAD: 96e8f9d0313cb81752c04fe58d6e7d00d700a6f4 (Milestone B merge is 96e8f9d; a post-merge documentation commit follows it)
+Milestone B branch: feat/graph-accessibility (local review artefact), merged into main by fast-forward
+Milestone B commits: eece046 (feature), e1b8400 (review fixes), 96e8f9d (documentation correction)
+Ancestry: main was a strict superset after the merge; no rebase, no merge commit, no force push, no history rewrite
+Milestone A integration commit: 077911b (unchanged, still an ancestor of main)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -80,30 +103,28 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the final task response (blockers, validation, review rounds, merge evidence)
-- progress_108_canvas_tangent_authoring.md — Milestone A report (orchestration, blocker-closing pass, verification matrix, validation, review rounds, deviations)
-- progress_109_graph_accessibility_start.md — Milestone B start note (scope, boundaries, authorities, validation gate)
-- KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — design contract, updated where the implementation forced wording
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — grouped roadmap plan: Milestone A merged, Milestone B next
-- NEXT_SESSION.md — repository state with Milestone B as the first next scoped work
+- OMP_FINAL_RESPONSE.md — the Milestone B final response
+- progress_109_graph_accessibility.md — the Milestone B report (implementation, behaviour, tests, validation, review rounds, residual risks, merge status)
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan: A and B merged, C next
+- CHANGELOG.md — repository changelog with the Milestone B entry
+- NEXT_SESSION.md — repository state with Milestone C as the next scoped work
 - PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
 Omitted categories:
 - Source and test files (they live under src/ and e2e/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
-- package.json, ci.yml, release-smoke.yml, the Milestone A design contract, CHANGELOG.md (the repository changelog carries the Milestone A entry)
-- older progress reports, current-state/release documents, QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
+- package.json, ci.yml, release-smoke.yml, older reports, design contracts, current-state/release documents
+- QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision:
-- Focused Vitest: PASS — 7 files / 165 tests
-- Full Vitest: PASS — 108 files / 1,641 tests
+- Focused Vitest: PASS — 3 files / 35 tests
+- Real-browser smoke: PASS — e2e/graph-accessibility.spec.ts (2 tests; not part of CI or the release gate)
+- Full Vitest: PASS — 109 files / 1,652 tests
 - validate:ograf, qa:release (2 Chromium tests), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
-- Real-browser smoke: PASS — e2e/canvas-tangent-authoring.spec.ts (not part of CI or the release gate)
-- Independent review: READY at round 6 (six rounds; round-6 verdict READY with no new defect and no remaining over-claim)
-Integration: main fast-forwarded to the replay branch tip; v1.1.0-rc.1 tag target, draft release, and npm untouched
+- Independent review: round 1 BLOCKED (3 findings, 6 over-claims) → all closed → round 2 READY WITH WARNINGS (documentation notes corrected)
 
-Next milestone: B — graph + keyboard accessibility (item 4); recommended branch feat/graph-accessibility; start note in this bundle.
+Next milestone: C — first export / onboarding flow (item 5); recommended branch feat/export-onboarding.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -111,25 +132,27 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-## KCS Minimal ChatGPT Upload Bundle — Pre-Milestone-B State
+## KCS Minimal ChatGPT Upload Bundle — Milestone B (Graph + Keyboard Accessibility)
 
-This is a minimal, task-specific ChatGPT upload bundle for the pre-Milestone-B state: Milestone A is merged and verified, and Milestone B (graph + keyboard accessibility) is the next scoped milestone. It was clean-refreshed for this task.
+This is a minimal, task-specific ChatGPT upload bundle for Milestone B. It was clean-refreshed for this task.
 
 ### What this bundle covers
 
-Milestone A is complete and merged (direct Bezier tangent-handle authoring on the stage canvas, six review rounds, verification matrix, legacy points normalization, selection model, Escape/batch lifecycle, smooth-handle and extreme-coordinate guards). This bundle also carries the Milestone B start note: scope, boundaries, authorities to reuse, and the validation gate.
+Milestone B is merged: the timeline keyframe diamonds and the value graph are keyboard operable and screen-reader labelled, decorative geometry is hidden from assistive technology, and focus rings were added — with the review rounds and the validation evidence behind it. The next roadmap milestone (C — first export / onboarding flow) is scoped.
 
 ### Files
 
-- `progress_108_canvas_tangent_authoring.md` — the Milestone A report: orchestration record, blocker-closing pass, verification matrix, validation table, review rounds, deviations
-- `progress_109_graph_accessibility_start.md` — the Milestone B start note: scope, hard boundaries, authorities to reuse, validation gate
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the grouped roadmap plan; Milestone A is MERGED and Milestone B is the next milestone
-- `NEXT_SESSION.md` — repository state with Milestone B as the first next scoped work
+- `OMP_FINAL_RESPONSE.md` — the final task response (result, behaviour, validation, review, release safety, next action)
+- `progress_109_graph_accessibility.md` — the Milestone B report: scope, implementation, authorities reused, files changed, behaviour, tests, validation matrix, review rounds, residual risks, merge status
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan; Milestone A and B are MERGED and Milestone C is next
+- `CHANGELOG.md` — the repository changelog with the Milestone B entry under Unreleased
+- `NEXT_SESSION.md` — repository state with Milestone C as the first next scoped work
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
+- `manifest.txt` — this bundle's inventory
 
 ### Deliberately not included
 
-Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, the Milestone A design contract (it lives at `docs/KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` in the repository), `CHANGELOG.md` (its Unreleased entry for Milestone A is recorded in the repository), QA output, assets, archives, and caches.
+Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI, and the real files live under `src/` and `e2e/` in the repository. Also omitted: `package.json`, CI/release workflows, older reports, release/current-state documents, design contracts, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
@@ -143,321 +166,125 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Progress Report
 
-Milestone A report (completed) and the Milestone B start note.
+Milestone B report (merged).
 
-## Progress 108 — Canvas Tangent Authoring (Milestone A) + Grouped Roadmap Orchestration
+## Progress 109 — Milestone B: Graph + Keyboard Accessibility
 
-### 1. Scope
+### Scope
 
-Grouped-roadmap orchestration with Milestone A (roadmap item 3, direct canvas tangent handles) as the first milestone. The goal review, milestone grouping, design contract, design review, implementation, and validation all ran. At the end of that orchestration run the milestone was **not merged** because the independent merge-gate review returned BLOCKED with a concrete remaining-work list; §11 records the later blocker-closing pass and its Merge status the final integration. **Milestone A is merged into `main`.**
+Roadmap item 4 (Milestone B of `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`): make the existing graph and keyframe surfaces usable without a mouse and correctly labelled for assistive technology — no graph-engine, evaluator, timeline-mutation, shortcut-registry, state-store, or package change.
 
-### 2. Repo preflight state
+Out of scope (unchanged): graph engine or interpolation math, timeline/keyframe model, drag behaviour redesign, new keyboard shortcut registry, broad style churn, new dependencies, release/package/workflow changes, Milestone C onboarding.
 
-- `main` = `origin/main` = `d3aa135bdf8d63b9cb01b21f2b2f4c14f7973c72`; working tree clean.
-- Tag `v1.1.0-rc.1` present, target `46d2a3e59e065816d972dcd56951803951b577f6` (unchanged).
-- CI on `main`: run `35103238439` (d3aa135) — success; no failing run on current `main`.
+### Branch
 
-### 3. Goal review and milestone grouping
+- Implementation branch: `feat/graph-accessibility`
+- Feature commit: `feat: improve graph keyboard accessibility`
+- Baseline `main`: `beb4b495aa6c47930d4eefe0f2140580d1ae8e9c` (Milestone A merged, `main == origin/main`)
+- `v1.1.0-rc.1` tag target (unchanged): `46d2a3e59e065816d972dcd56951803951b577f6`
 
-Complete before this run: Task 105 (export diagnostics remediation UX), Task 106B (minimal handoff policy + CI fix), Task 107 (track-matte source selection affordance). Roadmap items 1 and 2 are done.
+### Implementation summary
 
-Remaining roadmap items were grouped as instructed:
+1. **Timeline keyframe diamonds became real keyboard controls.** Both diamond renderers in `TrackLane` (canonical frame-group `keyframe-diamond`, legacy composite diamond, and the expanded-lane `ue-prop-diamond`) now get a shared `diamondKeyboardProps` contract: `role="button"`, `tabIndex={0}`, an accessible name carrying frame + track + channel/property + easing/value, `aria-pressed` for the selected keyframe, `Enter`/`Space` activation that runs the existing selection side effects (select keyframe + move playhead, and for the parent lane also select the part; the channel-lane diamond previously had no `click` handler at all, so its keyboard path mirrors what its own `mousedown` does), and a local `ArrowLeft`/`ArrowRight` focus walk across the diamonds of the same lane. The legacy lane now renders from `sortedKfs` (already computed) so DOM order — and therefore the arrow walk and tab order — matches frame order; the diamonds are absolutely positioned, so this changes no pixel.
+2. **The value graph stopped hiding its own controls.** `TemporalGraphPanel`'s SVG carried `role="img"`, which removes its descendants from the accessibility tree while the keyframe points inside it are focusable. It is now a labelled `group` (`aria-labelledby` → the visible "Value Graph"/"Speed Graph" title, `aria-describedby` → the helper text), the decorative axes and curve are `aria-hidden="true"`, and each keyframe point's label now states its frame and value and how to change it with the keyboard. The helper text states the keyboard contract.
+3. **The selected-keyframe section is a labelled group.** `SelectedKeyframeSection` now exposes `role="group"` with `aria-label="Selected keyframe at frame N, M channels"`, so its per-channel inputs (`Keyframe Location X`, `Keyframe Rotation`, …) are unambiguous without changing their existing labels.
+4. **Focus visibility on the new controls.** Added `:focus-visible` rules in the existing stylesheets for `.keyframe-diamond`, `.ue-prop-diamond`, and the graph's keyframe points, using the same `--accent-cyan` / `--accent-teal-glow` tokens the rest of the editor uses.
 
-| Milestone | Roadmap items | Status this run |
+### Existing authorities reused
+
+| Concern | Authority | Reused for |
 |---|---|---|
-| A — Canvas path authoring UX (tangent handles) | 3 | Implemented and validated on a branch; **not merged** at that point (review BLOCKED) → five findings later closed, review READY, milestone **merged** (see Merge status) |
-| B — Graph + keyboard accessibility | 4 | Not started |
-| C — First export / onboarding flow | 5 | Not started |
-| D — State / CI / warning hygiene | 6, 9 | Plan only (needs approval for dependency work) |
-| E — OGraf QA / schema hardening study | 7, 8 | Plan only |
-| F — Architecture exploration only | 10, 11, 12 | Plan only |
+| Timeline lane rendering | `src/components/Timeline/TrackLane.tsx` | the only keyframe diamond renderer; no new timeline component |
+| Keyframe selection + playhead | `onSelectKeyframe` / `onSetFrame` / `onSelectPart` props fed by `SequencerTimeline` | every keyboard activation path |
+| Frame grouping + ordering | `groupChannelKeyframesByFrame`, the lane's existing `sortedKfs`/`chKfs` | accessible labels and the arrow walk order |
+| Channel metadata | `CHANNEL_META` (`timelineConstants`) | property names in labels |
+| Graph panels | `src/components/Inspector/TemporalGraphPanel.tsx` (existing keyframe drag + arrow editing) | the graph surface, unchanged math |
+| Selected-keyframe editor | `SelectedKeyframeSection` + `SmartNumberInput` + `updateCurrentTransform` | unchanged value pipeline |
+| Global shortcuts | `src/hooks/useKeyboardShortcuts.ts` (untouched) | keyboard activation stops propagation, so no global handler is hijacked |
+| Design system | `docs/design/KCS_DESIGN_SYSTEM.md`, existing `:focus-visible` rules | focus ring tokens and behaviour |
 
-The grouping held up: A is genuinely separable, and B–F each keep their own gate. One correction to the grouping: item 9 (dependency/warning maintenance) must stay behind an explicit approval gate because it touches `package.json`/lockfile, so it is not a mechanical follow-up to item 6.
+No new graph engine, evaluator, timeline mutation, shortcut registry, state store, dependency, or package/workflow change.
 
-### 4. Milestone A — design contract
-
-`docs/KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` (three revisions).
-
-- Revision 1 was reviewed by the ADVISOR/planner role and returned BLOCKED for factual and structural reasons (wrong editor camera centre, wrong rendering-authority file, `onPartPropChange` misdescribed as a canvas API, optional `BezierVertex.kind` ignored, a materialization hazard when both `path` and `points` exist, byte-parity over-claim, `worldToLocal` misused as a delta converter, an unimplementable smooth-handle rule, missing eligibility guards, pointer-ownership gaps).
-- Revision 2 accepted every correction; a second review (SLOW role) confirmed most were CLOSED but returned BLOCKED on four remaining mechanics: the initializer's degenerate/open/partial policies, the cancel-rollback commit ordering versus `useHistory`'s ref sync, and a non-existent `part.closed` field.
-- Revision 3 pinned all four: unit-normalized chord direction with an explicit fallback ladder, open-path endpoint rule, "zero chord never forces zero-length handles", the double-click action as the only handle creator (with mirror repair), materialization fixed to `legacyFreeformPointsToPath(normalizeClosedPoints(points), true)` (`closed: true`), and an Escape-cancel that writes the rollback first and closes the batch in a post-commit effect, with `pointercancel` committing like the existing transform drags.
-
-Budget note: the prompt allows one review plus one re-review after BLOCKED; a third design round was not run, and the implementation review below covers the contract's promises.
-
-### 5. Milestone A — implementation (branch `feat/canvas-tangent-authoring`, commit `c7ae7bc`)
-
-- `src/utils/bezierPath.ts`: pure `initializeSmoothHandles(path, index)` — neighbour chord, unit direction, quarter-of-shortest-span reach, deterministic degenerate ladder, partial-smooth mirror repair, existing handles never overwritten.
-- `src/utils/freeform.ts`: pure `resolveFreeformPath(part)` = `part.path ?? legacyFreeformPointsToPath(part.points, true)`.
-- `src/components/Canvas/overlays/FreeformTangentOverlay.tsx`: vertex markers for the selected freeform layer (replacing the previous read-only marker block, same `data-testid`), the selected vertex's handles, handle drags through `setCharacterParts` inside `startBatchInteraction`/`endBatchInteraction`, Escape rollback, double-click corner/smooth toggle, pointer capture, all markers screen-sized through `zScale`.
-- `src/components/Canvas/StageCanvas.tsx`: eligibility guards (edit mode, select tool, single selection, `custom_freeform`, no boolean ownership/operand, edit-visible, no other drag, `coordinateSpace === 'local'`, ≥2 points, trim disabled, non-zero scale) and wiring; the existing marker block was removed rather than duplicated.
-- Tests: `src/tests/bezierTangentHandles.test.ts` (7) and `src/tests/freeformTangentOverlay.test.tsx` (6).
-
-### 6. Validation at the stop point
-
-| Check | Command | Result |
-|---|---|---|
-| Focused tests | `npx vitest run src/tests/bezierTangentHandles.test.ts src/tests/freeformTangentOverlay.test.tsx src/tests/bezierPath.test.ts` | PASS — 3 files / 18 tests |
-| Full Vitest | `npm test` | PASS — 105 files / 1,588 tests |
-| OGraf fixture | `npm run validate:ograf` | PASS |
-| Release gate | `npm run qa:release` | PASS — 2 Chromium tests |
-| Production build | `npm run build` | PASS — existing Vite chunk-size warning only |
-| TypeScript | `npx tsc --noEmit` | PASS |
-| Lint | `npm run lint` | PASS — existing `AnimatorContext` Fast Refresh warning only |
-| Whitespace | `git diff --check` | PASS |
-
-`main` was not modified by this milestone: the branch is committed but unmerged, so `main`, the tag, the draft release, and CI are exactly as they were at preflight.
-
-### 7. Independent review — BLOCKED
-
-One independent merge-gate review ran on `d3aa135..c7ae7bc`. Verdict: **BLOCKED**, with these required items before merge. **Update (blocker-closing pass, §11): all five items were closed; see §11 for the evidence per item.**
-
-1. **HIGH — verification matrix incomplete.** The contract requires coordinate parity at the real `EDITOR_CAMERA_CENTER` with rotation, non-uniform, and negative scale; behavior tests for every `StageCanvas` eligibility guard; canonical-path priority; real `useHistory` undo/redo/cancel entry counts; serialization/import and OGraf byte-parity; and a manual editor smoke. The branch has focused unit/component tests only, and one test name ("leaves other vertices identical") over-claims what it asserts.
-2. **MEDIUM — legacy normalization missing.** `resolveFreeformPath` uses raw `part.points`; the contract pins `normalizeClosedPoints(points)`, so a legacy layer whose closing vertex repeats the first vertex would show an extra marker and materialize a duplicate vertex into the canonical path.
-3. **MEDIUM — §7 selection model incomplete.** No separate handle-selection authority, no empty-canvas "clear overlay selection only" behavior, and the overlay does not reset its `selectedIndex` when the selected layer changes.
-4. **MEDIUM — Escape lifecycle.** The listener is installed for the overlay's lifetime instead of only during a drag; a pointerdown-then-Escape with no move can leave the batch open until the global `mouseup`.
-5. Also named: a plausible bug where dragging a smooth handle exactly onto its anchor collapses the counterpart's length (`Math.hypot(...) || 1`).
-
-Reviewer conclusion: merge is blocked until those are closed; the reviewer explicitly confirmed the reused authorities, the coordinate/delta rule, the initializer, the pointer-ownership order, and that no parallel engine or protected-authority change was introduced.
-
-### 8. Stop rationale (at the orchestration stop point — superseded by the Merge status section below)
-
-The orchestrator policy allows fixing in scope and running one more focused review, but also requires stopping when a milestone turns broad. Here the remaining work is a coherent batch (two small code fixes, selection/lifecycle behaviour, and a real verification matrix including history and export parity) that is larger than the increment itself. Stopping kept `main` green and unchanged at that point, left the design contract and the implementation available for the next session, and avoided merging an unverified increment. No package, workflow, dependency, or release change was made, and `chatgpt_handoff/latest/` was not given source or test copies.
-
-### 9. Protected invariants
-
-- Tag `v1.1.0-rc.1` target unchanged; draft release not published/finalized; no npm publish; no branch deleted.
-- `main` untouched **during the orchestration run** (`d3aa135…`); CI on `main` green. (Milestone A was merged into `main` later — see Merge status.)
-- No new matte/rendering/evaluation/timing/package/state engine; `ShapePartRenderers`, `evaluateFrame`, `StagePartLayers`, matte authority, `bounds.ts`, and `src/ograf/**` untouched.
-- `without-mask`, global OMP configuration (model roles, provider mappings, `memory.backend: mnemopi`, `task.maxConcurrency: 8`) untouched.
-- `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics` untouched; no secrets handled.
-
-### 10. Next recommended action (historical — this action was completed)
-
-That recommendation was: finish Milestone A on the existing branch by closing the review's five items, then run one focused re-review and merge by fast-forward. It was carried out: the five items were closed, the review returned READY, and the milestone was replayed and fast-forward merged into `main` (`077911b`).
-
-The current next action is **Milestone B — graph + keyboard accessibility** (roadmap item 4); see the roadmap plan, which now recommends the Milestone B prompt.
-
-### 11. Blocker-closing pass (this session)
-
-#### Branch
-
-- Branch: `feat/canvas-tangent-authoring` (kept as the review artefact; replayed as `feat/canvas-tangent-authoring-replay`, whose commits carry new hashes `d1b396a` … `1ed65e0`)
-- Milestone A feature commit: `c7ae7bc` — `feat: add direct canvas tangent handle authoring`
-- Blocker-fix commits: `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216` (code fixes, test corrections, documentation scoping)
-- Baseline `main` at branch point: `d3aa135`
-- `main` / `origin/main` before the replay: `312a0d771123b2b64f9b6f5779f873b439eedab5`; after the merge: `077911b469bf7026364c0335e748114bf8df05c0`
-- Pre-merge ancestry: `main` and the branch **diverged** (main advanced with four docs/handoff commits after `d3aa135`), so a direct fast-forward was impossible. No rebase, no merge commit, and no force push were performed; the approved replay resolved it (see Merge status).
-
-#### Blocker status
-
-| # | Review finding | Status | Evidence |
-|---|---|---|---|
-| 1 | HIGH — verification matrix incomplete (coordinate parity, guard matrix, canonical-path priority, real history, serialization/import, OGraf parity, manual smoke) | **CLOSED** | §Verification matrix below; new `freeformTangentEligibility.test.ts` (23), `freeformTangentPersistence.test.ts` (6), `freeformTangentHistory.test.tsx` (3), overlay suite grown to 19; guarded render condition extracted to `src/utils/freeformTangentEligibility.ts` |
-| 2 | MEDIUM — legacy points normalization missing in `resolveFreeformPath` | **CLOSED** | `src/utils/freeform.ts`: `part.path ?? legacyFreeformPointsToPath(normalizeClosedPoints(part.points ?? []), true)`; tests cover repeated closing vertex, `<2` points → `undefined`, canonical-path priority, no mutation of `part.points` |
-| 3 | MEDIUM — §7 selection model incomplete | **CLOSED** | overlay holds `selectedIndex` + `selectedHandle` + an in-flight drag flag; clicking a vertex clears the handle selection, clicking a handle selects it (rendered highlighted via `data-selected`); switching layer or losing the selected vertex resets the overlay selection; empty-canvas behaviour documented (see Deviations) |
-| 4 | MEDIUM — Escape lifecycle / batch close | **CLOSED** | `Escape` listener is installed **only** while a drag is in flight and removed when it ends; the batch is closed by a state-driven post-commit effect (`pendingCancel`), so a `pointerdown` with no `pointermove` still closes the batch |
-| 5 | MEDIUM — smooth-handle-at-anchor collapse (`Math.hypot(...) || 1`) | **CLOSED** | Drag: a vector `<= 1e-6` keeps the counterpart's own length/direction, a non-finite pointer result is dropped, a non-finite (overflowing) dragged length leaves the counterpart untouched, and a non-finite mirror leaves the counterpart untouched. Smooth toggle: the §8 initializer computes finite handles only — non-finite mirror → direction-and-reach handle; non-finite fallback → degenerate onto the vertex; overflowing span → zero reach; overflowing chord → `{x: 1, y: 0}`; a vertex whose own coordinates are not finite gains no computed handles. Exact scope: **no writer computes a non-finite handle** — the drag refuses non-finite output, and the smooth toggle computes handles only for a finite vertex; existing handles (including ones from an unsanitized legacy import) are passed through, and the arithmetic is not claimed to be overflow-free. Tests: `1.7e308` counterpart, `1.7e308` dragged vector, `1e308` mirror overflow (selected vertex = the huge one), overflowing chord with an unrepresentable reach, and a non-finite vertex gaining no handles. |
-
-#### Verification matrix
-
-#### A. Coordinate parity (real origin, real transform)
-
-Overlay suite `FreeformTangentOverlay coordinate mapping`, `outputOrigin = EDITOR_CAMERA_CENTER` (the production constant), one row per transform: identity, rotation-only, non-uniform scale, negative `scaleX`, and rotation + non-uniform + negative scale + offset.
-
-For each row the test drags the out-handle through the stage pointer mapper by a screen delta and requires the handle's world position to move by exactly that delta (± 1e-6 local / < 2 px in the browser run). The delta is produced by the implementation's separate inverse-mapping of the *start* and *current* pointer points (`worldToLocal` on each, difference of the two locals), so a raw world delta reaching `worldToLocal` would fail this row.
-
-#### B. Eligibility guard matrix
-
-`src/tests/freeformTangentEligibility.test.ts` — 23 tests. One positive case, one legacy-points-only positive case, two negative-control positives (unrelated hidden track, negative/non-uniform scale), and 18 guard rows, each asserting the predicate is `false`:
-
-broadcast mode · non-select tool · active stage drag · empty selection · multi-selection · missing selected part · non-freeform type · boolean owner · boolean operands · boolean operand child · edit-hidden track · trim enabled · missing evaluated transform · `scaleX === 0` · `scaleY === 0` · normalized-space path · single-vertex path · fewer than two legacy points.
-
-Plus canonical priority (path present while legacy points are unusable → eligible) and the inverse case.
-
-The guard list is no longer inline JSX: `StageCanvas` calls `isFreeformTangentOverlayEligible({...})`, so the matrix and the runtime condition are the same code.
-
-#### C. Canonical-path priority
-
-- Unit: `resolveFreeformPath` returns the *same object* when `part.path` exists, and `buildBezierPathD(resolved) === buildBezierPathD(part.path)` even when legacy `points` disagree.
-- Component: with `path` and differing legacy `points` the overlay renders exactly the path's 3 markers at the path's anchors (legacy points would produce 4 different anchors).
-- Clone-on-write: the untouched-vertex test reads the neighbouring smooth vertex's handles after a drag and requires `26/0` and `14/0` — its own values — while the dragged vertex's handle holds the pointer value.
-
-#### D. Real history
-
-`src/tests/freeformTangentHistory.test.tsx` wires the overlay to the real `useHistory` (same `startBatchInteraction` / `endBatchInteraction` wiring `StageCanvas` uses):
-
-| Action | Expected | Result |
-|---|---|---|
-| completed drag | exactly one undo entry; undo restores the previous handle; redo reapplies | PASS |
-| drag then `Escape` | path restored, **no** entry added (one undo returns to the pre-drag state, then `canUndo === false`) | PASS |
-| `pointerdown` then `Escape`, no move | batch closed, no entry (`canUndo === false`), path unchanged | PASS |
-| `pointercancel` after a move | last value committed, one entry, undo restores | PASS |
-
-#### E. Serialization / import
-
-`src/tests/freeformTangentPersistence.test.ts`:
-
-- A points-only layer materializes a `local`, closed path whose anchors are exactly the normalized legacy polygon and whose `d` equals the normalized `legacyFreeformPointsToPath` output.
-- The materialized path (after `initializeSmoothHandles`) survives `JSON` round-trip **and** the import sanitizer `normalizeBezierPath(..., 'local')` unchanged (`toEqual` + identical `d`).
-- `part.points` identity and the whole part object are unchanged by resolution (no hidden rebuild while a canonical path exists).
-- **Real serializer round-trip (added after the first review round):** `src/tests/useSerialization.test.ts` → `Milestone A: a materialized freeform path survives export → import with its handles and legacy points` runs the real authority (`exportProject()` → `importProject()`), then asserts the restored part keeps the canonical path (`toEqual` of the whole path, `handleOut`, `kind: 'smooth'`, identical `d`) **and** the legacy `points` array next to it.
-
-#### F. OGraf / SVG byte parity
-
-- No file under `src/ograf/`, `ShapePartRenderers.tsx`, `StagePartLayers.tsx`, `bounds.ts`, `evaluateFrame`, or the matte authority is modified by this pass.
-- For a **canonical** freeform path, `resolveFreeformPath` returns the identical object, so every render authority that reads `content.path` emits the identical `d` before and after this milestone. What the tests assert is exactly this: object identity plus `buildBezierPathD(resolveFreeformPath(part)) === buildBezierPathD(part.path)` in `freeformTangentPersistence.test.ts`. The renderers themselves are **not** called by that test — OGraf's canonical-path output is pinned by the existing, unchanged `src/tests/ografSvg.test.ts` (`d` for a canonical freeform layer), and Canvas/matte resolution is unchanged code, so the parity argument is structural rather than a new byte-diff assertion.
-- `npm run validate:ograf` PASS and the OGraf suite in the full run PASS.
-- Not claimed: byte parity for an *edited* handle (edits legitimately change geometry) and for a points-only layer **after** its first edit (documented deviation below).
-
-#### G. Manual editor smoke (real Chromium, real app)
-
-Throwaway Playwright spec (deleted after the run) seeded a scene with a canonical-path freeform layer plus a rect layer, then asserted against the live DOM:
-
-| Step | Result |
-|---|---|
-| no selection → overlay absent; select layer → overlay present with 3 markers | PASS |
-| click a vertex → its two handles appear | PASS |
-| drag the out-handle 90/−60 px → rendered `d` changes and the handle follows the pointer within 2 px | PASS |
-| `Ctrl+Z` → `d` restored byte-for-byte; `Ctrl+Shift+Z` → `d` reapplied | PASS |
-| drag then `Escape` → `d` restored; the following `Ctrl+Z` steps over the *previous* action (no entry for the cancelled drag) | PASS |
-| switching the selected layer away → overlay removed, back → re-rendered | PASS |
-
-The smoke is now a **permanent, re-runnable spec** instead of a throwaway one: `e2e/canvas-tangent-authoring.spec.ts` (seeds the scene through the autosave key, asserts the same table above, writes `test-results/tangent-authoring-handles.png` and `test-results/tangent-authoring-eligibility.png`). `test-results/` is not tracked, so the screenshots are regenerated by running the spec; the spec itself is the auditable artefact. It is not part of CI or the release gate (neither runs this file).
-
-Existing interaction e2e specs re-run on the branch for the "not obviously broken" part of the requirement: `canvas-interaction-v1.spec.ts` (gizmo corner resize, cursor-anchored zoom, marquee selection), `interactive-shape-creation-v1.spec.ts` (shape tools incl. Escape cancel), `editor-interaction-regressions.spec.ts` (mirror duplicate keeps the selection gizmo aligned) — **9 passed**.
-
-Note recorded during the smoke: a `custom_freeform` layer intentionally renders no transform gizmo (`SelectionGizmo` skips `TransformGizmo` for freeform parts), so the gizmo check uses the rect layer. This is pre-existing behaviour, unchanged here.
-
-#### Changed files
+### Files changed
 
 | File | Change |
 |---|---|
-| `src/utils/freeformTangentEligibility.ts` | **new** — pure eligibility predicate (single guard authority) |
-| `src/utils/freeform.ts` | `resolveFreeformPath` normalizes legacy points |
-| `src/components/Canvas/StageCanvas.tsx` | inline guard chain replaced by the helper call; unused import removed |
-| `src/components/Canvas/overlays/FreeformTangentOverlay.tsx` | selection model (vertex + handle state, layer/topology reset), state-driven Escape/batch close, drag-scoped key listener, zero-length handle guard, `data-selected` marker on the handle hit target |
-| `src/tests/freeformTangentEligibility.test.ts` | **new** — 23 guard/priority tests |
-| `src/tests/freeformTangentPersistence.test.ts` | **new** — 6 normalization/materialization/parity tests |
-| `src/tests/freeformTangentHistory.test.tsx` | **new** — 3 real-`useHistory` tests |
-| `src/tests/freeformTangentOverlay.test.tsx` | rewritten — 19 tests (coordinate matrix, selection model, Escape/pointercancel, smooth-at-anchor, canonical priority) |
-| `docs/KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md` | §4/§5/§7/§9/§10/§12 clarified where the implementation forced wording |
-| `reports/progress_108_canvas_tangent_authoring.md` | this report |
+| `src/components/Timeline/TrackLane.tsx` | `diamondKeyboardProps` contract (role, name, selected state, Enter/Space, arrow walk) applied to the three diamond renderers; legacy lane iterates `sortedKfs` |
+| `src/components/Inspector/TemporalGraphPanel.tsx` | SVG `role="img"` → labelled `group`; decorative geometry `aria-hidden`; richer keyframe-point labels; helper text now states the arrow-key contract |
+| `src/components/Inspector/sections/transform/SelectedKeyframeSection.tsx` | `role="group"` + frame-aware `aria-label`; input labels unchanged |
+| `src/components/Timeline/SequencerTimeline.css` | `:focus-visible` for `.keyframe-diamond` and `.ue-prop-diamond` |
+| `src/kcsEditorTheme.css` | `:focus-visible` for `.temporal-graph-svg circle` |
+| `src/tests/timelineKeyframeA11y.test.tsx` | **new** — 8 tests for the diamond contract |
+| `src/tests/TemporalGraphPanel.test.tsx` | updated to the group semantics + 3 new keyboard/decorative tests |
+| `src/tests/selectedKeyframeSection.test.tsx` | added the group-label test (existing label assertions kept) |
+| `e2e/graph-accessibility.spec.ts` | **new** — real-browser keyboard smoke (2 tests) |
+| `reports/progress_109_graph_accessibility.md` | this report |
 
-Removed claim: the previous test name "leaves other vertices identical" asserted only the dragged vertex in one direction; the test was renamed and now reads the neighbouring smooth vertex's `handleOut`/`handleIn` after the drag.
+### User-facing behavior
 
-#### Validation
+- **Graph keyboard behavior:** the value graph's keyframe points are reachable with `Tab`, announce frame + value + "use the Up and Down arrow keys to change it", and `ArrowUp`/`ArrowDown` change the value through the existing callback (unchanged math, unchanged drag behavior). The speed graph stays read-only and exposes no points.
+- **Keyframe row behavior:** each keyframe diamond is a `button` in the tab order, announced as e.g. "Keyframe at frame 12, Track a, channels x, easeInOut" (canonical) or "Keyframe at frame 12, Location X, value 140.00" (expanded channel lanes). `Enter` or `Space` selects that keyframe and moves the playhead to its frame; on the parent lane it also selects the part, exactly like the existing click. The channel-lane diamond had no click handler before, so its keyboard path mirrors its own mousedown selection without starting a drag. `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order, stop at the ends, and consume the key there so the timeline never scrolls. Mouse click and drag behave as before (the channel diamond gained a click handler that repeats the same selection/frame result as its mousedown).
+- **Selected-keyframe section behavior:** the panel is announced as a group scoped to the selected frame; its numeric inputs keep their existing labels and pipeline.
+- **Screen-reader semantics:** the graph is a labelled group instead of an image (its controls are no longer hidden); decorative SVG geometry is `aria-hidden`; the selected keyframe is exposed via `aria-pressed`; no control is left unnamed.
+- **Focus visibility:** timeline diamonds show a cyan `outline` plus a soft glow on `:focus-visible`; graph keyframe points show a cyan `outline` on `:focus-visible`. Both are keyboard-only states; mouse focus is unchanged. The real-browser smoke asserts the painted `outline-style`/`outline-width`, not just the pseudo-class.
+- **Unsupported/out-of-scope:** no roving-tabindex manager (every diamond is normally tabbable), no keyframe add/delete/nudge shortcuts, no arrow-key scrubbing of the playhead, no timeline restructure, no new shortcut registry, no change to Escape semantics.
+
+### Tests added/updated
+
+| File | Tests | Focus |
+|---|---|---|
+| `src/tests/timelineKeyframeA11y.test.tsx` | 8 | labelled focusable diamonds, `aria-pressed`, Enter/Space activation (keyframe + frame on both keys, part selection asserted on Enter), arrow walk in both directions with end stops and a lone diamond (key cancellation asserted for the right end and the lone case), mouse click regression, channel-lane labels with values and local activation, legacy composite labels with frame jump |
+| `src/tests/TemporalGraphPanel.test.tsx` | 6 (2 added, 1 rewritten from the old `role="img"` assertions) | group semantics + hidden decoration + focusable labelled points + `aria-describedby` keyboard contract + ArrowUp/ArrowDown editing + speed-graph read-only + handle inputs |
+| `src/tests/selectedKeyframeSection.test.tsx` | 19 (1 added) | existing value/pipeline coverage plus the frame-scoped group label |
+| `e2e/graph-accessibility.spec.ts` | 2 | real Chromium: Tab traversal reaches a diamond, the painted focus ring (`outline-style`/`outline-width`) is asserted, the arrow walk moves focus in frame order, `Enter` selects and opens the selected-keyframe panel, mouse click still selects, no console errors; and — through the Curve Studio control, with no early-exit path — the graph group, its Tab-reachable keyframe point, its painted ring, its ArrowUp edit and its three `aria-hidden` decorations |
+
+### Validation matrix
 
 | Command | Result |
 |---|---|
-| `npx vitest run` on the tangent/path suites + `useSerialization` | 165 passed (19 files) |
-| Focused per-file counts | eligibility 23 · persistence 6 · overlay 21 · history 3 · initializer 12 · bezierPath 5 · useSerialization 95 |
-| `npm test` (full suite) | 108 files / 1641 tests passed |
-| `npm run validate:ograf` | PASS (`fixtures/ograf/minimal.ograf.json` valid) |
-| `npm run qa:release` | PASS — release gate 2/2, candidate SHA resolved from HEAD |
-| `npm run build` | PASS (`tsc -b && vite build`) |
+| Focused Vitest (`timelineKeyframeA11y`, `TemporalGraphPanel`, `selectedKeyframeSection`) | PASS — 3 files / 35 tests |
+| `npx playwright test e2e/graph-accessibility.spec.ts` | PASS — 2 tests |
+| Full Vitest (`npm test`) | PASS — 109 files / 1,652 tests |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium tests (candidate resolved from HEAD) |
+| `npm run build` | PASS |
 | `npx tsc --noEmit` | clean |
-| `npm run lint` | clean (one pre-existing `react-refresh` warning in `AnimatorContext.tsx`) |
+| `npm run lint` | clean (pre-existing `AnimatorContext` Fast Refresh warning only) |
 | `git diff --check` | clean |
-| `npx playwright test e2e/canvas-tangent-authoring.spec.ts` | PASS — permanent real-browser smoke (1 test) |
 
-#### Deviations and limits (disclosed, not hidden)
+### Known warnings
 
-1. **Empty-canvas click.** The contract §7 wording said an empty-canvas click must clear only the overlay-local selection. The stage already clears the *app* layer selection on an empty-canvas pointer-down — existing behaviour that this milestone must not change — and that necessarily unmounts the overlay. The contract was corrected to state the actual, pre-existing behaviour instead of adding a second selection authority.
-2. **Legacy points-only layers and the degenerate closing vertex.** `normalizeClosedPoints` drops a repeated closing vertex, so for a points-only layer that carries one, the overlay shows/edits the normalized topology while the modern canvas and OGraf render branches (`part.path ?? legacyFreeformPointsToPath(part.points)`) still draw the duplicated, zero-length closing edge (the legacy/non-modern canvas branch already normalizes: `ShapePartRenderers.tsx:345-348`). A scene imported through `src/utils/v6Migration.ts` materializes a canonical path from the raw legacy points, so such a layer never reaches the overlay's normalization step at all — pre-existing migration behaviour, outside this milestone's scope. The shapes are visually identical (the extra edge has zero length), but after the first handle edit the materialized canonical path is the normalized one, so the `d` string of that layer changes (an edited layer, so F's parity claim does not apply). Canonical-path layers are unaffected. Recorded in the contract §4.
-3. **`resolveFreeformPath` with two coincident legacy points** now returns `undefined` (normalization leaves one point) instead of a degenerate 2-point path, so the overlay stays hidden. Defence, not a behaviour loss: a 2-point "polygon" was never renderable as a closed shape.
-4. **Extreme coordinates are refused, not repaired.** Individually finite coordinates near the double-precision limit can overflow the mirror/normalization arithmetic. The drag writer refuses non-finite output (the counterpart keeps its value); the §8 initializer refuses it too, falling back to the direction-and-reach handle and then to a zero-length handle at the vertex, and a vertex whose own coordinates are not finite gains no computed handles. Both are pinned by tests, and both tests fail on the pre-fix code (verified by replaying the old expressions). A non-finite value that a user scene already contains is preserved as-is: the versioned SceneData import sanitizes handles, the legacy `AnimationProject` import does not, and repairing that path is outside this milestone.
-5. **Merge is not ff-possible on this branch base.** See §Branch. Awaiting an explicit decision.
+- Pre-existing: `react(only-export-components)` in `AnimatorContext.tsx`, Vite chunk-size advisory, the `e2e` folder is outside the Vitest `include` glob.
 
-##### Independent review rounds
+### Protected invariants
 
-| Round | Scope | Verdict | Outcome |
-|---|---|---|---|
-| 1 | `d3aa135..c7ae7bc` (the original implementation) | BLOCKED | the five findings closed in this pass |
-| 2 | `c7ae7bc..0114098` (this pass) | BLOCKED | blockers 2/3/4 CLOSED; two gaps remained: (a) no real `exportProject()` → `importProject()` round-trip of a materialized path — the new test in `useSerialization.test.ts` closes it; (b) `Math.hypot` overflow on individually-finite imported coordinates could still write `Infinity`/`NaN` — closed by the non-finite policy in §5 plus the `1.7e308` counterpart test. Six documentation over-claims were also corrected (round-trip wording, renderer-parity wording, the NaN/Infinity claim, the initializer reach claim, screenshot paths now replaced by a permanent spec, and the points-only render generalization). |
-| 3 | `0114098..eb1f1a1` (fix commits) | BLOCKED | blocker 1 CLOSED (real `exportProject()` → `importProject()` round-trip); blocker 5 still OPEN, with two extreme-coordinate paths named: the §8 initializer could store an overflowing mirror, and a dragged vector whose `hypot` overflows collapsed the counterpart onto the anchor (both finite-input arithmetic, not regressions of this milestone). Both are now guarded and covered by tests, and the five remaining documentation over-claims were rewritten to their exact scope. |
-| 4 | `71e4290` / `469c070` (extreme-coordinate fixes) | BLOCKED | the drag side CLOSED; the initializer guard was incomplete — the *final* direction-and-reach fallback was still unvalidated, and one newly added test selected the wrong vertex so it passed on the pre-fix code. Both are fixed: the initializer now walks mirror → direction-and-reach → degenerate-onto-vertex, and the two regression tests were corrected/added and verified to fail pre-fix. |
-| 5 | `e40b808` (initializer fallback + tests) | BLOCKED | both named defects CLOSED, verified with the exact pre-fix failing assertions; one new medium finding: the degenerate fallback copied a non-finite *vertex* into new handles. Fixed by a finite-anchor precondition (a non-finite vertex gains no computed handles) plus two tests, and the contract/report wording scoped to exactly that. |
-| 6 | `ffaf216` (finite-anchor guard + wording scoping) | **READY** | the guard closes the round-5 reproduction, both earlier defects stay CLOSED, no new defect, documentation matches the code, residual note only: existing non-finite handles are pass-through by design. |
+- No change to the evaluator, interpolation, keyframe/channel model, timeline mutation utilities, `useKeyboardShortcuts`, serialization, OGraf export/runtime, or any package/workflow file.
+- No new dependency, state store, event bus, shortcut registry, or UI framework.
+- Mouse interactions behave as before: parent-lane and legacy diamond click/drag/context-menu handlers are byte-identical, and the channel diamond keeps its mousedown drag plus gains a click that produces the same selection/frame result.
+- Tag `v1.1.0-rc.1`, the draft GitHub release, npm metadata, `without-mask`, global OMP configuration, `C:\Users\ertugrul.ak\Desktop\KCS`, and `ograf-graphics` are untouched.
 
-Self-found hardening during round 2: the unmount cleanup that closes an open batch was bound to `onBatchEnd`'s identity, so a re-created callback during a drag could have closed the batch early and split one drag into several history entries. It now reads the latest callback through a ref and is bound to unmount only.
+### Independent review result
 
-### Merge status
+Round 1 (`eece046`) returned **BLOCKED** with three findings and six documentation over-claims; all were addressed in the review-fix commit:
 
-**MERGED into `main` by fast-forward** (approved replay strategy).
+| Finding | Severity | Resolution |
+|---|---|---|
+| The graph Playwright test could pass without opening the graph (it returned early when the graph was not mounted) | medium | The test now opens the Curve Studio modal through its own control, asserts the labelled group, Tab-reaches the keyframe point, asserts the painted focus ring, edits with `ArrowUp`, and checks the three `aria-hidden` decorations — there is no early exit |
+| `ArrowLeft`/`ArrowRight` at the lane ends returned before `preventDefault`/`stopPropagation`, leaving the key unconsumed (timeline scroll) | low | The lane now consumes the arrow before resolving the neighbour; two tests dispatch a cancelable event and assert `defaultPrevented` |
+| The focus-ring assertion only checked `:focus-visible`, not the painted style | low | Both smoke tests now read the computed `outline-style` / `outline-width` from the focused element |
+| Over-claims: universal click parity, "graph E2E PASS" wording, glow on the graph ring, incomplete test-coverage wording, "mouse entirely unchanged", changed-file list and test counts | documentation | The report now states the exact per-renderer activation effects, the graph outline (no glow), the strengthened assertions, the channel-diamond click addition, and the real test counts, and it lists itself in the changed-files table. Round 2 accepted every code finding as CLOSED and returned the documentation notes above, which this correction addresses (the counts now match the file: 8 tests in `timelineKeyframeA11y.test.tsx`, 6 in `TemporalGraphPanel.test.tsx`, 19+1 in `selectedKeyframeSection.test.tsx`, 2 in the Playwright spec). |
 
-- Replay branch: `feat/canvas-tangent-authoring-replay`, created from `main` at `312a0d771123b2b64f9b6f5779f873b439eedab5`, carrying the eleven milestone commits re-applied on top of current `main` (same messages, new hashes `d1b396a` … `1ed65e0`, plus the final state commit)
-- Final `main` / `origin/main`: `077911b469bf7026364c0335e748114bf8df05c0` (Milestone A integration commit; a docs state-reconciliation commit follows it); CI runs `35206117254` and `35207913453` success
-- The original branch `feat/canvas-tangent-authoring` stays as the review artefact and was not rewritten
-- Conflicts were limited to documentation/handoff files and were resolved in favour of the branch content (the newest), except `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, which exists only on `main` and was preserved and updated
-- No rebase, no merge commit, no force push, no history rewrite: `main` is a strict superset of its previous state
-- `v1.1.0-rc.1` tag target, the draft GitHub release, and npm are untouched
+Round 2 (`e1b8400`) verdict: **READY WITH WARNINGS** — all three defects CLOSED (the graph smoke cannot pass without the graph semantics, the arrow keys are consumed at lane ends and on a lone diamond, the focus-ring assertions read the painted style). The only remaining findings were documentation notes about test counts and coverage wording, corrected in the follow-up docs commit; the reviewer also observed that deleting only the component-specific focus rules would not fail the smoke because the global `[role='button']:focus-visible` rule in `src/index.css` paints an equivalent 2 px ring — the visual contract holds either way, the assertion proves the computed result rather than a particular selector.
 
----
+### Merge/push status
 
-## Progress 109 — Milestone B Start Note (Graph + Keyboard Accessibility)
+**MERGED into `main` by fast-forward** at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` and pushed (`beb4b49..96e8f9d`). The branch `feat/graph-accessibility` carried three commits (`eece046` feature, `e1b8400` review fixes, `96e8f9d` documentation correction); `main` was a strict superset afterwards. No rebase, no merge commit, no force push, no history rewrite. Tag `v1.1.0-rc.1`, the draft release, and npm are untouched.
 
-### Status
+Known residual risks (accepted, no AT matrix was run): the derived speed graph changes from an `img` graphic to a named group with no focusable content, so its screen-reader announcement is reasoned rather than measured; `aria-pressed` carries toggle semantics while activation only selects; `Shift`+`Enter`/`Shift`+`Space` does not forward the shift-modifier part-selection behaviour that a shift-click performs.
 
-Documentation only. **Milestone B has not been implemented**; this note fixes the start state, the scope boundary, and the gate for the implementation session. No source, test, package, or workflow file was touched.
+### Next recommended task
 
-### Preflight state (verified)
-
-| Item | Value |
-|---|---|
-| Repo | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
-| `main` / `origin/main` | `07d8f8dddf3fbe9820e6dccd728676b51c6d397f` (synchronized, working tree clean) |
-| Milestone A integration commit | `077911b469bf7026364c0335e748114bf8df05c0` — verified as an ancestor of `main` |
-| `v1.1.0-rc.1` tag target | `46d2a3e59e065816d972dcd56951803951b577f6` (unchanged) |
-| Milestone A CI | runs `35206117254` (merge), `35207913453` (state reconciliation), `35208109947` (final wording) — all success |
-| Branches | `feat/canvas-tangent-authoring` (review artefact), `feat/canvas-tangent-authoring-replay` (identical to `main`) |
-
-### Milestone A — merged (precedent for B)
-
-Milestone A (direct canvas tangent handle authoring) is merged into `main`:
-
-- Selecting a single freeform layer in edit mode shows its vertices on the stage; clicking a vertex reveals its Bezier tangent handles; dragging a handle reshapes the rendered path live; double-clicking a vertex toggles corner ↔ smooth with neighbour-derived symmetric handles.
-- One history entry per completed drag; `Escape` cancels an in-flight drag and records nothing.
-- Six independent review rounds, final verdict READY; validation 108 files / 1,641 tests plus `validate:ograf`, `qa:release`, build, TypeScript, lint, and the real-browser spec `e2e/canvas-tangent-authoring.spec.ts`.
-- Integration was an approved replay onto current `main` followed by a fast-forward merge: no rebase, no merge commit, no force push, no history rewrite.
-
-Reusable lessons for B: extract the pure predicate/guard list so the tests and the runtime condition cannot drift; state the exact scope of every claim in the contract; keep the review loop bounded and fix only what the reviewer can reproduce.
-
-### Milestone B — scope
-
-Goal: make the graph and path editing surfaces usable without a mouse, and correctly labelled for screen readers.
-
-In scope:
-
-- Keyboard reachability for `TemporalGraphPanel`: focusable panel and graph area, arrow-key navigation across keyframes/values where a focus model already exists, `Enter`/`Space` activation of the focused control, and focus that survives re-renders.
-- Screen-reader labelling for the keyframe rows, the selected-keyframe sections, and the graph surface: accessible names, roles, `aria-selected`/`aria-expanded`-style state where the UI already has that state, and no decorative element leaking into the accessibility tree.
-- Focus visibility that matches the existing design system (see `docs/design/KCS_DESIGN_SYSTEM.md` focus requirements), including reduced-motion behaviour.
-
-Out of scope (hard boundary):
-
-- No graph engine, evaluator, channel, or timeline-mutation rewrite; no new state store or event bus.
-- No broad visual/style churn, no design-system rewrite, no new dependency or UI framework.
-- No package/lockfile/workflow/release change, no tag or draft-release edit, no npm publish.
-- No new keyboard shortcut registry: reuse `useKeyboardShortcuts` and the existing tool shortcuts, and do not remap or remove existing keys.
-
-### Authorities to reuse
-
-| Concern | Authority |
-|---|---|
-| Graph + keyframe surfaces | `src/components/Timeline/TemporalGraphPanel.tsx`, keyframe rows and selected-keyframe sections in the timeline |
-| Graph/value/channel data | the existing keyframe/channel model in `src/types/animator.ts` and the timeline mutation utilities |
-| Shortcuts | `src/hooks/useKeyboardShortcuts.ts` |
-| Design constraints | `docs/design/KCS_DESIGN_SYSTEM.md` (focus visibility, semantic colour, reduced motion) |
-
-### Validation and gate for the implementation session
-
-1. Focused a11y tests (keyboard traversal, activation, labelling) plus one Playwright smoke that drives the panel with the keyboard only.
-2. Full set: `npm test`, `npm run validate:ograf`, `npm run qa:release`, `npm run build`, `npx tsc --noEmit`, `npm run lint`, `git diff --check`.
-3. One focused independent review before any merge; integrate by fast-forward, or by an approved replay if the branch and `main` have diverged.
-4. Stop and report if the work grows beyond narrow UI/accessibility.
-
-### Recommended next prompt
-
-"KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY. On a new `feat/graph-accessibility` branch, make the existing graph/path editing surfaces keyboard reachable and screen-reader labelled (TemporalGraphPanel, keyframe rows, selected-keyframe sections), reusing the existing graph/value/channel authorities: no graph engine rewrite, no broad style churn, no package/workflow/release change. Add focused a11y tests, run one Playwright smoke, run the full validation set, then one focused independent review before any merge."
+Milestone C — first export / onboarding flow (roadmap item 5), reusing the Task 105 diagnostics and the existing export UI; no host/vendor contract invention and no package format change.
 
 ---
 
@@ -492,7 +319,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ### Next scoped work
 
-1. Start **Milestone B — graph + keyboard accessibility (roadmap item 4)** — the current next action. Read `reports/progress_109_graph_accessibility_start.md`, then `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md` for the Milestone A precedents. Implementation briefly: keyboard reachability and screen-reader labelling for the graph/path editing surfaces that already exist (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections). No graph-engine rewrite, no broad style churn, reuse the existing graph/value/channel authorities; focused a11y tests + one Playwright smoke + full validation + independent review; stop if the work grows beyond narrow UI/accessibility.
+1. Start **Milestone C — first export / onboarding flow (roadmap item 5)** — the current next action; Milestone B is merged (see below). Read `reports/progress_109_graph_accessibility_start.md`, then `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md` for the Milestone A precedents. Implementation briefly: keyboard reachability and screen-reader labelling for the graph/path editing surfaces that already exist (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections). No graph-engine rewrite, no broad style churn, reuse the existing graph/value/channel authorities; focused a11y tests + one Playwright smoke + full validation + independent review; stop if the work grows beyond narrow UI/accessibility.
 2. Milestone C (first export / onboarding flow) follows only after B, and D–F stay plan-only; dependency, workflow, and release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -513,6 +340,15 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 - Never store flattened source or test copies there. Those copies are separate files, and the ones named `src__*test*` are picked up by the Vitest default include glob, which breaks CI.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset folder, not a handoff dump. Never copy the bundle there unless the user explicitly asks.
 - Omitted files are never deleted from the repository; they simply are not part of the bundle.
+
+### Milestone B merged — graph + keyboard accessibility
+
+- Branch `feat/graph-accessibility` was fast-forward-merged into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` (no merge commit, no rebase, no history rewrite).
+- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; the selected-keyframe panel is a group scoped to its frame; focus rings were added for the diamonds and the graph points.
+- Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
+- Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
+- Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
+- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; plan-only, not started.
 
 ---
 
@@ -557,7 +393,8 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 ### Remaining work
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
-- **Next: Milestone B (graph + keyboard accessibility, item 4)** — not started; start note `reports/progress_109_graph_accessibility_start.md`. C follows it, and D–F stay plan-only. Dependency, workflow, and release changes require explicit approval.
+- **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
+- **Next: Milestone C (first export / onboarding flow, item 5)** — not started, plan-only; D–F stay plan-only. Dependency, workflow, and release changes require explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -579,9 +416,20 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Model roles, provider mappings, task concurrency, and global OMP configuration remain unchanged.
 - Candidate package version is `1.1.0-rc.1`; package remains private and unreleased.
 
+### Milestone B merged — graph + keyboard accessibility
+
+- Branch `feat/graph-accessibility` was fast-forward-merged into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` (no merge commit, no rebase, no history rewrite).
+- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; the selected-keyframe panel is a group scoped to its frame; focus rings were added for the diamonds and the graph points.
+- Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
+- Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
+- Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
+- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; plan-only, not started.
+
 ---
 
-## 7. Current Roadmap Plan
+## 7. Current Roadmap Plan and Changelog
+
+### KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 
 ## KCS Grouped Roadmap Execution Plan
 
@@ -592,8 +440,8 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | Milestone | Roadmap items | Branch | Status |
 |---|---|---|---|
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
-| B — Graph + keyboard accessibility | 4 | — | **NEXT — not started** (start note: `reports/progress_109_graph_accessibility_start.md`) |
-| C — First export / onboarding flow | 5 | — | Not started |
+| B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
+| C — First export / onboarding flow | 5 | — | **NEXT — not started** |
 | D — State / CI / warning hygiene | 6, 9 | — | Plan only |
 | E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
 | F — Architecture exploration only | 10, 11, 12 | — | Plan only |
@@ -652,9 +500,76 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 ### Recommended next prompt
 
-"KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY. On a new `feat/graph-accessibility` branch, make the existing graph/path editing surfaces keyboard reachable and screen-reader labelled (TemporalGraphPanel, keyframe rows, selected-keyframe sections), reusing the existing graph/value/channel authorities: no graph engine rewrite, no broad style churn, no package/workflow/release change. Add focused a11y tests, run one Playwright smoke, run the full validation set, then one focused independent review before any merge."
+"KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW. On a new `feat/export-onboarding` branch, add a short first-successful-OGraf-export path for new users, reusing the Task 105 export diagnostics, the existing templates, and the existing export UI: no host/vendor contract invention, no OGraf package format change, no new dependency, and no package/workflow/release change. Add focused tests plus one Playwright smoke, run the full validation set, then one focused independent review before any merge."
 
-Historical note: the previous recommendation ("KCS MILESTONE A COMPLETION …") was carried out — all five review items were closed, the review returned READY, and Milestone A was replayed and fast-forward merged into `main` (`077911b`).
+Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`), and "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`).
+
+### CHANGELOG.md
+
+## Changelog
+
+All notable changes to **Keyframe Character Studio** will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+### [Unreleased]
+
+#### Added
+- The timeline keyframe diamonds are keyboard operable: each one is a named button in the tab order, `Enter`/`Space` selects the keyframe and moves the playhead (and selects the part on the parent lane), and `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order.
+- The value graph's keyframe points are announced with their frame and value, and its decorative axes and curve stay out of the accessibility tree; the selected-keyframe panel is exposed as a group scoped to its frame.
+- Bezier tangent handles can be authored directly on the stage: select a single freeform layer, click a vertex to reveal its handles, drag a handle to reshape the path live, and double-click a vertex to toggle corner ↔ smooth. Each drag is a single undo step and `Escape` cancels one without recording history.
+- Track-matte source relationships are now visible in the outliner for both relationship models (`Mask → <source name>`), and unnamed layers fall back to their ids in the matte source pickers.
+- The Track Matte V2 card's source select carries an accessible label.
+- Actionable OGraf export diagnostics: every blocking diagnostic now reports a stable title, the failing layer or feature, the reason, and a concrete next step, and it never reports success while export is blocked.
+- Non-blocking OGraf warnings are surfaced as a compact grouped notification instead of being silently dropped.
+- Package materialization failures now carry stable failure codes; filesystem guidance states the trusted-directory requirement, the unsupported hostile-concurrency case, and avoids claiming perfect OS-level protection. Machine paths are reduced to a display-safe form.
+
+#### Changed
+- The value and speed graphs are exposed as labelled groups instead of images, and focus rings were added for the timeline diamonds and the graph keyframe points.
+- Freeform paths that only carry legacy `points` normalize a repeated closing vertex before the editing overlay materializes a canonical `path` on first edit; the legacy array itself is preserved.
+- Matte relationship resolution went through one shared helper that mirrors the rendered result, so the outliner indicator and the stage agree for enabled, disabled, missing, and unusable sources.
+
+#### Release candidate `1.1.0-rc.1` (unreleased package metadata)
+- Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.
+- The Git tag and GitHub draft prerelease exist; this changelog entry remains under `[Unreleased]` because the package is private and was not published.
+
+#### Security
+- Hardened prototype-sensitive imported OGraf keys, package paths, MIME lookups, and generated runtime maps.
+- Hardened SVG input boundaries, source-path handling, output filesystem checks, hierarchy, broadcast state, and mask/matte parity.
+- The `1.1.0-rc.1` candidate records accepted operational warnings for hostile-concurrency filesystem mutation and network-dependent schema validation.
+
+---
+
+
+### [1.0.0] - 2026-08-02
+
+#### Added
+- **Motion Design Sequencer**:
+  - Multi-track timeline hierarchy supporting track lock, eye visibility, and z-index ordering.
+  - Precision keyframing engine for position (`x`, `y`), scale (`scaleX`, `scaleY`), rotation, and opacity at 60 FPS.
+  - Interactive Cubic Bezier Easing editor with velocity curve presets and real-time canvas preview.
+  - Sequence management tabs with inline double-click renaming and deletion safety.
+- **Directional Transform Gizmo**:
+  - 8-handle transform controls featuring 4 corner square handles for uniform scaling and 4 midpoint circle handles for single-edge directional stretching.
+  - Trigonometric matrix math for directional single-edge resizing preserving fixed opposite edge world coordinates.
+  - 360° interactive rotation handle.
+- **Media & Shape Masking Engine**:
+  - Dynamic vector geometric clipping masks supporting 6 geometries: Circle, Pill/Capsule, Star, Hexagon, Heart, and Rectangle.
+  - Interactive crop positioning and custom text caption overlays.
+- **Live Broadcast Director Panel (Reji Mode)**:
+  - Zero-latency broadcast triggers for streaming tools (OBS Studio, vMix, NDI).
+  - Individual and global `PLAY IN` / `PLAY OUT` transition animations.
+  - Live broadcast stunts including Bounce, Pulse, Wobble, Spin 360, Shake, Float, and custom keyframe loops.
+- **Dual Database Architecture**:
+  - Production-ready PostgreSQL database with schema (`schema.sql`) and seed data (`seed.sql`).
+  - Zero-config local embedded SQLite database fallback (`keyframe_studio.sqlite`).
+  - Express 5 REST API backend providing `/api/projects`, `/api/presets`, and `/api/health` endpoints.
+- **Testing & Quality Infrastructure**:
+  - Vitest test suite featuring 21 unit and integration test files (62 tests).
+  - Playwright end-to-end (E2E) workflow test suite (`e2e/workflow.spec.ts`).
+  - TypeScript strict mode compilation and Oxlint linting integration.
+  - Agent governance guidelines, project context specification, and domain-driven branch strategy (`.agents/`).
 
 ---
 
@@ -662,14 +577,14 @@ Historical note: the previous recommendation ("KCS MILESTONE A COMPLETION …") 
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 6205 bytes
-- `NEXT_SESSION.md` — 5707 bytes
-- `OMP_FINAL_RESPONSE.md` — 3592 bytes
-- `PROJECT_STATE.md` — 6088 bytes
-- `README.md` — 2357 bytes
-- `manifest.txt` — 3761 bytes
-- `progress_108_canvas_tangent_authoring.md` — 29692 bytes
-- `progress_109_graph_accessibility_start.md` — 5012 bytes
+- `CHANGELOG.md` — 5349 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 6295 bytes
+- `NEXT_SESSION.md` — 7129 bytes
+- `OMP_FINAL_RESPONSE.md` — 6014 bytes
+- `PROJECT_STATE.md` — 7850 bytes
+- `README.md` — 2179 bytes
+- `manifest.txt` — 3017 bytes
+- `progress_109_graph_accessibility.md` — 14343 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

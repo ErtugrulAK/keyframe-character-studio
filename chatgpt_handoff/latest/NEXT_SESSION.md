@@ -27,7 +27,7 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. Start **Milestone B — graph + keyboard accessibility (roadmap item 4)** — the current next action. Read `reports/progress_109_graph_accessibility_start.md`, then `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md` for the Milestone A precedents. Implementation briefly: keyboard reachability and screen-reader labelling for the graph/path editing surfaces that already exist (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections). No graph-engine rewrite, no broad style churn, reuse the existing graph/value/channel authorities; focused a11y tests + one Playwright smoke + full validation + independent review; stop if the work grows beyond narrow UI/accessibility.
+1. Start **Milestone C — first export / onboarding flow (roadmap item 5)** — the current next action; Milestone B is merged (see below). Read `reports/progress_109_graph_accessibility_start.md`, then `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md` for the Milestone A precedents. Implementation briefly: keyboard reachability and screen-reader labelling for the graph/path editing surfaces that already exist (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections). No graph-engine rewrite, no broad style churn, reuse the existing graph/value/channel authorities; focused a11y tests + one Playwright smoke + full validation + independent review; stop if the work grows beyond narrow UI/accessibility.
 2. Milestone C (first export / onboarding flow) follows only after B, and D–F stay plan-only; dependency, workflow, and release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -48,3 +48,12 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 - Never store flattened source or test copies there. Those copies are separate files, and the ones named `src__*test*` are picked up by the Vitest default include glob, which breaks CI.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset folder, not a handoff dump. Never copy the bundle there unless the user explicitly asks.
 - Omitted files are never deleted from the repository; they simply are not part of the bundle.
+
+## Milestone B merged — graph + keyboard accessibility
+
+- Branch `feat/graph-accessibility` was fast-forward-merged into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` (no merge commit, no rebase, no history rewrite).
+- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; the selected-keyframe panel is a group scoped to its frame; focus rings were added for the diamonds and the graph points.
+- Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
+- Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
+- Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
+- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; plan-only, not started.

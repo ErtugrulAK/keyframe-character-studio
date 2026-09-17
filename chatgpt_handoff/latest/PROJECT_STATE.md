@@ -37,7 +37,8 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 ## Remaining work
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
-- **Next: Milestone B (graph + keyboard accessibility, item 4)** — not started; start note `reports/progress_109_graph_accessibility_start.md`. C follows it, and D–F stay plan-only. Dependency, workflow, and release changes require explicit approval.
+- **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
+- **Next: Milestone C (first export / onboarding flow, item 5)** — not started, plan-only; D–F stay plan-only. Dependency, workflow, and release changes require explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -58,3 +59,12 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - `.omp/config.yml` retains `memory.backend: mnemopi`.
 - Model roles, provider mappings, task concurrency, and global OMP configuration remain unchanged.
 - Candidate package version is `1.1.0-rc.1`; package remains private and unreleased.
+
+## Milestone B merged — graph + keyboard accessibility
+
+- Branch `feat/graph-accessibility` was fast-forward-merged into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` (no merge commit, no rebase, no history rewrite).
+- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; the selected-keyframe panel is a group scoped to its frame; focus rings were added for the diamonds and the graph points.
+- Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
+- Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
+- Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
+- Next roadmap milestone: **C — first export / onboarding flow (item 5)**; plan-only, not started.

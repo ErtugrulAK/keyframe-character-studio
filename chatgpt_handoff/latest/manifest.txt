@@ -1,13 +1,14 @@
-# KCS ChatGPT Upload Manifest — Pre-Milestone-B State
+# KCS ChatGPT Upload Manifest — Milestone B (Graph + Keyboard Accessibility)
 
 Clean refreshed: YES
-Bundle purpose: pre-Milestone-B state — Milestone A merged and verified, Milestone B (graph + keyboard accessibility) scoped as the next milestone
+Bundle purpose: Milestone B — graph + keyboard accessibility — merged, reviewed, and validated
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Current main / origin HEAD: at or newer than the Milestone A integration commit 077911b (a state-reconciliation docs commit follows it; later docs commits may be newer still)
-Milestone A branch: feat/canvas-tangent-authoring (review artefact) replayed as feat/canvas-tangent-authoring-replay and MERGED into main by fast-forward (main = origin/main = 077911b)
-Milestone A commits: c7ae7bc (feat), 0114098, b3396ec, eb1f1a1, 71e4290, 469c070, e40b808, ffaf216 (review fixes), b0e1027, b72db0a, f15ac93 (final report and handoff); replayed on main as bd922a6 ... 1ed65e0
-Integration: replay branch created from main at 312a0d7, milestone commits re-applied, fast-forward merged into main (077911b) and pushed; CI run 35206117254 success; no rebase, no merge commit, no force push, no history rewrite
+Current main / origin HEAD: 96e8f9d0313cb81752c04fe58d6e7d00d700a6f4 (Milestone B merge is 96e8f9d; a post-merge documentation commit follows it)
+Milestone B branch: feat/graph-accessibility (local review artefact), merged into main by fast-forward
+Milestone B commits: eece046 (feature), e1b8400 (review fixes), 96e8f9d (documentation correction)
+Ancestry: main was a strict superset after the merge; no rebase, no merge commit, no force push, no history rewrite
+Milestone A integration commit: 077911b (unchanged, still an ancestor of main)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -16,29 +17,27 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the final task response (blockers, validation, review rounds, merge evidence)
-- progress_108_canvas_tangent_authoring.md — Milestone A report (orchestration, blocker-closing pass, verification matrix, validation, review rounds, deviations)
-- progress_109_graph_accessibility_start.md — Milestone B start note (scope, boundaries, authorities, validation gate)
-- KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — design contract, updated where the implementation forced wording
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — grouped roadmap plan: Milestone A merged, Milestone B next
-- NEXT_SESSION.md — repository state with Milestone B as the first next scoped work
+- OMP_FINAL_RESPONSE.md — the Milestone B final response
+- progress_109_graph_accessibility.md — the Milestone B report (implementation, behaviour, tests, validation, review rounds, residual risks, merge status)
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan: A and B merged, C next
+- CHANGELOG.md — repository changelog with the Milestone B entry
+- NEXT_SESSION.md — repository state with Milestone C as the next scoped work
 - PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
 Omitted categories:
 - Source and test files (they live under src/ and e2e/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
-- package.json, ci.yml, release-smoke.yml, the Milestone A design contract, CHANGELOG.md (the repository changelog carries the Milestone A entry)
-- older progress reports, current-state/release documents, QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
+- package.json, ci.yml, release-smoke.yml, older reports, design contracts, current-state/release documents
+- QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision:
-- Focused Vitest: PASS — 7 files / 165 tests
-- Full Vitest: PASS — 108 files / 1,641 tests
+- Focused Vitest: PASS — 3 files / 35 tests
+- Real-browser smoke: PASS — e2e/graph-accessibility.spec.ts (2 tests; not part of CI or the release gate)
+- Full Vitest: PASS — 109 files / 1,652 tests
 - validate:ograf, qa:release (2 Chromium tests), build, TypeScript, lint, git diff --check: PASS with the pre-existing Fast Refresh and Vite chunk-size warnings only
-- Real-browser smoke: PASS — e2e/canvas-tangent-authoring.spec.ts (not part of CI or the release gate)
-- Independent review: READY at round 6 (six rounds; round-6 verdict READY with no new defect and no remaining over-claim)
-Integration: main fast-forwarded to the replay branch tip; v1.1.0-rc.1 tag target, draft release, and npm untouched
+- Independent review: round 1 BLOCKED (3 findings, 6 over-claims) → all closed → round 2 READY WITH WARNINGS (documentation notes corrected)
 
-Next milestone: B — graph + keyboard accessibility (item 4); recommended branch feat/graph-accessibility; start note in this bundle.
+Next milestone: C — first export / onboarding flow (item 5); recommended branch feat/export-onboarding.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

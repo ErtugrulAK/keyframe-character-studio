@@ -432,7 +432,7 @@ Evidence (`git merge-base --is-ancestor` in both directions, then `git rev-list 
 
 Per the protected rules (no rebase, no normal merge commit, no force push) nothing was attempted. Safe options, both needing explicit approval:
 
-1. **Replay onto current `main` (no history rewrite):** create a new branch from `main`, re-apply this branch's changes as new commits (for example `git checkout feat/canvas-tangent-authoring -- <paths>` per logical group, or `git cherry-pick` the four commits), then `git merge --ff-only` that branch into `main`. `chatgpt_handoff/**` should be resolved in favour of the newest content (this branch's refresh).
+1. **Replay onto current `main` (no history rewrite):** create a new branch from `main`, re-apply this branch's ten commits as new commits on it (for example `git checkout feat/canvas-tangent-authoring -- <paths>` per logical group, or `git cherry-pick c7ae7bc^..feat/canvas-tangent-authoring`), then `git merge --ff-only` that branch into `main`. `chatgpt_handoff/**` should be resolved in favour of the newest content (this branch's refresh).
 2. **Approved exception:** a controlled `git merge --no-ff` on `main`, or an approved rebase of the branch onto `main`, which the standing rules currently forbid.
 
 `main`, `origin/main`, the `v1.1.0-rc.1` tag target, the draft GitHub release, and npm were not touched: no push of any kind was performed (the feature branch has no remote counterpart).
@@ -809,7 +809,7 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `PROJECT_STATE.md` — 5804 bytes
 - `README.md` — 2278 bytes
 - `manifest.txt` — 2924 bytes
-- `progress_108_canvas_tangent_authoring.md` — 29177 bytes
+- `progress_108_canvas_tangent_authoring.md` — 29210 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

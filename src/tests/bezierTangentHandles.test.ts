@@ -72,4 +72,38 @@ describe('initializeSmoothHandles', () => {
     expect(next.closed).toBe(true);
     expect(next.version).toBe(1);
   });
+  it('refuses to write a non-finite mirrored handle when the mirror overflows', () => {
+    // anchor (1e308,0) with handleOut (-1e308,0): the mirror of handleOut is
+    // 2 * 1e308 - (-1e308) = Infinity, so it must not become the new handleIn.
+    const path = legacyFreeformPointsToPath([
+      { x: 0, y: 0 },
+      { x: 1e308, y: 0 },
+      { x: 20, y: 20 },
+    ], true)!;
+    path.points[2] = { ...path.points[2], handleOut: { x: -1e308, y: 0 } };
+
+    const vertex = initializeSmoothHandles(path, 2).points[2];
+    expect(vertex.kind).toBe('smooth');
+    expect(Number.isFinite(vertex.handleIn!.x)).toBe(true);
+    expect(Number.isFinite(vertex.handleIn!.y)).toBe(true);
+    // The existing handle is preserved untouched.
+    expect(vertex.handleOut).toEqual({ x: -1e308, y: 0 });
+  });
+
+  it('stays finite and deterministic when the neighbour chord overflows', () => {
+    const path = legacyFreeformPointsToPath([
+      { x: -1e308, y: 0 },
+      { x: 0, y: 0 },
+      { x: 1e308, y: 0 },
+    ], true)!;
+
+    const first = initializeSmoothHandles(path, 1);
+    const second = initializeSmoothHandles(path, 1);
+    const vertex = first.points[1];
+    expect(Number.isFinite(vertex.handleIn!.x)).toBe(true);
+    expect(Number.isFinite(vertex.handleIn!.y)).toBe(true);
+    expect(Number.isFinite(vertex.handleOut!.x)).toBe(true);
+    expect(Number.isFinite(vertex.handleOut!.y)).toBe(true);
+    expect(second.points[1]).toEqual(vertex);
+  });
 });

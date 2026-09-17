@@ -66,6 +66,9 @@ const withMovedHandle = (
   // A handle dragged exactly onto its anchor carries no direction, so the
   // counterpart keeps its own length and direction instead of collapsing.
   if (length <= HANDLE_VECTOR_EPSILON) return { ...vertex, [key]: next };
+  // An overflowing (Infinity) length would normalize to a zero direction and
+  // collapse the counterpart onto the anchor, so the drag only writes itself.
+  if (!Number.isFinite(length)) return { ...vertex, [key]: next };
 
   const counterpartLength = Math.hypot(counterpart.x - vertex.x, counterpart.y - vertex.y);
   const mirrored = handle === 'out'

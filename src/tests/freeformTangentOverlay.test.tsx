@@ -207,6 +207,29 @@ describe('FreeformTangentOverlay', () => {
     expect(Number(incoming.getAttribute('cy'))).toBe(1.7e308);
   });
 
+  it('keeps the counterpart length when the dragged vector itself overflows', () => {
+    const part = makePart({
+      path: makePath([
+        { id: 'a', x: 0, y: 0, handleOut: { x: 6, y: 0 }, handleIn: { x: -6, y: 0 }, kind: 'smooth' },
+        { id: 'b', x: 20, y: 0 },
+        { id: 'c', x: 20, y: 20 },
+      ]),
+    });
+    render(<Harness initialPart={part} />);
+
+    openHandlesFor(0);
+    const handle = screen.getByTestId('freeform-tangent-handle-out');
+    fireEvent.pointerDown(handle, { clientX: 6, clientY: 0, pointerId: 1 });
+    fireEvent.pointerMove(handle, { clientX: 1.7e308, clientY: 1.7e308, pointerId: 1 });
+    fireEvent.pointerUp(handle, { clientX: 1.7e308, clientY: 1.7e308, pointerId: 1 });
+
+    // Math.hypot(1.7e308, 1.7e308) is Infinity, so its normalized direction is
+    // unusable: the counterpart keeps its own length instead of collapsing.
+    const incoming = screen.getByTestId('freeform-tangent-handle-in');
+    expect(Number(incoming.getAttribute('cx'))).toBeCloseTo(-6, 6);
+    expect(Number(incoming.getAttribute('cy'))).toBeCloseTo(0, 6);
+  });
+
   it('rolls the drag back on Escape and closes the batch once', () => {
     const onBatchEnd = vi.fn();
     const part = makePart({

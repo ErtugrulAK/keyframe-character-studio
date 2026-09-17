@@ -241,17 +241,27 @@ export const initializeSmoothHandles = (path: BezierPath, index: number): Bezier
     ?? (leading && magnitudeOf(leading) > HANDLE_CHORD_EPSILON ? leading : undefined)
     ?? (trailing && magnitudeOf(trailing) > HANDLE_CHORD_EPSILON ? trailing : undefined)
     ?? { x: 1, y: 0 };
-  const magnitude = magnitudeOf(raw) || 1;
-  const direction = { x: raw.x / magnitude, y: raw.y / magnitude };
+  const magnitude = magnitudeOf(raw);
+  const direction = Number.isFinite(magnitude) && magnitude > 0
+    ? { x: raw.x / magnitude, y: raw.y / magnitude }
+    : { x: 1, y: 0 };
 
   const spans = [previous ? spanFromVertex(previous) : undefined, next ? spanFromVertex(next) : undefined]
     .filter((span): span is number => span !== undefined);
-  const reach = spans.length > 0 ? HANDLE_REACH_RATIO * Math.min(...spans) : 0;
+  const spanReach = spans.length > 0 ? HANDLE_REACH_RATIO * Math.min(...spans) : 0;
+  // An overflowing span must not push a handle to Infinity; zero reach keeps the
+  // deterministic degenerate answer of §8 instead.
+  const reach = Number.isFinite(spanReach) ? spanReach : 0;
+
+  // A mirror computed from an extreme (but finite) handle can overflow, and a
+  // value that already arrived non-finite is never propagated further.
+  const isFinitePoint = (point: PathPoint | undefined): point is PathPoint =>
+    point !== undefined && Number.isFinite(point.x) && Number.isFinite(point.y);
 
   const mirroredIn = vertex.handleOut ? { x: 2 * vertex.x - vertex.handleOut.x, y: 2 * vertex.y - vertex.handleOut.y } : undefined;
   const mirroredOut = vertex.handleIn ? { x: 2 * vertex.x - vertex.handleIn.x, y: 2 * vertex.y - vertex.handleIn.y } : undefined;
-  const handleIn = vertex.handleIn ?? mirroredIn ?? { x: vertex.x - direction.x * reach, y: vertex.y - direction.y * reach };
-  const handleOut = vertex.handleOut ?? mirroredOut ?? { x: vertex.x + direction.x * reach, y: vertex.y + direction.y * reach };
+  const handleIn = vertex.handleIn ?? (isFinitePoint(mirroredIn) ? mirroredIn : { x: vertex.x - direction.x * reach, y: vertex.y - direction.y * reach });
+  const handleOut = vertex.handleOut ?? (isFinitePoint(mirroredOut) ? mirroredOut : { x: vertex.x + direction.x * reach, y: vertex.y + direction.y * reach });
 
   return {
     ...path,

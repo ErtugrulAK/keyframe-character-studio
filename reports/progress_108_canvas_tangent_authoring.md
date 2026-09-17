@@ -94,7 +94,7 @@ Finish Milestone A on the existing branch by closing the review's five items, th
 
 - Branch: `feat/canvas-tangent-authoring`
 - Milestone A feature commit: `c7ae7bc` — `feat: add direct canvas tangent handle authoring`
-- Blocker-fix commit: `fix: close canvas tangent authoring review blockers` (this pass)
+- Blocker-fix commits: `0114098`, `b3396ec`, `eb1f1a1`, `71e4290`, `469c070`, `e40b808`, `ffaf216` (code fixes, test corrections, documentation scoping)
 - Baseline `main` at branch point: `d3aa135`
 - Current `main` / `origin/main`: `312a0d771123b2b64f9b6f5779f873b439eedab5`
 - Ancestry: `main` and the branch **diverged** (main advanced with four docs/handoff commits after `d3aa135`), so a fast-forward merge is not possible in either direction. No rebase, no merge commit, no force push was performed.
@@ -200,7 +200,7 @@ Removed claim: the previous test name "leaves other vertices identical" asserted
 
 | Command | Result |
 |---|---|
-| `npx vitest run` on the tangent/path suites + `useSerialization` | 162 passed (19 files) |
+| `npx vitest run` on the tangent/path suites + `useSerialization` | 165 passed (19 files) |
 | Focused per-file counts | eligibility 23 · persistence 6 · overlay 21 · history 3 · initializer 12 · bezierPath 5 · useSerialization 95 |
 | `npm test` (full suite) | 108 files / 1641 tests passed |
 | `npm run validate:ograf` | PASS (`fixtures/ograf/minimal.ograf.json` valid) |
@@ -228,10 +228,23 @@ Removed claim: the previous test name "leaves other vertices identical" asserted
 | 3 | `0114098..eb1f1a1` (fix commits) | BLOCKED | blocker 1 CLOSED (real `exportProject()` → `importProject()` round-trip); blocker 5 still OPEN, with two extreme-coordinate paths named: the §8 initializer could store an overflowing mirror, and a dragged vector whose `hypot` overflows collapsed the counterpart onto the anchor (both finite-input arithmetic, not regressions of this milestone). Both are now guarded and covered by tests, and the five remaining documentation over-claims were rewritten to their exact scope. |
 | 4 | `71e4290` / `469c070` (extreme-coordinate fixes) | BLOCKED | the drag side CLOSED; the initializer guard was incomplete — the *final* direction-and-reach fallback was still unvalidated, and one newly added test selected the wrong vertex so it passed on the pre-fix code. Both are fixed: the initializer now walks mirror → direction-and-reach → degenerate-onto-vertex, and the two regression tests were corrected/added and verified to fail pre-fix. |
 | 5 | `e40b808` (initializer fallback + tests) | BLOCKED | both named defects CLOSED, verified with the exact pre-fix failing assertions; one new medium finding: the degenerate fallback copied a non-finite *vertex* into new handles. Fixed by a finite-anchor precondition (a non-finite vertex gains no computed handles) plus two tests, and the contract/report wording scoped to exactly that. |
-| 6 | the finite-anchor guard | not re-reviewed (see Deviations) | the guard, its two tests, and the wording scoping are mechanical follow-ups of a single closed finding; they were validated by the full suite rather than by another review round. |
+| 6 | `ffaf216` (finite-anchor guard + wording scoping) | **READY** | the guard closes the round-5 reproduction, both earlier defects stay CLOSED, no new defect, documentation matches the code, residual note only: existing non-finite handles are pass-through by design. |
 
 Self-found hardening during round 2: the unmount cleanup that closes an open batch was bound to `onBatchEnd`'s identity, so a re-created callback during a drag could have closed the batch early and split one drag into several history entries. It now reads the latest callback through a ref and is bound to unmount only.
 
 ## Merge status
 
-**NOT MERGED.** The branch is committed and fully validated, but `main` advanced with docs-only commits after the branch point, so `git merge --ff-only` cannot be used in either direction. Per the task's protected rules (no rebase, no merge commit, no force push) the merge was stopped and reported for an approval decision.
+**NOT MERGED — fast-forward impossible; awaiting an explicit decision.**
+
+Evidence (`git merge-base --is-ancestor` in both directions, then `git rev-list --left-right --count main...feat/canvas-tangent-authoring`):
+
+- `main` is **not** an ancestor of the branch and the branch is **not** an ancestor of `main`
+- divergence: `4  4` — `main` has 4 commits the branch lacks (`449ed83`, `05418f1`, `9e52ca5`, `312a0d7`: docs/handoff only), the branch has 4 code+docs commits `main` lacks
+- therefore `git merge --ff-only feat/canvas-tangent-authoring` on `main` fails, and `git merge --ff-only main` on the branch fails as well
+
+Per the protected rules (no rebase, no normal merge commit, no force push) nothing was attempted. Safe options, both needing explicit approval:
+
+1. **Replay onto current `main` (no history rewrite):** create a new branch from `main`, re-apply this branch's changes as new commits (for example `git checkout feat/canvas-tangent-authoring -- <paths>` per logical group, or `git cherry-pick` the four commits), then `git merge --ff-only` that branch into `main`. `chatgpt_handoff/**` should be resolved in favour of the newest content (this branch's refresh).
+2. **Approved exception:** a controlled `git merge --no-ff` on `main`, or an approved rebase of the branch onto `main`, which the standing rules currently forbid.
+
+`main`, `origin/main`, the `v1.1.0-rc.1` tag target, the draft GitHub release, and npm were not touched: no push of any kind was performed (the feature branch has no remote counterpart).

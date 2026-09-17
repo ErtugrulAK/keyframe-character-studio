@@ -84,9 +84,11 @@ The orchestrator policy allows fixing in scope and running one more focused revi
 - `without-mask`, global OMP configuration (model roles, provider mappings, `memory.backend: mnemopi`, `task.maxConcurrency: 8`) untouched.
 - `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics` untouched; no secrets handled.
 
-## 10. Next recommended action
+## 10. Next recommended action (historical — this action was completed)
 
-Finish Milestone A on the existing branch by closing the review's five items, then run one focused re-review and merge by fast-forward. `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` records the milestone plan, the approval gates, and the recommended next prompt.
+That recommendation was: finish Milestone A on the existing branch by closing the review's five items, then run one focused re-review and merge by fast-forward. It was carried out: the five items were closed, the review returned READY, and the milestone was replayed and fast-forward merged into `main` (`077911b`).
+
+The current next action is **Milestone B — graph + keyboard accessibility** (roadmap item 4); see the roadmap plan, which now recommends the Milestone B prompt.
 
 ## 11. Blocker-closing pass (this session)
 

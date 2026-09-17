@@ -7,7 +7,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | Milestone | Roadmap items | Branch | Status |
 |---|---|---|---|
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
-| B — Graph + keyboard accessibility | 4 | — | Not started |
+| B — Graph + keyboard accessibility | 4 | — | **NEXT — not started** (start note: `reports/progress_109_graph_accessibility_start.md`) |
 | C — First export / onboarding flow | 5 | — | Not started |
 | D — State / CI / warning hygiene | 6, 9 | — | Plan only |
 | E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
@@ -67,4 +67,6 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 ## Recommended next prompt
 
-"KCS MILESTONE A COMPLETION — close the five review items on `feat/canvas-tangent-authoring`, build the contract's verification matrix, run one focused re-review, fast-forward merge if READY, then refresh the minimal handoff." Milestones B and C follow only after A is merged or explicitly deferred.
+"KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY. On a new `feat/graph-accessibility` branch, make the existing graph/path editing surfaces keyboard reachable and screen-reader labelled (TemporalGraphPanel, keyframe rows, selected-keyframe sections), reusing the existing graph/value/channel authorities: no graph engine rewrite, no broad style churn, no package/workflow/release change. Add focused a11y tests, run one Playwright smoke, run the full validation set, then one focused independent review before any merge."
+
+Historical note: the previous recommendation ("KCS MILESTONE A COMPLETION …") was carried out — all five review items were closed, the review returned READY, and Milestone A was replayed and fast-forward merged into `main` (`077911b`).

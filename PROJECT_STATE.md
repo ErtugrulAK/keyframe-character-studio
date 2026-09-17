@@ -37,7 +37,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 ## Remaining work
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
-- Milestone B (graph + keyboard accessibility, item 4) is the next scoped milestone and is not started; C follows it, and D–F stay plan-only. Dependency, workflow, and release changes require explicit approval.
+- **Next: Milestone B (graph + keyboard accessibility, item 4)** — not started; start note `reports/progress_109_graph_accessibility_start.md`. C follows it, and D–F stay plan-only. Dependency, workflow, and release changes require explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.

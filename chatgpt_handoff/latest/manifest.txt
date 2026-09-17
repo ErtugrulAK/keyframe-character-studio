@@ -1,7 +1,7 @@
-# KCS ChatGPT Upload Manifest — Milestone A (Canvas Tangent Authoring)
+# KCS ChatGPT Upload Manifest — Pre-Milestone-B State
 
 Clean refreshed: YES
-Bundle purpose: Milestone A (direct canvas tangent handle authoring) — blocker-closing pass, six review rounds, and the final integration into main
+Bundle purpose: pre-Milestone-B state — Milestone A merged and verified, Milestone B (graph + keyboard accessibility) scoped as the next milestone
 Bundle scope: minimal and task-specific; this folder is not an archive
 
 Current main / origin HEAD: at or newer than the Milestone A integration commit 077911b (a state-reconciliation docs commit follows it; later docs commits may be newer still)
@@ -17,15 +17,16 @@ Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
 - OMP_FINAL_RESPONSE.md — the final task response (blockers, validation, review rounds, merge evidence)
-- progress_108_canvas_tangent_authoring.md — orchestration report plus the blocker-closing pass (verification matrix, validation, review rounds, deviations)
+- progress_108_canvas_tangent_authoring.md — Milestone A report (orchestration, blocker-closing pass, verification matrix, validation, review rounds, deviations)
+- progress_109_graph_accessibility_start.md — Milestone B start note (scope, boundaries, authorities, validation gate)
 - KCS_CANVAS_TANGENT_AUTHORING_CONTRACT.md — design contract, updated where the implementation forced wording
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — grouped roadmap plan with the current Milestone A row
-- NEXT_SESSION.md — repository state with the merged Milestone A status
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — grouped roadmap plan: Milestone A merged, Milestone B next
+- NEXT_SESSION.md — repository state with Milestone B as the first next scoped work
 - PROJECT_STATE.md — project state, validation status, ChatGPT handoff policy
 
 Omitted categories:
 - Source and test files (they live under src/ and e2e/; flattened test copies break CI because Vitest's default include glob matches names ending in .test.*)
-- package.json, ci.yml, release-smoke.yml, CHANGELOG.md (the repository changelog carries the Milestone A entry)
+- package.json, ci.yml, release-smoke.yml, the Milestone A design contract, CHANGELOG.md (the repository changelog carries the Milestone A entry)
 - older progress reports, current-state/release documents, QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, node_modules, .omp, backups, secrets/env/API keys, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
@@ -38,4 +39,6 @@ Validation at this revision:
 - Independent review: READY at round 6 (six rounds; round-6 verdict READY with no new defect and no remaining over-claim)
 Integration: main fast-forwarded to the replay branch tip; v1.1.0-rc.1 tag target, draft release, and npm untouched
 
-Upload the contents of chatgpt_handoff/latest/ to ChatGPT.
+Next milestone: B — graph + keyboard accessibility (item 4); recommended branch feat/graph-accessibility; start note in this bundle.
+
+Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

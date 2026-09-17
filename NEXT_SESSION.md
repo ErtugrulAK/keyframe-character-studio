@@ -27,11 +27,10 @@ Full Vitest (108 files / 1,641 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. Read `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md`.
-2. Start **Milestone B — graph + keyboard accessibility (roadmap item 4)**: keyboard reachability and screen-reader labelling for the graph/path editing surfaces that already exist (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections). No graph-engine rewrite, no broad style churn, reuse the existing graph/value/channel authorities; focused a11y tests + one Playwright smoke + full validation + independent review; stop if the work grows beyond narrow UI/accessibility.
-3. Milestone C (first export / onboarding flow) follows only after B, and D–F stay plan-only; dependency, workflow, and release changes need explicit approval.
-4. Preserve the tag and draft release, and run an independent review before every merge.
-5. Publish/finalize the GitHub draft only with further explicit user instruction.
+1. Start **Milestone B — graph + keyboard accessibility (roadmap item 4)** — the current next action. Read `reports/progress_109_graph_accessibility_start.md`, then `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `reports/progress_108_canvas_tangent_authoring.md` for the Milestone A precedents. Implementation briefly: keyboard reachability and screen-reader labelling for the graph/path editing surfaces that already exist (`TemporalGraphPanel`, keyframe rows, selected-keyframe sections). No graph-engine rewrite, no broad style churn, reuse the existing graph/value/channel authorities; focused a11y tests + one Playwright smoke + full validation + independent review; stop if the work grows beyond narrow UI/accessibility.
+2. Milestone C (first export / onboarding flow) follows only after B, and D–F stay plan-only; dependency, workflow, and release changes need explicit approval.
+3. Preserve the tag and draft release, and run an independent review before every merge.
+4. Publish/finalize the GitHub draft only with further explicit user instruction.
 
 ## Guardrails
 

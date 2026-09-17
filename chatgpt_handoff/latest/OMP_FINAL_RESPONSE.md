@@ -34,7 +34,10 @@ This file is the OMP final response for the Option A warning-maintenance task. I
 
 ## 4) REVIEW
 
-The branch is a source change, so it goes through the same independent read-only review gate as every previous milestone; the verdict is recorded in this section before the merge request is put to the user.
+The branch is a source change, so it goes through the same independent read-only review gate as every previous milestone.
+
+- **Rounds 1–3 (read-only `reviewer-agent`): BLOCKED.** Round 1 found stale Option A decision text, a W3 anchor stub that swallowed the click event while the report claimed otherwise, a D9-2 test that did not test the variant it named (with the second pattern untested), a wrong W1 migration count, release-gate provenance not tied to the reviewed commit, and the W4 latest-ref window. Round 2 found `NEXT_SESSION.md` still describing the audit-only state, a manifest commit count, and a wrong D9-2 test-file total. Round 3 found active `PROJECT_STATE.md`/roadmap text still describing the pre-Option-A state. Every finding was closed in the following revision.
+- **Final round:** the reviewer model hit a provider usage limit mid-run, so the last verification was performed by the read-only `scout` agent (different model): **READY WITH WARNINGS**, no contradiction found across the report, the four state documents, the roadmap, the bundle and the one-file, one-file 8/8 mapping confirmed. The scout could not execute commands, so the main agent closed that evidence on this revision: `git diff --quiet bb3cac9..HEAD -- package.json package-lock.json .github/workflows` exits 0 (byte-identical to `main`; 49 files changed across source, test, config, docs and handoff), `node scripts/check-state-consistency.mjs` → `KCS state consistency: PASS (33 checks)`, `npm run lint` clean, `npx tsc --noEmit` passes.
 
 ## 5) RELEASE SAFETY
 

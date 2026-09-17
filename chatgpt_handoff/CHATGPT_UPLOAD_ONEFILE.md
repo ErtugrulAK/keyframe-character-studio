@@ -53,7 +53,10 @@ This file is the OMP final response for the Option A warning-maintenance task. I
 
 ## 4) REVIEW
 
-The branch is a source change, so it goes through the same independent read-only review gate as every previous milestone; the verdict is recorded in this section before the merge request is put to the user.
+The branch is a source change, so it goes through the same independent read-only review gate as every previous milestone.
+
+- **Rounds 1–3 (read-only `reviewer-agent`): BLOCKED.** Round 1 found stale Option A decision text, a W3 anchor stub that swallowed the click event while the report claimed otherwise, a D9-2 test that did not test the variant it named (with the second pattern untested), a wrong W1 migration count, release-gate provenance not tied to the reviewed commit, and the W4 latest-ref window. Round 2 found `NEXT_SESSION.md` still describing the audit-only state, a manifest commit count, and a wrong D9-2 test-file total. Round 3 found active `PROJECT_STATE.md`/roadmap text still describing the pre-Option-A state. Every finding was closed in the following revision.
+- **Final round:** the reviewer model hit a provider usage limit mid-run, so the last verification was performed by the read-only `scout` agent (different model): **READY WITH WARNINGS**, no contradiction found across the report, the four state documents, the roadmap, the bundle and the one-file, one-file 8/8 mapping confirmed. The scout could not execute commands, so the main agent closed that evidence on this revision: `git diff --quiet bb3cac9..HEAD -- package.json package-lock.json .github/workflows` exits 0 (byte-identical to `main`; 49 files changed across source, test, config, docs and handoff), `node scripts/check-state-consistency.mjs` → `KCS state consistency: PASS (33 checks)`, `npm run lint` clean, `npx tsc --noEmit` passes.
 
 ## 5) RELEASE SAFETY
 
@@ -177,7 +180,9 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 ## 2. Branch
 
 - Branch: `chore/warning-maintenance`, based on `main` at `bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4`
-- This is a source change, so the branch is reviewed by an independent agent before the merge request.
+- This is a source change, so the branch is reviewed by independent agents before the merge request.
+- **Review history:** the read-only `reviewer-agent` rounds 1–3 returned BLOCKED (round 1: stale Option A decision text, an over-claiming W3 anchor stub, an untested D9-2 variant, a wrong W1 migration count, gate provenance not tied to the reviewed commit, and the W4 latest-ref window; round 2: `NEXT_SESSION.md` still describing the audit-only state, a manifest commit count, and a D9-2 test-file total; round 3: active `PROJECT_STATE.md`/roadmap text still describing the pre-Option-A state). Every finding was closed in the revision that followed it.
+- **Final round:** the reviewer model hit a provider usage limit mid-run, so the last verification round was performed by the read-only `scout` agent instead (different model), which reported **READY WITH WARNINGS** with no contradiction found across the report, the four state documents, the roadmap, the bundle and the one-file, and confirmed the one-file maps 8/8 to `latest/`. It could not execute commands, so the main agent closed that evidence on this revision: `git diff --quiet bb3cac9..HEAD -- package.json package-lock.json .github/workflows` exits 0 (those paths are byte-identical to `main`; 49 files changed across source, test, config, docs and handoff), `node scripts/check-state-consistency.mjs` prints `KCS state consistency: PASS (33 checks)`, `npm run lint` is clean and `npx tsc --noEmit` passes.
 
 ## 3. What changed
 
@@ -563,11 +568,11 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `CHANGELOG.md` — 6149 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 8480 bytes
 - `NEXT_SESSION.md` — 8670 bytes
-- `OMP_FINAL_RESPONSE.md` — 5297 bytes
+- `OMP_FINAL_RESPONSE.md` — 6626 bytes
 - `PROJECT_STATE.md` — 11268 bytes
 - `README.md` — 2620 bytes
 - `manifest.txt` — 3723 bytes
-- `progress_113_warning_maintenance.md` — 11298 bytes
+- `progress_113_warning_maintenance.md` — 12671 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

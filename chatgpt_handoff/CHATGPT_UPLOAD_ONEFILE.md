@@ -32,10 +32,10 @@ This file is the OMP final response for the Milestone D item 9 task. It is copie
 
 ## 2) WHAT THE AUDIT ASKS THE USER TO DECIDE
 
-- **Option A** — no package change: W1 split `useAnimator` out of `AnimatorContext.tsx`; W3 stub the canvas/navigation gaps in `src/tests/setup.ts`; W4 re-derive the two suppressed dependency arrays with focused tests; W5 add `.gitattributes`; W2 route-level code splitting (or leave documented); D9-2 extend the checker's stale-phrase list.
+- **Option A (requires explicit user approval per item)** — no package change: W1 split `useAnimator` out of `AnimatorContext.tsx`; W3 stub the canvas/navigation gaps in `src/tests/setup.ts`; W4 re-derive the two suppressed dependency arrays with focused tests; W5 add `.gitattributes`; W2 route-level code splitting (or leave documented); D9-2 extend the checker's stale-phrase list.
 - **Option B** — patch/minor updates (7 patch + 12 minor rows) plus a bounded `npm audit fix` for the in-range advisories; requires approval because it edits `package.json` + `package-lock.json`.
-- **Option C** — `typescript` 6 → 7 and `vitest` 4 → 5 (+ `@vitest/coverage-v8` 5) on their own branch and validation pass.
-- **Option D** — defer and start Milestone E planning (OGraf QA / schema hardening study, items 7 and 8).
+- **Option C (requires explicit user approval; separate branch)** — `typescript` 6 → 7 and `vitest` 4 → 5 (+ `@vitest/coverage-v8` 5) on their own branch and validation pass.
+- **Option D (requires explicit user approval)** — defer and start Milestone E planning (OGraf QA / schema hardening study, items 7 and 8).
 - **Separate, approval-gated:** the local repair `npm rebuild sqlite3` (D9-1) so the REST API starts in this working copy.
 
 ## 3) VALIDATION
@@ -48,7 +48,7 @@ This file is the OMP final response for the Milestone D item 9 task. It is copie
 | `npx tsc --noEmit` | PASS (clean) |
 | `npm run validate:ograf` | PASS — `fixtures/ograf/minimal.ograf.json: valid OGraf v1 manifest` |
 | `npm run qa:release` | PASS — 2 Chromium tests, `Release gate passed for candidate SHA: a410605…` |
-| `node scripts/check-state-consistency.mjs` | PASS (34 checks) |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks with this branch's bundle (34 on the earlier `main` run; the total scales with the number of bundle documents scanned) |
 | `git diff --check` | clean |
 | `node server/index.js` (live probe) | FAILS at module load — `Could not locate the bindings file` (D9-1); recorded, not repaired |
 | Live browser smoke | PASS — editor loaded with port 5000 closed: rectangle layer drawn (gizmo + Inspector + timeline lane), readiness check "Ready to export", real export produced `template-ograf.zip` |
@@ -69,9 +69,33 @@ The reviewer also verified the strengths that matter here: audit-only discipline
 - R1-4: the wording still counted "two packages" while naming three (`typescript`, `vitest`, `@vitest/coverage-v8`).
 - New: the final response said round 2 "was run" before it had produced a verdict; the validation candidate SHA differed between documents; the audit summary called all findings transitive while the table marks two entries direct (dev); and the "byte-for-byte" mirror claim is stronger than the checker, which normalizes CRLF and trims before comparing.
 
-Fixes applied for this revision: `PROJECT_STATE.md` current position and validation table refreshed (113 files / 1,691 tests, candidate `a410605`, `main` at `bcf9241`); §4 wording corrected to "two toolchain groups / three package names"; the audit summary corrected to "every advisory path is transitive, two of the seven entries are direct dev dependencies"; `SESSION.md` records the latest candidate SHA; the mirror claim now says the copies are compared after CRLF/trim normalization; and the correction commit is created before this text is finalized.
+Fixes applied for this revision: `PROJECT_STATE.md` current position and validation table refreshed (113 files / 1,691 tests, candidate `a410605`, `main` at `bcf9241`); §4 wording corrected to "two toolchain groups / three package names"; the audit summary corrected to "every advisory path is transitive, two of the seven entries are direct dev dependencies"; `SESSION.md` records the latest candidate SHA; the mirror claim now says the copies are compared after CRLF normalization and a whole-document `trim()`, exactly as the checker implements it; and the correction commit `e43186e` was created before this text was finalized.
 
-**Round 3** is being run on this revision; its verdict replaces the following line before the handoff is finalized: _round-3 verdict pending in this revision._
+**Round 3 — BLOCKED** (same read-only reviewer). R2-2 and R2-3 verified CLOSED; R1-3, R1-4 and R2-4 were kept open, and two document-consistency findings were added:
+
+- R1-3: `NEXT_SESSION.md` still described the branch as one commit ahead (it now carries the audit and correction commits), and the report asserted a handoff-verdict commit that did not exist yet.
+- R1-4: the manifest still counted the majors as "typescript and vitest" without the two-groups/three-names phrasing.
+- R2-4: `trim()` is applied to the whole document, not per line — the wording was corrected to match the checker.
+- New: the state-consistency check count differed between documents (33 vs 34), and the roadmap still called the outdated rows "packages".
+
+Fixes applied for this revision: `NEXT_SESSION.md` names both branch commits with `git log --oneline` as the authority; the report's §2 lists exactly the commits that exist; the manifest names `typescript` and the Vitest pair as two toolchain groups / three package names; every document now reports the state-consistency result as "33 checks on this branch with its bundle, 34 on the earlier `main` run — the total scales with the number of bundle documents scanned"; the roadmap says "20 outdated rows over 21 package names"; and `PROJECT_STATE.md` marks the independent review as IN REVIEW rather than PASS-with-a-gap.
+
+This revision is the round-4 verification target.
+
+**Round 4 — BLOCKED** (same read-only reviewer). R1-3, R2-4 and R3-2 verified CLOSED; three findings were kept open and two new ones raised:
+
+- R1-4/R4-2: two active summaries (`PROJECT_STATE.md`, `NEXT_SESSION.md`) still used the old majors phrasing, and the manifest reported the state check as a bare PASS.
+- R3-3/R4-3: `SESSION.md`, the bundle README and the manifest each restated an outdated round state.
+- R4-1: only Option B carried an explicit approval gate; Option D had none.
+- R4-4: the `engines` gap was labelled "finding D9-1" although D9-1 is the missing native binding.
+
+Fixes applied for this revision: both summaries now use the two-toolchain-groups / three-package-names framing (`typescript` plus the Vitest pair `vitest` + `@vitest/coverage-v8`); the manifest carries the same 33/34/scaling statement as the other documents; `SESSION.md`, the bundle README and the manifest no longer restate a round state at all — they point at §12 of the report as the authoritative review history, which removes that drift class; every option (A, B, C, D and the local `npm rebuild sqlite3` repair) now carries its own "requires explicit user approval" gate in the report §7/§8 and in this response; and the `engines` row is described as a hygiene gap recorded alongside D9-1 rather than as D9-1 itself.
+
+**Round 5 — BLOCKED** (same read-only reviewer). R1-4/R4-2, R3-3/R4-3 and R4-4 verified CLOSED; one finding stayed open: §7 said that with no choice made the "default next planning step stays Milestone E", which implies starting Milestone E without the approval Option D requires. §7 now states that with no choice **nothing starts** — no warning fix, no dependency update, no local repair, no Milestone E work — and that Milestone E stays plan-only until Option D is chosen and approved; the report §9 and the roadmap prompt carry the same gate.
+
+**Round 6 — READY WITH WARNINGS (final).** R4-1 verified CLOSED with quoted evidence; no new finding at any severity; cross-document truth re-verified as consistent (branch/commit chain, `main` SHA, tag target, 113 files / 1,691 tests, candidate `a410605`, 7 audit findings, 7 warnings, 20 rows / 21 package names, state-check model, option contents); one-file integrity re-verified. Residual set unchanged and recorded: D9-1, D9-2, and the mirror comparison's CRLF/trim tolerance.
+
+**Accepted as READY WITH WARNINGS for the audit deliverable only.** This verdict authorizes no implementation: not Option A, B, C or D, not the local `npm rebuild sqlite3` repair, and not Milestone E.
 
 ## 5) RELEASE SAFETY
 
@@ -84,12 +108,12 @@ Fixes applied for this revision: `PROJECT_STATE.md` current position and validat
 
 - Bundle: `chatgpt_handoff/latest/` was clean-refreshed for this task and holds 8 documents (this response, the item-9 report, the roadmap, the changelog, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `README.md`, `manifest.txt`); no source, test, `.env`, zip or asset files.
 - One-file: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` was rebuilt from scratch out of `latest/` and lists every bundle file with its byte size. Upload only that file to ChatGPT.
-- `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` in the bundle are copies of their root documents compared after CRLF normalization and trailing-whitespace trimming (that is how `scripts/check-state-consistency.mjs` compares them, so it fails on content drift, not on line-ending-only differences).
+- `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` in the bundle are copies of their root documents. `scripts/check-state-consistency.mjs:428-430` compares them after CRLF→LF normalization and a whole-document `trim()`, so line-ending and outer-whitespace differences are accepted and content drift fails.
 - Nothing was copied to `C:\Users\ertugrul.ak\Desktop\KCS`.
 
 ## 7) NEXT
 
-Pick Option A, B, C or D (Section 2). If none is chosen now, the default next planning step stays Milestone E, and Milestone D item 9 remains audit-complete with no repository change.
+Pick Option A, B, C or D (Section 2). If no option is chosen now, **nothing starts**: no warning fix, no dependency update, no local repair, and no Milestone E work. Milestone E stays plan-only and only begins if you choose Option D and approve it explicitly. Milestone D item 9 otherwise remains audit-complete with no repository change.
 
 ---
 
@@ -104,7 +128,7 @@ Bundle scope: minimal and task-specific; this folder is not an archive
 Branch: chore/dependency-warning-audit — docs commits on top of main bcf92413ebc23868344c43a83f1c0f9318d3e4e7
 Audit report: reports/progress_112_dependency_warning_audit.md
 Item 9: dependency/warning maintenance — AUDITED, no package.json, lockfile, workflow, source or test change; the Option A–D decision needs explicit user approval
-Outdated packages: 20 grouped rows over 21 package names (7 patch, 12 minor, 1 with no wanted update; majors available for typescript 6→7 and vitest 4→5)
+Outdated packages: 20 grouped rows over 21 package names (7 patch, 12 minor, 1 with no wanted update); across two toolchain groups / three package names a newer major is available — typescript 6→7 and the Vitest pair vitest + @vitest/coverage-v8 4→5
 npm audit: 7 findings (6 moderate, 1 high); production tree only: 2 moderate (qs, undici)
 Warnings catalogued: 7 (W1 Fast Refresh export warning, W2 Vite chunk-size advisory 621.99 kB / 182.39 kB gzip, W3 jsdom canvas/navigation noise — 6 messages, W4 two react-hooks/exhaustive-deps suppressions, W5 git CRLF noise under core.autocrlf=true, W6 e2e/** outside the Vitest glob by design, W7 NO_COLOR/FORCE_COLOR env warning)
 Extra findings: D9-1 the REST API cannot start in this working copy (NAPI sqlite3 binding missing from node_modules; no in-memory fallback exists; the Node 24 ABI is not the cause); D9-2 the state checker does not catch stale item-level status claims; D9-3 @types/node latest tag sits behind the installed major
@@ -136,11 +160,11 @@ Validation at this revision (each command run separately):
 - npm run build: PASS — one advisory (chunk larger than 500 kB; JS 621.99 kB, gzip 182.39 kB)
 - npx tsc --noEmit: PASS (clean)
 - npm run validate:ograf: PASS — fixtures/ograf/minimal.ograf.json valid; npm run qa:release: PASS (2 Chromium tests, candidate SHA a410605)
-- node scripts/check-state-consistency.mjs: PASS; git diff --check: clean
+- node scripts/check-state-consistency.mjs: PASS — 33 checks on this branch with its bundle, 34 on the earlier main run (the total scales with the number of bundle documents scanned); git diff --check: clean
 - node server/index.js (live probe): FAILS at module load — Could not locate the bindings file (D9-1); recorded, not repaired
 - Live browser smoke: PASS — editor loaded with port 5000 closed, rectangle layer drawn, readiness check "Ready to export", export produced template-ograf.zip
 - Read-only informational runs: npm outdated --long, npm audit, npm audit --omit=dev, npm ls --depth=0
-- Independent review: round 1 BLOCKED (3 high, 3 medium, 1 low) → all findings closed by rewriting the affected sections (§12 of the report) → round 2 verdict recorded in OMP_FINAL_RESPONSE.md
+- Independent review: history and closures in §12 of the report; every round's findings were closed in the following revision. The final round's verdict is recorded in OMP_FINAL_RESPONSE.md §4 (this manifest does not restate the round count)
 
 Next: the user picks Option A (source/test/docs-only warning fixes), Option B (patch/minor updates plus a bounded npm audit fix), Option C (TypeScript 7 / Vitest 5 majors on their own branch) or Option D (defer to Milestone E planning); the local npm rebuild sqlite3 repair (D9-1) is a separate approval-gated item.
 
@@ -162,7 +186,7 @@ No `package.json`, lockfile, workflow, source, or test change was made, and no i
 
 ## Review status
 
-Independent review round 1 returned **BLOCKED** with three high, three medium and one low finding (stale one-file/final response, an overstated D9-1 backend effect, stale `NEXT_SESSION.md`/roadmap claims, the §4 row-vs-package classification, the unrecorded checker false negative, missing W3/W5/W7 evidence detail, and the missing TypeScript row). All findings were closed by rewriting the affected sections — see §12 of the report for the finding-by-finding table — and round 2 was run on this corrected revision; its verdict is recorded in `OMP_FINAL_RESPONSE.md`.
+The authoritative review history is §12 of `progress_112_dependency_warning_audit.md`: every round, every finding and its closure are recorded there, and each round's findings were closed in the revision that followed it. The verdict of the final round is recorded in `OMP_FINAL_RESPONSE.md` §4. This document deliberately does not restate the round count, so it cannot drift from that history.
 
 ## Files
 
@@ -174,7 +198,7 @@ Independent review round 1 returned **BLOCKED** with three high, three medium an
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
 - `manifest.txt` — this bundle's inventory
 
-`NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` are copies of their root documents, compared after CRLF normalization and trailing-whitespace trimming; `node scripts/check-state-consistency.mjs` fails when a copy drifts in content.
+`NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` are copies of their root documents; `node scripts/check-state-consistency.mjs` compares them after CRLF→LF normalization and a whole-document `trim()` and fails on content drift.
 
 ## Deliberately not included
 
@@ -203,7 +227,7 @@ Out of scope (unchanged): dependency updates, warning remediation, lockfile rege
 ## 2. Branch
 
 - Branch: `chore/dependency-warning-audit`
-- Commits: `docs: audit dependency and warning maintenance` (`a410605`), then `docs: correct the audit findings after review` (the corrections in §12), then the handoff-verdict commit; `git log --oneline` on this branch is the authority for the exact SHAs.
+- Commits on the branch: the audit commit `docs: audit dependency and warning maintenance` (`a410605`) and the review-corrections commit `docs: correct the audit findings after review` (`e43186e`). The branch tip is the commit that carries this document; `git log --oneline` on the branch is the authority for it.
 - Baseline `main`: `bcf92413ebc23868344c43a83f1c0f9318d3e4e7` (Milestones A, B, C and D item 6 merged; `main == origin/main`)
 - `v1.1.0-rc.1` tag target (unchanged): `46d2a3e59e065816d972dcd56951803951b577f6`
 - Toolchain at audit time: Node `v24.18.0` (ABI 137), npm `12.0.2`
@@ -215,7 +239,7 @@ Out of scope (unchanged): dependency updates, warning remediation, lockfile rege
 |---|---|---|
 | `dependencies` | 10 | `cors`, `dotenv`, `express`, `fflate`, `lucide-react`, `pg`, `polygon-clipping`, `react`, `react-dom`, `sqlite3` |
 | `devDependencies` | 22 | Playwright, Testing Library, Vite/Vitest/oxlint/TypeScript toolchain, `concurrently`, `jsdom`, `ajv` |
-| `engines` | **absent** | no declared Node range — a hygiene gap (finding D9-1), not the cause of the missing native binding |
+| `engines` | **absent** | no declared Node range — a hygiene gap recorded alongside D9-1, not the cause of the missing native binding |
 | `private` / version | `true` / `1.1.0-rc.1` | package stays unpublished |
 | Package manager | `package-lock.json` present, no `packageManager` field | npm-managed |
 
@@ -289,7 +313,7 @@ Undocumented findings worth recording:
 
 ## 7. Proposed plan options
 
-**Option A — no package changes (docs/source/test/build-config only, each item still needs approval to implement).**
+**Option A — no package changes (docs/source/test/build-config only). Requires explicit user approval per item before implementation.**
 1. W1: split `useAnimator` out of `AnimatorContext.tsx` (removes the lint warning at its root).
 2. W3: stub canvas/navigation gaps in `src/tests/setup.ts` (removes test-output noise).
 3. W4: re-derive the two suppressed dependency arrays with focused canvas-interaction tests.
@@ -298,19 +322,19 @@ Undocumented findings worth recording:
 6. D9-2: extend the stale-phrase list in `scripts/check-state-consistency.mjs` to cover item-level status claims, so a handoff that keeps a finished item open fails the check.
 None of these touch `package.json`, the lockfile, or the workflows.
 
-**Local repair (no repository change; mutates `node_modules` → approval-gated).**
+**Local repair (no repository change; mutates `node_modules`). Requires explicit user approval.**
 - `npm rebuild sqlite3` (or a full `npm install`) to extract the cached NAPI prebuild, which makes `node server/index.js` start again in this working copy. No `package.json`/lockfile edit is implied; `engines` may be added later as a separate hygiene task.
 
-**Option B — patch/minor dependency maintenance (requires explicit approval; edits `package.json` + lockfile).**
+**Option B — patch/minor dependency maintenance. Requires explicit user approval before implementation; edits `package.json` + lockfile.**
 - Patch set: `@testing-library/*` (3), `@types/node` → 24.13.5, `concurrently`, `vitest` → 4.1.11, `@vitest/coverage-v8` → 4.1.11.
 - Minor set: `@playwright/test` + `playwright` → 1.63, `@types/pg`, `@types/react`, `@types/react-dom`, `@vitejs/plugin-react` → 6.1.1, `jsdom` → 30.1, `oxlint` → 1.83, `vite` → 8.3, `lucide-react` → 1.47, `pg` → 8.23, `react` + `react-dom` → 19.3.
 - Plus a bounded `npm audit fix` (in-range only) to clear the 2 production moderates (`qs`, `undici`) and the dev-tree advisories.
 - Validation required: `npm test`, `npm run build`, `npx tsc --noEmit`, `npm run lint`, `npm run validate:ograf`, `npm run qa:release` (Playwright browsers may need `npx playwright install`), plus the live smoke and `node scripts/check-state-consistency.mjs`.
 
-**Option C — major upgrades (separate branch and task; requires explicit approval).**
+**Option C — major upgrades (separate branch and task). Requires explicit user approval before implementation.**
 - `typescript` 6 → 7, `vitest` 4 → 5 (+ `@vitest/coverage-v8` 5). Both change toolchains that every suite depends on; each needs its own validation pass and rollback plan. Do not bundle them with Option B.
 
-**Option D — defer item 9 and move to Milestone E planning.**
+**Option D — defer item 9 and move to Milestone E planning. Requires explicit user approval to start Milestone E (its licensing/size decision is part of that approval).**
 - Item 6 (state consistency check) already merged; the audit above is the deliverable for item 9. Deferring keeps `main` exactly as it is (no lockfile churn) and starts Milestone E (OGraf QA / schema hardening study, items 7 and 8), which itself needs a licensing/size decision.
 
 ## 8. Approval gates
@@ -318,6 +342,7 @@ None of these touch `package.json`, the lockfile, or the workflows.
 - Any `package.json`, `package-lock.json`, or `.github/workflows/**` edit: **explicit user approval required**, with the exact package list and validation plan above.
 - `npm audit fix`, `npm install`, `npm update`, `npm rebuild sqlite3`: all mutate state (lockfile and/or native modules) → **approval required**.
 - Option A items change source/test/build-config or add `.gitattributes` → approval per item; none touch package/lock/workflow.
+- Option C (TypeScript 7 / Vitest 5 majors) and Option D (starting Milestone E planning) each require their own explicit approval; no option in §7 grants implicit permission for another.
 - Release, tag, draft-release, or npm changes: never without explicit approval (unchanged by this audit).
 
 ## 9. Recommended next action
@@ -325,13 +350,13 @@ None of these touch `package.json`, the lockfile, or the workflows.
 1. **Approve Option A narrowly** (W1 + W3 + W5 + D9-2 first; they are low risk and remove the two persistent warnings and the checker's false-negative class without touching dependencies), then
 2. **approve the local `npm rebuild sqlite3`** so the REST API starts in this working copy (or explicitly keep the backend down), then
 3. **approve a single bounded Option B run** for the patch/minor set plus `npm audit fix`, validated by the full suite + release gate, and
-4. leave **Option C** (TypeScript 7, Vitest 5) and an `engines` declaration for their own tasks, or postpone everything with **Option D** and start Milestone E planning.
+4. leave **Option C** (TypeScript 7, Vitest 5) and an `engines` declaration for their own tasks, or postpone everything with **Option D** — which itself requires explicit approval, because Milestone E stays plan-only until you approve it. With no decision from the user, nothing starts and no work is authorized.
 
 ## 10. Validation run for this audit
 
 | Command | Result |
 |---|---|
-| `node scripts/check-state-consistency.mjs` | PASS (34 checks) on the audit commit, re-run after the state-document updates |
+| `node scripts/check-state-consistency.mjs` | PASS — `KCS state consistency: PASS (33 checks)` on this branch with its bundle; the earlier run on `main` reported 34 (the total scales with the number of bundle documents scanned) |
 | `npm run lint` | PASS — one warning (W1) |
 | `npm run build` | PASS — one advisory (W2); `dist/assets/index-*.js` 621.99 kB (gzip 182.39 kB) |
 | `npm test` | PASS — `Test Files 113 passed (113)`, `Tests 1691 passed (1691)`; jsdom noise (W3) only |
@@ -374,9 +399,38 @@ None of these touch `package.json`, the lockfile, or the workflows.
 | R2-1 | medium | The final response said round 2 "was run" with a verdict "recorded below" before that verdict existed. | The review section now narrates round 2 with its actual outcome, and the round-3 verdict replaces the pending line before the handoff is finalized. |
 | R2-2 | medium | The validation candidate SHA differed between documents (`SESSION.md` had the earlier `main` run, the report the audit-branch run). | `SESSION.md` now records the latest run (`a410605`) and notes the earlier `bcf9241` run on `main`. |
 | R2-3 | medium | The audit summary called all findings transitive while the table marks `vitest` and `@vitest/coverage-v8` as direct (dev). | The summary now says every advisory path is transitive and that two of the seven entries are direct dev dependencies pulling the affected transitive packages. |
-| R2-4 | low | "Byte-for-byte" mirror claim is stronger than the checker, which normalizes CRLF and trims before comparing. | The final response and bundle README now describe the comparison exactly (CRLF normalization + trimming), in the checker's own terms. |
+| R2-4 | low | The mirror claim was stronger than the checker, which normalizes CRLF and then applies a whole-document `trim()`. | The final response and bundle README now say exactly that: CRLF normalization followed by a whole-document `trim()` (`scripts/check-state-consistency.mjs:428-430`), so line-ending and outer-whitespace differences are accepted while content drift fails. |
 
-**Round 3 — in progress** on this revision (the round-2 fixes plus the created correction commit); the verdict is recorded in the final response's review section.
+**Round 3 — BLOCKED** (same read-only reviewer). R2-2 and R2-3 verified CLOSED; R1-3, R1-4 and R2-4 stayed open, and three document-consistency findings were added:
+
+| # | Severity | Finding | Resolution |
+|---|---|---|---|
+| R1-3 (reopened) | high | `NEXT_SESSION.md` still described the branch as one commit ahead, and §2 of this report listed a "handoff-verdict commit" that did not exist yet. | `NEXT_SESSION.md` now names both commits (`a410605` audit, `e43186e` corrections) and points at `git log --oneline` as the authority; §2 lists exactly the commits that exist. |
+| R1-4 (reopened) | medium | The manifest still said "majors available for typescript 6→7 and vitest 4→5" without the two-groups/three-names phrasing and without `@vitest/coverage-v8`. | The manifest now reads "across two toolchain groups / three package names a newer major is available — `typescript` 6→7 and the Vitest pair `vitest` + `@vitest/coverage-v8` 4→5". |
+| R2-4 (reopened) | low | The checker applies `trim()` to the whole document, not per line, so "trailing-whitespace trimming" was imprecise. | The final response and bundle README now state exactly that (`CRLF→LF normalization and a whole-document trim()`, `scripts/check-state-consistency.mjs:428-430`). |
+| R3-1 | medium | The state-consistency check count was reported as both 33 and 34 across documents. | The report, `PROJECT_STATE.md`, `NEXT_SESSION.md`, `SESSION.md` and the final response now report it the same way (33 on this branch with its bundle, 34 on the earlier `main` run, the total scaling with bundle document count); the manifest line was completed in round 4 (R4-2). |
+| R3-2 | low | The roadmap row still called the outdated rows "20 outdated packages". | It now says "20 outdated rows over 21 package names". |
+| R3-3 | medium | The final response carried a "round-3 verdict pending" placeholder while the report said the verdict was recorded, and `PROJECT_STATE.md` labelled the independent review PASS while also saying it was under re-review. | The placeholder was replaced by the round-3 outcome and its fixes, and `PROJECT_STATE.md` now labels the item-9 review IN REVIEW. The remaining round-state restatements in `SESSION.md`, the bundle README and the manifest were removed in round 4 (R4-3): those documents now defer to this section instead of asserting a round. |
+
+**Round 4 — BLOCKED** (same read-only reviewer). R1-3, R2-4 and R3-2 verified CLOSED; three findings were kept open and two new ones raised:
+
+| # | Severity | Finding | Resolution |
+|---|---|---|---|
+| R1-4 (reopened) | medium | Two active summaries still used the old "majors available for TypeScript 6→7 and Vitest 4→5" phrasing (`PROJECT_STATE.md`, `NEXT_SESSION.md`). | Both now use the two-toolchain-groups / three-package-names framing and name `@vitest/coverage-v8`. |
+| R3-1 / R4-2 (reopened) | medium | The manifest reported the state check as a bare PASS without the 33/34 model. | The manifest line now carries the same 33/34/scaling statement as the other documents. |
+| R3-3 / R4-3 (reopened) | medium | `SESSION.md`, the bundle README and the manifest each restated an outdated round state. | Those three documents no longer restate a round count at all: they point at this section as the authoritative review history, which removes the drift class instead of re-syncing one number. |
+| R4-1 | medium | Option D had no explicit approval gate, and the final response gated only Option B. | Every option now carries its own "Requires explicit user approval" statement in §7 and in the final response, and §8 states that no option grants implicit permission for another. |
+| R4-4 | low | The `engines` gap was labelled "finding D9-1" although D9-1 is the missing native binding. | The inventory row now says "a hygiene gap recorded alongside D9-1, not the cause of the missing native binding". |
+
+**Round 5 — BLOCKED** (same read-only reviewer). R1-4/R4-2, R3-3/R4-3 and R4-4 verified CLOSED; one finding stayed open:
+
+| # | Severity | Finding | Resolution |
+|---|---|---|---|
+| R4-1 (reopened) | medium | §7 of the final response said that with no choice made, "the default next planning step stays Milestone E", which implies starting Milestone E without the approval that Option D requires. | §7 now states that with no choice nothing starts — no warning fix, no dependency update, no local repair, no Milestone E work — and that Milestone E stays plan-only until Option D is chosen and approved; §9 of this report and the roadmap prompt carry the same gate. |
+
+**Round 6 — READY WITH WARNINGS** (same read-only reviewer, final round). R4-1 verified CLOSED with quoted evidence, no new finding was raised at any severity, and cross-document truth was re-verified as consistent (branch/commit chain, `main` SHA, tag target, test totals, candidate SHA, audit/warning/outdated counts, majors framing, state-check model, option contents). The reviewer's residual set is exactly the recorded one: D9-1 (unrepaired local `sqlite3` binding, repair approval-gated), D9-2 (the checker's item-level gap) and the mirror comparison's CRLF/trim tolerance. The reviewer also confirmed the approval gate cannot be bypassed: `OMP_FINAL_RESPONSE.md` §7 states that with no option chosen, nothing starts, and Milestone E only begins under an explicitly approved Option D.
+
+Final recorded verdict: **READY WITH WARNINGS** — the audit deliverable is accepted as report-only; the verdict grants no permission for Options A–D, the local `sqlite3` repair, or Milestone E.
 
 ---
 
@@ -386,7 +440,7 @@ None of these touch `package.json`, the lockfile, or the workflows.
 
 ## Repository state
 
-- Checkout: branch `chore/dependency-warning-audit` (audit commit `a410605`, one commit on top of `main`); `main` is at `bcf92413ebc23868344c43a83f1c0f9318d3e4e7` and matches `origin/main`. The feature branches `feat/export-onboarding` and `chore/state-hygiene-gate` are retained as review artefacts.
+- Checkout: branch `chore/dependency-warning-audit` — audit commit `a410605` plus the review-corrections commit `e43186e` — on top of `main` at `bcf92413ebc23868344c43a83f1c0f9318d3e4e7`, which matches `origin/main`. `git log --oneline` on the branch is the authority for the current tip. The feature branches `feat/export-onboarding` and `chore/state-hygiene-gate` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -401,13 +455,13 @@ Milestones A, B and C are merged into `main`, and Milestone D is the active mile
 - Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.
 - Milestone C — first export / onboarding (`c2dcb22`): opt-in "First export help" panel, readiness check reading the same OGraf diagnostics authority as the export, one shared compile path for readiness and both export actions.
 - Milestone D item 6 — state consistency check (`b91e8b9`, CI follow-up `be76df9`): `node scripts/check-state-consistency.mjs`.
-- Milestone D item 9 — dependency and warning maintenance: **audited on `chore/dependency-warning-audit`, report only** (`reports/progress_112_dependency_warning_audit.md`). Nothing was installed, updated, or rewritten: `package.json`, `package-lock.json`, `.github/workflows/**`, source and tests are untouched. Recorded findings: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; majors available for `typescript` 6→7 and `vitest` 4→5), `npm audit` 7 findings (6 moderate, 1 high; only `qs` and `undici` moderate in the production tree), 7 catalogued warnings, plus D9-1 (the REST API cannot start in this working copy because the NAPI `sqlite3` binding is missing from `node_modules`; the editor is API-independent and was verified live), D9-2 (the state checker does not catch stale item-level status claims) and D9-3 (`@types/node`'s `latest` tag is behind the installed major).
+- Milestone D item 9 — dependency and warning maintenance: **audited on `chore/dependency-warning-audit`, report only** (`reports/progress_112_dependency_warning_audit.md`). Nothing was installed, updated, or rewritten: `package.json`, `package-lock.json`, `.github/workflows/**`, source and tests are untouched. Recorded findings: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; across two toolchain groups / three package names a newer major is available — `typescript` 6→7 and the Vitest pair `vitest` + `@vitest/coverage-v8` 4→5), `npm audit` 7 findings (6 moderate, 1 high; only `qs` and `undici` moderate in the production tree), 7 catalogued warnings, plus D9-1 (the REST API cannot start in this working copy because the NAPI `sqlite3` binding is missing from `node_modules`; the editor is API-independent and was verified live), D9-2 (the state checker does not catch stale item-level status claims) and D9-3 (`@types/node`'s `latest` tag is behind the installed major).
 
 The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease exist at the workflow-tested code candidate; nothing was published, finalized, or pushed to npm.
 
 ## Validation
 
-Full Vitest (113 files / 1,691 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `a410605`), `npm run build`, `npx tsc --noEmit`, `npm run lint`, `git diff --check`, `node scripts/check-state-consistency.mjs` (34 checks) and a live browser smoke (editor with port 5000 closed: layer authoring, readiness check, real export) all pass. Existing warnings remain: the Fast Refresh export warning, the Vite chunk-size advisory (621.99 kB / 182.39 kB gzip), jsdom canvas/navigation noise, two `react-hooks/exhaustive-deps` suppressions, git CRLF noise and the `NO_COLOR`/`FORCE_COLOR` env warning — all catalogued in `reports/progress_112_dependency_warning_audit.md`.
+Full Vitest (113 files / 1,691 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `a410605`), `npm run build`, `npx tsc --noEmit`, `npm run lint`, `git diff --check`, `node scripts/check-state-consistency.mjs` (33 checks with this bundle; the earlier run on `main` reported 34 — the total scales with the number of bundle documents scanned) and a live browser smoke (editor with port 5000 closed: layer authoring, readiness check, real export) all pass. Existing warnings remain: the Fast Refresh export warning, the Vite chunk-size advisory (621.99 kB / 182.39 kB gzip), jsdom canvas/navigation noise, two `react-hooks/exhaustive-deps` suppressions, git CRLF noise and the `NO_COLOR`/`FORCE_COLOR` env warning — all catalogued in `reports/progress_112_dependency_warning_audit.md`.
 
 ## Next scoped work
 
@@ -476,11 +530,11 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 | OGraf fixture validation | PASS | `npm run validate:ograf`; committed minimal fixture |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests at `a410605` on the audit branch (earlier run at `bcf9241` on `main`) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
-| State consistency | PASS | `node scripts/check-state-consistency.mjs` (34 checks on `main`, 33 with the audit branch's bundle in place) |
+| State consistency | PASS | `node scripts/check-state-consistency.mjs` — 33 checks on this branch with its bundle, 34 on the earlier `main` run (the total scales with the number of bundle documents scanned) |
 | TypeScript | PASS | `npx tsc --noEmit` and build typecheck |
 | Lint | PASS | Existing Fast Refresh warning only |
 | Production build | PASS | Existing Vite chunk-size advisory only (JS 621.99 kB / 182.39 kB gzip) |
-| Independent review | PASS (with a documented gap) | Milestone A `READY` in round 6 of six rounds; the item-9 audit revision is under re-review, and the checker's item-level false negative is recorded as D9-2 |
+| Independent review | IN REVIEW | Milestone A `READY` in round 6 of six rounds; the item-9 audit stays IN REVIEW until a round returns READY or READY WITH WARNINGS — §12 of `reports/progress_112_dependency_warning_audit.md` is the authoritative round-by-round history — and the checker's item-level false negative is recorded as D9-2 |
 | CI on `main` | PASS | runs `35206117254` (Milestone A merge) and `35207913453` (state reconciliation) |
 
 ## Remaining work
@@ -517,7 +571,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
 - **Milestone D item 6 — state consistency check — MERGED** at `b91e8b9` (follow-up `be76df9`): `node scripts/check-state-consistency.mjs` fails when the live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when the handoff upload instruction is superseded, or when the bundle carries source/test/binary copies, collapsed Windows paths or secret markers (see `reports/progress_111_state_hygiene_gate.md`).
-- **Item 9 (dependency and warning maintenance) — AUDIT COMPLETE, report only** (`reports/progress_112_dependency_warning_audit.md`): 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; majors available for TypeScript 6→7 and Vitest 4→5), `npm audit` 7 findings (6 moderate, 1 high; only `qs` and `undici` are moderate in the production tree), and 7 catalogued warnings (Fast Refresh export warning, Vite chunk-size advisory at 621.99 kB / 182.39 kB gzip, jsdom canvas/navigation noise, two `react-hooks/exhaustive-deps` suppressions, CRLF noise, `NO_COLOR`/`FORCE_COLOR` env noise). Recorded environment findings: **D9-1** — the REST API does not start in this working copy because the NAPI `sqlite3` binding is missing from `node_modules` (`node server/index.js` exits 1 at module load; "Auto-Fallback / In-Memory Mode" is only the PostgreSQL health log, not a database fallback); the editor is API-independent and was verified live in a browser. **D9-2** — the item-6 state checker does not catch stale item-level status claims. **D9-3** — `@types/node`'s `latest` tag sits behind the installed major. No `package.json`, lockfile, workflow, source, or test change was made; **the next decision is Option A (source/test/docs-only warning fixes), Option B (patch/minor updates plus a bounded `npm audit fix`), Option C (TypeScript 7 / Vitest 5 majors on their own branch), or Option D (defer and start Milestone E)**, with the local `npm rebuild sqlite3` repair as a separate approval-gated item.
+- **Item 9 (dependency and warning maintenance) — AUDIT COMPLETE, report only** (`reports/progress_112_dependency_warning_audit.md`): 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; across two toolchain groups / three package names a newer major is available — `typescript` 6→7 and the Vitest pair `vitest` + `@vitest/coverage-v8` 4→5), `npm audit` 7 findings (6 moderate, 1 high; only `qs` and `undici` are moderate in the production tree), and 7 catalogued warnings (Fast Refresh export warning, Vite chunk-size advisory at 621.99 kB / 182.39 kB gzip, jsdom canvas/navigation noise, two `react-hooks/exhaustive-deps` suppressions, CRLF noise, `NO_COLOR`/`FORCE_COLOR` env noise). Recorded environment findings: **D9-1** — the REST API does not start in this working copy because the NAPI `sqlite3` binding is missing from `node_modules` (`node server/index.js` exits 1 at module load; "Auto-Fallback / In-Memory Mode" is only the PostgreSQL health log, not a database fallback); the editor is API-independent and was verified live in a browser. **D9-2** — the item-6 state checker does not catch stale item-level status claims. **D9-3** — `@types/node`'s `latest` tag sits behind the installed major. No `package.json`, lockfile, workflow, source, or test change was made; **the next decision is Option A (source/test/docs-only warning fixes), Option B (patch/minor updates plus a bounded `npm audit fix`), Option C (TypeScript 7 / Vitest 5 majors on their own branch), or Option D (defer and start Milestone E)**, with the local `npm rebuild sqlite3` repair as a separate approval-gated item.
 
 ---
 
@@ -534,7 +588,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
-| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit` | **NEXT** — **item 6 MERGED** (`scripts/check-state-consistency.mjs`, run `node scripts/check-state-consistency.mjs`); **item 9 AUDITED, report only** (`reports/progress_112_dependency_warning_audit.md` — 20 outdated packages, 7 audit findings, 7 catalogued warnings, no package/lock/workflow change); the Option A–D decision needs explicit approval before any `package.json`/lockfile/workflow edit |
+| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit` | **NEXT** — **item 6 MERGED** (`scripts/check-state-consistency.mjs`, run `node scripts/check-state-consistency.mjs`); **item 9 AUDITED, report only** (`reports/progress_112_dependency_warning_audit.md` — 20 outdated rows over 21 package names, 7 audit findings, 7 catalogued warnings, no package/lock/workflow change); the Option A–D decision needs explicit approval before any `package.json`/lockfile/workflow edit |
 | E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
 | F — Architecture exploration only | 10, 11, 12 | — | Plan only |
 
@@ -592,7 +646,7 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 ## Recommended next prompt
 
-"KCS MILESTONE D ITEM 9 — DECISION (approval-gated). The dependency/warning audit is complete in `reports/progress_112_dependency_warning_audit.md` (no package change was made). Choose Option A (source/test/docs-only warning fixes: W1 lint split, W3 test-setup stubs, W4 dependency arrays, W5 `.gitattributes`, W2 code splitting, D9-2 checker pattern), Option B (patch/minor updates plus a bounded `npm audit fix`; edits `package.json` + lockfile), Option C (TypeScript 7 / Vitest 5 majors on their own branch), or Option D (defer and start Milestone E planning — OGraf QA / schema hardening study, items 7 and 8, which needs a licensing/size decision before implementation). The local `npm rebuild sqlite3` repair (D9-1) is a separate approval-gated item."
+"KCS MILESTONE D ITEM 9 — DECISION (approval-gated). The dependency/warning audit is complete in `reports/progress_112_dependency_warning_audit.md` (no package change was made). Choose Option A (source/test/docs-only warning fixes: W1 lint split, W3 test-setup stubs, W4 dependency arrays, W5 `.gitattributes`, W2 code splitting, D9-2 checker pattern), Option B (patch/minor updates plus a bounded `npm audit fix`; edits `package.json` + lockfile), Option C (TypeScript 7 / Vitest 5 majors on their own branch), or Option D (defer item 9 and start Milestone E planning — OGraf QA / schema hardening study, items 7 and 8; Option D also requires explicit user approval, and Milestone E stays plan-only until then). The local `npm rebuild sqlite3` repair (D9-1) is a separate approval-gated item."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
@@ -672,13 +726,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 7866 bytes
-- `NEXT_SESSION.md` — 8484 bytes
-- `OMP_FINAL_RESPONSE.md` — 8798 bytes
-- `PROJECT_STATE.md` — 10832 bytes
-- `README.md` — 3495 bytes
-- `manifest.txt` — 4564 bytes
-- `progress_112_dependency_warning_audit.md` — 25796 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 7921 bytes
+- `NEXT_SESSION.md` — 8808 bytes
+- `OMP_FINAL_RESPONSE.md` — 13103 bytes
+- `PROJECT_STATE.md` — 11138 bytes
+- `README.md` — 3315 bytes
+- `manifest.txt` — 4844 bytes
+- `progress_112_dependency_warning_audit.md` — 32000 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

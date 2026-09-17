@@ -10,7 +10,7 @@ No `package.json`, lockfile, workflow, source, or test change was made, and no i
 
 ## Review status
 
-Independent review round 1 returned **BLOCKED** with three high, three medium and one low finding (stale one-file/final response, an overstated D9-1 backend effect, stale `NEXT_SESSION.md`/roadmap claims, the §4 row-vs-package classification, the unrecorded checker false negative, missing W3/W5/W7 evidence detail, and the missing TypeScript row). All findings were closed by rewriting the affected sections — see §12 of the report for the finding-by-finding table — and round 2 was run on this corrected revision; its verdict is recorded in `OMP_FINAL_RESPONSE.md`.
+The authoritative review history is §12 of `progress_112_dependency_warning_audit.md`: every round, every finding and its closure are recorded there, and each round's findings were closed in the revision that followed it. The verdict of the final round is recorded in `OMP_FINAL_RESPONSE.md` §4. This document deliberately does not restate the round count, so it cannot drift from that history.
 
 ## Files
 
@@ -22,7 +22,7 @@ Independent review round 1 returned **BLOCKED** with three high, three medium an
 - `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
 - `manifest.txt` — this bundle's inventory
 
-`NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` are copies of their root documents, compared after CRLF normalization and trailing-whitespace trimming; `node scripts/check-state-consistency.mjs` fails when a copy drifts in content.
+`NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` are copies of their root documents; `node scripts/check-state-consistency.mjs` compares them after CRLF→LF normalization and a whole-document `trim()` and fails on content drift.
 
 ## Deliberately not included
 

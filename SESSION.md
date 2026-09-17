@@ -31,14 +31,14 @@ Checkout: `chore/dependency-warning-audit`, based on synchronized `main` at `bcf
 - TypeScript (`npx tsc --noEmit`): PASS.
 - Lint: PASS with the existing Fast Refresh warning.
 - Build: PASS with the existing Vite chunk-size advisory (621.99 kB / 182.39 kB gzip).
-- `node scripts/check-state-consistency.mjs`: PASS (34 checks).
+- `node scripts/check-state-consistency.mjs`: PASS (33 checks on this branch with its bundle; the earlier run on `main` reported 34 — the total scales with the number of bundle documents scanned).
 - `git diff --check`: PASS.
 
 ## Open decision
 
 Milestone D item 9 needs one of: Option A (source/test/docs-only warning fixes — W1, W3, W4, W5, W2, D9-2), Option B (patch/minor updates plus a bounded `npm audit fix`), Option C (TypeScript 7 / Vitest 5 majors on their own branch), or Option D (defer and start Milestone E planning). Any `package.json`, lockfile, or workflow edit requires explicit approval, as does the separate local repair `npm rebuild sqlite3` (D9-1) that would let the REST API start in this working copy.
 
-The audit report `reports/progress_112_dependency_warning_audit.md` §12 records the independent review: round 1 returned BLOCKED (three high, three medium, one low finding), all findings were closed by rewriting the affected sections, and round 2 is the re-review of this corrected revision.
+The audit report `reports/progress_112_dependency_warning_audit.md` §12 is the authoritative review history: each round, its findings, and the closure of each finding are recorded there, and every round's findings were closed in the revision that followed. The verdict of the final round is recorded in `chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md` §4; this summary does not restate the round count.
 
 ## Protected state
 

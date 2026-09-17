@@ -46,19 +46,31 @@ if (typeof HTMLCanvasElement !== 'undefined') {
 }
 
 /**
- * jsdom cannot follow a download link: clicking an anchor that carries
+ * jsdom cannot follow a download link: activating an anchor that carries
  * `download` (or a `blob:`/`data:` href) makes it log "Not implemented:
  * navigation to another Document". The download helpers only build the anchor
- * and click it, and the tests assert the anchor's own state, so skipping the
- * navigation attempt here removes the noise without changing what a test can
- * observe. Ordinary anchors keep jsdom's normal click behaviour.
+ * and click it, so for those links the click event is still dispatched for
+ * listeners, but jsdom must not try to activate the (unreachable) target.
+ *
+ * Approach: while the event is dispatched the link temporarily points at a
+ * same-document fragment, which jsdom navigates without logging; the original
+ * href is restored immediately afterwards, so the element's own observable
+ * state is unchanged. Ordinary anchors stay entirely on jsdom's native path.
  */
 if (typeof HTMLAnchorElement !== 'undefined') {
   const nativeAnchorClick = HTMLAnchorElement.prototype.click;
   HTMLAnchorElement.prototype.click = function anchorClick(this: HTMLAnchorElement) {
     const href = this.getAttribute('href') ?? '';
     const isDownloadLink = this.hasAttribute('download') || /^(?:blob|data):/u.test(href);
-    if (isDownloadLink) return;
-    nativeAnchorClick.call(this);
+    if (!isDownloadLink) {
+      nativeAnchorClick.call(this);
+      return;
+    }
+    this.setAttribute('href', '#');
+    try {
+      this.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, composed: true }));
+    } finally {
+      this.setAttribute('href', href);
+    }
   };
 }

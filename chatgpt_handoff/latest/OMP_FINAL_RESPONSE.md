@@ -12,19 +12,19 @@ This file is the OMP final response for the Option A warning-maintenance task. I
 
 | Item | Change | Evidence |
 |---|---|---|
-| W1 | New `src/context/useAnimator.ts` owns the context object and hook; `AnimatorContext.tsx` exports only the provider; 23 files migrated (16 source, 7 test mocks); `ToastPortal` reads `ToastItem` from its canonical module | `npm run lint`: no warning (was one Fast Refresh export warning) |
+| W1 | New `src/context/useAnimator.ts` owns the context object and hook; `AnimatorContext.tsx` exports only the provider; 24 files migrated (16 source — 15 hook consumers plus the provider's context import — and 8 test files, including the `vi.mock` factories); `ToastPortal` reads `ToastItem` from its canonical module | `npm run lint`: no warning (was one Fast Refresh export warning) |
 | W2 | `vite.config.ts` splits stable third-party groups (`react-vendor`, `icons`, `geometry`) via `build.rolldownOptions.output.codeSplitting` — no lazy imports, same module order | single 621.99 kB chunk (gzip 182.39) → app 382.19 kB (gzip 104.53) + react-vendor 189.64 + geometry 36.09 + icons 14.30; build emits no chunk-size advisory |
-| W3 | `src/tests/setup.ts` returns `null` from `HTMLCanvasElement.getContext` (jsdom's own outcome without the log) and skips the navigation attempt for download links (`download`/`blob:`/`data:`) | full-run `grep -c "Not implemented"`: **0** (was 6: 3 canvas, 3 navigation) |
+| W3 | `src/tests/setup.ts` returns `null` from `HTMLCanvasElement.getContext` (jsdom's own outcome without the log); for download links the click event is still dispatched (listeners and `preventDefault` keep working) while the link temporarily points at a same-document fragment and its href is restored in a `finally` block | full-run `grep -c "Not implemented"`: **0** (was 6: 3 canvas, 3 navigation); `src/tests/setupStubs.test.ts` pins the semantics in 5 cases |
 | W4 | The `[appMode]` viewport effect needs no suppression (refs + stable setters only); the mouse-move callback now reads the later-declared `handleMouseUp` through a latest-ref, so its dependency array is complete | `npm run lint` clean; `npx tsc --noEmit` PASS; pointer paths exercised in a real browser |
 | W5 | New `.gitattributes` (`* text=auto eol=lf` + binary guards) | scripted git runs no longer print the per-file CRLF warning |
-| D9-2 | `scripts/check-state-consistency.mjs` fails an active claim that a roadmap item has not started / is not implemented yet; three focused cases added to `src/tests/stateConsistencyCheck.test.ts` | checker PASS; the new cases pass (file total 29 tests) |
+| D9-2 | `scripts/check-state-consistency.mjs` fails an active claim that a roadmap item has not started / has not yet begun / is not implemented yet; four focused cases added to `src/tests/stateConsistencyCheck.test.ts` (three negative — one per variant — and one truthful-state guard) | checker PASS; the new cases pass (file total 29 tests) |
 | D9-1 | npm 12 blocks `sqlite3`'s install script ("not covered by allowScripts"), so the NAPI prebuild was never extracted; ran the package's own install command inside `node_modules/sqlite3` | `require('sqlite3')` loads; `node server/index.js` serves `GET /api/health` → **200** |
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npm test` | PASS — 113 files / 1,694 tests (1,691 + 3 new D9-2 cases); 0 jsdom "Not implemented" lines |
+| `npm test` | PASS — 114 files / 1,700 tests (1,691 baseline + 4 D9-2 + 5 setup-stub cases); 0 jsdom "Not implemented" lines |
 | `npm run lint` / `npx tsc --noEmit` | clean / PASS |
 | `npm run build` | PASS — no chunk-size advisory |
 | `npm run validate:ograf` / `npm run qa:release` | PASS / PASS (2 Chromium tests) |

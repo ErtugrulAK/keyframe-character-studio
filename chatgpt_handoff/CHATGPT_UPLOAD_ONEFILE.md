@@ -31,19 +31,19 @@ This file is the OMP final response for the Option A warning-maintenance task. I
 
 | Item | Change | Evidence |
 |---|---|---|
-| W1 | New `src/context/useAnimator.ts` owns the context object and hook; `AnimatorContext.tsx` exports only the provider; 23 files migrated (16 source, 7 test mocks); `ToastPortal` reads `ToastItem` from its canonical module | `npm run lint`: no warning (was one Fast Refresh export warning) |
+| W1 | New `src/context/useAnimator.ts` owns the context object and hook; `AnimatorContext.tsx` exports only the provider; 24 files migrated (16 source — 15 hook consumers plus the provider's context import — and 8 test files, including the `vi.mock` factories); `ToastPortal` reads `ToastItem` from its canonical module | `npm run lint`: no warning (was one Fast Refresh export warning) |
 | W2 | `vite.config.ts` splits stable third-party groups (`react-vendor`, `icons`, `geometry`) via `build.rolldownOptions.output.codeSplitting` — no lazy imports, same module order | single 621.99 kB chunk (gzip 182.39) → app 382.19 kB (gzip 104.53) + react-vendor 189.64 + geometry 36.09 + icons 14.30; build emits no chunk-size advisory |
-| W3 | `src/tests/setup.ts` returns `null` from `HTMLCanvasElement.getContext` (jsdom's own outcome without the log) and skips the navigation attempt for download links (`download`/`blob:`/`data:`) | full-run `grep -c "Not implemented"`: **0** (was 6: 3 canvas, 3 navigation) |
+| W3 | `src/tests/setup.ts` returns `null` from `HTMLCanvasElement.getContext` (jsdom's own outcome without the log); for download links the click event is still dispatched (listeners and `preventDefault` keep working) while the link temporarily points at a same-document fragment and its href is restored in a `finally` block | full-run `grep -c "Not implemented"`: **0** (was 6: 3 canvas, 3 navigation); `src/tests/setupStubs.test.ts` pins the semantics in 5 cases |
 | W4 | The `[appMode]` viewport effect needs no suppression (refs + stable setters only); the mouse-move callback now reads the later-declared `handleMouseUp` through a latest-ref, so its dependency array is complete | `npm run lint` clean; `npx tsc --noEmit` PASS; pointer paths exercised in a real browser |
 | W5 | New `.gitattributes` (`* text=auto eol=lf` + binary guards) | scripted git runs no longer print the per-file CRLF warning |
-| D9-2 | `scripts/check-state-consistency.mjs` fails an active claim that a roadmap item has not started / is not implemented yet; three focused cases added to `src/tests/stateConsistencyCheck.test.ts` | checker PASS; the new cases pass (file total 29 tests) |
+| D9-2 | `scripts/check-state-consistency.mjs` fails an active claim that a roadmap item has not started / has not yet begun / is not implemented yet; four focused cases added to `src/tests/stateConsistencyCheck.test.ts` (three negative — one per variant — and one truthful-state guard) | checker PASS; the new cases pass (file total 29 tests) |
 | D9-1 | npm 12 blocks `sqlite3`'s install script ("not covered by allowScripts"), so the NAPI prebuild was never extracted; ran the package's own install command inside `node_modules/sqlite3` | `require('sqlite3')` loads; `node server/index.js` serves `GET /api/health` → **200** |
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npm test` | PASS — 113 files / 1,694 tests (1,691 + 3 new D9-2 cases); 0 jsdom "Not implemented" lines |
+| `npm test` | PASS — 114 files / 1,700 tests (1,691 baseline + 4 D9-2 + 5 setup-stub cases); 0 jsdom "Not implemented" lines |
 | `npm run lint` / `npx tsc --noEmit` | clean / PASS |
 | `npm run build` | PASS — no chunk-size advisory |
 | `npm run validate:ograf` / `npm run qa:release` | PASS / PASS (2 Chromium tests) |
@@ -111,7 +111,7 @@ Omitted categories:
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- npm test: PASS — 113 files / 1,694 tests; 0 jsdom "Not implemented" lines (was 6)
+- npm test: PASS — 114 files / 1,700 tests; 0 jsdom "Not implemented" lines (was 6)
 - npm run lint: clean (the Fast Refresh export warning is gone); npx tsc --noEmit: PASS
 - npm run build: PASS — no chunk-size advisory (app 382.19 kB, react-vendor 189.64 kB, geometry 36.09 kB, icons 14.30 kB)
 - npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests, candidate SHA bb3cac9)
@@ -185,7 +185,7 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 
 - New `src/context/useAnimator.ts` owns the `AnimatorContext` object and the `useAnimator` hook.
 - `src/context/AnimatorContext.tsx` now exports `AnimatorProvider` (and the `AnimatorContextType` type) only; it imports the context object from the new module. The type-only import direction keeps the dependency acyclic at runtime.
-- 23 files were migrated to the new hook module (16 source files, 7 test files), including the `vi.mock` factories: mocks that supply `useAnimator` now target `../context/useAnimator`, mocks that supply the provider keep targeting `../context/AnimatorContext`.
+- 24 files were migrated to the new hook module (16 source files — 15 hook consumers plus the provider's own context import — and 8 test files), including the `vi.mock` factories: mocks that supply `useAnimator` now target `../context/useAnimator`, mocks that supply the provider keep targeting `../context/AnimatorContext`.
 - `src/components/Toast/ToastPortal.tsx` reads `ToastItem` from its canonical source (`src/hooks/useToast.ts`), so the provider module no longer re-exports it.
 - Evidence: `npm run lint` reports **no** warnings (previously one at `AnimatorContext.tsx:651`).
 
@@ -197,9 +197,10 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 
 ### W3 — jsdom noise removed in the test setup
 
-- `src/tests/setup.ts` now replaces `HTMLCanvasElement.prototype.getContext` with a function that returns `null` (jsdom's own outcome, minus the "Not implemented" log) and skips the navigation attempt for download links (`download` attribute or `blob:`/`data:` href) while leaving ordinary anchors on jsdom's normal path.
-- Why it is behaviour-identical: the production text-measurement helper (`src/utils/bounds.ts:61`) already falls back when `getContext` returns null, and the download helpers only build an anchor whose own state the tests assert.
-- Evidence: the full suite previously printed **6** "Not implemented" lines (3 canvas from `ografPackage` / `presetConversion`, 3 navigation from the download flows in `presetExportImportUi` / `firstExportFlow`); after the change `grep -c "Not implemented"` on a full run returns **0**.
+- `src/tests/setup.ts` now replaces `HTMLCanvasElement.prototype.getContext` with a function that returns `null` (jsdom's own outcome, minus the "Not implemented" log). For download links (`download` attribute or `blob:`/`data:` href) the click event is still dispatched so listeners and `preventDefault` keep working, but the link temporarily points at a same-document fragment while the event is in flight — jsdom cannot navigate to the unreachable target, which is what produced the log — and the original `href` is restored in a `finally` block, so the element's observable state is unchanged. Ordinary anchors stay entirely on jsdom's native path.
+- Why the canvas stub is behaviour-identical: the production text-measurement helper (`src/utils/bounds.ts:61`) already falls back when `getContext` returns null.
+- The stub semantics are pinned by `src/tests/setupStubs.test.ts` (5 cases: canvas returns null; a download-link click reaches listeners and restores the href; a listener can cancel the event; a blob href without the `download` attribute follows the same path; an ordinary anchor keeps the native path).
+- Evidence: the full suite previously printed **6** "Not implemented" lines (3 canvas from `ografPackage` / `presetConversion`, 3 navigation from the download flows in `presetExportImportUi` / `firstExportFlow`); after the change `grep -c "Not implemented"` on a full run returns **0** (verified again after this correction).
 
 ### W4 — the two `react-hooks/exhaustive-deps` suppressions are gone
 
@@ -214,7 +215,7 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 ### D9-2 — the state checker now catches item-level stale claims
 
 - `scripts/check-state-consistency.mjs` gained two `STALE_ACTIVE_PATTERNS` entries that fail an active claim that a roadmap item has not started / is not implemented yet (the exact class that survived a PASS before).
-- `src/tests/stateConsistencyCheck.test.ts` gained three focused cases: two negative (item reported as not started, item reported as not yet begun) and one guard (a truthful item-level status passes).
+- `src/tests/stateConsistencyCheck.test.ts` gained four focused cases: three negative — "is not started", "has not yet begun" (`begun` is part of the first pattern) and "is not implemented yet" (the second pattern, previously untested) — and one guard, a truthful item-level status that must pass.
 - `reports/progress_112_dependency_warning_audit.md` §12 is now headed "Independent review history (superseded states are quoted verbatim)", which is what it is — quoting superseded states — and is therefore exempt from the stale-claim scan by the checker's own rule.
 
 ### D9-1 — local SQLite binding repaired (root cause refined)
@@ -228,7 +229,7 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 
 | Check | Command | Result |
 |---|---|---|
-| Full unit/integration suite | `npm test` | PASS — 113 files / **1,694** tests (1,691 + 3 new D9-2 cases) |
+| Full unit/integration suite | `npm test` | PASS — 114 files / **1,700** tests (the 1,691 baseline + 4 D9-2 cases + 5 setup-stub cases) |
 | jsdom noise | `npm test 2>&1 \| grep -c "Not implemented"` | **0** (was 6) |
 | Lint | `npm run lint` | **clean** (was one Fast Refresh warning) |
 | TypeScript | `npx tsc --noEmit` | PASS |
@@ -238,6 +239,8 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 | State consistency | `node scripts/check-state-consistency.mjs` | PASS |
 | Backend probe | `node server/index.js` + `curl /api/health` | PASS — HTTP 200 (repair verified) |
 | Built-app smoke | `vite preview` + real browser | PASS — editor loads from the split chunks, layer drawn, transform gizmo, inspector, timeline lane |
+
+**Provenance:** every command above was run on this branch's working tree; the release gate prints the candidate SHA it saw, and §3 of the handoff records that value. Because this report is itself edited after those runs, the gate is re-run on the source revision and the printed SHA is recorded in the handoff manifest rather than inferred.
 
 ## 5. Warning status after this task
 
@@ -251,6 +254,12 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 | W6 | `e2e/**` outside the Vitest glob | Unchanged by design (documented) |
 | W7 | `NO_COLOR`/`FORCE_COLOR` env warning | Unchanged (environment, not the repository) |
 
+## 5b. Recorded residual risks
+
+- **W4 latest-ref window:** the mouse-move callback reads the handler through a ref published in a passive effect. In the normal path the listener is installed only for the `isDragging` render, and that effect runs before the listener effect, so the current handler is always published in time. A theoretical gap remains between commit and the passive effect, during which the ref briefly holds the previous callback. No concrete regression was observed; the semantics moved from a stale closure to "read the latest handler at call time".
+- **W2 is a caching boundary, not a smaller download:** every chunk is still eagerly loaded, so the bytes shipped on first load are effectively unchanged (622.78 kB across chunks versus 621.99 kB before, i.e. +0.79 kB of chunk overhead). The gain is cacheable boundaries plus the removal of the per-chunk size advisory.
+- **The SQLite repair is `node_modules`-local:** a fresh `npm install` on npm 12 blocks the install script again until the `allowScripts` pin is approved.
+- **`.gitattributes` rewrites working-tree line endings** on the next checkout/touch of tracked text files; that is the intended W5 effect.
 ## 6. Protected invariants
 
 - `package.json`, `package-lock.json`, `.github/workflows/**` and `node_modules` dependency versions: unchanged. (The `node_modules` change is the repaired native binding only; the accidental `allowScripts` edit was reverted.)
@@ -287,7 +296,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (113 files / 1,694 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `bb3cac9`), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `chore/warning-maintenance`. The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
+Full Vitest (114 files / 1,700 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `bb3cac9`), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `chore/warning-maintenance`. The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
 
 ## Next scoped work
 
@@ -352,7 +361,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 113 files / 1,694 tests |
+| Full Vitest | PASS | 114 files / 1,700 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf`; committed minimal fixture |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests (latest run at `bb3cac9` on `main`) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
@@ -367,7 +376,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Next: Milestone D (state / CI / warning hygiene, items 6 and 9)** — item 6 is merged; item 9 is audited (report only, `reports/progress_112_dependency_warning_audit.md`) and awaits the Option A–D decision before any `package.json`, lockfile, or workflow change; E–F otherwise stay plan-only.
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Next: Milestone D (state / CI / warning hygiene, items 6 and 9)** — item 6 is merged; item 9 is audited (report only, `reports/progress_112_dependency_warning_audit.md`) and its approved **Option A is implemented** on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`), awaiting the merge decision. Option B, Option C, the `engines` declaration, the npm-12 `allowScripts` pin and the Option A–D alternatives stay approval-gated before any `package.json`, lockfile, or workflow change; E–F otherwise stay plan-only.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -448,7 +457,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 ## Milestone D — State / CI / warning hygiene (roadmap items 6, 9)
 
 - Item 6 (current-state consistency check) is a documentation/tooling task: a small script or CI check that fails when live docs contradict the tag/main SHA. No gate beyond normal review.
-- Item 9 (dependency and warning maintenance) **requires explicit user approval**: it touches `package.json`/`package-lock.json`. Present the proposed dependency deltas and the warning inventory first, then wait.
+- Item 9 (dependency and warning maintenance) **requires explicit user approval for anything that touches `package.json`/`package-lock.json`**. The audit is complete (`reports/progress_112_dependency_warning_audit.md`), the approved **Option A** (warning fixes only, no package change) is implemented on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`) and is now subject to the user merge decision; Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin stay approval-gated.
 
 ## Milestone E — OGraf QA / schema hardening study (roadmap items 7, 8)
 
@@ -472,7 +481,7 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 ## Recommended next prompt
 
-"KCS MILESTONE D ITEM 9 — DECISION (approval-gated). The dependency/warning audit is complete in `reports/progress_112_dependency_warning_audit.md` (no package change was made). Choose Option A (source/test/docs-only warning fixes: W1 lint split, W3 test-setup stubs, W4 dependency arrays, W5 `.gitattributes`, W2 code splitting, D9-2 checker pattern), Option B (patch/minor updates plus a bounded `npm audit fix`; edits `package.json` + lockfile), Option C (TypeScript 7 / Vitest 5 majors on their own branch), or Option D (defer item 9 and start Milestone E planning — OGraf QA / schema hardening study, items 7 and 8; Option D also requires explicit user approval, and Milestone E stays plan-only until then). The local `npm rebuild sqlite3` repair (D9-1) is a separate approval-gated item."
+"KCS MILESTONE D ITEM 9 — MERGE DECISION (approval-gated). The audit (`reports/progress_112_dependency_warning_audit.md`) is complete and the approved Option A is implemented on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 dependency arrays, W5 `.gitattributes`, D9-2 checker rule, plus the local SQLite repair. Decide whether to fast-forward merge it, and separately whether to do Option B (patch/minor updates plus a bounded `npm audit fix`; edits `package.json` + lockfile), Option C (TypeScript 7 / Vitest 5 majors on their own branch) — OGraf QA / schema hardening study, items 7 and 8; Option D also requires explicit user approval, and Milestone E stays plan-only until then). The local `npm rebuild sqlite3` repair (D9-1) is a separate approval-gated item."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
@@ -552,13 +561,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 8068 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 8448 bytes
 - `NEXT_SESSION.md` — 8433 bytes
-- `OMP_FINAL_RESPONSE.md` — 4898 bytes
-- `PROJECT_STATE.md` — 11379 bytes
+- `OMP_FINAL_RESPONSE.md` — 5297 bytes
+- `PROJECT_STATE.md` — 11627 bytes
 - `README.md` — 2620 bytes
 - `manifest.txt` — 3537 bytes
-- `progress_113_warning_maintenance.md` — 8856 bytes
+- `progress_113_warning_maintenance.md` — 11196 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

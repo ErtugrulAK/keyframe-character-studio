@@ -26,7 +26,7 @@ Checkout: `chore/warning-maintenance` (the approved Option A warning maintenance
 
 ## Validation (branch `chore/warning-maintenance`)
 
-- Full Vitest: PASS — 113 files / 1,694 tests, and `grep -c "Not implemented"` on a full run returns **0** (was 6).
+- Full Vitest: PASS — 114 files / 1,700 tests, and `grep -c "Not implemented"` on a full run returns **0** (was 6).
 - `npm run lint`: **clean** (the Fast Refresh warning is gone).
 - `npx tsc --noEmit`: PASS.
 - `npm run build`: PASS with **no** chunk-size advisory (largest chunk 382.19 kB; react-vendor 189.64 kB, geometry 36.09 kB, icons 14.30 kB).

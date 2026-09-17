@@ -161,11 +161,20 @@ describe('check-state-consistency — text rules', () => {
 
   it('fails when a roadmap item is reported as not yet begun', () => {
     const { status, output } = runCheck(makeFixture({
-      'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## Status\n\nItem 9 has not started; the audit is still outstanding.\n',
+      'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## Status\n\nItem 9 has not yet begun, so its warnings are still open.\n',
     }));
 
     expect(status).toBe(1);
     expect(output).toContain('says a roadmap item has not started');
+  });
+
+  it('fails when a roadmap item is reported as not implemented yet', () => {
+    const { status, output } = runCheck(makeFixture({
+      'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## Status\n\nItem 9 is not implemented yet; plan options are proposed.\n',
+    }));
+
+    expect(status).toBe(1);
+    expect(output).toContain('says a roadmap item is not implemented yet');
   });
 
   it('accepts an item-level status that names the real state', () => {

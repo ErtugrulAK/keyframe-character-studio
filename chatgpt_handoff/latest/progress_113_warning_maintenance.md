@@ -18,7 +18,7 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 
 - New `src/context/useAnimator.ts` owns the `AnimatorContext` object and the `useAnimator` hook.
 - `src/context/AnimatorContext.tsx` now exports `AnimatorProvider` (and the `AnimatorContextType` type) only; it imports the context object from the new module. The type-only import direction keeps the dependency acyclic at runtime.
-- 23 files were migrated to the new hook module (16 source files, 7 test files), including the `vi.mock` factories: mocks that supply `useAnimator` now target `../context/useAnimator`, mocks that supply the provider keep targeting `../context/AnimatorContext`.
+- 24 files were migrated to the new hook module (16 source files — 15 hook consumers plus the provider's own context import — and 8 test files), including the `vi.mock` factories: mocks that supply `useAnimator` now target `../context/useAnimator`, mocks that supply the provider keep targeting `../context/AnimatorContext`.
 - `src/components/Toast/ToastPortal.tsx` reads `ToastItem` from its canonical source (`src/hooks/useToast.ts`), so the provider module no longer re-exports it.
 - Evidence: `npm run lint` reports **no** warnings (previously one at `AnimatorContext.tsx:651`).
 
@@ -30,9 +30,10 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 
 ### W3 — jsdom noise removed in the test setup
 
-- `src/tests/setup.ts` now replaces `HTMLCanvasElement.prototype.getContext` with a function that returns `null` (jsdom's own outcome, minus the "Not implemented" log) and skips the navigation attempt for download links (`download` attribute or `blob:`/`data:` href) while leaving ordinary anchors on jsdom's normal path.
-- Why it is behaviour-identical: the production text-measurement helper (`src/utils/bounds.ts:61`) already falls back when `getContext` returns null, and the download helpers only build an anchor whose own state the tests assert.
-- Evidence: the full suite previously printed **6** "Not implemented" lines (3 canvas from `ografPackage` / `presetConversion`, 3 navigation from the download flows in `presetExportImportUi` / `firstExportFlow`); after the change `grep -c "Not implemented"` on a full run returns **0**.
+- `src/tests/setup.ts` now replaces `HTMLCanvasElement.prototype.getContext` with a function that returns `null` (jsdom's own outcome, minus the "Not implemented" log). For download links (`download` attribute or `blob:`/`data:` href) the click event is still dispatched so listeners and `preventDefault` keep working, but the link temporarily points at a same-document fragment while the event is in flight — jsdom cannot navigate to the unreachable target, which is what produced the log — and the original `href` is restored in a `finally` block, so the element's observable state is unchanged. Ordinary anchors stay entirely on jsdom's native path.
+- Why the canvas stub is behaviour-identical: the production text-measurement helper (`src/utils/bounds.ts:61`) already falls back when `getContext` returns null.
+- The stub semantics are pinned by `src/tests/setupStubs.test.ts` (5 cases: canvas returns null; a download-link click reaches listeners and restores the href; a listener can cancel the event; a blob href without the `download` attribute follows the same path; an ordinary anchor keeps the native path).
+- Evidence: the full suite previously printed **6** "Not implemented" lines (3 canvas from `ografPackage` / `presetConversion`, 3 navigation from the download flows in `presetExportImportUi` / `firstExportFlow`); after the change `grep -c "Not implemented"` on a full run returns **0** (verified again after this correction).
 
 ### W4 — the two `react-hooks/exhaustive-deps` suppressions are gone
 
@@ -47,7 +48,7 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 ### D9-2 — the state checker now catches item-level stale claims
 
 - `scripts/check-state-consistency.mjs` gained two `STALE_ACTIVE_PATTERNS` entries that fail an active claim that a roadmap item has not started / is not implemented yet (the exact class that survived a PASS before).
-- `src/tests/stateConsistencyCheck.test.ts` gained three focused cases: two negative (item reported as not started, item reported as not yet begun) and one guard (a truthful item-level status passes).
+- `src/tests/stateConsistencyCheck.test.ts` gained four focused cases: three negative — "is not started", "has not yet begun" (`begun` is part of the first pattern) and "is not implemented yet" (the second pattern, previously untested) — and one guard, a truthful item-level status that must pass.
 - `reports/progress_112_dependency_warning_audit.md` §12 is now headed "Independent review history (superseded states are quoted verbatim)", which is what it is — quoting superseded states — and is therefore exempt from the stale-claim scan by the checker's own rule.
 
 ### D9-1 — local SQLite binding repaired (root cause refined)
@@ -61,7 +62,7 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 
 | Check | Command | Result |
 |---|---|---|
-| Full unit/integration suite | `npm test` | PASS — 113 files / **1,694** tests (1,691 + 3 new D9-2 cases) |
+| Full unit/integration suite | `npm test` | PASS — 114 files / **1,700** tests (the 1,691 baseline + 4 D9-2 cases + 5 setup-stub cases) |
 | jsdom noise | `npm test 2>&1 \| grep -c "Not implemented"` | **0** (was 6) |
 | Lint | `npm run lint` | **clean** (was one Fast Refresh warning) |
 | TypeScript | `npx tsc --noEmit` | PASS |
@@ -71,6 +72,8 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 | State consistency | `node scripts/check-state-consistency.mjs` | PASS |
 | Backend probe | `node server/index.js` + `curl /api/health` | PASS — HTTP 200 (repair verified) |
 | Built-app smoke | `vite preview` + real browser | PASS — editor loads from the split chunks, layer drawn, transform gizmo, inspector, timeline lane |
+
+**Provenance:** every command above was run on this branch's working tree; the release gate prints the candidate SHA it saw, and §3 of the handoff records that value. Because this report is itself edited after those runs, the gate is re-run on the source revision and the printed SHA is recorded in the handoff manifest rather than inferred.
 
 ## 5. Warning status after this task
 
@@ -84,6 +87,12 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 | W6 | `e2e/**` outside the Vitest glob | Unchanged by design (documented) |
 | W7 | `NO_COLOR`/`FORCE_COLOR` env warning | Unchanged (environment, not the repository) |
 
+## 5b. Recorded residual risks
+
+- **W4 latest-ref window:** the mouse-move callback reads the handler through a ref published in a passive effect. In the normal path the listener is installed only for the `isDragging` render, and that effect runs before the listener effect, so the current handler is always published in time. A theoretical gap remains between commit and the passive effect, during which the ref briefly holds the previous callback. No concrete regression was observed; the semantics moved from a stale closure to "read the latest handler at call time".
+- **W2 is a caching boundary, not a smaller download:** every chunk is still eagerly loaded, so the bytes shipped on first load are effectively unchanged (622.78 kB across chunks versus 621.99 kB before, i.e. +0.79 kB of chunk overhead). The gain is cacheable boundaries plus the removal of the per-chunk size advisory.
+- **The SQLite repair is `node_modules`-local:** a fresh `npm install` on npm 12 blocks the install script again until the `allowScripts` pin is approved.
+- **`.gitattributes` rewrites working-tree line endings** on the next checkout/touch of tracked text files; that is the intended W5 effect.
 ## 6. Protected invariants
 
 - `package.json`, `package-lock.json`, `.github/workflows/**` and `node_modules` dependency versions: unchanged. (The `node_modules` change is the repaired native binding only; the accidental `allowScripts` edit was reverted.)

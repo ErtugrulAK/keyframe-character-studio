@@ -100,7 +100,7 @@ Docs/state after the merge (this branch): `docs/KCS_GROUPED_ROADMAP_EXECUTION_PL
 | The A/B/C `MERGED` loop had no deletion-sensitive test (its case passed via a co-firing rule) | medium | That case now changes both roadmap copies together and asserts the rule's own message (`milestone C is not marked MERGED`) |
 | The git fixture relied on the machine's `init.defaultBranch`, so the case would fail on a `master`-default CI runner | medium | The fixture pins `git init -b main`; the suite was re-run with `init.defaultBranch=master` forced and passes |
 | The mirror rule skipped absent copies, so a bundle that silently dropped a mirrored document still passed | medium | A missing copy is now a failure ("the bundle must carry a copy of …") |
-| The roadmap's historical note still said Milestone C awaits the merge decision, and the blacklist pattern did not match the live wording | low | The note now records the merge, and the pattern covers both wordings |
+| The roadmap's historical note still carried a pending-merge claim for Milestone C, and the blacklist pattern did not match the live wording | low | The note now records the merge, and the pattern covers both wordings |
 | The one-file's final response said "PASS (33 checks)" while the run reports 35 | low | The final response states PASS without a brittle count; the exact count lives in this report's validation matrix |
 
 ## Merge/push status

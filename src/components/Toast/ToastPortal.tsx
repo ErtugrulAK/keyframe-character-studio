@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import { CheckCircle2, AlertCircle, Sparkles, X } from 'lucide-react';
-import type { ToastItem } from '../../context/AnimatorContext';
+import type { ToastItem } from '../../hooks/useToast';
 
 interface ToastPortalProps {
   toasts: ToastItem[];

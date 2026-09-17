@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeFilenameComponent } from '../../utils/pathSafety';
-import { useAnimator } from '../../context/AnimatorContext';
+import { useAnimator } from '../../context/useAnimator';
 import {
   Download,
   Upload,

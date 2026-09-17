@@ -11,7 +11,7 @@ const part = {
   fillColor: '#ff0000', strokeColor: '#101218', zIndex: 3,
 } as CharacterPart;
 
-vi.mock('../context/AnimatorContext', () => ({
+vi.mock('../context/useAnimator', () => ({
   useAnimator: () => ({
     isScaleLocked: true,
     setIsScaleLocked: vi.fn(),

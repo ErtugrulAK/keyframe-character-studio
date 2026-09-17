@@ -61,6 +61,10 @@ const STALE_ACTIVE_PATTERNS = [
   { pattern: /awaits the merge decision/u, reason: 'stale pending-merge claim' },
   { pattern: /plan-only, not started/u, reason: 'stale "not started" status for a started/merged milestone' },
   { pattern: /milestones B–F are unchanged/u, reason: 'stale roadmap intro phrase that contradicted its own table' },
+  // Item-level status drift: a handoff that keeps a finished roadmap item open
+  // (the class D9-2 recorded — "Item 9 … is not started" survived a PASS).
+  { pattern: /item\s+\d+[^\n]{0,60}?(?:is|has|had|was)\s+not\s+(?:yet\s+)?(?:been\s+)?started/iu, reason: 'says a roadmap item has not started; record its real state or mark the section historical' },
+  { pattern: /item\s+\d+[^\n]{0,60}?not\s+implemented\s+yet/iu, reason: 'says a roadmap item is not implemented yet; record its real state or mark the section historical' },
 ];
 
 /** The upload instruction the handoff must carry. */

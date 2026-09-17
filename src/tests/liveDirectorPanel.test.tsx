@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   triggerAllBroadcastIn: vi.fn(),
 }));
 
-vi.mock('../context/AnimatorContext', () => ({
+vi.mock('../context/useAnimator', () => ({
   useAnimator: () => ({
     sceneTitle: 'Template',
     motionTemplates: [

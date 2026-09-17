@@ -1,25 +1,21 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone D Item 9 (Dependency and Warning Maintenance Audit)
+# KCS Minimal ChatGPT Upload Bundle — Milestone D Item 9, Option A (Warning Maintenance + SQLite Repair)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-Milestone D item 9 — dependency and warning maintenance — **audit only**. `reports/progress_112_dependency_warning_audit.md` records the dependency inventory, the `npm outdated` and `npm audit` results, seven catalogued warnings with their exact commands, evidence, impact, proposed fix, risk and approval gate, four plan options (A: source/test/docs-only warning fixes; B: patch/minor updates plus a bounded `npm audit fix`; C: TypeScript 7 / Vitest 5 majors on their own branch; D: defer and start Milestone E planning), and the findings D9-1 (the REST API cannot start in this working copy because the NAPI `sqlite3` binding is missing from `node_modules`), D9-2 (the item-6 state checker does not catch stale item-level status claims) and D9-3 (`@types/node`'s `latest` tag is behind the installed major).
+The approved **Option A** of the item-9 audit plus the approved **local SQLite repair**: W1 Fast Refresh split (`src/context/useAnimator.ts`), W2 real chunk splitting (no chunk above 500 kB), W3 jsdom canvas/navigation stubs, W4 honest dependency arrays with a latest-ref, W5 `.gitattributes`, D9-2 checker rule for item-level stale claims, and the D9-1 repair (`node_modules/sqlite3` binding extracted with the package's own install command, `/api/health` → 200). The refined D9-1 root cause is npm 12 blocking the `sqlite3` install script ("not covered by allowScripts"), not the Node 24 ABI.
 
-No `package.json`, lockfile, workflow, source, or test change was made, and no install/update/audit-fix command was run. Item 9's implementation stays approval-gated; Milestone D remains the roadmap's `NEXT` milestone.
-
-## Review status
-
-The authoritative review history is §12 of `progress_112_dependency_warning_audit.md`: every round, every finding and its closure are recorded there, and each round's findings were closed in the revision that followed it. The verdict of the final round is recorded in `OMP_FINAL_RESPONSE.md` §4. This document deliberately does not restate the round count, so it cannot drift from that history.
+No dependency was updated and `package.json`, `package-lock.json` and the workflows are byte-identical to `main`. The change is on branch `chore/warning-maintenance` and awaits its independent review and the user's merge decision.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_112_dependency_warning_audit.md` — the item-9 audit report (scope, dependency inventory, outdated table, audit result, warning inventory, plan options, approval gates, validation, protected invariants)
+- `progress_113_warning_maintenance.md` — the implementation report (per-item changes, evidence, before/after warnings, validation, invariants)
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan with the item-9 status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
-- `PROJECT_STATE.md` — project state, validation status, and the ChatGPT handoff policy
+- `PROJECT_STATE.md` — project state, validation status and the handoff policy
 - `manifest.txt` — this bundle's inventory
 
 `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` are copies of their root documents; `node scripts/check-state-consistency.mjs` compares them after CRLF→LF normalization and a whole-document `trim()` and fails on content drift.

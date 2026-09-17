@@ -5,6 +5,8 @@ import { App } from '../App';
 
 vi.mock('../context/AnimatorContext', () => ({
   AnimatorProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+vi.mock('../context/useAnimator', () => ({
   useAnimator: () => ({ appMode: 'edit', setIsPlaying: vi.fn() }),
 }));
 vi.mock('../components/Header/HeaderBar', () => ({ HeaderBar: () => <header /> }));

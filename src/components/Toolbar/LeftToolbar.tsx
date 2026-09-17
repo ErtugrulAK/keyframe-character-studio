@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAnimator } from '../../context/AnimatorContext';
+import { useAnimator } from '../../context/useAnimator';
 import { ProjectDrawer } from './drawers/ProjectDrawer';
 import { MediaDrawer } from './drawers/MediaDrawer';
 import { ElementsDrawer } from './drawers/ElementsDrawer';

@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useAnimator } from '../../context/AnimatorContext';
+import { useAnimator } from '../../context/useAnimator';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
@@ -78,7 +78,6 @@ export const StageCanvas: React.FC = () => {
       setZoomLevel(editViewportRef.current.zoom);
       setPanOffset(editViewportRef.current.pan);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appMode]);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -306,12 +305,16 @@ export const StageCanvas: React.FC = () => {
 
   const rafPanRef = useRef<number | null>(null);
 
+  // The move handler runs before the pointer-up callback is declared, so it reads
+  // the latest handler through a ref instead of closing over it (no dependency cycle).
+  const handleMouseUpRef = useRef<(commitShape?: boolean) => void>(() => {});
+
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (!isDragging || !dragMode) return;
 
       if (e.buttons === 0) {
-        handleMouseUp();
+        handleMouseUpRef.current();
         return;
       }
 
@@ -544,7 +547,6 @@ export const StageCanvas: React.FC = () => {
       }
     },
     // The pointer-up effect owns the current mouse-up callback; adding the later-declared callback here would create a declaration cycle.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, shapeCreationStart, pendingShapeType, currentFrame, getComputedTransform, isScaleLocked]
   );
 
@@ -586,6 +588,10 @@ export const StageCanvas: React.FC = () => {
     setDragMode(null);
     setMarqueeRect(null);
   }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId, booleanOperandEditingGroupId]);
+  useEffect(() => {
+    handleMouseUpRef.current = handleMouseUp;
+  }, [handleMouseUp]);
+
   const handlePointerUp = useCallback(() => handleMouseUp(), [handleMouseUp]);
 
   const handlePointerCancel = useCallback(() => handleMouseUp(false), [handleMouseUp]);

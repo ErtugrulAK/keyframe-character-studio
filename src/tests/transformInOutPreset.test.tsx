@@ -6,7 +6,7 @@ import type { CharacterPart, Transform } from '../types/animator';
 
 // TransformAlignmentBar (rendered inside TransformTab) reads the animator
 // context for the multi-select alignment state — provide a minimal stub.
-vi.mock('../context/AnimatorContext', () => ({
+vi.mock('../context/useAnimator', () => ({
   useAnimator: () => ({
     selectedPartIds: [] as string[],
     selectedPartId: undefined as string | undefined,

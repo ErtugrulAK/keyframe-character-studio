@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAnimator } from '../../../context/AnimatorContext';
+import { useAnimator } from '../../../context/useAnimator';
 
 export const ProjectDrawer: React.FC = () => {
   const { projectResolution, setProjectResolution } = useAnimator();

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import { AnimatorContext } from './useAnimator';
+import React, { useState, useCallback } from 'react';
 import { ToastPortal } from '../components/Toast/ToastPortal';
 import type {
   CharacterPart,
@@ -38,9 +39,7 @@ import { usePresets, type SavePresetInput, type UpdatePresetInput } from '../hoo
 import { useProjectState } from '../hooks/useProjectState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
-export type { ToastItem } from '../hooks/useToast';
-
-interface AnimatorContextType {
+export interface AnimatorContextType {
   currentFrame: number;
   setCurrentFrame: (frame: number | ((prev: number) => number)) => void;
   isPlaying: boolean;
@@ -188,8 +187,6 @@ interface AnimatorContextType {
   setStuntLoopState: (loop: boolean) => void;
   stopAllLiveStunts: () => void;
 }
-
-const AnimatorContext = createContext<AnimatorContextType | null>(null);
 
 export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { toasts, showToast, removeToast } = useToast();
@@ -646,10 +643,4 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       <ToastPortal toasts={toasts} removeToast={removeToast} />
     </AnimatorContext.Provider>
   );
-};
-
-export const useAnimator = () => {
-  const ctx = useContext(AnimatorContext);
-  if (!ctx) throw new Error('useAnimator must be used within an AnimatorProvider');
-  return ctx;
 };

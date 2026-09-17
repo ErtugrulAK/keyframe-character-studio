@@ -1,6 +1,6 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { useAnimator } from '../../context/AnimatorContext';
+import { useAnimator } from '../../context/useAnimator';
 import { TRACK_CHANNELS, type PropertyKeyframe, type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, findChannelKeyframeAtFrame, hasChannelDataForTemplate } from '../../utils/timelineMetrics';
 import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, buildTransformSnapshot } from '../../utils/channelKeyframeGroups';

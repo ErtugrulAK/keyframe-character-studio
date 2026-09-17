@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { useAnimator } from '../../../context/AnimatorContext';
+import { useAnimator } from '../../../context/useAnimator';
 import { Upload } from 'lucide-react';
 
 export const MediaDrawer: React.FC = () => {

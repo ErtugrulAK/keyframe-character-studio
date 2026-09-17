@@ -1,6 +1,6 @@
 import React from 'react';
 import { CopyPlus, FlipHorizontal2, FlipVertical2, RotateCw } from 'lucide-react';
-import { useAnimator } from '../../../context/AnimatorContext';
+import { useAnimator } from '../../../context/useAnimator';
 
 /**
  * Duplicate inspector tab: normal copy plus mirror copies (Y axis, X axis,

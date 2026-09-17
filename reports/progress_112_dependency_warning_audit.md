@@ -158,7 +158,7 @@ None of these touch `package.json`, the lockfile, or the workflows.
 - `without-mask`, global OMP configuration (`memory.backend: mnemopi`, `task.maxConcurrency: 8`), `C:\Users\ertugrul.ak\Desktop\KCS`, and `ograf-graphics` are untouched.
 - The handoff bundle still carries documentation only (no source/test copies, no secrets).
 
-## 12. Independent review history
+## 12. Independent review history (superseded states are quoted verbatim)
 
 **Round 1 — BLOCKED** (read-only `reviewer-agent`, scope: this report, the state-document updates, the handoff bundle and the one-file). Findings and how each was closed:
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAnimator } from '../../context/AnimatorContext';
+import { useAnimator } from '../../context/useAnimator';
 import { Zap, Film, CheckCircle2, Play } from 'lucide-react';
 import './LiveDirector.css';
 

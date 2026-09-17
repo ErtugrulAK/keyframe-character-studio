@@ -6,7 +6,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `bcf92413ebc23868344c43a83f1c0f9318d3e4e7` (Milestones A, B, C and Milestone D item 6 merged). Milestone D item 9 (dependency and warning maintenance) is **audited, report only**, on branch `chore/dependency-warning-audit`; nothing in `package.json`, `package-lock.json`, `.github/workflows/**`, `src/**`, `e2e/**`, `scripts/**` or `server/**` was changed by it.
+Current `main` / `origin/main` is at `bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4` (milestones A, B, C, Milestone D item 6, and the item-9 audit). The approved **Option A warning maintenance** is implemented on branch `chore/warning-maintenance` — W1, W2, W3, W4, W5 and the D9-2 checker rule are fixed there, and the local SQLite binding (D9-1) is repaired in this working copy (`GET /api/health` returns 200). `package.json`, `package-lock.json` and the workflows are still unchanged; the branch awaits merge approval.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -24,15 +24,15 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 113 files / 1,691 tests |
+| Full Vitest | PASS | 113 files / 1,694 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf`; committed minimal fixture |
-| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests at `a410605` on the audit branch (earlier run at `bcf9241` on `main`) |
+| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests (latest run at `bb3cac9` on `main`) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
 | State consistency | PASS | `node scripts/check-state-consistency.mjs` — 33 checks on this branch with its bundle, 34 on the earlier `main` run (the total scales with the number of bundle documents scanned) |
 | TypeScript | PASS | `npx tsc --noEmit` and build typecheck |
-| Lint | PASS | Existing Fast Refresh warning only |
-| Production build | PASS | Existing Vite chunk-size advisory only (JS 621.99 kB / 182.39 kB gzip) |
-| Independent review | IN REVIEW | Milestone A `READY` in round 6 of six rounds; the item-9 audit stays IN REVIEW until a round returns READY or READY WITH WARNINGS — §12 of `reports/progress_112_dependency_warning_audit.md` is the authoritative round-by-round history — and the checker's item-level false negative is recorded as D9-2 |
+| Lint | PASS | clean — the Fast Refresh warning was removed in `reports/progress_113_warning_maintenance.md` |
+| Production build | PASS | no chunk-size advisory — split into 382.19 kB app + react-vendor/icons/geometry chunks (see `reports/progress_113_warning_maintenance.md`) |
+| Independent review | IN REVIEW | Milestone A `READY` in round 6 of six rounds; the item-9 audit itself closed `READY WITH WARNINGS` in round 6 of six (`reports/progress_112_dependency_warning_audit.md` §12); the Option A warning-maintenance change is under its own review before any merge |
 | CI on `main` | PASS | runs `35206117254` (Milestone A merge) and `35207913453` (state reconciliation) |
 
 ## Remaining work

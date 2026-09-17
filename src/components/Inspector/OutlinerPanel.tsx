@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useAnimator } from '../../context/AnimatorContext';
+import { useAnimator } from '../../context/useAnimator';
 import {
   Eye,
   EyeOff,

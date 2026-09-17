@@ -150,6 +150,32 @@ describe('check-state-consistency — text rules', () => {
     expect(output).toContain('stale active claims');
   });
 
+  it('fails when a roadmap item is reported as not started (D9-2 class)', () => {
+    const { status, output } = runCheck(makeFixture({
+      'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## Status\n\nItem 9 (dependency maintenance) is not started and needs approval.\n',
+    }));
+
+    expect(status).toBe(1);
+    expect(output).toContain('says a roadmap item has not started');
+  });
+
+  it('fails when a roadmap item is reported as not yet begun', () => {
+    const { status, output } = runCheck(makeFixture({
+      'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## Status\n\nItem 9 has not started; the audit is still outstanding.\n',
+    }));
+
+    expect(status).toBe(1);
+    expect(output).toContain('says a roadmap item has not started');
+  });
+
+  it('accepts an item-level status that names the real state', () => {
+    const { status } = runCheck(makeFixture({
+      'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## Status\n\nItem 9 is audited, report only; the decision needs explicit user approval.\n',
+    }));
+
+    expect(status).toBe(0);
+  });
+
   it('tolerates the same wording under a heading marked historical', () => {
     const { status } = runCheck(makeFixture({
       'chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md': '# Final response\n\n## Historical record\n\nAt that time the merge was NOT MERGED.\n',

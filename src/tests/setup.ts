@@ -33,3 +33,32 @@ if (typeof window !== 'undefined') {
 afterEach(() => {
   cleanup();
 });
+
+/**
+ * jsdom has no canvas implementation: `HTMLCanvasElement.prototype.getContext`
+ * logs "Not implemented" and returns null. The production text-measurement
+ * helper (`src/utils/bounds.ts`) already falls back when the context is
+ * missing, so returning null up front is behaviour-identical and removes the
+ * per-suite noise from every test that renders text geometry.
+ */
+if (typeof HTMLCanvasElement !== 'undefined') {
+  HTMLCanvasElement.prototype.getContext = (() => null) as unknown as typeof HTMLCanvasElement.prototype.getContext;
+}
+
+/**
+ * jsdom cannot follow a download link: clicking an anchor that carries
+ * `download` (or a `blob:`/`data:` href) makes it log "Not implemented:
+ * navigation to another Document". The download helpers only build the anchor
+ * and click it, and the tests assert the anchor's own state, so skipping the
+ * navigation attempt here removes the noise without changing what a test can
+ * observe. Ordinary anchors keep jsdom's normal click behaviour.
+ */
+if (typeof HTMLAnchorElement !== 'undefined') {
+  const nativeAnchorClick = HTMLAnchorElement.prototype.click;
+  HTMLAnchorElement.prototype.click = function anchorClick(this: HTMLAnchorElement) {
+    const href = this.getAttribute('href') ?? '';
+    const isDownloadLink = this.hasAttribute('download') || /^(?:blob|data):/u.test(href);
+    if (isDownloadLink) return;
+    nativeAnchorClick.call(this);
+  };
+}

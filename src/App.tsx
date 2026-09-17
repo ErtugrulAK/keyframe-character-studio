@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { AnimatorProvider, useAnimator } from './context/AnimatorContext';
+import { AnimatorProvider } from './context/AnimatorContext';
+import { useAnimator } from './context/useAnimator';
 import { HeaderBar } from './components/Header/HeaderBar';
 import { LeftToolbar } from './components/Toolbar/LeftToolbar';
 import { StageCanvas } from './components/Canvas/StageCanvas';

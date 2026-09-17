@@ -1,0 +1,18 @@
+# Normalise line endings so scripted git runs stop emitting CRLF warnings.
+# The working tree is Windows-shaped but every text file is stored with LF;
+# binary assets keep their own bytes.
+* text=auto eol=lf
+
+# Explicit binary guards (text=auto already detects most of these).
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.zip binary
+*.sqlite binary
+*.node binary
+*.woff binary
+*.woff2 binary
+*.ttf binary

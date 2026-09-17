@@ -27,7 +27,7 @@ const animatorCtx = {
   setBooleanOperandEditingGroupId: vi.fn(),
 
 };
-vi.mock('../context/AnimatorContext', () => ({
+vi.mock('../context/useAnimator', () => ({
   useAnimator: () => animatorCtx,
 }));
 

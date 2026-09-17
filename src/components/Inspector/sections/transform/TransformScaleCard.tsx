@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, Unlink } from 'lucide-react';
 import type { Transform } from '../../../../types/animator';
-import { useAnimator } from '../../../../context/AnimatorContext';
+import { useAnimator } from '../../../../context/useAnimator';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
 interface TransformScaleCardProps {

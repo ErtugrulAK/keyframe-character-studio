@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { AnimatorProvider, useAnimator } from '../context/AnimatorContext';
+import { AnimatorProvider } from '../context/AnimatorContext';
+import { useAnimator } from '../context/useAnimator';
 
 // Dummy consumer to access and manipulate context
 const ContextConsumer = ({ callback }: { callback: (ctx: any) => void }) => {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useAnimator } from '../../context/AnimatorContext';
+import { useAnimator } from '../../context/useAnimator';
 import { makeEmptyChannels } from '../../utils/defaults';
 import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
 import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../../utils/shapeAppearance';

@@ -28,7 +28,7 @@ const { context, createZipMock } = vi.hoisted(() => ({
   createZipMock: vi.fn(),
 }));
 
-vi.mock('../context/AnimatorContext', () => ({ useAnimator: () => context }));
+vi.mock('../context/useAnimator', () => ({ useAnimator: () => context }));
 vi.mock('../components/Modal/NewItemModal', () => ({ NewItemModal: () => null }));
 vi.mock('../ograf/browserZip', async () => {
   const actual = await vi.importActual<typeof import('../ograf/browserZip')>('../ograf/browserZip');

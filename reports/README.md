@@ -36,3 +36,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_110_export_onboarding.md` — Milestone C: first export / onboarding flow.
 - `progress_111_state_hygiene_gate.md` — Milestone D item 6: state consistency check.
 - `progress_112_dependency_warning_audit.md` — Milestone D item 9: dependency and warning maintenance audit (report only; no package/lock/workflow change).
+- `progress_113_warning_maintenance.md` — Option A warning maintenance (W1/W2/W3/W4/W5/D9-2) and the local SQLite binding repair.

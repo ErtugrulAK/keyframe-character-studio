@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAnimator } from '../../../context/AnimatorContext';
+import { useAnimator } from '../../../context/useAnimator';
 import { Diamond, Plus, Trash2, Play } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 import { groupChannelKeyframesByFrame, DISPLAY_CHANNELS, TRIM_PATH_CHANNELS } from '../../../utils/channelKeyframeGroups';

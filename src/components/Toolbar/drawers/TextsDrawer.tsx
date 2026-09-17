@@ -1,5 +1,5 @@
 import React from 'react';
-import { useAnimator } from '../../../context/AnimatorContext';
+import { useAnimator } from '../../../context/useAnimator';
 import type { BodyPartType } from '../../../types/animator';
 import { Type } from 'lucide-react';
 

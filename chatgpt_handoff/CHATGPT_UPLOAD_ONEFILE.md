@@ -32,8 +32,8 @@ This file is the OMP final response for the Milestone E study task. It is copied
 - `scripts/validate-ograf-manifest.mjs` fetches **8** documents (OGraf graphics schema + six `$ref` targets + the JSON Schema 2020-12 meta-schema) and pins each by **SHA-256**, throwing on an unpinned reference or a digest mismatch. That pin check is the fail-closed contract and the study keeps it.
 - Read-only verification on 2026-09-18: **8/8 pins still match** upstream; the whole closure is **33,567 bytes (≈32.8 KiB)**.
 - Licensing checked at the source: `ebu/ograf` is **MIT**; the JSON Schema meta-schema ships under the BSD-style "JSON Schema Specification Authors" notice. Redistribution is viable **with the notices retained**; the final licensing call is the user's.
-- Options: **7-A** vendor the closure + an offline mode (deterministic, ~33 KiB, makes CI meaningful), **7-B** a gitignored verified cache (offline after a warm run; cold runners still need the network), **7-C** status quo. The study recommends **7-A** and specifies the negative controls (unpinned `$ref`, one-byte drift, invalid manifest) that must keep failing closed.
-- CI wiring for `validate:ograf` is a **separate** approval, because it edits a workflow.
+- Options: **7-A** vendor the closure + an offline mode (deterministic, ~33 KiB, no network in CI), **7-B** a gitignored verified cache (offline after a warm run; cold runners still need the network), **7-C** status quo. The study recommends **7-A** and specifies the negative controls (unpinned `$ref`, one-byte drift, invalid manifest) that must keep failing closed.
+- CI **already** runs `validate:ograf` (`.github/workflows/ci.yml:27-28`, Node 22), so every push performs the live fetches: an outage or a schema bump fails the pipeline. 7-A removes that dependency **without** a workflow edit; any change to the workflow itself stays a separate approval.
 
 ## 3) ITEM 8 — WHAT THE PLAN PROPOSES
 
@@ -58,7 +58,7 @@ This file is the OMP final response for the Milestone E study task. It is copied
 ## 6) NEXT — FOUR DECISIONS
 
 1. Item 7: **7-A** (vendor + offline) or **7-B** (verified cache), or record **7-C**.
-2. Item 7: approve **CI wiring** for `validate:ograf` once it can run offline.
+2. Item 7: confirm the existing CI step keeps calling `validate:ograf` unchanged once the closure is vendored (no workflow edit required).
 3. Item 8: approve implementing the generator + comparison + host-limited report on `test/ograf-folder-qa-automation`.
 4. Item 8: confirm the **QA root path policy**.
 
@@ -76,10 +76,10 @@ Bundle scope: minimal and task-specific; this folder is not an archive
 
 Branch: docs/milestone-e-ograf-qa-study on top of main 392314168b2bbbfc87b5c47079eda73c65d187f7 (milestone D complete: item 6 plus item 9 audit, Option A warning maintenance and the local SQLite repair, merged with green CI run 35322372675)
 Study: docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md; task record: reports/progress_114_ograf_qa_study.md
-Item 7 findings: 8 pinned schema documents fetched live by validate-ograf-manifest.mjs; 8/8 pins verified; closure 33,567 bytes; ebu/ograf MIT; JSON Schema meta-schema under a BSD-style notice; options 7-A vendor + offline (recommended), 7-B verified cache, 7-C status quo
+Item 7 findings: 8 pinned schema documents fetched live by validate-ograf-manifest.mjs, and CI runs that validator on every push (.github/workflows/ci.yml:27-28); 8/8 pins verified; closure 33,567 bytes; ebu/ograf MIT; JSON Schema meta-schema under a BSD-style notice; options 7-A vendor + offline (recommended, no workflow edit), 7-B verified cache, 7-C status quo
 Item 8 plan: generator + ZIP/folder artifact comparison + host-limited report on test/ograf-folder-qa-automation; no host contract invention; no change to the official exports
 Implemented in this task: NOTHING (documentation only; no source, test, dependency or workflow change)
-Still approval-gated: item 7 licensing/redistribution decision, CI wiring for validate:ograf, item 8 implementation, the QA root path policy, plus the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
+Still approval-gated: item 7 licensing/redistribution decision (and confirmation that the existing CI step stays as-is), item 8 implementation, the QA root path policy, plus the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -110,7 +110,7 @@ Validation at this revision (each command run separately):
 - Item 7 evidence: live pin verification (8/8 match), closure byte measurement (33,567 B), upstream licence metadata (MIT / BSD-style notice)
 - Item 8 evidence: desktop QA-root existence check (absent), reports/progress_049.md, reports/progress_080.md, reports/progress_104.md, docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md
 
-Next: four decisions — item 7 (7-A / 7-B / 7-C), item 7 CI wiring, item 8 implementation approval, item 8 QA root path policy. With no decision, nothing is implemented.
+Next: four decisions — item 7 (7-A / 7-B / 7-C), confirmation of the unchanged CI step, item 8 implementation approval, and the QA root path policy. With no decision, nothing is implemented.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -171,13 +171,14 @@ Measured facts about `scripts/validate-ograf-manifest.mjs`:
 
 - It fetches **8** documents (the OGraf graphics schema, six `$ref` targets, and the JSON Schema 2020-12 meta-schema) and pins each by SHA-256, throwing on an unpinned reference or a digest mismatch. That pin check is the fail-closed contract.
 - A read-only fetch on 2026-09-18 confirmed **8/8 pins still match** upstream and measured the whole closure at **33,567 bytes (≈32.8 KiB)**.
+- CI **does** run the validator (`.github/workflows/ci.yml:27-28`, Node 22), so the live fetches are on the critical path of every push and pull request; an earlier report (`progress_080.md`) that says CI does not invoke it is stale and is not used as current fact here.
 - Licensing checked: `ebu/ograf` is **MIT**; the JSON Schema meta-schema ships under the BSD-style "JSON Schema Specification Authors" licence (both retrieved from the upstream repositories). Redistribution is therefore viable **if the notices ship with the vendored files**. The final licensing call is the user's.
 
-Options presented: **7-A** vendor the closure plus an offline mode (~33 KiB, deterministic, CI-able), **7-B** a gitignored verified cache (offline after a warm run, cold runners still need the network), **7-C** status quo. The study recommends **7-A** and lists the negative controls that keep validation failing closed (unpinned `$ref`, one-byte drift, invalid manifest), plus the separate CI-wiring decision.
+Options presented: **7-A** vendor the closure plus an offline mode (~33 KiB, deterministic, no network in CI, no workflow edit needed), **7-B** a gitignored verified cache (offline after a warm run, cold runners still need the network), **7-C** status quo. The study recommends **7-A** and lists the negative controls that keep validation failing closed (unpinned `$ref`, one-byte drift, invalid manifest).
 
 ## 3. Item 8 — downstream folder QA automation (plan delivered)
 
-- The host import unit is a folder containing a manifest-rooted graphic, and the research record explicitly rejects a new exporter or fake host wrapper (`docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md:165,180`).
+- The host import unit is a folder containing a manifest-rooted graphic, and the research record explicitly rejects a new exporter or fake host wrapper (`docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md` gap-matrix "Import unit" row and its `## Decision` paragraph at line 180).
 - The earlier clean-folder QA copies were hand-made (`reports/progress_049.md`), so the check is not repeatable.
 - On this machine the expected QA roots under `Desktop` (`kcs-ograf-public-controls-qa`, `kcs-ograf-host-compat-qa`, `kcs-ograf-downstream-qa`, `ograf-graphics`) are **absent**; nothing was created, moved, or deleted while checking.
 
@@ -222,7 +223,7 @@ Plan on branch `test/ograf-folder-qa-automation`: a generator that materializes 
 
 ## Current result
 
-Milestones A, B and C are merged into `main`, and Milestone D is the active milestone:
+Milestones A, B and C are merged, Milestone D is complete, and Milestone E is the active milestone:
 
 - Milestone A — canvas tangent authoring (`077911b`): vertex selection shows Bezier handles on the stage, dragging reshapes the path live, one history entry per completed drag, `Escape` cancels.
 - Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.
@@ -500,12 +501,12 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 9404 bytes
-- `NEXT_SESSION.md` — 9047 bytes
-- `OMP_FINAL_RESPONSE.md` — 4408 bytes
+- `NEXT_SESSION.md` — 9060 bytes
+- `OMP_FINAL_RESPONSE.md` — 4665 bytes
 - `PROJECT_STATE.md` — 11385 bytes
 - `README.md` — 2872 bytes
-- `manifest.txt` — 3862 bytes
-- `progress_114_ograf_qa_study.md` — 4119 bytes
+- `manifest.txt` — 4004 bytes
+- `progress_114_ograf_qa_study.md` — 4451 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

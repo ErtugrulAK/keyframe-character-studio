@@ -6,10 +6,10 @@ Bundle scope: minimal and task-specific; this folder is not an archive
 
 Branch: docs/milestone-e-ograf-qa-study on top of main 392314168b2bbbfc87b5c47079eda73c65d187f7 (milestone D complete: item 6 plus item 9 audit, Option A warning maintenance and the local SQLite repair, merged with green CI run 35322372675)
 Study: docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md; task record: reports/progress_114_ograf_qa_study.md
-Item 7 findings: 8 pinned schema documents fetched live by validate-ograf-manifest.mjs; 8/8 pins verified; closure 33,567 bytes; ebu/ograf MIT; JSON Schema meta-schema under a BSD-style notice; options 7-A vendor + offline (recommended), 7-B verified cache, 7-C status quo
+Item 7 findings: 8 pinned schema documents fetched live by validate-ograf-manifest.mjs, and CI runs that validator on every push (.github/workflows/ci.yml:27-28); 8/8 pins verified; closure 33,567 bytes; ebu/ograf MIT; JSON Schema meta-schema under a BSD-style notice; options 7-A vendor + offline (recommended, no workflow edit), 7-B verified cache, 7-C status quo
 Item 8 plan: generator + ZIP/folder artifact comparison + host-limited report on test/ograf-folder-qa-automation; no host contract invention; no change to the official exports
 Implemented in this task: NOTHING (documentation only; no source, test, dependency or workflow change)
-Still approval-gated: item 7 licensing/redistribution decision, CI wiring for validate:ograf, item 8 implementation, the QA root path policy, plus the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
+Still approval-gated: item 7 licensing/redistribution decision (and confirmation that the existing CI step stays as-is), item 8 implementation, the QA root path policy, plus the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -40,6 +40,6 @@ Validation at this revision (each command run separately):
 - Item 7 evidence: live pin verification (8/8 match), closure byte measurement (33,567 B), upstream licence metadata (MIT / BSD-style notice)
 - Item 8 evidence: desktop QA-root existence check (absent), reports/progress_049.md, reports/progress_080.md, reports/progress_104.md, docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md
 
-Next: four decisions — item 7 (7-A / 7-B / 7-C), item 7 CI wiring, item 8 implementation approval, item 8 QA root path policy. With no decision, nothing is implemented.
+Next: four decisions — item 7 (7-A / 7-B / 7-C), confirmation of the unchanged CI step, item 8 implementation approval, and the QA root path policy. With no decision, nothing is implemented.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

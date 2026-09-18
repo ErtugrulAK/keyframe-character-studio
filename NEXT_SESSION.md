@@ -11,7 +11,7 @@
 
 ## Current result
 
-Milestones A, B and C are merged into `main`, and Milestone D is the active milestone:
+Milestones A, B and C are merged, Milestone D is complete, and Milestone E is the active milestone:
 
 - Milestone A — canvas tangent authoring (`077911b`): vertex selection shows Bezier handles on the stage, dragging reshapes the path live, one history entry per completed drag, `Escape` cancels.
 - Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.

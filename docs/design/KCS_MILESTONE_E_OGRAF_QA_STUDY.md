@@ -4,7 +4,7 @@ Milestone E of `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`. This document is a 
 
 ## 1. Why this milestone exists
 
-- **Item 7 (offline schema closure).** `npm run validate:ograf` validates a manifest against the live EBU OGraf schema closure. If the network or the host is unavailable, validation cannot run at all, and CI does not invoke it — so the deterministic guard the project already pays for is not exercised automatically. The open question was a licensing/size decision before anything is vendored.
+- **Item 7 (offline schema closure).** `npm run validate:ograf` validates a manifest against the live EBU OGraf schema closure: every run fetches eight documents from two remote hosts. CI **does** run it (`.github/workflows/ci.yml:27-28`, step *Validate OGraf Fixture Manifest*, on Node 22), so every push and pull request depends on those hosts being reachable and on their content still matching the pins — a network or upstream problem fails the pipeline, and a pinned-schema drift fails it too. The open question was a licensing/size decision before anything is vendored. (Note: `reports/progress_080.md` records an earlier state in which CI did not invoke the validator; that sentence is stale and is not used here as current fact.)
 - **Item 8 (downstream folder QA automation).** The host format evidence says the import unit is a *folder* containing a manifest-rooted graphic (`docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md:165`), and that no new exporter or fake host wrapper is justified (`:180`). The clean-folder QA copies produced so far were made by hand, so the check is neither repeatable nor reviewable.
 
 ## 2. Item 7 — current behaviour (measured, not assumed)
@@ -39,9 +39,9 @@ Licensing (checked, with the caveat that the final call is the user's):
 
 | # | Option | Effect | Cost / risk | Approval needed |
 |---|---|---|---|---|
-| 7-A | **Vendor the closure + offline mode** — commit the 8 documents under `fixtures/ograf/schema/` with a `NOTICE.md` carrying both upstream notices, and make the validator resolve pinned URLs from that local map first, fetching only if `--online` is passed | `validate:ograf` runs offline and deterministically; `$ref` resolution stays inside the pinned set; pins keep failing closed on any local edit | ~33 KiB added to the repo; a schema refresh becomes a deliberate, reviewable commit | **User approval** (licensing/redistribution + new committed artifacts) |
+| 7-A | **Vendor the closure + offline mode** — commit the 8 documents under `fixtures/ograf/schema/` with a `NOTICE.md` carrying both upstream notices, and make the validator resolve pinned URLs from that local map first, fetching only if `--online` is passed | `validate:ograf` (and therefore the CI step that already calls it) runs without network access and deterministically; `$ref` resolution stays inside the pinned set; pins keep failing closed on any local edit | ~33 KiB added to the repo; a schema refresh becomes a deliberate, reviewable commit | **User approval** (licensing/redistribution + new committed artifacts) |
 | 7-B | **Controlled local cache** — keep fetching, but cache into a gitignored `.cache/ograf-schema/` verified by the same pins | Offline after the first successful run; nothing redistributed | Cache is per-machine, so CI still needs the network or a warm cache; the failure mode returns on a cold runner | User approval (cache location/policy) |
-| 7-C | **Status quo** — live-only validation, CI keeps ignoring it | No repo change | The deterministic guard stays unexercised in automation; a network outage looks like a validation failure | none (do nothing) |
+| 7-C | **Status quo** — live-only validation | No repo change | CI keeps depending on two remote hosts and on pinned content staying unchanged; an outage or a blocked host fails the pipeline | none (do nothing) |
 
 **Recommendation: 7-A**, because the closure is tiny, the licences permit it with notices, and it is the only option that makes the guard deterministic in CI. 7-B is the fallback if the user prefers not to redistribute upstream text.
 
@@ -49,7 +49,7 @@ Licensing (checked, with the caveat that the final call is the user's):
 
 1. `npm run validate:ograf` must print the same verdict for `fixtures/ograf/minimal.ograf.json` with the network disabled (`--offline`, or by asserting the local map is used).
 2. Negative controls must still fail closed: (a) an unpinned `$ref` in a fixture copy → `Unpinned remote schema reference`; (b) one byte changed in a vendored document → `Schema hash mismatch`; (c) an invalid manifest → the existing `invalid OGraf v1 manifest` path. Each becomes a focused test beside the current validator tests.
-3. CI wiring is a **separate** decision: adding `npm run validate:ograf` to `.github/workflows/ci.yml` is a workflow edit and needs its own approval.
+3. CI wiring: the step already exists (`.github/workflows/ci.yml:27-28`), so 7-A needs **no** workflow edit — it only changes how the validator resolves the pinned documents. Any change to the workflow itself (for example a Node-version bump) remains a separate approval.
 4. A refresh procedure (how an upstream schema bump is vendored and re-pinned) must be written down in the same change, because a stale vendored closure would otherwise be invisible.
 
 ## 3. Item 8 — current behaviour
@@ -60,7 +60,7 @@ Licensing (checked, with the caveat that the final call is the user's):
 
 ### 3.1 Plan (implementation needs its own approval)
 
-Branch: `test/ograf-folder-qa-automation` (the name the roadmap table already records).
+Branch: `test/ograf-folder-qa-automation` for item 8 and `chore/ograf-offline-schema-study` for the item-7 implementation (the names `reports/progress_104.md` proposed).
 
 1. **Generator** — a script that takes a compiled OGraf package (the existing `OGrafGeneratedPackage` from the canonical compiler) and materializes it into a clean folder QA root: manifest-rooted graphic, assets, no diagnostics sidecars, no artefacts from other QA profiles. It must reuse the existing package compiler and path-safety authorities rather than adding a second writer.
 2. **Artifact comparison** — a second step that compares the folder copy against the ZIP produced by the same compilation (per-file presence plus content equality), so "the folder is a clean copy of the package" is checked, not asserted.
@@ -83,7 +83,7 @@ Focused tests for the generator and the comparison (parity pass/fail, missing fi
 ## 5. Open decisions this study asks for
 
 1. **Item 7:** approve 7-A (vendor + offline mode with notices) or 7-B (controlled cache), or record 7-C as the decision.
-2. **Item 7 (separate):** approve adding `npm run validate:ograf` to CI once the closure is offline.
+2. **Item 7 (separate):** confirm the CI step keeps running `validate:ograf` unchanged after the closure is vendored (no workflow edit needed).
 3. **Item 8:** approve implementing the generator + comparison + host-limited report on `test/ograf-folder-qa-automation`.
 4. **Item 8 (separate):** confirm the QA root path policy (where clean folder QA copies may be written).
 

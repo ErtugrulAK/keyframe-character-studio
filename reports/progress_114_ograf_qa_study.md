@@ -10,13 +10,14 @@ Measured facts about `scripts/validate-ograf-manifest.mjs`:
 
 - It fetches **8** documents (the OGraf graphics schema, six `$ref` targets, and the JSON Schema 2020-12 meta-schema) and pins each by SHA-256, throwing on an unpinned reference or a digest mismatch. That pin check is the fail-closed contract.
 - A read-only fetch on 2026-09-18 confirmed **8/8 pins still match** upstream and measured the whole closure at **33,567 bytes (≈32.8 KiB)**.
+- CI **does** run the validator (`.github/workflows/ci.yml:27-28`, Node 22), so the live fetches are on the critical path of every push and pull request; an earlier report (`progress_080.md`) that says CI does not invoke it is stale and is not used as current fact here.
 - Licensing checked: `ebu/ograf` is **MIT**; the JSON Schema meta-schema ships under the BSD-style "JSON Schema Specification Authors" licence (both retrieved from the upstream repositories). Redistribution is therefore viable **if the notices ship with the vendored files**. The final licensing call is the user's.
 
-Options presented: **7-A** vendor the closure plus an offline mode (~33 KiB, deterministic, CI-able), **7-B** a gitignored verified cache (offline after a warm run, cold runners still need the network), **7-C** status quo. The study recommends **7-A** and lists the negative controls that keep validation failing closed (unpinned `$ref`, one-byte drift, invalid manifest), plus the separate CI-wiring decision.
+Options presented: **7-A** vendor the closure plus an offline mode (~33 KiB, deterministic, no network in CI, no workflow edit needed), **7-B** a gitignored verified cache (offline after a warm run, cold runners still need the network), **7-C** status quo. The study recommends **7-A** and lists the negative controls that keep validation failing closed (unpinned `$ref`, one-byte drift, invalid manifest).
 
 ## 3. Item 8 — downstream folder QA automation (plan delivered)
 
-- The host import unit is a folder containing a manifest-rooted graphic, and the research record explicitly rejects a new exporter or fake host wrapper (`docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md:165,180`).
+- The host import unit is a folder containing a manifest-rooted graphic, and the research record explicitly rejects a new exporter or fake host wrapper (`docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md` gap-matrix "Import unit" row and its `## Decision` paragraph at line 180).
 - The earlier clean-folder QA copies were hand-made (`reports/progress_049.md`), so the check is not repeatable.
 - On this machine the expected QA roots under `Desktop` (`kcs-ograf-public-controls-qa`, `kcs-ograf-host-compat-qa`, `kcs-ograf-downstream-qa`, `ograf-graphics`) are **absent**; nothing was created, moved, or deleted while checking.
 

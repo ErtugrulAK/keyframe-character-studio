@@ -4,12 +4,13 @@ Clean refreshed: YES
 Bundle purpose: Milestone F item 10 first slice — the Lottie import core and its loss report (no UI entry point yet)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/lottie-import-core on top of main 06a5dfcf (after the CI hotfix)
+Branch: feat/lottie-import-core, merged with --no-ff into main as ff32d6c (base main was 06a5dfcf) and pushed to origin/main; the branch is kept
 Task record: reports/progress_123_lottie_import_core.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
-What changed: src/interop/lottie/temporal.ts (frame mapping and the segment-to-keyframe handle split, hold, linear fallback with reports for roving/expression, keyframe limit), src/interop/lottie/diagnostics.ts (loss-report contract and first-cut limits), src/interop/lottie/mapDocument.ts (importLottieDocument: untrusted input handling, document timing, layer/transform/shape mapping, everything else reported), src/tests/lottieImport.test.ts (17 cases)
-Approved first-cut decisions honoured: precomps reported and skipped; layer in/out reported, not converted; the design's limits (512 keyframes per channel, 8 masks, 32 levels, 4096 vertices, 32 MB); the report carries codes, paths and actions
+What changed: src/interop/lottie/temporal.ts (frame mapping and the segment-to-keyframe handle split, hold, linear fallback with reports for roving/expression, keyframe limit), src/interop/lottie/diagnostics.ts (loss-report contract and first-cut limits), src/interop/lottie/mapDocument.ts (importLottieDocument: untrusted input handling, document timing, layer/transform/shape mapping, everything else reported), src/tests/lottieImport.test.ts (37 cases)
+Approved first-cut decisions honoured: precomps reported and skipped; layer in/out reported, not converted; the design's limits (512 keyframes per channel, 32 levels, 4096 vertices, 32 MB); the report carries codes, paths and actions
 Not changed: no UI, export, dependency, package.json, lockfile or workflow change
-Validation: npm run build (tsc -b && vite build) PASS; lottie core suite PASS (17); full suite PASS (120 files / 1,753 tests); lint clean; qa:release PASS (2 Chromium tests); state check PASS
+Validation: npm run build (tsc -b && vite build) PASS; lottie core suite PASS (37); full suite PASS (120 files / 1,773 tests); lint clean; qa:release PASS (2 Chromium tests, candidate ff32d6c); state check PASS (34 checks)
+Reviews: five independent read-only rounds — BLOCKED, BLOCKED, BLOCKED, READY WITH WARNINGS, READY WITH WARNINGS — plus a merge-eligibility review of the last delta
 Next slices (each needs its own approval): masks and track mattes; text/image/precomp; the import entry point with the report-before-replace UX
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
@@ -36,10 +37,10 @@ Omitted files were not deleted from the repository. Not copied and never touched
 
 Validation at this revision (each command run separately):
 - npm run build (tsc -b && vite build): PASS — the type gate CI runs
-- npx vitest run src/tests/lottieImport.test.ts: PASS — 17 cases
-- npm test: PASS — 120 files / 1,753 tests; npm run lint: clean
-- npm run qa:release: PASS (2 Chromium tests); node scripts/check-state-consistency.mjs: PASS
+- npx vitest run src/tests/lottieImport.test.ts: PASS — 37 cases
+- npm test: PASS — 120 files / 1,773 tests; npm run lint: clean
+- npm run qa:release: PASS (2 Chromium tests); node scripts/check-state-consistency.mjs: PASS (34 checks)
 
-Next: the independent review of this branch, then the user merge decision, followed by the remaining item-10 slices.
+Next: the remaining item-10 slices, each behind its own approval gate.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

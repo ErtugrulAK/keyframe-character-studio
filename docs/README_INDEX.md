@@ -20,6 +20,8 @@
 16. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` — applied local archive result.
 17. `docs/KCS_WINDOWS_PATH_HARDENING.md` — Windows filename, package-path, ZIP, and OGraf asset safety policy.
 
+Current checkpoint: `docs/checkpoints/2026-09-18-after-lottie-core/` (see §Checkpoints below) records `main` at `47d3368` with the Lottie import core merged, and its `RESUME_PROMPT.md` is the copy-paste start for the next session.
+
 ## Reports
 
 - `reports/README.md` — report navigation and preservation rules.
@@ -60,12 +62,17 @@
 - `reports/progress_121_kcs_import_product_half.md` — Milestone F item 12 product half: compatibility matrix, migration report, autosave boundary.
 - `reports/progress_122_ci_hotfix_import_boundary_types.md` — CI hotfix: import-boundary types and the correct type gate.
 - `reports/progress_123_lottie_import_core.md` — Milestone F item 10 first slice: Lottie import core.
-- `reports/progress_123_lottie_import_core.md` — Milestone F item 10 first slice: Lottie import core.
-- `reports/progress_121_kcs_import_product_half.md` — Milestone F item 12 product half: compatibility matrix, migration report, autosave boundary.
-- `reports/progress_121_kcs_import_product_half.md` — Milestone F item 12 product half: compatibility matrix, migration report, autosave boundary.
+- `reports/progress_124_checkpoint_after_lottie_core.md` — Checkpoint `2026-09-18-after-lottie-core`: state, tasklist, resume prompt and machine-readable summary.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.
+
+## Checkpoints
+
+- `docs/checkpoints/2026-09-18-after-lottie-core/README.md` — checkpoint summary: git state, completed work, validation, remaining work, protected state, resume steps.
+- `docs/checkpoints/2026-09-18-after-lottie-core/TASKLIST.md` — done / active / next recommended / remaining backlog / approval-gated / do-not-touch.
+- `docs/checkpoints/2026-09-18-after-lottie-core/RESUME_PROMPT.md` — copy-paste prompt for the next session (Milestone F item 10 masks + track mattes).
+- `docs/checkpoints/2026-09-18-after-lottie-core/STATE.json` — machine-readable checkpoint summary.
 
 `docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free global tooling state. Historical reports remain unchanged and are audit-trail documents, not first-read current state.
 - `reports/progress_075.md` — prototype-key security hardening implementation.

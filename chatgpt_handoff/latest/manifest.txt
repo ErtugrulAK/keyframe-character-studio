@@ -1,16 +1,16 @@
-# KCS ChatGPT Upload Manifest — Milestone E Item 7 (Offline OGraf Schema Closure, Option 7-A)
+# KCS ChatGPT Upload Manifest — Milestone E Item 8 (Folder QA Automation)
 
 Clean refreshed: YES
-Bundle purpose: Milestone E item 7 — the approved Option 7-A: vendor the pinned OGraf schema closure and make `validate:ograf` offline and deterministic
+Bundle purpose: Milestone E item 8 — the approved downstream folder QA automation (generator, artifact comparison, host-limited report)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/ograf-offline-schema-closure on top of main 46021eece4714fa8880ae4d3018e8f8f064c3a81
-Task record: reports/progress_115_ograf_offline_schema_closure.md
-What changed: the 8 pinned schema documents (33,567 B) are vendored under fixtures/ograf/schema/ with a NOTICE.md carrying both upstream notices (EBU MIT, JSON Schema Specification Authors BSD-style); scripts/ografSchemaClosure.mjs owns the pins, the vendored map, verifyPinnedBytes and loadSchemaDocument({ online, root, readFile, fetchBytes }); validate-ograf-manifest.mjs resolves the closure locally by default and fetches only with --online; src/tests/ografSchemaClosure.test.ts adds 8 focused cases
-Fail-closed contract: unchanged — every document is verified against its pinned SHA-256 on both paths, and an unpinned reference is refused
-CI: no workflow change was needed; the existing step (.github/workflows/ci.yml:27-28) now runs offline
-Validation: offline run PASS; offline with poisoned proxy PASS (no fetch attempted); --online PASS; tamper control FAILS CLOSED (Schema hash mismatch, file restored); focused tests 8/8; full suite 115 files / 1,708 tests; lint clean; tsc clean; build PASS with no chunk advisory; qa:release PASS (2 Chromium tests)
-Still approval-gated: the merge of this branch, item 8 (implemented separately), the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
+Branch: test/ograf-folder-qa-automation, stacked on chore/ograf-offline-schema-closure (item 7), on top of main 46021eece4714fa8880ae4d3018e8f8f064c3a81
+Task record: reports/progress_116_ograf_folder_qa.md
+What changed: scripts/generate-ograf-folder-qa.mjs (generate and --verify modes: clean folder QA copy, sidecar exclusion, manifest validation through the existing offline validator, byte-for-byte comparison on disk, host-limited report, explicit required QA root, repository-overwrite guard) and src/tests/ografFolderQa.test.ts (8 cases)
+Not changed: the official OGraf Package, OGraf Single File (Legacy), JSON export and KCS project export; no dependency, package.json, package-lock.json or workflow change; no host contract invented
+Validation: generate PASS; --verify unchanged PASS (exit 0); --verify after a one-byte edit FAILS (content drift); --verify with a stray file FAILS (extra file); invalid manifest FAILS with the copy and report preserved; --out <repository root> REFUSED; focused tests 8/8; full suite 116 files / 1,716 tests; lint clean; tsc clean; build PASS; validate:ograf PASS (offline closure); qa:release PASS (2 Chromium tests)
+QA roots: an explicit required argument; nothing was written to any user folder, and the Desktop kcs-ograf-* roots still do not exist on this machine
+Still approval-gated: the merge of this branch and of its item-7 base; the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -19,15 +19,15 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-7 final response
-- progress_115_ograf_offline_schema_closure.md — the task record
+- OMP_FINAL_RESPONSE.md — the item-8 final response
+- progress_116_ograf_folder_qa.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test, script and fixture files (the validator, the new closure module, its tests and the vendored schema documents live in the repository)
+- Source, test and script files (the generator and its tests live in the repository)
 - package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
@@ -35,15 +35,15 @@ Omitted categories:
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- npm run validate:ograf: PASS (offline, vendored closure)
-- same command with HTTP_PROXY/HTTPS_PROXY poisoned: PASS — proves no fetch is attempted
-- node scripts/validate-ograf-manifest.mjs --online: PASS
-- tamper control: one byte added to a vendored document → Schema hash mismatch (fail-closed); file restored from upstream afterwards
-- npx vitest run src/tests/ografSchemaClosure.test.ts: PASS — 8 cases
-- npm test: PASS — 115 files / 1,708 tests; npm run lint: clean; npx tsc --noEmit: clean
-- npm run build: PASS — no chunk-size advisory; npm run qa:release: PASS (2 Chromium tests)
+- node scripts/generate-ograf-folder-qa.mjs --package <dir> --out <tmp>/qa: PASS — clean copy with the sidecar excluded and a host-limited report
+- the same tool with --verify <copy>: PASS (exit 0); after a one-byte edit: exit 1, content drift; after adding a stray file: exit 1, extra file
+- invalid manifest package: exit 1 with Result: INVALID in the report
+- --out <repository root>: refused with an explicit message
+- npx vitest run src/tests/ografFolderQa.test.ts: PASS — 8 cases
+- npm test: PASS — 116 files / 1,716 tests; npm run lint: clean; npx tsc --noEmit: clean
+- npm run build: PASS; npm run validate:ograf: PASS (offline, pin-verified); npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS
 
-Next: the independent review of this branch, then the user merge decision. If no decision is given, nothing merges.
+Next: the independent review of this branch and of its item-7 base, then the user merge decision. If no decision is given, nothing merges.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

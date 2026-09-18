@@ -1,23 +1,20 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone E Item 7 (Offline OGraf Schema Closure)
+# KCS Minimal ChatGPT Upload Bundle — Milestone E Item 8 (Folder QA Automation)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The approved **Option 7-A** of the Milestone E study: the pinned OGraf schema closure is vendored into the repository and `npm run validate:ograf` resolves it locally by default, so the validator and the CI step that calls it no longer depend on two remote hosts.
+The approved item-8 plan of the Milestone E study: a repeatable way to produce and check a clean folder QA copy of an OGraf package — the host import unit — without inventing a host contract, a new exporter, or a fake host wrapper.
 
-- `fixtures/ograf/schema/` holds unmodified copies of all 8 pinned documents (33,567 bytes) plus `NOTICE.md` with both upstream notices (EBU MIT; JSON Schema Specification Authors BSD-style) and the refresh procedure.
-- `scripts/ografSchemaClosure.mjs` owns the pins, the vendored map, `verifyPinnedBytes` and `loadSchemaDocument({ online, root, readFile, fetchBytes })`.
-- `scripts/validate-ograf-manifest.mjs` keeps its behaviour and exit codes, resolves locally by default and fetches only with `--online` (the refresh path).
-- `src/tests/ografSchemaClosure.test.ts` pins the contract in 8 cases, including the tamper and unpinned-reference failures.
-
-The fail-closed contract is unchanged: every document is verified against its pinned SHA-256 on both paths. No workflow change was needed — `.github/workflows/ci.yml:27-28` already ran the validator, which is now offline and deterministic.
+- `scripts/generate-ograf-folder-qa.mjs` generates a clean folder QA copy from a `.zip` or extracted package directory, excludes QA sidecars (`*.diagnostics.json`), validates the manifest through the existing offline validator (pin-verified schema closure), compares every file byte-for-byte on disk, and writes a host-limited report. `--verify <folder>` checks an existing copy without writing.
+- The QA root is an explicit required argument, and a root that would overwrite the repository is refused. The source package is only read.
+- `src/tests/ografFolderQa.test.ts` pins the contract in 8 cases, including byte drift, an extra file, an invalid manifest, and the repository-overwrite guard.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_115_ograf_offline_schema_closure.md` — the task record (scope, changes, validation, residual risks)
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the item-7 and item-8 status
+- `progress_116_ograf_folder_qa.md` — the task record (scope, changes, validation, residual risks)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone E status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -27,12 +24,12 @@ The fail-closed contract is unchanged: every document is verified against its pi
 
 ## Deliberately not included
 
-Source, test, script and fixture files are intentionally omitted (the validator, the closure module, its tests and the vendored schema documents live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test and script files are intentionally omitted (the generator and its tests live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
 ## Staging note
 
-`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be.
+`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be. The folder QA tool writes only where `--out` or `--verify` explicitly points.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in this folder are its sources.

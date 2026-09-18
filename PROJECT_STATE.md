@@ -6,7 +6,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `46021eece4714fa8880ae4d3018e8f8f064c3a81`: milestones A, B, C, Milestone D item 6, the item-9 audit, the approved **Option A warning maintenance** and the Milestone E study are all merged (`main` CI green). Milestone E item 7 (**7-A offline schema closure**) is implemented on `chore/ograf-offline-schema-closure` and item 8 (folder QA automation) on `test/ograf-folder-qa-automation`; both await review and the merge decision, and nothing beyond them is authorized.
+Current `main` / `origin/main` is at `46021eece4714fa8880ae4d3018e8f8f064c3a81`: milestones A, B, C, Milestone D item 6, the item-9 audit, the approved **Option A warning maintenance** and the Milestone E study are all merged (`main` CI green). Milestone E item 7 (**7-A offline schema closure**) is implemented on `chore/ograf-offline-schema-closure` and item 8 (folder QA automation) on `test/ograf-folder-qa-automation`; both await review and the merge decision, and nothing beyond them is authorized. The folder QA tool writes only to an explicitly named QA root and refuses a root that would overwrite the repository.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -24,7 +24,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 115 files / 1,708 tests |
+| Full Vitest | PASS | 116 files / 1,716 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |

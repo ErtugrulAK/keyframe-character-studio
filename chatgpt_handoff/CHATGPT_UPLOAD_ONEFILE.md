@@ -17,37 +17,40 @@
 
 ## 1. OMP Final Response
 
-# KCS Milestone E Item 7 — Final Response (Offline OGraf Schema Closure, Option 7-A)
+# KCS Milestone E Item 8 — Final Response (Folder QA Automation)
 
-This file is the OMP final response for the item-7 task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+This file is the OMP final response for the item-8 task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** the approved **7-A** is implemented on branch `chore/ograf-offline-schema-closure` (base `main` = `46021eece4714fa8880ae4d3018e8f8f064c3a81`); it awaits the review and the user merge decision.
-- **Report:** `reports/progress_115_ograf_offline_schema_closure.md`.
+- **Status:** the approved item-8 plan is implemented on branch `test/ograf-folder-qa-automation`, stacked on the item-7 branch (`chore/ograf-offline-schema-closure`), base `main` = `46021eece4714fa8880ae4d3018e8f8f064c3a81`. It awaits the review and the user merge decision.
+- **Report:** `reports/progress_116_ograf_folder_qa.md`.
 
 ## 2) WHAT CHANGED
 
-| Item | Change | Evidence |
-|---|---|---|
-| Closure vendored | All 8 pinned documents (33,567 B) copied unmodified into `fixtures/ograf/schema/` | hash of every vendored file equals its pin (8/8) |
-| Notices | `fixtures/ograf/schema/NOTICE.md` carries the EBU MIT notice and the JSON Schema Specification Authors BSD-style notice, plus the refresh procedure | the refresh procedure states that a vendored document may never be edited without updating its pin |
-| Shared module | `scripts/ografSchemaClosure.mjs` owns the pins, the vendored map, `verifyPinnedBytes` and `loadSchemaDocument({ online, root, readFile, fetchBytes })` | the repository root is injected, so the module is importable by the test runner |
-| Validator | `scripts/validate-ograf-manifest.mjs` resolves the closure locally by default and fetches only with `--online`; exit codes and wording unchanged | offline run passes even with a poisoned proxy; `--online` passes |
-| Tests | `src/tests/ografSchemaClosure.test.ts` — 8 cases | pins vs vendored bytes, tamper fails closed, unpinned URI refused, default mode never fetches, online mode verifies pins, CLI offline with poisoned proxy, CLI accepts an explicit path |
+`scripts/generate-ograf-folder-qa.mjs` is one Node-side tool with two modes:
 
-No workflow change was needed: the existing CI step already runs `npm run validate:ograf`, which is now offline and deterministic.
+- `--package <zip|dir> --out <qa-root>` writes the clean folder QA copy (the host import unit) to `<qa-root>/<folder>` and then verifies what it wrote;
+- `--package <zip|dir> --verify <existing-folder>` verifies an existing copy without writing anything.
+
+Both modes read the package from a `.zip` (the editor's output, through the existing `fflate`) or an extracted directory, exclude QA sidecars (`*.diagnostics.json`), validate the manifest by running the existing validator against the copy's own manifest file (offline, pin-verified closure from item 7), compare every file byte-for-byte on disk, and write a host-limited report. The QA root is a required explicit argument; a root that would overwrite the repository is refused; the source package is only read. `toSafeFolderName` mirrors the browser-side `sanitizeOGrafId` policy.
+
+`src/tests/ografFolderQa.test.ts` pins the contract in 8 cases: clean copy with the sidecar excluded and full parity in the report; `--verify` passes unchanged; `--verify` fails on byte drift; `--verify` fails on an extra file; invalid manifest fails the run while the inspected copy and report remain; the repository-overwrite root is refused; an explicit root is required; the folder-name policy matches the package id policy.
+
+No host contract, host profile, exporter, dependency or workflow change.
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npm run validate:ograf` | PASS — offline |
-| Same with `HTTP_PROXY/HTTPS_PROXY` poisoned | PASS — no fetch attempted |
-| `node scripts/validate-ograf-manifest.mjs --online` | PASS |
-| Tamper control (one byte added to a vendored document) | FAILS CLOSED — `Schema hash mismatch`; file restored |
-| Focused tests / full suite | PASS — 8 cases / 115 files, 1,708 tests |
-| Lint / TypeScript / build / release gate | clean / clean / PASS (no chunk advisory) / PASS (2 Chromium tests) |
+| Generate from a package directory | PASS — clean copy (`assets/`, `graphic.js`, `<name>.ograf.json`, `scene.kcs`), sidecar excluded, report written |
+| `--verify` on the unchanged copy | PASS — exit 0 |
+| `--verify` after editing one byte | FAILS — exit 1, `content drift: scene.kcs` |
+| `--verify` after adding a stray file | FAILS — exit 1, `extra file in the copy: stray.json` |
+| Invalid manifest package | FAILS — exit 1, report records `Result: INVALID` |
+| `--out <repository root>` | REFUSED — exit 1 |
+| Focused tests / full suite | PASS — 8 cases / 116 files, 1,716 tests |
+| Lint / TypeScript / build / validate:ograf / release gate | clean / clean / PASS / PASS (offline) / PASS (2 Chromium tests) |
 
 ## 4) REVIEW
 
@@ -55,31 +58,31 @@ The change goes through the independent read-only review gate before any merge; 
 
 ## 5) SAFETY
 
-- Pins, fail-closed checks, validator exit codes and wording: unchanged. `fixtures/ograf/minimal.ograf.json`: untouched.
-- No dependency, `package.json`, `package-lock.json` or workflow change.
+- The official exports are untouched; the tool only reads a package and writes to an explicitly named QA root. No dependency, `package.json`, `package-lock.json` or workflow change.
+- The expected QA roots under `Desktop` still do not exist on this machine; verification ran in the system temporary directory. Nothing was written to any user folder.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders: unchanged.
 
 ## 6) NEXT
 
-One decision: merge `chore/ograf-offline-schema-closure` after the review passes. If no decision is given, nothing merges.
+One decision: merge `test/ograf-folder-qa-automation` (and its item-7 base) after the review passes. If no decision is given, nothing merges.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone E Item 7 (Offline OGraf Schema Closure, Option 7-A)
+# KCS ChatGPT Upload Manifest — Milestone E Item 8 (Folder QA Automation)
 
 Clean refreshed: YES
-Bundle purpose: Milestone E item 7 — the approved Option 7-A: vendor the pinned OGraf schema closure and make `validate:ograf` offline and deterministic
+Bundle purpose: Milestone E item 8 — the approved downstream folder QA automation (generator, artifact comparison, host-limited report)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/ograf-offline-schema-closure on top of main 46021eece4714fa8880ae4d3018e8f8f064c3a81
-Task record: reports/progress_115_ograf_offline_schema_closure.md
-What changed: the 8 pinned schema documents (33,567 B) are vendored under fixtures/ograf/schema/ with a NOTICE.md carrying both upstream notices (EBU MIT, JSON Schema Specification Authors BSD-style); scripts/ografSchemaClosure.mjs owns the pins, the vendored map, verifyPinnedBytes and loadSchemaDocument({ online, root, readFile, fetchBytes }); validate-ograf-manifest.mjs resolves the closure locally by default and fetches only with --online; src/tests/ografSchemaClosure.test.ts adds 8 focused cases
-Fail-closed contract: unchanged — every document is verified against its pinned SHA-256 on both paths, and an unpinned reference is refused
-CI: no workflow change was needed; the existing step (.github/workflows/ci.yml:27-28) now runs offline
-Validation: offline run PASS; offline with poisoned proxy PASS (no fetch attempted); --online PASS; tamper control FAILS CLOSED (Schema hash mismatch, file restored); focused tests 8/8; full suite 115 files / 1,708 tests; lint clean; tsc clean; build PASS with no chunk advisory; qa:release PASS (2 Chromium tests)
-Still approval-gated: the merge of this branch, item 8 (implemented separately), the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
+Branch: test/ograf-folder-qa-automation, stacked on chore/ograf-offline-schema-closure (item 7), on top of main 46021eece4714fa8880ae4d3018e8f8f064c3a81
+Task record: reports/progress_116_ograf_folder_qa.md
+What changed: scripts/generate-ograf-folder-qa.mjs (generate and --verify modes: clean folder QA copy, sidecar exclusion, manifest validation through the existing offline validator, byte-for-byte comparison on disk, host-limited report, explicit required QA root, repository-overwrite guard) and src/tests/ografFolderQa.test.ts (8 cases)
+Not changed: the official OGraf Package, OGraf Single File (Legacy), JSON export and KCS project export; no dependency, package.json, package-lock.json or workflow change; no host contract invented
+Validation: generate PASS; --verify unchanged PASS (exit 0); --verify after a one-byte edit FAILS (content drift); --verify with a stray file FAILS (extra file); invalid manifest FAILS with the copy and report preserved; --out <repository root> REFUSED; focused tests 8/8; full suite 116 files / 1,716 tests; lint clean; tsc clean; build PASS; validate:ograf PASS (offline closure); qa:release PASS (2 Chromium tests)
+QA roots: an explicit required argument; nothing was written to any user folder, and the Desktop kcs-ograf-* roots still do not exist on this machine
+Still approval-gated: the merge of this branch and of its item-7 base; the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -88,15 +91,15 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-7 final response
-- progress_115_ograf_offline_schema_closure.md — the task record
+- OMP_FINAL_RESPONSE.md — the item-8 final response
+- progress_116_ograf_folder_qa.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test, script and fixture files (the validator, the new closure module, its tests and the vendored schema documents live in the repository)
+- Source, test and script files (the generator and its tests live in the repository)
 - package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
@@ -104,16 +107,16 @@ Omitted categories:
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- npm run validate:ograf: PASS (offline, vendored closure)
-- same command with HTTP_PROXY/HTTPS_PROXY poisoned: PASS — proves no fetch is attempted
-- node scripts/validate-ograf-manifest.mjs --online: PASS
-- tamper control: one byte added to a vendored document → Schema hash mismatch (fail-closed); file restored from upstream afterwards
-- npx vitest run src/tests/ografSchemaClosure.test.ts: PASS — 8 cases
-- npm test: PASS — 115 files / 1,708 tests; npm run lint: clean; npx tsc --noEmit: clean
-- npm run build: PASS — no chunk-size advisory; npm run qa:release: PASS (2 Chromium tests)
+- node scripts/generate-ograf-folder-qa.mjs --package <dir> --out <tmp>/qa: PASS — clean copy with the sidecar excluded and a host-limited report
+- the same tool with --verify <copy>: PASS (exit 0); after a one-byte edit: exit 1, content drift; after adding a stray file: exit 1, extra file
+- invalid manifest package: exit 1 with Result: INVALID in the report
+- --out <repository root>: refused with an explicit message
+- npx vitest run src/tests/ografFolderQa.test.ts: PASS — 8 cases
+- npm test: PASS — 116 files / 1,716 tests; npm run lint: clean; npx tsc --noEmit: clean
+- npm run build: PASS; npm run validate:ograf: PASS (offline, pin-verified); npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS
 
-Next: the independent review of this branch, then the user merge decision. If no decision is given, nothing merges.
+Next: the independent review of this branch and of its item-7 base, then the user merge decision. If no decision is given, nothing merges.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -121,26 +124,23 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone E Item 7 (Offline OGraf Schema Closure)
+# KCS Minimal ChatGPT Upload Bundle — Milestone E Item 8 (Folder QA Automation)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The approved **Option 7-A** of the Milestone E study: the pinned OGraf schema closure is vendored into the repository and `npm run validate:ograf` resolves it locally by default, so the validator and the CI step that calls it no longer depend on two remote hosts.
+The approved item-8 plan of the Milestone E study: a repeatable way to produce and check a clean folder QA copy of an OGraf package — the host import unit — without inventing a host contract, a new exporter, or a fake host wrapper.
 
-- `fixtures/ograf/schema/` holds unmodified copies of all 8 pinned documents (33,567 bytes) plus `NOTICE.md` with both upstream notices (EBU MIT; JSON Schema Specification Authors BSD-style) and the refresh procedure.
-- `scripts/ografSchemaClosure.mjs` owns the pins, the vendored map, `verifyPinnedBytes` and `loadSchemaDocument({ online, root, readFile, fetchBytes })`.
-- `scripts/validate-ograf-manifest.mjs` keeps its behaviour and exit codes, resolves locally by default and fetches only with `--online` (the refresh path).
-- `src/tests/ografSchemaClosure.test.ts` pins the contract in 8 cases, including the tamper and unpinned-reference failures.
-
-The fail-closed contract is unchanged: every document is verified against its pinned SHA-256 on both paths. No workflow change was needed — `.github/workflows/ci.yml:27-28` already ran the validator, which is now offline and deterministic.
+- `scripts/generate-ograf-folder-qa.mjs` generates a clean folder QA copy from a `.zip` or extracted package directory, excludes QA sidecars (`*.diagnostics.json`), validates the manifest through the existing offline validator (pin-verified schema closure), compares every file byte-for-byte on disk, and writes a host-limited report. `--verify <folder>` checks an existing copy without writing.
+- The QA root is an explicit required argument, and a root that would overwrite the repository is refused. The source package is only read.
+- `src/tests/ografFolderQa.test.ts` pins the contract in 8 cases, including byte drift, an extra file, an invalid manifest, and the repository-overwrite guard.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_115_ograf_offline_schema_closure.md` — the task record (scope, changes, validation, residual risks)
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the item-7 and item-8 status
+- `progress_116_ograf_folder_qa.md` — the task record (scope, changes, validation, residual risks)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone E status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -150,13 +150,13 @@ The fail-closed contract is unchanged: every document is verified against its pi
 
 ## Deliberately not included
 
-Source, test, script and fixture files are intentionally omitted (the validator, the closure module, its tests and the vendored schema documents live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test and script files are intentionally omitted (the generator and its tests live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
 ## Staging note
 
-`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be.
+`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be. The folder QA tool writes only where `--out` or `--verify` explicitly points.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in this folder are its sources.
 
@@ -164,56 +164,59 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 115 — OGraf Offline Schema Closure (Milestone E, item 7, Option 7-A)
+# Progress 116 — Downstream Folder QA Automation (Milestone E, item 8)
 
 ## 1. Scope
 
-Implements the approved **7-A** from `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`: the pinned OGraf schema closure is vendored into the repository and `npm run validate:ograf` resolves it locally by default, so the validator — and the CI step that calls it — no longer depends on two remote hosts. The fail-closed contract is unchanged: every document is still verified against its pinned SHA-256.
+Implements the approved item-8 plan from `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`: a repeatable way to produce and check a clean folder QA copy of an OGraf package — the host import unit — without inventing a host contract, a new exporter, or a fake host wrapper.
 
 ## 2. Branch
 
-- `chore/ograf-offline-schema-closure`, based on `main` at `46021eece4714fa8880ae4d3018e8f8f064c3a81`.
+- `test/ograf-folder-qa-automation`, stacked on `chore/ograf-offline-schema-closure` (item 7), base `main` = `46021eece4714fa8880ae4d3018e8f8f064c3a81`.
 
 ## 3. What changed
 
-- **`fixtures/ograf/schema/`** — unmodified copies of all **8** pinned documents (33,567 bytes total), laid out as `graphics/schema.json`, `lib/action.json`, `lib/constraints/{number,boolean}.json`, `gdd/{object,gdd-types,basic-types}.json`, `json-schema-2020-12/schema.json`.
-- **`fixtures/ograf/schema/NOTICE.md`** — the upstream notices required by both licences (EBU MIT; JSON Schema Specification Authors BSD-style) plus the refresh procedure, which says a vendored document may never be edited without updating its pin.
-- **`scripts/ografSchemaClosure.mjs`** — the closure definition in one place: `schemaUrl`, `schemaHashes` (the same pins as before), `vendoredSchemaPaths`, `verifyPinnedBytes`, and `loadSchemaDocument(uri, { online, root, readFile, fetchBytes })`. The repository root is injected rather than derived from `import.meta.url`, which keeps the module importable by the test runner.
-- **`scripts/validate-ograf-manifest.mjs`** — unchanged behaviour and exit codes; it now loads the closure through the shared module, defaults to the vendored copies, and fetches only with `--online` (the refresh path). The pinned-digest check runs on both paths.
-- **`src/tests/ografSchemaClosure.test.ts`** — 8 focused cases: every pinned URL has a vendored file; each vendored file hashes to its pin; a changed document fails with `Schema hash mismatch`; an unpinned URI fails with `Unpinned remote schema reference`; the default mode never calls `fetch`; the online mode verifies pins too; the CLI validates the committed fixture with a poisoned proxy (proving no network); the CLI accepts an explicit fixture path.
+- **`scripts/generate-ograf-folder-qa.mjs`** — one Node-side tool with two modes:
+  - `--package <zip|dir> --out <qa-root>` writes the clean folder copy to `<qa-root>/<folder>` and then verifies what it wrote.
+  - `--package <zip|dir> --verify <existing-folder>` verifies an existing copy without writing anything.
+  - Both modes read the package from a `.zip` (the editor's output, via the existing `fflate`) or from an extracted directory, exclude QA sidecars (`*.diagnostics.json`) from the copy, validate the manifest by running the existing validator against the copy's own manifest file, verify every package file byte-for-byte on disk (missing, drifted and extra files are all reported), and write a host-limited report.
+  - `--name` overrides the folder name, which is otherwise derived with the same policy as the browser-side `sanitizeOGrafId` (`toSafeFolderName`, exported for tests).
+  - The QA root is an explicit required argument, and the tool refuses a root that would overwrite the repository; the source package is only read.
+- **`src/tests/ografFolderQa.test.ts`** — 8 focused cases: clean copy with the sidecar excluded and full parity in the report; `--verify` passes on an unchanged copy; `--verify` fails on byte drift; `--verify` fails on an extra file; an invalid manifest fails the run while the inspected copy and report still exist; a QA root that would overwrite the repository is refused; an explicit root is required; the folder-name policy matches the package id policy.
 
-No workflow change was needed: `.github/workflows/ci.yml:27-28` already runs `npm run validate:ograf`, so the existing step became offline and deterministic.
+No host contract, host profile, exporter, dependency or workflow change: the tool reuses the canonical package layout and the pin-verified offline schema closure from item 7.
 
-## 4. Validation (branch `chore/ograf-offline-schema-closure`)
+## 4. Validation (branch `test/ograf-folder-qa-automation`)
 
 | Check | Command | Result |
 |---|---|---|
-| Offline validation | `npm run validate:ograf` | PASS — `valid OGraf v1 manifest` |
-| Offline with poisoned proxy | `HTTP_PROXY=http://127.0.0.1:9 HTTPS_PROXY=http://127.0.0.1:9 npm run validate:ograf` | PASS — proves no fetch is attempted |
-| Online refresh path | `node scripts/validate-ograf-manifest.mjs --online` | PASS |
-| Vendored pins | hash every vendored file against `schemaHashes` | 8/8 match |
-| Tamper control | add one byte to a vendored document, run the validator | FAILS CLOSED with `Schema hash mismatch` (file restored afterwards) |
-| Focused tests | `npx vitest run src/tests/ografSchemaClosure.test.ts` | PASS — 8 cases |
-| Full suite | `npm test` | PASS — 115 files / 1,708 tests |
-| Lint / TypeScript / build | `npm run lint`, `npx tsc --noEmit`, `npm run build` | clean / clean / PASS, no chunk-size advisory |
-| Release gate | `npm run qa:release` | PASS — 2 Chromium tests |
+| Generate | `node scripts/generate-ograf-folder-qa.mjs --package <dir> --out <tmp>/qa` | PASS — clean copy (`assets/`, `graphic.js`, `<name>.ograf.json`, `scene.kcs`), sidecar excluded, report written |
+| Verify, unchanged copy | same tool with `--verify <copy>` | PASS — exit 0 |
+| Verify, tampered copy | edit one byte in the copy, re-run `--verify` | FAILS — exit 1, `content drift: scene.kcs` |
+| Verify, extra file | add a file to the copy, re-run `--verify` | FAILS — exit 1, `extra file in the copy: stray.json` |
+| Invalid manifest | package whose manifest is `{"name":"broken"}` | FAILS — exit 1, report records `Result: INVALID` |
+| Unsafe root | `--out <repository root>` | REFUSED — exit 1 with an explicit message |
+| Focused tests | `npx vitest run src/tests/ografFolderQa.test.ts` | PASS — 8 cases |
+| Full suite | `npm test` | PASS — 116 files / 1,716 tests |
+| Lint / TypeScript / build | `npm run lint`, `npx tsc --noEmit`, `npm run build` | clean / clean / PASS |
+| OGraf validation / release gate | `npm run validate:ograf`, `npm run qa:release` | PASS (offline closure) / PASS — 2 Chromium tests |
 
 ## 5. Protected invariants
 
-- The pins, the fail-closed checks, the validator's exit codes and its console wording are unchanged; `fixtures/ograf/minimal.ograf.json` is untouched.
+- The official `OGraf Package`, `OGraf Single File (Legacy)`, JSON export and KCS project export are untouched; the tool only reads a package and writes to an explicitly named QA root.
 - No dependency, `package.json`, `package-lock.json` or workflow change.
-- The vendored documents are byte-identical to upstream (verified by the pin check in the tests and by the gate run).
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, global OMP configuration and the user's folders are unchanged.
+- The expected QA roots under `Desktop` still do not exist on this machine; verification ran in the system temporary directory, and nothing was written to any user folder.
+- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, global OMP configuration and user folders are unchanged.
 
 ## 6. Residual risks
 
-- **Stale vendored closure:** if upstream publishes a new schema, the vendored copy keeps validating the old one until someone runs the refresh procedure. The procedure is documented in `NOTICE.md`; a repository-wide reminder is not automated.
-- **`.gitattributes` and hashes:** the new `* text=auto eol=lf` rule normalises line endings. The vendored documents are already LF, and the pin test asserts the bytes on disk, so a normalisation change would fail the suite rather than silently passing.
-- **`--online` remains a live-network path** by design, used only for refreshing the closure.
+- **No host is executed.** The report states this explicitly; folder parity and manifest validity are proven, host acceptance is not.
+- **The sidecar rule is a name pattern** (`*.diagnostics.json`). A future sidecar with a different name would be copied and then reported as an extra file by `--verify` rather than silently ignored.
+- **Folder names are sanitized** to a conservative character set, so a package whose display name is non-ASCII gets an ASCII folder name; `--name` overrides it when the host requires something specific.
 
 ## 7. Next
 
-- Item 8 (folder QA automation) is approved and implemented on its own branch.
+- Both Milestone E branches (item 7 and item 8) await the independent review and the user merge decision.
 
 ---
 
@@ -223,7 +226,7 @@ No workflow change was needed: `.github/workflows/ci.yml:27-28` already runs `np
 
 ## Repository state
 
-- Checkout: branch `chore/ograf-offline-schema-closure` (Milestone E item 7) on top of `main` at `46021eece4714fa8880ae4d3018e8f8f064c3a81`, which matches `origin/main`. The merged warning-maintenance work and the Milestone E study are in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` and `docs/milestone-e-ograf-qa-study` are retained as review artefacts.
+- Checkout: branch `test/ograf-folder-qa-automation` (Milestone E item 8), stacked on `chore/ograf-offline-schema-closure` (item 7), on top of `main` at `46021eece4714fa8880ae4d3018e8f8f064c3a81`, which matches `origin/main`. The merged warning-maintenance work and the Milestone E study are in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` and `docs/milestone-e-ograf-qa-study` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -244,7 +247,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (115 files / 1,708 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `chore/warning-maintenance`. The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
+Full Vitest (116 files / 1,716 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `chore/warning-maintenance`. The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
 
 ## Next scoped work
 
@@ -291,7 +294,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `46021eece4714fa8880ae4d3018e8f8f064c3a81`: milestones A, B, C, Milestone D item 6, the item-9 audit, the approved **Option A warning maintenance** and the Milestone E study are all merged (`main` CI green). Milestone E item 7 (**7-A offline schema closure**) is implemented on `chore/ograf-offline-schema-closure` and item 8 (folder QA automation) on `test/ograf-folder-qa-automation`; both await review and the merge decision, and nothing beyond them is authorized.
+Current `main` / `origin/main` is at `46021eece4714fa8880ae4d3018e8f8f064c3a81`: milestones A, B, C, Milestone D item 6, the item-9 audit, the approved **Option A warning maintenance** and the Milestone E study are all merged (`main` CI green). Milestone E item 7 (**7-A offline schema closure**) is implemented on `chore/ograf-offline-schema-closure` and item 8 (folder QA automation) on `test/ograf-folder-qa-automation`; both await review and the merge decision, and nothing beyond them is authorized. The folder QA tool writes only to an explicitly named QA root and refuses a root that would overwrite the repository.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -309,7 +312,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 115 files / 1,708 tests |
+| Full Vitest | PASS | 116 files / 1,716 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
@@ -510,12 +513,12 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 9628 bytes
-- `NEXT_SESSION.md` — 9123 bytes
-- `OMP_FINAL_RESPONSE.md` — 3068 bytes
-- `PROJECT_STATE.md` — 11488 bytes
-- `README.md` — 3031 bytes
-- `manifest.txt` — 4011 bytes
-- `progress_115_ograf_offline_schema_closure.md` — 4688 bytes
+- `NEXT_SESSION.md` — 9179 bytes
+- `OMP_FINAL_RESPONSE.md` — 3609 bytes
+- `PROJECT_STATE.md` — 11606 bytes
+- `README.md` — 2793 bytes
+- `manifest.txt` — 4092 bytes
+- `progress_116_ograf_folder_qa.md` — 4763 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

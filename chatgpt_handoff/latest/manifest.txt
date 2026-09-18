@@ -1,27 +1,35 @@
-# KCS ChatGPT Upload Manifest — Milestone F Item 10 First Slice (Lottie Import Core)
+# KCS ChatGPT Upload Manifest — Checkpoint 2026-09-18 After Lottie Core
 
 Clean refreshed: YES
-Bundle purpose: Milestone F item 10 first slice — the Lottie import core and its loss report (no UI entry point yet)
+Bundle purpose: the `2026-09-18-after-lottie-core` checkpoint — the state of `main` after Milestone F item 10's first slice (the Lottie import core) was merged and pushed
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/lottie-import-core, merged with --no-ff into main as ff32d6c (base main was 06a5dfcf) and pushed to origin/main; the branch is kept
-Task record: reports/progress_123_lottie_import_core.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
-What changed: src/interop/lottie/temporal.ts (frame mapping and the segment-to-keyframe handle split, hold, linear fallback with reports for roving/expression, keyframe limit), src/interop/lottie/diagnostics.ts (loss-report contract and first-cut limits), src/interop/lottie/mapDocument.ts (importLottieDocument: untrusted input handling, document timing, layer/transform/shape mapping, everything else reported), src/tests/lottieImport.test.ts (37 cases)
-Approved first-cut decisions honoured: precomps reported and skipped; layer in/out reported, not converted; the design's limits (512 keyframes per channel, 32 levels, 4096 vertices, 32 MB); the report carries codes, paths and actions
-Not changed: no UI, export, dependency, package.json, lockfile or workflow change
-Validation: npm run build (tsc -b && vite build) PASS; lottie core suite PASS (37); full suite PASS (120 files / 1,773 tests); lint clean; qa:release PASS (2 Chromium tests, candidate ff32d6c); state check PASS (34 checks)
-Reviews: five independent read-only rounds — BLOCKED, BLOCKED, BLOCKED, READY WITH WARNINGS, READY WITH WARNINGS — plus a merge-eligibility review of the last delta
-Next slices (each needs its own approval): masks and track mattes; text/image/precomp; the import entry point with the report-before-replace UX
+Base state recorded: main = origin/main = 47d3368a2b54a32f812a041feb158ac82b20cf87
+Checkpoint commit: 0d346ac (docs: checkpoint after lottie import core), fast-forward merged into main and pushed
+Lottie core merge commit: ff32d6c (--no-ff); branch feat/lottie-import-core kept at f76ae6a
+Checkpoint folder: docs/checkpoints/2026-09-18-after-lottie-core/ (README.md, TASKLIST.md, RESUME_PROMPT.md, STATE.json)
+Task record: reports/progress_124_checkpoint_after_lottie_core.md
+What changed: documentation only — the checkpoint folder, the task record, PROJECT_STATE.md, NEXT_SESSION.md, docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, reports/README.md and docs/README_INDEX.md
+Not changed: no source, test, package.json, lockfile or workflow change
+Validation: npm run build (tsc -b && vite build) PASS; full Vitest PASS (120 files / 1,773 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); node scripts/check-state-consistency.mjs PASS; git diff --check clean
+Review: one focused independent review returned BLOCKED (stale milestone-F wording; checkpoint files not yet tracked), both closed; the single re-review returned READY
+Next recommended task: Milestone F item 10 — masks + track matte slice on feat/lottie-mask-matte-slice, resumed from docs/checkpoints/2026-09-18-after-lottie-core/RESUME_PROMPT.md
+Remaining item-10 slices (each needs its own approval): masks + track mattes; text/image/precomp; the import entry point with the report-before-replace UX
+Approval-gated elsewhere: package/lockfile/dependency and workflow work (Option B, Option C, the engines declaration, the npm-12 allowScripts decision) and every release/tag/npm action
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (8):
+Copied files (11):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-10 first-slice final response
-- progress_123_lottie_import_core.md — the task record
+- OMP_FINAL_RESPONSE.md — the checkpoint final response
+- progress_124_checkpoint_after_lottie_core.md — the task record
+- checkpoint_2026-09-18_README.md — checkpoint summary
+- checkpoint_2026-09-18_TASKLIST.md — checkpoint tasklist
+- checkpoint_2026-09-18_RESUME_PROMPT.md — copy-paste next-session prompt
+- checkpoint_2026-09-18_STATE.json — machine-readable checkpoint summary
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
@@ -37,10 +45,10 @@ Omitted files were not deleted from the repository. Not copied and never touched
 
 Validation at this revision (each command run separately):
 - npm run build (tsc -b && vite build): PASS — the type gate CI runs
-- npx vitest run src/tests/lottieImport.test.ts: PASS — 37 cases
 - npm test: PASS — 120 files / 1,773 tests; npm run lint: clean
-- npm run qa:release: PASS (2 Chromium tests); node scripts/check-state-consistency.mjs: PASS (34 checks)
+- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests)
+- node scripts/check-state-consistency.mjs: PASS; git diff --check: clean
 
-Next: the remaining item-10 slices, each behind its own approval gate.
+Next: resume from the checkpoint's RESUME_PROMPT.md and take the masks + track matte slice through its own approval gate.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

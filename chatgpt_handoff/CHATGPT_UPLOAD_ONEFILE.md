@@ -12,95 +12,108 @@
 - The repository root is `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user project/asset workspace, not a handoff destination; nothing was copied there.
 - `C:\Users\ertugrul.ak\Desktop\ograf-graphics` is untouched by this workflow.
+- Checkpoint documents live in `docs/checkpoints/2026-09-18-after-lottie-core/` and are mirrored here with a `checkpoint_2026-09-18_` prefix.
 
 ---
 
 ## 1. OMP Final Response
 
-# KCS Milestone F Item 10 First Slice — Final Response (Lottie Import Core)
+# KCS Milestone F Item 10 Checkpoint — Final Response (After the Lottie Import Core)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** done and merged. `feat/lottie-import-core` was merged into `main` with `--no-ff` as `ff32d6c` (base `main` was `06a5dfcf…`) and pushed to `origin/main`; the branch is kept.
-- **Report:** `reports/progress_123_lottie_import_core.md`. **Design:** `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`.
-- No UI entry point is wired yet: the core returns a scene plus a loss report, and a later slice adds the import entry point with the report-before-replace UX.
+- **Status:** checkpoint saved. Branch `docs/checkpoint-after-lottie-core` carried a documentation-only change, was fast-forward merged into `main` at `0d346ac` and pushed. No source, test, package, lockfile or workflow file changed.
+- **Checkpoint folder:** `docs/checkpoints/2026-09-18-after-lottie-core/` — `README.md`, `TASKLIST.md`, `RESUME_PROMPT.md`, `STATE.json`.
+- **Task record:** `reports/progress_124_checkpoint_after_lottie_core.md`.
+- **Base state recorded:** `main` = `origin/main` = `47d3368a2b54a32f812a041feb158ac82b20cf87`; Lottie import core merged with `--no-ff` at `ff32d6c` (branch `feat/lottie-import-core` kept at `f76ae6a`).
 
 ## 2) WHAT CHANGED
 
 | File | Content |
 |---|---|
-| `src/interop/lottie/temporal.ts` | Frame mapping (`max(0, round(t − ip − st))`, frame rate preserved) and the **segment split**: Lottie's `o` on keyframe k becomes `mapped[k].bezierOut` and its `i` becomes `mapped[k+1].bezierIn`; `h: 1` → `hold`; no handles → `linear`; roving and expression-driven segments are reported and fall back to linear; the 512-keyframe-per-channel limit is reported |
-| `src/interop/lottie/diagnostics.ts` | The loss-report contract (stable code, severity, feature, source path, message, mandatory action) and the first-cut limits (512 keyframes per channel, 32 hierarchy levels, 4096 vertices, 32 MB document — no mask limit until the mask slice) |
-| `src/interop/lottie/mapDocument.ts` | `importLottieDocument(text)`: size limit → JSON → depth-bounded prototype-key walk → mapping. Document: `fr`→fps (fractional reported), `ip`/`op`→totalFrames (in-point shift reported), `w`/`h` (a missing size is reported instead of silently defaulting), `nm`, 3D flag. Layers: `ty` 1/3/4 converted — solids carry `sc`→fill and `sw`/`sh`→size, and a missing paint/size is reported; precomps, text and images are reported and skipped (approved first-cut decision), as are effects, expressions, masks and track mattes; anchors, broken parents and 3D components are reported. Transforms → base values or canonical channels. Shapes `sh`/`rc`/`el`/`fl`/`st`/`tm` mapped (`rc.r`→corner radius, `st` colour/opacity, cap/join reported only when non-default, dashes and non-default trim modes reported), `gr` flattened and reported, anything else reported. **Every property the slice reads is either mapped or reported, one shape item never produces two animation reports, and no default is applied silently** |
-| `src/tests/lottieImport.test.ts` | 37 cases in five groups: document timing, transforms (segment split, hold, roving fallback, keyframe limit), dimensions and fallbacks (per-dimension vectors, non-uniform keyframed scale, hierarchy limit, layer in/out + skew + auto-orient reports, missing document size and solid paint), shapes and unsupported constructs, and untrusted input |
-
-Three real defects were caught while writing the tests and fixed: the incoming handle was attached to the keyframe that holds it instead of the keyframe it arrives at; rectangle size and fill colour were read through a helper that rejects arrays (so `{ k: [x, y] }` produced nothing); and a static value list such as `k: [1, 0, 0]` was mistaken for a keyframe list.
+| `docs/checkpoints/2026-09-18-after-lottie-core/README.md` | Checkpoint summary: git state, completed work, validation, remaining work, protected state, resume steps |
+| `docs/checkpoints/2026-09-18-after-lottie-core/TASKLIST.md` | Done / active / next recommended / remaining backlog / approval-gated work / do-not-touch list |
+| `docs/checkpoints/2026-09-18-after-lottie-core/RESUME_PROMPT.md` | Copy-paste next-session prompt: preflight, scope, guardrails, done-when |
+| `docs/checkpoints/2026-09-18-after-lottie-core/STATE.json` | Machine-readable summary (SHAs as strings, valid JSON) |
+| `reports/progress_124_checkpoint_after_lottie_core.md` | Task record: checkpoint only, no source/test/package/workflow change |
+| `PROJECT_STATE.md` | Current position names the checkpoint, `main` at `47d3368`, the merged import core and the next task |
+| `NEXT_SESSION.md` | Repository state and the next scoped item point at the checkpoint and at the masks + track matte slice |
+| `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` | Milestone F row and section record the merged item-10 first slice; the remaining slices stay approval-gated |
+| `reports/README.md`, `docs/README_INDEX.md` | Index the new report and the checkpoint folder (three duplicated index lines were also removed) |
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| Type gate (CI's) | `npm run build` (`tsc -b && vite build`) — PASS |
-| Lottie core suite | PASS — 37 cases |
-| Full suite | PASS — 120 files / 1,773 tests |
-| Lint | clean |
-| Release gate | PASS — 2 Chromium smoke tests, candidate `ff32d6c` |
-| State check | PASS — 34 checks |
+| `npm run build` (`tsc -b && vite build`) | PASS |
+| `npm test` (full Vitest) | PASS — 120 files / 1,773 tests |
+| `npm run lint` | clean |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium smoke tests |
+| `node scripts/check-state-consistency.mjs` | PASS — see §5 for the check total |
+| `git diff --check` | clean |
+| CI on `main` | run `35360234801` for `0d346ac`; the previous `main` runs (`35355797739`, `35355585227`) are green |
 
 ## 4) REVIEW
 
-Five independent read-only review rounds ran before the merge (all `scout`, evidence-cited), plus a merge-eligibility review of the last delta:
-
-| Round | Verdict | Blocking finding |
-|---|---|---|
-| 1 | BLOCKED | Per-dimension mapping and fallback handling |
-| 2 | BLOCKED | The design's "lossless" rows silently dropped (solid paint, anchor, shape position, corner radius, stroke opacity, animated values) |
-| 3 | BLOCKED | Static shapes mis-reported as animated; trim offset, fill/stroke opacity and corner radius dropped without a note |
-| 4 | READY WITH WARNINGS | Unreadable stroke colour, dashes, trim mode and animated paths mis-coded |
-| 5 | READY WITH WARNINGS | Silent defaults (missing document size, missing solid paint) and `{ k }`-wrapped cap/join and trim mode |
-| Delta (`b625b9e..7ca389d`) | merge-eligible | Required the six validation commands re-run green at the tip — they were |
+One focused independent review (`reviewer-agent`) ran on the checkpoint change and returned
+**BLOCKED** with two findings: stale "plan-only / exploration-only" Milestone F wording in the
+roadmap, and the four checkpoint files not yet tracked by Git (they were still uncommitted). Both
+were closed — the roadmap now records the merged slices and scopes "Plan only" to unapproved slices
+(the state checker requires that token for milestone F), and the checkpoint commit tracks all four
+files. The single re-review returned **READY** with no findings.
 
 ## 5) SAFETY
 
-- No UI, export, dependency, `package.json`, lockfile or workflow change; the importer only reads text and returns a scene.
-- The output uses the existing `SceneData`/`AnimationTrackData` shapes, so the existing serializer validates it again before anything is applied.
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
-- The merge is a `--no-ff` merge on `main`; no tag, no release, no branch deletion, no force push, no history rewrite.
+- No source, test, `package.json`, lockfile or workflow file changed: the commit touches only documentation paths.
+- Tag `v1.1.0-rc.1` (`46d2a3e…`), the GitHub draft release, npm metadata, `origin/without-mask`, the OMP configuration (`memory.backend: mnemopi`, model roles, provider mappings, `task.maxConcurrency: 8`) and the user folders are unchanged.
+- Integration was fast-forward only: no merge commit, no rebase, no force push, no tag change, no branch deletion.
+- The state consistency check reports one deliberate failure until the handoff bundle mirrors the updated root documents; the handoff refresh commit closes it. The check total moves with the number of bundle documents, so a different total on a different state is expected.
 
 ## 6) NEXT
 
-The remaining slices — masks and track mattes, text/image/precomp, and the import entry point with the report-before-replace UX — each need their own approval.
+Resume from `docs/checkpoints/2026-09-18-after-lottie-core/RESUME_PROMPT.md`. The recommended next
+task is **Milestone F item 10 — masks + track matte slice** on `feat/lottie-mask-matte-slice`;
+everything that touches `package.json`, lockfiles or workflows stays behind its own approval.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone F Item 10 First Slice (Lottie Import Core)
+# KCS ChatGPT Upload Manifest — Checkpoint 2026-09-18 After Lottie Core
 
 Clean refreshed: YES
-Bundle purpose: Milestone F item 10 first slice — the Lottie import core and its loss report (no UI entry point yet)
+Bundle purpose: the `2026-09-18-after-lottie-core` checkpoint — the state of `main` after Milestone F item 10's first slice (the Lottie import core) was merged and pushed
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/lottie-import-core, merged with --no-ff into main as ff32d6c (base main was 06a5dfcf) and pushed to origin/main; the branch is kept
-Task record: reports/progress_123_lottie_import_core.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
-What changed: src/interop/lottie/temporal.ts (frame mapping and the segment-to-keyframe handle split, hold, linear fallback with reports for roving/expression, keyframe limit), src/interop/lottie/diagnostics.ts (loss-report contract and first-cut limits), src/interop/lottie/mapDocument.ts (importLottieDocument: untrusted input handling, document timing, layer/transform/shape mapping, everything else reported), src/tests/lottieImport.test.ts (37 cases)
-Approved first-cut decisions honoured: precomps reported and skipped; layer in/out reported, not converted; the design's limits (512 keyframes per channel, 32 levels, 4096 vertices, 32 MB); the report carries codes, paths and actions
-Not changed: no UI, export, dependency, package.json, lockfile or workflow change
-Validation: npm run build (tsc -b && vite build) PASS; lottie core suite PASS (37); full suite PASS (120 files / 1,773 tests); lint clean; qa:release PASS (2 Chromium tests, candidate ff32d6c); state check PASS (34 checks)
-Reviews: five independent read-only rounds — BLOCKED, BLOCKED, BLOCKED, READY WITH WARNINGS, READY WITH WARNINGS — plus a merge-eligibility review of the last delta
-Next slices (each needs its own approval): masks and track mattes; text/image/precomp; the import entry point with the report-before-replace UX
+Base state recorded: main = origin/main = 47d3368a2b54a32f812a041feb158ac82b20cf87
+Checkpoint commit: 0d346ac (docs: checkpoint after lottie import core), fast-forward merged into main and pushed
+Lottie core merge commit: ff32d6c (--no-ff); branch feat/lottie-import-core kept at f76ae6a
+Checkpoint folder: docs/checkpoints/2026-09-18-after-lottie-core/ (README.md, TASKLIST.md, RESUME_PROMPT.md, STATE.json)
+Task record: reports/progress_124_checkpoint_after_lottie_core.md
+What changed: documentation only — the checkpoint folder, the task record, PROJECT_STATE.md, NEXT_SESSION.md, docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, reports/README.md and docs/README_INDEX.md
+Not changed: no source, test, package.json, lockfile or workflow change
+Validation: npm run build (tsc -b && vite build) PASS; full Vitest PASS (120 files / 1,773 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); node scripts/check-state-consistency.mjs PASS; git diff --check clean
+Review: one focused independent review returned BLOCKED (stale milestone-F wording; checkpoint files not yet tracked), both closed; the single re-review returned READY
+Next recommended task: Milestone F item 10 — masks + track matte slice on feat/lottie-mask-matte-slice, resumed from docs/checkpoints/2026-09-18-after-lottie-core/RESUME_PROMPT.md
+Remaining item-10 slices (each needs its own approval): masks + track mattes; text/image/precomp; the import entry point with the report-before-replace UX
+Approval-gated elsewhere: package/lockfile/dependency and workflow work (Option B, Option C, the engines declaration, the npm-12 allowScripts decision) and every release/tag/npm action
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (8):
+Copied files (11):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-10 first-slice final response
-- progress_123_lottie_import_core.md — the task record
+- OMP_FINAL_RESPONSE.md — the checkpoint final response
+- progress_124_checkpoint_after_lottie_core.md — the task record
+- checkpoint_2026-09-18_README.md — checkpoint summary
+- checkpoint_2026-09-18_TASKLIST.md — checkpoint tasklist
+- checkpoint_2026-09-18_RESUME_PROMPT.md — copy-paste next-session prompt
+- checkpoint_2026-09-18_STATE.json — machine-readable checkpoint summary
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
@@ -116,11 +129,11 @@ Omitted files were not deleted from the repository. Not copied and never touched
 
 Validation at this revision (each command run separately):
 - npm run build (tsc -b && vite build): PASS — the type gate CI runs
-- npx vitest run src/tests/lottieImport.test.ts: PASS — 37 cases
 - npm test: PASS — 120 files / 1,773 tests; npm run lint: clean
-- npm run qa:release: PASS (2 Chromium tests); node scripts/check-state-consistency.mjs: PASS (34 checks)
+- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests)
+- node scripts/check-state-consistency.mjs: PASS; git diff --check: clean
 
-Next: the remaining item-10 slices, each behind its own approval gate.
+Next: resume from the checkpoint's RESUME_PROMPT.md and take the masks + track matte slice through its own approval gate.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -128,41 +141,59 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 First Slice (Lottie Import Core)
+# KCS Minimal ChatGPT Upload Bundle — Checkpoint 2026-09-18 After Lottie Core
 
-This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
+This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this checkpoint.
 
 ## What this bundle covers
 
-The first implementation slice of the approved Lottie mapping design (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`): the **import core**. It maps a Lottie document to a normal KCS `SceneData` plus a loss report — document timing, shape/solid/null layers, transforms, paths, primitives, fill/stroke/trim, and the segment-to-keyframe easing rules. Everything it does not convert is **reported**, never guessed:
+The `2026-09-18-after-lottie-core` checkpoint: the state of `main` after Milestone F item 10's first
+slice — the Lottie import core — was merged and pushed. It is documentation only; no source, test,
+package or workflow file changed.
 
-- Lottie's `o` on keyframe k becomes `bezierOut` on that keyframe and its `i` becomes `bezierIn` on the **next** one; `h: 1` maps to `hold`; a segment without handles is `linear`; roving and expression-driven segments are reported and fall back to linear.
-- Precomps, text, images, effects, expressions, masks and track mattes are reported and skipped (the approved first-cut decisions), with the design's limits (512 keyframes per channel, 4096 vertices, 32 MB) enforced as reports rather than silent truncation.
-- Untrusted input is handled like the project import boundary: size limit, JSON syntax, and a depth-bounded prototype-key walk.
-
-No UI entry point is wired yet; the following slices (masks/mattes, text/image/precomp, the import entry point with the report-before-replace UX) each need their own approval.
+- `main` = `origin/main` = `47d3368a2b54a32f812a041feb158ac82b20cf87` when the checkpoint was
+  written; the checkpoint commit is `0d346ac`.
+- The Lottie import core was merged into `main` with `--no-ff` at `ff32d6c`; its branch
+  `feat/lottie-import-core` is kept at `f76ae6a` as the review artefact.
+- Release tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`; the GitHub
+  release is still a draft prerelease and nothing was published to npm.
+- The importer has no UI entry point yet. The remaining item-10 slices — masks + track mattes
+  (the recommended next task), text/image/precomp, and the import entry point with the
+  report-before-replace UX — each need their own approval.
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_123_lottie_import_core.md` — the task record (scope, changes, validation, residual risks)
+- `OMP_FINAL_RESPONSE.md` — the final response for this checkpoint task
+- `progress_124_checkpoint_after_lottie_core.md` — the task record
+- `checkpoint_2026-09-18_README.md` — checkpoint summary (git state, work, validation, protected state, resume)
+- `checkpoint_2026-09-18_TASKLIST.md` — done / active / next recommended / remaining backlog / approval-gated / do-not-touch
+- `checkpoint_2026-09-18_RESUME_PROMPT.md` — copy-paste prompt for the next session
+- `checkpoint_2026-09-18_STATE.json` — machine-readable checkpoint summary
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
 - `manifest.txt` — this bundle's inventory
 
-`NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` are copies of their root documents; `node scripts/check-state-consistency.mjs` compares them after CRLF→LF normalization and a whole-document `trim()` and fails on content drift.
+`NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md`
+are copies of their root documents; `node scripts/check-state-consistency.mjs` compares them after
+CRLF→LF normalization and a whole-document `trim()` and fails on content drift. The four
+`checkpoint_2026-09-18_*` files are copies of the checkpoint folder, prefixed so they cannot collide
+with this bundle's own `README.md`.
 
 ## Deliberately not included
 
-Source, test and design files are intentionally omitted (they live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, release/current-state documents, QA output, assets, archives, and caches.
+Source, test and design files are intentionally omitted (they live in the repository). Flattened
+copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also
+omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports,
+release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
 ## Staging note
 
-`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be.
+`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination.
+Nothing was copied there, and nothing should be.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in this folder are its sources.
 
@@ -170,95 +201,428 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 123 — Lottie Import Core, First Slice (Milestone F, item 10)
+# Progress 124 — Checkpoint After the Lottie Import Core
 
-## 1. Scope
+## 1. What this is
 
-The approved first slice of `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`: the import **core**. It maps a Lottie document into a normal KCS `SceneData` plus a loss report, covering document timing, shape/solid/null layers, transforms, paths, primitives, fill/stroke/trim and the temporal/easing rules. Everything the slice does not convert is **reported**, never guessed. There is deliberately **no UI entry point** yet: the caller receives a scene it can hand to the existing import path.
+A documentation checkpoint only. It records the state after Milestone F item 10's first slice (the
+Lottie import core) was merged and pushed, so a later session can resume from a single, trustable
+reference.
 
-## 2. Branch
+- **No source change.** `src/**` is untouched.
+- **No test change.** `src/tests/**` is untouched.
+- **No package/workflow change.** `package.json`, lockfiles and `.github/workflows/**` are untouched.
+- **No runtime change.** Nothing in the editor, renderer or evaluator behaves differently.
 
-- `feat/lottie-import-core`, based on `main` at `06a5dfcf98cf7d5a0dd61f09ca06acab35dcd26e` (after the CI hotfix).
+## 2. Checkpoint folder
 
-## 3. What changed
+`docs/checkpoints/2026-09-18-after-lottie-core/`
 
-- **`src/interop/lottie/temporal.ts`** — the conversion that must not be guessed:
-  - `frame = max(0, round(t − documentInPoint − layerStartTime))`; the importer preserves the document frame rate, so Lottie frame units and scene frames are the same unit (documented in the module).
-  - **The segment split:** Lottie's `o` on keyframe *k* is the outgoing control point of the segment *k → k+1* and its `i` is the incoming control point of that same segment, so `mapped[k].bezierOut ← o` and `mapped[k+1].bezierIn ← i`. A converted channel therefore keeps both sides of every curve.
-  - `h: 1` → the `hold` easing with no invented handles; a segment without handles → `linear`; a **roving** keyframe or an **expression** keyframe is reported (`LOTTIE_ROVING_KEYFRAME`, `LOTTIE_UNSUPPORTED_EXPRESSION`) and falls back to linear.
-  - The per-channel keyframe limit (512) reports `LOTTIE_KEYFRAME_LIMIT` and keeps the first keyframes.
-- **`src/interop/lottie/diagnostics.ts`** — the loss-report contract: a stable code, severity, feature, source document path, message and a mandatory action, plus the first-cut limits that this slice enforces (512 keyframes per channel, 32 hierarchy levels, 4096 vertices, 32 MB document). The mask limit from the design arrives with the mask slice, because nothing converts masks yet.
-- **`src/interop/lottie/mapDocument.ts`** — `importLottieDocument(text)` → `{ ok, scene?, diagnostics }`:
-  - Untrusted-input handling like the project import boundary: size limit before parsing, JSON syntax, and a depth-bounded prototype-key walk reusing `isPrototypeSensitiveKey`.
-  - Document level: `fr` → `fps` (fractional rates rounded and reported), `ip`/`op` → `totalFrames` with an in-point shift warning, `w`/`h` → scene size, `nm` → name, and the scene is emitted as `coordinateSystem: 'project-unit-center-v1'`.
-  - Layers: `ty` 1/3/4 (solid/null/shape) are converted; **precomps, text and images are reported and skipped** per the approved first-cut decision, as are effects, expressions, masks and track mattes; a parent index that is not an already-imported layer reports `LOTTIE_BROKEN_PARENT` and is dropped.
-  - Transforms: `ks.p` (x/y), `ks.r`, `ks.s` (percent → factor), `ks.o` (percent → 0..1), static values as the base transform and keyframed ones as canonical channels.
-  - Shapes: `sh` → `BezierPath` (v1) with a vertex limit, `rc`/`el` → width/height (plus `rc.r` → corner radius), `fl` → fill colour + opacity, `st` → stroke width + colour + opacity (cap/join reported unless default, dashes reported), `tm` → trim start/end/offset (a non-default mode is reported), `gr` → flattened and reported, anything else reported.
-- **`src/tests/lottieImport.test.ts`** — **37 cases** across five groups: document timing (mapping, fractional fps, in-point shift, missing timing), transforms (static values, the segment split, hold, roving fallback, keyframe limit), dimensions and fallbacks (per-dimension vector mapping, non-uniform keyframed scale, roving *with* handles, a two-segment curve pinning both handles on the middle keyframe, layer start-time subtraction with the frame-0 clamp, hierarchy limit, layer in/out + skew + auto-orient reports, unreadable shape payloads, stroke colour, the missing document size and solid paint), shapes and unsupported constructs, and untrusted input (malformed JSON, prototype key, size limit, broken parent).
+| File | Purpose |
+|---|---|
+| `README.md` | Human-readable checkpoint summary: git state, completed work, validation, remaining work, protected state, resume steps |
+| `TASKLIST.md` | Done / active / next recommended / remaining backlog / approval-gated / do-not-touch |
+| `RESUME_PROMPT.md` | Copy-paste prompt for the next session, starting from `main` at or after `47d3368` |
+| `STATE.json` | Machine-readable checkpoint summary (SHAs as strings, valid JSON) |
 
-**Bugs the tests caught while writing them** (each fixed before commit):
+## 3. Recorded state
 
-1. The incoming handle was attached to the keyframe that *holds* it instead of the keyframe it *arrives at*.
-2. Rectangle size and fill colour were read through a record helper that rejects arrays, so `{ k: [x, y] }` produced nothing.
-3. **Review round 1 (independent, read-only) found three more, all fixed here:**
-   - A vector property aliased its first component into every channel: `p: [15, 25]` imported `y = 15` and non-uniform `s: [100, 200]` imported `scaleY = 100`. Numeric properties now keep every dimension and each channel maps its own.
-   - A roving or expression-driven keyframe **with** handles kept its Bezier easing; the design requires the linear fallback plus a report, so both handle passes now skip such a segment.
-   - The `y` channel's diagnostics were dropped from the report (they are distinct paths), and keyframed scale/opacity carried Lottie percentages while the static base values were divided by 100 — the channels now go through the same conversion.
+- `main` = `origin/main` = `47d3368a2b54a32f812a041feb158ac82b20cf87` at checkpoint time.
+- Lottie import core merged into `main` at `ff32d6c` (`--no-ff`); branch `feat/lottie-import-core`
+  kept at `f76ae6a` as the review artefact.
+- Release tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`.
+- Recommended next task: **Milestone F item 10 — masks + track matte slice**, on
+  `feat/lottie-mask-matte-slice`.
 
-**Review round 1 also asked for fuller reporting, now added:** layer in/out ranges, skew, auto-orient, the document 3D flag, unreadable shape payloads, stroke colour mapping, and the hierarchy limit measured as a chain depth instead of an index gap (the unused mask limit was removed).
+## 4. Validation run
 
-**Review round 2** went further on the design's "lossless" rows and the silent drops behind them, and this revision adds:
+Run on `main` before this checkpoint was written:
 
-- Solid layers now map their own paint and size (`sc` → fill colour, `sw`/`sh` → width/height) instead of importing a white layer.
-- A rect corner radius maps to `borderRadius`, and stroke opacity maps to `strokeOpacity` (percent → factor).
-- The constructs KCS genuinely does not model are **reported** rather than ignored: the layer anchor (`LOTTIE_UNSUPPORTED_ANCHOR`), a shape's own position (`LOTTIE_UNSUPPORTED_SHAPE_POSITION`), stroke cap/join (`LOTTIE_UNSUPPORTED_STROKE_STYLE`, and only when the value differs from Lottie's default), and **one** `LOTTIE_UNSUPPORTED_ANIMATED_SHAPE` entry per animated shape item, naming the animated properties (fill colour/opacity, stroke width/colour/opacity, rect corner radius/size, ellipse size, trim start/end/offset).
+| Check | Result |
+|---|---|
+| `npm run build` | PASS |
+| `npm test` | PASS — 120 files / 1,773 tests |
+| `npm run lint` | clean |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium smoke tests |
+| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `git diff --check` | clean |
+| `gh run list --branch main --limit 10` | newest `main` run `35355797739` — success |
 
-**Review round 3** found the animated-property detector reporting *static* fills as animated and three animated properties (trim offset, fill/stroke opacity, rect corner radius) still dropped without a note. The detector now decides by keyframe structure (a `k` whose first entry is an object with a numeric `t`), the per-type property list covers those three, and each item reports at most once.
+## 5. Protected state
 
-**Review round 4** named four remaining gaps, all closed: an unreadable stroke colour (`LOTTIE_UNREADABLE_COLOUR`), a dash pattern (`LOTTIE_UNSUPPORTED_STROKE_DASH`), a non-default trim mode (`LOTTIE_UNSUPPORTED_TRIM_MODE`), and an animated path that used to be reported as an unreadable path instead of as animation. The stroke cap/join report now stays silent for Lottie's defaults (butt/miter).
+- Tag, GitHub draft release and npm state are unchanged; no publication occurred.
+- `origin/without-mask` is untouched; OMP configuration (`memory.backend: mnemopi`, model roles,
+  provider mappings, `task.maxConcurrency: 8`) is unchanged.
+- `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics` are untouched.
+- No force push, no `reset --hard`, no rebase, no tag change, no branch deletion.
+- No secrets are recorded here or in the checkpoint documents.
 
-**Review round 5** (READY WITH WARNINGS) named the remaining silent defaults, all closed: a document without a declared size and a solid layer without its paint are now reported (`LOTTIE_MISSING_DOCUMENT_SIZE`, `LOTTIE_MISSING_SOLID_PAINT`) instead of falling back to 1920x1080 and white, and the cap/join and trim-mode fields are read in both their bare and `{ k }` forms.
+## 6. Next decision
 
-Every branch is therefore map-or-report: no property that this slice reads is dropped without a diagnostic, and no default is applied silently. layer in/out ranges (`LOTTIE_LAYER_TIMING`), skew (`LOTTIE_UNSUPPORTED_SKEW`), auto-orient (`LOTTIE_UNSUPPORTED_AUTO_ORIENT`), the document 3D flag (`LOTTIE_UNSUPPORTED_3D`), unreadable shape payloads (`LOTTIE_UNREADABLE_SHAPE`, `LOTTIE_UNREADABLE_SIZE`, `LOTTIE_UNREADABLE_COLOUR`, `LOTTIE_UNREADABLE_STROKE_WIDTH`, `LOTTIE_UNREADABLE_PATH`), stroke colour mapping, the hierarchy limit now measured as a chain depth instead of an index gap, and the unused mask limit removed (it returns with the mask slice).
-
-## 4. Validation (branch `feat/lottie-import-core`)
-
-| Check | Command | Result |
-|---|---|---|
-| Type gate (CI's) | `npm run build` (`tsc -b && vite build`) | PASS |
-| Lottie core suite | `npx vitest run src/tests/lottieImport.test.ts` | PASS — 37 cases |
-| Full suite | `npm test` | PASS — 120 files / 1,773 tests |
-| Lint | `npm run lint` | clean |
-| Release gate | `npm run qa:release` | PASS — 2 Chromium tests |
-| State consistency | `node scripts/check-state-consistency.mjs` | PASS |
-
-## 5. Protected invariants
-
-- No UI, export, dependency, `package.json`, lockfile or workflow change; the importer only *reads* text and returns a scene, so no existing surface can be affected until a later slice wires an entry point.
-- The canonical model, the OGraf package format and the export paths are untouched; the produced scene uses the existing `SceneData`/`AnimationTrackData` shapes, so the existing serializer validates it again.
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
-
-## 6. Residual risks
-
-- **Not wired to a UI yet.** The importer is a library call; the design's "show the report before replacing work" step lands when an entry point is added, and importing today would require calling the module directly.
-- **Colour/model limits of the first slice:** shapes are flattened (group transforms reported), masks and track mattes are reported rather than converted, and gradient/merge/repeater items are reported. Each is a documented follow-up slice.
-- **Coordinate assumption:** Lottie units map 1:1 into `project-unit-center-v1`; a scene authored at a different scale needs the existing coordinate migration after import, which is not automatic.
-
-## 7. Next slices (each needs its own approval)
-
-1. Masks and track mattes (`§5` of the design).
-2. Text and image layers, precomp flattening.
-3. The import entry point with the report-before-replace UX.
+Approve the next slice — Milestone F item 10 masks + track mattes — or name a different priority
+from `TASKLIST.md`. Everything that touches `package.json`, lockfiles or workflows stays behind its
+own approval gate.
 
 ---
 
-## 5. Next Session
+## 5. Checkpoint Summary
+
+# KCS Checkpoint — 2026-09-18 After Lottie Import Core
+
+## 1. Checkpoint title
+
+Checkpoint `2026-09-18-after-lottie-core`. This checkpoint records the state after the first
+implementation slice of the approved Lottie mapping design (Milestone F, item 10) was merged and
+pushed. It contains documentation only.
+
+## 2. Current git state
+
+| Item | Value |
+|---|---|
+| Repository | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
+| `main` (checkpoint base) | `47d3368a2b54a32f812a041feb158ac82b20cf87` |
+| `origin/main` at checkpoint time | `47d3368a2b54a32f812a041feb158ac82b20cf87` (equal) |
+| Lottie import core merge commit | `ff32d6c` — `feat/lottie-import-core` merged into `main` with `--no-ff` |
+| Lottie import core branch tip | `feat/lottie-import-core` at `f76ae6a` (kept as the review artefact) |
+| Release tag target | `v1.1.0-rc.1` → `46d2a3e59e065816d972dcd56951803951b577f6` (unchanged) |
+| Checkpoint branch | `docs/checkpoint-after-lottie-core` |
+
+No tag was created, moved or deleted; no release was published or finalized; nothing was pushed to
+npm; no branch was deleted; no history was rewritten.
+
+## 3. Completed work
+
+- Milestone A — canvas path authoring UX (tangent handles), merged at `077911b`.
+- Milestone B — graph + keyboard accessibility, merged at `96e8f9d`.
+- Milestone C — first export / onboarding flow, merged at `c2dcb22`.
+- Milestone D — item 6 (state consistency check) and item 9 (dependency/warning audit plus the
+  approved Option A maintenance), merged.
+- Milestone E — study, item 7 (7-A offline schema closure) and item 8 (folder QA automation),
+  merged.
+- Milestone F study — delivered.
+- **Milestone F item 10 first slice (Lottie import core)** — merged at `ff32d6c` and pushed:
+  - `src/interop/lottie/temporal.ts` — frame mapping and the segment-to-keyframe handle split,
+    hold, linear fallback, reports for roving/expression segments, keyframe limit.
+  - `src/interop/lottie/diagnostics.ts` — the loss-report contract and the first-cut limits.
+  - `src/interop/lottie/mapDocument.ts` — `importLottieDocument(text)`: untrusted-input handling,
+    document timing, layer/transform/shape mapping, and a report for everything the slice does not
+    convert. Every property the slice reads is either mapped or reported; no default is applied
+    silently; one shape item never produces two animation reports.
+  - `src/tests/lottieImport.test.ts` — 37 contract cases.
+
+## 4. Validation
+
+Run on `main` at `47d3368` before this checkpoint was written:
+
+| Check | Result |
+|---|---|
+| `npm run build` (`tsc -b && vite build`) | PASS |
+| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 37 cases |
+| `npm test` (full Vitest) | PASS — 120 files / 1,773 tests |
+| `npm run lint` | clean |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium smoke tests, candidate `47d3368` |
+| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `git diff --check` | clean |
+| CI on `main` | success — run `35355797739` |
+| Independent review | five read-only rounds on the Lottie core (verdicts BLOCKED, BLOCKED, BLOCKED, READY WITH WARNINGS, READY WITH WARNINGS) plus a merge-eligibility review of the final delta |
+
+The check total moves with the number of documents in the handoff bundle, so a different total on a
+different state is expected as long as the check passes.
+
+## 5. Remaining work
+
+In priority order (details in `TASKLIST.md`):
+
+1. Milestone F item 10 — masks + track matte slice.
+2. Milestone F item 10 — text/image/precomp slice.
+3. Milestone F item 10 — the import entry point with the report-before-replace UX.
+4. Milestone F item 12 — unified import entry.
+5. Milestone D item 9 Option B — package/dependency updates (approval-gated).
+6. The `engines` declaration and the npm-12 `allowScripts` decision (approval-gated).
+7. Option C — TypeScript 7 / Vitest 5 major upgrades (approval-gated).
+8. OGraf package / editable import expansion.
+
+There is **no UI entry point** for the Lottie importer yet: the merged slice returns a scene plus a
+loss report, and nothing in the editor calls it.
+
+## 6. Protected state
+
+- Release tag `v1.1.0-rc.1` target stays `46d2a3e59e065816d972dcd56951803951b577f6`; the GitHub
+  release stays a draft prerelease; no npm publication.
+- `origin/without-mask` is untouched and stays classified ARCHIVE.
+- `.omp/config.yml` keeps `memory.backend: mnemopi`; model roles, provider mappings and
+  `task.maxConcurrency` (8) are unchanged.
+- `C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace and is never a handoff
+  destination; `C:\Users\ertugrul.ak\Desktop\ograf-graphics` is untouched.
+- No source, test, `package.json`, lockfile or workflow change belongs to this checkpoint.
+- No force push, no `reset --hard`, no rebase, no tag change, no branch deletion.
+
+## 7. Resume instructions
+
+Read this folder, then `RESUME_PROMPT.md` (a copy-paste prompt), then `TASKLIST.md` for the backlog
+and `STATE.json` for the machine-readable summary.
+
+To continue in a new session:
+
+1. Confirm the repository is on `main` at or after `47d3368` with a clean working tree.
+2. Run the preflight in `RESUME_PROMPT.md` (`git fetch`, `git pull --ff-only`, tag check, state
+   check, CI check).
+3. Create the suggested branch `feat/lottie-mask-matte-slice`.
+4. Implement only the approved slice, with an independent review before any merge.
+
+---
+
+## 6. Checkpoint Tasklist
+
+# KCS Tasklist — 2026-09-18 After Lottie Import Core
+
+## 1. Done
+
+| Item | State | Evidence |
+|---|---|---|
+| Milestone A — canvas path authoring UX (tangent handles) | MERGED at `077911b` | `reports/progress_108_canvas_tangent_authoring.md` |
+| Milestone B — graph + keyboard accessibility | MERGED at `96e8f9d` | `reports/progress_109_graph_accessibility.md` |
+| Milestone C — first export / onboarding flow | MERGED at `c2dcb22` | `reports/progress_110_export_onboarding.md` |
+| Milestone D item 6 — state consistency check | MERGED at `b91e8b9` (+ `be76df9`) | `reports/progress_111_state_hygiene_gate.md` |
+| Milestone D item 9 — dependency/warning audit and the approved Option A | MERGED at `3923141` | `reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md` |
+| Milestone E study + item 7 (7-A) + item 8 | MERGED | `reports/progress_114_ograf_qa_study.md`, `reports/progress_115_ograf_offline_schema_closure.md`, `reports/progress_116_ograf_folder_qa.md` |
+| Milestone F study | delivered | `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md` |
+| Milestone F item 11 — evaluator profiling (measurement only) | implemented on `chore/evaluator-profiling-harness` | `reports/progress_118_evaluator_profiling.md` |
+| Milestone F item 12 first step — validated import boundary | merged | `reports/progress_119_kcs_import_boundary.md` |
+| Milestone F item 12 product half | merged | `reports/progress_121_kcs_import_product_half.md` |
+| Milestone F item 10 design — Lottie mapping contract | delivered | `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` |
+| **Milestone F item 10 first slice — Lottie import core** | **MERGED at `ff32d6c`** (branch `feat/lottie-import-core` at `f76ae6a`, kept) | `reports/progress_123_lottie_import_core.md` |
+| CI hotfix — import boundary types | MERGED | `reports/progress_122_ci_hotfix_import_boundary_types.md` |
+| This checkpoint | `docs/checkpoints/2026-09-18-after-lottie-core/` | `reports/progress_124_checkpoint_after_lottie_core.md` |
+
+## 2. Active
+
+Nothing is in progress. `main` is at `47d3368` with a clean working tree and green CI; the next
+action is a new approval.
+
+## 3. Next recommended task
+
+**Milestone F item 10 — masks + track matte slice.** Branch `feat/lottie-mask-matte-slice`, base
+`main` at or after `47d3368`. Scope: extend `src/interop/lottie/**` so Lottie masks and track mattes
+are either converted through the existing KCS mask/matte authority or reported through the same
+loss-report contract, and restore the mask limit that the first slice deliberately left out. Out of
+scope: any UI entry point, any package/lock/workflow change.
+
+## 4. Remaining backlog
+
+Priority order:
+
+1. Milestone F item 10 — masks + track matte slice.
+2. Milestone F item 10 — text/image/precomp slice.
+3. Milestone F item 10 — the import entry point with the report-before-replace UX.
+4. Milestone F item 12 — unified import entry.
+5. Milestone D item 9 Option B — 7 patch + 12 minor dependency updates and a bounded `npm audit fix`.
+6. The `engines` declaration and the npm-12 `allowScripts` decision.
+7. Option C — TypeScript 7 / Vitest 5 major upgrades on their own branch.
+8. OGraf package / editable import expansion.
+
+## 5. Approval-gated tasks
+
+Anything that touches the following needs explicit user approval before work starts:
+
+- `package.json`, lockfiles, dependency versions, `.github/workflows/**` (backlog items 5, 6 and 7).
+- Release, tag, draft-release or npm actions of any kind.
+- Branch deletion (`feat/lottie-import-core`, `feat/canvas-tangent-authoring`,
+  `feat/canvas-tangent-authoring-replay` are all retained today).
+- Any merge that is not a fast-forward, and any history rewrite.
+
+## 6. Do-not-touch list
+
+- `origin/without-mask` — preserved ARCHIVE, untouched.
+- `.omp/config.yml` — `memory.backend` stays `mnemopi`; model roles, provider mappings and
+  `task.maxConcurrency` (8) stay unchanged.
+- `C:\Users\ertugrul.ak\Desktop\KCS` — user project/asset workspace, never a handoff destination.
+- `C:\Users\ertugrul.ak\Desktop\ograf-graphics` — corpus, untouched.
+- Secret material of any kind — never printed, copied or committed.
+- Source/test files are never copied into `chatgpt_handoff/latest/`.
+
+---
+
+## 7. Checkpoint Resume Prompt
+
+KCS RESUME FROM CHECKPOINT — 2026-09-18 AFTER LOTTIE CORE
+
+CONTEXT
+You are resuming the Keyframe Character Studio repository at
+C:\Users\ertugrul.ak\Desktop\keyframe-character-studio from checkpoint
+docs/checkpoints/2026-09-18-after-lottie-core/.
+
+The checkpoint base is `main` at 47d3368a2b54a32f812a041feb158ac82b20cf87, which equalled
+`origin/main` when the checkpoint was written. The last completed task is Milestone F item 10 first
+slice — the Lottie import core — merged at ff32d6c (branch `feat/lottie-import-core` at f76ae6a,
+kept as the review artefact). The importer has no UI entry point yet: it returns a scene plus a loss
+report, and nothing in the editor calls it.
+
+GOAL OF THIS RUN
+Milestone F Item 10 — masks + track matte slice.
+
+RECOMMENDED BRANCH
+feat/lottie-mask-matte-slice, created from `main` at or after 47d3368.
+
+SCOPE
+- In scope: extend `src/interop/lottie/**` so Lottie masks (`masksProperties`, `hasMask`) and track
+  mattes (`tt`, `td`) are either converted through the existing KCS mask/matte authority — the same
+  authority the editor and the renderer already use, no parallel model — or reported through the
+  existing loss-report contract with a stable code, a source path, a message and a concrete action.
+  Restore the design's mask limit that the first slice deliberately left out of
+  `LOTTIE_IMPORT_LIMITS`, and cover the new behaviour with contract tests in
+  `src/tests/lottieImport.test.ts` or a sibling test file.
+- Out of scope unless separately approved: any UI or import entry point, the report-before-replace
+  UX, text/image/precomp conversion, evaluator or renderer changes, new dependencies, and any
+  `package.json`, lockfile or workflow change.
+
+WORKFLOW
+1. Preflight (all gates must pass, otherwise STOP and report):
+   - `git status --short --branch` — the working tree must be clean before any work starts.
+   - `git fetch origin --prune`
+   - `git switch main`
+   - `git pull --ff-only origin main` — if the pull cannot be fast-forward-only, STOP.
+   - `git rev-parse HEAD` must equal `git rev-parse origin/main`; if not, STOP and report both SHAs.
+   - `git rev-parse "v1.1.0-rc.1^{commit}"` must be 46d2a3e59e065816d972dcd56951803951b577f6;
+     if not, STOP.
+   - `node scripts/check-state-consistency.mjs` must PASS; if it fails, STOP and report.
+   - `gh run list --branch main --limit 10` — the newest `main` run must be a success; if it failed,
+     inspect the log and STOP before editing anything.
+2. Read `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_123_lottie_import_core.md`
+   and the existing `src/interop/lottie/**` sources before proposing anything.
+3. Plan the change (files, the mask/matte authority it reuses, the report codes it adds, the tests),
+   state it, and wait for explicit approval before writing code.
+4. Create the branch, implement only the approved scope, then run the full validation set:
+   `npm run build`, `npx vitest run src/tests/lottieImport.test.ts` (or the new sibling test),
+   `npm test`, `npm run lint`, `npm run validate:ograf`, `npm run qa:release`,
+   `node scripts/check-state-consistency.mjs`, `git diff --check`.
+5. Run one independent read-only review of the branch and record its verdict (READY / READY WITH
+   WARNINGS / BLOCKED). Close every blocking finding before requesting the merge decision.
+6. Ask the user for the merge decision. Do not merge, push or delete anything on your own.
+
+GUARDRAILS
+- No force push. No `reset --hard`. No rebase. No history rewrite.
+- No tag create/move/delete. No release publish or finalize. No npm publish.
+- No branch deletion.
+- No normal (non-fast-forward) merge unless the user explicitly approves it; prefer `--ff-only`.
+- Do not touch `origin/without-mask`.
+- Do not change global OMP configuration: model roles, provider mappings, `memory.backend`
+  (`mnemopi`) and `task.maxConcurrency` (8) stay as they are.
+- Do not modify, copy into, or delete anything under `C:\Users\ertugrul.ak\Desktop\KCS`, and do not
+  modify `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
+- Never print, copy or commit secrets, tokens or API keys.
+- Do not edit `package.json`, lockfiles or `.github/workflows/**` without explicit approval.
+- Do not copy source or test files into `chatgpt_handoff/latest/`.
+- Keep repository code, tests, documentation and commit messages in English; speak to the user in
+  Turkish.
+
+DONE WHEN
+- The mask + track matte slice is implemented on the approved branch, every mask/matte construct is
+  either converted through the existing authority or reported, the validation set is green, an
+  independent review has returned READY or READY WITH WARNINGS with all blocking findings closed,
+  and the merge decision has been put to the user.
+
+START
+Begin with the preflight in step 1 and report each gate result before touching any file.
+
+---
+
+## 8. Checkpoint State
+
+```json
+{
+  "checkpoint_name": "2026-09-18-after-lottie-core",
+  "date": "2026-09-18",
+  "repo_path": "C:\\Users\\ertugrul.ak\\Desktop\\keyframe-character-studio",
+  "main_head": "47d3368a2b54a32f812a041feb158ac82b20cf87",
+  "origin_main_at_checkpoint": "47d3368a2b54a32f812a041feb158ac82b20cf87",
+  "lottie_core_merge_commit": "ff32d6c",
+  "lottie_core_branch": "feat/lottie-import-core",
+  "lottie_core_branch_tip": "f76ae6a",
+  "rc_tag_target": "46d2a3e59e065816d972dcd56951803951b577f6",
+  "completed_milestones": [
+    "Milestone A - canvas path authoring UX (tangent handles), merged at 077911b",
+    "Milestone B - graph + keyboard accessibility, merged at 96e8f9d",
+    "Milestone C - first export / onboarding flow, merged at c2dcb22",
+    "Milestone D item 6 - state consistency check, merged",
+    "Milestone D item 9 - dependency/warning audit and the approved Option A, merged at 3923141",
+    "Milestone E study, item 7 (7-A) and item 8, merged",
+    "Milestone F study delivered",
+    "Milestone F item 11 - evaluator profiling (measurement only), implemented",
+    "Milestone F item 12 first step and product half, merged",
+    "Milestone F item 10 design delivered",
+    "Milestone F item 10 first slice - Lottie import core, merged at ff32d6c"
+  ],
+  "active_milestone": "Milestone F - interop exploration; item 10 implementation proceeds slice by slice",
+  "last_completed_task": "Milestone F item 10 first slice - Lottie import core (reports/progress_123_lottie_import_core.md)",
+  "recommended_next_task": "Milestone F item 10 - masks + track matte slice",
+  "recommended_next_branch": "feat/lottie-mask-matte-slice",
+  "checkpoint_branch": "docs/checkpoint-after-lottie-core",
+  "protected_invariants": {
+    "release_tag_v1_1_0_rc_1_target": "46d2a3e59e065816d972dcd56951803951b577f6",
+    "release_tag_must_not_change": true,
+    "github_release_state": "draft prerelease, not published or finalized",
+    "npm_publish": false,
+    "without_mask_branch": "untouched, classified ARCHIVE",
+    "omp_memory_backend": "mnemopi",
+    "omp_task_max_concurrency": 8,
+    "omp_model_roles_providers": "unchanged",
+    "desktop_kcs_folder": "C:\\Users\\ertugrul.ak\\Desktop\\KCS - user workspace, never a handoff destination",
+    "ograf_graphics_folder": "C:\\Users\\ertugrul.ak\\Desktop\\ograf-graphics - untouched",
+    "secrets": "never printed, copied or committed",
+    "handoff_bundle": "chatgpt_handoff/latest carries no source, test, package or workflow copies",
+    "merge_policy": "fast-forward only unless the user explicitly approves another path",
+    "history_policy": "no force push, no reset --hard, no rebase"
+  },
+  "validation_matrix": {
+    "build": "PASS - npm run build (tsc -b && vite build)",
+    "lottie_core_suite": "PASS - 37 cases",
+    "full_vitest": "PASS - 120 files / 1,773 tests",
+    "lint": "PASS - clean",
+    "validate_ograf": "PASS",
+    "qa_release": "PASS - 2 Chromium smoke tests, candidate 47d3368",
+    "state_consistency": "PASS - 32 checks",
+    "git_diff_check": "clean",
+    "ci_main": "success - run 35355797739",
+    "independent_review": "five read-only rounds on the Lottie core (BLOCKED, BLOCKED, BLOCKED, READY WITH WARNINGS, READY WITH WARNINGS) plus a merge-eligibility review of the final delta"
+  },
+  "remaining_work": [
+    "Milestone F item 10 - masks + track matte slice",
+    "Milestone F item 10 - text/image/precomp slice",
+    "Milestone F item 10 - import entry point with the report-before-replace UX",
+    "Milestone F item 12 - unified import entry",
+    "Milestone D item 9 Option B - patch/minor dependency updates and a bounded npm audit fix",
+    "engines declaration and the npm-12 allowScripts decision",
+    "Option C - TypeScript 7 / Vitest 5 major upgrades",
+    "OGraf package / editable import expansion"
+  ],
+  "approval_gated_work": [
+    "package.json, lockfiles, dependency versions and .github/workflows/**",
+    "release, tag, draft-release and npm actions",
+    "branch deletion",
+    "non-fast-forward merges and any history rewrite"
+  ],
+  "checkpoint_docs": {
+    "readme": "docs/checkpoints/2026-09-18-after-lottie-core/README.md",
+    "tasklist": "docs/checkpoints/2026-09-18-after-lottie-core/TASKLIST.md",
+    "resume_prompt": "docs/checkpoints/2026-09-18-after-lottie-core/RESUME_PROMPT.md",
+    "state": "docs/checkpoints/2026-09-18-after-lottie-core/STATE.json",
+    "report": "reports/progress_124_checkpoint_after_lottie_core.md"
+  }
+}
+```
+
+---
+
+## 9. Next Session
 
 # Next Session Handoff
 
 ## Repository state
 
-- Checkout: branch `feat/lottie-import-core` (Milestone F item 10 first slice) on top of `main` at `06a5dfcf…`, which matches `origin/main`; milestones A–E, the Milestone F study, the item-11 harness, the item-12 first step and product half, and the CI hotfix are merged. The merged warning-maintenance work and the Milestone E study are in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` and `docs/milestone-e-ograf-qa-study` are retained as review artefacts.
+- Checkout: `main` at `47d3368a2b54…`, which matches `origin/main` — the state recorded by checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/`. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **Milestone F item 10's first slice (the Lottie import core, merged with `--no-ff` at `ff32d6c`, pushed)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -267,7 +631,9 @@ Every branch is therefore map-or-report: no property that this slice reads is dr
 
 ## Current result
 
-Milestones A–E are complete, and Milestone F is the active milestone:
+Milestones A–E are complete, and Milestone F is the active milestone; its item-10 first slice is merged:
+
+- Milestone F item 10 first slice — **the Lottie import core is merged into `main`** at `ff32d6c` (base `06a5dfcf`, `--no-ff`, pushed; branch `feat/lottie-import-core` kept at `f76ae6a`): `importLottieDocument(text)` maps document timing, shape/solid/null layers, transforms, paths, primitives and fill/stroke/trim, applies the segment-to-keyframe easing rules, and reports every construct it does not convert through the loss-report contract. 37 contract cases; five independent read-only review rounds (BLOCKED, BLOCKED, BLOCKED, READY WITH WARNINGS, READY WITH WARNINGS) plus a merge-eligibility review of the last delta. There is **no UI entry point** yet: nothing in the editor calls the importer.
 
 - Milestone A — canvas tangent authoring (`077911b`): vertex selection shows Bezier handles on the stage, dragging reshapes the path live, one history entry per completed drag, `Escape` cancels.
 - Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.
@@ -279,12 +645,12 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (120 files / 1,773 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on this Milestone F stack (`fix/kcs-import-boundary-hardening`), whose source commits are `f17215b` (item 11), `9c257ed` (item 12 first step) and `a17be8b` (item 10 design). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
+Full Vitest (120 files / 1,773 tests), `npx vitest run src/tests/lottieImport.test.ts` (37 cases), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `47d3368`), `npm run build`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS, 32 checks) all pass on `main` at the `2026-09-18-after-lottie-core` checkpoint; the newest CI run on `main` is `35355797739` (success).
 
 ## Next scoped work
 
-1. **Milestone F — item 10 first slice awaiting the merge decision**: the Lottie import core (document timing, shape/solid/null layers, transforms, shapes, the segment-to-keyframe easing rules and the loss report) is implemented on `feat/lottie-import-core` (`reports/progress_123_lottie_import_core.md`). Its next slices — masks and track mattes, text/image/precomp, and the import entry point with the report-before-replace UX — stay plan-only, as do item 12’s unified import entry and OGraf package import. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
-2. Milestone F items 10 (design), 11 and 12 (first step + product half) are implemented on their branches, with the merges awaiting the decision above; anything beyond them — item 10’s importer, item 12’s unified import entry, OGraf package import, Milestone E beyond items 7 and 8 — stays plan-only, and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
+1. **Milestone F — item 10 masks + track matte slice (the recommended next task)**: extend `src/interop/lottie/**` so Lottie masks and track mattes are converted through the existing KCS mask/matte authority or reported through the loss-report contract, and restore the mask limit the first slice left out. Suggested branch `feat/lottie-mask-matte-slice` from `main` at or after `47d3368`; the copy-paste preflight and guardrails are in `docs/checkpoints/2026-09-18-after-lottie-core/RESUME_PROMPT.md`. Still open afterwards: item 10's text/image/precomp conversion, item 10's import entry point with the report-before-replace UX, item 12's unified import entry, and OGraf package import. Also open, each approval-gated: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and the npm-12 `allowScripts` decision.
+2. Milestone F's delivered work: the study, item 10's design and its merged first slice (the import core), item 11 (measurement only, on `chore/evaluator-profiling-harness`), and item 12's first step (merged) plus product half (on `feat/kcs-import-product-half`). Anything beyond those scopes — item 10's remaining slices, item 12's unified import entry, OGraf package import, Milestone E beyond items 7 and 8 — needs its own approval, and **D's dependency/package part (item 9 Option B) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
 
@@ -316,17 +682,17 @@ Full Vitest (120 files / 1,773 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ---
 
-## 6. Project State
+## 10. Project State
 
 # KCS Project State
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into main, and the grouped post-RC roadmap has completed milestones A, B, C and Milestone D item 6.
+The accepted product and security follow-up line is integrated into main, and the grouped post-RC roadmap has completed milestones A–E plus the first implementation slice of Milestone F item 10.
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `44218a62ff48…` (the Milestone F stack is merged): milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; item 10’s **first implementation slice (the import core)** is implemented on `feat/lottie-import-core` (`reports/progress_123_lottie_import_core.md`). The merge of that branch is the open decision.
+**Checkpoint `2026-09-18-after-lottie-core`** (`docs/checkpoints/2026-09-18-after-lottie-core/`) records this state: `main` / `origin/main` is at `47d3368a2b54…`, the Lottie import core (Milestone F item 10, first slice) was merged with `--no-ff` at `ff32d6c` and pushed, and its branch `feat/lottie-import-core` is kept at `f76ae6a` as the review artefact. The checkpoint folder carries the summary (`README.md`), the tasklist (`TASKLIST.md`), a copy-paste next-session prompt (`RESUME_PROMPT.md`) and a machine-readable summary (`STATE.json`); the task record is `reports/progress_124_checkpoint_after_lottie_core.md`. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; item 10’s **first implementation slice (the import core)** is **merged into `main`** at `ff32d6c` (`reports/progress_123_lottie_import_core.md`); its remaining slices — masks + track mattes, text/image/precomp, and the import entry point with the report-before-replace UX — are the next work, and the masks + track matte slice is the recommended next task.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -346,20 +712,20 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 |---|---|---|
 | Full Vitest | PASS | 120 files / 1,773 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
-| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
+| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `47d3368` on `main` at the `2026-09-18-after-lottie-core` checkpoint |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
-| State consistency | PASS | `node scripts/check-state-consistency.mjs` — 33 checks on this branch with its bundle, 34 on the earlier `main` run (the total scales with the number of bundle documents scanned) |
+| State consistency | PASS | `node scripts/check-state-consistency.mjs` — 32 checks on `main` at the `2026-09-18-after-lottie-core` checkpoint (the total scales with the number of bundle documents scanned) |
 | TypeScript | PASS | `npm run build` (`tsc -b && vite build`) — the gate CI runs; `npx tsc --noEmit` alone does not cover the same project program (see `reports/progress_122_ci_hotfix_import_boundary_types.md`) |
 | Lint | PASS | clean — the Fast Refresh warning was removed in `reports/progress_113_warning_maintenance.md` |
 | Production build | PASS | no chunk-size advisory — split into 382.19 kB app + react-vendor/icons/geometry chunks (see `reports/progress_113_warning_maintenance.md`) |
 | Independent review | PASS | Milestone A `READY` in round 6 of six; the item-9 audit closed `READY WITH WARNINGS` in round 6 of six (`reports/progress_112_dependency_warning_audit.md` §12); the Option A change closed with `READY WITH WARNINGS` from the read-only `scout` round (the reviewer model hit a provider usage limit) after `reviewer-agent` rounds 1–3 closed every finding (`reports/progress_113_warning_maintenance.md` §2) |
-| CI on `main` | PASS | runs `35206117254` (Milestone A merge) and `35207913453` (state reconciliation) |
+| CI on `main` | PASS | runs `35355797739` (Lottie import core handoff) and `35355585227` (Lottie import core merge) — both success |
 
 ## Remaining work
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is the active milestone with its study delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); implementation stays plan-only. Follow-ups stay approval-gated before any `package.json`, lockfile, or workflow change: Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin.
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is the active milestone: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is implemented as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's first implementation slice — the Lottie import core — is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`). Remaining item-10 slices: masks + track mattes (the recommended next task), text/image/precomp, and the import entry point with the report-before-replace UX. Follow-ups stay approval-gated before any `package.json`, lockfile, or workflow change: Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -393,11 +759,11 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ---
 
-## 7. Current Roadmap Plan and Changelog
+## 11. Current Roadmap Plan and Changelog
 
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9 stays behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and merged at `22335a5`, and Milestone F is study-only until its items are approved separately.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9's audit and its approved Option A are merged and only its follow-ups (Option B, Option C, `engines`, the npm-12 `allowScripts` pin) stay behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and merged at `22335a5`, and Milestone F's study is delivered while its implementation proceeds slice by slice under separate approvals (item 11, item 12's first step and product half, and item 10's first slice are merged; the remaining item-10 slices are the next work).
 
 ## Milestone map and status
 
@@ -408,7 +774,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
 | D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. Follow-ups stay approval-gated: Option B (patch/minor updates + `npm audit fix`), Option C (TypeScript 7 / Vitest 5), the `engines` declaration and the npm-12 `allowScripts` pin |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
-| F — Architecture exploration only | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for implementation until each item is approved separately. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` |
+| F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its remaining slices — masks + track mattes, text/image/precomp, and the import entry point with the report-before-replace UX — need separate approval. Checkpoint `2026-09-18-after-lottie-core` |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -447,9 +813,9 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 - Item 7 (offline schema closure): **7-A approved and implemented** — the eight pinned documents (33,567 B) are vendored under `fixtures/ograf/schema/` with both upstream notices in `NOTICE.md`; `npm run validate:ograf` is offline and deterministic by default and verifies every pin, `--online` is the refresh path, and the existing CI step needed no change. Evidence: `reports/progress_115_ograf_offline_schema_closure.md`.
 - Item 8 (downstream folder QA automation): **approved and implemented** — the generator, the ZIP/folder comparison and the host-limited report live on `test/ograf-folder-qa-automation` and reuse the canonical compiler and path-safety authorities, with the QA root as an explicit required argument. Evidence: `reports/progress_116_ograf_folder_qa.md`.
 
-## Milestone F — Architecture exploration only (roadmap items 10, 11, 12)
+## Milestone F — Interop design and its approved slices (roadmap items 10, 11, 12)
 
-Research/design deliverables only: Lottie import mapping design, evaluator profiling plan, editable KCS import plan. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix, migration report, autosave through the boundary) on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_120_lottie_mapping_design.md`) with its four open questions settled by the user, and its **first implementation slice (the import core)** is implemented on `feat/lottie-import-core` (`reports/progress_123_lottie_import_core.md`): document timing, shape/solid/null layers, transforms, shapes and the segment-to-keyframe easing rules, with every unconverted construct reported; the UI entry point and the mask/matte and text/image/precomp slices remain plan-only; **no implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code.
+The deliverables are the study, the Lottie import mapping design and the editable-KCS-import plan; implementation runs slice by slice, each slice behind its own approval. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix, migration report, autosave through the boundary) on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_120_lottie_mapping_design.md`) with its four open questions settled by the user, and its **first implementation slice (the import core)** is **merged into `main` at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`): document timing, shape/solid/null layers, transforms, shapes and the segment-to-keyframe easing rules, with every unconverted construct reported; the mask/matte slice (the recommended next task, branch `feat/lottie-mask-matte-slice`), the text/image/precomp slice and the UI entry point remain approval-gated; **no further implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code. Checkpoint `2026-09-18-after-lottie-core` records this state.
 
 ## Approval gates
 
@@ -464,7 +830,7 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 ## Recommended next prompt
 
-"KCS MILESTONE E — OGRAF QA (approval-gated). The study and plan are delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`): item 7 measured the schema closure (8 pinned documents, 33,567 B, 8/8 pins verified, MIT + BSD-style notices) and proposes 7-A vendor + offline mode / 7-B verified cache / 7-C status quo; item 8 proposes a folder-QA generator, artifact comparison and host-limited report on `test/ograf-folder-qa-automation`. Decide item 7 (and separately the CI wiring), item 8 implementation, and the QA root path policy. Milestone D item 9 Option A is already merged at `3923141`; Option B (patch/minor updates plus a bounded `npm audit fix`; edits `package.json` + lockfile), Option C (TypeScript 7 / Vitest 5 majors on their own branch) — OGraf QA / schema hardening study, items 7 and 8; Option D also requires explicit user approval, and Milestone E stays plan-only until then). The local SQLite repair (D9-1) is already applied on that branch, so the remaining decision is the merge itself."
+"KCS MILESTONE F — ITEM 10 MASKS + TRACK MATTE SLICE (approval-gated). Resume from checkpoint `2026-09-18-after-lottie-core` (`docs/checkpoints/2026-09-18-after-lottie-core/RESUME_PROMPT.md`): `main` is at `47d3368` and the item-10 first slice (the Lottie import core) is merged at `ff32d6c`. Extend `src/interop/lottie/**` so Lottie masks (`masksProperties`, `hasMask`) and track mattes (`tt`, `td`) are converted through the existing KCS mask/matte authority or reported through the loss-report contract, and restore the mask limit the first slice left out. Suggested branch `feat/lottie-mask-matte-slice`; the UI entry point, the text/image/precomp slice, item 12's unified import entry, package/lockfile/workflow work (Option B, Option C, `engines`, the npm-12 `allowScripts` decision) and every release action stay behind their own approval."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
@@ -539,18 +905,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## 8. File Inventory
+## 12. File Inventory
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 11822 bytes
-- `NEXT_SESSION.md` — 9242 bytes
-- `OMP_FINAL_RESPONSE.md` — 5254 bytes
-- `PROJECT_STATE.md` — 12455 bytes
-- `README.md` — 2984 bytes
-- `manifest.txt` — 3703 bytes
-- `progress_123_lottie_import_core.md` — 10204 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 12506 bytes
+- `NEXT_SESSION.md` — 9854 bytes
+- `OMP_FINAL_RESPONSE.md` — 4404 bytes
+- `PROJECT_STATE.md` — 13387 bytes
+- `README.md` — 3230 bytes
+- `checkpoint_2026-09-18_README.md` — 5425 bytes
+- `checkpoint_2026-09-18_RESUME_PROMPT.md` — 4836 bytes
+- `checkpoint_2026-09-18_STATE.json` — 4443 bytes
+- `checkpoint_2026-09-18_TASKLIST.md` — 4292 bytes
+- `manifest.txt` — 4153 bytes
+- `progress_124_checkpoint_after_lottie_core.md` — 2825 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

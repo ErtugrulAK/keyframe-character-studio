@@ -1,45 +1,50 @@
-# KCS Milestone F — Interop and Evaluator Study Final Response
+# KCS Milestone F Item 11 — Final Response (Evaluator Profiling Harness)
 
-This file is the OMP final response for the Milestone F study task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+This file is the OMP final response for the item-11 task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** Milestone F (items 10, 11, 12) is delivered as **research and design only** — `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, with the task record in `reports/progress_117_interop_study.md`. Nothing is implemented; each item states the approval it needs first.
-- Main is at `22335a5` with Milestone E merged and its CI run green; this study sits on branch `docs/milestone-f-interop-study` and is subject to the user merge decision.
+- **Status:** measurement only, implemented on branch `chore/evaluator-profiling-harness` (base `main` = `af0288de…`); awaiting the review and the user merge decision.
+- **Report:** `reports/progress_118_evaluator_profiling.md` (includes the first baseline table).
 
-## 2) WHAT THE STUDY ESTABLISHES
+## 2) WHAT CHANGED
 
-**Verified current state.** The interop principle already exists (`docs/interop/V6_LOTTIE_MAPPING.md`: KCS stays canonical, unsupported data is preserved, never silently reinterpreted). The channels-only export policy is in force (`src/hooks/useSerialization.ts:114-116`). Evaluation is pure and uncached (`interpolateChannel` and `applyEasing` in `src/utils/defaults.ts:53,141`; `evaluateFrame` 165 lines, `evaluateTransform` 174, `evaluateLayerMasks` 50, `channelKeyframeGroups` 81) with no benchmark harness. Import accepts a `.kcs` scene or the legacy project shape, rejects OGraf manifests/packages with a toast, and parses through `JSON.parse` into `any` before narrowing (`src/hooks/useSerialization.ts:443`).
+| Item | Change |
+|---|---|
+| Deterministic scenes | `perf/sceneBuilder.ts` — no randomness, clocks or generated ids; channels come from the production `makeEmptyChannels` factory; parameters cover layers, channels per layer, keyframes per channel, masked layers and parented layers; four default scenes (small, medium, large, masks) |
+| Harness | `perf/evaluator-profile.perf.ts` — warm-up then 60 sampled iterations per target, p50/p95/min/max for `evaluateFrame` (1 and 4 frames), `evaluateTransform`, `interpolateChannel` and `applyEasing`; the report is pinned to revision, Node version, platform and scene parameters and states that the numbers are evidence, not a gate |
+| On-demand run | `perf/vitest.perf.config.ts` — the root config only includes `*.test.*`, so the harness never runs in CI; run it with `npx vitest run --config perf/vitest.perf.config.ts` |
+| Builder contract | `src/tests/evaluatorProfileScenes.test.ts` — 5 fast cases: counts and id alignment, exact channels/keyframes, byte-identical rebuilds, mask channels only on masked layers, parent links never on the first layer |
 
-| Item | Deliverable contract the study fixes | Approval needed before code |
-|---|---|---|
-| 10 — Lottie import mapping | Source construct → canonical field, mapping kind (lossless / lossy-with-report / unsupported-and-preserved), exact temporal and easing conversion rules, one loss entry per construct in the existing diagnostics shape; expressions, effects, 3D/cameras, text animators, audio and image sequences are preserved and reported, not converted | Design approval (design gate applies to interchange work) |
-| 11 — Evaluator profiling | Deterministic parametric scenes, wall-clock per evaluation pass on the pure utilities **and** through the React path, a `scripts/` harness with warm-up and p50/p95 plus a revision-pinned report; the report is evidence, not a gate, and no threshold is asserted before the first run | Approval to build the harness only; caching is separate |
-| 12 — Editable KCS import | Product half: compatibility matrix per document kind, migration only through the existing authorities, round-trip guarantee with a fixture per kind, one import entry point that reports before replacing work. Security half: typed parse instead of `JSON.parse` into `any`, size/shape limits, existing path-safety authorities honoured, report-don't-repair | Product/security approval, plus the document kinds that must be editable first |
+## 3) FIRST BASELINE (excerpt)
 
-## 3) VALIDATION
+Node `v24.18.0`, win32/x64, 60 sampled iterations after warm-up, milliseconds per operation:
+
+| Scene | Target | p50 | p95 |
+|---|---|---|---|
+| small (5 layers) | evaluateFrame @ frame 60 | 0.0254 | 0.0404 |
+| medium (25 layers, 5 masked, 5 parented) | evaluateFrame @ frame 60 | 0.1103 | 0.1365 |
+| large (100 layers, 20 masked, 20 parented) | evaluateFrame @ frame 60 | 1.2258 | 1.4602 |
+| masks (40 layers, all masked) | evaluateFrame @ frame 60 | 0.0965 | 0.1126 |
+| any scene | interpolateChannel (first channel) | 0.0004–0.0009 | ≤ 0.0015 |
+
+Reading it: a 100-layer frame costs about **1.2 ms**, scaling roughly linearly with layer count, while keyframe interpolation itself is sub-microsecond — the per-frame cost sits in the pipeline around it. That is the evidence a caching proposal would have to build on.
+
+## 4) VALIDATION
 
 | Check | Result |
 |---|---|
-| Study coverage | items 10, 11 and 12 each have their contract, validation plan and approval gate |
-| Evidence basis | every cited file and line exists at `main` = `22335a5` (checked while writing) |
-| Implementation | none, by design |
-| Repository changes | documentation only: `docs/design/**`, `reports/**`, roadmap, state documents, handoff |
-| `node scripts/check-state-consistency.mjs` | PASS |
-
-## 4) REVIEW
-
-The study goes through the independent read-only review gate before any merge; the verdict is recorded here before the merge request.
+| Harness | `npx vitest run --config perf/vitest.perf.config.ts` — PASS, report printed |
+| CI cost | unchanged: the root config includes only `*.test.*` |
+| Builder contract | PASS — 5 cases |
+| Full suite | PASS — 117 files / 1,721 tests |
+| Lint / TypeScript | clean / clean |
 
 ## 5) SAFETY
 
-- No source, test, script, dependency, `package.json`, lockfile or workflow change; the canonical model, channel semantics, OGraf package format and export paths are untouched.
+- No `src/` production behaviour change, no caching, no worker, no evaluation-order change, no threshold; no dependency, `package.json`, lockfile or workflow change.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
 
-## 6) NEXT — THREE DECISIONS
+## 6) NEXT
 
-1. Item 10: approve the Lottie mapping design scope (construct list and loss-report contract).
-2. Item 11: approve building the profiling harness only, with the first scene parameters named.
-3. Item 12: approve the editable-KCS-import product/security plan and name the first editable document kinds.
-
-With no decision, nothing is implemented and this study remains the Milestone F deliverable.
+One decision: merge `chore/evaluator-profiling-harness` after the review passes. Items 10 and 12 of Milestone F proceed on their own branches.

@@ -1,22 +1,23 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone F (Interop and Evaluator Study)
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 11 (Evaluator Profiling Harness)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-Milestone F (roadmap items 10, 11 and 12) as **study and plan only** (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, task record `reports/progress_117_interop_study.md`):
+The approved item-11 plan of the Milestone F study: **measurement only** for the channel evaluator.
 
-- **Item 10 (Lottie import mapping):** the deliverable contract — source construct → canonical field, mapping kind (lossless / lossy-with-report / unsupported-and-preserved), exact temporal and easing conversion rules, and one loss entry per construct in the existing diagnostics shape. Expressions, effects, 3D/cameras, text animators, audio and image sequences are preserved and reported, not converted.
-- **Item 11 (evaluator profiling):** measurement before caching — deterministic parametric scenes, wall-clock per pass on the pure utilities and through the React path, a `scripts/` harness with warm-up and p50/p95, and a revision-pinned report that is evidence rather than a gate.
-- **Item 12 (editable KCS import):** a product half (compatibility matrix, migration only through the existing authorities, round-trip guarantee, one reporting import entry point) and a security half (typed parse instead of `JSON.parse` into `any`, size/shape limits, existing path-safety authorities, report-don't-repair).
+- `perf/sceneBuilder.ts` builds deterministic scenes (no randomness, clocks or generated ids; channels come from the production `makeEmptyChannels` factory) with parameters for layers, channels per layer, keyframes per channel, masked layers and parented layers.
+- `perf/evaluator-profile.perf.ts` is the harness: warm-up, then 60 sampled iterations per target reporting p50/p95/min/max for `evaluateFrame`, `evaluateTransform`, `interpolateChannel` and `applyEasing`, with a report pinned to the revision, Node version, platform and scene parameters.
+- `perf/vitest.perf.config.ts` runs it on demand; the root config only includes `*.test.*`, so CI keeps its current cost.
+- `src/tests/evaluatorProfileScenes.test.ts` pins the builder contract in 5 fast cases.
 
-Nothing is implemented, and each item states the approval it needs before any code.
+First baseline (Node `v24.18.0`, p50 per operation): `evaluateFrame` @ frame 60 is 0.0254 ms (5 layers), 0.1103 ms (25 layers), **1.2258 ms (100 layers)**; `interpolateChannel` is 0.0004–0.0009 ms. No threshold is asserted — the numbers exist so a later caching proposal can cite a before/after.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_117_interop_study.md` — the task record (scope, findings, validation, decisions)
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with milestones A–E complete and F next
+- `progress_118_evaluator_profiling.md` — the task record with the baseline table
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -26,7 +27,7 @@ Nothing is implemented, and each item states the approval it needs before any co
 
 ## Deliberately not included
 
-Source, test and script files are intentionally omitted (the study lives at `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test, script and perf files are intentionally omitted (the harness lives at `perf/` in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 

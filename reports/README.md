@@ -41,3 +41,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_115_ograf_offline_schema_closure.md` — Milestone E item 7, Option 7-A: vendored offline schema closure.
 - `progress_116_ograf_folder_qa.md` — Milestone E item 8: folder QA generator, artifact comparison and host-limited report.
 - `progress_117_interop_study.md` — Milestone F: Lottie mapping, evaluator profiling and editable KCS import study.
+- `progress_118_evaluator_profiling.md` — Milestone F item 11: deterministic evaluator profiling harness and its first baseline.

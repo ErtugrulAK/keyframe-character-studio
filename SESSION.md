@@ -4,7 +4,7 @@
 
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 
-Checkout: `docs/milestone-f-interop-study` on top of synchronized `main` at `22335a5dc899…` (Milestone E merged and green).
+Checkout: `chore/evaluator-profiling-harness` (Milestone F item 11) on top of synchronized `main` at `af0288de…` (Milestones A–E and the Milestone F study merged and green).
 
 ## Completed
 
@@ -32,7 +32,7 @@ The Milestone F study is delivered on this branch and awaits the user merge deci
 
 ## Open decision
 
-The user merge decision for this Milestone F study branch, plus the three per-item approvals it asks for. Still approval-gated afterwards: the milestone D follow-ups (Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin) and anything in Milestone F.
+The user merge decision for this item-11 branch. Items 10 and 12 of Milestone F are approved in principle and await their own branches and reviews. Still approval-gated afterwards: the milestone D follow-ups (Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin) and anything in Milestone F.
 
 ## Protected state
 

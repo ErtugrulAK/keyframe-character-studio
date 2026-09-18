@@ -6,7 +6,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `22335a5dc899…`: milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is delivered on `docs/milestone-f-interop-study` (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and is study-only: items 10, 11 and 12 each need their own approval before any code.
+Current `main` / `origin/main` is at `22335a5dc899…`: milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), and items 10 (Lottie mapping design) and 12 (editable KCS import) remain approval-gated before their own code changes.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -24,7 +24,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 116 files / 1,716 tests |
+| Full Vitest | PASS | 117 files / 1,721 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |

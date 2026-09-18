@@ -1,16 +1,16 @@
-# KCS ChatGPT Upload Manifest — Milestone F (Interop and Evaluator Study)
+# KCS ChatGPT Upload Manifest — Milestone F Item 11 (Evaluator Profiling Harness)
 
 Clean refreshed: YES
-Bundle purpose: Milestone F items 10, 11 and 12 — Lottie import mapping design, evaluator performance profiling plan, and editable KCS import product/security plan; study and plan only
+Bundle purpose: Milestone F item 11 — deterministic evaluator profiling harness and its first baseline (measurement only)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: docs/milestone-f-interop-study on top of main 22335a5dc899 (Milestone E merged, CI green)
-Study: docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md; task record: reports/progress_117_interop_study.md
-Item 10 findings: the interop principle already exists in docs/interop/V6_LOTTIE_MAPPING.md; the study fixes the deliverable contract (source construct to canonical field, mapping kind lossless / lossy-with-report / unsupported-and-preserved, exact temporal and easing rules, one loss entry per construct in the existing diagnostics shape)
-Item 11 findings: evaluation is pure and uncached (interpolateChannel and applyEasing in src/utils/defaults.ts:53,141; evaluateFrame 165 lines; evaluateTransform 174; evaluateLayerMasks 50; channelKeyframeGroups 81) with no benchmark harness; the study specifies deterministic parametric scenes, a scripts/ harness, p50/p95 reporting pinned to the revision, and evidence-not-gate semantics
-Item 12 findings: import accepts a .kcs scene or the legacy project shape, rejects OGraf manifests/packages with a toast, and parses through JSON.parse into any at src/hooks/useSerialization.ts:443; the study defines the compatibility matrix, migration through existing authorities, round-trip guarantee, typed parse at the boundary, size/shape limits and report-don't-repair
-Implemented in this task: NOTHING (documentation only; no source, test, script, dependency or workflow change)
-Approval gates: item 10 design approval; item 11 approval to build the harness only (caching separate); item 12 product/security approval plus the first editable document kinds
+Branch: chore/evaluator-profiling-harness on top of main af0288de (Milestones A–E and the Milestone F study merged)
+Task record: reports/progress_118_evaluator_profiling.md
+What changed: perf/sceneBuilder.ts (deterministic scenes reusing the production makeEmptyChannels factory), perf/evaluator-profile.perf.ts (warm-up plus 60 sampled iterations, p50/p95/min/max for evaluateFrame, evaluateTransform, interpolateChannel and applyEasing, report pinned to revision/Node/platform/scene parameters), perf/vitest.perf.config.ts (on-demand run; never part of CI), src/tests/evaluatorProfileScenes.test.ts (5 contract cases)
+Baseline (Node v24.18.0, win32/x64, p50 ms per operation): evaluateFrame @ frame 60 — small 0.0254, medium 0.1103, large 1.2258, masks 0.0965; interpolateChannel 0.0004–0.0009; applyEasing (1k calls) ~0.07
+Not changed: src/ production behaviour (no caching, no worker, no evaluation-order change), dependencies, package.json, package-lock.json, workflows
+Validation: harness PASS (1 case, report printed); builder tests PASS (5); full suite PASS (117 files / 1,721 tests); lint clean; tsc clean
+Thresholds: NONE asserted — the numbers are evidence for a later caching proposal, which needs its own approval
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -19,27 +19,27 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the Milestone F final response
-- progress_117_interop_study.md — the task record
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document; milestones A–E complete, F next)
+- OMP_FINAL_RESPONSE.md — the item-11 final response
+- progress_118_evaluator_profiling.md — the task record with the baseline table
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- The study document itself lives in the repository at docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md (the bundle carries its summary in the final response and the task record)
-- Source, test, script, package.json, package-lock.json, ci.yml, release-smoke.yml files
+- Source, test, script and perf files (the harness lives at perf/ in the repository)
+- package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
+- npx vitest run --config perf/vitest.perf.config.ts: PASS — 1 case, report printed
+- npx vitest run src/tests/evaluatorProfileScenes.test.ts: PASS — 5 cases
+- npm test: PASS — 117 files / 1,721 tests; npm run lint: clean; npx tsc --noEmit: clean
 - node scripts/check-state-consistency.mjs: PASS
-- Repository changes: documentation only — docs/design/**, reports/**, the roadmap, the state documents and the handoff bundle
-- No source, test, script, dependency, package or workflow change
-- Evidence basis: every cited file and line exists at main = 22335a5 (checked while writing)
 
-Next: three decisions — item 10 (Lottie mapping design scope), item 11 (build the profiling harness only), item 12 (editable-KCS-import plan and the first editable document kinds). With no decision, nothing is implemented.
+Next: the independent review of this branch, then the user merge decision. Items 10 and 12 of Milestone F proceed on their own branches.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

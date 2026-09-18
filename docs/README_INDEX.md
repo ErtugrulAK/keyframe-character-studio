@@ -54,6 +54,7 @@
 - `reports/progress_115_ograf_offline_schema_closure.md` — Milestone E item 7: vendored offline schema closure.
 - `reports/progress_116_ograf_folder_qa.md` — Milestone E item 8: folder QA automation.
 - `reports/progress_117_interop_study.md` — Milestone F: Lottie mapping, evaluator profiling and editable KCS import study.
+- `reports/progress_118_evaluator_profiling.md` — Milestone F item 11: evaluator profiling harness and baseline.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.
 

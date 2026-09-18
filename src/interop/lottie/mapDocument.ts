@@ -42,14 +42,45 @@ const readNumber = (value: unknown): number | undefined => (typeof value === 'nu
 
 const readString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 
-/** Reports an animated trim, which the first slice reads as static only. */
-const layerPathTrimNote = (diagnostics: LottieImportDiagnostic[], shape: LottieRecord, shapePath: string, shapeIndex: number, layerIndex: number): void => {
-  if (!isAnimatedProperty(shape.s) && !isAnimatedProperty(shape.e)) return;
-  diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANIMATED_SHAPE', shapePath, 'Trim ' + shapeIndex + ' of layer ' + layerIndex + ' is animated, which the first slice reads as static only.', 'Bake the trim animation in the source document or re-create it after import.'));
+/** Which properties of each shape item this slice reads as static only. */
+const ANIMATED_SHAPE_PROPERTIES: Record<string, string[]> = {
+  fl: ['c', 'o'],
+  st: ['w', 'c', 'o'],
+  rc: ['r', 's'],
+  el: ['s'],
+  tm: ['s', 'e', 'o'],
 };
 
-/** True when a shape property holds keyframes, which this slice reads as static only. */
-const isAnimatedProperty = (value: unknown): boolean => Array.isArray((asRecord(value) ?? {}).k);
+/**
+ * Reports an animated shape item exactly once, naming the animated
+ * properties. Items this slice reads only as static values must never be
+ * imported silently.
+ */
+const noteAnimatedShape = (
+  diagnostics: LottieImportDiagnostic[],
+  shape: LottieRecord,
+  shapeType: string,
+  shapePath: string,
+  shapeIndex: number,
+  layerIndex: number,
+): void => {
+  const keys = ANIMATED_SHAPE_PROPERTIES[shapeType] ?? ['c', 'w', 'o', 'r'];
+  const animated = keys.filter((key) => isAnimatedProperty(shape[key]));
+  if (animated.length === 0) return;
+  diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANIMATED_SHAPE', shapePath, 'Shape item ' + shapeIndex + ' of layer ' + layerIndex + ' animates ' + animated.join('/') + ', which the first slice reads as static only.', 'Bake that animation in the source document or re-create it after import.'));
+};
+
+/**
+ * True when a property holds keyframes rather than a static value list.
+ * Deciding by structure (`k[0]` is an object with a numeric `t`) keeps a
+ * static colour list such as `k: [1, 0, 0]` from being reported as animated.
+ */
+const isAnimatedProperty = (value: unknown): boolean => {
+  const entries = (asRecord(value) ?? {}).k;
+  if (!Array.isArray(entries)) return false;
+  const first = asRecord(entries[0]);
+  return typeof first?.t === 'number';
+};
 
 /** A Lottie property object holds either `k` (static) or keyframed entries. */
 /** Reads `{ k: number | number[] }` or `{ k: [ { t, s, i, o, h, r, x } … ] }`. */
@@ -281,13 +312,11 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       const shape = asRecord(shapeEntry);
       const shapeType = readString(shape?.ty);
       const shapePath = `${path}.shapes[${shapeIndex}]`;
-      if (shape && (isAnimatedProperty(shape.c) || isAnimatedProperty(shape.w))) {
-        diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANIMATED_SHAPE', shapePath, 'Shape item ' + shapeIndex + ' of layer ' + index + ' animates its colour or width, which the first slice reads as static only.', 'Bake the animation in the source document or re-create it after import.'));
-      }
       if (!shape || !shapeType) {
         diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_SHAPE', shapePath, `Shape item ${shapeIndex} of layer ${index} has no readable type and was skipped.`, 'Re-export the document; an unsupported item should carry a type.'));
         continue;
       }
+      noteAnimatedShape(diagnostics, shape, shapeType, shapePath, shapeIndex, index);
       if (shapeType === 'sh') {
         const mapped = mapPath(shape.ks, shapePath, diagnostics);
         if (mapped && 'version' in mapped) layerShape.path = mapped;
@@ -338,7 +367,9 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         else diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_STROKE_WIDTH', shapePath, `Stroke ${shapeIndex} of layer ${index} has no readable width.`, 'Re-export the shape from the source document.'));
         const strokeOpacity = readNumber(asRecord(shape.o)?.k);
         if (strokeOpacity !== undefined) layerShape.strokeOpacity = strokeOpacity / 100;
-        if (shape.lc !== undefined || shape.lj !== undefined) {
+        const lineCap = readNumber(shape.lc);
+        const lineJoin = readNumber(shape.lj);
+        if ((lineCap !== undefined && lineCap !== 2) || (lineJoin !== undefined && lineJoin !== 2)) {
           diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_STROKE_STYLE', shapePath, 'Stroke ' + shapeIndex + ' of layer ' + index + ' sets a line cap or join, which KCS does not model.', 'Accept the default stroke style or bake it in the source document.'));
         }
         const strokeColourValue = asRecord(shape.c)?.k;
@@ -351,7 +382,6 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         continue;
       }
       if (shapeType === 'tm') {
-        layerPathTrimNote(diagnostics, shape, shapePath, shapeIndex, index);
         layerShape.trimPathEnabled = true;
         const start = readNumber(asRecord(shape.s)?.k);
         const end = readNumber(asRecord(shape.e)?.k);

@@ -21,8 +21,8 @@ The approved first slice of `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`: the impo
   - Document level: `fr` → `fps` (fractional rates rounded and reported), `ip`/`op` → `totalFrames` with an in-point shift warning, `w`/`h` → scene size, `nm` → name, and the scene is emitted as `coordinateSystem: 'project-unit-center-v1'`.
   - Layers: `ty` 1/3/4 (solid/null/shape) are converted; **precomps, text and images are reported and skipped** per the approved first-cut decision, as are effects, expressions, masks and track mattes; a parent index that is not an already-imported layer reports `LOTTIE_BROKEN_PARENT` and is dropped.
   - Transforms: `ks.p` (x/y), `ks.r`, `ks.s` (percent → factor), `ks.o` (percent → 0..1), static values as the base transform and keyframed ones as canonical channels.
-  - Shapes: `sh` → `BezierPath` (v1) with a vertex limit, `rc`/`el` → width/height, `fl` → fill colour + opacity, `st` → stroke width, `tm` → trim start/end/offset, `gr` → flattened and reported, anything else reported.
-- **`src/tests/lottieImport.test.ts`** — **31 cases** across five groups: document timing (mapping, fractional fps, in-point shift, missing timing), transforms (static values, the segment split, hold, roving fallback, keyframe limit), dimensions and fallbacks (per-dimension vector mapping, non-uniform keyframed scale, roving *with* handles, a two-segment curve pinning both handles on the middle keyframe, layer start-time subtraction with the frame-0 clamp, hierarchy limit, layer in/out + skew + auto-orient reports, unreadable shape payloads, stroke colour), shapes and unsupported constructs, and untrusted input (malformed JSON, prototype key, size limit, broken parent).
+  - Shapes: `sh` → `BezierPath` (v1) with a vertex limit, `rc`/`el` → width/height (plus `rc.r` → corner radius), `fl` → fill colour + opacity, `st` → stroke width + colour + opacity, `tm` → trim start/end/offset, `gr` → flattened and reported, anything else reported.
+- **`src/tests/lottieImport.test.ts`** — **33 cases** across five groups: document timing (mapping, fractional fps, in-point shift, missing timing), transforms (static values, the segment split, hold, roving fallback, keyframe limit), dimensions and fallbacks (per-dimension vector mapping, non-uniform keyframed scale, roving *with* handles, a two-segment curve pinning both handles on the middle keyframe, layer start-time subtraction with the frame-0 clamp, hierarchy limit, layer in/out + skew + auto-orient reports, unreadable shape payloads, stroke colour), shapes and unsupported constructs, and untrusted input (malformed JSON, prototype key, size limit, broken parent).
 
 **Bugs the tests caught while writing them** (each fixed before commit):
 
@@ -39,15 +39,17 @@ The approved first slice of `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`: the impo
 
 - Solid layers now map their own paint and size (`sc` → fill colour, `sw`/`sh` → width/height) instead of importing a white layer.
 - A rect corner radius maps to `borderRadius`, and stroke opacity maps to `strokeOpacity` (percent → factor).
-- The constructs KCS genuinely does not model are **reported** rather than ignored: the layer anchor (`LOTTIE_UNSUPPORTED_ANCHOR`), a shape's own position (`LOTTIE_UNSUPPORTED_SHAPE_POSITION`), stroke cap/join (`LOTTIE_UNSUPPORTED_STROKE_STYLE`), and an animated fill, stroke width or trim (`LOTTIE_UNSUPPORTED_ANIMATED_SHAPE`, one entry per animated item). layer in/out ranges (`LOTTIE_LAYER_TIMING`), skew (`LOTTIE_UNSUPPORTED_SKEW`), auto-orient (`LOTTIE_UNSUPPORTED_AUTO_ORIENT`), the document 3D flag (`LOTTIE_UNSUPPORTED_3D`), unreadable shape payloads (`LOTTIE_UNREADABLE_SHAPE`, `LOTTIE_UNREADABLE_SIZE`, `LOTTIE_UNREADABLE_COLOUR`, `LOTTIE_UNREADABLE_STROKE_WIDTH`, `LOTTIE_UNREADABLE_PATH`), stroke colour mapping, the hierarchy limit now measured as a chain depth instead of an index gap, and the unused mask limit removed (it returns with the mask slice).
+- The constructs KCS genuinely does not model are **reported** rather than ignored: the layer anchor (`LOTTIE_UNSUPPORTED_ANCHOR`), a shape's own position (`LOTTIE_UNSUPPORTED_SHAPE_POSITION`), stroke cap/join (`LOTTIE_UNSUPPORTED_STROKE_STYLE`, and only when the value differs from Lottie's default), and **one** `LOTTIE_UNSUPPORTED_ANIMATED_SHAPE` entry per animated shape item, naming the animated properties (fill colour/opacity, stroke width/colour/opacity, rect corner radius/size, ellipse size, trim start/end/offset).
+
+**Review round 3** found the animated-property detector reporting *static* fills as animated and three animated properties (trim offset, fill/stroke opacity, rect corner radius) still dropped without a note. The detector now decides by keyframe structure (a `k` whose first entry is an object with a numeric `t`), the per-type property list covers those three, and each item reports at most once. layer in/out ranges (`LOTTIE_LAYER_TIMING`), skew (`LOTTIE_UNSUPPORTED_SKEW`), auto-orient (`LOTTIE_UNSUPPORTED_AUTO_ORIENT`), the document 3D flag (`LOTTIE_UNSUPPORTED_3D`), unreadable shape payloads (`LOTTIE_UNREADABLE_SHAPE`, `LOTTIE_UNREADABLE_SIZE`, `LOTTIE_UNREADABLE_COLOUR`, `LOTTIE_UNREADABLE_STROKE_WIDTH`, `LOTTIE_UNREADABLE_PATH`), stroke colour mapping, the hierarchy limit now measured as a chain depth instead of an index gap, and the unused mask limit removed (it returns with the mask slice).
 
 ## 4. Validation (branch `feat/lottie-import-core`)
 
 | Check | Command | Result |
 |---|---|---|
 | Type gate (CI's) | `npm run build` (`tsc -b && vite build`) | PASS |
-| Lottie core suite | `npx vitest run src/tests/lottieImport.test.ts` | PASS — 31 cases |
-| Full suite | `npm test` | PASS — 120 files / 1,767 tests |
+| Lottie core suite | `npx vitest run src/tests/lottieImport.test.ts` | PASS — 33 cases |
+| Full suite | `npm test` | PASS — 120 files / 1,769 tests |
 | Lint | `npm run lint` | clean |
 | Release gate | `npm run qa:release` | PASS — 2 Chromium tests |
 | State consistency | `node scripts/check-state-consistency.mjs` | PASS |

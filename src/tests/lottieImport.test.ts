@@ -255,6 +255,37 @@ describe('Lottie import — dimensions and fallbacks (review round)', () => {
     );
   });
 
+  it('does not report a static shape as animated', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'fl', c: { k: [1, 0, 0] }, o: { k: 100 } }, { ty: 'st', w: { k: 2 }, o: { k: 100 }, c: { k: [0, 0, 1] } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+
+    expect(result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNSUPPORTED_ANIMATED_SHAPE')).toHaveLength(0);
+  });
+
+  it('reports an animated fill opacity, stroke opacity, corner radius and trim offset', () => {
+    const animated = { k: [{ t: 0, s: [0] }, { t: 10, s: [50] }] };
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [
+        { ty: 'fl', c: { k: [1, 0, 0] }, o: animated },
+        { ty: 'st', w: { k: 2 }, o: animated },
+        { ty: 'rc', s: { k: [10, 10] }, r: animated },
+        { ty: 'tm', s: { k: 0 }, e: { k: 100 }, o: animated },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+    const reported = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNSUPPORTED_ANIMATED_SHAPE');
+
+    expect(reported).toHaveLength(4);
+  });
+
   it('maps a solid layer colour and size, and reports its anchor', () => {
     const layer = solidLayer({ sc: '#123456', sw: 320, sh: 180, ks: { a: { k: [10, 10] }, o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } });
     const result = importLottieDocument(JSON.stringify(baseDocument([layer])));

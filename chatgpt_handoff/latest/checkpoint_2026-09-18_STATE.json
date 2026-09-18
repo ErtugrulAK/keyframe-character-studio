@@ -26,6 +26,18 @@
   "recommended_next_task": "Milestone F item 10 - masks + track matte slice",
   "recommended_next_branch": "feat/lottie-mask-matte-slice",
   "checkpoint_branch": "docs/checkpoint-after-lottie-core",
+  "checkpoint_commits": {
+    "checkpoint": "0d346ac",
+    "handoff_refresh": "d9cf060"
+  },
+  "post_checkpoint_verification": {
+    "tip": "d9cf060",
+    "state_consistency": "PASS - 40 checks",
+    "full_vitest": "PASS - 120 files / 1,773 tests",
+    "qa_release": "PASS - 2 Chromium smoke tests, candidate d9cf060",
+    "ci_main": "success - run 35360426788",
+    "intermediate_ci": "run 35360234801 failed on 0d346ac for exactly one check, the handoff bundle mirrors, which d9cf060 re-synced"
+  },
   "protected_invariants": {
     "release_tag_v1_1_0_rc_1_target": "46d2a3e59e065816d972dcd56951803951b577f6",
     "release_tag_must_not_change": true,

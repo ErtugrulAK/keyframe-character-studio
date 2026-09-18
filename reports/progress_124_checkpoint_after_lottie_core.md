@@ -44,7 +44,14 @@ Run on `main` before this checkpoint was written:
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
 | `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
 | `git diff --check` | clean |
-| `gh run list --branch main --limit 10` | newest `main` run `35355797739` — success |
+| `gh run list --branch main --limit 10` | newest `main` run at the checkpoint base `35355797739` — success |
+
+**After the checkpoint commits:** `0d346ac` failed CI run `35360234801` on exactly one check — the
+handoff bundle mirrors had not been re-copied yet — and nothing else (verified in the failed-run
+log). The handoff refresh commit `d9cf060` re-copied the four mirrored documents into
+`chatgpt_handoff/latest/` and rebuilt the one-file; on that tip `node
+scripts/check-state-consistency.mjs` passes with **40 checks**, the full suite is 120 files / 1,773
+tests, `npm run qa:release` passes with candidate `d9cf060`, and CI run `35360426788` is green.
 
 ## 5. Protected state
 

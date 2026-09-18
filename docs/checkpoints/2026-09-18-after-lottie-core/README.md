@@ -61,6 +61,14 @@ Run on `main` at `47d3368` before this checkpoint was written:
 The check total moves with the number of documents in the handoff bundle, so a different total on a
 different state is expected as long as the check passes.
 
+**At the checkpoint base (`47d3368`):** 32 checks.
+**At the checkpoint tip:** the checkpoint commit `0d346ac` touched these documents before the
+handoff bundle mirrored them, so its CI run `35360234801` failed on exactly one check — the bundle
+mirrors — and nothing else. The handoff refresh commit `d9cf060` re-copied the mirrored documents
+and rebuilt the one-file; on that tip the state check passes with **40 checks**, the full suite is
+still 120 files / 1,773 tests, `npm run qa:release` passes with candidate `d9cf060`, and CI run
+`35360426788` is green.
+
 ## 5. Remaining work
 
 In priority order (details in `TASKLIST.md`):

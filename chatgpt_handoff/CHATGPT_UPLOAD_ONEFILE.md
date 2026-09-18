@@ -52,9 +52,9 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
-| `node scripts/check-state-consistency.mjs` | PASS — see §5 for the check total |
+| `node scripts/check-state-consistency.mjs` | PASS — 32 checks at the checkpoint base, 40 checks at the checkpoint tip (`d9cf060`) |
 | `git diff --check` | clean |
-| CI on `main` | run `35360234801` for `0d346ac`; the previous `main` runs (`35355797739`, `35355585227`) are green |
+| CI on `main` | `35360426788` for `d9cf060` — success; the intermediate checkpoint commit `0d346ac` failed run `35360234801` on exactly one check (the handoff bundle mirrors, re-copied by `d9cf060`), and the earlier `main` runs `35355797739` and `35355585227` are green |
 
 ## 4) REVIEW
 
@@ -70,7 +70,7 @@ files. The single re-review returned **READY** with no findings.
 - No source, test, `package.json`, lockfile or workflow file changed: the commit touches only documentation paths.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the GitHub draft release, npm metadata, `origin/without-mask`, the OMP configuration (`memory.backend: mnemopi`, model roles, provider mappings, `task.maxConcurrency: 8`) and the user folders are unchanged.
 - Integration was fast-forward only: no merge commit, no rebase, no force push, no tag change, no branch deletion.
-- The state consistency check reports one deliberate failure until the handoff bundle mirrors the updated root documents; the handoff refresh commit closes it. The check total moves with the number of bundle documents, so a different total on a different state is expected.
+- The state consistency check briefly failed on the intermediate checkpoint commit because the handoff bundle had not yet mirrored the updated root documents; the handoff refresh commit re-synced them and the check now passes. The check total moves with the number of bundle documents, so a different total on a different state is expected.
 
 ## 6) NEXT
 
@@ -247,7 +247,14 @@ Run on `main` before this checkpoint was written:
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
 | `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
 | `git diff --check` | clean |
-| `gh run list --branch main --limit 10` | newest `main` run `35355797739` — success |
+| `gh run list --branch main --limit 10` | newest `main` run at the checkpoint base `35355797739` — success |
+
+**After the checkpoint commits:** `0d346ac` failed CI run `35360234801` on exactly one check — the
+handoff bundle mirrors had not been re-copied yet — and nothing else (verified in the failed-run
+log). The handoff refresh commit `d9cf060` re-copied the four mirrored documents into
+`chatgpt_handoff/latest/` and rebuilt the one-file; on that tip `node
+scripts/check-state-consistency.mjs` passes with **40 checks**, the full suite is 120 files / 1,773
+tests, `npm run qa:release` passes with candidate `d9cf060`, and CI run `35360426788` is green.
 
 ## 5. Protected state
 
@@ -330,6 +337,14 @@ Run on `main` at `47d3368` before this checkpoint was written:
 
 The check total moves with the number of documents in the handoff bundle, so a different total on a
 different state is expected as long as the check passes.
+
+**At the checkpoint base (`47d3368`):** 32 checks.
+**At the checkpoint tip:** the checkpoint commit `0d346ac` touched these documents before the
+handoff bundle mirrored them, so its CI run `35360234801` failed on exactly one check — the bundle
+mirrors — and nothing else. The handoff refresh commit `d9cf060` re-copied the mirrored documents
+and rebuilt the one-file; on that tip the state check passes with **40 checks**, the full suite is
+still 120 files / 1,773 tests, `npm run qa:release` passes with candidate `d9cf060`, and CI run
+`35360426788` is green.
 
 ## 5. Remaining work
 
@@ -560,6 +575,18 @@ Begin with the preflight in step 1 and report each gate result before touching a
   "recommended_next_task": "Milestone F item 10 - masks + track matte slice",
   "recommended_next_branch": "feat/lottie-mask-matte-slice",
   "checkpoint_branch": "docs/checkpoint-after-lottie-core",
+  "checkpoint_commits": {
+    "checkpoint": "0d346ac",
+    "handoff_refresh": "d9cf060"
+  },
+  "post_checkpoint_verification": {
+    "tip": "d9cf060",
+    "state_consistency": "PASS - 40 checks",
+    "full_vitest": "PASS - 120 files / 1,773 tests",
+    "qa_release": "PASS - 2 Chromium smoke tests, candidate d9cf060",
+    "ci_main": "success - run 35360426788",
+    "intermediate_ci": "run 35360234801 failed on 0d346ac for exactly one check, the handoff bundle mirrors, which d9cf060 re-synced"
+  },
   "protected_invariants": {
     "release_tag_v1_1_0_rc_1_target": "46d2a3e59e065816d972dcd56951803951b577f6",
     "release_tag_must_not_change": true,
@@ -912,15 +939,15 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `CHANGELOG.md` — 6149 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 12506 bytes
 - `NEXT_SESSION.md` — 9854 bytes
-- `OMP_FINAL_RESPONSE.md` — 4404 bytes
+- `OMP_FINAL_RESPONSE.md` — 4678 bytes
 - `PROJECT_STATE.md` — 13387 bytes
 - `README.md` — 3230 bytes
-- `checkpoint_2026-09-18_README.md` — 5425 bytes
+- `checkpoint_2026-09-18_README.md` — 5991 bytes
 - `checkpoint_2026-09-18_RESUME_PROMPT.md` — 4836 bytes
-- `checkpoint_2026-09-18_STATE.json` — 4443 bytes
+- `checkpoint_2026-09-18_STATE.json` — 4945 bytes
 - `checkpoint_2026-09-18_TASKLIST.md` — 4292 bytes
 - `manifest.txt` — 4153 bytes
-- `progress_124_checkpoint_after_lottie_core.md` — 2825 bytes
+- `progress_124_checkpoint_after_lottie_core.md` — 3401 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

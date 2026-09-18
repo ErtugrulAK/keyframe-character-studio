@@ -32,9 +32,9 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
-| `node scripts/check-state-consistency.mjs` | PASS — see §5 for the check total |
+| `node scripts/check-state-consistency.mjs` | PASS — 32 checks at the checkpoint base, 40 checks at the checkpoint tip (`d9cf060`) |
 | `git diff --check` | clean |
-| CI on `main` | run `35360234801` for `0d346ac`; the previous `main` runs (`35355797739`, `35355585227`) are green |
+| CI on `main` | `35360426788` for `d9cf060` — success; the intermediate checkpoint commit `0d346ac` failed run `35360234801` on exactly one check (the handoff bundle mirrors, re-copied by `d9cf060`), and the earlier `main` runs `35355797739` and `35355585227` are green |
 
 ## 4) REVIEW
 
@@ -50,7 +50,7 @@ files. The single re-review returned **READY** with no findings.
 - No source, test, `package.json`, lockfile or workflow file changed: the commit touches only documentation paths.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the GitHub draft release, npm metadata, `origin/without-mask`, the OMP configuration (`memory.backend: mnemopi`, model roles, provider mappings, `task.maxConcurrency: 8`) and the user folders are unchanged.
 - Integration was fast-forward only: no merge commit, no rebase, no force push, no tag change, no branch deletion.
-- The state consistency check reports one deliberate failure until the handoff bundle mirrors the updated root documents; the handoff refresh commit closes it. The check total moves with the number of bundle documents, so a different total on a different state is expected.
+- The state consistency check briefly failed on the intermediate checkpoint commit because the handoff bundle had not yet mirrored the updated root documents; the handoff refresh commit re-synced them and the check now passes. The check total moves with the number of bundle documents, so a different total on a different state is expected.
 
 ## 6) NEXT
 

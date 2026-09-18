@@ -11,7 +11,7 @@
 
 ## Current result
 
-Milestones A, B and C are merged, Milestone D is complete, and Milestone E is the active milestone:
+Milestones A–E are complete, and Milestone F is the active milestone:
 
 - Milestone A — canvas tangent authoring (`077911b`): vertex selection shows Bezier handles on the stage, dragging reshapes the path live, one history entry per completed drag, `Escape` cancels.
 - Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.
@@ -56,4 +56,4 @@ Full Vitest (116 files / 1,716 tests), `npm run validate:ograf`, `npm run qa:rel
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Roadmap status when this milestone landed: D was next (items 6 and 9) and C was merged. Current status: D is complete and Milestone E is the active milestone (see "Current result" above).
+- Roadmap status when this milestone landed: D was next (items 6 and 9) and C was merged. Current status: A–E are complete and Milestone F is the active milestone (see "Current result" above).

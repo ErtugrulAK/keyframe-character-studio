@@ -32,7 +32,7 @@ The Milestone F study is delivered on this branch and awaits the user merge deci
 
 ## Open decision
 
-The user merge decision for the stacked Milestone E branch. Still approval-gated afterwards: the milestone D follow-ups (Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin) and anything in Milestone F.
+The user merge decision for this Milestone F study branch, plus the three per-item approvals it asks for. Still approval-gated afterwards: the milestone D follow-ups (Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin) and anything in Milestone F.
 
 ## Protected state
 

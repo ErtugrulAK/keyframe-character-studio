@@ -25,7 +25,7 @@ Item 10’s first implementation slice (the Lottie import core and its loss repo
 
 ## Validation
 
-- `npm test`: PASS — 120 files / 1,769 tests. `npm run lint`: clean. `npm run build` (`tsc -b && vite build`): PASS — this is the type gate CI uses. The session's earlier "tsc clean" claims cited `npx tsc --noEmit`, which does not cover the same project program; two import-boundary type errors therefore reached `main` and are fixed in `reports/progress_122_ci_hotfix_import_boundary_types.md`.
+- `npm test`: PASS — 120 files / 1,771 tests. `npm run lint`: clean. `npm run build` (`tsc -b && vite build`): PASS — this is the type gate CI uses. The session's earlier "tsc clean" claims cited `npx tsc --noEmit`, which does not cover the same project program; two import-boundary type errors therefore reached `main` and are fixed in `reports/progress_122_ci_hotfix_import_boundary_types.md`.
 - Evaluator profile harness: `npx vitest run --config perf/vitest.perf.config.ts` PASS (report printed); baseline recorded in `reports/progress_118_evaluator_profiling.md`.
 - Import boundary and product half: `src/tests/importValidation.test.ts` PASS (9 cases), `src/tests/importCompatibilityMatrix.test.ts` PASS (5 cases); the serialization suite PASS (96 cases, including the autosave refusal).
 - `npm run validate:ograf`: PASS offline (pin-verified vendored closure); the same command passes with a poisoned proxy, proving no fetch is attempted; `--online` also passes.

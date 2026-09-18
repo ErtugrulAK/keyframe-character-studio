@@ -255,6 +255,57 @@ describe('Lottie import — dimensions and fallbacks (review round)', () => {
     );
   });
 
+  it('stays silent for default stroke styles and reports dashes, trim modes and a missing stroke colour', () => {
+    const defaultStroke = {
+      ty: 4,
+      nm: 'Default',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'st', w: { k: 2 }, o: { k: 100 }, c: { k: [0, 0, 1] }, lc: { k: 2 }, lj: { k: 2 } }],
+    };
+    const special = {
+      ty: 4,
+      nm: 'Special',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [
+        { ty: 'st', w: { k: 2 }, o: { k: 100 }, c: { k: [0, 0, 1] }, d: { k: [3, 2] } },
+        { ty: 'st', w: { k: 2 }, o: { k: 100 }, c: { k: 'red' } },
+        { ty: 'tm', s: { k: 0 }, e: { k: 100 }, m: 2 },
+      ],
+    };
+
+    const plain = importLottieDocument(JSON.stringify(baseDocument([defaultStroke])));
+    expect(plain.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNSUPPORTED_STROKE_STYLE')).toHaveLength(0);
+
+    const codes = importLottieDocument(JSON.stringify(baseDocument([special]))).diagnostics.map((entry) => entry.code);
+    expect(codes).toContain('LOTTIE_UNSUPPORTED_STROKE_DASH');
+    expect(codes).toContain('LOTTIE_UNREADABLE_COLOUR');
+    expect(codes).toContain('LOTTIE_UNSUPPORTED_TRIM_MODE');
+  });
+
+  it('reports an animated path as animated rather than unreadable', () => {
+    const animatedPath = {
+      ty: 4,
+      nm: 'Animated path',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [
+        {
+          ty: 'sh',
+          ks: {
+            k: [
+              { t: 0, s: [{ v: [[0, 0], [10, 0], [10, 10]], i: [[0, 0], [0, 0], [0, 0]], o: [[0, 0], [0, 0], [0, 0]], c: true }] },
+              { t: 10, s: [{ v: [[0, 0], [20, 0], [20, 20]], i: [[0, 0], [0, 0], [0, 0]], o: [[0, 0], [0, 0], [0, 0]], c: true }] },
+            ],
+          },
+        },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([animatedPath])));
+    const codes = result.diagnostics.map((entry) => entry.code);
+
+    expect(codes).toContain('LOTTIE_UNSUPPORTED_ANIMATED_SHAPE');
+    expect(codes).not.toContain('LOTTIE_UNREADABLE_PATH');
+  });
+
   it('does not report a static shape as animated', () => {
     const shapeLayer = {
       ty: 4,

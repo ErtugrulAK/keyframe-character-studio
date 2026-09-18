@@ -49,6 +49,7 @@ const ANIMATED_SHAPE_PROPERTIES: Record<string, string[]> = {
   rc: ['r', 's'],
   el: ['s'],
   tm: ['s', 'e', 'o'],
+  sh: ['ks'],
 };
 
 /**
@@ -320,7 +321,8 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       if (shapeType === 'sh') {
         const mapped = mapPath(shape.ks, shapePath, diagnostics);
         if (mapped && 'version' in mapped) layerShape.path = mapped;
-        else if (mapped === undefined) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_PATH', shapePath, `Path ${shapeIndex} of layer ${index} has no readable vertices and was skipped.`, 'Re-export the path from the source document.'));
+        // An animated path already carries its own, accurate report above.
+        else if (mapped === undefined && !isAnimatedProperty(shape.ks)) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_PATH', shapePath, `Path ${shapeIndex} of layer ${index} has no readable vertices and was skipped.`, 'Re-export the path from the source document.'));
         continue;
       }
       if (shapeType === 'rc' || shapeType === 'el') {
@@ -367,6 +369,9 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         else diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_STROKE_WIDTH', shapePath, `Stroke ${shapeIndex} of layer ${index} has no readable width.`, 'Re-export the shape from the source document.'));
         const strokeOpacity = readNumber(asRecord(shape.o)?.k);
         if (strokeOpacity !== undefined) layerShape.strokeOpacity = strokeOpacity / 100;
+        if (shape.d !== undefined) {
+          diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_STROKE_DASH', shapePath, 'Stroke ' + shapeIndex + ' of layer ' + index + ' uses a dash pattern, which KCS does not model.', 'Accept a solid stroke or bake the dashes in the source document.'));
+        }
         const lineCap = readNumber(shape.lc);
         const lineJoin = readNumber(shape.lj);
         if ((lineCap !== undefined && lineCap !== 2) || (lineJoin !== undefined && lineJoin !== 2)) {
@@ -375,6 +380,9 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         const strokeColourValue = asRecord(shape.c)?.k;
         const strokeColour = Array.isArray(strokeColourValue) ? strokeColourValue : [];
         const [strokeRed, strokeGreen, strokeBlue] = [readNumber(strokeColour[0]), readNumber(strokeColour[1]), readNumber(strokeColour[2])];
+        if (strokeRed === undefined || strokeGreen === undefined || strokeBlue === undefined) {
+          diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_COLOUR', shapePath, 'Stroke ' + shapeIndex + ' of layer ' + index + ' has no readable colour.', 'Re-export the shape from the source document.'));
+        }
         if (strokeRed !== undefined && strokeGreen !== undefined && strokeBlue !== undefined) {
           const toHex = (value: number) => Math.max(0, Math.min(255, Math.round(value * 255))).toString(16).padStart(2, '0');
           layerShape.strokeColor = `#${toHex(strokeRed)}${toHex(strokeGreen)}${toHex(strokeBlue)}`;
@@ -382,6 +390,10 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         continue;
       }
       if (shapeType === 'tm') {
+        const trimMode = readNumber(shape.m);
+        if (trimMode !== undefined && trimMode !== 1) {
+          diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TRIM_MODE', shapePath, 'Trim ' + shapeIndex + ' of layer ' + index + ' uses trim mode ' + trimMode + ', which KCS does not model.', 'Use the default trim mode in the source document.'));
+        }
         layerShape.trimPathEnabled = true;
         const start = readNumber(asRecord(shape.s)?.k);
         const end = readNumber(asRecord(shape.e)?.k);

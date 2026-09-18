@@ -20,7 +20,7 @@ document against the pinned digest, so an edited copy fails closed.
 ## Refresh procedure
 
 1. Run `node scripts/validate-ograf-manifest.mjs --online <fixture>` against the live upstream documents.
-2. If an upstream document changed, copy the new bytes into this directory, update the corresponding SHA-256 in `schemaHashes` (`scripts/validate-ograf-manifest.mjs`), and re-run the validator plus its tests.
+2. If an upstream document changed, copy the new bytes into this directory, update the corresponding SHA-256 in `schemaHashes` (`scripts/ografSchemaClosure.mjs` — the validator imports the pins from there), and re-run the validator plus its tests.
 3. Never edit a vendored document in place without updating its pin: the pin check is the fail-closed contract.
 
 ## Upstream licence notices

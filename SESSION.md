@@ -4,7 +4,7 @@
 
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 
-Checkout: `docs/milestone-e-ograf-qa-study`, based on synchronized `main` at `392314168b2bbbfc87b5c47079eda73c65d187f7`.
+Checkout: `test/ograf-folder-qa-automation` (Milestone E item 8), stacked on `chore/ograf-offline-schema-closure` (item 7), on top of synchronized `main` at `46021eece4714fa8880ae4d3018e8f8f064c3a81`.
 
 ## Completed
 
@@ -14,28 +14,30 @@ Checkout: `docs/milestone-e-ograf-qa-study`, based on synchronized `main` at `39
 - Milestone B (item 4): graph and keyboard accessibility — merged at `96e8f9d`.
 - Milestone C (item 5): first export / onboarding flow — merged at `c2dcb22`.
 - Milestone D item 6: state consistency check — merged at `b91e8b9`, follow-up `be76df9`.
-- Milestone D item 9: dependency and warning maintenance — audited (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS), then the approved Option A implemented and **merged at `3923141`** (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule, and the local SQLite binding repair (`GET /api/health` → 200). CI run `35322372675` is green.
-- Milestone E items 7 and 8: **study and plan delivered** (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`) on this branch. Nothing is implemented.
+- Milestone D item 9: dependency and warning maintenance — audited (`reports/progress_112_dependency_warning_audit.md`), then the approved Option A implemented and merged at `3923141` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule and the local SQLite binding repair.
+- Milestone E study: `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` and `reports/progress_114_ograf_qa_study.md` — merged at `46021ee`.
+- Milestone E item 7 (Option 7-A, offline schema closure): **implemented on `chore/ograf-offline-schema-closure`** — the 8 pinned documents are vendored under `fixtures/ograf/schema/` with `NOTICE.md`, `scripts/ografSchemaClosure.mjs` owns the pins, and `validate-ograf-manifest.mjs` is offline by default with `--online` as the refresh path (`reports/progress_115_ograf_offline_schema_closure.md`).
+- Milestone E item 8 (folder QA automation): **implemented on this branch** — `scripts/generate-ograf-folder-qa.mjs` generates or verifies a clean folder QA copy with byte-level comparison, manifest validation through the offline validator and a host-limited report (`reports/progress_116_ograf_folder_qa.md`).
 
-## Current work (this branch)
+## Current work
 
-- Item 7 study: the validator fetches **8** SHA-256-pinned documents; a read-only check confirmed 8/8 pins still match upstream and measured the closure at **33,567 bytes**. `ebu/ograf` is MIT and the JSON Schema meta-schema carries a BSD-style notice, so vendoring is viable with the notices. CI **does** run `npm run validate:ograf` (`.github/workflows/ci.yml:27-28`), which is why the live fetches matter: every push depends on two remote hosts. Options 7-A (vendor + offline mode, recommended), 7-B (verified cache), 7-C (status quo).
-- Item 8 plan: a folder-QA generator through the existing compiler and path-safety authorities, an artifact comparison against the ZIP from the same compilation, and a host-limited report — on `test/ograf-folder-qa-automation`, with no host contract invention.
+Both Milestone E branches await the independent review verdict and the user merge decision; the stacked branch `test/ograf-folder-qa-automation` is the merge unit (it contains item 7 and item 8). Nothing beyond those two approved scopes is authorized.
 
 ## Validation
 
-- `node scripts/check-state-consistency.mjs`: PASS.
-- Repository changes on this branch: documentation only (`docs/design/**`, `reports/**`, the roadmap, the state documents, the handoff bundle). No source, test, dependency, `package.json`, lockfile or workflow change.
-- Independent verification: the read-only `scout` round returned BLOCKED for one false claim (the study said CI does not invoke `validate:ograf`) and two stale state sentences; all three were corrected in this revision.
+- `npm test`: PASS — 116 files / 1,716 tests. `npm run lint`: clean. `npx tsc --noEmit`: clean. `npm run build`: PASS.
+- `npm run validate:ograf`: PASS offline (pin-verified vendored closure); the same command passes with a poisoned proxy, proving no fetch is attempted; `--online` also passes.
+- `npm run qa:release`: PASS — 2 Chromium tests. `node scripts/check-state-consistency.mjs`: PASS.
+- Folder QA: generate PASS; `--verify` on an unchanged copy PASS; `--verify` after a one-byte edit FAILS with `content drift`; `--verify` with a stray file FAILS with `extra file`; invalid manifest FAILS with the inspected copy and report preserved; `--out <repository root>` is refused.
 
 ## Open decision
 
-Milestone E needs four decisions: item 7 (7-A / 7-B / 7-C), confirmation that the existing CI step stays as-is after vendoring, item 8 implementation approval on `test/ograf-folder-qa-automation`, and the QA root path policy. Milestone D follow-ups stay approval-gated: Option B (patch/minor updates + `npm audit fix`), Option C (TypeScript 7 / Vitest 5 majors), the `engines` declaration and the npm-12 `allowScripts` pin.
+The user merge decision for the stacked Milestone E branch. Still approval-gated afterwards: the milestone D follow-ups (Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin) and anything in Milestone F.
 
 ## Protected state
 
 - Release tags `v1.1.0-rc.1` (target `46d2a3e59e065816d972dcd56951803951b577f6`) and `v1.1.0-public-controls` remain unchanged; the GitHub draft release is neither published nor finalized.
 - `origin/without-mask` remains ARCHIVE and untouched.
-- `.omp/config.yml`, global OMP tooling, model roles, task concurrency, and the memory backend remain unchanged.
-- `Desktop\KCS`, `Desktop\ograf-graphics` and the (absent) `kcs-ograf-*` QA roots were not modified; nothing was written to any user folder.
+- `.omp/config.yml`, global OMP tooling, model roles, task concurrency and the memory backend remain unchanged.
+- `Desktop\KCS`, `Desktop\ograf-graphics` and the (absent) `kcs-ograf-*` QA roots were not modified; the folder QA tool writes only where `--out` or `--verify` explicitly points, and verification ran in the system temporary directory.
 - The package remains private at `1.1.0-rc.1`; no dependency was updated.

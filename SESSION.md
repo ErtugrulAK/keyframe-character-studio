@@ -4,7 +4,7 @@
 
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 
-Checkout: `feat/kcs-import-product-half` (Milestone F item 12 product half) on top of synchronized `main` at `44218a62…` (Milestones A–E, the Milestone F study and the item-10/11/12-first-step stack merged and green).
+Checkout: `feat/lottie-import-core` (Milestone F item 10 first slice) on top of synchronized `main` at `06a5dfcf…` (Milestones A–E, the Milestone F study, the item-11 harness, the item-12 first step and product half, and the CI hotfix merged and green).
 
 ## Completed
 
@@ -21,11 +21,11 @@ Checkout: `feat/kcs-import-product-half` (Milestone F item 12 product half) on t
 
 ## Current work
 
-Item 12’s product half (compatibility matrix, legacy migration report, autosave through the validated boundary) is implemented on this branch and awaits the user merge decision. Item 10’s design is approved with its defaults settled, so its implementation is the next large slice; OGraf package import stays out of scope.
+Item 10’s first implementation slice (the Lottie import core and its loss report) is implemented on this branch and awaits the user merge decision. Masks/mattes, text/image/precomp, the UI entry point, item 12’s unified import entry and OGraf package import stay plan-only.
 
 ## Validation
 
-- `npm test`: PASS — 119 files / 1,736 tests. `npm run lint`: clean. `npm run build` (`tsc -b && vite build`): PASS — this is the type gate CI uses. The session's earlier "tsc clean" claims cited `npx tsc --noEmit`, which does not cover the same project program; two import-boundary type errors therefore reached `main` and are fixed in `reports/progress_122_ci_hotfix_import_boundary_types.md`.
+- `npm test`: PASS — 120 files / 1,753 tests. `npm run lint`: clean. `npm run build` (`tsc -b && vite build`): PASS — this is the type gate CI uses. The session's earlier "tsc clean" claims cited `npx tsc --noEmit`, which does not cover the same project program; two import-boundary type errors therefore reached `main` and are fixed in `reports/progress_122_ci_hotfix_import_boundary_types.md`.
 - Evaluator profile harness: `npx vitest run --config perf/vitest.perf.config.ts` PASS (report printed); baseline recorded in `reports/progress_118_evaluator_profiling.md`.
 - Import boundary and product half: `src/tests/importValidation.test.ts` PASS (9 cases), `src/tests/importCompatibilityMatrix.test.ts` PASS (5 cases); the serialization suite PASS (96 cases, including the autosave refusal).
 - `npm run validate:ograf`: PASS offline (pin-verified vendored closure); the same command passes with a poisoned proxy, proving no fetch is attempted; `--online` also passes.

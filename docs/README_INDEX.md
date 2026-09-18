@@ -59,6 +59,7 @@
 - `reports/progress_120_lottie_mapping_design.md` — Milestone F item 10: Lottie import mapping design.
 - `reports/progress_121_kcs_import_product_half.md` — Milestone F item 12 product half: compatibility matrix, migration report, autosave boundary.
 - `reports/progress_122_ci_hotfix_import_boundary_types.md` — CI hotfix: import-boundary types and the correct type gate.
+- `reports/progress_123_lottie_import_core.md` — Milestone F item 10 first slice: Lottie import core.
 - `reports/progress_121_kcs_import_product_half.md` — Milestone F item 12 product half: compatibility matrix, migration report, autosave boundary.
 - `reports/progress_121_kcs_import_product_half.md` — Milestone F item 12 product half: compatibility matrix, migration report, autosave boundary.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.

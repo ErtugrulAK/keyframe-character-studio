@@ -1,29 +1,32 @@
-# KCS Milestone F Item 12 Product Half — Final Response (Compatibility Matrix, Migration Report, Autosave Boundary)
+# KCS Milestone F Item 10 First Slice — Final Response (Lottie Import Core)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on branch `feat/kcs-import-product-half` (base `main` = `44218a62…`); awaiting the review and the user merge decision.
-- **Report:** `reports/progress_121_kcs_import_product_half.md`.
+- **Status:** the approved first slice of the Lottie mapping design (the import core) is implemented on branch `feat/lottie-import-core` (base `main` = `06a5dfcf…`); awaiting the review and the user merge decision.
+- **Report:** `reports/progress_123_lottie_import_core.md`. **Design:** `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`.
+- No UI entry point is wired yet: the core returns a scene plus a loss report, and a later slice adds the import entry point with the report-before-replace UX.
 
 ## 2) WHAT CHANGED
 
-- **Compatibility matrix, executed:** `src/tests/importCompatibilityMatrix.test.ts` (5 cases) proves scene v1 and v2 apply with no report, the legacy project applies **and** reports exactly the migration warning, a scene never reports a migration, and a non-project document is refused with `KCS_IMPORT_UNKNOWN_SHAPE`.
-- **Legacy imports report their migration:** `KCS_IMPORT_LEGACY_MIGRATED` (warning) now travels with a successful legacy import, and `HeaderBar` shows it as an `info` toast with the code, message and action — the user learns that the document was migrated instead of discovering it later.
-- **Autosave goes through the same boundary:** the `localStorage` restore now calls `validateImportedDocument` first; a corrupted or tampered entry is refused with a `console.warn` naming the code and message and the defaults stay in place. The now-unused local `isSceneData` helper was deleted, because the boundary owns that decision.
-- **Legacy fields are narrowed, not trusted:** `LegacyProjectDocument` names the optional fields the legacy path reads as `unknown`, and the consumers narrow each one with `typeof`/guards instead of the previous `any`.
+| File | Content |
+|---|---|
+| `src/interop/lottie/temporal.ts` | Frame mapping (`max(0, round(t − ip − st))`, frame rate preserved) and the **segment split**: Lottie's `o` on keyframe k becomes `mapped[k].bezierOut` and its `i` becomes `mapped[k+1].bezierIn`; `h: 1` → `hold`; no handles → `linear`; roving and expression-driven segments are reported and fall back to linear; the 512-keyframe-per-channel limit is reported |
+| `src/interop/lottie/diagnostics.ts` | The loss-report contract (stable code, severity, feature, source path, message, mandatory action) and the first-cut limits |
+| `src/interop/lottie/mapDocument.ts` | `importLottieDocument(text)`: size limit → JSON → depth-bounded prototype-key walk → mapping. Document: `fr`→fps (fractional reported), `ip`/`op`→totalFrames (in-point shift reported), `w`/`h`, `nm`. Layers: `ty` 1/3/4 converted; precomps, text and images reported and skipped (approved first-cut decision), as are effects, expressions, masks and track mattes; broken parents reported and dropped. Transforms → base values or canonical channels; shapes `sh`/`rc`/`el`/`fl`/`st`/`tm` mapped, `gr` flattened and reported, anything else reported |
+| `src/tests/lottieImport.test.ts` | 17 cases in four groups: document timing, transforms (including the segment split, hold, roving fallback, keyframe limit), shapes and unsupported constructs, and untrusted input |
+
+Two real mis-mappings were caught by the tests while writing them and fixed: the incoming handle was attached to the keyframe that holds it instead of the keyframe it arrives at, and rectangle size / fill colour were read through a helper that rejects arrays (so `{ k: [x, y] }` produced nothing).
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| Compatibility matrix | PASS — 5 cases |
-| Serialization suite | PASS — 96 cases, including the autosave refusal |
-| Full suite | PASS — 119 files / 1,736 tests |
-| Lint / TypeScript / build | clean / clean / PASS |
-| Release gate | PASS — 2 Chromium tests |
-| State consistency | PASS |
+| Type gate (CI's) | `npm run build` (`tsc -b && vite build`) — PASS |
+| Lottie core suite | PASS — 17 cases |
+| Full suite | PASS — 120 files / 1,753 tests |
+| Lint / release gate / state check | clean / PASS (2 Chromium tests) / PASS |
 
 ## 4) REVIEW
 
@@ -31,10 +34,10 @@ The change goes through the independent read-only review gate before any merge; 
 
 ## 5) SAFETY
 
-- Both document kinds still import exactly as before; the change adds a warning for legacy documents and a refusal for a corrupted autosave entry that previously would have been applied.
-- No dependency, `package.json`, lockfile or workflow change; the autosave key and the export paths are untouched.
+- No UI, export, dependency, `package.json`, lockfile or workflow change; the importer only reads text and returns a scene.
+- The output uses the existing `SceneData`/`AnimationTrackData` shapes, so the existing serializer validates it again before anything is applied.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
 
 ## 6) NEXT
 
-One decision: merge `feat/kcs-import-product-half` after the review passes. Then item 10’s implementation (the Lottie importer, design and defaults approved) is the next large slice, and OGraf package import stays out of scope.
+One decision: merge `feat/lottie-import-core` after the review passes. The following slices — masks and track mattes, text/image/precomp, and the import entry point with the report-before-replace UX — each need their own approval.

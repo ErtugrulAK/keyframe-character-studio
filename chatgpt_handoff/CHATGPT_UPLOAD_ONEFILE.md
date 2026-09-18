@@ -247,12 +247,12 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (116 files / 1,716 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `chore/warning-maintenance`. The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
+Full Vitest (116 files / 1,716 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `test/ograf-folder-qa-automation` (the stacked Milestone E tip). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
 
 ## Next scoped work
 
 1. **Milestone E — merge decisions**: item 7 (7-A) is implemented on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and item 8 on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`); both need the review to pass and the user merge decision. The QA root is an explicit required argument. Previously (already decided and merged): the Milestone D Option A warning maintenance (W1 Fast Refresh split, W2 real chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, D9-2 checker rule) plus the local SQLite binding repair are implemented and validated there (`reports/progress_113_warning_maintenance.md`). It merges by fast-forward once the independent review passes and the user approves the merge. Still open afterwards: Option B (7 patch + 12 minor updates + bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again). Milestones E–F stay plan-only and Option D (Milestone E planning) needs its own explicit approval.
-2. Milestones E–F stay plan-only, and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
+2. Milestone F stays plan-only (and anything in Milestone E beyond items 7 and 8 stays plan-only), and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
 
@@ -365,7 +365,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9 stays behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestones E–F remain plan-only.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9 stays behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and awaiting the merge decision, and everything beyond them (plus Milestone F) remains plan-only.
 
 ## Milestone map and status
 
@@ -408,7 +408,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 ## Milestone D — State / CI / warning hygiene (roadmap items 6, 9)
 
 - Item 6 (current-state consistency check) is a documentation/tooling task: a small script or CI check that fails when live docs contradict the tag/main SHA. No gate beyond normal review.
-- Item 9 (dependency and warning maintenance) **requires explicit user approval for anything that touches `package.json`/`package-lock.json`**. The audit is complete (`reports/progress_112_dependency_warning_audit.md`), the approved **Option A** (warning fixes only, no package change) is implemented on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`) and is now subject to the user merge decision; Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin stay approval-gated.
+- Item 9 (dependency and warning maintenance) **requires explicit user approval for anything that touches `package.json`/`package-lock.json`**. The audit is complete (`reports/progress_112_dependency_warning_audit.md`), the approved **Option A** (warning fixes only, no package change) is implemented and **merged** at `3923141` (`reports/progress_113_warning_maintenance.md`); Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin stay approval-gated.
 
 ## Milestone E — OGraf QA / schema hardening study (roadmap items 7, 8)
 
@@ -512,8 +512,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 9628 bytes
-- `NEXT_SESSION.md` — 9179 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 9684 bytes
+- `NEXT_SESSION.md` — 9278 bytes
 - `OMP_FINAL_RESPONSE.md` — 3609 bytes
 - `PROJECT_STATE.md` — 11606 bytes
 - `README.md` — 2793 bytes

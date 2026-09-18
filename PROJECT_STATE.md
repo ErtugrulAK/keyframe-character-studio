@@ -24,7 +24,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 120 files / 1,771 tests |
+| Full Vitest | PASS | 120 files / 1,773 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |

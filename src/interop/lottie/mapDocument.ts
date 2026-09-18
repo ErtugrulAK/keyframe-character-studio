@@ -40,6 +40,9 @@ const asArray = (value: unknown): unknown[] => (Array.isArray(value) ? value : [
 
 const readNumber = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 
+/** Reads a bare number or a `{ k: number }` wrapper; both forms appear in the wild. */
+const readPlainNumber = (value: unknown): number | undefined => readNumber(value) ?? readNumber(asRecord(value)?.k);
+
 const readString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 
 /** Which properties of each shape item this slice reads as static only. */
@@ -213,8 +216,13 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_3D', '$.ddd', 'The document is flagged as 3D; only its 2D transform components are imported.', 'Disable 3D layers in the source document and export again.'));
   }
 
-  const width = readNumber(root.w) ?? 1920;
-  const height = readNumber(root.h) ?? 1080;
+  const documentWidth = readNumber(root.w);
+  const documentHeight = readNumber(root.h);
+  if (documentWidth === undefined || documentHeight === undefined) {
+    diagnostics.push(lottieWarning('LOTTIE_MISSING_DOCUMENT_SIZE', '$.w', 'The document does not declare both a width (`w`) and a height (`h`); the import uses 1920x1080.', 'Export the document with an explicit composition size.'));
+  }
+  const width = documentWidth ?? 1920;
+  const height = documentHeight ?? 1080;
   const layers: SceneLayer[] = [];
   const tracks: AnimationTrackData[] = [];
   const layerIds: string[] = [];
@@ -257,6 +265,9 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     const solidFill = readString(layer.sc);
     const solidWidth = readNumber(layer.sw);
     const solidHeight = readNumber(layer.sh);
+    if (type === 1 && (solidFill === undefined || solidWidth === undefined || solidHeight === undefined)) {
+      diagnostics.push(lottieWarning('LOTTIE_MISSING_SOLID_PAINT', path, 'Solid layer ' + index + ' does not carry both a colour (`sc`) and a size (`sw`/`sh`); the missing values fall back to white and the layer size.', 'Set the solid colour and size in the source document.'));
+    }
     const transform = asRecord(layer.ks) ?? {};
     if (asRecord(transform.a)?.k !== undefined) {
       diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANCHOR', path + '.ks.a', 'Layer ' + index + ' uses an anchor point; KCS derives the pivot instead, so the anchor is not converted.', 'Re-check the layer position after import, or move the anchor in the source document.'));
@@ -372,8 +383,8 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         if (shape.d !== undefined) {
           diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_STROKE_DASH', shapePath, 'Stroke ' + shapeIndex + ' of layer ' + index + ' uses a dash pattern, which KCS does not model.', 'Accept a solid stroke or bake the dashes in the source document.'));
         }
-        const lineCap = readNumber(shape.lc);
-        const lineJoin = readNumber(shape.lj);
+        const lineCap = readPlainNumber(shape.lc);
+        const lineJoin = readPlainNumber(shape.lj);
         if ((lineCap !== undefined && lineCap !== 2) || (lineJoin !== undefined && lineJoin !== 2)) {
           diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_STROKE_STYLE', shapePath, 'Stroke ' + shapeIndex + ' of layer ' + index + ' sets a line cap or join, which KCS does not model.', 'Accept the default stroke style or bake it in the source document.'));
         }
@@ -390,7 +401,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         continue;
       }
       if (shapeType === 'tm') {
-        const trimMode = readNumber(shape.m);
+        const trimMode = readPlainNumber(shape.m);
         if (trimMode !== undefined && trimMode !== 1) {
           diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TRIM_MODE', shapePath, 'Trim ' + shapeIndex + ' of layer ' + index + ' uses trim mode ' + trimMode + ', which KCS does not model.', 'Use the default trim mode in the source document.'));
         }

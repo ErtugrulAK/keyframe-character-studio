@@ -255,6 +255,27 @@ describe('Lottie import — dimensions and fallbacks (review round)', () => {
     );
   });
 
+  it('reports a document without a declared size and a solid without its paint', () => {
+    const document = baseDocument([{ ty: 1, nm: 'Block', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } }]) as Record<string, unknown>;
+    delete document.w;
+    delete document.h;
+
+    const codes = importLottieDocument(JSON.stringify(document)).diagnostics.map((entry) => entry.code);
+
+    expect(codes).toContain('LOTTIE_MISSING_DOCUMENT_SIZE');
+    expect(codes).toContain('LOTTIE_MISSING_SOLID_PAINT');
+  });
+
+  it('stays silent when a document declares its size and its solids are complete', () => {
+    const document = baseDocument([
+      { ty: 1, nm: 'Block', sc: '#336699', sw: 320, sh: 180, ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } },
+    ]);
+    const codes = importLottieDocument(JSON.stringify(document)).diagnostics.map((entry) => entry.code);
+
+    expect(codes).not.toContain('LOTTIE_MISSING_DOCUMENT_SIZE');
+    expect(codes).not.toContain('LOTTIE_MISSING_SOLID_PAINT');
+  });
+
   it('stays silent for default stroke styles and reports dashes, trim modes and a missing stroke colour', () => {
     const defaultStroke = {
       ty: 4,

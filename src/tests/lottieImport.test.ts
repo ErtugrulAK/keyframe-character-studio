@@ -255,6 +255,69 @@ describe('Lottie import — dimensions and fallbacks (review round)', () => {
     );
   });
 
+  it('maps a solid layer colour and size, and reports its anchor', () => {
+    const layer = solidLayer({ sc: '#123456', sw: 320, sh: 180, ks: { a: { k: [10, 10] }, o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const imported = result.scene?.layers[0];
+
+    expect(imported?.fillColor).toBe('#123456');
+    expect(imported?.width).toBe(320);
+    expect(imported?.height).toBe(180);
+    expect(codes(result.diagnostics)).toContain('LOTTIE_UNSUPPORTED_ANCHOR');
+  });
+
+  it('maps stroke opacity and rect corner radius, and reports cap/join and shape position', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [
+        { ty: 'rc', s: { k: [100, 50] }, r: { k: 8 }, p: { k: [5, 5] } },
+        { ty: 'st', w: { k: 2 }, o: { k: 40 }, lc: 2, lj: 3 },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+    const imported = result.scene?.layers[0];
+
+    expect(imported?.borderRadius).toBe(8);
+    expect(imported?.strokeOpacity).toBe(0.4);
+    expect(codes(result.diagnostics)).toEqual(expect.arrayContaining(['LOTTIE_UNSUPPORTED_SHAPE_POSITION', 'LOTTIE_UNSUPPORTED_STROKE_STYLE']));
+  });
+
+  it('reports an animated trim and an animated fill instead of reading them as static', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'tm', s: { k: [{ t: 0, s: [0] }, { t: 10, s: [50] }] }, e: { k: 100 } }, { ty: 'fl', c: { k: [{ t: 0, s: [1, 0, 0] }] } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+    const animated = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNSUPPORTED_ANIMATED_SHAPE');
+
+    expect(animated).toHaveLength(2);
+  });
+
+  it('converts keyframed opacity from percent to a factor', () => {
+    const layer = solidLayer({ ks: { o: { k: [{ t: 0, s: [100] }, { t: 12, s: [50] }] }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+
+    expect(result.scene?.tracks[0]?.channels.opacity?.map((keyframe) => keyframe.value)).toEqual([1, 0.5]);
+  });
+
+  it('reports a path above the vertex limit instead of importing it', () => {
+    const vertices = Array.from({ length: 5000 }, (_, index) => ({ x: index, y: index }));
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'sh', ks: { k: { c: true, v: vertices, i: vertices, o: vertices } } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_PATH_LIMIT');
+    expect(result.scene?.layers[0]?.path).toBeUndefined();
+  });
+
   it('maps the stroke colour when the document provides one', () => {
     const shapeLayer = {
       ty: 4,

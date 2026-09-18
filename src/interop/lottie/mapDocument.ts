@@ -42,6 +42,15 @@ const readNumber = (value: unknown): number | undefined => (typeof value === 'nu
 
 const readString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 
+/** Reports an animated trim, which the first slice reads as static only. */
+const layerPathTrimNote = (diagnostics: LottieImportDiagnostic[], shape: LottieRecord, shapePath: string, shapeIndex: number, layerIndex: number): void => {
+  if (!isAnimatedProperty(shape.s) && !isAnimatedProperty(shape.e)) return;
+  diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANIMATED_SHAPE', shapePath, 'Trim ' + shapeIndex + ' of layer ' + layerIndex + ' is animated, which the first slice reads as static only.', 'Bake the trim animation in the source document or re-create it after import.'));
+};
+
+/** True when a shape property holds keyframes, which this slice reads as static only. */
+const isAnimatedProperty = (value: unknown): boolean => Array.isArray((asRecord(value) ?? {}).k);
+
 /** A Lottie property object holds either `k` (static) or keyframed entries. */
 /** Reads `{ k: number | number[] }` or `{ k: [ { t, s, i, o, h, r, x } … ] }`. */
 const readNumericProperty = (value: unknown): LottieNumericProperty | undefined => {
@@ -213,7 +222,13 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     if (layer.ao === 1) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_AUTO_ORIENT', `${path}.ao`, `Layer ${index} uses auto-orient, which KCS does not model.`, 'Bake the orientation in the source document.'));
     if (layer.hasMask === true || layer.masksProperties !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_MASK', `${path}.masksProperties`, `Layer ${index} carries masks, which the first import slice reports instead of converting.`, 'Bake the mask in the source document or re-create it after import.'));
 
+    const solidFill = readString(layer.sc);
+    const solidWidth = readNumber(layer.sw);
+    const solidHeight = readNumber(layer.sh);
     const transform = asRecord(layer.ks) ?? {};
+    if (asRecord(transform.a)?.k !== undefined) {
+      diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANCHOR', path + '.ks.a', 'Layer ' + index + ' uses an anchor point; KCS derives the pivot instead, so the anchor is not converted.', 'Re-check the layer position after import, or move the anchor in the source document.'));
+    }
     const layerStartTime = readNumber(layer.st);
     const context = { documentInPoint: inPoint, layerStartTime, path: `${path}.ks`, channel: '' };
     const position = readNumericProperty(transform.p);
@@ -254,8 +269,10 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       ...(parentId ? { parentId } : {}),
       visible: true,
       zIndex: lottieLayers.length - index,
-      fillColor: '#ffffff',
+      fillColor: solidFill ?? '#ffffff',
       strokeColor: '#101218',
+      ...(solidWidth !== undefined ? { width: solidWidth } : {}),
+      ...(solidHeight !== undefined ? { height: solidHeight } : {}),
     } as SceneLayer);
     const layerShape = layers[layers.length - 1];
 
@@ -264,6 +281,9 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       const shape = asRecord(shapeEntry);
       const shapeType = readString(shape?.ty);
       const shapePath = `${path}.shapes[${shapeIndex}]`;
+      if (shape && (isAnimatedProperty(shape.c) || isAnimatedProperty(shape.w))) {
+        diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANIMATED_SHAPE', shapePath, 'Shape item ' + shapeIndex + ' of layer ' + index + ' animates its colour or width, which the first slice reads as static only.', 'Bake the animation in the source document or re-create it after import.'));
+      }
       if (!shape || !shapeType) {
         diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_SHAPE', shapePath, `Shape item ${shapeIndex} of layer ${index} has no readable type and was skipped.`, 'Re-export the document; an unsupported item should carry a type.'));
         continue;
@@ -280,7 +300,12 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         const sizeX = readNumber(size[0]);
         const sizeY = readNumber(size[1]);
         if (sizeX === undefined && sizeY === undefined) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_SIZE', shapePath, `Shape ${shapeIndex} of layer ${index} has no readable size.`, 'Re-export the shape from the source document.'));
+        if (asRecord(shape.p)?.k !== undefined) {
+          diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SHAPE_POSITION', shapePath + '.p', 'Shape ' + shapeIndex + ' of layer ' + index + ' has its own position, which KCS does not model per shape.', 'Bake the shape position into the layer transform in the source document.'));
+        }
         if (shapeType === 'rc') {
+          const cornerRadius = readNumber(asRecord(shape.r)?.k);
+          if (cornerRadius !== undefined && cornerRadius > 0) layerShape.borderRadius = cornerRadius;
           if (sizeX !== undefined) layerShape.width = sizeX;
           if (sizeY !== undefined) layerShape.height = sizeY;
         } else {
@@ -311,6 +336,11 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         const strokeWidth = readNumber(asRecord(shape.w)?.k);
         if (strokeWidth !== undefined) layerShape.strokeWidth = strokeWidth;
         else diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_STROKE_WIDTH', shapePath, `Stroke ${shapeIndex} of layer ${index} has no readable width.`, 'Re-export the shape from the source document.'));
+        const strokeOpacity = readNumber(asRecord(shape.o)?.k);
+        if (strokeOpacity !== undefined) layerShape.strokeOpacity = strokeOpacity / 100;
+        if (shape.lc !== undefined || shape.lj !== undefined) {
+          diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_STROKE_STYLE', shapePath, 'Stroke ' + shapeIndex + ' of layer ' + index + ' sets a line cap or join, which KCS does not model.', 'Accept the default stroke style or bake it in the source document.'));
+        }
         const strokeColourValue = asRecord(shape.c)?.k;
         const strokeColour = Array.isArray(strokeColourValue) ? strokeColourValue : [];
         const [strokeRed, strokeGreen, strokeBlue] = [readNumber(strokeColour[0]), readNumber(strokeColour[1]), readNumber(strokeColour[2])];
@@ -321,6 +351,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         continue;
       }
       if (shapeType === 'tm') {
+        layerPathTrimNote(diagnostics, shape, shapePath, shapeIndex, index);
         layerShape.trimPathEnabled = true;
         const start = readNumber(asRecord(shape.s)?.k);
         const end = readNumber(asRecord(shape.e)?.k);

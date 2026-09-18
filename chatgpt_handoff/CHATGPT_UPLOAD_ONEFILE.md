@@ -67,18 +67,19 @@ One decision: merge `chore/ograf-offline-schema-closure` after the review passes
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone E (OGraf QA Study: Schema Closure + Folder QA)
+# KCS ChatGPT Upload Manifest — Milestone E Item 7 (Offline OGraf Schema Closure, Option 7-A)
 
 Clean refreshed: YES
-Bundle purpose: Milestone E items 7 and 8 — study and plan only; implementation needs its own approval
+Bundle purpose: Milestone E item 7 — the approved Option 7-A: vendor the pinned OGraf schema closure and make `validate:ograf` offline and deterministic
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: docs/milestone-e-ograf-qa-study on top of main 392314168b2bbbfc87b5c47079eda73c65d187f7 (milestone D complete: item 6 plus item 9 audit, Option A warning maintenance and the local SQLite repair, merged with green CI run 35322372675)
-Study: docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md; task record: reports/progress_114_ograf_qa_study.md
-Item 7 findings: 8 pinned schema documents fetched live by validate-ograf-manifest.mjs, and CI runs that validator on every push (.github/workflows/ci.yml:27-28); 8/8 pins verified; closure 33,567 bytes; ebu/ograf MIT; JSON Schema meta-schema under a BSD-style notice; options 7-A vendor + offline (recommended, no workflow edit), 7-B verified cache, 7-C status quo
-Item 8 plan: generator + ZIP/folder artifact comparison + host-limited report on test/ograf-folder-qa-automation; no host contract invention; no change to the official exports
-Implemented in this task: NOTHING (documentation only; no source, test, dependency or workflow change)
-Still approval-gated: item 7 licensing/redistribution decision (and confirmation that the existing CI step stays as-is), item 8 implementation, the QA root path policy, plus the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
+Branch: chore/ograf-offline-schema-closure on top of main 46021eece4714fa8880ae4d3018e8f8f064c3a81
+Task record: reports/progress_115_ograf_offline_schema_closure.md
+What changed: the 8 pinned schema documents (33,567 B) are vendored under fixtures/ograf/schema/ with a NOTICE.md carrying both upstream notices (EBU MIT, JSON Schema Specification Authors BSD-style); scripts/ografSchemaClosure.mjs owns the pins, the vendored map, verifyPinnedBytes and loadSchemaDocument({ online, root, readFile, fetchBytes }); validate-ograf-manifest.mjs resolves the closure locally by default and fetches only with --online; src/tests/ografSchemaClosure.test.ts adds 8 focused cases
+Fail-closed contract: unchanged — every document is verified against its pinned SHA-256 on both paths, and an unpinned reference is refused
+CI: no workflow change was needed; the existing step (.github/workflows/ci.yml:27-28) now runs offline
+Validation: offline run PASS; offline with poisoned proxy PASS (no fetch attempted); --online PASS; tamper control FAILS CLOSED (Schema hash mismatch, file restored); focused tests 8/8; full suite 115 files / 1,708 tests; lint clean; tsc clean; build PASS with no chunk advisory; qa:release PASS (2 Chromium tests)
+Still approval-gated: the merge of this branch, item 8 (implemented separately), the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -87,29 +88,32 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the Milestone E final response
-- progress_114_ograf_qa_study.md — the task record
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document; milestone D complete, E next)
+- OMP_FINAL_RESPONSE.md — the item-7 final response
+- progress_115_ograf_offline_schema_closure.md — the task record
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- The study document itself lives in the repository at `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` (the bundle carries its summary in the final response and the task record)
-- Source, test, package.json, package-lock.json, ci.yml, release-smoke.yml files
+- Source, test, script and fixture files (the validator, the new closure module, its tests and the vendored schema documents live in the repository)
+- package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
-Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`, and every `kcs-ograf-*` QA root (which does not exist on this machine).
+Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
+- npm run validate:ograf: PASS (offline, vendored closure)
+- same command with HTTP_PROXY/HTTPS_PROXY poisoned: PASS — proves no fetch is attempted
+- node scripts/validate-ograf-manifest.mjs --online: PASS
+- tamper control: one byte added to a vendored document → Schema hash mismatch (fail-closed); file restored from upstream afterwards
+- npx vitest run src/tests/ografSchemaClosure.test.ts: PASS — 8 cases
+- npm test: PASS — 115 files / 1,708 tests; npm run lint: clean; npx tsc --noEmit: clean
+- npm run build: PASS — no chunk-size advisory; npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS
-- Repository changes: documentation only — docs/design/**, reports/**, the roadmap, the state documents and the handoff bundle
-- No source, test, dependency, package or workflow change; `git diff --stat` for this branch lists documentation paths only
-- Item 7 evidence: live pin verification (8/8 match), closure byte measurement (33,567 B), upstream licence metadata (MIT / BSD-style notice)
-- Item 8 evidence: desktop QA-root existence check (absent), reports/progress_049.md, reports/progress_080.md, reports/progress_104.md, docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md
 
-Next: four decisions — item 7 (7-A / 7-B / 7-C), confirmation of the unchanged CI step, item 8 implementation approval, and the QA root path policy. With no decision, nothing is implemented.
+Next: the independent review of this branch, then the user merge decision. If no decision is given, nothing merges.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -117,24 +121,26 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone E (OGraf QA Study: Schema Closure + Folder QA)
+# KCS Minimal ChatGPT Upload Bundle — Milestone E Item 7 (Offline OGraf Schema Closure)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-Milestone E items 7 and 8 as **study and plan only** (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, task record `reports/progress_114_ograf_qa_study.md`):
+The approved **Option 7-A** of the Milestone E study: the pinned OGraf schema closure is vendored into the repository and `npm run validate:ograf` resolves it locally by default, so the validator and the CI step that calls it no longer depend on two remote hosts.
 
-- **Item 7 (offline schema closure):** the validator fetches 8 documents pinned by SHA-256; a read-only check confirmed 8/8 pins still match and measured the closure at 33,567 bytes; `ebu/ograf` is MIT and the JSON Schema meta-schema carries a BSD-style notice. Options 7-A (vendor + offline mode, recommended), 7-B (verified cache), 7-C (status quo), plus the negative controls that keep validation failing closed and a separate CI-wiring decision.
-- **Item 8 (downstream folder QA automation):** plan for a generator, an artifact comparison against the ZIP, and a host-limited report on `test/ograf-folder-qa-automation`, reusing the canonical compiler and path-safety authorities, with no host contract invention.
+- `fixtures/ograf/schema/` holds unmodified copies of all 8 pinned documents (33,567 bytes) plus `NOTICE.md` with both upstream notices (EBU MIT; JSON Schema Specification Authors BSD-style) and the refresh procedure.
+- `scripts/ografSchemaClosure.mjs` owns the pins, the vendored map, `verifyPinnedBytes` and `loadSchemaDocument({ online, root, readFile, fetchBytes })`.
+- `scripts/validate-ograf-manifest.mjs` keeps its behaviour and exit codes, resolves locally by default and fetches only with `--online` (the refresh path).
+- `src/tests/ografSchemaClosure.test.ts` pins the contract in 8 cases, including the tamper and unpinned-reference failures.
 
-Milestone D is complete in `main` (`3923141`); nothing from this study is implemented, and every implementation step states the approval it needs.
+The fail-closed contract is unchanged: every document is verified against its pinned SHA-256 on both paths. No workflow change was needed — `.github/workflows/ci.yml:27-28` already ran the validator, which is now offline and deterministic.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_114_ograf_qa_study.md` — the Milestone E task record (scope, findings, validation, decisions)
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with milestone D complete and E next
+- `progress_115_ograf_offline_schema_closure.md` — the task record (scope, changes, validation, residual risks)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the item-7 and item-8 status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -144,7 +150,7 @@ Milestone D is complete in `main` (`3923141`); nothing from this study is implem
 
 ## Deliberately not included
 
-Source and test files are intentionally omitted (the study document lives at `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test, script and fixture files are intentionally omitted (the validator, the closure module, its tests and the vendored schema documents live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
@@ -507,8 +513,8 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `NEXT_SESSION.md` — 9123 bytes
 - `OMP_FINAL_RESPONSE.md` — 3068 bytes
 - `PROJECT_STATE.md` — 11488 bytes
-- `README.md` — 2872 bytes
-- `manifest.txt` — 4004 bytes
+- `README.md` — 3031 bytes
+- `manifest.txt` — 4011 bytes
 - `progress_115_ograf_offline_schema_closure.md` — 4688 bytes
 
 - Source/test copies present: NO

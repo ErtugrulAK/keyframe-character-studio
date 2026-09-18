@@ -1,21 +1,23 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone E (OGraf QA Study: Schema Closure + Folder QA)
+# KCS Minimal ChatGPT Upload Bundle — Milestone E Item 7 (Offline OGraf Schema Closure)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-Milestone E items 7 and 8 as **study and plan only** (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, task record `reports/progress_114_ograf_qa_study.md`):
+The approved **Option 7-A** of the Milestone E study: the pinned OGraf schema closure is vendored into the repository and `npm run validate:ograf` resolves it locally by default, so the validator and the CI step that calls it no longer depend on two remote hosts.
 
-- **Item 7 (offline schema closure):** the validator fetches 8 documents pinned by SHA-256; a read-only check confirmed 8/8 pins still match and measured the closure at 33,567 bytes; `ebu/ograf` is MIT and the JSON Schema meta-schema carries a BSD-style notice. Options 7-A (vendor + offline mode, recommended), 7-B (verified cache), 7-C (status quo), plus the negative controls that keep validation failing closed and a separate CI-wiring decision.
-- **Item 8 (downstream folder QA automation):** plan for a generator, an artifact comparison against the ZIP, and a host-limited report on `test/ograf-folder-qa-automation`, reusing the canonical compiler and path-safety authorities, with no host contract invention.
+- `fixtures/ograf/schema/` holds unmodified copies of all 8 pinned documents (33,567 bytes) plus `NOTICE.md` with both upstream notices (EBU MIT; JSON Schema Specification Authors BSD-style) and the refresh procedure.
+- `scripts/ografSchemaClosure.mjs` owns the pins, the vendored map, `verifyPinnedBytes` and `loadSchemaDocument({ online, root, readFile, fetchBytes })`.
+- `scripts/validate-ograf-manifest.mjs` keeps its behaviour and exit codes, resolves locally by default and fetches only with `--online` (the refresh path).
+- `src/tests/ografSchemaClosure.test.ts` pins the contract in 8 cases, including the tamper and unpinned-reference failures.
 
-Milestone D is complete in `main` (`3923141`); nothing from this study is implemented, and every implementation step states the approval it needs.
+The fail-closed contract is unchanged: every document is verified against its pinned SHA-256 on both paths. No workflow change was needed — `.github/workflows/ci.yml:27-28` already ran the validator, which is now offline and deterministic.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_114_ograf_qa_study.md` — the Milestone E task record (scope, findings, validation, decisions)
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with milestone D complete and E next
+- `progress_115_ograf_offline_schema_closure.md` — the task record (scope, changes, validation, residual risks)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the item-7 and item-8 status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -25,7 +27,7 @@ Milestone D is complete in `main` (`3923141`); nothing from this study is implem
 
 ## Deliberately not included
 
-Source and test files are intentionally omitted (the study document lives at `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test, script and fixture files are intentionally omitted (the validator, the closure module, its tests and the vendored schema documents live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 

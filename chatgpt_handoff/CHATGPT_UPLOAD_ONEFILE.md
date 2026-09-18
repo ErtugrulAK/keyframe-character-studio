@@ -112,23 +112,23 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone F (items 10, 11, 12 first step)
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 12 Product Half
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-Milestone F on one stacked branch:
+The item-12 product half, continuing the validated import boundary:
 
-- **Item 11 — evaluator profiling harness (measurement only).** `perf/sceneBuilder.ts` builds deterministic scenes; `perf/evaluator-profile.perf.ts` reports p50/p95/min/max for `evaluateFrame`, `evaluateTransform`, `interpolateChannel` and `applyEasing`; `perf/vitest.perf.config.ts` runs it on demand so CI keeps its cost. First baseline: a 100-layer frame costs about 1.2 ms p50, while `interpolateChannel` is sub-microsecond — evidence for a later caching proposal, not a threshold.
-- **Item 12, first step — validated KCS import boundary.** `src/utils/importValidation.ts` refuses oversized, malformed, prototype-poisoned, unknown-shaped or over-limit documents with stable codes and the offending document path; `importProject` returns `ImportResult` and no longer parses into `any`; the refusal toast shows the message and the action. The scope is the current `.kcs` scene and the legacy project shape.
-- **Item 10 — Lottie import mapping design (design only).** Three mapping kinds, per-construct tables, the temporal/easing conversion rules, first-cut limits, one diagnostics contract and a validation plan, with four open questions for the user.
+- **Compatibility matrix, executed** — `src/tests/importCompatibilityMatrix.test.ts` proves each supported document kind: scene v1/v2 apply with no report, the legacy project applies and reports exactly one migration warning, a scene never reports a migration, and a non-project document is refused.
+- **Legacy migrations are reported** — a successful legacy import carries the `KCS_IMPORT_LEGACY_MIGRATED` warning, shown as an `info` toast with its code, message and action.
+- **Autosave goes through the boundary** — the `localStorage` restore validates first: a corrupted or tampered entry is refused with a console warning naming the code, and the defaults stay in place.
+- **Legacy fields are narrowed** — `LegacyProjectDocument` types the optional fields it reads as `unknown`, and consumers narrow with `typeof`/guards instead of the previous `any`.
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — the final response for this stack
-- `progress_119_kcs_import_boundary.md` — the item-12 first-step task record
-- `progress_120_lottie_mapping_design.md` — the item-10 design task record
+- `OMP_FINAL_RESPONSE.md` — the final response for this task
+- `progress_121_kcs_import_product_half.md` — the task record (scope, changes, validation, residual risks)
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
@@ -139,7 +139,7 @@ Milestone F on one stacked branch:
 
 ## Deliberately not included
 
-Source, test, script, perf and design files are intentionally omitted (they live in the repository, including `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test and design files are intentionally omitted (they live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
@@ -504,7 +504,7 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `NEXT_SESSION.md` — 9109 bytes
 - `OMP_FINAL_RESPONSE.md` — 2895 bytes
 - `PROJECT_STATE.md` — 12055 bytes
-- `README.md` — 3082 bytes
+- `README.md` — 2692 bytes
 - `manifest.txt` — 3435 bytes
 - `progress_121_kcs_import_product_half.md` — 4586 bytes
 

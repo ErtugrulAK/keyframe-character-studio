@@ -37,4 +37,4 @@ The change goes through the independent read-only review gate before any merge; 
 
 ## 6) NEXT
 
-One decision: merge the stacked branch (item 11 + item 12 first step) after the review passes. Item 10’s mapping design is on its own branch. The remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only.
+One decision: merge the stacked branch (items 11 and 12 first step and the item-10 mapping design) after the review passes. Only item 10’s *future implementation* needs its own branch, once the four design questions are settled. The remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only.

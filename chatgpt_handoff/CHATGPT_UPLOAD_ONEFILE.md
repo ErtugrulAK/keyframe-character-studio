@@ -56,7 +56,7 @@ The change goes through the independent read-only review gate before any merge; 
 
 ## 6) NEXT
 
-One decision: merge the stacked branch (item 11 + item 12 first step) after the review passes. Item 10’s mapping design is on its own branch. The remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only.
+One decision: merge the stacked branch (items 11 and 12 first step and the item-10 mapping design) after the review passes. Only item 10’s *future implementation* needs its own branch, once the four design questions are settled. The remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only.
 
 ---
 
@@ -291,7 +291,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (118 files / 1,730 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `test/ograf-folder-qa-automation` (the stacked Milestone E tip). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
+Full Vitest (118 files / 1,730 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on this Milestone F stack (`fix/kcs-import-boundary-hardening`), whose source commits are `f17215b` (item 11), `9c257ed` (item 12 first step) and `a17be8b` (item 10 design). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
 
 ## Next scoped work
 
@@ -557,8 +557,8 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 11260 bytes
-- `NEXT_SESSION.md` — 8990 bytes
-- `OMP_FINAL_RESPONSE.md` — 3475 bytes
+- `NEXT_SESSION.md` — 9096 bytes
+- `OMP_FINAL_RESPONSE.md` — 3562 bytes
 - `PROJECT_STATE.md` — 11891 bytes
 - `README.md` — 3082 bytes
 - `manifest.txt` — 4365 bytes

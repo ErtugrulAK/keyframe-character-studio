@@ -34,7 +34,7 @@ Item 11 (evaluator profiling) is implemented in this stack as measurement only, 
 
 ## Open decision
 
-The user merge decision for this item-11 branch. Items 10 and 12 of Milestone F are approved in principle and await their own branches and reviews. Still approval-gated afterwards: the milestone D follow-ups (Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin) and anything in Milestone F.
+The user merge decision for this stacked Milestone F branch (item 11 harness, item 12 first step and the item 10 mapping design). Item 10’s future implementation and the rest of item 12 stay plan-only until separately approved. Still approval-gated afterwards: the milestone D follow-ups (Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin) and anything in Milestone F.
 
 ## Protected state
 

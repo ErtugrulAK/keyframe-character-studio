@@ -17,30 +17,29 @@
 
 ## 1. OMP Final Response
 
-# KCS Milestone F Item 12 (first step) — Final Response (Validated KCS Import Boundary)
+# KCS Milestone F Item 12 Product Half — Final Response (Compatibility Matrix, Migration Report, Autosave Boundary)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** the approved item-12 **security half, first step** is implemented on branch `fix/kcs-import-boundary-hardening`, stacked on item 11 (`chore/evaluator-profiling-harness`) over `main` = `af0288de…`. Awaiting review and the user merge decision.
-- **Report:** `reports/progress_119_kcs_import_boundary.md`.
-- Scope confirmed by the user: the first editable kinds are the current `.kcs` scene and the legacy `AnimationProject` shape; OGraf package/single-file import stays rejected.
+- **Status:** implemented on branch `feat/kcs-import-product-half` (base `main` = `44218a62…`); awaiting the review and the user merge decision.
+- **Report:** `reports/progress_121_kcs_import_product_half.md`.
 
 ## 2) WHAT CHANGED
 
-- `src/utils/importValidation.ts` (new): `validateImportedDocument(text)` runs cheapest-first — size (32 MB), JSON syntax, a depth-bounded walk for prototype-sensitive keys (reusing `isPrototypeSensitiveKey`), document shape, then declared layer/track count (5,000) — and returns a discriminated result with stable refusal codes (`KCS_IMPORT_TOO_LARGE`, `KCS_IMPORT_MALFORMED_JSON`, `KCS_IMPORT_UNSAFE_KEY`, `KCS_IMPORT_UNKNOWN_SHAPE`, `KCS_IMPORT_TOO_MANY_LAYERS`) plus the offending document path and an actionable message. Exceeding a limit is a refusal, never a silent clamp — trimming a user's project would be data loss.
-- `src/hooks/useSerialization.ts`: `importProject` delegates to the boundary, returns `ImportResult` (`{ ok, diagnostics }`), and no longer parses into `any`; the legacy branch consumes the already-validated document and the catch-all reports `KCS_IMPORT_FAILED`.
-- `src/context/AnimatorContext.tsx` follows the new return shape; `src/components/Header/HeaderBar.tsx` shows the diagnostic message **and** its action instead of a generic "Invalid project file format!".
-- `src/tests/importValidation.test.ts` (new, 9 cases) pins the boundary: both kinds accepted, malformed JSON, unknown shape, oversize refused before parsing, prototype key top-level and nested with the path named, and the layer-limit refusal. Existing import-path tests were adapted to the result shape; no assertion was weakened.
+- **Compatibility matrix, executed:** `src/tests/importCompatibilityMatrix.test.ts` (5 cases) proves scene v1 and v2 apply with no report, the legacy project applies **and** reports exactly the migration warning, a scene never reports a migration, and a non-project document is refused with `KCS_IMPORT_UNKNOWN_SHAPE`.
+- **Legacy imports report their migration:** `KCS_IMPORT_LEGACY_MIGRATED` (warning) now travels with a successful legacy import, and `HeaderBar` shows it as an `info` toast with the code, message and action — the user learns that the document was migrated instead of discovering it later.
+- **Autosave goes through the same boundary:** the `localStorage` restore now calls `validateImportedDocument` first; a corrupted or tampered entry is refused with a `console.warn` naming the code and message and the defaults stay in place. The now-unused local `isSceneData` helper was deleted, because the boundary owns that decision.
+- **Legacy fields are narrowed, not trusted:** `LegacyProjectDocument` names the optional fields the legacy path reads as `unknown`, and the consumers narrow each one with `typeof`/guards instead of the previous `any`.
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| Boundary cases | PASS — 9 cases |
-| Serialization suite | PASS — 95 cases (round-trip, matte, appearance, freeform, migration) |
-| Full suite | PASS — 118 files / 1,730 tests |
+| Compatibility matrix | PASS — 5 cases |
+| Serialization suite | PASS — 96 cases, including the autosave refusal |
+| Full suite | PASS — 119 files / 1,736 tests |
 | Lint / TypeScript / build | clean / clean / PASS |
 | Release gate | PASS — 2 Chromium tests |
 | State consistency | PASS |
@@ -51,51 +50,47 @@ The change goes through the independent read-only review gate before any merge; 
 
 ## 5) SAFETY
 
-- Both accepted document kinds still import exactly as before; only unsafe, malformed or oversized inputs changed behaviour (now refused with a reason). No dependency, `package.json`, lockfile or workflow change; no new path-safety authority was invented.
+- Both document kinds still import exactly as before; the change adds a warning for legacy documents and a refusal for a corrupted autosave entry that previously would have been applied.
+- No dependency, `package.json`, lockfile or workflow change; the autosave key and the export paths are untouched.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
 
 ## 6) NEXT
 
-One decision: merge the stacked branch (items 11 and 12 first step and the item-10 mapping design) after the review passes. Only item 10’s *future implementation* needs its own branch, once the four design questions are settled. The remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only.
+One decision: merge `feat/kcs-import-product-half` after the review passes. Then item 10’s implementation (the Lottie importer, design and defaults approved) is the next large slice, and OGraf package import stays out of scope.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone F Deliverables (items 10, 11, 12 first step)
+# KCS ChatGPT Upload Manifest — Milestone F Item 12 Product Half
 
 Clean refreshed: YES
-Bundle purpose: Milestone F on one stacked branch — item 11 profiling harness, item 12 first step (validated import boundary) and item 10 (Lottie mapping design)
+Bundle purpose: Milestone F item 12 product half — compatibility matrix executed, legacy migration reported, autosave routed through the validated boundary
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/kcs-import-boundary-hardening — f17215b (item 11 harness), 9c257ed (item 12 import boundary), a17be8b (item 10 design), on base main af0288de
-Task records: reports/progress_118_evaluator_profiling.md (item 11), reports/progress_119_kcs_import_boundary.md (item 12 first step), reports/progress_120_lottie_mapping_design.md (item 10)
-Design document: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository; its summary is in the item-10 task record)
-Item 11: perf/sceneBuilder.ts, perf/evaluator-profile.perf.ts, perf/vitest.perf.config.ts, src/tests/evaluatorProfileScenes.test.ts — measurement only, no caching, no threshold; baseline in the task record
-Item 12 first step: src/utils/importValidation.ts (size 32 MB, JSON syntax, depth-bounded prototype-key walk, shape, layer limit 5,000; stable refusal codes with the offending document path), importProject returns ImportResult, HeaderBar shows message + action; scope confirmed as .kcs + legacy project
-Item 10: mapping design only — three mapping kinds, per-construct tables, temporal/easing rules, first-cut limits, diagnostics contract, validation plan, and four open questions for the user
-Implemented in this task: items 11 and 12 first step (code + tests); item 10 is design only
-Not changed: dependencies, package.json, package-lock.json, workflows, the OGraf import rejection path, existing path-safety authorities
-Still plan-only: the item-12 product half (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary) and OGraf package import
-Validation: item-11 harness PASS (1 case, report printed) and builder tests PASS (5); import boundary PASS (9 cases); serialization suite PASS (95 cases); full suite PASS (118 files / 1,730 tests); lint clean; tsc clean; build PASS; qa:release PASS (2 Chromium tests); state check PASS
+Branch: feat/kcs-import-product-half on top of main 44218a62 (Milestone F stack merged)
+Task record: reports/progress_121_kcs_import_product_half.md
+What changed: src/utils/importValidation.ts (LegacyProjectDocument optional fields typed unknown; KCS_IMPORT_LEGACY_MIGRATED warning on a successful legacy import), src/hooks/useSerialization.ts (importProject returns the validation diagnostics; legacy fields narrowed; autosave restore validated through the boundary; unused local isSceneData removed), src/components/Header/HeaderBar.tsx (warning shown as an info toast with code/message/action), src/tests/importCompatibilityMatrix.test.ts (new, 5 cases), src/tests/useSerialization.test.ts (autosave refusal case)
+Validation: matrix PASS (5); serialization suite PASS (96); full suite PASS (119 files / 1,736 tests); lint clean; tsc clean; build PASS; qa:release PASS (2 Chromium tests); state check PASS
+Not changed: dependencies, package.json, package-lock.json, workflows, the autosave key/writer, the export paths, the OGraf import rejection
+Still plan-only: a unified import entry that shows the full report before replacing work; item 10 implementation (Lottie importer, design approved); OGraf package import
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (9):
+Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the final response for this stack
-- progress_119_kcs_import_boundary.md — the item-12 first-step task record
-- progress_120_lottie_mapping_design.md — the item-10 design task record
+- OMP_FINAL_RESPONSE.md — the item-12 product-half final response
+- progress_121_kcs_import_product_half.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test, script and perf files (they live in the repository)
+- Source, test and script files (they live in the repository)
 - package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
@@ -103,14 +98,13 @@ Omitted categories:
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- npx vitest run --config perf/vitest.perf.config.ts: PASS — 1 case, baseline report printed
-- npx vitest run src/tests/evaluatorProfileScenes.test.ts: PASS — 5 cases
-- npx vitest run src/tests/importValidation.test.ts src/tests/useSerialization.test.ts: PASS — 9 + 95 cases
-- npm test: PASS — 118 files / 1,730 tests; npm run lint: clean; npx tsc --noEmit: clean
-- npm run build: PASS; npm run qa:release: PASS (2 Chromium tests, candidate a17be8b)
+- npx vitest run src/tests/importCompatibilityMatrix.test.ts: PASS — 5 cases
+- npx vitest run src/tests/useSerialization.test.ts: PASS — 96 cases
+- npm test: PASS — 119 files / 1,736 tests; npm run lint: clean; npx tsc --noEmit: clean
+- npm run build: PASS; npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS
 
-Next: the independent review of this stack, then the user merge decision, followed by the four item-10 design questions and the item-12 product half.
+Next: the independent review of this branch, then the user merge decision. Item 10's implementation is the next large slice.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -157,120 +151,70 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ---
 
-## 4. Item 12 Task Record
+## 4. Task Record
 
-# Progress 119 — KCS Import Boundary Hardening (Milestone F, item 12, first step)
+# Progress 121 — KCS Import Product Half: Compatibility Matrix, Migration Report, Autosave Boundary
 
 ## 1. Scope
 
-The approved item-12 plan, **security half, first step**: a single validated boundary turns imported project text into a typed document instead of `JSON.parse` into `any`. Product-half items (compatibility matrix, round-trip guarantee per kind, import UX beyond the refusal toast) remain plan-only and are named in §7.
-
-Scope confirmed by the user: the first editable kinds are the current `.kcs` scene and the legacy `AnimationProject` shape; OGraf manifest/package import stays rejected as before.
+The approved item-12 product-half step, continuing `reports/progress_119_kcs_import_boundary.md`: the supported document kinds are now an executed matrix, a legacy import **reports** the migration it will run instead of succeeding silently, and the autosave restore path goes through the same validated boundary as an imported file.
 
 ## 2. Branch
 
-- `fix/kcs-import-boundary-hardening`, stacked on `chore/evaluator-profiling-harness` (item 11) over `main` = `af0288de…`.
+- `feat/kcs-import-product-half`, based on `main` at `44218a62ff48a090e5f94ce6331ec2578332ce5d` (Milestone F stack merged and green).
 
 ## 3. What changed
 
-- **`src/utils/importValidation.ts` (new)** — the boundary:
-  - `validateImportedDocument(text)` runs cheapest-first checks and returns a discriminated result: size limit → JSON syntax → prototype-sensitive keys (deep, depth-bounded walk reusing `isPrototypeSensitiveKey` from `src/utils/pathSafety.ts`) → document shape → declared layer/track count.
-  - Limits: `MAX_IMPORT_CHARACTERS` 32 MB, `MAX_IMPORT_LAYERS` 5,000, `MAX_IMPORT_DEPTH` 64. Exceeding a limit is a **refusal with a diagnostic**, never a silent clamp: trimming a user's project would be data loss, and a refusal tells them exactly what to do.
-  - Diagnostics reuse the export-diagnostics shape (`code`, `severity`, `feature`, `path`, `message`, `action`), with stable codes (`KCS_IMPORT_TOO_LARGE`, `KCS_IMPORT_MALFORMED_JSON`, `KCS_IMPORT_UNSAFE_KEY`, `KCS_IMPORT_UNKNOWN_SHAPE`, `KCS_IMPORT_TOO_MANY_LAYERS`, `KCS_IMPORT_FAILED`) and the offending document path (`$.characterParts[0].prototype`) so the author can find it.
-- **`src/hooks/useSerialization.ts`** — `importProject` now delegates to the boundary and returns `ImportResult` (`{ ok, diagnostics }`) instead of a bare boolean. The `JSON.parse` into `any` and the post-hoc narrowing are gone; the legacy branch consumes the already-validated `legacy-project` document, and the catch-all path reports `KCS_IMPORT_FAILED` instead of swallowing the reason.
-- **`src/context/AnimatorContext.tsx`** — the context type follows the new return shape.
-- **`src/components/Header/HeaderBar.tsx`** — the refusal toast shows the diagnostic's message **and** its action instead of a generic "Invalid project file format!".
-- **`src/tests/importValidation.test.ts` (new)** — 9 cases: scene and legacy acceptance, malformed JSON, unknown shape, oversized document refused before parsing, prototype key at the top level and nested (with the path named), message/action present, and the layer-limit refusal.
-- **Test adaptations** — `src/tests/useSerialization.test.ts` and `src/tests/ografBrowserZip.test.tsx` assert the new result shape (`imported.ok`); no assertion was weakened or removed.
+- **`src/utils/importValidation.ts`**
+  - `LegacyProjectDocument` now names the optional fields the legacy application path reads (`fps`, `totalFrames`, `projectResolution`, `motionTemplates`, `activeTemplateId`, `coordinateSystem`, `lastSavedTime`, `sceneTitle`, `name`) as `unknown`, so each consumer narrows with `typeof`/guards instead of the previous `any`. `tracks` and `characterParts` stay proven arrays.
+  - A successful legacy import now carries one **warning** diagnostic, `KCS_IMPORT_LEGACY_MIGRATED`, with the action ("review the imported template and export it again to store the current format"). A current scene import stays report-free.
+- **`src/hooks/useSerialization.ts`**
+  - `importProject` returns the validation's diagnostics with the success result, so warnings reach the UI.
+  - The legacy import branch reads `sceneTitle`/`name` through `typeof` narrowing.
+  - **Autosave restore** (`localStorage` → `AUTOSAVE_STORAGE_KEY`) now calls `validateImportedDocument` first: a corrupted or tampered entry is refused with a `console.warn` naming the code and message, and the defaults stay in place; a valid entry is applied through the same scene/legacy branches as before. The now-unused local `isSceneData` helper was deleted (the boundary owns that decision).
+- **`src/components/Header/HeaderBar.tsx`** — a successful import that carries warnings shows the success toast **and** an `info` toast with the warning's code, message and action.
+- **Tests**
+  - `src/tests/importCompatibilityMatrix.test.ts` (new, 5 cases): scene v1 and v2 apply with no report; the legacy project applies and reports exactly the migration warning; a scene never reports a migration; a non-project document is refused with `KCS_IMPORT_UNKNOWN_SHAPE`.
+  - `src/tests/useSerialization.test.ts`: one new case proving a prototype-poisoned autosave payload is refused (the warning names `KCS_IMPORT_UNSAFE_KEY`) and no state setter runs.
 
-## 4. Validation (branch `fix/kcs-import-boundary-hardening`)
+## 4. Validation (branch `feat/kcs-import-product-half`)
 
 | Check | Command | Result |
 |---|---|---|
-| Boundary cases | `npx vitest run src/tests/importValidation.test.ts` | PASS — 9 cases |
-| Serialization suite | `npx vitest run src/tests/useSerialization.test.ts` | PASS — 95 cases (round-trip, matte, appearance, freeform, migration) |
-| Full suite | `npm test` | PASS — 118 files / 1,730 tests |
-| Lint / TypeScript | `npm run lint`, `npx tsc --noEmit` | clean / clean |
-| Build | `npm run build` | PASS |
+| Compatibility matrix | `npx vitest run src/tests/importCompatibilityMatrix.test.ts` | PASS — 5 cases |
+| Serialization suite | `npx vitest run src/tests/useSerialization.test.ts` | PASS — 96 cases (including the autosave refusal) |
+| Full suite | `npm test` | PASS — 119 files / 1,736 tests |
+| Lint / TypeScript / build | `npm run lint`, `npx tsc --noEmit`, `npm run build` | clean / clean / PASS |
 | Release gate | `npm run qa:release` | PASS — 2 Chromium tests |
 | State consistency | `node scripts/check-state-consistency.mjs` | PASS |
 
 ## 5. Protected invariants
 
-- Both accepted document kinds still import exactly as before; only the *unsafe, malformed or oversized* cases changed behaviour (they are now refused with a reason).
-- No dependency, `package.json`, `package-lock.json` or workflow change; no new path-safety authority (the existing `isPrototypeSensitiveKey` is reused).
-- OGraf manifest/package rejection is unchanged.
+- Both document kinds import exactly as before; the additions are a warning for the legacy kind and a *refusal* for a corrupted autosave entry that previously would have been applied (or crashed).
+- The autosave key, its writer, and the export paths are unchanged; no dependency, `package.json`, lockfile or workflow change; no new path-safety authority.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
 
 ## 6. Residual risks
 
-- **Legacy branch trusts the shape, not every field.** The boundary proves `tracks` and `characterParts` are arrays and that no prototype-sensitive key exists; field-level validation of a legacy document still happens where it always did (the migration helpers). A malformed *field* therefore degrades as before, not worse.
-- **Refusal, not repair.** A document that exceeds a limit is refused. If a real project ever legitimately exceeds 5,000 layers or 32 MB, the limit needs raising — that is a deliberate, visible decision rather than a silent truncation.
-- **Autosave path unchanged.** `localStorage` restore still parses its own payload (it is written by this app, not imported). Bringing it onto the same boundary is a natural follow-up and is listed in §7.
+- **Autosave refusal keeps defaults.** If a user's autosave is corrupted, they land on an empty project with a console warning rather than a crash; a user-visible notice for that case is a UI decision that has not been taken.
+- **Element-level legacy validation is still shallow.** The boundary proves arrays and rejects prototype keys; a malformed *element* field still degrades where it always did.
+- **OGraf package import remains out of scope** and is still rejected with the dedicated toast.
 
-## 7. Still plan-only (item 12 product half and follow-ups)
+## 7. Still plan-only
 
-1. Compatibility matrix executed as fixtures per document kind.
-2. Round-trip guarantee per kind, with a loss report instead of dropped fields.
-3. One import entry point that detects the kind and shows the migration/loss report before replacing work.
-4. Route the `localStorage` autosave restore through the same boundary.
-5. OGraf package/single-file import (explicitly out of the first scope).
+1. A unified import entry point that shows the full migration/loss report before replacing work (today: refusal toast, or the migration warning after apply).
+2. Item 10 implementation (Lottie importer) — design approved, implementation needs its own branch and slices.
+3. OGraf package/single-file import.
 
 ---
 
-## 5. Item 10 Task Record
-
-# Progress 120 — Lottie Import Mapping Design (Milestone F, item 10)
-
-## 1. Scope
-
-Delivers the approved item-10 design scope: `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`. It is a **design document only** — no importer, no dependency, no runtime change. Implementation needs the design approval this document asks for, per the roadmap's interchange gate.
-
-## 2. Branch
-
-- Delivered in the same stacked Milestone F branch as items 11 and 12 (`fix/kcs-import-boundary-hardening`), so the Milestone F documentation merges as one unit; the design itself is self-contained and reviewers may take it independently.
-
-## 3. What the design fixes
-
-- **Three mapping kinds, no fourth option:** *lossless*, *lossy with report*, *unsupported, preserved*. A construct never becomes lossless by silence: anything dropped or approximated is at least reported.
-- **Document, layer, shape, mask and matte mapping tables** — every canonical KCS field is tied to the Lottie construct that feeds it (`ks` transform, `sh`/`rc`/`el`/`sr`/`gr`/`fl`/`st`/`tm`/`mm`, `masksProperties`, `tt`/`td`, `parent`, `ip`/`op`, `st`), with precomps, effects, expressions, 3D/cameras, skew, auto-orient and repeaters marked *unsupported, preserved* for the first cut.
-- **Temporal and easing conversion rules** — the document-level frame shift, the `fr` → `fps` rounding, and the segment-to-keyframe handle split: Lottie's `i`/`o` describe the segment, KCS's `bezierIn`/`bezierOut` describe the keyframe, so `keyframe[i].bezierOut ← o` and `keyframe[i+1].bezierIn ← i`; `h: 1` maps to the `hold` easing. Roving and expression-driven segments become `linear` **and** a report entry — never a silent approximation.
-- **First-cut import limits** (masks per layer 8, keyframes per channel 512, hierarchy depth 32, path vertices 4096), each reported rather than silently reduced.
-- **One diagnostics contract** reusing the existing export-diagnostic shape, with stable codes, the source document path (`layers[3].shapes[1].ef[0]`) and an actionable next step, shown **before** the import replaces the user's work.
-- **Validation plan** — per-construct golden fixtures, round-trip fixtures for the lossless subset, limit tests, negative fixtures (cyclic parent, self-referencing matte, missing asset, unknown mask mode) that must report and continue rather than throw, and a UI smoke.
-
-## 4. Validation of this deliverable
-
-| Check | Result |
-|---|---|
-| Design covers the approved scope | yes — mapping tables, loss taxonomy, temporal rules, limits, diagnostics, validation plan |
-| Claims about the canonical model are accurate | every referenced type and field exists at this revision (`BezierPath` v1, `TemporalHandle`, `LayerMask`, `TrackMatteV2`, `PropertyKeyframe.bezierIn/bezierOut`, `hold`, `applyEasing`, `maskPathChannels`, the path-safety authority) |
-| Implementation | **none**, by design |
-| Repository changes | documentation only |
-| State consistency | `node scripts/check-state-consistency.mjs` PASS after the updates |
-
-## 5. Protected invariants
-
-- No source, test, script, dependency, `package.json`, lockfile or workflow change; the canonical model, channel semantics, OGraf package format and export paths are untouched.
-- `docs/interop/V6_LOTTIE_MAPPING.md` remains the authority for the interop principle; this design does not contradict it and does not need to change it.
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
-
-## 6. Open questions for the user
-
-1. Precomps: confirm *unsupported, preserved* in the first cut (flattening would change timing).
-2. Layer in/out (`ip`/`op`): confirm *reported, not converted*.
-3. Limit defaults: confirm the numbers in the design, or set your own.
-4. Report surface: confirm the report appears before replacement (recommended).
-
----
-
-## 6. Next Session
+## 5. Next Session
 
 # Next Session Handoff
 
 ## Repository state
 
-- Checkout: branch `fix/kcs-import-boundary-hardening` (Milestone F item 12 first step), stacked on `chore/evaluator-profiling-harness` (item 11) over `main` at `af0288de…`, which matches `origin/main`; milestones A–E and the Milestone F study are merged. The merged warning-maintenance work and the Milestone E study are in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` and `docs/milestone-e-ograf-qa-study` are retained as review artefacts.
+- Checkout: branch `feat/kcs-import-product-half` (Milestone F item 12 product half) on top of `main` at `44218a62…`, which matches `origin/main`; milestones A–E, the Milestone F study and the item-10/11/12-first-step stack are merged. The merged warning-maintenance work and the Milestone E study are in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` and `docs/milestone-e-ograf-qa-study` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -291,11 +235,11 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (118 files / 1,730 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on this Milestone F stack (`fix/kcs-import-boundary-hardening`), whose source commits are `f17215b` (item 11), `9c257ed` (item 12 first step) and `a17be8b` (item 10 design). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
+Full Vitest (119 files / 1,736 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on this Milestone F stack (`fix/kcs-import-boundary-hardening`), whose source commits are `f17215b` (item 11), `9c257ed` (item 12 first step) and `a17be8b` (item 10 design). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
 
 ## Next scoped work
 
-1. **Milestone F — three deliverables awaiting the merge decision**: item 11 (evaluator profiling harness and baseline, `reports/progress_118_evaluator_profiling.md`), item 12’s first step (validated import boundary, `reports/progress_119_kcs_import_boundary.md`) and item 10’s mapping design (merged in this stack, with four open questions for the user: precomp handling, layer in/out, limit defaults, report surface). Remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
+1. **Milestone F — item 12 product half awaiting the merge decision**: the compatibility matrix, the legacy migration report and the autosave-through-the-boundary change are implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`); items 10 (design + approved defaults) and 11 (profiling harness) are already merged. Item 10’s implementation (the Lottie importer) is the next large slice and needs its own branch. Remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
 2. Milestone F stays plan-only (and anything in Milestone E beyond items 7 and 8 stays plan-only), and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -328,7 +272,7 @@ Full Vitest (118 files / 1,730 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ---
 
-## 7. Project State
+## 6. Project State
 
 # KCS Project State
 
@@ -338,7 +282,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `22335a5dc899…`: milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is implemented on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; all three await review and the merge decision.
+Current `main` / `origin/main` is at `22335a5dc899…`: milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix, migration report, autosave through the boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; all three await review and the merge decision.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -356,7 +300,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 118 files / 1,730 tests |
+| Full Vitest | PASS | 119 files / 1,736 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
@@ -405,7 +349,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ---
 
-## 8. Current Roadmap Plan and Changelog
+## 7. Current Roadmap Plan and Changelog
 
 # KCS Grouped Roadmap Execution Plan
 
@@ -461,7 +405,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 
 ## Milestone F — Architecture exploration only (roadmap items 10, 11, 12)
 
-Research/design deliverables only: Lottie import mapping design, evaluator profiling plan, editable KCS import plan. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`) and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_120_lottie_mapping_design.md`) with its four open questions listed for the user; **no implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code.
+Research/design deliverables only: Lottie import mapping design, evaluator profiling plan, editable KCS import plan. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix, migration report, autosave through the boundary) on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_120_lottie_mapping_design.md`) with its four open questions listed for the user; **no implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code.
 
 ## Approval gates
 
@@ -551,19 +495,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## 9. File Inventory
+## 8. File Inventory
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 11260 bytes
-- `NEXT_SESSION.md` — 9096 bytes
-- `OMP_FINAL_RESPONSE.md` — 3562 bytes
-- `PROJECT_STATE.md` — 11891 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 11441 bytes
+- `NEXT_SESSION.md` — 9109 bytes
+- `OMP_FINAL_RESPONSE.md` — 2895 bytes
+- `PROJECT_STATE.md` — 12055 bytes
 - `README.md` — 3082 bytes
-- `manifest.txt` — 4365 bytes
-- `progress_119_kcs_import_boundary.md` — 5341 bytes
-- `progress_120_lottie_mapping_design.md` — 3866 bytes
+- `manifest.txt` — 3435 bytes
+- `progress_121_kcs_import_product_half.md` — 4586 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

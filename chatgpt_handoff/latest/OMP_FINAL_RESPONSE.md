@@ -1,27 +1,26 @@
-# KCS Milestone F Item 12 (first step) — Final Response (Validated KCS Import Boundary)
+# KCS Milestone F Item 12 Product Half — Final Response (Compatibility Matrix, Migration Report, Autosave Boundary)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** the approved item-12 **security half, first step** is implemented on branch `fix/kcs-import-boundary-hardening`, stacked on item 11 (`chore/evaluator-profiling-harness`) over `main` = `af0288de…`. Awaiting review and the user merge decision.
-- **Report:** `reports/progress_119_kcs_import_boundary.md`.
-- Scope confirmed by the user: the first editable kinds are the current `.kcs` scene and the legacy `AnimationProject` shape; OGraf package/single-file import stays rejected.
+- **Status:** implemented on branch `feat/kcs-import-product-half` (base `main` = `44218a62…`); awaiting the review and the user merge decision.
+- **Report:** `reports/progress_121_kcs_import_product_half.md`.
 
 ## 2) WHAT CHANGED
 
-- `src/utils/importValidation.ts` (new): `validateImportedDocument(text)` runs cheapest-first — size (32 MB), JSON syntax, a depth-bounded walk for prototype-sensitive keys (reusing `isPrototypeSensitiveKey`), document shape, then declared layer/track count (5,000) — and returns a discriminated result with stable refusal codes (`KCS_IMPORT_TOO_LARGE`, `KCS_IMPORT_MALFORMED_JSON`, `KCS_IMPORT_UNSAFE_KEY`, `KCS_IMPORT_UNKNOWN_SHAPE`, `KCS_IMPORT_TOO_MANY_LAYERS`) plus the offending document path and an actionable message. Exceeding a limit is a refusal, never a silent clamp — trimming a user's project would be data loss.
-- `src/hooks/useSerialization.ts`: `importProject` delegates to the boundary, returns `ImportResult` (`{ ok, diagnostics }`), and no longer parses into `any`; the legacy branch consumes the already-validated document and the catch-all reports `KCS_IMPORT_FAILED`.
-- `src/context/AnimatorContext.tsx` follows the new return shape; `src/components/Header/HeaderBar.tsx` shows the diagnostic message **and** its action instead of a generic "Invalid project file format!".
-- `src/tests/importValidation.test.ts` (new, 9 cases) pins the boundary: both kinds accepted, malformed JSON, unknown shape, oversize refused before parsing, prototype key top-level and nested with the path named, and the layer-limit refusal. Existing import-path tests were adapted to the result shape; no assertion was weakened.
+- **Compatibility matrix, executed:** `src/tests/importCompatibilityMatrix.test.ts` (5 cases) proves scene v1 and v2 apply with no report, the legacy project applies **and** reports exactly the migration warning, a scene never reports a migration, and a non-project document is refused with `KCS_IMPORT_UNKNOWN_SHAPE`.
+- **Legacy imports report their migration:** `KCS_IMPORT_LEGACY_MIGRATED` (warning) now travels with a successful legacy import, and `HeaderBar` shows it as an `info` toast with the code, message and action — the user learns that the document was migrated instead of discovering it later.
+- **Autosave goes through the same boundary:** the `localStorage` restore now calls `validateImportedDocument` first; a corrupted or tampered entry is refused with a `console.warn` naming the code and message and the defaults stay in place. The now-unused local `isSceneData` helper was deleted, because the boundary owns that decision.
+- **Legacy fields are narrowed, not trusted:** `LegacyProjectDocument` names the optional fields the legacy path reads as `unknown`, and the consumers narrow each one with `typeof`/guards instead of the previous `any`.
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| Boundary cases | PASS — 9 cases |
-| Serialization suite | PASS — 95 cases (round-trip, matte, appearance, freeform, migration) |
-| Full suite | PASS — 118 files / 1,730 tests |
+| Compatibility matrix | PASS — 5 cases |
+| Serialization suite | PASS — 96 cases, including the autosave refusal |
+| Full suite | PASS — 119 files / 1,736 tests |
 | Lint / TypeScript / build | clean / clean / PASS |
 | Release gate | PASS — 2 Chromium tests |
 | State consistency | PASS |
@@ -32,9 +31,10 @@ The change goes through the independent read-only review gate before any merge; 
 
 ## 5) SAFETY
 
-- Both accepted document kinds still import exactly as before; only unsafe, malformed or oversized inputs changed behaviour (now refused with a reason). No dependency, `package.json`, lockfile or workflow change; no new path-safety authority was invented.
+- Both document kinds still import exactly as before; the change adds a warning for legacy documents and a refusal for a corrupted autosave entry that previously would have been applied.
+- No dependency, `package.json`, lockfile or workflow change; the autosave key and the export paths are untouched.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
 
 ## 6) NEXT
 
-One decision: merge the stacked branch (items 11 and 12 first step and the item-10 mapping design) after the review passes. Only item 10’s *future implementation* needs its own branch, once the four design questions are settled. The remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only.
+One decision: merge `feat/kcs-import-product-half` after the review passes. Then item 10’s implementation (the Lottie importer, design and defaults approved) is the next large slice, and OGraf package import stays out of scope.

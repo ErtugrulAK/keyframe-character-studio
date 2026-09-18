@@ -1,37 +1,32 @@
-# KCS ChatGPT Upload Manifest — Milestone F Deliverables (items 10, 11, 12 first step)
+# KCS ChatGPT Upload Manifest — Milestone F Item 12 Product Half
 
 Clean refreshed: YES
-Bundle purpose: Milestone F on one stacked branch — item 11 profiling harness, item 12 first step (validated import boundary) and item 10 (Lottie mapping design)
+Bundle purpose: Milestone F item 12 product half — compatibility matrix executed, legacy migration reported, autosave routed through the validated boundary
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/kcs-import-boundary-hardening — f17215b (item 11 harness), 9c257ed (item 12 import boundary), a17be8b (item 10 design), on base main af0288de
-Task records: reports/progress_118_evaluator_profiling.md (item 11), reports/progress_119_kcs_import_boundary.md (item 12 first step), reports/progress_120_lottie_mapping_design.md (item 10)
-Design document: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository; its summary is in the item-10 task record)
-Item 11: perf/sceneBuilder.ts, perf/evaluator-profile.perf.ts, perf/vitest.perf.config.ts, src/tests/evaluatorProfileScenes.test.ts — measurement only, no caching, no threshold; baseline in the task record
-Item 12 first step: src/utils/importValidation.ts (size 32 MB, JSON syntax, depth-bounded prototype-key walk, shape, layer limit 5,000; stable refusal codes with the offending document path), importProject returns ImportResult, HeaderBar shows message + action; scope confirmed as .kcs + legacy project
-Item 10: mapping design only — three mapping kinds, per-construct tables, temporal/easing rules, first-cut limits, diagnostics contract, validation plan, and four open questions for the user
-Implemented in this task: items 11 and 12 first step (code + tests); item 10 is design only
-Not changed: dependencies, package.json, package-lock.json, workflows, the OGraf import rejection path, existing path-safety authorities
-Still plan-only: the item-12 product half (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary) and OGraf package import
-Validation: item-11 harness PASS (1 case, report printed) and builder tests PASS (5); import boundary PASS (9 cases); serialization suite PASS (95 cases); full suite PASS (118 files / 1,730 tests); lint clean; tsc clean; build PASS; qa:release PASS (2 Chromium tests); state check PASS
+Branch: feat/kcs-import-product-half on top of main 44218a62 (Milestone F stack merged)
+Task record: reports/progress_121_kcs_import_product_half.md
+What changed: src/utils/importValidation.ts (LegacyProjectDocument optional fields typed unknown; KCS_IMPORT_LEGACY_MIGRATED warning on a successful legacy import), src/hooks/useSerialization.ts (importProject returns the validation diagnostics; legacy fields narrowed; autosave restore validated through the boundary; unused local isSceneData removed), src/components/Header/HeaderBar.tsx (warning shown as an info toast with code/message/action), src/tests/importCompatibilityMatrix.test.ts (new, 5 cases), src/tests/useSerialization.test.ts (autosave refusal case)
+Validation: matrix PASS (5); serialization suite PASS (96); full suite PASS (119 files / 1,736 tests); lint clean; tsc clean; build PASS; qa:release PASS (2 Chromium tests); state check PASS
+Not changed: dependencies, package.json, package-lock.json, workflows, the autosave key/writer, the export paths, the OGraf import rejection
+Still plan-only: a unified import entry that shows the full report before replacing work; item 10 implementation (Lottie importer, design approved); OGraf package import
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (9):
+Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the final response for this stack
-- progress_119_kcs_import_boundary.md — the item-12 first-step task record
-- progress_120_lottie_mapping_design.md — the item-10 design task record
+- OMP_FINAL_RESPONSE.md — the item-12 product-half final response
+- progress_121_kcs_import_product_half.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test, script and perf files (they live in the repository)
+- Source, test and script files (they live in the repository)
 - package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
@@ -39,13 +34,12 @@ Omitted categories:
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- npx vitest run --config perf/vitest.perf.config.ts: PASS — 1 case, baseline report printed
-- npx vitest run src/tests/evaluatorProfileScenes.test.ts: PASS — 5 cases
-- npx vitest run src/tests/importValidation.test.ts src/tests/useSerialization.test.ts: PASS — 9 + 95 cases
-- npm test: PASS — 118 files / 1,730 tests; npm run lint: clean; npx tsc --noEmit: clean
-- npm run build: PASS; npm run qa:release: PASS (2 Chromium tests, candidate a17be8b)
+- npx vitest run src/tests/importCompatibilityMatrix.test.ts: PASS — 5 cases
+- npx vitest run src/tests/useSerialization.test.ts: PASS — 96 cases
+- npm test: PASS — 119 files / 1,736 tests; npm run lint: clean; npx tsc --noEmit: clean
+- npm run build: PASS; npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS
 
-Next: the independent review of this stack, then the user merge decision, followed by the four item-10 design questions and the item-12 product half.
+Next: the independent review of this branch, then the user merge decision. Item 10's implementation is the next large slice.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

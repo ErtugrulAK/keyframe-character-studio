@@ -57,6 +57,7 @@
 - `reports/progress_118_evaluator_profiling.md` — Milestone F item 11: evaluator profiling harness and baseline.
 - `reports/progress_119_kcs_import_boundary.md` — Milestone F item 12: validated KCS import boundary.
 - `reports/progress_120_lottie_mapping_design.md` — Milestone F item 10: Lottie import mapping design.
+- `reports/progress_121_kcs_import_product_half.md` — Milestone F item 12 product half: compatibility matrix, migration report, autosave boundary.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

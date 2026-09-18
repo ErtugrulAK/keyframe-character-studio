@@ -35,6 +35,31 @@ describe('useSerialization Hook', () => {
     vi.useRealTimers();
   });
 
+  it('refuses a corrupted autosave payload through the import boundary and keeps the defaults', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue('{"__proto__":{"polluted":true}}');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 100, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 800, height: 600 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [], setTracks: mockSetTracks,
+      characterParts: [], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'My Scene', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying
+    }));
+
+    expect(warn).toHaveBeenCalledWith('[Storage] Autosave restore refused:', 'KCS_IMPORT_UNSAFE_KEY', expect.any(String));
+    expect(mockSetTracks).not.toHaveBeenCalled();
+    expect(mockSetCharacterParts).not.toHaveBeenCalled();
+  });
+
   it('triggers manual save to localStorage', () => {
     const { result } = renderHook(() => useSerialization({
       fps: 30, setFps: mockSetFps,

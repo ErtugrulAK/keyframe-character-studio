@@ -24,10 +24,26 @@ export interface ImportDiagnostic {
   action: string;
 }
 
-/** The legacy project shape the importer still accepts (backward compatibility). */
+/**
+ * The legacy project shape the importer still accepts (backward compatibility).
+ *
+ * `tracks` and `characterParts` are proven arrays by the boundary; the remaining
+ * fields are the ones the legacy application path reads and are typed `unknown`
+ * on purpose — the consumer narrows each one (`typeof`, guards) instead of
+ * trusting the document, which is what the previous `any` did.
+ */
 export interface LegacyProjectDocument {
   tracks: Track[];
   characterParts: CharacterPart[];
+  fps?: unknown;
+  totalFrames?: unknown;
+  projectResolution?: unknown;
+  motionTemplates?: unknown;
+  activeTemplateId?: unknown;
+  coordinateSystem?: unknown;
+  lastSavedTime?: unknown;
+  sceneTitle?: unknown;
+  name?: unknown;
 }
 
 /** A document the importer accepts: the current scene shape or the legacy project shape. */
@@ -170,5 +186,21 @@ export const validateImportedDocument = (text: string): ImportValidationResult =
     );
   }
 
-  return { ok: true, document, diagnostics: [] };
+  // The legacy shape is accepted, but importing it runs a migration: say so
+  // instead of letting the user discover it after their work is replaced.
+  const diagnostics: ImportDiagnostic[] =
+    document.kind === 'legacy-project'
+      ? [
+        {
+          code: 'KCS_IMPORT_LEGACY_MIGRATED',
+          severity: 'warning',
+          feature: 'project-import',
+          path: '$',
+          message: 'This is a legacy project document; it is migrated to the current scene format on import.',
+          action: 'Review the imported template and export it again to store the current format.',
+        },
+      ]
+      : [];
+
+  return { ok: true, document, diagnostics };
 };

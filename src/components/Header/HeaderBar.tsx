@@ -285,7 +285,11 @@ export const HeaderBar: React.FC = () => {
         }
         const result = importProject(text, fileNameWithoutExt);
         if (result.ok) {
+          // A successful import can still carry warnings (for example the legacy
+          // migration notice): show them instead of reporting a silent success.
+          const [notice] = result.diagnostics;
           showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
+          if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
           return;
         }
         const [refusal] = result.diagnostics;

@@ -298,13 +298,6 @@ function fromSceneData(
   return true;
 }
 
-/**
- * Detect if a parsed JSON object is SceneData (has version field) or legacy.
- */
-function isSceneData(parsed: any): parsed is SceneData {
-  return parsed && typeof parsed.version === 'number' && parsed.version >= 1;
-}
-
 // ─── Hook ─────────────────────────────────────────────────────────────
 
 interface UseSerializationOptions {
@@ -367,23 +360,31 @@ export const useSerialization = ({
     try {
       const saved = localStorage.getItem(AUTOSAVE_STORAGE_KEY);
       if (saved) {
-        const parsed: any = JSON.parse(saved);
+        // The autosave payload goes through the same boundary as an imported
+        // document: a corrupted or tampered entry is reported and skipped
+        // instead of being applied, and the defaults stay in place.
+        const validation = validateImportedDocument(saved);
+        if (!validation.ok) {
+          console.warn('[Storage] Autosave restore refused:', validation.diagnostics[0]?.code, validation.diagnostics[0]?.message);
+          return;
+        }
 
-        // Phase 3: Try SceneData format first
-        if (isSceneData(parsed)) {
-          fromSceneData(parsed, parsed.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
+        if (validation.document.kind === 'scene') {
+          const scene = validation.document.scene;
+          fromSceneData(scene, scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
           return;
         }
 
         // Legacy AnimationProject format (backward compat)
-        const hasLegacyStickman = parsed.characterParts?.some((p: any) => (p.type as string) === 'head' || (p.type as string) === 'torso');
-        if (parsed.tracks && parsed.characterParts && !hasLegacyStickman) {
-          if (parsed.projectResolution) setProjectResolution(parsed.projectResolution);
+        const parsed = validation.document.project;
+        const hasLegacyStickman = parsed.characterParts.some((part) => (part as { type?: unknown }).type === 'head' || (part as { type?: unknown }).type === 'torso');
+        if (!hasLegacyStickman) {
+          if (parsed.projectResolution) setProjectResolution(parsed.projectResolution as { width: number; height: number });
           setTracks(parsed.tracks.map(migrateTrack));
           setCharacterParts(parsed.characterParts);
-          if (parsed.fps) setFps(parsed.fps);
-          if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
-          setLastSavedAt(parsed.lastSavedTime ? new Date(parsed.lastSavedTime) : new Date());
+          if (typeof parsed.fps === 'number') setFps(parsed.fps);
+          if (typeof parsed.totalFrames === 'number') setTotalFrames(parsed.totalFrames);
+          setLastSavedAt(typeof parsed.lastSavedTime === 'string' ? new Date(parsed.lastSavedTime) : new Date());
 
           const allIds: string[] = [];
           parsed.characterParts.forEach((p: any) => allIds.push(p.id));
@@ -446,13 +447,13 @@ export const useSerialization = ({
       if (validation.document.kind === 'scene') {
         const scene = validation.document.scene;
         const imported = fromSceneData(scene, defaultName || scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
-        return { ok: imported, diagnostics: [] };
+        return { ok: imported, diagnostics: validation.diagnostics };
       }
 
       // Legacy AnimationProject format (backward compat)
       const parsed = validation.document.project;
       {
-        const rawName = defaultName || parsed.sceneTitle || parsed.name || 'Imported Template';
+        const rawName = defaultName || (typeof parsed.sceneTitle === 'string' ? parsed.sceneTitle : undefined) || (typeof parsed.name === 'string' ? parsed.name : undefined) || 'Imported Template';
         const templateName = rawName.replace(/\.json$/i, '').trim() || 'Imported Template';
         const newId = `tmpl_${Date.now()}`;
 
@@ -487,7 +488,7 @@ export const useSerialization = ({
         if (parsed.fps) setFps(parsed.fps);
         if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
 
-        return { ok: true, diagnostics: [] };
+        return { ok: true, diagnostics: validation.diagnostics };
       }
     } catch {
       return { ok: false, diagnostics: [{ code: 'KCS_IMPORT_FAILED', severity: 'error', feature: 'project-import', path: '$', message: 'The document passed validation but could not be applied.', action: 'Re-export the project and import it again.' }] };

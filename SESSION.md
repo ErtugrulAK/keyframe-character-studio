@@ -4,7 +4,7 @@
 
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 
-Checkout: `fix/kcs-import-boundary-hardening` (Milestone F item 12 first step), stacked on `chore/evaluator-profiling-harness` (item 11) over synchronized `main` at `af0288de…` (Milestones A–E and the Milestone F study merged and green).
+Checkout: `feat/kcs-import-product-half` (Milestone F item 12 product half) on top of synchronized `main` at `44218a62…` (Milestones A–E, the Milestone F study and the item-10/11/12-first-step stack merged and green).
 
 ## Completed
 
@@ -21,11 +21,11 @@ Checkout: `fix/kcs-import-boundary-hardening` (Milestone F item 12 first step), 
 
 ## Current work
 
-Item 11 (evaluator profiling) is implemented in this stack as measurement only, item 12’s first step (validated import boundary) is implemented on this branch, and item 10’s mapping design is delivered in the same stack (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) — all three await the user merge decision. The remaining item-12 product work stays plan-only; nothing beyond the approved scopes is authorized.
+Item 12’s product half (compatibility matrix, legacy migration report, autosave through the validated boundary) is implemented on this branch and awaits the user merge decision. Item 10’s design is approved with its defaults settled, so its implementation is the next large slice; OGraf package import stays out of scope.
 
 ## Validation
 
-- `npm test`: PASS — 118 files / 1,730 tests. `npm run lint`: clean. `npx tsc --noEmit`: clean. `npm run build`: PASS.
+- `npm test`: PASS — 119 files / 1,736 tests. `npm run lint`: clean. `npx tsc --noEmit`: clean. `npm run build`: PASS.
 - Evaluator profile harness: `npx vitest run --config perf/vitest.perf.config.ts` PASS (report printed); baseline recorded in `reports/progress_118_evaluator_profiling.md`.
 - Import boundary: `src/tests/importValidation.test.ts` PASS (9 cases); the serialization suite PASS (95 cases).
 - `npm run validate:ograf`: PASS offline (pin-verified vendored closure); the same command passes with a poisoned proxy, proving no fetch is attempted; `--online` also passes.

@@ -17,6 +17,13 @@ import { migrateSceneLayerV6 } from '../utils/v6Migration';
  */
 const readOptionalNumber = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 const readOptionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+/** A saved ISO timestamp, only when it actually parses to a valid date. */
+const readOptionalDate = (value: unknown): Date | undefined => {
+  const text = readOptionalString(value);
+  if (text === undefined) return undefined;
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
 const readProjectResolution = (value: unknown): { width: number; height: number } | undefined => {
   if (typeof value !== 'object' || value === null) return undefined;
   const candidate = value as { width?: unknown; height?: unknown };
@@ -410,8 +417,8 @@ export const useSerialization = ({
           if (savedFps !== undefined) setFps(savedFps);
           const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
           if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
-          const savedAt = readOptionalString(parsed.lastSavedTime);
-          setLastSavedAt(savedAt ? new Date(savedAt) : new Date());
+          const savedAt = readOptionalDate(parsed.lastSavedTime);
+          setLastSavedAt(savedAt ?? new Date());
 
           const allIds: string[] = [];
           parsed.characterParts.forEach((p: any) => allIds.push(p.id));

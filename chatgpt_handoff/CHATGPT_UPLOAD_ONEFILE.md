@@ -165,7 +165,7 @@ The approved item-12 product-half step, continuing `reports/progress_119_kcs_imp
 
 ## 3. What changed
 
-- **`src/utils/importValidation.ts`**
+- **`src/utils/importValidation.ts`** (the type and the boundary) **and `src/hooks/useSerialization.ts`** (the narrowing helpers and their two consumers)
   - `LegacyProjectDocument` now names the optional fields the legacy application path reads (`fps`, `totalFrames`, `projectResolution`, `motionTemplates`, `activeTemplateId`, `coordinateSystem`, `lastSavedTime`, `sceneTitle`, `name`) as `unknown`, and **every one of them goes through a narrowing helper** before it reaches state: `readOptionalNumber` (finite number), `readOptionalString`, `readProjectResolution` (both dimensions finite and positive), `readMotionTemplates` (array of objects with string `id`/`name`), and the existing `isSceneCoordinateSystem` guard for the coordinate contract. `tracks` and `characterParts` stay proven arrays.
   - A review round found the first version narrowed only some of those fields (truthiness plus casts on `projectResolution`, the import branch's `fps`/`totalFrames`, `motionTemplates`, `activeTemplateId` and `coordinateSystem`); this branch closes that gap, so the report's claim is now true rather than aspirational.
   - A successful legacy import now carries one **warning** diagnostic, `KCS_IMPORT_LEGACY_MIGRATED`, with the action ("review the imported template and export it again to store the current format"). A current scene import stays report-free.
@@ -241,7 +241,7 @@ Full Vitest (119 files / 1,736 tests), `npm run validate:ograf`, `npm run qa:rel
 ## Next scoped work
 
 1. **Milestone F — item 12 product half awaiting the merge decision**: the compatibility matrix, the legacy migration report and the autosave-through-the-boundary change are implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`); items 10 (design + approved defaults) and 11 (profiling harness) are already merged. Item 10’s implementation (the Lottie importer) is the next large slice and needs its own branch. What remains in item 12 is a unified import entry that shows the full report before replacing work, plus OGraf package import — both plan-only. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
-2. Milestone F items 10 (design), 11 and 12 (first step + product half) are delivered; anything beyond them — item 10’s importer, item 12’s unified import entry, OGraf package import, Milestone E beyond items 7 and 8 — stays plan-only, and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
+2. Milestone F items 10 (design), 11 and 12 (first step + product half) are implemented on their branches, with the merges awaiting the decision above; anything beyond them — item 10’s importer, item 12’s unified import entry, OGraf package import, Milestone E beyond items 7 and 8 — stays plan-only, and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
 
@@ -283,7 +283,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `22335a5dc899…`: milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; all three await review and the merge decision.
+Current `main` / `origin/main` is at `44218a62ff48…` (the Milestone F stack is merged): milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; all three await review and the merge decision.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -502,12 +502,12 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 11441 bytes
-- `NEXT_SESSION.md` — 9228 bytes
+- `NEXT_SESSION.md` — 9293 bytes
 - `OMP_FINAL_RESPONSE.md` — 2895 bytes
-- `PROJECT_STATE.md` — 12115 bytes
+- `PROJECT_STATE.md` — 12149 bytes
 - `README.md` — 2692 bytes
 - `manifest.txt` — 3435 bytes
-- `progress_121_kcs_import_product_half.md` — 5177 bytes
+- `progress_121_kcs_import_product_half.md` — 5293 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

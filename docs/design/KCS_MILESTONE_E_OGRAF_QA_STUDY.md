@@ -1,6 +1,6 @@
 # KCS OGraf QA Study — Offline Schema Closure (item 7) and Downstream Folder QA (item 8)
 
-Milestone E of `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`. This document is a **study and plan**: item 7 delivers findings and options only, and neither item is implemented here. Every implementation step below states the approval it needs first.
+Milestone E of `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`. This document is the **study and plan**; item 7 was approved as **7-A** and is implemented in `reports/progress_115_ograf_offline_schema_closure.md`, and item 8 is approved and implemented in `reports/progress_116_ograf_folder_qa.md`. The sections below keep their original study form; each item states its current status.
 
 ## 1. Why this milestone exists
 
@@ -43,7 +43,7 @@ Licensing (checked, with the caveat that the final call is the user's):
 | 7-B | **Controlled local cache** — keep fetching, but cache into a gitignored `.cache/ograf-schema/` verified by the same pins | Offline after the first successful run; nothing redistributed | Cache is per-machine, so CI still needs the network or a warm cache; the failure mode returns on a cold runner | User approval (cache location/policy) |
 | 7-C | **Status quo** — live-only validation | No repo change | CI keeps depending on two remote hosts and on pinned content staying unchanged; an outage or a blocked host fails the pipeline | none (do nothing) |
 
-**Recommendation: 7-A**, because the closure is tiny, the licences permit it with notices, and it is the only option that makes the guard deterministic in CI. 7-B is the fallback if the user prefers not to redistribute upstream text.
+**Outcome: 7-A was approved and implemented** (`reports/progress_115_ograf_offline_schema_closure.md`): the eight documents are vendored under `fixtures/ograf/schema/` with `NOTICE.md` carrying both upstream notices, and `npm run validate:ograf` resolves them locally by default, keeping `--online` for refreshes. Options 7-B and 7-C were not taken.
 
 ### 2.2 Validation plan for whichever option is approved
 
@@ -85,6 +85,6 @@ Focused tests for the generator and the comparison (parity pass/fail, missing fi
 1. **Item 7:** approve 7-A (vendor + offline mode with notices) or 7-B (controlled cache), or record 7-C as the decision.
 2. **Item 7 (separate):** confirm the CI step keeps running `validate:ograf` unchanged after the closure is vendored (no workflow edit needed).
 3. **Item 8:** approve implementing the generator + comparison + host-limited report on `test/ograf-folder-qa-automation`.
-4. **Item 8 (separate):** confirm the QA root path policy (where clean folder QA copies may be written).
+4. **Item 8 (separate):** the QA root is an explicit required argument with no default location, so nothing is written to a user folder without naming it.
 
 With no decision, nothing is implemented: this document is the deliverable of Milestone E.

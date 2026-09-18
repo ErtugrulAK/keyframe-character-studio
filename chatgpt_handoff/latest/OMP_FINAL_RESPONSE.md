@@ -1,46 +1,45 @@
-# KCS Milestone E — OGraf QA Study Final Response (Schema Closure + Folder QA)
+# KCS Milestone E Item 7 — Final Response (Offline OGraf Schema Closure, Option 7-A)
 
-This file is the OMP final response for the Milestone E study task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+This file is the OMP final response for the item-7 task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** Milestone E items 7 and 8 are delivered as **study and plan only** — `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, with the task record in `reports/progress_114_ograf_qa_study.md`. Implementation of either item needs its own approval; nothing is implemented.
-- Milestone D is complete in `main` (`3923141`): item 6 (state check) plus item 9 (audit, Option A warning maintenance and the local SQLite repair) are merged with green CI run `35322372675`.
-- Branch `docs/milestone-e-ograf-qa-study` sits on that `main`; the study document is subject to the user merge decision.
+- **Status:** the approved **7-A** is implemented on branch `chore/ograf-offline-schema-closure` (base `main` = `46021eece4714fa8880ae4d3018e8f8f064c3a81`); it awaits the review and the user merge decision.
+- **Report:** `reports/progress_115_ograf_offline_schema_closure.md`.
 
-## 2) ITEM 7 — WHAT THE STUDY FOUND
+## 2) WHAT CHANGED
 
-- `scripts/validate-ograf-manifest.mjs` fetches **8** documents (OGraf graphics schema + six `$ref` targets + the JSON Schema 2020-12 meta-schema) and pins each by **SHA-256**, throwing on an unpinned reference or a digest mismatch. That pin check is the fail-closed contract and the study keeps it.
-- Read-only verification on 2026-09-18: **8/8 pins still match** upstream; the whole closure is **33,567 bytes (≈32.8 KiB)**.
-- Licensing checked at the source: `ebu/ograf` is **MIT**; the JSON Schema meta-schema ships under the BSD-style "JSON Schema Specification Authors" notice. Redistribution is viable **with the notices retained**; the final licensing call is the user's.
-- Options: **7-A** vendor the closure + an offline mode (deterministic, ~33 KiB, no network in CI), **7-B** a gitignored verified cache (offline after a warm run; cold runners still need the network), **7-C** status quo. The study recommends **7-A** and specifies the negative controls (unpinned `$ref`, one-byte drift, invalid manifest) that must keep failing closed.
-- CI **already** runs `validate:ograf` (`.github/workflows/ci.yml:27-28`, Node 22), so every push performs the live fetches: an outage or a schema bump fails the pipeline. 7-A removes that dependency **without** a workflow edit; any change to the workflow itself stays a separate approval.
+| Item | Change | Evidence |
+|---|---|---|
+| Closure vendored | All 8 pinned documents (33,567 B) copied unmodified into `fixtures/ograf/schema/` | hash of every vendored file equals its pin (8/8) |
+| Notices | `fixtures/ograf/schema/NOTICE.md` carries the EBU MIT notice and the JSON Schema Specification Authors BSD-style notice, plus the refresh procedure | the refresh procedure states that a vendored document may never be edited without updating its pin |
+| Shared module | `scripts/ografSchemaClosure.mjs` owns the pins, the vendored map, `verifyPinnedBytes` and `loadSchemaDocument({ online, root, readFile, fetchBytes })` | the repository root is injected, so the module is importable by the test runner |
+| Validator | `scripts/validate-ograf-manifest.mjs` resolves the closure locally by default and fetches only with `--online`; exit codes and wording unchanged | offline run passes even with a poisoned proxy; `--online` passes |
+| Tests | `src/tests/ografSchemaClosure.test.ts` — 8 cases | pins vs vendored bytes, tamper fails closed, unpinned URI refused, default mode never fetches, online mode verifies pins, CLI offline with poisoned proxy, CLI accepts an explicit path |
 
-## 3) ITEM 8 — WHAT THE PLAN PROPOSES
+No workflow change was needed: the existing CI step already runs `npm run validate:ograf`, which is now offline and deterministic.
 
-- The host import unit is a folder containing a manifest-rooted graphic, and the research record rejects a new exporter or fake host wrapper (`docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md:165,180`); the earlier clean-folder QA copies were hand-made (`reports/progress_049.md`).
-- Plan on `test/ograf-folder-qa-automation`: (1) a generator that materializes a compiled package into a clean folder QA root through the existing compiler and path-safety authorities, (2) an artifact comparison against the ZIP from the same compilation, (3) a **host-limited report** that states what was verified and that no real host was executed.
-- Constraints: no host contract invention, no change to the official exports, no writing into user folders without consent. On this machine the expected QA roots under `Desktop` are absent; nothing was created or moved while checking.
-
-## 4) VALIDATION
+## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| Study coverage | item 7 and item 8 both: current behaviour, measured evidence, options/plan, constraints, validation, approval gates |
-| Evidence basis | live pin check 8/8, byte measurement, upstream licence metadata, desktop QA-root existence check, `reports/progress_049.md`, `reports/progress_080.md`, `reports/progress_104.md`, `docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md` |
-| `node scripts/check-state-consistency.mjs` | PASS |
-| Repository changes | documentation only (`docs/design/**`, `reports/**`, roadmap, state docs, handoff) — no source, test, dependency or workflow change |
+| `npm run validate:ograf` | PASS — offline |
+| Same with `HTTP_PROXY/HTTPS_PROXY` poisoned | PASS — no fetch attempted |
+| `node scripts/validate-ograf-manifest.mjs --online` | PASS |
+| Tamper control (one byte added to a vendored document) | FAILS CLOSED — `Schema hash mismatch`; file restored |
+| Focused tests / full suite | PASS — 8 cases / 115 files, 1,708 tests |
+| Lint / TypeScript / build / release gate | clean / clean / PASS (no chunk advisory) / PASS (2 Chromium tests) |
 
-## 5) REVIEW AND SAFETY
+## 4) REVIEW
 
-- The study document goes through the same independent read-only review gate before any merge.
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release and npm metadata are unchanged; `package.json`, `package-lock.json` and the workflows are untouched; `Desktop\KCS` and `Desktop\ograf-graphics` were not modified.
+The change goes through the independent read-only review gate before any merge; the verdict is recorded here before the merge request.
 
-## 6) NEXT — FOUR DECISIONS
+## 5) SAFETY
 
-1. Item 7: **7-A** (vendor + offline) or **7-B** (verified cache), or record **7-C**.
-2. Item 7: confirm the existing CI step keeps calling `validate:ograf` unchanged once the closure is vendored (no workflow edit required).
-3. Item 8: approve implementing the generator + comparison + host-limited report on `test/ograf-folder-qa-automation`.
-4. Item 8: confirm the **QA root path policy**.
+- Pins, fail-closed checks, validator exit codes and wording: unchanged. `fixtures/ograf/minimal.ograf.json`: untouched.
+- No dependency, `package.json`, `package-lock.json` or workflow change.
+- Tag `v1.1.0-rc.1` (`46d2a3e…`), draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders: unchanged.
 
-With no decision, nothing is implemented and this study remains the Milestone E deliverable.
+## 6) NEXT
+
+One decision: merge `chore/ograf-offline-schema-closure` after the review passes. If no decision is given, nothing merges.

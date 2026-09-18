@@ -51,6 +51,8 @@
 - `reports/progress_112_dependency_warning_audit.md` — Milestone D item 9: dependency and warning maintenance audit (report only).
 - `reports/progress_113_warning_maintenance.md` — Option A warning maintenance and the local SQLite binding repair.
 - `reports/progress_114_ograf_qa_study.md` — Milestone E: OGraf offline schema closure study and folder QA plan.
+- `reports/progress_115_ograf_offline_schema_closure.md` — Milestone E item 7: vendored offline schema closure.
+- `reports/progress_116_ograf_folder_qa.md` — Milestone E item 8: folder QA automation.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.
 
 `docs/OMP_GLOBAL_TOOLING_STATUS.md` summarizes the secret-free global tooling state. Historical reports remain unchanged and are audit-trail documents, not first-read current state.

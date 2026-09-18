@@ -262,8 +262,16 @@ describe('Lottie import — dimensions and fallbacks (review round)', () => {
 
     const codes = importLottieDocument(JSON.stringify(document)).diagnostics.map((entry) => entry.code);
 
-    expect(codes).toContain('LOTTIE_MISSING_DOCUMENT_SIZE');
-    expect(codes).toContain('LOTTIE_MISSING_SOLID_PAINT');
+    expect(codes.filter((code) => code === 'LOTTIE_MISSING_DOCUMENT_SIZE')).toHaveLength(1);
+    expect(codes.filter((code) => code === 'LOTTIE_MISSING_SOLID_PAINT')).toHaveLength(1);
+
+    const halfSized = baseDocument([{ ty: 3, nm: 'Null', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } }]) as Record<string, unknown>;
+    delete halfSized.h;
+    const halfCodes = importLottieDocument(JSON.stringify(halfSized)).diagnostics.map((entry) => entry.code);
+
+    expect(halfCodes.filter((code) => code === 'LOTTIE_MISSING_DOCUMENT_SIZE')).toHaveLength(1);
+    // A layer type that has no solid paint at all must not be reported for one.
+    expect(halfCodes).not.toContain('LOTTIE_MISSING_SOLID_PAINT');
   });
 
   it('stays silent when a document declares its size and its solids are complete', () => {

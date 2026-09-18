@@ -1,20 +1,21 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 12 Product Half
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 First Slice (Lottie Import Core)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The item-12 product half, continuing the validated import boundary:
+The first implementation slice of the approved Lottie mapping design (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`): the **import core**. It maps a Lottie document to a normal KCS `SceneData` plus a loss report — document timing, shape/solid/null layers, transforms, paths, primitives, fill/stroke/trim, and the segment-to-keyframe easing rules. Everything it does not convert is **reported**, never guessed:
 
-- **Compatibility matrix, executed** — `src/tests/importCompatibilityMatrix.test.ts` proves each supported document kind: scene v1/v2 apply with no report, the legacy project applies and reports exactly one migration warning, a scene never reports a migration, and a non-project document is refused.
-- **Legacy migrations are reported** — a successful legacy import carries the `KCS_IMPORT_LEGACY_MIGRATED` warning, shown as an `info` toast with its code, message and action.
-- **Autosave goes through the boundary** — the `localStorage` restore validates first: a corrupted or tampered entry is refused with a console warning naming the code, and the defaults stay in place.
-- **Legacy fields are narrowed** — `LegacyProjectDocument` types the optional fields it reads as `unknown`, and consumers narrow with `typeof`/guards instead of the previous `any`.
+- Lottie's `o` on keyframe k becomes `bezierOut` on that keyframe and its `i` becomes `bezierIn` on the **next** one; `h: 1` maps to `hold`; a segment without handles is `linear`; roving and expression-driven segments are reported and fall back to linear.
+- Precomps, text, images, effects, expressions, masks and track mattes are reported and skipped (the approved first-cut decisions), with the design's limits (512 keyframes per channel, 4096 vertices, 32 MB) enforced as reports rather than silent truncation.
+- Untrusted input is handled like the project import boundary: size limit, JSON syntax, and a depth-bounded prototype-key walk.
+
+No UI entry point is wired yet; the following slices (masks/mattes, text/image/precomp, the import entry point with the report-before-replace UX) each need their own approval.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_121_kcs_import_product_half.md` — the task record (scope, changes, validation, residual risks)
+- `progress_123_lottie_import_core.md` — the task record (scope, changes, validation, residual risks)
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
@@ -25,7 +26,7 @@ The item-12 product half, continuing the validated import boundary:
 
 ## Deliberately not included
 
-Source, test and design files are intentionally omitted (they live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test and design files are intentionally omitted (they live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 

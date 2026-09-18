@@ -1,0 +1,524 @@
+import { describe, expect, it } from 'vitest';
+import { importLottieDocument } from '../interop/lottie/mapDocument';
+import { LOTTIE_IMPORT_LIMITS } from '../interop/lottie/diagnostics';
+
+/**
+ * Contract tests for the Lottie import core (Milestone F, item 10, first slice).
+ *
+ * They pin the decisions the design fixes: document timing, the segment-to-keyframe
+ * easing split, hold segments, the linear fallback for unsupported segments, and
+ * that everything the slice does not convert is *reported* rather than guessed.
+ */
+const baseDocument = (layers: unknown[], overrides: Record<string, unknown> = {}) => ({
+  v: '5.7.4',
+  fr: 24,
+  ip: 0,
+  op: 48,
+  w: 800,
+  h: 600,
+  nm: 'Fixture',
+  layers,
+  ...overrides,
+});
+
+const solidLayer = (overrides: Record<string, unknown> = {}) => ({
+  ty: 1,
+  nm: 'Solid',
+  sc: '#336699',
+  sw: 100,
+  sh: 100,
+  ks: {
+    o: { k: 100 },
+    r: { k: 0 },
+    p: { k: 10 },
+    s: { k: 200 },
+  },
+  ...overrides,
+});
+
+const codes = (diagnostics: { code: string }[]) => diagnostics.map((entry) => entry.code);
+
+describe('Lottie import — document level', () => {
+  it('maps timing, size and name into a KCS scene', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([solidLayer()])));
+
+    expect(result.ok).toBe(true);
+    expect(result.scene?.fps).toBe(24);
+    expect(result.scene?.totalFrames).toBe(48);
+    expect(result.scene?.width).toBe(800);
+    expect(result.scene?.height).toBe(600);
+    expect(result.scene?.name).toBe('Fixture');
+  });
+
+  it('rounds a fractional frame rate and reports it', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([solidLayer()], { fr: 23.976 })));
+
+    expect(result.scene?.fps).toBe(24);
+    expect(codes(result.diagnostics)).toContain('LOTTIE_FRACTIONAL_FPS');
+  });
+
+  it('shifts keyframes when the document starts after frame 0 and reports it', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([solidLayer()], { ip: 24, op: 72 })));
+
+    expect(result.scene?.totalFrames).toBe(48);
+    expect(codes(result.diagnostics)).toContain('LOTTIE_IN_POINT_SHIFT');
+  });
+
+  it('refuses a document without usable timing', () => {
+    const result = importLottieDocument(JSON.stringify({ nm: 'broken' }));
+
+    expect(result.ok).toBe(false);
+    expect(codes(result.diagnostics)).toEqual(['LOTTIE_MISSING_TIMING']);
+  });
+});
+
+describe('Lottie import — transforms', () => {
+  it('maps static transform values with percent scaling', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([solidLayer()])));
+    const layer = result.scene?.layers[0];
+
+    expect(layer?.x).toBe(10);
+    expect(layer?.scaleX).toBe(2);
+    expect(layer?.opacity).toBe(1);
+    expect(result.scene?.tracks).toHaveLength(0);
+  });
+
+  it('splits one Lottie segment across the two keyframes it connects', () => {
+    const layer = solidLayer({
+      ks: {
+        o: { k: 100 },
+        r: { k: 0 },
+        s: { k: 100 },
+        p: {
+          a: 0,
+          k: [
+            { t: 0, s: [0], e: [100], o: { x: 0.25, y: 0.1 }, i: { x: 0.75, y: 0.9 } },
+            { t: 24, s: [100] },
+          ],
+        },
+      },
+    });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const track = result.scene?.tracks[0];
+    const xKeyframes = track?.channels.x ?? [];
+
+    expect(xKeyframes).toHaveLength(2);
+    expect(xKeyframes[0]).toMatchObject({ frame: 0, value: 0, easing: 'bezier', bezierOut: { x: 0.25, y: 0.1 } });
+    expect(xKeyframes[1]).toMatchObject({ frame: 24, value: 100, easing: 'bezier', bezierIn: { x: 0.75, y: 0.9 } });
+  });
+
+  it('maps a hold segment to the hold easing without inventing handles', () => {
+    const layer = solidLayer({
+      ks: {
+        o: { k: 100 },
+        r: { k: 0 },
+        s: { k: 100 },
+        p: { a: 0, k: [{ t: 0, s: [0], h: 1, o: { x: 0, y: 0 }, i: { x: 1, y: 1 } }, { t: 12, s: [50] }] },
+      },
+    });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const first = result.scene?.tracks[0]?.channels.x?.[0];
+
+    expect(first?.easing).toBe('hold');
+    expect(first?.bezierOut).toBeUndefined();
+  });
+
+  it('falls back to linear and reports a roving segment', () => {
+    const layer = solidLayer({
+      ks: {
+        o: { k: 100 },
+        r: { k: 0 },
+        s: { k: 100 },
+        p: { a: 0, k: [{ t: 0, s: [0], r: 1 }, { t: 12, s: [50] }] },
+      },
+    });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+
+    expect(result.scene?.tracks[0]?.channels.x?.[0]?.easing).toBe('linear');
+    expect(codes(result.diagnostics)).toContain('LOTTIE_ROVING_KEYFRAME');
+  });
+
+  it('reports when a channel exceeds the keyframe limit and keeps the first keyframes', () => {
+    const keyframes = Array.from({ length: LOTTIE_IMPORT_LIMITS.keyframesPerChannel + 5 }, (_, index) => ({ t: index, s: [index] }));
+    const layer = solidLayer({
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { a: 0, k: keyframes } },
+    });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+
+    expect(result.scene?.tracks[0]?.channels.x).toHaveLength(LOTTIE_IMPORT_LIMITS.keyframesPerChannel);
+    expect(codes(result.diagnostics)).toContain('LOTTIE_KEYFRAME_LIMIT');
+  });
+});
+
+describe('Lottie import — dimensions and fallbacks (review round)', () => {
+  it('maps each vector dimension to its own channel instead of aliasing x into y', () => {
+    const layer = solidLayer({ ks: { o: { k: 100 }, r: { k: 0 }, s: { k: [100, 200] }, p: { k: [15, 25] } } });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const imported = result.scene?.layers[0];
+
+    expect(imported?.x).toBe(15);
+    expect(imported?.y).toBe(25);
+    expect(imported?.scaleX).toBe(1);
+    expect(imported?.scaleY).toBe(2);
+  });
+
+  it('maps non-uniform keyframed scale per dimension', () => {
+    const layer = solidLayer({
+      ks: {
+        o: { k: 100 },
+        r: { k: 0 },
+        p: { k: 0 },
+        s: { k: [{ t: 0, s: [100, 200] }, { t: 12, s: [300, 400] }] },
+      },
+    });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const track = result.scene?.tracks[0];
+
+    expect(track?.channels.scaleX?.map((keyframe) => keyframe.value)).toEqual([1, 3]);
+    expect(track?.channels.scaleY?.map((keyframe) => keyframe.value)).toEqual([2, 4]);
+  });
+
+  it('keeps a roving segment linear even when it carries handles, and reports it', () => {
+    const layer = solidLayer({
+      ks: {
+        o: { k: 100 },
+        r: { k: 0 },
+        s: { k: 100 },
+        p: { k: [{ t: 0, s: [0], r: 1, o: { x: 0.25, y: 0.1 }, i: { x: 0.75, y: 0.9 } }, { t: 12, s: [50] }] },
+      },
+    });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const keyframes = result.scene?.tracks[0]?.channels.x ?? [];
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_ROVING_KEYFRAME');
+    expect(keyframes[0]?.easing).toBe('linear');
+    expect(keyframes[0]?.bezierOut).toBeUndefined();
+    expect(keyframes[1]?.bezierIn).toBeUndefined();
+  });
+
+  it('pins both handles on the middle keyframe of a two-segment curve', () => {
+    const layer = solidLayer({
+      ks: {
+        o: { k: 100 },
+        r: { k: 0 },
+        s: { k: 100 },
+        p: {
+          k: [
+            { t: 0, s: [0], o: { x: 0.1, y: 0.2 }, i: { x: 0.3, y: 0.4 } },
+            { t: 12, s: [50], o: { x: 0.5, y: 0.6 }, i: { x: 0.7, y: 0.8 } },
+            { t: 24, s: [100] },
+          ],
+        },
+      },
+    });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const keyframes = result.scene?.tracks[0]?.channels.x ?? [];
+
+    expect(keyframes[1]).toMatchObject({ frame: 12, value: 50, bezierIn: { x: 0.3, y: 0.4 }, bezierOut: { x: 0.5, y: 0.6 } });
+  });
+
+  it('subtracts the layer start time and clamps pre-in-point keyframes to frame 0', () => {
+    const layer = solidLayer({ st: 6, ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: [{ t: 0, s: [0] }, { t: 20, s: [80] }] } } });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const keyframes = result.scene?.tracks[0]?.channels.x ?? [];
+
+    expect(keyframes.map((keyframe) => keyframe.frame)).toEqual([0, 14]);
+  });
+
+  it('reports a parent chain deeper than the hierarchy limit', () => {
+    const deepLayers = Array.from({ length: 40 }, (_, index) => solidLayer({ parent: index === 0 ? undefined : index - 1 }));
+    const result = importLottieDocument(JSON.stringify(baseDocument(deepLayers)));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_HIERARCHY_LIMIT');
+  });
+
+  it('reports a layer in/out range, a skewed layer and auto-orient instead of ignoring them', () => {
+    const layer = solidLayer({ ip: 6, op: 40, ao: 1, ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 }, sk: { k: 10 }, sa: { k: 5 } } });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+
+    expect(codes(result.diagnostics)).toEqual(
+      expect.arrayContaining(['LOTTIE_LAYER_TIMING', 'LOTTIE_UNSUPPORTED_SKEW', 'LOTTIE_UNSUPPORTED_AUTO_ORIENT']),
+    );
+  });
+
+  it('reports unreadable shape payloads instead of keeping silent defaults', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'rc' }, { ty: 'fl' }, { ty: 'st' }, { nm: 'no type' }, { ty: 'sh', ks: { k: { c: true, v: [] } } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+
+    expect(codes(result.diagnostics)).toEqual(
+      expect.arrayContaining(['LOTTIE_UNREADABLE_SIZE', 'LOTTIE_UNREADABLE_COLOUR', 'LOTTIE_UNREADABLE_STROKE_WIDTH', 'LOTTIE_UNREADABLE_SHAPE', 'LOTTIE_UNREADABLE_PATH']),
+    );
+  });
+
+  it('reports a document without a declared size and a solid without its paint', () => {
+    const document = baseDocument([{ ty: 1, nm: 'Block', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } }]) as Record<string, unknown>;
+    delete document.w;
+    delete document.h;
+
+    const codes = importLottieDocument(JSON.stringify(document)).diagnostics.map((entry) => entry.code);
+
+    expect(codes.filter((code) => code === 'LOTTIE_MISSING_DOCUMENT_SIZE')).toHaveLength(1);
+    expect(codes.filter((code) => code === 'LOTTIE_MISSING_SOLID_PAINT')).toHaveLength(1);
+
+    const halfSized = baseDocument([{ ty: 3, nm: 'Null', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } }]) as Record<string, unknown>;
+    delete halfSized.h;
+    const halfCodes = importLottieDocument(JSON.stringify(halfSized)).diagnostics.map((entry) => entry.code);
+
+    expect(halfCodes.filter((code) => code === 'LOTTIE_MISSING_DOCUMENT_SIZE')).toHaveLength(1);
+    // A layer type that has no solid paint at all must not be reported for one.
+    expect(halfCodes).not.toContain('LOTTIE_MISSING_SOLID_PAINT');
+  });
+
+  it('stays silent when a document declares its size and its solids are complete', () => {
+    const document = baseDocument([
+      { ty: 1, nm: 'Block', sc: '#336699', sw: 320, sh: 180, ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } },
+    ]);
+    const codes = importLottieDocument(JSON.stringify(document)).diagnostics.map((entry) => entry.code);
+
+    expect(codes).not.toContain('LOTTIE_MISSING_DOCUMENT_SIZE');
+    expect(codes).not.toContain('LOTTIE_MISSING_SOLID_PAINT');
+  });
+
+  it('stays silent for default stroke styles and reports dashes, trim modes and a missing stroke colour', () => {
+    const defaultStroke = {
+      ty: 4,
+      nm: 'Default',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'st', w: { k: 2 }, o: { k: 100 }, c: { k: [0, 0, 1] }, lc: { k: 2 }, lj: { k: 2 } }],
+    };
+    const special = {
+      ty: 4,
+      nm: 'Special',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [
+        { ty: 'st', w: { k: 2 }, o: { k: 100 }, c: { k: [0, 0, 1] }, d: { k: [3, 2] } },
+        { ty: 'st', w: { k: 2 }, o: { k: 100 }, c: { k: 'red' } },
+        { ty: 'tm', s: { k: 0 }, e: { k: 100 }, m: 2 },
+      ],
+    };
+
+    const plain = importLottieDocument(JSON.stringify(baseDocument([defaultStroke])));
+    expect(plain.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNSUPPORTED_STROKE_STYLE')).toHaveLength(0);
+
+    const codes = importLottieDocument(JSON.stringify(baseDocument([special]))).diagnostics.map((entry) => entry.code);
+    expect(codes).toContain('LOTTIE_UNSUPPORTED_STROKE_DASH');
+    expect(codes).toContain('LOTTIE_UNREADABLE_COLOUR');
+    expect(codes).toContain('LOTTIE_UNSUPPORTED_TRIM_MODE');
+  });
+
+  it('reports an animated path as animated rather than unreadable', () => {
+    const animatedPath = {
+      ty: 4,
+      nm: 'Animated path',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [
+        {
+          ty: 'sh',
+          ks: {
+            k: [
+              { t: 0, s: [{ v: [[0, 0], [10, 0], [10, 10]], i: [[0, 0], [0, 0], [0, 0]], o: [[0, 0], [0, 0], [0, 0]], c: true }] },
+              { t: 10, s: [{ v: [[0, 0], [20, 0], [20, 20]], i: [[0, 0], [0, 0], [0, 0]], o: [[0, 0], [0, 0], [0, 0]], c: true }] },
+            ],
+          },
+        },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([animatedPath])));
+    const codes = result.diagnostics.map((entry) => entry.code);
+
+    expect(codes).toContain('LOTTIE_UNSUPPORTED_ANIMATED_SHAPE');
+    expect(codes).not.toContain('LOTTIE_UNREADABLE_PATH');
+  });
+
+  it('does not report a static shape as animated', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'fl', c: { k: [1, 0, 0] }, o: { k: 100 } }, { ty: 'st', w: { k: 2 }, o: { k: 100 }, c: { k: [0, 0, 1] } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+
+    expect(result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNSUPPORTED_ANIMATED_SHAPE')).toHaveLength(0);
+  });
+
+  it('reports an animated fill opacity, stroke opacity, corner radius and trim offset', () => {
+    const animated = { k: [{ t: 0, s: [0] }, { t: 10, s: [50] }] };
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [
+        { ty: 'fl', c: { k: [1, 0, 0] }, o: animated },
+        { ty: 'st', w: { k: 2 }, o: animated },
+        { ty: 'rc', s: { k: [10, 10] }, r: animated },
+        { ty: 'tm', s: { k: 0 }, e: { k: 100 }, o: animated },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+    const reported = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNSUPPORTED_ANIMATED_SHAPE');
+
+    expect(reported).toHaveLength(4);
+  });
+
+  it('maps a solid layer colour and size, and reports its anchor', () => {
+    const layer = solidLayer({ sc: '#123456', sw: 320, sh: 180, ks: { a: { k: [10, 10] }, o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const imported = result.scene?.layers[0];
+
+    expect(imported?.fillColor).toBe('#123456');
+    expect(imported?.width).toBe(320);
+    expect(imported?.height).toBe(180);
+    expect(codes(result.diagnostics)).toContain('LOTTIE_UNSUPPORTED_ANCHOR');
+  });
+
+  it('maps stroke opacity and rect corner radius, and reports cap/join and shape position', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [
+        { ty: 'rc', s: { k: [100, 50] }, r: { k: 8 }, p: { k: [5, 5] } },
+        { ty: 'st', w: { k: 2 }, o: { k: 40 }, lc: 2, lj: 3 },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+    const imported = result.scene?.layers[0];
+
+    expect(imported?.borderRadius).toBe(8);
+    expect(imported?.strokeOpacity).toBe(0.4);
+    expect(codes(result.diagnostics)).toEqual(expect.arrayContaining(['LOTTIE_UNSUPPORTED_SHAPE_POSITION', 'LOTTIE_UNSUPPORTED_STROKE_STYLE']));
+  });
+
+  it('reports an animated trim and an animated fill instead of reading them as static', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'tm', s: { k: [{ t: 0, s: [0] }, { t: 10, s: [50] }] }, e: { k: 100 } }, { ty: 'fl', c: { k: [{ t: 0, s: [1, 0, 0] }] } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+    const animated = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNSUPPORTED_ANIMATED_SHAPE');
+
+    expect(animated).toHaveLength(2);
+  });
+
+  it('converts keyframed opacity from percent to a factor', () => {
+    const layer = solidLayer({ ks: { o: { k: [{ t: 0, s: [100] }, { t: 12, s: [50] }] }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+
+    expect(result.scene?.tracks[0]?.channels.opacity?.map((keyframe) => keyframe.value)).toEqual([1, 0.5]);
+  });
+
+  it('reports a path above the vertex limit instead of importing it', () => {
+    const vertices = Array.from({ length: 5000 }, (_, index) => ({ x: index, y: index }));
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'sh', ks: { k: { c: true, v: vertices, i: vertices, o: vertices } } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_PATH_LIMIT');
+    expect(result.scene?.layers[0]?.path).toBeUndefined();
+  });
+
+  it('maps the stroke colour when the document provides one', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'st', w: { k: 2 }, c: { k: [0, 0, 1] } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+
+    expect(result.scene?.layers[0]?.strokeColor).toBe('#0000ff');
+    expect(result.scene?.layers[0]?.strokeWidth).toBe(2);
+  });
+});
+
+describe('Lottie import — shapes and unsupported constructs', () => {
+  it('maps a path, a rectangle, a fill, a stroke and a trim item', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 50 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [
+        { ty: 'rc', s: { k: [120, 80] } },
+        { ty: 'fl', c: { k: [1, 0, 0] }, o: { k: 50 } },
+        { ty: 'st', w: { k: 3 } },
+        { ty: 'tm', s: { k: 10 }, e: { k: 90 }, o: { k: 5 } },
+        { ty: 'sh', ks: { k: { c: true, v: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }], i: [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }], o: [{ x: 0, y: 0 }, { x: 0, y: 0 }, { x: 0, y: 0 }] } } },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+    const layer = result.scene?.layers[0];
+
+    expect(layer?.width).toBe(120);
+    expect(layer?.height).toBe(80);
+    expect(layer?.fillColor).toBe('#ff0000');
+    expect(layer?.fillOpacity).toBe(0.5);
+    expect(layer?.strokeWidth).toBe(3);
+    expect(layer?.trimPathStart).toBe(0.1);
+    expect(layer?.trimPathEnabled).toBe(true);
+    expect(layer?.path?.points).toHaveLength(3);
+  });
+
+  it('reports unsupported layer types instead of importing them', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([{ ty: 0, nm: 'Precomp', refId: 'comp_0', ks: {} }])));
+
+    expect(result.ok).toBe(false);
+    expect(codes(result.diagnostics)).toContain('LOTTIE_UNSUPPORTED_LAYER_TYPE');
+    expect(codes(result.diagnostics)).toContain('LOTTIE_EMPTY_SCENE');
+  });
+
+  it('reports effects, expressions, masks and track mattes on a supported layer', () => {
+    const layer = solidLayer({ ef: [{ nm: 'Blur' }], hasExpressions: true, hasMask: true, tt: 1, td: 1 });
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+
+    expect(codes(result.diagnostics)).toEqual(
+      expect.arrayContaining(['LOTTIE_UNSUPPORTED_EFFECT', 'LOTTIE_UNSUPPORTED_EXPRESSION', 'LOTTIE_UNSUPPORTED_MASK', 'LOTTIE_UNSUPPORTED_TRACK_MATTE']),
+    );
+    expect(result.scene?.layers).toHaveLength(1);
+  });
+
+  it('reports an unsupported shape item and still imports the layer', () => {
+    const shapeLayer = { ty: 4, nm: 'Shape', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } }, shapes: [{ ty: 'rp', c: { k: 3 } }] };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_UNSUPPORTED_SHAPE');
+    expect(result.scene?.layers).toHaveLength(1);
+  });
+});
+
+describe('Lottie import — untrusted input', () => {
+  it('refuses malformed JSON', () => {
+    expect(codes(importLottieDocument('{ nope').diagnostics)).toEqual(['LOTTIE_MALFORMED_JSON']);
+  });
+
+  it('refuses a prototype-sensitive key', () => {
+    const result = importLottieDocument('{"fr":24,"op":10,"__proto__":{"x":1}}');
+
+    expect(result.ok).toBe(false);
+    expect(codes(result.diagnostics)).toEqual(['LOTTIE_UNSAFE_KEY']);
+  });
+
+  it('refuses a document above the size limit before parsing it', () => {
+    const oversized = `{"pad":"${'x'.repeat(LOTTIE_IMPORT_LIMITS.characters)}"}`;
+
+    expect(codes(importLottieDocument(oversized).diagnostics)).toEqual(['LOTTIE_DOCUMENT_TOO_LARGE']);
+  });
+
+  it('reports a parent that is not an already-imported layer', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([solidLayer({ parent: 5 })])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_BROKEN_PARENT');
+    expect(result.scene?.layers[0]?.parentId).toBeUndefined();
+  });
+});

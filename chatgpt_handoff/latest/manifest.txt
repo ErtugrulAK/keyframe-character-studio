@@ -1,15 +1,16 @@
-# KCS ChatGPT Upload Manifest — Milestone F Item 12 Product Half
+# KCS ChatGPT Upload Manifest — Milestone F Item 10 First Slice (Lottie Import Core)
 
 Clean refreshed: YES
-Bundle purpose: Milestone F item 12 product half — compatibility matrix executed, legacy migration reported, autosave routed through the validated boundary
+Bundle purpose: Milestone F item 10 first slice — the Lottie import core and its loss report (no UI entry point yet)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/kcs-import-product-half on top of main 44218a62 (Milestone F stack merged)
-Task record: reports/progress_121_kcs_import_product_half.md
-What changed: src/utils/importValidation.ts (LegacyProjectDocument optional fields typed unknown; KCS_IMPORT_LEGACY_MIGRATED warning on a successful legacy import), src/hooks/useSerialization.ts (importProject returns the validation diagnostics; legacy fields narrowed; autosave restore validated through the boundary; unused local isSceneData removed), src/components/Header/HeaderBar.tsx (warning shown as an info toast with code/message/action), src/tests/importCompatibilityMatrix.test.ts (new, 5 cases), src/tests/useSerialization.test.ts (autosave refusal case)
-Validation: matrix PASS (5); serialization suite PASS (96); full suite PASS (119 files / 1,736 tests); lint clean; tsc clean; build PASS; qa:release PASS (2 Chromium tests); state check PASS
-Not changed: dependencies, package.json, package-lock.json, workflows, the autosave key/writer, the export paths, the OGraf import rejection
-Still plan-only: a unified import entry that shows the full report before replacing work; item 10 implementation (Lottie importer, design approved); OGraf package import
+Branch: feat/lottie-import-core on top of main 06a5dfcf (after the CI hotfix)
+Task record: reports/progress_123_lottie_import_core.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
+What changed: src/interop/lottie/temporal.ts (frame mapping and the segment-to-keyframe handle split, hold, linear fallback with reports for roving/expression, keyframe limit), src/interop/lottie/diagnostics.ts (loss-report contract and first-cut limits), src/interop/lottie/mapDocument.ts (importLottieDocument: untrusted input handling, document timing, layer/transform/shape mapping, everything else reported), src/tests/lottieImport.test.ts (17 cases)
+Approved first-cut decisions honoured: precomps reported and skipped; layer in/out reported, not converted; the design's limits (512 keyframes per channel, 8 masks, 32 levels, 4096 vertices, 32 MB); the report carries codes, paths and actions
+Not changed: no UI, export, dependency, package.json, lockfile or workflow change
+Validation: npm run build (tsc -b && vite build) PASS; lottie core suite PASS (17); full suite PASS (120 files / 1,753 tests); lint clean; qa:release PASS (2 Chromium tests); state check PASS
+Next slices (each needs its own approval): masks and track mattes; text/image/precomp; the import entry point with the report-before-replace UX
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -18,28 +19,27 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-12 product-half final response
-- progress_121_kcs_import_product_half.md — the task record
+- OMP_FINAL_RESPONSE.md — the item-10 first-slice final response
+- progress_123_lottie_import_core.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test and script files (they live in the repository)
+- Source, test and design files (they live in the repository, including docs/design/KCS_LOTTIE_IMPORT_MAPPING.md)
 - package.json, package-lock.json, ci.yml, release-smoke.yml files
-- Older reports, design contracts, current-state/release documents
+- Older reports, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- npx vitest run src/tests/importCompatibilityMatrix.test.ts: PASS — 5 cases
-- npx vitest run src/tests/useSerialization.test.ts: PASS — 96 cases
-- npm test: PASS — 119 files / 1,736 tests; npm run lint: clean; npx tsc --noEmit: clean
-- npm run build: PASS; npm run qa:release: PASS (2 Chromium tests)
-- node scripts/check-state-consistency.mjs: PASS
+- npm run build (tsc -b && vite build): PASS — the type gate CI runs
+- npx vitest run src/tests/lottieImport.test.ts: PASS — 17 cases
+- npm test: PASS — 120 files / 1,753 tests; npm run lint: clean
+- npm run qa:release: PASS (2 Chromium tests); node scripts/check-state-consistency.mjs: PASS
 
-Next: the independent review of this branch, then the user merge decision. Item 10's implementation is the next large slice.
+Next: the independent review of this branch, then the user merge decision, followed by the remaining item-10 slices.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

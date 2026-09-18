@@ -143,7 +143,7 @@ describe('useSerialization Hook', () => {
     };
 
     const imported = result.current.importProject(JSON.stringify(mockProject));
-    
+
     expect(imported.ok).toBe(true);
     expect(mockSetFps).toHaveBeenCalledWith(24);
     expect(mockSetSceneTitleState).toHaveBeenCalledWith('Imported Scene');

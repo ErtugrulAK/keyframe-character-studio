@@ -11,7 +11,8 @@ The approved item-12 product-half step, continuing `reports/progress_119_kcs_imp
 ## 3. What changed
 
 - **`src/utils/importValidation.ts`**
-  - `LegacyProjectDocument` now names the optional fields the legacy application path reads (`fps`, `totalFrames`, `projectResolution`, `motionTemplates`, `activeTemplateId`, `coordinateSystem`, `lastSavedTime`, `sceneTitle`, `name`) as `unknown`, so each consumer narrows with `typeof`/guards instead of the previous `any`. `tracks` and `characterParts` stay proven arrays.
+  - `LegacyProjectDocument` now names the optional fields the legacy application path reads (`fps`, `totalFrames`, `projectResolution`, `motionTemplates`, `activeTemplateId`, `coordinateSystem`, `lastSavedTime`, `sceneTitle`, `name`) as `unknown`, and **every one of them goes through a narrowing helper** before it reaches state: `readOptionalNumber` (finite number), `readOptionalString`, `readProjectResolution` (both dimensions finite and positive), `readMotionTemplates` (array of objects with string `id`/`name`), and the existing `isSceneCoordinateSystem` guard for the coordinate contract. `tracks` and `characterParts` stay proven arrays.
+  - A review round found the first version narrowed only some of those fields (truthiness plus casts on `projectResolution`, the import branch's `fps`/`totalFrames`, `motionTemplates`, `activeTemplateId` and `coordinateSystem`); this branch closes that gap, so the report's claim is now true rather than aspirational.
   - A successful legacy import now carries one **warning** diagnostic, `KCS_IMPORT_LEGACY_MIGRATED`, with the action ("review the imported template and export it again to store the current format"). A current scene import stays report-free.
 - **`src/hooks/useSerialization.ts`**
   - `importProject` returns the validation's diagnostics with the success result, so warnings reach the UI.

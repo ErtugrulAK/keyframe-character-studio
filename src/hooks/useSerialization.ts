@@ -5,9 +5,31 @@ import { initializeIdCounter } from '../utils/idGenerator';
 import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
 import { convertLegacyKeyframesToChannels } from '../utils/legacyKeyframeConversion';
 import { AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
-import { DEFAULT_SCENE_COORDINATE_SYSTEM, migrateSceneCoordinates } from '../utils/coordinateMigration';
+import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/coordinateMigration';
 import { normalizeMotionTemplates } from '../utils/motionTemplates';
 import { migrateSceneLayerV6 } from '../utils/v6Migration';
+
+/**
+ * Narrowing helpers for the legacy document's optional fields. The import
+ * boundary types them `unknown` on purpose, so every consumer checks the
+ * shape before handing a value to state — truthiness alone would let a
+ * string or an object through.
+ */
+const readOptionalNumber = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
+const readOptionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+const readProjectResolution = (value: unknown): { width: number; height: number } | undefined => {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const candidate = value as { width?: unknown; height?: unknown };
+  const width = readOptionalNumber(candidate.width);
+  const height = readOptionalNumber(candidate.height);
+  return width !== undefined && height !== undefined && width > 0 && height > 0 ? { width, height } : undefined;
+};
+const readMotionTemplates = (value: unknown): MotionTemplate[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const templates = value.filter((entry): entry is MotionTemplate =>
+    typeof entry === 'object' && entry !== null && typeof (entry as { id?: unknown }).id === 'string' && typeof (entry as { name?: unknown }).name === 'string');
+  return templates.length > 0 ? templates : undefined;
+};
 import { normalizeBezierPath } from '../utils/bezierPath';
 import { validateImportedDocument, type ImportResult } from '../utils/importValidation';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
@@ -378,13 +400,18 @@ export const useSerialization = ({
         // Legacy AnimationProject format (backward compat)
         const parsed = validation.document.project;
         const hasLegacyStickman = parsed.characterParts.some((part) => (part as { type?: unknown }).type === 'head' || (part as { type?: unknown }).type === 'torso');
+        const legacyMotionTemplates = readMotionTemplates(parsed.motionTemplates);
         if (!hasLegacyStickman) {
-          if (parsed.projectResolution) setProjectResolution(parsed.projectResolution as { width: number; height: number });
+          const savedResolution = readProjectResolution(parsed.projectResolution);
+          if (savedResolution) setProjectResolution(savedResolution);
           setTracks(parsed.tracks.map(migrateTrack));
           setCharacterParts(parsed.characterParts);
-          if (typeof parsed.fps === 'number') setFps(parsed.fps);
-          if (typeof parsed.totalFrames === 'number') setTotalFrames(parsed.totalFrames);
-          setLastSavedAt(typeof parsed.lastSavedTime === 'string' ? new Date(parsed.lastSavedTime) : new Date());
+          const savedFps = readOptionalNumber(parsed.fps);
+          if (savedFps !== undefined) setFps(savedFps);
+          const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
+          if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
+          const savedAt = readOptionalString(parsed.lastSavedTime);
+          setLastSavedAt(savedAt ? new Date(savedAt) : new Date());
 
           const allIds: string[] = [];
           parsed.characterParts.forEach((p: any) => allIds.push(p.id));
@@ -395,8 +422,8 @@ export const useSerialization = ({
               Object.values(t.channels).forEach((ch: any) => (ch as any[])?.forEach((pk: any) => allIds.push(pk.id)));
             }
           });
-          if (parsed.motionTemplates) {
-            parsed.motionTemplates.forEach((template: any) => allIds.push(template.id));
+          for (const template of legacyMotionTemplates ?? []) {
+            allIds.push(template.id);
           }
           initializeIdCounter(allIds);
         } else {
@@ -453,15 +480,13 @@ export const useSerialization = ({
       // Legacy AnimationProject format (backward compat)
       const parsed = validation.document.project;
       {
-        const rawName = defaultName || (typeof parsed.sceneTitle === 'string' ? parsed.sceneTitle : undefined) || (typeof parsed.name === 'string' ? parsed.name : undefined) || 'Imported Template';
+        const rawName = defaultName || readOptionalString(parsed.sceneTitle) || readOptionalString(parsed.name) || 'Imported Template';
         const templateName = rawName.replace(/\.json$/i, '').trim() || 'Imported Template';
         const newId = `tmpl_${Date.now()}`;
 
-        const importedMotionTemplates = normalizeMotionTemplates(
-          (parsed.motionTemplates && parsed.motionTemplates.length > 0)
-            ? parsed.motionTemplates
-            : DEFAULT_MOTION_TEMPLATES,
-        );
+        const declaredCoordinateSystem = isSceneCoordinateSystem(parsed.coordinateSystem) ? parsed.coordinateSystem : DEFAULT_SCENE_COORDINATE_SYSTEM;
+        const declaredTemplates = readMotionTemplates(parsed.motionTemplates);
+        const importedMotionTemplates = normalizeMotionTemplates(declaredTemplates ?? DEFAULT_MOTION_TEMPLATES);
 
         const initialSeqId = importedMotionTemplates[0].id;
         const importedTracks = parsed.tracks.map(migrateTrack);
@@ -470,23 +495,27 @@ export const useSerialization = ({
         setTemplateCanvasStore((prev: any) => ({
           ...prev,
           [activeProjectTemplateId]: { characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem },
-          [newId]: { characterParts: importedParts, tracks: importedTracks, motionTemplates: importedMotionTemplates, activeTemplateId: initialSeqId, coordinateSystem: parsed.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM },
+          [newId]: { characterParts: importedParts, tracks: importedTracks, motionTemplates: importedMotionTemplates, activeTemplateId: initialSeqId, coordinateSystem: declaredCoordinateSystem },
         }));
 
         setProjectTemplates((prev: any) => [...prev, { id: newId, name: templateName }]);
         setCharacterParts(importedParts);
         setTracks(importedTracks);
         setMotionTemplates(importedMotionTemplates);
-        setActiveTemplateIdState(parsed.activeTemplateId && importedMotionTemplates.some((template: MotionTemplate) => template.id === parsed.activeTemplateId)
-          ? parsed.activeTemplateId
+        const declaredActiveTemplateId = readOptionalString(parsed.activeTemplateId);
+        setActiveTemplateIdState(declaredActiveTemplateId && importedMotionTemplates.some((template) => template.id === declaredActiveTemplateId)
+          ? declaredActiveTemplateId
           : initialSeqId);
         setActiveProjectTemplateIdState(newId);
         setSceneTitleState(templateName);
 
-        if (parsed.projectResolution) setProjectResolution(parsed.projectResolution);
+        const declaredResolution = readProjectResolution(parsed.projectResolution);
+        if (declaredResolution) setProjectResolution(declaredResolution);
         setCoordinateSystem(DEFAULT_SCENE_COORDINATE_SYSTEM);
-        if (parsed.fps) setFps(parsed.fps);
-        if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
+        const declaredFps = readOptionalNumber(parsed.fps);
+        if (declaredFps !== undefined) setFps(declaredFps);
+        const declaredTotalFrames = readOptionalNumber(parsed.totalFrames);
+        if (declaredTotalFrames !== undefined) setTotalFrames(declaredTotalFrames);
 
         return { ok: true, diagnostics: validation.diagnostics };
       }

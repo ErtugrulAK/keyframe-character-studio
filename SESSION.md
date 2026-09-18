@@ -27,7 +27,7 @@ Item 12’s product half (compatibility matrix, legacy migration report, autosav
 
 - `npm test`: PASS — 119 files / 1,736 tests. `npm run lint`: clean. `npx tsc --noEmit`: clean. `npm run build`: PASS.
 - Evaluator profile harness: `npx vitest run --config perf/vitest.perf.config.ts` PASS (report printed); baseline recorded in `reports/progress_118_evaluator_profiling.md`.
-- Import boundary: `src/tests/importValidation.test.ts` PASS (9 cases); the serialization suite PASS (95 cases).
+- Import boundary and product half: `src/tests/importValidation.test.ts` PASS (9 cases), `src/tests/importCompatibilityMatrix.test.ts` PASS (5 cases); the serialization suite PASS (96 cases, including the autosave refusal).
 - `npm run validate:ograf`: PASS offline (pin-verified vendored closure); the same command passes with a poisoned proxy, proving no fetch is attempted; `--online` also passes.
 - `npm run qa:release`: PASS — 2 Chromium tests. `node scripts/check-state-consistency.mjs`: PASS.
 - Folder QA: generate PASS; `--verify` on an unchanged copy PASS; `--verify` after a one-byte edit FAILS with `content drift`; `--verify` with a stray file FAILS with `extra file`; invalid manifest FAILS with the inspected copy and report preserved; `--out <repository root>` is refused.

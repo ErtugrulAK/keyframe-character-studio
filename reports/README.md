@@ -45,3 +45,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_119_kcs_import_boundary.md` — Milestone F item 12 first step: validated KCS import boundary.
 - `progress_120_lottie_mapping_design.md` — Milestone F item 10: Lottie import mapping design.
 - `progress_121_kcs_import_product_half.md` — Milestone F item 12 product half: compatibility matrix, migration report and the autosave boundary.
+- `progress_121_kcs_import_product_half.md` — Milestone F item 12 product half: compatibility matrix, migration report and the autosave boundary.

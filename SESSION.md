@@ -4,7 +4,7 @@
 
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 
-Checkout: `test/ograf-folder-qa-automation` (Milestone E item 8), stacked on `chore/ograf-offline-schema-closure` (item 7), on top of synchronized `main` at `46021eece4714fa8880ae4d3018e8f8f064c3a81`.
+Checkout: `docs/milestone-f-interop-study` on top of synchronized `main` at `22335a5dc899…` (Milestone E merged and green).
 
 ## Completed
 
@@ -21,7 +21,7 @@ Checkout: `test/ograf-folder-qa-automation` (Milestone E item 8), stacked on `ch
 
 ## Current work
 
-Both Milestone E branches await the independent review verdict and the user merge decision; the stacked branch `test/ograf-folder-qa-automation` is the merge unit (it contains item 7 and item 8). Nothing beyond those two approved scopes is authorized.
+The Milestone F study is delivered on this branch and awaits the user merge decision plus the three per-item design/plan approvals. Nothing beyond the study is authorized.
 
 ## Validation
 

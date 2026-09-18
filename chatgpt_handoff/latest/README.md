@@ -1,20 +1,22 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone E Item 8 (Folder QA Automation)
+# KCS Minimal ChatGPT Upload Bundle — Milestone F (Interop and Evaluator Study)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The approved item-8 plan of the Milestone E study: a repeatable way to produce and check a clean folder QA copy of an OGraf package — the host import unit — without inventing a host contract, a new exporter, or a fake host wrapper.
+Milestone F (roadmap items 10, 11 and 12) as **study and plan only** (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, task record `reports/progress_117_interop_study.md`):
 
-- `scripts/generate-ograf-folder-qa.mjs` generates a clean folder QA copy from a `.zip` or extracted package directory, excludes QA sidecars (`*.diagnostics.json`), validates the manifest through the existing offline validator (pin-verified schema closure), compares every file byte-for-byte on disk, and writes a host-limited report. `--verify <folder>` checks an existing copy without writing.
-- The QA root is an explicit required argument, and a root that would overwrite the repository is refused. The source package is only read.
-- `src/tests/ografFolderQa.test.ts` pins the contract in 8 cases, including byte drift, an extra file, an invalid manifest, and the repository-overwrite guard.
+- **Item 10 (Lottie import mapping):** the deliverable contract — source construct → canonical field, mapping kind (lossless / lossy-with-report / unsupported-and-preserved), exact temporal and easing conversion rules, and one loss entry per construct in the existing diagnostics shape. Expressions, effects, 3D/cameras, text animators, audio and image sequences are preserved and reported, not converted.
+- **Item 11 (evaluator profiling):** measurement before caching — deterministic parametric scenes, wall-clock per pass on the pure utilities and through the React path, a `scripts/` harness with warm-up and p50/p95, and a revision-pinned report that is evidence rather than a gate.
+- **Item 12 (editable KCS import):** a product half (compatibility matrix, migration only through the existing authorities, round-trip guarantee, one reporting import entry point) and a security half (typed parse instead of `JSON.parse` into `any`, size/shape limits, existing path-safety authorities, report-don't-repair).
+
+Nothing is implemented, and each item states the approval it needs before any code.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_116_ograf_folder_qa.md` — the task record (scope, changes, validation, residual risks)
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone E status
+- `progress_117_interop_study.md` — the task record (scope, findings, validation, decisions)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with milestones A–E complete and F next
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -24,12 +26,12 @@ The approved item-8 plan of the Milestone E study: a repeatable way to produce a
 
 ## Deliberately not included
 
-Source, test and script files are intentionally omitted (the generator and its tests live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test and script files are intentionally omitted (the study lives at `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
 ## Staging note
 
-`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be. The folder QA tool writes only where `--out` or `--verify` explicitly points.
+`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in this folder are its sources.

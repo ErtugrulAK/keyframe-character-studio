@@ -40,3 +40,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_114_ograf_qa_study.md` — Milestone E: OGraf offline schema closure study and downstream folder QA plan.
 - `progress_115_ograf_offline_schema_closure.md` — Milestone E item 7, Option 7-A: vendored offline schema closure.
 - `progress_116_ograf_folder_qa.md` — Milestone E item 8: folder QA generator, artifact comparison and host-limited report.
+- `progress_117_interop_study.md` — Milestone F: Lottie mapping, evaluator profiling and editable KCS import study.

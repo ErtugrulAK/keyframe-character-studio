@@ -1,16 +1,16 @@
-# KCS ChatGPT Upload Manifest — Milestone E Item 8 (Folder QA Automation)
+# KCS ChatGPT Upload Manifest — Milestone F (Interop and Evaluator Study)
 
 Clean refreshed: YES
-Bundle purpose: Milestone E item 8 — the approved downstream folder QA automation (generator, artifact comparison, host-limited report)
+Bundle purpose: Milestone F items 10, 11 and 12 — Lottie import mapping design, evaluator performance profiling plan, and editable KCS import product/security plan; study and plan only
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: test/ograf-folder-qa-automation, stacked on chore/ograf-offline-schema-closure (item 7), on top of main 46021eece4714fa8880ae4d3018e8f8f064c3a81
-Task record: reports/progress_116_ograf_folder_qa.md
-What changed: scripts/generate-ograf-folder-qa.mjs (generate and --verify modes: clean folder QA copy, sidecar exclusion, manifest validation through the existing offline validator, byte-for-byte comparison on disk, host-limited report, explicit required QA root, repository-overwrite guard) and src/tests/ografFolderQa.test.ts (8 cases)
-Not changed: the official OGraf Package, OGraf Single File (Legacy), JSON export and KCS project export; no dependency, package.json, package-lock.json or workflow change; no host contract invented
-Validation: generate PASS; --verify unchanged PASS (exit 0); --verify after a one-byte edit FAILS (content drift); --verify with a stray file FAILS (extra file); invalid manifest FAILS with the copy and report preserved; --out <repository root> REFUSED; focused tests 8/8; full suite 116 files / 1,716 tests; lint clean; tsc clean; build PASS; validate:ograf PASS (offline closure); qa:release PASS (2 Chromium tests)
-QA roots: an explicit required argument; nothing was written to any user folder, and the Desktop kcs-ograf-* roots still do not exist on this machine
-Still approval-gated: the merge of this branch and of its item-7 base; the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
+Branch: docs/milestone-f-interop-study on top of main 22335a5dc899 (Milestone E merged, CI green)
+Study: docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md; task record: reports/progress_117_interop_study.md
+Item 10 findings: the interop principle already exists in docs/interop/V6_LOTTIE_MAPPING.md; the study fixes the deliverable contract (source construct to canonical field, mapping kind lossless / lossy-with-report / unsupported-and-preserved, exact temporal and easing rules, one loss entry per construct in the existing diagnostics shape)
+Item 11 findings: evaluation is pure and uncached (interpolateChannel and applyEasing in src/utils/defaults.ts:53,141; evaluateFrame 165 lines; evaluateTransform 174; evaluateLayerMasks 50; channelKeyframeGroups 81) with no benchmark harness; the study specifies deterministic parametric scenes, a scripts/ harness, p50/p95 reporting pinned to the revision, and evidence-not-gate semantics
+Item 12 findings: import accepts a .kcs scene or the legacy project shape, rejects OGraf manifests/packages with a toast, and parses through JSON.parse into any at src/hooks/useSerialization.ts:443; the study defines the compatibility matrix, migration through existing authorities, round-trip guarantee, typed parse at the boundary, size/shape limits and report-don't-repair
+Implemented in this task: NOTHING (documentation only; no source, test, script, dependency or workflow change)
+Approval gates: item 10 design approval; item 11 approval to build the harness only (caching separate); item 12 product/security approval plus the first editable document kinds
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -19,31 +19,27 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-8 final response
-- progress_116_ograf_folder_qa.md — the task record
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
+- OMP_FINAL_RESPONSE.md — the Milestone F final response
+- progress_117_interop_study.md — the task record
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document; milestones A–E complete, F next)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test and script files (the generator and its tests live in the repository)
-- package.json, package-lock.json, ci.yml, release-smoke.yml files
+- The study document itself lives in the repository at docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md (the bundle carries its summary in the final response and the task record)
+- Source, test, script, package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- node scripts/generate-ograf-folder-qa.mjs --package <dir> --out <tmp>/qa: PASS — clean copy with the sidecar excluded and a host-limited report
-- the same tool with --verify <copy>: PASS (exit 0); after a one-byte edit: exit 1, content drift; after adding a stray file: exit 1, extra file
-- invalid manifest package: exit 1 with Result: INVALID in the report
-- --out <repository root>: refused with an explicit message
-- npx vitest run src/tests/ografFolderQa.test.ts: PASS — 8 cases
-- npm test: PASS — 116 files / 1,716 tests; npm run lint: clean; npx tsc --noEmit: clean
-- npm run build: PASS; npm run validate:ograf: PASS (offline, pin-verified); npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS
+- Repository changes: documentation only — docs/design/**, reports/**, the roadmap, the state documents and the handoff bundle
+- No source, test, script, dependency, package or workflow change
+- Evidence basis: every cited file and line exists at main = 22335a5 (checked while writing)
 
-Next: the independent review of this branch and of its item-7 base, then the user merge decision. If no decision is given, nothing merges.
+Next: three decisions — item 10 (Lottie mapping design scope), item 11 (build the profiling harness only), item 12 (editable-KCS-import plan and the first editable document kinds). With no decision, nothing is implemented.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

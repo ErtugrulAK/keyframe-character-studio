@@ -17,72 +17,69 @@
 
 ## 1. OMP Final Response
 
-# KCS Milestone E Item 8 — Final Response (Folder QA Automation)
+# KCS Milestone F — Interop and Evaluator Study Final Response
 
-This file is the OMP final response for the item-8 task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+This file is the OMP final response for the Milestone F study task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** the approved item-8 plan is implemented on branch `test/ograf-folder-qa-automation`, stacked on the item-7 branch (`chore/ograf-offline-schema-closure`), base `main` = `46021eece4714fa8880ae4d3018e8f8f064c3a81`. It awaits the review and the user merge decision.
-- **Report:** `reports/progress_116_ograf_folder_qa.md`.
+- **Status:** Milestone F (items 10, 11, 12) is delivered as **research and design only** — `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, with the task record in `reports/progress_117_interop_study.md`. Nothing is implemented; each item states the approval it needs first.
+- Main is at `22335a5` with Milestone E merged and its CI run green; this study sits on branch `docs/milestone-f-interop-study` and is subject to the user merge decision.
 
-## 2) WHAT CHANGED
+## 2) WHAT THE STUDY ESTABLISHES
 
-`scripts/generate-ograf-folder-qa.mjs` is one Node-side tool with two modes:
+**Verified current state.** The interop principle already exists (`docs/interop/V6_LOTTIE_MAPPING.md`: KCS stays canonical, unsupported data is preserved, never silently reinterpreted). The channels-only export policy is in force (`src/hooks/useSerialization.ts:114-116`). Evaluation is pure and uncached (`interpolateChannel` and `applyEasing` in `src/utils/defaults.ts:53,141`; `evaluateFrame` 165 lines, `evaluateTransform` 174, `evaluateLayerMasks` 50, `channelKeyframeGroups` 81) with no benchmark harness. Import accepts a `.kcs` scene or the legacy project shape, rejects OGraf manifests/packages with a toast, and parses through `JSON.parse` into `any` before narrowing (`src/hooks/useSerialization.ts:443`).
 
-- `--package <zip|dir> --out <qa-root>` writes the clean folder QA copy (the host import unit) to `<qa-root>/<folder>` and then verifies what it wrote;
-- `--package <zip|dir> --verify <existing-folder>` verifies an existing copy without writing anything.
-
-Both modes read the package from a `.zip` (the editor's output, through the existing `fflate`) or an extracted directory, exclude QA sidecars (`*.diagnostics.json`), validate the manifest by running the existing validator against the copy's own manifest file (offline, pin-verified closure from item 7), compare every file byte-for-byte on disk, and write a host-limited report. The QA root is a required explicit argument; a root that would overwrite the repository is refused; the source package is only read. `toSafeFolderName` mirrors the browser-side `sanitizeOGrafId` policy.
-
-`src/tests/ografFolderQa.test.ts` pins the contract in 8 cases: clean copy with the sidecar excluded and full parity in the report; `--verify` passes unchanged; `--verify` fails on byte drift; `--verify` fails on an extra file; invalid manifest fails the run while the inspected copy and report remain; the repository-overwrite root is refused; an explicit root is required; the folder-name policy matches the package id policy.
-
-No host contract, host profile, exporter, dependency or workflow change.
+| Item | Deliverable contract the study fixes | Approval needed before code |
+|---|---|---|
+| 10 — Lottie import mapping | Source construct → canonical field, mapping kind (lossless / lossy-with-report / unsupported-and-preserved), exact temporal and easing conversion rules, one loss entry per construct in the existing diagnostics shape; expressions, effects, 3D/cameras, text animators, audio and image sequences are preserved and reported, not converted | Design approval (design gate applies to interchange work) |
+| 11 — Evaluator profiling | Deterministic parametric scenes, wall-clock per evaluation pass on the pure utilities **and** through the React path, a `scripts/` harness with warm-up and p50/p95 plus a revision-pinned report; the report is evidence, not a gate, and no threshold is asserted before the first run | Approval to build the harness only; caching is separate |
+| 12 — Editable KCS import | Product half: compatibility matrix per document kind, migration only through the existing authorities, round-trip guarantee with a fixture per kind, one import entry point that reports before replacing work. Security half: typed parse instead of `JSON.parse` into `any`, size/shape limits, existing path-safety authorities honoured, report-don't-repair | Product/security approval, plus the document kinds that must be editable first |
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| Generate from a package directory | PASS — clean copy (`assets/`, `graphic.js`, `<name>.ograf.json`, `scene.kcs`), sidecar excluded, report written |
-| `--verify` on the unchanged copy | PASS — exit 0 |
-| `--verify` after editing one byte | FAILS — exit 1, `content drift: scene.kcs` |
-| `--verify` after adding a stray file | FAILS — exit 1, `extra file in the copy: stray.json` |
-| Invalid manifest package | FAILS — exit 1, report records `Result: INVALID` |
-| `--out <repository root>` | REFUSED — exit 1 |
-| Focused tests / full suite | PASS — 8 cases / 116 files, 1,716 tests |
-| Lint / TypeScript / build / validate:ograf / release gate | clean / clean / PASS / PASS (offline) / PASS (2 Chromium tests) |
+| Study coverage | items 10, 11 and 12 each have their contract, validation plan and approval gate |
+| Evidence basis | every cited file and line exists at `main` = `22335a5` (checked while writing) |
+| Implementation | none, by design |
+| Repository changes | documentation only: `docs/design/**`, `reports/**`, roadmap, state documents, handoff |
+| `node scripts/check-state-consistency.mjs` | PASS |
 
 ## 4) REVIEW
 
-The change goes through the independent read-only review gate before any merge; the verdict is recorded here before the merge request.
+The study goes through the independent read-only review gate before any merge; the verdict is recorded here before the merge request.
 
 ## 5) SAFETY
 
-- The official exports are untouched; the tool only reads a package and writes to an explicitly named QA root. No dependency, `package.json`, `package-lock.json` or workflow change.
-- The expected QA roots under `Desktop` still do not exist on this machine; verification ran in the system temporary directory. Nothing was written to any user folder.
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders: unchanged.
+- No source, test, script, dependency, `package.json`, lockfile or workflow change; the canonical model, channel semantics, OGraf package format and export paths are untouched.
+- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
 
-## 6) NEXT
+## 6) NEXT — THREE DECISIONS
 
-One decision: merge `test/ograf-folder-qa-automation` (and its item-7 base) after the review passes. If no decision is given, nothing merges.
+1. Item 10: approve the Lottie mapping design scope (construct list and loss-report contract).
+2. Item 11: approve building the profiling harness only, with the first scene parameters named.
+3. Item 12: approve the editable-KCS-import product/security plan and name the first editable document kinds.
+
+With no decision, nothing is implemented and this study remains the Milestone F deliverable.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone E Item 8 (Folder QA Automation)
+# KCS ChatGPT Upload Manifest — Milestone F (Interop and Evaluator Study)
 
 Clean refreshed: YES
-Bundle purpose: Milestone E item 8 — the approved downstream folder QA automation (generator, artifact comparison, host-limited report)
+Bundle purpose: Milestone F items 10, 11 and 12 — Lottie import mapping design, evaluator performance profiling plan, and editable KCS import product/security plan; study and plan only
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: test/ograf-folder-qa-automation, stacked on chore/ograf-offline-schema-closure (item 7), on top of main 46021eece4714fa8880ae4d3018e8f8f064c3a81
-Task record: reports/progress_116_ograf_folder_qa.md
-What changed: scripts/generate-ograf-folder-qa.mjs (generate and --verify modes: clean folder QA copy, sidecar exclusion, manifest validation through the existing offline validator, byte-for-byte comparison on disk, host-limited report, explicit required QA root, repository-overwrite guard) and src/tests/ografFolderQa.test.ts (8 cases)
-Not changed: the official OGraf Package, OGraf Single File (Legacy), JSON export and KCS project export; no dependency, package.json, package-lock.json or workflow change; no host contract invented
-Validation: generate PASS; --verify unchanged PASS (exit 0); --verify after a one-byte edit FAILS (content drift); --verify with a stray file FAILS (extra file); invalid manifest FAILS with the copy and report preserved; --out <repository root> REFUSED; focused tests 8/8; full suite 116 files / 1,716 tests; lint clean; tsc clean; build PASS; validate:ograf PASS (offline closure); qa:release PASS (2 Chromium tests)
-QA roots: an explicit required argument; nothing was written to any user folder, and the Desktop kcs-ograf-* roots still do not exist on this machine
-Still approval-gated: the merge of this branch and of its item-7 base; the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
+Branch: docs/milestone-f-interop-study on top of main 22335a5dc899 (Milestone E merged, CI green)
+Study: docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md; task record: reports/progress_117_interop_study.md
+Item 10 findings: the interop principle already exists in docs/interop/V6_LOTTIE_MAPPING.md; the study fixes the deliverable contract (source construct to canonical field, mapping kind lossless / lossy-with-report / unsupported-and-preserved, exact temporal and easing rules, one loss entry per construct in the existing diagnostics shape)
+Item 11 findings: evaluation is pure and uncached (interpolateChannel and applyEasing in src/utils/defaults.ts:53,141; evaluateFrame 165 lines; evaluateTransform 174; evaluateLayerMasks 50; channelKeyframeGroups 81) with no benchmark harness; the study specifies deterministic parametric scenes, a scripts/ harness, p50/p95 reporting pinned to the revision, and evidence-not-gate semantics
+Item 12 findings: import accepts a .kcs scene or the legacy project shape, rejects OGraf manifests/packages with a toast, and parses through JSON.parse into any at src/hooks/useSerialization.ts:443; the study defines the compatibility matrix, migration through existing authorities, round-trip guarantee, typed parse at the boundary, size/shape limits and report-don't-repair
+Implemented in this task: NOTHING (documentation only; no source, test, script, dependency or workflow change)
+Approval gates: item 10 design approval; item 11 approval to build the harness only (caching separate); item 12 product/security approval plus the first editable document kinds
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -91,32 +88,28 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-8 final response
-- progress_116_ograf_folder_qa.md — the task record
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
+- OMP_FINAL_RESPONSE.md — the Milestone F final response
+- progress_117_interop_study.md — the task record
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document; milestones A–E complete, F next)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test and script files (the generator and its tests live in the repository)
-- package.json, package-lock.json, ci.yml, release-smoke.yml files
+- The study document itself lives in the repository at docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md (the bundle carries its summary in the final response and the task record)
+- Source, test, script, package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- node scripts/generate-ograf-folder-qa.mjs --package <dir> --out <tmp>/qa: PASS — clean copy with the sidecar excluded and a host-limited report
-- the same tool with --verify <copy>: PASS (exit 0); after a one-byte edit: exit 1, content drift; after adding a stray file: exit 1, extra file
-- invalid manifest package: exit 1 with Result: INVALID in the report
-- --out <repository root>: refused with an explicit message
-- npx vitest run src/tests/ografFolderQa.test.ts: PASS — 8 cases
-- npm test: PASS — 116 files / 1,716 tests; npm run lint: clean; npx tsc --noEmit: clean
-- npm run build: PASS; npm run validate:ograf: PASS (offline, pin-verified); npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS
+- Repository changes: documentation only — docs/design/**, reports/**, the roadmap, the state documents and the handoff bundle
+- No source, test, script, dependency, package or workflow change
+- Evidence basis: every cited file and line exists at main = 22335a5 (checked while writing)
 
-Next: the independent review of this branch and of its item-7 base, then the user merge decision. If no decision is given, nothing merges.
+Next: three decisions — item 10 (Lottie mapping design scope), item 11 (build the profiling harness only), item 12 (editable-KCS-import plan and the first editable document kinds). With no decision, nothing is implemented.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -124,23 +117,25 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone E Item 8 (Folder QA Automation)
+# KCS Minimal ChatGPT Upload Bundle — Milestone F (Interop and Evaluator Study)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The approved item-8 plan of the Milestone E study: a repeatable way to produce and check a clean folder QA copy of an OGraf package — the host import unit — without inventing a host contract, a new exporter, or a fake host wrapper.
+Milestone F (roadmap items 10, 11 and 12) as **study and plan only** (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, task record `reports/progress_117_interop_study.md`):
 
-- `scripts/generate-ograf-folder-qa.mjs` generates a clean folder QA copy from a `.zip` or extracted package directory, excludes QA sidecars (`*.diagnostics.json`), validates the manifest through the existing offline validator (pin-verified schema closure), compares every file byte-for-byte on disk, and writes a host-limited report. `--verify <folder>` checks an existing copy without writing.
-- The QA root is an explicit required argument, and a root that would overwrite the repository is refused. The source package is only read.
-- `src/tests/ografFolderQa.test.ts` pins the contract in 8 cases, including byte drift, an extra file, an invalid manifest, and the repository-overwrite guard.
+- **Item 10 (Lottie import mapping):** the deliverable contract — source construct → canonical field, mapping kind (lossless / lossy-with-report / unsupported-and-preserved), exact temporal and easing conversion rules, and one loss entry per construct in the existing diagnostics shape. Expressions, effects, 3D/cameras, text animators, audio and image sequences are preserved and reported, not converted.
+- **Item 11 (evaluator profiling):** measurement before caching — deterministic parametric scenes, wall-clock per pass on the pure utilities and through the React path, a `scripts/` harness with warm-up and p50/p95, and a revision-pinned report that is evidence rather than a gate.
+- **Item 12 (editable KCS import):** a product half (compatibility matrix, migration only through the existing authorities, round-trip guarantee, one reporting import entry point) and a security half (typed parse instead of `JSON.parse` into `any`, size/shape limits, existing path-safety authorities, report-don't-repair).
+
+Nothing is implemented, and each item states the approval it needs before any code.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_116_ograf_folder_qa.md` — the task record (scope, changes, validation, residual risks)
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone E status
+- `progress_117_interop_study.md` — the task record (scope, findings, validation, decisions)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with milestones A–E complete and F next
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -150,13 +145,13 @@ The approved item-8 plan of the Milestone E study: a repeatable way to produce a
 
 ## Deliberately not included
 
-Source, test and script files are intentionally omitted (the generator and its tests live in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test and script files are intentionally omitted (the study lives at `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
 ## Staging note
 
-`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be. The folder QA tool writes only where `--out` or `--verify` explicitly points.
+`C:\Users\ertugrul.ak\Desktop\KCS` is the user's project/asset workspace, not a handoff destination. Nothing was copied there, and nothing should be.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in this folder are its sources.
 
@@ -164,59 +159,47 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 116 — Downstream Folder QA Automation (Milestone E, item 8)
+# Progress 117 — Milestone F Study: Lottie Mapping, Evaluator Profiling, Editable KCS Import
 
 ## 1. Scope
 
-Implements the approved item-8 plan from `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`: a repeatable way to produce and check a clean folder QA copy of an OGraf package — the host import unit — without inventing a host contract, a new exporter, or a fake host wrapper.
+Milestone F (roadmap items 10, 11, 12) delivered as **research and design only**: `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`. Nothing is implemented; each item states the approval it needs before any code is written.
 
 ## 2. Branch
 
-- `test/ograf-folder-qa-automation`, stacked on `chore/ograf-offline-schema-closure` (item 7), base `main` = `46021eece4714fa8880ae4d3018e8f8f064c3a81`.
+- `docs/milestone-f-interop-study`, based on `main` at `22335a5dc899…` (Milestone E merged, CI run green).
 
-## 3. What changed
+## 3. What the study establishes
 
-- **`scripts/generate-ograf-folder-qa.mjs`** — one Node-side tool with two modes:
-  - `--package <zip|dir> --out <qa-root>` writes the clean folder copy to `<qa-root>/<folder>` and then verifies what it wrote.
-  - `--package <zip|dir> --verify <existing-folder>` verifies an existing copy without writing anything.
-  - Both modes read the package from a `.zip` (the editor's output, via the existing `fflate`) or from an extracted directory, exclude QA sidecars (`*.diagnostics.json`) from the copy, validate the manifest by running the existing validator against the copy's own manifest file, verify every package file byte-for-byte on disk (missing, drifted and extra files are all reported), and write a host-limited report.
-  - `--name` overrides the folder name, which is otherwise derived with the same policy as the browser-side `sanitizeOGrafId` (`toSafeFolderName`, exported for tests).
-  - The QA root is an explicit required argument, and the tool refuses a root that would overwrite the repository; the source package is only read.
-- **`src/tests/ografFolderQa.test.ts`** — 8 focused cases: clean copy with the sidecar excluded and full parity in the report; `--verify` passes on an unchanged copy; `--verify` fails on byte drift; `--verify` fails on an extra file; an invalid manifest fails the run while the inspected copy and report still exist; a QA root that would overwrite the repository is refused; an explicit root is required; the folder-name policy matches the package id policy.
+**Current state (verified at this revision).** The interop boundary already exists as a principle in `docs/interop/V6_LOTTIE_MAPPING.md` (KCS stays canonical; unsupported data is preserved, never silently reinterpreted). The channels-only export policy is already in force (`src/hooks/useSerialization.ts:114-116`). Channel evaluation is pure and uncached across `interpolateChannel` (`src/utils/defaults.ts:53`), `applyEasing` (`:141`), `evaluateFrame` (165 lines), `evaluateTransform` (174), `evaluateLayerMasks` (50) and `channelKeyframeGroups` (81), and there is no benchmark harness. Project import accepts a `.kcs` scene or the legacy `AnimationProject` shape, rejects OGraf manifests/packages with a toast, and parses through `JSON.parse` into `any` before `isSceneData` narrows it (`src/hooks/useSerialization.ts:443`).
 
-No host contract, host profile, exporter, dependency or workflow change: the tool reuses the canonical package layout and the pin-verified offline schema closure from item 7.
+**Item 10 — Lottie import mapping design.** The study fixes the deliverable's contract: for every canonical field, the source Lottie construct, a mapping kind (lossless / lossy-with-report / unsupported-and-preserved), the exact temporal and easing conversion rule, and one loss entry per construct in the existing Task 105 diagnostics shape. Expressions, effects, 3D/cameras, text animators, audio and image sequences are explicitly *preserved and reported*, not converted. Validation: round-trip fixtures with a loss manifest, per-construct golden tests, and a UI smoke that shows the loss report before the import is accepted.
 
-## 4. Validation (branch `test/ograf-folder-qa-automation`)
+**Item 11 — evaluator performance profiling plan.** Measurement before caching: deterministic parametric scenes built from the existing factories, wall-clock per evaluation pass on the pure utilities *and* through the React path so framework overhead is visible, a `scripts/` harness (not a Vitest test) with warm-up and p50/p95 plus a JSON/markdown report pinned to the revision and machine. The report is evidence, not a gate; no threshold is asserted before the first run, and caching/workers/semantic changes are out of scope.
 
-| Check | Command | Result |
-|---|---|---|
-| Generate | `node scripts/generate-ograf-folder-qa.mjs --package <dir> --out <tmp>/qa` | PASS — clean copy (`assets/`, `graphic.js`, `<name>.ograf.json`, `scene.kcs`), sidecar excluded, report written |
-| Verify, unchanged copy | same tool with `--verify <copy>` | PASS — exit 0 |
-| Verify, tampered copy | edit one byte in the copy, re-run `--verify` | FAILS — exit 1, `content drift: scene.kcs` |
-| Verify, extra file | add a file to the copy, re-run `--verify` | FAILS — exit 1, `extra file in the copy: stray.json` |
-| Invalid manifest | package whose manifest is `{"name":"broken"}` | FAILS — exit 1, report records `Result: INVALID` |
-| Unsafe root | `--out <repository root>` | REFUSED — exit 1 with an explicit message |
-| Focused tests | `npx vitest run src/tests/ografFolderQa.test.ts` | PASS — 8 cases |
-| Full suite | `npm test` | PASS — 116 files / 1,716 tests |
-| Lint / TypeScript / build | `npm run lint`, `npx tsc --noEmit`, `npm run build` | clean / clean / PASS |
-| OGraf validation / release gate | `npm run validate:ograf`, `npm run qa:release` | PASS (offline closure) / PASS — 2 Chromium tests |
+**Item 12 — editable KCS import plan.** A product half (compatibility matrix per document kind, migration only through the existing authorities `detectSceneCoordinateSystem` / `migrateSceneCoordinates` / `convertLegacyKeyframesToChannels`, a round-trip guarantee with a fixture per kind, and one import entry point that reports before replacing the user's work) and a security half (typed parse at the boundary instead of `JSON.parse` into `any`, size/shape limits, existing path-safety authorities honoured, and report-don't-repair).
+
+## 4. Validation of this deliverable
+
+| Check | Result |
+|---|---|
+| Study covers items 10, 11, 12 | yes — mapping contract, measurement plan, product+security plan, each with its own approval gate |
+| Claims cite real authorities | every referenced file and line exists at `main` = `22335a5` (verified while writing: `useSerialization.ts:114-116,443`, `defaults.ts:53,141`, `HeaderBar.tsx:267,283`, evaluator line counts, `docs/interop/V6_LOTTIE_MAPPING.md`) |
+| Implementation | **none**, by design |
+| Repository changes | documentation only (`docs/design/**`, `reports/**`, roadmap, state documents, handoff bundle) |
+| State consistency | `node scripts/check-state-consistency.mjs` PASS after the updates |
 
 ## 5. Protected invariants
 
-- The official `OGraf Package`, `OGraf Single File (Legacy)`, JSON export and KCS project export are untouched; the tool only reads a package and writes to an explicitly named QA root.
-- No dependency, `package.json`, `package-lock.json` or workflow change.
-- The expected QA roots under `Desktop` still do not exist on this machine; verification ran in the system temporary directory, and nothing was written to any user folder.
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, global OMP configuration and user folders are unchanged.
+- No source, test, script, dependency, `package.json`, lockfile or workflow change.
+- The canonical model, channel semantics, OGraf package format and existing export paths are untouched.
+- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, global OMP configuration and the user's folders are unchanged.
 
-## 6. Residual risks
+## 6. Open decisions
 
-- **No host is executed.** The report states this explicitly; folder parity and manifest validity are proven, host acceptance is not.
-- **The sidecar rule is a name pattern** (`*.diagnostics.json`). A future sidecar with a different name would be copied and then reported as an extra file by `--verify` rather than silently ignored.
-- **Folder names are sanitized** to a conservative character set, so a package whose display name is non-ASCII gets an ASCII folder name; `--name` overrides it when the host requires something specific.
-
-## 7. Next
-
-- Both Milestone E branches (item 7 and item 8) await the independent review and the user merge decision.
+1. Item 10: approve the Lottie mapping design scope (construct list + loss-report contract).
+2. Item 11: approve the profiling harness only (no caching) and the first scene parameters.
+3. Item 12: approve the product/security plan as the basis for implementation and name the document kinds that must be editable first.
 
 ---
 
@@ -226,7 +209,7 @@ No host contract, host profile, exporter, dependency or workflow change: the too
 
 ## Repository state
 
-- Checkout: branch `test/ograf-folder-qa-automation` (Milestone E item 8), stacked on `chore/ograf-offline-schema-closure` (item 7), on top of `main` at `46021eece4714fa8880ae4d3018e8f8f064c3a81`, which matches `origin/main`. The merged warning-maintenance work and the Milestone E study are in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` and `docs/milestone-e-ograf-qa-study` are retained as review artefacts.
+- Checkout: branch `docs/milestone-f-interop-study` on top of `main` at `22335a5dc899…`, which matches `origin/main`; Milestone E is merged and green. The merged warning-maintenance work and the Milestone E study are in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` and `docs/milestone-e-ograf-qa-study` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -251,7 +234,7 @@ Full Vitest (116 files / 1,716 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. **Milestone E — merge decision**: item 7 (7-A offline schema closure) is implemented on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and item 8 (folder QA automation) on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`); the stacked branch is the merge unit, and both need the user decision. The QA root is an explicit required argument. Already merged: the Milestone D Option A warning maintenance (W1, W2, W3, W4, W5, the D9-2 checker rule and the local SQLite binding repair) at `3923141`. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
+1. **Milestone F — study decisions**: the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`) and await the merge decision for the document itself. Per item: approve the Lottie mapping design scope (item 10), approve the profiling harness with no caching (item 11), and approve the editable-KCS-import product/security plan plus the document kinds that must be editable first (item 12). Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
 2. Milestone F stays plan-only (and anything in Milestone E beyond items 7 and 8 stays plan-only), and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -294,7 +277,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `46021eece4714fa8880ae4d3018e8f8f064c3a81`: milestones A, B, C, Milestone D item 6, the item-9 audit, the approved **Option A warning maintenance** and the Milestone E study are all merged (`main` CI green). Milestone E item 7 (**7-A offline schema closure**) is implemented on `chore/ograf-offline-schema-closure` and item 8 (folder QA automation) on `test/ograf-folder-qa-automation`; both await review and the merge decision, and nothing beyond them is authorized. The folder QA tool writes only to an explicitly named QA root and refuses a root that would overwrite the repository.
+Current `main` / `origin/main` is at `22335a5dc899…`: milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is delivered on `docs/milestone-f-interop-study` (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and is study-only: items 10, 11 and 12 each need their own approval before any code.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -365,7 +348,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9 stays behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and awaiting the merge decision, and everything beyond them (plus Milestone F) remains plan-only.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9 stays behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and merged at `22335a5`, and Milestone F is study-only until its items are approved separately.
 
 ## Milestone map and status
 
@@ -375,8 +358,8 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
 | D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. Follow-ups stay approval-gated: Option B (patch/minor updates + `npm audit fix`), Option C (TypeScript 7 / Vitest 5), the `engines` declaration and the npm-12 `allowScripts` pin |
-| E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **NEXT** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), both subject to review and the merge decision. **Plan only** for anything beyond those two approved scopes |
-| F — Architecture exploration only | 10, 11, 12 | — | Plan only |
+| E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), both subject to review and the merge decision. **Plan only** for anything beyond those two approved scopes |
+| F — Architecture exploration only | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for implementation until each item is approved separately |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -417,7 +400,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 
 ## Milestone F — Architecture exploration only (roadmap items 10, 11, 12)
 
-Research/design deliverables only: Lottie import mapping design, evaluator profiling plan, editable KCS import plan. No implementation without a separate explicit approval.
+Research/design deliverables only: Lottie import mapping design, evaluator profiling plan, editable KCS import plan. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **no implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code.
 
 ## Approval gates
 
@@ -512,13 +495,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 9684 bytes
-- `NEXT_SESSION.md` — 8956 bytes
-- `OMP_FINAL_RESPONSE.md` — 3609 bytes
-- `PROJECT_STATE.md` — 11606 bytes
-- `README.md` — 2793 bytes
-- `manifest.txt` — 4092 bytes
-- `progress_116_ograf_folder_qa.md` — 4763 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 10222 bytes
+- `NEXT_SESSION.md` — 8754 bytes
+- `OMP_FINAL_RESPONSE.md` — 4189 bytes
+- `PROJECT_STATE.md` — 11503 bytes
+- `README.md` — 3099 bytes
+- `manifest.txt` — 4081 bytes
+- `progress_117_interop_study.md` — 4452 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

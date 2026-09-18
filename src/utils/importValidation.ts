@@ -1,4 +1,5 @@
-import type { CharacterPart, SceneData, Track } from '../types/animator';
+import type { CharacterPart, Track } from '../types/animator';
+import type { SceneData } from '../types/composition';
 import { isPrototypeSensitiveKey } from './pathSafety';
 
 /**
@@ -106,11 +107,15 @@ const findPrototypeSensitiveKey = (value: unknown): { key: string; path: string 
   return undefined;
 };
 
-/** True for a current KCS scene document (a numeric `version` of at least 1). */
+/**
+ * True for a current KCS scene document: a numeric `version` of at least 1
+ * *and* the two arrays the scene contract requires. Checking `version` alone
+ * would accept a document the serializer cannot apply.
+ */
 const isSceneDocument = (value: unknown): value is SceneData => {
   const record = asRecord(value);
   if (!record) return false;
-  return typeof record.version === 'number' && record.version >= 1;
+  return typeof record.version === 'number' && record.version >= 1 && Array.isArray(record.layers) && Array.isArray(record.tracks);
 };
 
 /** True for the legacy project shape (a `tracks` and a `characterParts` array). */
@@ -122,7 +127,7 @@ const isLegacyProject = (value: unknown): value is LegacyProjectDocument => {
 
 const declaredLayerCount = (document: ImportedDocument): number =>
   document.kind === 'scene'
-    ? (document.scene.characterParts?.length ?? 0) + (document.scene.tracks?.length ?? 0)
+    ? document.scene.layers.length + document.scene.tracks.length
     : document.project.characterParts.length + document.project.tracks.length;
 
 /**

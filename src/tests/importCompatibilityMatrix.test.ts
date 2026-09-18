@@ -13,7 +13,7 @@ const SCENE_V1 = {
   totalFrames: 90,
   projectResolution: { width: 1920, height: 1080 },
   coordinateSystem: 'project-unit-center-v1',
-  characterParts: [{ id: 'part-1', name: 'Box', type: 'custom' }],
+  layers: [{ id: 'part-1', name: 'Box', type: 'custom', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 0, fillColor: '#fff', strokeColor: '#000' }],
   tracks: [{ partId: 'part-1', channels: { x: [{ id: 'kf-1', frame: 0, value: 0, easing: 'linear' }] } }],
 };
 

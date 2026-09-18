@@ -17,7 +17,7 @@ const refusalCode = (text: string): string | undefined => {
 
 describe('project import boundary', () => {
   it('accepts a current scene document', () => {
-    const result = validateImportedDocument(JSON.stringify({ version: 1, name: 'Scene', characterParts: [], tracks: [] }));
+    const result = validateImportedDocument(JSON.stringify({ version: 1, name: 'Scene', layers: [], tracks: [] }));
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.document.kind).toBe('scene');
@@ -49,17 +49,17 @@ describe('project import boundary', () => {
   });
 
   it('refuses a prototype-sensitive key nested inside the document', () => {
-    const document = JSON.stringify({ version: 1, characterParts: [{ id: 'p1', nested: { list: [{ constructor: {} }] } }], tracks: [] });
+    const document = JSON.stringify({ version: 1, layers: [{ id: 'l1', nested: { list: [{ constructor: {} }] } }], tracks: [] });
 
     expect(refusalCode(document)).toBe('KCS_IMPORT_UNSAFE_KEY');
   });
 
   it('names the offending path so the author can find it', () => {
-    const result = validateImportedDocument(JSON.stringify({ version: 1, characterParts: [{ prototype: {} }] }));
+    const result = validateImportedDocument(JSON.stringify({ version: 1, layers: [{ prototype: {} }], tracks: [] }));
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.diagnostics[0].path).toContain('characterParts');
+      expect(result.diagnostics[0].path).toContain('layers');
       expect(result.diagnostics[0].message).toContain('prototype');
       expect(result.diagnostics[0].action.length).toBeGreaterThan(0);
     }

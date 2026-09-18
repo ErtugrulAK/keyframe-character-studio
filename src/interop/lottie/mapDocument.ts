@@ -25,7 +25,8 @@ export interface LottieImportResult {
 }
 
 interface LottieNumericProperty {
-  staticValue?: number;
+  /** Every dimension of a static value (`p: [x, y]` keeps both). */
+  staticValues?: number[];
   keyframes?: LottieKeyframe[];
 }
 
@@ -42,12 +43,21 @@ const readNumber = (value: unknown): number | undefined => (typeof value === 'nu
 const readString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 
 /** A Lottie property object holds either `k` (static) or keyframed entries. */
+/** Reads `{ k: number | number[] }` or `{ k: [ { t, s, i, o, h, r, x } … ] }`. */
 const readNumericProperty = (value: unknown): LottieNumericProperty | undefined => {
   const record = asRecord(value);
   if (!record) return undefined;
   const raw = record.k;
-  if (typeof raw === 'number' && Number.isFinite(raw)) return { staticValue: raw };
+  if (typeof raw === 'number' && Number.isFinite(raw)) return { staticValues: [raw] };
   if (!Array.isArray(raw)) return undefined;
+  // A keyframe entry is an object carrying a numeric `t`; anything else is a
+  // static component list. Deciding by structure (not truthiness) keeps a
+  // keyframe at time 0 on the keyframe path.
+  const firstEntry = asRecord(raw[0]);
+  if (!firstEntry || typeof firstEntry.t !== 'number') {
+    const staticValues = raw.map((entry) => readNumber(entry)).filter((entry): entry is number => entry !== undefined);
+    return staticValues.length > 0 ? { staticValues } : undefined;
+  }
   const keyframes: LottieKeyframe[] = [];
   for (const entry of raw) {
     const keyframe = asRecord(entry);
@@ -55,11 +65,12 @@ const readNumericProperty = (value: unknown): LottieNumericProperty | undefined 
     if (!keyframe || time === undefined) continue;
     const incoming = asRecord(keyframe.i);
     const outgoing = asRecord(keyframe.o);
-    const startValue = Array.isArray(keyframe.s) ? readNumber(keyframe.s[0]) : readNumber(keyframe.s);
-    if (startValue === undefined) continue;
+    const rawValues = Array.isArray(keyframe.s) ? keyframe.s : [keyframe.s];
+    const values = rawValues.map((entry) => readNumber(entry)).filter((entry): entry is number => entry !== undefined);
+    if (values.length === 0) continue;
     keyframes.push({
       time,
-      value: startValue,
+      values,
       hold: keyframe.h === 1,
       ...(outgoing ? { out: { x: readNumber(outgoing.x) ?? 0, y: readNumber(outgoing.y) ?? 0 } } : {}),
       ...(incoming ? { in: { x: readNumber(incoming.x) ?? 0, y: readNumber(incoming.y) ?? 0 } } : {}),
@@ -67,16 +78,19 @@ const readNumericProperty = (value: unknown): LottieNumericProperty | undefined 
       ...(readString(keyframe.x) ? { expression: readString(keyframe.x) as string } : {}),
     });
   }
-  return keyframes.length > 0 ? { keyframes } : { staticValue: 0 };
+  return keyframes.length > 0 ? { keyframes } : undefined;
 };
 
 const toTransformChannel = (
   property: LottieNumericProperty | undefined,
-  context: { documentInPoint: number; layerStartTime?: number; path: string; channel: string },
+  context: { dimension?: number; documentInPoint: number; layerStartTime?: number; path: string; channel: string },
 ): { staticValue?: number; keyframes?: PropertyKeyframe[]; diagnostics: LottieImportDiagnostic[] } => {
   if (!property) return { diagnostics: [] };
-  if (property.staticValue !== undefined) return { staticValue: property.staticValue, diagnostics: [] };
-  const mapped = mapLottieKeyframes(property.keyframes ?? [], { ...context, keyframeLimit: LOTTIE_IMPORT_LIMITS.keyframesPerChannel });
+  const dimension = context.dimension ?? 0;
+  if (property.staticValues) {
+    return { staticValue: property.staticValues[dimension] ?? property.staticValues[0] ?? 0, diagnostics: [] };
+  }
+  const mapped = mapLottieKeyframes(property.keyframes ?? [], { ...context, dimension, keyframeLimit: LOTTIE_IMPORT_LIMITS.keyframesPerChannel });
   return {
     keyframes: mapped.keyframes as PropertyKeyframe[],
     diagnostics: mapped.diagnostics,
@@ -154,11 +168,21 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     diagnostics.push(lottieWarning('LOTTIE_IN_POINT_SHIFT', '$.ip', `The document starts at frame ${inPoint}; every keyframe is shifted so the scene starts at 0.`, 'Start the animation at frame 0 in the source document if the shift is unwanted.'));
   }
 
+  if (root.ddd === 1) {
+    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_3D', '$.ddd', 'The document is flagged as 3D; only its 2D transform components are imported.', 'Disable 3D layers in the source document and export again.'));
+  }
+
   const width = readNumber(root.w) ?? 1920;
   const height = readNumber(root.h) ?? 1080;
   const layers: SceneLayer[] = [];
   const tracks: AnimationTrackData[] = [];
   const layerIds: string[] = [];
+  /** Parent-chain depth per Lottie layer index, so the limit counts levels, not gaps. */
+  const parentDepth = new Map<number, number>();
+
+  /** Lottie stores scale and opacity as percentages; KCS stores factors. */
+  const asFactor = (keyframes: PropertyKeyframe[]): PropertyKeyframe[] =>
+    keyframes.map((keyframe) => ({ ...keyframe, value: keyframe.value / 100 }));
 
   const lottieLayers = asArray(root.layers);
   lottieLayers.forEach((entry, index) => {
@@ -184,28 +208,39 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     if (layer.ef !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_EFFECT', `${path}.ef`, `Layer ${index} carries effects, which are not converted.`, 'Remove the effect or bake it before exporting.'));
     if (layer.hasExpressions === true) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_EXPRESSION', `${path}.hasExpressions`, `Layer ${index} uses expressions, which are preserved but not evaluated.`, 'Bake the expressions and export again.'));
     if (layer.tt !== undefined || layer.td !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TRACK_MATTE', `${path}.tt`, `Layer ${index} uses a track matte, which the first import slice reports instead of converting.`, 'Apply the matte after import, or bake it in the source document.'));
+    if (layer.ip !== undefined || layer.op !== undefined) diagnostics.push(lottieWarning('LOTTIE_LAYER_TIMING', `${path}.ip`, `Layer ${index} has an in/out range, which KCS does not model.`, 'Trim the layer after import, or remove the in/out range in the source document.'));
+    if (asRecord(layer.ks)?.sk !== undefined || asRecord(layer.ks)?.sa !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SKEW', `${path}.ks.sk`, `Layer ${index} is skewed, which KCS does not model.`, 'Bake the skew in the source document.'));
+    if (layer.ao === 1) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_AUTO_ORIENT', `${path}.ao`, `Layer ${index} uses auto-orient, which KCS does not model.`, 'Bake the orientation in the source document.'));
     if (layer.hasMask === true || layer.masksProperties !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_MASK', `${path}.masksProperties`, `Layer ${index} carries masks, which the first import slice reports instead of converting.`, 'Bake the mask in the source document or re-create it after import.'));
 
     const transform = asRecord(layer.ks) ?? {};
     const layerStartTime = readNumber(layer.st);
     const context = { documentInPoint: inPoint, layerStartTime, path: `${path}.ks`, channel: '' };
     const position = readNumericProperty(transform.p);
-    const x = toTransformChannel(position, { ...context, path: `${path}.ks.p`, channel: 'x' });
-    const y = toTransformChannel(position, { ...context, path: `${path}.ks.p`, channel: 'y' });
+    const x = toTransformChannel(position, { ...context, dimension: 0, path: `${path}.ks.p`, channel: 'x' });
+    const y = toTransformChannel(position, { ...context, dimension: 1, path: `${path}.ks.p`, channel: 'y' });
     const rotation = toTransformChannel(readNumericProperty(transform.r), { ...context, path: `${path}.ks.r`, channel: 'rotation' });
-    const scale = toTransformChannel(readNumericProperty(transform.s), { ...context, path: `${path}.ks.s`, channel: 'scaleX' });
-    const opacity = toTransformChannel(readNumericProperty(transform.o), { ...context, path: `${path}.ks.o`, channel: 'opacity' });
-    diagnostics.push(...x.diagnostics, ...rotation.diagnostics, ...scale.diagnostics, ...opacity.diagnostics);
+    const scaleProperty = readNumericProperty(transform.s);
+    const scaleX = toTransformChannel(scaleProperty, { ...context, dimension: 0, path: `${path}.ks.s`, channel: 'scaleX' });
+    const scaleY = toTransformChannel(scaleProperty, { ...context, dimension: 1, path: `${path}.ks.s`, channel: 'scaleY' });
+    const opacity = toTransformChannel(readNumericProperty(transform.o), { ...context, dimension: 0, path: `${path}.ks.o`, channel: 'opacity' });
+    diagnostics.push(...x.diagnostics, ...y.diagnostics, ...rotation.diagnostics, ...scaleX.diagnostics, ...scaleY.diagnostics, ...opacity.diagnostics);
 
     const layerId = `lottie-layer-${index}`;
     layerIds.push(layerId);
     const parentIndex = readNumber(layer.parent);
+    const parentChainDepth = parentIndex !== undefined && parentIndex >= 0 && parentIndex < index ? (parentDepth.get(parentIndex) ?? 0) + 1 : 0;
+    parentDepth.set(index, parentChainDepth);
+    if (parentChainDepth > LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
+      diagnostics.push(lottieWarning('LOTTIE_HIERARCHY_LIMIT', `${path}.parent`, `Layer ${index} sits ${parentChainDepth} levels below its parent chain, above the ${LOTTIE_IMPORT_LIMITS.hierarchyDepth}-level import limit.`, 'Flatten the hierarchy in the source document and import again.'));
+    }
     const parentId = parentIndex !== undefined && parentIndex >= 0 && parentIndex < index ? `lottie-layer-${parentIndex}` : undefined;
     if (parentIndex !== undefined && parentId === undefined) {
       diagnostics.push(lottieWarning('LOTTIE_BROKEN_PARENT', `${path}.parent`, `Layer ${index} points at parent ${parentIndex}, which is not an already-imported layer.`, 'Reorder the layers in the source document so parents come first.'));
     }
 
-    const scalePercent = scale.staticValue ?? 100;
+    const scaleXPercent = scaleX.staticValue ?? 100;
+    const scaleYPercent = scaleY.staticValue ?? 100;
     layers.push({
       id: layerId,
       name: readString(layer.nm) ?? `Layer ${index}`,
@@ -213,8 +248,8 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       x: x.staticValue ?? 0,
       y: y.staticValue ?? 0,
       rotation: rotation.staticValue ?? 0,
-      scaleX: scalePercent / 100,
-      scaleY: scalePercent / 100,
+      scaleX: scaleXPercent / 100,
+      scaleY: scaleYPercent / 100,
       opacity: (opacity.staticValue ?? 100) / 100,
       ...(parentId ? { parentId } : {}),
       visible: true,
@@ -229,10 +264,14 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       const shape = asRecord(shapeEntry);
       const shapeType = readString(shape?.ty);
       const shapePath = `${path}.shapes[${shapeIndex}]`;
-      if (!shape || !shapeType) continue;
+      if (!shape || !shapeType) {
+        diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_SHAPE', shapePath, `Shape item ${shapeIndex} of layer ${index} has no readable type and was skipped.`, 'Re-export the document; an unsupported item should carry a type.'));
+        continue;
+      }
       if (shapeType === 'sh') {
         const mapped = mapPath(shape.ks, shapePath, diagnostics);
         if (mapped && 'version' in mapped) layerShape.path = mapped;
+        else if (mapped === undefined) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_PATH', shapePath, `Path ${shapeIndex} of layer ${index} has no readable vertices and was skipped.`, 'Re-export the path from the source document.'));
         continue;
       }
       if (shapeType === 'rc' || shapeType === 'el') {
@@ -240,6 +279,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         const size = Array.isArray(sizeValue) ? sizeValue : [];
         const sizeX = readNumber(size[0]);
         const sizeY = readNumber(size[1]);
+        if (sizeX === undefined && sizeY === undefined) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_SIZE', shapePath, `Shape ${shapeIndex} of layer ${index} has no readable size.`, 'Re-export the shape from the source document.'));
         if (shapeType === 'rc') {
           if (sizeX !== undefined) layerShape.width = sizeX;
           if (sizeY !== undefined) layerShape.height = sizeY;
@@ -261,6 +301,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
           const toHex = (value: number) => Math.max(0, Math.min(255, Math.round(value * 255))).toString(16).padStart(2, '0');
           layerShape.fillColor = `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
         }
+        if (red === undefined || green === undefined || blue === undefined) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_COLOUR', shapePath, `Fill ${shapeIndex} of layer ${index} has no readable colour.`, 'Re-export the shape from the source document.'));
         const fillOpacity = readNumber(asRecord(shape.o)?.k);
         if (fillOpacity !== undefined) layerShape.fillOpacity = fillOpacity / 100;
         continue;
@@ -269,6 +310,14 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         layerShape.strokeEnabled = true;
         const strokeWidth = readNumber(asRecord(shape.w)?.k);
         if (strokeWidth !== undefined) layerShape.strokeWidth = strokeWidth;
+        else diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_STROKE_WIDTH', shapePath, `Stroke ${shapeIndex} of layer ${index} has no readable width.`, 'Re-export the shape from the source document.'));
+        const strokeColourValue = asRecord(shape.c)?.k;
+        const strokeColour = Array.isArray(strokeColourValue) ? strokeColourValue : [];
+        const [strokeRed, strokeGreen, strokeBlue] = [readNumber(strokeColour[0]), readNumber(strokeColour[1]), readNumber(strokeColour[2])];
+        if (strokeRed !== undefined && strokeGreen !== undefined && strokeBlue !== undefined) {
+          const toHex = (value: number) => Math.max(0, Math.min(255, Math.round(value * 255))).toString(16).padStart(2, '0');
+          layerShape.strokeColor = `#${toHex(strokeRed)}${toHex(strokeGreen)}${toHex(strokeBlue)}`;
+        }
         continue;
       }
       if (shapeType === 'tm') {
@@ -292,9 +341,9 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       x: (x.keyframes ?? []) as PropertyKeyframe[],
       y: (y.keyframes ?? []) as PropertyKeyframe[],
       rotation: (rotation.keyframes ?? []) as PropertyKeyframe[],
-      scaleX: (scale.keyframes ?? []) as PropertyKeyframe[],
-      scaleY: (scale.keyframes ?? []) as PropertyKeyframe[],
-      opacity: (opacity.keyframes ?? []) as PropertyKeyframe[],
+      scaleX: asFactor((scaleX.keyframes ?? []) as PropertyKeyframe[]),
+      scaleY: asFactor((scaleY.keyframes ?? []) as PropertyKeyframe[]),
+      opacity: asFactor((opacity.keyframes ?? []) as PropertyKeyframe[]),
     } as Record<TrackChannel, PropertyKeyframe[]>;
     if (Object.values(channels).some((keyframes) => keyframes.length > 0)) {
       tracks.push({ partId: layerId, channels: channels as AnimationTrackData['channels'] });

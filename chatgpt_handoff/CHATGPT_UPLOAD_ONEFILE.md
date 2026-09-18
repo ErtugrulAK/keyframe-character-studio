@@ -181,17 +181,26 @@ The approved first slice of `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`: the impo
   - Layers: `ty` 1/3/4 (solid/null/shape) are converted; **precomps, text and images are reported and skipped** per the approved first-cut decision, as are effects, expressions, masks and track mattes; a parent index that is not an already-imported layer reports `LOTTIE_BROKEN_PARENT` and is dropped.
   - Transforms: `ks.p` (x/y), `ks.r`, `ks.s` (percent → factor), `ks.o` (percent → 0..1), static values as the base transform and keyframed ones as canonical channels.
   - Shapes: `sh` → `BezierPath` (v1) with a vertex limit, `rc`/`el` → width/height, `fl` → fill colour + opacity, `st` → stroke width, `tm` → trim start/end/offset, `gr` → flattened and reported, anything else reported.
-- **`src/tests/lottieImport.test.ts`** — 17 cases across four groups: document timing (mapping, fractional fps, in-point shift, missing timing), transforms (static values, the segment split, hold, roving fallback, keyframe limit), shapes and unsupported constructs (path/rect/fill/stroke/trim mapping, unsupported layer type, effects/expressions/masks/mattes reporting, unsupported shape item), and untrusted input (malformed JSON, prototype key, size limit, broken parent).
+- **`src/tests/lottieImport.test.ts`** — **26 cases** across five groups: document timing (mapping, fractional fps, in-point shift, missing timing), transforms (static values, the segment split, hold, roving fallback, keyframe limit), dimensions and fallbacks (per-dimension vector mapping, non-uniform keyframed scale, roving *with* handles, a two-segment curve pinning both handles on the middle keyframe, layer start-time subtraction with the frame-0 clamp, hierarchy limit, layer in/out + skew + auto-orient reports, unreadable shape payloads, stroke colour), shapes and unsupported constructs, and untrusted input (malformed JSON, prototype key, size limit, broken parent).
 
-Two real bugs were found by these tests while writing them and fixed: the incoming handle was first attached to the keyframe that *holds* it instead of the keyframe it *arrives at*, and the rectangle size / fill colour were read through a record helper that rejects arrays (so `{ k: [x, y] }` produced nothing). Both are exactly the class of silent mis-mapping the design warned about.
+**Bugs the tests caught while writing them** (each fixed before commit):
+
+1. The incoming handle was attached to the keyframe that *holds* it instead of the keyframe it *arrives at*.
+2. Rectangle size and fill colour were read through a record helper that rejects arrays, so `{ k: [x, y] }` produced nothing.
+3. **Review round 1 (independent, read-only) found three more, all fixed here:**
+   - A vector property aliased its first component into every channel: `p: [15, 25]` imported `y = 15` and non-uniform `s: [100, 200]` imported `scaleY = 100`. Numeric properties now keep every dimension and each channel maps its own.
+   - A roving or expression-driven keyframe **with** handles kept its Bezier easing; the design requires the linear fallback plus a report, so both handle passes now skip such a segment.
+   - The `y` channel's diagnostics were dropped from the report (they are distinct paths), and keyframed scale/opacity carried Lottie percentages while the static base values were divided by 100 — the channels now go through the same conversion.
+
+**Review round 1 also asked for fuller reporting, now added:** layer in/out ranges (`LOTTIE_LAYER_TIMING`), skew (`LOTTIE_UNSUPPORTED_SKEW`), auto-orient (`LOTTIE_UNSUPPORTED_AUTO_ORIENT`), the document 3D flag (`LOTTIE_UNSUPPORTED_3D`), unreadable shape payloads (`LOTTIE_UNREADABLE_SHAPE`, `LOTTIE_UNREADABLE_SIZE`, `LOTTIE_UNREADABLE_COLOUR`, `LOTTIE_UNREADABLE_STROKE_WIDTH`, `LOTTIE_UNREADABLE_PATH`), stroke colour mapping, the hierarchy limit now measured as a chain depth instead of an index gap, and the unused mask limit removed (it returns with the mask slice).
 
 ## 4. Validation (branch `feat/lottie-import-core`)
 
 | Check | Command | Result |
 |---|---|---|
 | Type gate (CI's) | `npm run build` (`tsc -b && vite build`) | PASS |
-| Lottie core suite | `npx vitest run src/tests/lottieImport.test.ts` | PASS — 17 cases |
-| Full suite | `npm test` | PASS — 120 files / 1,753 tests |
+| Lottie core suite | `npx vitest run src/tests/lottieImport.test.ts` | PASS — 26 cases |
+| Full suite | `npm test` | PASS — 120 files / 1,762 tests |
 | Lint | `npm run lint` | clean |
 | Release gate | `npm run qa:release` | PASS — 2 Chromium tests |
 | State consistency | `node scripts/check-state-consistency.mjs` | PASS |
@@ -243,7 +252,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (120 files / 1,753 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on this Milestone F stack (`fix/kcs-import-boundary-hardening`), whose source commits are `f17215b` (item 11), `9c257ed` (item 12 first step) and `a17be8b` (item 10 design). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
+Full Vitest (120 files / 1,762 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on this Milestone F stack (`fix/kcs-import-boundary-hardening`), whose source commits are `f17215b` (item 11), `9c257ed` (item 12 first step) and `a17be8b` (item 10 design). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
 
 ## Next scoped work
 
@@ -308,7 +317,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 120 files / 1,753 tests |
+| Full Vitest | PASS | 120 files / 1,762 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
@@ -515,7 +524,7 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `README.md` — 2984 bytes
 - `manifest.txt` — 3479 bytes
 - `progress_121_kcs_import_product_half.md` — 5293 bytes
-- `progress_123_lottie_import_core.md` — 6024 bytes
+- `progress_123_lottie_import_core.md` — 7476 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

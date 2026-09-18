@@ -17,7 +17,12 @@ import type { LottieImportDiagnostic } from './diagnostics';
 /** A Lottie keyframe as read from the document (numbers already validated by the caller). */
 export interface LottieKeyframe {
   time: number;
-  value: number;
+  /**
+   * One entry per Lottie dimension (`p: [x, y]`, `s: [x, y]`, `o: [value]`).
+   * A channel maps one dimension, so a vector property never aliases its
+   * first component into every channel.
+   */
+  values: number[];
   hold?: boolean;
   /** Outgoing control point of the segment that starts here. */
   out?: { x: number; y: number };
@@ -28,6 +33,8 @@ export interface LottieKeyframe {
 }
 
 export interface TemporalMappingContext {
+  /** Which component of the Lottie value this channel maps (`0` for scalars). */
+  dimension: number;
   /** Document in-point in Lottie frame units. */
   documentInPoint: number;
   /** Layer start time in Lottie frame units. */
@@ -54,6 +61,9 @@ export interface TemporalMappingResult {
   diagnostics: LottieImportDiagnostic[];
 }
 
+const readDimension = (keyframe: LottieKeyframe, dimension: number): number =>
+  keyframe.values[dimension] ?? keyframe.values[keyframe.values.length - 1] ?? 0;
+
 const toSceneFrame = (time: number, context: TemporalMappingContext): number =>
   Math.max(0, Math.round(time - context.documentInPoint - (context.layerStartTime ?? 0)));
 
@@ -79,12 +89,16 @@ export const mapLottieKeyframes = (keyframes: LottieKeyframe[], context: Tempora
   }
 
   const mapped: MappedKeyframe[] = accepted.map((keyframe, index) => {
+    // A roving or expression-driven segment cannot be represented faithfully,
+    // so it is reported below and deliberately kept linear: keeping its handles
+    // would claim a curve the source does not actually describe.
+    const unsupportedSegment = keyframe.roving === true || keyframe.expression !== undefined;
     const hold = keyframe.hold === true;
-    const startsSegment = !hold && keyframe.out !== undefined && accepted[index + 1] !== undefined;
+    const startsSegment = !hold && !unsupportedSegment && keyframe.out !== undefined && accepted[index + 1] !== undefined;
     const mappedKeyframe: MappedKeyframe = {
       id: `kf-${context.channel}-${index}`,
       frame: toSceneFrame(keyframe.time, context),
-      value: keyframe.value,
+      value: readDimension(keyframe, context.dimension),
       easing: hold ? 'hold' : 'linear',
     };
     if (startsSegment && keyframe.out) {
@@ -117,7 +131,7 @@ export const mapLottieKeyframes = (keyframes: LottieKeyframe[], context: Tempora
   // Lottie stores the incoming control point of a segment on the keyframe the
   // segment *starts* from, so it becomes bezierIn on the keyframe that ends it.
   accepted.forEach((keyframe, index) => {
-    if (keyframe.hold === true) return;
+    if (keyframe.hold === true || keyframe.roving === true || keyframe.expression !== undefined) return;
     const incoming = keyframe.in;
     const target = mapped[index + 1];
     if (!incoming || !target) return;

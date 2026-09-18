@@ -39,7 +39,7 @@ export const lottieError = (code: string, path: string, message: string, action:
 /** Limits from the design's first cut (§7): reported, never silently reduced. */
 export const LOTTIE_IMPORT_LIMITS = {
   keyframesPerChannel: 512,
-  masksPerLayer: 8,
+  /** Parent-chain depth; deeper chains are reported (masks join this list with the mask slice). */
   hierarchyDepth: 32,
   verticesPerPath: 4096,
   /** Refuse documents larger than this before parsing them. */

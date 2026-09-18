@@ -251,7 +251,7 @@ Full Vitest (116 files / 1,716 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. **Milestone E — merge decisions**: item 7 (7-A) is implemented on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and item 8 on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`); both need the review to pass and the user merge decision. The QA root is an explicit required argument. Previously (already decided and merged): the Milestone D Option A warning maintenance (W1 Fast Refresh split, W2 real chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, D9-2 checker rule) plus the local SQLite binding repair are implemented and validated there (`reports/progress_113_warning_maintenance.md`). It merges by fast-forward once the independent review passes and the user approves the merge. Still open afterwards: Option B (7 patch + 12 minor updates + bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again). Milestones E–F stay plan-only and Option D (Milestone E planning) needs its own explicit approval.
+1. **Milestone E — merge decision**: item 7 (7-A offline schema closure) is implemented on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and item 8 (folder QA automation) on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`); the stacked branch is the merge unit, and both need the user decision. The QA root is an explicit required argument. Already merged: the Milestone D Option A warning maintenance (W1, W2, W3, W4, W5, the D9-2 checker rule and the local SQLite binding repair) at `3923141`. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
 2. Milestone F stays plan-only (and anything in Milestone E beyond items 7 and 8 stays plan-only), and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -513,7 +513,7 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 9684 bytes
-- `NEXT_SESSION.md` — 9278 bytes
+- `NEXT_SESSION.md` — 8956 bytes
 - `OMP_FINAL_RESPONSE.md` — 3609 bytes
 - `PROJECT_STATE.md` — 11606 bytes
 - `README.md` — 2793 bytes

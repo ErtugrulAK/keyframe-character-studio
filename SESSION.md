@@ -4,7 +4,7 @@
 
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 
-Checkout: `chore/evaluator-profiling-harness` (Milestone F item 11) on top of synchronized `main` at `af0288de…` (Milestones A–E and the Milestone F study merged and green).
+Checkout: `fix/kcs-import-boundary-hardening` (Milestone F item 12 first step), stacked on `chore/evaluator-profiling-harness` (item 11) over synchronized `main` at `af0288de…` (Milestones A–E and the Milestone F study merged and green).
 
 ## Completed
 
@@ -21,7 +21,7 @@ Checkout: `chore/evaluator-profiling-harness` (Milestone F item 11) on top of sy
 
 ## Current work
 
-The Milestone F study is delivered on this branch and awaits the user merge decision plus the three per-item design/plan approvals. Nothing beyond the study is authorized.
+Item 11 (evaluator profiling) is implemented in this stack as measurement only, item 12’s first step (validated import boundary) is implemented on this branch, and item 10’s mapping design is delivered on its own branch — all three await the user merge decision. The remaining item-12 product work stays plan-only; nothing beyond the approved scopes is authorized.
 
 ## Validation
 

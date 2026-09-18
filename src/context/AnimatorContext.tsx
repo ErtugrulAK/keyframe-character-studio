@@ -38,6 +38,7 @@ import { useToast, type ToastOptions } from '../hooks/useToast';
 import { usePresets, type SavePresetInput, type UpdatePresetInput } from '../hooks/usePresets';
 import { useProjectState } from '../hooks/useProjectState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import type { ImportResult } from '../utils/importValidation';
 
 export interface AnimatorContextType {
   currentFrame: number;
@@ -109,7 +110,7 @@ export interface AnimatorContextType {
   toggleTrackLock: (trackId: string) => void;
   toggleTrackExpanded: (trackId: string) => void;
   exportProject: () => string;
-  importProject: (jsonStr: string, defaultName?: string) => boolean;
+  importProject: (jsonStr: string, defaultName?: string) => ImportResult;
   migrateLegacyCoordinates: () => boolean;
   resetProject: () => void;
   addCustomPart: (type: BodyPartType, name: string, extraProps?: Partial<CharacterPart>) => void;

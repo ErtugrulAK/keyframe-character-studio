@@ -17,74 +17,65 @@
 
 ## 1. OMP Final Response
 
-# KCS Milestone F Item 11 — Final Response (Evaluator Profiling Harness)
+# KCS Milestone F Item 12 (first step) — Final Response (Validated KCS Import Boundary)
 
-This file is the OMP final response for the item-11 task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** measurement only, implemented on branch `chore/evaluator-profiling-harness` (base `main` = `af0288de…`); awaiting the review and the user merge decision.
-- **Report:** `reports/progress_118_evaluator_profiling.md` (includes the first baseline table).
+- **Status:** the approved item-12 **security half, first step** is implemented on branch `fix/kcs-import-boundary-hardening`, stacked on item 11 (`chore/evaluator-profiling-harness`) over `main` = `af0288de…`. Awaiting review and the user merge decision.
+- **Report:** `reports/progress_119_kcs_import_boundary.md`.
+- Scope confirmed by the user: the first editable kinds are the current `.kcs` scene and the legacy `AnimationProject` shape; OGraf package/single-file import stays rejected.
 
 ## 2) WHAT CHANGED
 
-| Item | Change |
-|---|---|
-| Deterministic scenes | `perf/sceneBuilder.ts` — no randomness, clocks or generated ids; channels come from the production `makeEmptyChannels` factory; parameters cover layers, channels per layer, keyframes per channel, masked layers and parented layers; four default scenes (small, medium, large, masks) |
-| Harness | `perf/evaluator-profile.perf.ts` — warm-up then 60 sampled iterations per target, p50/p95/min/max for `evaluateFrame` (1 and 4 frames), `evaluateTransform`, `interpolateChannel` and `applyEasing`; the report is pinned to revision, Node version, platform and scene parameters and states that the numbers are evidence, not a gate |
-| On-demand run | `perf/vitest.perf.config.ts` — the root config only includes `*.test.*`, so the harness never runs in CI; run it with `npx vitest run --config perf/vitest.perf.config.ts` |
-| Builder contract | `src/tests/evaluatorProfileScenes.test.ts` — 5 fast cases: counts and id alignment, exact channels/keyframes, byte-identical rebuilds, mask channels only on masked layers, parent links never on the first layer |
+- `src/utils/importValidation.ts` (new): `validateImportedDocument(text)` runs cheapest-first — size (32 MB), JSON syntax, a depth-bounded walk for prototype-sensitive keys (reusing `isPrototypeSensitiveKey`), document shape, then declared layer/track count (5,000) — and returns a discriminated result with stable refusal codes (`KCS_IMPORT_TOO_LARGE`, `KCS_IMPORT_MALFORMED_JSON`, `KCS_IMPORT_UNSAFE_KEY`, `KCS_IMPORT_UNKNOWN_SHAPE`, `KCS_IMPORT_TOO_MANY_LAYERS`) plus the offending document path and an actionable message. Exceeding a limit is a refusal, never a silent clamp — trimming a user's project would be data loss.
+- `src/hooks/useSerialization.ts`: `importProject` delegates to the boundary, returns `ImportResult` (`{ ok, diagnostics }`), and no longer parses into `any`; the legacy branch consumes the already-validated document and the catch-all reports `KCS_IMPORT_FAILED`.
+- `src/context/AnimatorContext.tsx` follows the new return shape; `src/components/Header/HeaderBar.tsx` shows the diagnostic message **and** its action instead of a generic "Invalid project file format!".
+- `src/tests/importValidation.test.ts` (new, 9 cases) pins the boundary: both kinds accepted, malformed JSON, unknown shape, oversize refused before parsing, prototype key top-level and nested with the path named, and the layer-limit refusal. Existing import-path tests were adapted to the result shape; no assertion was weakened.
 
-## 3) FIRST BASELINE (excerpt)
-
-Node `v24.18.0`, win32/x64, 60 sampled iterations after warm-up, milliseconds per operation:
-
-| Scene | Target | p50 | p95 |
-|---|---|---|---|
-| small (5 layers) | evaluateFrame @ frame 60 | 0.0254 | 0.0404 |
-| medium (25 layers, 5 masked, 5 parented) | evaluateFrame @ frame 60 | 0.1103 | 0.1365 |
-| large (100 layers, 20 masked, 20 parented) | evaluateFrame @ frame 60 | 1.2258 | 1.4602 |
-| masks (40 layers, all masked) | evaluateFrame @ frame 60 | 0.0965 | 0.1126 |
-| any scene | interpolateChannel (first channel) | 0.0004–0.0009 | ≤ 0.0015 |
-
-Reading it: a 100-layer frame costs about **1.2 ms**, scaling roughly linearly with layer count, while keyframe interpolation itself is sub-microsecond — the per-frame cost sits in the pipeline around it. That is the evidence a caching proposal would have to build on.
-
-## 4) VALIDATION
+## 3) VALIDATION
 
 | Check | Result |
 |---|---|
-| Harness | `npx vitest run --config perf/vitest.perf.config.ts` — PASS, report printed |
-| CI cost | unchanged: the root config includes only `*.test.*` |
-| Builder contract | PASS — 5 cases |
-| Full suite | PASS — 117 files / 1,721 tests |
-| Lint / TypeScript | clean / clean |
+| Boundary cases | PASS — 9 cases |
+| Serialization suite | PASS — 95 cases (round-trip, matte, appearance, freeform, migration) |
+| Full suite | PASS — 118 files / 1,730 tests |
+| Lint / TypeScript / build | clean / clean / PASS |
+| Release gate | PASS — 2 Chromium tests |
+| State consistency | PASS |
+
+## 4) REVIEW
+
+The change goes through the independent read-only review gate before any merge; the verdict is recorded here before the merge request.
 
 ## 5) SAFETY
 
-- No `src/` production behaviour change, no caching, no worker, no evaluation-order change, no threshold; no dependency, `package.json`, lockfile or workflow change.
+- Both accepted document kinds still import exactly as before; only unsafe, malformed or oversized inputs changed behaviour (now refused with a reason). No dependency, `package.json`, lockfile or workflow change; no new path-safety authority was invented.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
 
 ## 6) NEXT
 
-One decision: merge `chore/evaluator-profiling-harness` after the review passes. Items 10 and 12 of Milestone F proceed on their own branches.
+One decision: merge the stacked branch (item 11 + item 12 first step) after the review passes. Item 10’s mapping design is on its own branch. The remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone F Item 11 (Evaluator Profiling Harness)
+# KCS ChatGPT Upload Manifest — Milestone F Item 12 First Step (Validated KCS Import Boundary)
 
 Clean refreshed: YES
-Bundle purpose: Milestone F item 11 — deterministic evaluator profiling harness and its first baseline (measurement only)
+Bundle purpose: Milestone F item 12, security half first step — one validated boundary for imported KCS project text
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/evaluator-profiling-harness on top of main af0288de (Milestones A–E and the Milestone F study merged)
-Task record: reports/progress_118_evaluator_profiling.md
-What changed: perf/sceneBuilder.ts (deterministic scenes reusing the production makeEmptyChannels factory), perf/evaluator-profile.perf.ts (warm-up plus 60 sampled iterations, p50/p95/min/max for evaluateFrame, evaluateTransform, interpolateChannel and applyEasing, report pinned to revision/Node/platform/scene parameters), perf/vitest.perf.config.ts (on-demand run; never part of CI), src/tests/evaluatorProfileScenes.test.ts (5 contract cases)
-Baseline (Node v24.18.0, win32/x64, p50 ms per operation): evaluateFrame @ frame 60 — small 0.0254, medium 0.1103, large 1.2258, masks 0.0965; interpolateChannel 0.0004–0.0009; applyEasing (1k calls) ~0.07
-Not changed: src/ production behaviour (no caching, no worker, no evaluation-order change), dependencies, package.json, package-lock.json, workflows
-Validation: harness PASS (1 case, report printed); builder tests PASS (5); full suite PASS (117 files / 1,721 tests); lint clean; tsc clean
-Thresholds: NONE asserted — the numbers are evidence for a later caching proposal, which needs its own approval
+Branch: fix/kcs-import-boundary-hardening, stacked on chore/evaluator-profiling-harness (item 11) over main af0288de
+Task record: reports/progress_119_kcs_import_boundary.md
+What changed: src/utils/importValidation.ts (new boundary: size limit 32 MB, JSON syntax, depth-bounded prototype-key walk reusing isPrototypeSensitiveKey, document shape, declared layer/track limit 5,000; stable refusal codes plus the offending document path and an actionable message), src/hooks/useSerialization.ts (importProject delegates to the boundary and returns ImportResult; the JSON.parse into any is gone), src/context/AnimatorContext.tsx (type follows), src/components/Header/HeaderBar.tsx (refusal toast shows message + action), src/tests/importValidation.test.ts (9 new cases)
+Design decision: exceeding a limit is a refusal with a diagnostic, never a silent clamp — trimming a project would be data loss
+Accepted kinds (scope confirmed): current .kcs scene and legacy AnimationProject; OGraf package/single-file import stays rejected as before
+Validation: boundary cases PASS (9); serialization suite PASS (95); full suite PASS (118 files / 1,730 tests); lint clean; tsc clean; build PASS; qa:release PASS (2 Chromium tests); state check PASS
+Not changed: dependencies, package.json, package-lock.json, workflows, the OGraf rejection path, the existing path-safety authorities
+Still plan-only: the item-12 product half (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary) and OGraf package import
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -93,15 +84,15 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-11 final response
-- progress_118_evaluator_profiling.md — the task record with the baseline table
+- OMP_FINAL_RESPONSE.md — the item-12 final response
+- progress_119_kcs_import_boundary.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test, script and perf files (the harness lives at perf/ in the repository)
+- Source, test and script files (the boundary and its tests live in the repository)
 - package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
@@ -109,12 +100,13 @@ Omitted categories:
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- npx vitest run --config perf/vitest.perf.config.ts: PASS — 1 case, report printed
-- npx vitest run src/tests/evaluatorProfileScenes.test.ts: PASS — 5 cases
-- npm test: PASS — 117 files / 1,721 tests; npm run lint: clean; npx tsc --noEmit: clean
+- npx vitest run src/tests/importValidation.test.ts: PASS — 9 cases
+- npx vitest run src/tests/useSerialization.test.ts: PASS — 95 cases
+- npm test: PASS — 118 files / 1,730 tests; npm run lint: clean; npx tsc --noEmit: clean
+- npm run build: PASS; npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS
 
-Next: the independent review of this branch, then the user merge decision. Items 10 and 12 of Milestone F proceed on their own branches.
+Next: the independent review of this branch and of its item-11 base, then the user merge decision. Item 10's mapping design is on its own branch.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -165,68 +157,62 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 118 — Evaluator Profiling Harness (Milestone F, item 11)
+# Progress 119 — KCS Import Boundary Hardening (Milestone F, item 12, first step)
 
 ## 1. Scope
 
-Implements the approved item-11 plan from `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`: **measurement only**. The harness builds deterministic scenes and profiles the existing evaluation utilities; it changes nothing in `src/`, adds no caching, and asserts no performance threshold.
+The approved item-12 plan, **security half, first step**: a single validated boundary turns imported project text into a typed document instead of `JSON.parse` into `any`. Product-half items (compatibility matrix, round-trip guarantee per kind, import UX beyond the refusal toast) remain plan-only and are named in §7.
+
+Scope confirmed by the user: the first editable kinds are the current `.kcs` scene and the legacy `AnimationProject` shape; OGraf manifest/package import stays rejected as before.
 
 ## 2. Branch
 
-- `chore/evaluator-profiling-harness`, based on `main` at `af0288de…` (Milestone F study merged).
+- `fix/kcs-import-boundary-hardening`, stacked on `chore/evaluator-profiling-harness` (item 11) over `main` = `af0288de…`.
 
 ## 3. What changed
 
-- **`perf/sceneBuilder.ts`** — deterministic scene builder. Nothing uses randomness, clocks or generated ids: layer ids derive from the index and keyframe values follow a fixed pattern, so the same parameters always produce the same scene. Channels come from the production factory (`makeEmptyChannels`), so the track shape cannot drift from what the evaluator reads. Parameters: layers, channels per layer, keyframes per channel, masked layers, parented layers. Four default scenes: `small`, `medium`, `large`, `masks`.
-- **`perf/evaluator-profile.perf.ts`** — the harness. Warm-up pass, then N sampled iterations per target, reporting p50/p95/min/max for `evaluateFrame` (single frame and four frames), `evaluateTransform`, `interpolateChannel` and `applyEasing`. The report is pinned to the revision, the Node version, the platform and the scene parameters, and states explicitly that the numbers are evidence, not a gate.
-- **`perf/vitest.perf.config.ts`** — a dedicated config so the harness runs through the repository's own TS/Vite resolution on demand. The root config only includes `*.test.*`, so the harness never runs in the default suite and CI keeps its current cost.
-- **`src/tests/evaluatorProfileScenes.test.ts`** — 5 fast cases pinning the builder's contract: layer/track counts and id alignment, exactly the requested channels and keyframe counts, byte-identical rebuilds (determinism), mask channels on masked layers only, and parent links on the parented tail (never the first layer).
+- **`src/utils/importValidation.ts` (new)** — the boundary:
+  - `validateImportedDocument(text)` runs cheapest-first checks and returns a discriminated result: size limit → JSON syntax → prototype-sensitive keys (deep, depth-bounded walk reusing `isPrototypeSensitiveKey` from `src/utils/pathSafety.ts`) → document shape → declared layer/track count.
+  - Limits: `MAX_IMPORT_CHARACTERS` 32 MB, `MAX_IMPORT_LAYERS` 5,000, `MAX_IMPORT_DEPTH` 64. Exceeding a limit is a **refusal with a diagnostic**, never a silent clamp: trimming a user's project would be data loss, and a refusal tells them exactly what to do.
+  - Diagnostics reuse the export-diagnostics shape (`code`, `severity`, `feature`, `path`, `message`, `action`), with stable codes (`KCS_IMPORT_TOO_LARGE`, `KCS_IMPORT_MALFORMED_JSON`, `KCS_IMPORT_UNSAFE_KEY`, `KCS_IMPORT_UNKNOWN_SHAPE`, `KCS_IMPORT_TOO_MANY_LAYERS`, `KCS_IMPORT_FAILED`) and the offending document path (`$.characterParts[0].prototype`) so the author can find it.
+- **`src/hooks/useSerialization.ts`** — `importProject` now delegates to the boundary and returns `ImportResult` (`{ ok, diagnostics }`) instead of a bare boolean. The `JSON.parse` into `any` and the post-hoc narrowing are gone; the legacy branch consumes the already-validated `legacy-project` document, and the catch-all path reports `KCS_IMPORT_FAILED` instead of swallowing the reason.
+- **`src/context/AnimatorContext.tsx`** — the context type follows the new return shape.
+- **`src/components/Header/HeaderBar.tsx`** — the refusal toast shows the diagnostic's message **and** its action instead of a generic "Invalid project file format!".
+- **`src/tests/importValidation.test.ts` (new)** — 9 cases: scene and legacy acceptance, malformed JSON, unknown shape, oversized document refused before parsing, prototype key at the top level and nested (with the path named), message/action present, and the layer-limit refusal.
+- **Test adaptations** — `src/tests/useSerialization.test.ts` and `src/tests/ografBrowserZip.test.tsx` assert the new result shape (`imported.ok`); no assertion was weakened or removed.
 
-Run it with:
-
-```
-npx vitest run --config perf/vitest.perf.config.ts
-```
-
-## 4. First baseline (the point of the harness)
-
-Measured on this branch, Node `v24.18.0`, win32/x64. Milliseconds per operation, 60 sampled iterations after warm-up; `applyEasing` measures 1,000 calls.
-
-| Scene | Target | p50 | p95 |
-|---|---|---|---|
-| small (5 layers, 5 channels, 4 keyframes) | evaluateFrame @ frame 60 | 0.0254 | 0.0404 |
-| small | evaluateFrame @ 4 frames | 0.0438 | 0.1180 |
-| small | interpolateChannel (first channel) | 0.0006 | 0.0009 |
-| medium (25 layers, 5 channels, 12 keyframes, 5 masked, 5 parented) | evaluateFrame @ frame 60 | 0.1103 | 0.1365 |
-| medium | evaluateFrame @ 4 frames | 0.4180 | 0.5508 |
-| large (100 layers, 5 channels, 24 keyframes, 20 masked, 20 parented) | evaluateFrame @ frame 60 | 1.2258 | 1.4602 |
-| large | evaluateFrame @ 4 frames | 4.7582 | 5.6087 |
-| masks (40 layers, all masked) | evaluateFrame @ frame 60 | 0.0965 | 0.1126 |
-| masks | evaluateFrame @ 4 frames | 0.3387 | 0.4351 |
-
-Reading it: one frame of a 100-layer scene costs about **1.2 ms** on this machine, and evaluation scales roughly linearly with layer count. `interpolateChannel` alone is in the sub-microsecond range, so the per-frame cost sits in the pipeline around it (hierarchy, procedural deltas, masks, sorting), not in keyframe interpolation — which is exactly the kind of question a caching proposal must answer before it is written.
-
-## 5. Validation
+## 4. Validation (branch `fix/kcs-import-boundary-hardening`)
 
 | Check | Command | Result |
 |---|---|---|
-| Harness runs | `npx vitest run --config perf/vitest.perf.config.ts` | PASS — 1 case, report printed |
-| Harness stays out of CI | root config include is `*.test.*`; harness is `*.perf.ts` | confirmed — `npm test` sees no perf file |
-| Builder contract | `npx vitest run src/tests/evaluatorProfileScenes.test.ts` | PASS — 5 cases |
-| Full suite | `npm test` | PASS — 117 files / 1,721 tests |
+| Boundary cases | `npx vitest run src/tests/importValidation.test.ts` | PASS — 9 cases |
+| Serialization suite | `npx vitest run src/tests/useSerialization.test.ts` | PASS — 95 cases (round-trip, matte, appearance, freeform, migration) |
+| Full suite | `npm test` | PASS — 118 files / 1,730 tests |
 | Lint / TypeScript | `npm run lint`, `npx tsc --noEmit` | clean / clean |
+| Build | `npm run build` | PASS |
+| Release gate | `npm run qa:release` | PASS — 2 Chromium tests |
+| State consistency | `node scripts/check-state-consistency.mjs` | PASS |
 
-## 6. Protected invariants
+## 5. Protected invariants
 
-- No change to `src/**` production behaviour: the harness only calls existing pure utilities, and the only added source file is a test.
-- No dependency, `package.json`, `package-lock.json` or workflow change.
-- No caching, no worker, no evaluation-order change, no threshold: those remain a separate, approval-gated proposal that must cite this baseline.
+- Both accepted document kinds still import exactly as before; only the *unsafe, malformed or oversized* cases changed behaviour (they are now refused with a reason).
+- No dependency, `package.json`, `package-lock.json` or workflow change; no new path-safety authority (the existing `isPrototypeSensitiveKey` is reused).
+- OGraf manifest/package rejection is unchanged.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
 
-## 7. Residual risks
+## 6. Residual risks
 
-- **Wall-clock only.** The numbers include engine and machine noise; the report says to compare on the same machine and prefer p50. Allocation-level or CPU-profile attribution still needs a one-off `--cpu-prof` run.
-- **Synthetic scenes.** They exercise the real evaluator but not real projects; a project with unusual structures (deep hierarchy, broadcast runtimes) could profile differently, and the builder can be extended per case when a specific question arises.
+- **Legacy branch trusts the shape, not every field.** The boundary proves `tracks` and `characterParts` are arrays and that no prototype-sensitive key exists; field-level validation of a legacy document still happens where it always did (the migration helpers). A malformed *field* therefore degrades as before, not worse.
+- **Refusal, not repair.** A document that exceeds a limit is refused. If a real project ever legitimately exceeds 5,000 layers or 32 MB, the limit needs raising — that is a deliberate, visible decision rather than a silent truncation.
+- **Autosave path unchanged.** `localStorage` restore still parses its own payload (it is written by this app, not imported). Bringing it onto the same boundary is a natural follow-up and is listed in §7.
+
+## 7. Still plan-only (item 12 product half and follow-ups)
+
+1. Compatibility matrix executed as fixtures per document kind.
+2. Round-trip guarantee per kind, with a loss report instead of dropped fields.
+3. One import entry point that detects the kind and shows the migration/loss report before replacing work.
+4. Route the `localStorage` autosave restore through the same boundary.
+5. OGraf package/single-file import (explicitly out of the first scope).
 
 ---
 
@@ -236,7 +222,7 @@ Reading it: one frame of a 100-layer scene costs about **1.2 ms** on this machin
 
 ## Repository state
 
-- Checkout: branch `chore/evaluator-profiling-harness` (Milestone F item 11) on top of `main` at `af0288de…`, which matches `origin/main`; milestones A–E and the Milestone F study are merged. The merged warning-maintenance work and the Milestone E study are in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` and `docs/milestone-e-ograf-qa-study` are retained as review artefacts.
+- Checkout: branch `fix/kcs-import-boundary-hardening` (Milestone F item 12 first step), stacked on `chore/evaluator-profiling-harness` (item 11) over `main` at `af0288de…`, which matches `origin/main`; milestones A–E and the Milestone F study are merged. The merged warning-maintenance work and the Milestone E study are in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` and `docs/milestone-e-ograf-qa-study` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -257,11 +243,11 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (117 files / 1,721 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `test/ograf-folder-qa-automation` (the stacked Milestone E tip). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
+Full Vitest (118 files / 1,730 tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate SHA `d19bab6` (the branch's source revision; later commits are documentation only)), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check`, `node scripts/check-state-consistency.mjs` and a live browser smoke (built app from `vite preview`: layer authoring, transform gizmo, inspector, timeline lane) all pass on `test/ograf-folder-qa-automation` (the stacked Milestone E tip). The seven catalogued warnings from the item-9 audit are resolved except the two that are not repository defects (W6 `e2e/**` outside the Vitest glob by design; W7 the environment `NO_COLOR`/`FORCE_COLOR` notice) — see `reports/progress_113_warning_maintenance.md`.
 
 ## Next scoped work
 
-1. **Milestone F — item 11 implemented, items 10 and 12 pending**: the evaluator profiling harness is implemented on `chore/evaluator-profiling-harness` with a first baseline (`reports/progress_118_evaluator_profiling.md`) and is subject to the user merge decision. Item 10 (Lottie mapping design) and item 12 (editable KCS import, scope `.kcs` + legacy project) are approved in principle; their work proceeds on their own branches with their own reviews. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
+1. **Milestone F — three deliverables awaiting the merge decision**: item 11 (evaluator profiling harness and baseline, `reports/progress_118_evaluator_profiling.md`), item 12’s first step (validated import boundary, `reports/progress_119_kcs_import_boundary.md`) and item 10 (Lottie mapping design, `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`). The import-boundary branch is stacked on the profiling branch; the design document is on its own branch. Remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
 2. Milestone F stays plan-only (and anything in Milestone E beyond items 7 and 8 stays plan-only), and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -304,7 +290,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `22335a5dc899…`: milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), and items 10 (Lottie mapping design) and 12 (editable KCS import) remain approval-gated before their own code changes.
+Current `main` / `origin/main` is at `22335a5dc899…`: milestones A–E are complete — A/B/C, Milestone D item 6, the item-9 audit and its approved Option A warning maintenance, the Milestone E study, and Milestone E items 7 (7-A offline schema closure) and 8 (folder QA automation), with green CI on the merge. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is implemented on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; all three await review and the merge decision.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -322,7 +308,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 117 files / 1,721 tests |
+| Full Vitest | PASS | 118 files / 1,730 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `d19bab6` on this branch (its source revision; later commits are documentation only) |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
@@ -386,7 +372,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
 | D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. Follow-ups stay approval-gated: Option B (patch/minor updates + `npm audit fix`), Option C (TypeScript 7 / Vitest 5), the `engines` declaration and the npm-12 `allowScripts` pin |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
-| F — Architecture exploration only | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for implementation until each item is approved separately. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching |
+| F — Architecture exploration only | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for implementation until each item is approved separately. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -427,7 +413,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 
 ## Milestone F — Architecture exploration only (roadmap items 10, 11, 12)
 
-Research/design deliverables only: Lottie import mapping design, evaluator profiling plan, editable KCS import plan. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **no implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code.
+Research/design deliverables only: Lottie import mapping design, evaluator profiling plan, editable KCS import plan. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`) and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`); **no implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code.
 
 ## Approval gates
 
@@ -522,13 +508,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 10661 bytes
-- `NEXT_SESSION.md` — 8786 bytes
-- `OMP_FINAL_RESPONSE.md` — 3331 bytes
-- `PROJECT_STATE.md` — 11710 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 11162 bytes
+- `NEXT_SESSION.md` — 9018 bytes
+- `OMP_FINAL_RESPONSE.md` — 3475 bytes
+- `PROJECT_STATE.md` — 11891 bytes
 - `README.md` — 2939 bytes
-- `manifest.txt` — 3421 bytes
-- `progress_118_evaluator_profiling.md` — 5019 bytes
+- `manifest.txt` — 3762 bytes
+- `progress_119_kcs_import_boundary.md` — 5341 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

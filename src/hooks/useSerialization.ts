@@ -9,7 +9,7 @@ import { DEFAULT_SCENE_COORDINATE_SYSTEM, migrateSceneCoordinates } from '../uti
 import { normalizeMotionTemplates } from '../utils/motionTemplates';
 import { migrateSceneLayerV6 } from '../utils/v6Migration';
 import { normalizeBezierPath } from '../utils/bezierPath';
-
+import { validateImportedDocument, type ImportResult } from '../utils/importValidation';
 const noopSetCoordinateSystem: React.Dispatch<React.SetStateAction<SceneCoordinateSystem>> = () => undefined;
 
 /** Ensure legacy tracks (without channels) get empty channels injected */
@@ -437,18 +437,21 @@ export const useSerialization = ({
     return JSON.stringify(scene, null, 2);
   }, [characterParts, tracks, fps, totalFrames, projectResolution, coordinateSystem, sceneTitle, motionTemplates, activeTemplateId]);
 
-  // 4. Import: SceneData or legacy AnimationProject
-  const importProject = useCallback((jsonStr: string, defaultName?: string): boolean => {
-    try {
-      const parsed: any = JSON.parse(jsonStr);
-      if (!parsed) return false;
+  // 4. Import: one validated boundary for both document kinds
+  const importProject = useCallback((jsonStr: string, defaultName?: string): ImportResult => {
+    const validation = validateImportedDocument(jsonStr);
+    if (!validation.ok) return { ok: false, diagnostics: validation.diagnostics };
 
-      if (isSceneData(parsed)) {
-        return fromSceneData(parsed, defaultName || parsed.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
+    try {
+      if (validation.document.kind === 'scene') {
+        const scene = validation.document.scene;
+        const imported = fromSceneData(scene, defaultName || scene.name || '', setCharacterParts, setTracks, setFps, setTotalFrames, setProjectResolution, setCoordinateSystem, setLastSavedAt, setSceneTitleState, setMotionTemplates, setActiveTemplateIdState);
+        return { ok: imported, diagnostics: [] };
       }
 
       // Legacy AnimationProject format (backward compat)
-      if (parsed.tracks && parsed.characterParts) {
+      const parsed = validation.document.project;
+      {
         const rawName = defaultName || parsed.sceneTitle || parsed.name || 'Imported Template';
         const templateName = rawName.replace(/\.json$/i, '').trim() || 'Imported Template';
         const newId = `tmpl_${Date.now()}`;
@@ -484,11 +487,10 @@ export const useSerialization = ({
         if (parsed.fps) setFps(parsed.fps);
         if (parsed.totalFrames) setTotalFrames(parsed.totalFrames);
 
-        return true;
+        return { ok: true, diagnostics: [] };
       }
-      return false;
     } catch {
-      return false;
+      return { ok: false, diagnostics: [{ code: 'KCS_IMPORT_FAILED', severity: 'error', feature: 'project-import', path: '$', message: 'The document passed validation but could not be applied.', action: 'Re-export the project and import it again.' }] };
     }
   }, [activeProjectTemplateId, characterParts, tracks, motionTemplates, activeTemplateId, coordinateSystem, setProjectResolution, setCoordinateSystem, setTracks, setCharacterParts, setFps, setTotalFrames, setTemplateCanvasStore, setProjectTemplates, setMotionTemplates, setActiveTemplateIdState, setActiveProjectTemplateIdState, setSceneTitleState]);
 

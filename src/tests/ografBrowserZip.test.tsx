@@ -284,7 +284,7 @@ describe('HeaderBar OGraf export integration', () => {
   });
 
   it('imports a KCS scene file through the existing project path', async () => {
-    context.importProject.mockReturnValue(true);
+    context.importProject.mockReturnValue({ ok: true, diagnostics: [] });
     render(<HeaderBar />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(['{"version":1}'], 'scene.kcs', { type: 'application/json' })] } });

@@ -117,9 +117,9 @@ describe('useSerialization Hook', () => {
       templateCanvasStore: {}
     };
 
-    const success = result.current.importProject(JSON.stringify(mockProject));
+    const imported = result.current.importProject(JSON.stringify(mockProject));
     
-    expect(success).toBe(true);
+    expect(imported.ok).toBe(true);
     expect(mockSetFps).toHaveBeenCalledWith(24);
     expect(mockSetSceneTitleState).toHaveBeenCalledWith('Imported Scene');
   });
@@ -188,8 +188,8 @@ describe('useSerialization Hook', () => {
       motionTemplates: [],
     };
 
-    const success = result.current.importProject(JSON.stringify(sceneData));
-    expect(success).toBe(true);
+    const imported = result.current.importProject(JSON.stringify(sceneData));
+    expect(imported.ok).toBe(true);
     expect(mockSetFps).toHaveBeenCalledWith(60);
     expect(mockSetTotalFrames).toHaveBeenCalledWith(200);
     expect(mockSetCharacterParts).toHaveBeenCalled();
@@ -216,8 +216,8 @@ describe('useSerialization Hook', () => {
     const exported = result.current.exportProject();
 
     // Round-trip: import the exported data back
-    const success = result.current.importProject(exported);
-    expect(success).toBe(true);
+    const imported = result.current.importProject(exported);
+    expect(imported.ok).toBe(true);
 
     // Re-export and verify version preserved
     const reExported = result.current.exportProject();
@@ -296,8 +296,8 @@ describe('useSerialization Hook', () => {
       }],
     };
 
-    const success = result.current.importProject(JSON.stringify(legacyScene));
-    expect(success).toBe(true);
+    const imported = result.current.importProject(JSON.stringify(legacyScene));
+    expect(imported.ok).toBe(true);
     expect(mockSetTracks).toHaveBeenCalled();
   });
 
@@ -356,8 +356,8 @@ describe('useSerialization Hook', () => {
 
     // Import (mock captures the restored tracks)
     mockSetTracks.mockClear();
-    const success = result.current.importProject(exported);
-    expect(success).toBe(true);
+    const imported = result.current.importProject(exported);
+    expect(imported.ok).toBe(true);
 
     const lastTracks = mockSetTracks.mock.calls.at(-1)?.[0] as Track[];
     expect(lastTracks).toBeDefined();
@@ -394,8 +394,8 @@ describe('useSerialization Hook', () => {
 
     // Import must restore it via setSceneTitleState
     mockSetSceneTitleState.mockClear();
-    const success = result.current.importProject(exported);
-    expect(success).toBe(true);
+    const imported = result.current.importProject(exported);
+    expect(imported.ok).toBe(true);
     expect(mockSetSceneTitleState).toHaveBeenCalledWith('My Scene');
   });
 
@@ -425,8 +425,8 @@ describe('useSerialization Hook', () => {
     };
 
     mockSetSceneTitleState.mockClear();
-    const success = result.current.importProject(JSON.stringify(sceneNoName));
-    expect(success).toBe(true);
+    const imported = result.current.importProject(JSON.stringify(sceneNoName));
+    expect(imported.ok).toBe(true);
     // No name in file → sceneTitle must not be touched
     expect(mockSetSceneTitleState).not.toHaveBeenCalled();
   });
@@ -471,8 +471,8 @@ describe('useSerialization Hook', () => {
 
     // Import must preserve it (not coerce 0 → 1)
     mockSetTracks.mockClear();
-    const success = result.current.importProject(exported);
-    expect(success).toBe(true);
+    const imported = result.current.importProject(exported);
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     expect(restored.channels.opacity.find((k: any) => k.frame === 120)!.value).toBe(0);
@@ -510,8 +510,8 @@ describe('useSerialization Hook', () => {
     }));
 
     mockSetTracks.mockClear();
-    const success = result.current.importProject(result.current.exportProject());
-    expect(success).toBe(true);
+    const imported = result.current.importProject(result.current.exportProject());
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     // undefined opacity → default 1 preserved (channels conversion)
@@ -560,8 +560,8 @@ describe('useSerialization Hook', () => {
 
     // Import must restore all 4
     mockSetCharacterParts.mockClear();
-    const success = result.current.importProject(exported);
-    expect(success).toBe(true);
+    const imported = result.current.importProject(exported);
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find(p => p.id === 'L1')!;
     expect(restored.inAnimPreset).toBe('fade');
@@ -597,8 +597,8 @@ describe('useSerialization Hook', () => {
 
     // Import must restore them via setMotionTemplates
     mockSetMotionTemplates.mockClear();
-    const success = result.current.importProject(exported);
-    expect(success).toBe(true);
+    const imported = result.current.importProject(exported);
+    expect(imported.ok).toBe(true);
     expect(mockSetMotionTemplates).toHaveBeenCalledWith(expect.arrayContaining([
       expect.objectContaining({ name: 'Outro' }),
     ]));
@@ -630,8 +630,8 @@ describe('useSerialization Hook', () => {
     };
 
     mockSetMotionTemplates.mockClear();
-    const success = result.current.importProject(JSON.stringify(sceneNoMT));
-    expect(success).toBe(true);
+    const imported = result.current.importProject(JSON.stringify(sceneNoMT));
+    expect(imported.ok).toBe(true);
     expect(mockSetMotionTemplates).not.toHaveBeenCalled();
   });
 
@@ -675,8 +675,8 @@ describe('useSerialization Hook', () => {
 
     // Import must restore both birebir
     mockSetCharacterParts.mockClear();
-    const success = result.current.importProject(exported);
-    expect(success).toBe(true);
+    const imported = result.current.importProject(exported);
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find(p => p.id === 'L1')!;
     expect(restored.clonerConfig).toEqual(clonerCfg);
@@ -736,8 +736,8 @@ describe('useSerialization Hook', () => {
 
     // Import must restore the same channel data (transition survives)
     mockSetTracks.mockClear();
-    const success = result.current.importProject(exported);
-    expect(success).toBe(true);
+    const imported = result.current.importProject(exported);
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     expect(restored.channels.opacity).toEqual(parsed.tracks[0].channels.opacity);
@@ -803,8 +803,8 @@ describe('useSerialization Hook', () => {
     }));
 
     mockSetTracks.mockClear();
-    const success = result.current.importProject(JSON.stringify(makeDualSceneData([dualTrack])));
-    expect(success).toBe(true);
+    const imported = result.current.importProject(JSON.stringify(makeDualSceneData([dualTrack])));
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     // Canonical channels win — legacy values (999 / 0.9) must not override
@@ -846,8 +846,8 @@ describe('useSerialization Hook', () => {
     }));
 
     mockSetTracks.mockClear();
-    const success = result.current.importProject(JSON.stringify(makeDualSceneData([legacyOnlyTrack])));
-    expect(success).toBe(true);
+    const imported = result.current.importProject(JSON.stringify(makeDualSceneData([legacyOnlyTrack])));
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     // Conversion fallback: legacy values now live in canonical channels
@@ -933,8 +933,8 @@ describe('useSerialization Hook', () => {
     }));
 
     mockSetTracks.mockClear();
-    const success = result.current.importProject(JSON.stringify(makeDualSceneData([track])));
-    expect(success).toBe(true);
+    const imported = result.current.importProject(JSON.stringify(makeDualSceneData([track])));
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     // Legacy conversion must have run — channels now carry the legacy values
@@ -981,8 +981,8 @@ describe('useSerialization Hook', () => {
     }));
 
     mockSetTracks.mockClear();
-    const success = result.current.importProject(JSON.stringify(makeDualSceneData([track])));
-    expect(success).toBe(true);
+    const imported = result.current.importProject(JSON.stringify(makeDualSceneData([track])));
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     // canonical x preserved; legacy values NOT injected anywhere
@@ -1016,8 +1016,8 @@ describe('useSerialization Hook', () => {
     }));
 
     mockSetTracks.mockClear();
-    const success = result.current.importProject(JSON.stringify(makeDualSceneData([track])));
-    expect(success).toBe(true);
+    const imported = result.current.importProject(JSON.stringify(makeDualSceneData([track])));
+    expect(imported.ok).toBe(true);
 
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     expect(restored.channels.x).toHaveLength(0);
@@ -1099,7 +1099,7 @@ describe('useSerialization Hook', () => {
 
     // Import round-trip restores the same channels
     mockSetTracks.mockClear();
-    expect(result.current.importProject(JSON.stringify(parsed))).toBe(true);
+    expect(result.current.importProject(JSON.stringify(parsed)).ok).toBe(true);
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     expect(restored.channels.x[1].value).toBe(30);
     expect(restored.channels.opacity[0].value).toBe(0);
@@ -1142,7 +1142,7 @@ describe('useSerialization Hook', () => {
     expect(parsed.tracks[0].channels.opacity[0].value).toBe(0);
 
     mockSetTracks.mockClear();
-    expect(result.current.importProject(JSON.stringify(parsed))).toBe(true);
+    expect(result.current.importProject(JSON.stringify(parsed)).ok).toBe(true);
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     expect(restored.channels.x[0].bezierControlPoints).toEqual([0.2, 0.4, 0.6, 0.8]);
     expect(restored.channels.x[0].templateId).toBe('Outro');
@@ -1271,7 +1271,7 @@ describe('useSerialization Hook', () => {
 
     // Import restores identical channel data
     mockSetTracks.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
 
     const startOp = restored.channels.opacity.find((k: any) => k.frame === 30)!;
@@ -1299,7 +1299,7 @@ describe('useSerialization Hook', () => {
 
     // Import keeps it cleared
     mockSetTracks.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
     expect(restored.channels.opacity.filter((k) => (k.templateId || 'Sequence') === 'Sequence')).toHaveLength(0);
     expect(restored.channels.x.filter((k) => (k.templateId || 'Sequence') === 'Outro')).toHaveLength(1);
@@ -1364,7 +1364,7 @@ describe('useSerialization Hook', () => {
 
     const exported = result.current.exportProject();
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === 'part_m')!;
     expect(restored.matte).toEqual({ sourcePartId: 'part_s', mode: 'clip', enabled: true });
   });
@@ -1395,7 +1395,7 @@ describe('useSerialization Hook', () => {
     const exported = result.current.exportProject();
     expect(JSON.parse(exported).layers[0].matte).toBeUndefined();
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === 'part_l')!;
     expect(restored.matte).toBeUndefined();
   });
@@ -1430,7 +1430,7 @@ describe('useSerialization Hook', () => {
     const { result } = renderSerializationWithPart(part);
     const exported = result.current.exportProject();
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     return (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === 'part_m')!;
   }
 
@@ -1527,7 +1527,7 @@ describe('useSerialization Hook', () => {
     const { result } = renderSerializationWithPart(part);
     const exported = result.current.exportProject();
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     return (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === part.id)!;
   }
 
@@ -1546,7 +1546,7 @@ describe('useSerialization Hook', () => {
       fillColor: '#123456', strokeColor: '#654321',
     });
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(JSON.stringify(exported))).toBe(true);
+    expect(result.current.importProject(JSON.stringify(exported)).ok).toBe(true);
     const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[])[0];
     expect(restored).toMatchObject({
       fillEnabled: false, fillOpacity: 0, strokeEnabled: false, strokeWidth: 0, strokeOpacity: 0,
@@ -1568,7 +1568,7 @@ describe('useSerialization Hook', () => {
     expect(exported.layers[0].strokeOpacity).toBeUndefined();
     expect(exported.layers[0].strokeWidth).toBe(8);
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(JSON.stringify(exported))).toBe(true);
+    expect(result.current.importProject(JSON.stringify(exported)).ok).toBe(true);
     const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[])[0];
     expect(restored.fillEnabled).toBeUndefined();
     expect(restored.fillOpacity).toBeUndefined();
@@ -1629,7 +1629,7 @@ describe('useSerialization Hook', () => {
     });
     // Import side: restore BOTH parts then round-trip the full scene
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     const restoredParts = mockSetCharacterParts.mock.calls.at(-1)?.[0] as CharacterPart[];
     const restoredSource = restoredParts.find((p) => p.id === 'freeform-source')!;
     const restoredTarget = restoredParts.find((p) => p.id === 'target')!;
@@ -1702,7 +1702,7 @@ describe('useSerialization Hook', () => {
       const { result } = renderSerializationWithPart(part);
       const exported = result.current.exportProject();
       mockSetCharacterParts.mockClear();
-      expect(result.current.importProject(exported)).toBe(true); // never throws
+      expect(result.current.importProject(exported).ok).toBe(true); // never throws
       const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === 'tgt')!;
       expect(restored.matte.sourcePartId).toBe('src'); // matte survives
     }
@@ -1759,7 +1759,7 @@ describe('useSerialization Hook', () => {
       const { result } = renderSerializationWithPart(part);
       const exported = result.current.exportProject();
       mockSetCharacterParts.mockClear();
-      expect(result.current.importProject(exported)).toBe(true); // never throws
+      expect(result.current.importProject(exported).ok).toBe(true); // never throws
       const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === 'tgt')!;
       expect(restored.matte.sourcePartId).toBe('src'); // matte survives
       expect(normalizeGradientAngle(restored.matte.gradient?.angle)).toBe(0); // render-side guard
@@ -1817,7 +1817,7 @@ describe('useSerialization Hook', () => {
     const { result } = renderSerializationWithPart(part);
     const exported = result.current.exportProject();
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     return (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === part.id)!;
   }
 
@@ -1857,7 +1857,7 @@ describe('useSerialization Hook', () => {
     const { result } = renderSerializationWithPart(part);
     const exported = result.current.exportProject();
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === 'tgt')!;
     expect(restored.matte.sourcePartId).toBe('txt');
     expect(normalizeGradientAngle(restored.matte.gradient?.angle)).toBe(0);
@@ -1893,7 +1893,7 @@ describe('useSerialization Hook', () => {
       const { result } = renderSerializationWithPart(part);
       const exported = result.current.exportProject();
       mockSetCharacterParts.mockClear();
-      expect(result.current.importProject(exported)).toBe(true);
+      expect(result.current.importProject(exported).ok).toBe(true);
       return (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === part.id)!;
     }
 
@@ -1970,7 +1970,7 @@ describe('useSerialization Hook', () => {
       const { result } = renderSerializationWithPart(part);
       const exported = result.current.exportProject();
       mockSetCharacterParts.mockClear();
-      expect(result.current.importProject(exported)).toBe(true);
+      expect(result.current.importProject(exported).ok).toBe(true);
       return (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === part.id)!;
     }
 
@@ -2048,7 +2048,7 @@ describe('useSerialization — M21 image matte serialization contract', () => {
     const { result } = renderSerializationWithPart(part);
     const exported = result.current.exportProject();
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     return (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === part.id)!;
   }
   const imgPart = (matte: any) => ({
@@ -2264,7 +2264,7 @@ describe('useSerialization — M21 image matte serialization contract', () => {
     expect(JSON.parse(exported).layers[0].path.coordinateSpace).toBe('local');
 
     mockSetCharacterParts.mockClear();
-    expect(result.current.importProject(exported)).toBe(true);
+    expect(result.current.importProject(exported).ok).toBe(true);
     const restored = (mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[]).find((p) => p.id === 'ff-a')!;
 
     expect(restored.path).toEqual(materialized);

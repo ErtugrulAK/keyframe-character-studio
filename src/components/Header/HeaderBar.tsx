@@ -283,9 +283,13 @@ export const HeaderBar: React.FC = () => {
           showToast('This is an OGraf graphic manifest/package. KCS project import expects a .kcs project file. Use Export/OGraf tools or add Import OGraf Package support.', 'error');
           return;
         }
-        const success = importProject(text, fileNameWithoutExt);
-        if (success) showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
-        else showToast('Invalid project file format!', 'error');
+        const result = importProject(text, fileNameWithoutExt);
+        if (result.ok) {
+          showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
+          return;
+        }
+        const [refusal] = result.diagnostics;
+        showToast(refusal ? `${refusal.message} ${refusal.action}` : 'Invalid project file format!', 'error');
       }
     };
     reader.readAsText(file);

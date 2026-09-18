@@ -247,7 +247,7 @@ Full Vitest (118 files / 1,730 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. **Milestone F — three deliverables awaiting the merge decision**: item 11 (evaluator profiling harness and baseline, `reports/progress_118_evaluator_profiling.md`), item 12’s first step (validated import boundary, `reports/progress_119_kcs_import_boundary.md`) and item 10 (Lottie mapping design, `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`). The import-boundary branch is stacked on the profiling branch; the design document is on its own branch. Remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
+1. **Milestone F — three deliverables awaiting the merge decision**: item 11 (evaluator profiling harness and baseline, `reports/progress_118_evaluator_profiling.md`), item 12’s first step (validated import boundary, `reports/progress_119_kcs_import_boundary.md`) and item 10’s mapping design (merged in this stack, with four open questions for the user: precomp handling, layer in/out, limit defaults, report surface). Remaining item-12 product work (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary, OGraf package import) stays plan-only. Still open afterwards: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again).
 2. Milestone F stays plan-only (and anything in Milestone E beyond items 7 and 8 stays plan-only), and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -413,7 +413,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 
 ## Milestone F — Architecture exploration only (roadmap items 10, 11, 12)
 
-Research/design deliverables only: Lottie import mapping design, evaluator profiling plan, editable KCS import plan. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`) and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`); **no implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code.
+Research/design deliverables only: Lottie import mapping design, evaluator profiling plan, editable KCS import plan. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`) and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_120_lottie_mapping_design.md`) with its four open questions listed for the user; **no implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code.
 
 ## Approval gates
 
@@ -508,13 +508,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 11162 bytes
-- `NEXT_SESSION.md` — 9018 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 11260 bytes
+- `NEXT_SESSION.md` — 8990 bytes
 - `OMP_FINAL_RESPONSE.md` — 3475 bytes
 - `PROJECT_STATE.md` — 11891 bytes
 - `README.md` — 2939 bytes
 - `manifest.txt` — 3762 bytes
 - `progress_119_kcs_import_boundary.md` — 5341 bytes
+- `progress_120_lottie_mapping_design.md` — 3849 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

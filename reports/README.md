@@ -43,3 +43,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_117_interop_study.md` — Milestone F: Lottie mapping, evaluator profiling and editable KCS import study.
 - `progress_118_evaluator_profiling.md` — Milestone F item 11: deterministic evaluator profiling harness and its first baseline.
 - `progress_119_kcs_import_boundary.md` — Milestone F item 12 first step: validated KCS import boundary.
+- `progress_120_lottie_mapping_design.md` — Milestone F item 10: Lottie import mapping design.

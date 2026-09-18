@@ -74,7 +74,7 @@ Common per-layer fields:
 
 ## 5. Masks and mattes
 
-- Each entry in `masksProperties[]` becomes one `LayerMask` with `mode` mapped as `a` → `add`, `s` → `subtract`, `i` → `intersect`, `n` → `none`; KCS's `LayerMaskMode` set is the target, and an unmappable mode is reported.
+- Each entry in `masksProperties[]` becomes one `LayerMask` with `mode` mapped onto the four values KCS actually has (`LayerMaskMode = 'add' | 'subtract' | 'intersect' | 'difference'`): `a` → `add`, `s` → `subtract`, `i` → `intersect`, `n` (Lottie has no mask contribution there) → the mask is **skipped and reported**, because KCS has no "none" mode. KCS's `difference` has no Lottie equivalent in the first cut, so an imported document never produces it. Any other mode value is reported rather than guessed.
 - Static mask geometry (`pt.k` without keyframes) maps into `path`; animated geometry maps into the existing `maskPathChannels` (canonical `PathKeyframe`), not into a new channel.
 - Masks with a frequency above the first-cut limit (see §7) are reported per mask instead of being silently reduced.
 - `f` (feather) and `o` (opacity) map to the mask's `feather`/`opacity`; a mask *animated* on those properties uses `maskChannels` with the same per-mask id.

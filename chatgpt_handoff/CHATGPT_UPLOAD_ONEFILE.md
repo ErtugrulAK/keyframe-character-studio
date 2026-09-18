@@ -62,37 +62,40 @@ One decision: merge the stacked branch (item 11 + item 12 first step) after the 
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone F Item 12 First Step (Validated KCS Import Boundary)
+# KCS ChatGPT Upload Manifest — Milestone F Deliverables (items 10, 11, 12 first step)
 
 Clean refreshed: YES
-Bundle purpose: Milestone F item 12, security half first step — one validated boundary for imported KCS project text
+Bundle purpose: Milestone F on one stacked branch — item 11 profiling harness, item 12 first step (validated import boundary) and item 10 (Lottie mapping design)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/kcs-import-boundary-hardening, stacked on chore/evaluator-profiling-harness (item 11) over main af0288de
-Task record: reports/progress_119_kcs_import_boundary.md
-What changed: src/utils/importValidation.ts (new boundary: size limit 32 MB, JSON syntax, depth-bounded prototype-key walk reusing isPrototypeSensitiveKey, document shape, declared layer/track limit 5,000; stable refusal codes plus the offending document path and an actionable message), src/hooks/useSerialization.ts (importProject delegates to the boundary and returns ImportResult; the JSON.parse into any is gone), src/context/AnimatorContext.tsx (type follows), src/components/Header/HeaderBar.tsx (refusal toast shows message + action), src/tests/importValidation.test.ts (9 new cases)
-Design decision: exceeding a limit is a refusal with a diagnostic, never a silent clamp — trimming a project would be data loss
-Accepted kinds (scope confirmed): current .kcs scene and legacy AnimationProject; OGraf package/single-file import stays rejected as before
-Validation: boundary cases PASS (9); serialization suite PASS (95); full suite PASS (118 files / 1,730 tests); lint clean; tsc clean; build PASS; qa:release PASS (2 Chromium tests); state check PASS
-Not changed: dependencies, package.json, package-lock.json, workflows, the OGraf rejection path, the existing path-safety authorities
+Branch: fix/kcs-import-boundary-hardening — f17215b (item 11 harness), 9c257ed (item 12 import boundary), a17be8b (item 10 design), on base main af0288de
+Task records: reports/progress_118_evaluator_profiling.md (item 11), reports/progress_119_kcs_import_boundary.md (item 12 first step), reports/progress_120_lottie_mapping_design.md (item 10)
+Design document: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository; its summary is in the item-10 task record)
+Item 11: perf/sceneBuilder.ts, perf/evaluator-profile.perf.ts, perf/vitest.perf.config.ts, src/tests/evaluatorProfileScenes.test.ts — measurement only, no caching, no threshold; baseline in the task record
+Item 12 first step: src/utils/importValidation.ts (size 32 MB, JSON syntax, depth-bounded prototype-key walk, shape, layer limit 5,000; stable refusal codes with the offending document path), importProject returns ImportResult, HeaderBar shows message + action; scope confirmed as .kcs + legacy project
+Item 10: mapping design only — three mapping kinds, per-construct tables, temporal/easing rules, first-cut limits, diagnostics contract, validation plan, and four open questions for the user
+Implemented in this task: items 11 and 12 first step (code + tests); item 10 is design only
+Not changed: dependencies, package.json, package-lock.json, workflows, the OGraf import rejection path, existing path-safety authorities
 Still plan-only: the item-12 product half (compatibility matrix, round-trip guarantee, unified import UX, autosave routed through the boundary) and OGraf package import
+Validation: item-11 harness PASS (1 case, report printed) and builder tests PASS (5); import boundary PASS (9 cases); serialization suite PASS (95 cases); full suite PASS (118 files / 1,730 tests); lint clean; tsc clean; build PASS; qa:release PASS (2 Chromium tests); state check PASS
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (8):
+Copied files (9):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the item-12 final response
-- progress_119_kcs_import_boundary.md — the task record
+- OMP_FINAL_RESPONSE.md — the final response for this stack
+- progress_119_kcs_import_boundary.md — the item-12 first-step task record
+- progress_120_lottie_mapping_design.md — the item-10 design task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test and script files (the boundary and its tests live in the repository)
+- Source, test, script and perf files (they live in the repository)
 - package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
@@ -100,13 +103,14 @@ Omitted categories:
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
-- npx vitest run src/tests/importValidation.test.ts: PASS — 9 cases
-- npx vitest run src/tests/useSerialization.test.ts: PASS — 95 cases
+- npx vitest run --config perf/vitest.perf.config.ts: PASS — 1 case, baseline report printed
+- npx vitest run src/tests/evaluatorProfileScenes.test.ts: PASS — 5 cases
+- npx vitest run src/tests/importValidation.test.ts src/tests/useSerialization.test.ts: PASS — 9 + 95 cases
 - npm test: PASS — 118 files / 1,730 tests; npm run lint: clean; npx tsc --noEmit: clean
-- npm run build: PASS; npm run qa:release: PASS (2 Chromium tests)
+- npm run build: PASS; npm run qa:release: PASS (2 Chromium tests, candidate a17be8b)
 - node scripts/check-state-consistency.mjs: PASS
 
-Next: the independent review of this branch and of its item-11 base, then the user merge decision. Item 10's mapping design is on its own branch.
+Next: the independent review of this stack, then the user merge decision, followed by the four item-10 design questions and the item-12 product half.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -114,25 +118,23 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 11 (Evaluator Profiling Harness)
+# KCS Minimal ChatGPT Upload Bundle — Milestone F (items 10, 11, 12 first step)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The approved item-11 plan of the Milestone F study: **measurement only** for the channel evaluator.
+Milestone F on one stacked branch:
 
-- `perf/sceneBuilder.ts` builds deterministic scenes (no randomness, clocks or generated ids; channels come from the production `makeEmptyChannels` factory) with parameters for layers, channels per layer, keyframes per channel, masked layers and parented layers.
-- `perf/evaluator-profile.perf.ts` is the harness: warm-up, then 60 sampled iterations per target reporting p50/p95/min/max for `evaluateFrame`, `evaluateTransform`, `interpolateChannel` and `applyEasing`, with a report pinned to the revision, Node version, platform and scene parameters.
-- `perf/vitest.perf.config.ts` runs it on demand; the root config only includes `*.test.*`, so CI keeps its current cost.
-- `src/tests/evaluatorProfileScenes.test.ts` pins the builder contract in 5 fast cases.
-
-First baseline (Node `v24.18.0`, p50 per operation): `evaluateFrame` @ frame 60 is 0.0254 ms (5 layers), 0.1103 ms (25 layers), **1.2258 ms (100 layers)**; `interpolateChannel` is 0.0004–0.0009 ms. No threshold is asserted — the numbers exist so a later caching proposal can cite a before/after.
+- **Item 11 — evaluator profiling harness (measurement only).** `perf/sceneBuilder.ts` builds deterministic scenes; `perf/evaluator-profile.perf.ts` reports p50/p95/min/max for `evaluateFrame`, `evaluateTransform`, `interpolateChannel` and `applyEasing`; `perf/vitest.perf.config.ts` runs it on demand so CI keeps its cost. First baseline: a 100-layer frame costs about 1.2 ms p50, while `interpolateChannel` is sub-microsecond — evidence for a later caching proposal, not a threshold.
+- **Item 12, first step — validated KCS import boundary.** `src/utils/importValidation.ts` refuses oversized, malformed, prototype-poisoned, unknown-shaped or over-limit documents with stable codes and the offending document path; `importProject` returns `ImportResult` and no longer parses into `any`; the refusal toast shows the message and the action. The scope is the current `.kcs` scene and the legacy project shape.
+- **Item 10 — Lottie import mapping design (design only).** Three mapping kinds, per-construct tables, the temporal/easing conversion rules, first-cut limits, one diagnostics contract and a validation plan, with four open questions for the user.
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_118_evaluator_profiling.md` — the task record with the baseline table
+- `OMP_FINAL_RESPONSE.md` — the final response for this stack
+- `progress_119_kcs_import_boundary.md` — the item-12 first-step task record
+- `progress_120_lottie_mapping_design.md` — the item-10 design task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
@@ -143,7 +145,7 @@ First baseline (Node `v24.18.0`, p50 per operation): `evaluateFrame` @ frame 60 
 
 ## Deliberately not included
 
-Source, test, script and perf files are intentionally omitted (the harness lives at `perf/` in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source, test, script, perf and design files are intentionally omitted (they live in the repository, including `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
@@ -155,7 +157,7 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ---
 
-## 4. Task Record
+## 4. Item 12 Task Record
 
 # Progress 119 — KCS Import Boundary Hardening (Milestone F, item 12, first step)
 
@@ -216,7 +218,53 @@ Scope confirmed by the user: the first editable kinds are the current `.kcs` sce
 
 ---
 
-## 5. Next Session
+## 5. Item 10 Task Record
+
+# Progress 120 — Lottie Import Mapping Design (Milestone F, item 10)
+
+## 1. Scope
+
+Delivers the approved item-10 design scope: `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`. It is a **design document only** — no importer, no dependency, no runtime change. Implementation needs the design approval this document asks for, per the roadmap's interchange gate.
+
+## 2. Branch
+
+- Delivered in the same stacked Milestone F branch as items 11 and 12 (`fix/kcs-import-boundary-hardening`), so the Milestone F documentation merges as one unit; the design itself is self-contained and reviewers may take it independently.
+
+## 3. What the design fixes
+
+- **Three mapping kinds, no fourth option:** *lossless*, *lossy with report*, *unsupported, preserved*. A construct never becomes lossless by silence: anything dropped or approximated is at least reported.
+- **Document, layer, shape, mask and matte mapping tables** — every canonical KCS field is tied to the Lottie construct that feeds it (`ks` transform, `sh`/`rc`/`el`/`sr`/`gr`/`fl`/`st`/`tm`/`mm`, `masksProperties`, `tt`/`td`, `parent`, `ip`/`op`, `st`), with precomps, effects, expressions, 3D/cameras, skew, auto-orient and repeaters marked *unsupported, preserved* for the first cut.
+- **Temporal and easing conversion rules** — the document-level frame shift, the `fr` → `fps` rounding, and the segment-to-keyframe handle split: Lottie's `i`/`o` describe the segment, KCS's `bezierIn`/`bezierOut` describe the keyframe, so `keyframe[i].bezierOut ← o` and `keyframe[i+1].bezierIn ← i`; `h: 1` maps to the `hold` easing. Roving and expression-driven segments become `linear` **and** a report entry — never a silent approximation.
+- **First-cut import limits** (masks per layer 8, keyframes per channel 512, hierarchy depth 32, path vertices 4096), each reported rather than silently reduced.
+- **One diagnostics contract** reusing the existing export-diagnostic shape, with stable codes, the source document path (`layers[3].shapes[1].ef[0]`) and an actionable next step, shown **before** the import replaces the user's work.
+- **Validation plan** — per-construct golden fixtures, round-trip fixtures for the lossless subset, limit tests, negative fixtures (cyclic parent, self-referencing matte, missing asset, unknown mask mode) that must report and continue rather than throw, and a UI smoke.
+
+## 4. Validation of this deliverable
+
+| Check | Result |
+|---|---|
+| Design covers the approved scope | yes — mapping tables, loss taxonomy, temporal rules, limits, diagnostics, validation plan |
+| Claims about the canonical model are accurate | every referenced type and field exists at this revision (`BezierPath` v1, `TemporalHandle`, `LayerMask`, `TrackMatteV2`, `PropertyKeyframe.bezierIn/bezierOut`, `hold`, `applyEasing`, `maskPathChannels`, the path-safety authority) |
+| Implementation | **none**, by design |
+| Repository changes | documentation only |
+| State consistency | `node scripts/check-state-consistency.mjs` PASS after the updates |
+
+## 5. Protected invariants
+
+- No source, test, script, dependency, `package.json`, lockfile or workflow change; the canonical model, channel semantics, OGraf package format and export paths are untouched.
+- `docs/interop/V6_LOTTIE_MAPPING.md` remains the authority for the interop principle; this design does not contradict it and does not need to change it.
+- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, OMP configuration and user folders are unchanged.
+
+## 6. Open questions for the user
+
+1. Precomps: confirm *unsupported, preserved* in the first cut (flattening would change timing).
+2. Layer in/out (`ip`/`op`): confirm *reported, not converted*.
+3. Limit defaults: confirm the numbers in the design, or set your own.
+4. Report surface: confirm the report appears before replacement (recommended).
+
+---
+
+## 6. Next Session
 
 # Next Session Handoff
 
@@ -280,7 +328,7 @@ Full Vitest (118 files / 1,730 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ---
 
-## 6. Project State
+## 7. Project State
 
 # KCS Project State
 
@@ -357,7 +405,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ---
 
-## 7. Current Roadmap Plan and Changelog
+## 8. Current Roadmap Plan and Changelog
 
 # KCS Grouped Roadmap Execution Plan
 
@@ -503,7 +551,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## 8. File Inventory
+## 9. File Inventory
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
@@ -512,10 +560,10 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `NEXT_SESSION.md` — 8990 bytes
 - `OMP_FINAL_RESPONSE.md` — 3475 bytes
 - `PROJECT_STATE.md` — 11891 bytes
-- `README.md` — 2939 bytes
-- `manifest.txt` — 3762 bytes
+- `README.md` — 3082 bytes
+- `manifest.txt` — 4365 bytes
 - `progress_119_kcs_import_boundary.md` — 5341 bytes
-- `progress_120_lottie_mapping_design.md` — 3849 bytes
+- `progress_120_lottie_mapping_design.md` — 3866 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

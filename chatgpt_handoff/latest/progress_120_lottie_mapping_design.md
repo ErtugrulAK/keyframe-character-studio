@@ -6,7 +6,7 @@ Delivers the approved item-10 design scope: `docs/design/KCS_LOTTIE_IMPORT_MAPPI
 
 ## 2. Branch
 
-- Same stacked Milestone F branch as items 11 and 12 (`fix/kcs-import-boundary-hardening`), so the Milestone F documentation merges as one unit; the design itself is self-contained and reviewers may take it independently.
+- Delivered in the same stacked Milestone F branch as items 11 and 12 (`fix/kcs-import-boundary-hardening`), so the Milestone F documentation merges as one unit; the design itself is self-contained and reviewers may take it independently.
 
 ## 3. What the design fixes
 

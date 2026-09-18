@@ -21,11 +21,13 @@ Checkout: `fix/kcs-import-boundary-hardening` (Milestone F item 12 first step), 
 
 ## Current work
 
-Item 11 (evaluator profiling) is implemented in this stack as measurement only, item 12’s first step (validated import boundary) is implemented on this branch, and item 10’s mapping design is delivered on its own branch — all three await the user merge decision. The remaining item-12 product work stays plan-only; nothing beyond the approved scopes is authorized.
+Item 11 (evaluator profiling) is implemented in this stack as measurement only, item 12’s first step (validated import boundary) is implemented on this branch, and item 10’s mapping design is delivered in the same stack (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) — all three await the user merge decision. The remaining item-12 product work stays plan-only; nothing beyond the approved scopes is authorized.
 
 ## Validation
 
-- `npm test`: PASS — 116 files / 1,716 tests. `npm run lint`: clean. `npx tsc --noEmit`: clean. `npm run build`: PASS.
+- `npm test`: PASS — 118 files / 1,730 tests. `npm run lint`: clean. `npx tsc --noEmit`: clean. `npm run build`: PASS.
+- Evaluator profile harness: `npx vitest run --config perf/vitest.perf.config.ts` PASS (report printed); baseline recorded in `reports/progress_118_evaluator_profiling.md`.
+- Import boundary: `src/tests/importValidation.test.ts` PASS (9 cases); the serialization suite PASS (95 cases).
 - `npm run validate:ograf`: PASS offline (pin-verified vendored closure); the same command passes with a poisoned proxy, proving no fetch is attempted; `--online` also passes.
 - `npm run qa:release`: PASS — 2 Chromium tests. `node scripts/check-state-consistency.mjs`: PASS.
 - Folder QA: generate PASS; `--verify` on an unchanged copy PASS; `--verify` after a one-byte edit FAILS with `content drift`; `--verify` with a stray file FAILS with `extra file`; invalid manifest FAILS with the inspected copy and report preserved; `--out <repository root>` is refused.

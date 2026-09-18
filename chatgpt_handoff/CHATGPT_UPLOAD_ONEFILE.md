@@ -17,80 +17,69 @@
 
 ## 1. OMP Final Response
 
-# KCS Milestone D Item 9 — Option A Final Response (Warning Maintenance + SQLite Repair)
+# KCS Milestone E — OGraf QA Study Final Response (Schema Closure + Folder QA)
 
-This file is the OMP final response for the Option A warning-maintenance task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+This file is the OMP final response for the Milestone E study task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** the approved **Option A** is implemented on branch `chore/warning-maintenance` (base `main` = `bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4`), together with the approved **local SQLite repair (D9-1)**. It awaits the independent review and the user's merge decision.
-- **Report:** `reports/progress_113_warning_maintenance.md` (what changed, per-item evidence, before/after warning table, validation matrix, protected invariants).
-- **Nothing outside Option A changed:** no dependency was updated, and `package.json`, `package-lock.json`, `.github/workflows/**` are byte-identical to `main`.
+- **Status:** Milestone E items 7 and 8 are delivered as **study and plan only** — `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, with the task record in `reports/progress_114_ograf_qa_study.md`. Implementation of either item needs its own approval; nothing is implemented.
+- Milestone D is complete in `main` (`3923141`): item 6 (state check) plus item 9 (audit, Option A warning maintenance and the local SQLite repair) are merged with green CI run `35322372675`.
+- Branch `docs/milestone-e-ograf-qa-study` sits on that `main`; the study document is subject to the user merge decision.
 
-## 2) WHAT CHANGED
+## 2) ITEM 7 — WHAT THE STUDY FOUND
 
-| Item | Change | Evidence |
-|---|---|---|
-| W1 | New `src/context/useAnimator.ts` owns the context object and hook; `AnimatorContext.tsx` exports only the provider; 24 files migrated (16 source — 15 hook consumers plus the provider's context import — and 8 test files, including the `vi.mock` factories); `ToastPortal` reads `ToastItem` from its canonical module | `npm run lint`: no warning (was one Fast Refresh export warning) |
-| W2 | `vite.config.ts` splits stable third-party groups (`react-vendor`, `icons`, `geometry`) via `build.rolldownOptions.output.codeSplitting` — no lazy imports, same module order | single 621.99 kB chunk (gzip 182.39) → app 382.19 kB (gzip 104.53) + react-vendor 189.64 + geometry 36.09 + icons 14.30; build emits no chunk-size advisory |
-| W3 | `src/tests/setup.ts` returns `null` from `HTMLCanvasElement.getContext` (jsdom's own outcome without the log); for download links the click event is still dispatched (listeners and `preventDefault` keep working) while the link temporarily points at a same-document fragment and its href is restored in a `finally` block | full-run `grep -c "Not implemented"`: **0** (was 6: 3 canvas, 3 navigation); `src/tests/setupStubs.test.ts` pins the semantics in 5 cases |
-| W4 | The `[appMode]` viewport effect needs no suppression (refs + stable setters only); the mouse-move callback now reads the later-declared `handleMouseUp` through a latest-ref, so its dependency array is complete | `npm run lint` clean; `npx tsc --noEmit` PASS; pointer paths exercised in a real browser |
-| W5 | New `.gitattributes` (`* text=auto eol=lf` + binary guards) | scripted git runs no longer print the per-file CRLF warning |
-| D9-2 | `scripts/check-state-consistency.mjs` fails an active claim that a roadmap item has not started / has not yet begun / is not implemented yet; four focused cases added to `src/tests/stateConsistencyCheck.test.ts` (three negative — one per variant — and one truthful-state guard) | checker PASS; the new cases pass (file total 30 tests) |
-| D9-1 | npm 12 blocks `sqlite3`'s install script ("not covered by allowScripts"), so the NAPI prebuild was never extracted; ran the package's own install command inside `node_modules/sqlite3` | `require('sqlite3')` loads; `node server/index.js` serves `GET /api/health` → **200** |
+- `scripts/validate-ograf-manifest.mjs` fetches **8** documents (OGraf graphics schema + six `$ref` targets + the JSON Schema 2020-12 meta-schema) and pins each by **SHA-256**, throwing on an unpinned reference or a digest mismatch. That pin check is the fail-closed contract and the study keeps it.
+- Read-only verification on 2026-09-18: **8/8 pins still match** upstream; the whole closure is **33,567 bytes (≈32.8 KiB)**.
+- Licensing checked at the source: `ebu/ograf` is **MIT**; the JSON Schema meta-schema ships under the BSD-style "JSON Schema Specification Authors" notice. Redistribution is viable **with the notices retained**; the final licensing call is the user's.
+- Options: **7-A** vendor the closure + an offline mode (deterministic, ~33 KiB, makes CI meaningful), **7-B** a gitignored verified cache (offline after a warm run; cold runners still need the network), **7-C** status quo. The study recommends **7-A** and specifies the negative controls (unpinned `$ref`, one-byte drift, invalid manifest) that must keep failing closed.
+- CI wiring for `validate:ograf` is a **separate** approval, because it edits a workflow.
 
-## 3) VALIDATION
+## 3) ITEM 8 — WHAT THE PLAN PROPOSES
+
+- The host import unit is a folder containing a manifest-rooted graphic, and the research record rejects a new exporter or fake host wrapper (`docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md:165,180`); the earlier clean-folder QA copies were hand-made (`reports/progress_049.md`).
+- Plan on `test/ograf-folder-qa-automation`: (1) a generator that materializes a compiled package into a clean folder QA root through the existing compiler and path-safety authorities, (2) an artifact comparison against the ZIP from the same compilation, (3) a **host-limited report** that states what was verified and that no real host was executed.
+- Constraints: no host contract invention, no change to the official exports, no writing into user folders without consent. On this machine the expected QA roots under `Desktop` are absent; nothing was created or moved while checking.
+
+## 4) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npm test` | PASS — 114 files / 1,700 tests (1,691 baseline + 4 D9-2 + 5 setup-stub cases); 0 jsdom "Not implemented" lines |
-| `npm run lint` / `npx tsc --noEmit` | clean / PASS |
-| `npm run build` | PASS — no chunk-size advisory |
-| `npm run validate:ograf` / `npm run qa:release` | PASS / PASS (2 Chromium tests) |
+| Study coverage | item 7 and item 8 both: current behaviour, measured evidence, options/plan, constraints, validation, approval gates |
+| Evidence basis | live pin check 8/8, byte measurement, upstream licence metadata, desktop QA-root existence check, `reports/progress_049.md`, `reports/progress_080.md`, `reports/progress_104.md`, `docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md` |
 | `node scripts/check-state-consistency.mjs` | PASS |
-| `node server/index.js` + `curl /api/health` | PASS — HTTP 200 |
-| `vite preview` + real browser | PASS — editor from the split chunks, layer authored, gizmo, inspector, timeline lane |
+| Repository changes | documentation only (`docs/design/**`, `reports/**`, roadmap, state docs, handoff) — no source, test, dependency or workflow change |
 
-## 4) REVIEW
+## 5) REVIEW AND SAFETY
 
-The branch is a source change, so it goes through the same independent read-only review gate as every previous milestone.
+- The study document goes through the same independent read-only review gate before any merge.
+- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release and npm metadata are unchanged; `package.json`, `package-lock.json` and the workflows are untouched; `Desktop\KCS` and `Desktop\ograf-graphics` were not modified.
 
-- **Rounds 1–3 (read-only `reviewer-agent`): BLOCKED.** Round 1 found stale Option A decision text, a W3 anchor stub that swallowed the click event while the report claimed otherwise, a D9-2 test that did not test the variant it named (with the second pattern untested), a wrong W1 migration count, release-gate provenance not tied to the reviewed commit, and the W4 latest-ref window. Round 2 found `NEXT_SESSION.md` still describing the audit-only state, a manifest commit count, and a wrong D9-2 test-file total. Round 3 found active `PROJECT_STATE.md`/roadmap text still describing the pre-Option-A state. Every finding was closed in the following revision.
-- **Final round:** the reviewer model hit a provider usage limit mid-run, so the last verification was performed by the read-only `scout` agent (different model): **READY WITH WARNINGS**, no contradiction found across the report, the four state documents, the roadmap, the bundle and the one-file, one-file 8/8 mapping confirmed. The scout could not execute commands, so the main agent closed that evidence on this revision: `git diff --quiet bb3cac9..HEAD -- package.json package-lock.json .github/workflows` exits 0 (byte-identical to `main`; 49 files changed across source, test, config, docs and handoff), `node scripts/check-state-consistency.mjs` → `KCS state consistency: PASS (33 checks)`, `npm run lint` clean, `npx tsc --noEmit` passes.
+## 6) NEXT — FOUR DECISIONS
 
-## 5) RELEASE SAFETY
+1. Item 7: **7-A** (vendor + offline) or **7-B** (verified cache), or record **7-C**.
+2. Item 7: approve **CI wiring** for `validate:ograf` once it can run offline.
+3. Item 8: approve implementing the generator + comparison + host-limited report on `test/ograf-folder-qa-automation`.
+4. Item 8: confirm the **QA root path policy**.
 
-- Tag `v1.1.0-rc.1` target `46d2a3e59e065816d972dcd56951803951b577f6`: unchanged. No tag, draft-release, or npm change.
-- `package.json`, `package-lock.json`, workflows: unchanged. The exploratory `npm install-scripts approve sqlite3 --dry-run` wrote an `allowScripts` entry despite the dry-run flag; it was reverted immediately and the file is byte-identical to `main`.
-- Still open by decision, not by defect: Option B updates, Option C majors, the `engines` declaration, the npm-12 `allowScripts` pin (without it a fresh install blocks the sqlite3 script again), Milestones E–F.
-
-## 6) HANDOFF
-
-- Bundle `chatgpt_handoff/latest/` was clean-refreshed for this task; upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
-- `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` in the bundle are copies of their root documents, compared after CRLF→LF normalization and a whole-document `trim()` by `node scripts/check-state-consistency.mjs`.
-
-## 7) NEXT
-
-One decision: approve the fast-forward merge of `chore/warning-maintenance` into `main` once the review passes. If no decision is given, nothing merges and no further work starts.
+With no decision, nothing is implemented and this study remains the Milestone E deliverable.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone D Item 9, Option A (Warning Maintenance + SQLite Repair)
+# KCS ChatGPT Upload Manifest — Milestone E (OGraf QA Study: Schema Closure + Folder QA)
 
 Clean refreshed: YES
-Bundle purpose: Milestone D item 9, Option A warning maintenance plus the local SQLite binding repair
+Bundle purpose: Milestone E items 7 and 8 — study and plan only; implementation needs its own approval
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/warning-maintenance on top of main bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4 — e800fd0 (implementation), d19bab6 (review fixes) and the documentation-only commits that record the release-gate revision and the handoff alignment; `git log --oneline` on the branch is the authority for the current chain. Awaiting the user merge decision
-Implementation report: reports/progress_113_warning_maintenance.md
-Items implemented: W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 dependency arrays, W5 .gitattributes, D9-2 checker rule, D9-1 local binding repair
-Dependencies updated: NO (package.json, package-lock.json and workflows are byte-identical to main)
-Warning status: 7 catalogued warnings — W1–W5 removed at the root, W6 by design, W7 environment-only
-Backend: node server/index.js starts again; GET /api/health returned 200 after the repair
-D9-1 refined root cause: npm 12 blocks sqlite3's install script ("not covered by allowScripts"); the Node 24 ABI is not involved
-Still approval-gated: Option B updates, Option C majors, the engines declaration, the npm-12 allowScripts pin (without it a fresh install blocks the script again), Milestones E–F
+Branch: docs/milestone-e-ograf-qa-study on top of main 392314168b2bbbfc87b5c47079eda73c65d187f7 (milestone D complete: item 6 plus item 9 audit, Option A warning maintenance and the local SQLite repair, merged with green CI run 35322372675)
+Study: docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md; task record: reports/progress_114_ograf_qa_study.md
+Item 7 findings: 8 pinned schema documents fetched live by validate-ograf-manifest.mjs; 8/8 pins verified; closure 33,567 bytes; ebu/ograf MIT; JSON Schema meta-schema under a BSD-style notice; options 7-A vendor + offline (recommended), 7-B verified cache, 7-C status quo
+Item 8 plan: generator + ZIP/folder artifact comparison + host-limited report on test/ograf-folder-qa-automation; no host contract invention; no change to the official exports
+Implemented in this task: NOTHING (documentation only; no source, test, dependency or workflow change)
+Still approval-gated: item 7 licensing/redistribution decision, CI wiring for validate:ograf, item 8 implementation, the QA root path policy, plus the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -99,30 +88,29 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the Option A final response
-- progress_113_warning_maintenance.md — the implementation report
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
+- OMP_FINAL_RESPONSE.md — the Milestone E final response
+- progress_114_ograf_qa_study.md — the task record
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document; milestone D complete, E next)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test, package.json, package-lock.json, ci.yml, release-smoke.yml files (the version split, the chunk config and the checker rule live in the repository)
+- The study document itself lives in the repository at `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` (the bundle carries its summary in the final response and the task record)
+- Source, test, package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
-Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
+Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`, and every `kcs-ograf-*` QA root (which does not exist on this machine).
 
 Validation at this revision (each command run separately):
-- npm test: PASS — 114 files / 1,700 tests; 0 jsdom "Not implemented" lines (was 6)
-- npm run lint: clean (the Fast Refresh export warning is gone); npx tsc --noEmit: PASS
-- npm run build: PASS — no chunk-size advisory (app 382.19 kB, react-vendor 189.64 kB, geometry 36.09 kB, icons 14.30 kB)
-- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests, candidate SHA d19bab6)
 - node scripts/check-state-consistency.mjs: PASS
-- node server/index.js + curl /api/health: PASS — HTTP 200
-- vite preview + real browser: PASS — editor loads from the split chunks, layer authored, gizmo, inspector, timeline lane
+- Repository changes: documentation only — docs/design/**, reports/**, the roadmap, the state documents and the handoff bundle
+- No source, test, dependency, package or workflow change; `git diff --stat` for this branch lists documentation paths only
+- Item 7 evidence: live pin verification (8/8 match), closure byte measurement (33,567 B), upstream licence metadata (MIT / BSD-style notice)
+- Item 8 evidence: desktop QA-root existence check (absent), reports/progress_049.md, reports/progress_080.md, reports/progress_104.md, docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md
 
-Next: the independent review of branch chore/warning-maintenance, then the user's merge decision. If no decision is given, nothing merges and no further work starts.
+Next: four decisions — item 7 (7-A / 7-B / 7-C), item 7 CI wiring, item 8 implementation approval, item 8 QA root path policy. With no decision, nothing is implemented.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -130,21 +118,24 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone D Item 9, Option A (Warning Maintenance + SQLite Repair)
+# KCS Minimal ChatGPT Upload Bundle — Milestone E (OGraf QA Study: Schema Closure + Folder QA)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The approved **Option A** of the item-9 audit plus the approved **local SQLite repair**: W1 Fast Refresh split (`src/context/useAnimator.ts`), W2 real chunk splitting (no chunk above 500 kB), W3 jsdom canvas/navigation stubs, W4 honest dependency arrays with a latest-ref, W5 `.gitattributes`, D9-2 checker rule for item-level stale claims, and the D9-1 repair (`node_modules/sqlite3` binding extracted with the package's own install command, `/api/health` → 200). The refined D9-1 root cause is npm 12 blocking the `sqlite3` install script ("not covered by allowScripts"), not the Node 24 ABI.
+Milestone E items 7 and 8 as **study and plan only** (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, task record `reports/progress_114_ograf_qa_study.md`):
 
-No dependency was updated and `package.json`, `package-lock.json` and the workflows are byte-identical to `main`. The change is on branch `chore/warning-maintenance` and awaits its independent review and the user's merge decision.
+- **Item 7 (offline schema closure):** the validator fetches 8 documents pinned by SHA-256; a read-only check confirmed 8/8 pins still match and measured the closure at 33,567 bytes; `ebu/ograf` is MIT and the JSON Schema meta-schema carries a BSD-style notice. Options 7-A (vendor + offline mode, recommended), 7-B (verified cache), 7-C (status quo), plus the negative controls that keep validation failing closed and a separate CI-wiring decision.
+- **Item 8 (downstream folder QA automation):** plan for a generator, an artifact comparison against the ZIP, and a host-limited report on `test/ograf-folder-qa-automation`, reusing the canonical compiler and path-safety authorities, with no host contract invention.
+
+Milestone D is complete in `main` (`3923141`); nothing from this study is implemented, and every implementation step states the approval it needs.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_113_warning_maintenance.md` — the implementation report (per-item changes, evidence, before/after warnings, validation, invariants)
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap plan with the item-9 status
+- `progress_114_ograf_qa_study.md` — the Milestone E task record (scope, findings, validation, decisions)
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with milestone D complete and E next
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -154,7 +145,7 @@ No dependency was updated and `package.json`, `package-lock.json` and the workfl
 
 ## Deliberately not included
 
-Source and test files are intentionally omitted. Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
+Source and test files are intentionally omitted (the study document lives at `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` in the repository). Flattened copies named `src__*test*` previously matched Vitest's default include glob and broke CI. Also omitted: `package.json`, `package-lock.json`, CI/release workflows, older reports, design contracts, release/current-state documents, QA output, assets, archives, and caches.
 
 Omitted files were not deleted from the repository; they are simply not part of this bundle.
 
@@ -166,111 +157,53 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ---
 
-## 4. Implementation Report
+## 4. Task Record
 
-# Progress 113 — Warning Maintenance (Option A) and Local SQLite Binding Repair
+# Progress 114 — Milestone E: OGraf Offline Schema Closure Study and Folder QA Plan
 
 ## 1. Scope
 
-Implements **Option A** of the item-9 audit (`reports/progress_112_dependency_warning_audit.md` §7) plus the **approved local repair of the SQLite binding (D9-1)**. Every item was approved by the user before implementation.
+Milestone E of the grouped roadmap, items 7 and 8, delivered as **study and plan only** (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`). No validator, exporter, test, dependency, or workflow change was made. Every implementation step in the study carries the approval it needs.
 
-In scope: W1, W2, W3, W4, W5, D9-2, and the local `node_modules` binding repair.
-Out of scope (unchanged, still approval-gated): the dependency updates of Option B, the major upgrades of Option C, the `engines` declaration, any `package.json`/`package-lock.json`/workflow edit, and Milestone E.
+## 2. Item 7 — offline schema closure (study delivered)
 
-## 2. Branch
+Measured facts about `scripts/validate-ograf-manifest.mjs`:
 
-- Branch: `chore/warning-maintenance`, based on `main` at `bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4`
-- This is a source change, so the branch is reviewed by independent agents before the merge request.
-- **Review history:** the read-only `reviewer-agent` rounds 1–3 returned BLOCKED (round 1: stale Option A decision text, an over-claiming W3 anchor stub, an untested D9-2 variant, a wrong W1 migration count, gate provenance not tied to the reviewed commit, and the W4 latest-ref window; round 2: `NEXT_SESSION.md` still describing the audit-only state, a manifest commit count, and a D9-2 test-file total; round 3: active `PROJECT_STATE.md`/roadmap text still describing the pre-Option-A state). Every finding was closed in the revision that followed it.
-- **Final round:** the reviewer model hit a provider usage limit mid-run, so the last verification round was performed by the read-only `scout` agent instead (different model), which reported **READY WITH WARNINGS** with no contradiction found across the report, the four state documents, the roadmap, the bundle and the one-file, and confirmed the one-file maps 8/8 to `latest/`. It could not execute commands, so the main agent closed that evidence on this revision: `git diff --quiet bb3cac9..HEAD -- package.json package-lock.json .github/workflows` exits 0 (those paths are byte-identical to `main`; 49 files changed across source, test, config, docs and handoff), `node scripts/check-state-consistency.mjs` prints `KCS state consistency: PASS (33 checks)`, `npm run lint` is clean and `npx tsc --noEmit` passes.
+- It fetches **8** documents (the OGraf graphics schema, six `$ref` targets, and the JSON Schema 2020-12 meta-schema) and pins each by SHA-256, throwing on an unpinned reference or a digest mismatch. That pin check is the fail-closed contract.
+- A read-only fetch on 2026-09-18 confirmed **8/8 pins still match** upstream and measured the whole closure at **33,567 bytes (≈32.8 KiB)**.
+- Licensing checked: `ebu/ograf` is **MIT**; the JSON Schema meta-schema ships under the BSD-style "JSON Schema Specification Authors" licence (both retrieved from the upstream repositories). Redistribution is therefore viable **if the notices ship with the vendored files**. The final licensing call is the user's.
 
-## 3. What changed
+Options presented: **7-A** vendor the closure plus an offline mode (~33 KiB, deterministic, CI-able), **7-B** a gitignored verified cache (offline after a warm run, cold runners still need the network), **7-C** status quo. The study recommends **7-A** and lists the negative controls that keep validation failing closed (unpinned `$ref`, one-byte drift, invalid manifest), plus the separate CI-wiring decision.
 
-### W1 — Fast Refresh warning removed at its root
+## 3. Item 8 — downstream folder QA automation (plan delivered)
 
-- New `src/context/useAnimator.ts` owns the `AnimatorContext` object and the `useAnimator` hook.
-- `src/context/AnimatorContext.tsx` now exports `AnimatorProvider` (and the `AnimatorContextType` type) only; it imports the context object from the new module. The type-only import direction keeps the dependency acyclic at runtime.
-- 24 files were migrated to the new hook module (16 source files — 15 hook consumers plus the provider's own context import — and 8 test files), including the `vi.mock` factories: mocks that supply `useAnimator` now target `../context/useAnimator`, mocks that supply the provider keep targeting `../context/AnimatorContext`.
-- `src/components/Toast/ToastPortal.tsx` reads `ToastItem` from its canonical source (`src/hooks/useToast.ts`), so the provider module no longer re-exports it.
-- Evidence: `npm run lint` reports **no** warnings (previously one at `AnimatorContext.tsx:651`).
+- The host import unit is a folder containing a manifest-rooted graphic, and the research record explicitly rejects a new exporter or fake host wrapper (`docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md:165,180`).
+- The earlier clean-folder QA copies were hand-made (`reports/progress_049.md`), so the check is not repeatable.
+- On this machine the expected QA roots under `Desktop` (`kcs-ograf-public-controls-qa`, `kcs-ograf-host-compat-qa`, `kcs-ograf-downstream-qa`, `ograf-graphics`) are **absent**; nothing was created, moved, or deleted while checking.
 
-### W2 — chunk-size advisory removed by splitting, not by raising the limit
+Plan on branch `test/ograf-folder-qa-automation`: a generator that materializes a compiled package into a clean folder QA root through the existing compiler and path-safety authorities, an artifact comparison against the ZIP from the same compilation, and a host-limited report that states what was and was not verified (no real host is executed). Constraints: no host contract invention, no change to the official exports, and no writing into user folders without explicit consent.
 
-- `vite.config.ts` declares `build.rolldownOptions.output.codeSplitting.groups` for three stable third-party groups: `react-vendor` (react/react-dom/scheduler), `icons` (lucide-react), `geometry` (polygon-clipping/fflate).
-- No import became lazy and no module order changed, so runtime behaviour is identical; only the chunk boundaries moved, which also improves caching across releases.
-- Evidence (before → after): single `index-*.js` **621.99 kB (gzip 182.39)** → `index-*.js` **382.19 kB (gzip 104.53)** + `react-vendor` 189.64 kB (gzip 59.65) + `geometry` 36.09 kB (gzip 13.09) + `icons` 14.30 kB (gzip 5.13) + runtime 0.56 kB. No chunk now exceeds the 500 kB threshold and `npm run build` emits no chunk-size advisory.
+## 4. Validation of this deliverable
 
-### W3 — jsdom noise removed in the test setup
+| Check | Result |
+|---|---|
+| Study coverage | item 7 (current behaviour, size/licence evidence, three options, negative controls, CI decision) and item 8 (current behaviour, three-step plan, validation, constraints) |
+| Evidence basis | live pin/origin check (8/8), byte measurement, upstream licence metadata, desktop QA-root existence check, `reports/progress_049.md`, `reports/progress_080.md`, `reports/progress_104.md`, `docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md` |
+| State consistency | `node scripts/check-state-consistency.mjs` PASS after the state-document updates |
+| Implementation | **none**, by design: every step needs its own approval |
 
-- `src/tests/setup.ts` now replaces `HTMLCanvasElement.prototype.getContext` with a function that returns `null` (jsdom's own outcome, minus the "Not implemented" log). For download links (`download` attribute or `blob:`/`data:` href) the click event is still dispatched so listeners and `preventDefault` keep working, but the link temporarily points at a same-document fragment while the event is in flight — jsdom cannot navigate to the unreachable target, which is what produced the log — and the original `href` is restored in a `finally` block, so the element's observable state is unchanged. Ordinary anchors stay entirely on jsdom's native path.
-- Why the canvas stub is behaviour-identical: the production text-measurement helper (`src/utils/bounds.ts:61`) already falls back when `getContext` returns null.
-- The stub semantics are pinned by `src/tests/setupStubs.test.ts` (5 cases: canvas returns null; a download-link click reaches listeners and restores the href; a listener can cancel the event; a blob href without the `download` attribute follows the same path; an ordinary anchor keeps the native path).
-- Evidence: the full suite previously printed **6** "Not implemented" lines (3 canvas from `ografPackage` / `presetConversion`, 3 navigation from the download flows in `presetExportImportUi` / `firstExportFlow`); after the change `grep -c "Not implemented"` on a full run returns **0** (verified again after this correction).
+## 5. Protected invariants
 
-### W4 — the two `react-hooks/exhaustive-deps` suppressions are gone
+- `scripts/validate-ograf-manifest.mjs`, the pins, `fixtures/**`, `src/**`, `vite.config.ts`, dependencies, `package.json`, `package-lock.json` and the workflows are untouched.
+- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, global OMP configuration, `Desktop\KCS` and `Desktop\ograf-graphics` are unchanged; nothing was written to any user folder.
+- No release, tag, draft-release, or npm action.
 
-- `src/components/Canvas/StageCanvas.tsx`: the `[appMode]` viewport-sync effect needed no suppression at all — it only closes over refs and stable state setters, so the comment was removed and lint stays clean.
-- The mouse-move callback read the later-declared `handleMouseUp` and carried a suppression for that declaration cycle. It now reads the handler through `handleMouseUpRef` (a latest-ref published in an effect), so the dependency array is honest and complete with no cycle.
-- Evidence: `npm run lint` is clean; `npx tsc --noEmit` passes; the pointer paths were exercised in a real browser (draw + drag + select) and by the canvas unit specs.
+## 6. Open decisions
 
-### W5 — line-ending noise removed
-
-- New `.gitattributes` with `* text=auto eol=lf` plus explicit binary guards, so scripted git runs stop printing "LF will be replaced by CRLF" for every text file.
-
-### D9-2 — the state checker now catches item-level stale claims
-
-- `scripts/check-state-consistency.mjs` gained two `STALE_ACTIVE_PATTERNS` entries that fail an active claim that a roadmap item has not started / is not implemented yet (the exact class that survived a PASS before).
-- `src/tests/stateConsistencyCheck.test.ts` gained four focused cases: three negative — "is not started", "has not yet begun" (`begun` is part of the first pattern) and "is not implemented yet" (the second pattern, previously untested) — and one guard, a truthful item-level status that must pass.
-- `reports/progress_112_dependency_warning_audit.md` §12 is now headed "Independent review history (superseded states are quoted verbatim)", which is what it is — quoting superseded states — and is therefore exempt from the stale-claim scan by the checker's own rule.
-
-### D9-1 — local SQLite binding repaired (root cause refined)
-
-- **Refined root cause:** the binding was missing because **npm 12 blocks `sqlite3`'s install script** — `npm install-scripts ls` reported `sqlite3@6.0.1 (install: prebuild-install -r napi || node-gyp rebuild)` as "blocked because they are not covered by allowScripts" — so `npm rebuild sqlite3` was a no-op and the prebuilt NAPI archive stayed unused in the npm cache. The Node 24 ABI is still **not** involved (`sqlite3@6.0.1` ships NAPI v3/v6 prebuilds).
-- **Repair performed:** ran the package's own install command inside `node_modules/sqlite3` (`node ../../node_modules/prebuild-install/bin.js -r napi`), which extracted the cached prebuild to `node_modules/sqlite3/build/Release/node_sqlite3.node`.
-- **Evidence:** `require('sqlite3')` now loads; `node server/index.js` starts and `GET http://127.0.0.1:5000/api/health` returned **200**.
-- **`package.json` stayed unchanged.** The exploratory `npm install-scripts approve sqlite3 --dry-run` wrote an `allowScripts` entry despite the dry-run flag; that unintended edit was reverted immediately (`git checkout -- package.json`) and the file is byte-identical to `main`. Consequence to record: **a fresh `npm install` on npm 12 will block that script again**, so either the `allowScripts` pin or an explicit re-extraction step has to be approved as its own change.
-
-## 4. Validation matrix (branch `chore/warning-maintenance`)
-
-| Check | Command | Result |
-|---|---|---|
-| Full unit/integration suite | `npm test` | PASS — 114 files / **1,700** tests (the 1,691 baseline + 4 D9-2 cases + 5 setup-stub cases) |
-| jsdom noise | `npm test 2>&1 \| grep -c "Not implemented"` | **0** (was 6) |
-| Lint | `npm run lint` | **clean** (was one Fast Refresh warning) |
-| TypeScript | `npx tsc --noEmit` | PASS |
-| Build | `npm run build` | PASS — no chunk-size advisory; largest chunk 382.19 kB |
-| OGraf fixture | `npm run validate:ograf` | PASS |
-| Release gate | `npm run qa:release` | PASS — 2 Chromium tests, candidate SHA `d19bab6` (this branch's source revision; the commits after it are documentation only) |
-| State consistency | `node scripts/check-state-consistency.mjs` | PASS |
-| Backend probe | `node server/index.js` + `curl /api/health` | PASS — HTTP 200 (repair verified) |
-| Built-app smoke | `vite preview` + real browser | PASS — editor loads from the split chunks, layer drawn, transform gizmo, inspector, timeline lane |
-
-**Provenance:** every command above was run on this branch's working tree; the release gate prints the candidate SHA it saw, and §3 of the handoff records that value. Because this report is itself edited after those runs, the gate is re-run on the source revision and the printed SHA is recorded in the handoff manifest rather than inferred.
-
-## 5. Warning status after this task
-
-| # | Warning | Status |
-|---|---|---|
-| W1 | Fast Refresh export warning | **Removed** (root cause fixed) |
-| W2 | Vite chunk-size advisory | **Removed** (real splitting) |
-| W3 | jsdom canvas/navigation noise | **Removed** (test setup) |
-| W4 | Two `exhaustive-deps` suppressions | **Removed** (honest dependency arrays) |
-| W5 | git CRLF noise | **Removed** (`.gitattributes`) |
-| W6 | `e2e/**` outside the Vitest glob | Unchanged by design (documented) |
-| W7 | `NO_COLOR`/`FORCE_COLOR` env warning | Unchanged (environment, not the repository) |
-
-## 5b. Recorded residual risks
-
-- **W4 latest-ref window:** the mouse-move callback reads the handler through a ref published in a passive effect. In the normal path the listener is installed only for the `isDragging` render, and that effect runs before the listener effect, so the current handler is always published in time. A theoretical gap remains between commit and the passive effect, during which the ref briefly holds the previous callback. No concrete regression was observed; the semantics moved from a stale closure to "read the latest handler at call time".
-- **W2 is a caching boundary, not a smaller download:** every chunk is still eagerly loaded, so the bytes shipped on first load are effectively unchanged (622.78 kB across chunks versus 621.99 kB before, i.e. +0.79 kB of chunk overhead). The gain is cacheable boundaries plus the removal of the per-chunk size advisory.
-- **The SQLite repair is `node_modules`-local:** a fresh `npm install` on npm 12 blocks the install script again until the `allowScripts` pin is approved.
-- **`.gitattributes` rewrites working-tree line endings** on the next checkout/touch of tracked text files; that is the intended W5 effect.
-## 6. Protected invariants
-
-- `package.json`, `package-lock.json`, `.github/workflows/**` and `node_modules` dependency versions: unchanged. (The `node_modules` change is the repaired native binding only; the accidental `allowScripts` edit was reverted.)
-- No dependency was updated; the outdated list and the `npm audit` findings from `progress_112` are untouched and still open.
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release, npm metadata, `origin/without-mask`, global OMP configuration, `C:\Users\ertugrul.ak\Desktop\KCS` and `ograf-graphics`: untouched.
-- Runtime behaviour: unchanged — the only production-code changes are the module split, the latest-ref indirection and the build-time chunk grouping, each verified by the existing suite plus a real-browser smoke.
+1. Item 7: 7-A / 7-B / 7-C.
+2. Item 7: CI wiring for `validate:ograf` once offline.
+3. Item 8: approve the implementation on `test/ograf-folder-qa-automation`.
+4. Item 8: the QA root path policy.
 
 ---
 
@@ -280,7 +213,7 @@ Out of scope (unchanged, still approval-gated): the dependency updates of Option
 
 ## Repository state
 
-- Checkout: branch `chore/warning-maintenance` (the approved Option A warning maintenance) on top of `main` at `bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4`, which matches `origin/main`. `git log --oneline` on the branch is the authority for the current tip. The feature branches `feat/export-onboarding` and `chore/state-hygiene-gate` are retained as review artefacts.
+- Checkout: branch `docs/milestone-e-ograf-qa-study` on top of `main` at `392314168b2bbbfc87b5c47079eda73c65d187f7`, which matches `origin/main`. The merged warning-maintenance work is in `main`; the feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit` and `chore/warning-maintenance` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -305,7 +238,7 @@ Full Vitest (114 files / 1,700 tests), `npm run validate:ograf`, `npm run qa:rel
 
 ## Next scoped work
 
-1. **Milestone D (item 9, Option A) — merge decision for `chore/warning-maintenance`**: the approved warning maintenance (W1 Fast Refresh split, W2 real chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, D9-2 checker rule) plus the local SQLite binding repair are implemented and validated there (`reports/progress_113_warning_maintenance.md`). It merges by fast-forward once the independent review passes and the user approves the merge. Still open afterwards: Option B (7 patch + 12 minor updates + bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again). Milestones E–F stay plan-only and Option D (Milestone E planning) needs its own explicit approval.
+1. **Milestone E — OGraf QA decisions**: the study and plan are delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`). Decide item 7 (7-A vendor + offline mode, 7-B verified cache, or 7-C status quo), then the separate CI wiring; and item 8 (implement the folder-QA generator + comparison + host-limited report on `test/ograf-folder-qa-automation`) plus the QA root path policy. Previously: Milestone D (item 9, Option A) merge decision for `chore/warning-maintenance` — the approved warning maintenance (W1 Fast Refresh split, W2 real chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, D9-2 checker rule) plus the local SQLite binding repair are implemented and validated there (`reports/progress_113_warning_maintenance.md`). It merges by fast-forward once the independent review passes and the user approves the merge. Still open afterwards: Option B (7 patch + 12 minor updates + bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and an npm-12 `allowScripts` decision (without it a fresh install blocks `sqlite3`'s install script again). Milestones E–F stay plan-only and Option D (Milestone E planning) needs its own explicit approval.
 2. Milestones E–F stay plan-only, and **D's dependency/package part (item 9) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -348,7 +281,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-Current `main` / `origin/main` is at `bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4` (milestones A, B, C, Milestone D item 6, and the item-9 audit). The approved **Option A warning maintenance** is implemented on branch `chore/warning-maintenance` — W1, W2, W3, W4, W5 and the D9-2 checker rule are fixed there, and the local SQLite binding (D9-1) is repaired in this working copy (`GET /api/health` returns 200). `package.json`, `package-lock.json` and the workflows are still unchanged; the branch awaits merge approval.
+Current `main` / `origin/main` is at `392314168b2bbbfc87b5c47079eda73c65d187f7`: milestones A, B, C, Milestone D item 6, the item-9 audit and the approved **Option A warning maintenance** (W1, W2, W3, W4, W5, the D9-2 checker rule and the local SQLite binding repair) are all merged, with green CI run `35322372675`. `package.json`, `package-lock.json` and the workflows remain unchanged. Milestone E is now the active milestone: the study and plan are delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`) and its implementation stays plan-only until approved.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -374,7 +307,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 | TypeScript | PASS | `npx tsc --noEmit` and build typecheck |
 | Lint | PASS | clean — the Fast Refresh warning was removed in `reports/progress_113_warning_maintenance.md` |
 | Production build | PASS | no chunk-size advisory — split into 382.19 kB app + react-vendor/icons/geometry chunks (see `reports/progress_113_warning_maintenance.md`) |
-| Independent review | IN REVIEW | Milestone A `READY` in round 6 of six rounds; the item-9 audit itself closed `READY WITH WARNINGS` in round 6 of six (`reports/progress_112_dependency_warning_audit.md` §12); the Option A warning-maintenance change is under its own review before any merge |
+| Independent review | PASS | Milestone A `READY` in round 6 of six; the item-9 audit closed `READY WITH WARNINGS` in round 6 of six (`reports/progress_112_dependency_warning_audit.md` §12); the Option A change closed with `READY WITH WARNINGS` from the read-only `scout` round (the reviewer model hit a provider usage limit) after `reviewer-agent` rounds 1–3 closed every finding (`reports/progress_113_warning_maintenance.md` §2) |
 | CI on `main` | PASS | runs `35206117254` (Milestone A merge) and `35207913453` (state reconciliation) |
 
 ## Remaining work
@@ -411,7 +344,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
 - **Milestone D item 6 — state consistency check — MERGED** at `b91e8b9` (follow-up `be76df9`): `node scripts/check-state-consistency.mjs` fails when the live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when the handoff upload instruction is superseded, or when the bundle carries source/test/binary copies, collapsed Windows paths or secret markers (see `reports/progress_111_state_hygiene_gate.md`).
-- **Item 9 (dependency and warning maintenance) — pending merge decision.** The audit is complete (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and the approved **Option A is implemented** on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule and the repair of **D9-1** (the local `sqlite3` NAPI binding is extracted; `node server/index.js` starts and `GET /api/health` returns 200 in this working copy). No dependency was updated and `package.json`, `package-lock.json` and the workflows are unchanged; nothing is merged. The 7 catalogued warnings are resolved except W6 (`e2e/**` outside the Vitest glob by design) and W7 (environment `NO_COLOR`/`FORCE_COLOR`). Still open by decision: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; majors available for `typescript` 6→7 and the Vitest pair 4→5), the 7 `npm audit` findings (6 moderate, 1 high; `qs` and `undici` moderate in the production tree), the `engines` declaration and the npm-12 `allowScripts` pin.
+- **Item 9 (dependency and warning maintenance) — MERGED at `3923141`.** The audit is complete (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and the approved **Option A is implemented** on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule and the repair of **D9-1** (the local `sqlite3` NAPI binding is extracted; `node server/index.js` starts and `GET /api/health` returns 200 in this working copy). No dependency was updated and `package.json`, `package-lock.json` and the workflows are unchanged; nothing is merged. The 7 catalogued warnings are resolved except W6 (`e2e/**` outside the Vitest glob by design) and W7 (environment `NO_COLOR`/`FORCE_COLOR`). Still open by decision: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; majors available for `typescript` 6→7 and the Vitest pair 4→5), the 7 `npm audit` findings (6 moderate, 1 high; `qs` and `undici` moderate in the production tree), the `engines` declaration and the npm-12 `allowScripts` pin.
 
 ---
 
@@ -428,8 +361,8 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
-| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **NEXT** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 AUDITED, report only** (`reports/progress_112_dependency_warning_audit.md`) and **Option A IMPLEMENTED on `chore/warning-maintenance`** (W1, W2, W3, W4, W5, D9-2 + the local SQLite repair; `reports/progress_113_warning_maintenance.md`) awaiting the merge decision; Option B needs `package.json`/lockfile approval, and Option D (Milestone E planning) needs its own explicit approval |
-| E — OGraf QA / schema hardening study | 7, 8 | — | Plan only |
+| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. Follow-ups stay approval-gated: Option B (patch/minor updates + `npm audit fix`), Option C (TypeScript 7 / Vitest 5), the `engines` declaration and the npm-12 `allowScripts` pin |
+| E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study` | **NEXT** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`). **Plan only** for implementation: item 7 (offline schema closure) needs the vendoring/licensing decision, item 8 (folder QA automation) needs implementation approval on `test/ograf-folder-qa-automation` |
 | F — Architecture exploration only | 10, 11, 12 | — | Plan only |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
@@ -466,8 +399,8 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 
 ## Milestone E — OGraf QA / schema hardening study (roadmap items 7, 8)
 
-- Item 7 (offline schema closure) needs a licensing/size decision before any implementation; deliverable is a study with a hash closure proposal, not a change to fail-closed behaviour.
-- Item 8 (downstream folder QA automation) must preserve the evidence-backed folder import model and must not invent host contracts.
+- Item 7 (offline schema closure): **study delivered** — eight pinned documents, 33,567 B total, 8/8 pins verified, `ebu/ograf` MIT and the JSON Schema meta-schema under a BSD-style notice. Options 7-A (vendor + offline mode), 7-B (verified cache), 7-C (status quo); 7-A recommended. Implementation still needs the licensing/redistribution decision, and CI wiring is a separate approval.
+- Item 8 (downstream folder QA automation): **plan delivered** — generator + artifact comparison + host-limited report on `test/ograf-folder-qa-automation`, reusing the canonical compiler and path-safety authorities. It must preserve the evidence-backed folder import model, must not invent host contracts, and implementation needs its own approval plus a QA root path policy.
 
 ## Milestone F — Architecture exploration only (roadmap items 10, 11, 12)
 
@@ -486,7 +419,7 @@ Research/design deliverables only: Lottie import mapping design, evaluator profi
 
 ## Recommended next prompt
 
-"KCS MILESTONE D ITEM 9 — MERGE DECISION (approval-gated). The audit (`reports/progress_112_dependency_warning_audit.md`) is complete and the approved Option A is implemented on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 dependency arrays, W5 `.gitattributes`, D9-2 checker rule, plus the local SQLite repair. Decide whether to fast-forward merge it, and separately whether to do Option B (patch/minor updates plus a bounded `npm audit fix`; edits `package.json` + lockfile), Option C (TypeScript 7 / Vitest 5 majors on their own branch) — OGraf QA / schema hardening study, items 7 and 8; Option D also requires explicit user approval, and Milestone E stays plan-only until then). The local SQLite repair (D9-1) is already applied on that branch, so the remaining decision is the merge itself."
+"KCS MILESTONE E — OGRAF QA (approval-gated). The study and plan are delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`): item 7 measured the schema closure (8 pinned documents, 33,567 B, 8/8 pins verified, MIT + BSD-style notices) and proposes 7-A vendor + offline mode / 7-B verified cache / 7-C status quo; item 8 proposes a folder-QA generator, artifact comparison and host-limited report on `test/ograf-folder-qa-automation`. Decide item 7 (and separately the CI wiring), item 8 implementation, and the QA root path policy. Milestone D item 9 Option A is already merged at `3923141`; Option B (patch/minor updates plus a bounded `npm audit fix`; edits `package.json` + lockfile), Option C (TypeScript 7 / Vitest 5 majors on their own branch) — OGraf QA / schema hardening study, items 7 and 8; Option D also requires explicit user approval, and Milestone E stays plan-only until then). The local SQLite repair (D9-1) is already applied on that branch, so the remaining decision is the merge itself."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
@@ -566,13 +499,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 8480 bytes
-- `NEXT_SESSION.md` — 8670 bytes
-- `OMP_FINAL_RESPONSE.md` — 6626 bytes
-- `PROJECT_STATE.md` — 11268 bytes
-- `README.md` — 2620 bytes
-- `manifest.txt` — 3723 bytes
-- `progress_113_warning_maintenance.md` — 12671 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 9404 bytes
+- `NEXT_SESSION.md` — 9047 bytes
+- `OMP_FINAL_RESPONSE.md` — 4408 bytes
+- `PROJECT_STATE.md` — 11385 bytes
+- `README.md` — 2872 bytes
+- `manifest.txt` — 3862 bytes
+- `progress_114_ograf_qa_study.md` — 4119 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

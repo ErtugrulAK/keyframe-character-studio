@@ -1,17 +1,15 @@
-# KCS ChatGPT Upload Manifest — Milestone D Item 9, Option A (Warning Maintenance + SQLite Repair)
+# KCS ChatGPT Upload Manifest — Milestone E (OGraf QA Study: Schema Closure + Folder QA)
 
 Clean refreshed: YES
-Bundle purpose: Milestone D item 9, Option A warning maintenance plus the local SQLite binding repair
+Bundle purpose: Milestone E items 7 and 8 — study and plan only; implementation needs its own approval
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/warning-maintenance on top of main bb3cac9f61a60048f1fe9f0ae6ec69eabe46e1e4 — e800fd0 (implementation), d19bab6 (review fixes) and the documentation-only commits that record the release-gate revision and the handoff alignment; `git log --oneline` on the branch is the authority for the current chain. Awaiting the user merge decision
-Implementation report: reports/progress_113_warning_maintenance.md
-Items implemented: W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 dependency arrays, W5 .gitattributes, D9-2 checker rule, D9-1 local binding repair
-Dependencies updated: NO (package.json, package-lock.json and workflows are byte-identical to main)
-Warning status: 7 catalogued warnings — W1–W5 removed at the root, W6 by design, W7 environment-only
-Backend: node server/index.js starts again; GET /api/health returned 200 after the repair
-D9-1 refined root cause: npm 12 blocks sqlite3's install script ("not covered by allowScripts"); the Node 24 ABI is not involved
-Still approval-gated: Option B updates, Option C majors, the engines declaration, the npm-12 allowScripts pin (without it a fresh install blocks the script again), Milestones E–F
+Branch: docs/milestone-e-ograf-qa-study on top of main 392314168b2bbbfc87b5c47079eda73c65d187f7 (milestone D complete: item 6 plus item 9 audit, Option A warning maintenance and the local SQLite repair, merged with green CI run 35322372675)
+Study: docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md; task record: reports/progress_114_ograf_qa_study.md
+Item 7 findings: 8 pinned schema documents fetched live by validate-ograf-manifest.mjs; 8/8 pins verified; closure 33,567 bytes; ebu/ograf MIT; JSON Schema meta-schema under a BSD-style notice; options 7-A vendor + offline (recommended), 7-B verified cache, 7-C status quo
+Item 8 plan: generator + ZIP/folder artifact comparison + host-limited report on test/ograf-folder-qa-automation; no host contract invention; no change to the official exports
+Implemented in this task: NOTHING (documentation only; no source, test, dependency or workflow change)
+Still approval-gated: item 7 licensing/redistribution decision, CI wiring for validate:ograf, item 8 implementation, the QA root path policy, plus the milestone D follow-ups (Option B updates, Option C majors, engines, npm-12 allowScripts pin)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -20,29 +18,28 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the Option A final response
-- progress_113_warning_maintenance.md — the implementation report
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
+- OMP_FINAL_RESPONSE.md — the Milestone E final response
+- progress_114_ograf_qa_study.md — the task record
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document; milestone D complete, E next)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
 - PROJECT_STATE.md — project state (copy of the root document)
 
 Omitted categories:
-- Source, test, package.json, package-lock.json, ci.yml, release-smoke.yml files (the version split, the chunk config and the checker rule live in the repository)
+- The study document itself lives in the repository at `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` (the bundle carries its summary in the final response and the task record)
+- Source, test, package.json, package-lock.json, ci.yml, release-smoke.yml files
 - Older reports, design contracts, current-state/release documents
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
-Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
+Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`, and every `kcs-ograf-*` QA root (which does not exist on this machine).
 
 Validation at this revision (each command run separately):
-- npm test: PASS — 114 files / 1,700 tests; 0 jsdom "Not implemented" lines (was 6)
-- npm run lint: clean (the Fast Refresh export warning is gone); npx tsc --noEmit: PASS
-- npm run build: PASS — no chunk-size advisory (app 382.19 kB, react-vendor 189.64 kB, geometry 36.09 kB, icons 14.30 kB)
-- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests, candidate SHA d19bab6)
 - node scripts/check-state-consistency.mjs: PASS
-- node server/index.js + curl /api/health: PASS — HTTP 200
-- vite preview + real browser: PASS — editor loads from the split chunks, layer authored, gizmo, inspector, timeline lane
+- Repository changes: documentation only — docs/design/**, reports/**, the roadmap, the state documents and the handoff bundle
+- No source, test, dependency, package or workflow change; `git diff --stat` for this branch lists documentation paths only
+- Item 7 evidence: live pin verification (8/8 match), closure byte measurement (33,567 B), upstream licence metadata (MIT / BSD-style notice)
+- Item 8 evidence: desktop QA-root existence check (absent), reports/progress_049.md, reports/progress_080.md, reports/progress_104.md, docs/research/KCS_DOWNSTREAM_HOST_FORMAT_DIFF.md
 
-Next: the independent review of branch chore/warning-maintenance, then the user's merge decision. If no decision is given, nothing merges and no further work starts.
+Next: four decisions — item 7 (7-A / 7-B / 7-C), item 7 CI wiring, item 8 implementation approval, item 8 QA root path policy. With no decision, nothing is implemented.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

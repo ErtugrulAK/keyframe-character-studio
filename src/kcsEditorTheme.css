@@ -73,7 +73,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .left-drawer-panel { width: 280px; background: #11161e; border-right-color: var(--kcs-border-default); }
 .drawer-content { padding: 12px; gap: 10px; }
 .drawer-header { padding-bottom: 8px; border-bottom-color: var(--kcs-border-subtle); }
-.dropzone-box { padding: 20px 10px; border-width: 1px; border-radius: 4px; background: var(--kcs-bg-input); }
 .drawer-item-card { padding: 10px 6px; border-radius: 4px; background: var(--kcs-bg-surface); border-color: var(--kcs-border-subtle); }
 
 .motion-design-right-sidebar { --right-inspector-width: 360px; background: #10151c; border-left-color: var(--kcs-border-default); box-shadow: -8px 0 24px rgba(0,0,0,.2); }
@@ -505,23 +504,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   background: var(--kcs-bg-active-muted);
   border-color: var(--kcs-border-subtle);
   color: var(--kcs-text-primary);
-  box-shadow: none;
-}
-
-.dropzone-box {
-  align-items: flex-start;
-  padding: 14px 10px;
-  border-style: solid;
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-  text-align: left;
-}
-
-.dropzone-box:hover,
-.dropzone-box.drag-over {
-  background: var(--kcs-bg-active-muted);
-  border-color: var(--kcs-border-subtle);
   box-shadow: none;
 }
 

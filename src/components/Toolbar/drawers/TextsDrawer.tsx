@@ -9,9 +9,12 @@ interface TextPreset {
   fontSize: number;
   fontWeight: number;
   fontStyle?: string;
-  colorClass: string;
+  /** Accent tone of the card's icon badge; the CSS owns the colours. */
+  tone: 'cyan' | 'gold' | 'teal' | 'green' | 'purple';
   /** Preview font stack used for the card label. */
   previewFamily: string;
+  /** Tracking applied to the preview label, for presets that need it. */
+  letterSpacing?: number;
   description: string;
 }
 
@@ -21,7 +24,7 @@ const TEXT_PRESETS: TextPreset[] = [
     fontFamily: 'Bebas Neue',
     fontSize: 64,
     fontWeight: 400,
-    colorClass: 'text-cyan',
+    tone: 'cyan',
     previewFamily: "'Bebas Neue', sans-serif",
     description: 'Bebas Neue · 64px',
   },
@@ -30,7 +33,7 @@ const TEXT_PRESETS: TextPreset[] = [
     fontFamily: 'Outfit',
     fontSize: 48,
     fontWeight: 800,
-    colorClass: 'text-cyan',
+    tone: 'cyan',
     previewFamily: 'Outfit',
     description: 'Outfit · 48px',
   },
@@ -40,7 +43,7 @@ const TEXT_PRESETS: TextPreset[] = [
     fontSize: 42,
     fontWeight: 400,
     fontStyle: 'italic',
-    colorClass: 'text-gold',
+    tone: 'gold',
     previewFamily: "'Playfair Display', serif",
     description: 'Playfair Display · 42px',
   },
@@ -49,7 +52,7 @@ const TEXT_PRESETS: TextPreset[] = [
     fontFamily: 'Inter',
     fontSize: 24,
     fontWeight: 600,
-    colorClass: 'text-teal',
+    tone: 'teal',
     previewFamily: 'Inter',
     description: 'Inter · 24px',
   },
@@ -58,7 +61,7 @@ const TEXT_PRESETS: TextPreset[] = [
     fontFamily: 'Inter',
     fontSize: 16,
     fontWeight: 400,
-    colorClass: 'text-green',
+    tone: 'green',
     previewFamily: 'Inter',
     description: 'Inter · 16px',
   },
@@ -67,8 +70,9 @@ const TEXT_PRESETS: TextPreset[] = [
     fontFamily: 'Montserrat',
     fontSize: 16,
     fontWeight: 700,
-    colorClass: 'text-purple',
+    tone: 'purple',
     previewFamily: 'Montserrat',
+    letterSpacing: 0.5,
     description: 'Montserrat · 16px',
   },
 ];
@@ -94,8 +98,9 @@ export const TextsDrawer: React.FC = () => {
         {TEXT_PRESETS.map((preset) => (
           <button
             key={preset.label}
-            className="drawer-item-card"
-            style={{ justifyContent: 'flex-start', alignItems: 'center', padding: '18px 20px' }}
+            type="button"
+            className={`text-preset-card tone-${preset.tone}`}
+            title="Click to add, or drag onto the canvas"
             draggable={true}
             onDragStart={(e) =>
               handleDragStart(e, 'custom_text', preset.label, { fontFamily: preset.fontFamily, fontSize: preset.fontSize })
@@ -104,21 +109,22 @@ export const TextsDrawer: React.FC = () => {
               addCustomPart('custom_text', preset.label, { fontFamily: preset.fontFamily, fontSize: preset.fontSize })
             }
           >
-            <Type size={26} className={preset.colorClass} />
-            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+            <span className="text-preset-icon" aria-hidden="true">
+              <Type size={17} />
+            </span>
+            <span className="text-preset-text">
               <span
-                className="item-label"
+                className="text-preset-label"
                 style={{
                   fontFamily: preset.previewFamily,
-                  fontSize: 23,
                   fontWeight: preset.fontWeight,
                   fontStyle: preset.fontStyle,
-                  letterSpacing: preset.label === 'Button Label' ? 0.5 : undefined,
+                  letterSpacing: preset.letterSpacing,
                 }}
               >
                 {preset.label}
               </span>
-              <span style={{ fontSize: 14, color: 'var(--text-muted)', letterSpacing: '0.4px' }}>{preset.description}</span>
+              <span className="text-preset-meta">{preset.description}</span>
             </span>
           </button>
         ))}

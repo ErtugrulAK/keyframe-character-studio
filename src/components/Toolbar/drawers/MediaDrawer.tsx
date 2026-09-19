@@ -88,49 +88,49 @@ export const MediaDrawer: React.FC = () => {
         onDragLeave={() => setIsDragOver(false)}
         onDrop={handleDrop}
       >
-        <Upload size={28} className="text-teal mb-2" />
+        <span className="dropzone-icon" aria-hidden="true">
+          <Upload size={20} />
+        </span>
         <span className="dropzone-title">Select media (Images & Videos)</span>
         <span className="dropzone-sub">Click to browse or drag MP4, WebM, PNG, JPG files here</span>
+        <button
+          type="button"
+          className="dropzone-browse"
+          onClick={(event) => {
+            // The card itself opens the picker; stop the bubble so a click on
+            // this control never opens the dialog twice.
+            event.stopPropagation();
+            fileInputRef.current?.click();
+          }}
+        >
+          Browse files
+        </button>
       </div>
 
       {recentMedia.length > 0 && (
         <>
-          <div className="drawer-subtitle" style={{ marginTop: 20 }}>
-            RECENTLY ADDED MEDIA
-          </div>
-          <div className="media-preview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8, marginTop: 8 }}>
+          <div className="drawer-subtitle">RECENTLY ADDED MEDIA</div>
+          <div className="media-preview-grid">
             {recentMedia.map((url, i) => {
               const isVideo = url.startsWith('data:video') || url.match(/\.(mp4|webm|mov|ogg)$/i);
               return (
-                <div
-                  key={i}
+                <button
+                  key={url}
+                  type="button"
                   className="media-preview-item"
                   title="Click to add to canvas"
-                  style={{
-                    height: 60,
-                    background: 'var(--bg-input)',
-                    borderRadius: 6,
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    border: '1px solid var(--border-color)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s',
-                  }}
+                  aria-label={`Add media ${i + 1} to canvas`}
                   onClick={() => {
                     const type = isVideo ? 'custom_video' : 'custom_image';
                     addCustomPart(type, `Media ${i + 1}`, isVideo ? { videoUrl: url } : { imageUrl: url });
                   }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = 'var(--accent-teal)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'var(--border-color)')}
                 >
                   {isVideo ? (
-                    <video src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted />
+                    <video src={url} muted />
                   ) : (
-                    <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="recent" />
+                    <img src={url} alt="" />
                   )}
-                </div>
+                </button>
               );
             })}
           </div>

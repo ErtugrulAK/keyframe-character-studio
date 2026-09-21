@@ -1,18 +1,23 @@
-import type { AnimationTrackData, BezierPath, PropertyKeyframe, TrackChannel } from '../../types/animator';
+import type { AnimationTrackData, BezierPath, LayerMask, LayerMaskChannel, LayerMaskMode, LayerMaskPathChannel, PathKeyframe, PropertyKeyframe, TrackChannel } from '../../types/animator';
+import { layerMaskChannel, layerMaskPathChannel } from '../../types/animator';
 import type { SceneData, SceneLayer } from '../../types/composition';
 import { isPrototypeSensitiveKey } from '../../utils/pathSafety';
 import { LOTTIE_IMPORT_LIMITS, lottieError, lottieWarning, type LottieImportDiagnostic } from './diagnostics';
-import { mapLottieKeyframes, type LottieKeyframe } from './temporal';
+import { mapLottieKeyframes, mapLottieSegmentTiming, type LottieKeyframe } from './temporal';
 
 /**
- * Lottie import core (Milestone F, item 10, first slice).
+ * Lottie import core (Milestone F, item 10).
  *
  * Implements the document- and layer-level mapping of
- * `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` for the constructs the first slice
- * covers — document timing, shape/solid/null layers, transforms, paths,
- * primitives, fill/stroke/trim — and **reports** everything the slice does not
- * convert (precomps, text, images, effects, expressions, masks and track mattes)
- * instead of guessing. Nothing here silently approximates.
+ * `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` for the constructs the imported
+ * slices cover — document timing, shape/solid/null layers, transforms, paths,
+ * primitives, fill/stroke/trim, layer masks and track mattes — and **reports**
+ * everything the slices do not convert (precomps, text, images, effects,
+ * expressions) instead of guessing. Nothing here silently approximates.
+ *
+ * Masks and mattes reuse the KCS authorities that already exist (`LayerMask`,
+ * `TrackMatteV2`, `maskChannels`/`maskPathChannels`); the importer introduces no
+ * parallel mask or matte model.
  *
  * The returned scene is a normal KCS `SceneData`, so the caller can hand it to
  * the existing import path (`useSerialization`), which validates it again.
@@ -141,14 +146,17 @@ const toTransformChannel = (
   };
 };
 
-/** Maps one Lottie path (`ks.k` with `v`/`i`/`o`/`c`) to a canonical `BezierPath`. */
-const mapPath = (
-  property: unknown,
+/**
+ * Reads a Lottie path payload (`{ v, i, o, c }`) into a canonical `BezierPath`.
+ * The vertices are layer-local, which is the same space KCS stores as
+ * `coordinateSpace: 'local'` — the renderer's existing mask/geometry authority
+ * applies the layer transform, so no per-call-site conversion exists.
+ */
+const toBezierPath = (
+  shape: LottieRecord | undefined,
   pathLabel: string,
   diagnostics: LottieImportDiagnostic[],
-): BezierPath | { staticPath?: BezierPath } | undefined => {
-  const record = asRecord(property);
-  const shape = asRecord(record?.k);
+): BezierPath | undefined => {
   const vertices = asArray(shape?.v);
   if (vertices.length === 0) return undefined;
   if (vertices.length > LOTTIE_IMPORT_LIMITS.verticesPerPath) {
@@ -181,6 +189,182 @@ const mapPath = (
   });
   if (points.length === 0) return undefined;
   return { version: 1, coordinateSpace: 'local', closed: shape?.c === true, points: points as BezierPath['points'] };
+};
+
+/** Maps one Lottie path property (`ks`/`pt` with `v`/`i`/`o`/`c`) to a canonical `BezierPath`. */
+const mapPath = (
+  property: unknown,
+  pathLabel: string,
+  diagnostics: LottieImportDiagnostic[],
+): BezierPath | undefined => toBezierPath(asRecord(asRecord(property)?.k), pathLabel, diagnostics);
+
+/** One Lottie path keyframe: the timing plus the shape it holds. */
+const readPathKeyframes = (property: unknown): { keyframes: LottieKeyframe[]; shapes: LottieRecord[] } => {
+  const raw = (asRecord(property) ?? {}).k;
+  const keyframes: LottieKeyframe[] = [];
+  const shapes: LottieRecord[] = [];
+  if (!Array.isArray(raw)) return { keyframes, shapes };
+  for (const entry of raw) {
+    const keyframe = asRecord(entry);
+    const time = readNumber(keyframe?.t);
+    // A path keyframe carries its shape in a single-entry array ().
+    const shape = asRecord(Array.isArray(keyframe?.s) ? keyframe.s[0] : keyframe?.s);
+    if (!keyframe || time === undefined || !shape) continue;
+    const incoming = asRecord(keyframe.i);
+    const outgoing = asRecord(keyframe.o);
+    keyframes.push({
+      time,
+      // A path keyframe carries no scalar value; the geometry travels beside
+      // the timing in `mapPathChannel`, so this placeholder is never read.
+      values: [0],
+      hold: keyframe.h === 1,
+      ...(outgoing ? { out: { x: readNumber(outgoing.x) ?? 0, y: readNumber(outgoing.y) ?? 0 } } : {}),
+      ...(incoming ? { in: { x: readNumber(incoming.x) ?? 0, y: readNumber(incoming.y) ?? 0 } } : {}),
+      ...(keyframe.r === 1 ? { roving: true } : {}),
+      ...(readString(keyframe.x) ? { expression: readString(keyframe.x) as string } : {}),
+    });
+    shapes.push(shape);
+  }
+  return { keyframes, shapes };
+};
+
+/** Maps an animated path property onto the existing mask path channel. */
+const mapPathChannel = (
+  property: unknown,
+  pathLabel: string,
+  context: { documentInPoint: number; layerStartTime?: number; channel: string },
+  diagnostics: LottieImportDiagnostic[],
+): PathKeyframe[] | undefined => {
+  const { keyframes, shapes } = readPathKeyframes(property);
+  if (keyframes.length === 0) return undefined;
+  const { timing } = mapLottieSegmentTiming(keyframes, {
+    ...context,
+    dimension: 0,
+    keyframeLimit: LOTTIE_IMPORT_LIMITS.keyframesPerChannel,
+    path: pathLabel,
+  });
+  const mapped: PathKeyframe[] = [];
+  timing.forEach((entry, index) => {
+    const shape = shapes[index];
+    const path = shape ? toBezierPath(shape, `${pathLabel}[${index}]`, diagnostics) : undefined;
+    if (!path) return;
+    mapped.push({
+      id: `kf-${context.channel}-${index}`,
+      frame: entry.frame,
+      value: path,
+      easing: entry.easing,
+      ...(entry.bezierIn ? { bezierIn: entry.bezierIn } : {}),
+      ...(entry.bezierOut ? { bezierOut: entry.bezierOut } : {}),
+    });
+  });
+  return mapped.length > 0 ? mapped : undefined;
+};
+
+/** Lottie mask modes that map onto the KCS `LayerMaskMode` union. */
+const MASK_MODES: Record<string, LayerMaskMode> = { a: 'add', s: 'subtract', i: 'intersect' };
+
+/**
+ * Maps `masksProperties[]` onto the KCS `LayerMask` stack plus the existing
+ * `maskChannels`/`maskPathChannels` for anything animated — see the design §5.
+ */
+const mapLayerMasks = (
+  masks: unknown[],
+  layerIndex: number,
+  layerPath: string,
+  context: { documentInPoint: number; layerStartTime?: number },
+  diagnostics: LottieImportDiagnostic[],
+): { masks: LayerMask[]; maskChannels: Record<LayerMaskChannel, PropertyKeyframe[]>; maskPathChannels: Record<LayerMaskPathChannel, PathKeyframe[]> } => {
+  const imported: LayerMask[] = [];
+  const maskChannels: Record<LayerMaskChannel, PropertyKeyframe[]> = {};
+  const maskPathChannels: Record<LayerMaskPathChannel, PathKeyframe[]> = {};
+
+  masks.forEach((entry, maskIndex) => {
+    const maskPathLabel = `${layerPath}.masksProperties[${maskIndex}]`;
+    const mask = asRecord(entry);
+    if (!mask) {
+      diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_MASK', maskPathLabel, `Mask ${maskIndex} of layer ${layerIndex} is not an object and was skipped.`, 'Re-export the document with a readable mask.'));
+      return;
+    }
+    if (imported.length >= LOTTIE_IMPORT_LIMITS.masksPerLayer) {
+      diagnostics.push(lottieWarning('LOTTIE_MASK_LIMIT', maskPathLabel, `Layer ${layerIndex} carries ${masks.length} masks; only the first ${LOTTIE_IMPORT_LIMITS.masksPerLayer} were imported.`, 'Reduce the mask count in the source document and import again.'));
+      return;
+    }
+    const mode = readString(mask.mode);
+    const mappedMode = mode ? MASK_MODES[mode] : undefined;
+    if (!mappedMode) {
+      diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_MASK_MODE', `${maskPathLabel}.mode`, `Mask ${maskIndex} of layer ${layerIndex} uses mode "${mode ?? 'unknown'}", which KCS cannot represent.`, 'Use the add, subtract or intersect mask mode in the source document.'));
+      return;
+    }
+
+    const maskId = `mask-${maskIndex}`;
+    const pathChannel = layerMaskPathChannel(maskId);
+    const animatedGeometry = isAnimatedProperty(mask.pt);
+    let path: BezierPath | undefined;
+    if (animatedGeometry) {
+      const keyframes = mapPathChannel(mask.pt, `${maskPathLabel}.pt`, { ...context, channel: maskId }, diagnostics);
+      if (keyframes) {
+        maskPathChannels[pathChannel] = keyframes;
+        path = keyframes[0].value;
+      }
+    } else {
+      path = mapPath(mask.pt, `${maskPathLabel}.pt`, diagnostics);
+    }
+    if (!path) {
+      diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_MASK', `${maskPathLabel}.pt`, `Mask ${maskIndex} of layer ${layerIndex} has no readable path and was skipped.`, 'Re-export the mask from the source document.'));
+      return;
+    }
+
+    /** Reads one static mask scalar, reporting the animated form onto its channel. */
+    const readMaskScalar = (property: string, channelProperty: 'opacity' | 'feather' | 'expansion', scale: number): number | undefined => {
+      const value = mask[property];
+      if (value === undefined) return undefined;
+      if (isAnimatedProperty(value)) {
+        const mapped = mapLottieKeyframes(readNumericProperty(value)?.keyframes ?? [], {
+          ...context,
+          dimension: 0,
+          keyframeLimit: LOTTIE_IMPORT_LIMITS.keyframesPerChannel,
+          path: `${maskPathLabel}.${property}`,
+          channel: layerMaskChannel(maskId, channelProperty),
+        });
+        if (mapped.keyframes.length > 0) {
+          maskChannels[layerMaskChannel(maskId, channelProperty)] = (scale === 1
+            ? mapped.keyframes
+            : mapped.keyframes.map((keyframe) => ({ ...keyframe, value: keyframe.value * scale }))) as PropertyKeyframe[];
+          diagnostics.push(...mapped.diagnostics);
+          return mapped.keyframes[0].value * scale;
+        }
+        return undefined;
+      }
+      const staticValue = readNumber(asRecord(value)?.k ?? value);
+      return staticValue === undefined ? undefined : staticValue * scale;
+    };
+
+    const opacity = readMaskScalar('o', 'opacity', 1 / 100);
+    const feather = readMaskScalar('f', 'feather', 1);
+    const expansion = readMaskScalar('x', 'expansion', 1);
+
+    imported.push({
+      id: maskId,
+      name: readString(mask.nm) ?? `Mask ${maskIndex + 1}`,
+      path,
+      mode: mappedMode,
+      enabled: true,
+      ...(mask.inv === true ? { inverted: true } : {}),
+      ...(opacity !== undefined ? { opacity } : {}),
+      ...(feather !== undefined ? { feather } : {}),
+      ...(expansion !== undefined ? { expansion } : {}),
+    });
+  });
+
+  return { masks: imported, maskChannels, maskPathChannels };
+};
+
+/** Lottie track matte types (`tt`) → the KCS `TrackMatteV2` mode and inversion. */
+const TRACK_MATTE_TYPES: Record<number, { mode: 'alpha' | 'luminance'; inverted: boolean }> = {
+  1: { mode: 'alpha', inverted: false },
+  2: { mode: 'alpha', inverted: true },
+  3: { mode: 'luminance', inverted: false },
+  4: { mode: 'luminance', inverted: true },
 };
 
 const BASIC_LAYER_TYPES: Record<number, string> = { 1: 'custom', 3: 'custom', 4: 'custom' };
@@ -256,11 +440,10 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     }
     if (layer.ef !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_EFFECT', `${path}.ef`, `Layer ${index} carries effects, which are not converted.`, 'Remove the effect or bake it before exporting.'));
     if (layer.hasExpressions === true) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_EXPRESSION', `${path}.hasExpressions`, `Layer ${index} uses expressions, which are preserved but not evaluated.`, 'Bake the expressions and export again.'));
-    if (layer.tt !== undefined || layer.td !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TRACK_MATTE', `${path}.tt`, `Layer ${index} uses a track matte, which the first import slice reports instead of converting.`, 'Apply the matte after import, or bake it in the source document.'));
     if (layer.ip !== undefined || layer.op !== undefined) diagnostics.push(lottieWarning('LOTTIE_LAYER_TIMING', `${path}.ip`, `Layer ${index} has an in/out range, which KCS does not model.`, 'Trim the layer after import, or remove the in/out range in the source document.'));
     if (asRecord(layer.ks)?.sk !== undefined || asRecord(layer.ks)?.sa !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SKEW', `${path}.ks.sk`, `Layer ${index} is skewed, which KCS does not model.`, 'Bake the skew in the source document.'));
     if (layer.ao === 1) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_AUTO_ORIENT', `${path}.ao`, `Layer ${index} uses auto-orient, which KCS does not model.`, 'Bake the orientation in the source document.'));
-    if (layer.hasMask === true || layer.masksProperties !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_MASK', `${path}.masksProperties`, `Layer ${index} carries masks, which the first import slice reports instead of converting.`, 'Bake the mask in the source document or re-create it after import.'));
+    if (layer.hasMask === true && !Array.isArray(layer.masksProperties)) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_MASK', `${path}.masksProperties`, `Layer ${index} is flagged as masked but carries no readable mask list.`, 'Re-export the document so the mask list travels with the layer.'));
 
     const solidFill = readString(layer.sc);
     const solidWidth = readNumber(layer.sw);
@@ -318,6 +501,42 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       ...(solidHeight !== undefined ? { height: solidHeight } : {}),
     } as SceneLayer);
     const layerShape = layers[layers.length - 1];
+
+    const masks = mapLayerMasks(asArray(layer.masksProperties), index, path, { documentInPoint: inPoint, layerStartTime }, diagnostics);
+    if (masks.masks.length > 0) layerShape.masks = masks.masks;
+
+    // The matte source is the layer directly above (Lottie applies the matte of
+    // the preceding layer); `td` only ever confirms or contradicts that rule.
+    const matteType = readNumber(layer.tt);
+    if (matteType !== undefined) {
+      const matte = TRACK_MATTE_TYPES[matteType];
+      const sourceId = `lottie-layer-${index - 1}`;
+      const sourceImported = index > 0 && layers.some((candidate) => candidate.id === sourceId);
+      const sourceHint = index > 0 ? readNumber(asRecord(lottieLayers[index - 1])?.td) : undefined;
+      if (!matte) {
+        diagnostics.push(lottieWarning('LOTTIE_TRACK_MATTE_UNSUPPORTED', `${path}.tt`, `Layer ${index} declares track matte type ${matteType}, which KCS does not model.`, 'Use an alpha or luminance matte in the source document.'));
+      } else if (!sourceImported) {
+        diagnostics.push(lottieWarning('LOTTIE_TRACK_MATTE_MISSING_SOURCE', `${path}.tt`, `Layer ${index} declares a track matte, but the layer above it (layer ${index - 1}), which Lottie uses as the matte source, was not imported.`, 'Import the source layer as well, or bake the matte in the source document.'));
+      } else if (sourceHint !== undefined && sourceHint !== index) {
+        diagnostics.push(lottieWarning('LOTTIE_TRACK_MATTE_AMBIGUOUS', `${path}.td`, `Layer ${index} declares a track matte, but the layer above it marks layer ${sourceHint} as its matte target instead.`, 'Remove the conflicting matte hint in the source document and export again.'));
+      } else {
+        // Lottie never draws a matte layer on its own, so the source is hidden —
+        // the same relationship `sourceVisible: false` describes in KCS.
+        layerShape.trackMatte = {
+          sourceLayerId: sourceId,
+          mode: matte.mode,
+          enabled: true,
+          sourceVisible: false,
+          ...(matte.inverted ? { inverted: true } : {}),
+        };
+      }
+    } else if (layer.td !== undefined) {
+      const targetIndex = readNumber(layer.td);
+      const targetDeclaresMatte = targetIndex !== undefined && readNumber(asRecord(lottieLayers[targetIndex])?.tt) !== undefined;
+      if (!targetDeclaresMatte) {
+        diagnostics.push(lottieWarning('LOTTIE_TRACK_MATTE_UNSUPPORTED', `${path}.td`, `Layer ${index} marks itself as the matte source for layer ${targetIndex ?? 'unknown'}, which does not declare a track matte.`, 'Remove the matte hint in the source document, or declare the matte on the target layer.'));
+      }
+    }
 
     const shapes = asArray(layer.shapes);
     for (const [shapeIndex, shapeEntry] of shapes.entries()) {
@@ -429,8 +648,17 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       scaleY: asFactor((scaleY.keyframes ?? []) as PropertyKeyframe[]),
       opacity: asFactor((opacity.keyframes ?? []) as PropertyKeyframe[]),
     } as Record<TrackChannel, PropertyKeyframe[]>;
-    if (Object.values(channels).some((keyframes) => keyframes.length > 0)) {
-      tracks.push({ partId: layerId, channels: channels as AnimationTrackData['channels'] });
+    const maskChannels = masks.maskChannels;
+    const maskPathChannels = masks.maskPathChannels;
+    const hasMaskChannels = Object.keys(maskChannels).length > 0;
+    const hasMaskPathChannels = Object.keys(maskPathChannels).length > 0;
+    if (Object.values(channels).some((keyframes) => keyframes.length > 0) || hasMaskChannels || hasMaskPathChannels) {
+      tracks.push({
+        partId: layerId,
+        channels: channels as AnimationTrackData['channels'],
+        ...(hasMaskChannels ? { maskChannels } : {}),
+        ...(hasMaskPathChannels ? { maskPathChannels } : {}),
+      });
     }
   });
 

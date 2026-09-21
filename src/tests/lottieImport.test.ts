@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { importLottieDocument } from '../interop/lottie/mapDocument';
 import { LOTTIE_IMPORT_LIMITS } from '../interop/lottie/diagnostics';
+import { validateImportedDocument } from '../utils/importValidation';
+import { validateSceneForOGraf } from '../ograf/validation';
 
 /**
  * Contract tests for the Lottie import core (Milestone F, item 10, first slice).
@@ -478,12 +480,12 @@ describe('Lottie import — shapes and unsupported constructs', () => {
     expect(codes(result.diagnostics)).toContain('LOTTIE_EMPTY_SCENE');
   });
 
-  it('reports effects, expressions, masks and track mattes on a supported layer', () => {
-    const layer = solidLayer({ ef: [{ nm: 'Blur' }], hasExpressions: true, hasMask: true, tt: 1, td: 1 });
+  it('reports effects and expressions on a supported layer', () => {
+    const layer = solidLayer({ ef: [{ nm: 'Blur' }], hasExpressions: true });
     const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
 
     expect(codes(result.diagnostics)).toEqual(
-      expect.arrayContaining(['LOTTIE_UNSUPPORTED_EFFECT', 'LOTTIE_UNSUPPORTED_EXPRESSION', 'LOTTIE_UNSUPPORTED_MASK', 'LOTTIE_UNSUPPORTED_TRACK_MATTE']),
+      expect.arrayContaining(['LOTTIE_UNSUPPORTED_EFFECT', 'LOTTIE_UNSUPPORTED_EXPRESSION']),
     );
     expect(result.scene?.layers).toHaveLength(1);
   });
@@ -520,5 +522,184 @@ describe('Lottie import — untrusted input', () => {
 
     expect(codes(result.diagnostics)).toContain('LOTTIE_BROKEN_PARENT');
     expect(result.scene?.layers[0]?.parentId).toBeUndefined();
+  });
+});
+
+const maskPathShape = (vertices: number[][] = [[0, 0], [10, 0], [10, 10]]) => ({
+  c: true,
+  v: vertices.map(([x, y]) => ({ x, y })),
+  i: vertices.map(() => ({ x: 0, y: 0 })),
+  o: vertices.map(() => ({ x: 0, y: 0 })),
+});
+
+const maskEntry = (overrides: Record<string, unknown> = {}) => ({
+  inv: false,
+  mode: 'a',
+  pt: { k: maskPathShape() },
+  o: { k: 100 },
+  x: { k: 0 },
+  nm: 'Mask 1',
+  ...overrides,
+});
+
+const maskedLayer = (masks: unknown[], overrides: Record<string, unknown> = {}) => ({
+  ty: 4,
+  nm: 'Masked',
+  ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+  hasMask: true,
+  masksProperties: masks,
+  ...overrides,
+});
+
+describe('Lottie import — masks and track mattes', () => {
+  it('maps a static mask onto the KCS layer mask stack', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      maskedLayer([maskEntry({ mode: 's', inv: true, o: { k: 40 }, f: { k: 3 }, x: { k: 2 } })]),
+    ])));
+    const mask = result.scene?.layers[0]?.masks?.[0];
+
+    expect(mask?.id).toBe('mask-0');
+    expect(mask?.name).toBe('Mask 1');
+    expect(mask?.mode).toBe('subtract');
+    expect(mask?.inverted).toBe(true);
+    expect(mask?.opacity).toBeCloseTo(0.4);
+    expect(mask?.feather).toBe(3);
+    expect(mask?.expansion).toBe(2);
+    expect(mask?.path.points).toHaveLength(3);
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_UNREADABLE_MASK');
+  });
+
+  it('reports the mask modes KCS cannot represent and skips those masks', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      maskedLayer([maskEntry({ mode: 'n' }), maskEntry({ mode: 'f' }), maskEntry({ mode: 'i' })]),
+    ])));
+
+    expect(result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNSUPPORTED_MASK_MODE')).toHaveLength(2);
+    expect(result.scene?.layers[0]?.masks).toHaveLength(1);
+    expect(result.scene?.layers[0]?.masks?.[0]?.mode).toBe('intersect');
+  });
+
+  it('maps an animated mask path onto the existing mask path channel', () => {
+    const animated = {
+      k: [
+        { t: 0, s: [maskPathShape([[0, 0], [10, 0], [10, 10]])], o: { x: 0.5, y: 0.5 }, i: { x: 0.5, y: 0.5 } },
+        { t: 12, s: [maskPathShape([[0, 0], [20, 0], [20, 20]])] },
+      ],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      maskedLayer([maskEntry({ pt: animated })], { st: 2 }),
+    ])));
+    const channel = result.scene?.tracks[0]?.maskPathChannels?.['mask-0:path'];
+
+    expect(channel).toHaveLength(2);
+    expect(channel?.[0]?.frame).toBe(0);
+    expect(channel?.[1]?.frame).toBe(10);
+    expect(channel?.[0]?.easing).toBe('bezier');
+    expect(channel?.[0]?.bezierOut).toEqual({ x: 0.5, y: 0.5 });
+    expect(channel?.[1]?.bezierIn).toEqual({ x: 0.5, y: 0.5 });
+    expect(channel?.[1]?.value.points[1]).toMatchObject({ x: 20, y: 0 });
+    expect(result.scene?.layers[0]?.masks?.[0]?.path.points[1]).toMatchObject({ x: 10, y: 0 });
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_UNREADABLE_MASK');
+  });
+
+  it('maps an animated mask opacity onto the existing mask channel', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      maskedLayer([maskEntry({ o: { k: [{ t: 0, s: [100] }, { t: 12, s: [50] }] } })]),
+    ])));
+    const channel = result.scene?.tracks[0]?.maskChannels?.['mask-0:opacity'];
+
+    expect(channel?.map((keyframe) => keyframe.value)).toEqual([1, 0.5]);
+    expect(result.scene?.layers[0]?.masks?.[0]?.opacity).toBe(1);
+  });
+
+  it('reports masks above the per-layer limit and imports the first ones', () => {
+    const masks = Array.from({ length: LOTTIE_IMPORT_LIMITS.masksPerLayer + 1 }, () => maskEntry());
+    const result = importLottieDocument(JSON.stringify(baseDocument([maskedLayer(masks)])));
+
+    expect(result.scene?.layers[0]?.masks).toHaveLength(LOTTIE_IMPORT_LIMITS.masksPerLayer);
+    expect(result.diagnostics.filter((entry) => entry.code === 'LOTTIE_MASK_LIMIT')).toHaveLength(1);
+  });
+
+  it('reports a mask with no readable path instead of importing an empty one', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      maskedLayer([maskEntry({ pt: { k: { c: true, v: [], i: [], o: [] } } })]),
+    ])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_UNREADABLE_MASK');
+    expect(result.scene?.layers[0]?.masks).toBeUndefined();
+  });
+
+  it('maps the four track matte types onto the existing track matte relation', () => {
+    const expectations: [number, 'alpha' | 'luminance', boolean][] = [[1, 'alpha', false], [2, 'alpha', true], [3, 'luminance', false], [4, 'luminance', true]];
+
+    for (const [tt, mode, inverted] of expectations) {
+      const result = importLottieDocument(JSON.stringify(baseDocument([
+        solidLayer({ nm: 'Source' }),
+        maskedLayer([], { nm: 'Target', tt }),
+      ])));
+      const target = result.scene?.layers.find((layer) => layer.name === 'Target');
+
+      expect(target?.trackMatte).toMatchObject({ sourceLayerId: 'lottie-layer-0', mode, enabled: true, sourceVisible: false });
+      expect(target?.trackMatte?.inverted === true).toBe(inverted);
+      expect(codes(result.diagnostics).filter((code) => code.startsWith('LOTTIE_TRACK_MATTE'))).toEqual([]);
+    }
+  });
+
+  it('reports a track matte whose source layer was not imported', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      { ty: 0, nm: 'Precomp', refId: 'comp_0', ks: {} },
+      maskedLayer([], { nm: 'Target', tt: 1 }),
+    ])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_TRACK_MATTE_MISSING_SOURCE');
+    expect(result.scene?.layers[0]?.trackMatte).toBeUndefined();
+  });
+
+  it('reports a track matte when the source hint contradicts the layer above', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer({ nm: 'Source', td: 4 }),
+      maskedLayer([], { nm: 'Target', tt: 1 }),
+    ])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_TRACK_MATTE_AMBIGUOUS');
+    expect(result.scene?.layers[1]?.trackMatte).toBeUndefined();
+  });
+
+  it('produces a masked scene the existing import boundary accepts', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer({ nm: 'Source' }),
+      maskedLayer([maskEntry(), maskEntry({ mode: 'i', pt: { k: [{ t: 0, s: [maskPathShape()] }] } })], { nm: 'Target', tt: 2 }),
+    ])));
+    const validated = validateImportedDocument(JSON.stringify(result.scene));
+
+    expect(validated.ok).toBe(true);
+    expect(result.scene?.layers[1]?.trackMatte?.mode).toBe('alpha');
+    expect(result.scene?.layers[1]?.masks).toHaveLength(2);
+  });
+
+  it('produces a masked, matted scene the OGraf export validation accepts', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer({ nm: 'Source' }),
+      maskedLayer([maskEntry({ mode: 'i' })], { nm: 'Target', tt: 3 }),
+    ])));
+    const validated = validateSceneForOGraf(result.scene!);
+    const matteOrMaskErrors = validated.diagnostics.filter(
+      (entry) => entry.severity === 'ERROR' && /matte|mask/iu.test(entry.message),
+    );
+
+    // The layer type itself is a separate, pre-existing gap (`custom` is not an
+    // OGraf type); what this slice must not do is produce an invalid relation.
+    expect(matteOrMaskErrors).toEqual([]);
+    expect(validated.diagnostics.map((entry) => entry.code)).not.toContain('OGRAF_INVALID_TRACK_MATTE');
+  });
+
+  it('reports an unknown track matte type', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer({ nm: 'Source' }),
+      maskedLayer([], { nm: 'Target', tt: 9 }),
+    ])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_TRACK_MATTE_UNSUPPORTED');
+    expect(result.scene?.layers[1]?.trackMatte).toBeUndefined();
   });
 });

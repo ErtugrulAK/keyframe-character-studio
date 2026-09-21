@@ -48,3 +48,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_122_ci_hotfix_import_boundary_types.md` — CI hotfix: import-boundary type errors and the correct type gate (`npm run build`).
 - `progress_123_lottie_import_core.md` — Milestone F item 10 first slice: the Lottie import core and its loss report.
 - `progress_124_checkpoint_after_lottie_core.md` — Checkpoint `2026-09-18-after-lottie-core`: state, tasklist, resume prompt and machine-readable summary after the Lottie import core.
+- `progress_125_lottie_mask_matte_slice.md` — Milestone F item 10 second slice: Lottie layer masks and track mattes on the existing KCS mask/matte authorities.

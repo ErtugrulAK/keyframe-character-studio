@@ -12,6 +12,10 @@ import type { LottieImportDiagnostic } from './diagnostics';
  * Lottie frame units and scene frames are the same unit and the time mapping is
  * the documented offset plus rounding. Nothing here guesses: an unsupported
  * segment (roving, expression-driven) is reported and falls back to `linear`.
+ *
+ * The timing decision lives in one place (`mapLottieSegmentTiming`) because both
+ * the numeric channels and the mask-geometry channel must split segments the
+ * same way; a second copy of this rule would be a second authority.
  */
 
 /** A Lottie keyframe as read from the document (numbers already validated by the caller). */
@@ -47,17 +51,29 @@ export interface TemporalMappingContext {
   channel: string;
 }
 
-export interface MappedKeyframe {
-  id: string;
+/** The value-independent part of a mapped keyframe. */
+export interface SegmentTiming {
   frame: number;
-  value: number;
   easing: 'linear' | 'hold' | 'bezier';
   bezierIn?: { x: number; y: number };
   bezierOut?: { x: number; y: number };
 }
 
+export interface MappedKeyframe extends SegmentTiming {
+  id: string;
+  value: number;
+}
+
 export interface TemporalMappingResult {
   keyframes: MappedKeyframe[];
+  diagnostics: LottieImportDiagnostic[];
+}
+
+export interface SegmentTimingResult {
+  /** The keyframes inside the limit, in document order. */
+  accepted: LottieKeyframe[];
+  /** One timing per accepted keyframe, in the same order. */
+  timing: SegmentTiming[];
   diagnostics: LottieImportDiagnostic[];
 }
 
@@ -68,13 +84,17 @@ const toSceneFrame = (time: number, context: TemporalMappingContext): number =>
   Math.max(0, Math.round(time - context.documentInPoint - (context.layerStartTime ?? 0)));
 
 /**
- * Maps one channel's Lottie keyframes into canonical KCS keyframes.
+ * Maps the timing of one channel's keyframes — frames, easing and the split
+ * handles — and reports the segments that cannot be represented.
  *
  * The `in` handle of a segment becomes `bezierIn` on the keyframe that ends the
  * segment, and the `out` handle becomes `bezierOut` on the keyframe that starts
  * it, so a converted channel keeps both sides of every curve.
  */
-export const mapLottieKeyframes = (keyframes: LottieKeyframe[], context: TemporalMappingContext): TemporalMappingResult => {
+export const mapLottieSegmentTiming = (
+  keyframes: LottieKeyframe[],
+  context: TemporalMappingContext,
+): SegmentTimingResult => {
   const diagnostics: LottieImportDiagnostic[] = [];
   const accepted = keyframes.slice(0, context.keyframeLimit);
   if (keyframes.length > accepted.length) {
@@ -88,22 +108,20 @@ export const mapLottieKeyframes = (keyframes: LottieKeyframe[], context: Tempora
     });
   }
 
-  const mapped: MappedKeyframe[] = accepted.map((keyframe, index) => {
+  const timing: SegmentTiming[] = accepted.map((keyframe, index) => {
     // A roving or expression-driven segment cannot be represented faithfully,
     // so it is reported below and deliberately kept linear: keeping its handles
     // would claim a curve the source does not actually describe.
     const unsupportedSegment = keyframe.roving === true || keyframe.expression !== undefined;
     const hold = keyframe.hold === true;
     const startsSegment = !hold && !unsupportedSegment && keyframe.out !== undefined && accepted[index + 1] !== undefined;
-    const mappedKeyframe: MappedKeyframe = {
-      id: `kf-${context.channel}-${index}`,
+    const mapped: SegmentTiming = {
       frame: toSceneFrame(keyframe.time, context),
-      value: readDimension(keyframe, context.dimension),
       easing: hold ? 'hold' : 'linear',
     };
     if (startsSegment && keyframe.out) {
-      mappedKeyframe.easing = 'bezier';
-      mappedKeyframe.bezierOut = { x: keyframe.out.x, y: keyframe.out.y };
+      mapped.easing = 'bezier';
+      mapped.bezierOut = { x: keyframe.out.x, y: keyframe.out.y };
     }
     if (keyframe.roving) {
       diagnostics.push({
@@ -125,7 +143,7 @@ export const mapLottieKeyframes = (keyframes: LottieKeyframe[], context: Tempora
         action: 'Bake the expression in the source document and export again.',
       });
     }
-    return mappedKeyframe;
+    return mapped;
   });
 
   // Lottie stores the incoming control point of a segment on the keyframe the
@@ -133,11 +151,24 @@ export const mapLottieKeyframes = (keyframes: LottieKeyframe[], context: Tempora
   accepted.forEach((keyframe, index) => {
     if (keyframe.hold === true || keyframe.roving === true || keyframe.expression !== undefined) return;
     const incoming = keyframe.in;
-    const target = mapped[index + 1];
+    const target = timing[index + 1];
     if (!incoming || !target) return;
     target.easing = 'bezier';
     target.bezierIn = { x: incoming.x, y: incoming.y };
   });
 
+  return { accepted, timing, diagnostics };
+};
+
+/**
+ * Maps one numeric channel's Lottie keyframes into canonical KCS keyframes.
+ */
+export const mapLottieKeyframes = (keyframes: LottieKeyframe[], context: TemporalMappingContext): TemporalMappingResult => {
+  const { accepted, timing, diagnostics } = mapLottieSegmentTiming(keyframes, context);
+  const mapped: MappedKeyframe[] = accepted.map((keyframe, index) => ({
+    id: `kf-${context.channel}-${index}`,
+    ...timing[index],
+    value: readDimension(keyframe, context.dimension),
+  }));
   return { keyframes: mapped, diagnostics };
 };

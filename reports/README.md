@@ -50,3 +50,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_124_checkpoint_after_lottie_core.md` — Checkpoint `2026-09-18-after-lottie-core`: state, tasklist, resume prompt and machine-readable summary after the Lottie import core.
 - `progress_125_lottie_mask_matte_slice.md` — Milestone F item 10 second slice: Lottie layer masks and track mattes on the existing KCS mask/matte authorities.
 - `progress_126_lottie_text_image_precomp_slice.md` — Milestone F item 10 third slice: Lottie text, image and precomp layers.
+- `progress_127_lottie_import_entry_report_ux.md` — Milestone F item 10 final slice: the Lottie import entry point and its report-before-replace flow.

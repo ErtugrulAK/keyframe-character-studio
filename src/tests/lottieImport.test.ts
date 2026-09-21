@@ -499,6 +499,77 @@ describe('Lottie import — shapes and unsupported constructs', () => {
   });
 });
 
+describe('Lottie import — layer types the editor and the exporter both accept', () => {
+  it('gives every imported layer a supported type instead of a generic placeholder', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Shape',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'sh', ks: { k: { c: true, v: [[0, 0], [10, 0], [10, 10]], i: [[0, 0], [0, 0], [0, 0]], o: [[0, 0], [0, 0], [0, 0]] } } }],
+    };
+    const rectLayer = {
+      ty: 4,
+      nm: 'Rect',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'rc', s: { k: [120, 80] } }],
+    };
+    const ellipseLayer = {
+      ty: 4,
+      nm: 'Ellipse',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'el', s: { k: [30, 30] } }],
+    };
+    const geometryless = { ty: 4, nm: 'Empty', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } }, shapes: [] };
+    const nullLayer = { ty: 3, nm: 'Rig', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } };
+
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      shapeLayer,
+      rectLayer,
+      ellipseLayer,
+      geometryless,
+      nullLayer,
+      solidLayer(),
+      textLayer({}),
+      imageLayer('image_0'),
+    ], { assets: [{ id: 'image_0', w: 10, h: 10, u: '', p: PNG_DATA_URL }] })));
+
+    const types = result.scene?.layers.map((layer) => layer.type);
+    expect(types).toEqual([
+      'custom_freeform',
+      'custom_rect',
+      'custom_circle',
+      'custom_freeform',
+      'custom_freeform',
+      'custom_rect',
+      'custom_text',
+      'custom_image',
+    ]);
+  });
+
+  it('produces a scene the OGraf export validation accepts on type grounds', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer(),
+      textLayer({}),
+      imageLayer('image_0'),
+      { ty: 4, nm: 'Shape', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } }, shapes: [{ ty: 'sh', ks: { k: { c: true, v: [[0, 0], [10, 0], [10, 10]], i: [[0, 0], [0, 0], [0, 0]], o: [[0, 0], [0, 0], [0, 0]] } } }] },
+    ], { assets: [{ id: 'image_0', w: 10, h: 10, u: '', p: PNG_DATA_URL }] })));
+
+    const unsupportedType = validateSceneForOGraf(result.scene!).diagnostics.filter(
+      (entry) => entry.severity === 'ERROR' && /not supported by OGraf Export/iu.test(entry.message),
+    );
+    expect(unsupportedType).toEqual([]);
+  });
+
+  it('keeps a construct it cannot convert reported rather than giving it a supported-looking type', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      { ty: 4, nm: 'Effects only', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } }, shapes: [{ ty: 'rp', c: { k: 3 } }] },
+    ])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_UNSUPPORTED_SHAPE');
+    expect(result.scene?.layers[0]?.type).toBe('custom_freeform');
+  });
+});
+
 describe('Lottie import — untrusted input', () => {
   it('refuses malformed JSON', () => {
     expect(codes(importLottieDocument('{ nope').diagnostics)).toEqual(['LOTTIE_MALFORMED_JSON']);

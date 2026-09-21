@@ -26,6 +26,8 @@ import {
 import type { OGrafExportDiagnostic } from '../../ograf/types';
 import type { ToastOptions } from '../../hooks/useToast';
 import { FirstExportGuide } from './FirstExportGuide';
+import { LottieImportReportDialog } from '../Modal/LottieImportReportDialog';
+import { importLottieDocument, type LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
 import './HeaderBar.css';
 
@@ -151,6 +153,13 @@ export const HeaderBar: React.FC = () => {
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lottieInputRef = useRef<HTMLInputElement>(null);
+  /**
+   * A parsed Lottie document waiting for the user to accept its report. It is
+   * the only thing selecting a file changes: the project is untouched until
+   * `confirmLottieImport` runs.
+   */
+  const [pendingLottieImport, setPendingLottieImport] = useState<{ fileName: string; result: LottieImportResult } | null>(null);
   const [timeAgoStr, setTimeAgoStr] = useState<string>('Not saved yet');
 
   useEffect(() => {
@@ -300,6 +309,57 @@ export const HeaderBar: React.FC = () => {
     e.target.value = '';
   };
 
+  const handleLottieFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      if (typeof text !== 'string') {
+        showToast('The selected file could not be read as text.', 'error');
+        return;
+      }
+      // Parsing only: nothing in the project changes until the report is accepted.
+      setPendingLottieImport({ fileName: file.name, result: importLottieDocument(text) });
+    };
+    reader.onerror = () => showToast('The selected file could not be read.', 'error');
+    reader.readAsText(file);
+  };
+
+  /** Applies the pending import through the project authority the .kcs import uses. */
+  const confirmLottieImport = () => {
+    if (!pendingLottieImport) return;
+    const { fileName, result } = pendingLottieImport;
+    setPendingLottieImport(null);
+    if (!result.ok || !result.scene) {
+      showToast('The Lottie document was refused; your project is unchanged.', 'error', {
+        title: 'Lottie import refused',
+        action: result.diagnostics[0]?.action ?? 'Export the animation again and retry.',
+      });
+      return;
+    }
+    const name = fileName.replace(/\.lottie\.json$/i, '').replace(/\.json$/i, '').trim();
+    const applied = importProject(JSON.stringify(result.scene), name);
+    if (!applied.ok) {
+      const [refusal] = applied.diagnostics;
+      showToast(refusal ? sanitizeOGrafDiagnosticText(refusal.message) : 'The imported scene was refused.', 'error', {
+        title: refusal ? refusal.code : 'Lottie import refused',
+        action: refusal?.action ?? 'Export the animation again and retry.',
+      });
+      return;
+    }
+    const warningCount = result.diagnostics.filter((entry) => entry.severity === 'warning').length;
+    showToast(`Imported "${name}" from Lottie.`, 'success');
+    if (warningCount > 0) {
+      const [firstWarning] = result.diagnostics.filter((entry) => entry.severity === 'warning');
+      showToast(`${warningCount} report entr${warningCount === 1 ? 'y' : 'ies'} from the import.`, 'info', {
+        title: firstWarning?.code,
+        action: firstWarning?.action,
+      });
+    }
+  };
+
   return (
     <>
       <header className="header-bar">
@@ -439,7 +499,12 @@ export const HeaderBar: React.FC = () => {
             <Upload size={14} />
             <span>Import</span>
           </button>
-          <input ref={fileInputRef} type="file" accept=".json,.kcs,.ograf.json,.zip" style={{ display: 'none' }} onChange={handleImportFile} />
+          <input ref={fileInputRef} type="file" accept=".json,.kcs,.ograf.json,.zip" aria-label="Choose a KCS project or OGraf manifest" style={{ display: 'none' }} onChange={handleImportFile} />
+          <button className="header-action-btn import-btn" onClick={() => lottieInputRef.current?.click()} title="Import a Lottie (bodymovin) JSON file">
+            <Upload size={14} />
+            <span>Import Lottie</span>
+          </button>
+          <input ref={lottieInputRef} type="file" accept=".json,.lottie.json" style={{ display: 'none' }} onChange={handleLottieFile} aria-label="Choose a Lottie file to import" />
 
           <div style={{ position: 'relative' }}>
             <button
@@ -538,6 +603,16 @@ export const HeaderBar: React.FC = () => {
           </button>
         </div>
       </header>
+      <LottieImportReportDialog
+        isOpen={pendingLottieImport !== null}
+        fileName={pendingLottieImport?.fileName ?? ''}
+        layerCount={pendingLottieImport?.result.scene?.layers.length}
+        frameCount={pendingLottieImport?.result.scene?.totalFrames}
+        diagnostics={pendingLottieImport?.result.diagnostics ?? []}
+        refused={pendingLottieImport !== null && !pendingLottieImport.result.ok}
+        onCancel={() => setPendingLottieImport(null)}
+        onConfirm={confirmLottieImport}
+      />
 
       {/* New Project Template Modal */}
       <NewItemModal

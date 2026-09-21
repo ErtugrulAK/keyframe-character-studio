@@ -1,0 +1,151 @@
+.lottie-report-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 10, 18, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.lottie-report-dialog {
+  width: min(640px, 92vw);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  border: 1px solid #1f2a3a;
+  border-radius: 10px;
+  background: #0e141d;
+  color: #e6edf7;
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+}
+
+.lottie-report-dialog h2 {
+  margin: 0;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+.lottie-report-source {
+  margin: 0;
+  font-size: 12px;
+  color: #9fb0c6;
+  overflow-wrap: anywhere;
+}
+
+.lottie-report-counts {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  font-size: 11px;
+}
+
+.lottie-report-count {
+  padding: 2px 8px;
+  border: 1px solid #24303f;
+  border-radius: 999px;
+  color: #9fb0c6;
+}
+
+.lottie-report-count.blocking {
+  border-color: #7f2b2b;
+  color: #ff9a9a;
+}
+
+.lottie-report-count.warning {
+  border-color: #7d6220;
+  color: #ffd479;
+}
+
+.lottie-report-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  border: 1px solid #1b2431;
+  border-radius: 8px;
+  background: #0b1017;
+}
+
+.lottie-report-entry {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #161f2b;
+  font-size: 11px;
+}
+
+.lottie-report-entry:last-child {
+  border-bottom: none;
+}
+
+.lottie-report-entry.blocking {
+  border-left: 3px solid #b03a3a;
+}
+
+.lottie-report-entry.warning {
+  border-left: 3px solid #b0892f;
+}
+
+.lottie-report-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #7fd6ff;
+}
+
+.lottie-report-message {
+  color: #e6edf7;
+}
+
+.lottie-report-path {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #8fa1b8;
+  overflow-wrap: anywhere;
+}
+
+.lottie-report-action {
+  color: #9fb0c6;
+}
+
+.lottie-report-hidden {
+  margin: 0;
+  font-size: 11px;
+  color: #9fb0c6;
+}
+
+.lottie-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.lottie-report-actions button {
+  padding: 7px 14px;
+  border-radius: 7px;
+  border: 1px solid #24303f;
+  background: #151d28;
+  color: #e6edf7;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.lottie-report-actions button:focus-visible {
+  outline: 2px solid #00d2ff;
+  outline-offset: 2px;
+}
+
+.lottie-report-confirm {
+  border-color: #1f6f5c;
+  background: #123528;
+}
+
+.lottie-report-confirm:disabled {
+  border-color: #2a3441;
+  background: #141a22;
+  color: #6b7a8d;
+  cursor: not-allowed;
+}

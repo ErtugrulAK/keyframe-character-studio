@@ -699,11 +699,19 @@ const reportPrecompGraph = (assets: Map<string, AssetEntry>, diagnostics: Lottie
 };
 
 
+/**
+ * The KCS layer type a Lottie layer starts as, before its geometry is known.
+ *
+ * Every value is a type the editor renders and the OGraf export accepts, and
+ * each one draws exactly what the source layer drew: a solid is a filled
+ * rectangle, a null layer is a parenting helper that must not draw (hence the
+ * geometry-free freeform), and a shape layer is refined once its items are read.
+ */
 const BASIC_LAYER_TYPES: Record<number, string> = {
-  1: 'custom',
+  1: 'custom_rect',
   2: 'custom_image',
-  3: 'custom',
-  4: 'custom',
+  3: 'custom_freeform',
+  4: 'custom_freeform',
   5: 'custom_text',
 };
 
@@ -947,6 +955,8 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     }
 
     const shapes = asArray(layer.shapes);
+    let sawRectangle = false;
+    let sawEllipse = false;
     for (const [shapeIndex, shapeEntry] of shapes.entries()) {
       const shape = asRecord(shapeEntry);
       const shapeType = readString(shape?.ty);
@@ -964,6 +974,8 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         continue;
       }
       if (shapeType === 'rc' || shapeType === 'el') {
+        if (shapeType === 'rc') sawRectangle = true;
+        else sawEllipse = true;
         const sizeValue = asRecord(shape.s)?.k;
         const size = Array.isArray(sizeValue) ? sizeValue : [];
         const sizeX = readNumber(size[0]);
@@ -1056,6 +1068,19 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       scaleY: asFactor((scaleY.keyframes ?? []) as PropertyKeyframe[]),
       opacity: asFactor((opacity.keyframes ?? []) as PropertyKeyframe[]),
     } as Record<TrackChannel, PropertyKeyframe[]>;
+    if (type === 4) {
+      // The shape layer becomes the existing KCS type that draws what its items
+      // draw: a path is a freeform, an ellipse a circle, a rectangle a rect, and
+      // a layer with no convertible geometry stays a freeform that draws nothing.
+      layerShape.type = layerShape.path
+        ? 'custom_freeform'
+        : sawEllipse
+          ? 'custom_circle'
+          : sawRectangle
+            ? 'custom_rect'
+            : 'custom_freeform';
+    }
+
     const maskChannels = masks.maskChannels;
     const maskPathChannels = masks.maskPathChannels;
     const hasMaskChannels = Object.keys(maskChannels).length > 0;

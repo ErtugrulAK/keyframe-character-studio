@@ -1,35 +1,26 @@
-# KCS ChatGPT Upload Manifest — Checkpoint 2026-09-18 After Lottie Core
+# KCS ChatGPT Upload Manifest — Milestone F Item 10 Second Slice (Masks + Track Mattes)
 
 Clean refreshed: YES
-Bundle purpose: the `2026-09-18-after-lottie-core` checkpoint — the state of `main` after Milestone F item 10's first slice (the Lottie import core) was merged and pushed
+Bundle purpose: the Lottie importer's mask + track matte slice (Milestone F item 10, second slice)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Base state recorded: main = origin/main = 47d3368a2b54a32f812a041feb158ac82b20cf87
-Checkpoint commit: 0d346ac (docs: checkpoint after lottie import core), fast-forward merged into main and pushed
-Lottie core merge commit: ff32d6c (--no-ff); branch feat/lottie-import-core kept at f76ae6a
-Checkpoint folder: docs/checkpoints/2026-09-18-after-lottie-core/ (README.md, TASKLIST.md, RESUME_PROMPT.md, STATE.json)
-Task record: reports/progress_124_checkpoint_after_lottie_core.md
-What changed: documentation only — the checkpoint folder, the task record, PROJECT_STATE.md, NEXT_SESSION.md, docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, reports/README.md and docs/README_INDEX.md
-Not changed: no source, test, package.json, lockfile or workflow change
-Validation: npm run build (tsc -b && vite build) PASS; full Vitest PASS (120 files / 1,773 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); node scripts/check-state-consistency.mjs PASS; git diff --check clean
-Review: one focused independent review returned BLOCKED (stale milestone-F wording; checkpoint files not yet tracked), both closed; the single re-review returned READY
-Next recommended task: Milestone F item 10 — masks + track matte slice on feat/lottie-mask-matte-slice, resumed from docs/checkpoints/2026-09-18-after-lottie-core/RESUME_PROMPT.md
-Remaining item-10 slices (each needs its own approval): masks + track mattes; text/image/precomp; the import entry point with the report-before-replace UX
-Approval-gated elsewhere: package/lockfile/dependency and workflow work (Option B, Option C, the engines declaration, the npm-12 allowScripts decision) and every release/tag/npm action
+Branch: feat/lottie-mask-matte-slice, fast-forward merged into main at 8670b2a (base main was bf8632a) and pushed; the branch is kept
+Task record: reports/progress_125_lottie_mask_matte_slice.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
+What changed: src/interop/lottie/temporal.ts (shared segment-split timing), src/interop/lottie/mapDocument.ts (mask mapping onto LayerMask + maskChannels/maskPathChannels, four track matte types onto TrackMatteV2, tp/td handling, the specification's [x, y] path form), src/interop/lottie/diagnostics.ts (masksPerLayer limit), src/tests/lottieImport.test.ts (56 cases, was 37)
+Not changed: no UI, import entry point, evaluator, renderer, dependency, package.json, lockfile or workflow change
+Validation: npm run build PASS; lottie core suite PASS (56); full suite PASS (120 files / 1,792 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests, candidate 8670b2a); state check PASS; git diff --check clean
+Reviews: three independent read-only rounds — BLOCKED, BLOCKED, READY — every finding closed; the first round's high findings were verified against the published Lottie specification before the fix
+Next slices (each needs its own approval): text/image/precomp conversion; the import entry point with the report-before-replace UX
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (11):
+Copied files (7):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the checkpoint final response
-- progress_124_checkpoint_after_lottie_core.md — the task record
-- checkpoint_2026-09-18_README.md — checkpoint summary
-- checkpoint_2026-09-18_TASKLIST.md — checkpoint tasklist
-- checkpoint_2026-09-18_RESUME_PROMPT.md — copy-paste next-session prompt
-- checkpoint_2026-09-18_STATE.json — machine-readable checkpoint summary
+- OMP_FINAL_RESPONSE.md — the second-slice final response
+- progress_125_lottie_mask_matte_slice.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
@@ -38,17 +29,18 @@ Copied files (11):
 Omitted categories:
 - Source, test and design files (they live in the repository, including docs/design/KCS_LOTTIE_IMPORT_MAPPING.md)
 - package.json, package-lock.json, ci.yml, release-smoke.yml files
-- Older reports, current-state/release documents
+- Older reports, current-state/release documents, the previous checkpoint bundle copies
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
 - npm run build (tsc -b && vite build): PASS — the type gate CI runs
-- npm test: PASS — 120 files / 1,773 tests; npm run lint: clean
+- npx vitest run src/tests/lottieImport.test.ts: PASS — 56 cases
+- npm test: PASS — 120 files / 1,792 tests; npm run lint: clean
 - npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS; git diff --check: clean
 
-Next: resume from the checkpoint's RESUME_PROMPT.md and take the masks + track matte slice through its own approval gate.
+Next: the text/image/precomp slice, then the import entry point with the report-before-replace UX.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

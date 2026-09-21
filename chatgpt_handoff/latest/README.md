@@ -1,31 +1,32 @@
-# KCS Minimal ChatGPT Upload Bundle — Checkpoint 2026-09-18 After Lottie Core
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 Masks + Track Mattes
 
-This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this checkpoint.
+This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The `2026-09-18-after-lottie-core` checkpoint: the state of `main` after Milestone F item 10's first
-slice — the Lottie import core — was merged and pushed. It is documentation only; no source, test,
-package or workflow file changed.
+The second implementation slice of the approved Lottie mapping design
+(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), merged into `main` at `8670b2a`:
 
-- `main` = `origin/main` = `47d3368a2b54a32f812a041feb158ac82b20cf87` when the checkpoint was
-  written; the checkpoint commit is `0d346ac`.
-- The Lottie import core was merged into `main` with `--no-ff` at `ff32d6c`; its branch
-  `feat/lottie-import-core` is kept at `f76ae6a` as the review artefact.
-- Release tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`; the GitHub
-  release is still a draft prerelease and nothing was published to npm.
-- The importer has no UI entry point yet. The remaining item-10 slices — masks + track mattes
-  (the recommended next task), text/image/precomp, and the import entry point with the
-  report-before-replace UX — each need their own approval.
+- **Layer masks** — `masksProperties` map onto the existing KCS `LayerMask` stack (`mode`,
+  `inverted`, `opacity`, `feather`, `expansion`), animated mask geometry maps onto the existing
+  `maskPathChannels`, animated mask scalars onto the existing `maskChannels`, and the design's
+  8-mask limit is restored. Modes KCS cannot represent, unreadable payloads and every mask above the
+  limit are reported.
+- **Track mattes** — `tt` 1/2 → alpha (± inverted), 3/4 → luminance (± inverted) on the existing
+  `TrackMatteV2` relation, sourced from the layer directly above with `sourceVisible: false`. An
+  explicit `tp` matte parent, a contradicting `td: 0` and a missing/unimported source are reported
+  instead of guessed.
+- **Spec conformance** — vertices and tangents are read in the specification's own `[x, y]` form
+  (the previous reader only accepted `{ x, y }` objects, which real documents do not use), and `td`
+  is handled as the specification's 0/1 matte flag rather than an index.
+
+No UI or import entry point exists yet; the text/image/precomp slice and the import entry point with
+the report-before-replace UX each need their own approval.
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — the final response for this checkpoint task
-- `progress_124_checkpoint_after_lottie_core.md` — the task record
-- `checkpoint_2026-09-18_README.md` — checkpoint summary (git state, work, validation, protected state, resume)
-- `checkpoint_2026-09-18_TASKLIST.md` — done / active / next recommended / remaining backlog / approval-gated / do-not-touch
-- `checkpoint_2026-09-18_RESUME_PROMPT.md` — copy-paste prompt for the next session
-- `checkpoint_2026-09-18_STATE.json` — machine-readable checkpoint summary
+- `OMP_FINAL_RESPONSE.md` — the final response for this task
+- `progress_125_lottie_mask_matte_slice.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
@@ -34,9 +35,7 @@ package or workflow file changed.
 
 `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md`
 are copies of their root documents; `node scripts/check-state-consistency.mjs` compares them after
-CRLF→LF normalization and a whole-document `trim()` and fails on content drift. The four
-`checkpoint_2026-09-18_*` files are copies of the checkpoint folder, prefixed so they cannot collide
-with this bundle's own `README.md`.
+CRLF→LF normalization and a whole-document `trim()` and fails on content drift.
 
 ## Deliberately not included
 

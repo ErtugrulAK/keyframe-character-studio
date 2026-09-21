@@ -1102,6 +1102,25 @@ describe('Lottie import — text, image and precomp layers', () => {
     expect(fonts.diagnostics.find((entry) => entry.code === 'LOTTIE_UNREADABLE_TEXT')?.path).toBe('$.fonts.list[0].fFamily');
   });
 
+  it('reports a late precomp component even after a dense graph has been walked', () => {
+    // A Fibonacci-shaped (dense but acyclic) component followed by one asset that
+    // references a missing precomp: the walk must not stop before the last asset.
+    const dense = Array.from({ length: 20 }, (_, index) => ({
+      id: 'a' + index,
+      layers: [
+        ...(index + 1 < 20 ? [{ ty: 0, refId: 'a' + (index + 1) }] : []),
+        ...(index + 2 < 20 ? [{ ty: 0, refId: 'a' + (index + 2) }] : []),
+      ],
+    }));
+    const late = { id: 'zzz', layers: [{ ty: 0, refId: 'gone' }] };
+    const result = importLottieDocument(JSON.stringify(baseDocument([precompLayer('a0')], { assets: [...dense, late] })));
+
+    const missing = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_PRECOMP_MISSING_ASSET');
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.path).toBe('assets[20].layers[0].refId');
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_PRECOMP_DEPTH_LIMIT');
+  });
+
   it('keeps the layer order and transform of an image and a text layer deterministic', () => {
     const assets = [{ id: 'image_0', w: 20, h: 10, u: '', p: PNG_DATA_URL }];
     const result = importLottieDocument(JSON.stringify(baseDocument([

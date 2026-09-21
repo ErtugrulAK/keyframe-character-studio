@@ -626,8 +626,9 @@ const readAssetTable = (assets: unknown[]): Map<string, AssetEntry> => {
  * *unsupported, preserved* — but a document that would recurse forever is worth
  * telling the author about.
  *
- * Each asset is expanded once across the whole walk and every finding is
- * reported once, so a shared sub-precomp cannot produce duplicate entries.
+ * Every finding is reported once, so a shared sub-precomp cannot produce
+ * duplicate entries, and no reachable part of the graph is skipped: an asset is
+ * re-expanded only when a deeper path reaches it.
  */
 const reportPrecompGraph = (assets: Map<string, AssetEntry>, diagnostics: LottieImportDiagnostic[]): void => {
   if (assets.size === 0) return;
@@ -638,10 +639,12 @@ const reportPrecompGraph = (assets: Map<string, AssetEntry>, diagnostics: Lottie
     diagnostics.push(lottieWarning(code, sourcePath, message, action));
   };
 
-  // The walk is bounded twice over: a branch never re-enters an asset it is
-  // already inside (that is the cycle case), and the total number of expansions
-  // is capped, so a dense graph cannot make the import unbounded work.
-  let budget = assets.size * (LOTTIE_IMPORT_LIMITS.hierarchyDepth + 2);
+  // The walk is bounded without cutting anything short: a branch never re-enters
+  // an asset it is already inside (that is the cycle case), and an asset is only
+  // re-expanded when it is reached at a greater depth than before. Its recorded
+  // depth rises at most to the nesting limit, so the total work is bounded by
+  // `assets × (limit + 2)` while every reachable asset is still inspected.
+  const exploredDepth = new Map<string, number>();
 
   const walk = (assetId: string, chain: string[]): void => {
     const entry = assets.get(assetId);
@@ -658,8 +661,12 @@ const reportPrecompGraph = (assets: Map<string, AssetEntry>, diagnostics: Lottie
       reportOnce('depth-limit', 'LOTTIE_PRECOMP_DEPTH_LIMIT', `${entry.assetPath}.layers`, `The precomposition assets nest deeper than the ${LOTTIE_IMPORT_LIMITS.hierarchyDepth}-level import limit.`, 'Flatten the precomposition nesting in the source document.');
       return;
     }
-    if (budget <= 0) return;
-    budget -= 1;
+    const depth = chain.length;
+    const previousDepth = exploredDepth.get(assetId);
+    // Everything below an asset already explored at this depth or deeper was
+    // reported along a path at least as deep, so nothing new can come of it.
+    if (previousDepth !== undefined && previousDepth >= depth) return;
+    exploredDepth.set(assetId, depth);
 
     const layers = entry.asset.layers;
     if (!Array.isArray(layers)) {

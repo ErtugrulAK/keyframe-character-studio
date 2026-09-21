@@ -75,8 +75,9 @@ The design keeps precomps **unsupported, preserved**, so nothing is flattened:
 - The graph walk runs once per document, and only when a precomp layer is actually present. It is a
   true depth-first walk with a per-branch chain, so a diamond graph (two parents sharing one child) is
   not a cycle, a cycle is reported once per cycle rather than once per asset, and the nesting limit
-  counts levels below the first precomposition exactly like the layer parent chain. A total expansion
-  budget keeps a dense graph from making the import unbounded work.
+  counts levels below the first precomposition exactly like the layer parent chain. An asset is only
+  re-expanded when a deeper path reaches it, which bounds the work at `assets × (limit + 2)` **without**
+  cutting the walk short: a late, independent precomp component is always inspected.
 
 ## 7. Diagnostics
 
@@ -115,7 +116,7 @@ of carrying a `parentId` that does not exist.
 
 ## 8. Tests
 
-`src/tests/lottieImport.test.ts` — **82 cases** (was 56). The new group covers:
+`src/tests/lottieImport.test.ts` — **83 cases** (was 56). The new group covers:
 
 1. A static text layer maps `textValue`/`fontFamily`/`fontSize`/`fillColor`.
 2. An unknown family falls back to the renderer default and is reported **once** for two spellings of
@@ -155,8 +156,8 @@ of carrying a `parentId` that does not exist.
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 82 cases |
-| `npm test` (full Vitest) | PASS — 120 files / 1,818 tests |
+| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 83 cases |
+| `npm test` (full Vitest) | PASS — 120 files / 1,819 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
@@ -222,7 +223,9 @@ and one low finding; all were closed before the merge decision:
 
 The second read-only round returned **BLOCKED** again with three findings, also closed: the DFS
 ancestry handling, an unreadable asset *height* reported at the width path, and an unreadable
-`fonts.list[].fFamily` falling back silently — each now has a test.
+`fonts.list[].fFamily` falling back silently — each now has a test. A third round then caught that the
+first budget-based work bound could silently end the walk before a late component was inspected; the
+budget is replaced by the depth rule above and the case is pinned by a dense-graph regression test.
 
 ## 13. Next slice
 

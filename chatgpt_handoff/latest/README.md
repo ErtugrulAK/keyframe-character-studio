@@ -1,32 +1,32 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 Masks + Track Mattes
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 Text / Image / Precomp
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The second implementation slice of the approved Lottie mapping design
-(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), merged into `main` at `8670b2a`:
+The third implementation slice of the approved Lottie mapping design
+(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), merged into `main` at `bda62cb`:
 
-- **Layer masks** — `masksProperties` map onto the existing KCS `LayerMask` stack (`mode`,
-  `inverted`, `opacity`, `feather`, `expansion`), animated mask geometry maps onto the existing
-  `maskPathChannels`, animated mask scalars onto the existing `maskChannels`, and the design's
-  8-mask limit is restored. Modes KCS cannot represent, unreadable payloads and every mask above the
-  limit are reported.
-- **Track mattes** — `tt` 1/2 → alpha (± inverted), 3/4 → luminance (± inverted) on the existing
-  `TrackMatteV2` relation, sourced from the layer directly above with `sourceVisible: false`. An
-  explicit `tp` matte parent, a contradicting `td: 0` and a missing/unimported source are reported
-  instead of guessed.
-- **Spec conformance** — vertices and tangents are read in the specification's own `[x, y]` form
-  (the previous reader only accepted `{ x, y }` objects, which real documents do not use), and `td`
-  is handled as the specification's 0/1 matte flag rather than an index.
+- **Text layers** map their static text document onto the KCS text fields (`textValue`, `fontSize`,
+  `fontFamily`, `fillColor`). One canonical list of renderable families lives in
+  `src/utils/textFonts.ts` and the inspector renders from it; a family outside it falls back to the
+  default font and is reported once per document. Animators, text boxes, text paths and the
+  justification/tracking/leading/baseline/caps properties are reported.
+- **Image layers** resolve their `refId` against the document asset table. Only an embedded data URL
+  that already passes the application's embedded-image policy is imported; a file path or URL is
+  never read, fetched or resolved, so it is reported and the layer skipped.
+- **Precomp layers** stay *unsupported, preserved* per the design: one report per layer naming its
+  `refId`, plus cycle, nesting-limit and missing-asset reports from a depth-bounded asset-graph walk.
+- Every report carries the source document's own node path, and a layer that is skipped leaves no id
+  behind — a later layer pointing at it reports `LOTTIE_BROKEN_PARENT` instead.
 
-No UI or import entry point exists yet; the text/image/precomp slice and the import entry point with
-the report-before-replace UX each need their own approval.
+No UI or import entry point exists yet; the import entry point with the report-before-replace UX is the
+next slice and needs its own approval.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_125_lottie_mask_matte_slice.md` — the task record
+- `progress_126_lottie_text_image_precomp_slice.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action

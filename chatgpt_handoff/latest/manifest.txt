@@ -1,26 +1,26 @@
-# KCS ChatGPT Upload Manifest — Milestone F Item 10 Second Slice (Masks + Track Mattes)
+# KCS ChatGPT Upload Manifest — Milestone F Item 10 Third Slice (Text / Image / Precomp)
 
 Clean refreshed: YES
-Bundle purpose: the Lottie importer's mask + track matte slice (Milestone F item 10, second slice)
+Bundle purpose: the Lottie importer's text, image and precomp layer slice (Milestone F item 10, third slice)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/lottie-mask-matte-slice, fast-forward merged into main at 8670b2a (base main was bf8632a) and pushed; the branch is kept
-Task record: reports/progress_125_lottie_mask_matte_slice.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
-What changed: src/interop/lottie/temporal.ts (shared segment-split timing), src/interop/lottie/mapDocument.ts (mask mapping onto LayerMask + maskChannels/maskPathChannels, four track matte types onto TrackMatteV2, tp/td handling, the specification's [x, y] path form), src/interop/lottie/diagnostics.ts (masksPerLayer limit), src/tests/lottieImport.test.ts (56 cases, was 37)
-Not changed: no UI, import entry point, evaluator, renderer, dependency, package.json, lockfile or workflow change
-Validation: npm run build PASS; lottie core suite PASS (56); full suite PASS (120 files / 1,792 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests, candidate 8670b2a); state check PASS; git diff --check clean
-Reviews: three independent read-only rounds — BLOCKED, BLOCKED, READY — every finding closed; the first round's high findings were verified against the published Lottie specification before the fix
-Next slices (each needs its own approval): text/image/precomp conversion; the import entry point with the report-before-replace UX
+Branch: feat/lottie-text-image-precomp-slice, fast-forward merged into main at bda62cb (base main was c66cc80) and pushed; the branch is kept
+Task record: reports/progress_126_lottie_text_image_precomp_slice.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
+What changed: src/interop/lottie/mapDocument.ts (text document mapping, image asset resolution against the document asset table, precomp reporting with a depth-bounded graph walk), src/utils/textFonts.ts (the single canonical font list, also used by the inspector), src/ograf/legacyCompatibility.ts (exports the existing embedded-image predicate), src/components/Inspector/sections/style/StyleTextFields.tsx (renders its options from that list), src/tests/lottieImport.test.ts (83 cases, was 56)
+Not changed: no UI or import entry point, no renderer or evaluator change, no filesystem or network access from the importer, no dependency, package.json, lockfile or workflow change
+Validation: npm run build PASS; lottie core suite PASS (83); full suite PASS (120 files / 1,819 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests, candidate bda62cb); git diff --check clean
+Reviews: three independent read-only rounds plus a confirmation round — BLOCKED (7 findings), BLOCKED (3), BLOCKED (1, two items PASS), READY WITH WARNINGS (last blocker closed; the remaining note was a comment-precision warning, fixed in bda62cb)
+Next slice (needs its own approval): the import entry point with the report-before-replace UX
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (7):
+Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the second-slice final response
-- progress_125_lottie_mask_matte_slice.md — the task record
+- OMP_FINAL_RESPONSE.md — the third-slice final response
+- progress_126_lottie_text_image_precomp_slice.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
@@ -36,11 +36,11 @@ Omitted files were not deleted from the repository. Not copied and never touched
 
 Validation at this revision (each command run separately):
 - npm run build (tsc -b && vite build): PASS — the type gate CI runs
-- npx vitest run src/tests/lottieImport.test.ts: PASS — 56 cases
-- npm test: PASS — 120 files / 1,792 tests; npm run lint: clean
+- npx vitest run src/tests/lottieImport.test.ts: PASS — 83 cases
+- npm test: PASS — 120 files / 1,819 tests; npm run lint: clean
 - npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS; git diff --check: clean
 
-Next: the text/image/precomp slice, then the import entry point with the report-before-replace UX.
+Next: the import entry point with the report-before-replace UX — the first slice that puts the importer in front of a user.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

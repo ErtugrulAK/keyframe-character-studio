@@ -12,100 +12,100 @@
 - The repository root is `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
 - `C:\Users\ertugrul.ak\Desktop\KCS` is the user project/asset workspace, not a handoff destination; nothing was copied there.
 - `C:\Users\ertugrul.ak\Desktop\ograf-graphics` is untouched by this workflow.
-- The previous checkpoint folder `docs/checkpoints/2026-09-18-after-lottie-core/` stays in the repository; its copies left this bundle with the refresh.
+- The checkpoint folder `docs/checkpoints/2026-09-18-after-lottie-core/` stays in the repository; its copies left this bundle with an earlier refresh.
 
 ---
 
 ## 1. OMP Final Response
 
-# KCS Milestone F Item 10 Second Slice — Final Response (Masks + Track Mattes)
+# KCS Milestone F Item 10 Third Slice — Final Response (Text / Image / Precomp)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** done and merged. `feat/lottie-mask-matte-slice` was fast-forward merged into `main` at `8670b2a` (base `main` was `bf8632a`) and pushed; the branch is kept.
-- **Report:** `reports/progress_125_lottie_mask_matte_slice.md`. **Design:** `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`.
-- No UI entry point is wired yet: the importer returns a scene plus a loss report, and nothing in the editor calls it.
+- **Status:** done and merged. `feat/lottie-text-image-precomp-slice` was fast-forward merged into `main` at `bda62cb` (base `main` was `c66cc80`) and pushed; the branch is kept.
+- **Report:** `reports/progress_126_lottie_text_image_precomp_slice.md`. **Design:** `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`.
+- No UI entry point exists yet: the importer still returns a scene plus a loss report, and nothing in the editor calls it.
 
 ## 2) WHAT CHANGED
 
 | File | Change |
 |---|---|
-| `src/interop/lottie/temporal.ts` | The segment-split timing decision moved into `mapLottieSegmentTiming`, so the numeric channels and the mask-geometry channel share one easing authority; `mapLottieKeyframes` is a thin value mapper over it |
-| `src/interop/lottie/mapDocument.ts` | `mapLayerMasks` (mode map, static geometry, animated geometry and scalars, limit, unreadable payloads), the four track-matte types, `tp`/`td` handling, and mask channels on the layer's existing track; the path reader now accepts the specification's `[x, y]` pairs as well as `{ x, y }` objects |
-| `src/interop/lottie/diagnostics.ts` | `LOTTIE_IMPORT_LIMITS.masksPerLayer: 8` restored |
-| `src/tests/lottieImport.test.ts` | Mask/matte group with 19 cases (56 in total, was 37); fixtures moved to the specification's path form; the superseded blanket-report test re-pinned to the constructs that are still reported |
-| `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` | §3/§5 record the specification facts this slice follows (`[x, y]` pairs, `td` as a 0/1 flag, `tp` reported, the limit counts source masks, unreadable fields reported) |
+| `src/interop/lottie/mapDocument.ts` | Text layer mapping (`t.d.k[0].s` → `textValue`/`fontSize`/`fontFamily`/`fillColor`, with animators, layout, justification/tracking/leading/baseline and unreadable fields reported), image layer resolution against the document asset table (embedded data URLs only, through the existing image policy; every external reference reported and skipped without being read), precomp layers reported as *unsupported, preserved* with a depth-bounded graph walk for cycles, nesting and missing assets |
+| `src/utils/textFonts.ts` | New: the single canonical list of families KCS can render plus a name matcher; the inspector now renders its options from it, so one authority decides what a text layer may name |
+| `src/ograf/legacyCompatibility.ts` | Exports `isSupportedEmbeddedImage`, so the importer classifies an embedded image through the policy the rest of the app already uses instead of its own MIME list |
+| `src/tests/lottieImport.test.ts` | 83 cases (was 56): 27 covering text, image, precomp, report paths, report shape, report counts, the no-network property and the parent integrity of a skipped layer |
+| `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` | §2/§3 record the implemented text/image/precomp rules and the severity interpretation (a skipped construct is a `warning`; only a refused import is an `error`) |
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 56 cases |
-| `npm test` (full Vitest) | PASS — 120 files / 1,792 tests |
+| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 83 cases |
+| `npm test` (full Vitest) | PASS — 120 files / 1,819 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium smoke tests, candidate `8670b2a` |
+| `npm run qa:release` | PASS — 2 Chromium smoke tests, candidate `bda62cb` |
 | `node scripts/check-state-consistency.mjs` | PASS once the handoff bundle mirrors the updated root documents (this refresh) |
 | `git diff --check` | clean |
 
 ## 4) REVIEW
 
-Three independent read-only review rounds (`reviewer-agent`, evidence-cited):
+Four independent read-only rounds (`reviewer-agent`, evidence-cited):
 
 | Round | Verdict | Findings |
 |---|---|---|
-| 1 | BLOCKED | 3 high + 3 medium: the path reader ignored the specification's `[x, y]` pairs; `td` was misread as an index; animated mask-path timing diagnostics were dropped; the mask limit counted imported masks instead of source masks; present-but-unreadable mask fields fell back silently; one diagnostic path pointed at the wrong layer |
-| 2 | BLOCKED | 4 findings closed; one partially open (`hasMask: true` with no mask list, and an animated scalar with no readable keyframe, still fell back silently) |
-| 3 | READY | Every finding closed, no new blocker |
+| 1 | BLOCKED | 4 high + 2 medium: diagnostic paths were not real document nodes; present-but-unreadable text/precomp fields fell back silently; the precomp walk re-expanded shared assets; a skipped image layer could leave a dangling `parentId`; the external-image message echoed the raw path; the tests pinned neither paths nor the report shape |
+| 2 | BLOCKED | 3: the walk's mutable ancestry reported a diamond graph as a cycle and could miss the depth limit; an unreadable asset height was reported at the width path; an unreadable `fonts.list[].fFamily` fell back silently |
+| 3 | BLOCKED | 1 (two items PASS): the work-bound budget could end the walk before a late component was inspected |
+| 4 | READY WITH WARNINGS | Every blocker closed; the only note was that a comment overstated the bound, fixed in `bda62cb` |
 
-The first round's high findings were verified against the published Lottie specification before the fix: `v`/`i`/`o` are arrays of `[x, y]` pairs and `td` is a 0/1 flag with `tp` naming an explicit matte parent.
-
-The review also surfaced a **pre-existing defect in the merged import core** that this slice fixes: the path reader only accepted `{ x, y }` objects, so real documents lost every shape path and mask.
+Everything the rounds found was a real defect in this slice, and each one now has a regression test — including the diamond graph, the cycle count, the exact depth boundary, the late-component walk and the no-network property.
 
 ## 5) SAFETY
 
-- No UI, editor or import entry point; no evaluator or renderer change.
-- No `package.json`, lockfile, dependency or workflow change; the changed paths are the Lottie importer, its tests and documentation.
+- No UI or import entry point; no renderer or evaluator change. The only inspector change is that its font options come from the shared list (identical values).
+- No filesystem and no network access from the importer: an image is either embedded in the document or the layer is reported and skipped.
+- No `package.json`, lockfile, dependency or workflow change.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the GitHub draft release, npm metadata, `origin/without-mask`, the OMP configuration (`memory.backend: mnemopi`, model roles, provider mappings, `task.maxConcurrency: 8`) and the user folders are unchanged.
 - Integration was fast-forward only: no merge commit, no rebase, no force push, no tag change, no branch deletion.
 
 ## 6) NEXT
 
-The next item-10 slice is **text/image/precomp conversion**, followed by the import entry point with
-the report-before-replace UX (which is also where the imported layer type can be reconciled with the
-OGraf export types). Everything that touches `package.json`, lockfiles or workflows stays behind its
-own approval.
+The next item-10 slice is the **import entry point with the report-before-replace UX** — the first slice
+that puts the importer in front of a user, and the natural place to reconcile the imported layer types
+with the OGraf export types. Everything that touches `package.json`, lockfiles or workflows stays
+behind its own approval.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone F Item 10 Second Slice (Masks + Track Mattes)
+# KCS ChatGPT Upload Manifest — Milestone F Item 10 Third Slice (Text / Image / Precomp)
 
 Clean refreshed: YES
-Bundle purpose: the Lottie importer's mask + track matte slice (Milestone F item 10, second slice)
+Bundle purpose: the Lottie importer's text, image and precomp layer slice (Milestone F item 10, third slice)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/lottie-mask-matte-slice, fast-forward merged into main at 8670b2a (base main was bf8632a) and pushed; the branch is kept
-Task record: reports/progress_125_lottie_mask_matte_slice.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
-What changed: src/interop/lottie/temporal.ts (shared segment-split timing), src/interop/lottie/mapDocument.ts (mask mapping onto LayerMask + maskChannels/maskPathChannels, four track matte types onto TrackMatteV2, tp/td handling, the specification's [x, y] path form), src/interop/lottie/diagnostics.ts (masksPerLayer limit), src/tests/lottieImport.test.ts (56 cases, was 37)
-Not changed: no UI, import entry point, evaluator, renderer, dependency, package.json, lockfile or workflow change
-Validation: npm run build PASS; lottie core suite PASS (56); full suite PASS (120 files / 1,792 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests, candidate 8670b2a); state check PASS; git diff --check clean
-Reviews: three independent read-only rounds — BLOCKED, BLOCKED, READY — every finding closed; the first round's high findings were verified against the published Lottie specification before the fix
-Next slices (each needs its own approval): text/image/precomp conversion; the import entry point with the report-before-replace UX
+Branch: feat/lottie-text-image-precomp-slice, fast-forward merged into main at bda62cb (base main was c66cc80) and pushed; the branch is kept
+Task record: reports/progress_126_lottie_text_image_precomp_slice.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
+What changed: src/interop/lottie/mapDocument.ts (text document mapping, image asset resolution against the document asset table, precomp reporting with a depth-bounded graph walk), src/utils/textFonts.ts (the single canonical font list, also used by the inspector), src/ograf/legacyCompatibility.ts (exports the existing embedded-image predicate), src/components/Inspector/sections/style/StyleTextFields.tsx (renders its options from that list), src/tests/lottieImport.test.ts (83 cases, was 56)
+Not changed: no UI or import entry point, no renderer or evaluator change, no filesystem or network access from the importer, no dependency, package.json, lockfile or workflow change
+Validation: npm run build PASS; lottie core suite PASS (83); full suite PASS (120 files / 1,819 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests, candidate bda62cb); git diff --check clean
+Reviews: three independent read-only rounds plus a confirmation round — BLOCKED (7 findings), BLOCKED (3), BLOCKED (1, two items PASS), READY WITH WARNINGS (last blocker closed; the remaining note was a comment-precision warning, fixed in bda62cb)
+Next slice (needs its own approval): the import entry point with the report-before-replace UX
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (7):
+Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the second-slice final response
-- progress_125_lottie_mask_matte_slice.md — the task record
+- OMP_FINAL_RESPONSE.md — the third-slice final response
+- progress_126_lottie_text_image_precomp_slice.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
@@ -121,12 +121,12 @@ Omitted files were not deleted from the repository. Not copied and never touched
 
 Validation at this revision (each command run separately):
 - npm run build (tsc -b && vite build): PASS — the type gate CI runs
-- npx vitest run src/tests/lottieImport.test.ts: PASS — 56 cases
-- npm test: PASS — 120 files / 1,792 tests; npm run lint: clean
+- npx vitest run src/tests/lottieImport.test.ts: PASS — 83 cases
+- npm test: PASS — 120 files / 1,819 tests; npm run lint: clean
 - npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests)
 - node scripts/check-state-consistency.mjs: PASS; git diff --check: clean
 
-Next: the text/image/precomp slice, then the import entry point with the report-before-replace UX.
+Next: the import entry point with the report-before-replace UX — the first slice that puts the importer in front of a user.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -134,35 +134,35 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 Masks + Track Mattes
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 Text / Image / Precomp
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The second implementation slice of the approved Lottie mapping design
-(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), merged into `main` at `8670b2a`:
+The third implementation slice of the approved Lottie mapping design
+(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), merged into `main` at `bda62cb`:
 
-- **Layer masks** — `masksProperties` map onto the existing KCS `LayerMask` stack (`mode`,
-  `inverted`, `opacity`, `feather`, `expansion`), animated mask geometry maps onto the existing
-  `maskPathChannels`, animated mask scalars onto the existing `maskChannels`, and the design's
-  8-mask limit is restored. Modes KCS cannot represent, unreadable payloads and every mask above the
-  limit are reported.
-- **Track mattes** — `tt` 1/2 → alpha (± inverted), 3/4 → luminance (± inverted) on the existing
-  `TrackMatteV2` relation, sourced from the layer directly above with `sourceVisible: false`. An
-  explicit `tp` matte parent, a contradicting `td: 0` and a missing/unimported source are reported
-  instead of guessed.
-- **Spec conformance** — vertices and tangents are read in the specification's own `[x, y]` form
-  (the previous reader only accepted `{ x, y }` objects, which real documents do not use), and `td`
-  is handled as the specification's 0/1 matte flag rather than an index.
+- **Text layers** map their static text document onto the KCS text fields (`textValue`, `fontSize`,
+  `fontFamily`, `fillColor`). One canonical list of renderable families lives in
+  `src/utils/textFonts.ts` and the inspector renders from it; a family outside it falls back to the
+  default font and is reported once per document. Animators, text boxes, text paths and the
+  justification/tracking/leading/baseline/caps properties are reported.
+- **Image layers** resolve their `refId` against the document asset table. Only an embedded data URL
+  that already passes the application's embedded-image policy is imported; a file path or URL is
+  never read, fetched or resolved, so it is reported and the layer skipped.
+- **Precomp layers** stay *unsupported, preserved* per the design: one report per layer naming its
+  `refId`, plus cycle, nesting-limit and missing-asset reports from a depth-bounded asset-graph walk.
+- Every report carries the source document's own node path, and a layer that is skipped leaves no id
+  behind — a later layer pointing at it reports `LOTTIE_BROKEN_PARENT` instead.
 
-No UI or import entry point exists yet; the text/image/precomp slice and the import entry point with
-the report-before-replace UX each need their own approval.
+No UI or import entry point exists yet; the import entry point with the report-before-replace UX is the
+next slice and needs its own approval.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_125_lottie_mask_matte_slice.md` — the task record
+- `progress_126_lottie_text_image_precomp_slice.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
@@ -193,146 +193,166 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 125 — Lottie Mask + Track Matte Slice
+# Progress 126 — Lottie Text / Image / Precomp Slice
 
 ## 1. Scope
 
-The second implementation slice of the approved Lottie mapping design
-(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), on top of the import core merged at `ff32d6c`:
+The third implementation slice of the approved Lottie mapping design
+(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), on top of the merged import core (`ff32d6c`) and the
+mask/matte slice (`8670b2a`):
 
-- Convert Lottie layer masks (`hasMask`, `masksProperties[]`) through the existing KCS layer-mask
-  authority, or report what cannot be represented (design §5).
-- Convert Lottie track mattes (`tt`, `td`) through the existing KCS `TrackMatteV2` relation, or
-  report the cases the relation cannot carry (design §3).
-- Restore the mask limit the first slice deliberately left out of `LOTTIE_IMPORT_LIMITS`.
-- Cover the new behaviour with contract tests.
+- **Text layers** (`ty: 5`) — the static text document maps onto the KCS text fields; animators,
+  text boxes/paths and the document properties KCS does not model are reported (design §3).
+- **Image layers** (`ty: 2`) — the layer's asset resolves against the document asset table; only an
+  embedded data URL that already passes the application's embedded-image policy is imported, and
+  everything else is reported and skipped (design §2/§3).
+- **Precomp layers** (`ty: 0`) — the design's decision stands: *unsupported, preserved*. They are
+  reported once per layer with their `refId`, nothing is flattened, and the precomp asset graph is
+  walked only to report a cycle, excessive nesting or a missing asset.
+- `fonts.list` families are checked once per document, per the design's `fonts.list` row.
 
-Out of scope by instruction: any UI or import entry point, text/image/precomp conversion, the item-12
-unified import entry, and every `package.json`, lockfile, dependency or workflow change. No
-evaluator or renderer change was needed — the importer fills fields those authorities already read.
+Out of scope by instruction: any UI or import entry point, the report-before-replace UX, the item-12
+unified import entry, and every `package.json`, lockfile, dependency or workflow change.
 
 ## 2. Branch
 
-`feat/lottie-mask-matte-slice`, created from `main` at `bf8632a`.
+`feat/lottie-text-image-precomp-slice`, created from `main` at `c66cc80`.
 
 ## 3. Existing authorities reused
 
 | Authority | Where | How this slice uses it |
 |---|---|---|
-| `LayerMask`, `LayerMaskMode`, `LayerMaskStack` | `src/types/animator.ts:58-75` | Each Lottie mask becomes one `LayerMask`; no parallel mask model was introduced |
-| `maskChannels` / `maskPathChannels` + `layerMaskChannel()` / `layerMaskPathChannel()` | `src/types/animator.ts:197-232` | Animated mask opacity/feather/expansion and mask geometry use the only mask animation channels that exist |
-| `TrackMatteV2` | `src/types/animator.ts:77-83` | `tt` 1–4 map onto `mode`/`inverted`; the relation is the same field the inspector, renderer and export validation already read |
-| `mapLottieSegmentTiming` (extracted from `mapLottieKeyframes`) | `src/interop/lottie/temporal.ts` | One segment-split/easing rule now feeds both the numeric channels and the mask-geometry channel — a second copy would have been a second authority |
-| `toBezierPath` / vertex limit | `src/interop/lottie/mapDocument.ts` | Mask geometry uses the same reader, the same `coordinateSpace: 'local'` and the same `LOTTIE_PATH_LIMIT` as layer shapes |
-| `evaluateLayerMasks`, `runtimeTemplate.maskDefs`, `svgRenderer`, `validateSceneForOGraf` | `src/utils/evaluateLayerMasks.ts`, `src/ograf/**` | Unchanged; they already evaluate `maskChannels`/`maskPathChannels` (falling back to `mask.path`) and validate the matte relation |
+| KCS text fields (`textValue`, `fontSize`, `fontFamily`) + `custom_text` | `src/types/composition.ts`, rendered by `src/components/Canvas/renderers/parts/TextAndClonerRenderers.tsx` | A text layer becomes a normal text part; no parallel text model, no invented font metrics |
+| `KCS_TEXT_FONT_FAMILIES` + `matchTextFontFamily` | new `src/utils/textFonts.ts`, also used by `StyleTextFields.tsx` | One list of renderable families; the importer maps onto it and the inspector renders from it, so a second list cannot drift |
+| KCS media fields (`imageUrl`) + `custom_image`, `width`/`height` | `src/types/composition.ts`, rendered by `MediaPartRenderer` | An imported bitmap is an ordinary image part |
+| Embedded-image policy (`EMBEDDED_IMAGE_MIME_TYPES`, `decodeDataUrl`, `isSafeEmbeddedImage`) | `src/ograf/legacyCompatibility.ts` | The importer calls the exported `isSupportedEmbeddedImage` predicate instead of carrying its own MIME list or SVG check |
+| Document asset table (`assets[]`, `refId`) | Lottie document | Read once per import into the existing `Map` pattern; image and precomp layers resolve through it |
+| Loss-report contract, transform/mask/matte mapping | `src/interop/lottie/{diagnostics,mapDocument}.ts` | The new layer types flow through the same layer pipeline, so masks, mattes, parents and transforms behave exactly as for shape layers |
 
-## 4. What changed
+## 4. Text mapping
 
-| File | Change |
+| Lottie | KCS | Behaviour |
+|---|---|---|
+| `t.d.k[0].s` (the first text document) | `textValue` | Mapped (`t`, falling back to `s`) |
+| `…s.f` | `fontFamily` | Mapped only when the name resolves to a family in `KCS_TEXT_FONT_FAMILIES` (`Roboto-Bold` → `Roboto`, `BebasNeue-Regular` → `'Bebas Neue'`); otherwise the renderer's default is used and the family is reported once per document |
+| `…s.s` | `fontSize` | Mapped; a present but unreadable value is reported |
+| `…s.fc` | `fillColor` | Mapped from `[r, g, b]`; an absent/unreadable colour is reported rather than defaulted |
+| `t.d.k` with more than one document | — | The first document is imported and the animated text is reported (`LOTTIE_UNSUPPORTED_ANIMATED_TEXT`) |
+| `t.a` (animators) | — | Reported (`LOTTIE_UNSUPPORTED_TEXT_ANIMATOR`) |
+| `t.m` / `t.p` (text box, text path) | — | Reported (`LOTTIE_UNSUPPORTED_TEXT_LAYOUT`) |
+| `j`, `tr`, `lh`, `ls`, `ca` (justification, tracking, line height, baseline shift, caps) | — | Reported when present and not the default (`LOTTIE_UNSUPPORTED_TEXT_STYLE`) |
+| no readable `t`/`d`/`s`/text string | — | Reported (`LOTTIE_UNREADABLE_TEXT`) and the layer keeps no text |
+
+## 5. Image mapping
+
+| Case | Behaviour |
 |---|---|
-| `src/interop/lottie/temporal.ts` | Extracted `mapLottieSegmentTiming` (frames, easing, the `in`/`out` split, roving/expression reports, keyframe limit); `mapLottieKeyframes` is now a thin value mapper over it. Behaviour is unchanged — the existing core tests still pin the same split |
-| `src/interop/lottie/mapDocument.ts` | Added `mapLayerMasks` (mode map, static geometry, animated geometry/properties, limit, unreadable payloads), the four-type track-matte mapping, and mask channels on the layer's existing track. Removed the two blanket reports (`LOTTIE_UNSUPPORTED_MASK`, `LOTTIE_UNSUPPORTED_TRACK_MATTE`) the first slice used |
-| `src/interop/lottie/diagnostics.ts` | `LOTTIE_IMPORT_LIMITS.masksPerLayer: 8` restored |
-| `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` | §3/§5 record the specification facts this slice follows: `v`/`i`/`o` are `[x, y]` pairs, `td` is the 0/1 matte flag (`tp` is reported and dropped), the mask limit counts source masks, and a present-but-unreadable mask field is reported |
-| `src/tests/lottieImport.test.ts` | New mask/matte group (12 cases); one existing case re-pinned from the old blanket reports to the constructs that are still reported |
+| `refId` missing | `LOTTIE_MISSING_ASSET`, layer skipped |
+| `refId` not in `assets[]` | `LOTTIE_MISSING_ASSET`, layer skipped |
+| `p` is a `data:` URL and passes `isSupportedEmbeddedImage` | `imageUrl` mapped, `w`/`h` → `width`/`height` |
+| `p` is a `data:` URL with an unsupported MIME, or an SVG carrying a script/handler | `LOTTIE_UNSUPPORTED_IMAGE_TYPE`, layer skipped |
+| `p`/`u` is a file path or URL | `LOTTIE_UNSUPPORTED_IMAGE_SOURCE` at the asset node, layer skipped — **nothing is read, fetched or resolved**, because the importer only receives the document text, and the message names the shape of the source rather than echoing a machine path or a URL that can carry credentials |
+| `p` names a sequence (`%d`) | `LOTTIE_UNSUPPORTED_IMAGE_SEQUENCE`, layer skipped |
+| asset without a readable width or height | `LOTTIE_UNREADABLE_IMAGE_ASSET` at `.w` or `.h` respectively, naming the missing or unreadable field; the bitmap still imports and keeps the layer's own size |
 
-## 5. Mask behavior
+The importer performs no filesystem access and no network access; the asset is either inside the
+document or the layer is reported.
 
-- **Modes** — `a` → `add`, `s` → `subtract`, `i` → `intersect`. `n` (Lottie's "none") and any other
-  value (`f`, `d`, `l`) are **skipped and reported** per mask (`LOTTIE_UNSUPPORTED_MASK_MODE`),
-  because KCS has no mode for them and guessing one would change the picture.
-- **Geometry** — a static `pt` becomes the mask's `path`; a keyframed `pt` becomes the existing
-  `mask-<i>:path` channel with one `PathKeyframe` per keyframe, using the same segment-to-keyframe
-  split as the transform channels (verified: `bezierOut` on the starting keyframe, `bezierIn` on the
-  one that ends the segment), and the same `ip`/`st` frame shift. `mask.path` keeps the first
-  keyframe as its base value, which is the fallback `evaluateLayerMasks` uses when a channel is
-  absent.
-- **Scalars** — `o` → `opacity` (percent → 0..1), `f` → `feather`, `x` → `expansion`; an animated
-  form of any of them becomes `mask-<i>:opacity|feather|expansion` on the same track.
-- **`inv`** → `inverted`; `nm` → `name` (falling back to `Mask <i+1>`); ids are deterministic
-  (`mask-<i>`), never taken from the document.
-- **Limit** — at most 8 masks per layer; each mask above it is reported (`LOTTIE_MASK_LIMIT`). The limit counts the masks in the **source**, so an unreadable mask never lets a later one through in its place.
-- **Unreadable payloads** — a mask that is not an object, or whose `pt` carries no readable
-  vertices, is skipped with `LOTTIE_UNREADABLE_MASK`; a mask list that is not an array reports the
-  same code whether or not `hasMask` is set, and `hasMask: true` without any list reports it too; and
-  is not a boolean, `nm` that is not a string, `o`/`f`/`x` whose static value or animated keyframes
-  instead of defaulted, so "absent" and "unreadable" never look the same in the report.
+## 6. Precomp behavior
 
-## 6. Track matte behavior
+The design keeps precomps **unsupported, preserved**, so nothing is flattened:
 
-- `tt` 1/2 → `mode: 'alpha'`, 3/4 → `mode: 'luminance'`; 2 and 4 additionally set `inverted: true`.
-  KCS supports both modes and inversion, so no matte type is reported merely for being luma or
-  inverted.
-- The source is **the layer directly above** (`index - 1`), which is Lottie's rule when `tp` is
-  absent; the relation is written as `{ sourceLayerId, mode, enabled: true, sourceVisible: false }`
-  because Lottie never draws a matte layer on its own — the same thing `sourceVisible: false`
-  means in KCS.
-- `td` is the specification's **0/1 flag** ("this layer is used as a track matte"), not an index:
-  `td: 1` on the layer above confirms the positional rule and is silent, while `td: 0` on that
-  layer contradicts it (`LOTTIE_TRACK_MATTE_AMBIGUOUS`, reported at `layers[<source>].td`) and the
-  relation is dropped.
-- An explicit `tp` matte-parent index is reported (`LOTTIE_TRACK_MATTE_UNSUPPORTED`, at
-  `layers[<target>].tp`) and the relation dropped: this slice cannot resolve which layer that index
-  names, and guessing would silently attach the wrong source.
-- A matte whose source layer was not imported (for example a precomp or text layer above it) reports
-  `LOTTIE_TRACK_MATTE_MISSING_SOURCE` and drops the relation instead of pointing at a layer that
-  does not exist.
-- An unknown or non-numeric `tt` value reports `LOTTIE_TRACK_MATTE_UNSUPPORTED`; a layer that flags
-  itself as a matte source (`td: 1`) while the layer below declares no matte reports the same code
-  at `layers[<source>].td`.
+- One `LOTTIE_PRECOMP_UNMAPPED` per precomp layer, naming its `refId`.
+- `LOTTIE_PRECOMP_MISSING_ASSET` when the layer's `refId` is not in `assets[]`, and when a nested
+  precomp layer references an asset the document does not carry.
+- `LOTTIE_PRECOMP_CYCLE` when the precomp asset graph re-enters an asset it is already inside.
+- `LOTTIE_PRECOMP_DEPTH_LIMIT` when nesting exceeds `LOTTIE_IMPORT_LIMITS.hierarchyDepth` (32).
+- The graph walk runs once per document, and only when a precomp layer is actually present. It is a
+  true depth-first walk with a per-branch chain, so a diamond graph (two parents sharing one child) is
+  not a cycle, a cycle is reported once per cycle rather than once per asset, and the nesting limit
+  counts levels below the first precomposition exactly like the layer parent chain. An asset is only
+  re-expanded when a deeper path reaches it, which bounds the work at `assets × (limit + 2)` **without**
+  cutting the walk short: a late, independent precomp component is always inspected.
 
-## 7. Diagnostics added
+## 7. Diagnostics
 
-Stable code, `severity: 'warning'`, `feature: 'lottie-import'`, a source-document path, a message and
-a concrete action, as the design §8 requires:
+New stable codes (all `warning`, `feature: 'lottie-import'`, with the source-document path, a message
+and a concrete action, per design §8):
 
 | Code | When |
 |---|---|
-| `LOTTIE_MASK_LIMIT` | A layer carries more than 8 masks |
-| `LOTTIE_UNSUPPORTED_MASK_MODE` | Mask mode `n` or an unknown mode |
-| `LOTTIE_UNREADABLE_MASK` | Mask entry not an object, no readable path, or `hasMask` without a list |
-| `LOTTIE_TRACK_MATTE_UNSUPPORTED` | Unknown or non-numeric `tt`; an explicit `tp` matte parent; a `td: 1` layer whose neighbour declares no matte |
-| `LOTTIE_TRACK_MATTE_MISSING_SOURCE` | The layer above the target was not imported |
-| `LOTTIE_TRACK_MATTE_AMBIGUOUS` | The layer above carries a contradicting `td` hint |
+| `LOTTIE_UNREADABLE_TEXT` | Text layer without a readable document, text string or font size |
+| `LOTTIE_UNSUPPORTED_ANIMATED_TEXT` | The text document carries more than one document (animated text) |
+| `LOTTIE_UNKNOWN_FONT` | A family in `fonts.list` or on a text document that KCS cannot render |
+| `LOTTIE_MISSING_TEXT_COLOUR` | Text document without a readable colour |
+| `LOTTIE_UNSUPPORTED_TEXT_STYLE` | Justification/tracking/line height/baseline shift/caps set |
+| `LOTTIE_UNSUPPORTED_TEXT_ANIMATOR` | `t.a` animators present |
+| `LOTTIE_UNSUPPORTED_TEXT_LAYOUT` | `t.m` (text box) or `t.p` (text path) present |
+| `LOTTIE_MISSING_ASSET` | Image layer without a usable asset reference |
+| `LOTTIE_UNSUPPORTED_IMAGE_SOURCE` | Image asset outside the document (path/URL) |
+| `LOTTIE_UNSUPPORTED_IMAGE_TYPE` | Embedded image MIME or payload rejected by the image policy |
+| `LOTTIE_UNSUPPORTED_IMAGE_SEQUENCE` | Image asset that is a sequence |
+| `LOTTIE_UNREADABLE_IMAGE_ASSET` | Asset without a readable size |
+| `LOTTIE_PRECOMP_UNMAPPED` | A precomp layer (once per layer, with `refId`) |
+| `LOTTIE_UNREADABLE_PRECOMP` | A precomp layer or a nested precomp reference with no readable asset reference, or a precomp asset whose `layers` is not an array |
+| `LOTTIE_PRECOMP_MISSING_ASSET` | Precomp `refId` the document does not carry |
+| `LOTTIE_PRECOMP_CYCLE` | Cycle in the precomp asset graph |
+| `LOTTIE_PRECOMP_DEPTH_LIMIT` | Precomp nesting above the import limit |
 
-One report per affected mask or matte item, with the item's own path
-(`layers[2].masksProperties[1].pt`), so the author can find it in the source document.
+Every entry carries the document's own node path (`layers[3].t.d.k[0].s.fc`, `assets[2].p`,
+`assets[0].layers[1].refId`), so the path points at the node the author must fix. Per design §8 the
+severity of every one of them is `warning`: the import still produces a scene, and only a document
+that cannot be read at all is an `error`.
+
+Text, image and precomp layers now flow through the shared layer pipeline, so masks, track mattes,
+parents, transforms and layer order work for them exactly as for shape layers. A layer that is
+skipped leaves no id behind: a later layer that pointed at it reports `LOTTIE_BROKEN_PARENT` instead
+of carrying a `parentId` that does not exist.
 
 ## 8. Tests
 
-`src/tests/lottieImport.test.ts` — 56 cases (was 37). The new group covers:
+`src/tests/lottieImport.test.ts` — **83 cases** (was 56). The new group covers:
 
-1. A static mask maps to `LayerMask` (mode, path, opacity, feather, expansion, inversion, name).
-2. `n` and `f` mask modes report and are skipped while a valid sibling mask still imports.
-3. An animated mask path lands on `mask-0:path` with the documented split and frame shift, and the
-   layer keeps the first keyframe as the mask base path.
-4. Animated mask opacity lands on `mask-0:opacity` with the percent → factor conversion.
-5. Nine masks import the first eight and report `LOTTIE_MASK_LIMIT` once.
-6. A mask with no readable path reports `LOTTIE_UNREADABLE_MASK` and leaves no empty mask behind.
-7. All four `tt` types map to the expected `mode`/`inverted`/`sourceVisible`, with no matte report.
-8. A matte whose source layer was not imported reports and drops the relation.
-9. A contradicting `td` hint reports `LOTTIE_TRACK_MATTE_AMBIGUOUS`.
-10. An unknown `tt` reports `LOTTIE_TRACK_MATTE_UNSUPPORTED`.
-11. The produced masked/matted scene passes the existing import boundary
-    (`validateImportedDocument`) and carries no matte/mask error in the OGraf export validation.
-12. The spec path form (`v`/`i`/`o` as `[x, y]` pairs) reaches the layer shape, and an animated mask
-    path that carries a roving segment reports `LOTTIE_ROVING_KEYFRAME` while still importing both
-    keyframes.
-13. A present-but-unreadable mask field (`inv`, `o`, `nm`, and an animated scalar whose keyframes
-    carry no value) reports `LOTTIE_UNREADABLE_MASK` at that field, and a broken or missing mask list
-    reports it with or without the `hasMask` flag.
-14. A contradicting `td: 0` reports at the source layer's own path; an explicit `tp` and a `td: 1`
-    layer with no matte below report `LOTTIE_TRACK_MATTE_UNSUPPORTED`.
-15. The superseded blanket-report test was re-pinned to effects and expressions, which are still
-    reported.
+1. A static text layer maps `textValue`/`fontFamily`/`fontSize`/`fillColor`.
+2. An unknown family falls back to the renderer default and is reported **once** for two spellings of
+   the same family.
+3. A family declared by `fonts.list` but never used is reported.
+4. An animated text document reports and imports its first document.
+5. Justification/tracking/line height report `LOTTIE_UNSUPPORTED_TEXT_STYLE`, with `t.a` and `t.m`
+   reporting their own codes, while the text itself still imports.
+6. A text layer with no document and one with no string both report `LOTTIE_UNREADABLE_TEXT`.
+7. A text layer without a colour reports instead of defaulting.
+8. An embedded PNG asset maps `imageUrl`, `width` and `height`.
+9. A missing asset reference reports and skips the layer.
+10. An external path reports and is never read.
+11. A sequence asset and an unsupported video MIME each report their own code.
+12. An embedded SVG carrying `onload` is refused by the existing image policy.
+13. A precomp layer reports `LOTTIE_PRECOMP_UNMAPPED` with its `refId` and leaves no layer behind.
+14. A precomp whose asset is missing reports both codes.
+15. A precomp cycle and an over-deep nesting report their own codes.
+16. An image and a text layer keep deterministic order, `zIndex`, transform and opacity.
+17. Every new diagnostic is asserted to carry a `warning` severity, the `lottie-import` feature, a
+    non-empty path/message/action pair, and a shared sub-precomp reports its cycle exactly once.
+18. Text diagnostics point at `layers[0].t.d.k[0].s*`, image diagnostics at `assets[0].p`, and
+    precomp diagnostics at `assets[0].layers[0].refId`.
+19. A quoted multi-word family (`BebasNeue-Regular` → `'Bebas Neue'`) maps, while a numeric font
+    name and a string justification report `LOTTIE_UNREADABLE_TEXT`.
+20. A stubbed `fetch` proves an external image asset triggers no network call, `file:///` never
+    appears in a message, and an unreadable precomp reference or asset list reports
+    `LOTTIE_UNREADABLE_PRECOMP`.
+21. An image layer skipped for a missing asset leaves no dangling parent: the later layer reports
+    `LOTTIE_BROKEN_PARENT` and carries no `parentId`.
+22. The superseded test that pinned the generic `LOTTIE_UNSUPPORTED_LAYER_TYPE` for a precomp layer
+    was re-pinned to an actually unsupported type (`ty: 6`), and the precomp contract is covered by
+    its own case.
 
 ## 9. Validation matrix
 
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 56 cases |
-| `npm test` (full Vitest) | PASS — 120 files / 1,792 tests |
+| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 83 cases |
+| `npm test` (full Vitest) | PASS — 120 files / 1,819 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
@@ -341,34 +361,72 @@ One report per affected mask or matte item, with the item's own path
 
 ## 10. Protected invariants
 
-- No `package.json`, lockfile, dependency or `.github/workflows/**` change.
-- No UI, editor or import entry point; nothing calls the importer yet.
-- No evaluator or renderer change: the slice fills the fields those authorities already read.
-- Tag `v1.1.0-rc.1`, the GitHub draft release, npm state, `origin/without-mask`, the OMP
-  configuration and the user folders are untouched.
+- No UI surface added: the only inspector change is that its font list now comes from the shared
+  constant (identical options), and no import entry point exists.
+- No renderer or evaluator change; the new layer types use the fields those renderers already read.
+- No `package.json`, lockfile, dependency or workflow change.
+- No filesystem or network access from the importer: an image is either embedded in the document or
+  the layer is reported.
+- Tag `v1.1.0-rc.1`, the draft release, npm state, `origin/without-mask`, the OMP configuration and
+  the user folders are untouched.
 
 ## 11. Residual risks
 
-- The importer maps every Lottie layer to the KCS `custom` layer type, which the OGraf export
-  validation does not accept as a target type. That is a pre-existing property of the merged import
-  core (it predates this slice) and is only observable once an import entry point exists; it is
-  pinned by a comment in the new boundary test rather than silently worked around.
-- Mask geometry is stored in layer-local coordinates. The KCS mask authority applies the layer
-  transform, so a Lottie mask authored against a different anchor point can sit offset until the
-  anchor is converted — the same open item the import core records for anchors
-  (`LOTTIE_UNSUPPORTED_ANCHOR`).
-- A track matte is only as good as the layer order: a document that names an explicit matte parent
-  (`tp`) is reported rather than guessed, and a `td: 0` contradiction drops the relation.
-- Mask opacity/feather/expansion animation uses the existing channels; a document that animates a
-  mask property on a *sequence* other than `Sequence` keeps the default sequence, exactly like the
-  other imported channels.
+- **Fonts.** A matched family means "KCS can render this name"; it does not mean the source document's
+  exact face is available, and KCS has no portable font file for any family yet (the OGraf export
+  already reports that separately). Text metrics are also the renderer's, not the source's, so a text
+  layer can sit or wrap differently than in the source player.
+- **Text layout.** Justification, tracking, leading, baseline shift and caps are reported, not
+  converted; a source document that relies on them will look different after import.
+- **Images.** Only embedded data URLs are imported. A document that references external files imports
+  without its bitmaps (each one reported) — the design's "the referenced file is present" test cannot
+  be performed from document text alone, and the importer deliberately does not reach for the
+  filesystem or the network.
+- **Sequences.** An image-sequence asset is reported and skipped; a multi-frame sequence is not
+  modelled by a single KCS image layer.
+- **Precomps.** Nothing is flattened, so a document built mostly of precomps imports as a small scene
+  with a clear report — by design, not by accident.
+- The importer still maps every Lottie layer to the KCS `custom` family of types, which the OGraf
+  export validation does not accept as a target type; that pre-existing gap is unchanged by this slice
+  and is where the import entry point slice will have to reconcile the two.
 
-## 12. Next slices
+## 12. Review
 
-1. Item 10 — text/image/precomp conversion.
-2. Item 10 — the import entry point with the report-before-replace UX (this also gives the layer-type
-   gap above a visible surface to close).
-3. Item 12 — the unified import entry.
+One independent read-only round (`reviewer-agent`) returned **BLOCKED** with four high, two medium
+and one low finding; all were closed before the merge decision:
+
+1. Diagnostic paths were not real document nodes (`t.d[0]` instead of `t.d.k[0]`, asset problems
+   attached to the layer instead of the asset, precomp paths using an asset id as an array index,
+   `fonts.list` without its entry) — every path now names the node the author must fix.
+2. Present-but-unreadable text and precomp fields fell back silently (a non-string font name,
+   non-numeric style fields, a non-array animator list, a precomp `refId` or `assets[].layers` that
+   is not readable) — each now reports.
+3. The precomp graph walk re-expanded shared assets, so one missing nested asset could be reported
+   once per ancestor and a two-node cycle twice — the walk now expands each asset once and reports
+   each finding once. The second round caught that the walk also treated a **diamond graph** as a
+   cycle and could miss the depth limit; it is now a true depth-first walk with a per-branch chain,
+   pinned by tests for the diamond, the cycle count and the exact depth boundary.
+4. A skipped image layer could leave a dangling `parentId` — the asset is resolved before the layer
+   enters the scene, and a parent must now be an imported layer, so the case reports
+   `LOTTIE_BROKEN_PARENT` instead.
+5. The external-image diagnostic echoed the raw path/URL — it now states the shape of the source
+   only, and a stubbed `fetch` test proves nothing is reached for.
+6. The new tests did not pin paths, the report shape, report counts or the no-network property —
+   they now do, and the colour test asserts what it actually proves.
+7. Design §8 now states the severity interpretation the implementation follows (a skipped construct
+   is a `warning`; only a refused import is an `error`).
+
+The second read-only round returned **BLOCKED** again with three findings, also closed: the DFS
+ancestry handling, an unreadable asset *height* reported at the width path, and an unreadable
+`fonts.list[].fFamily` falling back silently — each now has a test. A third round then caught that the
+first budget-based work bound could silently end the walk before a late component was inspected; the
+budget is replaced by the depth rule above and the case is pinned by a dense-graph regression test.
+
+## 13. Next slice
+
+The import entry point with the report-before-replace UX — the first slice that puts the importer in
+front of a user, and the natural place to reconcile the imported layer types with the OGraf export
+types. Everything that touches `package.json`, lockfiles or workflows stays behind its own approval.
 
 ---
 
@@ -378,7 +436,7 @@ One report per affected mask or matte item, with the item's own path
 
 ## Repository state
 
-- Checkout: `feat/lottie-mask-matte-slice` (Milestone F item 10, masks + track mattes) on top of `main` at `bf8632a…`, which matches `origin/main` — the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` plus its final tip. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **Milestone F item 10's first slice (the Lottie import core, merged with `--no-ff` at `ff32d6c`, pushed)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
+- Checkout: `feat/lottie-text-image-precomp-slice` (Milestone F item 10, text/image/precomp) on top of `main` at `c66cc80…`, which matches `origin/main`; the mask/matte slice is merged at `8670b2a` and the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **Milestone F item 10's first slice (the Lottie import core, merged with `--no-ff` at `ff32d6c`, pushed)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
@@ -401,12 +459,12 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (120 files / 1,785 tests), `npx vitest run src/tests/lottieImport.test.ts` (49 cases), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `47d3368`), `npm run build`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS, 32 checks) all pass on `main` at the `2026-09-18-after-lottie-core` checkpoint; the newest CI run on `main` is `35355797739` (success).
+Full Vitest (120 files / 1,808 tests), `npx vitest run src/tests/lottieImport.test.ts` (72 cases), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `47d3368`), `npm run build`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS, 32 checks) all pass on `main` at the `2026-09-18-after-lottie-core` checkpoint; the newest CI run on `main` is `35355797739` (success).
 
 ## Next scoped work
 
-1. **Milestone F — item 10 masks + track matte slice is implemented on `feat/lottie-mask-matte-slice`** (`reports/progress_125_lottie_mask_matte_slice.md`): `masksProperties` map onto the existing `LayerMask` stack plus the existing `maskChannels`/`maskPathChannels`, `tt` 1–4 map onto the existing `TrackMatteV2` relation, the 8-mask limit is restored, and every remaining mask/matte construct is reported. **The merge decision for that branch is with the user.** Still open afterwards: item 10's text/image/precomp conversion (the next slice), item 10's import entry point with the report-before-replace UX, item 12's unified import entry, and OGraf package import. Also open, each approval-gated: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and the npm-12 `allowScripts` decision.
-2. Milestone F's delivered work: the study, item 10's design, its merged first slice (the import core) and its mask/matte slice on `feat/lottie-mask-matte-slice`, item 11 (measurement only, on `chore/evaluator-profiling-harness`), and item 12's first step (merged) plus product half (on `feat/kcs-import-product-half`). Anything beyond those scopes — item 10's remaining slices, item 12's unified import entry, OGraf package import, Milestone E beyond items 7 and 8 — needs its own approval, and **D's dependency/package part (item 9 Option B) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
+1. **Milestone F — item 10 text/image/precomp slice is implemented on `feat/lottie-text-image-precomp-slice`** (`reports/progress_126_lottie_text_image_precomp_slice.md`): static text documents map onto the KCS text fields with one canonical font list, embedded image assets map onto the media layer fields while external references are reported and never read, and precomp layers stay *unsupported, preserved* with cycle and depth reports. **The merge decision for that branch is with the user.** The next slice is item 10's import entry point with the report-before-replace UX, followed by item 12's unified import entry and OGraf package import. Also open, each approval-gated: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and the npm-12 `allowScripts` decision.
+2. Milestone F's delivered work: the study, item 10's design, its merged first slice (the import core) its merged mask/matte slice, and its text/image/precomp slice on `feat/lottie-text-image-precomp-slice`, item 11 (measurement only, on `chore/evaluator-profiling-harness`), and item 12's first step (merged) plus product half (on `feat/kcs-import-product-half`). Anything beyond those scopes — item 10's remaining slices, item 12's unified import entry, OGraf package import, Milestone E beyond items 7 and 8 — needs its own approval, and **D's dependency/package part (item 9 Option B) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
 
@@ -448,7 +506,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-**Checkpoint `2026-09-18-after-lottie-core`** (`docs/checkpoints/2026-09-18-after-lottie-core/`) records this state: `main` / `origin/main` is at `47d3368a2b54…`, the Lottie import core (Milestone F item 10, first slice) was merged with `--no-ff` at `ff32d6c` and pushed, and its branch `feat/lottie-import-core` is kept at `f76ae6a` as the review artefact. The checkpoint folder carries the summary (`README.md`), the tasklist (`TASKLIST.md`), a copy-paste next-session prompt (`RESUME_PROMPT.md`) and a machine-readable summary (`STATE.json`); the task record is `reports/progress_124_checkpoint_after_lottie_core.md`. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; item 10’s **first implementation slice (the import core)** is **merged into `main`** at `ff32d6c` (`reports/progress_123_lottie_import_core.md`), and its **second slice — layer masks + track mattes — is implemented on `feat/lottie-mask-matte-slice`** (`reports/progress_125_lottie_mask_matte_slice.md`): masks map onto the existing `LayerMask` stack plus the existing `maskChannels`/`maskPathChannels`, `tt` 1–4 map onto the existing `TrackMatteV2` relation, the 8-mask limit is restored, and every mask/matte construct the slice cannot represent is reported; the merge decision for that branch is with the user. Remaining item-10 slices: text/image/precomp, and the import entry point with the report-before-replace UX.
+**Checkpoint `2026-09-18-after-lottie-core`** (`docs/checkpoints/2026-09-18-after-lottie-core/`) records this state: `main` / `origin/main` is at `47d3368a2b54…`, the Lottie import core (Milestone F item 10, first slice) was merged with `--no-ff` at `ff32d6c` and pushed, and its branch `feat/lottie-import-core` is kept at `f76ae6a` as the review artefact. The checkpoint folder carries the summary (`README.md`), the tasklist (`TASKLIST.md`), a copy-paste next-session prompt (`RESUME_PROMPT.md`) and a machine-readable summary (`STATE.json`); the task record is `reports/progress_124_checkpoint_after_lottie_core.md`. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; item 10’s **first implementation slice (the import core)** is **merged into `main`** at `ff32d6c` (`reports/progress_123_lottie_import_core.md`), its **second slice — layer masks + track mattes — is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), and its **third slice — text, image and precomp layers — is implemented on `feat/lottie-text-image-precomp-slice`** (`reports/progress_126_lottie_text_image_precomp_slice.md`): static text maps onto the KCS text fields, an embedded image asset maps onto the media layer fields while every external reference is reported without being read, and precomp layers stay *unsupported, preserved* with their cycles and nesting reported; the merge decision for that branch is with the user. The remaining item-10 slice is the import entry point with the report-before-replace UX.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -481,7 +539,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is the active milestone: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is implemented as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's first implementation slice — the Lottie import core — is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`). Remaining item-10 slices: masks + track mattes (the recommended next task), text/image/precomp, and the import entry point with the report-before-replace UX. Follow-ups stay approval-gated before any `package.json`, lockfile, or workflow change: Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin.
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is the active milestone: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is implemented as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's first implementation slice — the Lottie import core — is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`). Remaining item-10 slice: the import entry point with the report-before-replace UX; masks + track mattes are merged at `8670b2a` and text/image/precomp sit on `feat/lottie-text-image-precomp-slice`. Follow-ups stay approval-gated before any `package.json`, lockfile, or workflow change: Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -530,7 +588,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
 | D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. Follow-ups stay approval-gated: Option B (patch/minor updates + `npm audit fix`), Option C (TypeScript 7 / Vitest 5), the `engines` declaration and the npm-12 `allowScripts` pin |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
-| F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is implemented on `feat/lottie-mask-matte-slice`** (`reports/progress_125_lottie_mask_matte_slice.md`); its remaining slices — text/image/precomp, and the import entry point with the report-before-replace UX — need separate approval. Checkpoint `2026-09-18-after-lottie-core` |
+| F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`) and its **third slice (text, image and precomp layers) is implemented on `feat/lottie-text-image-precomp-slice`** (`reports/progress_126_lottie_text_image_precomp_slice.md`); its remaining slice — the import entry point with the report-before-replace UX — needs separate approval. Checkpoint `2026-09-18-after-lottie-core` |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -571,7 +629,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 
 ## Milestone F — Interop design and its approved slices (roadmap items 10, 11, 12)
 
-The deliverables are the study, the Lottie import mapping design and the editable-KCS-import plan; implementation runs slice by slice, each slice behind its own approval. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix, migration report, autosave through the boundary) on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_120_lottie_mapping_design.md`) with its four open questions settled by the user, and its **first implementation slice (the import core)** is **merged into `main` at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`): document timing, shape/solid/null layers, transforms, shapes and the segment-to-keyframe easing rules, with every unconverted construct reported; its **second slice (layer masks + track mattes)** is implemented on `feat/lottie-mask-matte-slice` (`reports/progress_125_lottie_mask_matte_slice.md`) with the 8-mask limit restored; the text/image/precomp slice and the UI entry point remain approval-gated; **no further implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code. Checkpoint `2026-09-18-after-lottie-core` records this state.
+The deliverables are the study, the Lottie import mapping design and the editable-KCS-import plan; implementation runs slice by slice, each slice behind its own approval. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix, migration report, autosave through the boundary) on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_120_lottie_mapping_design.md`) with its four open questions settled by the user, and its **first implementation slice (the import core)** is **merged into `main` at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`): document timing, shape/solid/null layers, transforms, shapes and the segment-to-keyframe easing rules, with every unconverted construct reported; its **second slice (layer masks + track mattes)** is merged at `8670b2a` (`reports/progress_125_lottie_mask_matte_slice.md`) with the 8-mask limit restored, and its **third slice (text, image and precomp layers)** is implemented on `feat/lottie-text-image-precomp-slice` (`reports/progress_126_lottie_text_image_precomp_slice.md`); the UI entry point remains approval-gated; **no further implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code. Checkpoint `2026-09-18-after-lottie-core` records this state.
 
 ## Approval gates
 
@@ -666,13 +724,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 6149 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 12730 bytes
-- `NEXT_SESSION.md` — 9972 bytes
-- `OMP_FINAL_RESPONSE.md` — 4405 bytes
-- `PROJECT_STATE.md` — 13753 bytes
-- `README.md` — 3016 bytes
-- `manifest.txt` — 3554 bytes
-- `progress_125_lottie_mask_matte_slice.md` — 12162 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 12971 bytes
+- `NEXT_SESSION.md` — 10053 bytes
+- `OMP_FINAL_RESPONSE.md` — 4904 bytes
+- `PROJECT_STATE.md` — 13919 bytes
+- `README.md` — 3109 bytes
+- `manifest.txt` — 3796 bytes
+- `progress_126_lottie_text_image_precomp_slice.md` — 16427 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

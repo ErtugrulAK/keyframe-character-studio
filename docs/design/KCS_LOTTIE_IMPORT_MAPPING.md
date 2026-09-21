@@ -21,7 +21,7 @@ A construct never becomes *lossless* by silence: if any part of it is dropped (a
 | `v`, `nm`, `ddd` | — | Unsupported, preserved | Version/name are informational; `ddd: 1` means 3D and is reported once per document |
 | `fr` | scene `fps` | Lossless | Integer round; a non-integer `fr` is rounded and reported |
 | `ip`, `op` | scene `totalFrames` | Lossy with report | `totalFrames = ceil((op − ip) / fr × fps)`; a document whose `ip ≠ 0` shifts every keyframe by `−ip` and is reported once |
-| `assets` | media/asset references | Lossy with report | Image assets import only when the referenced file is present and passes the existing path-safety checks; otherwise the layer is reported and skipped |
+| `assets` | media/asset references | Lossy with report | An image asset imports only when it is embedded in the document as a data URL that passes the application's embedded-image policy (`isSupportedEmbeddedImage` — MIME allowlist plus the SVG payload check); a path or URL is never read, fetched or resolved, so that layer is reported and skipped. An image *sequence* is reported as well |
 | `fonts.list` | text font references | Lossy with report | Unknown families fall back to the KCS default font and are reported per family |
 | `layers[]` | `CharacterPart[]` + one canonical track per layer | — | Layer order maps to `zIndex` (Lottie draws first-in-list on top, so `zIndex` counts upward from the last entry) |
 
@@ -31,10 +31,10 @@ A construct never becomes *lossless* by silence: if any part of it is dropped (a
 |---|---|---|---|
 | `4` shape | part + channels + masks | Lossless / lossy per shape (see §4) | The layer's shapes are grouped into the part's own shape content; a group with mixed primitive and path items is preserved as separate items in order |
 | `3` null | part without shape content | Lossless | Used as a parent target; `parent` links map to `parentId` |
-| `5` text | text part | Lossy with report | Static text (`t.d.k[0].s`) maps to a text part; `t.a` animators and `t.m` masks are reported and skipped |
-| `2` image | media layer (part with an image source) | Lossy with report | Requires a resolvable asset; scale/rotation map normally, `ty:2`-specific matte behaviour is reported |
+| `5` text | text part | Lossy with report | Static text (`t.d.k[0].s`) maps to a text part — `t.d.k[0].s.t` → `textValue`, `.f` → `fontFamily` when it resolves to a family in `KCS_TEXT_FONT_FAMILIES` (otherwise the default font and a report), `.s` → `fontSize`, `.fc` → `fillColor`; `t.a` animators, `t.m`/`t.p` layout, a second text document and the justification/tracking/leading/baseline/caps fields are reported and skipped |
+| `2` image | media layer (part with an image source) | Lossy with report | `refId` resolves against `assets[]`; an embedded data URL maps to `imageUrl` with the asset size, and a missing asset, an external path or URL, an unsupported type or a sequence shape is reported and the layer skipped. Scale/rotation map normally, and the `ty:2`-specific matte behaviour is covered by the shared track-matte rules the image layer now runs through |
 | `1` solid | rectangle part from `sc`/`sw`/`sh` | Lossless | Colour and size map directly |
-| `0` precomp | — | Unsupported, preserved | A precomp carries its own timeline; flattening it would silently change timing. Reported once per precomp layer, with its `refId` named |
+| `0` precomp | — | Unsupported, preserved | A precomp carries its own timeline; flattening it would silently change timing. Reported once per precomp layer with its `refId` named; the precomp asset graph is walked only to report a cycle, nesting beyond the hierarchy limit, or a missing precomp asset |
 
 Common per-layer fields:
 

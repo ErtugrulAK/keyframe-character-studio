@@ -4,6 +4,7 @@ import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 import { ColorPickerPopover } from '../../inputs/ColorPickerPopover';
 import { StyleCard } from './StyleCard';
 import { StyleEffectsSection } from './StyleEffectsSection';
+import { KCS_TEXT_FONT_FAMILIES } from '../../../../utils/textFonts';
 
 interface StyleTextFieldsProps {
   selectedPart: CharacterPart;
@@ -83,13 +84,9 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
               value={selectedPart.fontFamily || 'Outfit'}
               onChange={(e) => onPartPropChange('fontFamily', e.target.value)}
             >
-              <option value="Outfit">Outfit</option>
-              <option value="Inter">Inter</option>
-              <option value="Roboto">Roboto</option>
-              <option value="Montserrat">Montserrat</option>
-              <option value="'Playfair Display'">Playfair Display</option>
-              <option value="'Bebas Neue'">Bebas Neue</option>
-              <option value="'JetBrains Mono'">JetBrains Mono</option>
+              {KCS_TEXT_FONT_FAMILIES.map((family) => (
+                <option key={family} value={family}>{family.replace(/['"]/gu, '')}</option>
+              ))}
             </select>
           </div>
 

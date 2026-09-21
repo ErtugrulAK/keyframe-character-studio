@@ -56,6 +56,15 @@ function decodeDataUrl(source: string): { bytes: Uint8Array; mimeType: string } 
   }
 }
 
+/**
+ * True when `source` is a data URL whose MIME type and payload pass the
+ * embedded-image policy (the allowlist above plus the SVG script check).
+ *
+ * The Lottie importer uses this instead of its own MIME list so a document can
+ * never smuggle an image form the rest of the app refuses to embed.
+ */
+export const isSupportedEmbeddedImage = (source: string): boolean => decodeDataUrl(source) !== undefined;
+
 async function readBlobUrl(source: string): Promise<{ bytes: Uint8Array; mimeType: string } | undefined> {
   if (!source.startsWith('blob:') || typeof fetch !== 'function') return undefined;
   try {

@@ -38,6 +38,7 @@ evaluator or renderer change was needed — the importer fills fields those auth
 | `src/interop/lottie/temporal.ts` | Extracted `mapLottieSegmentTiming` (frames, easing, the `in`/`out` split, roving/expression reports, keyframe limit); `mapLottieKeyframes` is now a thin value mapper over it. Behaviour is unchanged — the existing core tests still pin the same split |
 | `src/interop/lottie/mapDocument.ts` | Added `mapLayerMasks` (mode map, static geometry, animated geometry/properties, limit, unreadable payloads), the four-type track-matte mapping, and mask channels on the layer's existing track. Removed the two blanket reports (`LOTTIE_UNSUPPORTED_MASK`, `LOTTIE_UNSUPPORTED_TRACK_MATTE`) the first slice used |
 | `src/interop/lottie/diagnostics.ts` | `LOTTIE_IMPORT_LIMITS.masksPerLayer: 8` restored |
+| `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` | §3/§5 record the specification facts this slice follows: `v`/`i`/`o` are `[x, y]` pairs, `td` is the 0/1 matte flag (`tp` is reported and dropped), the mask limit counts source masks, and a present-but-unreadable mask field is reported |
 | `src/tests/lottieImport.test.ts` | New mask/matte group (12 cases); one existing case re-pinned from the old blanket reports to the constructs that are still reported |
 
 ## 5. Mask behavior
@@ -55,27 +56,35 @@ evaluator or renderer change was needed — the importer fills fields those auth
   form of any of them becomes `mask-<i>:opacity|feather|expansion` on the same track.
 - **`inv`** → `inverted`; `nm` → `name` (falling back to `Mask <i+1>`); ids are deterministic
   (`mask-<i>`), never taken from the document.
-- **Limit** — at most 8 masks per layer; each mask above it is reported (`LOTTIE_MASK_LIMIT`).
+- **Limit** — at most 8 masks per layer; each mask above it is reported (`LOTTIE_MASK_LIMIT`). The limit counts the masks in the **source**, so an unreadable mask never lets a later one through in its place.
 - **Unreadable payloads** — a mask that is not an object, or whose `pt` carries no readable
-  vertices, is skipped with `LOTTIE_UNREADABLE_MASK`; a layer flagged `hasMask` without a mask list
-  reports the same code.
+  vertices, is skipped with `LOTTIE_UNREADABLE_MASK`; a mask list that is not an array reports the
+  same code whether or not `hasMask` is set; and a field that is present but unreadable (`inv` that
+  is not a boolean, `nm` that is not a string, `o`/`f`/`x` that carry no number) is reported
+  instead of defaulted, so "absent" and "unreadable" never look the same in the report.
 
 ## 6. Track matte behavior
 
 - `tt` 1/2 → `mode: 'alpha'`, 3/4 → `mode: 'luminance'`; 2 and 4 additionally set `inverted: true`.
   KCS supports both modes and inversion, so no matte type is reported merely for being luma or
   inverted.
-- The source is **the layer directly above** (`index - 1`), which is Lottie's own rule; the relation
-  is written as `{ sourceLayerId, mode, enabled: true, sourceVisible: false }` because Lottie never
-  draws a matte layer on its own — the same thing `sourceVisible: false` means in KCS.
-- `td` is treated as a hint, never as the authority: a `td` on the layer above that names a
-  different target makes the relation **ambiguous** (`LOTTIE_TRACK_MATTE_AMBIGUOUS`) and it is
-  dropped; a `td` that names the layer declaring the matte confirms it and is silent.
+- The source is **the layer directly above** (`index - 1`), which is Lottie's rule when `tp` is
+  absent; the relation is written as `{ sourceLayerId, mode, enabled: true, sourceVisible: false }`
+  because Lottie never draws a matte layer on its own — the same thing `sourceVisible: false`
+  means in KCS.
+- `td` is the specification's **0/1 flag** ("this layer is used as a track matte"), not an index:
+  `td: 1` on the layer above confirms the positional rule and is silent, while `td: 0` on that
+  layer contradicts it (`LOTTIE_TRACK_MATTE_AMBIGUOUS`, reported at `layers[<source>].td`) and the
+  relation is dropped.
+- An explicit `tp` matte-parent index is reported (`LOTTIE_TRACK_MATTE_UNSUPPORTED`, at
+  `layers[<target>].tp`) and the relation dropped: this slice cannot resolve which layer that index
+  names, and guessing would silently attach the wrong source.
 - A matte whose source layer was not imported (for example a precomp or text layer above it) reports
   `LOTTIE_TRACK_MATTE_MISSING_SOURCE` and drops the relation instead of pointing at a layer that
   does not exist.
-- An unknown `tt` value, and a lone `td` that names a layer that declares no matte, report
-  `LOTTIE_TRACK_MATTE_UNSUPPORTED`.
+- An unknown or non-numeric `tt` value reports `LOTTIE_TRACK_MATTE_UNSUPPORTED`; a layer that flags
+  itself as a matte source (`td: 1`) while the layer below declares no matte reports the same code
+  at `layers[<source>].td`.
 
 ## 7. Diagnostics added
 
@@ -87,7 +96,7 @@ a concrete action, as the design §8 requires:
 | `LOTTIE_MASK_LIMIT` | A layer carries more than 8 masks |
 | `LOTTIE_UNSUPPORTED_MASK_MODE` | Mask mode `n` or an unknown mode |
 | `LOTTIE_UNREADABLE_MASK` | Mask entry not an object, no readable path, or `hasMask` without a list |
-| `LOTTIE_TRACK_MATTE_UNSUPPORTED` | Unknown `tt` type; a lone `td` with no matte on its target |
+| `LOTTIE_TRACK_MATTE_UNSUPPORTED` | Unknown or non-numeric `tt`; an explicit `tp` matte parent; a `td: 1` layer whose neighbour declares no matte |
 | `LOTTIE_TRACK_MATTE_MISSING_SOURCE` | The layer above the target was not imported |
 | `LOTTIE_TRACK_MATTE_AMBIGUOUS` | The layer above carries a contradicting `td` hint |
 
@@ -96,7 +105,7 @@ One report per affected mask or matte item, with the item's own path
 
 ## 8. Tests
 
-`src/tests/lottieImport.test.ts` — 49 cases (was 37). The new group covers:
+`src/tests/lottieImport.test.ts` — 55 cases (was 37). The new group covers:
 
 1. A static mask maps to `LayerMask` (mode, path, opacity, feather, expansion, inversion, name).
 2. `n` and `f` mask modes report and are skipped while a valid sibling mask still imports.
@@ -111,7 +120,14 @@ One report per affected mask or matte item, with the item's own path
 10. An unknown `tt` reports `LOTTIE_TRACK_MATTE_UNSUPPORTED`.
 11. The produced masked/matted scene passes the existing import boundary
     (`validateImportedDocument`) and carries no matte/mask error in the OGraf export validation.
-12. The superseded blanket-report test was re-pinned to effects and expressions, which are still
+12. The spec path form (`v`/`i`/`o` as `[x, y]` pairs) reaches the layer shape, and an animated mask
+    path that carries a roving segment reports `LOTTIE_ROVING_KEYFRAME` while still importing both
+    keyframes.
+13. A present-but-unreadable mask field (`inv`, `o`, `nm`) reports `LOTTIE_UNREADABLE_MASK` at that
+    field, and a non-array mask list reports it without needing `hasMask`.
+14. A contradicting `td: 0` reports at the source layer's own path; an explicit `tp` and a `td: 1`
+    layer with no matte below report `LOTTIE_TRACK_MATTE_UNSUPPORTED`.
+15. The superseded blanket-report test was re-pinned to effects and expressions, which are still
     reported.
 
 ## 9. Validation matrix
@@ -119,8 +135,8 @@ One report per affected mask or matte item, with the item's own path
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 49 cases |
-| `npm test` (full Vitest) | PASS — 120 files / 1,785 tests |
+| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 55 cases |
+| `npm test` (full Vitest) | PASS — 120 files / 1,791 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
@@ -145,8 +161,8 @@ One report per affected mask or matte item, with the item's own path
   transform, so a Lottie mask authored against a different anchor point can sit offset until the
   anchor is converted — the same open item the import core records for anchors
   (`LOTTIE_UNSUPPORTED_ANCHOR`).
-- A track matte is only as good as the layer order: a document whose matte source is not the layer
-  directly above is reported as ambiguous rather than guessed.
+- A track matte is only as good as the layer order: a document that names an explicit matte parent
+  (`tp`) is reported rather than guessed, and a `td: 0` contradiction drops the relation.
 - Mask opacity/feather/expansion animation uses the existing channels; a document that animates a
   mask property on a *sequence* other than `Sequence` keeps the default sequence, exactly like the
   other imported channels.

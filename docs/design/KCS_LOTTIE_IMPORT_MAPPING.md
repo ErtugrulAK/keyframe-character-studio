@@ -49,7 +49,7 @@ Common per-layer fields:
 | `ks.o` (opacity) | `opacity` channel | Lossless | Lottie percent → 0..1 |
 | `ks.sk`, `ks.sa` (skew) | — | Unsupported, preserved | Reported per layer |
 | `ip`, `op` (layer in/out) | — | Unsupported, preserved | KCS has no layer in/out; reported per layer with both frames so the author can trim manually |
-| `tt`, `td` (track matte) | `TrackMatteV2` | Lossy with report | `tt` 1/2 → `mode: 'alpha'` (+ `inverted` for 2), 3/4 → `'luminance'` (+ `inverted`); the matte source is the layer directly above, which must pass KCS's self-reference and cycle validation or the relation is reported and dropped |
+| `tt`, `td`, `tp` (track matte) | `TrackMatteV2` | Lossy with report | `tt` 1/2 → `mode: 'alpha'` (+ `inverted` for 2), 3/4 → `'luminance'` (+ `inverted`); the matte source is the layer directly above, which must pass KCS's self-reference and cycle validation or the relation is reported and dropped. `td` is the specification's 0/1 flag marking a layer as someone's matte, so it can only confirm or contradict that rule; an explicit `tp` matte-parent index is reported and the relation dropped, because this slice cannot resolve which layer it names |
 | `hasMask`, `masksProperties[]` | `LayerMask[]` | Lossy with report | See §5 |
 | `ef` (effects) | — | Unsupported, preserved | Reported per effect with its `nm` |
 | `hasExpressions`, `x` (expressions) | — | Unsupported, preserved | Reported once per layer, never evaluated |
@@ -76,7 +76,9 @@ Common per-layer fields:
 
 - Each entry in `masksProperties[]` becomes one `LayerMask` with `mode` mapped onto the four values KCS actually has (`LayerMaskMode = 'add' | 'subtract' | 'intersect' | 'difference'`): `a` → `add`, `s` → `subtract`, `i` → `intersect`, `n` (Lottie has no mask contribution there) → the mask is **skipped and reported**, because KCS has no "none" mode. KCS's `difference` has no Lottie equivalent in the first cut, so an imported document never produces it. Any other mode value is reported rather than guessed.
 - Static mask geometry (`pt.k` without keyframes) maps into `path`; animated geometry maps into the existing `maskPathChannels` (canonical `PathKeyframe`), not into a new channel.
-- Masks with a frequency above the first-cut limit (see §7) are reported per mask instead of being silently reduced.
+- Path geometry uses the specification's own shape form: `v`, `i` and `o` are arrays of `[x, y]` pairs. A document that writes `{ x, y }` objects instead is accepted as well, because this is an untrusted boundary and both forms describe the same geometry.
+- A mask field that is present but unreadable (a non-boolean `inv`, a non-string `nm`, a scalar that carries no number, a mask list that is not an array) is reported rather than defaulted, so `absent` and `unreadable` never look the same in the import report.
+- Masks above the first-cut limit (see §7) are reported per mask instead of being silently reduced: the limit counts the masks in the source, so an unreadable mask never lets a later one through in its place.
 - `f` (feather) and `o` (opacity) map to the mask's `feather`/`opacity`; a mask *animated* on those properties uses `maskChannels` with the same per-mask id.
 - Track mattes map to `TrackMatteV2` as in §3, and the importer must run the existing validation before accepting the relation.
 

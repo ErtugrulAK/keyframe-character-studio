@@ -421,6 +421,12 @@ const toHexColour = (value: unknown): string | undefined => {
  * `fonts.list` and the text documents both name families, and both spellings
  * ("Roboto" and "Roboto-Bold") are the same family — hence the normalised key.
  */
+/**
+ * Reports a font family KCS cannot render, once per family per document.
+ *
+ * `fonts.list` and the text documents both name families, and both spellings
+ * ("Roboto" and "Roboto-Bold") are the same family — hence the normalised key.
+ */
 const reportFontFamily = (
   family: string,
   sourcePath: string,
@@ -438,55 +444,90 @@ const reportFontFamily = (
  * Maps a Lottie text layer (`ty: 5`) onto the KCS text fields. Only the
  * static text document maps; animators, text boxes, text-on-path and the
  * document properties KCS does not model are reported (§3 of the design).
+ *
+ * Diagnostics carry the document's own node path (`layers[i].t.d.k[0].s…`), so
+ * the author can find the construct in the source file.
  */
 const mapTextLayer = (layer: LottieRecord, layerPath: string, index: number, reportedFonts: Set<string>, diagnostics: LottieImportDiagnostic[]): { textValue?: string; fontSize?: number; fontFamily?: string; fillColor?: string } => {
   const textProperty = asRecord(layer.t);
-  const documents = asArray(asRecord(textProperty?.d)?.k);
-  if (!textProperty || documents.length === 0) {
-    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', `${layerPath}.t`, `Text layer ${index} carries no readable text document.`, 'Re-export the layer from the source document.'));
+  const textPath = `${layerPath}.t`;
+  if (!textProperty) {
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', `${textPath}`, `Text layer ${index} carries no readable text property.`, 'Re-export the layer from the source document.'));
+    return {};
+  }
+  const documents = asArray(asRecord(textProperty.d)?.k);
+  const documentPath = `${textPath}.d.k`;
+  if (documents.length === 0) {
+    if (textProperty.d !== undefined && !Array.isArray(asRecord(textProperty.d)?.k)) {
+      diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', documentPath, `Text layer ${index} has an unreadable text document list.`, 'Re-export the layer from the source document.'));
+      return {};
+    }
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', documentPath, `Text layer ${index} carries no readable text document.`, 'Re-export the layer from the source document.'));
     return {};
   }
   if (documents.length > 1) {
-    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANIMATED_TEXT', `${layerPath}.t.d`, `Text layer ${index} animates its text document; only the first document is imported.`, 'Bake the text animation in the source document or re-create it after import.'));
+    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANIMATED_TEXT', documentPath, `Text layer ${index} animates its text document; only the first document is imported.`, 'Bake the text animation in the source document or re-create it after import.'));
   }
   const document = asRecord(asRecord(documents[0])?.s);
+  const valuePath = `${documentPath}[0].s`;
   if (!document) {
-    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', `${layerPath}.t.d[0].s`, `Text layer ${index} has an unreadable text document.`, 'Re-export the layer from the source document.'));
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', valuePath, `Text layer ${index} has an unreadable text document.`, 'Re-export the layer from the source document.'));
     return {};
   }
 
   const textValue = readString(document.t) ?? readString(document.s);
   if (textValue === undefined) {
-    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', `${layerPath}.t.d[0].s.t`, `Text layer ${index} has no readable text string.`, 'Re-export the layer from the source document.'));
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', `${valuePath}.t`, `Text layer ${index} has no readable text string.`, 'Re-export the layer from the source document.'));
     return {};
   }
 
   const sourceFamily = readString(document.f);
+  if (document.f !== undefined && sourceFamily === undefined) {
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', `${valuePath}.f`, `Text layer ${index} has an unreadable font name.`, 'Re-export the layer from the source document.'));
+  }
   const fontFamily = matchTextFontFamily(sourceFamily);
-  if (sourceFamily !== undefined) reportFontFamily(sourceFamily, `${layerPath}.t.d[0].s.f`, reportedFonts, diagnostics);
+  if (sourceFamily !== undefined) reportFontFamily(sourceFamily, `${valuePath}.f`, reportedFonts, diagnostics);
 
   const fontSize = readNumber(document.s);
   if (document.s !== undefined && fontSize === undefined) {
-    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', `${layerPath}.t.d[0].s.s`, `Text layer ${index} has an unreadable font size.`, 'Re-export the layer from the source document.'));
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', `${valuePath}.s`, `Text layer ${index} has an unreadable font size.`, 'Re-export the layer from the source document.'));
   }
 
   const fillColor = toHexColour(document.fc);
   if (fillColor === undefined) {
-    diagnostics.push(lottieWarning('LOTTIE_MISSING_TEXT_COLOUR', `${layerPath}.t.d[0].s.fc`, `Text layer ${index} declares no readable text colour.`, 'Set the text colour again after import.'));
+    diagnostics.push(lottieWarning('LOTTIE_MISSING_TEXT_COLOUR', `${valuePath}.fc`, `Text layer ${index} declares no readable text colour.`, 'Set the text colour again after import.'));
   }
 
-  const unsupported = UNSUPPORTED_TEXT_STYLE_FIELDS.filter(({ key, defaultValue }) => {
+  const unsupported: string[] = [];
+  const unreadable: string[] = [];
+  for (const { key, label, defaultValue } of UNSUPPORTED_TEXT_STYLE_FIELDS) {
+    if (document[key] === undefined) continue;
     const value = readPlainNumber(document[key]);
-    return value !== undefined && value !== defaultValue;
-  }).map(({ label }) => label);
+    if (value === undefined) unreadable.push(label);
+    else if (value !== defaultValue) unsupported.push(label);
+  }
   if (unsupported.length > 0) {
-    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TEXT_STYLE', `${layerPath}.t.d[0].s`, `Text layer ${index} uses ${unsupported.join(', ')}, which KCS does not model.`, 'Accept the default text layout or re-create it after import.'));
+    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TEXT_STYLE', valuePath, `Text layer ${index} uses ${unsupported.join(', ')}, which KCS does not model.`, 'Accept the default text layout or re-create it after import.'));
   }
-  if (asArray(textProperty.a).length > 0) {
-    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TEXT_ANIMATOR', `${layerPath}.t.a`, `Text layer ${index} carries ${asArray(textProperty.a).length} text animator(s), which are not applied.`, 'Bake the text animation in the source document and import again.'));
+  if (unreadable.length > 0) {
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', valuePath, `Text layer ${index} has unreadable ${unreadable.join(', ')} value(s).`, 'Re-export the layer from the source document.'));
   }
-  if (textProperty.m !== undefined || textProperty.p !== undefined) {
-    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TEXT_LAYOUT', `${layerPath}.t.m`, `Text layer ${index} uses a text box or a text path, which KCS does not model.`, 'Convert the text to a shape in the source document, or re-create the layout after import.'));
+
+  if (textProperty.a !== undefined) {
+    if (Array.isArray(textProperty.a)) {
+      const animators = textProperty.a.length;
+      if (animators > 0) {
+        diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TEXT_ANIMATOR', `${textPath}.a`, `Text layer ${index} carries ${animators} text animator(s), which are not applied.`, 'Bake the text animation in the source document and import again.'));
+      }
+    } else {
+      diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', `${textPath}.a`, `Text layer ${index} has an unreadable animator list.`, 'Re-export the layer from the source document.'));
+    }
+  }
+  for (const layoutField of ['m', 'p']) {
+    if (textProperty[layoutField] === undefined) continue;
+    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_TEXT_LAYOUT', `${textPath}.${layoutField}`, layoutField === 'm'
+      ? `Text layer ${index} uses a text box, which KCS does not model.`
+      : `Text layer ${index} follows a text path, which KCS does not model.`, 'Convert the text to a shape in the source document, or re-create the layout after import.'));
   }
 
   return {
@@ -503,40 +544,49 @@ const mapTextLayer = (layer: LottieRecord, layerPath: string, index: number, rep
  * Only an embedded data URL that already passes the application's embedded-image
  * policy is imported; a path or URL is never read, fetched or resolved, because
  * the importer receives the document text and nothing else. Everything else is
- * reported and the layer skipped.
+ * reported and the layer skipped. Asset problems are reported at the asset's own
+ * node (`assets[i].p`), so the path points at what the author must fix.
  */
-const mapImageLayer = (layer: LottieRecord, layerPath: string, index: number, assets: Map<string, LottieRecord>, diagnostics: LottieImportDiagnostic[]): { imageUrl?: string; width?: number; height?: number } | undefined => {
+const mapImageLayer = (layer: LottieRecord, layerPath: string, index: number, assets: Map<string, AssetEntry>, diagnostics: LottieImportDiagnostic[]): { imageUrl?: string; width?: number; height?: number } | undefined => {
   const refId = readString(layer.refId);
   if (refId === undefined) {
     diagnostics.push(lottieWarning('LOTTIE_MISSING_ASSET', `${layerPath}.refId`, `Image layer ${index} names no asset.`, 'Re-export the document with its asset table.'));
     return undefined;
   }
-  const asset = assets.get(refId);
-  if (!asset) {
+  const entry = assets.get(refId);
+  if (!entry) {
     diagnostics.push(lottieWarning('LOTTIE_MISSING_ASSET', `${layerPath}.refId`, `Image layer ${index} references asset "${refId}", which the document does not carry.`, 'Export the animation with its assets embedded and import it again.'));
     return undefined;
   }
+  const { asset, assetPath } = entry;
 
-  const fileName = readString(asset.p) ?? '';
-  const source = fileName.startsWith('data:') ? fileName : `${readString(asset.u) ?? ''}${fileName}`;
-  if (/%0?\d*d/u.test(fileName)) {
-    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_IMAGE_SEQUENCE', `${layerPath}.refId`, `Image layer ${index} uses asset "${refId}", an image sequence, which KCS does not model.`, 'Export the animation with single images instead of a sequence.'));
+  const fileName = readString(asset.p);
+  if (fileName === undefined) {
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_IMAGE_ASSET', `${assetPath}.p`, `Image layer ${index} references asset "${refId}", which carries no readable file name.`, 'Re-export the document with its asset table.'));
     return undefined;
   }
   if (!fileName.startsWith('data:')) {
-    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_IMAGE_SOURCE', `${layerPath}.refId`, `Image layer ${index} references "${source || refId}", a file outside the document; the importer only reads the document itself.`, 'Export the animation with the image embedded as a data URL and import it again.'));
+    const prefix = readString(asset.u) ?? '';
+    // Never echo the raw source: a path can carry a machine tree and a URL can
+    // carry credentials, so the diagnostic states the shape, not the value.
+    const shape = prefix.length > 0 ? 'a file path' : 'a file name';
+    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_IMAGE_SOURCE', `${assetPath}.p`, `Image layer ${index} references ${shape} outside the document, which the importer cannot read.`, 'Export the animation with the image embedded as a data URL and import it again.'));
+    return undefined;
+  }
+  if (/%0?\d*d/u.test(fileName)) {
+    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_IMAGE_SEQUENCE', `${assetPath}.p`, `Image layer ${index} references asset "${refId}", an image sequence, which KCS does not model.`, 'Export the animation with single images instead of a sequence.'));
     return undefined;
   }
   if (!isSupportedEmbeddedImage(fileName)) {
     const mimeType = /^data:([^;,]+)/u.exec(fileName)?.[1] ?? 'unknown';
-    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_IMAGE_TYPE', `${layerPath}.refId`, `Image layer ${index} embeds "${mimeType}", which is not a supported image type.`, 'Use a PNG, JPEG, GIF, WebP or safe SVG asset.'));
+    diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_IMAGE_TYPE', `${assetPath}.p`, `Image layer ${index} embeds "${mimeType}", which is not a supported image type.`, 'Use a PNG, JPEG, GIF, WebP or safe SVG asset.'));
     return undefined;
   }
 
   const assetWidth = readNumber(asset.w);
   const assetHeight = readNumber(asset.h);
   if (assetWidth === undefined || assetHeight === undefined) {
-    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_IMAGE_ASSET', `${layerPath}.refId`, `Image layer ${index} has an asset without a readable size.`, 'Re-export the asset from the source document.'));
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_IMAGE_ASSET', `${assetPath}.w`, `Image layer ${index} references asset "${refId}", which declares no readable size.`, 'Re-export the asset from the source document.'));
   }
 
   return {
@@ -546,62 +596,96 @@ const mapImageLayer = (layer: LottieRecord, layerPath: string, index: number, as
   };
 };
 
+/** One entry of the document asset table, with the node path the reports point at. */
+interface AssetEntry {
+  asset: LottieRecord;
+  assetPath: string;
+}
+
 /** Collects the document asset table by id, so a layer can resolve its `refId`. */
-const readAssetTable = (assets: unknown[]): Map<string, LottieRecord> => {
-  const table = new Map<string, LottieRecord>();
-  for (const entry of assets) {
+const readAssetTable = (assets: unknown[]): Map<string, AssetEntry> => {
+  const table = new Map<string, AssetEntry>();
+  assets.forEach((entry, index) => {
     const asset = asRecord(entry);
     const id = readString(asset?.id);
-    if (asset && id !== undefined && !table.has(id)) table.set(id, asset);
-  }
+    if (asset && id !== undefined && !table.has(id)) table.set(id, { asset, assetPath: `assets[${index}]` });
+  });
   return table;
 };
 
 /**
- * Walks the precomp asset graph for cycles and excessive nesting. Nothing is
- * converted — the design keeps precomps *unsupported, preserved* — but a
- * document that would recurse forever is worth telling the author about.
+ * Walks the precomp asset graph for cycles, nesting beyond the import limit and
+ * missing precomp assets. Nothing is converted — the design keeps precomps
+ * *unsupported, preserved* — but a document that would recurse forever is worth
+ * telling the author about.
+ *
+ * Each asset is expanded once across the whole walk and every finding is
+ * reported once, so a shared sub-precomp cannot produce duplicate entries.
  */
-const reportPrecompGraph = (assets: Map<string, LottieRecord>, diagnostics: LottieImportDiagnostic[]): void => {
+const reportPrecompGraph = (assets: Map<string, AssetEntry>, diagnostics: LottieImportDiagnostic[]): void => {
   if (assets.size === 0) return;
-  const reportedCycles = new Set<string>();
-  let depthReported = false;
-  const walk = (assetId: string, depth: number, seen: Set<string>): void => {
-    const asset = assets.get(assetId);
-    if (!asset) return;
-    if (seen.has(assetId)) {
-      if (!reportedCycles.has(assetId)) {
-        reportedCycles.add(assetId);
-        diagnostics.push(lottieWarning('LOTTIE_PRECOMP_CYCLE', `$.assets[${assetId}].layers`, `The precomposition assets of this document form a cycle through "${assetId}".`, 'Break the precomposition cycle in the source document and export again.'));
-      }
-      return;
-    }
-    if (depth > LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
-      if (!depthReported) {
-        depthReported = true;
-        diagnostics.push(lottieWarning('LOTTIE_PRECOMP_DEPTH_LIMIT', `$.assets[${assetId}].layers`, `The precomposition assets nest deeper than the ${LOTTIE_IMPORT_LIMITS.hierarchyDepth}-level import limit.`, 'Flatten the precomposition nesting in the source document.'));
-      }
-      return;
-    }
-    const nested = new Set(seen);
-    nested.add(assetId);
-    for (const childEntry of asArray(asset.layers)) {
-      const child = asRecord(childEntry);
-      if (readNumber(child?.ty) !== 0) continue;
-      const childRef = readString(child?.refId);
-      if (childRef === undefined) continue;
-      if (!assets.has(childRef)) {
-        diagnostics.push(lottieWarning('LOTTIE_PRECOMP_MISSING_ASSET', `$.assets[${assetId}].layers`, `A precomposition layer references asset "${childRef}", which the document does not carry.`, 'Export the animation with all precompositions included.'));
+  const expanded = new Set<string>();
+  const reported = new Set<string>();
+  const reportOnce = (key: string, code: string, sourcePath: string, message: string, action: string): void => {
+    if (reported.has(key)) return;
+    reported.add(key);
+    diagnostics.push(lottieWarning(code, sourcePath, message, action));
+  };
+
+  for (const [assetId, entry] of assets) {
+    if (entry.asset.layers === undefined) continue;
+    const path = new Set<string>();
+    const stack: { assetId: string; depth: number }[] = [{ assetId, depth: 1 }];
+    while (stack.length > 0) {
+      const current = stack.pop();
+      if (!current) break;
+      const currentEntry = assets.get(current.assetId);
+      if (!currentEntry) continue;
+      if (path.has(current.assetId)) {
+        reportOnce(`cycle:${current.assetId}`, 'LOTTIE_PRECOMP_CYCLE', `${currentEntry.assetPath}.layers`, `The precomposition assets of this document form a cycle through "${current.assetId}".`, 'Break the precomposition cycle in the source document and export again.');
         continue;
       }
-      walk(childRef, depth + 1, nested);
+      if (expanded.has(current.assetId)) continue;
+      expanded.add(current.assetId);
+
+      const layers = currentEntry.asset.layers;
+      if (!Array.isArray(layers)) {
+        reportOnce(`unreadable:${current.assetId}`, 'LOTTIE_UNREADABLE_PRECOMP', `${currentEntry.assetPath}.layers`, `Precomposition "${current.assetId}" carries a layer list that is not an array.`, 'Re-export the document so its precompositions travel with the layers.');
+        continue;
+      }
+      layers.forEach((childEntry, childIndex) => {
+        const child = asRecord(childEntry);
+        if (readNumber(child?.ty) !== 0) return;
+        const childRef = readString(child?.refId);
+        if (childRef === undefined) {
+          reportOnce(`unreadable-ref:${current.assetId}:${childIndex}`, 'LOTTIE_UNREADABLE_PRECOMP', `${currentEntry.assetPath}.layers[${childIndex}].refId`, `A precomposition layer inside "${current.assetId}" names no readable asset.`, 'Re-export the document so its precompositions travel with the layers.');
+          return;
+        }
+        if (!assets.has(childRef)) {
+          reportOnce(`missing:${childRef}`, 'LOTTIE_PRECOMP_MISSING_ASSET', `${currentEntry.assetPath}.layers[${childIndex}].refId`, `A precomposition layer references asset "${childRef}", which the document does not carry.`, 'Export the animation with all precompositions included.');
+          return;
+        }
+        if (current.depth > LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
+          reportOnce('depth-limit', 'LOTTIE_PRECOMP_DEPTH_LIMIT', `${currentEntry.assetPath}.layers`, `The precomposition assets nest deeper than the ${LOTTIE_IMPORT_LIMITS.hierarchyDepth}-level import limit.`, 'Flatten the precomposition nesting in the source document.');
+          return;
+        }
+        if (path.has(childRef)) {
+          const childEntryRecord = assets.get(childRef);
+          reportOnce(`cycle:${childRef}`, 'LOTTIE_PRECOMP_CYCLE', `${childEntryRecord?.assetPath ?? `assets[${childRef}]`}.layers`, `The precomposition assets of this document form a cycle through "${childRef}".`, 'Break the precomposition cycle in the source document and export again.');
+          return;
+        }
+        stack.push({ assetId: childRef, depth: current.depth + 1 });
+      });
+      if (current.depth <= LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
+        const nested = new Set(path);
+        nested.add(current.assetId);
+        path.clear();
+        for (const value of nested) path.add(value);
+      }
     }
-  };
-  for (const [assetId, asset] of assets) {
-    if (asset.layers === undefined) continue;
-    walk(assetId, 1, new Set());
   }
 };
+
 
 const BASIC_LAYER_TYPES: Record<number, string> = {
   1: 'custom',
@@ -660,10 +744,10 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
   const reportedFonts = new Set<string>();
   // The document's font table names families the layers may not use; the design
   // reports an unknown family once, so it is checked here as well.
-  for (const entry of asArray(asRecord(root.fonts)?.list)) {
+  asArray(asRecord(root.fonts)?.list).forEach((entry, fontIndex) => {
     const family = readString(asRecord(entry)?.fFamily);
-    if (family !== undefined) reportFontFamily(family, '$.fonts.list', reportedFonts, diagnostics);
-  }
+    if (family !== undefined) reportFontFamily(family, `$.fonts.list[${fontIndex}].fFamily`, reportedFonts, diagnostics);
+  });
   /** One report per precomp layer, and one precomp-graph pass per document. */
   let precompGraphReported = false;
 
@@ -686,7 +770,11 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         precompGraphReported = true;
         reportPrecompGraph(assetTable, diagnostics);
       }
-      if (refId !== undefined && !assetTable.has(refId)) {
+      if (layer.refId === undefined) {
+        diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_PRECOMP', `${path}.refId`, `Precomposition layer ${index} names no asset.`, 'Re-export the document so its precompositions travel with the layers.'));
+      } else if (refId === undefined) {
+        diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_PRECOMP', `${path}.refId`, `Precomposition layer ${index} has an unreadable asset reference.`, 'Re-export the document so its precompositions travel with the layers.'));
+      } else if (!assetTable.has(refId)) {
         diagnostics.push(lottieWarning('LOTTIE_PRECOMP_MISSING_ASSET', `${path}.refId`, `Precomposition layer ${index} references asset "${refId}", which the document does not carry.`, 'Export the animation with all precompositions included.'));
       }
       diagnostics.push(
@@ -744,6 +832,13 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     diagnostics.push(...x.diagnostics, ...y.diagnostics, ...rotation.diagnostics, ...scaleX.diagnostics, ...scaleY.diagnostics, ...opacity.diagnostics);
 
     const layerId = `lottie-layer-${index}`;
+    let image: { imageUrl?: string; width?: number; height?: number } | undefined;
+    if (type === 2) {
+      image = mapImageLayer(layer, path, index, assetTable, diagnostics);
+      // A reported image layer stays out of the scene entirely, so no later
+      // layer can point at an id that does not exist.
+      if (!image) return;
+    }
     layerIds.push(layerId);
     const parentIndex = readNumber(layer.parent);
     const parentChainDepth = parentIndex !== undefined && parentIndex >= 0 && parentIndex < index ? (parentDepth.get(parentIndex) ?? 0) + 1 : 0;
@@ -751,9 +846,10 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     if (parentChainDepth > LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
       diagnostics.push(lottieWarning('LOTTIE_HIERARCHY_LIMIT', `${path}.parent`, `Layer ${index} sits ${parentChainDepth} levels below its parent chain, above the ${LOTTIE_IMPORT_LIMITS.hierarchyDepth}-level import limit.`, 'Flatten the hierarchy in the source document and import again.'));
     }
-    const parentId = parentIndex !== undefined && parentIndex >= 0 && parentIndex < index ? `lottie-layer-${parentIndex}` : undefined;
+    const candidateParentId = parentIndex !== undefined && parentIndex >= 0 && parentIndex < index ? `lottie-layer-${parentIndex}` : undefined;
+    const parentId = candidateParentId !== undefined && layerIds.includes(candidateParentId) ? candidateParentId : undefined;
     if (parentIndex !== undefined && parentId === undefined) {
-      diagnostics.push(lottieWarning('LOTTIE_BROKEN_PARENT', `${path}.parent`, `Layer ${index} points at parent ${parentIndex}, which is not an already-imported layer.`, 'Reorder the layers in the source document so parents come first.'));
+      diagnostics.push(lottieWarning('LOTTIE_BROKEN_PARENT', `${path}.parent`, `Layer ${index} points at parent ${parentIndex}, which is not an imported layer of this scene.`, 'Reorder the layers in the source document so parents come first, and make sure the parent layer itself can be imported.'));
     }
 
     const scaleXPercent = scaleX.staticValue ?? 100;
@@ -778,23 +874,18 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     } as SceneLayer);
     const layerShape = layers[layers.length - 1];
 
+    if (image) {
+      if (image.imageUrl !== undefined) layerShape.imageUrl = image.imageUrl;
+      if (image.width !== undefined) layerShape.width = image.width;
+      if (image.height !== undefined) layerShape.height = image.height;
+    }
+
     if (type === 5) {
       const text = mapTextLayer(layer, path, index, reportedFonts, diagnostics);
       if (text.textValue !== undefined) layerShape.textValue = text.textValue;
       if (text.fontSize !== undefined) layerShape.fontSize = text.fontSize;
       if (text.fontFamily !== undefined) layerShape.fontFamily = text.fontFamily;
       if (text.fillColor !== undefined) layerShape.fillColor = text.fillColor;
-    }
-    if (type === 2) {
-      const image = mapImageLayer(layer, path, index, assetTable, diagnostics);
-      if (!image) {
-        layers.pop();
-        layerIds.pop();
-        return;
-      }
-      layerShape.imageUrl = image.imageUrl;
-      if (image.width !== undefined) layerShape.width = image.width;
-      if (image.height !== undefined) layerShape.height = image.height;
     }
 
     const masks = mapLayerMasks(asArray(layer.masksProperties), index, path, { documentInPoint: inPoint, layerStartTime }, diagnostics);

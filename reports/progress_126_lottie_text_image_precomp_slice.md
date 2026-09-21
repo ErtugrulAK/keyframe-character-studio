@@ -56,7 +56,7 @@ unified import entry, and every `package.json`, lockfile, dependency or workflow
 | `refId` not in `assets[]` | `LOTTIE_MISSING_ASSET`, layer skipped |
 | `p` is a `data:` URL and passes `isSupportedEmbeddedImage` | `imageUrl` mapped, `w`/`h` → `width`/`height` |
 | `p` is a `data:` URL with an unsupported MIME, or an SVG carrying a script/handler | `LOTTIE_UNSUPPORTED_IMAGE_TYPE`, layer skipped |
-| `p`/`u` is a file path or URL | `LOTTIE_UNSUPPORTED_IMAGE_SOURCE`, layer skipped — **nothing is read, fetched or resolved**, because the importer only receives the document text |
+| `p`/`u` is a file path or URL | `LOTTIE_UNSUPPORTED_IMAGE_SOURCE` at the asset node, layer skipped — **nothing is read, fetched or resolved**, because the importer only receives the document text, and the message names the shape of the source rather than echoing a machine path or a URL that can carry credentials |
 | `p` names a sequence (`%d`) | `LOTTIE_UNSUPPORTED_IMAGE_SEQUENCE`, layer skipped |
 | asset without a readable size | `LOTTIE_UNREADABLE_IMAGE_ASSET`; the bitmap still imports and keeps the layer's own size |
 
@@ -95,16 +95,24 @@ and a concrete action, per design §8):
 | `LOTTIE_UNSUPPORTED_IMAGE_SEQUENCE` | Image asset that is a sequence |
 | `LOTTIE_UNREADABLE_IMAGE_ASSET` | Asset without a readable size |
 | `LOTTIE_PRECOMP_UNMAPPED` | A precomp layer (once per layer, with `refId`) |
+| `LOTTIE_UNREADABLE_PRECOMP` | A precomp layer or a nested precomp reference with no readable asset reference, or a precomp asset whose `layers` is not an array |
 | `LOTTIE_PRECOMP_MISSING_ASSET` | Precomp `refId` the document does not carry |
 | `LOTTIE_PRECOMP_CYCLE` | Cycle in the precomp asset graph |
 | `LOTTIE_PRECOMP_DEPTH_LIMIT` | Precomp nesting above the import limit |
 
+Every entry carries the document's own node path (`layers[3].t.d.k[0].s.fc`, `assets[2].p`,
+`assets[0].layers[1].refId`), so the path points at the node the author must fix. Per design §8 the
+severity of every one of them is `warning`: the import still produces a scene, and only a document
+that cannot be read at all is an `error`.
+
 Text, image and precomp layers now flow through the shared layer pipeline, so masks, track mattes,
-parents, transforms and layer order work for them exactly as for shape layers.
+parents, transforms and layer order work for them exactly as for shape layers. A layer that is
+skipped leaves no id behind: a later layer that pointed at it reports `LOTTIE_BROKEN_PARENT` instead
+of carrying a `parentId` that does not exist.
 
 ## 8. Tests
 
-`src/tests/lottieImport.test.ts` — **72 cases** (was 56). The new group covers:
+`src/tests/lottieImport.test.ts` — **79 cases** (was 56). The new group covers:
 
 1. A static text layer maps `textValue`/`fontFamily`/`fontSize`/`fillColor`.
 2. An unknown family falls back to the renderer default and is reported **once** for two spellings of
@@ -124,7 +132,18 @@ parents, transforms and layer order work for them exactly as for shape layers.
 14. A precomp whose asset is missing reports both codes.
 15. A precomp cycle and an over-deep nesting report their own codes.
 16. An image and a text layer keep deterministic order, `zIndex`, transform and opacity.
-17. The superseded test that pinned the generic `LOTTIE_UNSUPPORTED_LAYER_TYPE` for a precomp layer
+17. Every new diagnostic is asserted to carry a `warning` severity, the `lottie-import` feature, a
+    non-empty path/message/action pair, and a shared sub-precomp reports its cycle exactly once.
+18. Text diagnostics point at `layers[0].t.d.k[0].s*`, image diagnostics at `assets[0].p`, and
+    precomp diagnostics at `assets[0].layers[0].refId`.
+19. A quoted multi-word family (`BebasNeue-Regular` → `'Bebas Neue'`) maps, while a numeric font
+    name and a string justification report `LOTTIE_UNREADABLE_TEXT`.
+20. A stubbed `fetch` proves an external image asset triggers no network call, `file:///` never
+    appears in a message, and an unreadable precomp reference or asset list reports
+    `LOTTIE_UNREADABLE_PRECOMP`.
+21. An image layer skipped for a missing asset leaves no dangling parent: the later layer reports
+    `LOTTIE_BROKEN_PARENT` and carries no `parentId`.
+22. The superseded test that pinned the generic `LOTTIE_UNSUPPORTED_LAYER_TYPE` for a precomp layer
     was re-pinned to an actually unsupported type (`ty: 6`), and the precomp contract is covered by
     its own case.
 
@@ -133,8 +152,8 @@ parents, transforms and layer order work for them exactly as for shape layers.
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 72 cases |
-| `npm test` (full Vitest) | PASS — 120 files / 1,808 tests |
+| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 79 cases |
+| `npm test` (full Vitest) | PASS — 120 files / 1,815 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
@@ -172,7 +191,31 @@ parents, transforms and layer order work for them exactly as for shape layers.
   export validation does not accept as a target type; that pre-existing gap is unchanged by this slice
   and is where the import entry point slice will have to reconcile the two.
 
-## 12. Next slice
+## 12. Review
+
+One independent read-only round (`reviewer-agent`) returned **BLOCKED** with four high, two medium
+and one low finding; all were closed before the merge decision:
+
+1. Diagnostic paths were not real document nodes (`t.d[0]` instead of `t.d.k[0]`, asset problems
+   attached to the layer instead of the asset, precomp paths using an asset id as an array index,
+   `fonts.list` without its entry) — every path now names the node the author must fix.
+2. Present-but-unreadable text and precomp fields fell back silently (a non-string font name,
+   non-numeric style fields, a non-array animator list, a precomp `refId` or `assets[].layers` that
+   is not readable) — each now reports.
+3. The precomp graph walk re-expanded shared assets, so one missing nested asset could be reported
+   once per ancestor and a two-node cycle twice — the walk now expands each asset once and reports
+   each finding once (pinned by a test).
+4. A skipped image layer could leave a dangling `parentId` — the asset is resolved before the layer
+   enters the scene, and a parent must now be an imported layer, so the case reports
+   `LOTTIE_BROKEN_PARENT` instead.
+5. The external-image diagnostic echoed the raw path/URL — it now states the shape of the source
+   only, and a stubbed `fetch` test proves nothing is reached for.
+6. The new tests did not pin paths, the report shape, report counts or the no-network property —
+   they now do, and the colour test asserts what it actually proves.
+7. Design §8 now states the severity interpretation the implementation follows (a skipped construct
+   is a `warning`; only a refused import is an `error`).
+
+## 13. Next slice
 
 The import entry point with the report-before-replace UX — the first slice that puts the importer in
 front of a user, and the natural place to reconcile the imported layer types with the OGraf export

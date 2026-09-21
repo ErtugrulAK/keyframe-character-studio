@@ -122,7 +122,7 @@ One entry per affected construct, shaped like the existing export diagnostics so
 
 - `code` — stable, e.g. `LOTTIE_UNSUPPORTED_EFFECT`, `LOTTIE_ROVING_KEYFRAME`, `LOTTIE_MASK_LIMIT`, `LOTTIE_PRECOMP_UNMAPPED`.
 - `path` — the Lottie node path (`layers[3].shapes[1].ef[0]`) so the author can find it in the source document.
-- `severity` — `error` only when the construct cannot be represented at all; everything reported-but-imported is a `warning`.
+- `severity` — `error` only when the import itself cannot proceed (an unreadable document, a refused size, missing timing); a construct that is reported while the rest of the document still imports is a `warning`, including one that is skipped entirely because it cannot be represented.
 - `action` — the concrete next step ("remove the expression in the source document and re-export", "raise the mask limit for this import", …).
 
 Import UX: the report is shown **before** the document replaces the user's work, with counts by kind, and the user may cancel.

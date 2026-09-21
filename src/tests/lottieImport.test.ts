@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { importLottieDocument } from '../interop/lottie/mapDocument';
 import { LOTTIE_IMPORT_LIMITS } from '../interop/lottie/diagnostics';
 import { validateImportedDocument } from '../utils/importValidation';
@@ -878,12 +878,15 @@ describe('Lottie import — text, image and precomp layers', () => {
     expect(codes(second.diagnostics)).toContain('LOTTIE_UNREADABLE_TEXT');
   });
 
-  it('reports a text layer without a readable colour instead of defaulting it', () => {
+  it('reports a text layer without a readable colour while the layer keeps the standard colour', () => {
     const layer = textLayer({}, { t: { d: { k: [{ t: 0, s: { t: 'Plain', f: 'Inter', s: 20 } }] } } });
     const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
 
-    expect(codes(result.diagnostics)).toContain('LOTTIE_MISSING_TEXT_COLOUR');
+    const reported = result.diagnostics.find((entry) => entry.code === 'LOTTIE_MISSING_TEXT_COLOUR');
+    expect(reported?.path).toBe('layers[0].t.d.k[0].s.fc');
+    expect(reported?.action.length).toBeGreaterThan(0);
     expect(result.scene?.layers[0]?.textValue).toBe('Plain');
+    expect(result.scene?.layers[0]?.fillColor).toBe('#ffffff');
   });
 
   it('maps an embedded image asset onto the media layer fields', () => {
@@ -964,6 +967,102 @@ describe('Lottie import — text, image and precomp layers', () => {
 
     expect(codes(cycleResult.diagnostics)).toContain('LOTTIE_PRECOMP_CYCLE');
     expect(codes(deepResult.diagnostics)).toContain('LOTTIE_PRECOMP_DEPTH_LIMIT');
+  });
+
+  it('points every text diagnostic at the real document node', () => {
+    const layer = textLayer({ j: 2 });
+    const textProperty = layer.t as { a?: unknown[]; p?: unknown };
+    textProperty.a = [{ nm: 'Fade' }];
+    textProperty.p = { m: 1 };
+    const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+    const pathOf = (code: string) => result.diagnostics.find((entry) => entry.code === code)?.path;
+
+    expect(pathOf('LOTTIE_UNSUPPORTED_TEXT_STYLE')).toBe('layers[0].t.d.k[0].s');
+    expect(pathOf('LOTTIE_UNSUPPORTED_TEXT_ANIMATOR')).toBe('layers[0].t.a');
+    expect(pathOf('LOTTIE_UNSUPPORTED_TEXT_LAYOUT')).toBe('layers[0].t.p');
+  });
+
+  it('points image diagnostics at the asset node and precomp diagnostics at the asset list', () => {
+    const image = importLottieDocument(JSON.stringify(baseDocument([imageLayer('image_0')], {
+      assets: [{ id: 'image_0', w: 10, h: 10, u: 'images/', p: 'img_0.png' }],
+    })));
+    const precomp = importLottieDocument(JSON.stringify(baseDocument([precompLayer('comp_0')], {
+      assets: [{ id: 'comp_0', layers: [{ ty: 0, refId: 'gone' }] }],
+    })));
+
+    expect(image.diagnostics.find((entry) => entry.code === 'LOTTIE_UNSUPPORTED_IMAGE_SOURCE')?.path).toBe('assets[0].p');
+    expect(precomp.diagnostics.find((entry) => entry.code === 'LOTTIE_PRECOMP_MISSING_ASSET')?.path).toBe('assets[0].layers[0].refId');
+  });
+
+  it('reports every construct once, with the report contract shape', () => {
+    const cyclic = [
+      { id: 'a', layers: [{ ty: 0, refId: 'b' }] },
+      { id: 'b', layers: [{ ty: 0, refId: 'a' }] },
+    ];
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      precompLayer('a'),
+      precompLayer('b', { nm: 'Second' }),
+    ], { assets: cyclic })));
+
+    const cycles = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_PRECOMP_CYCLE');
+    expect(cycles).toHaveLength(1);
+    for (const entry of result.diagnostics) {
+      expect(entry.severity).toBe('warning');
+      expect(entry.feature).toBe('lottie-import');
+      expect(entry.path.length).toBeGreaterThan(0);
+      expect(entry.message.length).toBeGreaterThan(0);
+      expect(entry.action.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('reports an unreadable precomp reference and asset list', () => {
+    const noRef = importLottieDocument(JSON.stringify(baseDocument([precompLayer(undefined)], { assets: [] })));
+    const brokenList = importLottieDocument(JSON.stringify(baseDocument([precompLayer('bad')], { assets: [{ id: 'bad', layers: 'nope' }] })));
+
+    expect(codes(noRef.diagnostics)).toContain('LOTTIE_UNREADABLE_PRECOMP');
+    expect(codes(brokenList.diagnostics)).toContain('LOTTIE_UNREADABLE_PRECOMP');
+  });
+
+  it('reads a quoted multi-word family name and reports unreadable text fields', () => {
+    const quoted = importLottieDocument(JSON.stringify(baseDocument([textLayer({ f: 'BebasNeue-Regular' })])));
+    const broken = importLottieDocument(JSON.stringify(baseDocument([textLayer({ f: 7, j: 'wide' })])));
+
+    expect(quoted.scene?.layers[0]?.fontFamily).toBe("'Bebas Neue'");
+    expect(codes(quoted.diagnostics)).not.toContain('LOTTIE_UNKNOWN_FONT');
+    const unreadable = broken.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNREADABLE_TEXT').map((entry) => entry.path);
+    expect(unreadable).toContain('layers[0].t.d.k[0].s.f');
+    expect(unreadable).toContain('layers[0].t.d.k[0].s');
+  });
+
+  it('never reaches for the network when an image asset lives outside the document', () => {
+    const fetchSpy = vi.fn(() => {
+      throw new Error('the importer must not fetch');
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+
+    try {
+      const result = importLottieDocument(JSON.stringify(baseDocument([imageLayer('image_0')], {
+        assets: [{ id: 'image_0', w: 10, h: 10, u: 'file:///C:/secret/', p: 'photo.png' }],
+      })));
+
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(result.scene?.layers).toHaveLength(0);
+      expect(codes(result.diagnostics)).toContain('LOTTIE_UNSUPPORTED_IMAGE_SOURCE');
+      expect(result.diagnostics.some((entry) => entry.message.includes('file:///'))).toBe(false);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('keeps a skipped image layer out of every parent reference', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      imageLayer('gone'),
+      solidLayer({ nm: 'Child', parent: 0 }),
+    ], { assets: [] })));
+
+    expect(result.scene?.layers.map((layer) => layer.name)).toEqual(['Child']);
+    expect(result.scene?.layers[0]?.parentId).toBeUndefined();
+    expect(codes(result.diagnostics)).toContain('LOTTIE_BROKEN_PARENT');
   });
 
   it('keeps the layer order and transform of an image and a text layer deterministic', () => {

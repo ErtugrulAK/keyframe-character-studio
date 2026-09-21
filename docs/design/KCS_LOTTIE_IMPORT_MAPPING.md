@@ -30,10 +30,10 @@ A construct never becomes *lossless* by silence: if any part of it is dropped (a
 | Lottie `ty` | KCS | Kind | Rule |
 |---|---|---|---|
 | `4` shape | part + channels + masks | Lossless / lossy per shape (see §4) | The layer's shapes are grouped into the part's own shape content; a group with mixed primitive and path items is preserved as separate items in order |
-| `3` null | part without shape content | Lossless | Used as a parent target; `parent` links map to `parentId` |
+| `3` null | `custom_freeform` without a path | Lossless | Used as a parent target; it draws nothing, which is what a null layer does |
 | `5` text | text part | Lossy with report | Static text (`t.d.k[0].s`) maps to a text part — `t.d.k[0].s.t` → `textValue`, `.f` → `fontFamily` when it resolves to a family in `KCS_TEXT_FONT_FAMILIES` (otherwise the default font and a report), `.s` → `fontSize`, `.fc` → `fillColor`; `t.a` animators, `t.m`/`t.p` layout, a second text document and the justification/tracking/leading/baseline/caps fields are reported and skipped |
 | `2` image | media layer (part with an image source) | Lossy with report | `refId` resolves against `assets[]`; an embedded data URL maps to `imageUrl` with the asset size, and a missing asset, an external path or URL, an unsupported type or a sequence shape is reported and the layer skipped. Scale/rotation map normally, and the `ty:2`-specific matte behaviour is covered by the shared track-matte rules the image layer now runs through |
-| `1` solid | rectangle part from `sc`/`sw`/`sh` | Lossless | Colour and size map directly |
+| `1` solid | `custom_freeform` path from `sc`/`sw`/`sh` | Lossless | Colour maps directly and the size becomes the rectangle path that draws it |
 | `0` precomp | — | Unsupported, preserved | A precomp carries its own timeline; flattening it would silently change timing. Reported once per precomp layer with its `refId` named; the precomp asset graph is walked only to report a cycle, nesting beyond the hierarchy limit, or a missing precomp asset |
 
 Common per-layer fields:
@@ -60,10 +60,10 @@ Common per-layer fields:
 | Lottie item | KCS | Kind | Rule |
 |---|---|---|---|
 | `sh` (path) | `BezierPath` (`version: 1`) | Lossless | `ks.k` supplies `v` (vertices), `i`/`o` (in/out tangents) and `c` (closed); KCS vertex ids are generated deterministically from the index, never from the document |
-| `rc` (rectangle) | rectangle primitive | Lossless | `s` (size), `p` (position), `r` (corner radius → the KCS corner-radius property when present; otherwise reported) |
-| `el` (ellipse) | ellipse primitive | Lossless | `s`, `p` |
+| `rc` (rectangle) | `custom_freeform` path | Lossless | `s` (size) and `r` (corner radius) are written as the rectangle's own path, because the KCS rect primitive draws a canonical size and would not show the imported one; `p` (position) is reported |
+| `el` (ellipse) | `custom_freeform` path | Lossless | `s` is the ellipse **size** (its bounding box), and it is written as the ellipse's own path for the same reason as the rectangle; `p` is reported |
 | `sr` (star/polygon) | star primitive | Lossy with report | Point count and outer/inner radius map; `sy` (star type) variants are reported |
-| `gr` (group) | shape group | Lossless | Groups are flattened in order; a group transform (`tr` inside the group) that cannot be folded into its children is reported |
+| `gr` (group) | — | Unsupported, preserved | Group contents are **not** converted yet: the group is reported once and its items are skipped, because folding a group transform into its children changes the picture unless it is done exactly |
 | `fl` (fill) | `fillColor` / `fillOpacity` | Lossless | `c` (colour) and `o` (opacity) |
 | `st` (stroke) | `strokeColor` / `strokeWidth` / `strokeOpacity` | Lossless | `w` maps to stroke width; `lc`/`lj` (cap/join) map where KCS has an equivalent, otherwise reported |
 | `tm` (trim path) | `trimPathStart` / `trimPathEnd` / `trimPathOffset` channels | Lossless | `s`, `e`, `o`; Lottie percent → 0..1 |

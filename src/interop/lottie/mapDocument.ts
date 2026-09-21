@@ -279,6 +279,57 @@ const mapPathChannel = (
   return mapped.length > 0 ? mapped : undefined;
 };
 
+/** The circle-to-bezier constant that makes a four-vertex ellipse exact enough. */
+const KAPPA = 0.5522847498307936;
+
+/** A closed rectangle path with optional rounded corners, in layer-local space. */
+const rectanglePath = (width: number, height: number, radius: number): BezierPath => {
+  const halfWidth = width / 2;
+  const halfHeight = height / 2;
+  const corner = Math.max(0, Math.min(radius, halfWidth, halfHeight));
+  if (corner === 0) {
+    return {
+      version: 1,
+      coordinateSpace: 'local',
+      closed: true,
+      points: [
+        { id: 'v0', x: -halfWidth, y: -halfHeight },
+        { id: 'v1', x: halfWidth, y: -halfHeight },
+        { id: 'v2', x: halfWidth, y: halfHeight },
+        { id: 'v3', x: -halfWidth, y: halfHeight },
+      ],
+    };
+  }
+  // Two vertices per corner, joined by a circular-arc bezier.
+  const handle = corner * KAPPA;
+  const points = [
+    { id: 'v0', x: -halfWidth + corner, y: -halfHeight, inX: -handle, inY: 0, outX: 0, outY: 0 },
+    { id: 'v1', x: halfWidth - corner, y: -halfHeight, inX: 0, inY: 0, outX: handle, outY: 0 },
+    { id: 'v2', x: halfWidth, y: -halfHeight + corner, inX: 0, inY: -handle, outX: 0, outY: 0 },
+    { id: 'v3', x: halfWidth, y: halfHeight - corner, inX: 0, inY: 0, outX: 0, outY: handle },
+    { id: 'v4', x: halfWidth - corner, y: halfHeight, inX: handle, inY: 0, outX: 0, outY: 0 },
+    { id: 'v5', x: -halfWidth + corner, y: halfHeight, inX: 0, inY: 0, outX: -handle, outY: 0 },
+    { id: 'v6', x: -halfWidth, y: halfHeight - corner, inX: 0, inY: handle, outX: 0, outY: 0 },
+    { id: 'v7', x: -halfWidth, y: -halfHeight + corner, inX: 0, inY: 0, outX: 0, outY: -handle },
+  ];
+  return { version: 1, coordinateSpace: 'local', closed: true, points: points as BezierPath['points'] };
+};
+
+/** A closed ellipse path whose bounding box is `width` x `height`. */
+const ellipsePath = (width: number, height: number): BezierPath => {
+  const rx = width / 2;
+  const ry = height / 2;
+  const hx = rx * KAPPA;
+  const hy = ry * KAPPA;
+  const points = [
+    { id: 'v0', x: 0, y: -ry, inX: -hx, inY: 0, outX: hx, outY: 0 },
+    { id: 'v1', x: rx, y: 0, inX: 0, inY: -hy, outX: 0, outY: hy },
+    { id: 'v2', x: 0, y: ry, inX: hx, inY: 0, outX: -hx, outY: 0 },
+    { id: 'v3', x: -rx, y: 0, inX: 0, inY: hy, outX: 0, outY: -hy },
+  ];
+  return { version: 1, coordinateSpace: 'local', closed: true, points: points as BezierPath['points'] };
+};
+
 /** Lottie mask modes that map onto the KCS `LayerMaskMode` union. */
 const MASK_MODES: Record<string, LayerMaskMode> = { a: 'add', s: 'subtract', i: 'intersect' };
 
@@ -899,6 +950,10 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     } as SceneLayer);
     const layerShape = layers[layers.length - 1];
 
+    if (type === 1 && solidWidth !== undefined && solidHeight !== undefined) {
+      // A solid is a filled rectangle; its path is what draws it at its size.
+      layerShape.path = rectanglePath(solidWidth, solidHeight, 0);
+    }
     if (image) {
       if (image.imageUrl !== undefined) layerShape.imageUrl = image.imageUrl;
       if (image.width !== undefined) layerShape.width = image.width;
@@ -955,8 +1010,6 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     }
 
     const shapes = asArray(layer.shapes);
-    let sawRectangle = false;
-    let sawEllipse = false;
     for (const [shapeIndex, shapeEntry] of shapes.entries()) {
       const shape = asRecord(shapeEntry);
       const shapeType = readString(shape?.ty);
@@ -974,8 +1027,6 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         continue;
       }
       if (shapeType === 'rc' || shapeType === 'el') {
-        if (shapeType === 'rc') sawRectangle = true;
-        else sawEllipse = true;
         const sizeValue = asRecord(shape.s)?.k;
         const size = Array.isArray(sizeValue) ? sizeValue : [];
         const sizeX = readNumber(size[0]);
@@ -984,17 +1035,20 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         if (asRecord(shape.p)?.k !== undefined) {
           diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SHAPE_POSITION', shapePath + '.p', 'Shape ' + shapeIndex + ' of layer ' + index + ' has its own position, which KCS does not model per shape.', 'Bake the shape position into the layer transform in the source document.'));
         }
+        // The KCS primitive renderers draw a canonical rectangle/circle, so the
+        // rectangle and ellipse are imported as the path that draws the source
+        // geometry at its own size.
         if (shapeType === 'rc') {
           const cornerRadius = readNumber(asRecord(shape.r)?.k);
           if (cornerRadius !== undefined && cornerRadius > 0) layerShape.borderRadius = cornerRadius;
           if (sizeX !== undefined) layerShape.width = sizeX;
           if (sizeY !== undefined) layerShape.height = sizeY;
-        } else {
-          const radius = sizeX ?? sizeY;
-          if (radius !== undefined) {
-            layerShape.width = radius * 2;
-            layerShape.height = radius * 2;
-          }
+          if (sizeX !== undefined && sizeY !== undefined) layerShape.path = rectanglePath(sizeX, sizeY, cornerRadius ?? 0);
+        } else if (sizeX !== undefined && sizeY !== undefined) {
+          // `el.s` is the ellipse size (its bounding box), not a radius.
+          layerShape.width = sizeX;
+          layerShape.height = sizeY;
+          layerShape.path = ellipsePath(sizeX, sizeY);
         }
         continue;
       }
@@ -1054,7 +1108,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         continue;
       }
       if (shapeType === 'gr') {
-        diagnostics.push(lottieWarning('LOTTIE_SHAPE_GROUP_FLATTENED', shapePath, `Shape group ${shapeIndex} of layer ${index} was flattened in order.`, 'Check the layer after import; group transforms are not converted.'));
+        diagnostics.push(lottieWarning('LOTTIE_SHAPE_GROUP_FLATTENED', shapePath, `Shape group ${shapeIndex} of layer ${index} was not converted: group contents are skipped by this importer.`, 'Ungroup the shapes in the source document so each item imports on its own, then import again.'));
         continue;
       }
       diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SHAPE', shapePath, `Shape item "${shapeType}" of layer ${index} is not converted by the first slice.`, 'Bake or remove that item in the source document.'));
@@ -1068,17 +1122,11 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       scaleY: asFactor((scaleY.keyframes ?? []) as PropertyKeyframe[]),
       opacity: asFactor((opacity.keyframes ?? []) as PropertyKeyframe[]),
     } as Record<TrackChannel, PropertyKeyframe[]>;
-    if (type === 4) {
-      // The shape layer becomes the existing KCS type that draws what its items
-      // draw: a path is a freeform, an ellipse a circle, a rectangle a rect, and
-      // a layer with no convertible geometry stays a freeform that draws nothing.
-      layerShape.type = layerShape.path
-        ? 'custom_freeform'
-        : sawEllipse
-          ? 'custom_circle'
-          : sawRectangle
-            ? 'custom_rect'
-            : 'custom_freeform';
+    if (type === 4 || type === 1 || type === 3) {
+      // `custom_freeform` is the one supported type whose renderer draws exactly
+      // the imported geometry (the rect/circle primitives draw a canonical size),
+      // so every imported shape, solid and null layer is a freeform path.
+      layerShape.type = 'custom_freeform';
     }
 
     const maskChannels = masks.maskChannels;

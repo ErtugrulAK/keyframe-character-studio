@@ -70,16 +70,17 @@ type that draws what the source layer drew:
 | Lottie layer | KCS type | Why it is the same picture |
 |---|---|---|
 | shape with a path | `custom_freeform` | The freeform renderer draws the imported `BezierPath` |
-| shape from `rc` | `custom_rect` | The rect renderer uses the imported width/height and corner radius |
-| shape from `el` | `custom_circle` | The circle renderer uses the imported diameter |
+| shape from `rc` | `custom_freeform` | The rectangle's own path is generated (with its rounded corners), because the KCS rect primitive draws a **canonical** 120×60 and would not show the imported size |
+| shape from `el` | `custom_freeform` | The ellipse's own path is generated from `s`, which is the ellipse **size** (its bounding box, not a radius) |
 | shape with no convertible geometry | `custom_freeform` | It draws nothing, exactly as before |
-| solid (`ty: 1`) | `custom_rect` | A solid is a filled rectangle of `sw` × `sh` |
+| solid (`ty: 1`) | `custom_freeform` | `sw` × `sh` becomes the rectangle path that draws it |
 | null (`ty: 3`) | `custom_freeform` | A parenting helper; the freeform renders nothing without a path |
 | text (`ty: 5`) | `custom_text` | Unchanged from the previous slice |
 | image (`ty: 2`) | `custom_image` | Unchanged from the previous slice |
 
-All eight are in the OGraf export's supported list, so an imported scene no longer fails export
-validation *because of the layer type the importer chose*. Constructs that truly cannot be converted
+Every one of them is in the OGraf export's supported list, so an imported scene no longer fails
+export validation *because of the layer type the importer chose* — and because the geometry travels
+as the layer's own path, what the editor draws is what the source drew. Constructs that truly cannot be converted
 (for example a repeater, a gradient or a precomp) stay diagnostics, and the layer keeps the type of
 whatever geometry it did produce.
 
@@ -106,8 +107,8 @@ whatever geometry it did produce.
 
 | Test | What it pins |
 |---|---|
-| `src/tests/lottieImportEntry.test.tsx` (new, 8 cases) | The report appears and the project is untouched; cancel is a true no-op; confirm applies through `importProject` with a scene whose layer type is a supported one; a refused document never applies and never reports success; warnings (code + action) are visible before apply; focus starts on Cancel, Tab wraps and Escape cancels; the existing `.kcs` control still imports; the OGraf manifest rejection still fires |
-| `src/tests/lottieImport.test.ts` (86 cases, +3) | Every imported layer type is one the editor and the exporter accept; a shape/solid/text/image scene produces no "not supported by OGraf Export" error; a construct that cannot be converted keeps a supported type **and** stays reported |
+| `src/tests/lottieImportEntry.test.tsx` (new, 11 cases) | The report appears and the project is untouched; cancel is a true no-op; confirm applies through `importProject` with a scene whose layer type is a supported one; a refused document never applies and never reports success; warnings (code + action) are visible before apply; focus starts on Cancel, Tab wraps and Escape cancels; the existing `.kcs` control still imports; the OGraf manifest rejection still fires |
+| `src/tests/lottieImport.test.ts` (86 cases, +3) | Every imported layer type is one the editor and the exporter accept; the generated rectangle and ellipse paths and the ellipse size are pinned; a shape/solid/text/image scene produces no "not supported by OGraf Export" error; a construct that cannot be converted keeps a supported type **and** stays reported |
 | `e2e/lottie-import-report.spec.ts` (new) | Real browser: report appears, cancel leaves the seeded project intact, confirm replaces it with the imported layers, and the console stays clean |
 
 ## 10. Validation matrix
@@ -115,8 +116,8 @@ whatever geometry it did produce.
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts src/tests/lottieImportEntry.test.tsx` | PASS — 94 cases |
-| `npm test` (full Vitest) | PASS — 121 files / 1,830 tests |
+| `npx vitest run src/tests/lottieImport.test.ts src/tests/lottieImportEntry.test.tsx` | PASS — 97 cases |
+| `npm test` (full Vitest) | PASS — 121 files / 1,833 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
@@ -149,7 +150,31 @@ whatever geometry it did produce.
 - **Warnings are summarised in one toast.** A long report is visible in the dialog only; there is no
   persisted report log after the dialog closes.
 
-## 13. Next work
+## 13. Review
+
+One independent read-only round (`reviewer-agent`) returned **BLOCKED** with one high, three medium
+and one low finding; all were closed before the merge decision:
+
+1. **The reconciliation did not preserve what the source drew.** The KCS `custom_rect`/`custom_circle`
+   renderers draw a canonical 120×60 / r=30 (`getShapeGeometry`), so mapping an imported rectangle or
+   solid to them showed the wrong size, and the ellipse mapping also doubled a value that is already a
+   size. Rectangles, rounded rectangles and ellipses are now generated as their own paths, which the
+   one supported type renders exactly — and the generated geometry is pinned by tests.
+2. **The Tab trap leaked when confirming is impossible.** With the confirm button disabled, Cancel is
+   the only stop, so Tab and Shift+Tab now keep focus on it.
+3. **One report was not true.** A shape group claimed it "was flattened in order" while its contents
+   were skipped; the message, the action and the design row now say that group contents are not
+   converted yet.
+4. **The diagnostic code was not sanitised.** It is now passed through the same display sanitiser as
+   every other rendered value.
+5. **Test gaps.** Added: a refusal from the project authority (no success toast), no manual save on a
+   cancel, blocker-first grouping with the 40-entry cap and the hidden count, the disabled-confirm
+   focus trap, and the generated rectangle/ellipse geometry.
+
+The only failure the validation set still reports is the expected handoff-bundle mirror check, which
+   the handoff refresh commit closes.
+
+## 14. Next work
 
 Item 12's unified import entry (one control that dispatches `.kcs`, legacy, OGraf and Lottie, with a
 shared report surface), then the approval-gated package/dependency follow-ups (Option B, Option C,

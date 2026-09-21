@@ -84,14 +84,15 @@ describe('Lottie import entry point', () => {
   it('leaves the project untouched when the report is cancelled', async () => {
     render(<HeaderBar />);
     chooseFile(LOTTIE_FILE_INPUT, 'scene.lottie.json', lottieDocument());
-    const dialog = await screen.findByRole('dialog', { name: 'Lottie import report' });
+    await screen.findByRole('dialog', { name: 'Lottie import report' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(reportDialog()).toBeNull();
     expect(context.importProject).not.toHaveBeenCalled();
     expect(context.showToast).not.toHaveBeenCalled();
-    expect(dialog).toBeTruthy();
+    // A cancel must not save either: nothing about the project changed.
+    expect(context.triggerManualSave).not.toHaveBeenCalled();
   });
 
   it('applies the imported scene through the project authority on confirm', async () => {
@@ -104,7 +105,10 @@ describe('Lottie import entry point', () => {
     expect(context.importProject).toHaveBeenCalledTimes(1);
     const [payload, name] = context.importProject.mock.calls[0] as [string, string];
     const scene = JSON.parse(payload) as { layers: { type: string }[] };
-    expect(scene.layers[0]?.type).toBe('custom_rect');
+    // The imported solid is a freeform path: the supported type whose renderer
+    // draws the geometry the importer produced.
+    expect(scene.layers[0]?.type).toBe('custom_freeform');
+    expect(scene.layers[0]?.path?.points).toHaveLength(4);
     expect(name).toBe('scene');
 
     await screen.findByRole('dialog', { name: 'Lottie import report' }).catch(() => null);
@@ -159,6 +163,53 @@ describe('Lottie import entry point', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(reportDialog()).toBeNull();
     expect(context.importProject).not.toHaveBeenCalled();
+  });
+
+  it('reports a refusal from the project authority instead of a success', async () => {
+    context.importProject.mockReturnValueOnce({ ok: false, diagnostics: [{ code: 'IMPORT_REFUSED', message: 'The scene is not valid.', action: 'Export again.' }] });
+    render(<HeaderBar />);
+    chooseFile(LOTTIE_FILE_INPUT, 'scene.lottie.json', lottieDocument());
+    await screen.findByRole('dialog', { name: 'Lottie import report' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import and replace project' }));
+
+    expect(context.importProject).toHaveBeenCalledTimes(1);
+    expect(context.showToast).toHaveBeenCalledWith('The scene is not valid.', 'error', expect.objectContaining({ title: 'IMPORT_REFUSED' }));
+    expect(context.showToast).not.toHaveBeenCalledWith(expect.stringContaining('Imported'), 'success');
+  });
+
+  it('groups blockers first, bounds the list and sanitises every rendered value', async () => {
+    const noisy = lottieDocument({
+      layers: Array.from({ length: 45 }, (_, index) => ({ ty: 4, nm: 'L' + index, ks: {}, shapes: [{ ty: 'rp', c: { k: index } }] })),
+    });
+    render(<HeaderBar />);
+    chooseFile(LOTTIE_FILE_INPUT, 'many.json', noisy);
+
+    const dialog = await screen.findByRole('dialog', { name: 'Lottie import report' });
+    const entries = dialog.querySelectorAll('.lottie-report-entry');
+
+    expect(entries.length).toBe(40);
+    expect(dialog.textContent).toContain('And 5 more diagnostic(s).');
+    expect(dialog.textContent).toContain('45 warning(s)');
+    expect(dialog.textContent).toContain('0 blocker(s)');
+    // The report never renders a machine path or a payload verbatim.
+    expect(dialog.textContent).not.toContain('data:image');
+  });
+
+  it('keeps focus on Cancel while confirming is impossible', async () => {
+    render(<HeaderBar />);
+    chooseFile(LOTTIE_FILE_INPUT, 'broken.json', '{ not json');
+    await screen.findByRole('dialog', { name: 'Lottie import report' });
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    const confirm = screen.getByRole('button', { name: 'Import and replace project' }) as HTMLButtonElement;
+
+    expect(confirm.disabled).toBe(true);
+    // The dialog focuses Cancel on open; await it so a slow render cannot flake the test.
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+    fireEvent.keyDown(document, { key: 'Tab' });
+    expect(document.activeElement).toBe(cancel);
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
+    expect(document.activeElement).toBe(cancel);
   });
 
   it('keeps the existing project import control working', async () => {

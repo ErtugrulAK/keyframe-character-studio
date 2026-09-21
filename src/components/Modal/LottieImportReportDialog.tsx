@@ -63,7 +63,12 @@ export const LottieImportReportDialog: React.FC<LottieImportReportDialogProps> =
       }
       if (event.key === 'Tab') {
         const active = document.activeElement;
-        if (event.shiftKey && active === cancelRef.current) {
+        // When confirming is not possible, Cancel is the only stop in the dialog:
+        // Tab and Shift+Tab must stay on it instead of walking out of the modal.
+        if (confirmRef.current?.disabled) {
+          event.preventDefault();
+          cancelRef.current?.focus();
+        } else if (event.shiftKey && active === cancelRef.current) {
           event.preventDefault();
           confirmRef.current?.focus();
         } else if (!event.shiftKey && active === confirmRef.current) {
@@ -113,7 +118,7 @@ export const LottieImportReportDialog: React.FC<LottieImportReportDialogProps> =
                 key={`${entry.code}-${index}`}
                 className={entry.severity === 'error' ? 'lottie-report-entry blocking' : 'lottie-report-entry warning'}
               >
-                <span className="lottie-report-code">{entry.code}</span>
+                <span className="lottie-report-code">{sanitizeOGrafDiagnosticText(entry.code)}</span>
                 <span className="lottie-report-message">{sanitizeOGrafDiagnosticText(entry.message)}</span>
                 <span className="lottie-report-path">{sanitizeOGrafDiagnosticText(entry.path)}</span>
                 <span className="lottie-report-action">{sanitizeOGrafDiagnosticText(entry.action)}</span>

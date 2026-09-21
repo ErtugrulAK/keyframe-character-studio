@@ -534,16 +534,25 @@ describe('Lottie import — layer types the editor and the exporter both accept'
     ], { assets: [{ id: 'image_0', w: 10, h: 10, u: '', p: PNG_DATA_URL }] })));
 
     const types = result.scene?.layers.map((layer) => layer.type);
+    // Every imported shape, solid and null layer is a freeform path: it is the one
+    // supported type whose renderer draws the imported geometry itself.
     expect(types).toEqual([
       'custom_freeform',
-      'custom_rect',
-      'custom_circle',
       'custom_freeform',
       'custom_freeform',
-      'custom_rect',
+      'custom_freeform',
+      'custom_freeform',
+      'custom_freeform',
       'custom_text',
       'custom_image',
     ]);
+    // The rectangles and the ellipse carry the path that draws them at their size.
+    const [importedPath, importedRect, importedEllipse] = result.scene?.layers ?? [];
+    expect(importedPath?.path?.points).toHaveLength(3);
+    expect(importedRect?.path?.points.map((point) => [point.x, point.y])).toEqual([[-60, -40], [60, -40], [60, 40], [-60, 40]]);
+    expect(importedEllipse?.path?.points.map((point) => [point.x, point.y])).toEqual([[0, -15], [15, 0], [0, 15], [-15, 0]]);
+    expect(importedEllipse?.width).toBe(30);
+    expect(importedEllipse?.height).toBe(30);
   });
 
   it('produces a scene the OGraf export validation accepts on type grounds', () => {

@@ -59,8 +59,8 @@ evaluator or renderer change was needed — the importer fills fields those auth
 - **Limit** — at most 8 masks per layer; each mask above it is reported (`LOTTIE_MASK_LIMIT`). The limit counts the masks in the **source**, so an unreadable mask never lets a later one through in its place.
 - **Unreadable payloads** — a mask that is not an object, or whose `pt` carries no readable
   vertices, is skipped with `LOTTIE_UNREADABLE_MASK`; a mask list that is not an array reports the
-  same code whether or not `hasMask` is set; and a field that is present but unreadable (`inv` that
-  is not a boolean, `nm` that is not a string, `o`/`f`/`x` that carry no number) is reported
+  same code whether or not `hasMask` is set, and `hasMask: true` without any list reports it too; and
+  is not a boolean, `nm` that is not a string, `o`/`f`/`x` whose static value or animated keyframes
   instead of defaulted, so "absent" and "unreadable" never look the same in the report.
 
 ## 6. Track matte behavior
@@ -105,7 +105,7 @@ One report per affected mask or matte item, with the item's own path
 
 ## 8. Tests
 
-`src/tests/lottieImport.test.ts` — 55 cases (was 37). The new group covers:
+`src/tests/lottieImport.test.ts` — 56 cases (was 37). The new group covers:
 
 1. A static mask maps to `LayerMask` (mode, path, opacity, feather, expansion, inversion, name).
 2. `n` and `f` mask modes report and are skipped while a valid sibling mask still imports.
@@ -123,8 +123,9 @@ One report per affected mask or matte item, with the item's own path
 12. The spec path form (`v`/`i`/`o` as `[x, y]` pairs) reaches the layer shape, and an animated mask
     path that carries a roving segment reports `LOTTIE_ROVING_KEYFRAME` while still importing both
     keyframes.
-13. A present-but-unreadable mask field (`inv`, `o`, `nm`) reports `LOTTIE_UNREADABLE_MASK` at that
-    field, and a non-array mask list reports it without needing `hasMask`.
+13. A present-but-unreadable mask field (`inv`, `o`, `nm`, and an animated scalar whose keyframes
+    carry no value) reports `LOTTIE_UNREADABLE_MASK` at that field, and a broken or missing mask list
+    reports it with or without the `hasMask` flag.
 14. A contradicting `td: 0` reports at the source layer's own path; an explicit `tp` and a `td: 1`
     layer with no matte below report `LOTTIE_TRACK_MATTE_UNSUPPORTED`.
 15. The superseded blanket-report test was re-pinned to effects and expressions, which are still
@@ -135,8 +136,8 @@ One report per affected mask or matte item, with the item's own path
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 55 cases |
-| `npm test` (full Vitest) | PASS — 120 files / 1,791 tests |
+| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 56 cases |
+| `npm test` (full Vitest) | PASS — 120 files / 1,792 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |

@@ -650,12 +650,25 @@ describe('Lottie import — masks and track mattes', () => {
     expect(result.scene?.layers[0]?.masks?.[0]?.name).toBe('Mask 1');
   });
 
-  it('reports a mask list that is not an array even without the hasMask flag', () => {
+  it('reports a broken or missing mask list in both flag states', () => {
+    const withoutFlag = { ty: 4, nm: 'Broken', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } }, masksProperties: 'nope' };
+    const missingList = { ty: 4, nm: 'Flagged', ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } }, hasMask: true };
+
+    for (const layer of [maskedLayer([], { masksProperties: 'nope' }), withoutFlag, missingList]) {
+      const result = importLottieDocument(JSON.stringify(baseDocument([layer])));
+
+      expect(codes(result.diagnostics)).toContain('LOTTIE_UNREADABLE_MASK');
+    }
+  });
+
+  it('reports an animated mask scalar whose keyframes carry no value', () => {
     const result = importLottieDocument(JSON.stringify(baseDocument([
-      maskedLayer([], { masksProperties: 'nope' }),
+      maskedLayer([maskEntry({ o: { k: [{ t: 0, s: ['bad'] }] } })]),
     ])));
 
-    expect(codes(result.diagnostics)).toContain('LOTTIE_UNREADABLE_MASK');
+    const reported = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_UNREADABLE_MASK');
+    expect(reported.map((entry) => entry.path)).toContain('layers[0].masksProperties[0].o');
+    expect(result.scene?.layers[0]?.masks).toHaveLength(1);
   });
 
   it('reports masks above the per-layer limit and imports the first ones', () => {

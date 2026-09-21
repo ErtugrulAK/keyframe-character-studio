@@ -350,6 +350,7 @@ const mapLayerMasks = (
           diagnostics.push(...mapped.diagnostics);
           return mapped.keyframes[0].value * scale;
         }
+        diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_MASK', `${maskPathLabel}.${property}`, `Mask ${maskIndex} of layer ${layerIndex} has no readable "${property}" keyframes.`, 'Re-export the mask from the source document.'));
         return undefined;
       }
       const staticValue = readNumber(asRecord(value)?.k ?? value);
@@ -470,7 +471,11 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     if (layer.ip !== undefined || layer.op !== undefined) diagnostics.push(lottieWarning('LOTTIE_LAYER_TIMING', `${path}.ip`, `Layer ${index} has an in/out range, which KCS does not model.`, 'Trim the layer after import, or remove the in/out range in the source document.'));
     if (asRecord(layer.ks)?.sk !== undefined || asRecord(layer.ks)?.sa !== undefined) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SKEW', `${path}.ks.sk`, `Layer ${index} is skewed, which KCS does not model.`, 'Bake the skew in the source document.'));
     if (layer.ao === 1) diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_AUTO_ORIENT', `${path}.ao`, `Layer ${index} uses auto-orient, which KCS does not model.`, 'Bake the orientation in the source document.'));
-    if (layer.masksProperties !== undefined && !Array.isArray(layer.masksProperties)) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_MASK', `${path}.masksProperties`, `Layer ${index} carries a mask list that is not an array.`, 'Re-export the document so the mask list travels with the layer.'));
+    if (layer.masksProperties !== undefined && !Array.isArray(layer.masksProperties)) {
+      diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_MASK', `${path}.masksProperties`, `Layer ${index} carries a mask list that is not an array.`, 'Re-export the document so the mask list travels with the layer.'));
+    } else if (layer.hasMask === true && layer.masksProperties === undefined) {
+      diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_MASK', `${path}.masksProperties`, `Layer ${index} is flagged as masked but carries no mask list.`, 'Re-export the document so the mask list travels with the layer.'));
+    }
 
     const solidFill = readString(layer.sc);
     const solidWidth = readNumber(layer.sw);

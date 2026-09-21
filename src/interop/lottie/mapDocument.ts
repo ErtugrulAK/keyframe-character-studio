@@ -642,8 +642,8 @@ const reportPrecompGraph = (assets: Map<string, AssetEntry>, diagnostics: Lottie
   // The walk is bounded without cutting anything short: a branch never re-enters
   // an asset it is already inside (that is the cycle case), and an asset is only
   // re-expanded when it is reached at a greater depth than before. Its recorded
-  // depth rises at most to the nesting limit, so the total work is bounded by
-  // `assets × (limit + 2)` while every reachable asset is still inspected.
+  // depth rises at most to the nesting limit, so an asset is expanded at most
+  // `limit + 2` times — bounded work — and every reachable asset is inspected.
   const exploredDepth = new Map<string, number>();
 
   const walk = (assetId: string, chain: string[]): void => {

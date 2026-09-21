@@ -58,7 +58,7 @@ unified import entry, and every `package.json`, lockfile, dependency or workflow
 | `p` is a `data:` URL with an unsupported MIME, or an SVG carrying a script/handler | `LOTTIE_UNSUPPORTED_IMAGE_TYPE`, layer skipped |
 | `p`/`u` is a file path or URL | `LOTTIE_UNSUPPORTED_IMAGE_SOURCE` at the asset node, layer skipped — **nothing is read, fetched or resolved**, because the importer only receives the document text, and the message names the shape of the source rather than echoing a machine path or a URL that can carry credentials |
 | `p` names a sequence (`%d`) | `LOTTIE_UNSUPPORTED_IMAGE_SEQUENCE`, layer skipped |
-| asset without a readable size | `LOTTIE_UNREADABLE_IMAGE_ASSET`; the bitmap still imports and keeps the layer's own size |
+| asset without a readable width or height | `LOTTIE_UNREADABLE_IMAGE_ASSET` at `.w` or `.h` respectively, naming the missing or unreadable field; the bitmap still imports and keeps the layer's own size |
 
 The importer performs no filesystem access and no network access; the asset is either inside the
 document or the layer is reported.
@@ -72,8 +72,11 @@ The design keeps precomps **unsupported, preserved**, so nothing is flattened:
   precomp layer references an asset the document does not carry.
 - `LOTTIE_PRECOMP_CYCLE` when the precomp asset graph re-enters an asset it is already inside.
 - `LOTTIE_PRECOMP_DEPTH_LIMIT` when nesting exceeds `LOTTIE_IMPORT_LIMITS.hierarchyDepth` (32).
-- The graph walk is bounded by that same limit and runs once per document, and only when a precomp
-  layer is actually present.
+- The graph walk runs once per document, and only when a precomp layer is actually present. It is a
+  true depth-first walk with a per-branch chain, so a diamond graph (two parents sharing one child) is
+  not a cycle, a cycle is reported once per cycle rather than once per asset, and the nesting limit
+  counts levels below the first precomposition exactly like the layer parent chain. A total expansion
+  budget keeps a dense graph from making the import unbounded work.
 
 ## 7. Diagnostics
 
@@ -112,7 +115,7 @@ of carrying a `parentId` that does not exist.
 
 ## 8. Tests
 
-`src/tests/lottieImport.test.ts` — **79 cases** (was 56). The new group covers:
+`src/tests/lottieImport.test.ts` — **82 cases** (was 56). The new group covers:
 
 1. A static text layer maps `textValue`/`fontFamily`/`fontSize`/`fillColor`.
 2. An unknown family falls back to the renderer default and is reported **once** for two spellings of
@@ -152,8 +155,8 @@ of carrying a `parentId` that does not exist.
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 79 cases |
-| `npm test` (full Vitest) | PASS — 120 files / 1,815 tests |
+| `npx vitest run src/tests/lottieImport.test.ts` | PASS — 82 cases |
+| `npm test` (full Vitest) | PASS — 120 files / 1,818 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
@@ -204,7 +207,9 @@ and one low finding; all were closed before the merge decision:
    is not readable) — each now reports.
 3. The precomp graph walk re-expanded shared assets, so one missing nested asset could be reported
    once per ancestor and a two-node cycle twice — the walk now expands each asset once and reports
-   each finding once (pinned by a test).
+   each finding once. The second round caught that the walk also treated a **diamond graph** as a
+   cycle and could miss the depth limit; it is now a true depth-first walk with a per-branch chain,
+   pinned by tests for the diamond, the cycle count and the exact depth boundary.
 4. A skipped image layer could leave a dangling `parentId` — the asset is resolved before the layer
    enters the scene, and a parent must now be an imported layer, so the case reports
    `LOTTIE_BROKEN_PARENT` instead.
@@ -214,6 +219,10 @@ and one low finding; all were closed before the merge decision:
    they now do, and the colour test asserts what it actually proves.
 7. Design §8 now states the severity interpretation the implementation follows (a skipped construct
    is a `warning`; only a refused import is an `error`).
+
+The second read-only round returned **BLOCKED** again with three findings, also closed: the DFS
+ancestry handling, an unreadable asset *height* reported at the width path, and an unreadable
+`fonts.list[].fFamily` falling back silently — each now has a test.
 
 ## 13. Next slice
 

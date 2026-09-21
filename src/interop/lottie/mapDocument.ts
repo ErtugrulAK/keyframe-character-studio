@@ -585,8 +585,15 @@ const mapImageLayer = (layer: LottieRecord, layerPath: string, index: number, as
 
   const assetWidth = readNumber(asset.w);
   const assetHeight = readNumber(asset.h);
-  if (assetWidth === undefined || assetHeight === undefined) {
-    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_IMAGE_ASSET', `${assetPath}.w`, `Image layer ${index} references asset "${refId}", which declares no readable size.`, 'Re-export the asset from the source document.'));
+  if (assetWidth === undefined) {
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_IMAGE_ASSET', `${assetPath}.w`, asset.w === undefined
+      ? `Image layer ${index} references asset "${refId}", which declares no width.`
+      : `Image layer ${index} references asset "${refId}", which declares an unreadable width.`, 'Re-export the asset from the source document.'));
+  }
+  if (assetHeight === undefined) {
+    diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_IMAGE_ASSET', `${assetPath}.h`, asset.h === undefined
+      ? `Image layer ${index} references asset "${refId}", which declares no height.`
+      : `Image layer ${index} references asset "${refId}", which declares an unreadable height.`, 'Re-export the asset from the source document.'));
   }
 
   return {
@@ -624,7 +631,6 @@ const readAssetTable = (assets: unknown[]): Map<string, AssetEntry> => {
  */
 const reportPrecompGraph = (assets: Map<string, AssetEntry>, diagnostics: LottieImportDiagnostic[]): void => {
   if (assets.size === 0) return;
-  const expanded = new Set<string>();
   const reported = new Set<string>();
   const reportOnce = (key: string, code: string, sourcePath: string, message: string, action: string): void => {
     if (reported.has(key)) return;
@@ -632,57 +638,56 @@ const reportPrecompGraph = (assets: Map<string, AssetEntry>, diagnostics: Lottie
     diagnostics.push(lottieWarning(code, sourcePath, message, action));
   };
 
+  // The walk is bounded twice over: a branch never re-enters an asset it is
+  // already inside (that is the cycle case), and the total number of expansions
+  // is capped, so a dense graph cannot make the import unbounded work.
+  let budget = assets.size * (LOTTIE_IMPORT_LIMITS.hierarchyDepth + 2);
+
+  const walk = (assetId: string, chain: string[]): void => {
+    const entry = assets.get(assetId);
+    if (!entry) return;
+    const cycleStart = chain.indexOf(assetId);
+    if (cycleStart >= 0) {
+      // The same cycle is reachable from every asset it contains; the member
+      // list is the key, so the document is told about it exactly once.
+      const members = [...chain.slice(cycleStart)].sort();
+      reportOnce(`cycle:${members.join('|')}`, 'LOTTIE_PRECOMP_CYCLE', `${entry.assetPath}.layers`, `The precomposition assets of this document form a cycle through "${members[0]}".`, 'Break the precomposition cycle in the source document and export again.');
+      return;
+    }
+    if (chain.length > LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
+      reportOnce('depth-limit', 'LOTTIE_PRECOMP_DEPTH_LIMIT', `${entry.assetPath}.layers`, `The precomposition assets nest deeper than the ${LOTTIE_IMPORT_LIMITS.hierarchyDepth}-level import limit.`, 'Flatten the precomposition nesting in the source document.');
+      return;
+    }
+    if (budget <= 0) return;
+    budget -= 1;
+
+    const layers = entry.asset.layers;
+    if (!Array.isArray(layers)) {
+      reportOnce(`unreadable:${assetId}`, 'LOTTIE_UNREADABLE_PRECOMP', `${entry.assetPath}.layers`, `Precomposition "${assetId}" carries a layer list that is not an array.`, 'Re-export the document so its precompositions travel with the layers.');
+      return;
+    }
+    // The chain is per branch: a sibling may legitimately reach the same asset
+    // the previous sibling reached without that being a cycle.
+    const nested = [...chain, assetId];
+    layers.forEach((childEntry, childIndex) => {
+      const child = asRecord(childEntry);
+      if (readNumber(child?.ty) !== 0) return;
+      const childRef = readString(child?.refId);
+      if (childRef === undefined) {
+        reportOnce(`unreadable-ref:${assetId}:${childIndex}`, 'LOTTIE_UNREADABLE_PRECOMP', `${entry.assetPath}.layers[${childIndex}].refId`, `A precomposition layer inside "${assetId}" names no readable asset.`, 'Re-export the document so its precompositions travel with the layers.');
+        return;
+      }
+      if (!assets.has(childRef)) {
+        reportOnce(`missing:${childRef}`, 'LOTTIE_PRECOMP_MISSING_ASSET', `${entry.assetPath}.layers[${childIndex}].refId`, `A precomposition layer references asset "${childRef}", which the document does not carry.`, 'Export the animation with all precompositions included.');
+        return;
+      }
+      walk(childRef, nested);
+    });
+  };
+
   for (const [assetId, entry] of assets) {
     if (entry.asset.layers === undefined) continue;
-    const path = new Set<string>();
-    const stack: { assetId: string; depth: number }[] = [{ assetId, depth: 1 }];
-    while (stack.length > 0) {
-      const current = stack.pop();
-      if (!current) break;
-      const currentEntry = assets.get(current.assetId);
-      if (!currentEntry) continue;
-      if (path.has(current.assetId)) {
-        reportOnce(`cycle:${current.assetId}`, 'LOTTIE_PRECOMP_CYCLE', `${currentEntry.assetPath}.layers`, `The precomposition assets of this document form a cycle through "${current.assetId}".`, 'Break the precomposition cycle in the source document and export again.');
-        continue;
-      }
-      if (expanded.has(current.assetId)) continue;
-      expanded.add(current.assetId);
-
-      const layers = currentEntry.asset.layers;
-      if (!Array.isArray(layers)) {
-        reportOnce(`unreadable:${current.assetId}`, 'LOTTIE_UNREADABLE_PRECOMP', `${currentEntry.assetPath}.layers`, `Precomposition "${current.assetId}" carries a layer list that is not an array.`, 'Re-export the document so its precompositions travel with the layers.');
-        continue;
-      }
-      layers.forEach((childEntry, childIndex) => {
-        const child = asRecord(childEntry);
-        if (readNumber(child?.ty) !== 0) return;
-        const childRef = readString(child?.refId);
-        if (childRef === undefined) {
-          reportOnce(`unreadable-ref:${current.assetId}:${childIndex}`, 'LOTTIE_UNREADABLE_PRECOMP', `${currentEntry.assetPath}.layers[${childIndex}].refId`, `A precomposition layer inside "${current.assetId}" names no readable asset.`, 'Re-export the document so its precompositions travel with the layers.');
-          return;
-        }
-        if (!assets.has(childRef)) {
-          reportOnce(`missing:${childRef}`, 'LOTTIE_PRECOMP_MISSING_ASSET', `${currentEntry.assetPath}.layers[${childIndex}].refId`, `A precomposition layer references asset "${childRef}", which the document does not carry.`, 'Export the animation with all precompositions included.');
-          return;
-        }
-        if (current.depth > LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
-          reportOnce('depth-limit', 'LOTTIE_PRECOMP_DEPTH_LIMIT', `${currentEntry.assetPath}.layers`, `The precomposition assets nest deeper than the ${LOTTIE_IMPORT_LIMITS.hierarchyDepth}-level import limit.`, 'Flatten the precomposition nesting in the source document.');
-          return;
-        }
-        if (path.has(childRef)) {
-          const childEntryRecord = assets.get(childRef);
-          reportOnce(`cycle:${childRef}`, 'LOTTIE_PRECOMP_CYCLE', `${childEntryRecord?.assetPath ?? `assets[${childRef}]`}.layers`, `The precomposition assets of this document form a cycle through "${childRef}".`, 'Break the precomposition cycle in the source document and export again.');
-          return;
-        }
-        stack.push({ assetId: childRef, depth: current.depth + 1 });
-      });
-      if (current.depth <= LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
-        const nested = new Set(path);
-        nested.add(current.assetId);
-        path.clear();
-        for (const value of nested) path.add(value);
-      }
-    }
+    walk(assetId, []);
   }
 };
 
@@ -745,8 +750,13 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
   // The document's font table names families the layers may not use; the design
   // reports an unknown family once, so it is checked here as well.
   asArray(asRecord(root.fonts)?.list).forEach((entry, fontIndex) => {
-    const family = readString(asRecord(entry)?.fFamily);
-    if (family !== undefined) reportFontFamily(family, `$.fonts.list[${fontIndex}].fFamily`, reportedFonts, diagnostics);
+    const fontEntry = asRecord(entry);
+    const family = readString(fontEntry?.fFamily);
+    const familyPath = `$.fonts.list[${fontIndex}].fFamily`;
+    if (family !== undefined) reportFontFamily(family, familyPath, reportedFonts, diagnostics);
+    else if (fontEntry?.fFamily !== undefined) {
+      diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_TEXT', familyPath, `Font entry ${fontIndex} has an unreadable family name.`, 'Re-export the document so its font table travels with the text.'));
+    }
   });
   /** One report per precomp layer, and one precomp-graph pass per document. */
   let precompGraphReported = false;

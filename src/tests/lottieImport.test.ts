@@ -1065,6 +1065,43 @@ describe('Lottie import — text, image and precomp layers', () => {
     expect(codes(result.diagnostics)).toContain('LOTTIE_BROKEN_PARENT');
   });
 
+  it('does not report the shared child of a diamond precomp graph as a cycle', () => {
+    const diamond = [
+      { id: 'a', layers: [{ ty: 0, refId: 'b' }, { ty: 0, refId: 'c' }] },
+      { id: 'b', layers: [{ ty: 0, refId: 'c' }] },
+      { id: 'c', layers: [] },
+    ];
+    const result = importLottieDocument(JSON.stringify(baseDocument([precompLayer('a')], { assets: diamond })));
+
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_PRECOMP_CYCLE');
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_PRECOMP_DEPTH_LIMIT');
+  });
+
+  it('reports the precomp depth limit exactly at the boundary', () => {
+    const chain = (length: number) => Array.from({ length }, (_, index) => ({
+      id: 'node_' + index,
+      layers: index + 1 < length ? [{ ty: 0, refId: 'node_' + (index + 1) }] : [],
+    }));
+    // The limit counts nesting levels below the first precomposition, the same
+    // way the layer parent chain counts ancestors.
+    const atLimit = importLottieDocument(JSON.stringify(baseDocument([precompLayer('node_0')], { assets: chain(LOTTIE_IMPORT_LIMITS.hierarchyDepth + 1) })));
+    const overLimit = importLottieDocument(JSON.stringify(baseDocument([precompLayer('node_0')], { assets: chain(LOTTIE_IMPORT_LIMITS.hierarchyDepth + 2) })));
+
+    expect(codes(atLimit.diagnostics)).not.toContain('LOTTIE_PRECOMP_DEPTH_LIMIT');
+    expect(codes(overLimit.diagnostics)).toContain('LOTTIE_PRECOMP_DEPTH_LIMIT');
+  });
+
+  it('reports an unreadable asset height at the height and an unreadable family in the font table', () => {
+    const image = importLottieDocument(JSON.stringify(baseDocument([imageLayer('image_0')], {
+      assets: [{ id: 'image_0', w: 320, h: 'tall', u: '', p: PNG_DATA_URL }],
+    })));
+    const fonts = importLottieDocument(JSON.stringify(baseDocument([solidLayer()], { fonts: { list: [{ fFamily: 42 }] } })));
+
+    expect(image.diagnostics.find((entry) => entry.code === 'LOTTIE_UNREADABLE_IMAGE_ASSET')?.path).toBe('assets[0].h');
+    expect(codes(fonts.diagnostics)).toContain('LOTTIE_UNREADABLE_TEXT');
+    expect(fonts.diagnostics.find((entry) => entry.code === 'LOTTIE_UNREADABLE_TEXT')?.path).toBe('$.fonts.list[0].fFamily');
+  });
+
   it('keeps the layer order and transform of an image and a text layer deterministic', () => {
     const assets = [{ id: 'image_0', w: 20, h: 10, u: '', p: PNG_DATA_URL }];
     const result = importLottieDocument(JSON.stringify(baseDocument([

@@ -3,6 +3,7 @@ import { importLottieDocument } from '../interop/lottie/mapDocument';
 import { LOTTIE_IMPORT_LIMITS } from '../interop/lottie/diagnostics';
 import { validateImportedDocument } from '../utils/importValidation';
 import { validateSceneForOGraf } from '../ograf/validation';
+import { buildBezierPathD } from '../utils/bezierPath';
 
 /**
  * Contract tests for the Lottie import core (Milestone F, item 10, first slice).
@@ -555,6 +556,52 @@ describe('Lottie import — layer types the editor and the exporter both accept'
     expect(importedEllipse?.height).toBe(30);
   });
 
+  it('draws the generated rectangle, rounded rectangle and ellipse as curves', () => {
+    const rounded = {
+      ty: 4,
+      nm: 'Rounded',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'rc', s: { k: [100, 60] }, r: { k: 10 } }],
+    };
+    const ellipse = {
+      ty: 4,
+      nm: 'Ellipse',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'el', s: { k: [60, 40] } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([solidLayer(), rounded, ellipse])));
+    const [solid, roundedLayer, ellipseLayer] = result.scene?.layers ?? [];
+
+    // A plain rectangle is a closed square path with no curves.
+    expect(buildBezierPathD(solid?.path)).toBe('M -50 -50 L 50 -50 L 50 50 L -50 50 Z');
+    // A rounded rectangle is eight vertices whose corners carry absolute handles.
+    expect(roundedLayer?.path?.points).toHaveLength(8);
+    expect(roundedLayer?.path?.points[0]).toMatchObject({ x: -40, y: -30, kind: 'smooth' });
+    expect(roundedLayer?.path?.points[0]?.handleOut?.x).toBeCloseTo(-45.5228, 3);
+    expect(roundedLayer?.path?.points[0]?.handleOut?.y).toBe(-30);
+    expect(buildBezierPathD(roundedLayer?.path)).toContain('C');
+    // An ellipse is four vertices whose handles make it round, not a diamond.
+    expect(ellipseLayer?.path?.points).toHaveLength(4);
+    expect(ellipseLayer?.path?.points[0]).toMatchObject({ x: 0, y: -20, kind: 'smooth' });
+    expect(ellipseLayer?.path?.points[0]?.handleIn?.x).toBeCloseTo(-16.5685, 3);
+    expect(ellipseLayer?.path?.points[0]?.handleOut?.x).toBeCloseTo(16.5685, 3);
+    const ellipseD = buildBezierPathD(ellipseLayer?.path);
+    expect(ellipseD.match(/C /gu)?.length).toBe(4);
+  });
+
+  it('reports a shape whose size is only half readable instead of importing an empty layer', () => {
+    const shapeLayer = {
+      ty: 4,
+      nm: 'Half',
+      ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+      shapes: [{ ty: 'rc', s: { k: [120, 'wide'] } }],
+    };
+    const result = importLottieDocument(JSON.stringify(baseDocument([shapeLayer])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_UNREADABLE_SIZE');
+    expect(result.scene?.layers[0]?.path).toBeUndefined();
+  });
+
   it('produces a scene the OGraf export validation accepts on type grounds', () => {
     const result = importLottieDocument(JSON.stringify(baseDocument([
       solidLayer(),
@@ -703,8 +750,11 @@ describe('Lottie import — masks and track mattes', () => {
     const points = result.scene?.layers[0]?.path?.points;
 
     expect(points).toHaveLength(3);
-    expect(points?.[0]).toMatchObject({ x: 0, y: 0, inX: -1, inY: 0, outX: 1, outY: 0 });
+    // Lottie's offsets become the absolute control points the renderer reads.
+    expect(points?.[0]).toMatchObject({ x: 0, y: 0, handleIn: { x: -1, y: 0 }, handleOut: { x: 1, y: 0 }, kind: 'smooth' });
     expect(points?.[2]).toMatchObject({ x: 10, y: 10 });
+    // A curve must survive into the path data the renderer builds.
+    expect(buildBezierPathD(result.scene?.layers[0]?.path)).toContain('C 1 0, 10 0, 10 0');
   });
 
   it('reports a mask whose animated geometry carries unsupported segments', () => {

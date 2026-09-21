@@ -69,7 +69,7 @@ type that draws what the source layer drew:
 
 | Lottie layer | KCS type | Why it is the same picture |
 |---|---|---|
-| shape with a path | `custom_freeform` | The freeform renderer draws the imported `BezierPath` |
+| shape with a path | `custom_freeform` | The freeform renderer draws the imported `BezierPath`; Lottie's relative tangents become the absolute `handleIn`/`handleOut` control points the renderer reads |
 | shape from `rc` | `custom_freeform` | The rectangle's own path is generated (with its rounded corners), because the KCS rect primitive draws a **canonical** 120×60 and would not show the imported size |
 | shape from `el` | `custom_freeform` | The ellipse's own path is generated from `s`, which is the ellipse **size** (its bounding box, not a radius) |
 | shape with no convertible geometry | `custom_freeform` | It draws nothing, exactly as before |
@@ -108,7 +108,7 @@ whatever geometry it did produce.
 | Test | What it pins |
 |---|---|
 | `src/tests/lottieImportEntry.test.tsx` (new, 11 cases) | The report appears and the project is untouched; cancel is a true no-op; confirm applies through `importProject` with a scene whose layer type is a supported one; a refused document never applies and never reports success; warnings (code + action) are visible before apply; focus starts on Cancel, Tab wraps and Escape cancels; the existing `.kcs` control still imports; the OGraf manifest rejection still fires |
-| `src/tests/lottieImport.test.ts` (86 cases, +3) | Every imported layer type is one the editor and the exporter accept; the generated rectangle and ellipse paths and the ellipse size are pinned; a shape/solid/text/image scene produces no "not supported by OGraf Export" error; a construct that cannot be converted keeps a supported type **and** stays reported |
+| `src/tests/lottieImport.test.ts` (88 cases, +5) | Every imported layer type is one the editor and the exporter accept; the generated rectangle and ellipse paths and the ellipse size are pinned; a shape/solid/text/image scene produces no "not supported by OGraf Export" error; a construct that cannot be converted keeps a supported type **and** stays reported |
 | `e2e/lottie-import-report.spec.ts` (new) | Real browser: report appears, cancel leaves the seeded project intact, confirm replaces it with the imported layers, and the console stays clean |
 
 ## 10. Validation matrix
@@ -116,8 +116,8 @@ whatever geometry it did produce.
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts src/tests/lottieImportEntry.test.tsx` | PASS — 97 cases |
-| `npm test` (full Vitest) | PASS — 121 files / 1,833 tests |
+| `npx vitest run src/tests/lottieImport.test.ts src/tests/lottieImportEntry.test.tsx` | PASS — 99 cases |
+| `npm test` (full Vitest) | PASS — 121 files / 1,835 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
@@ -169,7 +169,16 @@ and one low finding; all were closed before the merge decision:
    every other rendered value.
 5. **Test gaps.** Added: a refusal from the project authority (no success toast), no manual save on a
    cancel, blocker-first grouping with the 40-entry cap and the hidden count, the disabled-confirm
-   focus trap, and the generated rectangle/ellipse geometry.
+   focus trap, and the generated geometry.
+6. **The generated curves did not reach the renderer.** The canonical vertex carries **absolute**
+   `handleIn`/`handleOut` control points, while the importer wrote `inX`/`outX` offsets that
+   `normalizeBezierPath` drops on import — so an imported path lost every curve (this also affected the
+   earlier slices) and the generated ellipse would have rendered as a diamond. Lottie's offsets are
+   now converted to absolute handles, and `buildBezierPathD` output is asserted.
+7. **Two reports still described the wrong outcome.** The shape-group code said `FLATTENED` while the
+   message says the contents are skipped (renamed to `LOTTIE_UNSUPPORTED_SHAPE_GROUP`), and a
+   rectangle/ellipse with only one readable dimension — or a solid without both sizes — now reports
+   `LOTTIE_UNREADABLE_SIZE` and says it draws nothing, instead of importing an invisible layer.
 
 The only failure the validation set still reports is the expected handoff-bundle mirror check, which
    the handoff refresh commit closes.

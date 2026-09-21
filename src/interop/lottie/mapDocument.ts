@@ -197,12 +197,18 @@ const toBezierPath = (
     if (!vertex) return [];
     const inPoint = readPoint(inTangents[index]);
     const outPoint = readPoint(outTangents[index]);
+    // Lottie stores each tangent as an offset from its vertex; a canonical KCS
+    // handle is the absolute control point the renderer feeds to the path data.
+    const handleIn = inPoint ? { x: vertex.x + inPoint.x, y: vertex.y + inPoint.y } : undefined;
+    const handleOut = outPoint ? { x: vertex.x + outPoint.x, y: vertex.y + outPoint.y } : undefined;
+    const curved = Boolean(handleIn || handleOut);
     return [{
       id: `v${index}`,
       x: vertex.x,
       y: vertex.y,
-      ...(inPoint ? { inX: inPoint.x, inY: inPoint.y } : {}),
-      ...(outPoint ? { outX: outPoint.x, outY: outPoint.y } : {}),
+      ...(handleIn ? { handleIn } : {}),
+      ...(handleOut ? { handleOut } : {}),
+      kind: curved ? 'smooth' as const : 'corner' as const,
     }];
   });
   if (points.length === 0) return undefined;
@@ -300,17 +306,18 @@ const rectanglePath = (width: number, height: number, radius: number): BezierPat
       ],
     };
   }
-  // Two vertices per corner, joined by a circular-arc bezier.
+  // Two vertices per corner, joined by a circular-arc bezier: each control point
+  // sits `r * kappa` away from the corner along the edge it leaves or enters.
   const handle = corner * KAPPA;
   const points = [
-    { id: 'v0', x: -halfWidth + corner, y: -halfHeight, inX: -handle, inY: 0, outX: 0, outY: 0 },
-    { id: 'v1', x: halfWidth - corner, y: -halfHeight, inX: 0, inY: 0, outX: handle, outY: 0 },
-    { id: 'v2', x: halfWidth, y: -halfHeight + corner, inX: 0, inY: -handle, outX: 0, outY: 0 },
-    { id: 'v3', x: halfWidth, y: halfHeight - corner, inX: 0, inY: 0, outX: 0, outY: handle },
-    { id: 'v4', x: halfWidth - corner, y: halfHeight, inX: handle, inY: 0, outX: 0, outY: 0 },
-    { id: 'v5', x: -halfWidth + corner, y: halfHeight, inX: 0, inY: 0, outX: -handle, outY: 0 },
-    { id: 'v6', x: -halfWidth, y: halfHeight - corner, inX: 0, inY: handle, outX: 0, outY: 0 },
-    { id: 'v7', x: -halfWidth, y: -halfHeight + corner, inX: 0, inY: 0, outX: 0, outY: -handle },
+    { id: 'v0', x: -halfWidth + corner, y: -halfHeight, handleOut: { x: -halfWidth + corner - handle, y: -halfHeight }, kind: 'smooth' as const },
+    { id: 'v1', x: halfWidth - corner, y: -halfHeight, handleIn: { x: halfWidth - corner + handle, y: -halfHeight }, kind: 'smooth' as const },
+    { id: 'v2', x: halfWidth, y: -halfHeight + corner, handleOut: { x: halfWidth, y: -halfHeight + corner - handle }, kind: 'smooth' as const },
+    { id: 'v3', x: halfWidth, y: halfHeight - corner, handleIn: { x: halfWidth, y: halfHeight - corner + handle }, kind: 'smooth' as const },
+    { id: 'v4', x: halfWidth - corner, y: halfHeight, handleOut: { x: halfWidth - corner + handle, y: halfHeight }, kind: 'smooth' as const },
+    { id: 'v5', x: -halfWidth + corner, y: halfHeight, handleIn: { x: -halfWidth + corner - handle, y: halfHeight }, kind: 'smooth' as const },
+    { id: 'v6', x: -halfWidth, y: halfHeight - corner, handleOut: { x: -halfWidth, y: halfHeight - corner + handle }, kind: 'smooth' as const },
+    { id: 'v7', x: -halfWidth, y: -halfHeight + corner, handleIn: { x: -halfWidth, y: -halfHeight + corner - handle }, kind: 'smooth' as const },
   ];
   return { version: 1, coordinateSpace: 'local', closed: true, points: points as BezierPath['points'] };
 };
@@ -322,10 +329,10 @@ const ellipsePath = (width: number, height: number): BezierPath => {
   const hx = rx * KAPPA;
   const hy = ry * KAPPA;
   const points = [
-    { id: 'v0', x: 0, y: -ry, inX: -hx, inY: 0, outX: hx, outY: 0 },
-    { id: 'v1', x: rx, y: 0, inX: 0, inY: -hy, outX: 0, outY: hy },
-    { id: 'v2', x: 0, y: ry, inX: hx, inY: 0, outX: -hx, outY: 0 },
-    { id: 'v3', x: -rx, y: 0, inX: 0, inY: hy, outX: 0, outY: -hy },
+    { id: 'v0', x: 0, y: -ry, handleIn: { x: -hx, y: -ry }, handleOut: { x: hx, y: -ry }, kind: 'smooth' as const },
+    { id: 'v1', x: rx, y: 0, handleIn: { x: rx, y: -hy }, handleOut: { x: rx, y: hy }, kind: 'smooth' as const },
+    { id: 'v2', x: 0, y: ry, handleIn: { x: hx, y: ry }, handleOut: { x: -hx, y: ry }, kind: 'smooth' as const },
+    { id: 'v3', x: -rx, y: 0, handleIn: { x: -rx, y: hy }, handleOut: { x: -rx, y: -hy }, kind: 'smooth' as const },
   ];
   return { version: 1, coordinateSpace: 'local', closed: true, points: points as BezierPath['points'] };
 };
@@ -889,7 +896,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     const solidWidth = readNumber(layer.sw);
     const solidHeight = readNumber(layer.sh);
     if (type === 1 && (solidFill === undefined || solidWidth === undefined || solidHeight === undefined)) {
-      diagnostics.push(lottieWarning('LOTTIE_MISSING_SOLID_PAINT', path, 'Solid layer ' + index + ' does not carry both a colour (`sc`) and a size (`sw`/`sh`); the missing values fall back to white and the layer size.', 'Set the solid colour and size in the source document.'));
+      diagnostics.push(lottieWarning('LOTTIE_MISSING_SOLID_PAINT', path, 'Solid layer ' + index + ' does not carry both a colour (`sc`) and a size (`sw`/`sh`): a missing colour falls back to white, and a missing size leaves the layer with no rectangle to draw.', 'Set the solid colour and size in the source document.'));
     }
     const transform = asRecord(layer.ks) ?? {};
     if (asRecord(transform.a)?.k !== undefined) {
@@ -1031,7 +1038,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         const size = Array.isArray(sizeValue) ? sizeValue : [];
         const sizeX = readNumber(size[0]);
         const sizeY = readNumber(size[1]);
-        if (sizeX === undefined && sizeY === undefined) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_SIZE', shapePath, `Shape ${shapeIndex} of layer ${index} has no readable size.`, 'Re-export the shape from the source document.'));
+        if (sizeX === undefined || sizeY === undefined) diagnostics.push(lottieWarning('LOTTIE_UNREADABLE_SIZE', shapePath, `Shape ${shapeIndex} of layer ${index} has no readable size, so it draws nothing.`, 'Re-export the shape from the source document.'));
         if (asRecord(shape.p)?.k !== undefined) {
           diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SHAPE_POSITION', shapePath + '.p', 'Shape ' + shapeIndex + ' of layer ' + index + ' has its own position, which KCS does not model per shape.', 'Bake the shape position into the layer transform in the source document.'));
         }
@@ -1108,7 +1115,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         continue;
       }
       if (shapeType === 'gr') {
-        diagnostics.push(lottieWarning('LOTTIE_SHAPE_GROUP_FLATTENED', shapePath, `Shape group ${shapeIndex} of layer ${index} was not converted: group contents are skipped by this importer.`, 'Ungroup the shapes in the source document so each item imports on its own, then import again.'));
+        diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SHAPE_GROUP', shapePath, `Shape group ${shapeIndex} of layer ${index} was not converted: group contents are skipped by this importer.`, 'Ungroup the shapes in the source document so each item imports on its own, then import again.'));
         continue;
       }
       diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SHAPE', shapePath, `Shape item "${shapeType}" of layer ${index} is not converted by the first slice.`, 'Bake or remove that item in the source document.'));

@@ -1,28 +1,33 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 12 OGraf Package Import
+# KCS Minimal ChatGPT Upload Bundle — Milestone D Item 9 Option B Dependency Maintenance
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The OGraf package import (Milestone F item 12, second half), merged into `main` at `419fc6a`:
+The approval-gated dependency maintenance (Milestone D item 9, Option B), applied on
+`chore/dependency-maintenance-option-b` from `main` at `a4f8642`:
 
-- One **Import** control classifies a selected file by what it **contains**. A KCS project, a legacy
-  project, an OGraf manifest/package and a Lottie animation each reach their existing importer.
-- An **OGraf package** (`.zip`/`.ograf`) is decoded in memory under entry-count, per-entry size,
-  cumulative size and package-path guards, and the `scene.kcs` it carries opens a report with the
-  scene it would apply. Cancel changes nothing; **Import and replace project** applies it through the
-  same validated path the project import uses.
-- A package the reader cannot accept (unsafe path, duplicate name, reserved key, no scene, too large)
-  is refused with its own code, and its confirm button stays disabled — it can never apply or report
-  success. A bare `.ograf.json` manifest still points the user at the package.
-- An import that cannot be applied leaves the project untouched: the scene is prepared completely
-  before any editor state changes, which is pinned by a regression test proven red before the fix.
+- Sixteen patch/minor packages were refreshed inside their current major versions — React and
+  React DOM 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47, the testing-library patches, `pg`,
+  `concurrently` and the `@types` packages — keeping the repository's caret convention, with no
+  package added or removed.
+- A **bounded `npm audit fix`** (no `--force`) took `npm audit` from one high and six moderate
+  advisories to **zero** known vulnerabilities.
+- Two minors were applied, verified and then **deferred with evidence**: `oxlint` 1.85 reports 33
+  warnings the current version does not (and silencing rules or rewriting React code is not a
+  dependency task), and `jsdom` 30.1 dropped its own `createObjectURL`, so any Blob download throws
+  and the export-flow test fails.
+- The upgrade also required four test selectors to use the attribute-value case the component
+  actually renders (`Gradient angle`), because the current jsdom selector engine matches attribute
+  values case-sensitively where the previous one did not.
+
+No application behaviour changed: the only non-package edit is those four test selectors.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_127_lottie_import_entry_report_ux.md` — the task record
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
+- `progress_130_dependency_maintenance_option_b.md` — the task record
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone D status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy

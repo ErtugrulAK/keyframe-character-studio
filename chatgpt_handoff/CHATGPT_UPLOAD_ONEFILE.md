@@ -17,91 +17,80 @@
 
 ## 1. OMP Final Response
 
-# KCS Milestone F Item 12 (Second Half) — Final Response (OGraf Package Import)
+# KCS Milestone D Item 9 Option B — Final Response (Dependency Maintenance)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** done and merged. `feat/ograf-editable-import` was fast-forward merged into `main` at `419fc6a` (base `main` was `7904037`) and pushed; the branch is kept.
-- **Report:** `reports/progress_129_ograf_editable_import.md`.
-- **Product decision (user):** an OGraf package opens as an **editable** KCS document; a bare `.ograf.json` manifest stays refused because it carries no scene.
+- **Status:** Option B is implemented on `chore/dependency-maintenance-option-b` (base `main` at `a4f8642`); the merge decision is with the user.
+- **Report:** `reports/progress_130_dependency_maintenance_option_b.md`.
+- **Decision (user):** apply the patch and minor group plus a bounded `npm audit fix` (no `--force`), on its own branch.
 
 ## 2) WHAT CHANGED
 
-| File | Change |
+| Area | Change |
 |---|---|
-| `src/ograf/packageImport.ts` (new) | `readOGrafPackage(bytes)` decodes the archive under an explicit admission rule: entry count, per-entry size, cumulative declared size, normalised package paths, reserved names, prototype-sensitive segments and exact/case-only repeats — all decided on the central directory, immediately before each entry is inflated; a missing or oversized `scene.kcs` is refused; the manifest is walked, and an over-deep manifest is refused rather than skipped |
-| `src/utils/importValidation.ts` | The boundary now refuses the fields the apply path consumes after it queues its updates (`motionTemplates`, `activeTemplateId`, `coordinateSystem`) with `KCS_IMPORT_INVALID_SCENE_FIELD`, and refuses a document deeper than the walk can check (`KCS_IMPORT_TOO_DEEP`) instead of accepting an unchecked subtree |
-| `src/hooks/useSerialization.ts` | `fromSceneData` prepares **everything** — tracks, templates, active template, dimensions, name and the id collection — before the first state setter, so a scene that cannot be applied changes nothing |
-| `src/components/Header/HeaderBar.tsx`, `ImportReportDialog.tsx` | The unified control reads a package as bytes and opens the shared report ("OGraf package import report") with the scene's real counts; cancel is a no-op, confirm applies through `importProject`, a refusal disables the confirm |
-| tests + `e2e/lottie-import-report.spec.ts` | New package reader suite (8 cases), new atomicity regression through the real hook (2 cases), package flow cases in the entry suite, and a third Playwright test for the package path |
+| Dependencies (16) | `react`/`react-dom` 19.3.0, `@types/react(-dom)` 19.3.0, `vite` 8.3.0, `vitest`/`@vitest/coverage-v8` 4.1.11, `@vitejs/plugin-react` 6.1.1, `@testing-library/{jest-dom,react,user-event}` 7.0.1/16.3.3/14.6.7, `lucide-react` 1.47.0, `pg` 8.23.0, `@types/pg` 8.23.1, `@types/node` 24.13.6, `concurrently` 10.0.5 — caret convention kept, no package added or removed |
+| Security | bounded `npm audit fix`: 7 advisories (1 high `nanoid`, 6 moderate) → **0** |
+| Tests | four `styleMatteSection` queries used `aria-label="Gradient Angle"` while the component renders `"Gradient angle"`; the current jsdom selector engine matches attribute values case-sensitively, so they now use the label the component actually renders |
 
-## 3) VALIDATION
+## 3) DEFERRED, WITH EVIDENCE
+
+- **`oxlint` 1.85.0:** reports 33 warnings (`react(refs)`, `react(set-state-in-effect`, `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report. Clean lint is the project standard; silencing rules or rewriting React code is not a dependency task → stays `^1.74.0`.
+- **`jsdom` 30.1.1:** dropped its own `createObjectURL` implementation (absent from its `lib/`), so `URL.createObjectURL(new Blob([...]))` throws `Cannot read properties of undefined (reading '_buffer')` and the export-download test fails. Isolated: reproduces with `jsdom@30.1.1` + `vitest@4.1.10`, disappears with `jsdom@30.0.1` → stays `^30.0.1`.
+
+## 4) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npm run build` (`tsc -b && vite build`) | PASS |
-| `npm test` (full Vitest) | PASS — 124 files / 1,858 tests |
-| `npm run lint` | clean |
-| `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium smoke tests |
-| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 real-browser tests |
-| `git diff --check` | clean |
+| `npm run build`, `npx tsc --noEmit` | PASS / clean |
+| `npm test` | PASS — 124 files / 1,858 tests |
+| `npm run lint` | clean (exit 0) |
+| `npm run validate:ograf`, `npm run qa:release` | PASS (2 Chromium tests) |
+| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
+| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `npm audit` | 0 vulnerabilities |
+| Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and executes a statement |
 
-The atomicity regression was proven **red before the fix** (the pre-fix hook called `setFps` for a refused scene) and green after it.
-
-## 4) REVIEW
-
-Three independent read-only rounds (`reviewer-agent`, evidence-cited):
-
-| Round | Verdict | Findings |
-|---|---|---|
-| 1 | BLOCKED | 3 high + 2 medium + 1 low: the entry limit did not bound decompression; names could hide behind the unzip result object; applying a scene was not atomic; the manifest walk skipped deep subtrees; the report always claimed "0 layer(s)"; one test asserted the wrong dialog |
-| 2 | BLOCKED | All closed except atomicity, which the reviewer showed was still reachable through nested scene fields |
-| 3 | READY WITH WARNINGS | Every finding PASS; the remaining notes (the project boundary's own depth walk, an unreachable-by-the-writer duplicate fixture, two stale comments) were closed in `419fc6a` |
+`npm install` confirms `sqlite3@6.0.1`'s install script is blocked by the npm-12 `allowScripts` policy; the existing prebuilt binding still loads (verified directly and through the API), which is the same open question as the `engines`/`allowScripts` follow-up.
 
 ## 5) SAFETY
 
-- The archive is decoded in memory under explicit bounds; no filesystem or network access.
-- The validated boundary and `importProject` remain the only path from text to a project, and an import that cannot be applied now changes nothing.
-- No dependency was added (`fflate` was already present) and no `package.json`, lockfile or workflow file changed.
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), the GitHub draft release, npm metadata, `origin/without-mask`, the OMP configuration and the user folders are unchanged.
-- Integration was fast-forward only: no merge commit, no rebase, no force push, no tag change, no branch deletion.
+- No source behaviour change: the only non-package edit is the four test selectors.
+- Scripts, workflows, `.gitattributes`, the tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release and npm metadata are untouched; no tag, release, publish or branch deletion.
+- Integration is for the user to approve; nothing was merged or pushed in this task.
 
 ## 6) NEXT
 
-The approval-gated package and toolchain work: Option B dependency maintenance (7 patch + 12 minor and a
-bounded `npm audit fix`), then the `engines`/npm-12 `allowScripts` decision, then Option C major
-toolchain upgrades — each on its own branch, behind its own explicit approval.
+The merge decision for this branch, then Option C (TypeScript 7 / Vitest 5 majors) with the `engines`/
+npm-12 `allowScripts` decision, then the two deferred minor bumps with their own triage.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone F Item 12 (OGraf Package / Editable Import)
+# KCS ChatGPT Upload Manifest — Milestone D Item 9 Option B (Dependency Maintenance)
 
 Clean refreshed: YES
-Bundle purpose: importing an OGraf package as its editable scene (Milestone F item 12, second half)
+Bundle purpose: the patch/minor dependency refresh plus the bounded security fix (Milestone D item 9, Option B)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/ograf-editable-import, fast-forward merged into main at 419fc6a (base main was 7904037) and pushed; the branch is kept
-Task record: reports/progress_129_ograf_editable_import.md
-What changed: src/ograf/packageImport.ts (guarded archive decode with a per-entry admission rule), src/utils/importValidation.ts (scene fields the apply path consumes, plus a fail-closed depth limit), src/hooks/useSerialization.ts (the scene is prepared completely before the first state update), src/components/Header/HeaderBar.tsx + ImportReportDialog (the shared report surface now serves the package import too, with real counts), e2e/lottie-import-report.spec.ts (a package browser test)
-Not changed: no dependency (fflate was already present), no package.json, lockfile or workflow change; the .kcs, legacy, Lottie and bare OGraf manifest behaviour is unchanged apart from the manifest message that now names the package route
-Validation: npm run build PASS; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); npx playwright test e2e/lottie-import-report.spec.ts PASS (3 tests); git diff --check clean
-Reviews: three independent read-only rounds — BLOCKED (6 findings), BLOCKED (1), READY WITH WARNINGS — every blocker closed, including an atomicity fix in the apply path with a regression test proven red before it
-Next work (approval-gated): Option B dependency maintenance, then the engines/allowScripts decision and Option C
+Branch: chore/dependency-maintenance-option-b, base main at a4f8642 — not merged, not pushed; the merge decision is with the user
+Task record: reports/progress_130_dependency_maintenance_option_b.md
+What changed: package.json and package-lock.json (16 patch/minor packages keep their caret convention; nothing added or removed) and four selectors in src/tests/styleMatteSection.test.tsx that used the wrong attribute-value case
+Security: a bounded npm audit fix (no --force) took npm audit from 1 high + 6 moderate to 0
+Deferred with evidence: oxlint 1.85 (33 new rule warnings) and jsdom 30.1 (its createObjectURL no longer accepts a Blob, which breaks the export download test)
+Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (32); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
+Next work (approval-gated): the merge decision for this branch, then Option C majors with the engines/allowScripts decision
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): README.md, manifest.txt, OMP_FINAL_RESPONSE.md, progress_129_ograf_editable_import.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, CHANGELOG.md, NEXT_SESSION.md, PROJECT_STATE.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_130_dependency_maintenance_option_b.md
 
-Omitted categories: source, test and design files; package/lock/workflow files; older reports and current-state documents; QA output, assets, archives, caches.
+Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
-
-Validation at this revision: build PASS; 124 files / 1,858 tests PASS; lint clean; validate:ograf PASS; qa:release PASS; playwright 3/3 PASS; state check PASS.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -109,31 +98,36 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 12 OGraf Package Import
+# KCS Minimal ChatGPT Upload Bundle — Milestone D Item 9 Option B Dependency Maintenance
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The OGraf package import (Milestone F item 12, second half), merged into `main` at `419fc6a`:
+The approval-gated dependency maintenance (Milestone D item 9, Option B), applied on
+`chore/dependency-maintenance-option-b` from `main` at `a4f8642`:
 
-- One **Import** control classifies a selected file by what it **contains**. A KCS project, a legacy
-  project, an OGraf manifest/package and a Lottie animation each reach their existing importer.
-- An **OGraf package** (`.zip`/`.ograf`) is decoded in memory under entry-count, per-entry size,
-  cumulative size and package-path guards, and the `scene.kcs` it carries opens a report with the
-  scene it would apply. Cancel changes nothing; **Import and replace project** applies it through the
-  same validated path the project import uses.
-- A package the reader cannot accept (unsafe path, duplicate name, reserved key, no scene, too large)
-  is refused with its own code, and its confirm button stays disabled — it can never apply or report
-  success. A bare `.ograf.json` manifest still points the user at the package.
-- An import that cannot be applied leaves the project untouched: the scene is prepared completely
-  before any editor state changes, which is pinned by a regression test proven red before the fix.
+- Sixteen patch/minor packages were refreshed inside their current major versions — React and
+  React DOM 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47, the testing-library patches, `pg`,
+  `concurrently` and the `@types` packages — keeping the repository's caret convention, with no
+  package added or removed.
+- A **bounded `npm audit fix`** (no `--force`) took `npm audit` from one high and six moderate
+  advisories to **zero** known vulnerabilities.
+- Two minors were applied, verified and then **deferred with evidence**: `oxlint` 1.85 reports 33
+  warnings the current version does not (and silencing rules or rewriting React code is not a
+  dependency task), and `jsdom` 30.1 dropped its own `createObjectURL`, so any Blob download throws
+  and the export-flow test fails.
+- The upgrade also required four test selectors to use the attribute-value case the component
+  actually renders (`Gradient angle`), because the current jsdom selector engine matches attribute
+  values case-sensitively where the previous one did not.
+
+No application behaviour changed: the only non-package edit is those four test selectors.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_127_lottie_import_entry_report_ux.md` — the task record
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
+- `progress_130_dependency_maintenance_option_b.md` — the task record
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone D status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -163,171 +157,119 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 129 — OGraf Package / Editable Import
+# Progress 130 — Milestone D item 9 Option B: dependency maintenance
 
-## 1. Scope
+Branch: `chore/dependency-maintenance-option-b` (base `main` at `a4f8642`).
+User decision: **Option B approved** — apply the patch and minor group plus a bounded `npm audit fix`
+(no `--force`), on its own branch, behind its own review.
 
-An OGraf **package** (`.zip`/`.ograf`) can now be imported as an editable KCS document. The package
-already carries `scene.kcs` — the canonical scene the exporter wrote — so the slice decodes the
-archive under explicit guards and hands that scene to the existing validated import path; nothing is
-reconstructed and nothing is invented.
+## 1. What was asked
 
-A bare `.ograf.json` manifest stays refused: it carries no scene, so an editable import from it would
-need a different (and currently undefined) product decision. Its message now points at the package.
+Milestone D item 9 left three approval-gated follow-ups open: Option B (patch/minor dependency updates
+plus `npm audit fix`), Option C (TypeScript 7 / Vitest 5 majors) and the `engines` + npm-12
+`allowScripts` decision. This task is Option B.
 
-Out of scope by instruction: dependency changes, `package.json`/lockfile/workflow edits, release
-actions.
+## 2. Audited state before the change
 
-## 2. Branch
+`npm outdated` reported 22 directly-outdated packages and `npm audit` reported 7 vulnerabilities
+(1 high, 6 moderate): `nanoid` (high), `vitest`, `@vitest/mocker`, `@vitest/coverage-v8`, `postcss`,
+`qs`, `undici`.
 
-`feat/ograf-editable-import`, created from `main` at `7904037`.
+The user approved the whole patch and minor group, not just the patches: 16 packages plus the audit
+fix.
 
-## 3. Existing authorities reused
+## 3. Applied
 
-| Authority | Where | How this slice uses it |
+| Package | From | To |
 |---|---|---|
-| The exported package layout (`scene.kcs` beside the manifest) | `src/ograf/packageCompiler.ts` | The reader looks for that one member instead of inventing a format |
-| `unzipSync` | `fflate` (already a dependency) | Decodes the archive; no new dependency |
-| `normalizePackagePath`, `isSafePackageRelativePath`, `isReservedWindowsName`, `hasCaseInsensitiveCollision`, `isPrototypeSensitiveKey` | `src/utils/pathSafety.ts` | Every entry path is normalised and checked; the manifest is walked for reserved keys |
-| `validateImportedDocument` + `importProject` | `src/utils/importValidation.ts`, `src/hooks/useSerialization.ts` | The decoded `scene.kcs` goes through the same boundary and apply path as a `.kcs` file; the boundary now also validates the fields the apply path consumes *after* it queues its state updates, so a refused scene never applies part of itself |
-| `ImportReportDialog` | `src/components/Modal/ImportReportDialog.tsx` | The same report surface the Lottie import uses; its diagnostic prop is now the shared structural shape |
-| `describeOGrafValueForDiagnostics`-style messages | — | Messages name what is wrong; no raw archive bytes or machine paths are rendered |
+| `react`, `react-dom` | 19.2.7 | 19.3.0 |
+| `@types/react`, `@types/react-dom` | 19.2.17 / 19.2.3 | 19.3.0 |
+| `vite` | 8.1.5 | 8.3.0 |
+| `vitest`, `@vitest/coverage-v8` | 4.1.10 | 4.1.11 |
+| `@vitejs/plugin-react` | 6.0.3 | 6.1.1 |
+| `@testing-library/jest-dom` | 7.0.0 | 7.0.1 |
+| `@testing-library/react` | 16.3.2 | 16.3.3 |
+| `@testing-library/user-event` | 14.6.1 | 14.6.7 |
+| `lucide-react` | 1.25.0 | 1.47.0 |
+| `pg` | 8.22.0 | 8.23.0 |
+| `@types/pg` | 8.20.0 | 8.23.1 |
+| `@types/node` | 24.13.3 | 24.13.6 |
+| `concurrently` | 10.0.4 | 10.0.5 |
+| `npm audit fix` | — | 7 advisories → **0** |
 
-## 4. The reader (`src/ograf/packageImport.ts`)
+Version specifiers keep the repository's caret convention; only the numbers changed. No dependency was
+added or removed, and no script, workflow or release metadata changed.
 
-`readOGrafPackage(bytes)` fails closed on the first problem and returns the scene text plus a report:
+## 4. Deferred, with evidence
 
-| Check | Code |
-|---|---|
-| Empty file, not a zip, no files | `OGRAF_PACKAGE_UNREADABLE` |
-| Archive above 64 MB | `OGRAF_PACKAGE_TOO_LARGE` |
-| More than 512 entries | `OGRAF_PACKAGE_TOO_MANY_ENTRIES` |
-| One entry above the 32 MB scene limit | `OGRAF_PACKAGE_ENTRY_TOO_LARGE` |
-| Declared contents totalling more than 64 MB | `OGRAF_PACKAGE_TOO_LARGE` |
-| A manifest deeper than the import can walk | `OGRAF_PACKAGE_MANIFEST_TOO_DEEP` |
-| Traversal, absolute or reserved path | `OGRAF_PACKAGE_UNSAFE_PATH` |
-| Two paths differing only by case | `OGRAF_PACKAGE_DUPLICATE_PATH` |
-| A reserved key in the manifest | `OGRAF_PACKAGE_UNSAFE_KEY` |
-| No `scene.kcs`, or an empty/oversized scene | `OGRAF_PACKAGE_MISSING_SCENE` / `OGRAF_PACKAGE_TOO_LARGE` |
-| Unreadable manifest (warning, the scene still imports) | `OGRAF_PACKAGE_UNREADABLE_MANIFEST` |
-| Assets are not imported (warning) | `OGRAF_PACKAGE_ASSETS_OMITTED` |
+Two minor bumps were applied, verified, and then **deferred** because each one demands work of its own
+kind rather than a version bump. Both stay in `package.json` unchanged (`^1.74.0`, `^30.0.1`) and the
+lockfile pins the known-good version.
 
-Every check runs on a central-directory entry immediately before that entry is inflated: the entry
-count, the declared size of that entry, the cumulative declared size and the raw name are all
-validated there, so no name can hide behind the result object — a prototype-sensitive segment, an
-exact repeat and a case-only repeat are refused — and the archive never materialises more than the
-budget allows. An entry over the per-entry limit is reported rather than dropped, and the
-post-unzip checks only confirm what the admission already accepted.
+1. **`oxlint` 1.74.0 → 1.85.0 — 33 new rule warnings.**
+   With 1.85.0 the linter reports 33 warnings (`react(refs)`, `react(set-state-in-effect)`,
+   `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report at all. The
+   project's standard is a clean lint run, and silencing new rules or rewriting React code to satisfy
+   them is not a dependency task. The linter therefore stays at `^1.74.0` until the new rules get
+   their own triage.
 
-## 5. Entry point and flow
+2. **`jsdom` 30.0.1 → 30.1.1 — `URL.createObjectURL` no longer accepts a Blob.**
+   jsdom 30.1.1 dropped its own `createObjectURL` implementation (the string does not appear anywhere
+   in its `lib/`), the environment's `Blob` no longer carries a jsdom implementation symbol, and
+   `URL.createObjectURL(new Blob([...]))` throws
+   `Cannot read properties of undefined (reading '_buffer')`. `src/tests/firstExportFlow.test.tsx`
+   exercises the real download step, so the suite fails with `jsdom` 30.1.1 and passes with 30.0.1.
+   Proven by isolation: the failure reproduces with `jsdom@30.1.1` + `vitest@4.1.10` and disappears
+   with `jsdom@30.0.1` on the same `vitest`; it is not a `vitest` regression and not a cross-file
+   isolation problem.
 
-The unified import control already classifies `.zip`/`.ograf` as a package; it now reads those bytes
-and opens the shared report titled **"OGraf package import report"**:
+## 5. Test corrections the upgrade required
 
-1. Selecting a package reads it as bytes and decodes it in memory — the project is untouched.
-2. A readable package reports its scene (and its warnings) before anything is applied.
-3. **Cancel** (button, Escape, backdrop) clears the pending import only: no mutation, no history, no
-   autosave, no toast.
-4. **Import and replace project** applies the scene through `importProject` — the same validated path
-   the `.kcs` import uses — then shows the success toast and, when the report carried warnings, one
-   compact info toast.
-5. A refused package (unreadable, unsafe, no scene) shows the same dialog with the refusal and a
-   disabled confirm, so it can never apply or report success.
+`src/tests/styleMatteSection.test.tsx` queried four inputs with
+`container.querySelector('input[aria-label="Gradient Angle"]')` while the component renders
+`aria-label="Gradient angle"`. The old selector engine matched HTML attribute values
+case-insensitively; jsdom's current selector engine (`@asamuzakjp/dom-selector` 8.3.0 → 9.2.1) matches
+them case-sensitively, so the four queries silently stopped finding the element (two of them asserted
+`toBeNull()`, so they had become vacuous). The queries now use the exact label the component renders,
+which restores the original intent: the angle control is present for a linear gradient, absent for a
+radial one, and derived from the matte rather than mirrored in local state.
 
-## 6. Cancel / apply / refusal semantics
-
-- Cancel is a true no-op, identical to the Lottie import.
-- Apply re-validates the scene through the boundary (the package text is untrusted input) and never
-  partially applies.
-- A refusal from either the reader or the project authority reports the refusal, never a success.
-
-## 7. Security / privacy boundaries
-
-- No filesystem or network access: the archive is decoded in memory from bytes the user selected.
-- Entry count, entry size and total size are bounded before decompression.
-- Package paths go through the existing path-safety authority; traversal, absolute and reserved names
-  are refused.
-- Prototype-sensitive keys in the manifest are refused.
-- The rendered report carries only the reader's own messages and the archive's entry names, all
-  display-sanitised.
-
-## 8. Tests
-
-| Test | What it pins |
-|---|---|
-| `src/tests/ografPackageImport.test.ts` (new, 8 cases) | A real package imports its `scene.kcs` and its manifest name; missing scene, empty file and non-archive are refused; traversal, absolute, reserved and case-collision paths are refused; a prototype key in the manifest is refused; the archive and entry limits are enforced (and an oversized entry is reported, not dropped); an unreadable manifest is a warning, not a failure |
-| `src/tests/lottieImportEntry.test.tsx` (16 cases) | Package report appears without mutating, cancel is a no-op, confirm applies through `importProject` with the manifest name, a project-authority refusal never reports success — plus the existing single-control cases |
-| `src/tests/ografBrowserZip.test.tsx` (18 cases) | The manifest message now points at the package, and an unreadable package opens a refusal report instead of a blanket toast |
-| `e2e/lottie-import-report.spec.ts` (3 browser tests) | The package flow end to end: report, cancel keeps the seeded project, confirm replaces it with the package scene |
-
-## 9. Validation matrix
+## 6. Validation
 
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| focused suites (package import, dispatch, entry, lottie, ograf zip) | PASS — 134 cases |
-| `npm test` (full Vitest) | PASS — 123 files / 1,854 tests |
-| `npm run lint` | clean |
+| `npx tsc --noEmit` | clean |
+| `npm test` | PASS — 124 files / 1,858 tests |
+| `npm run lint` | clean (exit 0, no output) |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium smoke tests |
-| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 real-browser tests |
-| `node scripts/check-state-consistency.mjs` | PASS |
+| `npm run qa:release` | PASS (2 Chromium tests), release gate recorded candidate `a4f8642` |
+| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
+| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `npm audit` | **0 vulnerabilities** (was 1 high + 6 moderate) |
 | `git diff --check` | clean |
+| Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and runs a statement |
 
-## 10. Protected invariants
+`npm install` reports that `sqlite3@6.0.1`'s install script is blocked by the npm-12 `allowScripts`
+policy. The prebuilt binding repaired during item 9 is still in place and was exercised directly
+(`create table` on an in-memory database) plus through the API health check, so runtime behaviour is
+unaffected. This is the same policy question that stays open for the `engines`/`allowScripts`
+decision (Option C / the follow-up pinned in the roadmap).
 
-- The validated boundary remains the only path from text to a project.
-- `.kcs`, legacy, Lottie and bare OGraf manifest behaviour is unchanged apart from the manifest
-  message that now names the package route.
-- No dependency was added (`fflate` was already present) and no `package.json`, lockfile or workflow
-  file changed.
-- Cancel keeps its zero-mutation guarantee for every report-driven import.
+## 7. Not changed
 
-## 11. Residual risks
+- No source behaviour change: the only non-package edit is the four test selectors above.
+- `package.json` scripts, `.github/workflows/**`, `.gitattributes`, `.env*` and the release tag
+  `v1.1.0-rc.1` (`46d2a3e…`) are untouched. No tag, release, npm publish or branch deletion.
+- `C:\Users\ertugrul.ak\Desktop\ograf-graphics`, `origin/without-mask`, the OMP configuration and the
+  QA folders were not touched.
 
-- **Assets and fonts are not reconstructed.** The package may carry images and fonts; only the scene
-  imports, and the report says so. A graphic that relied on packaged images imports with the layers
-  and loses their sources — re-linking them is manual until an asset slice exists.
-- **Round-trip is scene-level, not byte-level.** Exporting the imported scene again will produce a new
-  package (new ids, new asset paths) rather than the original bytes; nothing claims otherwise.
-- **The manifest's public controls are not imported.** They are runtime/OGraf concepts; the editable
-  document keeps the scene only.
-- **`.ograf.json` on its own stays refused**, which is a product boundary, not a limitation of the
-  reader.
-- The reader trusts the zip's declared entry sizes for the pre-decompression filter, which is the
-  standard mitigation; a crafted archive that lies about a size can still allocate up to the entry
-  limit, which is why the total and entry bounds exist.
+## 8. Open after this task
 
-## 12. Next work
-
-The approval-gated package/toolchain follow-ups (Option B dependency maintenance, the `engines` and
-npm-12 `allowScripts` decision, Option C major toolchain upgrades) — each behind its own explicit
-approval, then the final documentation reconciliation and the release-readiness audit.
-
-## 13. Review
-
-One independent read-only round (`reviewer-agent`) returned **BLOCKED** with three high, two medium and
-one low finding; all were closed before the merge decision:
-
-1. **The entry limit did not protect decompression.** `fflate` inflates each member as it walks the
-   central directory, so counting entries afterwards bounded nothing. The count, the per-entry size and
-   a new total-size budget are now enforced **inside the archive filter**, and every raw name is
-   validated there too — before anything is inflated or stored.
-2. **Names could hide behind the result object.** `unzipSync` stores members on a plain object, so an
-   exact duplicate silently overwrote its twin and a `__proto__` member disappeared from the key list
-   and skipped validation. The preflight refuses `__proto__`-style segments, exact repeats and
-   case-only repeats before that object exists.
-3. **Applying a scene was not atomic.** `fromSceneData` queues its state updates before it consumes
-   `motionTemplates`, so a scene with a truthy non-array `motionTemplates` could apply most of itself
-   and then fail. The boundary now validates the fields the apply path consumes (`motionTemplates`,
-   `activeTemplateId`, `coordinateSystem`) and refuses with `KCS_IMPORT_INVALID_SCENE_FIELD` before any
-   setter runs.
-4. **The manifest walk skipped anything deeper than 64 levels** instead of refusing it; an over-deep
-   manifest now reports `OGRAF_PACKAGE_MANIFEST_TOO_DEEP`.
-5. **The package report always claimed "0 layer(s) and 0 frame(s)".** It now shows the counts of the
-   scene the package carries, and the dialog only states counts it was actually given.
-6. **One package test asserted the Lottie dialog helper**, which proved nothing; it queries the package
-   dialog now, and the package preflight and the deep manifest have their own regression tests.
+- Merge decision for `chore/dependency-maintenance-option-b`.
+- Option C: TypeScript 7 and Vitest 5 majors (own branch, own review), plus the `engines` declaration
+  and the npm-12 `allowScripts` decision.
+- The two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), each with the evidence above.
 
 ---
 
@@ -340,6 +282,8 @@ one low finding; all were closed before the merge decision:
 - Checkout: `main` at or after `12b71a5` (the accepted code baseline), matching `origin/main`. **Milestone F item 10 is complete**: the import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are merged; the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base and stays historical. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **all four Milestone F item 10 slices (merged at `ff32d6c`, `8670b2a`, `bda62cb` and `3b30bff`)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
+- Checkout after the item 12 merge: `main` at or after `a4f8642` (the OGraf package import and its handoff refresh), matching `origin/main`
+- Milestone D item 9 **Option B** is implemented on `chore/dependency-maintenance-option-b` (`reports/progress_130_dependency_maintenance_option_b.md`) and **its merge decision is with the user**
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
 - Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (identical to `main`; deleting it needs approval)
@@ -365,9 +309,10 @@ Full Vitest (123 files / 1,850 tests), `npx vitest run src/tests/ografPackageImp
 ## Next scoped work
 
 1. **Milestone F — item 12 unified import entry is implemented on `feat/unified-import-entry`** (`reports/progress_128_unified_import_entry.md`): one header control decides from the file's content what it is — `.kcs` and legacy through the validated boundary, Lottie through the report dialog, OGraf manifests/packages through their existing refusal — and **the merge decision for that branch is with the user**. Item 10 is complete and merged (`reports/progress_127_lottie_import_entry_report_ux.md`): the "Import Lottie" control parses the document in memory, shows blocker/warning counts and every diagnostic with its source path and next step before anything is applied, cancels without touching the project, applies only on an explicit confirm through the existing `importProject` authority, and reconciles imported layer types onto existing KCS types the OGraf export accepts. The **OGraf package/editable import** is implemented on `feat/ograf-editable-import` (`reports/progress_129_ograf_editable_import.md`): the package is decoded in memory with entry/path guards and its `scene.kcs` is applied through the validated project path, with the merge decision still with the user. After it: the approval-gated package and toolchain follow-ups (Option B, `engines`/`allowScripts`, Option C) — each on its own branch with its own review and merge gate. Also open, each approval-gated: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and the npm-12 `allowScripts` decision.
-2. Milestone F's delivered work: the study, item 10's design, its four merged slices (the import core, masks/track mattes, text/image/precomp, and the import entry point), item 11 (measurement only, on `chore/evaluator-profiling-harness`), and item 12's first step (merged) plus product half (on `feat/kcs-import-product-half`). Anything beyond those scopes — item 12's unified import entry, OGraf package import, Milestone E beyond items 7 and 8 — needs its own approval, and **D's dependency/package part (item 9 Option B) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
-3. Preserve the tag and draft release, and run an independent review before every merge.
-4. Publish/finalize the GitHub draft only with further explicit user instruction.
+2. **Milestone D item 9 Option B (dependency maintenance) is applied on `chore/dependency-maintenance-option-b`**: 16 patch/minor packages refreshed (React 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47, testing-library patches, pg, concurrently, @types) plus a bounded `npm audit fix` — `npm audit` went from 1 high + 6 moderate to **0**. Two minors were applied, verified and then deferred with evidence in the report: `oxlint` 1.85 (33 new rule warnings) and `jsdom` 30.1 (its `URL.createObjectURL` no longer accepts a Blob, which breaks the export-download test). The upgrade also required four test selectors to use the label case the component actually renders (`Gradient angle`), because jsdom's selector engine now matches attribute values case-sensitively. Validation: 124 files / 1,858 tests, build, tsc, lint (clean), `validate:ograf`, `qa:release`, the Lottie browser spec (3 tests), state check (32), `npm audit` 0, server health 200.
+3. Milestone F's delivered work: the study, item 10's design, its four merged slices (the import core, masks/track mattes, text/image/precomp, and the import entry point), item 11 (measurement only, on `chore/evaluator-profiling-harness`), and item 12's first step (merged) plus product half (on `feat/kcs-import-product-half`). Anything beyond those scopes — item 12's unified import entry, OGraf package import, Milestone E beyond items 7 and 8 — needs its own approval, and **D's dependency/package part (item 9 Option B) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
+4. Preserve the tag and draft release, and run an independent review before every merge.
+5. Publish/finalize the GitHub draft only with further explicit user instruction.
 
 ## Guardrails
 
@@ -470,6 +415,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
 - **Milestone D item 6 — state consistency check — MERGED** at `b91e8b9` (follow-up `be76df9`): `node scripts/check-state-consistency.mjs` fails when the live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when the handoff upload instruction is superseded, or when the bundle carries source/test/binary copies, collapsed Windows paths or secret markers (see `reports/progress_111_state_hygiene_gate.md`).
+- **Item 9 (dependency and warning maintenance) — Option A MERGED at `3923141`; Option B applied on `chore/dependency-maintenance-option-b` awaiting the merge decision** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**; `oxlint` 1.85 and `jsdom` 30.1 are deferred with evidence. The paragraph below records the merged Option A.
 - **Item 9 (dependency and warning maintenance) — MERGED at `3923141`** (audit, Option A warning maintenance and the local SQLite repair). The audit is complete (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and the approved **Option A is implemented** on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule and the repair of **D9-1** (the local `sqlite3` NAPI binding is extracted; `node server/index.js` starts and `GET /api/health` returns 200 in this working copy). No dependency was updated and `package.json`, `package-lock.json` and the workflows are unchanged by that maintenance work; only its approval-gated follow-ups (Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin) are still open. The 7 catalogued warnings are resolved except W6 (`e2e/**` outside the Vitest glob by design) and W7 (environment `NO_COLOR`/`FORCE_COLOR`). Still open by decision: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; majors available for `typescript` 6→7 and the Vitest pair 4→5), the 7 `npm audit` findings (6 moderate, 1 high; `qs` and `undici` moderate in the production tree), the `engines` declaration and the npm-12 `allowScripts` pin.
 
 ---
@@ -487,7 +433,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
-| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. Follow-ups stay approval-gated: Option B (patch/minor updates + `npm audit fix`), Option C (TypeScript 7 / Vitest 5), the `engines` declaration and the npm-12 `allowScripts` pin |
+| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is implemented on `chore/dependency-maintenance-option-b`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 and `jsdom` 30.1 deferred for documented reasons; the merge decision is with the user. Still approval-gated: Option C (TypeScript 7 / Vitest 5), the `engines` declaration, the npm-12 `allowScripts` pin, and the two deferred minor bumps |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**. Checkpoint `2026-09-18-after-lottie-core` |
 
@@ -579,6 +525,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The value and speed graphs are exposed as labelled groups instead of images, and focus rings were added for the timeline diamonds and the graph keyframe points.
 - Freeform paths that only carry legacy `points` normalize a repeated closing vertex before the editing overlay materializes a canonical `path` on first edit; the legacy array itself is preserved.
 - Matte relationship resolution went through one shared helper that mirrors the rendered result, so the outliner indicator and the stage agree for enabled, disabled, missing, and unusable sources.
+- Runtime and toolchain dependencies were refreshed within their current major versions (React 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47 and the test-library patches) on an isolated branch; the linter and jsdom keep their previously verified versions because the newer ones need work of their own (33 new lint rules; a jsdom regression that drops `URL.createObjectURL`).
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.
@@ -588,6 +535,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hardened prototype-sensitive imported OGraf keys, package paths, MIME lookups, and generated runtime maps.
 - Hardened SVG input boundaries, source-path handling, output filesystem checks, hierarchy, broadcast state, and mask/matte parity.
 - The `1.1.0-rc.1` candidate records accepted operational warnings for hostile-concurrency filesystem mutation and network-dependent schema validation.
+- `npm audit` reports no known vulnerabilities: the six moderate advisories and the high `nanoid` advisory were resolved by a bounded `npm audit fix` (no `--force`) together with the refreshed dependency set.
 
 ---
 
@@ -627,14 +575,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 7557 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 13458 bytes
-- `NEXT_SESSION.md` — 11193 bytes
-- `OMP_FINAL_RESPONSE.md` — 4530 bytes
-- `PROJECT_STATE.md` — 15371 bytes
-- `README.md` — 2826 bytes
-- `manifest.txt` — 2755 bytes
-- `progress_129_ograf_editable_import.md` — 10700 bytes
+- `CHANGELOG.md` — 8144 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 13760 bytes
+- `NEXT_SESSION.md` — 12481 bytes
+- `OMP_FINAL_RESPONSE.md` — 3473 bytes
+- `PROJECT_STATE.md` — 15828 bytes
+- `README.md` — 3003 bytes
+- `manifest.txt` — 2205 bytes
+- `progress_130_dependency_maintenance_option_b.md` — 5986 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

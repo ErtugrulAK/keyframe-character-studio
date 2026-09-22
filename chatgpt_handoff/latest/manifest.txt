@@ -1,25 +1,23 @@
-# KCS ChatGPT Upload Manifest — Milestone F Item 12 (OGraf Package / Editable Import)
+# KCS ChatGPT Upload Manifest — Milestone D Item 9 Option B (Dependency Maintenance)
 
 Clean refreshed: YES
-Bundle purpose: importing an OGraf package as its editable scene (Milestone F item 12, second half)
+Bundle purpose: the patch/minor dependency refresh plus the bounded security fix (Milestone D item 9, Option B)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/ograf-editable-import, fast-forward merged into main at 419fc6a (base main was 7904037) and pushed; the branch is kept
-Task record: reports/progress_129_ograf_editable_import.md
-What changed: src/ograf/packageImport.ts (guarded archive decode with a per-entry admission rule), src/utils/importValidation.ts (scene fields the apply path consumes, plus a fail-closed depth limit), src/hooks/useSerialization.ts (the scene is prepared completely before the first state update), src/components/Header/HeaderBar.tsx + ImportReportDialog (the shared report surface now serves the package import too, with real counts), e2e/lottie-import-report.spec.ts (a package browser test)
-Not changed: no dependency (fflate was already present), no package.json, lockfile or workflow change; the .kcs, legacy, Lottie and bare OGraf manifest behaviour is unchanged apart from the manifest message that now names the package route
-Validation: npm run build PASS; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); npx playwright test e2e/lottie-import-report.spec.ts PASS (3 tests); git diff --check clean
-Reviews: three independent read-only rounds — BLOCKED (6 findings), BLOCKED (1), READY WITH WARNINGS — every blocker closed, including an atomicity fix in the apply path with a regression test proven red before it
-Next work (approval-gated): Option B dependency maintenance, then the engines/allowScripts decision and Option C
+Branch: chore/dependency-maintenance-option-b, base main at a4f8642 — not merged, not pushed; the merge decision is with the user
+Task record: reports/progress_130_dependency_maintenance_option_b.md
+What changed: package.json and package-lock.json (16 patch/minor packages keep their caret convention; nothing added or removed) and four selectors in src/tests/styleMatteSection.test.tsx that used the wrong attribute-value case
+Security: a bounded npm audit fix (no --force) took npm audit from 1 high + 6 moderate to 0
+Deferred with evidence: oxlint 1.85 (33 new rule warnings) and jsdom 30.1 (its createObjectURL no longer accepts a Blob, which breaks the export download test)
+Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (32); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
+Next work (approval-gated): the merge decision for this branch, then Option C majors with the engines/allowScripts decision
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): README.md, manifest.txt, OMP_FINAL_RESPONSE.md, progress_129_ograf_editable_import.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, CHANGELOG.md, NEXT_SESSION.md, PROJECT_STATE.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_130_dependency_maintenance_option_b.md
 
-Omitted categories: source, test and design files; package/lock/workflow files; older reports and current-state documents; QA output, assets, archives, caches.
+Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
-
-Validation at this revision: build PASS; 124 files / 1,858 tests PASS; lint clean; validate:ograf PASS; qa:release PASS; playwright 3/3 PASS; state check PASS.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

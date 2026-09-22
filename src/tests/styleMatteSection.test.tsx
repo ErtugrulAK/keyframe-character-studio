@@ -1069,7 +1069,7 @@ describe('StyleMatteSection — M21 image matte UI', () => {
       imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { angle: 45 } }),
       [IMAGE, imgTarget()],
     );
-    expect(container.querySelector('input[aria-label="Gradient Angle"]')).toBeTruthy();
+    expect(container.querySelector('input[aria-label="Gradient angle"]')).toBeTruthy();
   });
 
   it('14. image + Radial gradient hides the angle control', () => {
@@ -1077,7 +1077,7 @@ describe('StyleMatteSection — M21 image matte UI', () => {
       imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { type: 'radial', stops: STOPS2 } }),
       [IMAGE, imgTarget()],
     );
-    expect(container.querySelector('input[aria-label="Gradient Angle"]')).toBeNull();
+    expect(container.querySelector('input[aria-label="Gradient angle"]')).toBeNull();
     const type = screen.getByLabelText(/Gradient Type/i) as HTMLSelectElement;
     expect(type.value).toBe('radial');
   });
@@ -1142,7 +1142,7 @@ describe('StyleMatteSection — M21 image matte UI', () => {
       imgTarget({ sourcePartId: 'img', mode: 'alpha', enabled: true, gradient: { type: 'radial', stops: STOPS2 } }),
       [IMAGE, imgTarget()],
     );
-    expect(container.querySelector('input[aria-label="Gradient Angle"]')).toBeNull();
+    expect(container.querySelector('input[aria-label="Gradient angle"]')).toBeNull();
     // re-render with a Linear gradient — the SAME component instance derives
     // the new display (no stale local state survives)
     rerender(<StyleMatteSection
@@ -1150,7 +1150,7 @@ describe('StyleMatteSection — M21 image matte UI', () => {
       characterParts={[IMAGE, imgTarget()]}
       onPartPropChange={vi.fn()}
     />);
-    expect(container.querySelector('input[aria-label="Gradient Angle"]')).toBeTruthy();
+    expect(container.querySelector('input[aria-label="Gradient angle"]')).toBeTruthy();
   });
 
   it('21. legacy linear {angle:45} displays Linear without rewrite (no callback)', () => {

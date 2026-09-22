@@ -17,40 +17,39 @@
 
 ## 1. OMP Final Response
 
-# KCS Milestone F Item 12 — Final Response (Unified Import Entry)
+# KCS Milestone F Item 12 (Second Half) — Final Response (OGraf Package Import)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** done and merged. `feat/unified-import-entry` was fast-forward merged into `main` at `ce6cec2` (base `main` was `81b87a3`) and pushed; the branch is kept.
-- **Report:** `reports/progress_128_unified_import_entry.md`.
-- One import control replaces the fragmented ones, and it decides what a file is from its **content**, never from its name alone.
+- **Status:** done and merged. `feat/ograf-editable-import` was fast-forward merged into `main` at `419fc6a` (base `main` was `7904037`) and pushed; the branch is kept.
+- **Report:** `reports/progress_129_ograf_editable_import.md`.
+- **Product decision (user):** an OGraf package opens as an **editable** KCS document; a bare `.ograf.json` manifest stays refused because it carries no scene.
 
 ## 2) WHAT CHANGED
 
 | File | Change |
 |---|---|
-| `src/utils/importDispatch.ts` | New `classifyImport(fileName, text)`: package names first, then the boundary size gate (no parse), then one parse shared by an OGraf-schema check and a Lottie shape check, with the KCS scene/legacy decision delegated to `validateImportedDocument` |
-| `src/components/Header/HeaderBar.tsx` | One `Import` button and input (`.json`, `.kcs`, `.lottie.json`, `.ograf.json`, `.zip`, `.ograf`) whose label names every accepted kind; the separate `Import Lottie` control is gone; the handler routes each kind to its existing behaviour |
-| `src/components/Modal/ImportReportDialog.{tsx,css}` | The Lottie report dialog generalised with a `title` prop (renamed from `LottieImportReportDialog`) so the OGraf package slice can reuse it; its accessibility, sanitiser, blocker-first order and 40-entry cap are unchanged |
-| `src/tests/importDispatch.test.ts` | New, 4 cases: the classification matrix, content-over-extension, the unclassifiable cases, the OGraf-marker precedence and the oversized route |
-| `src/tests/lottieImportEntry.test.tsx` | 13 cases rewritten around the single control: report/cancel/apply, KCS import, OGraf rejection, unclassifiable refusal, refusal dialog, focus trap, sanitisation, cap |
-| `e2e/lottie-import-report.spec.ts` | 2 browser tests: the Lottie report flow, and a `.kcs` project importing through the same control while a refused file changes nothing |
+| `src/ograf/packageImport.ts` (new) | `readOGrafPackage(bytes)` decodes the archive under an explicit admission rule: entry count, per-entry size, cumulative declared size, normalised package paths, reserved names, prototype-sensitive segments and exact/case-only repeats — all decided on the central directory, immediately before each entry is inflated; a missing or oversized `scene.kcs` is refused; the manifest is walked, and an over-deep manifest is refused rather than skipped |
+| `src/utils/importValidation.ts` | The boundary now refuses the fields the apply path consumes after it queues its updates (`motionTemplates`, `activeTemplateId`, `coordinateSystem`) with `KCS_IMPORT_INVALID_SCENE_FIELD`, and refuses a document deeper than the walk can check (`KCS_IMPORT_TOO_DEEP`) instead of accepting an unchecked subtree |
+| `src/hooks/useSerialization.ts` | `fromSceneData` prepares **everything** — tracks, templates, active template, dimensions, name and the id collection — before the first state setter, so a scene that cannot be applied changes nothing |
+| `src/components/Header/HeaderBar.tsx`, `ImportReportDialog.tsx` | The unified control reads a package as bytes and opens the shared report ("OGraf package import report") with the scene's real counts; cancel is a no-op, confirm applies through `importProject`, a refusal disables the confirm |
+| tests + `e2e/lottie-import-report.spec.ts` | New package reader suite (8 cases), new atomicity regression through the real hook (2 cases), package flow cases in the entry suite, and a third Playwright test for the package path |
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| focused suites (`importDispatch`, `lottieImportEntry`, `lottieImport`) | PASS — 105 cases |
-| `npm test` (full Vitest) | PASS — 122 files / 1,841 tests |
+| `npm test` (full Vitest) | PASS — 124 files / 1,858 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
-| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 2 real-browser tests |
-| `node scripts/check-state-consistency.mjs` | PASS |
+| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 real-browser tests |
 | `git diff --check` | clean |
+
+The atomicity regression was proven **red before the fix** (the pre-fix hook called `setFps` for a refused scene) and green after it.
 
 ## 4) REVIEW
 
@@ -58,76 +57,51 @@ Three independent read-only rounds (`reviewer-agent`, evidence-cited):
 
 | Round | Verdict | Findings |
 |---|---|---|
-| 1 | BLOCKED | The dispatcher parsed before applying the boundary's size gate; the canonical OGraf schema (`ograf.ebu.io`) was not recognised by content, only by the `/ograf/` substring and the file name; the control's accessible label did not name the legacy and package kinds; the new tests missed both the canonical-schema and the oversized cases |
-| 2 | BLOCKED | The OGraf marker had been moved behind the KCS shape check, so an OGraf-marked document that also carried a KCS shape could reach the project authority |
-| 3 | READY WITH WARNINGS | Every blocker closed; the remaining notes were a duplicated changelog bullet, stale test counts in the report and a misplaced import — all fixed |
-
-The production fixes: the size gate now runs before any parse (so an oversized document is never parsed by the dispatcher), the canonical `OGRAF_GRAPHICS_SCHEMA_URL` authority is reused instead of a substring, and the OGraf marker wins over the KCS shape so an OGraf document can never be applied as a project.
+| 1 | BLOCKED | 3 high + 2 medium + 1 low: the entry limit did not bound decompression; names could hide behind the unzip result object; applying a scene was not atomic; the manifest walk skipped deep subtrees; the report always claimed "0 layer(s)"; one test asserted the wrong dialog |
+| 2 | BLOCKED | All closed except atomicity, which the reviewer showed was still reachable through nested scene fields |
+| 3 | READY WITH WARNINGS | Every finding PASS; the remaining notes (the project boundary's own depth walk, an unreachable-by-the-writer duplicate fixture, two stale comments) were closed in `419fc6a` |
 
 ## 5) SAFETY
 
-- The validated import boundary is still the only path that turns text into a project, and `importProject` still validates before it applies anything.
-- `.kcs`, legacy, OGraf manifest and OGraf package outcomes are unchanged; the OGraf kinds keep their existing messages.
-- Lottie still reports before it replaces, and cancel still performs no mutation, no save and no toast.
-- No network or filesystem access; the document text is the only input.
-- No renderer/evaluator change, no dependency, and no `package.json`, lockfile or workflow change.
+- The archive is decoded in memory under explicit bounds; no filesystem or network access.
+- The validated boundary and `importProject` remain the only path from text to a project, and an import that cannot be applied now changes nothing.
+- No dependency was added (`fflate` was already present) and no `package.json`, lockfile or workflow file changed.
 - Tag `v1.1.0-rc.1` (`46d2a3e…`), the GitHub draft release, npm metadata, `origin/without-mask`, the OMP configuration and the user folders are unchanged.
 - Integration was fast-forward only: no merge commit, no rebase, no force push, no tag change, no branch deletion.
 
 ## 6) NEXT
 
-The OGraf package/editable import expansion (the next task of this orchestrator run), reusing
-`ImportReportDialog` and the same validated apply path; then the approval-gated package and toolchain
-follow-ups (Option B, `engines`/`allowScripts`, Option C).
+The approval-gated package and toolchain work: Option B dependency maintenance (7 patch + 12 minor and a
+bounded `npm audit fix`), then the `engines`/npm-12 `allowScripts` decision, then Option C major
+toolchain upgrades — each on its own branch, behind its own explicit approval.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone F Item 12 (Unified Import Entry)
+# KCS ChatGPT Upload Manifest — Milestone F Item 12 (OGraf Package / Editable Import)
 
 Clean refreshed: YES
-Bundle purpose: one content-classified import control replacing the fragmented entry points (Milestone F item 12)
+Bundle purpose: importing an OGraf package as its editable scene (Milestone F item 12, second half)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/unified-import-entry, fast-forward merged into main at ce6cec2 (base main was 81b87a3) and pushed; the branch is kept
-Task record: reports/progress_128_unified_import_entry.md; design: docs/design/KCS_MILESTONE_F_INTEROP_MAPPING.md context in docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md (in the repository)
-What changed: src/utils/importDispatch.ts (content-first classifier), src/components/Header/HeaderBar.tsx (one Import control + dispatch), src/components/Modal/ImportReportDialog.{tsx,css} (the Lottie report dialog generalised with a title prop), src/tests/importDispatch.test.ts (4 cases, new), src/tests/lottieImportEntry.test.tsx (13 cases), e2e/lottie-import-report.spec.ts (2 browser tests)
-Not changed: no renderer/evaluator change, no dependency, package.json, lockfile or workflow change; the .kcs, legacy, OGraf manifest and OGraf package outcomes are unchanged
-Validation: npm run build PASS; focused suites PASS (105 cases); full suite PASS (122 files / 1,841 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); npx playwright test e2e/lottie-import-report.spec.ts PASS (2 tests); git diff --check clean
-Reviews: three independent read-only rounds — BLOCKED, BLOCKED, READY WITH WARNINGS — every blocker closed (unbounded parse before the size gate; the canonical OGraf schema not recognised by content; the OGraf marker losing to the KCS shape)
-Next work (each needs its own approval): OGraf package/editable import expansion; then the approval-gated package/toolchain follow-ups (Option B, engines/allowScripts, Option C)
+Branch: feat/ograf-editable-import, fast-forward merged into main at 419fc6a (base main was 7904037) and pushed; the branch is kept
+Task record: reports/progress_129_ograf_editable_import.md
+What changed: src/ograf/packageImport.ts (guarded archive decode with a per-entry admission rule), src/utils/importValidation.ts (scene fields the apply path consumes, plus a fail-closed depth limit), src/hooks/useSerialization.ts (the scene is prepared completely before the first state update), src/components/Header/HeaderBar.tsx + ImportReportDialog (the shared report surface now serves the package import too, with real counts), e2e/lottie-import-report.spec.ts (a package browser test)
+Not changed: no dependency (fflate was already present), no package.json, lockfile or workflow change; the .kcs, legacy, Lottie and bare OGraf manifest behaviour is unchanged apart from the manifest message that now names the package route
+Validation: npm run build PASS; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); npx playwright test e2e/lottie-import-report.spec.ts PASS (3 tests); git diff --check clean
+Reviews: three independent read-only rounds — BLOCKED (6 findings), BLOCKED (1), READY WITH WARNINGS — every blocker closed, including an atomicity fix in the apply path with a regression test proven red before it
+Next work (approval-gated): Option B dependency maintenance, then the engines/allowScripts decision and Option C
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
-GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (8):
-- README.md — bundle instructions
-- manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the task final response
-- progress_128_unified_import_entry.md — the task record
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
-- CHANGELOG.md — changelog (copy of the root document)
-- NEXT_SESSION.md — current state and next action (copy of the root document)
-- PROJECT_STATE.md — project state (copy of the root document)
+Copied files (8): README.md, manifest.txt, OMP_FINAL_RESPONSE.md, progress_129_ograf_editable_import.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, CHANGELOG.md, NEXT_SESSION.md, PROJECT_STATE.md
 
-Omitted categories:
-- Source, test and design files (they live in the repository)
-- package.json, package-lock.json, ci.yml, release-smoke.yml files
-- Older reports, current-state/release documents, earlier bundle copies
-- QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
+Omitted categories: source, test and design files; package/lock/workflow files; older reports and current-state documents; QA output, assets, archives, caches.
+Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
-Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
-
-Validation at this revision (each command run separately):
-- npm run build (tsc -b && vite build): PASS — the type gate CI runs
-- npx vitest run src/tests/importDispatch.test.ts src/tests/lottieImportEntry.test.tsx src/tests/lottieImport.test.ts: PASS — 105 cases
-- npm test: PASS — 122 files / 1,841 tests; npm run lint: clean
-- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests)
-- npx playwright test e2e/lottie-import-report.spec.ts: PASS — 2 tests
-
-Next: the OGraf package/editable import expansion (the next orchestrator task).
+Validation at this revision: build PASS; 124 files / 1,858 tests PASS; lint clean; validate:ograf PASS; qa:release PASS; playwright 3/3 PASS; state check PASS.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
 
@@ -135,24 +109,25 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 12 Unified Import Entry
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 12 OGraf Package Import
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The unified import entry (Milestone F item 12), merged into `main` at `ce6cec2`:
+The OGraf package import (Milestone F item 12, second half), merged into `main` at `419fc6a`:
 
-- One **Import** control in the header. The selected file is classified by what it **contains**, so a
-  KCS project, a legacy project, an OGraf manifest/package and a Lottie animation all reach their
-  existing importer (and the refusals) through the same button.
-- A Lottie animation still parses in memory and opens a report that lists its blockers and losses
-  with their source paths and next steps **before** anything is applied; **Cancel** clears the pending
-  import and nothing else, and only **Import and replace project** applies the scene through the same
-  validated path the project import uses.
-- Imported Lottie layer types stay ones the editor renders and the OGraf export accepts, and Lottie's
-  relative tangents become the absolute handles the renderer reads, so the imported geometry draws
-  what the source drew.
+- One **Import** control classifies a selected file by what it **contains**. A KCS project, a legacy
+  project, an OGraf manifest/package and a Lottie animation each reach their existing importer.
+- An **OGraf package** (`.zip`/`.ograf`) is decoded in memory under entry-count, per-entry size,
+  cumulative size and package-path guards, and the `scene.kcs` it carries opens a report with the
+  scene it would apply. Cancel changes nothing; **Import and replace project** applies it through the
+  same validated path the project import uses.
+- A package the reader cannot accept (unsafe path, duplicate name, reserved key, no scene, too large)
+  is refused with its own code, and its confirm button stays disabled — it can never apply or report
+  success. A bare `.ograf.json` manifest still points the user at the package.
+- An import that cannot be applied leaves the project untouched: the scene is prepared completely
+  before any editor state changes, which is pinned by a regression test proven red before the fix.
 
 ## Files
 
@@ -188,131 +163,171 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 128 — Unified Import Entry (Milestone F item 12)
+# Progress 129 — OGraf Package / Editable Import
 
 ## 1. Scope
 
-One controlled user-facing import entry replaces the fragmented ones. The header now offers a single
-**Import** control that decides from the file's **content** what it is and routes it to the importer
-that owns that kind:
+An OGraf **package** (`.zip`/`.ograf`) can now be imported as an editable KCS document. The package
+already carries `scene.kcs` — the canonical scene the exporter wrote — so the slice decodes the
+archive under explicit guards and hands that scene to the existing validated import path; nothing is
+reconstructed and nothing is invented.
 
-| Kind | Route | Behaviour |
-|---|---|---|
-| `.kcs` scene | `importProject` (the validated boundary) | Unchanged: applied immediately, warnings shown as an info toast |
-| Legacy project | `importProject` | Unchanged: applied immediately with the `KCS_IMPORT_LEGACY_MIGRATED` warning |
-| Lottie (`.json`/`.lottie.json`) | `importLottieDocument` + report dialog | Report before replace; cancel is a no-op |
-| OGraf manifest (`.ograf.json` or an OGraf `$schema`) | existing rejection message | Unchanged |
-| OGraf package (`.zip`/`.ograf`) | existing rejection message | Unchanged — package import is item 12's later slice |
-| Anything else | `importProject` (its own refusal) | Unchanged refusal message |
+A bare `.ograf.json` manifest stays refused: it carries no scene, so an editable import from it would
+need a different (and currently undefined) product decision. Its message now points at the package.
 
-Out of scope by instruction: new OGraf editable-import conversion, package/lockfile/workflow edits and
-new dependencies.
+Out of scope by instruction: dependency changes, `package.json`/lockfile/workflow edits, release
+actions.
 
 ## 2. Branch
 
-`feat/unified-import-entry`, created from `main` at `81b87a3`.
+`feat/ograf-editable-import`, created from `main` at `7904037`.
 
 ## 3. Existing authorities reused
 
 | Authority | Where | How this slice uses it |
 |---|---|---|
-| `validateImportedDocument` (the validated import boundary) | `src/utils/importValidation.ts` | The scene/legacy decision comes from its `document.kind`; no second classifier for KCS shapes exists |
-| `importProject` | `src/hooks/useSerialization.ts` | Still the only apply path for project documents; it validates first and never partially applies |
-| `importLottieDocument` | `src/interop/lottie/mapDocument.ts` | The Lottie parse, unchanged |
-| `ImportReportDialog` (was `LottieImportReportDialog`) | `src/components/Modal/ImportReportDialog.tsx` | Generalised with a `title` prop so the next slice (OGraf package import) reuses the same surface; its a11y, sanitiser, blocker-first order and 40-entry cap are unchanged |
-| `useToast`, `sanitizeOGrafDiagnosticText` | existing | Unchanged feedback and display safety |
+| The exported package layout (`scene.kcs` beside the manifest) | `src/ograf/packageCompiler.ts` | The reader looks for that one member instead of inventing a format |
+| `unzipSync` | `fflate` (already a dependency) | Decodes the archive; no new dependency |
+| `normalizePackagePath`, `isSafePackageRelativePath`, `isReservedWindowsName`, `hasCaseInsensitiveCollision`, `isPrototypeSensitiveKey` | `src/utils/pathSafety.ts` | Every entry path is normalised and checked; the manifest is walked for reserved keys |
+| `validateImportedDocument` + `importProject` | `src/utils/importValidation.ts`, `src/hooks/useSerialization.ts` | The decoded `scene.kcs` goes through the same boundary and apply path as a `.kcs` file; the boundary now also validates the fields the apply path consumes *after* it queues its state updates, so a refused scene never applies part of itself |
+| `ImportReportDialog` | `src/components/Modal/ImportReportDialog.tsx` | The same report surface the Lottie import uses; its diagnostic prop is now the shared structural shape |
+| `describeOGrafValueForDiagnostics`-style messages | — | Messages name what is wrong; no raw archive bytes or machine paths are rendered |
 
-## 4. Entry point
+## 4. The reader (`src/ograf/packageImport.ts`)
 
-One button and one file input in the header:
+`readOGrafPackage(bytes)` fails closed on the first problem and returns the scene text plus a report:
 
-- `Import` — "Import a KCS project, a legacy project, an OGraf manifest or a Lottie animation".
-- `accept=".json,.kcs,.lottie.json,.ograf.json,.zip,.ograf"`, with an `aria-label` naming all kinds.
+| Check | Code |
+|---|---|
+| Empty file, not a zip, no files | `OGRAF_PACKAGE_UNREADABLE` |
+| Archive above 64 MB | `OGRAF_PACKAGE_TOO_LARGE` |
+| More than 512 entries | `OGRAF_PACKAGE_TOO_MANY_ENTRIES` |
+| One entry above the 32 MB scene limit | `OGRAF_PACKAGE_ENTRY_TOO_LARGE` |
+| Declared contents totalling more than 64 MB | `OGRAF_PACKAGE_TOO_LARGE` |
+| A manifest deeper than the import can walk | `OGRAF_PACKAGE_MANIFEST_TOO_DEEP` |
+| Traversal, absolute or reserved path | `OGRAF_PACKAGE_UNSAFE_PATH` |
+| Two paths differing only by case | `OGRAF_PACKAGE_DUPLICATE_PATH` |
+| A reserved key in the manifest | `OGRAF_PACKAGE_UNSAFE_KEY` |
+| No `scene.kcs`, or an empty/oversized scene | `OGRAF_PACKAGE_MISSING_SCENE` / `OGRAF_PACKAGE_TOO_LARGE` |
+| Unreadable manifest (warning, the scene still imports) | `OGRAF_PACKAGE_UNREADABLE_MANIFEST` |
+| Assets are not imported (warning) | `OGRAF_PACKAGE_ASSETS_OMITTED` |
 
-The previous separate `Import Lottie` button and input are gone; the old routing (OGraf rejection
-included) is preserved inside the single handler.
+Every check runs on a central-directory entry immediately before that entry is inflated: the entry
+count, the declared size of that entry, the cumulative declared size and the raw name are all
+validated there, so no name can hide behind the result object — a prototype-sensitive segment, an
+exact repeat and a case-only repeat are refused — and the archive never materialises more than the
+budget allows. An entry over the per-entry limit is reported rather than dropped, and the
+post-unzip checks only confirm what the admission already accepted.
 
-## 5. Dispatch
+## 5. Entry point and flow
 
-`src/utils/importDispatch.ts` — `classifyImport(fileName, text)`:
+The unified import control already classifies `.zip`/`.ograf` as a package; it now reads those bytes
+and opens the shared report titled **"OGraf package import report"**:
 
-- A package form (`.zip`/`.ograf`) is decided by name because it is a binary archive that is never
-  read as text.
-- An OGraf manifest is recognised by its `.ograf.json` name **or** an OGraf `$schema` marker, which
-  keeps the previous behaviour for manifests whose schema URL has no `/ograf/` segment.
-- Everything else is decided by content: `validateImportedDocument` first (scene vs legacy), then a
-  Lottie check (`v` string + `layers` array + a timing field, and not an OGraf manifest). The Lottie
-  check is skipped for documents above the boundary's 32 MB limit.
-- A file that fits nothing is `unknown` and is handed to `importProject`, which refuses it with its
-  own diagnostic — the existing behaviour, unchanged.
+1. Selecting a package reads it as bytes and decodes it in memory — the project is untouched.
+2. A readable package reports its scene (and its warnings) before anything is applied.
+3. **Cancel** (button, Escape, backdrop) clears the pending import only: no mutation, no history, no
+   autosave, no toast.
+4. **Import and replace project** applies the scene through `importProject` — the same validated path
+   the `.kcs` import uses — then shows the success toast and, when the report carried warnings, one
+   compact info toast.
+5. A refused package (unreadable, unsafe, no scene) shows the same dialog with the refusal and a
+   disabled confirm, so it can never apply or report success.
 
-Because the content decides, a document renamed `.kcs` still imports as what it holds, and a `.json`
-that is really an OGraf manifest is still refused with the OGraf message.
+## 6. Cancel / apply / refusal semantics
 
-## 6. Report / cancel / apply semantics
-
-- Lottie: selecting the file parses it in memory and opens the report; **Cancel** (button, Escape or
-  backdrop) clears the pending state only — no project mutation, no history entry, no autosave, no
-  toast; **Import and replace project** applies through `importProject`.
-- KCS/legacy/unknown: unchanged immediate behaviour (validate → apply → toast).
-- A refusal from either side never reports success.
+- Cancel is a true no-op, identical to the Lottie import.
+- Apply re-validates the scene through the boundary (the package text is untrusted input) and never
+  partially applies.
+- A refusal from either the reader or the project authority reports the refusal, never a success.
 
 ## 7. Security / privacy boundaries
 
-- No network or filesystem access: the document text is the only input, and an external image source
-  is still only reported by the Lottie importer.
-- Every rendered value in the report passes the display sanitiser.
-- The boundary's protections (size limit, JSON syntax, prototype-key walk, layer-count limit) are
-  unchanged, and the dispatcher adds no parsing of its own beyond a bounded Lottie shape check.
+- No filesystem or network access: the archive is decoded in memory from bytes the user selected.
+- Entry count, entry size and total size are bounded before decompression.
+- Package paths go through the existing path-safety authority; traversal, absolute and reserved names
+  are refused.
+- Prototype-sensitive keys in the manifest are refused.
+- The rendered report carries only the reader's own messages and the archive's entry names, all
+  display-sanitised.
 
 ## 8. Tests
 
 | Test | What it pins |
 |---|---|
-| `src/tests/importDispatch.test.ts` (new, 4 cases) | The classification matrix for every kind; content beats extension (a `.kcs` holding Lottie, a `.lottie.json` holding a scene); unclassifiable input, a Lottie-shaped object without timing, and a prototype-key document are all `unknown` |
-| `src/tests/lottieImportEntry.test.tsx` (13 cases) | The single control drives the Lottie report, the KCS import, the OGraf rejection and the unclassifiable refusal; cancel is a no-op; a refusal dialog appears for a Lottie the importer rejects and its confirm is disabled; focus/Tab/Escape; sanitisation and the 40-entry cap |
-| `e2e/lottie-import-report.spec.ts` (2 browser tests) | A `.kcs` project imports through the same control and a refused file changes nothing; the Lottie report flow still cancels and applies |
-| `src/tests/ografBrowserZip.test.tsx` | The pre-existing OGraf manifest/package messages still fire (unchanged test) |
+| `src/tests/ografPackageImport.test.ts` (new, 8 cases) | A real package imports its `scene.kcs` and its manifest name; missing scene, empty file and non-archive are refused; traversal, absolute, reserved and case-collision paths are refused; a prototype key in the manifest is refused; the archive and entry limits are enforced (and an oversized entry is reported, not dropped); an unreadable manifest is a warning, not a failure |
+| `src/tests/lottieImportEntry.test.tsx` (16 cases) | Package report appears without mutating, cancel is a no-op, confirm applies through `importProject` with the manifest name, a project-authority refusal never reports success — plus the existing single-control cases |
+| `src/tests/ografBrowserZip.test.tsx` (18 cases) | The manifest message now points at the package, and an unreadable package opens a refusal report instead of a blanket toast |
+| `e2e/lottie-import-report.spec.ts` (3 browser tests) | The package flow end to end: report, cancel keeps the seeded project, confirm replaces it with the package scene |
 
 ## 9. Validation matrix
 
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| focused suites (`importDispatch`, `lottieImportEntry`, `lottieImport`) | PASS — 105 cases |
-| `npm test` (full Vitest) | PASS — 122 files / 1,841 tests |
+| focused suites (package import, dispatch, entry, lottie, ograf zip) | PASS — 134 cases |
+| `npm test` (full Vitest) | PASS — 123 files / 1,854 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
-| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 2 real-browser tests |
+| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 real-browser tests |
 | `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
 ## 10. Protected invariants
 
-- The validated import boundary remains the only path that turns text into a project.
-- No change to `.kcs`, legacy, OGraf manifest or OGraf package outcomes.
-- No renderer/evaluator change, no dependency, no `package.json`, lockfile or workflow change.
-- Cancel still guarantees zero mutation for the report-driven import.
+- The validated boundary remains the only path from text to a project.
+- `.kcs`, legacy, Lottie and bare OGraf manifest behaviour is unchanged apart from the manifest
+  message that now names the package route.
+- No dependency was added (`fflate` was already present) and no `package.json`, lockfile or workflow
+  file changed.
+- Cancel keeps its zero-mutation guarantee for every report-driven import.
 
 ## 11. Residual risks
 
-- **Unknown files now take the project path.** A malformed Lottie file can no longer open the Lottie
-  report; it is refused with the project boundary's "not valid JSON" message. That is honest (nothing
-  can be classified), but a user who renamed a Lottie file to something unrecognisable sees the
-  project message instead of a Lottie one.
-- **One control means one affordance.** The button no longer says "Lottie"; a user looking for a
-  Lottie-specific entry point has to read the tooltip. The accepted kinds are named there and in the
-  input's label.
-- **OGraf packages are still refused**, by design: their import is the next slice, and the shared
-  report dialog is ready for it.
-- The dispatcher parses the text once more for the Lottie shape check; the size guard keeps that
-  bounded, and the Lottie importer parses it again on accept.
+- **Assets and fonts are not reconstructed.** The package may carry images and fonts; only the scene
+  imports, and the report says so. A graphic that relied on packaged images imports with the layers
+  and loses their sources — re-linking them is manual until an asset slice exists.
+- **Round-trip is scene-level, not byte-level.** Exporting the imported scene again will produce a new
+  package (new ids, new asset paths) rather than the original bytes; nothing claims otherwise.
+- **The manifest's public controls are not imported.** They are runtime/OGraf concepts; the editable
+  document keeps the scene only.
+- **`.ograf.json` on its own stays refused**, which is a product boundary, not a limitation of the
+  reader.
+- The reader trusts the zip's declared entry sizes for the pre-decompression filter, which is the
+  standard mitigation; a crafted archive that lies about a size can still allocate up to the entry
+  limit, which is why the total and entry bounds exist.
 
 ## 12. Next work
 
-OGraf package/editable import expansion on its own branch (Task 2 of the current orchestrator run),
-reusing `ImportReportDialog` and the same validated apply path.
+The approval-gated package/toolchain follow-ups (Option B dependency maintenance, the `engines` and
+npm-12 `allowScripts` decision, Option C major toolchain upgrades) — each behind its own explicit
+approval, then the final documentation reconciliation and the release-readiness audit.
+
+## 13. Review
+
+One independent read-only round (`reviewer-agent`) returned **BLOCKED** with three high, two medium and
+one low finding; all were closed before the merge decision:
+
+1. **The entry limit did not protect decompression.** `fflate` inflates each member as it walks the
+   central directory, so counting entries afterwards bounded nothing. The count, the per-entry size and
+   a new total-size budget are now enforced **inside the archive filter**, and every raw name is
+   validated there too — before anything is inflated or stored.
+2. **Names could hide behind the result object.** `unzipSync` stores members on a plain object, so an
+   exact duplicate silently overwrote its twin and a `__proto__` member disappeared from the key list
+   and skipped validation. The preflight refuses `__proto__`-style segments, exact repeats and
+   case-only repeats before that object exists.
+3. **Applying a scene was not atomic.** `fromSceneData` queues its state updates before it consumes
+   `motionTemplates`, so a scene with a truthy non-array `motionTemplates` could apply most of itself
+   and then fail. The boundary now validates the fields the apply path consumes (`motionTemplates`,
+   `activeTemplateId`, `coordinateSystem`) and refuses with `KCS_IMPORT_INVALID_SCENE_FIELD` before any
+   setter runs.
+4. **The manifest walk skipped anything deeper than 64 levels** instead of refusing it; an over-deep
+   manifest now reports `OGRAF_PACKAGE_MANIFEST_TOO_DEEP`.
+5. **The package report always claimed "0 layer(s) and 0 frame(s)".** It now shows the counts of the
+   scene the package carries, and the dialog only states counts it was actually given.
+6. **One package test asserted the Lottie dialog helper**, which proved nothing; it queries the package
+   dialog now, and the package preflight and the deep manifest have their own regression tests.
 
 ---
 
@@ -615,11 +630,11 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `CHANGELOG.md` — 7557 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 13458 bytes
 - `NEXT_SESSION.md` — 11193 bytes
-- `OMP_FINAL_RESPONSE.md` — 4875 bytes
+- `OMP_FINAL_RESPONSE.md` — 4530 bytes
 - `PROJECT_STATE.md` — 15371 bytes
-- `README.md` — 2625 bytes
-- `manifest.txt` — 3791 bytes
-- `progress_128_unified_import_entry.md` — 7384 bytes
+- `README.md` — 2826 bytes
+- `manifest.txt` — 2755 bytes
+- `progress_129_ograf_editable_import.md` — 10700 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

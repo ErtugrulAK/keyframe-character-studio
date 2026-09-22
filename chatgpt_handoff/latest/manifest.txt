@@ -1,46 +1,25 @@
-# KCS ChatGPT Upload Manifest — Milestone F Item 12 (Unified Import Entry)
+# KCS ChatGPT Upload Manifest — Milestone F Item 12 (OGraf Package / Editable Import)
 
 Clean refreshed: YES
-Bundle purpose: one content-classified import control replacing the fragmented entry points (Milestone F item 12)
+Bundle purpose: importing an OGraf package as its editable scene (Milestone F item 12, second half)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/unified-import-entry, fast-forward merged into main at ce6cec2 (base main was 81b87a3) and pushed; the branch is kept
-Task record: reports/progress_128_unified_import_entry.md; design: docs/design/KCS_MILESTONE_F_INTEROP_MAPPING.md context in docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md (in the repository)
-What changed: src/utils/importDispatch.ts (content-first classifier), src/components/Header/HeaderBar.tsx (one Import control + dispatch), src/components/Modal/ImportReportDialog.{tsx,css} (the Lottie report dialog generalised with a title prop), src/tests/importDispatch.test.ts (4 cases, new), src/tests/lottieImportEntry.test.tsx (13 cases), e2e/lottie-import-report.spec.ts (2 browser tests)
-Not changed: no renderer/evaluator change, no dependency, package.json, lockfile or workflow change; the .kcs, legacy, OGraf manifest and OGraf package outcomes are unchanged
-Validation: npm run build PASS; focused suites PASS (105 cases); full suite PASS (122 files / 1,841 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); npx playwright test e2e/lottie-import-report.spec.ts PASS (2 tests); git diff --check clean
-Reviews: three independent read-only rounds — BLOCKED, BLOCKED, READY WITH WARNINGS — every blocker closed (unbounded parse before the size gate; the canonical OGraf schema not recognised by content; the OGraf marker losing to the KCS shape)
-Next work (each needs its own approval): OGraf package/editable import expansion; then the approval-gated package/toolchain follow-ups (Option B, engines/allowScripts, Option C)
+Branch: feat/ograf-editable-import, fast-forward merged into main at 419fc6a (base main was 7904037) and pushed; the branch is kept
+Task record: reports/progress_129_ograf_editable_import.md
+What changed: src/ograf/packageImport.ts (guarded archive decode with a per-entry admission rule), src/utils/importValidation.ts (scene fields the apply path consumes, plus a fail-closed depth limit), src/hooks/useSerialization.ts (the scene is prepared completely before the first state update), src/components/Header/HeaderBar.tsx + ImportReportDialog (the shared report surface now serves the package import too, with real counts), e2e/lottie-import-report.spec.ts (a package browser test)
+Not changed: no dependency (fflate was already present), no package.json, lockfile or workflow change; the .kcs, legacy, Lottie and bare OGraf manifest behaviour is unchanged apart from the manifest message that now names the package route
+Validation: npm run build PASS; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); npx playwright test e2e/lottie-import-report.spec.ts PASS (3 tests); git diff --check clean
+Reviews: three independent read-only rounds — BLOCKED (6 findings), BLOCKED (1), READY WITH WARNINGS — every blocker closed, including an atomicity fix in the apply path with a regression test proven red before it
+Next work (approval-gated): Option B dependency maintenance, then the engines/allowScripts decision and Option C
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
-GitHub release: existing draft prerelease, not published/finalized
 npm publish: NO
 
-Copied files (8):
-- README.md — bundle instructions
-- manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the task final response
-- progress_128_unified_import_entry.md — the task record
-- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
-- CHANGELOG.md — changelog (copy of the root document)
-- NEXT_SESSION.md — current state and next action (copy of the root document)
-- PROJECT_STATE.md — project state (copy of the root document)
+Copied files (8): README.md, manifest.txt, OMP_FINAL_RESPONSE.md, progress_129_ograf_editable_import.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, CHANGELOG.md, NEXT_SESSION.md, PROJECT_STATE.md
 
-Omitted categories:
-- Source, test and design files (they live in the repository)
-- package.json, package-lock.json, ci.yml, release-smoke.yml files
-- Older reports, current-state/release documents, earlier bundle copies
-- QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
+Omitted categories: source, test and design files; package/lock/workflow files; older reports and current-state documents; QA output, assets, archives, caches.
+Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
-Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
-
-Validation at this revision (each command run separately):
-- npm run build (tsc -b && vite build): PASS — the type gate CI runs
-- npx vitest run src/tests/importDispatch.test.ts src/tests/lottieImportEntry.test.tsx src/tests/lottieImport.test.ts: PASS — 105 cases
-- npm test: PASS — 122 files / 1,841 tests; npm run lint: clean
-- npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests)
-- npx playwright test e2e/lottie-import-report.spec.ts: PASS — 2 tests
-
-Next: the OGraf package/editable import expansion (the next orchestrator task).
+Validation at this revision: build PASS; 124 files / 1,858 tests PASS; lint clean; validate:ograf PASS; qa:release PASS; playwright 3/3 PASS; state check PASS.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

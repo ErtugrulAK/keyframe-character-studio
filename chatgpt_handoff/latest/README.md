@@ -1,21 +1,22 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 12 Unified Import Entry
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 12 OGraf Package Import
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The unified import entry (Milestone F item 12), merged into `main` at `ce6cec2`:
+The OGraf package import (Milestone F item 12, second half), merged into `main` at `419fc6a`:
 
-- One **Import** control in the header. The selected file is classified by what it **contains**, so a
-  KCS project, a legacy project, an OGraf manifest/package and a Lottie animation all reach their
-  existing importer (and the refusals) through the same button.
-- A Lottie animation still parses in memory and opens a report that lists its blockers and losses
-  with their source paths and next steps **before** anything is applied; **Cancel** clears the pending
-  import and nothing else, and only **Import and replace project** applies the scene through the same
-  validated path the project import uses.
-- Imported Lottie layer types stay ones the editor renders and the OGraf export accepts, and Lottie's
-  relative tangents become the absolute handles the renderer reads, so the imported geometry draws
-  what the source drew.
+- One **Import** control classifies a selected file by what it **contains**. A KCS project, a legacy
+  project, an OGraf manifest/package and a Lottie animation each reach their existing importer.
+- An **OGraf package** (`.zip`/`.ograf`) is decoded in memory under entry-count, per-entry size,
+  cumulative size and package-path guards, and the `scene.kcs` it carries opens a report with the
+  scene it would apply. Cancel changes nothing; **Import and replace project** applies it through the
+  same validated path the project import uses.
+- A package the reader cannot accept (unsafe path, duplicate name, reserved key, no scene, too large)
+  is refused with its own code, and its confirm button stays disabled — it can never apply or report
+  success. A bare `.ograf.json` manifest still points the user at the package.
+- An import that cannot be applied leaves the project untouched: the scene is prepared completely
+  before any editor state changes, which is pinned by a regression test proven red before the fix.
 
 ## Files
 

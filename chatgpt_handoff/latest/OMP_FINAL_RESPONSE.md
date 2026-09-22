@@ -4,7 +4,7 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 
 ## 1) RESULT
 
-- **Status:** Option B is implemented on `chore/dependency-maintenance-option-b` (base `main` at `a4f8642`); the merge decision is with the user.
+- **Status:** Option B is **merged into `main` at `73426e5`** (branch base `a4f8642`, fast-forward, pushed); the branch is kept.
 - **Report:** `reports/progress_130_dependency_maintenance_option_b.md`.
 - **Decision (user):** apply the patch and minor group plus a bounded `npm audit fix` (no `--force`), on its own branch.
 
@@ -31,7 +31,7 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 | `npm run lint` | clean (exit 0) |
 | `npm run validate:ograf`, `npm run qa:release` | PASS (2 Chromium tests) |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 32 checks on `main` (33 while the branch carried the extra bundle documents) |
 | `npm audit` | 0 vulnerabilities |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and executes a statement |
 
@@ -44,9 +44,9 @@ runtime and build packages changed, so an identical bundle is neither expected n
 
 - No application source behaviour or public API change: the only non-package product/test edit is the four test selectors. Documentation and the handoff bundle were also regenerated.
 - Scripts, workflows, `.gitattributes`, the tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release and npm metadata are untouched; no tag, release, publish or branch deletion.
-- Integration is for the user to approve; nothing was merged or pushed in this task.
+- Integration was fast-forward only, on the user's explicit approval: no merge commit, no rebase, no force push, no tag change, no branch deletion.
 
 ## 6) NEXT
 
-The merge decision for this branch, then Option C (TypeScript 7 / Vitest 5 majors) with the `engines`/
-npm-12 `allowScripts` decision, then the two deferred minor bumps with their own triage.
+Option C (TypeScript 7 / Vitest 5 majors) with the `engines`/npm-12 `allowScripts` decision, then the two
+deferred minor bumps with their own triage — each behind its own explicit approval.

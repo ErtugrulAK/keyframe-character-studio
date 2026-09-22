@@ -1,6 +1,6 @@
 # Progress 130 — Milestone D item 9 Option B: dependency maintenance
 
-Branch: `chore/dependency-maintenance-option-b` (base `main` at `a4f8642`).
+Branch: `chore/dependency-maintenance-option-b` (base `main` at `a4f8642`), **fast-forward merged into `main` at `73426e5` and pushed**; the branch is kept.
 User decision: **Option B approved** — apply the patch and minor group plus a bounded `npm audit fix`
 (no `--force`), on its own branch, behind its own review.
 
@@ -117,7 +117,7 @@ radial one, and derived from the matte rather than mirrored in local state.
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS (2 Chromium tests), release gate recorded candidate `a4f8642` |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 32 checks on `main` (33 while the branch carried the extra bundle documents) |
 | `npm audit` | **0 vulnerabilities** (was 1 high + 6 moderate) |
 | `git diff --check` | clean |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and runs a statement |
@@ -171,7 +171,7 @@ $ probe (throwaway vitest file, deleted after use)
 
 ## 8. Open after this task
 
-- Merge decision for `chore/dependency-maintenance-option-b`.
+- The merge decision is closed: the branch was fast-forward merged into `main` at `73426e5` and pushed.
 - Option C: TypeScript 7 and Vitest 5 majors (own branch, own review), plus the `engines` declaration
   and the npm-12 `allowScripts` decision.
 - The two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), each with the evidence above.

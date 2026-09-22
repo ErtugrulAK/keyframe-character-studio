@@ -99,7 +99,9 @@ export const ImportReportDialog: React.FC<ImportReportDialogProps> = ({
 
   const summary = refused
     ? 'Nothing was imported. Your current project is unchanged.'
-    : `${layerCount ?? 0} layer(s) and ${frameCount ?? 0} frame(s) would replace the current project.`;
+    : layerCount === undefined || frameCount === undefined
+      ? 'Accepting this import would replace the current project with the imported scene.'
+      : `${layerCount} layer(s) and ${frameCount} frame(s) would replace the current project.`;
 
   return ReactDOM.createPortal(
     <div className="lottie-report-backdrop" onMouseDown={onCancel}>

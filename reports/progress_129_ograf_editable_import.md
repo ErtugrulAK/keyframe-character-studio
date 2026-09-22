@@ -24,7 +24,7 @@ actions.
 | The exported package layout (`scene.kcs` beside the manifest) | `src/ograf/packageCompiler.ts` | The reader looks for that one member instead of inventing a format |
 | `unzipSync` | `fflate` (already a dependency) | Decodes the archive; no new dependency |
 | `normalizePackagePath`, `isSafePackageRelativePath`, `isReservedWindowsName`, `hasCaseInsensitiveCollision`, `isPrototypeSensitiveKey` | `src/utils/pathSafety.ts` | Every entry path is normalised and checked; the manifest is walked for reserved keys |
-| `validateImportedDocument` + `importProject` | `src/utils/importValidation.ts`, `src/hooks/useSerialization.ts` | The decoded `scene.kcs` goes through the same boundary and apply path as a `.kcs` file |
+| `validateImportedDocument` + `importProject` | `src/utils/importValidation.ts`, `src/hooks/useSerialization.ts` | The decoded `scene.kcs` goes through the same boundary and apply path as a `.kcs` file; the boundary now also validates the fields the apply path consumes *after* it queues its state updates, so a refused scene never applies part of itself |
 | `ImportReportDialog` | `src/components/Modal/ImportReportDialog.tsx` | The same report surface the Lottie import uses; its diagnostic prop is now the shared structural shape |
 | `describeOGrafValueForDiagnostics`-style messages | — | Messages name what is wrong; no raw archive bytes or machine paths are rendered |
 
@@ -37,7 +37,9 @@ actions.
 | Empty file, not a zip, no files | `OGRAF_PACKAGE_UNREADABLE` |
 | Archive above 64 MB | `OGRAF_PACKAGE_TOO_LARGE` |
 | More than 512 entries | `OGRAF_PACKAGE_TOO_MANY_ENTRIES` |
-| One entry above the 32 MB scene limit (filtered before decompression) | `OGRAF_PACKAGE_ENTRY_TOO_LARGE` |
+| One entry above the 32 MB scene limit | `OGRAF_PACKAGE_ENTRY_TOO_LARGE` |
+| Declared contents totalling more than 64 MB | `OGRAF_PACKAGE_TOO_LARGE` |
+| A manifest deeper than the import can walk | `OGRAF_PACKAGE_MANIFEST_TOO_DEEP` |
 | Traversal, absolute or reserved path | `OGRAF_PACKAGE_UNSAFE_PATH` |
 | Two paths differing only by case | `OGRAF_PACKAGE_DUPLICATE_PATH` |
 | A reserved key in the manifest | `OGRAF_PACKAGE_UNSAFE_KEY` |
@@ -45,8 +47,11 @@ actions.
 | Unreadable manifest (warning, the scene still imports) | `OGRAF_PACKAGE_UNREADABLE_MANIFEST` |
 | Assets are not imported (warning) | `OGRAF_PACKAGE_ASSETS_OMITTED` |
 
-An oversized entry is **refused**, not silently dropped: the filter stops it before decompression and
-the drop is reported.
+Every check runs on the **central directory**, before an entry is inflated or stored: the entry
+count, the declared sizes (per entry and in total) and every raw name are validated first, so an
+archive cannot exhaust memory and no name can hide behind the result object — `__proto__`, an exact
+repeat and a case-only repeat are all refused, and an oversized entry is reported rather than
+dropped. The post-unzip checks only confirm what the preflight admitted.
 
 ## 5. Entry point and flow
 
@@ -84,7 +89,7 @@ and opens the shared report titled **"OGraf package import report"**:
 
 | Test | What it pins |
 |---|---|
-| `src/tests/ografPackageImport.test.ts` (new, 6 cases) | A real package imports its `scene.kcs` and its manifest name; missing scene, empty file and non-archive are refused; traversal, absolute, reserved and case-collision paths are refused; a prototype key in the manifest is refused; the archive and entry limits are enforced (and an oversized entry is reported, not dropped); an unreadable manifest is a warning, not a failure |
+| `src/tests/ografPackageImport.test.ts` (new, 8 cases) | A real package imports its `scene.kcs` and its manifest name; missing scene, empty file and non-archive are refused; traversal, absolute, reserved and case-collision paths are refused; a prototype key in the manifest is refused; the archive and entry limits are enforced (and an oversized entry is reported, not dropped); an unreadable manifest is a warning, not a failure |
 | `src/tests/lottieImportEntry.test.tsx` (16 cases) | Package report appears without mutating, cancel is a no-op, confirm applies through `importProject` with the manifest name, a project-authority refusal never reports success — plus the existing single-control cases |
 | `src/tests/ografBrowserZip.test.tsx` (18 cases) | The manifest message now points at the package, and an unreadable package opens a refusal report instead of a blanket toast |
 | `e2e/lottie-import-report.spec.ts` (3 browser tests) | The package flow end to end: report, cancel keeps the seeded project, confirm replaces it with the package scene |
@@ -94,8 +99,8 @@ and opens the shared report titled **"OGraf package import report"**:
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| focused suites (package import, dispatch, entry, lottie, ograf zip) | PASS — 132 cases |
-| `npm test` (full Vitest) | PASS — 123 files / 1,850 tests |
+| focused suites (package import, dispatch, entry, lottie, ograf zip) | PASS — 134 cases |
+| `npm test` (full Vitest) | PASS — 123 files / 1,854 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
@@ -132,3 +137,28 @@ and opens the shared report titled **"OGraf package import report"**:
 The approval-gated package/toolchain follow-ups (Option B dependency maintenance, the `engines` and
 npm-12 `allowScripts` decision, Option C major toolchain upgrades) — each behind its own explicit
 approval, then the final documentation reconciliation and the release-readiness audit.
+
+## 13. Review
+
+One independent read-only round (`reviewer-agent`) returned **BLOCKED** with three high, two medium and
+one low finding; all were closed before the merge decision:
+
+1. **The entry limit did not protect decompression.** `fflate` inflates each member as it walks the
+   central directory, so counting entries afterwards bounded nothing. The count, the per-entry size and
+   a new total-size budget are now enforced **inside the archive filter**, and every raw name is
+   validated there too — before anything is inflated or stored.
+2. **Names could hide behind the result object.** `unzipSync` stores members on a plain object, so an
+   exact duplicate silently overwrote its twin and a `__proto__` member disappeared from the key list
+   and skipped validation. The preflight refuses `__proto__`-style segments, exact repeats and
+   case-only repeats before that object exists.
+3. **Applying a scene was not atomic.** `fromSceneData` queues its state updates before it consumes
+   `motionTemplates`, so a scene with a truthy non-array `motionTemplates` could apply most of itself
+   and then fail. The boundary now validates the fields the apply path consumes (`motionTemplates`,
+   `activeTemplateId`, `coordinateSystem`) and refuses with `KCS_IMPORT_INVALID_SCENE_FIELD` before any
+   setter runs.
+4. **The manifest walk skipped anything deeper than 64 levels** instead of refusing it; an over-deep
+   manifest now reports `OGRAF_PACKAGE_MANIFEST_TOO_DEEP`.
+5. **The package report always claimed "0 layer(s) and 0 frame(s)".** It now shows the counts of the
+   scene the package carries, and the dialog only states counts it was actually given.
+6. **One package test asserted the Lottie dialog helper**, which proved nothing; it queries the package
+   dialog now, and the package preflight and the deep manifest have their own regression tests.

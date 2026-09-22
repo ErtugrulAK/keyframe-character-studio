@@ -15,6 +15,24 @@ const refusalCode = (text: string): string | undefined => {
   return result.ok ? undefined : result.diagnostics[0]?.code;
 };
 
+describe('KCS import boundary — scene fields the apply path consumes after it queues its updates', () => {
+  it('refuses a scene whose motion templates are not a list', () => {
+    const result = validateImportedDocument(JSON.stringify({ version: 1, layers: [], tracks: [], motionTemplates: { length: 1 } }));
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.code).toBe('KCS_IMPORT_INVALID_SCENE_FIELD');
+    expect(result.diagnostics[0]?.path).toBe('$.motionTemplates');
+  });
+
+  it('refuses a scene with an unknown coordinate system or a non-text active template', () => {
+    const coordinate = validateImportedDocument(JSON.stringify({ version: 1, layers: [], tracks: [], coordinateSystem: 'not-a-system' }));
+    const active = validateImportedDocument(JSON.stringify({ version: 1, layers: [], tracks: [], activeTemplateId: 7 }));
+
+    expect(coordinate.diagnostics[0]?.path).toBe('$.coordinateSystem');
+    expect(active.diagnostics[0]?.path).toBe('$.activeTemplateId');
+  });
+});
+
 describe('project import boundary', () => {
   it('accepts a current scene document', () => {
     const result = validateImportedDocument(JSON.stringify({ version: 1, name: 'Scene', layers: [], tracks: [] }));

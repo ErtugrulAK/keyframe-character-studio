@@ -67,6 +67,7 @@ const chooseBytes = (ariaLabel: string, name: string, bytes: Uint8Array) => {
   fireEvent.change(input, { target: { files: [file] } });
 };
 const reportDialog = () => screen.queryByRole('dialog', { name: 'Lottie import report' });
+const packageDialog = () => screen.queryByRole('dialog', { name: 'OGraf package import report' });
 
 describe('Lottie import entry point', () => {
   beforeEach(() => {
@@ -265,10 +266,12 @@ describe('Lottie import entry point', () => {
     chooseBytes(IMPORT_INPUT, 'demo.zip', bytes);
     const dialog = await screen.findByRole('dialog', { name: 'OGraf package import report' });
 
+    expect(dialog.textContent).toContain('0 layer(s) and 24 frame(s)');
     expect(context.importProject).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(reportDialog()).toBeNull();
+    expect(packageDialog()).toBeNull();
     expect(context.importProject).not.toHaveBeenCalled();
+    expect(context.showToast).not.toHaveBeenCalled();
     expect(dialog).toBeTruthy();
   });
 

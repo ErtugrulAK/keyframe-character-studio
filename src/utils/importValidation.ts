@@ -1,6 +1,7 @@
 import type { CharacterPart, Track } from '../types/animator';
 import type { SceneData } from '../types/composition';
 import { isPrototypeSensitiveKey } from './pathSafety';
+import { isSceneCoordinateSystem } from './coordinateMigration';
 
 /**
  * Validated parse for imported project documents.
@@ -118,6 +119,25 @@ const isSceneDocument = (value: unknown): value is SceneData => {
   return typeof record.version === 'number' && record.version >= 1 && Array.isArray(record.layers) && Array.isArray(record.tracks);
 };
 
+/**
+ * Fields `fromSceneData` consumes after it has queued its state updates. A
+ * scene that carries one of them in the wrong shape would apply part of itself
+ * and then fail, so the boundary refuses it here instead.
+ */
+const sceneFieldProblem = (scene: SceneData): { path: string; message: string; action: string } | undefined => {
+  const record = scene as unknown as Record<string, unknown>;
+  if (record.motionTemplates !== undefined && !Array.isArray(record.motionTemplates)) {
+    return { path: '$.motionTemplates', message: 'The scene declares motion templates that are not a list.', action: 'Re-export the project from Keyframe Studio and import the new file.' };
+  }
+  if (record.activeTemplateId !== undefined && typeof record.activeTemplateId !== 'string') {
+    return { path: '$.activeTemplateId', message: 'The scene declares an active template id that is not text.', action: 'Re-export the project from Keyframe Studio and import the new file.' };
+  }
+  if (record.coordinateSystem !== undefined && !isSceneCoordinateSystem(record.coordinateSystem)) {
+    return { path: '$.coordinateSystem', message: 'The scene declares an unknown coordinate system.', action: 'Re-export the project from Keyframe Studio and import the new file.' };
+  }
+  return undefined;
+};
+
 /** True for the legacy project shape (a `tracks` and a `characterParts` array). */
 const isLegacyProject = (value: unknown): value is LegacyProjectDocument => {
   const record = asRecord(value);
@@ -170,7 +190,11 @@ export const validateImportedDocument = (text: string): ImportValidationResult =
   }
 
   let document: ImportedDocument;
-  if (isSceneDocument(parsed)) document = { kind: 'scene', scene: parsed };
+  if (isSceneDocument(parsed)) {
+    const problem = sceneFieldProblem(parsed);
+    if (problem) return refuse('KCS_IMPORT_INVALID_SCENE_FIELD', problem.path, problem.message, problem.action);
+    document = { kind: 'scene', scene: parsed };
+  }
   else if (isLegacyProject(parsed)) document = { kind: 'legacy-project', project: parsed };
   else {
     return refuse(

@@ -161,6 +161,19 @@ export const HeaderBar: React.FC = () => {
    * `confirmLottieImport` runs.
    */
   const [pendingLottieImport, setPendingLottieImport] = useState<{ fileName: string; result: LottieImportResult } | null>(null);
+  /** Reads the counts a report shows; an unreadable scene simply reports none. */
+  const sceneCounts = (sceneText: string | undefined): { layerCount?: number; frameCount?: number } => {
+    if (!sceneText) return {};
+    try {
+      const parsed = JSON.parse(sceneText) as { layers?: unknown; totalFrames?: unknown };
+      const layers = Array.isArray(parsed.layers) ? parsed.layers.length : undefined;
+      const frames = typeof parsed.totalFrames === 'number' ? parsed.totalFrames : undefined;
+      return { ...(layers !== undefined ? { layerCount: layers } : {}), ...(frames !== undefined ? { frameCount: frames } : {}) };
+    } catch {
+      return {};
+    }
+  };
+
   /**
    * An OGraf package waiting for the same decision: its scene text plus the
    * report the reader produced. Selecting a package changes nothing on its own.
@@ -651,7 +664,7 @@ export const HeaderBar: React.FC = () => {
         isOpen={pendingPackageImport !== null}
         title="OGraf package import report"
         fileName={pendingPackageImport?.fileName ?? ''}
-        layerCount={undefined}
+        {...sceneCounts(pendingPackageImport?.result.sceneText)}
         diagnostics={pendingPackageImport?.result.diagnostics ?? []}
         refused={pendingPackageImport !== null && !pendingPackageImport.result.ok}
         onCancel={() => setPendingPackageImport(null)}

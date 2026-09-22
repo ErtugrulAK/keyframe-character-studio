@@ -58,14 +58,34 @@ describe('OGraf package import', () => {
 
   it('bounds the archive and its entries', () => {
     const tooMany = Object.fromEntries(Array.from({ length: OGRAF_PACKAGE_LIMITS.entries + 1 }, (_, index) => [`file_${index}.txt`, encode('x')]));
+    const tooMuchContent = Object.fromEntries(Array.from({ length: 8 }, (_, index) => [`big_${index}.bin`, new Uint8Array(OGRAF_PACKAGE_LIMITS.entryBytes / 4)]));
     const tooManyBytes = zipSync({ ...tooMany, 'scene.kcs': encode(scene) });
 
     expect(codes(readOGrafPackage(tooManyBytes))).toEqual(['OGRAF_PACKAGE_TOO_MANY_ENTRIES']);
+    // The declared contents are summed before anything is inflated.
+    expect(codes(readOGrafPackage(zipSync({ ...tooMuchContent, 'scene.kcs': encode(scene) })))).toEqual(['OGRAF_PACKAGE_TOO_LARGE']);
     expect(codes(readOGrafPackage(new Uint8Array(OGRAF_PACKAGE_LIMITS.bytes + 1)))).toEqual(['OGRAF_PACKAGE_TOO_LARGE']);
     // An entry above the limit is refused instead of silently dropped: the filter
     // stops it before decompression, and the drop is reported.
     const oversizedEntry = zipSync({ 'scene.kcs': encode(scene), 'big.bin': new Uint8Array(OGRAF_PACKAGE_LIMITS.entryBytes + 1) });
     expect(codes(readOGrafPackage(oversizedEntry))).toEqual(['OGRAF_PACKAGE_ENTRY_TOO_LARGE']);
+  });
+
+  it('refuses an entry that hides behind the result prototype or repeats a path exactly', () => {
+    const protoEntry = zipSync({ '__proto__': encode('x'), 'scene.kcs': encode(scene) });
+    const exactDuplicate = zipSync({ 'scene.kcs': encode(scene), 'assets/img.png': encode('x') });
+
+    expect(codes(readOGrafPackage(protoEntry))).toEqual(['OGRAF_PACKAGE_UNSAFE_PATH']);
+    // A single member cannot collide with itself, so this package imports.
+    expect(readOGrafPackage(exactDuplicate).ok).toBe(true);
+  });
+
+  it('refuses a manifest that nests deeper than the walk can check', () => {
+    let nested: unknown = { leaf: 1 };
+    for (let depth = 0; depth < 70; depth += 1) nested = { child: nested };
+    const deep = zipSync({ 'demo.ograf.json': encode(JSON.stringify({ name: 'Deep', controls: nested })), 'scene.kcs': encode(scene) });
+
+    expect(codes(readOGrafPackage(deep))).toEqual(['OGRAF_PACKAGE_MANIFEST_TOO_DEEP']);
   });
 
   it('imports a package whose manifest is unreadable, and reports it', () => {

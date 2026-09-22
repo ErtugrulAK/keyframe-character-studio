@@ -5,6 +5,11 @@ import { hasCaseInsensitiveCollision, isPrototypeSensitiveKey, isReservedWindows
 /**
  * Reads an OGraf package back into the editable scene it was exported from.
  *
+ * Preflight (`admitEntry`) validates every entry name and size against the
+ * central directory before anything is inflated, so an archive cannot exhaust
+ * memory and no name can hide behind the result object; the post-unzip checks
+ * below only confirm what the preflight already admitted.
+
  * A package is a zip the exporter wrote; it always carries `scene.kcs`, the
  * canonical KCS scene. Importing therefore needs no reconstruction — it needs a
  * **guarded** decode: the archive is untrusted input, so entry count, entry size
@@ -24,6 +29,8 @@ export const OGRAF_PACKAGE_LIMITS = {
   entries: 512,
   /** Refuse a single entry larger than the scene import limit. */
   entryBytes: MAX_IMPORT_CHARACTERS,
+  /** Refuse an archive whose declared contents add up to more than this. */
+  totalBytes: 64 * 1024 * 1024,
 } as const;
 
 export interface OGrafPackageReadResult {
@@ -76,6 +83,75 @@ const findPrototypeSensitiveKey = (value: unknown): string | undefined => {
   return undefined;
 };
 
+/** True when the manifest nests deeper than the walk can safely check. */
+const exceedsDepth = (value: unknown, limit = 64): boolean => {
+  const stack: { node: unknown; depth: number }[] = [{ node: value, depth: 0 }];
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) continue;
+    if (current.depth > limit) return true;
+    if (Array.isArray(current.node)) {
+      for (const entry of current.node) stack.push({ node: entry, depth: current.depth + 1 });
+      continue;
+    }
+    const record = asRecord(current.node);
+    if (!record) continue;
+    for (const entry of Object.values(record)) stack.push({ node: entry, depth: current.depth + 1 });
+  }
+  return false;
+};
+
+/** Why a preflight stopped the archive before its contents were read. */
+interface PreflightProblem {
+  code: string;
+  path: string;
+  message: string;
+  action: string;
+}
+
+/**
+ * Validates one archive member while it is still only a central-directory
+ * entry: its name is normalised and checked against the same authorities the
+ * rest of the app uses, and its size counts against the total budget. Returning
+ * `false` keeps the entry out, and `unzipSync` never inflates it.
+ */
+const admitEntry = (
+  file: { name: string; originalSize: number },
+  state: { count: number; total: number; names: Set<string>; problem?: PreflightProblem },
+): boolean => {
+  state.count += 1;
+  if (state.count > OGRAF_PACKAGE_LIMITS.entries) {
+    state.problem ??= { code: 'OGRAF_PACKAGE_TOO_MANY_ENTRIES', path: file.name, message: `The package carries more than the ${OGRAF_PACKAGE_LIMITS.entries}-file import limit.`, action: 'Import a package the exporter produced without extra files.' };
+    return false;
+  }
+  state.total += file.originalSize;
+  if (file.originalSize > OGRAF_PACKAGE_LIMITS.entryBytes) {
+    state.problem ??= { code: 'OGRAF_PACKAGE_ENTRY_TOO_LARGE', path: file.name, message: 'The package carries a file larger than the import limit.', action: 'Import a package without that file.' };
+    return false;
+  }
+  if (state.total > OGRAF_PACKAGE_LIMITS.totalBytes) {
+    state.problem ??= { code: 'OGRAF_PACKAGE_TOO_LARGE', path: file.name, message: `The package contents exceed the ${Math.round(OGRAF_PACKAGE_LIMITS.totalBytes / (1024 * 1024))} MB import limit.`, action: 'Import a smaller package.' };
+    return false;
+  }
+  const normalized = normalizePackagePath(file.name);
+  const segments = normalized.split('/');
+  if (!normalized || !isSafePackageRelativePath(normalized) || segments.some((segment) => isPrototypeSensitiveKey(segment))) {
+    state.problem ??= { code: 'OGRAF_PACKAGE_UNSAFE_PATH', path: file.name, message: 'The package contains a file path that is not safe to import.', action: 'Export the graphic again; a package must only contain its own relative files.' };
+    return false;
+  }
+  if (isReservedWindowsName(segments[segments.length - 1] ?? '')) {
+    state.problem ??= { code: 'OGRAF_PACKAGE_UNSAFE_PATH', path: file.name, message: 'The package contains a file name that is reserved on Windows.', action: 'Re-export the graphic with a portable file name.' };
+    return false;
+  }
+  const collisionKey = normalized.toLowerCase();
+  if (state.names.has(collisionKey)) {
+    state.problem ??= { code: 'OGRAF_PACKAGE_DUPLICATE_PATH', path: file.name, message: 'The package contains two entries with the same path.', action: 'Re-export the graphic without duplicate paths.' };
+    return false;
+  }
+  state.names.add(collisionKey);
+  return true;
+};
+
 /**
  * Reads an OGraf package (zip bytes) into its scene text.
  *
@@ -89,24 +165,19 @@ export const readOGrafPackage = (bytes: Uint8Array): OGrafPackageReadResult => {
     return { ok: false, diagnostics: [refusal('OGRAF_PACKAGE_TOO_LARGE', '$', `The package is larger than the ${Math.round(OGRAF_PACKAGE_LIMITS.bytes / (1024 * 1024))} MB import limit.`, 'Import a smaller package.')] };
   }
 
+  // The preflight runs on the central directory: every name is validated and
+  // every size counted before a single entry is inflated or stored.
+  const preflight = { count: 0, total: 0, names: new Set<string>(), problem: undefined as PreflightProblem | undefined };
   let files: Record<string, Uint8Array>;
-  let oversizedEntry: string | undefined;
   try {
-    // The filter runs on the central directory, so an oversized member is never
-    // decompressed; dropping one is recorded rather than silently ignored.
-    files = unzipSync(bytes, {
-      filter: (file) => {
-        if (file.originalSize <= OGRAF_PACKAGE_LIMITS.entryBytes) return true;
-        oversizedEntry = file.name;
-        return false;
-      },
-    });
+    files = unzipSync(bytes, { filter: (file) => admitEntry(file, preflight) });
   } catch {
     return { ok: false, diagnostics: [refusal('OGRAF_PACKAGE_UNREADABLE', '$', 'The selected file is not a readable OGraf package.', 'Export the graphic again and import the new package.')] };
   }
 
-  if (oversizedEntry) {
-    return { ok: false, diagnostics: [refusal('OGRAF_PACKAGE_ENTRY_TOO_LARGE', oversizedEntry, 'The package carries a file larger than the import limit.', 'Import a package without that file. ')] };
+  if (preflight.problem) {
+    const problem = preflight.problem;
+    return { ok: false, diagnostics: [refusal(problem.code, problem.path, problem.message, problem.action)] };
   }
 
   const names = Object.keys(files);
@@ -151,6 +222,9 @@ export const readOGrafPackage = (bytes: Uint8Array): OGrafPackageReadResult => {
     try {
       const manifest = JSON.parse(new TextDecoder().decode(files[manifestName])) as unknown;
       const manifestRecord = asRecord(manifest);
+      if (exceedsDepth(manifest)) {
+        return { ok: false, diagnostics: [refusal('OGRAF_PACKAGE_MANIFEST_TOO_DEEP', manifestName, 'The package manifest nests deeper than the import can check.', 'Export the graphic again with a flatter manifest.')] };
+      }
       const unsafeKey = findPrototypeSensitiveKey(manifest);
       if (unsafeKey) {
         return { ok: false, diagnostics: [refusal('OGRAF_PACKAGE_UNSAFE_KEY', manifestName, `The package manifest contains the reserved key "${unsafeKey}".`, 'Export the graphic again; the manifest must not carry reserved keys.')] };

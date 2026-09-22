@@ -3,6 +3,9 @@
   "private": true,
   "version": "1.1.0-rc.1",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "concurrently \"node server/index.js\" \"vite --host\"",
     "dev:frontend": "vite --host",
@@ -53,5 +56,8 @@
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
     "vitest": "^4.1.11"
+  },
+  "allowScripts": {
+    "sqlite3@6.0.1": true
   }
 }

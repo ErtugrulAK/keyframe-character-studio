@@ -1,22 +1,22 @@
 # KCS ChatGPT Upload Manifest — Milestone D Item 9 Option B (Dependency Maintenance)
 
 Clean refreshed: YES
-Bundle purpose: the patch/minor dependency refresh plus the bounded security fix (Milestone D item 9, Option B)
+Bundle purpose: the engines declaration and the npm-12 allowScripts answer (Milestone D item 9 follow-up)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/dependency-maintenance-option-b, base main at a4f8642 — fast-forward merged into main at 73426e5 and pushed; the branch is kept
-Task record: reports/progress_130_dependency_maintenance_option_b.md
-What changed: package.json and package-lock.json (16 direct version moves keep the caret convention; no key added or removed and the oxlint/jsdom specifiers are unchanged) plus four selectors in src/tests/styleMatteSection.test.tsx that used the wrong attribute-value case
-Lock graph: 64 transitive entries touched (1 added, 6 removed, 57 version changes)
-Security: a bounded npm audit fix (no --force) took npm audit from 1 high + 6 moderate to 0
-Deferred with evidence: oxlint 1.85 (33 new rule warnings) and jsdom 30.1 (a Blob no longer carries the jsdom implementation symbol, so URL.createObjectURL throws and the export-download test fails)
-Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (33); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
-Next work (approval-gated): Option C majors (typescript 6 to 7, vitest and @vitest/coverage-v8 4 to 5) with the engines/allowScripts decision, then the two deferred minor bumps
+Branch: chore/engines-allow-scripts, base main at 752ca28 — not merged; the merge decision is with the user
+Task record: reports/progress_131_engines_allow_scripts.md
+What changed: package.json only — an engines declaration (node >= 22) and a version-pinned allowScripts approval for sqlite3@6.0.1, so its install step fetches the prebuilt NAPI binding on npm 12
+No dependency version, script, workflow, .npmrc or lockfile change
+Security: npm audit stays at 0 vulnerabilities; the install-script approval is pinned to sqlite3@6.0.1 so a future release needs a new approval
+Evidence: npm install-scripts ls reports nothing blocked; deleting node_modules/sqlite3/build and running the approved install script restored node_sqlite3.node from the prebuilt download and the binding loads; GET /api/health returns 200
+Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (32); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
+Next work (approval-gated): Option C majors (typescript 6 to 7, vitest and @vitest/coverage-v8 4 to 5), then the two deferred minor bumps (oxlint 1.85, jsdom 30.1.x)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_130_dependency_maintenance_option_b.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_131_engines_allow_scripts.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

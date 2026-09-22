@@ -306,18 +306,20 @@ const rectanglePath = (width: number, height: number, radius: number): BezierPat
       ],
     };
   }
-  // Two vertices per corner, joined by a circular-arc bezier: each control point
-  // sits `r * kappa` away from the corner along the edge it leaves or enters.
+  // Two vertices per corner, joined by a circular-arc bezier. The renderer reads
+  // `previous.handleOut` and `current.handleIn` for each segment, so the corner
+  // control points belong to the segments that are actually curved — the arcs
+  // v1→v2, v3→v4, v5→v6 and v7→v0 — while the four edges stay straight lines.
   const handle = corner * KAPPA;
   const points = [
-    { id: 'v0', x: -halfWidth + corner, y: -halfHeight, handleOut: { x: -halfWidth + corner - handle, y: -halfHeight }, kind: 'smooth' as const },
-    { id: 'v1', x: halfWidth - corner, y: -halfHeight, handleIn: { x: halfWidth - corner + handle, y: -halfHeight }, kind: 'smooth' as const },
-    { id: 'v2', x: halfWidth, y: -halfHeight + corner, handleOut: { x: halfWidth, y: -halfHeight + corner - handle }, kind: 'smooth' as const },
-    { id: 'v3', x: halfWidth, y: halfHeight - corner, handleIn: { x: halfWidth, y: halfHeight - corner + handle }, kind: 'smooth' as const },
-    { id: 'v4', x: halfWidth - corner, y: halfHeight, handleOut: { x: halfWidth - corner + handle, y: halfHeight }, kind: 'smooth' as const },
-    { id: 'v5', x: -halfWidth + corner, y: halfHeight, handleIn: { x: -halfWidth + corner - handle, y: halfHeight }, kind: 'smooth' as const },
-    { id: 'v6', x: -halfWidth, y: halfHeight - corner, handleOut: { x: -halfWidth, y: halfHeight - corner + handle }, kind: 'smooth' as const },
-    { id: 'v7', x: -halfWidth, y: -halfHeight + corner, handleIn: { x: -halfWidth, y: -halfHeight + corner - handle }, kind: 'smooth' as const },
+    { id: 'v0', x: -halfWidth + corner, y: -halfHeight, handleIn: { x: -halfWidth + corner - handle, y: -halfHeight } },
+    { id: 'v1', x: halfWidth - corner, y: -halfHeight, handleOut: { x: halfWidth - corner + handle, y: -halfHeight } },
+    { id: 'v2', x: halfWidth, y: -halfHeight + corner, handleIn: { x: halfWidth, y: -halfHeight + corner - handle } },
+    { id: 'v3', x: halfWidth, y: halfHeight - corner, handleOut: { x: halfWidth, y: halfHeight - corner + handle } },
+    { id: 'v4', x: halfWidth - corner, y: halfHeight, handleIn: { x: halfWidth - corner + handle, y: halfHeight } },
+    { id: 'v5', x: -halfWidth + corner, y: halfHeight, handleOut: { x: -halfWidth + corner - handle, y: halfHeight } },
+    { id: 'v6', x: -halfWidth, y: halfHeight - corner, handleIn: { x: -halfWidth, y: halfHeight - corner + handle } },
+    { id: 'v7', x: -halfWidth, y: -halfHeight + corner, handleOut: { x: -halfWidth, y: -halfHeight + corner - handle } },
   ];
   return { version: 1, coordinateSpace: 'local', closed: true, points: points as BezierPath['points'] };
 };

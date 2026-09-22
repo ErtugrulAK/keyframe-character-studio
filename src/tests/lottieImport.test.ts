@@ -576,10 +576,18 @@ describe('Lottie import — layer types the editor and the exporter both accept'
     expect(buildBezierPathD(solid?.path)).toBe('M -50 -50 L 50 -50 L 50 50 L -50 50 Z');
     // A rounded rectangle is eight vertices whose corners carry absolute handles.
     expect(roundedLayer?.path?.points).toHaveLength(8);
-    expect(roundedLayer?.path?.points[0]).toMatchObject({ x: -40, y: -30, kind: 'smooth' });
-    expect(roundedLayer?.path?.points[0]?.handleOut?.x).toBeCloseTo(-45.5228, 3);
-    expect(roundedLayer?.path?.points[0]?.handleOut?.y).toBe(-30);
-    expect(buildBezierPathD(roundedLayer?.path)).toContain('C');
+    // The four corners are the curved segments; the four edges stay straight.
+    expect(roundedLayer?.path?.points[0]).toMatchObject({ x: -40, y: -30 });
+    expect(roundedLayer?.path?.points[0]?.handleIn?.x).toBeCloseTo(-45.5228, 3);
+    expect(roundedLayer?.path?.points[0]?.handleIn?.y).toBe(-30);
+    expect(roundedLayer?.path?.points[0]?.handleOut).toBeUndefined();
+    expect(roundedLayer?.path?.points[1]?.handleIn).toBeUndefined();
+    expect(roundedLayer?.path?.points[1]?.handleOut?.x).toBeCloseTo(45.5228, 3);
+    const roundedD = buildBezierPathD(roundedLayer?.path);
+    expect(roundedD.match(/C /gu)?.length).toBe(4);
+    expect(roundedD.match(/ L /gu)?.length).toBe(4);
+    // The top edge is a line, and the first curve is the top-right corner.
+    expect(roundedD.startsWith('M -40 -30 L 40 -30 C 45.5228')).toBe(true);
     // An ellipse is four vertices whose handles make it round, not a diamond.
     expect(ellipseLayer?.path?.points).toHaveLength(4);
     expect(ellipseLayer?.path?.points[0]).toMatchObject({ x: 0, y: -20, kind: 'smooth' });

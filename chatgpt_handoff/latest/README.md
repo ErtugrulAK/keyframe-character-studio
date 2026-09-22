@@ -15,8 +15,8 @@ The approval-gated dependency maintenance (Milestone D item 9, Option B), applie
   advisories to **zero** known vulnerabilities.
 - Two minors were applied, verified and then **deferred with evidence**: `oxlint` 1.85 reports 33
   warnings the current version does not (and silencing rules or rewriting React code is not a
-  dependency task), and `jsdom` 30.1 dropped its own `createObjectURL`, so any Blob download throws
-  and the export-flow test fails.
+  dependency task), and with `jsdom` 30.1 a Blob carries no jsdom implementation symbol, so every
+  `URL.createObjectURL` call throws and the export-flow test fails.
 - The upgrade also required four test selectors to use the attribute-value case the component
   actually renders (`Gradient angle`), because the current jsdom selector engine matches attribute
   values case-sensitively where the previous one did not.

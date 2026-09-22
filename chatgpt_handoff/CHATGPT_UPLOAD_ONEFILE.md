@@ -31,14 +31,15 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 
 | Area | Change |
 |---|---|
-| Dependencies (16) | `react`/`react-dom` 19.3.0, `@types/react(-dom)` 19.3.0, `vite` 8.3.0, `vitest`/`@vitest/coverage-v8` 4.1.11, `@vitejs/plugin-react` 6.1.1, `@testing-library/{jest-dom,react,user-event}` 7.0.1/16.3.3/14.6.7, `lucide-react` 1.47.0, `pg` 8.23.0, `@types/pg` 8.23.1, `@types/node` 24.13.6, `concurrently` 10.0.5 — caret convention kept, no package added or removed |
+| Dependencies (16 direct moves) | `react`/`react-dom` 19.3.0, `@types/react(-dom)` 19.3.0, `vite` 8.3.0, `vitest`/`@vitest/coverage-v8` 4.1.11, `@vitejs/plugin-react` 6.1.1, `@testing-library/{jest-dom,react,user-event}` 7.0.1/16.3.3/14.6.7, `lucide-react` 1.47.0, `pg` 8.23.0, `@types/pg` 8.23.1, `@types/node` 24.13.6, `concurrently` 10.0.5 — caret convention kept, no key added or removed, `oxlint` and `jsdom` specifiers byte-identical to the base commit |
+| Lock graph | 64 transitive entries touched (1 added, 6 removed, 57 version changes), including the security fixes below |
 | Security | bounded `npm audit fix`: 7 advisories (1 high `nanoid`, 6 moderate) → **0** |
-| Tests | four `styleMatteSection` queries used `aria-label="Gradient Angle"` while the component renders `"Gradient angle"`; the current jsdom selector engine matches attribute values case-sensitively, so they now use the label the component actually renders |
+| Tests | the refresh moved the transitive selector engine `@asamuzakjp/dom-selector` 8.3.0 → 8.3.2, which made attribute-value matching case-sensitive; four `styleMatteSection` queries used `aria-label="Gradient Angle"` while the component renders `"Gradient angle"` and now use the rendered label (measured with a throwaway probe: 8.3.0 matched the capitalised variant, 8.3.2 does not) |
 
 ## 3) DEFERRED, WITH EVIDENCE
 
-- **`oxlint` 1.85.0:** reports 33 warnings (`react(refs)`, `react(set-state-in-effect`, `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report. Clean lint is the project standard; silencing rules or rewriting React code is not a dependency task → stays `^1.74.0`.
-- **`jsdom` 30.1.1:** dropped its own `createObjectURL` implementation (absent from its `lib/`), so `URL.createObjectURL(new Blob([...]))` throws `Cannot read properties of undefined (reading '_buffer')` and the export-download test fails. Isolated: reproduces with `jsdom@30.1.1` + `vitest@4.1.10`, disappears with `jsdom@30.0.1` → stays `^30.0.1`.
+- **`oxlint` 1.85.0:** reports 33 warnings (`react(refs)`, `react(set-state-in-effect)`, `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report. Clean lint is the project standard; silencing rules or rewriting React code is not a dependency task → stays `^1.74.0`.
+- **`jsdom` 30.1.1:** measured in this checkout — with 30.1.1 the Blob carries no jsdom-internal symbol and `URL.createObjectURL(new Blob([...]))` throws `Cannot read properties of undefined (reading '_buffer')`; with 30.0.1 the same call succeeds. Isolated (`jsdom@30.1.1` + `vitest@4.1.10` still fails; `jsdom@30.0.1` on the same `vitest` passes), so it is not a `vitest` regression. Which jsdom change causes it is **not** established and is not claimed → stays `^30.0.1`.
 
 ## 4) VALIDATION
 
@@ -53,11 +54,14 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 | `npm audit` | 0 vulnerabilities |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and executes a statement |
 
+The results are a green build and a green suite on this checkout, not an output-identity comparison:
+runtime and build packages changed, so an identical bundle is neither expected nor checked.
+
 `npm install` confirms `sqlite3@6.0.1`'s install script is blocked by the npm-12 `allowScripts` policy; the existing prebuilt binding still loads (verified directly and through the API), which is the same open question as the `engines`/`allowScripts` follow-up.
 
 ## 5) SAFETY
 
-- No source behaviour change: the only non-package edit is the four test selectors.
+- No application source behaviour or public API change: the only non-package product/test edit is the four test selectors. Documentation and the handoff bundle were also regenerated.
 - Scripts, workflows, `.gitattributes`, the tag `v1.1.0-rc.1` (`46d2a3e…`), the draft release and npm metadata are untouched; no tag, release, publish or branch deletion.
 - Integration is for the user to approve; nothing was merged or pushed in this task.
 
@@ -78,9 +82,10 @@ Bundle scope: minimal and task-specific; this folder is not an archive
 
 Branch: chore/dependency-maintenance-option-b, base main at a4f8642 — not merged, not pushed; the merge decision is with the user
 Task record: reports/progress_130_dependency_maintenance_option_b.md
-What changed: package.json and package-lock.json (16 patch/minor packages keep their caret convention; nothing added or removed) and four selectors in src/tests/styleMatteSection.test.tsx that used the wrong attribute-value case
+What changed: package.json and package-lock.json (16 direct version moves keep the caret convention; no key added or removed and the oxlint/jsdom specifiers are unchanged) plus four selectors in src/tests/styleMatteSection.test.tsx that used the wrong attribute-value case
+Lock graph: 64 transitive entries touched (1 added, 6 removed, 57 version changes)
 Security: a bounded npm audit fix (no --force) took npm audit from 1 high + 6 moderate to 0
-Deferred with evidence: oxlint 1.85 (33 new rule warnings) and jsdom 30.1 (its createObjectURL no longer accepts a Blob, which breaks the export download test)
+Deferred with evidence: oxlint 1.85 (33 new rule warnings) and jsdom 30.1 (a Blob no longer carries the jsdom implementation symbol, so URL.createObjectURL throws and the export-download test fails)
 Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (32); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
 Next work (approval-gated): the merge decision for this branch, then Option C majors with the engines/allowScripts decision
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
@@ -115,8 +120,8 @@ The approval-gated dependency maintenance (Milestone D item 9, Option B), applie
   advisories to **zero** known vulnerabilities.
 - Two minors were applied, verified and then **deferred with evidence**: `oxlint` 1.85 reports 33
   warnings the current version does not (and silencing rules or rewriting React code is not a
-  dependency task), and `jsdom` 30.1 dropped its own `createObjectURL`, so any Blob download throws
-  and the export-flow test fails.
+  dependency task), and with `jsdom` 30.1 a Blob carries no jsdom implementation symbol, so every
+  `URL.createObjectURL` call throws and the export-flow test fails.
 - The upgrade also required four test selectors to use the attribute-value case the component
   actually renders (`Gradient angle`), because the current jsdom selector engine matches attribute
   values case-sensitively where the previous one did not.
@@ -197,8 +202,23 @@ fix.
 | `concurrently` | 10.0.4 | 10.0.5 |
 | `npm audit fix` | — | 7 advisories → **0** |
 
-Version specifiers keep the repository's caret convention; only the numbers changed. No dependency was
-added or removed, and no script, workflow or release metadata changed.
+Version specifiers keep the repository's caret convention. The **direct** dependency set is exactly
+these sixteen moves: no key was added or removed, no script changed, and the `oxlint` (`^1.71.0`) and
+`jsdom` (`^30.0.1`) specifiers are byte-identical to the base commit, because both bumps were applied,
+measured and then reverted. The `From` column is the version **installed at the base commit**; the
+base specifier can be older than that (`@types/node` was installed at 24.13.3 under `^24.13.2`, and
+`vite` at 8.1.5 under `^8.1.1`) — those two lines therefore now move the specifier itself
+(`^24.13.2 → ^24.13.6`, `^8.1.1 → ^8.3.0`).
+
+The **lock graph** did change beyond those sixteen: **64 package entries were touched — 1 added, 6
+removed, 57 changed version**:
+
+- added: `@rolldown/binding-android-arm-eabi`
+- removed: `@emnapi/core`, `@emnapi/runtime`, `@emnapi/wasi-threads`, `@napi-rs/wasm-runtime`,
+  `@rolldown/binding-wasm32-wasi`, `@tybys/wasm-util`
+- the security fixes moved `nanoid` 3.3.16 → 3.3.19, `postcss` 8.5.20 → 8.5.28, `qs` 6.15.3 → 6.16.0
+  and `undici` 6.27.0 → 6.28.1, plus the jsdom-side `undici` 8.9.0 → 8.11.0 and the selector engine
+  `@asamuzakjp/dom-selector` 8.3.0 → 8.3.2.
 
 ## 4. Deferred, with evidence
 
@@ -213,24 +233,39 @@ lockfile pins the known-good version.
    them is not a dependency task. The linter therefore stays at `^1.74.0` until the new rules get
    their own triage.
 
-2. **`jsdom` 30.0.1 → 30.1.1 — `URL.createObjectURL` no longer accepts a Blob.**
-   jsdom 30.1.1 dropped its own `createObjectURL` implementation (the string does not appear anywhere
-   in its `lib/`), the environment's `Blob` no longer carries a jsdom implementation symbol, and
-   `URL.createObjectURL(new Blob([...]))` throws
-   `Cannot read properties of undefined (reading '_buffer')`. `src/tests/firstExportFlow.test.tsx`
-   exercises the real download step, so the suite fails with `jsdom` 30.1.1 and passes with 30.0.1.
-   Proven by isolation: the failure reproduces with `jsdom@30.1.1` + `vitest@4.1.10` and disappears
-   with `jsdom@30.0.1` on the same `vitest`; it is not a `vitest` regression and not a cross-file
-   isolation problem.
+2. **`jsdom` 30.0.1 → 30.1.1 — `URL.createObjectURL` stops accepting the Blob this environment
+   produces.** What was measured, in this checkout:
+
+   | Environment | `URL.createObjectURL(new Blob([...]))` | jsdom own symbols on the Blob |
+   |---|---|---|
+   | `jsdom` 30.0.1 | succeeds | 1 |
+   | `jsdom` 30.1.1 | throws `Cannot read properties of undefined (reading '_buffer')` | 0 |
+
+   With 30.1.1 the global `Blob` instance carries no jsdom-internal symbol, and the call then reads
+   `_buffer` off an undefined implementation. `src/tests/firstExportFlow.test.tsx` exercises the real
+   download step, so the suite fails with `jsdom` 30.1.1 and passes with 30.0.1. Isolated: the failure
+   reproduces with `jsdom@30.1.1` + `vitest@4.1.10` and disappears with `jsdom@30.0.1` on the same
+   `vitest`, so it is neither a `vitest` regression nor a cross-file isolation problem.
+   *Not established:* which jsdom change causes it. The string `createObjectURL` appears nowhere in
+   **either** version's `lib/`, so "jsdom 30.1 removed its own implementation" is **not** supported by
+   the evidence and is not claimed here.
 
 ## 5. Test corrections the upgrade required
 
 `src/tests/styleMatteSection.test.tsx` queried four inputs with
 `container.querySelector('input[aria-label="Gradient Angle"]')` while the component renders
-`aria-label="Gradient angle"`. The old selector engine matched HTML attribute values
-case-insensitively; jsdom's current selector engine (`@asamuzakjp/dom-selector` 8.3.0 → 9.2.1) matches
-them case-sensitively, so the four queries silently stopped finding the element (two of them asserted
-`toBeNull()`, so they had become vacuous). The queries now use the exact label the component renders,
+`aria-label="Gradient angle"`. The refresh moved the transitive selector engine
+`@asamuzakjp/dom-selector` **8.3.0 → 8.3.2** (a patch inside jsdom's `^8.3.0` range), and that patch
+made attribute-value matching case-sensitive. Measured with a throwaway probe that renders
+`<input aria-label="Gradient angle" />` and asks for the capitalised variant:
+
+| `@asamuzakjp/dom-selector` | exact case matches | capitalised variant matches |
+|---|---|---|
+| 8.3.0 (base lock) | yes | **yes** (case-insensitive) |
+| 8.3.2 (current lock) | yes | no (case-sensitive) |
+
+So the four queries silently stopped finding the element: two asserted `toBeTruthy()` and failed, two
+asserted `toBeNull()` and had become vacuous. They now use the exact label the component renders,
 which restores the original intent: the angle control is present for a linear gradient, absent for a
 radial one, and derived from the matte rather than mirrored in local state.
 
@@ -250,15 +285,48 @@ radial one, and derived from the matte rather than mirrored in local state.
 | `git diff --check` | clean |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and runs a statement |
 
+Scope of these results: they are a green build and a green suite on this checkout, not proof that the
+generated bundle is byte-identical to the base one — runtime (`react`, `react-dom`, `lucide-react`,
+`pg`) and build (`vite`, rolldown bindings) packages changed, so identical output is neither expected
+nor checked. What is checked is that no application source behaviour or public API changed, which the
+delta supports by construction: the only non-package product/test edit is the four test selectors in
+section 5 (documentation and the handoff bundle also changed).
+
 `npm install` reports that `sqlite3@6.0.1`'s install script is blocked by the npm-12 `allowScripts`
 policy. The prebuilt binding repaired during item 9 is still in place and was exercised directly
 (`create table` on an in-memory database) plus through the API health check, so runtime behaviour is
 unaffected. This is the same policy question that stays open for the `engines`/`allowScripts`
 decision (Option C / the follow-up pinned in the roadmap).
 
+## 6a. Command evidence
+
+Recorded verbatim from this run, so the claims above do not rest on prose:
+
+```
+$ npm audit --json | <counts>
+before: {"info":0,"low":0,"moderate":6,"high":1,"critical":0,"total":7}
+after : {"info":0,"low":0,"moderate":0,"high":0,"critical":0,"total":0}
+
+$ node -e "…require('sqlite3')…create table…"   → sqlite3 runtime: OK
+$ curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/api/health  → 200
+
+$ npx oxlint src        (1.74.0, installed)  → no output, exit 0
+$ npx oxlint src        (1.85.0, measured before reverting) → 33 warnings, exit 0
+$ npx oxlint@1.74.0 src (fetched fresh)      → no output
+
+$ probe (throwaway vitest file, deleted after use)
+  jsdom 30.0.1 → URL.createObjectURL(new Blob([1,2,3])) : succeeded, blob own symbols: 1
+  jsdom 30.1.1 → threw "Cannot read properties of undefined (reading '_buffer')", own symbols: 0
+  @asamuzakjp/dom-selector 8.3.0 → capitalised attribute selector matched: true
+  @asamuzakjp/dom-selector 8.3.2 → capitalised attribute selector matched: false
+```
+
 ## 7. Not changed
 
-- No source behaviour change: the only non-package edit is the four test selectors above.
+- No application source behaviour change and no public API change: the only non-package product/test
+  edit is the four test selectors in section 5. The delta also touches documentation (this report,
+  `CHANGELOG.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, the roadmap) and the regenerated
+  `chatgpt_handoff/**` bundle.
 - `package.json` scripts, `.github/workflows/**`, `.gitattributes`, `.env*` and the release tag
   `v1.1.0-rc.1` (`46d2a3e…`) are untouched. No tag, release, npm publish or branch deletion.
 - `C:\Users\ertugrul.ak\Desktop\ograf-graphics`, `origin/without-mask`, the OMP configuration and the
@@ -298,7 +366,7 @@ Milestones A–E are complete, and Milestone F item 10 is complete (all four sli
 - Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.
 - Milestone C — first export / onboarding (`c2dcb22`): opt-in "First export help" panel, readiness check reading the same OGraf diagnostics authority as the export, one shared compile path for readiness and both export actions.
 - Milestone D item 6 — state consistency check (`b91e8b9`, CI follow-up `be76df9`): `node scripts/check-state-consistency.mjs`.
-- Milestone D item 9 — dependency and warning maintenance: **the audit is complete** (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and **the approved Option A is implemented on `chore/warning-maintenance`** (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule, plus the local SQLite binding repair — the API starts again and `GET /api/health` returns 200 in this working copy. `package.json`, `package-lock.json`, `.github/workflows/**` and every dependency version are unchanged. Audit findings that remain open by decision: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; across two toolchain groups / three package names a newer major is available — `typescript` 6→7 and the Vitest pair `vitest` + `@vitest/coverage-v8` 4→5), `npm audit` 7 findings (6 moderate, 1 high; only `qs` and `undici` moderate in the production tree), the `engines` declaration and the npm-12 `allowScripts` pin. It is merged.
+- Milestone D item 9 — dependency and warning maintenance: **the audit is complete** (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and **the approved Option A is implemented on `chore/warning-maintenance`** (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule, plus the local SQLite binding repair — the API starts again and `GET /api/health` returns 200 in this working copy. `package.json`, `package-lock.json`, `.github/workflows/**` and every dependency version were left unchanged by that maintenance work. The audit's open items were then taken up one by one: **Option B is applied** on `chore/dependency-maintenance-option-b` (`reports/progress_130_dependency_maintenance_option_b.md`) and **its merge decision is with the user** — 16 patch/minor packages refreshed (React 19.3, Vite 8.3, Vitest 4.1.11, testing-library patches, `lucide-react`, `pg`, `concurrently`, `@types`) and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**. Still open by decision: Option C (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair), the `engines` declaration, the npm-12 `allowScripts` pin, and the two minor bumps that were applied, measured and reverted (`oxlint` 1.85 with 33 new rule warnings, `jsdom` 30.1 whose `URL.createObjectURL` throws for a Blob).
 
 The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease exist at the workflow-tested code candidate; nothing was published, finalized, or pushed to npm.
 
@@ -308,11 +376,10 @@ Full Vitest (123 files / 1,850 tests), `npx vitest run src/tests/ografPackageImp
 
 ## Next scoped work
 
-1. **Milestone F — item 12 unified import entry is implemented on `feat/unified-import-entry`** (`reports/progress_128_unified_import_entry.md`): one header control decides from the file's content what it is — `.kcs` and legacy through the validated boundary, Lottie through the report dialog, OGraf manifests/packages through their existing refusal — and **the merge decision for that branch is with the user**. Item 10 is complete and merged (`reports/progress_127_lottie_import_entry_report_ux.md`): the "Import Lottie" control parses the document in memory, shows blocker/warning counts and every diagnostic with its source path and next step before anything is applied, cancels without touching the project, applies only on an explicit confirm through the existing `importProject` authority, and reconciles imported layer types onto existing KCS types the OGraf export accepts. The **OGraf package/editable import** is implemented on `feat/ograf-editable-import` (`reports/progress_129_ograf_editable_import.md`): the package is decoded in memory with entry/path guards and its `scene.kcs` is applied through the validated project path, with the merge decision still with the user. After it: the approval-gated package and toolchain follow-ups (Option B, `engines`/`allowScripts`, Option C) — each on its own branch with its own review and merge gate. Also open, each approval-gated: Option B (7 patch + 12 minor updates + a bounded `npm audit fix`, needs `package.json`/lockfile approval), Option C (TypeScript 7 / Vitest 5 majors on their own branch), the `engines` declaration, and the npm-12 `allowScripts` decision.
-2. **Milestone D item 9 Option B (dependency maintenance) is applied on `chore/dependency-maintenance-option-b`**: 16 patch/minor packages refreshed (React 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47, testing-library patches, pg, concurrently, @types) plus a bounded `npm audit fix` — `npm audit` went from 1 high + 6 moderate to **0**. Two minors were applied, verified and then deferred with evidence in the report: `oxlint` 1.85 (33 new rule warnings) and `jsdom` 30.1 (its `URL.createObjectURL` no longer accepts a Blob, which breaks the export-download test). The upgrade also required four test selectors to use the label case the component actually renders (`Gradient angle`), because jsdom's selector engine now matches attribute values case-sensitively. Validation: 124 files / 1,858 tests, build, tsc, lint (clean), `validate:ograf`, `qa:release`, the Lottie browser spec (3 tests), state check (32), `npm audit` 0, server health 200.
-3. Milestone F's delivered work: the study, item 10's design, its four merged slices (the import core, masks/track mattes, text/image/precomp, and the import entry point), item 11 (measurement only, on `chore/evaluator-profiling-harness`), and item 12's first step (merged) plus product half (on `feat/kcs-import-product-half`). Anything beyond those scopes — item 12's unified import entry, OGraf package import, Milestone E beyond items 7 and 8 — needs its own approval, and **D's dependency/package part (item 9 Option B) requires explicit user approval** before any `package.json`/lockfile work; all release/tag/draft-release changes need explicit approval.
-4. Preserve the tag and draft release, and run an independent review before every merge.
-5. Publish/finalize the GitHub draft only with further explicit user instruction.
+1. **Milestone F item 12 is complete and merged** (`reports/progress_128_unified_import_entry.md`, `reports/progress_129_ograf_editable_import.md`): item 10's four slices, the unified import entry and the OGraf package import are all in `main` (the package flow merged at `419fc6a`, its handoff refresh at `a4f8642`), so no Milestone F work is waiting on a merge. **The only open merge decision is Milestone D item 9 Option B** (`chore/dependency-maintenance-option-b`, `reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**. `oxlint` 1.85 (33 new rule warnings) and `jsdom` 30.1 (every `URL.createObjectURL` call on a Blob throws, which fails the export-download test) were applied, measured and then reverted, so both specifiers stay byte-identical to the base commit. The refresh also moved the transitive selector engine the tests use (`@asamuzakjp/dom-selector` 8.3.0 → 8.3.2), which made attribute-value matching case-sensitive; four selectors in `src/tests/styleMatteSection.test.tsx` now use the label case the component actually renders. Validation: 124 files / 1,858 tests, build, tsc, lint (clean), `validate:ograf`, `qa:release`, the Lottie browser spec (3 tests), state check (32), `npm audit` 0, server health 200.
+2. Approval-gated follow-ups that remain open: **Option C** (TypeScript 7 and Vitest 5 majors, with the `engines` declaration and the npm-12 `allowScripts` decision) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) with their own triage. Every release/tag/draft-release change still needs explicit approval.
+3. Preserve the tag and draft release, and run an independent review before every merge.
+4. Publish/finalize the GitHub draft only with further explicit user instruction.
 
 ## Guardrails
 
@@ -416,7 +483,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
 - **Milestone D item 6 — state consistency check — MERGED** at `b91e8b9` (follow-up `be76df9`): `node scripts/check-state-consistency.mjs` fails when the live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when the handoff upload instruction is superseded, or when the bundle carries source/test/binary copies, collapsed Windows paths or secret markers (see `reports/progress_111_state_hygiene_gate.md`).
 - **Item 9 (dependency and warning maintenance) — Option A MERGED at `3923141`; Option B applied on `chore/dependency-maintenance-option-b` awaiting the merge decision** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**; `oxlint` 1.85 and `jsdom` 30.1 are deferred with evidence. The paragraph below records the merged Option A.
-- **Item 9 (dependency and warning maintenance) — MERGED at `3923141`** (audit, Option A warning maintenance and the local SQLite repair). The audit is complete (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and the approved **Option A is implemented** on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule and the repair of **D9-1** (the local `sqlite3` NAPI binding is extracted; `node server/index.js` starts and `GET /api/health` returns 200 in this working copy). No dependency was updated and `package.json`, `package-lock.json` and the workflows are unchanged by that maintenance work; only its approval-gated follow-ups (Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin) are still open. The 7 catalogued warnings are resolved except W6 (`e2e/**` outside the Vitest glob by design) and W7 (environment `NO_COLOR`/`FORCE_COLOR`). Still open by decision: 20 outdated rows over 21 package names (7 patch / 12 minor / 1 no-wanted-update; majors available for `typescript` 6→7 and the Vitest pair 4→5), the 7 `npm audit` findings (6 moderate, 1 high; `qs` and `undici` moderate in the production tree), the `engines` declaration and the npm-12 `allowScripts` pin.
+- **Item 9 (dependency and warning maintenance) — MERGED at `3923141`** (audit, Option A warning maintenance and the local SQLite repair). The audit is complete (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and the approved **Option A is implemented** on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule and the repair of **D9-1** (the local `sqlite3` NAPI binding is extracted; `node server/index.js` starts and `GET /api/health` returns 200 in this working copy). No dependency was updated and `package.json`, `package-lock.json` and the workflows were left unchanged by that maintenance work; its approval-gated follow-ups were taken up separately, starting with Option B. The 7 catalogued warnings are resolved except W6 (`e2e/**` outside the Vitest glob by design) and W7 (environment `NO_COLOR`/`FORCE_COLOR`). The audit's open items were then taken up one by one: **Option B is applied** on `chore/dependency-maintenance-option-b` (`reports/progress_130_dependency_maintenance_option_b.md`) and **its merge decision is with the user** — 16 patch/minor packages refreshed (React 19.3, Vite 8.3, Vitest 4.1.11, testing-library patches, `lucide-react`, `pg`, `concurrently`, `@types`) and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**. Still open by decision: Option C (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair), the `engines` declaration, the npm-12 `allowScripts` pin, and the two minor bumps that were applied, measured and reverted (`oxlint` 1.85 with 33 new rule warnings, `jsdom` 30.1 whose `URL.createObjectURL` throws for a Blob).
 
 ---
 
@@ -424,7 +491,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9's audit and its approved Option A are merged and only its follow-ups (Option B, Option C, `engines`, the npm-12 `allowScripts` pin) stay behind an explicit approval gate (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and merged at `22335a5`, and Milestone F's study is delivered while its implementation proceeds slice by slice under separate approvals: item 10 is complete (all four slices merged), item 11 is implemented, item 12's first step and product half are merged, and item 12's unified import entry is the next work.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9's audit and its approved Option A are merged and only its follow-ups stay behind an explicit approval gate — Option B is now applied on `chore/dependency-maintenance-option-b` with its merge decision with the user, while Option C, `engines`, the npm-12 `allowScripts` pin and the two deferred minor bumps remain gated (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and merged at `22335a5`, and Milestone F's study is delivered while its implementation proceeds slice by slice under separate approvals: item 10 is complete (all four slices merged), item 11 is implemented, and item 12 is complete: the unified import entry and the OGraf package import are merged.
 
 ## Milestone map and status
 
@@ -467,7 +534,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 ## Milestone D — State / CI / warning hygiene (roadmap items 6, 9)
 
 - Item 6 (current-state consistency check) is a documentation/tooling task: a small script or CI check that fails when live docs contradict the tag/main SHA. No gate beyond normal review.
-- Item 9 (dependency and warning maintenance) **requires explicit user approval for anything that touches `package.json`/`package-lock.json`**. The audit is complete (`reports/progress_112_dependency_warning_audit.md`), the approved **Option A** (warning fixes only, no package change) is implemented and **merged** at `3923141` (`reports/progress_113_warning_maintenance.md`); Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin stay approval-gated.
+- Item 9 (dependency and warning maintenance) **requires explicit user approval for anything that touches `package.json`/`package-lock.json`**. The audit is complete (`reports/progress_112_dependency_warning_audit.md`), the approved **Option A** (warning fixes only, no package change) is implemented and **merged** at `3923141` (`reports/progress_113_warning_maintenance.md`); **Option B is applied on `chore/dependency-maintenance-option-b`** (`reports/progress_130_dependency_maintenance_option_b.md`) with its merge decision still with the user; Option C, the `engines` declaration, the npm-12 `allowScripts` pin and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) stay approval-gated.
 
 ## Milestone E — OGraf QA / schema hardening study (roadmap items 7, 8)
 
@@ -525,7 +592,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The value and speed graphs are exposed as labelled groups instead of images, and focus rings were added for the timeline diamonds and the graph keyframe points.
 - Freeform paths that only carry legacy `points` normalize a repeated closing vertex before the editing overlay materializes a canonical `path` on first edit; the legacy array itself is preserved.
 - Matte relationship resolution went through one shared helper that mirrors the rendered result, so the outliner indicator and the stage agree for enabled, disabled, missing, and unusable sources.
-- Runtime and toolchain dependencies were refreshed within their current major versions (React 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47 and the test-library patches) on an isolated branch; the linter and jsdom keep their previously verified versions because the newer ones need work of their own (33 new lint rules; a jsdom regression that drops `URL.createObjectURL`).
+- Runtime and toolchain dependencies were refreshed within their current major versions (React 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47 and the test-library patches) on an isolated branch; the linter and jsdom keep their previously verified versions because the newer ones need work of their own (33 new lint rules; with jsdom 30.1 any `URL.createObjectURL` call on a Blob throws, which fails the export-download test).
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.
@@ -575,14 +642,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 8144 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 13760 bytes
-- `NEXT_SESSION.md` — 12481 bytes
-- `OMP_FINAL_RESPONSE.md` — 3473 bytes
-- `PROJECT_STATE.md` — 15828 bytes
-- `README.md` — 3003 bytes
-- `manifest.txt` — 2205 bytes
-- `progress_130_dependency_maintenance_option_b.md` — 5986 bytes
+- `CHANGELOG.md` — 8194 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 14122 bytes
+- `NEXT_SESSION.md` — 11271 bytes
+- `OMP_FINAL_RESPONSE.md` — 4225 bytes
+- `PROJECT_STATE.md` — 16246 bytes
+- `README.md` — 3035 bytes
+- `manifest.txt` — 2371 bytes
+- `progress_130_dependency_maintenance_option_b.md` — 9652 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

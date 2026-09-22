@@ -1,32 +1,30 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 Text / Image / Precomp
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 Import Entry Point + Report UX
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The third implementation slice of the approved Lottie mapping design
-(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), merged into `main` at `bda62cb`:
+The final product slice of the approved Lottie mapping design
+(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), merged into `main` at `3b30bff`:
 
-- **Text layers** map their static text document onto the KCS text fields (`textValue`, `fontSize`,
-  `fontFamily`, `fillColor`). One canonical list of renderable families lives in
-  `src/utils/textFonts.ts` and the inspector renders from it; a family outside it falls back to the
-  default font and is reported once per document. Animators, text boxes, text paths and the
-  justification/tracking/leading/baseline/caps properties are reported.
-- **Image layers** resolve their `refId` against the document asset table. Only an embedded data URL
-  that already passes the application's embedded-image policy is imported; a file path or URL is
-  never read, fetched or resolved, so it is reported and the layer skipped.
-- **Precomp layers** stay *unsupported, preserved* per the design: one report per layer naming its
-  `refId`, plus cycle, nesting-limit and missing-asset reports from a depth-bounded asset-graph walk.
-- Every report carries the source document's own node path, and a layer that is skipped leaves no id
-  behind — a later layer pointing at it reports `LOTTIE_BROKEN_PARENT` instead.
-
-No UI or import entry point exists yet; the import entry point with the report-before-replace UX is the
-next slice and needs its own approval.
+- The header offers a separate **Import Lottie** control. Selecting a file parses the document **in
+  memory** and opens a report that lists the blockers and the losses — each with its stable code, its
+  source path and the concrete next step — **before** anything is applied.
+- **Cancel** (button, Escape or backdrop) clears the pending import and nothing else: no project
+  mutation, no history entry, no autosave, no success message. Only **Import and replace project**
+  applies the scene, through the same validated path the project import uses.
+- A refused document never applies and never reports success, and the confirm button is disabled
+  while a blocker is present.
+- Imported layers keep what the source drew: a path, a rectangle, a rounded rectangle, an ellipse and
+  a solid all arrive as a freeform whose own path draws the imported geometry (with Lottie's tangents
+  converted to the absolute handles the renderer reads), while text and images keep their existing KCS
+  types. Every one of those types is accepted by the OGraf export, so an imported scene no longer
+  risks a refusal caused only by the layer type the importer picked.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_126_lottie_text_image_precomp_slice.md` — the task record
+- `progress_127_lottie_import_entry_report_ux.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone F status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action

@@ -1,16 +1,16 @@
-# KCS ChatGPT Upload Manifest — Milestone F Item 10 Third Slice (Text / Image / Precomp)
+# KCS ChatGPT Upload Manifest — Milestone F Item 10 Final Slice (Import Entry Point + Report UX)
 
 Clean refreshed: YES
-Bundle purpose: the Lottie importer's text, image and precomp layer slice (Milestone F item 10, third slice)
+Bundle purpose: the Lottie import entry point with its report-before-replace flow (Milestone F item 10, final slice)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: feat/lottie-text-image-precomp-slice, fast-forward merged into main at bda62cb (base main was c66cc80) and pushed; the branch is kept
-Task record: reports/progress_126_lottie_text_image_precomp_slice.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
-What changed: src/interop/lottie/mapDocument.ts (text document mapping, image asset resolution against the document asset table, precomp reporting with a depth-bounded graph walk), src/utils/textFonts.ts (the single canonical font list, also used by the inspector), src/ograf/legacyCompatibility.ts (exports the existing embedded-image predicate), src/components/Inspector/sections/style/StyleTextFields.tsx (renders its options from that list), src/tests/lottieImport.test.ts (83 cases, was 56)
-Not changed: no UI or import entry point, no renderer or evaluator change, no filesystem or network access from the importer, no dependency, package.json, lockfile or workflow change
-Validation: npm run build PASS; lottie core suite PASS (83); full suite PASS (120 files / 1,819 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests, candidate bda62cb); git diff --check clean
-Reviews: three independent read-only rounds plus a confirmation round — BLOCKED (7 findings), BLOCKED (3), BLOCKED (1, two items PASS), READY WITH WARNINGS (last blocker closed; the remaining note was a comment-precision warning, fixed in bda62cb)
-Next slice (needs its own approval): the import entry point with the report-before-replace UX
+Branch: feat/lottie-import-entry-report-ux, fast-forward merged into main at 3b30bff (base main was 5dc1f7b) and pushed; the branch is kept
+Task record: reports/progress_127_lottie_import_entry_report_ux.md; design: docs/design/KCS_LOTTIE_IMPORT_MAPPING.md (in the repository)
+What changed: src/components/Header/HeaderBar.tsx (the "Import Lottie" control, the in-memory parse, the apply/cancel semantics), src/components/Modal/LottieImportReportDialog.{tsx,css} (new report dialog), src/interop/lottie/mapDocument.ts (imported primitives as their own paths, Lottie tangents as absolute handles), src/tests/lottieImport.test.ts (88 cases), src/tests/lottieImportEntry.test.tsx (12 cases, new), e2e/lottie-import-report.spec.ts (new real-browser smoke)
+Not changed: no renderer or evaluator change, no network or filesystem access, no dependency, package.json, lockfile or workflow change, and no change to the .kcs / legacy / OGraf import routing
+Validation: npm run build PASS; lottie suites PASS (100); full suite PASS (121 files / 1,836 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS (2 Chromium tests); npx playwright test e2e/lottie-import-report.spec.ts PASS; git diff --check clean
+Reviews: four independent read-only rounds — BLOCKED (5 findings), BLOCKED (2), BLOCKED (1), READY WITH WARNINGS (the remaining two notes were a stale report sentence and two over-broad test names, both fixed in 3b30bff)
+Next work (each needs its own approval): item 12's unified import entry and OGraf package import; the approval-gated package/dependency follow-ups (Option B, Option C, engines, the npm-12 allowScripts decision)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 GitHub release: existing draft prerelease, not published/finalized
@@ -19,8 +19,8 @@ npm publish: NO
 Copied files (8):
 - README.md — bundle instructions
 - manifest.txt — this inventory
-- OMP_FINAL_RESPONSE.md — the third-slice final response
-- progress_126_lottie_text_image_precomp_slice.md — the task record
+- OMP_FINAL_RESPONSE.md — the final-slice final response
+- progress_127_lottie_import_entry_report_ux.md — the task record
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md — roadmap plan (copy of the root document)
 - CHANGELOG.md — changelog (copy of the root document)
 - NEXT_SESSION.md — current state and next action (copy of the root document)
@@ -29,18 +29,19 @@ Copied files (8):
 Omitted categories:
 - Source, test and design files (they live in the repository, including docs/design/KCS_LOTTIE_IMPORT_MAPPING.md)
 - package.json, package-lock.json, ci.yml, release-smoke.yml files
-- Older reports, current-state/release documents, the previous checkpoint bundle copies
+- Older reports, current-state/release documents, earlier bundle copies
 - QA output, zip files, asset folders, screenshots, archives, dependencies, secrets, caches
 
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets/env/API keys, backups, binary caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
 
 Validation at this revision (each command run separately):
 - npm run build (tsc -b && vite build): PASS — the type gate CI runs
-- npx vitest run src/tests/lottieImport.test.ts: PASS — 83 cases
-- npm test: PASS — 120 files / 1,819 tests; npm run lint: clean
+- npx vitest run src/tests/lottieImport.test.ts src/tests/lottieImportEntry.test.tsx: PASS — 100 cases
+- npm test: PASS — 121 files / 1,836 tests; npm run lint: clean
 - npm run validate:ograf: PASS; npm run qa:release: PASS (2 Chromium tests)
+- npx playwright test e2e/lottie-import-report.spec.ts: PASS
 - node scripts/check-state-consistency.mjs: PASS; git diff --check: clean
 
-Next: the import entry point with the report-before-replace UX — the first slice that puts the importer in front of a user.
+Next: item 12's unified import entry (one control that dispatches .kcs, legacy, OGraf and Lottie behind one report surface).
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.

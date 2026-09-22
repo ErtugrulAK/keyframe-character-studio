@@ -2,18 +2,20 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { sanitizeOGrafDiagnosticText } from '../../ograf/diagnostics';
 import type { LottieImportDiagnostic } from '../../interop/lottie/diagnostics';
-import './LottieImportReportDialog.css';
+import './ImportReportDialog.css';
 
 /** How many diagnostics are rendered before the list is cut with a count. */
 const VISIBLE_DIAGNOSTIC_LIMIT = 40;
 
-export interface LottieImportReportDialogProps {
+export interface ImportReportDialogProps {
   isOpen: boolean;
   fileName: string;
   /** Layers the parsed scene would add, or `undefined` when the import was refused. */
   layerCount?: number;
   frameCount?: number;
   diagnostics: LottieImportDiagnostic[];
+  /** Dialog title; the importer names itself here (for example "Lottie import report"). */
+  title?: string;
   /** A refusal (the document could not be read) rather than a report of losses. */
   refused?: boolean;
   onCancel: () => void;
@@ -23,13 +25,14 @@ export interface LottieImportReportDialogProps {
 const severityRank = (entry: LottieImportDiagnostic): number => (entry.severity === 'error' ? 0 : 1);
 
 /**
- * Shows what a Lottie import would do **before** it touches the project: the
+ * Shows what an import would do **before** it touches the project: the
  * blockers first, then the losses, each with its source path and the concrete
  * next step. The dialog owns no state and applies nothing — the caller decides
  * what "Import" means, which is what keeps Cancel a no-op.
  */
-export const LottieImportReportDialog: React.FC<LottieImportReportDialogProps> = ({
+export const ImportReportDialog: React.FC<ImportReportDialogProps> = ({
   isOpen,
+  title = 'Import report',
   fileName,
   layerCount,
   frameCount,
@@ -97,7 +100,7 @@ export const LottieImportReportDialog: React.FC<LottieImportReportDialogProps> =
         aria-describedby="lottie-report-summary"
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <h2 id="lottie-report-title">Lottie import report</h2>
+        <h2 id="lottie-report-title">{title}</h2>
         <p id="lottie-report-summary" className="lottie-report-source">
           {sanitizeOGrafDiagnosticText(fileName)} — {summary}
         </p>

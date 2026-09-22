@@ -36,7 +36,7 @@ vi.mock('../context/useAnimator', () => ({ useAnimator: () => context }));
 vi.mock('../components/Modal/NewItemModal', () => ({ NewItemModal: () => null }));
 
 import { HeaderBar } from '../components/Header/HeaderBar';
-import { LottieImportReportDialog } from '../components/Modal/LottieImportReportDialog';
+import { ImportReportDialog } from '../components/Modal/ImportReportDialog';
 
 const lottieDocument = (overrides: Record<string, unknown> = {}) => JSON.stringify({
   v: '5.7.4',
@@ -58,8 +58,7 @@ const chooseFile = (label: string, name: string, content: string) => {
   fireEvent.change(input, { target: { files: [file] } });
 };
 
-const LOTTIE_FILE_INPUT = 'Choose a Lottie file to import';
-const EXISTING_IMPORT_INPUT = 'Choose a KCS project or OGraf manifest';
+const IMPORT_INPUT = 'Choose a KCS project, OGraf manifest or Lottie file to import';
 const reportDialog = () => screen.queryByRole('dialog', { name: 'Lottie import report' });
 
 describe('Lottie import entry point', () => {
@@ -73,7 +72,7 @@ describe('Lottie import entry point', () => {
 
   it('shows the report without touching the project', async () => {
     render(<HeaderBar />);
-    chooseFile(LOTTIE_FILE_INPUT, 'scene.lottie.json', lottieDocument());
+    chooseFile(IMPORT_INPUT, 'scene.lottie.json', lottieDocument());
 
     const dialog = await screen.findByRole('dialog', { name: 'Lottie import report' });
     expect(dialog).toBeTruthy();
@@ -84,7 +83,7 @@ describe('Lottie import entry point', () => {
 
   it('leaves the project untouched when the report is cancelled', async () => {
     render(<HeaderBar />);
-    chooseFile(LOTTIE_FILE_INPUT, 'scene.lottie.json', lottieDocument());
+    chooseFile(IMPORT_INPUT, 'scene.lottie.json', lottieDocument());
     await screen.findByRole('dialog', { name: 'Lottie import report' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -98,7 +97,7 @@ describe('Lottie import entry point', () => {
 
   it('applies the imported scene through the project authority on confirm', async () => {
     render(<HeaderBar />);
-    chooseFile(LOTTIE_FILE_INPUT, 'scene.lottie.json', lottieDocument());
+    chooseFile(IMPORT_INPUT, 'scene.lottie.json', lottieDocument());
     await screen.findByRole('dialog', { name: 'Lottie import report' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Import and replace project' }));
@@ -117,9 +116,20 @@ describe('Lottie import entry point', () => {
     expect(context.showToast).toHaveBeenCalledWith('Imported "scene" from Lottie.', 'success');
   });
 
-  it('never applies a refused document and never reports success', async () => {
+  it('refuses a file it cannot classify without applying anything', async () => {
+    context.importProject.mockReturnValueOnce({ ok: false, diagnostics: [{ code: 'KCS_IMPORT_MALFORMED_JSON', message: 'The selected file is not valid JSON.', action: 'Export the project again.' }] });
     render(<HeaderBar />);
-    chooseFile(LOTTIE_FILE_INPUT, 'broken.json', '{ not json');
+    chooseFile(IMPORT_INPUT, 'broken.json', '{ not json');
+
+    await waitFor(() => expect(context.importProject).toHaveBeenCalledTimes(1));
+    expect(reportDialog()).toBeNull();
+    expect(context.showToast).toHaveBeenCalledWith(expect.stringContaining('not valid JSON'), 'error');
+    expect(context.showToast).not.toHaveBeenCalledWith(expect.stringContaining('Imported'), 'success');
+  });
+
+  it('shows a refusal dialog for a Lottie document the importer rejects', async () => {
+    render(<HeaderBar />);
+    chooseFile(IMPORT_INPUT, 'empty.lottie.json', JSON.stringify({ v: '5.7.4', fr: 24, ip: 0, op: 0, w: 10, h: 10, layers: [] }));
 
     const dialog = await screen.findByRole('dialog', { name: 'Lottie import report' });
     const confirm = screen.getByRole('button', { name: 'Import and replace project' }) as HTMLButtonElement;
@@ -132,7 +142,7 @@ describe('Lottie import entry point', () => {
 
   it('lists warnings with their code and action before the project changes', async () => {
     render(<HeaderBar />);
-    chooseFile(LOTTIE_FILE_INPUT, 'scene.lottie.json', lottieDocument({
+    chooseFile(IMPORT_INPUT, 'scene.lottie.json', lottieDocument({
       layers: [
         { ty: 0, nm: 'Nested', refId: 'comp_0', ks: {} },
         { ty: 1, nm: 'Block', sc: '#336699', sw: 10, sh: 10, ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } } },
@@ -149,7 +159,7 @@ describe('Lottie import entry point', () => {
 
   it('starts focus on Cancel, wraps with Tab and cancels on Escape', async () => {
     render(<HeaderBar />);
-    chooseFile(LOTTIE_FILE_INPUT, 'scene.lottie.json', lottieDocument());
+    chooseFile(IMPORT_INPUT, 'scene.lottie.json', lottieDocument());
     await screen.findByRole('dialog', { name: 'Lottie import report' });
     const cancel = screen.getByRole('button', { name: 'Cancel' });
     const confirm = screen.getByRole('button', { name: 'Import and replace project' });
@@ -169,7 +179,7 @@ describe('Lottie import entry point', () => {
   it('reports a refusal from the project authority instead of a success', async () => {
     context.importProject.mockReturnValueOnce({ ok: false, diagnostics: [{ code: 'IMPORT_REFUSED', message: 'The scene is not valid.', action: 'Export again.' }] });
     render(<HeaderBar />);
-    chooseFile(LOTTIE_FILE_INPUT, 'scene.lottie.json', lottieDocument());
+    chooseFile(IMPORT_INPUT, 'scene.lottie.json', lottieDocument());
     await screen.findByRole('dialog', { name: 'Lottie import report' });
 
     fireEvent.click(screen.getByRole('button', { name: 'Import and replace project' }));
@@ -184,7 +194,7 @@ describe('Lottie import entry point', () => {
       layers: Array.from({ length: 45 }, (_, index) => ({ ty: 4, nm: 'L' + index, ks: {}, shapes: [{ ty: 'rp', c: { k: index } }] })),
     });
     render(<HeaderBar />);
-    chooseFile(LOTTIE_FILE_INPUT, 'many.json', noisy);
+    chooseFile(IMPORT_INPUT, 'many.json', noisy);
 
     const dialog = await screen.findByRole('dialog', { name: 'Lottie import report' });
     const entries = dialog.querySelectorAll('.lottie-report-entry');
@@ -202,7 +212,7 @@ describe('Lottie import entry point', () => {
     ];
 
     render(
-      <LottieImportReportDialog
+      <ImportReportDialog
         isOpen
         fileName={'C:\\Users\\someone\\secret\\scene.lottie.json'}
         diagnostics={diagnostics}
@@ -226,7 +236,7 @@ describe('Lottie import entry point', () => {
 
   it('keeps focus on Cancel while confirming is impossible', async () => {
     render(<HeaderBar />);
-    chooseFile(LOTTIE_FILE_INPUT, 'broken.json', '{ not json');
+    chooseFile(IMPORT_INPUT, 'empty.lottie.json', JSON.stringify({ v: '5.7.4', fr: 24, ip: 0, op: 0, w: 10, h: 10, layers: [] }));
     await screen.findByRole('dialog', { name: 'Lottie import report' });
     const cancel = screen.getByRole('button', { name: 'Cancel' });
     const confirm = screen.getByRole('button', { name: 'Import and replace project' }) as HTMLButtonElement;
@@ -242,7 +252,7 @@ describe('Lottie import entry point', () => {
 
   it('keeps the existing project import control working', async () => {
     render(<HeaderBar />);
-    chooseFile(EXISTING_IMPORT_INPUT, 'project.kcs', JSON.stringify({ version: 1, width: 320, height: 180, fps: 24, totalFrames: 24, layers: [], tracks: [] }));
+    chooseFile(IMPORT_INPUT, 'project.kcs', JSON.stringify({ version: 1, width: 320, height: 180, fps: 24, totalFrames: 24, layers: [], tracks: [] }));
 
     await waitFor(() => expect(context.importProject).toHaveBeenCalledTimes(1));
     expect(context.showToast).toHaveBeenCalledWith('Imported "project" as a new Template tab!', 'success');
@@ -251,7 +261,7 @@ describe('Lottie import entry point', () => {
 
   it('keeps the OGraf manifest rejection on the existing control', async () => {
     render(<HeaderBar />);
-    chooseFile(EXISTING_IMPORT_INPUT, 'graphic.ograf.json', JSON.stringify({ $schema: 'https://keyframe.studio/ograf/v1' }));
+    chooseFile(IMPORT_INPUT, 'graphic.ograf.json', JSON.stringify({ $schema: 'https://keyframe.studio/ograf/v1' }));
 
     await waitFor(() => expect(context.showToast).toHaveBeenCalled());
     expect(context.importProject).not.toHaveBeenCalled();

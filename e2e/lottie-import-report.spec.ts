@@ -47,12 +47,46 @@ async function seed(page: Page): Promise<void> {
 }
 
 const importLottie = async (page: Page) => {
-  await page.setInputFiles('input[aria-label="Choose a Lottie file to import"]', {
+  await page.setInputFiles('input[aria-label="Choose a KCS project, OGraf manifest or Lottie file to import"]', {
     name: 'smoke.lottie.json',
     mimeType: 'application/json',
     buffer: Buffer.from(lottieDocument, 'utf8'),
   });
 };
+
+test.describe('Milestone F item 12 — the unified import entry', () => {
+  test('imports a KCS project through the same control and leaves a refused file alone', async ({ page }) => {
+    await seed(page);
+
+    const project = JSON.stringify({
+      version: 1,
+      width: 640,
+      height: 360,
+      fps: 30,
+      totalFrames: 30,
+      layers: [{ id: 'kcs', name: 'KCS Layer', type: 'custom_box', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fillColor: '#22cc88', strokeColor: '#101218', strokeWidth: 2, borderRadius: 0, width: 60, height: 60 }],
+      tracks: [],
+    });
+    await page.setInputFiles('input[aria-label="Choose a KCS project, OGraf manifest or Lottie file to import"]', {
+      name: 'project.kcs',
+      mimeType: 'application/json',
+      buffer: Buffer.from(project, 'utf8'),
+    });
+
+    await expect(page.getByText('KCS Layer').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Seed Layer')).toHaveCount(0);
+
+    // A file that is not a project at all is refused and changes nothing.
+    await page.setInputFiles('input[aria-label="Choose a KCS project, OGraf manifest or Lottie file to import"]', {
+      name: 'broken.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from('{ not json', 'utf8'),
+    });
+
+    await expect(page.getByText('KCS Layer').first()).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Lottie import report' })).toHaveCount(0);
+  });
+});
 
 test.describe('Milestone F item 10 — Lottie import report flow', () => {
   test('shows the report, cancels without changing the project, then applies on confirm', async ({ page }) => {

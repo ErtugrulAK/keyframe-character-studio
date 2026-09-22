@@ -26,7 +26,8 @@ import {
 import type { OGrafExportDiagnostic } from '../../ograf/types';
 import type { ToastOptions } from '../../hooks/useToast';
 import { FirstExportGuide } from './FirstExportGuide';
-import { LottieImportReportDialog } from '../Modal/LottieImportReportDialog';
+import { ImportReportDialog } from '../Modal/ImportReportDialog';
+import { classifyImport } from '../../utils/importDispatch';
 import { importLottieDocument, type LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
 import './HeaderBar.css';
@@ -153,7 +154,6 @@ export const HeaderBar: React.FC = () => {
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const lottieInputRef = useRef<HTMLInputElement>(null);
   /**
    * A parsed Lottie document waiting for the user to accept its report. It is
    * the only thing selecting a file changes: the project is untouched until
@@ -266,53 +266,23 @@ export const HeaderBar: React.FC = () => {
     }
   };
 
+  /**
+   * The one import entry: it decides what the file is from its **content** and
+   * routes it to the importer that owns that kind. Only a Lottie document opens
+   * the report dialog before it touches the project; the KCS and legacy paths
+   * keep their existing validated behaviour.
+   */
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = '';
     if (!file) return;
     const lowerName = file.name.toLowerCase();
-    const isOGrafManifest = lowerName.endsWith('.ograf.json');
-    const isOGrafPackage = lowerName.endsWith('.zip') || lowerName.endsWith('.ograf');
-    if (isOGrafManifest || isOGrafPackage) {
+    const looksLikePackage = lowerName.endsWith('.zip') || lowerName.endsWith('.ograf');
+    if (looksLikePackage) {
       showToast('This is an OGraf graphic manifest/package. KCS project import expects a .kcs project file. Use Export/OGraf tools or add Import OGraf Package support.', 'error');
-      e.target.value = '';
       return;
     }
-    const fileNameWithoutExt = file.name.replace(/\.(?:json|kcs)$/i, '').trim();
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      if (text) {
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(text);
-        } catch {
-          parsed = undefined;
-        }
-        if (parsed && typeof parsed === 'object' && '$schema' in parsed && String(parsed.$schema).includes('/ograf/')) {
-          showToast('This is an OGraf graphic manifest/package. KCS project import expects a .kcs project file. Use Export/OGraf tools or add Import OGraf Package support.', 'error');
-          return;
-        }
-        const result = importProject(text, fileNameWithoutExt);
-        if (result.ok) {
-          // A successful import can still carry warnings (for example the legacy
-          // migration notice): show them instead of reporting a silent success.
-          const [notice] = result.diagnostics;
-          showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
-          if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
-          return;
-        }
-        const [refusal] = result.diagnostics;
-        showToast(refusal ? `${refusal.message} ${refusal.action}` : 'Invalid project file format!', 'error');
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  const handleLottieFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
+    const fileNameWithoutExt = file.name.replace(/\.(?:lottie\.)?(?:json|kcs)$/i, '').trim();
     const reader = new FileReader();
     reader.onload = (ev) => {
       const text = ev.target?.result as string;
@@ -320,12 +290,34 @@ export const HeaderBar: React.FC = () => {
         showToast('The selected file could not be read as text.', 'error');
         return;
       }
-      // Parsing only: nothing in the project changes until the report is accepted.
-      setPendingLottieImport({ fileName: file.name, result: importLottieDocument(text) });
+      switch (classifyImport(file.name, text)) {
+        case 'ograf-package':
+        case 'ograf-manifest':
+          showToast('This is an OGraf graphic manifest/package. KCS project import expects a .kcs project file. Use Export/OGraf tools or add Import OGraf Package support.', 'error');
+          return;
+        case 'lottie':
+          // Parsing only: nothing in the project changes until the report is accepted.
+          setPendingLottieImport({ fileName: file.name, result: importLottieDocument(text) });
+          return;
+        default: {
+          const result = importProject(text, fileNameWithoutExt);
+          if (result.ok) {
+            // A successful import can still carry warnings (for example the legacy
+            // migration notice): show them instead of reporting a silent success.
+            const [notice] = result.diagnostics;
+            showToast(`Imported "${fileNameWithoutExt}" as a new Template tab!`, 'success');
+            if (notice) showToast(notice.message, 'info', { title: notice.code, action: notice.action });
+            return;
+          }
+          const [refusal] = result.diagnostics;
+          showToast(refusal ? `${refusal.message} ${refusal.action}` : 'Invalid project file format!', 'error');
+        }
+      }
     };
     reader.onerror = () => showToast('The selected file could not be read.', 'error');
     reader.readAsText(file);
   };
+
 
   /** Applies the pending import through the project authority the .kcs import uses. */
   const confirmLottieImport = () => {
@@ -495,16 +487,11 @@ export const HeaderBar: React.FC = () => {
           </select>
           <div className="divider-v" />
 
-          <button className="header-action-btn import-btn" onClick={() => fileInputRef.current?.click()} title="Import KCS Project or OGraf Manifest">
+          <button className="header-action-btn import-btn" onClick={() => fileInputRef.current?.click()} title="Import a KCS project, a legacy project, an OGraf manifest or a Lottie animation">
             <Upload size={14} />
             <span>Import</span>
           </button>
-          <input ref={fileInputRef} type="file" accept=".json,.kcs,.ograf.json,.zip" aria-label="Choose a KCS project or OGraf manifest" style={{ display: 'none' }} onChange={handleImportFile} />
-          <button className="header-action-btn import-btn" onClick={() => lottieInputRef.current?.click()} title="Import a Lottie (bodymovin) JSON file">
-            <Upload size={14} />
-            <span>Import Lottie</span>
-          </button>
-          <input ref={lottieInputRef} type="file" accept=".json,.lottie.json" style={{ display: 'none' }} onChange={handleLottieFile} aria-label="Choose a Lottie file to import" />
+          <input ref={fileInputRef} type="file" accept=".json,.kcs,.lottie.json,.ograf.json,.zip,.ograf" aria-label="Choose a KCS project, OGraf manifest or Lottie file to import" style={{ display: 'none' }} onChange={handleImportFile} />
 
           <div style={{ position: 'relative' }}>
             <button
@@ -603,8 +590,9 @@ export const HeaderBar: React.FC = () => {
           </button>
         </div>
       </header>
-      <LottieImportReportDialog
+      <ImportReportDialog
         isOpen={pendingLottieImport !== null}
+        title="Lottie import report"
         fileName={pendingLottieImport?.fileName ?? ''}
         layerCount={pendingLottieImport?.result.scene?.layers.length}
         frameCount={pendingLottieImport?.result.scene?.totalFrames}

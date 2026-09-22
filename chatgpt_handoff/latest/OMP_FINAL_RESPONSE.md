@@ -19,7 +19,7 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 
 ## 3) DEFERRED, WITH EVIDENCE
 
-- **`oxlint` 1.85.0:** reports 33 warnings (`react(refs)`, `react(set-state-in-effect)`, `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report. Clean lint is the project standard; silencing rules or rewriting React code is not a dependency task → stays `^1.74.0`.
+- **`oxlint` 1.85.0:** reports 33 warnings (`react(refs)`, `react(set-state-in-effect)`, `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report. Clean lint is the project standard; silencing rules or rewriting React code is not a dependency task → the installed linter stays 1.74.0 (specifier `^1.71.0`, unchanged).
 - **`jsdom` 30.1.1:** measured in this checkout — with 30.1.1 the Blob carries no jsdom-internal symbol and `URL.createObjectURL(new Blob([...]))` throws `Cannot read properties of undefined (reading '_buffer')`; with 30.0.1 the same call succeeds. Isolated (`jsdom@30.1.1` + `vitest@4.1.10` still fails; `jsdom@30.0.1` on the same `vitest` passes), so it is not a `vitest` regression. Which jsdom change causes it is **not** established and is not claimed → stays `^30.0.1`.
 
 ## 4) VALIDATION

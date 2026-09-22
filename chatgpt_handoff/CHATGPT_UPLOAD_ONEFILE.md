@@ -38,7 +38,7 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 
 ## 3) DEFERRED, WITH EVIDENCE
 
-- **`oxlint` 1.85.0:** reports 33 warnings (`react(refs)`, `react(set-state-in-effect)`, `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report. Clean lint is the project standard; silencing rules or rewriting React code is not a dependency task → stays `^1.74.0`.
+- **`oxlint` 1.85.0:** reports 33 warnings (`react(refs)`, `react(set-state-in-effect)`, `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report. Clean lint is the project standard; silencing rules or rewriting React code is not a dependency task → the installed linter stays 1.74.0 (specifier `^1.71.0`, unchanged).
 - **`jsdom` 30.1.1:** measured in this checkout — with 30.1.1 the Blob carries no jsdom-internal symbol and `URL.createObjectURL(new Blob([...]))` throws `Cannot read properties of undefined (reading '_buffer')`; with 30.0.1 the same call succeeds. Isolated (`jsdom@30.1.1` + `vitest@4.1.10` still fails; `jsdom@30.0.1` on the same `vitest` passes), so it is not a `vitest` regression. Which jsdom change causes it is **not** established and is not claimed → stays `^30.0.1`.
 
 ## 4) VALIDATION
@@ -375,11 +375,11 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (124 files / 1,858 tests), `npx vitest run src/tests/ografPackageImport.test.ts src/tests/importDispatch.test.ts src/tests/lottieImportEntry.test.tsx src/tests/lottieImport.test.ts src/tests/ografBrowserZip.test.tsx` (132 cases), `npx playwright test e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `a4f8642` on `main`), `npm run build`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS: 33 checks on `main` and on `chore/dependency-maintenance-option-b`) all pass on `main`; the newest CI run on `main` at the time of writing is `35704676331` (success).
+Full Vitest (124 files / 1,858 tests), `npx vitest run src/tests/ografPackageImport.test.ts src/tests/importDispatch.test.ts src/tests/lottieImportEntry.test.tsx src/tests/lottieImport.test.ts src/tests/ografBrowserZip.test.tsx` (132 cases), `npx playwright test e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `a4f8642` on `main`), `npm run build`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS: 32 checks on `main` at `a4f8642`, 33 on `chore/dependency-maintenance-option-b`, where the bundle and the new report add one) all pass on `main`; the newest CI run on `main` at the time of writing is `35704676331` (success).
 
 ## Next scoped work
 
-1. **Milestone F item 12 is complete and merged** (`reports/progress_128_unified_import_entry.md`, `reports/progress_129_ograf_editable_import.md`): item 10's four slices, the unified import entry and the OGraf package import are all in `main` (the package flow merged at `419fc6a`, its handoff refresh at `a4f8642`), so no Milestone F work is waiting on a merge. **The only open merge decision is Milestone D item 9 Option B** (`chore/dependency-maintenance-option-b`, `reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**. `oxlint` 1.85 (33 new rule warnings) and `jsdom` 30.1 (every `URL.createObjectURL` call on a Blob throws, which fails the export-download test) were applied, measured and then reverted, so both specifiers stay byte-identical to the base commit. The refresh also moved the transitive selector engine the tests use (`@asamuzakjp/dom-selector` 8.3.0 → 8.3.2), which made attribute-value matching case-sensitive; four selectors in `src/tests/styleMatteSection.test.tsx` now use the label case the component actually renders. Validation: 124 files / 1,858 tests, build, tsc, lint (clean), `validate:ograf`, `qa:release`, the Lottie browser spec (3 tests), state check (32), `npm audit` 0, server health 200.
+1. **Milestone F item 12 is complete and merged** (`reports/progress_128_unified_import_entry.md`, `reports/progress_129_ograf_editable_import.md`): item 10's four slices, the unified import entry and the OGraf package import are all in `main` (the package flow merged at `419fc6a`, its handoff refresh at `a4f8642`), so no Milestone F work is waiting on a merge. **The only open merge decision is Milestone D item 9 Option B** (`chore/dependency-maintenance-option-b`, `reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**. `oxlint` 1.85 (33 new rule warnings) and `jsdom` 30.1 (every `URL.createObjectURL` call on a Blob throws, which fails the export-download test) were applied, measured and then reverted, so both specifiers stay byte-identical to the base commit. The refresh also moved the transitive selector engine the tests use (`@asamuzakjp/dom-selector` 8.3.0 → 8.3.2), which made attribute-value matching case-sensitive; four selectors in `src/tests/styleMatteSection.test.tsx` now use the label case the component actually renders. Validation: 124 files / 1,858 tests, build, tsc, lint (clean), `validate:ograf`, `qa:release`, the Lottie browser spec (3 tests), state check (33), `npm audit` 0, server health 200.
 2. Approval-gated follow-ups that remain open: **Option C** (TypeScript 7 and Vitest 5 majors, with the `engines` declaration and the npm-12 `allowScripts` decision) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) with their own triage. Every release/tag/draft-release change still needs explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -647,8 +647,8 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 8194 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 14638 bytes
-- `NEXT_SESSION.md` — 11269 bytes
-- `OMP_FINAL_RESPONSE.md` — 4225 bytes
+- `NEXT_SESSION.md` — 11327 bytes
+- `OMP_FINAL_RESPONSE.md` — 4276 bytes
 - `PROJECT_STATE.md` — 16308 bytes
 - `README.md` — 3283 bytes
 - `manifest.txt` — 2371 bytes

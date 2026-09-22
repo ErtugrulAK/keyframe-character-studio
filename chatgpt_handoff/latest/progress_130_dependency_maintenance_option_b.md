@@ -59,15 +59,16 @@ removed, 57 changed version**:
 ## 4. Deferred, with evidence
 
 Two minor bumps were applied, verified, and then **deferred** because each one demands work of its own
-kind rather than a version bump. Both stay in `package.json` unchanged (`^1.74.0`, `^30.0.1`) and the
-lockfile pins the known-good version.
+kind rather than a version bump. The `oxlint` (`^1.71.0`) and `jsdom` (`^30.0.1`) specifiers in
+`package.json` are byte-identical to the base commit; the lockfile keeps the known-good versions
+(`oxlint` 1.74.0, `jsdom` 30.0.1).
 
 1. **`oxlint` 1.74.0 → 1.85.0 — 33 new rule warnings.**
    With 1.85.0 the linter reports 33 warnings (`react(refs)`, `react(set-state-in-effect)`,
    `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report at all. The
    project's standard is a clean lint run, and silencing new rules or rewriting React code to satisfy
-   them is not a dependency task. The linter therefore stays at `^1.74.0` until the new rules get
-   their own triage.
+   them is not a dependency task. The installed linter therefore stays at 1.74.0 (specifier
+   `^1.71.0`, unchanged) until the new rules get their own triage.
 
 2. **`jsdom` 30.0.1 → 30.1.1 — `URL.createObjectURL` stops accepting the Blob this environment
    produces.** What was measured, in this checkout:
@@ -116,7 +117,7 @@ radial one, and derived from the matte rather than mirrored in local state.
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS (2 Chromium tests), release gate recorded candidate `a4f8642` |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `npm audit` | **0 vulnerabilities** (was 1 high + 6 moderate) |
 | `git diff --check` | clean |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and runs a statement |

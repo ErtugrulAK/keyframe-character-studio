@@ -27,7 +27,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (123 files / 1,850 tests), `npx vitest run src/tests/ografPackageImport.test.ts src/tests/importDispatch.test.ts src/tests/lottieImportEntry.test.tsx src/tests/lottieImport.test.ts src/tests/ografBrowserZip.test.tsx` (132 cases), `npx playwright test e2e/lottie-import-report.spec.ts` (1 real-browser test), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `12b71a5`), `npm run build`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS: 32 checks at the accepted baseline `12b71a5`, 33 with the reconciliation bundle) all pass on `main`; the newest CI run on `main` at the time of writing is `35704676331` (success).
+Full Vitest (124 files / 1,858 tests), `npx vitest run src/tests/ografPackageImport.test.ts src/tests/importDispatch.test.ts src/tests/lottieImportEntry.test.tsx src/tests/lottieImport.test.ts src/tests/ografBrowserZip.test.tsx` (132 cases), `npx playwright test e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `a4f8642` on `main`), `npm run build`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS: 33 checks on `main` and on `chore/dependency-maintenance-option-b`) all pass on `main`; the newest CI run on `main` at the time of writing is `35704676331` (success).
 
 ## Next scoped work
 

@@ -50,7 +50,7 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 | `npm run lint` | clean (exit 0) |
 | `npm run validate:ograf`, `npm run qa:release` | PASS (2 Chromium tests) |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `npm audit` | 0 vulnerabilities |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and executes a statement |
 
@@ -114,8 +114,9 @@ The approval-gated dependency maintenance (Milestone D item 9, Option B), applie
 
 - Sixteen patch/minor packages were refreshed inside their current major versions — React and
   React DOM 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47, the testing-library patches, `pg`,
-  `concurrently` and the `@types` packages — keeping the repository's caret convention, with no
-  package added or removed.
+  `concurrently` and the `@types` packages — keeping the repository's caret convention, with no key added to or
+  removed from `package.json` and the `oxlint`/`jsdom` specifiers unchanged (the lock graph did move:
+  64 transitive entries, 1 added, 6 removed, 57 version changes).
 - A **bounded `npm audit fix`** (no `--force`) took `npm audit` from one high and six moderate
   advisories to **zero** known vulnerabilities.
 - Two minors were applied, verified and then **deferred with evidence**: `oxlint` 1.85 reports 33
@@ -126,7 +127,8 @@ The approval-gated dependency maintenance (Milestone D item 9, Option B), applie
   actually renders (`Gradient angle`), because the current jsdom selector engine matches attribute
   values case-sensitively where the previous one did not.
 
-No application behaviour changed: the only non-package edit is those four test selectors.
+No application behaviour changed: the only non-package product/test edit is those four test
+selectors. Documentation and this handoff bundle were also regenerated in the same delta.
 
 ## Files
 
@@ -223,15 +225,16 @@ removed, 57 changed version**:
 ## 4. Deferred, with evidence
 
 Two minor bumps were applied, verified, and then **deferred** because each one demands work of its own
-kind rather than a version bump. Both stay in `package.json` unchanged (`^1.74.0`, `^30.0.1`) and the
-lockfile pins the known-good version.
+kind rather than a version bump. The `oxlint` (`^1.71.0`) and `jsdom` (`^30.0.1`) specifiers in
+`package.json` are byte-identical to the base commit; the lockfile keeps the known-good versions
+(`oxlint` 1.74.0, `jsdom` 30.0.1).
 
 1. **`oxlint` 1.74.0 → 1.85.0 — 33 new rule warnings.**
    With 1.85.0 the linter reports 33 warnings (`react(refs)`, `react(set-state-in-effect)`,
    `typescript(no-non-null-asserted-optional-chain)`) that 1.74.0 does not report at all. The
    project's standard is a clean lint run, and silencing new rules or rewriting React code to satisfy
-   them is not a dependency task. The linter therefore stays at `^1.74.0` until the new rules get
-   their own triage.
+   them is not a dependency task. The installed linter therefore stays at 1.74.0 (specifier
+   `^1.71.0`, unchanged) until the new rules get their own triage.
 
 2. **`jsdom` 30.0.1 → 30.1.1 — `URL.createObjectURL` stops accepting the Blob this environment
    produces.** What was measured, in this checkout:
@@ -280,7 +283,7 @@ radial one, and derived from the matte rather than mirrored in local state.
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS (2 Chromium tests), release gate recorded candidate `a4f8642` |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `npm audit` | **0 vulnerabilities** (was 1 high + 6 moderate) |
 | `git diff --check` | clean |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and runs a statement |
@@ -372,7 +375,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Full Vitest (123 files / 1,850 tests), `npx vitest run src/tests/ografPackageImport.test.ts src/tests/importDispatch.test.ts src/tests/lottieImportEntry.test.tsx src/tests/lottieImport.test.ts src/tests/ografBrowserZip.test.tsx` (132 cases), `npx playwright test e2e/lottie-import-report.spec.ts` (1 real-browser test), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `12b71a5`), `npm run build`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS: 32 checks at the accepted baseline `12b71a5`, 33 with the reconciliation bundle) all pass on `main`; the newest CI run on `main` at the time of writing is `35704676331` (success).
+Full Vitest (124 files / 1,858 tests), `npx vitest run src/tests/ografPackageImport.test.ts src/tests/importDispatch.test.ts src/tests/lottieImportEntry.test.tsx src/tests/lottieImport.test.ts src/tests/ografBrowserZip.test.tsx` (132 cases), `npx playwright test e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `a4f8642` on `main`), `npm run build`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS: 33 checks on `main` and on `chore/dependency-maintenance-option-b`) all pass on `main`; the newest CI run on `main` at the time of writing is `35704676331` (success).
 
 ## Next scoped work
 
@@ -452,7 +455,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is the active milestone: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is implemented as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's first implementation slice — the Lottie import core — is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`). Milestone F item 10 is complete: its four slices are merged (`ff32d6c`, `8670b2a`, `bda62cb`, `3b30bff`), and **item 12's unified import entry is implemented on `feat/unified-import-entry`** (`reports/progress_128_unified_import_entry.md`): one header control classifies a selected file by its content and routes it to the KCS/legacy boundary, the Lottie importer with its report dialog, or the existing OGraf refusal — with the merge decision still with the user. Its **OGraf package/editable import** is implemented on `feat/ograf-editable-import` (`reports/progress_129_ograf_editable_import.md`): a `.zip`/`.ograf` package is decoded in memory under entry-count, entry-size and path-safety guards, its `scene.kcs` goes through the same validated path as a project import, and a bare `.ograf.json` manifest still points the user at the package. After it lands: the approval-gated package and toolchain follow-ups (Option B, `engines`/`allowScripts`, Option C). The state-consistency checker does not yet detect a stale sentence inside a current section, so these documents are still reviewed by hand after every task. Follow-ups stay approval-gated before any `package.json`, lockfile, or workflow change: Option B, Option C, the `engines` declaration and the npm-12 `allowScripts` pin.
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is the active milestone: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is implemented as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's first implementation slice — the Lottie import core — is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`). Milestone F item 10 is complete: its four slices are merged (`ff32d6c`, `8670b2a`, `bda62cb`, `3b30bff`), and **item 12's unified import entry is merged** (`reports/progress_128_unified_import_entry.md`): one header control classifies a selected file by its content and routes it to the KCS/legacy boundary, the Lottie importer with its report dialog, or the OGraf package reader — merged into `main` with its handoff refresh at `a4f8642`. Its **OGraf package/editable import** is merged at `419fc6a` (`reports/progress_129_ograf_editable_import.md`): a `.zip`/`.ograf` package is decoded in memory under entry-count, entry-size and path-safety guards, its `scene.kcs` goes through the same validated path as a project import, and a bare `.ograf.json` manifest still points the user at the package. After it landed: Option B was taken up and is applied on `chore/dependency-maintenance-option-b` with its merge decision with the user; `engines`/`allowScripts` and Option C stay open. The state-consistency checker does not yet detect a stale sentence inside a current section, so these documents are still reviewed by hand after every task. Any further `package.json`, lockfile or workflow change stays approval-gated: Option C, the `engines` declaration, the npm-12 `allowScripts` pin and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x).
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -502,7 +505,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
 | D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is implemented on `chore/dependency-maintenance-option-b`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 and `jsdom` 30.1 deferred for documented reasons; the merge decision is with the user. Still approval-gated: Option C (TypeScript 7 / Vitest 5), the `engines` declaration, the npm-12 `allowScripts` pin, and the two deferred minor bumps |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
-| F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**. Checkpoint `2026-09-18-after-lottie-core` |
+| F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is applied on `chore/dependency-maintenance-option-b` with its merge decision with the user. Checkpoint `2026-09-18-after-lottie-core` |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -543,7 +546,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 
 ## Milestone F — Interop design and its approved slices (roadmap items 10, 11, 12)
 
-The deliverables are the study, the Lottie import mapping design and the editable-KCS-import plan; implementation runs slice by slice, each slice behind its own approval. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix, migration report, autosave through the boundary) on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_120_lottie_mapping_design.md`) with its four open questions settled by the user, and its **first implementation slice (the import core)** is **merged into `main` at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`): document timing, shape/solid/null layers, transforms, shapes and the segment-to-keyframe easing rules, with every unconverted construct reported; its **second slice (layer masks + track mattes)** is merged at `8670b2a` (`reports/progress_125_lottie_mask_matte_slice.md`) with the 8-mask limit restored, its **third slice (text, image and precomp layers)** is merged at `bda62cb` (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **import entry point with the report-before-replace UX** is merged at `3b30bff` (`reports/progress_127_lottie_import_entry_report_ux.md`), **item 12's unified import entry is merged at `ce6cec2`** (`reports/progress_128_unified_import_entry.md`) — one control that classifies by content and keeps the existing `.kcs`, legacy and OGraf routing — and its **OGraf package/editable import** is implemented on `feat/ograf-editable-import` (`reports/progress_129_ograf_editable_import.md`); **no further implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code. The historical checkpoint `2026-09-18-after-lottie-core` records the state after the first slice only.
+The deliverables are the study, the Lottie import mapping design and the editable-KCS-import plan; implementation runs slice by slice, each slice behind its own approval. The study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`) and fixes each deliverable contract; **item 11 is implemented** (`perf/sceneBuilder.ts`, `perf/evaluator-profile.perf.ts`, `src/tests/evaluatorProfileScenes.test.ts`, `reports/progress_118_evaluator_profiling.md`) as measurement only — no caching, no threshold; **item 12’s first step (validated import boundary) is implemented** (`src/utils/importValidation.ts`, `reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix, migration report, autosave through the boundary) on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design is delivered** (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, `reports/progress_120_lottie_mapping_design.md`) with its four open questions settled by the user, and its **first implementation slice (the import core)** is **merged into `main` at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`): document timing, shape/solid/null layers, transforms, shapes and the segment-to-keyframe easing rules, with every unconverted construct reported; its **second slice (layer masks + track mattes)** is merged at `8670b2a` (`reports/progress_125_lottie_mask_matte_slice.md`) with the 8-mask limit restored, its **third slice (text, image and precomp layers)** is merged at `bda62cb` (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **import entry point with the report-before-replace UX** is merged at `3b30bff` (`reports/progress_127_lottie_import_entry_report_ux.md`), **item 12's unified import entry is merged** (`reports/progress_128_unified_import_entry.md`) — one control that classifies by content and keeps the existing `.kcs`, legacy and OGraf routing — and its **OGraf package/editable import** is merged into `main` at `419fc6a` (`reports/progress_129_ograf_editable_import.md`), with the handoff refresh at `a4f8642`; **no further implementation without a separate explicit approval**, and the design gate in §Approval gates applies before any code. The historical checkpoint `2026-09-18-after-lottie-core` records the state after the first slice only.
 
 ## Approval gates
 
@@ -558,7 +561,7 @@ The deliverables are the study, the Lottie import mapping design and the editabl
 
 ## Recommended next prompt
 
-"KCS MILESTONE F — ITEM 12 UNIFIED IMPORT ENTRY (approval-gated). Item 10 is complete and merged (import core `ff32d6c`, masks/track mattes `8670b2a`, text/image/precomp `bda62cb`, import entry point + report-before-replace UX `3b30bff`); `main` is at or after `12b71a5`. Replace the fragmented user-facing import controls with one controlled entry that dispatches `.kcs`, legacy KCS, `.ograf.json`, OGraf package/ZIP and Lottie, behind a shared report/decision surface, using only the import capabilities that already exist — no new OGraf editable-import conversion, no package/lockfile/workflow change. Suggested branch `feat/unified-import-entry`; the OGraf package/editable import expansion is the slice after it, and every release/tag/npm action stays behind its own explicit approval."
+"KCS OPTION B FOLLOW-UP — DEPENDENCY MAINTENANCE AND TOOLCHAIN DECISION (approval-gated). Milestone F item 12 is complete and merged (unified import entry and OGraf package import, `main` at `a4f8642`), and Milestone D item 9 Option B is applied on `chore/dependency-maintenance-option-b` awaiting its merge decision. Review that branch, decide the merge, then take the remaining approval-gated follow-ups one at a time: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair), the `engines` declaration and the npm-12 `allowScripts` policy for `sqlite3` (its install script is currently blocked; the prebuilt binding is what keeps `GET /api/health` at 200), and the two minor bumps that were applied, measured and reverted (`oxlint` 1.85 with 33 new rule warnings, `jsdom` 30.1 whose `URL.createObjectURL` throws for a Blob). Every package/lockfile/workflow change needs explicit approval, and every release/tag/npm action stays behind its own explicit approval."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
@@ -643,13 +646,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 8194 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 14122 bytes
-- `NEXT_SESSION.md` — 11271 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 14638 bytes
+- `NEXT_SESSION.md` — 11269 bytes
 - `OMP_FINAL_RESPONSE.md` — 4225 bytes
-- `PROJECT_STATE.md` — 16246 bytes
-- `README.md` — 3035 bytes
+- `PROJECT_STATE.md` — 16308 bytes
+- `README.md` — 3283 bytes
 - `manifest.txt` — 2371 bytes
-- `progress_130_dependency_maintenance_option_b.md` — 9652 bytes
+- `progress_130_dependency_maintenance_option_b.md` — 9780 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

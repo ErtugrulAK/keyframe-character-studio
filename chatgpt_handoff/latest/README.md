@@ -9,8 +9,9 @@ The approval-gated dependency maintenance (Milestone D item 9, Option B), applie
 
 - Sixteen patch/minor packages were refreshed inside their current major versions — React and
   React DOM 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47, the testing-library patches, `pg`,
-  `concurrently` and the `@types` packages — keeping the repository's caret convention, with no
-  package added or removed.
+  `concurrently` and the `@types` packages — keeping the repository's caret convention, with no key added to or
+  removed from `package.json` and the `oxlint`/`jsdom` specifiers unchanged (the lock graph did move:
+  64 transitive entries, 1 added, 6 removed, 57 version changes).
 - A **bounded `npm audit fix`** (no `--force`) took `npm audit` from one high and six moderate
   advisories to **zero** known vulnerabilities.
 - Two minors were applied, verified and then **deferred with evidence**: `oxlint` 1.85 reports 33
@@ -21,7 +22,8 @@ The approval-gated dependency maintenance (Milestone D item 9, Option B), applie
   actually renders (`Gradient angle`), because the current jsdom selector engine matches attribute
   values case-sensitively where the previous one did not.
 
-No application behaviour changed: the only non-package edit is those four test selectors.
+No application behaviour changed: the only non-package product/test edit is those four test
+selectors. Documentation and this handoff bundle were also regenerated in the same delta.
 
 ## Files
 

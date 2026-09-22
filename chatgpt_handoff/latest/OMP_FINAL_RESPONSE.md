@@ -31,7 +31,7 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 | `npm run lint` | clean (exit 0) |
 | `npm run validate:ograf`, `npm run qa:release` | PASS (2 Chromium tests) |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `npm audit` | 0 vulnerabilities |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → 200, `sqlite3` native binding loads and executes a statement |
 

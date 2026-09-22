@@ -58,7 +58,7 @@ const chooseFile = (label: string, name: string, content: string) => {
   fireEvent.change(input, { target: { files: [file] } });
 };
 
-const IMPORT_INPUT = 'Choose a KCS project, OGraf manifest or Lottie file to import';
+const IMPORT_INPUT = 'Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import';
 const reportDialog = () => screen.queryByRole('dialog', { name: 'Lottie import report' });
 
 describe('Lottie import entry point', () => {

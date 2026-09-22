@@ -1,3 +1,4 @@
+import { OGRAF_GRAPHICS_SCHEMA_URL } from '../ograf/types';
 import { MAX_IMPORT_CHARACTERS, validateImportedDocument } from './importValidation';
 
 /**
@@ -22,10 +23,21 @@ export type ImportKind =
   | 'legacy-project'
   | 'unknown';
 
+/** The canonical OGraf graphics schema, the authority the exporter writes. */
 const OGRAF_SCHEMA_MARKER = '/ograf/';
 
 const asRecord = (value: unknown): Record<string, unknown> | undefined =>
   typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+
+/**
+ * True when the text is an OGraf graphic manifest: it names the canonical schema
+ * the exporter writes, or a schema path that marks itself as OGraf.
+ */
+const isOGrafManifest = (text: string): boolean => {
+  const schema = asRecord(JSON.parse(text))?.$schema;
+  if (typeof schema !== 'string') return false;
+  return schema === OGRAF_GRAPHICS_SCHEMA_URL || schema.includes(OGRAF_SCHEMA_MARKER);
+};
 
 /**
  * True when the text is a Lottie (bodymovin) document: it carries the document
@@ -33,49 +45,43 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined =>
  * requires. A KCS scene has `version`/`tracks` instead, so the two never collide.
  */
 const isLottieDocument = (text: string): boolean => {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(text);
-  } catch {
-    return false;
-  }
-  const record = asRecord(parsed);
+  const record = asRecord(JSON.parse(text));
   if (!record) return false;
-  if (typeof record.$schema === 'string' && record.$schema.includes(OGRAF_SCHEMA_MARKER)) return false;
   return typeof record.v === 'string' && Array.isArray(record.layers) && (typeof record.fr === 'number' || typeof record.op === 'number');
 };
 
-/** True for an OGraf graphic manifest, which the project importer does not accept. */
-const isOGrafManifest = (text: string): boolean => {
-  let parsed: unknown;
+/** True when the text is JSON at all; a syntax error means nothing to classify. */
+const parsesAsJson = (text: string): boolean => {
   try {
-    parsed = JSON.parse(text);
+    JSON.parse(text);
+    return true;
   } catch {
     return false;
   }
-  const schema = asRecord(parsed)?.$schema;
-  return typeof schema === 'string' && schema.includes(OGRAF_SCHEMA_MARKER);
 };
 
 /**
  * Classifies a selected file for the unified import entry.
  *
  * `fileName` is used only for the package form, which is a binary archive that is
- * never read as text; every other decision comes from `text`.
+ * never read as text, and for the `.ograf.json` name the previous import path
+ * recognised before it looked at the content.
+ *
+ * The boundary's size limit is applied **before** any parse here, so an oversized
+ * document is never parsed by this module at all — the boundary itself refuses it
+ * with its own `KCS_IMPORT_TOO_LARGE` diagnostic.
  */
 export const classifyImport = (fileName: string, text: string): ImportKind => {
   if (/\.(?:zip|ograf)$/iu.test(fileName)) return 'ograf-package';
-  // The OGraf manifest keeps its file-name route as well: an OGraf `$schema` does
-  // not always carry the `/ograf/` marker, and the existing behaviour rejected the
-  // `.ograf.json` name before it looked at the content.
+  if (text.length > MAX_IMPORT_CHARACTERS) return 'unknown';
   if (/\.ograf\.json$/iu.test(fileName)) return 'ograf-manifest';
-  if (isOGrafManifest(text)) return 'ograf-manifest';
 
   const validation = validateImportedDocument(text);
   if (validation.ok) return validation.document.kind === 'scene' ? 'kcs-scene' : 'legacy-project';
 
-  // Not a KCS document: the only other JSON kind this entry accepts is Lottie.
-  // The size guard keeps a hostile file from being parsed here as well.
-  if (text.length <= MAX_IMPORT_CHARACTERS && isLottieDocument(text)) return 'lottie';
-  return 'unknown';
+  // Not a KCS document: the only other JSON kinds this entry accepts are an OGraf
+  // manifest (which keeps its own refusal message) and a Lottie document.
+  if (!parsesAsJson(text)) return 'unknown';
+  if (isOGrafManifest(text)) return 'ograf-manifest';
+  return isLottieDocument(text) ? 'lottie' : 'unknown';
 };

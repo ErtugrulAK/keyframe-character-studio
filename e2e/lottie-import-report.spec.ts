@@ -47,7 +47,7 @@ async function seed(page: Page): Promise<void> {
 }
 
 const importLottie = async (page: Page) => {
-  await page.setInputFiles('input[aria-label="Choose a KCS project, OGraf manifest or Lottie file to import"]', {
+  await page.setInputFiles('input[aria-label="Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import"]', {
     name: 'smoke.lottie.json',
     mimeType: 'application/json',
     buffer: Buffer.from(lottieDocument, 'utf8'),
@@ -67,7 +67,7 @@ test.describe('Milestone F item 12 — the unified import entry', () => {
       layers: [{ id: 'kcs', name: 'KCS Layer', type: 'custom_box', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fillColor: '#22cc88', strokeColor: '#101218', strokeWidth: 2, borderRadius: 0, width: 60, height: 60 }],
       tracks: [],
     });
-    await page.setInputFiles('input[aria-label="Choose a KCS project, OGraf manifest or Lottie file to import"]', {
+    await page.setInputFiles('input[aria-label="Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import"]', {
       name: 'project.kcs',
       mimeType: 'application/json',
       buffer: Buffer.from(project, 'utf8'),
@@ -77,7 +77,7 @@ test.describe('Milestone F item 12 — the unified import entry', () => {
     await expect(page.getByText('Seed Layer')).toHaveCount(0);
 
     // A file that is not a project at all is refused and changes nothing.
-    await page.setInputFiles('input[aria-label="Choose a KCS project, OGraf manifest or Lottie file to import"]', {
+    await page.setInputFiles('input[aria-label="Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import"]', {
       name: 'broken.json',
       mimeType: 'application/json',
       buffer: Buffer.from('{ not json', 'utf8'),

@@ -487,11 +487,11 @@ export const HeaderBar: React.FC = () => {
           </select>
           <div className="divider-v" />
 
-          <button className="header-action-btn import-btn" onClick={() => fileInputRef.current?.click()} title="Import a KCS project, a legacy project, an OGraf manifest or a Lottie animation">
+          <button className="header-action-btn import-btn" onClick={() => fileInputRef.current?.click()} title="Import a KCS project, a legacy project, a Lottie animation, or an OGraf manifest/package">
             <Upload size={14} />
             <span>Import</span>
           </button>
-          <input ref={fileInputRef} type="file" accept=".json,.kcs,.lottie.json,.ograf.json,.zip,.ograf" aria-label="Choose a KCS project, OGraf manifest or Lottie file to import" style={{ display: 'none' }} onChange={handleImportFile} />
+          <input ref={fileInputRef} type="file" accept=".json,.kcs,.lottie.json,.ograf.json,.zip,.ograf" aria-label="Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import" style={{ display: 'none' }} onChange={handleImportFile} />
 
           <div style={{ position: 'relative' }}>
             <button

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { classifyImport } from '../utils/importDispatch';
+import { MAX_IMPORT_CHARACTERS } from '../utils/importValidation';
 
 /**
  * Milestone F item 12 — the unified import entry's dispatcher.
@@ -13,7 +14,10 @@ import { classifyImport } from '../utils/importDispatch';
 const kcsScene = JSON.stringify({ version: 1, width: 320, height: 180, fps: 24, totalFrames: 24, layers: [], tracks: [] });
 const legacyProject = JSON.stringify({ tracks: [], characterParts: [], sceneTitle: 'Legacy' });
 const lottie = JSON.stringify({ v: '5.7.4', fr: 24, ip: 0, op: 24, w: 320, h: 180, layers: [] });
-const ografManifest = JSON.stringify({ $schema: 'https://keyframe.studio/schema/ograf/v1.json', layers: [] });
+import { OGRAF_GRAPHICS_SCHEMA_URL } from '../ograf/types';
+
+const ografManifest = JSON.stringify({ $schema: OGRAF_GRAPHICS_SCHEMA_URL, layers: [] });
+const otherOGrafManifest = JSON.stringify({ $schema: 'https://keyframe.studio/schema/ograf/v1.json', layers: [] });
 
 describe('import dispatch', () => {
   it('classifies each supported document by its content', () => {
@@ -21,6 +25,7 @@ describe('import dispatch', () => {
     expect(classifyImport('old-project.json', legacyProject)).toBe('legacy-project');
     expect(classifyImport('scene.lottie.json', lottie)).toBe('lottie');
     expect(classifyImport('graphic.ograf.json', ografManifest)).toBe('ograf-manifest');
+    expect(classifyImport('graphic.json', otherOGrafManifest)).toBe('ograf-manifest');
     expect(classifyImport('package.zip', 'PK')).toBe('ograf-package');
     expect(classifyImport('package.ograf', 'PK')).toBe('ograf-package');
   });
@@ -29,6 +34,8 @@ describe('import dispatch', () => {
     expect(classifyImport('renamed.kcs', lottie)).toBe('lottie');
     expect(classifyImport('renamed.lottie.json', kcsScene)).toBe('kcs-scene');
     expect(classifyImport('scene.json', ografManifest)).toBe('ograf-manifest');
+    // The canonical OGraf schema decides even when the file claims to be a project.
+    expect(classifyImport('renamed.kcs', ografManifest)).toBe('ograf-manifest');
   });
 
   it('reports an unclassifiable document instead of guessing', () => {
@@ -39,5 +46,12 @@ describe('import dispatch', () => {
     expect(classifyImport('half.json', JSON.stringify({ v: '5.7.4', layers: [] }))).toBe('unknown');
     // A prototype-sensitive key is left to the boundary, which refuses it.
     expect(classifyImport('unsafe.json', '{"version":1,"layers":[],"tracks":[],"__proto__":{"x":1}}')).toBe('unknown');
+  });
+
+  it('never parses a document above the boundary size limit', () => {
+    const oversized = `{"pad":"${'x'.repeat(MAX_IMPORT_CHARACTERS)}"}`;
+    // Classification must not touch the text at all; the boundary refuses it.
+    expect(classifyImport('huge.json', oversized)).toBe('unknown');
+    expect(classifyImport('huge.kcs', oversized)).toBe('unknown');
   });
 });

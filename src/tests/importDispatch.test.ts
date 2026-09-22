@@ -34,7 +34,7 @@ describe('import dispatch', () => {
     expect(classifyImport('renamed.kcs', lottie)).toBe('lottie');
     expect(classifyImport('renamed.lottie.json', kcsScene)).toBe('kcs-scene');
     expect(classifyImport('scene.json', ografManifest)).toBe('ograf-manifest');
-    // The canonical OGraf schema decides even when the file claims to be a project.
+    expect(classifyImport('renamed.kcs', ografManifest)).toBe('ograf-manifest');
     expect(classifyImport('renamed.kcs', ografManifest)).toBe('ograf-manifest');
   });
 
@@ -48,10 +48,13 @@ describe('import dispatch', () => {
     expect(classifyImport('unsafe.json', '{"version":1,"layers":[],"tracks":[],"__proto__":{"x":1}}')).toBe('unknown');
   });
 
-  it('never parses a document above the boundary size limit', () => {
+  it('leaves an oversized document to the boundary instead of classifying it', () => {
     const oversized = `{"pad":"${'x'.repeat(MAX_IMPORT_CHARACTERS)}"}`;
-    // Classification must not touch the text at all; the boundary refuses it.
+    // The dispatcher applies the boundary limit before parsing; the boundary then
+    // refuses the document with its own KCS_IMPORT_TOO_LARGE diagnostic.
     expect(classifyImport('huge.json', oversized)).toBe('unknown');
     expect(classifyImport('huge.kcs', oversized)).toBe('unknown');
+    // The file name still decides for an OGraf manifest, oversized or not.
+    expect(classifyImport('huge.ograf.json', oversized)).toBe('ograf-manifest');
   });
 });

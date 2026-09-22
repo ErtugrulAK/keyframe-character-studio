@@ -33,31 +33,31 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined =>
  * True when the text is an OGraf graphic manifest: it names the canonical schema
  * the exporter writes, or a schema path that marks itself as OGraf.
  */
-const isOGrafManifest = (text: string): boolean => {
-  const schema = asRecord(JSON.parse(text))?.$schema;
+/** Parses the document once, or `undefined` when it is not JSON at all. */
+const parseJson = (text: string): unknown => {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+};
+
+/** True when the parsed document names the canonical OGraf schema, or a marker inside it. */
+const isOGrafManifest = (parsed: unknown): boolean => {
+  const schema = asRecord(parsed)?.$schema;
   if (typeof schema !== 'string') return false;
   return schema === OGRAF_GRAPHICS_SCHEMA_URL || schema.includes(OGRAF_SCHEMA_MARKER);
 };
 
 /**
- * True when the text is a Lottie (bodymovin) document: it carries the document
+ * True when the parsed document is a Lottie (bodymovin) document: it carries the
  * version string and a layer list, and one of the timing fields the importer
  * requires. A KCS scene has `version`/`tracks` instead, so the two never collide.
  */
-const isLottieDocument = (text: string): boolean => {
-  const record = asRecord(JSON.parse(text));
+const isLottieDocument = (parsed: unknown): boolean => {
+  const record = asRecord(parsed);
   if (!record) return false;
   return typeof record.v === 'string' && Array.isArray(record.layers) && (typeof record.fr === 'number' || typeof record.op === 'number');
-};
-
-/** True when the text is JSON at all; a syntax error means nothing to classify. */
-const parsesAsJson = (text: string): boolean => {
-  try {
-    JSON.parse(text);
-    return true;
-  } catch {
-    return false;
-  }
 };
 
 /**
@@ -73,15 +73,21 @@ const parsesAsJson = (text: string): boolean => {
  */
 export const classifyImport = (fileName: string, text: string): ImportKind => {
   if (/\.(?:zip|ograf)$/iu.test(fileName)) return 'ograf-package';
-  if (text.length > MAX_IMPORT_CHARACTERS) return 'unknown';
+  // The name hints cost nothing and are checked before the size guard so an
+  // oversized `.ograf.json` still keeps its own refusal message.
   if (/\.ograf\.json$/iu.test(fileName)) return 'ograf-manifest';
+  // The boundary's size limit is applied before any parse, so an oversized
+  // document is never parsed here — the boundary refuses it itself.
+  if (text.length > MAX_IMPORT_CHARACTERS) return 'unknown';
+
+  const parsed = parseJson(text);
+  // An OGraf marker wins over the KCS shape: the exporter's own schema is the
+  // stronger signal, and an OGraf document must never reach the project authority.
+  if (parsed !== undefined && isOGrafManifest(parsed)) return 'ograf-manifest';
 
   const validation = validateImportedDocument(text);
   if (validation.ok) return validation.document.kind === 'scene' ? 'kcs-scene' : 'legacy-project';
 
-  // Not a KCS document: the only other JSON kinds this entry accepts are an OGraf
-  // manifest (which keeps its own refusal message) and a Lottie document.
-  if (!parsesAsJson(text)) return 'unknown';
-  if (isOGrafManifest(text)) return 'ograf-manifest';
-  return isLottieDocument(text) ? 'lottie' : 'unknown';
+  // Not a KCS document: the only other JSON kind this entry accepts is Lottie.
+  return parsed !== undefined && isLottieDocument(parsed) ? 'lottie' : 'unknown';
 };

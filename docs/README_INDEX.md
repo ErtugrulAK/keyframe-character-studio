@@ -67,6 +67,7 @@ Current checkpoint: `docs/checkpoints/2026-09-18-after-lottie-core/` (see §Chec
 - `reports/progress_126_lottie_text_image_precomp_slice.md` — Milestone F item 10 third slice: Lottie text, image and precomp layers.
 - `reports/progress_127_lottie_import_entry_report_ux.md` — Milestone F item 10 final slice: the Lottie import entry point and its report-before-replace flow.
 - `reports/progress_128_unified_import_entry.md` — Milestone F item 12: one import control that dispatches `.kcs`, legacy, OGraf and Lottie by content.
+- `reports/progress_128_unified_import_entry.md` — Milestone F item 12: one import control that dispatches `.kcs`, legacy, OGraf and Lottie by content.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

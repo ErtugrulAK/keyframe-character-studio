@@ -79,7 +79,7 @@ that is really an OGraf manifest is still refused with the OGraf message.
 
 | Test | What it pins |
 |---|---|
-| `src/tests/importDispatch.test.ts` (new, 3 cases) | The classification matrix for every kind; content beats extension (a `.kcs` holding Lottie, a `.lottie.json` holding a scene); unclassifiable input, a Lottie-shaped object without timing, and a prototype-key document are all `unknown` |
+| `src/tests/importDispatch.test.ts` (new, 4 cases) | The classification matrix for every kind; content beats extension (a `.kcs` holding Lottie, a `.lottie.json` holding a scene); unclassifiable input, a Lottie-shaped object without timing, and a prototype-key document are all `unknown` |
 | `src/tests/lottieImportEntry.test.tsx` (13 cases) | The single control drives the Lottie report, the KCS import, the OGraf rejection and the unclassifiable refusal; cancel is a no-op; a refusal dialog appears for a Lottie the importer rejects and its confirm is disabled; focus/Tab/Escape; sanitisation and the 40-entry cap |
 | `e2e/lottie-import-report.spec.ts` (2 browser tests) | A `.kcs` project imports through the same control and a refused file changes nothing; the Lottie report flow still cancels and applies |
 | `src/tests/ografBrowserZip.test.tsx` | The pre-existing OGraf manifest/package messages still fire (unchanged test) |
@@ -89,8 +89,8 @@ that is really an OGraf manifest is still refused with the OGraf message.
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| focused suites (`importDispatch`, `lottieImportEntry`, `lottieImport`) | PASS — 104 cases |
-| `npm test` (full Vitest) | PASS — 122 files / 1,840 tests |
+| focused suites (`importDispatch`, `lottieImportEntry`, `lottieImport`) | PASS — 105 cases |
+| `npm test` (full Vitest) | PASS — 122 files / 1,841 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |

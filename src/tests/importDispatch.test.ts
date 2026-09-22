@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { classifyImport } from '../utils/importDispatch';
+import { OGRAF_GRAPHICS_SCHEMA_URL } from '../ograf/types';
 import { MAX_IMPORT_CHARACTERS } from '../utils/importValidation';
 
 /**
@@ -14,7 +15,6 @@ import { MAX_IMPORT_CHARACTERS } from '../utils/importValidation';
 const kcsScene = JSON.stringify({ version: 1, width: 320, height: 180, fps: 24, totalFrames: 24, layers: [], tracks: [] });
 const legacyProject = JSON.stringify({ tracks: [], characterParts: [], sceneTitle: 'Legacy' });
 const lottie = JSON.stringify({ v: '5.7.4', fr: 24, ip: 0, op: 24, w: 320, h: 180, layers: [] });
-import { OGRAF_GRAPHICS_SCHEMA_URL } from '../ograf/types';
 
 const ografManifest = JSON.stringify({ $schema: OGRAF_GRAPHICS_SCHEMA_URL, layers: [] });
 const otherOGrafManifest = JSON.stringify({ $schema: 'https://keyframe.studio/schema/ograf/v1.json', layers: [] });
@@ -35,7 +35,9 @@ describe('import dispatch', () => {
     expect(classifyImport('renamed.lottie.json', kcsScene)).toBe('kcs-scene');
     expect(classifyImport('scene.json', ografManifest)).toBe('ograf-manifest');
     expect(classifyImport('renamed.kcs', ografManifest)).toBe('ograf-manifest');
-    expect(classifyImport('renamed.kcs', ografManifest)).toBe('ograf-manifest');
+    // A document that is both OGraf-marked and KCS-shaped stays an OGraf manifest:
+    // the marker must never reach the project authority.
+    expect(classifyImport('mixed.kcs', JSON.stringify({ $schema: OGRAF_GRAPHICS_SCHEMA_URL, version: 1, layers: [], tracks: [] }))).toBe('ograf-manifest');
   });
 
   it('reports an unclassifiable document instead of guessing', () => {

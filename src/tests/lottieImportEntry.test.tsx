@@ -36,6 +36,7 @@ vi.mock('../context/useAnimator', () => ({ useAnimator: () => context }));
 vi.mock('../components/Modal/NewItemModal', () => ({ NewItemModal: () => null }));
 
 import { HeaderBar } from '../components/Header/HeaderBar';
+import { LottieImportReportDialog } from '../components/Modal/LottieImportReportDialog';
 
 const lottieDocument = (overrides: Record<string, unknown> = {}) => JSON.stringify({
   v: '5.7.4',
@@ -178,7 +179,7 @@ describe('Lottie import entry point', () => {
     expect(context.showToast).not.toHaveBeenCalledWith(expect.stringContaining('Imported'), 'success');
   });
 
-  it('groups blockers first, bounds the list and sanitises every rendered value', async () => {
+  it('bounds a long report and counts what it holds', async () => {
     const noisy = lottieDocument({
       layers: Array.from({ length: 45 }, (_, index) => ({ ty: 4, nm: 'L' + index, ks: {}, shapes: [{ ty: 'rp', c: { k: index } }] })),
     });
@@ -192,8 +193,35 @@ describe('Lottie import entry point', () => {
     expect(dialog.textContent).toContain('And 5 more diagnostic(s).');
     expect(dialog.textContent).toContain('45 warning(s)');
     expect(dialog.textContent).toContain('0 blocker(s)');
-    // The report never renders a machine path or a payload verbatim.
-    expect(dialog.textContent).not.toContain('data:image');
+  });
+
+  it('renders blockers before warnings and sanitises every rendered value', () => {
+    const diagnostics = [
+      { code: 'LOTTIE_PRECOMP_UNMAPPED', severity: 'warning' as const, feature: 'lottie-import', path: 'layers[0]', message: 'A warning.', action: 'Fix it later.' },
+      { code: 'LOTTIE_MALFORMED_JSON', severity: 'error' as const, feature: 'lottie-import', path: 'C:\\Users\\someone\\secret\\file.json', message: 'Refused from data:image/png;base64,AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.', action: 'Export again.' },
+    ];
+
+    render(
+      <LottieImportReportDialog
+        isOpen
+        fileName={'C:\\Users\\someone\\secret\\scene.lottie.json'}
+        diagnostics={diagnostics}
+        refused
+        onCancel={() => undefined}
+        onConfirm={() => undefined}
+      />,
+    );
+
+    const entries = Array.from(document.querySelectorAll('.lottie-report-entry'));
+    expect(entries[0]?.className).toContain('blocking');
+    expect(entries[1]?.className).toContain('warning');
+    // No machine path and no payload travels to the UI; the redacted forms keep the
+    // file name and the media type only.
+    const rendered = document.body.textContent ?? '';
+    expect(rendered).not.toContain('base64,');
+    expect(rendered).not.toContain('C:\\Users\\someone');
+    expect(rendered).toContain('payload omitted');
+    expect(rendered).toContain('scene.lottie.json');
   });
 
   it('keeps focus on Cancel while confirming is impossible', async () => {

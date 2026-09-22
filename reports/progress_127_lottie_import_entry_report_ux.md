@@ -107,7 +107,7 @@ whatever geometry it did produce.
 
 | Test | What it pins |
 |---|---|
-| `src/tests/lottieImportEntry.test.tsx` (new, 11 cases) | The report appears and the project is untouched; cancel is a true no-op; confirm applies through `importProject` with a scene whose layer type is a supported one; a refused document never applies and never reports success; warnings (code + action) are visible before apply; focus starts on Cancel, Tab wraps and Escape cancels; the existing `.kcs` control still imports; the OGraf manifest rejection still fires |
+| `src/tests/lottieImportEntry.test.tsx` (new, 12 cases) | The report appears and the project is untouched; cancel is a true no-op; confirm applies through `importProject` with a scene whose layer type is a supported one; a refused document never applies and never reports success; warnings (code + action) are visible before apply; focus starts on Cancel, Tab wraps and Escape cancels; the existing `.kcs` control still imports; the OGraf manifest rejection still fires |
 | `src/tests/lottieImport.test.ts` (88 cases, +5) | Every imported layer type is one the editor and the exporter accept; the generated rectangle and ellipse paths and the ellipse size are pinned; a shape/solid/text/image scene produces no "not supported by OGraf Export" error; a construct that cannot be converted keeps a supported type **and** stays reported |
 | `e2e/lottie-import-report.spec.ts` (new) | Real browser: report appears, cancel leaves the seeded project intact, confirm replaces it with the imported layers, and the console stays clean |
 
@@ -116,8 +116,8 @@ whatever geometry it did produce.
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts src/tests/lottieImportEntry.test.tsx` | PASS — 99 cases |
-| `npm test` (full Vitest) | PASS — 121 files / 1,835 tests |
+| `npx vitest run src/tests/lottieImport.test.ts src/tests/lottieImportEntry.test.tsx` | PASS — 100 cases |
+| `npm test` (full Vitest) | PASS — 121 files / 1,836 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
@@ -145,8 +145,8 @@ whatever geometry it did produce.
 - **Null layers import as invisible freeforms.** They are needed as parents and draw nothing, but a
   user cannot select them on the stage. The outliner still lists them.
 - **The import still produces types the OGraf exporter supports, not necessarily what the user
-  wanted**: a Lottie rectangle becomes `custom_rect`, so an editor user cannot convert it to a
-  freeform path afterwards without re-creating it.
+  wanted**: a Lottie rectangle or ellipse arrives as a freeform path, so an editor user who wanted a
+  parametric rectangle (with its own width/height fields) has to re-create it.
 - **Warnings are summarised in one toast.** A long report is visible in the dialog only; there is no
   persisted report log after the dialog closes.
 

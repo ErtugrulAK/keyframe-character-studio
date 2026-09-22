@@ -86,7 +86,7 @@ What changed: package.json and package-lock.json (16 direct version moves keep t
 Lock graph: 64 transitive entries touched (1 added, 6 removed, 57 version changes)
 Security: a bounded npm audit fix (no --force) took npm audit from 1 high + 6 moderate to 0
 Deferred with evidence: oxlint 1.85 (33 new rule warnings) and jsdom 30.1 (a Blob no longer carries the jsdom implementation symbol, so URL.createObjectURL throws and the export-download test fails)
-Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (32); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
+Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (33); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
 Next work (approval-gated): the merge decision for this branch, then Option C majors with the engines/allowScripts decision
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO

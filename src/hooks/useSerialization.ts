@@ -290,26 +290,38 @@ function fromSceneData(
     };
   });
 
+  // Everything the scene can make this function throw is derived BEFORE the first
+  // state update: an import that cannot be applied is refused by the caller
+  // (`importProject`) without having replaced part of the current project.
+  // BUG #5 fix: restore exported motion templates (legacy path already does this).
+  // Missing motionTemplates keeps current templates untouched.
+  const templates = scene.motionTemplates && scene.motionTemplates.length > 0
+    ? normalizeMotionTemplates(scene.motionTemplates)
+    : undefined;
+  const nextActiveTemplateId = templates
+    ? (scene.activeTemplateId && templates.some((template) => template.id === scene.activeTemplateId)
+        ? scene.activeTemplateId
+        : templates[0]?.id || 'Sequence')
+    : undefined;
+  const nextFps = scene.fps;
+  const nextTotalFrames = scene.totalFrames;
+  const nextResolution = scene.width && scene.height ? { width: scene.width, height: scene.height } : undefined;
+  const nextName = (defaultName || '').trim();
+
   setCharacterParts(parts);
   setTracks(trks);
-  if (scene.fps) setFps(scene.fps);
-  if (scene.totalFrames) setTotalFrames(scene.totalFrames);
-  if (scene.width && scene.height) setProjectResolution({ width: scene.width, height: scene.height });
+  if (nextFps) setFps(nextFps);
+  if (nextTotalFrames) setTotalFrames(nextTotalFrames);
+  if (nextResolution) setProjectResolution(nextResolution);
   setCoordinateSystem(scene.coordinateSystem ?? DEFAULT_SCENE_COORDINATE_SYSTEM);
   // BUG #2 fix: restore the exported scene name as editor sceneTitle.
   // Empty/missing name keeps the current/default title (no-op).
-  const trimmedName = (defaultName || '').trim();
-  if (trimmedName) {
-    setSceneTitle(trimmedName);
+  if (nextName) {
+    setSceneTitle(nextName);
   }
-  // BUG #5 fix: restore exported motion templates (legacy path already does this).
-  // Missing motionTemplates keeps current templates untouched.
-  if (scene.motionTemplates && scene.motionTemplates.length > 0) {
-    const templates = normalizeMotionTemplates(scene.motionTemplates);
+  if (templates) {
     setMotionTemplates(templates);
-    setActiveTemplateId(scene.activeTemplateId && templates.some((template) => template.id === scene.activeTemplateId)
-      ? scene.activeTemplateId
-      : templates[0]?.id || 'Sequence');
+    if (nextActiveTemplateId) setActiveTemplateId(nextActiveTemplateId);
   }
   setLastSavedAt(new Date());
 

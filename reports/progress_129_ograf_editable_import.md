@@ -47,11 +47,12 @@ actions.
 | Unreadable manifest (warning, the scene still imports) | `OGRAF_PACKAGE_UNREADABLE_MANIFEST` |
 | Assets are not imported (warning) | `OGRAF_PACKAGE_ASSETS_OMITTED` |
 
-Every check runs on the **central directory**, before an entry is inflated or stored: the entry
-count, the declared sizes (per entry and in total) and every raw name are validated first, so an
-archive cannot exhaust memory and no name can hide behind the result object — `__proto__`, an exact
-repeat and a case-only repeat are all refused, and an oversized entry is reported rather than
-dropped. The post-unzip checks only confirm what the preflight admitted.
+Every check runs on a central-directory entry immediately before that entry is inflated: the entry
+count, the declared size of that entry, the cumulative declared size and the raw name are all
+validated there, so no name can hide behind the result object — a prototype-sensitive segment, an
+exact repeat and a case-only repeat are refused — and the archive never materialises more than the
+budget allows. An entry over the per-entry limit is reported rather than dropped, and the
+post-unzip checks only confirm what the admission already accepted.
 
 ## 5. Entry point and flow
 

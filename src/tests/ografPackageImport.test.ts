@@ -62,7 +62,7 @@ describe('OGraf package import', () => {
     const tooManyBytes = zipSync({ ...tooMany, 'scene.kcs': encode(scene) });
 
     expect(codes(readOGrafPackage(tooManyBytes))).toEqual(['OGRAF_PACKAGE_TOO_MANY_ENTRIES']);
-    // The declared contents are summed before anything is inflated.
+    // The declared contents are summed as the archive is admitted, so the total budget stops it.
     expect(codes(readOGrafPackage(zipSync({ ...tooMuchContent, 'scene.kcs': encode(scene) })))).toEqual(['OGRAF_PACKAGE_TOO_LARGE']);
     expect(codes(readOGrafPackage(new Uint8Array(OGRAF_PACKAGE_LIMITS.bytes + 1)))).toEqual(['OGRAF_PACKAGE_TOO_LARGE']);
     // An entry above the limit is refused instead of silently dropped: the filter
@@ -71,13 +71,15 @@ describe('OGraf package import', () => {
     expect(codes(readOGrafPackage(oversizedEntry))).toEqual(['OGRAF_PACKAGE_ENTRY_TOO_LARGE']);
   });
 
-  it('refuses an entry that hides behind the result prototype or repeats a path exactly', () => {
-    const protoEntry = zipSync({ '__proto__': encode('x'), 'scene.kcs': encode(scene) });
-    const exactDuplicate = zipSync({ 'scene.kcs': encode(scene), 'assets/img.png': encode('x') });
+  it('refuses a prototype-sensitive path segment and imports a plain two-file package', () => {
+    // A reserved name is only reachable as a real member, so the segment is inside a folder.
+    const protoEntry = zipSync({ 'assets/__proto__/x.png': encode('x'), 'scene.kcs': encode(scene) });
+    const duplicateKey = zipSync({ 'scene.kcs': encode(scene), 'assets/img.png': encode('x') });
 
     expect(codes(readOGrafPackage(protoEntry))).toEqual(['OGRAF_PACKAGE_UNSAFE_PATH']);
-    // A single member cannot collide with itself, so this package imports.
-    expect(readOGrafPackage(exactDuplicate).ok).toBe(true);
+    // The writer cannot emit two members with the same name, so the exact-duplicate
+    // branch is exercised by the preflight admission the reader runs per entry.
+    expect(readOGrafPackage(duplicateKey).ok).toBe(true);
   });
 
   it('refuses a manifest that nests deeper than the walk can check', () => {

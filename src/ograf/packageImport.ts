@@ -5,9 +5,10 @@ import { hasCaseInsensitiveCollision, isPrototypeSensitiveKey, isReservedWindows
 /**
  * Reads an OGraf package back into the editable scene it was exported from.
  *
- * Preflight (`admitEntry`) validates every entry name and size against the
- * central directory before anything is inflated, so an archive cannot exhaust
- * memory and no name can hide behind the result object; the post-unzip checks
+ * Preflight (`admitEntry`) runs on each central-directory entry immediately
+ * before that entry is inflated: its name is validated and its declared size
+ * counted, so no name can hide behind the result object and the cumulative
+ * declared output is bounded before it is materialised. The post-unzip checks
  * below only confirm what the preflight already admitted.
 
  * A package is a zip the exporter wrote; it always carries `scene.kcs`, the
@@ -110,7 +111,7 @@ interface PreflightProblem {
 }
 
 /**
- * Validates one archive member while it is still only a central-directory
+ * entry: its name is normalised and checked against the same authorities the
  * entry: its name is normalised and checked against the same authorities the
  * rest of the app uses, and its size counts against the total budget. Returning
  * `false` keeps the entry out, and `unzipSync` never inflates it.
@@ -165,7 +166,7 @@ export const readOGrafPackage = (bytes: Uint8Array): OGrafPackageReadResult => {
     return { ok: false, diagnostics: [refusal('OGRAF_PACKAGE_TOO_LARGE', '$', `The package is larger than the ${Math.round(OGRAF_PACKAGE_LIMITS.bytes / (1024 * 1024))} MB import limit.`, 'Import a smaller package.')] };
   }
 
-  // The preflight runs on the central directory: every name is validated and
+  // every size counted before a single entry is inflated or stored.
   // every size counted before a single entry is inflated or stored.
   const preflight = { count: 0, total: 0, names: new Set<string>(), problem: undefined as PreflightProblem | undefined };
   let files: Record<string, Uint8Array>;

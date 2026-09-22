@@ -279,7 +279,7 @@ describe('HeaderBar OGraf export integration', () => {
     render(<HeaderBar />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(['{"$schema":"https://ograf.ebu.io/v1/specification/json-schemas/graphics/schema.json"}'], 'graphic.ograf.json', { type: 'application/json' })] } });
-    await waitFor(() => expect(context.showToast).toHaveBeenCalledWith(expect.stringContaining('OGraf graphic manifest/package'), 'error'));
+    await waitFor(() => expect(context.showToast).toHaveBeenCalledWith(expect.stringContaining('OGraf graphic manifest'), 'error'));
     expect(context.importProject).not.toHaveBeenCalled();
   });
 
@@ -292,11 +292,15 @@ describe('HeaderBar OGraf export integration', () => {
     expect(context.showToast).toHaveBeenCalledWith('Imported "scene" as a new Template tab!', 'success');
   });
 
-  it('explains that an OGraf package requires dedicated package import support', async () => {
+  it('refuses an unreadable OGraf package with a report instead of applying it', async () => {
     render(<HeaderBar />);
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [new File(['PK'], 'graphic-ograf.zip', { type: 'application/zip' })] } });
-    await waitFor(() => expect(context.showToast).toHaveBeenCalledWith(expect.stringContaining('KCS project import expects a .kcs project file'), 'error'));
+
+    const dialog = await screen.findByRole('dialog', { name: 'OGraf package import report' });
+    expect(dialog.textContent).toContain('OGRAF_PACKAGE_UNREADABLE');
+    expect((screen.getByRole('button', { name: 'Import and replace project' }) as HTMLButtonElement).disabled).toBe(true);
     expect(context.importProject).not.toHaveBeenCalled();
+    expect(context.showToast).not.toHaveBeenCalled();
   });
 });

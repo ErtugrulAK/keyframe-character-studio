@@ -1,3 +1,4 @@
+import { zipSync } from 'fflate';
 import { test, expect, type Page } from '@playwright/test';
 
 /**
@@ -85,6 +86,51 @@ test.describe('Milestone F item 12 — the unified import entry', () => {
 
     await expect(page.getByText('KCS Layer').first()).toBeVisible();
     await expect(page.getByRole('dialog', { name: 'Lottie import report' })).toHaveCount(0);
+  });
+});
+
+test.describe('Milestone F item 12 — the OGraf package import', () => {
+  test('reads the package scene, cancels without changing the project, then applies it', async ({ page }) => {
+    await seed(page);
+
+    const scene = JSON.stringify({
+      version: 1,
+      width: 640,
+      height: 360,
+      fps: 30,
+      totalFrames: 30,
+      layers: [{ id: 'pkg', name: 'Package Layer', type: 'custom_box', x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1, fillColor: '#3366cc', strokeColor: '#101218', strokeWidth: 2, borderRadius: 0, width: 80, height: 80 }],
+      tracks: [],
+    });
+    const bytes = zipSync({
+      'demo.ograf.json': new TextEncoder().encode(JSON.stringify({ name: 'Demo Package' })),
+      'scene.kcs': new TextEncoder().encode(scene),
+    });
+
+    const importPackage = () => page.setInputFiles('input[aria-label="Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import"]', {
+      name: 'demo.zip',
+      mimeType: 'application/zip',
+      buffer: Buffer.from(bytes),
+    });
+
+    // 1. The report appears and the seeded project is untouched.
+    await importPackage();
+    const dialog = page.getByRole('dialog', { name: 'OGraf package import report' });
+    await expect(dialog).toBeVisible();
+    await expect(page.getByText('Seed Layer')).toBeVisible();
+
+    // 2. Cancel changes nothing.
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await expect(dialog).toBeHidden();
+    await expect(page.getByText('Seed Layer')).toBeVisible();
+    await expect(page.getByText('Package Layer')).toHaveCount(0);
+
+    // 3. Confirm replaces the project with the package scene.
+    await importPackage();
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Import and replace project' }).click();
+    await expect(page.getByText('Package Layer').first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText('Seed Layer')).toHaveCount(0);
   });
 });
 

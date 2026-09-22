@@ -28,6 +28,7 @@ import type { ToastOptions } from '../../hooks/useToast';
 import { FirstExportGuide } from './FirstExportGuide';
 import { ImportReportDialog } from '../Modal/ImportReportDialog';
 import { classifyImport } from '../../utils/importDispatch';
+import { readOGrafPackage, type OGrafPackageReadResult } from '../../ograf/packageImport';
 import { importLottieDocument, type LottieImportResult } from '../../interop/lottie/mapDocument';
 import type { SceneData } from '../../types/composition';
 import './HeaderBar.css';
@@ -160,6 +161,11 @@ export const HeaderBar: React.FC = () => {
    * `confirmLottieImport` runs.
    */
   const [pendingLottieImport, setPendingLottieImport] = useState<{ fileName: string; result: LottieImportResult } | null>(null);
+  /**
+   * An OGraf package waiting for the same decision: its scene text plus the
+   * report the reader produced. Selecting a package changes nothing on its own.
+   */
+  const [pendingPackageImport, setPendingPackageImport] = useState<{ fileName: string; result: OGrafPackageReadResult } | null>(null);
   const [timeAgoStr, setTimeAgoStr] = useState<string>('Not saved yet');
 
   useEffect(() => {
@@ -279,7 +285,20 @@ export const HeaderBar: React.FC = () => {
     const lowerName = file.name.toLowerCase();
     const looksLikePackage = lowerName.endsWith('.zip') || lowerName.endsWith('.ograf');
     if (looksLikePackage) {
-      showToast('This is an OGraf graphic manifest/package. KCS project import expects a .kcs project file. Use Export/OGraf tools or add Import OGraf Package support.', 'error');
+      // A package is an archive: read it as bytes and let the package reader
+      // decode it under its own guards. Nothing is applied until the report is
+      // accepted, exactly like the Lottie import.
+      const packageReader = new FileReader();
+      packageReader.onload = (packageEvent) => {
+        const buffer = packageEvent.target?.result;
+        if (!(buffer instanceof ArrayBuffer)) {
+          showToast('The selected package could not be read.', 'error');
+          return;
+        }
+        setPendingPackageImport({ fileName: file.name, result: readOGrafPackage(new Uint8Array(buffer)) });
+      };
+      packageReader.onerror = () => showToast('The selected package could not be read.', 'error');
+      packageReader.readAsArrayBuffer(file);
       return;
     }
     const fileNameWithoutExt = file.name.replace(/\.(?:lottie\.)?(?:json|kcs)$/i, '').trim();
@@ -293,7 +312,7 @@ export const HeaderBar: React.FC = () => {
       switch (classifyImport(file.name, text)) {
         case 'ograf-package':
         case 'ograf-manifest':
-          showToast('This is an OGraf graphic manifest/package. KCS project import expects a .kcs project file. Use Export/OGraf tools or add Import OGraf Package support.', 'error');
+          showToast('This is an OGraf graphic manifest. Import the .zip/.ograf package it belongs to, or export the KCS project again.', 'error');
           return;
         case 'lottie':
           // Parsing only: nothing in the project changes until the report is accepted.
@@ -343,6 +362,33 @@ export const HeaderBar: React.FC = () => {
     }
     const warningCount = result.diagnostics.filter((entry) => entry.severity === 'warning').length;
     showToast(`Imported "${name}" from Lottie.`, 'success');
+    if (warningCount > 0) {
+      const [firstWarning] = result.diagnostics.filter((entry) => entry.severity === 'warning');
+      showToast(`${warningCount} report entr${warningCount === 1 ? 'y' : 'ies'} from the import.`, 'info', {
+        title: firstWarning?.code,
+        action: firstWarning?.action,
+      });
+    }
+  };
+
+  /** Applies the pending package scene through the project authority. */
+  const confirmPackageImport = () => {
+    if (!pendingPackageImport) return;
+    const { fileName, result } = pendingPackageImport;
+    setPendingPackageImport(null);
+    if (!result.ok || !result.sceneText) return;
+    const name = result.name || fileName.replace(/\.(?:zip|ograf)$/i, '').trim();
+    const applied = importProject(result.sceneText, name);
+    if (!applied.ok) {
+      const [refusal] = applied.diagnostics;
+      showToast(refusal ? sanitizeOGrafDiagnosticText(refusal.message) : 'The imported scene was refused.', 'error', {
+        title: refusal ? refusal.code : 'OGraf package import refused',
+        action: refusal?.action ?? 'Export the graphic again and retry.',
+      });
+      return;
+    }
+    const warningCount = result.diagnostics.filter((entry) => entry.severity === 'warning').length;
+    showToast(`Imported "${name}" from an OGraf package.`, 'success');
     if (warningCount > 0) {
       const [firstWarning] = result.diagnostics.filter((entry) => entry.severity === 'warning');
       showToast(`${warningCount} report entr${warningCount === 1 ? 'y' : 'ies'} from the import.`, 'info', {
@@ -600,6 +646,16 @@ export const HeaderBar: React.FC = () => {
         refused={pendingLottieImport !== null && !pendingLottieImport.result.ok}
         onCancel={() => setPendingLottieImport(null)}
         onConfirm={confirmLottieImport}
+      />
+      <ImportReportDialog
+        isOpen={pendingPackageImport !== null}
+        title="OGraf package import report"
+        fileName={pendingPackageImport?.fileName ?? ''}
+        layerCount={undefined}
+        diagnostics={pendingPackageImport?.result.diagnostics ?? []}
+        refused={pendingPackageImport !== null && !pendingPackageImport.result.ok}
+        onCancel={() => setPendingPackageImport(null)}
+        onConfirm={confirmPackageImport}
       />
 
       {/* New Project Template Modal */}

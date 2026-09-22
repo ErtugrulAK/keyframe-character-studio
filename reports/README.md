@@ -52,4 +52,5 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_126_lottie_text_image_precomp_slice.md` — Milestone F item 10 third slice: Lottie text, image and precomp layers.
 - `progress_127_lottie_import_entry_report_ux.md` — Milestone F item 10 final slice: the Lottie import entry point and its report-before-replace flow.
 - `progress_128_unified_import_entry.md` — Milestone F item 12: one import control that dispatches `.kcs`, legacy, OGraf and Lottie by content.
+- `progress_129_ograf_editable_import.md` — Milestone F item 12: OGraf package import, decoded under guards into its editable scene.
 - `progress_128_unified_import_entry.md` — Milestone F item 12: one import control that dispatches `.kcs`, legacy, OGraf and Lottie by content.

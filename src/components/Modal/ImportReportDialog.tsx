@@ -1,7 +1,18 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
 import { sanitizeOGrafDiagnosticText } from '../../ograf/diagnostics';
-import type { LottieImportDiagnostic } from '../../interop/lottie/diagnostics';
+/**
+ * The report entry every importer produces: the Lottie importer and the OGraf
+ * package reader both shape their diagnostics this way, so the surface is one.
+ */
+export interface ImportReportEntry {
+  code: string;
+  severity: 'error' | 'warning';
+  feature: string;
+  path: string;
+  message: string;
+  action: string;
+}
 import './ImportReportDialog.css';
 
 /** How many diagnostics are rendered before the list is cut with a count. */
@@ -13,7 +24,7 @@ export interface ImportReportDialogProps {
   /** Layers the parsed scene would add, or `undefined` when the import was refused. */
   layerCount?: number;
   frameCount?: number;
-  diagnostics: LottieImportDiagnostic[];
+  diagnostics: ImportReportEntry[];
   /** Dialog title; the importer names itself here (for example "Lottie import report"). */
   title?: string;
   /** A refusal (the document could not be read) rather than a report of losses. */
@@ -22,7 +33,7 @@ export interface ImportReportDialogProps {
   onConfirm: () => void;
 }
 
-const severityRank = (entry: LottieImportDiagnostic): number => (entry.severity === 'error' ? 0 : 1);
+const severityRank = (entry: ImportReportEntry): number => (entry.severity === 'error' ? 0 : 1);
 
 /**
  * Shows what an import would do **before** it touches the project: the

@@ -35,6 +35,7 @@ const { context } = vi.hoisted(() => ({
 vi.mock('../context/useAnimator', () => ({ useAnimator: () => context }));
 vi.mock('../components/Modal/NewItemModal', () => ({ NewItemModal: () => null }));
 
+import { zipSync } from 'fflate';
 import { HeaderBar } from '../components/Header/HeaderBar';
 import { ImportReportDialog } from '../components/Modal/ImportReportDialog';
 
@@ -59,6 +60,12 @@ const chooseFile = (label: string, name: string, content: string) => {
 };
 
 const IMPORT_INPUT = 'Choose a KCS project, legacy project, Lottie file, or OGraf manifest/package to import';
+
+const chooseBytes = (ariaLabel: string, name: string, bytes: Uint8Array) => {
+  const input = screen.getByLabelText(ariaLabel) as HTMLInputElement;
+  const file = new File([bytes as unknown as BlobPart], name, { type: 'application/zip' });
+  fireEvent.change(input, { target: { files: [file] } });
+};
 const reportDialog = () => screen.queryByRole('dialog', { name: 'Lottie import report' });
 
 describe('Lottie import entry point', () => {
@@ -248,6 +255,50 @@ describe('Lottie import entry point', () => {
     expect(document.activeElement).toBe(cancel);
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
     expect(document.activeElement).toBe(cancel);
+  });
+
+  it('imports an OGraf package through the shared report, and cancels without changing anything', async () => {
+    const scene = JSON.stringify({ version: 1, width: 320, height: 180, fps: 24, totalFrames: 24, layers: [], tracks: [] });
+    const bytes = zipSync({ 'demo.ograf.json': new TextEncoder().encode(JSON.stringify({ name: 'Demo' })), 'scene.kcs': new TextEncoder().encode(scene) });
+
+    render(<HeaderBar />);
+    chooseBytes(IMPORT_INPUT, 'demo.zip', bytes);
+    const dialog = await screen.findByRole('dialog', { name: 'OGraf package import report' });
+
+    expect(context.importProject).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(reportDialog()).toBeNull();
+    expect(context.importProject).not.toHaveBeenCalled();
+    expect(dialog).toBeTruthy();
+  });
+
+  it('applies the package scene through the project authority on confirm', async () => {
+    const scene = JSON.stringify({ version: 1, width: 640, height: 360, fps: 30, totalFrames: 30, layers: [], tracks: [] });
+    const bytes = zipSync({ 'demo.ograf.json': new TextEncoder().encode(JSON.stringify({ name: 'Demo Graphic' })), 'scene.kcs': new TextEncoder().encode(scene) });
+
+    render(<HeaderBar />);
+    chooseBytes(IMPORT_INPUT, 'demo.zip', bytes);
+    await screen.findByRole('dialog', { name: 'OGraf package import report' });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Import and replace project' }));
+
+    expect(context.importProject).toHaveBeenCalledTimes(1);
+    expect(context.importProject).toHaveBeenCalledWith(scene, 'Demo Graphic');
+    expect(context.showToast).toHaveBeenCalledWith('Imported "Demo Graphic" from an OGraf package.', 'success');
+  });
+
+  it('reports a package refusal from the project authority instead of a success', async () => {
+    context.importProject.mockReturnValueOnce({ ok: false, diagnostics: [{ code: 'KCS_IMPORT_UNKNOWN_SHAPE', message: 'The scene is not valid.', action: 'Export again.' }] });
+    const scene = JSON.stringify({ version: 1, width: 320, height: 180, fps: 24, totalFrames: 24, layers: [], tracks: [] });
+    const bytes = zipSync({ 'scene.kcs': new TextEncoder().encode(scene) });
+
+    render(<HeaderBar />);
+    chooseBytes(IMPORT_INPUT, 'demo.zip', bytes);
+    await screen.findByRole('dialog', { name: 'OGraf package import report' });
+    fireEvent.click(screen.getByRole('button', { name: 'Import and replace project' }));
+
+    expect(context.showToast).toHaveBeenCalledWith('The scene is not valid.', 'error', expect.objectContaining({ title: 'KCS_IMPORT_UNKNOWN_SHAPE' }));
+    expect(context.showToast).not.toHaveBeenCalledWith(expect.stringContaining('Imported'), 'success');
   });
 
   it('keeps the existing project import control working', async () => {

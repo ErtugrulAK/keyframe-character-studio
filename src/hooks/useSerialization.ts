@@ -307,6 +307,16 @@ function fromSceneData(
   const nextTotalFrames = scene.totalFrames;
   const nextResolution = scene.width && scene.height ? { width: scene.width, height: scene.height } : undefined;
   const nextName = (defaultName || '').trim();
+  // Initialize ID counter from all IDs
+  const allIds: string[] = [];
+  parts.forEach(p => allIds.push(p.id));
+  trks.forEach(t => {
+    allIds.push(t.id);
+    t.keyframes?.forEach(k => allIds.push(k.id));
+    Object.values(t.channels || {}).forEach((channel) => channel.forEach((keyframe) => allIds.push(keyframe.id)));
+  });
+  (scene.motionTemplates || []).forEach((template) => allIds.push(template.id));
+  initializeIdCounter(allIds);
 
   setCharacterParts(parts);
   setTracks(trks);
@@ -324,17 +334,6 @@ function fromSceneData(
     if (nextActiveTemplateId) setActiveTemplateId(nextActiveTemplateId);
   }
   setLastSavedAt(new Date());
-
-  // Initialize ID counter from all IDs
-  const allIds: string[] = [];
-  parts.forEach(p => allIds.push(p.id));
-  trks.forEach(t => {
-    allIds.push(t.id);
-    t.keyframes?.forEach(k => allIds.push(k.id));
-    Object.values(t.channels || {}).forEach((channel) => channel.forEach((keyframe) => allIds.push(keyframe.id)));
-  });
-  (scene.motionTemplates || []).forEach((template) => allIds.push(template.id));
-  initializeIdCounter(allIds);
 
   return true;
 }

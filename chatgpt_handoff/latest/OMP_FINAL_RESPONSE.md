@@ -10,17 +10,21 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 
 ## 2) WHAT CHANGED
 
-`package.json` only:
+`package.json` declares the policy, and `package-lock.json` mirrors the root engine metadata:
 
 ```json
-"engines": { "node": ">=22" },
+"engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
 "allowScripts": { "sqlite3@6.0.1": true }
 ```
 
-- `engines.node: ">=22"` matches the Node version CI pins and the lowest version the suite runs on; the local runtime is Node 24.18.0. The declaration is advisory, so it informs rather than blocks.
+- The Node range is the intersection required by the locked toolchain: `jsdom@30.0.1` requires
+  `^22.22.2 || ^24.15.0 || >=26.0.0`; Vite and its React plugin are broader. CI's Node 22 lane and the
+  local Node 24.18.0 runtime are supported. The declaration is advisory, but it excludes unsupported
+  early Node 22 and odd-major runtimes.
 - The `allowScripts` entry is **pinned to `sqlite3@6.0.1`**, so a future release needs a new, deliberate approval. Older npm versions ignore the field, which leaves Node 22's bundled npm behaviour unchanged.
 
-No dependency version, script, workflow, `.npmrc`, lockfile, tag or release change.
+No dependency version, script, workflow, `.npmrc`, tag or release change. `package-lock.json` changed
+only at `packages[""].engines`; the dependency graph is unchanged.
 
 ## 3) WHY THE APPROVAL IS RIGHT
 
@@ -34,7 +38,7 @@ No dependency version, script, workflow, `.npmrc`, lockfile, tag or release chan
 | `npm install-scripts ls --json` after | `{"allowScripts": []}` — nothing blocked |
 | End-to-end proof | deleted `node_modules/sqlite3/build`, ran the approved install script → `node_sqlite3.node` restored from the prebuilt download, binding loads (`create table` OK) |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → **200** |
-| Lockfile | untouched by the rebuild (`git status` showed only `package.json`) |
+| Lockfile | `npm install --package-lock-only --ignore-scripts` synchronized only `packages[""].engines`; the dependency graph is unchanged |
 
 ## 5) VALIDATION
 
@@ -45,7 +49,7 @@ No dependency version, script, workflow, `.npmrc`, lockfile, tag or release chan
 | `npm run lint` | clean (exit 0) |
 | `npm run validate:ograf`, `npm run qa:release` | PASS (2 Chromium tests) |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `npm audit` | 0 vulnerabilities |
 
 ## 6) SAFETY NOTES

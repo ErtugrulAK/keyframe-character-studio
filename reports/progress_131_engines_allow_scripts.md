@@ -26,22 +26,26 @@ So approving the script does not force a source build; it restores the fast, too
 
 ## 3. Applied
 
-`package.json` only:
+`package.json` declares the policy, and `package-lock.json` mirrors the root engine metadata:
 
 ```json
-"engines": { "node": ">=22" },
+"engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
 "allowScripts": { "sqlite3@6.0.1": true }
 ```
 
-- **`engines.node: ">=22"`** — Node 22 is the version CI pins and the lowest version the suite is
-  tested on; the local runtime is Node 24.18.0. The declaration is advisory (no `engine-strict`), so it
-  informs instead of blocking, and it does not disturb the Node 22 CI job.
+- **`engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"`** — this is the intersection required by the
+  locked toolchain: `jsdom@30.0.1` requires `^22.22.2 || ^24.15.0 || >=26.0.0`, while Vite and its
+  React plugin require `^20.19.0 || >=22.12.0`. CI pins the Node 22 major and resolves within the
+  supported `^22.22.2` lane; the local Node 24.18.0 runtime is in the `^24.15.0` lane. The declaration
+  is advisory (no `engine-strict`), but it no longer advertises unsupported early Node 22 or odd-major
+  runtimes.
 - **`allowScripts: { "sqlite3@6.0.1": true }`** — npm 12 reads this field from `package.json` (the
   project layer of its `cli > package.json > .npmrc` policy chain). It is **pinned to the exact
   version**, so a future `sqlite3` release needs a new, deliberate approval instead of inheriting one.
   Older npm versions ignore the unknown field, which keeps Node 22's bundled npm behaviour unchanged.
 
-No script, workflow, dependency version, `.npmrc` or lockfile change.
+No script, workflow, dependency version or `.npmrc` change. `package-lock.json` changed only at
+`packages[""].engines` to mirror `package.json`; the dependency graph is unchanged.
 
 ## 4. Evidence
 
@@ -51,8 +55,8 @@ No script, workflow, dependency version, `.npmrc` or lockfile change.
 | `npm install-scripts ls --json` after the change | `{"allowScripts": []}` — nothing blocked or pending |
 | End-to-end proof | deleted `node_modules/sqlite3/build`, ran the now-approved install script (`npm rebuild sqlite3`) → "rebuilt dependencies successfully", `build/Release/node_sqlite3.node` present again, and the binding loads: `create table` on an in-memory database returns OK |
 | Server runtime | `node server/index.js` starts and `GET /api/health` returns **200** |
-| `package.json` specifier set | unchanged apart from the two new fields; no dependency version moved |
-| `git status` after the rebuild | only `M package.json` — the lockfile was not touched |
+| Manifest/lockfile scope | dependency specifiers unchanged; `npm install --package-lock-only --ignore-scripts` updated only the lockfile root's `engines` metadata |
+| `git status` after the sqlite rebuild, before lockfile synchronization | only `M package.json` — the rebuild itself did not touch the lockfile |
 
 The `sqlite3` binding before this task came from the item-9 repair; it now comes from the package's own
 approved install step, which is what a fresh clone will get.
@@ -68,7 +72,7 @@ approved install step, which is what a fresh clone will get.
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS (2 Chromium tests) |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `npm audit` | 0 vulnerabilities |
 | `git diff --check` | clean |
 
@@ -76,14 +80,15 @@ approved install step, which is what a fresh clone will get.
 
 `npm install-scripts deny sqlite3 --dry-run` wrote `"allowScripts": { "sqlite3": false }` into
 `package.json` **despite `--dry-run`** (the field did not exist in `HEAD` before the command). The
-unintended entry was removed and the file was rewritten deliberately with the two fields above; the
-final diff contains only those. Recorded here because an unrequested manifest edit is exactly what the
-project's review discipline is meant to catch, and because the same command would silently change a
-manifest for anyone else running it.
+unintended entry was removed and `package.json` was rewritten deliberately with the two fields above;
+the lockfile then received only the matching root engine metadata. Recorded here because an unrequested
+manifest edit is exactly what the project's review discipline is meant to catch, and because the same
+command would silently change a manifest for anyone else running it.
 
 ## 7. Not changed
 
-- No dependency version, script, workflow, `.npmrc`, lockfile, tag or release change.
+- No dependency version, script, workflow, `.npmrc`, tag or release change. The lockfile dependency
+  graph is unchanged; only its root `engines` metadata was synchronized.
 - Option C (TypeScript 7 / Vitest 5) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x)
   remain open and approval-gated.
 - `C:\Users\ertugrul.ak\Desktop\ograf-graphics`, `origin/without-mask`, the OMP configuration and the QA

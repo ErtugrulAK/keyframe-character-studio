@@ -7,15 +7,17 @@ This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed f
 The `engines` declaration and the npm-12 install-script policy (Milestone D item 9 follow-up), applied on
 `chore/engines-allow-scripts` from `main` at `752ca28`:
 
-- `package.json` now declares `engines.node: ">=22"` — the Node version CI pins and the lowest version the
-  suite runs on (the local runtime is Node 24.18.0) — as an advisory requirement that does not block.
+- `package.json` now declares `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` — the intersection
+  required by the locked jsdom/Vite toolchain. CI's Node 22 lane and the local Node 24.18.0 runtime
+  remain supported; the advisory range excludes unsupported early Node 22 and odd-major runtimes.
 - The npm-12 install-script policy is answered with a **version-pinned approval** for
   `sqlite3@6.0.1` (`allowScripts`), because that package installs by downloading a prebuilt NAPI
   binding and npm 12 blocks the step without an approval, which left a fresh install without the
   binding and the API server without a database driver.
 - Proof: deleting `node_modules/sqlite3/build` and running the approved install script restored
   `node_sqlite3.node` from the prebuilt download, the binding loads, and `GET /api/health` returns 200.
-- No dependency version, script, workflow, `.npmrc` or lockfile changed.
+- No dependency version, script, workflow or `.npmrc` changed. `package-lock.json` changed only at the
+  root `engines` metadata; its dependency graph is unchanged.
 
 ## Files
 

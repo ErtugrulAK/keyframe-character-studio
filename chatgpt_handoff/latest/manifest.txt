@@ -1,4 +1,4 @@
-# KCS ChatGPT Upload Manifest — Milestone D Item 9 Option B (Dependency Maintenance)
+# KCS ChatGPT Upload Manifest — Milestone D Item 9 Follow-Up (engines + npm-12 allowScripts)
 
 Clean refreshed: YES
 Bundle purpose: the engines declaration and the npm-12 allowScripts answer (Milestone D item 9 follow-up)
@@ -6,11 +6,11 @@ Bundle scope: minimal and task-specific; this folder is not an archive
 
 Branch: chore/engines-allow-scripts, base main at 752ca28 — not merged; the merge decision is with the user
 Task record: reports/progress_131_engines_allow_scripts.md
-What changed: package.json only — an engines declaration (node >= 22) and a version-pinned allowScripts approval for sqlite3@6.0.1, so its install step fetches the prebuilt NAPI binding on npm 12
-No dependency version, script, workflow, .npmrc or lockfile change
+What changed: package.json declares node ^22.22.2 || ^24.15.0 || >=26.0.0 and approves sqlite3@6.0.1; package-lock.json mirrors only the root engines metadata, with no dependency-graph change
+No dependency version, script, workflow or .npmrc change
 Security: npm audit stays at 0 vulnerabilities; the install-script approval is pinned to sqlite3@6.0.1 so a future release needs a new approval
 Evidence: npm install-scripts ls reports nothing blocked; deleting node_modules/sqlite3/build and running the approved install script restored node_sqlite3.node from the prebuilt download and the binding loads; GET /api/health returns 200
-Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (32); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
+Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (33); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
 Next work (approval-gated): Option C majors (typescript 6 to 7, vitest and @vitest/coverage-v8 4 to 5), then the two deferred minor bumps (oxlint 1.85, jsdom 30.1.x)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO

@@ -29,17 +29,21 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 
 ## 2) WHAT CHANGED
 
-`package.json` only:
+`package.json` declares the policy, and `package-lock.json` mirrors the root engine metadata:
 
 ```json
-"engines": { "node": ">=22" },
+"engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
 "allowScripts": { "sqlite3@6.0.1": true }
 ```
 
-- `engines.node: ">=22"` matches the Node version CI pins and the lowest version the suite runs on; the local runtime is Node 24.18.0. The declaration is advisory, so it informs rather than blocks.
+- The Node range is the intersection required by the locked toolchain: `jsdom@30.0.1` requires
+  `^22.22.2 || ^24.15.0 || >=26.0.0`; Vite and its React plugin are broader. CI's Node 22 lane and the
+  local Node 24.18.0 runtime are supported. The declaration is advisory, but it excludes unsupported
+  early Node 22 and odd-major runtimes.
 - The `allowScripts` entry is **pinned to `sqlite3@6.0.1`**, so a future release needs a new, deliberate approval. Older npm versions ignore the field, which leaves Node 22's bundled npm behaviour unchanged.
 
-No dependency version, script, workflow, `.npmrc`, lockfile, tag or release change.
+No dependency version, script, workflow, `.npmrc`, tag or release change. `package-lock.json` changed
+only at `packages[""].engines`; the dependency graph is unchanged.
 
 ## 3) WHY THE APPROVAL IS RIGHT
 
@@ -53,7 +57,7 @@ No dependency version, script, workflow, `.npmrc`, lockfile, tag or release chan
 | `npm install-scripts ls --json` after | `{"allowScripts": []}` — nothing blocked |
 | End-to-end proof | deleted `node_modules/sqlite3/build`, ran the approved install script → `node_sqlite3.node` restored from the prebuilt download, binding loads (`create table` OK) |
 | Server runtime | `node server/index.js` starts, `GET /api/health` → **200** |
-| Lockfile | untouched by the rebuild (`git status` showed only `package.json`) |
+| Lockfile | `npm install --package-lock-only --ignore-scripts` synchronized only `packages[""].engines`; the dependency graph is unchanged |
 
 ## 5) VALIDATION
 
@@ -64,7 +68,7 @@ No dependency version, script, workflow, `.npmrc`, lockfile, tag or release chan
 | `npm run lint` | clean (exit 0) |
 | `npm run validate:ograf`, `npm run qa:release` | PASS (2 Chromium tests) |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `npm audit` | 0 vulnerabilities |
 
 ## 6) SAFETY NOTES
@@ -81,7 +85,7 @@ deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) — each behind its own exp
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Milestone D Item 9 Option B (Dependency Maintenance)
+# KCS ChatGPT Upload Manifest — Milestone D Item 9 Follow-Up (engines + npm-12 allowScripts)
 
 Clean refreshed: YES
 Bundle purpose: the engines declaration and the npm-12 allowScripts answer (Milestone D item 9 follow-up)
@@ -89,11 +93,11 @@ Bundle scope: minimal and task-specific; this folder is not an archive
 
 Branch: chore/engines-allow-scripts, base main at 752ca28 — not merged; the merge decision is with the user
 Task record: reports/progress_131_engines_allow_scripts.md
-What changed: package.json only — an engines declaration (node >= 22) and a version-pinned allowScripts approval for sqlite3@6.0.1, so its install step fetches the prebuilt NAPI binding on npm 12
-No dependency version, script, workflow, .npmrc or lockfile change
+What changed: package.json declares node ^22.22.2 || ^24.15.0 || >=26.0.0 and approves sqlite3@6.0.1; package-lock.json mirrors only the root engines metadata, with no dependency-graph change
+No dependency version, script, workflow or .npmrc change
 Security: npm audit stays at 0 vulnerabilities; the install-script approval is pinned to sqlite3@6.0.1 so a future release needs a new approval
 Evidence: npm install-scripts ls reports nothing blocked; deleting node_modules/sqlite3/build and running the approved install script restored node_sqlite3.node from the prebuilt download and the binding loads; GET /api/health returns 200
-Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (32); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
+Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (33); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
 Next work (approval-gated): Option C majors (typescript 6 to 7, vitest and @vitest/coverage-v8 4 to 5), then the two deferred minor bumps (oxlint 1.85, jsdom 30.1.x)
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
@@ -119,15 +123,17 @@ This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed f
 The `engines` declaration and the npm-12 install-script policy (Milestone D item 9 follow-up), applied on
 `chore/engines-allow-scripts` from `main` at `752ca28`:
 
-- `package.json` now declares `engines.node: ">=22"` — the Node version CI pins and the lowest version the
-  suite runs on (the local runtime is Node 24.18.0) — as an advisory requirement that does not block.
+- `package.json` now declares `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` — the intersection
+  required by the locked jsdom/Vite toolchain. CI's Node 22 lane and the local Node 24.18.0 runtime
+  remain supported; the advisory range excludes unsupported early Node 22 and odd-major runtimes.
 - The npm-12 install-script policy is answered with a **version-pinned approval** for
   `sqlite3@6.0.1` (`allowScripts`), because that package installs by downloading a prebuilt NAPI
   binding and npm 12 blocks the step without an approval, which left a fresh install without the
   binding and the API server without a database driver.
 - Proof: deleting `node_modules/sqlite3/build` and running the approved install script restored
   `node_sqlite3.node` from the prebuilt download, the binding loads, and `GET /api/health` returns 200.
-- No dependency version, script, workflow, `.npmrc` or lockfile changed.
+- No dependency version, script, workflow or `.npmrc` changed. `package-lock.json` changed only at the
+  root `engines` metadata; its dependency graph is unchanged.
 
 ## Files
 
@@ -191,22 +197,26 @@ So approving the script does not force a source build; it restores the fast, too
 
 ## 3. Applied
 
-`package.json` only:
+`package.json` declares the policy, and `package-lock.json` mirrors the root engine metadata:
 
 ```json
-"engines": { "node": ">=22" },
+"engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
 "allowScripts": { "sqlite3@6.0.1": true }
 ```
 
-- **`engines.node: ">=22"`** — Node 22 is the version CI pins and the lowest version the suite is
-  tested on; the local runtime is Node 24.18.0. The declaration is advisory (no `engine-strict`), so it
-  informs instead of blocking, and it does not disturb the Node 22 CI job.
+- **`engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"`** — this is the intersection required by the
+  locked toolchain: `jsdom@30.0.1` requires `^22.22.2 || ^24.15.0 || >=26.0.0`, while Vite and its
+  React plugin require `^20.19.0 || >=22.12.0`. CI pins the Node 22 major and resolves within the
+  supported `^22.22.2` lane; the local Node 24.18.0 runtime is in the `^24.15.0` lane. The declaration
+  is advisory (no `engine-strict`), but it no longer advertises unsupported early Node 22 or odd-major
+  runtimes.
 - **`allowScripts: { "sqlite3@6.0.1": true }`** — npm 12 reads this field from `package.json` (the
   project layer of its `cli > package.json > .npmrc` policy chain). It is **pinned to the exact
   version**, so a future `sqlite3` release needs a new, deliberate approval instead of inheriting one.
   Older npm versions ignore the unknown field, which keeps Node 22's bundled npm behaviour unchanged.
 
-No script, workflow, dependency version, `.npmrc` or lockfile change.
+No script, workflow, dependency version or `.npmrc` change. `package-lock.json` changed only at
+`packages[""].engines` to mirror `package.json`; the dependency graph is unchanged.
 
 ## 4. Evidence
 
@@ -216,8 +226,8 @@ No script, workflow, dependency version, `.npmrc` or lockfile change.
 | `npm install-scripts ls --json` after the change | `{"allowScripts": []}` — nothing blocked or pending |
 | End-to-end proof | deleted `node_modules/sqlite3/build`, ran the now-approved install script (`npm rebuild sqlite3`) → "rebuilt dependencies successfully", `build/Release/node_sqlite3.node` present again, and the binding loads: `create table` on an in-memory database returns OK |
 | Server runtime | `node server/index.js` starts and `GET /api/health` returns **200** |
-| `package.json` specifier set | unchanged apart from the two new fields; no dependency version moved |
-| `git status` after the rebuild | only `M package.json` — the lockfile was not touched |
+| Manifest/lockfile scope | dependency specifiers unchanged; `npm install --package-lock-only --ignore-scripts` updated only the lockfile root's `engines` metadata |
+| `git status` after the sqlite rebuild, before lockfile synchronization | only `M package.json` — the rebuild itself did not touch the lockfile |
 
 The `sqlite3` binding before this task came from the item-9 repair; it now comes from the package's own
 approved install step, which is what a fresh clone will get.
@@ -233,7 +243,7 @@ approved install step, which is what a fresh clone will get.
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS (2 Chromium tests) |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 32 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `npm audit` | 0 vulnerabilities |
 | `git diff --check` | clean |
 
@@ -241,14 +251,15 @@ approved install step, which is what a fresh clone will get.
 
 `npm install-scripts deny sqlite3 --dry-run` wrote `"allowScripts": { "sqlite3": false }` into
 `package.json` **despite `--dry-run`** (the field did not exist in `HEAD` before the command). The
-unintended entry was removed and the file was rewritten deliberately with the two fields above; the
-final diff contains only those. Recorded here because an unrequested manifest edit is exactly what the
-project's review discipline is meant to catch, and because the same command would silently change a
-manifest for anyone else running it.
+unintended entry was removed and `package.json` was rewritten deliberately with the two fields above;
+the lockfile then received only the matching root engine metadata. Recorded here because an unrequested
+manifest edit is exactly what the project's review discipline is meant to catch, and because the same
+command would silently change a manifest for anyone else running it.
 
 ## 7. Not changed
 
-- No dependency version, script, workflow, `.npmrc`, lockfile, tag or release change.
+- No dependency version, script, workflow, `.npmrc`, tag or release change. The lockfile dependency
+  graph is unchanged; only its root `engines` metadata was synchronized.
 - Option C (TypeScript 7 / Vitest 5) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x)
   remain open and approval-gated.
 - `C:\Users\ertugrul.ak\Desktop\ograf-graphics`, `origin/without-mask`, the OMP configuration and the QA
@@ -267,7 +278,7 @@ manifest for anyone else running it.
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Checkout after the item 12 merge: `main` at or after `a4f8642` (the OGraf package import and its handoff refresh), matching `origin/main`
 - Milestone D item 9 **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`) and `main` matches `origin/main`
-- The **`engines` declaration and the npm-12 `allowScripts` question are answered on `chore/engines-allow-scripts`** (`reports/progress_131_engines_allow_scripts.md`): `engines.node: ">=22"` plus a version-pinned `allowScripts` approval for `sqlite3@6.0.1` (**its merge decision is with the user**)
+- The **`engines` declaration and the npm-12 `allowScripts` question are answered on `chore/engines-allow-scripts`** (`reports/progress_131_engines_allow_scripts.md`): `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` (the locked toolchain's supported intersection) plus a version-pinned `allowScripts` approval for `sqlite3@6.0.1`; `package-lock.json` mirrors only the root engine metadata and its dependency graph is unchanged (**the branch's merge decision is with the user**)
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
 - Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (identical to `main`; deleting it needs approval)
@@ -368,7 +379,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is the active milestone: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is implemented as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's first implementation slice — the Lottie import core — is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`). Milestone F item 10 is complete: its four slices are merged (`ff32d6c`, `8670b2a`, `bda62cb`, `3b30bff`), and **item 12's unified import entry is merged** (`reports/progress_128_unified_import_entry.md`): one header control classifies a selected file by its content and routes it to the KCS/legacy boundary, the Lottie importer with its report dialog, or the OGraf package reader — merged into `main` with its handoff refresh at `a4f8642`. Its **OGraf package/editable import** is merged at `419fc6a` (`reports/progress_129_ograf_editable_import.md`): a `.zip`/`.ograf` package is decoded in memory under entry-count, entry-size and path-safety guards, its `scene.kcs` goes through the same validated path as a project import, and a bare `.ograf.json` manifest still points the user at the package. After it landed: Option B was taken up and merged into `main` at `73426e5`; `engines`/`allowScripts` and Option C stay open. The state-consistency checker does not yet detect a stale sentence inside a current section, so these documents are still reviewed by hand after every task. The `engines` declaration and the npm-12 `allowScripts` question are answered on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`): `engines.node: ">=22"` and a version-pinned approval for `sqlite3@6.0.1`, whose install step downloads the prebuilt NAPI binding. Any further `package.json`, lockfile or workflow change stays approval-gated: Option C and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x).
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is the active milestone: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is implemented as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's first implementation slice — the Lottie import core — is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`). Milestone F item 10 is complete: its four slices are merged (`ff32d6c`, `8670b2a`, `bda62cb`, `3b30bff`), and **item 12's unified import entry is merged** (`reports/progress_128_unified_import_entry.md`): one header control classifies a selected file by its content and routes it to the KCS/legacy boundary, the Lottie importer with its report dialog, or the OGraf package reader — merged into `main` with its handoff refresh at `a4f8642`. Its **OGraf package/editable import** is merged at `419fc6a` (`reports/progress_129_ograf_editable_import.md`): a `.zip`/`.ograf` package is decoded in memory under entry-count, entry-size and path-safety guards, its `scene.kcs` goes through the same validated path as a project import, and a bare `.ograf.json` manifest still points the user at the package. After it landed: Option B was taken up and merged into `main` at `73426e5`; `engines`/`allowScripts` is answered on `chore/engines-allow-scripts` and awaits its merge decision, while Option C remains open. The state-consistency checker does not yet detect a stale sentence inside a current section, so these documents are still reviewed by hand after every task. The branch declares the locked toolchain's supported Node intersection (`^22.22.2 || ^24.15.0 || >=26.0.0`), approves `sqlite3@6.0.1`'s prebuilt-binding install step, and synchronizes only the lockfile root engine metadata; the dependency graph is unchanged. Any further `package.json`, lockfile or workflow change stays approval-gated: Option C and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x).
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -416,7 +427,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
-| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 and `jsdom` 30.1 deferred for documented reasons. Still approval-gated: Option C (TypeScript 7 / Vitest 5), the `engines` declaration, the npm-12 `allowScripts` pin, and the two deferred minor bumps |
+| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 and `jsdom` 30.1 deferred for documented reasons. The `engines` declaration and npm-12 `allowScripts` policy are answered on `chore/engines-allow-scripts` and await their merge decision. Still approval-gated: Option C (TypeScript 7 / Vitest 5) and the two deferred minor bumps |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
 
@@ -508,7 +519,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The value and speed graphs are exposed as labelled groups instead of images, and focus rings were added for the timeline diamonds and the graph keyframe points.
 - Freeform paths that only carry legacy `points` normalize a repeated closing vertex before the editing overlay materializes a canonical `path` on first edit; the legacy array itself is preserved.
 - Matte relationship resolution went through one shared helper that mirrors the rendered result, so the outliner indicator and the stage agree for enabled, disabled, missing, and unusable sources.
-- The project now declares its runtime requirement (`engines.node >= 22`) and approves the `sqlite3` install step for npm 12 with a version-pinned entry, so a fresh install fetches that package's prebuilt native binding instead of silently leaving the API server without a database driver.
+- The project now declares the locked toolchain's supported Node runtime intersection (`^22.22.2 || ^24.15.0 || >=26.0.0`) and approves the `sqlite3` install step for npm 12 with a version-pinned entry, so a fresh install fetches that package's prebuilt native binding instead of silently leaving the API server without a database driver; the lockfile mirrors only the root engine metadata and its dependency graph is unchanged.
 - Runtime and toolchain dependencies were refreshed within their current major versions (React 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47 and the test-library patches) on an isolated branch; the linter and jsdom keep their previously verified versions because the newer ones need work of their own (33 new lint rules; with jsdom 30.1 any `URL.createObjectURL` call on a Blob throws, which fails the export-download test).
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
@@ -559,14 +570,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 8484 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 14373 bytes
-- `NEXT_SESSION.md` — 12295 bytes
-- `OMP_FINAL_RESPONSE.md` — 3464 bytes
-- `PROJECT_STATE.md` — 16385 bytes
-- `README.md` — 2706 bytes
-- `manifest.txt` — 2366 bytes
-- `progress_131_engines_allow_scripts.md` — 4716 bytes
+- `CHANGELOG.md` — 8623 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 14451 bytes
+- `NEXT_SESSION.md` — 12477 bytes
+- `OMP_FINAL_RESPONSE.md` — 3851 bytes
+- `PROJECT_STATE.md` — 16433 bytes
+- `README.md` — 2885 bytes
+- `manifest.txt` — 2358 bytes
+- `progress_131_engines_allow_scripts.md` — 5408 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

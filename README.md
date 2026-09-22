@@ -205,8 +205,8 @@ keyframe-character-studio/
 ## 🚀 Quick Start
 
 ### 1. Prerequisites
-- **Node.js**: v18.0.0 or higher
-- **npm**: v9.0.0 or higher
+- **Node.js**: `^22.22.2 || ^24.15.0 || >=26.0.0`
+- **npm**: v9.0.0 or higher. npm 12 reads the version-pinned `allowScripts` approval and runs the `sqlite3` prebuilt NAPI installer automatically; do not use `dangerously-allow-all-scripts`.
 
 ### 2. Installation
 ```bash

@@ -86,12 +86,17 @@ const asRecord = (value: unknown): Record<string, unknown> | undefined => {
   return value as Record<string, unknown>;
 };
 
-/** Walks the document and reports the first prototype-sensitive key. */
+/**
+ * Walks the document and reports the first prototype-sensitive key, or the first
+ * node deeper than the walk can check — a document that nests further is refused
+ * rather than accepted with an unchecked subtree.
+ */
 const findPrototypeSensitiveKey = (value: unknown): { key: string; path: string } | undefined => {
   const stack: { node: unknown; path: string; depth: number }[] = [{ node: value, path: '$', depth: 0 }];
   while (stack.length > 0) {
     const current = stack.pop();
-    if (!current || current.depth > MAX_IMPORT_DEPTH) continue;
+    if (!current) continue;
+    if (current.depth > MAX_IMPORT_DEPTH) return { key: '', path: current.path };
 
     if (Array.isArray(current.node)) {
       current.node.forEach((entry, index) => stack.push({ node: entry, path: `${current.path}[${index}]`, depth: current.depth + 1 }));
@@ -181,6 +186,14 @@ export const validateImportedDocument = (text: string): ImportValidationResult =
 
   const unsafeKey = findPrototypeSensitiveKey(parsed);
   if (unsafeKey) {
+    if (unsafeKey.key === '') {
+      return refuse(
+        'KCS_IMPORT_TOO_DEEP',
+        unsafeKey.path,
+        `The document nests deeper than the ${MAX_IMPORT_DEPTH}-level import limit, so part of it cannot be checked.`,
+        'Re-export the project from Keyframe Studio; a project document does not need that much nesting.',
+      );
+    }
     return refuse(
       'KCS_IMPORT_UNSAFE_KEY',
       unsafeKey.path,

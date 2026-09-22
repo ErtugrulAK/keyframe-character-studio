@@ -5,7 +5,7 @@ import { hasCaseInsensitiveCollision, isPrototypeSensitiveKey, isReservedWindows
 /**
  * Reads an OGraf package back into the editable scene it was exported from.
  *
- * Preflight (`admitEntry`) runs on each central-directory entry immediately
+ * Preflight (`admitPackageEntry`) runs on each central-directory entry immediately
  * before that entry is inflated: its name is validated and its declared size
  * counted, so no name can hide behind the result object and the cumulative
  * declared output is bounded before it is materialised. The post-unzip checks
@@ -102,8 +102,15 @@ const exceedsDepth = (value: unknown, limit = 64): boolean => {
   return false;
 };
 
-/** Why a preflight stopped the archive before its contents were read. */
-interface PreflightProblem {
+/** Why an archive entry was not admitted. */
+export interface PackagePreflightState {
+  count: number;
+  total: number;
+  names: Set<string>;
+  problem?: PackagePreflightProblem;
+}
+
+export interface PackagePreflightProblem {
   code: string;
   path: string;
   message: string;
@@ -111,14 +118,18 @@ interface PreflightProblem {
 }
 
 /**
- * entry: its name is normalised and checked against the same authorities the
- * entry: its name is normalised and checked against the same authorities the
- * rest of the app uses, and its size counts against the total budget. Returning
- * `false` keeps the entry out, and `unzipSync` never inflates it.
+ * Validates one archive member from its central-directory entry, immediately
+ * before the library inflates it: its name is normalised and checked against the
+ * same authorities the rest of the app uses, and its declared size counts against
+ * the per-entry and total budgets. Returning `false` keeps that entry out, so the
+ * archive never materialises more than the budget allows.
+ *
+ * Exported because it is the archive rule itself: the writer cannot emit two
+ * members with the same name, so the duplicate branch is only reachable here.
  */
-const admitEntry = (
+export const admitPackageEntry = (
   file: { name: string; originalSize: number },
-  state: { count: number; total: number; names: Set<string>; problem?: PreflightProblem },
+  state: PackagePreflightState,
 ): boolean => {
   state.count += 1;
   if (state.count > OGRAF_PACKAGE_LIMITS.entries) {
@@ -166,12 +177,11 @@ export const readOGrafPackage = (bytes: Uint8Array): OGrafPackageReadResult => {
     return { ok: false, diagnostics: [refusal('OGRAF_PACKAGE_TOO_LARGE', '$', `The package is larger than the ${Math.round(OGRAF_PACKAGE_LIMITS.bytes / (1024 * 1024))} MB import limit.`, 'Import a smaller package.')] };
   }
 
-  // every size counted before a single entry is inflated or stored.
-  // every size counted before a single entry is inflated or stored.
-  const preflight = { count: 0, total: 0, names: new Set<string>(), problem: undefined as PreflightProblem | undefined };
+  // The admission runs per entry, immediately before that entry is inflated.
+  const preflight: PackagePreflightState = { count: 0, total: 0, names: new Set<string>() };
   let files: Record<string, Uint8Array>;
   try {
-    files = unzipSync(bytes, { filter: (file) => admitEntry(file, preflight) });
+    files = unzipSync(bytes, { filter: (file) => admitPackageEntry(file, preflight) });
   } catch {
     return { ok: false, diagnostics: [refusal('OGRAF_PACKAGE_UNREADABLE', '$', 'The selected file is not a readable OGraf package.', 'Export the graphic again and import the new package.')] };
   }

@@ -24,6 +24,15 @@ describe('KCS import boundary — scene fields the apply path consumes after it 
     expect(result.diagnostics[0]?.path).toBe('$.motionTemplates');
   });
 
+  it('refuses a document that nests deeper than the walk can check', () => {
+    let nested: unknown = 1;
+    for (let depth = 0; depth < 70; depth += 1) nested = { child: nested };
+    const result = validateImportedDocument(JSON.stringify({ version: 1, layers: [], tracks: [], sceneTitle: nested }));
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]?.code).toBe('KCS_IMPORT_TOO_DEEP');
+  });
+
   it('refuses a scene with an unknown coordinate system or a non-text active template', () => {
     const coordinate = validateImportedDocument(JSON.stringify({ version: 1, layers: [], tracks: [], coordinateSystem: 'not-a-system' }));
     const active = validateImportedDocument(JSON.stringify({ version: 1, layers: [], tracks: [], activeTemplateId: 7 }));

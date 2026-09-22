@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { zipSync } from 'fflate';
-import { OGRAF_PACKAGE_LIMITS, readOGrafPackage } from '../ograf/packageImport';
+import { OGRAF_PACKAGE_LIMITS, admitPackageEntry, readOGrafPackage, type PackagePreflightState } from '../ograf/packageImport';
 
 /**
  * Milestone F item 12 — reading an OGraf package back into an editable scene.
@@ -69,6 +69,19 @@ describe('OGraf package import', () => {
     // stops it before decompression, and the drop is reported.
     const oversizedEntry = zipSync({ 'scene.kcs': encode(scene), 'big.bin': new Uint8Array(OGRAF_PACKAGE_LIMITS.entryBytes + 1) });
     expect(codes(readOGrafPackage(oversizedEntry))).toEqual(['OGRAF_PACKAGE_ENTRY_TOO_LARGE']);
+  });
+
+  it('refuses a repeated entry name and a prototype-sensitive segment in the admission rule', () => {
+    // The writer cannot emit two members with the same name, so the rule is tested
+    // through the seam the archive reader itself uses.
+    const state: PackagePreflightState = { count: 0, total: 0, names: new Set<string>() };
+    expect(admitPackageEntry({ name: 'scene.kcs', originalSize: 10 }, state)).toBe(true);
+    expect(admitPackageEntry({ name: 'SCENE.KCS', originalSize: 10 }, state)).toBe(false);
+    expect(state.problem?.code).toBe('OGRAF_PACKAGE_DUPLICATE_PATH');
+
+    const protoState: PackagePreflightState = { count: 0, total: 0, names: new Set<string>() };
+    expect(admitPackageEntry({ name: 'assets/__proto__/x.png', originalSize: 10 }, protoState)).toBe(false);
+    expect(protoState.problem?.code).toBe('OGRAF_PACKAGE_UNSAFE_PATH');
   });
 
   it('refuses a prototype-sensitive path segment and imports a plain two-file package', () => {

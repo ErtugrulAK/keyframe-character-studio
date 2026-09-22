@@ -246,6 +246,7 @@ approved install step, which is what a fresh clone will get.
 | `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `npm audit` | 0 vulnerabilities |
 | `git diff --check` | clean |
+| Independent review (read-only `reviewer-agent`) | round 1 **BLOCKED** — one medium finding: `NEXT_SESSION.md` still carried the Option B merge status and the old state-check count, mirrored into the bundle and the one-file; fixed in `cfd6649`. Round 2 **READY** — no findings, all four prior blockers (Node range, lockfile root metadata, manifest heading, state-check count) closed, fast-forward topology verified (`752ca28 → 610ab8c → 72dfadf → cfd6649`) |
 
 ## 6. Note on a working-tree accident during this task
 
@@ -577,7 +578,7 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `PROJECT_STATE.md` — 16433 bytes
 - `README.md` — 2885 bytes
 - `manifest.txt` — 2358 bytes
-- `progress_131_engines_allow_scripts.md` — 5408 bytes
+- `progress_131_engines_allow_scripts.md` — 5878 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

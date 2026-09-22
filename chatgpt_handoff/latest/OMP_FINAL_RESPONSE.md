@@ -1,60 +1,62 @@
-# KCS Milestone F Item 10 Final Slice — Final Response (Import Entry Point + Report UX)
+# KCS Milestone F Item 12 — Final Response (Unified Import Entry)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** done and merged. `feat/lottie-import-entry-report-ux` was fast-forward merged into `main` at `3b30bff` (base `main` was `5dc1f7b`) and pushed; the branch is kept.
-- **Report:** `reports/progress_127_lottie_import_entry_report_ux.md`. **Design:** `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`.
-- Milestone F item 10 is complete: the importer now has a user-facing entry point, and nothing about the project changes until the user accepts the report.
+- **Status:** done and merged. `feat/unified-import-entry` was fast-forward merged into `main` at `ce6cec2` (base `main` was `81b87a3`) and pushed; the branch is kept.
+- **Report:** `reports/progress_128_unified_import_entry.md`.
+- One import control replaces the fragmented ones, and it decides what a file is from its **content**, never from its name alone.
 
 ## 2) WHAT CHANGED
 
 | File | Change |
 |---|---|
-| `src/components/Header/HeaderBar.tsx` | A separate **Import Lottie** control (its own `.json`/`.lottie.json` input) next to the untouched project Import; the file is read as text, parsed in memory, and held as a pending report. Confirm applies through `importProject`; cancel clears the pending state only. The existing input also gained an `aria-label` |
-| `src/components/Modal/LottieImportReportDialog.{tsx,css}` | New report dialog: counts, blockers first, each diagnostic with its code, message, source path and action, a 40-entry cap with a remaining count, display-sanitised values, Escape/Tab handling and a confirm button that is disabled for a refusal or a blocker |
-| `src/interop/lottie/mapDocument.ts` | Imported rectangles, rounded rectangles, ellipses and solids become their own **path** on the supported `custom_freeform` type (the KCS rect/circle primitives draw a canonical size); Lottie's relative tangents become the **absolute** `handleIn`/`handleOut` control points the renderer reads; the shape-group code and the malformed-size reports now say what actually happens |
-| `src/tests/lottieImport.test.ts` | 88 cases (was 86): the generated geometry, the ellipse size, the half-readable size report |
-| `src/tests/lottieImportEntry.test.tsx` | New, 12 cases: report before replace, cancel as a no-op (including no manual save), apply through the project authority, refusal from either side, blocker order, list cap, sanitisation, focus trap, and the untouched `.kcs`/OGraf routing |
-| `e2e/lottie-import-report.spec.ts` | New real-browser smoke: report appears, cancel keeps the seeded project, confirm replaces it |
+| `src/utils/importDispatch.ts` | New `classifyImport(fileName, text)`: package names first, then the boundary size gate (no parse), then one parse shared by an OGraf-schema check and a Lottie shape check, with the KCS scene/legacy decision delegated to `validateImportedDocument` |
+| `src/components/Header/HeaderBar.tsx` | One `Import` button and input (`.json`, `.kcs`, `.lottie.json`, `.ograf.json`, `.zip`, `.ograf`) whose label names every accepted kind; the separate `Import Lottie` control is gone; the handler routes each kind to its existing behaviour |
+| `src/components/Modal/ImportReportDialog.{tsx,css}` | The Lottie report dialog generalised with a `title` prop (renamed from `LottieImportReportDialog`) so the OGraf package slice can reuse it; its accessibility, sanitiser, blocker-first order and 40-entry cap are unchanged |
+| `src/tests/importDispatch.test.ts` | New, 4 cases: the classification matrix, content-over-extension, the unclassifiable cases, the OGraf-marker precedence and the oversized route |
+| `src/tests/lottieImportEntry.test.tsx` | 13 cases rewritten around the single control: report/cancel/apply, KCS import, OGraf rejection, unclassifiable refusal, refusal dialog, focus trap, sanitisation, cap |
+| `e2e/lottie-import-report.spec.ts` | 2 browser tests: the Lottie report flow, and a `.kcs` project importing through the same control while a refused file changes nothing |
 
 ## 3) VALIDATION
 
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b && vite build`) | PASS |
-| `npx vitest run src/tests/lottieImport.test.ts src/tests/lottieImportEntry.test.tsx` | PASS — 100 cases |
-| `npm test` (full Vitest) | PASS — 121 files / 1,836 tests |
+| focused suites (`importDispatch`, `lottieImportEntry`, `lottieImport`) | PASS — 105 cases |
+| `npm test` (full Vitest) | PASS — 122 files / 1,841 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
 | `npm run qa:release` | PASS — 2 Chromium smoke tests |
-| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 1 real-browser test |
-| `node scripts/check-state-consistency.mjs` | PASS once the handoff bundle mirrors the updated root documents (this refresh) |
+| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 2 real-browser tests |
+| `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
 ## 4) REVIEW
 
-Four independent read-only rounds (`reviewer-agent`, evidence-cited):
+Three independent read-only rounds (`reviewer-agent`, evidence-cited):
 
 | Round | Verdict | Findings |
 |---|---|---|
-| 1 | BLOCKED | 5: the layer-type reconciliation did not preserve what the source drew; the Tab trap leaked when confirming was impossible; a shape-group report claimed flattening; the diagnostic code was not sanitised; several test gaps |
-| 2 | BLOCKED | 2: the generated curves never reached the renderer (the importer wrote `inX`/`outX` offsets while the canonical vertex carries absolute `handleIn`/`handleOut` — a defect inherited from the earlier slices, so imported paths lost every curve); a half-readable size or a size-less solid silently became an invisible layer |
-| 3 | BLOCKED | 1: in the rounded rectangle the corner control points were attached to the straight edges, so the corners would have rendered as chamfers |
-| 4 | READY WITH WARNINGS | No blocker left; two low notes (a stale sentence in the task report, and two dialog assertions broader than what they proved) — both fixed in `3b30bff` |
+| 1 | BLOCKED | The dispatcher parsed before applying the boundary's size gate; the canonical OGraf schema (`ograf.ebu.io`) was not recognised by content, only by the `/ograf/` substring and the file name; the control's accessible label did not name the legacy and package kinds; the new tests missed both the canonical-schema and the oversized cases |
+| 2 | BLOCKED | The OGraf marker had been moved behind the KCS shape check, so an OGraf-marked document that also carried a KCS shape could reach the project authority |
+| 3 | READY WITH WARNINGS | Every blocker closed; the remaining notes were a duplicated changelog bullet, stale test counts in the report and a misplaced import — all fixed |
+
+The production fixes: the size gate now runs before any parse (so an oversized document is never parsed by the dispatcher), the canonical `OGRAF_GRAPHICS_SCHEMA_URL` authority is reused instead of a substring, and the OGraf marker wins over the KCS shape so an OGraf document can never be applied as a project.
 
 ## 5) SAFETY
 
-- The project is only replaced by an explicit user action; selecting a file cannot mutate state, and cancel performs no save.
-- No network and no filesystem access in the flow; the document text is the only input.
-- Every rendered value passes the existing display sanitiser, so a machine path, a credential-bearing URL or an embedded payload cannot appear in the report.
-- The `.kcs`, legacy, `.ograf.json` and OGraf package routings are unchanged; no renderer or evaluator change; no new dependency and no `package.json`, lockfile or workflow change.
-- Tag `v1.1.0-rc.1` (`46d2a3e…`), the GitHub draft release, npm metadata, `origin/without-mask`, the OMP configuration (`memory.backend: mnemopi`, model roles, provider mappings, `task.maxConcurrency: 8`) and the user folders are unchanged.
+- The validated import boundary is still the only path that turns text into a project, and `importProject` still validates before it applies anything.
+- `.kcs`, legacy, OGraf manifest and OGraf package outcomes are unchanged; the OGraf kinds keep their existing messages.
+- Lottie still reports before it replaces, and cancel still performs no mutation, no save and no toast.
+- No network or filesystem access; the document text is the only input.
+- No renderer/evaluator change, no dependency, and no `package.json`, lockfile or workflow change.
+- Tag `v1.1.0-rc.1` (`46d2a3e…`), the GitHub draft release, npm metadata, `origin/without-mask`, the OMP configuration and the user folders are unchanged.
 - Integration was fast-forward only: no merge commit, no rebase, no force push, no tag change, no branch deletion.
 
 ## 6) NEXT
 
-Item 12's unified import entry — one control that dispatches `.kcs`, legacy, OGraf and Lottie behind a
-shared report surface — and then the approval-gated package/dependency follow-ups (Option B, Option C,
-the `engines` declaration and the npm-12 `allowScripts` decision).
+The OGraf package/editable import expansion (the next task of this orchestrator run), reusing
+`ImportReportDialog` and the same validated apply path; then the approval-gated package and toolchain
+follow-ups (Option B, `engines`/`allowScripts`, Option C).

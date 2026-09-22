@@ -1,25 +1,21 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 10 Import Entry Point + Report UX
+# KCS Minimal ChatGPT Upload Bundle — Milestone F Item 12 Unified Import Entry
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The final product slice of the approved Lottie mapping design
-(`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`), merged into `main` at `3b30bff`:
+The unified import entry (Milestone F item 12), merged into `main` at `ce6cec2`:
 
-- The header offers a separate **Import Lottie** control. Selecting a file parses the document **in
-  memory** and opens a report that lists the blockers and the losses — each with its stable code, its
-  source path and the concrete next step — **before** anything is applied.
-- **Cancel** (button, Escape or backdrop) clears the pending import and nothing else: no project
-  mutation, no history entry, no autosave, no success message. Only **Import and replace project**
-  applies the scene, through the same validated path the project import uses.
-- A refused document never applies and never reports success, and the confirm button is disabled
-  while a blocker is present.
-- Imported layers keep what the source drew: a path, a rectangle, a rounded rectangle, an ellipse and
-  a solid all arrive as a freeform whose own path draws the imported geometry (with Lottie's tangents
-  converted to the absolute handles the renderer reads), while text and images keep their existing KCS
-  types. Every one of those types is accepted by the OGraf export, so an imported scene no longer
-  risks a refusal caused only by the layer type the importer picked.
+- One **Import** control in the header. The selected file is classified by what it **contains**, so a
+  KCS project, a legacy project, an OGraf manifest/package and a Lottie animation all reach their
+  existing importer (and the refusals) through the same button.
+- A Lottie animation still parses in memory and opens a report that lists its blockers and losses
+  with their source paths and next steps **before** anything is applied; **Cancel** clears the pending
+  import and nothing else, and only **Import and replace project** applies the scene through the same
+  validated path the project import uses.
+- Imported Lottie layer types stay ones the editor renders and the OGraf export accepts, and Lottie's
+  relative tangents become the absolute handles the renderer reads, so the imported geometry draws
+  what the source drew.
 
 ## Files
 

@@ -6,10 +6,26 @@ Default API Server URL: `http://localhost:5000`
 
 ---
 
+## Binding and exposure
+
+- **Default bind**: `127.0.0.1` (this machine only). The API is a local backend for the editor, and
+  the editor itself persists through browser local storage — it does not call this API.
+- **Opt-in**: set `KCS_API_HOST` to bind a wider interface (for example `0.0.0.0`, or a specific
+  address). The server prints a warning naming what it published and how to undo it.
+- **Authentication**: none. There is no authentication or authorization anywhere in `server/`, so
+  any client that can reach the port can read, overwrite and delete the stored projects. Do not put
+  this API on a network without adding authentication first.
+- **CORS is not authorization**: cross-origin requests are enabled (`cors()` with no allowlist), and
+  CORS is enforced by browsers, not by the server. It does not stop a non-browser client, and it does
+  not stop a page on this machine from reaching a local API. Treat it as a convenience for browser
+  clients, never as access control.
+
+---
+
 ## Headers & Content Types
 
 - **Content-Type**: `application/json`
-- **CORS**: Enabled for cross-origin requests.
+- **CORS**: Enabled for cross-origin requests (see "Binding and exposure" — this is not access control).
 - **Payload Limit**: `50mb`
 
 ---

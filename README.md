@@ -291,6 +291,23 @@ The Express backend exposes endpoints for project persistence, motion presets, a
 
 *(For full endpoint request/response payloads, see [docs/API.md](docs/API.md))*
 
+### Where the API listens
+
+The API binds **`127.0.0.1` by default**, so only this machine can reach it. It has **no
+authentication and no authorization**, and CORS does not restrict who may call it — cross-origin
+requests are enabled, and CORS is a browser rule, not access control. Exposing it beyond this
+machine therefore publishes a writable project store to that network.
+
+Reaching a wider interface is an explicit opt-in:
+
+```bash
+KCS_API_HOST=0.0.0.0 npm run server   # every interface — the server warns when you do this
+KCS_API_HOST=192.168.1.10 npm run server
+```
+
+Leave `KCS_API_HOST` unset (or `127.0.0.1`) to keep the API local. Putting it on a network should be
+paired with authentication of your own; nothing in this repository provides it.
+
 ---
 
 ## 📜 NPM Scripts Reference

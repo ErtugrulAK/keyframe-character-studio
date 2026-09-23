@@ -1,22 +1,23 @@
-# KCS ChatGPT Upload Manifest — Task D (OGraf inverse alpha matte)
+# KCS ChatGPT Upload Manifest — Task E (API trust boundary)
 
 Clean refreshed: YES
-Bundle purpose: the inverted track matte inversion fix (review finding H-02)
+Bundle purpose: the API bind and exposure model (review finding H-06)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/ograf-inverse-alpha-matte, base main at 85c3929 — not merged; the merge decision is with the user
-Task record: reports/progress_137_ograf_inverse_alpha_matte.md
-What changed: src/ograf/svgRenderer.ts (an inverted matte is a luminance mask with a white backdrop and a black source, for both modes; renderText treats a caller's paint as an override), src/ograf/runtimeTemplate.ts (the generated runtime mirrors both), src/tests/ografGeneratedParity.test.ts (the definition both renderers emit, plus a normal-alpha regression guard), e2e/ograf-matte-visual.spec.ts (new: pixel proof in Chromium)
-Root cause: measured in Chromium — an alpha mask with a black source is opaque inside and outside; a luminance mask with a white backdrop and a black source inverts correctly
-Sibling defect found by the new pixel test: the inverted luminance matte had no backdrop and was transparent everywhere outside the source; both modes now share one construction
-Security: no new input surface; no dependency change
-Validation: npm test PASS (125 files / 1,914 tests); npm run build PASS (tsc -b + vite); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate 85c3929); e2e/ograf-matte-visual.spec.ts PASS (4 pixel cases, 3 fail pre-fix); e2e/track-matte.spec.ts PASS (82 editor matte cases, 4.8 min); state check PASS; git diff --check clean
-Next work: Task E (API trust boundary — H-06), then F (M-04), G (M-05), each with its own branch, validation and merge gate
+Branch: fix/api-network-trust-boundary, base main at ac3bda1 — not merged; the merge decision is with the user
+Task record: reports/progress_138_api_trust_boundary.md
+Audit: the editor persists through local storage and never calls the API; the API is documented at localhost only; no LAN/shared use is documented; server/ has no authentication code — a local single-user product
+What changed: server/bindHost.js (new: the bind decision, pure and testable), server/index.js (listens on the resolved host and warns when it leaves this machine), src/tests/apiBindHost.test.ts (new: 12 cases), .env.example, README.md and docs/API.md (the bind, the opt-in, and that the API has no authentication and CORS is not access control)
+Evidence: default start logs http://127.0.0.1:5099 (this machine only) and GET /api/health returns 200 with GET /api/projects succeeding; KCS_API_HOST=127.0.0.2 binds exactly that address (health 200 there) while the same port on 127.0.0.1 refuses with ECONNREFUSED; the tracked SQLite file is untouched by running the real server
+Not changed: no authentication or authorization was added (out of scope by the task's instruction); no route, payload limit, database access, CORS configuration or dependency changed
+Security: the unauthenticated writable project store is no longer published to every interface by default; CORS is deliberately unchanged and is documented as not being access control
+Validation: npm test PASS (126 files / 1,926 tests); npm run build PASS (tsc -b + vite); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate ac3bda1); state check PASS; git diff --check clean
+Next work: Task F (profiler fixtures — M-04), then G (live docs and the state checker — M-05), each with its own branch, validation and merge gate
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_137_ograf_inverse_alpha_matte.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_138_api_trust_boundary.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

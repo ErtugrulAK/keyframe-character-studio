@@ -1,74 +1,61 @@
-# KCS Post-Review Correctness Fix — Task D Final Response (OGraf inverse alpha matte)
+# KCS Post-Review Correctness Fix — Task E Final Response (API trust boundary)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on `fix/ograf-inverse-alpha-matte` (base `main` at `85c3929`); the merge decision is with the user.
-- **Report:** `reports/progress_137_ograf_inverse_alpha_matte.md`.
-- **Finding closed:** H-02 — the OGraf inverse alpha matte did not invert alpha.
+- **Status:** implemented on `fix/api-network-trust-boundary` (base `main` at `ac3bda1`); the merge decision is with the user.
+- **Report:** `reports/progress_138_api_trust_boundary.md`.
+- **Finding closed:** H-06 — the writable API could be exposed on network interfaces without authentication.
 
-## 2) WHAT WAS WRONG
+## 2) AUDIT FIRST: WHAT THE PRODUCT IS
 
-The export renderer and the generated runtime built an inverted alpha matte as an **alpha** mask holding a white full-region path plus the source painted black. In an alpha mask, black paint keeps its alpha at 1, so the "hole" stayed opaque: the target rendered as if it had no matte at all. Measured in Chromium before the change — inside the source `255`, outside `255`.
+- The editor persists through browser local storage; **nothing in `src/` calls this API** (the only `fetch` in the app fetches OGraf legacy assets).
+- `README.md` and `docs/API.md` document the API at `http://localhost:5000` only. Nothing in the repository mentions a LAN, a shared server, a remote host or multiple users.
+- `server/` contains no authentication, authorization, token, session, login or credential code at all.
+- What was actually exposed: `app.listen(PORT, '0.0.0.0')` — every interface — with `cors()` unrestricted and the project routes reachable with no credentials.
 
-The editor's own matte authority already documented and used the correct technique, and its browser specs pinned the outcome. The export renderer had drifted from that authority.
+**Conclusion: a local, single-user application**, so the task's preferred resolution applies. No authentication system was invented, because the product does not claim a shared deployment and that would be an unapproved architecture change.
 
-## 3) THE MEASURED ROOT CAUSE
+## 3) WHAT CHANGED
 
-A probe of five mask formulations in Chromium decided the fix:
+- `server/bindHost.js` (new): the bind decision, pure and testable — `DEFAULT_API_HOST = '127.0.0.1'`, `resolveBindHost(env)` reading the namespaced `KCS_API_HOST`, `isLoopbackHost`, and the line the server prints. Blank or absent means the default; a named address is taken verbatim.
+- `server/index.js`: `app.listen(PORT, bind.host)`. A loopback bind reports the URL and says "this machine only"; anything wider **warns** with what was published and the variable that puts it back.
+- `src/tests/apiBindHost.test.ts` (new): the default, the blank-value case, the opt-in, the loopback set, the non-loopback set, and that the warning appears only for the wider bind.
+- `.env.example`, `README.md` and `docs/API.md` document the bind, the opt-in, and that the API has no authentication and that CORS is not access control.
 
-| Formulation | Inside source | Outside source |
-|---|---|---|
-| alpha mask + white backdrop + black source (**what was emitted**) | opaque | opaque |
-| luminance mask + white backdrop + black source | **transparent** | **opaque** |
-| alpha mask with a single evenodd hole path | transparent | opaque |
-| alpha mask with the source painted white (the normal case) | opaque | transparent |
-
-The luminance form is the only one that is both correct and general: an evenodd hole needs the source geometry as a path, which text and image sources cannot provide.
-
-## 4) WHAT CHANGED
-
-- An inverted matte now emits a **luminance** mask with a white backdrop and the source painted black — the technique the editor documents — and declares the model it uses while its id keeps naming the relationship.
-- **The sibling branch had the same defect**, found by the new pixel test: the inverted *luminance* matte had no backdrop, so the mask was transparent everywhere outside the source (inside `255`, outside `0`). Both inverted modes now share one construction and the `feComponentTransfer` branch is gone.
-- **Text matte sources are painted black.** The text renderer emitted its own `fill` and appended the caller's, so a browser used the layer colour and a dark text produced no hole; the override now replaces the layer's paint, which also removes the duplicate, invalid attributes that path emitted.
-- The generated runtime mirrors all of it, including a `fillOverride` argument on its `text()`, so the two renderers cannot drift apart.
-
-## 5) EVIDENCE
-
-A new browser spec, `e2e/ograf-matte-visual.spec.ts`, rasterizes the real exported SVG in Chromium and samples the alpha inside the source and inside the target but outside the source:
-
-| Case | Before | After |
-|---|---|---|
-| inverted alpha | fail (opaque everywhere) | inside transparent, outside opaque |
-| inverted luminance | fail (transparent outside) | inside transparent, outside opaque |
-| generated runtime, inverted alpha | fail | matches the canonical renderer pixel for pixel |
-| normal alpha (regression guard) | pass | pass |
-
-The unit test that asserted `fill-rule="evenodd"` (a no-op on a single subpath) and the `fill="black"` string was replaced: it pinned the broken construction instead of its result. It now pins the mask model and the two paints for both renderers, plus that a normal alpha matte still declares `mask-type="alpha"` with no backdrop.
-
-## 6) VALIDATION
+## 4) EVIDENCE (real server, not a simulation)
 
 | Check | Result |
 |---|---|
-| `e2e/ograf-matte-visual.spec.ts` | PASS — 4 pixel cases (3 fail against the pre-fix code) |
-| `src/tests/ografGeneratedParity.test.ts` | PASS — 9 tests |
-| `npm test` | PASS — 125 files / 1,914 tests |
+| Default start (`PORT=5099`, no `KCS_API_HOST`) | ready log: `http://127.0.0.1:5099 (this machine only)` |
+| `GET /api/health` on `127.0.0.1:5099` | **200** — `{"status":"online",...}` |
+| `GET /api/projects` on `127.0.0.1:5099` | `success: true`, `source: sqlite` |
+| Opt-in start (`KCS_API_HOST=127.0.0.2`, `PORT=5098`) | ready log: `http://127.0.0.2:5098` |
+| `GET /api/health` on `127.0.0.2:5098` | **200** |
+| Same port on `127.0.0.1:5098` | **ECONNREFUSED** — the bind is the named address, not every interface |
+| Working tree after running the real server | unchanged (the tracked SQLite file was not written) |
+
+## 5) VALIDATION
+
+| Check | Result |
+|---|---|
+| `src/tests/apiBindHost.test.ts` | PASS — 12 tests |
+| `npm test` | PASS — 126 files / 1,926 tests |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `85c3929` |
-| `e2e/track-matte.spec.ts` (the editor's own matte suite) | PASS — 82 tests in 4.8 min |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `ac3bda1` |
 | `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
-## 7) SELF-REVIEW NOTES
+## 6) SELF-REVIEW NOTES
 
-- One construction for both inverted modes, taken from the editor authority rather than invented, so the export matches what the editor shows.
-- The mask id is unchanged, so references and diagnostics keep working; the normal (non-inverted) path is byte-for-byte what it was.
-- Image sources cannot be repainted, so the luminance mask reads the image's own luminance — exactly what the editor does for an inverted image matte, and its spec asserts that structure.
-- `renderText` only takes the changed branch when a caller passes paint (the matte path), so ordinary text rendering is untouched.
+- **The bind test is a unit test plus a recorded manual run.** A test that starts the real server opens `server/db/keyframe_studio.sqlite`, which is **tracked in git**; a write there would leave a modified binary in the tree. The pure decision is unit-tested and the real behaviour was exercised against a running server, with its output recorded above.
+- **`KCS_API_HOST`, not `HOST`:** a bare `HOST` is commonly exported by shells, and a stray value would have widened the bind silently.
+- **CORS is deliberately unchanged and is not presented as protection.** Narrowing it would change behaviour for anyone running the API against a different frontend origin; the finding is about network exposure. The risk it does not close — a page in a browser on this machine can still reach a local API, and CORS does not stop a non-browser client — is now stated in `docs/API.md`. Recorded as an adjacent risk needing its own product decision.
+- `vite --host` in `npm run dev` still publishes the frontend dev server to the network: a deliberate dev convenience for a static editor with no server-side data, and not the writable API.
 
-## 8) NEXT
+## 7) NEXT
 
-- Task E (API trust boundary: H-06), then F (profiler fixtures: M-04) and G (live docs and the state checker: M-05) — each on its own branch with its own validation and merge gate.
+- Task F (profiler fixtures: M-04), then G (live docs and the state checker: M-05) — each on its own branch with its own validation and merge gate.

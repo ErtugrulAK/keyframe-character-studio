@@ -1,31 +1,30 @@
-# KCS Minimal ChatGPT Upload Bundle — Task D (OGraf inverse alpha matte)
+# KCS Minimal ChatGPT Upload Bundle — Task E (API trust boundary)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-H-02 from the full-project review, on `fix/ograf-inverse-alpha-matte` from `main` at `85c3929`:
+H-06 from the full-project review, on `fix/api-network-trust-boundary` from `main` at `ac3bda1`:
 
-- An inverted track matte in an exported OGraf graphic now actually inverts. It was built as an
-  **alpha** mask holding a white backdrop and the source painted black; in an alpha mask that black
-  keeps its alpha at 1, so the "hole" stayed opaque and the target rendered as if it had no matte.
-  It is now a **luminance** mask with a white backdrop and the source painted black — the technique
-  the editor's own matte authority documents — verified by sampling pixels in Chromium.
-- The inverted **luminance** matte had the same defect in the sibling branch: it had no backdrop, so
-  the mask was transparent everywhere outside the source. Both inverted modes now share one
-  construction and the `feComponentTransfer` branch is gone.
-- Text matte sources are painted black for the hole; the text renderer had emitted its own `fill`
-  first and appended the caller's, so a browser used the layer colour and a dark text produced no
-  hole. The duplicate, invalid attributes that path emitted are gone with it.
-- The generated runtime mirrors all of it, and the new browser spec renders both authorities and
-  compares their pixels.
-- Reproduced before the change (3 of 4 pixel cases fail) and closed after it. No new dependency,
-  workflow, tag or release action.
+- **Audit first:** the editor persists through browser local storage and **nothing in `src/` calls the
+  API**; the API is documented at `localhost:5000` only; nothing mentions a LAN, a shared server or
+  multiple users; `server/` contains no authentication code at all. The product is a local,
+  single-user application, so the task's preferred resolution applies and no authentication system was
+  invented.
+- The REST API now binds **`127.0.0.1`** instead of every interface, so the unauthenticated project
+  store is reachable from this machine only. Reaching a wider interface is an explicit opt-in
+  (`KCS_API_HOST`), and the server warns with what it published and how to undo it.
+- Proven against a running server: the default binds loopback and `GET /api/health` returns 200; the
+  opt-in binds exactly the address named and the same port on the default address refuses
+  (`ECONNREFUSED`).
+- `README.md` and `docs/API.md` now state that the API has no authentication and that CORS is not
+  access control; `.env.example` documents the variable. No dependency, workflow, tag or release
+  change.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_137_ograf_inverse_alpha_matte.md` — the task record
+- `progress_138_api_trust_boundary.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action

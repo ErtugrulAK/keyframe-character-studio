@@ -1,63 +1,55 @@
-# KCS Milestone D Item 9 Follow-Up — Final Response (`engines` + npm-12 `allowScripts`)
+# KCS Post-Review Correctness Fix — Task A Final Response (modal / global shortcut isolation)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on `chore/engines-allow-scripts` (base `main` at `752ca28`); the merge decision is with the user.
-- **Report:** `reports/progress_131_engines_allow_scripts.md`.
-- **Decision (user):** close the `engines` and npm-12 `allowScripts` follow-up first, on its own branch, with an independent review before the merge.
+- **Status:** merged into `main` by fast-forward (`0c19751`) and pushed; CI green.
+- **Report:** `reports/progress_134_modal_shortcut_isolation.md`.
+- **Finding closed:** H-01 from the full-project review — a blocking dialog could be open while the editor's global mutation shortcuts stayed live.
 
-## 2) WHAT CHANGED
+## 2) WHAT WAS WRONG
 
-`package.json` declares the policy, and `package-lock.json` mirrors the root engine metadata:
+`useKeyboardShortcuts` bound the editor's global commands on `window` (`Delete`/`Backspace`, undo/redo, copy/paste, duplicate, the tool keys and the zoom keys) and only skipped them while an editable element held focus. The dialogs handled `Escape` and `Tab` themselves and left the rest of the keyboard to the editor.
 
-```json
-"engines": { "node": "^22.22.2 || ^24.15.0 || >=26.0.0" },
-"allowScripts": { "sqlite3@6.0.1": true }
-```
+So with the Lottie or OGraf import report open, focus on its Cancel button and `Delete` pressed, **the selected layer of the current project was deleted while the report stayed open** — the dialog's "nothing is applied until you accept" contract was not what the keyboard did.
 
-- The Node range is the intersection required by the locked toolchain: `jsdom@30.0.1` requires
-  `^22.22.2 || ^24.15.0 || >=26.0.0`; Vite and its React plugin are broader. CI's Node 22 lane and the
-  local Node 24.18.0 runtime are supported. The declaration is advisory, but it excludes unsupported
-  early Node 22 and odd-major runtimes.
-- The `allowScripts` entry is **pinned to `sqlite3@6.0.1`**, so a future release needs a new, deliberate approval. Older npm versions ignore the field, which leaves Node 22's bundled npm behaviour unchanged.
+## 3) WHAT CHANGED
 
-No dependency version, script, workflow, `.npmrc`, tag or release change. `package-lock.json` changed
-only at `packages[""].engines`; the dependency graph is unchanged.
+- **`src/utils/modalBoundary.ts` (new).** The blocking-dialog contract: `aria-modal="true"`, read through one React-free predicate. Reading the rendered contract keeps one authority — the dialog itself — and covers dialogs added later without a second registry that could drift from what is on screen.
+- **`src/hooks/useKeyboardShortcuts.ts`.** The keydown handler returns before any command while a blocking dialog is on screen. One central guard, not a per-command special case.
+- **`src/components/Modal/NewItemModal.tsx`.** It was the one dialog that did not declare the contract, so the guard could not see it, and its `Escape` only worked from its input. It now declares `role="dialog"` / `aria-modal` / `aria-labelledby` and owns `Escape` at the dialog level, the same pattern the other two dialogs already use.
 
-## 3) WHY THE APPROVAL IS RIGHT
-
-`sqlite3@6.0.1` declares `"install": "prebuild-install -r napi || node-gyp rebuild"`: it **first downloads a prebuilt NAPI binding** and only falls back to a source build. npm 12 blocks that step without an approval, which left a fresh install without the binding and the API server without a database driver. Approving it restores the toolchain-free path.
+Popovers that deliberately leave the editor active (the Inspector's in/out preset cards) declare `role="dialog"` **without** `aria-modal`, so they are not matched — a case pins that so the guard cannot silently grow to swallow them.
 
 ## 4) EVIDENCE
 
-| Check | Result |
-|---|---|
-| `npm install-scripts ls --json` before | `sqlite3@6.0.1` pending, i.e. blocked |
-| `npm install-scripts ls --json` after | `{"allowScripts": []}` — nothing blocked |
-| End-to-end proof | deleted `node_modules/sqlite3/build`, ran the approved install script → `node_sqlite3.node` restored from the prebuilt download, binding loads (`create table` OK) |
-| Server runtime | `node server/index.js` starts, `GET /api/health` → **200** |
-| Lockfile | `npm install --package-lock-only --ignore-scripts` synchronized only `packages[""].engines`; the dependency graph is unchanged |
+- **Reproduced first:** 16 of the 18 new cases fail without the guard.
+- **After the fix:** 18 of 18 pass, twice in a row.
+- The two cases that pass either way are the boundaries that must not move: a non-modal Inspector popover stays inside the editor, and an editable element is still ignored.
+- The suite drives the **real** dialogs, so the rendered contract is what the guard is measured against, not a stand-in.
 
 ## 5) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npm run build`, `npx tsc --noEmit` | PASS / clean |
-| `npm test` | PASS — 124 files / 1,858 tests |
-| `npm run lint` | clean (exit 0) |
-| `npm run validate:ograf`, `npm run qa:release` | PASS (2 Chromium tests) |
+| Focused suite (`src/tests/modalShortcutIsolation.test.tsx`) | PASS — 18 tests |
+| `npm test` | PASS — 125 files / 1,876 tests |
+| `npx tsc --noEmit` | clean |
+| `npm run lint` | clean |
+| `npm run build` | PASS |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
-| `npm audit` | 0 vulnerabilities |
+| `git diff --check` | clean |
 
-## 6) SAFETY NOTES
+## 6) SELF-REVIEW (read-only, same model)
 
-- `npm install-scripts deny sqlite3 --dry-run` wrote `"allowScripts": { "sqlite3": false }` into `package.json` despite `--dry-run` (the field did not exist in `HEAD`). That unintended entry was removed and replaced with the deliberate, pinned approval above; the final diff contains only the two intended fields. Recorded because an unrequested manifest edit is exactly what the review discipline exists to catch.
-- No tag, release, npm publish or branch deletion; `C:\Users\ertugrul.ak\Desktop\ograf-graphics`, `origin/without-mask`, the OMP configuration and the QA folders were not touched.
+- The guard sits before the editable-element check, so the modal boundary is the outermost rule and the existing protections are untouched.
+- One attribute-selector query per key press: key events are human-rate, and a cached registry would trade this for a second state authority that can drift.
+- Blocking the tool and zoom keys as well is the point of `aria-modal`: while the dialog is up the editor is not the active surface. The canvas toolbar's zoom buttons remain available, so no action becomes unreachable.
+- `InteractiveCubicBezierEditor` already declared `aria-modal` and handles `Escape` itself; it is now guarded like the rest and behaves exactly as before.
+- **Not done here:** restoring focus to the control that opened the import report or the confirmation dialog. Those two dialogs have no previous-focus capture today (only the bezier editor has, and it was left alone), and adding one changes focus behaviour beyond this finding's command-isolation scope. Recorded as an accessibility follow-up.
 
 ## 7) NEXT
 
-Option C (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two
-deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) — each behind its own explicit approval.
+- Task B (import/serialization transaction correctness: H-03, H-04, M-03) is in progress on `fix/import-serialization-transaction-integrity`.
+- Every remaining finding from the review (H-02, H-05, H-06, M-01, M-02, M-04, M-05) still has its own task and merge gate.

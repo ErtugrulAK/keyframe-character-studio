@@ -1,22 +1,22 @@
-# KCS ChatGPT Upload Manifest — Milestone D Item 9 Follow-Up (engines + npm-12 allowScripts)
+# KCS ChatGPT Upload Manifest — Task A (modal / global shortcut isolation)
 
 Clean refreshed: YES
-Bundle purpose: the engines declaration and the npm-12 allowScripts answer (Milestone D item 9 follow-up)
+Bundle purpose: the blocking-dialog keyboard isolation (review finding H-01)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: chore/engines-allow-scripts, base main at 752ca28 — not merged; the merge decision is with the user
-Task record: reports/progress_131_engines_allow_scripts.md
-What changed: package.json declares node ^22.22.2 || ^24.15.0 || >=26.0.0 and approves sqlite3@6.0.1; package-lock.json mirrors only the root engines metadata, with no dependency-graph change
-No dependency version, script, workflow or .npmrc change
-Security: npm audit stays at 0 vulnerabilities; the install-script approval is pinned to sqlite3@6.0.1 so a future release needs a new approval
-Evidence: npm install-scripts ls reports nothing blocked; deleting node_modules/sqlite3/build and running the approved install script restored node_sqlite3.node from the prebuilt download and the binding loads; GET /api/health returns 200
-Validation: npm run build PASS; npx tsc --noEmit clean; full suite PASS (124 files / 1,858 tests); lint clean; npm run validate:ograf PASS; npm run qa:release PASS; playwright lottie spec PASS (3 tests); state check PASS (33); npm audit 0; server GET /api/health 200 with the sqlite3 binding loading
-Next work (approval-gated): Option C majors (typescript 6 to 7, vitest and @vitest/coverage-v8 4 to 5), then the two deferred minor bumps (oxlint 1.85, jsdom 30.1.x)
+Branch: fix/modal-shortcut-isolation at 0c19751, fast-forward merged into main and pushed; CI green on main
+Task record: reports/progress_134_modal_shortcut_isolation.md
+What changed: src/utils/modalBoundary.ts (new, the aria-modal contract), src/hooks/useKeyboardShortcuts.ts (one central guard before any command), src/components/Modal/NewItemModal.tsx (declares the dialog contract and owns Escape at the dialog level)
+Reproduction: 16 of the 18 new cases fail without the guard; 18 of 18 pass with it
+No change to the command set, the text-input/contenteditable protection, or any dialog's Tab/Escape contract
+Security: the guard reads the rendered dialog contract only; no new input surface, no dependency change
+Validation: focused suite PASS (18 tests); npm test PASS (125 files / 1,876 tests); npx tsc --noEmit clean; npm run lint clean; npm run build PASS; playwright lottie-import-report spec PASS (3 tests); git diff --check clean
+Next work: Task B (import/serialization transaction correctness — H-03, H-04, M-03) on fix/import-serialization-transaction-integrity; then H-02, H-05, H-06, M-01, M-02, M-04, M-05, each with its own branch, validation and merge gate
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_131_engines_allow_scripts.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_134_modal_shortcut_isolation.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

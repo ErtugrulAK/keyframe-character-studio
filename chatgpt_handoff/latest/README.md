@@ -1,29 +1,29 @@
-# KCS Minimal ChatGPT Upload Bundle — Milestone D Item 9 Follow-Up (engines + npm-12 allowScripts)
+# KCS Minimal ChatGPT Upload Bundle — Task A (modal / global shortcut isolation)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-The `engines` declaration and the npm-12 install-script policy (Milestone D item 9 follow-up), applied on
-`chore/engines-allow-scripts` from `main` at `752ca28`:
+H-01 from the full-project review: a blocking dialog could be open while the editor's global
+mutation shortcuts stayed live. Fixed on `fix/modal-shortcut-isolation`, fast-forward merged into
+`main` at `0c19751`:
 
-- `package.json` now declares `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` — the intersection
-  required by the locked jsdom/Vite toolchain. CI's Node 22 lane and the local Node 24.18.0 runtime
-  remain supported; the advisory range excludes unsupported early Node 22 and odd-major runtimes.
-- The npm-12 install-script policy is answered with a **version-pinned approval** for
-  `sqlite3@6.0.1` (`allowScripts`), because that package installs by downloading a prebuilt NAPI
-  binding and npm 12 blocks the step without an approval, which left a fresh install without the
-  binding and the API server without a database driver.
-- Proof: deleting `node_modules/sqlite3/build` and running the approved install script restored
-  `node_sqlite3.node` from the prebuilt download, the binding loads, and `GET /api/health` returns 200.
-- No dependency version, script, workflow or `.npmrc` changed. `package-lock.json` changed only at the
-  root `engines` metadata; its dependency graph is unchanged.
+- The editor's global commands (Delete/Backspace, undo/redo, copy/paste, duplicate, the tool keys
+  and the zoom keys) are now inert while a blocking dialog is on screen. The guard reads the
+  dialogs' own `aria-modal` contract, so there is one authority — the dialog — and no second
+  registry that could drift from what is rendered.
+- `NewItemModal` was the one dialog that did not declare that contract, so the guard could not see
+  it, and its `Escape` only worked from its input. It now declares the dialog and owns `Escape` at
+  the dialog level, the same pattern `ConfirmationDialog` and `ImportReportDialog` already use.
+- Reproduced before the change (16 of 18 new cases fail) and closed after it (18 of 18 pass).
+- No change to the command set, to the text-input/contenteditable protection, or to any dialog's
+  `Tab`/`Escape` contract. No dependency, workflow, tag or release change.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_131_engines_allow_scripts.md` — the task record
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the Milestone D status
+- `progress_134_modal_shortcut_isolation.md` — the task record
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy

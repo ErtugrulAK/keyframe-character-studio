@@ -1,22 +1,22 @@
-# KCS ChatGPT Upload Manifest — Task A (modal / global shortcut isolation)
+# KCS ChatGPT Upload Manifest — Task B (import / serialization transaction integrity)
 
 Clean refreshed: YES
-Bundle purpose: the blocking-dialog keyboard isolation (review finding H-01)
+Bundle purpose: the import boundary, round-trip and document-transaction fixes (review findings H-03, H-04, M-03)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/modal-shortcut-isolation at 0c19751, fast-forward merged into main and pushed; CI green on main
-Task record: reports/progress_134_modal_shortcut_isolation.md
-What changed: src/utils/modalBoundary.ts (new, the aria-modal contract), src/hooks/useKeyboardShortcuts.ts (one central guard before any command), src/components/Modal/NewItemModal.tsx (declares the dialog contract and owns Escape at the dialog level)
-Reproduction: 16 of the 18 new cases fail without the guard; 18 of 18 pass with it
-No change to the command set, the text-input/contenteditable protection, or any dialog's Tab/Escape contract
-Security: the guard reads the rendered dialog contract only; no new input surface, no dependency change
-Validation: focused suite PASS (18 tests); npm test PASS (125 files / 1,876 tests); npx tsc --noEmit clean; npm run lint clean; npm run build PASS; playwright lottie-import-report spec PASS (3 tests); git diff --check clean
-Next work: Task B (import/serialization transaction correctness — H-03, H-04, M-03) on fix/import-serialization-transaction-integrity; then H-02, H-05, H-06, M-01, M-02, M-04, M-05, each with its own branch, validation and merge gate
+Branch: fix/import-serialization-transaction-integrity at 214000b, base main at 1291bb8 — not merged; the merge decision is with the user
+Task record: reports/progress_135_import_serialization_integrity.md
+What changed: src/utils/importValidation.ts (semantic pass with stable codes), src/types/composition.ts (PersistedTrackState on SceneData.tracks), src/hooks/useSerialization.ts (write/read the track authoring state and the sequence link), src/hooks/useHistory.ts + src/context/AnimatorContext.tsx (the document travels with the scene snapshot)
+Reproduction: boundary cases refused before/after; 2 history cases and the provider integration case fail without the document restore
+No change to the legacy layerId shape, the documented defaults, the channels-only export policy or the OGraf export mapping
+Security: the boundary fails closed on malformed values before any state is touched; no new input surface, no dependency change
+Validation: npm test PASS (125 files / 1,902 tests); npx tsc --noEmit clean; npm run lint clean; npm run build PASS; npm run validate:ograf PASS; npm run qa:release PASS (candidate 214000b); playwright lottie-import-report spec PASS (3 tests); state check PASS (33); git diff --check clean
+Next work: Task C (Lottie structure correctness — H-05, M-01, M-02), then D (H-02), E (H-06), F (M-04), G (M-05), each with its own branch, validation and merge gate
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_134_modal_shortcut_isolation.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_135_import_serialization_integrity.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

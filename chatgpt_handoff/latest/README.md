@@ -1,28 +1,30 @@
-# KCS Minimal ChatGPT Upload Bundle — Task A (modal / global shortcut isolation)
+# KCS Minimal ChatGPT Upload Bundle — Task B (import / serialization transaction integrity)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-H-01 from the full-project review: a blocking dialog could be open while the editor's global
-mutation shortcuts stayed live. Fixed on `fix/modal-shortcut-isolation`, fast-forward merged into
-`main` at `0c19751`:
+H-03, H-04 and M-03 from the full-project review, on `fix/import-serialization-transaction-integrity`
+from `main` at `1291bb8`:
 
-- The editor's global commands (Delete/Backspace, undo/redo, copy/paste, duplicate, the tool keys
-  and the zoom keys) are now inert while a blocking dialog is on screen. The guard reads the
-  dialogs' own `aria-modal` contract, so there is one authority — the dialog — and no second
-  registry that could drift from what is rendered.
-- `NewItemModal` was the one dialog that did not declare that contract, so the guard could not see
-  it, and its `Escape` only worked from its input. It now declares the dialog and owns `Escape` at
-  the dialog level, the same pattern `ConfirmationDialog` and `ImportReportDialog` already use.
-- Reproduced before the change (16 of 18 new cases fail) and closed after it (18 of 18 pass).
-- No change to the command set, to the text-input/contenteditable protection, or to any dialog's
-  `Tab`/`Escape` contract. No dependency, workflow, tag or release change.
+- **H-03** — the import boundary now also checks the values the renderers and the evaluator read at
+  frame time (scene version, frame rate, timeline length, canvas size, layer ids and z-order, text and
+  coordinate fields, paths, masks, channels, keyframes, sequence entries). A malformed document is
+  refused with a stable code and the offending path before any state is touched. The legacy `layerId`
+  track shape and every documented default stay accepted.
+- **H-04** — a track's `visible`, `editVisible` and `locked` flags and its sequence link are written on
+  export and read back on import, so a muted, canvas-hidden or locked track no longer returns visible
+  after a save/load round-trip.
+- **M-03** — the history snapshot now carries the document-level state, so undoing an import restores
+  the whole document (frame rate, timeline length, canvas, coordinate contract, title, active
+  sequence) with the layers instead of leaving the imported settings on top of the restored scene.
+- Reproduced before the change at three levels (boundary, history hook, provider integration) and
+  closed after it. No new dependency, workflow, tag or release action.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_134_modal_shortcut_isolation.md` — the task record
+- `progress_135_import_serialization_integrity.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action

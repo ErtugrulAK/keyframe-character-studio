@@ -1,55 +1,65 @@
-# KCS Post-Review Correctness Fix — Task A Final Response (modal / global shortcut isolation)
+# KCS Post-Review Correctness Fix — Task B Final Response (import / serialization transaction integrity)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** merged into `main` by fast-forward (`0c19751`) and pushed; CI green.
-- **Report:** `reports/progress_134_modal_shortcut_isolation.md`.
-- **Finding closed:** H-01 from the full-project review — a blocking dialog could be open while the editor's global mutation shortcuts stayed live.
+- **Status:** implemented on `fix/import-serialization-transaction-integrity` (base `main` at `1291bb8`); the merge decision is with the user.
+- **Report:** `reports/progress_135_import_serialization_integrity.md`.
+- **Findings closed:** H-03 (malformed values accepted by the import boundary), H-04 (save/load round-trip loses persistent authoring state), M-03 (import undo restores only part of the document).
 
-## 2) WHAT WAS WRONG
+## 2) H-03 — the boundary now checks what the renderers read
 
-`useKeyboardShortcuts` bound the editor's global commands on `window` (`Delete`/`Backspace`, undo/redo, copy/paste, duplicate, the tool keys and the zoom keys) and only skipped them while an editable element held focus. The dialogs handled `Escape` and `Tab` themselves and left the rest of the keyboard to the editor.
+`validateImportedDocument` checked the fields the **apply** path reads while it queues its updates, but not the values the **renderers and the evaluator** read at frame time. A `textValue` object, a freeform path without points and a channel that is not a keyframe list were accepted, applied, and then crashed or rendered blank long after the import reported success.
 
-So with the Lottie or OGraf import report open, focus on its Cancel button and `Delete` pressed, **the selected layer of the current project was deleted while the report stayed open** — the dialog's "nothing is applied until you accept" contract was not what the keyboard did.
+A second pass now runs before the document reaches the apply path:
 
-## 3) WHAT CHANGED
+- **required** fields are the ones the apply path has no default for (layer `id`, layer `zIndex`, track `partId`);
+- every other consumed field is validated **when present**, because the documented defaults (`0`, `1`, `'none'`, 1920×1080) are what an absent value already means — refusing absence would reject documents the editor applies today;
+- the first problem refuses the whole document.
 
-- **`src/utils/modalBoundary.ts` (new).** The blocking-dialog contract: `aria-modal="true"`, read through one React-free predicate. Reading the rendered contract keeps one authority — the dialog itself — and covers dialogs added later without a second registry that could drift from what is on screen.
-- **`src/hooks/useKeyboardShortcuts.ts`.** The keydown handler returns before any command while a blocking dialog is on screen. One central guard, not a per-command special case.
-- **`src/components/Modal/NewItemModal.tsx`.** It was the one dialog that did not declare the contract, so the guard could not see it, and its `Escape` only worked from its input. It now declares `role="dialog"` / `aria-modal` / `aria-labelledby` and owns `Escape` at the dialog level, the same pattern the other two dialogs already use.
+Stable codes: `KCS_IMPORT_UNSUPPORTED_VERSION`, `KCS_IMPORT_INVALID_TIMELINE`, `KCS_IMPORT_INVALID_CANVAS`, `KCS_IMPORT_INVALID_LAYER`, `KCS_IMPORT_DUPLICATE_LAYER_ID`, `KCS_IMPORT_INVALID_TRACK`, `KCS_IMPORT_INVALID_TEMPLATE` — each with the offending path and a next step.
 
-Popovers that deliberately leave the editor active (the Inspector's in/out preset cards) declare `role="dialog"` **without** `aria-modal`, so they are not matched — a case pins that so the guard cannot silently grow to swallow them.
+**Backward compatibility caught by the suite:** the first cut required `track.partId`, and the existing `P4-S3: imports legacy SceneData with layerId` case failed. v1 files wrote `layerId` and the apply path reads both names, so either one now satisfies the requirement.
 
-## 4) EVIDENCE
+## 3) H-04 — the round-trip
 
-- **Reproduced first:** 16 of the 18 new cases fail without the guard.
-- **After the fix:** 18 of 18 pass, twice in a row.
-- The two cases that pass either way are the boundaries that must not move: a non-modal Inspector popover stays inside the editor, and an editable element is still ignored.
-- The suite drives the **real** dialogs, so the rendered contract is what the guard is measured against, not a stand-in.
+`SceneData.tracks` is now typed `(AnimationTrackData & PersistedTrackState)[]`. The three flags are written on export and read back on import with the documented defaults, and `sequencerTemplateId` is restored. The generated track name, its colour and its `expanded` flag stay session state (the outliner already notes the name is a generated placeholder), and a file written before this contract behaves exactly as it did.
 
-## 5) VALIDATION
+## 4) M-03 — one document transaction
+
+`useHistory` snapshots gained a `document` member (frame rate, timeline length, canvas, coordinate contract, title, active sequence), added through one option pair (`documentState`, `restoreDocumentState`) — the existing authority extended, not a second history system. The recording effect keys on the document's **content**, not its object identity, so a caller that hands over a fresh object every render cannot make every render undoable.
+
+Consequence, stated plainly: a document-level edit now participates in undo/redo, because it is document state an import replaces. Recording triggers are unchanged.
+
+## 5) EVIDENCE
+
+- **H-03:** 11 malformed shapes refused with the expected code and path; 4 legitimate shapes still accepted, including the compatibility fixture that carries no top-level `width`/`height`, a defaults-absent scene, and one with masks, a freeform path and path channels.
+- **H-04:** `visible: false`, `editVisible: false`, `locked: true`, `sequencerTemplateId: 'Out'` all survive the round-trip; a pre-contract file keeps the defaults.
+- **M-03 hook level:** 2 of the new history cases fail without the restore.
+- **M-03 provider level:** the new integration case fails without the restore (`expected 24 to be 60` — the imported frame rate stayed) and passes with it.
+
+## 6) VALIDATION
 
 | Check | Result |
 |---|---|
-| Focused suite (`src/tests/modalShortcutIsolation.test.tsx`) | PASS — 18 tests |
-| `npm test` | PASS — 125 files / 1,876 tests |
+| `npm test` | PASS — 125 files / 1,902 tests |
 | `npx tsc --noEmit` | clean |
 | `npm run lint` | clean |
 | `npm run build` | PASS |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `214000b` |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
+| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `git diff --check` | clean |
 
-## 6) SELF-REVIEW (read-only, same model)
+## 7) SELF-REVIEW NOTES
 
-- The guard sits before the editable-element check, so the modal boundary is the outermost rule and the existing protections are untouched.
-- One attribute-selector query per key press: key events are human-rate, and a cached registry would trade this for a second state authority that can drift.
-- Blocking the tool and zoom keys as well is the point of `aria-modal`: while the dialog is up the editor is not the active surface. The canvas toolbar's zoom buttons remain available, so no action becomes unreachable.
-- `InteractiveCubicBezierEditor` already declared `aria-modal` and handles `Escape` itself; it is now guarded like the rest and behaves exactly as before.
-- **Not done here:** restoring focus to the control that opened the import report or the confirmation dialog. Those two dialogs have no previous-focus capture today (only the bezier editor has, and it was left alone), and adding one changes focus behaviour beyond this finding's command-isolation scope. Recorded as an accessibility follow-up.
+- The pass walks layers, tracks, channels and keyframes once, after the size/depth/prototype checks, so a hostile document is still refused before the walk.
+- `totalFrames` is only required to be a positive number, not to match the playback setter's `[10, 1200]` clamp: the app accepts and clamps a larger value, so a stricter rule here would be stricter than the product. Every value the app can reach is already clamped, so a restored snapshot is verbatim.
+- **`SceneLayer.visible` is deliberately unchanged.** It is written as a constant `true` and read by the OGraf evaluation, i.e. it is the *document's* layer visibility, not the editor's per-track mute. Mapping the editor mute onto it would change what an exported OGraf package renders — a separate product decision, not a round-trip fix.
+- **The legacy project-template registry is not part of the scene history:** a legacy (non-scene) import also registers a project tab, which belongs to the template manager rather than the scene document. A modern scene import — the normal path — is fully covered.
 
-## 7) NEXT
+## 8) NEXT
 
-- Task B (import/serialization transaction correctness: H-03, H-04, M-03) is in progress on `fix/import-serialization-transaction-integrity`.
-- Every remaining finding from the review (H-02, H-05, H-06, M-01, M-02, M-04, M-05) still has its own task and merge gate.
+- Task C (Lottie structure correctness: H-05, M-01, M-02) is next, then D (H-02), E (H-06), F (M-04), G (M-05) — each on its own branch with its own validation and merge gate.

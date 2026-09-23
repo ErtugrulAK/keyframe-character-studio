@@ -349,7 +349,7 @@ On `main` at `64291bc` (the final live-state reconciliation): full Vitest (126 f
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into main, the grouped post-RC roadmap has completed milestones A–G, and `main` is at `64291bc`. Milestone F is complete (its item 10 slices — the Lottie import core `ff32d6c`, the mask/track-matte slice `8670b2a`, the text/image/precomp slice `bda62cb` and the import entry point `3b30bff` — item 11 and item 12 are all merged), milestone G (the post-review correctness follow-up) is complete, and **milestone H (release finalization) is NEXT**.
+The accepted product and security follow-up line is integrated into main, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `64291bc` (the live-state reconciliation). Milestone F is complete (its item 10 slices — the Lottie import core `ff32d6c`, the mask/track-matte slice `8670b2a`, the text/image/precomp slice `bda62cb` and the import entry point `3b30bff` — item 11 and item 12 are all merged), milestone G (the post-review correctness follow-up) is complete, and **milestone H (release finalization) is NEXT**.
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
@@ -599,7 +599,7 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 16303 bytes
 - `NEXT_SESSION.md` — 11256 bytes
 - `OMP_FINAL_RESPONSE.md` — 4175 bytes
-- `PROJECT_STATE.md` — 17411 bytes
+- `PROJECT_STATE.md` — 17452 bytes
 - `README.md` — 3863 bytes
 - `manifest.txt` — 3512 bytes
 - `progress_141_astra_correctness_followup_summary.md` — 12055 bytes

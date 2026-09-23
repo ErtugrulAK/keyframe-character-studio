@@ -1,23 +1,23 @@
-# KCS ChatGPT Upload Manifest — Task E (API trust boundary)
+# KCS ChatGPT Upload Manifest — Task F (evaluator profile fixtures)
 
 Clean refreshed: YES
-Bundle purpose: the API bind and exposure model (review finding H-06)
+Bundle purpose: the evaluator profile harness builds and verifies the workload it measures (review finding M-04)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/api-network-trust-boundary, base main at ac3bda1 — not merged; the merge decision is with the user
-Task record: reports/progress_138_api_trust_boundary.md
-Audit: the editor persists through local storage and never calls the API; the API is documented at localhost only; no LAN/shared use is documented; server/ has no authentication code — a local single-user product
-What changed: server/bindHost.js (new: the bind decision, pure and testable), server/index.js (listens on the resolved host and warns when it leaves this machine), src/tests/apiBindHost.test.ts (new: 12 cases), .env.example, README.md and docs/API.md (the bind, the opt-in, and that the API has no authentication and CORS is not access control)
-Evidence: default start logs http://127.0.0.1:5099 (this machine only) and GET /api/health returns 200 with GET /api/projects succeeding; KCS_API_HOST=127.0.0.2 binds exactly that address (health 200 there) while the same port on 127.0.0.1 refuses with ECONNREFUSED; the tracked SQLite file is untouched by running the real server
-Not changed: no authentication or authorization was added (out of scope by the task's instruction); no route, payload limit, database access, CORS configuration or dependency changed
-Security: the unauthenticated writable project store is no longer published to every interface by default; CORS is deliberately unchanged and is documented as not being access control
-Validation: npm test PASS (126 files / 1,926 tests); npm run build PASS (tsc -b + vite); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate ac3bda1); state check PASS; git diff --check clean
-Next work: Task F (profiler fixtures — M-04), then G (live docs and the state checker — M-05), each with its own branch, validation and merge gate
+Branch: fix/evaluator-profile-fixtures, base main at 352d272 — not merged; the merge decision is with the user
+Task record: reports/progress_139_evaluator_profile_fixture_fix.md
+What changed: perf/sceneBuilder.ts (baseTransform, real masks on `masks` with canonical BezierPath geometry, production mask channel keys, maskPathChannels, no cast), perf/evaluator-profile.perf.ts (verifyScene runs before any timing and the report carries the verification; KCS_PROFILE_OUT writes the report)
+Root cause: the builder wrote `transform` and `layers`, which the evaluator never reads, behind an `as CharacterPart` cast — 0 layers with a baseTransform, 0 masks against a scenario declaring 40, non-finite opacity, 0 visible layers
+Reproduction: the new verification against the old builder fails with TypeError: Cannot read properties of undefined (reading 'x') at layer.baseTransform
+Baseline: recorded in the report (measured on 352d272, Node v24.18.0 win32/x64, 60 iterations) — numbers only; no comparison to the previous unverified run and no optimisation proposed
+Not changed: no production code, no caching or optimisation, no threshold on any timing, no dependency/workflow/tag/release change
+Validation: perf harness PASS (1 test asserting every scene's verification); npm test PASS (126 files / 1,926 tests); npm run build PASS (tsc -b + vite); npm run lint clean; state check PASS; git diff --check clean
+Next work: Task G (live docs and the state checker — M-05), then the final correctness gate and the finding summary
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_138_api_trust_boundary.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_139_evaluator_profile_fixture_fix.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

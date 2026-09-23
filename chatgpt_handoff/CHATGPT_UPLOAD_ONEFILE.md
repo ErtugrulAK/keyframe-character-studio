@@ -17,92 +17,88 @@
 
 ## 1. OMP Final Response
 
-# KCS Post-Review Correctness Fix — Task E Final Response (API trust boundary)
+# KCS Post-Review Correctness Fix — Task F Final Response (evaluator profile fixtures)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on `fix/api-network-trust-boundary` (base `main` at `ac3bda1`); the merge decision is with the user.
-- **Report:** `reports/progress_138_api_trust_boundary.md`.
-- **Finding closed:** H-06 — the writable API could be exposed on network interfaces without authentication.
+- **Status:** implemented on `fix/evaluator-profile-fixtures` (base `main` at `352d272`); the merge decision is with the user.
+- **Report:** `reports/progress_139_evaluator_profile_fixture_fix.md`.
+- **Finding closed:** M-04 — the harness did not construct or measure the workload it described.
 
-## 2) AUDIT FIRST: WHAT THE PRODUCT IS
+## 2) WHAT WAS WRONG
 
-- The editor persists through browser local storage; **nothing in `src/` calls this API** (the only `fetch` in the app fetches OGraf legacy assets).
-- `README.md` and `docs/API.md` document the API at `http://localhost:5000` only. Nothing in the repository mentions a LAN, a shared server, a remote host or multiple users.
-- `server/` contains no authentication, authorization, token, session, login or credential code at all.
-- What was actually exposed: `app.listen(PORT, '0.0.0.0')` — every interface — with `cors()` unrestricted and the project routes reachable with no credentials.
-
-**Conclusion: a local, single-user application**, so the task's preferred resolution applies. No authentication system was invented, because the product does not claim a shared deployment and that would be an unapproved architecture change.
+`perf/sceneBuilder.ts` wrote two fields the evaluator never reads, behind an `as CharacterPart` cast that hid both: `transform` instead of `baseTransform`, and `layers` instead of `masks` (plus a `type: 'custom'` that is not a member of the type union). Measured against the old builder: 0 layers with a `baseTransform`, 0 mask arrays against a scenario declaring 40, every evaluated opacity non-finite, and **0 visible layers** — the harness timed a scene that could not be rendered and printed the numbers as its profile.
 
 ## 3) WHAT CHANGED
 
-- `server/bindHost.js` (new): the bind decision, pure and testable — `DEFAULT_API_HOST = '127.0.0.1'`, `resolveBindHost(env)` reading the namespaced `KCS_API_HOST`, `isLoopbackHost`, and the line the server prints. Blank or absent means the default; a named address is taken verbatim.
-- `server/index.js`: `app.listen(PORT, bind.host)`. A loopback bind reports the URL and says "this machine only"; anything wider **warns** with what was published and the variable that puts it back.
-- `src/tests/apiBindHost.test.ts` (new): the default, the blank-value case, the opt-in, the loopback set, the non-loopback set, and that the warning appears only for the wider bind.
-- `.env.example`, `README.md` and `docs/API.md` document the bind, the opt-in, and that the API has no authentication and that CORS is not access control.
+- **Builder:** `baseTransform` + `pivot`, `type: 'custom_freeform'` with a real `path`, masks on `masks` as `LayerMask` with canonical `BezierPath` geometry, mask channel keys from the production helpers (`layerMaskChannel`, `layerMaskPathChannel`), and `maskPathChannels` — which the scenario's own description claimed and never provided. **No cast.**
+- **Harness:** `verifyScene(name, scene)` runs **before** anything is timed and asserts the built layer/track/mask/parent counts, finite base transforms, finite evaluated transforms, opacity and mask values, and that every layer is visible. The report carries a Scene verification table, so a reader sees what was measured.
+- **Report path:** Vitest rejects an unknown `--out`, so the harness reads `KCS_PROFILE_OUT`; without it, "re-run the baseline" could not produce a file at all.
 
-## 4) EVIDENCE (real server, not a simulation)
+## 4) EVIDENCE
 
-| Check | Result |
-|---|---|
-| Default start (`PORT=5099`, no `KCS_API_HOST`) | ready log: `http://127.0.0.1:5099 (this machine only)` |
-| `GET /api/health` on `127.0.0.1:5099` | **200** — `{"status":"online",...}` |
-| `GET /api/projects` on `127.0.0.1:5099` | `success: true`, `source: sqlite` |
-| Opt-in start (`KCS_API_HOST=127.0.0.2`, `PORT=5098`) | ready log: `http://127.0.0.2:5098` |
-| `GET /api/health` on `127.0.0.2:5098` | **200** |
-| Same port on `127.0.0.1:5098` | **ECONNREFUSED** — the bind is the named address, not every interface |
-| Working tree after running the real server | unchanged (the tracked SQLite file was not written) |
+- **Reproduction:** the new verification against the **old** builder fails with `TypeError: Cannot read properties of undefined (reading 'x')` at `layer.baseTransform` — the field was never there.
+- **After the fix:** the harness passes and its verification table reports the real workload (masks, parents and visibility matching the parameters).
+- **Baseline (measured, `352d272`, Node v24.18.0 on win32/x64, 60 iterations, p50/p95 ms):**
+
+| Scene | `evaluateFrame` @ 60 | `evaluateFrame` @ 4 frames | `evaluateTransform` | `interpolateChannel` |
+|---|---|---|---|---|
+| small | 0.0218 / 0.0462 | 0.0466 / 0.0852 | 0.0022 / 0.0026 | 0.0005 / 0.0007 |
+| medium | 0.1262 / 0.2255 | 0.4663 / 0.5815 | 0.0021 / 0.0025 | 0.0005 / 0.0005 |
+| large | 1.2923 / 1.5192 | 5.5438 / 6.0446 | 0.0029 / 0.0036 | 0.0006 / 0.0007 |
+| masks | 0.1457 / 0.2193 | 0.5580 / 0.6764 | 0.0021 / 0.0027 | 0.0005 / 0.0006 |
+
+**These are numbers, not conclusions:** no comparison is drawn to the previous (unverified) numbers, because those measured a different scene, and no optimisation is proposed or implied.
 
 ## 5) VALIDATION
 
 | Check | Result |
 |---|---|
-| `src/tests/apiBindHost.test.ts` | PASS — 12 tests |
-| `npm test` | PASS — 126 files / 1,926 tests |
+| `npx vitest run --config perf/vitest.perf.config.ts` | PASS — 1 test, asserting every scene's verification |
+| Same harness against the pre-fix builder | FAIL — the reproduction above |
+| `npm test` | PASS — 126 files / 1,926 tests (the harness stays out of the default suite) |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npm run lint` | clean |
-| `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `ac3bda1` |
 | `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
 ## 6) SELF-REVIEW NOTES
 
-- **The bind test is a unit test plus a recorded manual run.** A test that starts the real server opens `server/db/keyframe_studio.sqlite`, which is **tracked in git**; a write there would leave a modified binary in the tree. The pure decision is unit-tested and the real behaviour was exercised against a running server, with its output recorded above.
-- **`KCS_API_HOST`, not `HOST`:** a bare `HOST` is commonly exported by shells, and a stray value would have widened the bind silently.
-- **CORS is deliberately unchanged and is not presented as protection.** Narrowing it would change behaviour for anyone running the API against a different frontend origin; the finding is about network exposure. The risk it does not close — a page in a browser on this machine can still reach a local API, and CORS does not stop a non-browser client — is now stated in `docs/API.md`. Recorded as an adjacent risk needing its own product decision.
-- `vite --host` in `npm run dev` still publishes the frontend dev server to the network: a deliberate dev convenience for a static editor with no server-side data, and not the writable API.
+- **Why the verification is runtime, not compile-time:** `perf/` is in no `tsconfig` (`tsconfig.app.json` includes `src` only), so removing the cast does not by itself restore type checking. The verification reads the canonical fields on every layer, so a renamed field now fails the harness loudly — which is exactly what the cast had prevented. Adding `perf` to a project would drag the app's `lib`/`types` settings into it: a build-config change of its own.
+- **Determinism preserved:** no randomness, clock or generated id; mask geometry steps through six sizes and repeats, so keyframes differ while every path stays valid and topologically identical.
+- **Nothing in `src/`:** the change is confined to `perf/`; no optimisation, no caching, no threshold on any timing.
+- **The generated baseline is not committed** (it carries a revision and a timestamp and would go stale); the numbers are recorded in the report with the command that produces them.
 
 ## 7) NEXT
 
-- Task F (profiler fixtures: M-04), then G (live docs and the state checker: M-05) — each on its own branch with its own validation and merge gate.
+- Task G (live docs and the state checker: M-05), then the final correctness gate and the summary that maps every review finding.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Task E (API trust boundary)
+# KCS ChatGPT Upload Manifest — Task F (evaluator profile fixtures)
 
 Clean refreshed: YES
-Bundle purpose: the API bind and exposure model (review finding H-06)
+Bundle purpose: the evaluator profile harness builds and verifies the workload it measures (review finding M-04)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/api-network-trust-boundary, base main at ac3bda1 — not merged; the merge decision is with the user
-Task record: reports/progress_138_api_trust_boundary.md
-Audit: the editor persists through local storage and never calls the API; the API is documented at localhost only; no LAN/shared use is documented; server/ has no authentication code — a local single-user product
-What changed: server/bindHost.js (new: the bind decision, pure and testable), server/index.js (listens on the resolved host and warns when it leaves this machine), src/tests/apiBindHost.test.ts (new: 12 cases), .env.example, README.md and docs/API.md (the bind, the opt-in, and that the API has no authentication and CORS is not access control)
-Evidence: default start logs http://127.0.0.1:5099 (this machine only) and GET /api/health returns 200 with GET /api/projects succeeding; KCS_API_HOST=127.0.0.2 binds exactly that address (health 200 there) while the same port on 127.0.0.1 refuses with ECONNREFUSED; the tracked SQLite file is untouched by running the real server
-Not changed: no authentication or authorization was added (out of scope by the task's instruction); no route, payload limit, database access, CORS configuration or dependency changed
-Security: the unauthenticated writable project store is no longer published to every interface by default; CORS is deliberately unchanged and is documented as not being access control
-Validation: npm test PASS (126 files / 1,926 tests); npm run build PASS (tsc -b + vite); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate ac3bda1); state check PASS; git diff --check clean
-Next work: Task F (profiler fixtures — M-04), then G (live docs and the state checker — M-05), each with its own branch, validation and merge gate
+Branch: fix/evaluator-profile-fixtures, base main at 352d272 — not merged; the merge decision is with the user
+Task record: reports/progress_139_evaluator_profile_fixture_fix.md
+What changed: perf/sceneBuilder.ts (baseTransform, real masks on `masks` with canonical BezierPath geometry, production mask channel keys, maskPathChannels, no cast), perf/evaluator-profile.perf.ts (verifyScene runs before any timing and the report carries the verification; KCS_PROFILE_OUT writes the report)
+Root cause: the builder wrote `transform` and `layers`, which the evaluator never reads, behind an `as CharacterPart` cast — 0 layers with a baseTransform, 0 masks against a scenario declaring 40, non-finite opacity, 0 visible layers
+Reproduction: the new verification against the old builder fails with TypeError: Cannot read properties of undefined (reading 'x') at layer.baseTransform
+Baseline: recorded in the report (measured on 352d272, Node v24.18.0 win32/x64, 60 iterations) — numbers only; no comparison to the previous unverified run and no optimisation proposed
+Not changed: no production code, no caching or optimisation, no threshold on any timing, no dependency/workflow/tag/release change
+Validation: perf harness PASS (1 test asserting every scene's verification); npm test PASS (126 files / 1,926 tests); npm run build PASS (tsc -b + vite); npm run lint clean; state check PASS; git diff --check clean
+Next work: Task G (live docs and the state checker — M-05), then the final correctness gate and the finding summary
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_138_api_trust_boundary.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_139_evaluator_profile_fixture_fix.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
@@ -113,33 +109,32 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Task E (API trust boundary)
+# KCS Minimal ChatGPT Upload Bundle — Task F (evaluator profile fixtures)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-H-06 from the full-project review, on `fix/api-network-trust-boundary` from `main` at `ac3bda1`:
+M-04 from the full-project review, on `fix/evaluator-profile-fixtures` from `main` at `352d272`:
 
-- **Audit first:** the editor persists through browser local storage and **nothing in `src/` calls the
-  API**; the API is documented at `localhost:5000` only; nothing mentions a LAN, a shared server or
-  multiple users; `server/` contains no authentication code at all. The product is a local,
-  single-user application, so the task's preferred resolution applies and no authentication system was
-  invented.
-- The REST API now binds **`127.0.0.1`** instead of every interface, so the unauthenticated project
-  store is reachable from this machine only. Reaching a wider interface is an explicit opt-in
-  (`KCS_API_HOST`), and the server warns with what it published and how to undo it.
-- Proven against a running server: the default binds loopback and `GET /api/health` returns 200; the
-  opt-in binds exactly the address named and the same port on the default address refuses
-  (`ECONNREFUSED`).
-- `README.md` and `docs/API.md` now state that the API has no authentication and that CORS is not
-  access control; `.env.example` documents the variable. No dependency, workflow, tag or release
-  change.
+- The evaluator profile harness now builds the workload it measures. Its scenes carried `transform`
+  instead of `baseTransform` and `layers` instead of `masks` — neither is a field the evaluator reads —
+  behind an `as CharacterPart` cast that hid both, so the profile timed default transforms and **no
+  masks at all** while reporting the scene parameters as if it had.
+- The builder now writes the canonical fields (and real mask geometry on `masks`, with channel keys
+  from the production helpers), and the harness **verifies the built scene before anything is timed**:
+  layer, track, mask and parent counts, finite base transforms, finite evaluated transforms, opacity and
+  mask values, and visible layers. The report carries that verification table.
+- Reproduced: the new verification against the old builder fails with a `TypeError` on
+  `layer.baseTransform`. A re-run baseline is recorded in the report — numbers only, with no comparison
+  to the previous unverified run and no optimisation proposed.
+- The report path also works now (`KCS_PROFILE_OUT`; Vitest rejects the `--out` flag the harness
+  expected). No production code, dependency, workflow, tag or release change.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_138_api_trust_boundary.md` — the task record
+- `progress_139_evaluator_profile_fixture_fix.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
@@ -170,95 +165,120 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 138 — Task E: the API trust boundary
+# Progress 139 — Task F: the evaluator profile harness measures the workload it claims
 
-Branch: `fix/api-network-trust-boundary` (base `main` at `ac3bda1`).
-Finding: **H-06** — the writable API could be exposed on network interfaces without authentication.
+Branch: `fix/evaluator-profile-fixtures` (base `main` at `352d272`).
+Finding: **M-04** — the performance harness did not construct or measure the workload it described.
 
-## 1. Audit first: what this product is
+## 1. What was open
 
-Before any code, the deployment question the task asks for:
+`perf/sceneBuilder.ts` built its layers with two fields the evaluator never reads, and cast the
+result with `as CharacterPart`, which hid both:
 
-| Question | Evidence |
-|---|---|
-| Is the editor local-only? | The editor persists through browser local storage (`AUTOSAVE_STORAGE_KEY`); **nothing in `src/` calls this API** — the only `fetch` in the app fetches OGraf legacy assets. The API is a separate documented surface. |
-| Is LAN/shared use documented or supported? | No. `README.md` and `docs/API.md` document it at `http://localhost:5000` only; nothing in the repository mentions a LAN, a shared server, a remote host or multiple users. |
-| Is there any authentication to build on? | No. `server/` contains no auth, token, session, login or credential code at all. |
-| What was actually exposed? | `app.listen(PORT, '0.0.0.0')` — every interface — with `cors()` unrestricted, and `GET/POST/DELETE /api/projects` plus `POST /api/presets` reachable with no credentials. |
+| Written | The canonical field | Consequence |
+|---|---|---|
+| `transform: {…}` | `baseTransform` | every layer was evaluated with the **default** transform — the profile measured zeros |
+| `layers: [mask]` | `masks` | **no layer carried a mask**, so the "masked-heavy" scene measured no mask work at all |
+| `type: 'custom'` | a member of the `BodyPartType` union | not a real type; only the cast accepted it |
 
-**Conclusion: a local, single-user application.** So the task's preferred resolution applies — bind
-loopback by default, make network exposure an explicit opt-in, document it — and **no authentication
-system was invented**, because the product does not claim a shared deployment and inventing one would
-be an unapproved architecture change.
+Measured against the old builder: 0 layers with a `baseTransform`, 0 mask arrays (against a scenario
+that declares 40), every evaluated opacity non-finite (`NaN`), and **0 visible layers** — the harness
+was timing a scene that could not be rendered, and printing the numbers as a profile of a workload it
+had not built.
 
-## 2. Applied
+## 2. Applied — the builder
 
-- **`server/bindHost.js` (new).** The bind decision, pure and testable: `DEFAULT_API_HOST = '127.0.0.1'`,
-  `resolveBindHost(env)` reading the namespaced `KCS_API_HOST` variable, `isLoopbackHost`, and the line
-  the server prints. A blank or absent setting is the default; a named address is taken verbatim, so an
-  operator can publish one interface instead of all of them.
-- **`server/index.js`.** `app.listen(PORT, bind.host)` instead of `'0.0.0.0'`. On a loopback bind it
-  reports the URL and says "this machine only"; on anything wider it **warns** with what was published
-  and the variable that puts it back.
-- **`src/tests/apiBindHost.test.ts` (new).** The default, the blank-value case, the opt-in, the loopback
-  set (`127.0.0.1`, `127.0.0.5`, `localhost`, `::1`), the non-loopback set (`0.0.0.0`, `192.168.1.10`,
-  `10.0.0.1`), and that the exposure warning appears only for the wider bind.
-- **Documentation.** `.env.example` carries `KCS_API_HOST` with its meaning; `README.md` gains a
-  "Where the API listens" section; `docs/API.md` gains "Binding and exposure" and stops presenting CORS
-  as a protection.
+- `baseTransform` and `pivot`, `type: 'custom_freeform'` with a real `path`, and the mask carried on
+  `masks` as a `LayerMask` with canonical `BezierPath` geometry.
+- The mask channel keys come from the production helpers (`layerMaskChannel`,
+  `layerMaskPathChannel`), so the track cannot drift from what `evaluateLayerMasks` reads — and
+  `maskPathChannels` now exists, which the scenario's own description ("animated mask scalars **and a
+  mask path**") had claimed without providing.
+- **No cast.** The layer is a `CharacterPart` literal, so the field names are the canonical ones.
 
-## 3. Evidence (real server, not a simulation)
+## 3. Applied — the harness
+
+`verifyScene(name, scene)` runs **before** anything is timed and asserts, per scene:
+
+- the built layer and track counts equal the parameters;
+- the layers carrying a mask equal `maskedLayers`, and the layers with a parent equal `parentedLayers`;
+- every layer has a finite base transform, and every evaluated transform, opacity and mask value is
+  finite with a path of at least two points;
+- **every layer is visible** after evaluation (the old scene produced none).
+
+The report now carries a **Scene verification** table with the counts it asserted, so a reader can see
+what was measured rather than trusting the parameter line. A scene that is not the workload it claims
+fails the harness instead of being timed and reported as one.
+
+The report path also works now: Vitest rejects an unknown `--out`, so the harness reads
+`KCS_PROFILE_OUT` from the environment. Without that, "re-run the baseline" could not produce a file
+at all.
+
+## 4. Evidence
 
 | Check | Result |
 |---|---|
-| Default start (`PORT=5099`, no `KCS_API_HOST`) | ready log: `http://127.0.0.1:5099 (this machine only)` |
-| `GET /api/health` on `127.0.0.1:5099` | **200** — `{"status":"online","service":"Keyframe Studio API",...}` |
-| `GET /api/projects` on `127.0.0.1:5099` | `success: true`, `source: sqlite` |
-| Opt-in start (`KCS_API_HOST=127.0.0.2`, `PORT=5098`) | ready log: `http://127.0.0.2:5098` |
-| `GET /api/health` on `127.0.0.2:5098` | **200** |
-| Same port on `127.0.0.1:5098` | **ECONNREFUSED** — the bind is the named address, not every interface |
-| Working tree after running the real server | unchanged (the tracked `server/db/keyframe_studio.sqlite` was not written) |
+| Reproduction | the new verification against the **old** builder fails: `TypeError: Cannot read properties of undefined (reading 'x')` at `layer.baseTransform` — the field was never there |
+| After the fix | the harness passes and its verification table reports the real workload |
+| Old builder, measured | 0/`maskedLayers` masks, 0 visible layers, non-finite opacity, default transforms |
+| New builder, measured | masks, parents and visibility all match the parameters (table below) |
 
-## 4. Validation
+## 5. The re-run baseline (measured, `352d272`, Node v24.18.0 on win32/x64)
+
+Scene verification, asserted before anything was timed:
+
+| Scene | Layers | Tracks | Parented | Masked | Mask scalar kfs | Mask path kfs | Animated kfs | Evaluated | Visible |
+|---|---|---|---|---|---|---|---|---|---|
+| small | 5 | 5 | 0 | 0 | 0 | 0 | 100 | 5 | 5 |
+| medium | 25 | 25 | 5 | 5 | 60 | 60 | 1500 | 25 | 25 |
+| large | 100 | 100 | 20 | 20 | 480 | 480 | 12000 | 100 | 100 |
+| masks | 40 | 40 | 0 | 40 | 480 | 480 | 2400 | 40 | 40 |
+
+Measurements (milliseconds per operation, 60 iterations, p50 / p95):
+
+| Scene | `evaluateFrame` @ frame 60 | `evaluateFrame` @ 4 frames | `evaluateTransform` (first layer) | `interpolateChannel` | `applyEasing` (1k) |
+|---|---|---|---|---|---|
+| small | 0.0218 / 0.0462 | 0.0466 / 0.0852 | 0.0022 / 0.0026 | 0.0005 / 0.0007 | 0.0811 / 0.1021 |
+| medium | 0.1262 / 0.2255 | 0.4663 / 0.5815 | 0.0021 / 0.0025 | 0.0005 / 0.0005 | 0.0683 / 0.0687 |
+| large | 1.2923 / 1.5192 | 5.5438 / 6.0446 | 0.0029 / 0.0036 | 0.0006 / 0.0007 | 0.0685 / 0.0702 |
+| masks | 0.1457 / 0.2193 | 0.5580 / 0.6764 | 0.0021 / 0.0027 | 0.0005 / 0.0006 | 0.0685 / 0.0692 |
+
+**These are numbers, not conclusions.** They are the first baseline produced on a scene whose masks,
+parents and visibility were verified; no comparison to the previous (unverified) numbers is drawn,
+because those measured a different scene, and no optimisation is proposed or implied. A caching
+proposal may cite this table as its "before", on the same scenes and revision.
+
+## 6. Validation
 
 | Check | Result |
 |---|---|
-| `src/tests/apiBindHost.test.ts` | PASS — 12 tests |
-| `npm test` | PASS — 126 files / 1,926 tests |
+| `npx vitest run --config perf/vitest.perf.config.ts` | PASS — 1 test (it asserts every scene's verification) |
+| Same harness against the pre-fix builder | FAIL — `TypeError` on `baseTransform` (the reproduction above) |
+| `npm test` | PASS — 126 files / 1,926 tests (the harness stays out of the default suite) |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npm run lint` | clean |
-| `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `ac3bda1` (the gate starts the real server, which now binds loopback) |
 | `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
-## 5. Self-review (read-only, same model)
+## 7. Self-review (read-only, same model)
 
-- **Why the bind test is a unit test plus a recorded manual run.** A test that starts the real server
-  would open `server/db/keyframe_studio.sqlite`, which is **tracked in git** — a write there would leave
-  a modified binary in the tree. The pure decision is unit-tested; the real behaviour (default bind,
-  health, opt-in, refusal on the default address) was exercised against a running server and is recorded
-  above with its output. The tracked database file is itself a hygiene question, and it is not this
-  finding's to change.
-- **`KCS_API_HOST`, not `HOST`.** A bare `HOST` is commonly exported by shells and terminal tooling; a
-  stray value would have widened the bind silently. The namespaced variable cannot be set by accident.
-- **CORS is deliberately unchanged, and is not presented as protection.** `cors()` still allows any
-  origin. Narrowing it would change behaviour for anyone running the API against a different frontend
-  origin, and the finding is about *network* exposure — but the risk it does not close is worth stating:
-  a page in a browser on this machine can still reach a local API, and CORS does not stop a non-browser
-  client. `docs/API.md` now says exactly that, so no reader mistakes it for access control. Recorded
-  here as an adjacent risk that needs its own product decision.
-- **`vite --host` in `npm run dev` still publishes the frontend dev server to the network.** That is a
-  deliberate dev convenience for a static editor with no server-side data, and it is not the writable
-  API; left as it is.
-- **Preserved workflow:** `npm run dev`, `npm run server` and the release gate's webServer all keep
-  working unchanged, because a loopback bind is what they were documented to use.
+- **Why the verification is runtime, not compile-time.** `perf/` is not part of any `tsconfig`
+  (`tsconfig.app.json` includes `src` only), so removing the cast does not by itself restore type
+  checking. The verification reads the canonical fields on every layer, so a renamed field now fails
+  the harness loudly — which is what the cast had prevented. Adding `perf` to a project would drag the
+  app's `lib`/`types` settings into it, and that is a build-config change of its own.
+- **Determinism is unchanged.** No randomness, clock or generated id was introduced; the mask geometry
+  steps through six sizes and repeats, so keyframes differ while every path stays valid and topologically
+  identical (which is what the path interpolator needs).
+- **No optimisation, no caching, nothing in `src/`.** The change is confined to `perf/`; the production
+  evaluator is untouched.
+- **The generated baseline is not committed.** It carries a revision and a timestamp and would go stale;
+  the numbers are recorded here instead, with the command that produces them.
 
-## 6. Not changed
+## 8. Not changed
 
-- No authentication or authorization was added (out of scope by the task's own instruction).
-- No route, payload limit, database access, CORS configuration or package dependency changed.
-- No new dependency, workflow, tag or release action.
+- No production code, dependency, workflow, tag or release action.
+- No threshold is asserted on any timing: the harness still treats a number as evidence, not a gate.
 
 ---
 
@@ -525,6 +545,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A layer with no animation track now inherits its parent transform. The hierarchy is resolved for every layer; only the keyframe evaluation is skipped, so a static child is no longer placed at its local position while the same child with an empty track was placed correctly.
 - An inverted track matte in an exported OGraf graphic now actually inverts: it is expressed as a luminance mask with a white backdrop and the source painted black, the technique the editor's own matte authority documents, instead of an alpha mask whose black source stayed opaque and left the target unmatted. The inverted luminance matte had the same defect — it had no backdrop, so the mask was transparent everywhere outside the source — and both modes now share one construction. Text matte sources are painted black for the hole as well, instead of keeping their own colour and emitting a duplicate, ignored `fill` attribute. The generated runtime mirrors all of it.
 - The REST API now binds `127.0.0.1` instead of every interface, so the unauthenticated project store is reachable from this machine only. Publishing it to a network is an explicit opt-in (`KCS_API_HOST`), and the server warns with what it published and how to undo it. `README.md` and `docs/API.md` state that the API has no authentication and that CORS is not access control.
+- The evaluator profile harness now builds the workload it measures: its scenes carry a real `baseTransform` and real layer masks (the previous builder wrote `transform` and `layers`, which the evaluator never reads, behind a cast that hid both), and the harness verifies the built scene — layer, track, mask and parent counts, finite transforms and masks, and visible layers — before anything is timed. The report carries that verification, and `KCS_PROFILE_OUT` writes it to a file (Vitest rejects the `--out` flag the harness previously expected).
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.
@@ -574,14 +595,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 12393 bytes
+- `CHANGELOG.md` — 12948 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 14451 bytes
 - `NEXT_SESSION.md` — 12211 bytes
-- `OMP_FINAL_RESPONSE.md` — 4722 bytes
+- `OMP_FINAL_RESPONSE.md` — 4702 bytes
 - `PROJECT_STATE.md` — 16433 bytes
-- `README.md` — 2885 bytes
-- `manifest.txt` — 2821 bytes
-- `progress_138_api_trust_boundary.md` — 5922 bytes
+- `README.md` — 2994 bytes
+- `manifest.txt` — 2612 bytes
+- `progress_139_evaluator_profile_fixture_fix.md` — 6660 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

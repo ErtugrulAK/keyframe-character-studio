@@ -1,30 +1,29 @@
-# KCS Minimal ChatGPT Upload Bundle — Task E (API trust boundary)
+# KCS Minimal ChatGPT Upload Bundle — Task F (evaluator profile fixtures)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-H-06 from the full-project review, on `fix/api-network-trust-boundary` from `main` at `ac3bda1`:
+M-04 from the full-project review, on `fix/evaluator-profile-fixtures` from `main` at `352d272`:
 
-- **Audit first:** the editor persists through browser local storage and **nothing in `src/` calls the
-  API**; the API is documented at `localhost:5000` only; nothing mentions a LAN, a shared server or
-  multiple users; `server/` contains no authentication code at all. The product is a local,
-  single-user application, so the task's preferred resolution applies and no authentication system was
-  invented.
-- The REST API now binds **`127.0.0.1`** instead of every interface, so the unauthenticated project
-  store is reachable from this machine only. Reaching a wider interface is an explicit opt-in
-  (`KCS_API_HOST`), and the server warns with what it published and how to undo it.
-- Proven against a running server: the default binds loopback and `GET /api/health` returns 200; the
-  opt-in binds exactly the address named and the same port on the default address refuses
-  (`ECONNREFUSED`).
-- `README.md` and `docs/API.md` now state that the API has no authentication and that CORS is not
-  access control; `.env.example` documents the variable. No dependency, workflow, tag or release
-  change.
+- The evaluator profile harness now builds the workload it measures. Its scenes carried `transform`
+  instead of `baseTransform` and `layers` instead of `masks` — neither is a field the evaluator reads —
+  behind an `as CharacterPart` cast that hid both, so the profile timed default transforms and **no
+  masks at all** while reporting the scene parameters as if it had.
+- The builder now writes the canonical fields (and real mask geometry on `masks`, with channel keys
+  from the production helpers), and the harness **verifies the built scene before anything is timed**:
+  layer, track, mask and parent counts, finite base transforms, finite evaluated transforms, opacity and
+  mask values, and visible layers. The report carries that verification table.
+- Reproduced: the new verification against the old builder fails with a `TypeError` on
+  `layer.baseTransform`. A re-run baseline is recorded in the report — numbers only, with no comparison
+  to the previous unverified run and no optimisation proposed.
+- The report path also works now (`KCS_PROFILE_OUT`; Vitest rejects the `--out` flag the harness
+  expected). No production code, dependency, workflow, tag or release change.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_138_api_trust_boundary.md` — the task record
+- `progress_139_evaluator_profile_fixture_fix.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action

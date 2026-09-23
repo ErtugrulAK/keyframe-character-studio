@@ -1,4 +1,5 @@
-import type { AnimationTrackData, CharacterPart, PropertyKeyframe, TrackChannel } from '../src/types/animator';
+import type { AnimationTrackData, BezierPath, CharacterPart, LayerMask, PathKeyframe, PropertyKeyframe, TrackChannel } from '../src/types/animator';
+import { layerMaskChannel, layerMaskPathChannel } from '../src/types/animator';
 import type { RuntimeData, RuntimeTrackState } from '../src/types/composition';
 import { makeEmptyChannels } from '../src/utils/defaults';
 
@@ -8,8 +9,14 @@ import { makeEmptyChannels } from '../src/utils/defaults';
  * The profile is only useful if the same parameters always produce the same
  * scene, so nothing here uses randomness, clocks or generated ids: ids are
  * derived from the layer index and keyframe values follow a fixed pattern.
- * It reuses the production channel factory (`makeEmptyChannels`) so the shape
- * of a track cannot drift from what the evaluator actually reads.
+ * It reuses the production channel factory (`makeEmptyChannels`) and the
+ * production mask channel keys (`layerMaskChannel`/`layerMaskPathChannel`) so
+ * the shape of a track cannot drift from what the evaluator actually reads.
+ *
+ * Every layer is built as a `CharacterPart` without a cast: the previous
+ * `as CharacterPart` hid two fields the evaluator never reads (`transform`
+ * instead of `baseTransform`, and `layers` instead of `masks`), so the profile
+ * measured default transforms and no masks at all.
  */
 export interface ProfileSceneParameters {
   /** Number of animated layers. */
@@ -33,6 +40,7 @@ export interface ProfileScene {
 }
 
 const ANIMATED_CHANNELS: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY'];
+const TOTAL_FRAMES = 120;
 
 const buildKeyframes = (layerIndex: number, channelIndex: number, count: number, totalFrames: number): PropertyKeyframe[] => {
   const keyframes: PropertyKeyframe[] = [];
@@ -53,52 +61,94 @@ const buildKeyframes = (layerIndex: number, channelIndex: number, count: number,
   return keyframes;
 };
 
+/**
+ * A closed rectangle in the mask's own space. The size steps through six values
+ * and repeats, so every keyframe carries valid geometry and consecutive
+ * keyframes still differ (the path interpolator needs matching topology, not
+ * identical points).
+ */
+const buildMaskPath = (layerIndex: number, keyframeIndex: number): BezierPath => {
+  const inset = keyframeIndex % 6;
+  const halfWidth = 20 - inset;
+  const halfHeight = 12 - inset;
+  return {
+    version: 1,
+    coordinateSpace: 'local',
+    closed: true,
+    points: [
+      { id: `mask-v0-l${layerIndex}-k${keyframeIndex}`, x: -halfWidth, y: -halfHeight },
+      { id: `mask-v1-l${layerIndex}-k${keyframeIndex}`, x: halfWidth, y: -halfHeight },
+      { id: `mask-v2-l${layerIndex}-k${keyframeIndex}`, x: halfWidth, y: halfHeight },
+      { id: `mask-v3-l${layerIndex}-k${keyframeIndex}`, x: -halfWidth, y: halfHeight },
+    ],
+  };
+};
+
+const buildMaskPathKeyframes = (layerIndex: number, count: number, totalFrames: number): PathKeyframe[] => {
+  const keyframes: PathKeyframe[] = [];
+  const stride = Math.max(1, Math.floor(totalFrames / Math.max(1, count)));
+  for (let index = 0; index < count; index += 1) {
+    keyframes.push({
+      id: `mask-pkf-l${layerIndex}-${index}`,
+      frame: Math.min(totalFrames - 1, index * stride),
+      value: buildMaskPath(layerIndex, index),
+      easing: 'easeInOut',
+    });
+  }
+  return keyframes;
+};
+
+const buildMask = (maskId: string, layerIndex: number): LayerMask => ({
+  id: maskId,
+  name: `Profile Mask ${layerIndex}`,
+  mode: 'add',
+  inverted: false,
+  enabled: true,
+  opacity: 1,
+  feather: 0,
+  expansion: 0,
+  path: buildMaskPath(layerIndex, 0),
+});
+
+/** A closed rectangle the freeform renderer can draw, so the layer is a real one. */
+const buildLayerPath = (layerIndex: number): BezierPath => ({
+  version: 1,
+  coordinateSpace: 'local',
+  closed: true,
+  points: [
+    { id: `v0-l${layerIndex}`, x: -12, y: -8 },
+    { id: `v1-l${layerIndex}`, x: 12, y: -8 },
+    { id: `v2-l${layerIndex}`, x: 12, y: 8 },
+    { id: `v3-l${layerIndex}`, x: -12, y: 8 },
+  ],
+});
+
 export const buildProfileScene = (parameters: ProfileSceneParameters): ProfileScene => {
-  const totalFrames = 120;
+  const totalFrames = TOTAL_FRAMES;
   const layers: CharacterPart[] = [];
   const tracks: (AnimationTrackData & RuntimeTrackState)[] = [];
 
   for (let layerIndex = 0; layerIndex < parameters.layers; layerIndex += 1) {
     const id = `profile-layer-${layerIndex}`;
+    const maskId = `${id}-mask`;
     const isMasked = layerIndex < parameters.maskedLayers;
     const isParented = layerIndex >= parameters.layers - parameters.parentedLayers && layerIndex > 0;
 
     layers.push({
       id,
       name: `Profile Layer ${layerIndex}`,
-      type: 'custom',
+      // A real member of the type union: the previous bare `'custom'` is not one,
+      // and the cast hid that too.
+      type: 'custom_freeform',
       zIndex: layerIndex,
       fillColor: '#404040',
       strokeColor: '#101218',
       pivot: { x: 0.5, y: 0.5 },
-      parentId: isParented ? `profile-layer-${layerIndex - 1}` : undefined,
-      transform: { x: layerIndex * 4, y: layerIndex * 2, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
-      ...(isMasked
-        ? {
-          layers: [
-            {
-              id: `${id}-mask`,
-              mode: 'add' as const,
-              inverted: false,
-              opacity: 1,
-              feather: 0,
-              expansion: 0,
-              path: {
-                version: 1 as const,
-                coordinateSpace: 'local' as const,
-                closed: true,
-                vertices: [
-                  { id: `${id}-v0`, x: 0, y: 0 },
-                  { id: `${id}-v1`, x: 40, y: 0 },
-                  { id: `${id}-v2`, x: 40, y: 40 },
-                  { id: `${id}-v3`, x: 0, y: 40 },
-                ],
-              },
-            },
-          ],
-        }
-        : {}),
-    } as CharacterPart);
+      ...(isParented ? { parentId: `profile-layer-${layerIndex - 1}` } : {}),
+      baseTransform: { x: layerIndex * 4, y: layerIndex * 2, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+      path: buildLayerPath(layerIndex),
+      ...(isMasked ? { masks: [buildMask(maskId, layerIndex)] } : {}),
+    });
 
     const channels = makeEmptyChannels();
     const animatedCount = Math.min(parameters.channelsPerLayer, ANIMATED_CHANNELS.length);
@@ -107,14 +157,19 @@ export const buildProfileScene = (parameters: ProfileSceneParameters): ProfileSc
       channels[channel] = buildKeyframes(layerIndex, channelIndex, parameters.keyframesPerChannel, totalFrames);
     }
 
-    const maskChannels: AnimationTrackData['maskChannels'] = isMasked
-      ? { [`${id}-mask:opacity`]: buildKeyframes(layerIndex, 9, parameters.keyframesPerChannel, totalFrames) }
-      : undefined;
-
     const track: AnimationTrackData & RuntimeTrackState = {
       partId: id,
       channels,
-      ...(maskChannels ? { maskChannels } : {}),
+      ...(isMasked
+        ? {
+          maskChannels: {
+            [layerMaskChannel(maskId, 'opacity')]: buildKeyframes(layerIndex, ANIMATED_CHANNELS.length, parameters.keyframesPerChannel, totalFrames),
+          },
+          maskPathChannels: {
+            [layerMaskPathChannel(maskId)]: buildMaskPathKeyframes(layerIndex, parameters.keyframesPerChannel, totalFrames),
+          },
+        }
+        : {}),
       visible: true,
       opacity: 1,
       editVisible: true,

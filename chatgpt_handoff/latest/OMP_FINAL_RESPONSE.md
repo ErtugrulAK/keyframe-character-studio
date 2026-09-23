@@ -1,65 +1,55 @@
-# KCS Post-Review Correctness Fix — Task B Final Response (import / serialization transaction integrity)
+# KCS Post-Review Correctness Fix — Task C Final Response (Lottie structure correctness)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on `fix/import-serialization-transaction-integrity` (base `main` at `1291bb8`); the merge decision is with the user.
-- **Report:** `reports/progress_135_import_serialization_integrity.md`.
-- **Findings closed:** H-03 (malformed values accepted by the import boundary), H-04 (save/load round-trip loses persistent authoring state), M-03 (import undo restores only part of the document).
+- **Status:** implemented on `fix/lottie-structure-correctness` (base `main` at `fc672f2`); the merge decision is with the user.
+- **Report:** `reports/progress_136_lottie_structure_correctness.md`.
+- **Findings closed:** M-01 (parent resolved by array offset instead of `ind`), M-02 (a static child skipped its parent transform), H-05 (multiple geometry silently overwritten).
 
-## 2) H-03 — the boundary now checks what the renderers read
+## 2) M-01 — a parent reference names a layer index, not an array position
 
-`validateImportedDocument` checked the fields the **apply** path reads while it queues its updates, but not the values the **renderers and the evaluator** read at frame time. A `textValue` object, a freeform path without points and a channel that is not a keyframe list were accepted, applied, and then crashed or rendered blank long after the import reported success.
+`mapDocument` read `layer.parent` as an array position (`lottie-layer-${parent}`, and only when the parent sat earlier in the array), and used the same assumption for the depth count. Lottie's `parent` names the parent layer's own `ind`, which in typical exports is 1-based — so the resolution was off by one *and* it refused any document where a child precedes its parent.
 
-A second pass now runs before the document reaches the apply path:
+The relation is now resolved after the layer loop: each imported layer registers its `ind`, each `parent` becomes a pending relation, and the references resolve through that map. An `ind` no imported layer declares, or a layer naming itself, is reported as `LOTTIE_BROKEN_PARENT`; an `ind` two layers share is reported once as `LOTTIE_DUPLICATE_LAYER_INDEX` and the first declaration keeps the reference, so the result is deterministic; the depth check walks the resolved graph with a visited set, so a malformed cycle terminates.
 
-- **required** fields are the ones the apply path has no default for (layer `id`, layer `zIndex`, track `partId`);
-- every other consumed field is validated **when present**, because the documented defaults (`0`, `1`, `'none'`, 1920×1080) are what an absent value already means — refusing absence would reject documents the editor applies today;
-- the first problem refuses the whole document.
+**Backward compatibility, stated plainly:** a document declaring `parent` without `ind` used to have its parent guessed from the array position; it is now reported as broken. That guess was the defect, and the one fixture built on it was corrected to declare `ind` while keeping the contract it checks.
 
-Stable codes: `KCS_IMPORT_UNSUPPORTED_VERSION`, `KCS_IMPORT_INVALID_TIMELINE`, `KCS_IMPORT_INVALID_CANVAS`, `KCS_IMPORT_INVALID_LAYER`, `KCS_IMPORT_DUPLICATE_LAYER_ID`, `KCS_IMPORT_INVALID_TRACK`, `KCS_IMPORT_INVALID_TEMPLATE` — each with the offending path and a next step.
+## 3) M-02 — the hierarchy is resolved for every layer
 
-**Backward compatibility caught by the suite:** the first cut required `track.partId`, and the existing `P4-S3: imports legacy SceneData with layerId` case failed. v1 files wrote `layerId` and the apply path reads both names, so either one now satisfies the requirement.
+`evaluateTransform` returned the base transform as soon as a layer had no animation track, before the parent chain was resolved: the same scene placed a child correctly when it carried an (empty) track and at its local position when it did not. Only the early return is gone; the anchor override, the cycle guard and the parent composition are untouched. This applies to every KCS scene, not only to imported Lottie ones.
 
-## 3) H-04 — the round-trip
+## 4) H-05 — no silent loss
 
-`SceneData.tracks` is now typed `(AnimationTrackData & PersistedTrackState)[]`. The three flags are written on export and read back on import with the documented defaults, and `sequencerTemplateId` is restored. The generated track name, its colour and its `expanded` flag stay session state (the outliner already notes the name is a generated placeholder), and a file written before this contract behaves exactly as it did.
-
-## 4) M-03 — one document transaction
-
-`useHistory` snapshots gained a `document` member (frame rate, timeline length, canvas, coordinate contract, title, active sequence), added through one option pair (`documentState`, `restoreDocumentState`) — the existing authority extended, not a second history system. The recording effect keys on the document's **content**, not its object identity, so a caller that hands over a fresh object every render cannot make every render undoable.
-
-Consequence, stated plainly: a document-level edit now participates in undo/redo, because it is document state an import replaces. Recording triggers are unchanged.
+A layer's geometry items are counted while its shapes are read; more than one now reports `LOTTIE_MULTIPLE_GEOMETRY` naming the count, the shape indexes and which one is kept. The layer still imports. A KCS layer draws exactly one path, so this is the same map-or-report contract the importer already uses for every other construct it cannot represent.
 
 ## 5) EVIDENCE
 
-- **H-03:** 11 malformed shapes refused with the expected code and path; 4 legitimate shapes still accepted, including the compatibility fixture that carries no top-level `width`/`height`, a defaults-absent scene, and one with masks, a freeform path and path channels.
-- **H-04:** `visible: false`, `editVisible: false`, `locked: true`, `sequencerTemplateId: 'Out'` all survive the round-trip; a pre-contract file keeps the defaults.
-- **M-03 hook level:** 2 of the new history cases fail without the restore.
-- **M-03 provider level:** the new integration case fails without the restore (`expected 24 to be 60` — the imported frame rate stayed) and passes with it.
+- **M-01:** 4 of the new/changed cases fail with the array-index interpretation.
+- **M-02:** 3 new cases fail without the fix (static child, nested static chain, helper parent).
+- **H-05:** the new case fails without the report.
 
 ## 6) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npm test` | PASS — 125 files / 1,902 tests |
-| `npx tsc --noEmit` | clean |
+| `npm test` | PASS — 125 files / 1,913 tests |
+| `npm run build` (`tsc -b` + vite) | PASS |
 | `npm run lint` | clean |
-| `npm run build` | PASS |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `214000b` |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `fc672f2` |
 | `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
+| `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
 ## 7) SELF-REVIEW NOTES
 
-- The pass walks layers, tracks, channels and keyframes once, after the size/depth/prototype checks, so a hostile document is still refused before the walk.
-- `totalFrames` is only required to be a positive number, not to match the playback setter's `[10, 1200]` clamp: the app accepts and clamps a larger value, so a stricter rule here would be stricter than the product. Every value the app can reach is already clamped, so a restored snapshot is verbatim.
-- **`SceneLayer.visible` is deliberately unchanged.** It is written as a constant `true` and read by the OGraf evaluation, i.e. it is the *document's* layer visibility, not the editor's per-track mute. Mapping the editor mute onto it would change what an exported OGraf package renders — a separate product decision, not a round-trip fix.
-- **The legacy project-template registry is not part of the scene history:** a legacy (non-scene) import also registers a project tab, which belongs to the template manager rather than the scene document. A modern scene import — the normal path — is fully covered.
+- Parent resolution is a linear pass with map lookups; the depth walk stops at the import limit or at a cycle, so it is bounded per layer.
+- A duplicated `ind` keeps the first declaration and is reported, so the same document always resolves to the same parent.
+- **The build is the real type gate here.** `npx tsc --noEmit` checks **zero** project files: the root `tsconfig.json` is a solution file (`files: []`) with references, and `--noEmit` does not build them (`tsc -b --listFiles` reports 151 source files; `npx tsc --noEmit --listFiles` reports none). A missing binding introduced during this task was caught by `npm run build`, not by that command. Recorded, not changed — the CI workflow and the documented validation steps are outside this finding's scope and need their own approval.
+- `zIndex` still follows the array position (`lottieLayers.length - index`), which is the drawing order Lottie's own list defines and is independent of the `ind` graph.
 
 ## 8) NEXT
 
-- Task C (Lottie structure correctness: H-05, M-01, M-02) is next, then D (H-02), E (H-06), F (M-04), G (M-05) — each on its own branch with its own validation and merge gate.
+- Task D (OGraf inverse alpha matte: H-02), then E (API trust boundary: H-06), F (profiler fixtures: M-04), G (live docs and the state checker: M-05) — each on its own branch with its own validation and merge gate.

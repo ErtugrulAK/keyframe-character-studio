@@ -1,30 +1,28 @@
-# KCS Minimal ChatGPT Upload Bundle — Task B (import / serialization transaction integrity)
+# KCS Minimal ChatGPT Upload Bundle — Task C (Lottie structure correctness)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-H-03, H-04 and M-03 from the full-project review, on `fix/import-serialization-transaction-integrity`
-from `main` at `1291bb8`:
+M-01, M-02 and H-05 from the full-project review, on `fix/lottie-structure-correctness` from
+`main` at `fc672f2`:
 
-- **H-03** — the import boundary now also checks the values the renderers and the evaluator read at
-  frame time (scene version, frame rate, timeline length, canvas size, layer ids and z-order, text and
-  coordinate fields, paths, masks, channels, keyframes, sequence entries). A malformed document is
-  refused with a stable code and the offending path before any state is touched. The legacy `layerId`
-  track shape and every documented default stay accepted.
-- **H-04** — a track's `visible`, `editVisible` and `locked` flags and its sequence link are written on
-  export and read back on import, so a muted, canvas-hidden or locked track no longer returns visible
-  after a save/load round-trip.
-- **M-03** — the history snapshot now carries the document-level state, so undoing an import restores
-  the whole document (frame rate, timeline length, canvas, coordinate contract, title, active
-  sequence) with the layers instead of leaving the imported settings on top of the restored scene.
-- Reproduced before the change at three levels (boundary, history hook, provider integration) and
-  closed after it. No new dependency, workflow, tag or release action.
+- **M-01** — a Lottie layer's parent is resolved through the layer index it names (`ind`) instead of
+  the layer's position in the array, so non-sequential indexes and a child that precedes its parent
+  both import correctly. A reference no imported layer declares, a self-reference, and an index two
+  layers share are reported instead of guessed; the depth check walks the resolved graph and
+  terminates on a cycle.
+- **M-02** — a layer with no animation track now inherits its parent transform. The hierarchy is
+  resolved for every layer and only the keyframe evaluation is skipped.
+- **H-05** — a Lottie layer carrying more than one geometry item is reported instead of silently
+  keeping only the last one; the layer still imports.
+- Reproduced before the change at every level (4 cases for M-01, 3 for M-02, 1 for H-05) and closed
+  after it. No new dependency, workflow, tag or release action.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_135_import_serialization_integrity.md` — the task record
+- `progress_136_lottie_structure_correctness.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action

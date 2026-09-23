@@ -322,6 +322,46 @@ describe('evaluateFrame — hierarchy', () => {
     expect(cLayer.transform.scaleX).toBeCloseTo(2, 1);
   });
 
+  test('a static child with no animation track still inherits its parent transform', () => {
+    const parent = makeLayer({ id: 'P', baseTransform: { x: 100, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
+    const child = makeLayer({ id: 'C', parentId: 'P', baseTransform: { x: 10, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
+
+    // The same scene with and without tracks must place the child identically: a
+    // layer's animation track must not decide whether it inherits a parent.
+    const withTracks = evaluateTransform([parent, child], [makeTrack('P'), makeTrack('C')], 'Sequence', 'C', 0);
+    const withoutTracks = evaluateTransform([parent, child], [], 'Sequence', 'C', 0);
+
+    expect(withoutTracks.x).toBe(110);
+    expect(withoutTracks).toEqual(withTracks);
+
+    const framed = evaluateFrame([parent, child], [], 120, 0, makeRuntime(), NO_PRESETS);
+    expect(framed.layers.find((layer) => layer.id === 'C')?.transform.x).toBe(110);
+  });
+
+  test('a nested chain of static layers composes through the whole hierarchy', () => {
+    const gp = makeLayer({ id: 'GP', baseTransform: { x: 10, y: 0, rotation: 0, scaleX: 2, scaleY: 2, opacity: 1 } });
+    const p = makeLayer({ id: 'P', parentId: 'GP', baseTransform: { x: 20, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
+    const c = makeLayer({ id: 'C', parentId: 'P', baseTransform: { x: 5, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
+
+    const result = evaluateTransform([gp, p, c], [], 'Sequence', 'C', 0);
+
+    // (5 + 20) × 2 + 10 = 60
+    expect(result.x).toBeCloseTo(60, 5);
+    expect(result.scaleX).toBeCloseTo(2, 5);
+  });
+
+  test('a helper parent with no track still moves its static children', () => {
+    const helper = makeLayer({ id: 'H', baseTransform: { x: 0, y: 40, rotation: 90, scaleX: 1, scaleY: 1, opacity: 1 } });
+    const child = makeLayer({ id: 'C', parentId: 'H', baseTransform: { x: 10, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
+
+    const result = evaluateTransform([helper, child], [], 'Sequence', 'C', 0);
+
+    // (10, 0) rotated 90° → (0, 10), then translated by the parent's (0, 40)
+    expect(result.x).toBeCloseTo(0, 5);
+    expect(result.y).toBeCloseTo(50, 5);
+    expect(result.rotation).toBe(90);
+  });
+
   test('nested hierarchy 3 levels', () => {
     const gp = makeLayer({ id: 'GP', baseTransform: { x: 10, y: 0, rotation: 0, scaleX: 2, scaleY: 2, opacity: 1 } });
     const p = makeLayer({ id: 'P', parentId: 'GP', baseTransform: { x: 20, y: 0, rotation: 0, scaleX: 1.5, scaleY: 1.5, opacity: 1 } });

@@ -816,8 +816,12 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
   const layers: SceneLayer[] = [];
   const tracks: AnimationTrackData[] = [];
   const layerIds: string[] = [];
-  /** Parent-chain depth per Lottie layer index, so the limit counts levels, not gaps. */
-  const parentDepth = new Map<number, number>();
+  /** Lottie `ind` → imported layer id, so a `parent` reference resolves by index. */
+  const indToLayerId = new Map<number, string>();
+  /** `ind` values already reported as reused, so one duplicate is named once. */
+  const reportedDuplicateInds = new Set<number>();
+  /** Parent references declared before the referenced layer was known. */
+  const pendingParents: { layer: SceneLayer; layerIndex: number; parentInd: number; parentPath: string }[] = [];
   /** The document asset table (`assets[]`), so image and precomp layers can resolve their `refId`. */
   const assetTable = readAssetTable(asArray(root.assets));
   /** Font families already reported, so one family is named once per document. */
@@ -925,17 +929,21 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       if (!image) return;
     }
     layerIds.push(layerId);
-    const parentIndex = readNumber(layer.parent);
-    const parentChainDepth = parentIndex !== undefined && parentIndex >= 0 && parentIndex < index ? (parentDepth.get(parentIndex) ?? 0) + 1 : 0;
-    parentDepth.set(index, parentChainDepth);
-    if (parentChainDepth > LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
-      diagnostics.push(lottieWarning('LOTTIE_HIERARCHY_LIMIT', `${path}.parent`, `Layer ${index} sits ${parentChainDepth} levels below its parent chain, above the ${LOTTIE_IMPORT_LIMITS.hierarchyDepth}-level import limit.`, 'Flatten the hierarchy in the source document and import again.'));
+    // Lottie addresses a parent by the parent layer's own `ind`, never by its
+    // position in the layer array, so the index is registered here and the
+    // references are resolved once every layer has been read.
+    const declaredInd = readNumber(layer.ind);
+    if (declaredInd !== undefined) {
+      if (indToLayerId.has(declaredInd)) {
+        if (!reportedDuplicateInds.has(declaredInd)) {
+          reportedDuplicateInds.add(declaredInd);
+          diagnostics.push(lottieWarning('LOTTIE_DUPLICATE_LAYER_INDEX', `${path}.ind`, `Layer ${index} reuses the layer index ${declaredInd} that another imported layer already declares, so a parent reference to it is ambiguous.`, 'Re-export the document so every layer carries a unique `ind`.'));
+        }
+      } else {
+        indToLayerId.set(declaredInd, layerId);
+      }
     }
-    const candidateParentId = parentIndex !== undefined && parentIndex >= 0 && parentIndex < index ? `lottie-layer-${parentIndex}` : undefined;
-    const parentId = candidateParentId !== undefined && layerIds.includes(candidateParentId) ? candidateParentId : undefined;
-    if (parentIndex !== undefined && parentId === undefined) {
-      diagnostics.push(lottieWarning('LOTTIE_BROKEN_PARENT', `${path}.parent`, `Layer ${index} points at parent ${parentIndex}, which is not an imported layer of this scene.`, 'Reorder the layers in the source document so parents come first, and make sure the parent layer itself can be imported.'));
-    }
+    const declaredParentInd = readNumber(layer.parent);
 
     const scaleXPercent = scaleX.staticValue ?? 100;
     const scaleYPercent = scaleY.staticValue ?? 100;
@@ -949,7 +957,6 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       scaleX: scaleXPercent / 100,
       scaleY: scaleYPercent / 100,
       opacity: (opacity.staticValue ?? 100) / 100,
-      ...(parentId ? { parentId } : {}),
       visible: true,
       zIndex: lottieLayers.length - index,
       fillColor: solidFill ?? '#ffffff',
@@ -958,6 +965,11 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       ...(solidHeight !== undefined ? { height: solidHeight } : {}),
     } as SceneLayer);
     const layerShape = layers[layers.length - 1];
+    // The parent is resolved after the loop: Lottie allows a child to precede
+    // its parent in the array, so the relation cannot be settled here.
+    if (declaredParentInd !== undefined) {
+      pendingParents.push({ layer: layerShape, layerIndex: index, parentInd: declaredParentInd, parentPath: `${path}.parent` });
+    }
 
     if (type === 1 && solidWidth !== undefined && solidHeight !== undefined) {
       // A solid is a filled rectangle; its path is what draws it at its size.
@@ -1019,6 +1031,8 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
     }
 
     const shapes = asArray(layer.shapes);
+    /** Geometry items of this layer; KCS draws one path per layer. */
+    const geometryShapeIndexes: number[] = [];
     for (const [shapeIndex, shapeEntry] of shapes.entries()) {
       const shape = asRecord(shapeEntry);
       const shapeType = readString(shape?.ty);
@@ -1029,6 +1043,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       }
       noteAnimatedShape(diagnostics, shape, shapeType, shapePath, shapeIndex, index);
       if (shapeType === 'sh') {
+        geometryShapeIndexes.push(shapeIndex);
         const mapped = mapPath(shape.ks, shapePath, diagnostics);
         if (mapped && 'version' in mapped) layerShape.path = mapped;
         // An animated path already carries its own, accurate report above.
@@ -1036,6 +1051,7 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
         continue;
       }
       if (shapeType === 'rc' || shapeType === 'el') {
+        geometryShapeIndexes.push(shapeIndex);
         const sizeValue = asRecord(shape.s)?.k;
         const size = Array.isArray(sizeValue) ? sizeValue : [];
         const sizeX = readNumber(size[0]);
@@ -1123,6 +1139,13 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_SHAPE', shapePath, `Shape item "${shapeType}" of layer ${index} is not converted by the first slice.`, 'Bake or remove that item in the source document.'));
     }
 
+    // A KCS layer draws exactly one path, so a layer carrying more than one
+    // geometry item cannot be represented: the last one is imported and the
+    // others are reported instead of disappearing without a word.
+    if (geometryShapeIndexes.length > 1) {
+      diagnostics.push(lottieWarning('LOTTIE_MULTIPLE_GEOMETRY', path, `Layer ${index} carries ${geometryShapeIndexes.length} geometry items (shape indexes ${geometryShapeIndexes.join(', ')}); KCS draws one path per layer, so only the last one is imported and the others are lost.`, 'Split the shapes into one layer each in the source document, then import again.'));
+    }
+
     const channels = {
       x: (x.keyframes ?? []) as PropertyKeyframe[],
       y: (y.keyframes ?? []) as PropertyKeyframe[],
@@ -1151,6 +1174,45 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       });
     }
   });
+
+  // ── Resolve the declared parent references against the imported layers ──
+  // After the loop, because Lottie's layer array order carries no hierarchy
+  // meaning: the `ind` graph does, and a child may precede its parent.
+  const parentOf = new Map<string, string>();
+  for (const entry of pendingParents) {
+    const parentId = indToLayerId.get(entry.parentInd);
+    if (parentId === undefined || parentId === entry.layer.id) {
+      diagnostics.push(lottieWarning('LOTTIE_BROKEN_PARENT', entry.parentPath, `Layer ${entry.layerIndex} points at parent ${entry.parentInd}, which no imported layer of this scene declares as its \`ind\`.`, 'Make sure the parent layer itself can be imported, and that every layer carries the `ind` the reference names.'));
+      continue;
+    }
+    entry.layer.parentId = parentId;
+    parentOf.set(entry.layer.id, parentId);
+  }
+
+  /**
+   * Ancestors above one layer, stopping at the import limit or at a cycle: a
+   * malformed document must not make the depth check walk forever.
+   */
+  const ancestorDepth = (layerId: string): number => {
+    const seen = new Set<string>([layerId]);
+    let depth = 0;
+    let current = layerId;
+    for (;;) {
+      const parent = parentOf.get(current);
+      if (parent === undefined || seen.has(parent)) return depth;
+      seen.add(parent);
+      current = parent;
+      depth += 1;
+      if (depth > LOTTIE_IMPORT_LIMITS.hierarchyDepth) return depth;
+    }
+  };
+  for (const entry of pendingParents) {
+    if (entry.layer.parentId === undefined) continue;
+    const depth = ancestorDepth(entry.layer.id);
+    if (depth > LOTTIE_IMPORT_LIMITS.hierarchyDepth) {
+      diagnostics.push(lottieWarning('LOTTIE_HIERARCHY_LIMIT', entry.parentPath, `Layer ${entry.layerIndex} sits ${depth} levels below its parent chain, above the ${LOTTIE_IMPORT_LIMITS.hierarchyDepth}-level import limit.`, 'Flatten the hierarchy in the source document and import again.'));
+    }
+  }
 
   if (layers.length === 0) {
     diagnostics.push(lottieWarning('LOTTIE_EMPTY_SCENE', '$.layers', 'No layer of this document could be converted by the first import slice.', 'Check the report above and bake the unsupported layers in the source document.'));

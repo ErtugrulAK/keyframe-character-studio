@@ -1,22 +1,23 @@
-# KCS ChatGPT Upload Manifest — Task B (import / serialization transaction integrity)
+# KCS ChatGPT Upload Manifest — Task C (Lottie structure correctness)
 
 Clean refreshed: YES
-Bundle purpose: the import boundary, round-trip and document-transaction fixes (review findings H-03, H-04, M-03)
+Bundle purpose: the Lottie parent, hierarchy and multi-geometry fixes (review findings M-01, M-02, H-05)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/import-serialization-transaction-integrity at 214000b, base main at 1291bb8 — not merged; the merge decision is with the user
-Task record: reports/progress_135_import_serialization_integrity.md
-What changed: src/utils/importValidation.ts (semantic pass with stable codes), src/types/composition.ts (PersistedTrackState on SceneData.tracks), src/hooks/useSerialization.ts (write/read the track authoring state and the sequence link), src/hooks/useHistory.ts + src/context/AnimatorContext.tsx (the document travels with the scene snapshot)
-Reproduction: boundary cases refused before/after; 2 history cases and the provider integration case fail without the document restore
-No change to the legacy layerId shape, the documented defaults, the channels-only export policy or the OGraf export mapping
-Security: the boundary fails closed on malformed values before any state is touched; no new input surface, no dependency change
-Validation: npm test PASS (125 files / 1,902 tests); npx tsc --noEmit clean; npm run lint clean; npm run build PASS; npm run validate:ograf PASS; npm run qa:release PASS (candidate 214000b); playwright lottie-import-report spec PASS (3 tests); state check PASS (33); git diff --check clean
-Next work: Task C (Lottie structure correctness — H-05, M-01, M-02), then D (H-02), E (H-06), F (M-04), G (M-05), each with its own branch, validation and merge gate
+Branch: fix/lottie-structure-correctness, base main at fc672f2 — not merged; the merge decision is with the user
+Task record: reports/progress_136_lottie_structure_correctness.md
+What changed: src/interop/lottie/mapDocument.ts (parents resolve through `ind` after the layer loop, duplicate/self/missing indexes reported, resolved-graph depth check, LOTTIE_MULTIPLE_GEOMETRY report), src/utils/evaluateTransform.ts (the hierarchy is resolved for a layer with no track)
+Reproduction: 4 cases for M-01, 3 for M-02 and 1 for H-05 fail without the fixes
+Backward compatibility: a document declaring `parent` without `ind` used to have its parent guessed from the array position and is now reported as broken; the one fixture built on that guess was corrected to declare `ind`
+Security: import-time work stays linear and bounded by the existing import limits; cycles terminate; no new input surface, no dependency change
+Validation: npm test PASS (125 files / 1,913 tests); npm run build PASS (tsc -b + vite); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate fc672f2); playwright lottie-import-report spec PASS (3 tests); state check PASS; git diff --check clean
+Note: npx tsc --noEmit checks zero project files in this repository (the root tsconfig is a solution file); npm run build is the real type gate. Recorded, not changed.
+Next work: Task D (OGraf inverse alpha matte — H-02), then E (H-06), F (M-04), G (M-05), each with its own branch, validation and merge gate
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_135_import_serialization_integrity.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_136_lottie_structure_correctness.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

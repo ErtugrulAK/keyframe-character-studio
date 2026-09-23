@@ -229,10 +229,109 @@ describe('Lottie import — dimensions and fallbacks (review round)', () => {
   });
 
   it('reports a parent chain deeper than the hierarchy limit', () => {
-    const deepLayers = Array.from({ length: 40 }, (_, index) => solidLayer({ parent: index === 0 ? undefined : index - 1 }));
+    // `ind` is what a `parent` reference names, so the chain is declared with it.
+    const deepLayers = Array.from({ length: 40 }, (_, index) => solidLayer({
+      ind: index + 1,
+      parent: index === 0 ? undefined : index,
+    }));
     const result = importLottieDocument(JSON.stringify(baseDocument(deepLayers)));
 
     expect(codes(result.diagnostics)).toContain('LOTTIE_HIERARCHY_LIMIT');
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_BROKEN_PARENT');
+  });
+
+  it('resolves a parent by the layer index it names, not by its array position', () => {
+    // The indexes are neither sequential nor in array order: the child comes
+    // first and points at `ind` 10, which sits second.
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer({ nm: 'Child', ind: 20, parent: 10 }),
+      solidLayer({ nm: 'Parent', ind: 10 }),
+    ])));
+
+    const child = result.scene?.layers.find((layer) => layer.name === 'Child');
+    const parent = result.scene?.layers.find((layer) => layer.name === 'Parent');
+    expect(child?.parentId).toBe(parent?.id);
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_BROKEN_PARENT');
+  });
+
+  it('reports a parent index that no imported layer declares', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer({ nm: 'Child', ind: 1, parent: 99 }),
+      solidLayer({ nm: 'Other', ind: 2 }),
+    ])));
+
+    expect(result.scene?.layers[0]?.parentId).toBeUndefined();
+    expect(codes(result.diagnostics)).toContain('LOTTIE_BROKEN_PARENT');
+  });
+
+  it('reports a layer index two imported layers share, and keeps the relation unambiguous', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer({ nm: 'First', ind: 7 }),
+      solidLayer({ nm: 'Second', ind: 7 }),
+      solidLayer({ nm: 'Child', ind: 9, parent: 7 }),
+    ])));
+
+    expect(codes(result.diagnostics).filter((code) => code === 'LOTTIE_DUPLICATE_LAYER_INDEX')).toHaveLength(1);
+    expect(result.scene?.layers.find((layer) => layer.name === 'Child')?.parentId)
+      .toBe(result.scene?.layers.find((layer) => layer.name === 'First')?.id);
+  });
+
+  it('reports a layer that names itself as its parent instead of building a cycle', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([solidLayer({ nm: 'Self', ind: 3, parent: 3 })])));
+
+    expect(result.scene?.layers[0]?.parentId).toBeUndefined();
+    expect(codes(result.diagnostics)).toContain('LOTTIE_BROKEN_PARENT');
+  });
+
+  it('keeps a parent cycle out of the depth check', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer({ nm: 'A', ind: 1, parent: 2 }),
+      solidLayer({ nm: 'B', ind: 2, parent: 1 }),
+    ])));
+
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_HIERARCHY_LIMIT');
+    expect(result.scene?.layers.find((layer) => layer.name === 'A')?.parentId).toBe('lottie-layer-1');
+    expect(result.scene?.layers.find((layer) => layer.name === 'B')?.parentId).toBe('lottie-layer-0');
+  });
+
+  it('reports the geometry a layer cannot keep instead of overwriting it silently', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      {
+        ty: 4,
+        ind: 1,
+        nm: 'Two shapes',
+        ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+        shapes: [
+          { ty: 'rc', s: { k: [100, 100] }, r: { k: 0 }, p: { k: [0, 0] } },
+          { ty: 'el', s: { k: [20, 20] }, p: { k: [0, 0] } },
+          { ty: 'fl', c: { k: [1, 0, 0] } },
+        ],
+      },
+    ])));
+
+    const multiple = result.diagnostics.filter((entry) => entry.code === 'LOTTIE_MULTIPLE_GEOMETRY');
+    expect(multiple).toHaveLength(1);
+    expect(multiple[0].message).toContain('2 geometry items');
+    // The layer still imports: what it cannot represent is reported, not dropped.
+    expect(result.scene?.layers).toHaveLength(1);
+    expect(result.scene?.layers[0].width).toBe(20);
+  });
+
+  it('does not report a layer whose one geometry carries its paint', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      {
+        ty: 4,
+        ind: 1,
+        nm: 'One shape',
+        ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 0 } },
+        shapes: [
+          { ty: 'rc', s: { k: [100, 100] }, r: { k: 0 }, p: { k: [0, 0] } },
+          { ty: 'fl', c: { k: [1, 0, 0] } },
+        ],
+      },
+    ])));
+
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_MULTIPLE_GEOMETRY');
   });
 
   it('reports a layer in/out range, a skewed layer and auto-orient instead of ignoring them', () => {

@@ -50,9 +50,12 @@ export function evaluateTransform(
       : { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, maskOffsetX: 0, maskOffsetY: 0, maskScale: 1, maskRotation: 0 };
 
     const track = tracks.find((t) => t.partId === currentPartId);
-    if (!track) return baseTransform;
     const activeTmpl = activeTemplateId || 'Sequence';
-    const rawTransform = evaluateKeyframes(track, baseTransform, frame, activeTmpl);
+    // A layer with no animation track still inherits its parent: only the
+    // keyframe evaluation is skipped here, never the hierarchy resolution.
+    // Returning early left a static child at its local transform while the same
+    // child with an (empty) track was placed correctly.
+    const rawTransform = track ? evaluateKeyframes(track, baseTransform, frame, activeTmpl) : baseTransform;
     let finalComputed = rawTransform;
 
     if (part && part.anchor && part.anchor !== 'none') {

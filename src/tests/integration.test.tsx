@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { render, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AnimatorProvider } from '../context/AnimatorContext';
+import type { AnimatorContextType } from '../context/AnimatorContext';
 import { useAnimator } from '../context/useAnimator';
 
 // Dummy consumer to access and manipulate context
@@ -136,6 +137,66 @@ describe('AnimatorContext Integration Tests', () => {
     });
 
     expect(context.tracks[0].keyframes.length).toBe(keyframesCount);
+  });
+
+  it('Import + History: undoing an import restores the whole document, not only its layers', () => {
+    let context!: AnimatorContextType;
+    render(
+      <AnimatorProvider>
+        <ContextConsumer callback={(ctx) => { context = ctx; }} />
+      </AnimatorProvider>
+    );
+
+    const before = {
+      fps: context.fps,
+      totalFrames: context.totalFrames,
+      resolution: context.projectResolution,
+      title: context.sceneTitle,
+    };
+
+    act(() => {
+      context.addCustomPart('head', 'Before the import');
+    });
+    const partsBefore = context.characterParts.map((part) => part.id);
+    expect(partsBefore.length).toBeGreaterThan(0);
+
+    const scene = JSON.stringify({
+      version: 2,
+      width: 1280,
+      height: 720,
+      fps: 24,
+      totalFrames: 240,
+      layers: [{
+        id: 'imported', name: 'Imported', type: 'custom_box',
+        x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+        visible: true, zIndex: 0, fillColor: '#ffffff', strokeColor: '#000000',
+      }],
+      tracks: [],
+    });
+
+    act(() => {
+      const result = context.importProject(scene, 'Imported');
+      expect(result.ok).toBe(true);
+    });
+
+    // The import replaced the document wholesale…
+    expect(context.characterParts.map((part) => part.id)).toEqual(['imported']);
+    expect(context.fps).toBe(24);
+    expect(context.totalFrames).toBe(240);
+    expect(context.projectResolution).toEqual({ width: 1280, height: 720 });
+    expect(context.sceneTitle).toBe('Imported');
+
+    act(() => {
+      context.undo();
+    });
+
+    // …and one undo puts all of it back. Restoring only the layers would leave
+    // the imported frame rate, canvas and title on the restored scene.
+    expect(context.characterParts.map((part) => part.id)).toEqual(partsBefore);
+    expect(context.fps).toBe(before.fps);
+    expect(context.totalFrames).toBe(before.totalFrames);
+    expect(context.projectResolution).toEqual(before.resolution);
+    expect(context.sceneTitle).toBe(before.title);
   });
 
   it('Clipboard + Timeline: copy, paste, duplicate works while selection remains valid', async () => {

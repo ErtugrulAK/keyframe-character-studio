@@ -23,7 +23,7 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 
 ## 1) RESULT
 
-- **Status:** the follow-up is complete and merged; the final correctness gate ran on clean `main` at `2b0bba0`.
+- **Status:** the follow-up is complete and merged; the final correctness gate ran on clean `main` at `dcbf9f5`, and the record update followed at `64291bc` (`main == origin/main`).
 - **Report:** `reports/progress_141_astra_correctness_followup_summary.md` — the finding map, the scope boundaries, the residual observations and the gate.
 - **Findings:** H-01, H-02, H-03, H-04, H-05, H-06, M-01, M-02, M-03, M-04, M-05 — **all CLOSED**. None deferred, none blocked, none dropped.
 
@@ -33,6 +33,7 @@ One task per finding group, each on its own branch with its own validation, a re
 
 | Task | Findings | Merged at |
 |---|---|---|
+| Phase 0 | Task 4 (`engines` + npm-12 `allowScripts`) | `1a12d79` |
 | A | H-01 | `0c19751` |
 | B | H-03, H-04, M-03 | `fc672f2` |
 | C | M-01, M-02, H-05 | `85c3929` |
@@ -40,23 +41,26 @@ One task per finding group, each on its own branch with its own validation, a re
 | E | H-06 | `352d272` |
 | F | M-04 | `16e1610` |
 | G | M-05 | `2b0bba0` |
+| CI fix | the Task G shallow-checkout regression | `dcbf9f5` |
 
-## 3) THE FINAL GATE (clean `main` at `2b0bba0`)
+## 3) THE FINAL GATE (clean `main` at `dcbf9f5`, after the CI fix)
 
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npx tsc --noEmit` | exits 0 — and checks no project file (see §5); `tsc -b` covers 151 |
-| `npm test` | PASS — 126 files / 1,932 tests |
-| Focused regression suites from Tasks A–G | PASS — 387 tests across 10 files |
+| `npm test` | PASS — 126 files / 1,934 tests |
+| Focused regression suites from Tasks A–G | PASS — 389 tests across 10 files |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `2b0bba0` |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `dcbf9f5` |
 | `e2e/lottie-import-report.spec.ts` + `e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests |
 | `perf` harness | PASS — every scene verified before timing |
 | `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
 | `npm audit` | 0 vulnerabilities |
 | `git diff --check` | clean |
+
+CI on `main` is green at `64291bc` (run `35880658380`).
 
 ## 4) SCOPE BOUNDARIES, STATED NOT HIDDEN
 
@@ -71,28 +75,30 @@ One task per finding group, each on its own branch with its own validation, a re
 
 ## 6) RELEASE VIEW
 
-The tag, draft prerelease and package metadata are unchanged (`v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the package stays private at `1.1.0-rc.1`, nothing published). The review's release blockers are closed. What remains is a human decision, not a fix: **Milestone H — release finalization**, being the approval-gated Option C majors, the two deferred minor bumps, and any publish/finalize instruction. **Option C stays deferred and is not a blocker:** the current toolchain builds, tests and lints cleanly.
+The tag, draft prerelease and package metadata are unchanged (`v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the package stays private at `1.1.0-rc.1`, nothing published). The review's release blockers are closed. What remains is a human decision, not a fix: **Milestone H — release finalization**, being the approval-gated Option C majors, the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), and any publish/finalize instruction. **Option C stays deferred and is not a blocker:** the current toolchain builds, tests and lints cleanly.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — final correctness checkpoint
+# KCS ChatGPT Upload Manifest — final live-state reconciliation
 
 Clean refreshed: YES
-Bundle purpose: the completed post-review correctness follow-up and its final gate
+Bundle purpose: the completed post-review correctness follow-up, its final gate, and the live documents reconciled to the repository truth
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: main at dcbf9f5 (the follow-up and its CI fix are merged and pushed)
+Branch: main at 64291bc (== origin/main); the follow-up, its CI fix and the reconciliation are merged and pushed
 Task record: reports/progress_141_astra_correctness_followup_summary.md
-Findings closed: H-01 (0c19751), H-03/H-04/M-03 (fc672f2), M-01/M-02/H-05 (85c3929), H-02 (ac3bda1), H-06 (352d272), M-04 (16e1610), M-05 (2b0bba0) — none deferred, none blocked
-Final gate on clean main at dcbf9f5 (after the CI fix recorded in the summary): npm run build PASS; npx tsc --noEmit exits 0 (and checks no project file — the root tsconfig is a solution file, so npm run build is the real type gate, 151 files); npm test PASS (126 files / 1,934 tests); focused regression suites PASS (389 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate dcbf9f5); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
+Phase 0: Task 4 (engines + npm-12 allowScripts) MERGED at 1a12d79 — no live text says its merge decision is pending; package.json/package-lock.json were not modified by this reconciliation
+Findings closed: H-01 (0c19751), H-03/H-04/M-03 (fc672f2), M-01/M-02/H-05 (85c3929), H-02 (ac3bda1), H-06 (352d272), M-04 (16e1610), M-05 (2b0bba0) — 11/11, none deferred, none blocked
+Milestone G: COMPLETE. The Task G merge turned main red for one push (the new live-revision rule used `git merge-base --is-ancestor`, which cannot resolve the older commits in CI's depth-1 checkout); the fix is dcbf9f5, verified in a real shallow clone
+Final gate on clean main at dcbf9f5, re-run after that fix: npm run build PASS; npx tsc --noEmit exits 0 and checks zero project files (the root tsconfig is a solution file, so npm run build / tsc -b is the real type gate, 151 files); npm test PASS (126 files / 1,934 tests); focused regression suites PASS (389 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate dcbf9f5); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
+CI: main is green at 64291bc (run 35880658380)
+Milestone H: NEXT. Option C (typescript 6→7, vitest + @vitest/coverage-v8 4→5) is deferred and NOT a release blocker; deferred minors are oxlint 1.85 and jsdom 30.1.x; every package/lockfile/workflow change and every release/tag/npm action is approval-gated
+Release state: tag v1.1.0-rc.1 target unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub draft prerelease unchanged; package private at 1.1.0-rc.1; npm publish NO
 Scope boundaries stated, not hidden: H-02 with an image matte source follows the editor authority; H-06 added no authentication (loopback bind plus documentation instead); H-04 leaves SceneLayer.visible alone; M-03 leaves the legacy project-template registry out of the scene history
 Residual observations (need their own decision): npx tsc --noEmit verifies nothing in CI; constant SceneLayer.visible; unrestricted CORS; the tracked SQLite file; vite --host publishing the dev frontend; missing focus restoration on two dialogs; one unreproduced full-suite failure during Task B
-Next work: Milestone H — release finalization (the approval-gated Option C majors, the two deferred minor bumps, and any publish/finalize instruction). Option C stays deferred and is not a blocker.
-v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
-npm publish: NO
 
 Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_141_astra_correctness_followup_summary.md
 
@@ -105,37 +111,42 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — final correctness checkpoint
+# KCS Minimal ChatGPT Upload Bundle — final live-state reconciliation
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this checkpoint.
 
 ## What this bundle covers
 
-The post-review correctness follow-up, complete and merged into `main` at `dcbf9f5`:
+The post-review correctness follow-up, complete and merged into `main`, with the live documents and
+this handoff reconciled to the repository truth (`main == origin/main == 64291bc`):
 
 - Every release-blocking finding from the full-project review is closed — **H-01…H-06 and M-01…M-05** —
   one task per finding group, each on its own branch with its own validation, a read-only self-review
-  and an approval-gated fast-forward merge. The finding map is in
-  `progress_141_astra_correctness_followup_summary.md`.
+  and an approval-gated fast-forward merge. Phase 0 closed Task 4 (`engines` + npm-12 `allowScripts`)
+  at `1a12d79`. The finding map is in `progress_141_astra_correctness_followup_summary.md`.
+- The Task G merge turned `main` red for one push: the new live-revision rule compared an "at or after"
+  claim with `git merge-base --is-ancestor`, and CI's `--depth 1` checkout does not carry the older
+  commits. The fix at `dcbf9f5` reports that limit as skipped, exactly as the tag and milestone checks
+  already do, and keeps failing when a *full* checkout cannot resolve the commit at all.
 - The final correctness gate ran on clean `main` at `dcbf9f5`: build, the full suite (126 files /
   1,934 tests), the focused regression suites from every task (389 tests), lint, `validate:ograf`,
-  `qa:release`, the two browser specs, the profiling harness, the state check (35 checks), `npm audit`
-  (0) and `git diff --check` — all green. The summary also records the one CI failure this run caused and
-  fixed: the new live-revision rule failed in CI's shallow checkout, and the fix reports that limit as
-  skipped exactly as the tag and milestone checks already do.
+  `qa:release`, the two browser specs (7 tests), the profiling harness, the state check (35 checks),
+  `npm audit` (0) and `git diff --check` — all green. CI on `main` is green at `64291bc`
+  (run `35880658380`).
 - The summary also records the scope boundaries that were stated rather than hidden (the image matte
   source, the decision not to invent an authentication system, `SceneLayer.visible`, the legacy
   template registry) and the residual observations that need their own decision (the type-check step
   that verifies nothing, unrestricted CORS, the tracked SQLite file, and the rest).
-- The release tag, draft prerelease and package metadata are unchanged. What remains is the
-  approval-gated **Milestone H — release finalization** (the Option C majors, the two deferred minor
-  bumps, and any publish/finalize instruction).
+- The release tag, draft prerelease and package metadata are unchanged. **Milestone H — release
+  finalization** is NEXT: the approval-gated Option C majors, the two deferred minor bumps
+  (`oxlint` 1.85, `jsdom` 30.1.x), and any publish/finalize instruction. Option C stays deferred and
+  is **not** a blocker.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this checkpoint
 - `progress_141_astra_correctness_followup_summary.md` — the finding map, the gate and the observations
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap, with milestone G complete and H as NEXT
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap, with milestones A–G complete and H as NEXT
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -167,7 +178,7 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 # Progress 141 — the post-review correctness follow-up: final summary
 
-Branch: `docs/final-correctness-gate` (base `main` at `2b0bba0`).
+Branch: `docs/final-correctness-gate` (base `main` at `2b0bba0`; merged and pushed through `64291bc`, the final live-state reconciliation).
 Scope: every finding from the full-project review, closed one task at a time, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge.
 
 ## 1. Finding map
@@ -227,7 +238,7 @@ These are not review findings; they were found while closing the ones above, and
 
 | Check | Result |
 |---|---|
-| `git pull --ff-only origin main` | up to date; `main == origin/main == 2b0bba0` |
+| `git pull --ff-only origin main` | up to date; `main == origin/main == dcbf9f5` at the gate, `64291bc` after the record update |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npx tsc --noEmit` | exits 0 — and checks no project file (see §4); `tsc -b` covers 151 |
 | `npm test` | PASS — 126 files / 1,934 tests |
@@ -259,7 +270,7 @@ Every one of these ran on the merged `main`, not on a branch.
 - **The Task G merge turned `main` red for one push, and the cause was a real gap in the new rule.** The live-revision check compared an "at or after" claim with `git merge-base --is-ancestor`, but CI checks out with `--depth 1`, so the older commits are not fetched and every such claim failed there while passing locally. The fix (`dcbf9f5`) reports that limit as skipped, exactly as the tag and milestone checks already did, and keeps failing when a *full* checkout cannot resolve the commit at all.
   - Reproduced faithfully: in a real shallow clone checked out on `main`, the pre-fix checker fails with `NEXT_SESSION.md:5 says main is at or after 16e1610, which is not an ancestor of …` — the CI message — and the fixed checker reports `PASS (35 checks)`.
   - Two tests pin it: a shallow checkout that cannot carry the claim is reported as skipped, and a full checkout that does not have the commit fails.
-- CI on `main` is green at `dcbf9f5` (run `35879677379`).
+- CI on `main` is green at `64291bc` (run `35880658380`).
 
 ---
 
@@ -269,12 +280,12 @@ Every one of these ran on the merged `main`, not on a branch.
 
 ## Repository state
 
-- Checkout: `main` at or after `16e1610` (the last merged correctness task), matching `origin/main`. **Milestone F item 10 is complete**: the import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are merged; the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base and stays historical. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **all four Milestone F item 10 slices (merged at `ff32d6c`, `8670b2a`, `bda62cb` and `3b30bff`)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
+- Checkout: `main` at or after `64291bc` (the final live-state reconciliation), matching `origin/main`. **Milestone F item 10 is complete**: the import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are merged; the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base and stays historical. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **all four Milestone F item 10 slices (merged at `ff32d6c`, `8670b2a`, `bda62cb` and `3b30bff`)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Checkout after the item 12 merge: `main` at or after `a4f8642` (the OGraf package import and its handoff refresh), matching `origin/main`
 - Milestone D item 9 **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`) and `main` matches `origin/main`
-- The **`engines` declaration and the npm-12 `allowScripts` question are answered on `chore/engines-allow-scripts`** (`reports/progress_131_engines_allow_scripts.md`): `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` (the locked toolchain's supported intersection) plus a version-pinned `allowScripts` approval for `sqlite3@6.0.1`; `package-lock.json` mirrors only the root engine metadata and its dependency graph is unchanged (**the branch's merge decision is with the user**)
+- The **`engines` declaration and the npm-12 `allowScripts` question are answered on `chore/engines-allow-scripts`** (`reports/progress_131_engines_allow_scripts.md`): `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` (the locked toolchain's supported intersection) plus a version-pinned `allowScripts` approval for `sqlite3@6.0.1`; `package-lock.json` mirrors only the root engine metadata and its dependency graph is unchanged (**merged into `main` at `1a12d79`**)
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
 - Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (identical to `main`; deleting it needs approval)
@@ -289,18 +300,18 @@ Milestones A–E are complete, and Milestone F item 10 is complete (all four sli
 - Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.
 - Milestone C — first export / onboarding (`c2dcb22`): opt-in "First export help" panel, readiness check reading the same OGraf diagnostics authority as the export, one shared compile path for readiness and both export actions.
 - Milestone D item 6 — state consistency check (`b91e8b9`, CI follow-up `be76df9`): `node scripts/check-state-consistency.mjs`.
-- Milestone D item 9 — dependency and warning maintenance: **the audit is complete** (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and **the approved Option A is implemented on `chore/warning-maintenance`** (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule, plus the local SQLite binding repair — the API starts again and `GET /api/health` returns 200 in this working copy. `package.json`, `package-lock.json`, `.github/workflows/**` and every dependency version were left unchanged by that maintenance work. The audit's open items were then taken up one by one: **Option B was applied and merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`) — 16 patch/minor packages refreshed (React 19.3, Vite 8.3, Vitest 4.1.11, testing-library patches, `lucide-react`, `pg`, `concurrently`, `@types`) and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**. The `engines` declaration and the npm-12 `allowScripts` pin were answered afterwards on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and await their merge decision. Still open by decision: Option C (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two minor bumps that were applied, measured and reverted (`oxlint` 1.85 with 33 new rule warnings, `jsdom` 30.1 whose `URL.createObjectURL` throws for a Blob).
+- Milestone D item 9 — dependency and warning maintenance: **the audit is complete** (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and **the approved Option A is implemented on `chore/warning-maintenance`** (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule, plus the local SQLite binding repair — the API starts again and `GET /api/health` returns 200 in this working copy. `package.json`, `package-lock.json`, `.github/workflows/**` and every dependency version were left unchanged by that maintenance work. The audit's open items were then taken up one by one: **Option B was applied and merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`) — 16 patch/minor packages refreshed (React 19.3, Vite 8.3, Vitest 4.1.11, testing-library patches, `lucide-react`, `pg`, `concurrently`, `@types`) and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**. The `engines` declaration and the npm-12 `allowScripts` pin were answered afterwards on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and are **merged into `main` at `1a12d79`**. Still open by decision: Option C (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two minor bumps that were applied, measured and reverted (`oxlint` 1.85 with 33 new rule warnings, `jsdom` 30.1 whose `URL.createObjectURL` throws for a Blob).
 
 The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease exist at the workflow-tested code candidate; nothing was published, finalized, or pushed to npm.
 
 ## Validation
 
-On `fix/state-consistency-live-docs` (the live-doc reconciliation): full Vitest (126 files / 1,926 tests), `npx playwright test e2e/ograf-matte-visual.spec.ts` (4 pixel cases) and `e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run build` (`tsc -b` + vite — the gate CI runs; `npx tsc --noEmit` alone checks no project file here), `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` all pass, `npm audit` reports 0 vulnerabilities, and the API serves `GET /api/health` with 200 on `127.0.0.1` (its default bind).
+On `main` at `64291bc` (the final live-state reconciliation): full Vitest (126 files / 1,934 tests), `npx playwright test e2e/ograf-matte-visual.spec.ts` (4 pixel cases) and `e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run build` (`tsc -b` + vite — the gate CI runs; `npx tsc --noEmit` alone checks no project file here), `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` all pass, `npm audit` reports 0 vulnerabilities, and the API serves `GET /api/health` with 200 on `127.0.0.1` (its default bind).
 
 ## Next scoped work
 
-1. **Milestone G — the post-review correctness follow-up is complete.** Every finding from the full-project review is closed, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge: H-01 at `0c19751`; H-03, H-04 and M-03 at `fc672f2`; M-01, M-02 and H-05 at `85c3929`; H-02 at `ac3bda1`; H-06 at `352d272`; M-04 at `16e1610`; M-05 at `2b0bba0`. The final correctness gate ran on `main` at `2b0bba0` and is recorded in `reports/progress_141_astra_correctness_followup_summary.md`, which also lists the residual observations that need their own decision. **Milestone H (release finalization) is the next work.**
-2. Approval-gated follow-ups that remain open: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) with their own triage. The `engines`/`allowScripts` follow-up is answered on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and only needs its merge decision. Every release/tag/draft-release change still needs explicit approval.
+1. **Milestone G — the post-review correctness follow-up is complete.** Every finding from the full-project review is closed, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge: H-01 at `0c19751`; H-03, H-04 and M-03 at `fc672f2`; M-01, M-02 and H-05 at `85c3929`; H-02 at `ac3bda1`; H-06 at `352d272`; M-04 at `16e1610`; M-05 at `2b0bba0`. The final correctness gate ran on `main` after the shallow-checkout fix (`dcbf9f5`) and is recorded in `reports/progress_141_astra_correctness_followup_summary.md`, which also lists the residual observations that need their own decision. **Milestone H (release finalization) is the next work.**
+2. Approval-gated follow-ups that remain open: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) with their own triage. The `engines`/`allowScripts` follow-up is answered on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and is **merged** at `1a12d79`. Every release/tag/draft-release change still needs explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
 
@@ -328,7 +339,7 @@ On `fix/state-consistency-live-docs` (the live-doc reconciliation): full Vitest 
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Roadmap status when this milestone landed: D was next (items 6 and 9) and C was merged. Current status: A–E are complete and Milestone F is the active milestone (see "Current result" above).
+- Roadmap status when this milestone landed: D was next (items 6 and 9) and C was merged. Current status: milestones A–G are complete and Milestone H (release finalization) is NEXT (see "Current result" above).
 
 ---
 
@@ -338,7 +349,7 @@ On `fix/state-consistency-live-docs` (the live-doc reconciliation): full Vitest 
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into main, and the grouped post-RC roadmap has completed milestones A–E. **Milestone F item 10 is complete**: the Lottie import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are all merged, and `main` is at or after `12b71a5` (the reconciliation commit is the next `main` commit).
+The accepted product and security follow-up line is integrated into main, the grouped post-RC roadmap has completed milestones A–G, and `main` is at `64291bc`. Milestone F is complete (its item 10 slices — the Lottie import core `ff32d6c`, the mask/track-matte slice `8670b2a`, the text/image/precomp slice `bda62cb` and the import entry point `3b30bff` — item 11 and item 12 are all merged), milestone G (the post-review correctness follow-up) is complete, and **milestone H (release finalization) is NEXT**.
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
@@ -360,7 +371,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 126 files / 1,926 tests |
+| Full Vitest | PASS | 126 files / 1,934 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Chromium tests on `main` |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
@@ -373,13 +384,13 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ## Post-review correctness follow-up (complete)
 
-The full-project review's release-blocking findings are closed, one task at a time and one branch each: **H-01** at `0c19751`, **H-03/H-04/M-03** at `fc672f2`, **M-01/M-02/H-05** at `85c3929`, **H-02** at `ac3bda1`, **H-06** at `352d272`, **M-04** at `16e1610`, **M-05** at `2b0bba0`. Every fix carries a reproduction that fails before it and passes after it, at the level a user observes. The final correctness gate and the finding map are in `reports/progress_141_astra_correctness_followup_summary.md`; the residual observations it records (the type-check step that verifies nothing, the tracked SQLite file, CORS, and the rest) each need their own decision.
+The full-project review's release-blocking findings are closed, one task at a time and one branch each: **H-01** at `0c19751`, **H-03/H-04/M-03** at `fc672f2`, **M-01/M-02/H-05** at `85c3929`, **H-02** at `ac3bda1`, **H-06** at `352d272`, **M-04** at `16e1610`, **M-05** at `2b0bba0`. The Task G merge then turned `main` red for one push — the new live-revision rule compared an "at or after" claim with `git merge-base --is-ancestor`, and CI's `--depth 1` checkout does not carry the older commits — and the fix at `dcbf9f5` reports that limit as skipped, exactly as the tag and milestone checks already do. Every fix carries a reproduction that fails before it and passes after it, at the level a user observes. The final correctness gate and the finding map are in `reports/progress_141_astra_correctness_followup_summary.md`; the residual observations it records (the type-check step that verifies nothing, the tracked SQLite file, CORS, and the rest) each need their own decision.
 
 ## Remaining work
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is the active milestone: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is implemented as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's first implementation slice — the Lottie import core — is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`). Milestone F item 10 is complete: its four slices are merged (`ff32d6c`, `8670b2a`, `bda62cb`, `3b30bff`), and **item 12's unified import entry is merged** (`reports/progress_128_unified_import_entry.md`): one header control classifies a selected file by its content and routes it to the KCS/legacy boundary, the Lottie importer with its report dialog, or the OGraf package reader — merged into `main` with its handoff refresh at `a4f8642`. Its **OGraf package/editable import** is merged at `419fc6a` (`reports/progress_129_ograf_editable_import.md`): a `.zip`/`.ograf` package is decoded in memory under entry-count, entry-size and path-safety guards, its `scene.kcs` goes through the same validated path as a project import, and a bare `.ograf.json` manifest still points the user at the package. After it landed: Option B was taken up and merged into `main` at `73426e5`; `engines`/`allowScripts` is answered on `chore/engines-allow-scripts` and awaits its merge decision, while Option C remains open. The state-consistency checker does not yet detect a stale sentence inside a current section, so these documents are still reviewed by hand after every task. The branch declares the locked toolchain's supported Node intersection (`^22.22.2 || ^24.15.0 || >=26.0.0`), approves `sqlite3@6.0.1`'s prebuilt-binding install step, and synchronizes only the lockfile root engine metadata; the dependency graph is unchanged. Any further `package.json`, lockfile or workflow change stays approval-gated: Option C and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x).
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is complete too: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is merged as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's implementation slices are merged**, the first at `ff32d6c` (`reports/progress_123_lottie_import_core.md`). Milestone F item 10 is complete: its four slices are merged (`ff32d6c`, `8670b2a`, `bda62cb`, `3b30bff`), and **item 12's unified import entry is merged** (`reports/progress_128_unified_import_entry.md`): one header control classifies a selected file by its content and routes it to the KCS/legacy boundary, the Lottie importer with its report dialog, or the OGraf package reader — merged into `main` with its handoff refresh at `a4f8642`. Its **OGraf package/editable import** is merged at `419fc6a` (`reports/progress_129_ograf_editable_import.md`): a `.zip`/`.ograf` package is decoded in memory under entry-count, entry-size and path-safety guards, its `scene.kcs` goes through the same validated path as a project import, and a bare `.ograf.json` manifest still points the user at the package. After it landed: Option B was taken up and merged into `main` at `73426e5`; `engines`/`allowScripts` is answered on `chore/engines-allow-scripts` and awaits its merge decision, while Option C remains open. The state-consistency checker does not yet detect a stale sentence inside a current section, so these documents are still reviewed by hand after every task. The branch declares the locked toolchain's supported Node intersection (`^22.22.2 || ^24.15.0 || >=26.0.0`), approves `sqlite3@6.0.1`'s prebuilt-binding install step, and synchronizes only the lockfile root engine metadata; the dependency graph is unchanged. Any further `package.json`, lockfile or workflow change stays approval-gated: Option C and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x).
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -427,11 +438,11 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
-| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 and `jsdom` 30.1 deferred for documented reasons. The `engines` declaration and npm-12 `allowScripts` policy are answered on `chore/engines-allow-scripts` and await their merge decision. Still approval-gated: Option C (TypeScript 7 / Vitest 5) and the two deferred minor bumps |
+| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 and `jsdom` 30.1 deferred for documented reasons. The `engines` declaration and npm-12 `allowScripts` policy are answered on `chore/engines-allow-scripts` and are **merged into `main` at `1a12d79`**. Still approval-gated: Option C (TypeScript 7 / Vitest 5) and the two deferred minor bumps |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **COMPLETE** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
-| G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **COMPLETE** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05** (the live-document reconciliation) is merged at `2b0bba0`, and the final correctness gate ran on `main` at `2b0bba0` (`reports/progress_141_astra_correctness_followup_summary.md`): every finding is closed. |
-| H — Release finalization and the approval-gated toolchain majors | review follow-up decisions | `chore/engines-allow-scripts` (kept) | **NEXT** — the correctness follow-up is complete, so what remains is the human decision the repository already defers: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), each with its own triage, then any publish/finalize instruction for the draft release. Every package/lockfile/workflow change needs explicit approval, and the release tag and draft stay untouched until then. |
+| G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **COMPLETE** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05** (the live-document reconciliation) is merged at `2b0bba0`, and the shallow-checkout CI regression it caused was fixed at `dcbf9f5`, and the final correctness gate ran on `main` after that fix (`reports/progress_141_astra_correctness_followup_summary.md`): every finding is closed. |
+| H — Release finalization and the approval-gated toolchain majors | review follow-up decisions | — (one branch per change) | **NEXT** — the correctness follow-up is complete, so what remains is the human decision the repository already defers: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), each with its own triage, then any publish/finalize instruction for the draft release. Every package/lockfile/workflow change needs explicit approval, and the release tag and draft stay untouched until then. |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -463,7 +474,7 @@ All five items were closed, the focused re-review and its follow-up rounds retur
 ## Milestone D — State / CI / warning hygiene (roadmap items 6, 9)
 
 - Item 6 (current-state consistency check) is a documentation/tooling task: a small script or CI check that fails when live docs contradict the tag/main SHA. No gate beyond normal review.
-- Item 9 (dependency and warning maintenance) **requires explicit user approval for anything that touches `package.json`/`package-lock.json`**. The audit is complete (`reports/progress_112_dependency_warning_audit.md`), the approved **Option A** (warning fixes only, no package change) is implemented and **merged** at `3923141` (`reports/progress_113_warning_maintenance.md`); **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`); **The `engines` declaration and the npm-12 `allowScripts` question are answered** on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and await their merge decision; Option C and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) stay approval-gated.
+- Item 9 (dependency and warning maintenance) **requires explicit user approval for anything that touches `package.json`/`package-lock.json`**. The audit is complete (`reports/progress_112_dependency_warning_audit.md`), the approved **Option A** (warning fixes only, no package change) is implemented and **merged** at `3923141` (`reports/progress_113_warning_maintenance.md`); **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`); **The `engines` declaration and the npm-12 `allowScripts` question are answered** on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and are **merged into `main` at `1a12d79`**; Option C and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) stay approval-gated.
 
 ## Milestone E — OGraf QA / schema hardening study (roadmap items 7, 8)
 
@@ -585,13 +596,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
 - `CHANGELOG.md` — 13931 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 16211 bytes
-- `NEXT_SESSION.md` — 11214 bytes
-- `OMP_FINAL_RESPONSE.md` — 3866 bytes
-- `PROJECT_STATE.md` — 17076 bytes
-- `README.md` — 3378 bytes
-- `manifest.txt` — 2788 bytes
-- `progress_141_astra_correctness_followup_summary.md` — 11934 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 16303 bytes
+- `NEXT_SESSION.md` — 11256 bytes
+- `OMP_FINAL_RESPONSE.md` — 4175 bytes
+- `PROJECT_STATE.md` — 17411 bytes
+- `README.md` — 3863 bytes
+- `manifest.txt` — 3512 bytes
+- `progress_141_astra_correctness_followup_summary.md` — 12055 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

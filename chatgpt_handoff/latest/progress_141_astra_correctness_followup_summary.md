@@ -1,6 +1,6 @@
 # Progress 141 — the post-review correctness follow-up: final summary
 
-Branch: `docs/final-correctness-gate` (base `main` at `2b0bba0`).
+Branch: `docs/final-correctness-gate` (base `main` at `2b0bba0`; merged and pushed through `64291bc`, the final live-state reconciliation).
 Scope: every finding from the full-project review, closed one task at a time, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge.
 
 ## 1. Finding map
@@ -60,7 +60,7 @@ These are not review findings; they were found while closing the ones above, and
 
 | Check | Result |
 |---|---|
-| `git pull --ff-only origin main` | up to date; `main == origin/main == 2b0bba0` |
+| `git pull --ff-only origin main` | up to date; `main == origin/main == dcbf9f5` at the gate, `64291bc` after the record update |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npx tsc --noEmit` | exits 0 — and checks no project file (see §4); `tsc -b` covers 151 |
 | `npm test` | PASS — 126 files / 1,934 tests |
@@ -92,4 +92,4 @@ Every one of these ran on the merged `main`, not on a branch.
 - **The Task G merge turned `main` red for one push, and the cause was a real gap in the new rule.** The live-revision check compared an "at or after" claim with `git merge-base --is-ancestor`, but CI checks out with `--depth 1`, so the older commits are not fetched and every such claim failed there while passing locally. The fix (`dcbf9f5`) reports that limit as skipped, exactly as the tag and milestone checks already did, and keeps failing when a *full* checkout cannot resolve the commit at all.
   - Reproduced faithfully: in a real shallow clone checked out on `main`, the pre-fix checker fails with `NEXT_SESSION.md:5 says main is at or after 16e1610, which is not an ancestor of …` — the CI message — and the fixed checker reports `PASS (35 checks)`.
   - Two tests pin it: a shallow checkout that cannot carry the claim is reported as skipped, and a full checkout that does not have the commit fails.
-- CI on `main` is green at `dcbf9f5` (run `35879677379`).
+- CI on `main` is green at `64291bc` (run `35880658380`).

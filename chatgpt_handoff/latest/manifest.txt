@@ -1,19 +1,21 @@
-# KCS ChatGPT Upload Manifest — final correctness checkpoint
+# KCS ChatGPT Upload Manifest — final live-state reconciliation
 
 Clean refreshed: YES
-Bundle purpose: the completed post-review correctness follow-up and its final gate
+Bundle purpose: the completed post-review correctness follow-up, its final gate, and the live documents reconciled to the repository truth
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: main at dcbf9f5 (the follow-up and its CI fix are merged and pushed)
+Branch: main at 64291bc (== origin/main); the follow-up, its CI fix and the reconciliation are merged and pushed
 Task record: reports/progress_141_astra_correctness_followup_summary.md
-Findings closed: H-01 (0c19751), H-03/H-04/M-03 (fc672f2), M-01/M-02/H-05 (85c3929), H-02 (ac3bda1), H-06 (352d272), M-04 (16e1610), M-05 (2b0bba0) — none deferred, none blocked
-Final gate on clean main at dcbf9f5 (after the CI fix recorded in the summary): npm run build PASS; npx tsc --noEmit exits 0 (and checks no project file — the root tsconfig is a solution file, so npm run build is the real type gate, 151 files); npm test PASS (126 files / 1,934 tests); focused regression suites PASS (389 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate dcbf9f5); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
+Phase 0: Task 4 (engines + npm-12 allowScripts) MERGED at 1a12d79 — no live text says its merge decision is pending; package.json/package-lock.json were not modified by this reconciliation
+Findings closed: H-01 (0c19751), H-03/H-04/M-03 (fc672f2), M-01/M-02/H-05 (85c3929), H-02 (ac3bda1), H-06 (352d272), M-04 (16e1610), M-05 (2b0bba0) — 11/11, none deferred, none blocked
+Milestone G: COMPLETE. The Task G merge turned main red for one push (the new live-revision rule used `git merge-base --is-ancestor`, which cannot resolve the older commits in CI's depth-1 checkout); the fix is dcbf9f5, verified in a real shallow clone
+Final gate on clean main at dcbf9f5, re-run after that fix: npm run build PASS; npx tsc --noEmit exits 0 and checks zero project files (the root tsconfig is a solution file, so npm run build / tsc -b is the real type gate, 151 files); npm test PASS (126 files / 1,934 tests); focused regression suites PASS (389 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate dcbf9f5); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
+CI: main is green at 64291bc (run 35880658380)
+Milestone H: NEXT. Option C (typescript 6→7, vitest + @vitest/coverage-v8 4→5) is deferred and NOT a release blocker; deferred minors are oxlint 1.85 and jsdom 30.1.x; every package/lockfile/workflow change and every release/tag/npm action is approval-gated
+Release state: tag v1.1.0-rc.1 target unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub draft prerelease unchanged; package private at 1.1.0-rc.1; npm publish NO
 Scope boundaries stated, not hidden: H-02 with an image matte source follows the editor authority; H-06 added no authentication (loopback bind plus documentation instead); H-04 leaves SceneLayer.visible alone; M-03 leaves the legacy project-template registry out of the scene history
 Residual observations (need their own decision): npx tsc --noEmit verifies nothing in CI; constant SceneLayer.visible; unrestricted CORS; the tracked SQLite file; vite --host publishing the dev frontend; missing focus restoration on two dialogs; one unreproduced full-suite failure during Task B
-Next work: Milestone H — release finalization (the approval-gated Option C majors, the two deferred minor bumps, and any publish/finalize instruction). Option C stays deferred and is not a blocker.
-v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
-npm publish: NO
 
 Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_141_astra_correctness_followup_summary.md
 

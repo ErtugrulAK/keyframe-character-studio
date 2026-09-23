@@ -4,7 +4,7 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 
 ## 1) RESULT
 
-- **Status:** the follow-up is complete and merged; the final correctness gate ran on clean `main` at `2b0bba0`.
+- **Status:** the follow-up is complete and merged; the final correctness gate ran on clean `main` at `dcbf9f5`, and the record update followed at `64291bc` (`main == origin/main`).
 - **Report:** `reports/progress_141_astra_correctness_followup_summary.md` — the finding map, the scope boundaries, the residual observations and the gate.
 - **Findings:** H-01, H-02, H-03, H-04, H-05, H-06, M-01, M-02, M-03, M-04, M-05 — **all CLOSED**. None deferred, none blocked, none dropped.
 
@@ -14,6 +14,7 @@ One task per finding group, each on its own branch with its own validation, a re
 
 | Task | Findings | Merged at |
 |---|---|---|
+| Phase 0 | Task 4 (`engines` + npm-12 `allowScripts`) | `1a12d79` |
 | A | H-01 | `0c19751` |
 | B | H-03, H-04, M-03 | `fc672f2` |
 | C | M-01, M-02, H-05 | `85c3929` |
@@ -21,23 +22,26 @@ One task per finding group, each on its own branch with its own validation, a re
 | E | H-06 | `352d272` |
 | F | M-04 | `16e1610` |
 | G | M-05 | `2b0bba0` |
+| CI fix | the Task G shallow-checkout regression | `dcbf9f5` |
 
-## 3) THE FINAL GATE (clean `main` at `2b0bba0`)
+## 3) THE FINAL GATE (clean `main` at `dcbf9f5`, after the CI fix)
 
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npx tsc --noEmit` | exits 0 — and checks no project file (see §5); `tsc -b` covers 151 |
-| `npm test` | PASS — 126 files / 1,932 tests |
-| Focused regression suites from Tasks A–G | PASS — 387 tests across 10 files |
+| `npm test` | PASS — 126 files / 1,934 tests |
+| Focused regression suites from Tasks A–G | PASS — 389 tests across 10 files |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `2b0bba0` |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `dcbf9f5` |
 | `e2e/lottie-import-report.spec.ts` + `e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests |
 | `perf` harness | PASS — every scene verified before timing |
 | `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
 | `npm audit` | 0 vulnerabilities |
 | `git diff --check` | clean |
+
+CI on `main` is green at `64291bc` (run `35880658380`).
 
 ## 4) SCOPE BOUNDARIES, STATED NOT HIDDEN
 
@@ -52,4 +56,4 @@ One task per finding group, each on its own branch with its own validation, a re
 
 ## 6) RELEASE VIEW
 
-The tag, draft prerelease and package metadata are unchanged (`v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the package stays private at `1.1.0-rc.1`, nothing published). The review's release blockers are closed. What remains is a human decision, not a fix: **Milestone H — release finalization**, being the approval-gated Option C majors, the two deferred minor bumps, and any publish/finalize instruction. **Option C stays deferred and is not a blocker:** the current toolchain builds, tests and lints cleanly.
+The tag, draft prerelease and package metadata are unchanged (`v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the package stays private at `1.1.0-rc.1`, nothing published). The review's release blockers are closed. What remains is a human decision, not a fix: **Milestone H — release finalization**, being the approval-gated Option C majors, the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), and any publish/finalize instruction. **Option C stays deferred and is not a blocker:** the current toolchain builds, tests and lints cleanly.

@@ -1,28 +1,31 @@
-# KCS Minimal ChatGPT Upload Bundle — Task C (Lottie structure correctness)
+# KCS Minimal ChatGPT Upload Bundle — Task D (OGraf inverse alpha matte)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-M-01, M-02 and H-05 from the full-project review, on `fix/lottie-structure-correctness` from
-`main` at `fc672f2`:
+H-02 from the full-project review, on `fix/ograf-inverse-alpha-matte` from `main` at `85c3929`:
 
-- **M-01** — a Lottie layer's parent is resolved through the layer index it names (`ind`) instead of
-  the layer's position in the array, so non-sequential indexes and a child that precedes its parent
-  both import correctly. A reference no imported layer declares, a self-reference, and an index two
-  layers share are reported instead of guessed; the depth check walks the resolved graph and
-  terminates on a cycle.
-- **M-02** — a layer with no animation track now inherits its parent transform. The hierarchy is
-  resolved for every layer and only the keyframe evaluation is skipped.
-- **H-05** — a Lottie layer carrying more than one geometry item is reported instead of silently
-  keeping only the last one; the layer still imports.
-- Reproduced before the change at every level (4 cases for M-01, 3 for M-02, 1 for H-05) and closed
-  after it. No new dependency, workflow, tag or release action.
+- An inverted track matte in an exported OGraf graphic now actually inverts. It was built as an
+  **alpha** mask holding a white backdrop and the source painted black; in an alpha mask that black
+  keeps its alpha at 1, so the "hole" stayed opaque and the target rendered as if it had no matte.
+  It is now a **luminance** mask with a white backdrop and the source painted black — the technique
+  the editor's own matte authority documents — verified by sampling pixels in Chromium.
+- The inverted **luminance** matte had the same defect in the sibling branch: it had no backdrop, so
+  the mask was transparent everywhere outside the source. Both inverted modes now share one
+  construction and the `feComponentTransfer` branch is gone.
+- Text matte sources are painted black for the hole; the text renderer had emitted its own `fill`
+  first and appended the caller's, so a browser used the layer colour and a dark text produced no
+  hole. The duplicate, invalid attributes that path emitted are gone with it.
+- The generated runtime mirrors all of it, and the new browser spec renders both authorities and
+  compares their pixels.
+- Reproduced before the change (3 of 4 pixel cases fail) and closed after it. No new dependency,
+  workflow, tag or release action.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_136_lottie_structure_correctness.md` — the task record
+- `progress_137_ograf_inverse_alpha_matte.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action

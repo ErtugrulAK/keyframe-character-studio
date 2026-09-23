@@ -17,86 +17,104 @@
 
 ## 1. OMP Final Response
 
-# KCS Post-Review Correctness Fix — Task C Final Response (Lottie structure correctness)
+# KCS Post-Review Correctness Fix — Task D Final Response (OGraf inverse alpha matte)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on `fix/lottie-structure-correctness` (base `main` at `fc672f2`); the merge decision is with the user.
-- **Report:** `reports/progress_136_lottie_structure_correctness.md`.
-- **Findings closed:** M-01 (parent resolved by array offset instead of `ind`), M-02 (a static child skipped its parent transform), H-05 (multiple geometry silently overwritten).
+- **Status:** implemented on `fix/ograf-inverse-alpha-matte` (base `main` at `85c3929`); the merge decision is with the user.
+- **Report:** `reports/progress_137_ograf_inverse_alpha_matte.md`.
+- **Finding closed:** H-02 — the OGraf inverse alpha matte did not invert alpha.
 
-## 2) M-01 — a parent reference names a layer index, not an array position
+## 2) WHAT WAS WRONG
 
-`mapDocument` read `layer.parent` as an array position (`lottie-layer-${parent}`, and only when the parent sat earlier in the array), and used the same assumption for the depth count. Lottie's `parent` names the parent layer's own `ind`, which in typical exports is 1-based — so the resolution was off by one *and* it refused any document where a child precedes its parent.
+The export renderer and the generated runtime built an inverted alpha matte as an **alpha** mask holding a white full-region path plus the source painted black. In an alpha mask, black paint keeps its alpha at 1, so the "hole" stayed opaque: the target rendered as if it had no matte at all. Measured in Chromium before the change — inside the source `255`, outside `255`.
 
-The relation is now resolved after the layer loop: each imported layer registers its `ind`, each `parent` becomes a pending relation, and the references resolve through that map. An `ind` no imported layer declares, or a layer naming itself, is reported as `LOTTIE_BROKEN_PARENT`; an `ind` two layers share is reported once as `LOTTIE_DUPLICATE_LAYER_INDEX` and the first declaration keeps the reference, so the result is deterministic; the depth check walks the resolved graph with a visited set, so a malformed cycle terminates.
+The editor's own matte authority already documented and used the correct technique, and its browser specs pinned the outcome. The export renderer had drifted from that authority.
 
-**Backward compatibility, stated plainly:** a document declaring `parent` without `ind` used to have its parent guessed from the array position; it is now reported as broken. That guess was the defect, and the one fixture built on it was corrected to declare `ind` while keeping the contract it checks.
+## 3) THE MEASURED ROOT CAUSE
 
-## 3) M-02 — the hierarchy is resolved for every layer
+A probe of five mask formulations in Chromium decided the fix:
 
-`evaluateTransform` returned the base transform as soon as a layer had no animation track, before the parent chain was resolved: the same scene placed a child correctly when it carried an (empty) track and at its local position when it did not. Only the early return is gone; the anchor override, the cycle guard and the parent composition are untouched. This applies to every KCS scene, not only to imported Lottie ones.
+| Formulation | Inside source | Outside source |
+|---|---|---|
+| alpha mask + white backdrop + black source (**what was emitted**) | opaque | opaque |
+| luminance mask + white backdrop + black source | **transparent** | **opaque** |
+| alpha mask with a single evenodd hole path | transparent | opaque |
+| alpha mask with the source painted white (the normal case) | opaque | transparent |
 
-## 4) H-05 — no silent loss
+The luminance form is the only one that is both correct and general: an evenodd hole needs the source geometry as a path, which text and image sources cannot provide.
 
-A layer's geometry items are counted while its shapes are read; more than one now reports `LOTTIE_MULTIPLE_GEOMETRY` naming the count, the shape indexes and which one is kept. The layer still imports. A KCS layer draws exactly one path, so this is the same map-or-report contract the importer already uses for every other construct it cannot represent.
+## 4) WHAT CHANGED
+
+- An inverted matte now emits a **luminance** mask with a white backdrop and the source painted black — the technique the editor documents — and declares the model it uses while its id keeps naming the relationship.
+- **The sibling branch had the same defect**, found by the new pixel test: the inverted *luminance* matte had no backdrop, so the mask was transparent everywhere outside the source (inside `255`, outside `0`). Both inverted modes now share one construction and the `feComponentTransfer` branch is gone.
+- **Text matte sources are painted black.** The text renderer emitted its own `fill` and appended the caller's, so a browser used the layer colour and a dark text produced no hole; the override now replaces the layer's paint, which also removes the duplicate, invalid attributes that path emitted.
+- The generated runtime mirrors all of it, including a `fillOverride` argument on its `text()`, so the two renderers cannot drift apart.
 
 ## 5) EVIDENCE
 
-- **M-01:** 4 of the new/changed cases fail with the array-index interpretation.
-- **M-02:** 3 new cases fail without the fix (static child, nested static chain, helper parent).
-- **H-05:** the new case fails without the report.
+A new browser spec, `e2e/ograf-matte-visual.spec.ts`, rasterizes the real exported SVG in Chromium and samples the alpha inside the source and inside the target but outside the source:
+
+| Case | Before | After |
+|---|---|---|
+| inverted alpha | fail (opaque everywhere) | inside transparent, outside opaque |
+| inverted luminance | fail (transparent outside) | inside transparent, outside opaque |
+| generated runtime, inverted alpha | fail | matches the canonical renderer pixel for pixel |
+| normal alpha (regression guard) | pass | pass |
+
+The unit test that asserted `fill-rule="evenodd"` (a no-op on a single subpath) and the `fill="black"` string was replaced: it pinned the broken construction instead of its result. It now pins the mask model and the two paints for both renderers, plus that a normal alpha matte still declares `mask-type="alpha"` with no backdrop.
 
 ## 6) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npm test` | PASS — 125 files / 1,913 tests |
+| `e2e/ograf-matte-visual.spec.ts` | PASS — 4 pixel cases (3 fail against the pre-fix code) |
+| `src/tests/ografGeneratedParity.test.ts` | PASS — 9 tests |
+| `npm test` | PASS — 125 files / 1,914 tests |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `fc672f2` |
-| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `85c3929` |
+| `e2e/track-matte.spec.ts` (the editor's own matte suite) | PASS — 82 tests in 4.8 min |
 | `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
 ## 7) SELF-REVIEW NOTES
 
-- Parent resolution is a linear pass with map lookups; the depth walk stops at the import limit or at a cycle, so it is bounded per layer.
-- A duplicated `ind` keeps the first declaration and is reported, so the same document always resolves to the same parent.
-- **The build is the real type gate here.** `npx tsc --noEmit` checks **zero** project files: the root `tsconfig.json` is a solution file (`files: []`) with references, and `--noEmit` does not build them (`tsc -b --listFiles` reports 151 source files; `npx tsc --noEmit --listFiles` reports none). A missing binding introduced during this task was caught by `npm run build`, not by that command. Recorded, not changed — the CI workflow and the documented validation steps are outside this finding's scope and need their own approval.
-- `zIndex` still follows the array position (`lottieLayers.length - index`), which is the drawing order Lottie's own list defines and is independent of the `ind` graph.
+- One construction for both inverted modes, taken from the editor authority rather than invented, so the export matches what the editor shows.
+- The mask id is unchanged, so references and diagnostics keep working; the normal (non-inverted) path is byte-for-byte what it was.
+- Image sources cannot be repainted, so the luminance mask reads the image's own luminance — exactly what the editor does for an inverted image matte, and its spec asserts that structure.
+- `renderText` only takes the changed branch when a caller passes paint (the matte path), so ordinary text rendering is untouched.
 
 ## 8) NEXT
 
-- Task D (OGraf inverse alpha matte: H-02), then E (API trust boundary: H-06), F (profiler fixtures: M-04), G (live docs and the state checker: M-05) — each on its own branch with its own validation and merge gate.
+- Task E (API trust boundary: H-06), then F (profiler fixtures: M-04) and G (live docs and the state checker: M-05) — each on its own branch with its own validation and merge gate.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Task C (Lottie structure correctness)
+# KCS ChatGPT Upload Manifest — Task D (OGraf inverse alpha matte)
 
 Clean refreshed: YES
-Bundle purpose: the Lottie parent, hierarchy and multi-geometry fixes (review findings M-01, M-02, H-05)
+Bundle purpose: the inverted track matte inversion fix (review finding H-02)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/lottie-structure-correctness, base main at fc672f2 — not merged; the merge decision is with the user
-Task record: reports/progress_136_lottie_structure_correctness.md
-What changed: src/interop/lottie/mapDocument.ts (parents resolve through `ind` after the layer loop, duplicate/self/missing indexes reported, resolved-graph depth check, LOTTIE_MULTIPLE_GEOMETRY report), src/utils/evaluateTransform.ts (the hierarchy is resolved for a layer with no track)
-Reproduction: 4 cases for M-01, 3 for M-02 and 1 for H-05 fail without the fixes
-Backward compatibility: a document declaring `parent` without `ind` used to have its parent guessed from the array position and is now reported as broken; the one fixture built on that guess was corrected to declare `ind`
-Security: import-time work stays linear and bounded by the existing import limits; cycles terminate; no new input surface, no dependency change
-Validation: npm test PASS (125 files / 1,913 tests); npm run build PASS (tsc -b + vite); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate fc672f2); playwright lottie-import-report spec PASS (3 tests); state check PASS; git diff --check clean
-Note: npx tsc --noEmit checks zero project files in this repository (the root tsconfig is a solution file); npm run build is the real type gate. Recorded, not changed.
-Next work: Task D (OGraf inverse alpha matte — H-02), then E (H-06), F (M-04), G (M-05), each with its own branch, validation and merge gate
+Branch: fix/ograf-inverse-alpha-matte, base main at 85c3929 — not merged; the merge decision is with the user
+Task record: reports/progress_137_ograf_inverse_alpha_matte.md
+What changed: src/ograf/svgRenderer.ts (an inverted matte is a luminance mask with a white backdrop and a black source, for both modes; renderText treats a caller's paint as an override), src/ograf/runtimeTemplate.ts (the generated runtime mirrors both), src/tests/ografGeneratedParity.test.ts (the definition both renderers emit, plus a normal-alpha regression guard), e2e/ograf-matte-visual.spec.ts (new: pixel proof in Chromium)
+Root cause: measured in Chromium — an alpha mask with a black source is opaque inside and outside; a luminance mask with a white backdrop and a black source inverts correctly
+Sibling defect found by the new pixel test: the inverted luminance matte had no backdrop and was transparent everywhere outside the source; both modes now share one construction
+Security: no new input surface; no dependency change
+Validation: npm test PASS (125 files / 1,914 tests); npm run build PASS (tsc -b + vite); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate 85c3929); e2e/ograf-matte-visual.spec.ts PASS (4 pixel cases, 3 fail pre-fix); e2e/track-matte.spec.ts PASS (82 editor matte cases, 4.8 min); state check PASS; git diff --check clean
+Next work: Task E (API trust boundary — H-06), then F (M-04), G (M-05), each with its own branch, validation and merge gate
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_136_lottie_structure_correctness.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_137_ograf_inverse_alpha_matte.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
@@ -107,31 +125,34 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Task C (Lottie structure correctness)
+# KCS Minimal ChatGPT Upload Bundle — Task D (OGraf inverse alpha matte)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-M-01, M-02 and H-05 from the full-project review, on `fix/lottie-structure-correctness` from
-`main` at `fc672f2`:
+H-02 from the full-project review, on `fix/ograf-inverse-alpha-matte` from `main` at `85c3929`:
 
-- **M-01** — a Lottie layer's parent is resolved through the layer index it names (`ind`) instead of
-  the layer's position in the array, so non-sequential indexes and a child that precedes its parent
-  both import correctly. A reference no imported layer declares, a self-reference, and an index two
-  layers share are reported instead of guessed; the depth check walks the resolved graph and
-  terminates on a cycle.
-- **M-02** — a layer with no animation track now inherits its parent transform. The hierarchy is
-  resolved for every layer and only the keyframe evaluation is skipped.
-- **H-05** — a Lottie layer carrying more than one geometry item is reported instead of silently
-  keeping only the last one; the layer still imports.
-- Reproduced before the change at every level (4 cases for M-01, 3 for M-02, 1 for H-05) and closed
-  after it. No new dependency, workflow, tag or release action.
+- An inverted track matte in an exported OGraf graphic now actually inverts. It was built as an
+  **alpha** mask holding a white backdrop and the source painted black; in an alpha mask that black
+  keeps its alpha at 1, so the "hole" stayed opaque and the target rendered as if it had no matte.
+  It is now a **luminance** mask with a white backdrop and the source painted black — the technique
+  the editor's own matte authority documents — verified by sampling pixels in Chromium.
+- The inverted **luminance** matte had the same defect in the sibling branch: it had no backdrop, so
+  the mask was transparent everywhere outside the source. Both inverted modes now share one
+  construction and the `feComponentTransfer` branch is gone.
+- Text matte sources are painted black for the hole; the text renderer had emitted its own `fill`
+  first and appended the caller's, so a browser used the layer colour and a dark text produced no
+  hole. The duplicate, invalid attributes that path emitted are gone with it.
+- The generated runtime mirrors all of it, and the new browser spec renders both authorities and
+  compares their pixels.
+- Reproduced before the change (3 of 4 pixel cases fail) and closed after it. No new dependency,
+  workflow, tag or release action.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_136_lottie_structure_correctness.md` — the task record
+- `progress_137_ograf_inverse_alpha_matte.md` — the task record
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
@@ -162,79 +183,113 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 136 — Task C: Lottie structure correctness
+# Progress 137 — Task D: the OGraf inverse alpha matte
 
-Branch: `fix/lottie-structure-correctness` (base `main` at `fc672f2`).
-Findings: **H-05** (multiple geometry silently overwritten), **M-01** (parent resolved by array offset instead of `ind`), **M-02** (a static child skipped its parent transform).
+Branch: `fix/ograf-inverse-alpha-matte` (base `main` at `85c3929`).
+Finding: **H-02** — the OGraf inverse alpha matte did not invert alpha.
 
 ## 1. What was open
 
-1. **M-01.** `mapDocument` read `layer.parent` as an **array position** (`lottie-layer-${parent}`, guarded by `parent < index`) and used that same assumption to count the hierarchy depth. Lottie's `parent` names the parent layer's own `ind` — in typical exports `ind` is 1-based, so the resolution was off by one *and* it refused any document where a child precedes its parent.
-2. **M-02.** `evaluateTransform` returned the base transform as soon as a layer had no animation track, before the parent chain was resolved. The same scene placed a child correctly when the child carried an (empty) track and at its local position when it did not — the animation track decided the hierarchy.
-3. **H-05.** `sh`, `rc` and `el` each assigned `layerShape.path`, so a layer carrying more than one geometry item kept only the last one, with no report.
+The export renderer (`src/ograf/svgRenderer.ts`) and the generated runtime
+(`src/ograf/runtimeTemplate.ts`) built an inverted alpha matte as an **alpha** mask holding a white
+full-region path plus the source painted black. In an alpha mask, black paint keeps its alpha at 1,
+so the "hole" stayed opaque: the target rendered as if it had no matte at all. Measured in Chromium
+before the change — inside the source `255`, outside `255` (fully opaque everywhere).
 
-## 2. M-01 — parent references resolve by `ind`
+The editor's own matte authority already documents and uses the correct technique
+(`src/utils/matte.ts`: *"luminance inverted: white region rect + BLACK geometry path"*, and for the
+alpha case an evenodd hole or a luminance structure), and its browser specs pin the outcome
+(`e2e/m21-image-matte.spec.ts` asserts `mask-type="luminance"` for an inverted alpha image matte;
+`e2e/m20-radial.spec.ts` asserts the inverted text is painted black). The export renderer had drifted
+from that authority.
 
-The parent relation is now resolved **after** the layer loop:
+## 2. The measured root cause
 
-- each imported layer registers its `ind` in an `ind → layer id` map (`lottie-layer-${arrayIndex}` stays the id);
-- each layer that declares `parent` is recorded as a pending relation, and the loop no longer requires the parent to sit earlier in the array;
-- after the loop the relation resolves through the map; an `ind` no imported layer declares, or a layer that names itself, is reported as `LOTTIE_BROKEN_PARENT` and leaves the layer unparented;
-- an `ind` two imported layers share is reported once as `LOTTIE_DUPLICATE_LAYER_INDEX` (the first declaration keeps the reference, so the relation stays deterministic);
-- the depth check walks the **resolved** graph with a visited set, so a malformed cycle terminates and is not reported as depth.
+A probe of five mask formulations in Chromium, sampling the same two points, decided the fix:
 
-**Backward compatibility, stated plainly:** a document that declares `parent` without `ind` used to have its parent guessed from the array position. It is now reported as broken. That guess was the defect — and the one test fixture built on it was corrected to declare `ind` (the contract it checks, "a chain deeper than the limit is reported", is unchanged).
+| Formulation | Inside source | Outside source |
+|---|---|---|
+| alpha mask + white backdrop + black source (**what was emitted**) | opaque | opaque |
+| luminance mask + white backdrop + black source | **transparent** | **opaque** |
+| alpha mask with a single evenodd hole path | transparent | opaque |
+| alpha mask with the source painted white (the normal case) | opaque | transparent |
 
-## 3. M-02 — the hierarchy is resolved for every layer
+The luminance form is the only one that is both correct and general: the evenodd hole needs the
+source geometry as a path, which text and image sources cannot provide, while the luminance form
+works for every content type the renderer supports.
 
-```ts
-// A layer with no animation track still inherits its parent: only the keyframe
-// evaluation is skipped here, never the hierarchy resolution.
-const rawTransform = track ? evaluateKeyframes(track, baseTransform, frame, activeTmpl) : baseTransform;
-```
+## 3. Applied
 
-The anchor override, the cycle guard and the parent composition are untouched; only the early return is gone. A consequence worth naming: a layer with a `parentId` or `booleanGroupId` and no track now inherits its parent, where before it stood still — that is the fix, and it applies to every KCS scene, not only to imported Lottie ones.
+- **`src/ograf/svgRenderer.ts`** — an inverted matte now emits a **luminance** mask holding a white
+  full-region backdrop and the source painted black; the mask declares the model it actually uses
+  (`mask-type="luminance"`) while its id keeps naming the relationship (`...-alpha-inverted`).
+- **The sibling branch had the same defect, found by the new pixel test.** The inverted *luminance*
+  matte used an `feComponentTransfer` filter with no backdrop, so the mask had no luminance outside
+  the source: measured inside `255`, outside `0` — transparent everywhere except the source, which is
+  the inverse of correct. It now uses the same documented technique, and the filter branch is gone.
+  Both inverted modes therefore share one construction.
+- **`renderText` treats the caller's paint as an override.** The matte path paints the source black to
+  punch the hole, but the text renderer emitted its own `fill` first and appended the caller's, so a
+  browser used the layer colour and a dark text produced no hole (the editor paints its mask text
+  black, and its spec asserts it). The override now replaces the layer's paint instead of being
+  appended as a duplicate attribute — which also removes the invalid duplicate `fill`/`stroke`/
+  `fill-opacity` attributes that path emitted.
+- **`src/ograf/runtimeTemplate.ts`** mirrors all of it in the generated runtime, including a
+  `fillOverride` argument on the generated `text()`, so the two renderers cannot drift apart.
 
-## 4. H-05 — no silent loss
+## 4. Evidence
 
-A layer's geometry items are counted while its shapes are read; when more than one is found the import reports `LOTTIE_MULTIPLE_GEOMETRY` naming the count and the shape indexes, and says which one is kept. The layer still imports. Nothing else about the mapping changed: a KCS layer draws exactly one path, so "report what cannot be represented" is the contract this importer already uses for every other unsupported construct.
+A new browser spec, `e2e/ograf-matte-visual.spec.ts`, rasterizes the real exported SVG in Chromium and
+samples the alpha **inside the source** and **inside the target but outside the source**:
 
-## 5. Evidence
+| Case | Before | After |
+|---|---|---|
+| inverted alpha | inside opaque, outside opaque (fail) | inside transparent, outside opaque |
+| inverted luminance | inside opaque, outside transparent (fail) | inside transparent, outside opaque |
+| generated runtime, inverted alpha | fail | matches the canonical renderer pixel for pixel |
+| normal alpha (regression guard) | pass | pass |
 
-| Finding | Reproduction |
-|---|---|
-| M-01 | 4 of the new/changed cases fail with the array-index interpretation (`resolves a parent by the layer index it names`, `keeps a parent cycle out of the depth check`, `reports a layer index two imported layers share`, `reports a parent chain deeper than the hierarchy limit`) |
-| M-02 | 3 new cases fail without the fix (static child, nested static chain, helper parent) |
-| H-05 | the new case fails without the report |
+`src/tests/ografGeneratedParity.test.ts` now pins the *definition* both renderers emit — the mask model
+and the two paints — for the inverted case, and pins that a normal alpha matte still declares
+`mask-type="alpha"` with no backdrop. The test that previously asserted `fill-rule="evenodd"` (a no-op
+attribute on a single subpath) and the `fill="black"` string was replaced: it pinned the broken
+construction rather than its result.
 
-The one pre-existing fixture that failed against the first cut was the hierarchy-limit case, whose document declared no `ind` at all; it now declares the indexes a real document carries and asserts both the limit report and the absence of a broken-parent report.
-
-## 6. Validation
+## 5. Validation
 
 | Check | Result |
 |---|---|
-| `npm test` | PASS — 125 files / 1,913 tests |
+| `e2e/ograf-matte-visual.spec.ts` | PASS — 4 pixel cases (3 of them fail against the pre-fix code) |
+| `npx vitest run src/tests/ografGeneratedParity.test.ts` | PASS — 9 tests |
+| `npm test` | PASS — 125 files / 1,914 tests |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `fc672f2` |
-| `npx playwright test e2e/lottie-import-report.spec.ts` | PASS — 3 tests |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `85c3929` |
+| `npx playwright test e2e/ograf-matte-visual.spec.ts` | PASS — 4 tests |
+| `npx playwright test e2e/track-matte.spec.ts` (the editor's own matte suite, 82 cases) | PASS — 82 tests in 4.8 min |
 | `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
-## 7. Self-review (read-only, same model)
+## 6. Self-review (read-only, same model)
 
-- **Cost.** Parent resolution is a linear pass over the declared relations with map lookups; the depth walk stops at the import limit or at a cycle, so it is bounded per layer. No nested scans were introduced.
-- **Determinism.** A duplicated `ind` keeps the first declaration and is reported, so the same document always resolves to the same parent.
-- **Blast radius of M-02.** Any trackless layer with a parent now moves. That is the intended contract (`evaluateFrame`'s own stage list says "Hierarchy — parent-child world transform"), and the existing hierarchy suite passes unchanged.
-- **The build is the real type gate.** `npx tsc --noEmit` checks **zero** project files here: the root `tsconfig.json` is a solution file (`files: []`) with references, and `--noEmit` does not build them. `tsc -b --listFiles` reports 151 source files; `npx tsc --noEmit --listFiles` reports none. A missing binding introduced during this task (`rawTransform`) was caught by `npm run build` and not by the documented `npx tsc --noEmit`. **Not changed here** — CI and the documented validation steps are outside this finding's scope and need their own approval; recorded so the next reader does not trust a step that verifies nothing.
-- **`zIndex` still follows the array position** (`lottieLayers.length - index`). That is the drawing order Lottie's own list defines, and it is independent of the `ind` graph, so it was left alone.
+- **One construction for both inverted modes**, taken from the editor authority rather than invented,
+  so the export matches what the editor shows.
+- **The mask id is unchanged** (`...-alpha-inverted`, `...-luminance-inverted`), so references,
+  diagnostics and any host that keys on the id keep working; only the mask's declared model changed,
+  and the normal (non-inverted) path is byte-for-byte what it was.
+- **Image sources** cannot be repainted, so the luminance mask reads the image's own luminance. That is
+  exactly what the editor does for an inverted image matte (`e2e/m21-image-matte.spec.ts` asserts the
+  luminance structure and "dark pixels hole"), so the two agree.
+- **`renderText` blast radius.** Only the matte path passes paint, so ordinary text rendering takes the
+  same branch it always did (the overrides are `undefined`).
+- **Not changed:** the clip path, the layer-mask definitions, the luminance *non-inverted* matte, the
+  matte relationship resolution, and the OGraf validation diagnostics.
 
-## 8. Not changed
+## 7. Not changed
 
-- The map-or-report contract, every other Lottie diagnostic, the channel mapping and the precomp reporting are untouched.
-- No new dependency, script, workflow, tag or release action.
-- No change to the CI workflow, including the type-check step noted above.
+- No new dependency, workflow, tag or release action.
+- No change to the OGraf package format, the public controls, or the editor's own matte renderer.
 
 ---
 
@@ -499,6 +554,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A Lottie layer's parent is now resolved through the layer index it names (`ind`) rather than through the position of the layer in the array, so a document whose indexes are not sequential, or whose child precedes its parent, imports its hierarchy correctly. A reference no imported layer declares, a layer that names itself, and an index two layers share are reported instead of guessed.
 - A Lottie layer that carries more than one geometry item is now reported instead of silently keeping only the last one: KCS draws one path per layer, so the import names what it cannot represent and still imports the layer.
 - A layer with no animation track now inherits its parent transform. The hierarchy is resolved for every layer; only the keyframe evaluation is skipped, so a static child is no longer placed at its local position while the same child with an empty track was placed correctly.
+- An inverted track matte in an exported OGraf graphic now actually inverts: it is expressed as a luminance mask with a white backdrop and the source painted black, the technique the editor's own matte authority documents, instead of an alpha mask whose black source stayed opaque and left the target unmatted. The inverted luminance matte had the same defect — it had no backdrop, so the mask was transparent everywhere outside the source — and both modes now share one construction. Text matte sources are painted black for the hole as well, instead of keeping their own colour and emitting a duplicate, ignored `fill` attribute. The generated runtime mirrors all of it.
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.
@@ -548,14 +604,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 11338 bytes
+- `CHANGELOG.md` — 12015 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 14451 bytes
 - `NEXT_SESSION.md` — 12211 bytes
-- `OMP_FINAL_RESPONSE.md` — 4719 bytes
+- `OMP_FINAL_RESPONSE.md` — 5082 bytes
 - `PROJECT_STATE.md` — 16433 bytes
-- `README.md` — 2727 bytes
-- `manifest.txt` — 2579 bytes
-- `progress_136_lottie_structure_correctness.md` — 6457 bytes
+- `README.md` — 3063 bytes
+- `manifest.txt` — 2537 bytes
+- `progress_137_ograf_inverse_alpha_matte.md` — 6461 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

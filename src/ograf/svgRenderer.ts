@@ -75,7 +75,15 @@ function renderGeometry(type: string, content: LayerContent, props: SvgAttribute
 function renderText(layer: EvaluatedLayer, props: SvgAttributes = {}): string {
   const content = layer.content;
   const text = content.textValue || 'TEXT';
-  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(content.fillColor || 'none')}" fill-opacity="${svgNumber(content.fillOpacity ?? 1)}" stroke="${escapeXml(content.strokeColor || 'none')}" stroke-opacity="${svgNumber(content.strokeOpacity ?? 1)}" stroke-width="0.5" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}" vector-effect="non-scaling-stroke"${attributes(props)}>${escapeXml(text)}</text>`;
+  // A caller that passes paint is drawing a silhouette — the matte path paints
+  // the source black to punch the hole — so those values replace the layer's own
+  // paint. Appending them instead produced a second `fill` the browser ignores,
+  // which left the glyphs their own colour and the hole missing for a dark text.
+  const { fill, stroke, 'fill-opacity': fillOpacity, ...rest } = props;
+  const fillColor = fill === undefined ? content.fillColor : String(fill);
+  const strokeColor = stroke === undefined ? content.strokeColor : String(stroke);
+  const resolvedFillOpacity = fillOpacity === undefined ? content.fillOpacity : Number(fillOpacity);
+  return `<text x="0" y="0" text-anchor="middle" dominant-baseline="middle" fill="${escapeXml(fillColor || 'none')}" fill-opacity="${svgNumber(resolvedFillOpacity ?? 1)}" stroke="${escapeXml(strokeColor || 'none')}" stroke-opacity="${svgNumber(content.strokeOpacity ?? 1)}" stroke-width="0.5" font-size="${svgNumber(content.fontSize || 24)}" font-weight="bold" font-family="${escapeXml(content.fontFamily || 'Outfit')}" vector-effect="non-scaling-stroke"${attributes(rest)}>${escapeXml(text)}</text>`;
 }
 
 function renderImage(layer: EvaluatedLayer, options: OGrafSvgRenderOptions, props: SvgAttributes = {}): string {
@@ -225,22 +233,30 @@ function renderTrackMatteDefinition(scene: OGrafEvaluatedScene, target: Evaluate
   const source = scene.layers.find((candidate) => candidate.id === relationship.sourceLayerId);
   if (!source) throw new Error(`Track matte source "${describeOGrafValueForDiagnostics(relationship.sourceLayerId)}" for layer "${describeOGrafValueForDiagnostics(target.id)}" was not found.`);
   const id = safeSvgId(`kcs-ograf-track-matte-${target.id}-${source.id}-${relationship.mode}${relationship.inverted ? '-inverted' : ''}`);
+  // An inverted matte cannot be expressed in an alpha mask: painting the source
+  // black still leaves its alpha at 1, so the "hole" stays opaque and the target
+  // renders as if it had no matte at all (measured in Chromium — the definition
+  // was fully opaque inside and outside the source, and the luminance branch was
+  // transparent outside it because a mask with no backdrop has no luminance
+  // there). The inversion is expressed in luminance with the technique the
+  // editor's own matte authority documents and uses: a white backdrop with the
+  // source painted black. The mask therefore declares the type it actually uses;
+  // its id keeps naming the relationship.
+  const sourceFill = relationship.inverted
+    ? 'black'
+    : relationship.mode === 'luminance' ? (source.content.fillColor || 'white') : 'white';
   const sourceContent = renderLayerContent(source, options, {
-    fill: relationship.mode === 'luminance' ? (source.content.fillColor || 'white') : 'white',
+    fill: sourceFill,
     stroke: 'none',
     'fill-opacity': source.content.fillOpacity ?? 1,
   });
   if (!sourceContent) throw new Error(`Track matte source "${describeOGrafValueForDiagnostics(source.id)}" has no supported SVG content.`);
   const sourceShape = `<g transform="${layerTransform(scene, source)}">${sourceContent}</g>`;
-  const body = relationship.inverted && relationship.mode === 'alpha'
-    ? `<path d="M 0 0 H ${scene.width} V ${scene.height} H 0 Z" fill="white" fill-rule="evenodd" />${sourceShape.replace('fill="white"', 'fill="black"')}`
-    : relationship.inverted
-      ? `<filter id="${id}-invert"><feComponentTransfer><feFuncR type="table" tableValues="1 0" /><feFuncG type="table" tableValues="1 0" /><feFuncB type="table" tableValues="1 0" /><feFuncA type="table" tableValues="1 0" /></feComponentTransfer></filter>${sourceShape.replace('<g ', `<g filter="url(#${id}-invert)" `)}`
-      : sourceShape;
+  const body = relationship.inverted
+    ? `<rect x="0" y="0" width="${scene.width}" height="${scene.height}" fill="white" />${sourceShape}`
+    : sourceShape;
   return {
-    defs: relationship.inverted && relationship.mode === 'alpha'
-      ? `<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="${relationship.mode}"><path d="M 0 0 H ${scene.width} V ${scene.height} H 0 Z" fill="white" fill-rule="evenodd" />${sourceShape.replace('fill="white"', 'fill="black"')}</mask>`
-      : `<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="${relationship.mode}">${body}</mask>`,
+    defs: `<mask id="${id}" x="0" y="0" width="${scene.width}" height="${scene.height}" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="${relationship.inverted ? 'luminance' : relationship.mode}">${body}</mask>`,
     id,
     relationship,
   };

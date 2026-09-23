@@ -65,6 +65,14 @@ type GeneratedGraphic = HTMLElement & {
 };
 
 let graphicCounter = 0;
+
+/** The mask an id names: the model it declares and the content it paints. */
+function maskDefinition(svg: string, id: string): { type: string | undefined; body: string } | undefined {
+  const match = new RegExp(`<mask id="${id}"([^>]*)>([\\s\\S]*?)</mask>`).exec(svg);
+  if (!match) return undefined;
+  return { type: /mask-type="([^"]*)"/u.exec(match[1])?.[1], body: match[2] };
+}
+
 function instantiateGraphic(source: string): GeneratedGraphic {
   const Graphic = new Function('HTMLElement', `${source.replace('export default class Graphic', 'return class Graphic').replaceAll('import.meta.url', 'location.href')}`)(HTMLElement) as unknown as new () => GeneratedGraphic;
   graphicCounter += 1;
@@ -194,7 +202,7 @@ describe('generated runtime parity', () => {
     await graphic.dispose();
   });
 
-  test('generated runtime emits valid inverted alpha track matte definitions', async () => {
+  test('generated runtime emits an inverted alpha track matte that inverts', async () => {
     const authored = scene([
       layer({ id: 'source', type: 'custom_circle', strokeEnabled: false, trimPathEnabled: undefined }),
       layer({
@@ -208,10 +216,48 @@ describe('generated runtime parity', () => {
     const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
     const graphic = instantiateGraphic(source);
     await graphic.load({ renderType: 'realtime', data: {} });
-    expect(graphic.innerHTML).toContain('id="kcs-ograf-track-matte-target-source-alpha-inverted"');
-    expect(graphic.innerHTML).toContain('fill-rule="evenodd"');
-    expect(graphic.innerHTML).toContain('fill="black"');
+    const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
+    const id = 'kcs-ograf-track-matte-target-source-alpha-inverted';
+
+    // An alpha mask cannot express the inversion — black paint keeps its alpha at
+    // 1, so the mask stayed opaque inside *and* outside the source. The mask must
+    // therefore declare the model it actually uses, with a white backdrop and the
+    // source painted black. The rendered pixels are asserted in
+    // `e2e/ograf-matte-visual.spec.ts`; this pins the definition both renderers
+    // emit, so the two cannot drift apart.
+    for (const svg of [graphic.innerHTML, canonical]) {
+      const mask = maskDefinition(svg, id);
+      expect(mask?.type).toBe('luminance');
+      expect(mask?.body).toContain('fill="white"');
+      expect(mask?.body).toContain('fill="black"');
+    }
     expect(graphic.innerHTML).not.toContain('data-layer-id="source"');
+    await graphic.dispose();
+  });
+
+  test('a normal alpha track matte keeps the alpha mask it always used', async () => {
+    const authored = scene([
+      layer({ id: 'source', type: 'custom_circle', strokeEnabled: false, trimPathEnabled: undefined }),
+      layer({
+        id: 'target',
+        zIndex: 1,
+        trackMatte: { sourceLayerId: 'source', mode: 'alpha', inverted: false, sourceVisible: false },
+        trimPathEnabled: undefined,
+      }),
+    ]);
+    const plan = compileOGrafPackage(authored);
+    const source = plan.files.find((file) => file.path === 'graphic.mjs')?.content || '';
+    const graphic = instantiateGraphic(source);
+    await graphic.load({ renderType: 'realtime', data: {} });
+    const canonical = renderOGrafSvg(evaluateOGrafScene(authored, 0));
+    const id = 'kcs-ograf-track-matte-target-source-alpha';
+
+    for (const svg of [graphic.innerHTML, canonical]) {
+      const mask = maskDefinition(svg, id);
+      expect(mask?.type).toBe('alpha');
+      // No backdrop: the normal case still masks by the source's own alpha.
+      expect(mask?.body.trim().startsWith('<g ')).toBe(true);
+    }
     await graphic.dispose();
   });
   test('generated runtime selects the persisted active named sequence for channels', async () => {

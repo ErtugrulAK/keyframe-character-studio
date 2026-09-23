@@ -1,23 +1,22 @@
-# KCS ChatGPT Upload Manifest — Task C (Lottie structure correctness)
+# KCS ChatGPT Upload Manifest — Task D (OGraf inverse alpha matte)
 
 Clean refreshed: YES
-Bundle purpose: the Lottie parent, hierarchy and multi-geometry fixes (review findings M-01, M-02, H-05)
+Bundle purpose: the inverted track matte inversion fix (review finding H-02)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/lottie-structure-correctness, base main at fc672f2 — not merged; the merge decision is with the user
-Task record: reports/progress_136_lottie_structure_correctness.md
-What changed: src/interop/lottie/mapDocument.ts (parents resolve through `ind` after the layer loop, duplicate/self/missing indexes reported, resolved-graph depth check, LOTTIE_MULTIPLE_GEOMETRY report), src/utils/evaluateTransform.ts (the hierarchy is resolved for a layer with no track)
-Reproduction: 4 cases for M-01, 3 for M-02 and 1 for H-05 fail without the fixes
-Backward compatibility: a document declaring `parent` without `ind` used to have its parent guessed from the array position and is now reported as broken; the one fixture built on that guess was corrected to declare `ind`
-Security: import-time work stays linear and bounded by the existing import limits; cycles terminate; no new input surface, no dependency change
-Validation: npm test PASS (125 files / 1,913 tests); npm run build PASS (tsc -b + vite); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate fc672f2); playwright lottie-import-report spec PASS (3 tests); state check PASS; git diff --check clean
-Note: npx tsc --noEmit checks zero project files in this repository (the root tsconfig is a solution file); npm run build is the real type gate. Recorded, not changed.
-Next work: Task D (OGraf inverse alpha matte — H-02), then E (H-06), F (M-04), G (M-05), each with its own branch, validation and merge gate
+Branch: fix/ograf-inverse-alpha-matte, base main at 85c3929 — not merged; the merge decision is with the user
+Task record: reports/progress_137_ograf_inverse_alpha_matte.md
+What changed: src/ograf/svgRenderer.ts (an inverted matte is a luminance mask with a white backdrop and a black source, for both modes; renderText treats a caller's paint as an override), src/ograf/runtimeTemplate.ts (the generated runtime mirrors both), src/tests/ografGeneratedParity.test.ts (the definition both renderers emit, plus a normal-alpha regression guard), e2e/ograf-matte-visual.spec.ts (new: pixel proof in Chromium)
+Root cause: measured in Chromium — an alpha mask with a black source is opaque inside and outside; a luminance mask with a white backdrop and a black source inverts correctly
+Sibling defect found by the new pixel test: the inverted luminance matte had no backdrop and was transparent everywhere outside the source; both modes now share one construction
+Security: no new input surface; no dependency change
+Validation: npm test PASS (125 files / 1,914 tests); npm run build PASS (tsc -b + vite); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate 85c3929); e2e/ograf-matte-visual.spec.ts PASS (4 pixel cases, 3 fail pre-fix); e2e/track-matte.spec.ts PASS (82 editor matte cases, 4.8 min); state check PASS; git diff --check clean
+Next work: Task E (API trust boundary — H-06), then F (M-04), G (M-05), each with its own branch, validation and merge gate
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_136_lottie_structure_correctness.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_137_ograf_inverse_alpha_matte.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

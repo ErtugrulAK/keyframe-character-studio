@@ -25,7 +25,7 @@ import { useSelection } from '../hooks/useSelection';
 import { usePlayback } from '../hooks/usePlayback';
 import { duplicateKeyframeGroup as duplicateKeyframeGroupTrack } from '../utils/keyframeDuplicate';
 import { pasteKeyframeGroupData, type KeyframeCopyPayload } from '../utils/keyframeCopyPaste';
-import { useHistory } from '../hooks/useHistory';
+import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 import { useBroadcast } from '../hooks/useBroadcast';
 import type { NamedSequenceRuntimeState } from '../utils/broadcastEngine';
 import { useToolbar } from '../hooks/useToolbar';
@@ -367,6 +367,31 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   });
 
 
+  /**
+   * Applies a document snapshot verbatim when undo/redo restores one. The
+   * setters are the raw state setters (not the sequence-switch wrapper), so the
+   * snapshot is what returns — including its `totalFrames`.
+   */
+  const restoreDocumentState = useCallback((state: HistoryDocumentState) => {
+    setFps(state.fps);
+    setTotalFrames(state.totalFrames);
+    setProjectResolution(state.projectResolution);
+    setCoordinateSystem(state.coordinateSystem);
+    setSceneTitleState(state.sceneTitle);
+    setActiveTemplateIdState(state.activeTemplateId);
+  }, [setFps, setTotalFrames, setSceneTitleState, setActiveTemplateIdState]);
+
+  // Recomputed every render so a snapshot always carries the values on screen;
+  // `useHistory` compares its content, not its identity.
+  const historyDocumentState: HistoryDocumentState = {
+    fps,
+    totalFrames,
+    projectResolution,
+    coordinateSystem,
+    sceneTitle,
+    activeTemplateId,
+  };
+
   const {
     undo,
     redo,
@@ -383,6 +408,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     characterPartsRef,
     motionTemplates,
     setMotionTemplates,
+    documentState: historyDocumentState,
+    restoreDocumentState,
   });
 
 

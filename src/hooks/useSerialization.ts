@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, PropertyKeyframe } from '../types/animator';
-import type { SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
+import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
 import { initializeIdCounter } from '../utils/idGenerator';
 import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
 import { convertLegacyKeyframesToChannels } from '../utils/legacyKeyframeConversion';
@@ -143,7 +143,7 @@ function toSceneData(
   // M8e: channels-only export policy. keyframes[] is NOT exported anymore —
   // legacy-only tracks (empty channels + populated keyframes[]) are converted
   // to canonical channels at export time so no animation data is lost.
-  const animTracks: AnimationTrackData[] = tracks.map(t => {
+  const animTracks: (AnimationTrackData & PersistedTrackState)[] = tracks.map(t => {
     const hasChannelData = !!t.channels && Object.values(t.channels).some((arr) => arr.length > 0);
     const channels = hasChannelData
       ? (t.channels || {})
@@ -154,6 +154,11 @@ function toSceneData(
       maskChannels: t.maskChannels,
       maskPathChannels: t.maskPathChannels,
       sequencerTemplateId: t.sequencerTemplateId,
+      // Authoring state the editor and the evaluator read back: without these a
+      // muted, canvas-hidden or locked track silently returns visible.
+      visible: t.visible,
+      locked: t.locked,
+      ...(t.editVisible !== undefined ? { editVisible: t.editVisible } : {}),
     };
   });
 
@@ -285,8 +290,12 @@ function fromSceneData(
         : convertLegacyKeyframesToChannels(t.keyframes || [])) as Track['channels'],
       maskChannels: t.maskChannels,
       maskPathChannels: migrateMaskPathChannels(t.maskPathChannels),
-      visible: (t as Track).visible ?? true,
-      locked: (t as Track).locked ?? false,
+      // H-04: the authoring state exported with the track has to come back, or a
+      // muted / canvas-hidden / locked track silently returns visible.
+      sequencerTemplateId: t.sequencerTemplateId,
+      visible: t.visible ?? true,
+      editVisible: t.editVisible ?? true,
+      locked: t.locked ?? false,
     };
   });
 

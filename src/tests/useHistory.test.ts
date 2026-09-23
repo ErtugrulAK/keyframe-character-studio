@@ -1,8 +1,26 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { useHistory } from '../hooks/useHistory';
+import { useHistory, type HistoryDocumentState } from '../hooks/useHistory';
 import type { CharacterPart, MotionTemplate, Track } from '../types/animator';
 import { deleteParts } from '../utils/partDeletion';
+
+/**
+ * The document-level state every caller stores with a snapshot. Cases that are
+ * not about the document keep it constant; the transaction cases below vary it
+ * the way an import does.
+ */
+const documentFixture = (overrides: Partial<HistoryDocumentState> = {}): HistoryDocumentState => ({
+  fps: 24,
+  totalFrames: 48,
+  projectResolution: { width: 1920, height: 1080 },
+  coordinateSystem: 'project-unit-center-v1',
+  sceneTitle: 'Fixture',
+  activeTemplateId: 'Sequence',
+  ...overrides,
+});
+
+/** Applying a snapshot is the caller's job; the document cases below supply their own. */
+const restoreDocumentState = vi.fn();
 
 describe('useHistory Hook', () => {
   const mockSetTracks = vi.fn();
@@ -26,6 +44,8 @@ describe('useHistory Hook', () => {
         characterParts: emptyParts,
         setCharacterParts: mockSetCharacterParts,
         characterPartsRef: emptyPartsRef,
+        documentState: documentFixture(),
+        restoreDocumentState,
       })
     );
 
@@ -48,6 +68,8 @@ describe('useHistory Hook', () => {
           characterParts: emptyParts,
           setCharacterParts: mockSetCharacterParts,
           characterPartsRef: emptyPartsRef,
+          documentState: documentFixture(),
+          restoreDocumentState,
         }),
       { initialProps: { tracks: currentTracks } }
     );
@@ -74,6 +96,8 @@ describe('useHistory Hook', () => {
           characterParts: props.parts,
           setCharacterParts: mockSetCharacterParts,
           characterPartsRef: partsRef,
+          documentState: documentFixture(),
+          restoreDocumentState,
         }),
       { initialProps: { parts: currentParts } }
     );
@@ -117,6 +141,8 @@ describe('useHistory Hook', () => {
           characterParts: props.parts,
           setCharacterParts: mockSetCharacterParts,
           characterPartsRef: partsRef,
+          documentState: documentFixture(),
+          restoreDocumentState,
         }),
       { initialProps: { parts: currentParts } }
     );
@@ -160,6 +186,8 @@ describe('useHistory Hook', () => {
           characterParts: emptyParts,
           setCharacterParts: mockSetCharacterParts,
           characterPartsRef: emptyPartsRef,
+          documentState: documentFixture(),
+          restoreDocumentState,
         }),
       { initialProps: { tracks: currentTracks } }
     );
@@ -192,6 +220,8 @@ describe('useHistory Hook', () => {
           characterParts: emptyParts,
           setCharacterParts: mockSetCharacterParts,
           characterPartsRef: emptyPartsRef,
+          documentState: documentFixture(),
+          restoreDocumentState,
         }),
       { initialProps: { tracks: emptyTracks } }
     );
@@ -229,6 +259,8 @@ describe('useHistory Hook', () => {
           characterParts: emptyParts,
           setCharacterParts: mockSetCharacterParts,
           characterPartsRef: emptyPartsRef,
+          documentState: documentFixture(),
+          restoreDocumentState,
         }),
       { initialProps: { tracks: currentTracks } }
     );
@@ -273,6 +305,8 @@ describe('useHistory Hook', () => {
           characterParts: props.parts,
           setCharacterParts,
           characterPartsRef: partsRef,
+          documentState: documentFixture(),
+          restoreDocumentState,
         }),
       { initialProps: { parts: currentParts } },
     );
@@ -307,6 +341,8 @@ describe('useHistory Hook', () => {
         characterParts: emptyParts,
         setCharacterParts: mockSetCharacterParts,
         characterPartsRef: emptyPartsRef,
+        documentState: documentFixture(),
+        restoreDocumentState,
         motionTemplates: props.templates,
         setMotionTemplates,
       }),
@@ -349,6 +385,8 @@ describe('useHistory Hook', () => {
         characterParts: props.parts,
         setCharacterParts: setParts,
         characterPartsRef: partsRef,
+        documentState: documentFixture(),
+        restoreDocumentState,
       }),
       { initialProps: { parts: currentParts, tracks: currentTracks } },
     );
@@ -369,5 +407,123 @@ describe('useHistory Hook', () => {
     act(() => result.current.redo());
     expect(currentParts).toEqual([]);
     expect(currentTracks).toEqual([]);
+  });
+});
+
+/**
+ * A scene replacement is one document transaction: the layers, the animation
+ * *and* the document-level settings come back together. Restoring only the
+ * layers would leave an imported frame rate or canvas size on top of the
+ * restored scene, which is what the observed bug did.
+ */
+describe('useHistory Hook — the document travels with the scene', () => {
+  const BEFORE = {
+    parts: [{ id: 'before', name: 'Before', type: 'custom_box', zIndex: 0, baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }] as CharacterPart[],
+    tracks: [{ id: 'track_before', partId: 'before', name: 'Before', channels: {}, keyframes: [] }] as Track[],
+    document: documentFixture({ fps: 24, totalFrames: 48, sceneTitle: 'Before', projectResolution: { width: 800, height: 600 } }),
+  };
+  const AFTER = {
+    parts: [{ id: 'after', name: 'After', type: 'custom_box', zIndex: 0, baseTransform: { x: 5, y: 5, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }] as CharacterPart[],
+    tracks: [{ id: 'track_after', partId: 'after', name: 'After', channels: {}, keyframes: [] }] as Track[],
+    document: documentFixture({ fps: 60, totalFrames: 300, sceneTitle: 'After', projectResolution: { width: 1920, height: 1080 } }),
+  };
+
+  /** The app's wiring: live values that the history hook drives through real setters. */
+  const renderWithDocument = (initial: typeof BEFORE) => {
+    let parts = initial.parts;
+    let tracks = initial.tracks;
+    let document = initial.document;
+    const partsRef = { current: parts };
+    const tracksRef = { current: tracks };
+
+    const setParts: React.Dispatch<React.SetStateAction<CharacterPart[]>> = (value) => {
+      parts = typeof value === 'function' ? value(parts) : value;
+      partsRef.current = parts;
+    };
+    const setTracks: React.Dispatch<React.SetStateAction<Track[]>> = (value) => {
+      tracks = typeof value === 'function' ? value(tracks) : value;
+      tracksRef.current = tracks;
+    };
+    const applyDocument = (state: HistoryDocumentState) => { document = state; };
+
+    const view = renderHook(
+      (props: { parts: CharacterPart[]; tracks: Track[]; document: HistoryDocumentState }) =>
+        useHistory({
+          tracks: props.tracks,
+          setTracks,
+          tracksRef,
+          characterParts: props.parts,
+          setCharacterParts: setParts,
+          characterPartsRef: partsRef,
+          documentState: props.document,
+          restoreDocumentState: applyDocument,
+        }),
+      { initialProps: { parts, tracks, document } },
+    );
+
+    return {
+      ...view,
+      read: () => ({ parts, tracks, document }),
+      replace: (next: typeof BEFORE) => {
+        parts = next.parts;
+        tracks = next.tracks;
+        document = next.document;
+        partsRef.current = parts;
+        tracksRef.current = tracks;
+        view.rerender({ parts, tracks, document });
+      },
+    };
+  };
+
+  it('undoes a whole scene replacement as one transaction', () => {
+    const view = renderWithDocument(BEFORE);
+    expect(view.result.current.canUndo).toBe(false);
+
+    view.replace(AFTER);
+    expect(view.result.current.canUndo).toBe(true);
+
+    act(() => view.result.current.undo());
+
+    expect(view.read().parts).toEqual(BEFORE.parts);
+    expect(view.read().tracks).toEqual(BEFORE.tracks);
+    expect(view.read().document).toEqual(BEFORE.document);
+  });
+
+  it('redoes the replacement with the document it replaced', () => {
+    const view = renderWithDocument(BEFORE);
+    view.replace(AFTER);
+
+    act(() => view.result.current.undo());
+    expect(view.read().document).toEqual(BEFORE.document);
+
+    act(() => view.result.current.redo());
+
+    expect(view.read().parts).toEqual(AFTER.parts);
+    expect(view.read().document).toEqual(AFTER.document);
+  });
+
+  it('records a document-level change on its own and undoes it', () => {
+    const view = renderWithDocument(BEFORE);
+
+    view.replace({ ...BEFORE, document: documentFixture({ ...BEFORE.document, fps: 30, sceneTitle: 'Renamed' }) });
+    expect(view.result.current.canUndo).toBe(true);
+
+    act(() => view.result.current.undo());
+
+    expect(view.read().document.fps).toBe(24);
+    expect(view.read().document.sceneTitle).toBe('Before');
+  });
+
+  it('does not record a render that only hands over an equal document object', () => {
+    const view = renderWithDocument(BEFORE);
+
+    // A fresh object with the same values (what a caller that does not memoize
+    // produces) must not count as a change, or every render would be undoable.
+    view.replace({
+      ...BEFORE,
+      document: { ...BEFORE.document, projectResolution: { ...BEFORE.document.projectResolution } },
+    });
+
+    expect(view.result.current.canUndo).toBe(false);
   });
 });

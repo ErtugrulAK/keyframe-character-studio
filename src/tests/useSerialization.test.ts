@@ -708,6 +708,87 @@ describe('useSerialization Hook', () => {
     expect(restored.particleConfig).toEqual(particleCfg);
   });
 
+  it('H-04: persisted track authoring state survives round-trip', () => {
+    const authoredTrack: Track = {
+      id: 'trk_state', partId: 'L1', name: 'T', color: '#f00',
+      channels: {
+        ...makeEmptyChannels(),
+        x: [{ id: 'cx0', frame: 0, value: 50, easing: 'linear', templateId: 'Sequence' }],
+      },
+      visible: false, editVisible: false, locked: true, sequencerTemplateId: 'Out',
+    };
+
+    const { result } = renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 120, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 1920, height: 1080 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [authoredTrack], setTracks: mockSetTracks,
+      characterParts: [], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'State', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying
+    }));
+
+    // Export carries the authoring state a muted / canvas-hidden / locked track needs.
+    const exported = result.current.exportProject();
+    expect(JSON.parse(exported).tracks[0]).toMatchObject({
+      visible: false, editVisible: false, locked: true, sequencerTemplateId: 'Out',
+    });
+
+    // Import must put all of it back, or the track returns visible and unlocked.
+    mockSetTracks.mockClear();
+    const imported = result.current.importProject(exported);
+    expect(imported.ok).toBe(true);
+
+    const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
+    expect(restored.visible).toBe(false);
+    expect(restored.editVisible).toBe(false);
+    expect(restored.locked).toBe(true);
+    expect(restored.sequencerTemplateId).toBe('Out');
+    expect(restored.channels.x).toEqual([
+      { id: 'cx0', frame: 0, value: 50, easing: 'linear', templateId: 'Sequence' },
+    ]);
+  });
+
+  it('H-04: a file written before the track-state contract keeps the documented defaults', () => {
+    const { result } = renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 120, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 1920, height: 1080 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [], setTracks: mockSetTracks,
+      characterParts: [], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'Legacy', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying
+    }));
+
+    mockSetTracks.mockClear();
+    const imported = result.current.importProject(JSON.stringify({
+      version: 1,
+      width: 1920, height: 1080,
+      fps: 30, totalFrames: 120,
+      layers: [],
+      tracks: [{ partId: 'L1', channels: { x: [{ id: 'k0', frame: 0, value: 1, easing: 'linear' }] } }],
+    }));
+    expect(imported.ok).toBe(true);
+
+    const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
+    expect(restored.visible).toBe(true);
+    expect(restored.editVisible).toBe(true);
+    expect(restored.locked).toBe(false);
+    expect(restored.sequencerTemplateId).toBeUndefined();
+  });
+
   it('M8a: canonical transition channels survive round-trip', () => {
     // Simulate a canonical transition (fade): 6 channels with start(0)/end(15)
     // keyframes — what applyTransitionChannelsMutator writes.

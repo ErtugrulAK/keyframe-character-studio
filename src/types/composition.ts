@@ -24,6 +24,23 @@ export type SceneCoordinateSystem =
 
 // ─── Scene Data (persistent, serializable) ───────────────────────────────
 
+/**
+ * Authoring state that survives save/load, written on every exported track.
+ *
+ * These three change what the editor and the evaluator do — a hidden, locked or
+ * canvas-hidden track that came back visible is a silent change to the scene —
+ * so they are part of the document. The generated track name, its colour and its
+ * `expanded` flag are session UI state and are deliberately not persisted.
+ *
+ * All three are optional: a file written before this contract keeps the
+ * documented defaults (`visible` and `editVisible` visible, `locked` unlocked).
+ */
+export interface PersistedTrackState {
+  visible?: boolean;
+  editVisible?: boolean;
+  locked?: boolean;
+}
+
 export interface SceneData {
   /** Schema version for forward-compatible migration */
   version: 1 | 2;
@@ -40,7 +57,7 @@ export interface SceneData {
   /** All compositable layers (shapes, text, images) */
   layers: SceneLayer[];
   /** Animation tracks — one per animated layer (canonical: AnimationTrackData) */
-  tracks: AnimationTrackData[];
+  tracks: (AnimationTrackData & PersistedTrackState)[];
   /** Motion design templates (preserved for editor use; not used by composition engine) */
   motionTemplates?: MotionTemplate[];
   /** Active authoring sequence ID; runtime playback state is never serialized. */

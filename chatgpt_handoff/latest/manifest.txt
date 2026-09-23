@@ -1,21 +1,21 @@
-# KCS ChatGPT Upload Manifest — Task G (live documents and the state checker)
+# KCS ChatGPT Upload Manifest — final correctness checkpoint
 
 Clean refreshed: YES
-Bundle purpose: the live-document coverage of the state checker (review finding M-05)
+Bundle purpose: the completed post-review correctness follow-up and its final gate
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/state-consistency-live-docs, base main at 16e1610 — not merged; the merge decision is with the user
-Task record: reports/progress_140_state_consistency_live_docs.md
-What changed: scripts/check-state-consistency.mjs (LIVE_DOCUMENTS is the authority, checkLiveDocuments guards coverage, checkLiveRevisionClaims and checkLiveReleaseClaims are the new rules, the roadmap row range covers A–H), src/tests/stateConsistencyCheck.test.ts (6 new cases), and the document reconciliation (PROJECT_STATE.md, NEXT_SESSION.md, the roadmap, the release summary, the docs index, the cleanup map; four closed-programme documents marked historical)
-Reproduction: on the pre-task tree the old rules passed every live-document check — including "roadmap status rows … F next" while the same file recorded item 12 as complete — and the new rules report the contradictions
-Not checked on purpose: test counts, run ids and other perishable numbers (the checker cannot verify them without running the suite)
-Validation: stateConsistencyCheck suite PASS (36 tests); node scripts/check-state-consistency.mjs PASS (35 checks) on the real repository; npm test PASS (126 files / 1,932 tests); npm run build PASS (tsc -b + vite); npm run lint clean; git diff --check clean
-Next work: the final correctness gate on main, then the summary that maps every review finding H-01…M-05 to its status, fix, evidence and tests
+Branch: docs/final-correctness-gate, base main at 2b0bba0 — the follow-up itself is merged; this checkpoint is with the user
+Task record: reports/progress_141_astra_correctness_followup_summary.md
+Findings closed: H-01 (0c19751), H-03/H-04/M-03 (fc672f2), M-01/M-02/H-05 (85c3929), H-02 (ac3bda1), H-06 (352d272), M-04 (16e1610), M-05 (2b0bba0) — none deferred, none blocked
+Final gate on clean main at 2b0bba0: npm run build PASS; npx tsc --noEmit exits 0 (and checks no project file — the root tsconfig is a solution file, so npm run build is the real type gate, 151 files); npm test PASS (126 files / 1,932 tests); focused regression suites PASS (387 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate 2b0bba0); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
+Scope boundaries stated, not hidden: H-02 with an image matte source follows the editor authority; H-06 added no authentication (loopback bind plus documentation instead); H-04 leaves SceneLayer.visible alone; M-03 leaves the legacy project-template registry out of the scene history
+Residual observations (need their own decision): npx tsc --noEmit verifies nothing in CI; constant SceneLayer.visible; unrestricted CORS; the tracked SQLite file; vite --host publishing the dev frontend; missing focus restoration on two dialogs; one unreproduced full-suite failure during Task B
+Next work: Milestone H — release finalization (the approval-gated Option C majors, the two deferred minor bumps, and any publish/finalize instruction). Option C stays deferred and is not a blocker.
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_140_state_consistency_live_docs.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_141_astra_correctness_followup_summary.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

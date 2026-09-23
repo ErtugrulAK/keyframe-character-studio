@@ -1,58 +1,55 @@
-# KCS Post-Review Correctness Fix — Task G Final Response (live documents and the state checker)
+# KCS Post-Review Correctness Follow-Up — Final Response (the closing checkpoint)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on `fix/state-consistency-live-docs` (base `main` at `16e1610`); the merge decision is with the user.
-- **Report:** `reports/progress_140_state_consistency_live_docs.md`.
-- **Finding closed:** M-05 — live-state documents could contradict each other and the repository while the checker still passed.
+- **Status:** the follow-up is complete and merged; the final correctness gate ran on clean `main` at `2b0bba0`.
+- **Report:** `reports/progress_141_astra_correctness_followup_summary.md` — the finding map, the scope boundaries, the residual observations and the gate.
+- **Findings:** H-01, H-02, H-03, H-04, H-05, H-06, M-01, M-02, M-03, M-04, M-05 — **all CLOSED**. None deferred, none blocked, none dropped.
 
-## 2) THE AUDIT AND THE CLASSIFICATION
+## 2) HOW IT RAN
 
-The checker read four documents plus the handoff bundle. Everything else was never read, which is why six stale documents sat next to a `PASS`: `PROJECT_STATE.md` put `main` at a checkpoint's revision, `NEXT_SESSION.md` described a long-merged branch, the roadmap said milestone F was **NEXT** while its own text recorded items 10–12 as complete, the release summary still claimed offline schema validation "is not claimed", and the docs index and cleanup map presented the closed-programme documents as current.
+One task per finding group, each on its own branch with its own validation, a read-only self-review by the same model, a report under `reports/`, and an approval-gated fast-forward merge. No rebase, no force push, no merge commit, no history rewrite, no release/tag/npm action.
 
-Classified: six **live** documents (the four above, the docs index and the cleanup map), four **historical** ones (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md` — each describing a finished programme and restating the live set), and the **record** class (`reports/**`, `docs/checkpoints/**`, the studies, the audit and plan documents).
+| Task | Findings | Merged at |
+|---|---|---|
+| A | H-01 | `0c19751` |
+| B | H-03, H-04, M-03 | `fc672f2` |
+| C | M-01, M-02, H-05 | `85c3929` |
+| D | H-02 | `ac3bda1` |
+| E | H-06 | `352d272` |
+| F | M-04 | `16e1610` |
+| G | M-05 | `2b0bba0` |
 
-The four closed-programme documents are marked as historical records with a note naming the live set. Keeping them live would mean maintaining a second copy of the current state — the drift this task exists to remove.
-
-## 3) THE CHECKER NOW HAS ONE AUTHORITY
-
-`LIVE_DOCUMENTS` names the documents that describe the current state; `checkLiveDocuments` fails when one is missing, so a rename cannot silently drop coverage. Two new rules, scoped to that set:
-
-- **`checkLiveRevisionClaims`** — a labelled `Checkout:` claim must name `main` or the branch really checked out; `` `main` is at <sha> `` must name the current `main`; `` `main` at or after <sha> `` must name an ancestor. A past merge ("merged into `main` at `c2dcb22`") is history and is deliberately not matched.
-- **`checkLiveReleaseClaims`** — a line tying the release tag or "tag target" to a revision must tie it to the pinned target (no git facts needed, so it works in a fixture).
-
-## 4) REPRODUCTION, ON IDENTICAL CONTENT
-
-The pre-task tree was extracted with `git archive` and made a throwaway repository, then both checker versions ran against it:
-
-- **Old checker:** every live-document rule passed, including `roadmap status rows … F next` — it accepted "F is NEXT" while the same file recorded item 12 as complete and merged.
-- **New checker:** additionally reports `live documents contradict the repository — PROJECT_STATE.md:9 says main is at 47d3368a2b54; NEXT_SESSION.md:5 says main is at or after 12b71a5, which is not an ancestor…`
-
-## 5) RECONCILED
-
-`PROJECT_STATE.md` (the checkpoint sentence now quotes the revision it recorded; the validation table is labelled "at the last reconciliation" and its perishable specifics were replaced), `NEXT_SESSION.md` (ancestor-form checkout claim, current validation, the first next-scoped item names the roadmap's NEXT milestone), the roadmap (F is **COMPLETE**, a new row **G — Post-review correctness follow-up** is **NEXT** with each finding's merge commit, and the recommended prompt describes the current work), the release summary (method instead of stored counts; the offline closure is stated correctly), the docs index and the cleanup map (the live set), and the four historical records (a note naming the live set; content otherwise untouched).
-
-## 6) VALIDATION
+## 3) THE FINAL GATE (clean `main` at `2b0bba0`)
 
 | Check | Result |
 |---|---|
-| `src/tests/stateConsistencyCheck.test.ts` | PASS — 36 tests (6 new) |
-| `node scripts/check-state-consistency.mjs` on the real repository | PASS — 35 checks |
-| `npm test` | PASS — 126 files / 1,932 tests |
 | `npm run build` (`tsc -b` + vite) | PASS |
+| `npx tsc --noEmit` | exits 0 — and checks no project file (see §5); `tsc -b` covers 151 |
+| `npm test` | PASS — 126 files / 1,932 tests |
+| Focused regression suites from Tasks A–G | PASS — 387 tests across 10 files |
 | `npm run lint` | clean |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `2b0bba0` |
+| `e2e/lottie-import-report.spec.ts` + `e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests |
+| `perf` harness | PASS — every scene verified before timing |
+| `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
+| `npm audit` | 0 vulnerabilities |
 | `git diff --check` | clean |
 
-## 7) SELF-REVIEW NOTES
+## 4) SCOPE BOUNDARIES, STATED NOT HIDDEN
 
-- The rules are narrow on purpose: only three claim shapes, each one a reader acts on. A wrong match on "merged into `main` at `<sha>`" would have failed the whole live set on legitimate prose, which is how a checker gets switched off.
-- The historical exemption is the document class, not a wording trick, and a test pins that an old revision under a historical heading inside a live document is accepted.
-- **Deliberately not checked:** test counts, run ids and other perishable numbers. The checker cannot verify them without running the suite, and asserting prose it cannot check manufactures a false `PASS`.
-- The roadmap gained a row rather than a rewritten history: F keeps every fact and only changes its headline status.
-- No document was deleted and no historical file was rewritten.
+- **H-02 with an image matte source** follows the editor authority (the image's luminance), which its own browser spec pins.
+- **H-06 added no authentication:** the product is local and does not claim a shared deployment, so the exposure is removed by binding loopback and the documentation says the API has no authentication and that CORS is not access control.
+- **H-04 leaves `SceneLayer.visible` alone:** it is the document's layer visibility, not the editor's mute, and changing it changes what an exported graphic renders.
+- **M-03 leaves the legacy project-template registry out of the scene history:** it belongs to the template manager, and a modern scene import is fully covered.
 
-## 8) NEXT
+## 5) RESIDUAL OBSERVATIONS (need their own decision)
 
-- The final correctness gate on `main`, then the summary that maps every review finding (H-01…M-05) to its status, fix, evidence and tests.
+`npx tsc --noEmit` checks zero project files (the root `tsconfig.json` is a solution file), so the CI step named "TypeScript Type Check" verifies nothing — `npm run build` is the real gate. Also recorded: the constant `SceneLayer.visible`, unrestricted CORS, the tracked SQLite file in git, `vite --host` publishing the dev frontend, the missing focus restoration on two dialogs, and one unreproduced full-suite failure during Task B. Each is listed with its evidence in `reports/progress_141_…` §4.
+
+## 6) RELEASE VIEW
+
+The tag, draft prerelease and package metadata are unchanged (`v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the package stays private at `1.1.0-rc.1`, nothing published). The review's release blockers are closed. What remains is a human decision, not a fix: **Milestone H — release finalization**, being the approval-gated Option C majors, the two deferred minor bumps, and any publish/finalize instruction. **Option C stays deferred and is not a blocker:** the current toolchain builds, tests and lints cleanly.

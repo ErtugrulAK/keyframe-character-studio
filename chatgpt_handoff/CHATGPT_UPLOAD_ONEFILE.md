@@ -17,87 +17,84 @@
 
 ## 1. OMP Final Response
 
-# KCS Post-Review Correctness Fix — Task G Final Response (live documents and the state checker)
+# KCS Post-Review Correctness Follow-Up — Final Response (the closing checkpoint)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on `fix/state-consistency-live-docs` (base `main` at `16e1610`); the merge decision is with the user.
-- **Report:** `reports/progress_140_state_consistency_live_docs.md`.
-- **Finding closed:** M-05 — live-state documents could contradict each other and the repository while the checker still passed.
+- **Status:** the follow-up is complete and merged; the final correctness gate ran on clean `main` at `2b0bba0`.
+- **Report:** `reports/progress_141_astra_correctness_followup_summary.md` — the finding map, the scope boundaries, the residual observations and the gate.
+- **Findings:** H-01, H-02, H-03, H-04, H-05, H-06, M-01, M-02, M-03, M-04, M-05 — **all CLOSED**. None deferred, none blocked, none dropped.
 
-## 2) THE AUDIT AND THE CLASSIFICATION
+## 2) HOW IT RAN
 
-The checker read four documents plus the handoff bundle. Everything else was never read, which is why six stale documents sat next to a `PASS`: `PROJECT_STATE.md` put `main` at a checkpoint's revision, `NEXT_SESSION.md` described a long-merged branch, the roadmap said milestone F was **NEXT** while its own text recorded items 10–12 as complete, the release summary still claimed offline schema validation "is not claimed", and the docs index and cleanup map presented the closed-programme documents as current.
+One task per finding group, each on its own branch with its own validation, a read-only self-review by the same model, a report under `reports/`, and an approval-gated fast-forward merge. No rebase, no force push, no merge commit, no history rewrite, no release/tag/npm action.
 
-Classified: six **live** documents (the four above, the docs index and the cleanup map), four **historical** ones (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md` — each describing a finished programme and restating the live set), and the **record** class (`reports/**`, `docs/checkpoints/**`, the studies, the audit and plan documents).
+| Task | Findings | Merged at |
+|---|---|---|
+| A | H-01 | `0c19751` |
+| B | H-03, H-04, M-03 | `fc672f2` |
+| C | M-01, M-02, H-05 | `85c3929` |
+| D | H-02 | `ac3bda1` |
+| E | H-06 | `352d272` |
+| F | M-04 | `16e1610` |
+| G | M-05 | `2b0bba0` |
 
-The four closed-programme documents are marked as historical records with a note naming the live set. Keeping them live would mean maintaining a second copy of the current state — the drift this task exists to remove.
-
-## 3) THE CHECKER NOW HAS ONE AUTHORITY
-
-`LIVE_DOCUMENTS` names the documents that describe the current state; `checkLiveDocuments` fails when one is missing, so a rename cannot silently drop coverage. Two new rules, scoped to that set:
-
-- **`checkLiveRevisionClaims`** — a labelled `Checkout:` claim must name `main` or the branch really checked out; `` `main` is at <sha> `` must name the current `main`; `` `main` at or after <sha> `` must name an ancestor. A past merge ("merged into `main` at `c2dcb22`") is history and is deliberately not matched.
-- **`checkLiveReleaseClaims`** — a line tying the release tag or "tag target" to a revision must tie it to the pinned target (no git facts needed, so it works in a fixture).
-
-## 4) REPRODUCTION, ON IDENTICAL CONTENT
-
-The pre-task tree was extracted with `git archive` and made a throwaway repository, then both checker versions ran against it:
-
-- **Old checker:** every live-document rule passed, including `roadmap status rows … F next` — it accepted "F is NEXT" while the same file recorded item 12 as complete and merged.
-- **New checker:** additionally reports `live documents contradict the repository — PROJECT_STATE.md:9 says main is at 47d3368a2b54; NEXT_SESSION.md:5 says main is at or after 12b71a5, which is not an ancestor…`
-
-## 5) RECONCILED
-
-`PROJECT_STATE.md` (the checkpoint sentence now quotes the revision it recorded; the validation table is labelled "at the last reconciliation" and its perishable specifics were replaced), `NEXT_SESSION.md` (ancestor-form checkout claim, current validation, the first next-scoped item names the roadmap's NEXT milestone), the roadmap (F is **COMPLETE**, a new row **G — Post-review correctness follow-up** is **NEXT** with each finding's merge commit, and the recommended prompt describes the current work), the release summary (method instead of stored counts; the offline closure is stated correctly), the docs index and the cleanup map (the live set), and the four historical records (a note naming the live set; content otherwise untouched).
-
-## 6) VALIDATION
+## 3) THE FINAL GATE (clean `main` at `2b0bba0`)
 
 | Check | Result |
 |---|---|
-| `src/tests/stateConsistencyCheck.test.ts` | PASS — 36 tests (6 new) |
-| `node scripts/check-state-consistency.mjs` on the real repository | PASS — 35 checks |
-| `npm test` | PASS — 126 files / 1,932 tests |
 | `npm run build` (`tsc -b` + vite) | PASS |
+| `npx tsc --noEmit` | exits 0 — and checks no project file (see §5); `tsc -b` covers 151 |
+| `npm test` | PASS — 126 files / 1,932 tests |
+| Focused regression suites from Tasks A–G | PASS — 387 tests across 10 files |
 | `npm run lint` | clean |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `2b0bba0` |
+| `e2e/lottie-import-report.spec.ts` + `e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests |
+| `perf` harness | PASS — every scene verified before timing |
+| `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
+| `npm audit` | 0 vulnerabilities |
 | `git diff --check` | clean |
 
-## 7) SELF-REVIEW NOTES
+## 4) SCOPE BOUNDARIES, STATED NOT HIDDEN
 
-- The rules are narrow on purpose: only three claim shapes, each one a reader acts on. A wrong match on "merged into `main` at `<sha>`" would have failed the whole live set on legitimate prose, which is how a checker gets switched off.
-- The historical exemption is the document class, not a wording trick, and a test pins that an old revision under a historical heading inside a live document is accepted.
-- **Deliberately not checked:** test counts, run ids and other perishable numbers. The checker cannot verify them without running the suite, and asserting prose it cannot check manufactures a false `PASS`.
-- The roadmap gained a row rather than a rewritten history: F keeps every fact and only changes its headline status.
-- No document was deleted and no historical file was rewritten.
+- **H-02 with an image matte source** follows the editor authority (the image's luminance), which its own browser spec pins.
+- **H-06 added no authentication:** the product is local and does not claim a shared deployment, so the exposure is removed by binding loopback and the documentation says the API has no authentication and that CORS is not access control.
+- **H-04 leaves `SceneLayer.visible` alone:** it is the document's layer visibility, not the editor's mute, and changing it changes what an exported graphic renders.
+- **M-03 leaves the legacy project-template registry out of the scene history:** it belongs to the template manager, and a modern scene import is fully covered.
 
-## 8) NEXT
+## 5) RESIDUAL OBSERVATIONS (need their own decision)
 
-- The final correctness gate on `main`, then the summary that maps every review finding (H-01…M-05) to its status, fix, evidence and tests.
+`npx tsc --noEmit` checks zero project files (the root `tsconfig.json` is a solution file), so the CI step named "TypeScript Type Check" verifies nothing — `npm run build` is the real gate. Also recorded: the constant `SceneLayer.visible`, unrestricted CORS, the tracked SQLite file in git, `vite --host` publishing the dev frontend, the missing focus restoration on two dialogs, and one unreproduced full-suite failure during Task B. Each is listed with its evidence in `reports/progress_141_…` §4.
+
+## 6) RELEASE VIEW
+
+The tag, draft prerelease and package metadata are unchanged (`v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the package stays private at `1.1.0-rc.1`, nothing published). The review's release blockers are closed. What remains is a human decision, not a fix: **Milestone H — release finalization**, being the approval-gated Option C majors, the two deferred minor bumps, and any publish/finalize instruction. **Option C stays deferred and is not a blocker:** the current toolchain builds, tests and lints cleanly.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Task G (live documents and the state checker)
+# KCS ChatGPT Upload Manifest — final correctness checkpoint
 
 Clean refreshed: YES
-Bundle purpose: the live-document coverage of the state checker (review finding M-05)
+Bundle purpose: the completed post-review correctness follow-up and its final gate
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/state-consistency-live-docs, base main at 16e1610 — not merged; the merge decision is with the user
-Task record: reports/progress_140_state_consistency_live_docs.md
-What changed: scripts/check-state-consistency.mjs (LIVE_DOCUMENTS is the authority, checkLiveDocuments guards coverage, checkLiveRevisionClaims and checkLiveReleaseClaims are the new rules, the roadmap row range covers A–H), src/tests/stateConsistencyCheck.test.ts (6 new cases), and the document reconciliation (PROJECT_STATE.md, NEXT_SESSION.md, the roadmap, the release summary, the docs index, the cleanup map; four closed-programme documents marked historical)
-Reproduction: on the pre-task tree the old rules passed every live-document check — including "roadmap status rows … F next" while the same file recorded item 12 as complete — and the new rules report the contradictions
-Not checked on purpose: test counts, run ids and other perishable numbers (the checker cannot verify them without running the suite)
-Validation: stateConsistencyCheck suite PASS (36 tests); node scripts/check-state-consistency.mjs PASS (35 checks) on the real repository; npm test PASS (126 files / 1,932 tests); npm run build PASS (tsc -b + vite); npm run lint clean; git diff --check clean
-Next work: the final correctness gate on main, then the summary that maps every review finding H-01…M-05 to its status, fix, evidence and tests
+Branch: docs/final-correctness-gate, base main at 2b0bba0 — the follow-up itself is merged; this checkpoint is with the user
+Task record: reports/progress_141_astra_correctness_followup_summary.md
+Findings closed: H-01 (0c19751), H-03/H-04/M-03 (fc672f2), M-01/M-02/H-05 (85c3929), H-02 (ac3bda1), H-06 (352d272), M-04 (16e1610), M-05 (2b0bba0) — none deferred, none blocked
+Final gate on clean main at 2b0bba0: npm run build PASS; npx tsc --noEmit exits 0 (and checks no project file — the root tsconfig is a solution file, so npm run build is the real type gate, 151 files); npm test PASS (126 files / 1,932 tests); focused regression suites PASS (387 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate 2b0bba0); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
+Scope boundaries stated, not hidden: H-02 with an image matte source follows the editor authority; H-06 added no authentication (loopback bind plus documentation instead); H-04 leaves SceneLayer.visible alone; M-03 leaves the legacy project-template registry out of the scene history
+Residual observations (need their own decision): npx tsc --noEmit verifies nothing in CI; constant SceneLayer.visible; unrestricted CORS; the tracked SQLite file; vite --host publishing the dev frontend; missing focus restoration on two dialogs; one unreproduced full-suite failure during Task B
+Next work: Milestone H — release finalization (the approval-gated Option C majors, the two deferred minor bumps, and any publish/finalize instruction). Option C stays deferred and is not a blocker.
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_140_state_consistency_live_docs.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_141_astra_correctness_followup_summary.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
@@ -108,35 +105,35 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Task G (live documents and the state checker)
+# KCS Minimal ChatGPT Upload Bundle — final correctness checkpoint
 
-This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
+This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this checkpoint.
 
 ## What this bundle covers
 
-M-05 from the full-project review, on `fix/state-consistency-live-docs` from `main` at `16e1610`:
+The post-review correctness follow-up, complete and merged into `main` at `2b0bba0`:
 
-- The state consistency check read four documents plus this bundle, so six stale live documents sat
-  next to a `PASS`. `LIVE_DOCUMENTS` in `scripts/check-state-consistency.mjs` is now the authority:
-  it names the documents that describe the current state, a missing one fails the check, and two new
-  rules catch a live document that claims the wrong checkout, puts `main` at another revision, or ties
-  the release tag to another candidate. A past merge — "merged into `main` at `<sha>`" — is history and
-  is deliberately not matched.
-- The closed-programme documents (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`,
-  `docs/KCS_BRANCH_STATUS.md`) are marked as historical records naming the live set; the live ones were
-  reconciled (`PROJECT_STATE.md`, `NEXT_SESSION.md`, the roadmap, the release summary, the docs index
-  and the cleanup map). The roadmap records milestone F as complete and the post-review follow-up as
-  NEXT.
-- Proven on identical content: against the pre-task tree the old rules passed (including "F next"),
-  while the new ones name the contradictions.
-- Six new checker tests: a stale checkout, a stale `main` revision, an accepted ancestor claim, a stale
-  release candidate, an old revision kept by a historical record, and a missing live document.
+- Every release-blocking finding from the full-project review is closed — **H-01…H-06 and M-01…M-05** —
+  one task per finding group, each on its own branch with its own validation, a read-only self-review
+  and an approval-gated fast-forward merge. The finding map is in
+  `progress_141_astra_correctness_followup_summary.md`.
+- The final correctness gate ran on clean `main` at `2b0bba0`: build, the full suite (126 files /
+  1,932 tests), the focused regression suites from every task (387 tests), lint, `validate:ograf`,
+  `qa:release`, the two browser specs, the profiling harness, the state check (35 checks), `npm audit`
+  (0) and `git diff --check` — all green.
+- The summary also records the scope boundaries that were stated rather than hidden (the image matte
+  source, the decision not to invent an authentication system, `SceneLayer.visible`, the legacy
+  template registry) and the residual observations that need their own decision (the type-check step
+  that verifies nothing, unrestricted CORS, the tracked SQLite file, and the rest).
+- The release tag, draft prerelease and package metadata are unchanged. What remains is the
+  approval-gated **Milestone H — release finalization** (the Option C majors, the two deferred minor
+  bumps, and any publish/finalize instruction).
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_140_state_consistency_live_docs.md` — the task record
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap, now with milestone F complete and G as NEXT
+- `OMP_FINAL_RESPONSE.md` — the final response for this checkpoint
+- `progress_141_astra_correctness_followup_summary.md` — the finding map, the gate and the observations
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap, with milestone G complete and H as NEXT
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -166,83 +163,97 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 140 — Task G: the state checker covers the live documents
+# Progress 141 — the post-review correctness follow-up: final summary
 
-Branch: `fix/state-consistency-live-docs` (base `main` at `16e1610`).
-Finding: **M-05** — live-state documents could contradict each other and the repository while the checker still passed.
+Branch: `docs/final-correctness-gate` (base `main` at `2b0bba0`).
+Scope: every finding from the full-project review, closed one task at a time, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge.
 
-## 1. The audit: what each document is
+## 1. Finding map
 
-The checker's scope was four documents (`PROJECT_STATE.md`, `NEXT_SESSION.md`, the roadmap, the one-file) plus the handoff bundle. Everything else in the repository was simply never read, which is why six stale documents could sit next to a `PASS`.
+| Finding | Status | Task | Branch | Merged at | Report |
+|---|---|---|---|---|---|
+| **H-01** — a blocking dialog left the editor's global commands live | **CLOSED** | A | `fix/modal-shortcut-isolation` | `0c19751` | `reports/progress_134_modal_shortcut_isolation.md` |
+| **H-02** — the OGraf inverted alpha matte did not invert alpha | **CLOSED** | D | `fix/ograf-inverse-alpha-matte` | `ac3bda1` | `reports/progress_137_ograf_inverse_alpha_matte.md` |
+| **H-03** — the import boundary accepted malformed values | **CLOSED** | B | `fix/import-serialization-transaction-integrity` | `fc672f2` | `reports/progress_135_import_serialization_integrity.md` |
+| **H-04** — save/load lost persistent authoring state | **CLOSED** | B | `fix/import-serialization-transaction-integrity` | `fc672f2` | `reports/progress_135_import_serialization_integrity.md` |
+| **H-05** — multiple geometry in one Lottie layer was silently overwritten | **CLOSED** | C | `fix/lottie-structure-correctness` | `85c3929` | `reports/progress_136_lottie_structure_correctness.md` |
+| **H-06** — the writable API was exposed on every interface without authentication | **CLOSED** | E | `fix/api-network-trust-boundary` | `352d272` | `reports/progress_138_api_trust_boundary.md` |
+| **M-01** — a Lottie parent resolved by array offset instead of `ind` | **CLOSED** | C | `fix/lottie-structure-correctness` | `85c3929` | `reports/progress_136_lottie_structure_correctness.md` |
+| **M-02** — a static child skipped its parent transform | **CLOSED** | C | `fix/lottie-structure-correctness` | `85c3929` | `reports/progress_136_lottie_structure_correctness.md` |
+| **M-03** — import undo did not restore the whole document | **CLOSED** | B | `fix/import-serialization-transaction-integrity` | `fc672f2` | `reports/progress_135_import_serialization_integrity.md` |
+| **M-04** — the profile harness did not build the workload it measured | **CLOSED** | F | `fix/evaluator-profile-fixtures` | `16e1610` | `reports/progress_139_evaluator_profile_fixture_fix.md` |
+| **M-05** — live documents could contradict each other while the check passed | **CLOSED** | G | `fix/state-consistency-live-docs` | `2b0bba0` | `reports/progress_140_state_consistency_live_docs.md` |
 
-| Document | Class | State found |
+**No finding is deferred, blocked or silently dropped.** Two were closed with a scope boundary stated in their own report and repeated below (§3): H-02's image-source behaviour follows the editor authority, and H-06 added no authentication.
+
+## 2. What each fix is, in one line
+
+- **H-01.** The global shortcut handler reads the dialogs' own `aria-modal` contract and returns before any command; `NewItemModal` declares the contract it was missing and owns `Escape` at the dialog level.
+- **H-02.** An inverted matte is a **luminance** mask with a white backdrop and the source painted black (the technique the editor documents) instead of an alpha mask whose black source stayed opaque; the inverted luminance branch had the same defect and both modes now share one construction. The generated runtime mirrors it.
+- **H-03.** A semantic pass at the boundary refuses a scene version this build does not know, a non-positive frame rate or timeline, a canvas size that is not positive, a non-text `textValue`, a layer without a usable id or z-order, duplicate layer ids, a path the geometry builder cannot walk, a mask without a path, a channel that is not a keyframe list and a keyframe value that is not finite — each with a stable code and the offending path, before any state is touched.
+- **H-04.** A track's `visible`, `editVisible` and `locked` flags and its sequence link are written on export and read back on import, with the documented defaults for older files.
+- **H-05.** A layer carrying more than one geometry item is reported instead of silently keeping the last one.
+- **H-06.** The API binds `127.0.0.1` by default; a wider interface is an explicit opt-in (`KCS_API_HOST`) and the server warns with what it published and how to undo it.
+- **M-01.** Parents resolve through an `ind` map after the layer loop, so order no longer matters; a missing index, a self-reference and a duplicated index are reported, and the depth walk is cycle-safe.
+- **M-02.** The hierarchy is resolved for every layer; only the keyframe evaluation is skipped.
+- **M-03.** The history snapshot carries the document-level state, so one undo restores the whole document.
+- **M-04.** The scenes carry real `baseTransform` and real masks, and the harness verifies the built scene before anything is timed.
+- **M-05.** `LIVE_DOCUMENTS` is the checker's authority, with rules for the checkout, the `main` revision and the release tag, and the stale live documents reconciled.
+
+## 3. Scope boundaries that were stated, not hidden
+
+- **H-02, image matte sources.** An image cannot be repainted, so the luminance mask reads the image's own luminance — which is exactly what the editor does for an inverted image matte, and its spec pins that structure. A true inverse of an image's *alpha* would need a filter chain the editor does not use either.
+- **H-06, authentication.** None was added: the product does not claim a shared deployment, and inventing an auth architecture is a decision of its own. The exposure is removed by binding loopback, and the documentation says plainly that the API has no authentication and that CORS is not access control.
+- **H-04, `SceneLayer.visible`.** Written as a constant and read by the OGraf evaluation; it is the *document's* layer visibility, not the editor's per-track mute. Mapping the mute onto it changes what an exported package renders — a separate product decision.
+- **M-03, the legacy project-template registry.** A legacy (non-scene) import also registers a project tab, which belongs to the template manager rather than the scene document. A modern scene import — the normal path — is fully covered.
+
+## 4. Residual observations (recorded, deliberately not changed)
+
+These are not review findings; they were found while closing the ones above, and each needs its own decision.
+
+| Observation | Evidence | Why it is not changed here |
 |---|---|---|
-| `PROJECT_STATE.md` | **LIVE** | `main` revision claim pointed at a checkpoint's revision; validation table carried 121 files / 1,836 tests |
-| `NEXT_SESSION.md` | **LIVE** | checkout claimed `main` "at or after `12b71a5`"; validation line described a long-merged branch |
-| `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` | **LIVE** | milestone F still said **NEXT** while its own text recorded items 10, 11 and 12 as complete and merged; the recommended next prompt pointed at finished work |
-| `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` | **LIVE** | validation status carried 101 files / 1,495 tests, and it still claimed offline schema validation "is not claimed" — the offline closure merged long before |
-| `docs/README_INDEX.md` | **LIVE** | "Current checkpoint" pointed at a checkpoint's revision as if it were today's |
-| `docs/KCS_DOCS_CLEANUP_MAP.md` | **LIVE** | listed the closed-programme documents as "canonical first-read" current state |
-| `SESSION.md` | HISTORICAL | claimed a `feat/lottie-import-core` checkout and an open merge decision |
-| `docs/KCS_CURRENT_STATE.md` | HISTORICAL | claimed schema validation requires network access |
-| `docs/KCS_OPEN_TASKS.md` | HISTORICAL | claimed `main@1ad3f60` and "production release remains HOLD pending Task 8" |
-| `docs/KCS_BRANCH_STATUS.md` | HISTORICAL | claimed `main@1ad3f60` and a Task 1–8 chain |
-| `reports/**`, `docs/checkpoints/**`, `docs/design/**`, `docs/research/**`, the audit and plan documents | RECORD | the audit trail, unchanged |
+| `npx tsc --noEmit` checks **zero** project files | `tsc -b --listFiles` reports 151 source files; `npx tsc --noEmit --listFiles` reports none (the root `tsconfig.json` is a solution file with `files: []`) | The CI workflow and the documented validation steps are outside every finding's scope; the real gate is `npm run build` (`tsc -b`), which is what this run used |
+| `SceneLayer.visible` is a constant `true` | `toSceneData` writes `visible: true`; the OGraf evaluation reads it | Changing it changes what an exported graphic renders |
+| CORS is unrestricted and is not access control | `cors()` with no allowlist; `docs/API.md` now says so | Narrowing it changes behaviour for any other frontend origin; the finding was about network exposure |
+| `server/db/keyframe_studio.sqlite` is **tracked** in git | `git ls-files server/db/` lists it | Repository hygiene outside the findings; it is also why the API trust test is a unit test plus a recorded run rather than a process-level test |
+| `vite --host` publishes the frontend dev server | `package.json` `dev` script | A deliberate dev convenience for a static editor with no server-side data, and not the writable API |
+| Focus is not restored when the import report or the confirmation dialog closes | Those two dialogs have no previous-focus capture (the bezier editor does) | An accessibility change beyond H-01's command-isolation scope; recorded in `reports/progress_134_…` §6 |
+| One full-suite run in Task B reported a single failure that never reproduced | Six further full runs, ten runs of the new integration case and six runs of the state-check suite are clean | No failure name was captured before the output was trimmed; recorded in `reports/progress_135_…` §6 |
 
-**Classification decision.** The four closed-programme documents each describe a programme that is finished (the release-candidate work and its Task 1–8 chain) and each restated the same facts as the live set. Keeping them "live" would mean maintaining a second copy of the current state — the exact drift this task exists to remove — so they are marked as historical records, each carrying a note that names the live set instead. That is the classification the task asked for, not a silent rewrite: the note is at the top of every one of them.
-
-## 2. The checker now has one authority
-
-`LIVE_DOCUMENTS` in `scripts/check-state-consistency.mjs` is the list of documents that describe the current state, and the only ones whose claims are checked. `checkLiveDocuments` fails when one of them is missing, so a rename cannot silently drop coverage. The stale-phrase scan, the roadmap rule, the next-action rule and the mirror rule all read that set (plus the one-file and the bundle).
-
-Two new rules, both scoped to the live documents only:
-
-- **`checkLiveRevisionClaims`** — the checked-out branch and the revision `main` is at. A labelled `Checkout:` claim must name `main` or the branch that is really checked out; `` `main` is at `<sha>` `` must name the current `main`; `` `main` at or after `<sha>` `` must name an ancestor. A past merge — "merged into `main` at `c2dcb22`" — is history about that merge and is deliberately not matched.
-- **`checkLiveReleaseClaims`** — a line that ties the release tag (or "tag target") to a revision must tie it to the pinned target. This needs no git facts, so it is caught even in a fixture.
-
-## 3. Reproduction, on identical content
-
-The pre-task tree was extracted with `git archive` and made a throwaway repository, then both versions of the checker ran against it:
-
-| | Old checker | New checker |
-|---|---|---|
-| Live-document rules | every one passed, including `roadmap status rows … F next` — it accepted "F is NEXT" while the same file recorded item 12 as complete and merged | **`live documents contradict the repository`** — `PROJECT_STATE.md:9 says main is at 47d3368a2b54; NEXT_SESSION.md:5 says main is at or after 12b71a5, which is not an ancestor…` |
-| Other failures | only the git facts a throwaway repository cannot have (the RC tag and the three milestone commits) | the same, plus the above |
-
-The same tree, the same facts: the old rules accepted it, the new rules name the contradiction.
-
-## 4. What was reconciled
-
-- **`PROJECT_STATE.md`** — the checkpoint sentence now says the checkpoint records the revision it was written from (`main` stood at `47d3368a2b54…` then) instead of asserting that `main` is there; the validation table is labelled "at the last reconciliation" and its perishable specifics (test count, run id, baseline SHA) were replaced by the current numbers and by the method where a number would go stale within a task.
-- **`NEXT_SESSION.md`** — the checkout claim is the ancestor form against the last merged task, the validation line describes the current run, and the first next-scoped item names the roadmap's NEXT milestone.
-- **`docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`** — milestone F is **COMPLETE** (items 10, 11 and 12 are merged) and a new row **G — Post-review correctness follow-up** is **NEXT**, listing each finding's merge commit; the recommended next prompt describes the current work instead of the finished Option B follow-up.
-- **`docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`** — the validation section states the method and points at `NEXT_SESSION.md` for the current numbers; the schema constraint now says the closure is offline by default with `--online` as the refresh path.
-- **`docs/README_INDEX.md`** and **`docs/KCS_DOCS_CLEANUP_MAP.md`** — the read-first lists name the live set, and the checkpoint sentence is reframed as the most recent historical record.
-- **`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md`** — a historical-record note at the top of each, naming the live set. Their content is otherwise untouched.
-
-## 5. Validation
+## 5. The final gate (clean `main` at `2b0bba0`)
 
 | Check | Result |
 |---|---|
-| `src/tests/stateConsistencyCheck.test.ts` | PASS — 36 tests (6 new: stale checkout, stale `main` revision, an accepted ancestor claim, a stale release candidate, an old revision kept by a historical record, a missing live document) |
-| `node scripts/check-state-consistency.mjs` on the real repository | PASS |
-| `npm test` | PASS — 126 files / 1,932 tests |
+| `git pull --ff-only origin main` | up to date; `main == origin/main == 2b0bba0` |
 | `npm run build` (`tsc -b` + vite) | PASS |
+| `npx tsc --noEmit` | exits 0 — and checks no project file (see §4); `tsc -b` covers 151 |
+| `npm test` | PASS — 126 files / 1,932 tests |
+| Focused regression suites from Tasks A–G (10 files) | PASS — 387 tests |
 | `npm run lint` | clean |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `2b0bba0` |
+| `npx playwright test e2e/lottie-import-report.spec.ts e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests (3 + 4) |
+| `npx vitest run --config perf/vitest.perf.config.ts` | PASS — the harness verifies every scene before timing |
+| `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
+| `npm audit` | 0 vulnerabilities |
 | `git diff --check` | clean |
 
-## 6. Self-review (read-only, same model)
+Every one of these ran on the merged `main`, not on a branch.
 
-- **The rules are narrow on purpose.** Only three claim shapes are checked, and each is one a reader acts on. "Merged into `main` at `<sha>`" is history and is not matched; a wrong match there would have failed the whole live set on legitimate prose, which is how a checker gets switched off.
-- **The historical exemption is the document class, not a wording trick.** Records are outside `LIVE_DOCUMENTS`; the existing heading-based exemption still applies inside a live document, and a test pins that an old revision under a historical heading is accepted.
-- **What is deliberately *not* checked:** test counts, run ids and other perishable numbers. The checker cannot verify them without running the suite, and asserting prose it cannot check is how a false `PASS` is manufactured. `PROJECT_STATE.md` now labels that table as of the last reconciliation instead.
-- **The roadmap gained a row rather than a rewritten history.** F's row keeps every fact it had and only changes its headline status; G records the current programme and the merges it has produced so far.
-- **No document was deleted and no historical file was rewritten**, per the repository's preservation rules.
+## 6. Release view
 
-## 7. Not changed
+- The release **tag, draft prerelease and package metadata are unchanged**: `v1.1.0-rc.1` still points at the workflow-tested candidate `46d2a3e59e065816d972dcd56951803951b577f6`, the package stays private at `1.1.0-rc.1`, and nothing was published.
+- **The review's release blockers are closed.** The remaining release work is the human decision the repository already defers: the approval-gated **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), plus any publish/finalize instruction.
+- **Option C is still deferred**, and it is not a blocker: the current toolchain builds, tests and lints cleanly.
+- The findings that were about *user-visible correctness* (H-01, H-02, H-03, H-04, M-01, M-02, M-03) each carry a reproduction that fails before their fix and passes after it, at the level a user observes — a deleted layer, a matte pixel, a refused import, a restored document, a placed child.
 
-- The release tag, draft release, package metadata and every dependency are untouched.
-- The audit trail (`reports/**`) and the checkpoints are byte-for-byte what they were.
+## 7. How this run behaved
+
+- One branch per task, each fast-forward merged only after the user approved the merge gate; no rebase, no force push, no merge commit, no history rewrite.
+- Every task carried a read-only self-review by the same model and a report under `reports/`.
+- The handoff bundle was rebuilt after every merged task, and the one-file regenerated from scratch.
+- One working-tree accident was recorded rather than hidden: the Task A changelog edit landed after the state check had run, which turned `main` red for one push; it was fixed by a docs-only commit (`1291bb8`) before the next task started, and the Task B branch was recreated on top of it.
 
 ---
 
@@ -282,7 +293,7 @@ On `fix/state-consistency-live-docs` (the live-doc reconciliation): full Vitest 
 
 ## Next scoped work
 
-1. **Milestone G — the post-review correctness follow-up is the active work.** The full-project review's release-blocking findings are closed one at a time, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge: H-01 (a blocking dialog left the editor's global commands live) at `0c19751`; H-03, H-04 and M-03 (import boundary validation, the track authoring-state round-trip, the document transaction) at `fc672f2`; M-01, M-02 and H-05 (Lottie parent resolution by `ind`, the static hierarchy, the multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05 (this reconciliation) and the final correctness gate remain** — see `reports/progress_134_…` through `reports/progress_140_…`.
+1. **Milestone G — the post-review correctness follow-up is complete.** Every finding from the full-project review is closed, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge: H-01 at `0c19751`; H-03, H-04 and M-03 at `fc672f2`; M-01, M-02 and H-05 at `85c3929`; H-02 at `ac3bda1`; H-06 at `352d272`; M-04 at `16e1610`; M-05 at `2b0bba0`. The final correctness gate ran on `main` at `2b0bba0` and is recorded in `reports/progress_141_astra_correctness_followup_summary.md`, which also lists the residual observations that need their own decision. **Milestone H (release finalization) is the next work.**
 2. Approval-gated follow-ups that remain open: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) with their own triage. The `engines`/`allowScripts` follow-up is answered on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and only needs its merge decision. Every release/tag/draft-release change still needs explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -354,6 +365,10 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 | Independent review | PASS | Milestone A `READY` in round 6 of six; the item-9 audit closed `READY WITH WARNINGS` in round 6 of six (`reports/progress_112_dependency_warning_audit.md` §12); the Option A change closed with `READY WITH WARNINGS` from the read-only `scout` round (the reviewer model hit a provider usage limit) after `reviewer-agent` rounds 1–3 closed every finding (`reports/progress_113_warning_maintenance.md` §2) |
 | CI on `main` | PASS | the newest `main` push run is green at the time of this reconciliation (`gh run list --branch main`) |
 
+## Post-review correctness follow-up (complete)
+
+The full-project review's release-blocking findings are closed, one task at a time and one branch each: **H-01** at `0c19751`, **H-03/H-04/M-03** at `fc672f2`, **M-01/M-02/H-05** at `85c3929`, **H-02** at `ac3bda1`, **H-06** at `352d272`, **M-04** at `16e1610`, **M-05** at `2b0bba0`. Every fix carries a reproduction that fails before it and passes after it, at the level a user observes. The final correctness gate and the finding map are in `reports/progress_141_astra_correctness_followup_summary.md`; the residual observations it records (the type-check step that verifies nothing, the tracked SQLite file, CORS, and the rest) each need their own decision.
+
 ## Remaining work
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
@@ -409,7 +424,8 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 and `jsdom` 30.1 deferred for documented reasons. The `engines` declaration and npm-12 `allowScripts` policy are answered on `chore/engines-allow-scripts` and await their merge decision. Still approval-gated: Option C (TypeScript 7 / Vitest 5) and the two deferred minor bumps |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **COMPLETE** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
-| G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **NEXT** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. Still open: M-05 (this reconciliation) and the final correctness gate. The approval-gated Option C majors and the two deferred minor bumps stay behind their own approval. |
+| G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **COMPLETE** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05** (the live-document reconciliation) is merged at `2b0bba0`, and the final correctness gate ran on `main` at `2b0bba0` (`reports/progress_141_astra_correctness_followup_summary.md`): every finding is closed. |
+| H — Release finalization and the approval-gated toolchain majors | review follow-up decisions | `chore/engines-allow-scripts` (kept) | **NEXT** — the correctness follow-up is complete, so what remains is the human decision the repository already defers: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), each with its own triage, then any publish/finalize instruction for the draft release. Every package/lockfile/workflow change needs explicit approval, and the release tag and draft stay untouched until then. |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -465,7 +481,7 @@ The deliverables are the study, the Lottie import mapping design and the editabl
 
 ## Recommended next prompt
 
-"KCS POST-REVIEW CORRECTNESS FOLLOW-UP (Milestone G). The full-project review's release-blocking findings are closed one at a time, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge. The remaining work is the live-document reconciliation (M-05) and the final correctness gate, then the approval-gated Option C (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x). Every package/lockfile/workflow change needs explicit approval, and every release/tag/npm action stays behind its own explicit approval."
+"KCS RELEASE FINALIZATION (Milestone H, approval-gated). The post-review correctness follow-up is complete and every finding H-01…M-05 is closed (`reports/progress_141_astra_correctness_followup_summary.md`). The remaining work is a decision, not a fix: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), each on its own branch with its own validation, then any publish/finalize instruction for the GitHub draft. Every package/lockfile/workflow change needs explicit approval, and the release tag and draft stay untouched until then."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
@@ -512,6 +528,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The REST API now binds `127.0.0.1` instead of every interface, so the unauthenticated project store is reachable from this machine only. Publishing it to a network is an explicit opt-in (`KCS_API_HOST`), and the server warns with what it published and how to undo it. `README.md` and `docs/API.md` state that the API has no authentication and that CORS is not access control.
 - The evaluator profile harness now builds the workload it measures: its scenes carry a real `baseTransform` and real layer masks (the previous builder wrote `transform` and `layers`, which the evaluator never reads, behind a cast that hid both), and the harness verifies the built scene — layer, track, mask and parent counts, finite transforms and masks, and visible layers — before anything is timed. The report carries that verification, and `KCS_PROFILE_OUT` writes it to a file (Vitest rejects the `--out` flag the harness previously expected).
 - The state consistency check now covers the live documents instead of four of them: `LIVE_DOCUMENTS` names the documents that describe the current state, a missing one fails the check, and two new rules catch a live document that claims the wrong checkout, puts `main` at another revision, or ties the release tag to another candidate. The closed-programme documents (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md`) are marked as historical records and reconciled where they were live, the roadmap records milestone F as complete with the post-review follow-up as NEXT, and the release summary no longer repeats validation counts that go stale within a task.
+- The post-review correctness follow-up is complete: every release-blocking finding from the full-project review is closed, one task at a time and one branch each, and the final correctness gate ran on `main` (`reports/progress_141_astra_correctness_followup_summary.md`).
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.
@@ -561,14 +578,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 13658 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 15543 bytes
-- `NEXT_SESSION.md` — 11453 bytes
-- `OMP_FINAL_RESPONSE.md` — 5186 bytes
-- `PROJECT_STATE.md` — 16364 bytes
-- `README.md` — 3134 bytes
-- `manifest.txt` — 2473 bytes
-- `progress_140_state_consistency_live_docs.md` — 8164 bytes
+- `CHANGELOG.md` — 13931 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 16211 bytes
+- `NEXT_SESSION.md` — 11214 bytes
+- `OMP_FINAL_RESPONSE.md` — 3866 bytes
+- `PROJECT_STATE.md` — 17076 bytes
+- `README.md` — 3149 bytes
+- `manifest.txt` — 2795 bytes
+- `progress_141_astra_correctness_followup_summary.md` — 10935 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

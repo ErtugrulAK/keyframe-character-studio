@@ -239,8 +239,15 @@ A file written before this contract keeps exactly the behaviour it had.
 | `node scripts/check-state-consistency.mjs` | PASS — 33 checks |
 | `git diff --check` | clean |
 
-## 7. Self-review (read-only, same model)
+### One unreproduced suite observation
 
+One full-suite run in this task reported `1 failed | 1902 passed` (125 files). The failing case could not
+be identified because the output was read through a truncated tail, and it never reproduced: six further
+full-suite runs are clean (1,903 passed), the new provider integration case ran 10 times with no failure,
+and `stateConsistencyCheck` ran 6 times with no failure. Recorded rather than dropped; if it recurs, the
+failure name must be captured before the run's output is trimmed.
+
+## 7. Self-review (read-only, same model)
 - **Reach of the semantic pass.** It walks layers, tracks, channels and keyframes once, after the size/depth/prototype checks, so a hostile document is still refused before the walk. Cost is linear in what the apply path would read anyway.
 - **Validation level.** `totalFrames` is only required to be a positive number, not to match the playback setter's `[10, 1200]` clamp: the app accepts and clamps a larger value, so refusing it here would be stricter than the product. Every value the app can reach is already clamped, so a restored snapshot is verbatim.
 - **`SceneLayer.visible` is deliberately unchanged.** It is written as a constant `true` and read by the OGraf evaluation, i.e. it is the *document's* layer visibility, not the editor's per-track mute. Mapping the editor mute onto it would change what an exported OGraf package renders — a separate product decision, not a round-trip fix. Recorded here rather than changed silently.
@@ -569,7 +576,7 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `PROJECT_STATE.md` — 16433 bytes
 - `README.md` — 3020 bytes
 - `manifest.txt` — 2498 bytes
-- `progress_135_import_serialization_integrity.md` — 7659 bytes
+- `progress_135_import_serialization_integrity.md` — 8187 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

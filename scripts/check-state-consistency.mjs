@@ -507,7 +507,9 @@ function checkLiveRevisionClaims(root) {
   }
   const branch = git(['rev-parse', '--abbrev-ref', 'HEAD'], root);
   const mainRef = git(['rev-parse', 'main'], root);
+  const shallow = git(['rev-parse', '--is-shallow-repository'], root) === 'true';
   const problems = [];
+  const unverifiable = [];
 
   for (const relative of LIVE_DOCUMENTS) {
     const text = readText(root, relative);
@@ -530,14 +532,30 @@ function checkLiveRevisionClaims(root) {
         problems.push(`${where} says main is at ${atClaim[1]}; main is ${mainRef.slice(0, 12)}`);
       }
       const ancestorClaim = MAIN_ANCESTOR_CLAIM.exec(line);
-      if (ancestorClaim && mainRef && git(['merge-base', '--is-ancestor', ancestorClaim[1], mainRef], root) === null) {
-        problems.push(`${where} says main is at or after ${ancestorClaim[1]}, which is not an ancestor of ${mainRef.slice(0, 12)}`);
+      if (ancestorClaim && mainRef) {
+        const claimed = ancestorClaim[1];
+        // A shallow checkout (CI's default) does not carry the older commits, so
+        // an ancestor claim cannot be verified here — the same limit the tag and
+        // milestone checks already report as skipped rather than as a failure.
+        if (git(['rev-parse', `${claimed}^{commit}`], root) === null) {
+          if (shallow) unverifiable.push(`${where} claims ${claimed}, which this checkout does not carry`);
+          else problems.push(`${where} claims ${claimed}, which this repository does not have`);
+        } else if (git(['merge-base', '--is-ancestor', claimed, mainRef], root) === null) {
+          problems.push(`${where} says main is at or after ${claimed}, which is not an ancestor of ${mainRef.slice(0, 12)}`);
+        }
       }
     }
   }
 
-  if (problems.length === 0) pass('live documents agree with the checked-out branch and main');
-  else fail('live documents contradict the repository', problems.join(' | '));
+  if (problems.length > 0) {
+    fail('live documents contradict the repository', problems.join(' | '));
+    return;
+  }
+  if (unverifiable.length > 0) {
+    pass('live revision claims agree with the repository', `${unverifiable.length} ancestor claim(s) not verifiable in a shallow checkout: ${unverifiable.join('; ')}`);
+    return;
+  }
+  pass('live documents agree with the checked-out branch and main');
 }
 
 /**

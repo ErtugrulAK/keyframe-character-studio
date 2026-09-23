@@ -441,6 +441,16 @@ describe('check-state-consistency — live documents', () => {
     expect(output).not.toContain('live documents contradict the repository');
   });
 
+  it('fails when a live document claims an ancestor this repository does not have', () => {
+    const root = makeGitFixture();
+    const claim = `# Next Session Handoff${nl}${nl}## Repository state${nl}${nl}- Checkout: \`main\` at or after \`deadbee\`, matching \`origin/main\`.${nl}${nl}## Next scoped work${nl}${nl}1. Milestone D item 6 is implemented; the current decision is item 9.${nl}`;
+    writeFixtureFile(root, 'NEXT_SESSION.md', claim);
+    writeFixtureFile(root, 'chatgpt_handoff/latest/NEXT_SESSION.md', claim);
+    const { output } = runCheck(root);
+
+    expect(output).toContain('which this repository does not have');
+  });
+
   it('fails when a live document is missing from the repository', () => {
     const root = makeFixture();
     rmSync(path.join(root, 'docs', 'README_INDEX.md'));
@@ -532,6 +542,33 @@ describe('check-state-consistency — portability', () => {
 
     expect(status).toBe(0);
     expect(output).toContain('shallow checkout');
+    expect(output).toContain('KCS state consistency: PASS');
+  });
+
+  it('reports an ancestor claim a shallow checkout cannot carry instead of failing on it', () => {
+    const source = makeFixture();
+    const run = (...args: string[]) => execFileSync('git', args, { cwd: source, encoding: 'utf8' });
+    run('init', '-q', '-b', 'main');
+    run('config', 'user.email', 'check@example.com');
+    run('config', 'user.name', 'Check Fixture');
+    run('add', '-A');
+    run('commit', '-q', '-m', 'fixture');
+    // A claim the shallow clone will not carry, exactly as CI's checkout behaves.
+    const claim = `# Next Session Handoff${nl}${nl}## Repository state${nl}${nl}- Checkout: \`main\` at or after \`${'0'.repeat(7)}\`, matching \`origin/main\`.${nl}${nl}## Next scoped work${nl}${nl}1. Milestone D item 6 is implemented; the current decision is item 9.${nl}`;
+    writeFixtureFile(source, 'NEXT_SESSION.md', claim);
+    writeFixtureFile(source, 'chatgpt_handoff/latest/NEXT_SESSION.md', claim);
+    run('add', '-A');
+    run('commit', '-q', '-m', 'claim');
+
+    const cloneParent = mkdtempSync(path.join(tmpdir(), 'kcs-clone-'));
+    dirs.push(cloneParent);
+    const clone = path.join(cloneParent, 'shallow');
+    execFileSync('git', ['clone', '-q', '--depth', '1', `file://${source.replace(/\\/gu, '/')}`, clone], { encoding: 'utf8' });
+
+    const { status, output } = runCheck(clone);
+
+    expect(status).toBe(0);
+    expect(output).toContain('not verifiable in a shallow checkout');
     expect(output).toContain('KCS state consistency: PASS');
   });
 });

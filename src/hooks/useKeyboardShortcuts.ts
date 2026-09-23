@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import type { ToolType } from '../types/animator';
+import { isBlockingModalOpen } from '../utils/modalBoundary';
 
 interface UseKeyboardShortcutsOptions {
   selectedPartId: string | null;
@@ -30,6 +31,10 @@ export const useKeyboardShortcuts = ({
 }: UseKeyboardShortcutsOptions) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // A blocking dialog owns the keyboard while it is on screen: none of these
+      // commands may reach project state, and the dialog itself handles Escape.
+      if (isBlockingModalOpen()) return;
+
       const activeEl = document.activeElement;
       const isInputActive = activeEl && (
         activeEl.tagName === 'INPUT'

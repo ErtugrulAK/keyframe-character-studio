@@ -36,6 +36,21 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
     }
   }, [isOpen, defaultValue]);
 
+  // Escape belongs to the dialog, not to the focused control, so it works from
+  // the buttons too — and the global shortcut guard stays out of the way because
+  // this dialog declares `aria-modal`.
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e?: React.FormEvent) => {
@@ -48,11 +63,17 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
 
   return (
     <div className="new-item-modal-overlay" onClick={onClose}>
-      <div className="new-item-modal-card" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="new-item-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-item-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <div className="modal-title-group">
             <Sparkles size={16} className="text-cyan" />
-            <h3 className="modal-title">{title}</h3>
+            <h3 className="modal-title" id="new-item-modal-title">{title}</h3>
           </div>
           <button className="modal-close-btn" onClick={onClose}>
             <X size={16} />
@@ -70,9 +91,6 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
               value={val}
               placeholder={placeholder}
               onChange={(e) => setVal(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') onClose();
-              }}
             />
           </div>
 

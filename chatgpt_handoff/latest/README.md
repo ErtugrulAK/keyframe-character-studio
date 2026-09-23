@@ -4,16 +4,18 @@ This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed f
 
 ## What this bundle covers
 
-The post-review correctness follow-up, complete and merged into `main` at `2b0bba0`:
+The post-review correctness follow-up, complete and merged into `main` at `dcbf9f5`:
 
 - Every release-blocking finding from the full-project review is closed — **H-01…H-06 and M-01…M-05** —
   one task per finding group, each on its own branch with its own validation, a read-only self-review
   and an approval-gated fast-forward merge. The finding map is in
   `progress_141_astra_correctness_followup_summary.md`.
-- The final correctness gate ran on clean `main` at `2b0bba0`: build, the full suite (126 files /
-  1,932 tests), the focused regression suites from every task (387 tests), lint, `validate:ograf`,
+- The final correctness gate ran on clean `main` at `dcbf9f5`: build, the full suite (126 files /
+  1,934 tests), the focused regression suites from every task (389 tests), lint, `validate:ograf`,
   `qa:release`, the two browser specs, the profiling harness, the state check (35 checks), `npm audit`
-  (0) and `git diff --check` — all green.
+  (0) and `git diff --check` — all green. The summary also records the one CI failure this run caused and
+  fixed: the new live-revision rule failed in CI's shallow checkout, and the fix reports that limit as
+  skipped exactly as the tag and milestone checks already do.
 - The summary also records the scope boundaries that were stated rather than hidden (the image matte
   source, the decision not to invent an authentication system, `SceneLayer.visible`, the legacy
   template registry) and the residual observations that need their own decision (the type-check step

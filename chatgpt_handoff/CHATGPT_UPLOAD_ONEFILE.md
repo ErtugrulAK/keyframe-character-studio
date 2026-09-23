@@ -83,10 +83,10 @@ Clean refreshed: YES
 Bundle purpose: the completed post-review correctness follow-up and its final gate
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: docs/final-correctness-gate, base main at 2b0bba0 — the follow-up itself is merged; this checkpoint is with the user
+Branch: main at dcbf9f5 (the follow-up and its CI fix are merged and pushed)
 Task record: reports/progress_141_astra_correctness_followup_summary.md
 Findings closed: H-01 (0c19751), H-03/H-04/M-03 (fc672f2), M-01/M-02/H-05 (85c3929), H-02 (ac3bda1), H-06 (352d272), M-04 (16e1610), M-05 (2b0bba0) — none deferred, none blocked
-Final gate on clean main at 2b0bba0: npm run build PASS; npx tsc --noEmit exits 0 (and checks no project file — the root tsconfig is a solution file, so npm run build is the real type gate, 151 files); npm test PASS (126 files / 1,932 tests); focused regression suites PASS (387 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate 2b0bba0); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
+Final gate on clean main at dcbf9f5 (after the CI fix recorded in the summary): npm run build PASS; npx tsc --noEmit exits 0 (and checks no project file — the root tsconfig is a solution file, so npm run build is the real type gate, 151 files); npm test PASS (126 files / 1,934 tests); focused regression suites PASS (389 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate dcbf9f5); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
 Scope boundaries stated, not hidden: H-02 with an image matte source follows the editor authority; H-06 added no authentication (loopback bind plus documentation instead); H-04 leaves SceneLayer.visible alone; M-03 leaves the legacy project-template registry out of the scene history
 Residual observations (need their own decision): npx tsc --noEmit verifies nothing in CI; constant SceneLayer.visible; unrestricted CORS; the tracked SQLite file; vite --host publishing the dev frontend; missing focus restoration on two dialogs; one unreproduced full-suite failure during Task B
 Next work: Milestone H — release finalization (the approval-gated Option C majors, the two deferred minor bumps, and any publish/finalize instruction). Option C stays deferred and is not a blocker.
@@ -111,16 +111,18 @@ This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed f
 
 ## What this bundle covers
 
-The post-review correctness follow-up, complete and merged into `main` at `2b0bba0`:
+The post-review correctness follow-up, complete and merged into `main` at `dcbf9f5`:
 
 - Every release-blocking finding from the full-project review is closed — **H-01…H-06 and M-01…M-05** —
   one task per finding group, each on its own branch with its own validation, a read-only self-review
   and an approval-gated fast-forward merge. The finding map is in
   `progress_141_astra_correctness_followup_summary.md`.
-- The final correctness gate ran on clean `main` at `2b0bba0`: build, the full suite (126 files /
-  1,932 tests), the focused regression suites from every task (387 tests), lint, `validate:ograf`,
+- The final correctness gate ran on clean `main` at `dcbf9f5`: build, the full suite (126 files /
+  1,934 tests), the focused regression suites from every task (389 tests), lint, `validate:ograf`,
   `qa:release`, the two browser specs, the profiling harness, the state check (35 checks), `npm audit`
-  (0) and `git diff --check` — all green.
+  (0) and `git diff --check` — all green. The summary also records the one CI failure this run caused and
+  fixed: the new live-revision rule failed in CI's shallow checkout, and the fix reports that limit as
+  skipped exactly as the tag and milestone checks already do.
 - The summary also records the scope boundaries that were stated rather than hidden (the image matte
   source, the decision not to invent an authentication system, `SceneLayer.visible`, the legacy
   template registry) and the residual observations that need their own decision (the type-check step
@@ -221,18 +223,18 @@ These are not review findings; they were found while closing the ones above, and
 | Focus is not restored when the import report or the confirmation dialog closes | Those two dialogs have no previous-focus capture (the bezier editor does) | An accessibility change beyond H-01's command-isolation scope; recorded in `reports/progress_134_…` §6 |
 | One full-suite run in Task B reported a single failure that never reproduced | Six further full runs, ten runs of the new integration case and six runs of the state-check suite are clean | No failure name was captured before the output was trimmed; recorded in `reports/progress_135_…` §6 |
 
-## 5. The final gate (clean `main` at `2b0bba0`)
+## 5. The final gate (clean `main` at `dcbf9f5`, after the CI fix in §7)
 
 | Check | Result |
 |---|---|
 | `git pull --ff-only origin main` | up to date; `main == origin/main == 2b0bba0` |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npx tsc --noEmit` | exits 0 — and checks no project file (see §4); `tsc -b` covers 151 |
-| `npm test` | PASS — 126 files / 1,932 tests |
-| Focused regression suites from Tasks A–G (10 files) | PASS — 387 tests |
+| `npm test` | PASS — 126 files / 1,934 tests |
+| Focused regression suites from Tasks A–G (10 files) | PASS — 389 tests |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `2b0bba0` |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `dcbf9f5` |
 | `npx playwright test e2e/lottie-import-report.spec.ts e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests (3 + 4) |
 | `npx vitest run --config perf/vitest.perf.config.ts` | PASS — the harness verifies every scene before timing |
 | `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
@@ -253,7 +255,11 @@ Every one of these ran on the merged `main`, not on a branch.
 - One branch per task, each fast-forward merged only after the user approved the merge gate; no rebase, no force push, no merge commit, no history rewrite.
 - Every task carried a read-only self-review by the same model and a report under `reports/`.
 - The handoff bundle was rebuilt after every merged task, and the one-file regenerated from scratch.
-- One working-tree accident was recorded rather than hidden: the Task A changelog edit landed after the state check had run, which turned `main` red for one push; it was fixed by a docs-only commit (`1291bb8`) before the next task started, and the Task B branch was recreated on top of it.
+- **Two working-tree accidents were recorded rather than hidden.** The Task A changelog edit landed after the state check had run, which turned `main` red for one push; a docs-only commit (`1291bb8`) fixed it before the next task started, and the Task B branch was recreated on top of it.
+- **The Task G merge turned `main` red for one push, and the cause was a real gap in the new rule.** The live-revision check compared an "at or after" claim with `git merge-base --is-ancestor`, but CI checks out with `--depth 1`, so the older commits are not fetched and every such claim failed there while passing locally. The fix (`dcbf9f5`) reports that limit as skipped, exactly as the tag and milestone checks already did, and keeps failing when a *full* checkout cannot resolve the commit at all.
+  - Reproduced faithfully: in a real shallow clone checked out on `main`, the pre-fix checker fails with `NEXT_SESSION.md:5 says main is at or after 16e1610, which is not an ancestor of …` — the CI message — and the fixed checker reports `PASS (35 checks)`.
+  - Two tests pin it: a shallow checkout that cannot carry the claim is reported as skipped, and a full checkout that does not have the commit fails.
+- CI on `main` is green at `dcbf9f5` (run `35879677379`).
 
 ---
 
@@ -583,9 +589,9 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `NEXT_SESSION.md` — 11214 bytes
 - `OMP_FINAL_RESPONSE.md` — 3866 bytes
 - `PROJECT_STATE.md` — 17076 bytes
-- `README.md` — 3149 bytes
-- `manifest.txt` — 2795 bytes
-- `progress_141_astra_correctness_followup_summary.md` — 10935 bytes
+- `README.md` — 3378 bytes
+- `manifest.txt` — 2788 bytes
+- `progress_141_astra_correctness_followup_summary.md` — 11934 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

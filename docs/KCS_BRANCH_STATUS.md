@@ -1,5 +1,10 @@
 # KCS Branch Status
 
+> **Historical record — superseded.** This document describes a closed programme (the
+> release-candidate work and its task chain) and is kept unchanged as an audit record.
+> Nothing here is a statement about the current repository state. For the current state read
+> `PROJECT_STATE.md`, `NEXT_SESSION.md` and `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`.
+
 Tasks 1–6 are integrated into `main@1ad3f60`; Task 7 is the current documentation branch. `without-mask` and the OMP tooling branch remain separate and untouched.
 
 | BRANCH | PURPOSE | STATUS | LATEST KNOWN COMMIT | NEXT ACTION |

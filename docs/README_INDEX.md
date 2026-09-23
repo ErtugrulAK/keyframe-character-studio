@@ -2,25 +2,17 @@
 
 ## Read this first
 
-1. `docs/README_INDEX.md` — navigation entry point.
-2. `PROJECT_STATE.md` — current main state, QA status, and protected boundaries.
-3. `SESSION.md` — latest implementation, QA, and validation results.
-4. `NEXT_SESSION.md` — exact next action and approval boundary.
-5. `docs/KCS_CURRENT_STATE.md` — consolidated technical current state.
-6. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` — accepted milestones and release boundary.
-7. `docs/KCS_BRANCH_STATUS.md` — branch inclusion and protected lines.
-8. `docs/KCS_OPEN_TASKS.md` — remaining decisions and follow-up work.
-9. `docs/KCS_WITHOUT_MASK_BRANCH_AUDIT.md` — standalone branch evidence and archive classification.
-10. `docs/KCS_BRANCH_CLEANUP_AUDIT.md` — completed safe merged branch audit.
-11. `docs/KCS_MARKDOWN_CLEANUP_AUDIT.md` — markdown inventory and archive-only plan.
-12. `docs/KCS_INVESTIGATION_BRANCH_AUDIT.md` — remaining investigation branch classifications.
-13. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md` — planning-only branch path.
-14. `docs/KCS_DESKTOP_FOLDER_INVENTORY.md` — desktop collection inventory.
-15. `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md` — archive-only cleanup decision.
-16. `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md` — applied local archive result.
-17. `docs/KCS_WINDOWS_PATH_HARDENING.md` — Windows filename, package-path, ZIP, and OGraf asset safety policy.
+The current state is written in exactly one place; everything else is a record. Read these, in order:
 
-Current checkpoint: `docs/checkpoints/2026-09-18-after-lottie-core/` (see §Checkpoints below) records `main` at `47d3368` with the Lottie import core merged, and its `RESUME_PROMPT.md` is the copy-paste start for the next session.
+1. `PROJECT_STATE.md` — current position, validation status and protected boundaries.
+2. `NEXT_SESSION.md` — the exact next action and its approval boundary.
+3. `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the milestone map and which milestone is NEXT.
+4. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` — the release boundary and the accepted blocker constraints.
+5. `docs/KCS_DOCS_CLEANUP_MAP.md` — which document is live, which is historical, and the preservation rules.
+
+`node scripts/check-state-consistency.mjs` is the gate over that set: it fails when a live document contradicts the repository's branch, `main` revision or release tag, when the roadmap and the next action disagree, or when a handoff mirror drifts.
+
+Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/2026-09-18-after-lottie-core/`, whose `RESUME_PROMPT.md` was written for the session that followed it.
 
 ## Reports
 

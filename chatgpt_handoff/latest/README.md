@@ -1,30 +1,32 @@
-# KCS Minimal ChatGPT Upload Bundle — Task F (evaluator profile fixtures)
+# KCS Minimal ChatGPT Upload Bundle — Task G (live documents and the state checker)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-M-04 from the full-project review, on `fix/evaluator-profile-fixtures` from `main` at `352d272`:
+M-05 from the full-project review, on `fix/state-consistency-live-docs` from `main` at `16e1610`:
 
-- The evaluator profile harness now builds the workload it measures. Its scenes carried `transform`
-  instead of `baseTransform` and `layers` instead of `masks` — neither is a field the evaluator reads —
-  behind an `as CharacterPart` cast that hid both, so the profile timed default transforms and **no
-  masks at all** while reporting the scene parameters as if it had.
-- The builder now writes the canonical fields (and real mask geometry on `masks`, with channel keys
-  from the production helpers), and the harness **verifies the built scene before anything is timed**:
-  layer, track, mask and parent counts, finite base transforms, finite evaluated transforms, opacity and
-  mask values, and visible layers. The report carries that verification table.
-- Reproduced: the new verification against the old builder fails with a `TypeError` on
-  `layer.baseTransform`. A re-run baseline is recorded in the report — numbers only, with no comparison
-  to the previous unverified run and no optimisation proposed.
-- The report path also works now (`KCS_PROFILE_OUT`; Vitest rejects the `--out` flag the harness
-  expected). No production code, dependency, workflow, tag or release change.
+- The state consistency check read four documents plus this bundle, so six stale live documents sat
+  next to a `PASS`. `LIVE_DOCUMENTS` in `scripts/check-state-consistency.mjs` is now the authority:
+  it names the documents that describe the current state, a missing one fails the check, and two new
+  rules catch a live document that claims the wrong checkout, puts `main` at another revision, or ties
+  the release tag to another candidate. A past merge — "merged into `main` at `<sha>`" — is history and
+  is deliberately not matched.
+- The closed-programme documents (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`,
+  `docs/KCS_BRANCH_STATUS.md`) are marked as historical records naming the live set; the live ones were
+  reconciled (`PROJECT_STATE.md`, `NEXT_SESSION.md`, the roadmap, the release summary, the docs index
+  and the cleanup map). The roadmap records milestone F as complete and the post-review follow-up as
+  NEXT.
+- Proven on identical content: against the pre-task tree the old rules passed (including "F next"),
+  while the new ones name the contradictions.
+- Six new checker tests: a stale checkout, a stale `main` revision, an accepted ancestor claim, a stale
+  release candidate, an old revision kept by a historical record, and a missing live document.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_139_evaluator_profile_fixture_fix.md` — the task record
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
+- `progress_140_state_consistency_live_docs.md` — the task record
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap, now with milestone F complete and G as NEXT
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy

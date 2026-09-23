@@ -1,26 +1,35 @@
 # KCS Documentation Cleanup Map
 
-## Canonical first-read documents
+## Live current documents
 
-1. `PROJECT_STATE.md` — short current truth, branch, QA state, and protected boundaries.
-2. `SESSION.md` — latest implementation and validation session.
-3. `NEXT_SESSION.md` — exact next action and approval boundary.
-4. `docs/KCS_CURRENT_STATE.md` — consolidated technical state.
-5. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` — accepted milestones and release boundary.
-6. `docs/KCS_BRANCH_STATUS.md` — branch purposes and consolidation status.
-7. `docs/KCS_OPEN_TASKS.md` — remaining decisions and follow-up work.
-8. `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md` — planning-only branch path.
-9. `docs/README_INDEX.md` — navigation index.
+These are the only documents that describe the current state, and the only ones `node scripts/check-state-consistency.mjs` checks. The list is the authority in that script (`LIVE_DOCUMENTS`); adding a document there is what makes it checked.
+
+1. `PROJECT_STATE.md` — current position, validation status and protected boundaries.
+2. `NEXT_SESSION.md` — the exact next action and its approval boundary.
+3. `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the milestone map, which milestone is NEXT, and the approval gates.
+4. `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` — the release boundary and the accepted blocker constraints.
+5. `docs/README_INDEX.md` — the navigation entry point.
+6. `docs/KCS_DOCS_CLEANUP_MAP.md` — this map.
+
+`CHANGELOG.md` is live too, and is checked as a mirrored document rather than for current-state claims: a changelog records what happened, so a past-tense statement in it is history, not drift.
+
+## Historical records
+
+Kept unchanged as the audit trail; none of them is a statement about the current state, and the checker never treats them as one.
+
+- `reports/progress_*.md` — the per-task audit trail.
+- `docs/checkpoints/**` — point-in-time snapshots that record their own revision.
+- `docs/design/**` and `docs/research/**` — studies and specifications.
+- `SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md` — closed-programme documents, each carrying a historical-record note that names the live set instead.
+- `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`, `docs/KCS_*AUDIT*.md`, `docs/KCS_*CLEANUP*.md`, `docs/KCS_DESKTOP_*`, `docs/OMP_*` — plans and audit results.
 
 ## Authoritative documents
 
-- Current product truth: `PROJECT_STATE.md`.
-- Current technical truth: `docs/KCS_CURRENT_STATE.md`.
+- Current product and technical truth: `PROJECT_STATE.md` and `NEXT_SESSION.md`.
+- Current milestone position: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`.
 - Current release boundary: `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`.
-- Current branch boundary: `docs/KCS_BRANCH_STATUS.md` and `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`.
 - Current audit trail: `reports/progress_044.md` through the latest report.
 - Public-controls contract: `docs/design/KCS_OGRAF_PUBLIC_CONTROLS_V1_SPEC.md`.
-- Desktop cleanup evidence: `docs/KCS_DESKTOP_FOLDER_INVENTORY.md`, `docs/KCS_DESKTOP_FOLDER_CLEANUP_PLAN.md`, and `docs/KCS_DESKTOP_FOLDER_CLEANUP_RESULT.md`.
 
 ## Consolidated or superseded navigation
 

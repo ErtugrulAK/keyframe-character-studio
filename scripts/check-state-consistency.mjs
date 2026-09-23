@@ -44,6 +44,50 @@ const PLAN_ONLY_MILESTONES = ['E', 'F'];
 const ROADMAP = 'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md';
 const NEXT_SESSION = 'NEXT_SESSION.md';
 const PROJECT_STATE = 'PROJECT_STATE.md';
+const RELEASE_SUMMARY = 'docs/KCS_RELEASE_CANDIDATE_SUMMARY.md';
+const README_INDEX = 'docs/README_INDEX.md';
+const DOCS_CLEANUP_MAP = 'docs/KCS_DOCS_CLEANUP_MAP.md';
+
+/**
+ * The documents that describe the **current** state — the only ones whose claims
+ * are checked against the repository.
+ *
+ * Everything else is a record: `reports/` is the audit trail, `docs/checkpoints/`
+ * holds point-in-time snapshots, `docs/design/` and `docs/research/` hold studies,
+ * and the closed-programme documents (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`,
+ * `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md`,
+ * `docs/KCS_BRANCH_CONSOLIDATION_PLAN.md`) are marked historical records. An old
+ * revision, branch or task claim in any of those is history, not a contradiction,
+ * and must not fail this check.
+ *
+ * Adding a document here is how it becomes checked; the list is the authority, so
+ * a rename cannot silently drop coverage (see `checkLiveDocuments`).
+ */
+const LIVE_DOCUMENTS = [
+  PROJECT_STATE,
+  NEXT_SESSION,
+  ROADMAP,
+  RELEASE_SUMMARY,
+  README_INDEX,
+  DOCS_CLEANUP_MAP,
+];
+
+/**
+ * A claim about the checked-out branch: the first backticked token on a labelled
+ * line. Later tokens on the same line are other branches, not the checkout.
+ */
+const BRANCH_CLAIM = /^[-*\s]*(?:Checkout|Current branch)\s*:\s*`([^`]+)`/iu;
+/**
+ * A claim about the revision `main` is at, in the two forms the documents use:
+ * "`main` is at `<sha>`" (that revision) and "`main` at or after `<sha>`" (an
+ * ancestor). A past merge — "merged into `main` at `<sha>`" — is history about
+ * that merge and is deliberately not matched.
+ */
+const MAIN_AT_CLAIM = /`?main`?(?:\s*\/\s*`?origin\/main`?)?\s+is\s+at\s+`?([0-9a-f]{7,40})/iu;
+const MAIN_ANCESTOR_CLAIM = /`?main`?\s+at\s+or\s+after\s+`?([0-9a-f]{7,40})/iu;
+/** A claim about which revision a release tag points at. */
+const RELEASE_TAG_CLAIM = /tag target|v1\.1\.0-rc\.1/iu;
+const HEX_TOKEN = /[0-9a-f]{7,40}/giu;
 const ONEFILE = 'chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md';
 const LATEST_DIR = 'chatgpt_handoff/latest';
 /** Bundle documents that must exist for the handoff to be usable at all. */
@@ -187,12 +231,10 @@ function activeLines(text) {
     .filter(({ number }) => !insideHistoricalSection(lines, number - 1));
 }
 
-/** Root documents plus the one-file plus every bundle document. */
+/** Every live document, plus the one-file plus every bundle document. */
 function currentStateDocuments(root) {
   return [
-    ROADMAP,
-    NEXT_SESSION,
-    PROJECT_STATE,
+    ...LIVE_DOCUMENTS,
     ONEFILE,
     ...listBundleFiles(root).map((name) => `${LATEST_DIR}/${name}`),
   ];
@@ -223,7 +265,7 @@ function checkStaleActivePhrases(root) {
 function readRoadmapRows(text) {
   const rows = new Map();
   for (const { line } of activeLines(text)) {
-    const match = /^\|\s*([A-F])\s—[^|]*\|[^|]*\|[^|]*\|\s*(.+?)\s*\|\s*$/u.exec(line);
+    const match = /^\|\s*([A-H])\s—[^|]*\|[^|]*\|[^|]*\|\s*(.+?)\s*\|\s*$/u.exec(line);
     if (match) rows.set(match[1], match[2]);
   }
   return rows;
@@ -442,8 +484,90 @@ function checkBundleMirrors(root) {
   else fail('bundle copies are out of sync with the root documents', problems.join(' | '));
 }
 
+/**
+ * Every live document must exist: a rename that is not reflected here would
+ * silently drop it from the checks instead of failing.
+ */
+function checkLiveDocuments(root) {
+  const missing = LIVE_DOCUMENTS.filter((relative) => readText(root, relative) === null);
+  if (missing.length === 0) pass('live documents present', `${LIVE_DOCUMENTS.length} document(s)`);
+  else fail('live documents missing', `${missing.join(', ')} — add the new name to LIVE_DOCUMENTS`);
+}
+
+/**
+ * The claims a live document makes about the repository itself: the branch that is
+ * checked out and the revision `main` is at. Only these two need git facts, and
+ * only the live documents are read, so a checkpoint or an audit report may keep
+ * whatever revision it recorded.
+ */
+function checkLiveRevisionClaims(root) {
+  if (!isGitRepo(root)) {
+    pass('live revision claims skipped', 'the checked root is not a git repository (fixture mode)');
+    return;
+  }
+  const branch = git(['rev-parse', '--abbrev-ref', 'HEAD'], root);
+  const mainRef = git(['rev-parse', 'main'], root);
+  const problems = [];
+
+  for (const relative of LIVE_DOCUMENTS) {
+    const text = readText(root, relative);
+    if (text === null) continue;
+    for (const { line, number } of activeLines(text)) {
+      const where = `${relative}:${number}`;
+
+      // The checked-out branch: `main`, or whatever is really checked out.
+      const checkout = BRANCH_CLAIM.exec(line);
+      if (checkout) {
+        const claimed = checkout[1].trim();
+        if (claimed !== 'main' && claimed !== branch) {
+          problems.push(`${where} says the checkout is "${claimed}"; HEAD is on "${branch ?? 'unknown'}"`);
+        }
+      }
+
+      // The revision `main` is at. "at or after" is an ancestor claim.
+      const atClaim = MAIN_AT_CLAIM.exec(line);
+      if (atClaim && mainRef && !mainRef.toLowerCase().startsWith(atClaim[1].toLowerCase())) {
+        problems.push(`${where} says main is at ${atClaim[1]}; main is ${mainRef.slice(0, 12)}`);
+      }
+      const ancestorClaim = MAIN_ANCESTOR_CLAIM.exec(line);
+      if (ancestorClaim && mainRef && git(['merge-base', '--is-ancestor', ancestorClaim[1], mainRef], root) === null) {
+        problems.push(`${where} says main is at or after ${ancestorClaim[1]}, which is not an ancestor of ${mainRef.slice(0, 12)}`);
+      }
+    }
+  }
+
+  if (problems.length === 0) pass('live documents agree with the checked-out branch and main');
+  else fail('live documents contradict the repository', problems.join(' | '));
+}
+
+/**
+ * The revision a live document says a release tag points at. This needs no git
+ * facts: the expected target is the release decision itself, so a document that
+ * moves the tag to another candidate is caught even in a fixture.
+ */
+function checkLiveReleaseClaims(root) {
+  const problems = [];
+  for (const relative of [...LIVE_DOCUMENTS, 'CHANGELOG.md']) {
+    const text = readText(root, relative);
+    if (text === null) continue;
+    for (const { line, number } of activeLines(text)) {
+      if (!RELEASE_TAG_CLAIM.test(line)) continue;
+      for (const token of line.match(HEX_TOKEN) ?? []) {
+        if (!EXPECTED_RC_TAG_TARGET.startsWith(token.toLowerCase())) {
+          problems.push(`${relative}:${number} ties ${EXPECTED_RC_TAG} to ${token}; its target is ${EXPECTED_RC_TAG_TARGET.slice(0, 12)}`);
+        }
+      }
+    }
+  }
+  if (problems.length === 0) pass('live documents agree with the release tag target');
+  else fail('live documents tie the release tag to another revision', problems.join(' | '));
+}
+
 function runChecks(root) {
   checkGitFacts(root);
+  checkLiveDocuments(root);
+  checkLiveRevisionClaims(root);
+  checkLiveReleaseClaims(root);
   const nextMilestone = checkRoadmapStatus(root, ROADMAP);
   if (readText(root, `${LATEST_DIR}/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`) !== null) {
     const bundleNext = checkRoadmapStatus(root, `${LATEST_DIR}/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`);

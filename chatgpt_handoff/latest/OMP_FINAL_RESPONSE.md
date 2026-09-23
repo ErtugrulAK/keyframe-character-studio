@@ -1,57 +1,58 @@
-# KCS Post-Review Correctness Fix — Task F Final Response (evaluator profile fixtures)
+# KCS Post-Review Correctness Fix — Task G Final Response (live documents and the state checker)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on `fix/evaluator-profile-fixtures` (base `main` at `352d272`); the merge decision is with the user.
-- **Report:** `reports/progress_139_evaluator_profile_fixture_fix.md`.
-- **Finding closed:** M-04 — the harness did not construct or measure the workload it described.
+- **Status:** implemented on `fix/state-consistency-live-docs` (base `main` at `16e1610`); the merge decision is with the user.
+- **Report:** `reports/progress_140_state_consistency_live_docs.md`.
+- **Finding closed:** M-05 — live-state documents could contradict each other and the repository while the checker still passed.
 
-## 2) WHAT WAS WRONG
+## 2) THE AUDIT AND THE CLASSIFICATION
 
-`perf/sceneBuilder.ts` wrote two fields the evaluator never reads, behind an `as CharacterPart` cast that hid both: `transform` instead of `baseTransform`, and `layers` instead of `masks` (plus a `type: 'custom'` that is not a member of the type union). Measured against the old builder: 0 layers with a `baseTransform`, 0 mask arrays against a scenario declaring 40, every evaluated opacity non-finite, and **0 visible layers** — the harness timed a scene that could not be rendered and printed the numbers as its profile.
+The checker read four documents plus the handoff bundle. Everything else was never read, which is why six stale documents sat next to a `PASS`: `PROJECT_STATE.md` put `main` at a checkpoint's revision, `NEXT_SESSION.md` described a long-merged branch, the roadmap said milestone F was **NEXT** while its own text recorded items 10–12 as complete, the release summary still claimed offline schema validation "is not claimed", and the docs index and cleanup map presented the closed-programme documents as current.
 
-## 3) WHAT CHANGED
+Classified: six **live** documents (the four above, the docs index and the cleanup map), four **historical** ones (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md` — each describing a finished programme and restating the live set), and the **record** class (`reports/**`, `docs/checkpoints/**`, the studies, the audit and plan documents).
 
-- **Builder:** `baseTransform` + `pivot`, `type: 'custom_freeform'` with a real `path`, masks on `masks` as `LayerMask` with canonical `BezierPath` geometry, mask channel keys from the production helpers (`layerMaskChannel`, `layerMaskPathChannel`), and `maskPathChannels` — which the scenario's own description claimed and never provided. **No cast.**
-- **Harness:** `verifyScene(name, scene)` runs **before** anything is timed and asserts the built layer/track/mask/parent counts, finite base transforms, finite evaluated transforms, opacity and mask values, and that every layer is visible. The report carries a Scene verification table, so a reader sees what was measured.
-- **Report path:** Vitest rejects an unknown `--out`, so the harness reads `KCS_PROFILE_OUT`; without it, "re-run the baseline" could not produce a file at all.
+The four closed-programme documents are marked as historical records with a note naming the live set. Keeping them live would mean maintaining a second copy of the current state — the drift this task exists to remove.
 
-## 4) EVIDENCE
+## 3) THE CHECKER NOW HAS ONE AUTHORITY
 
-- **Reproduction:** the new verification against the **old** builder fails with `TypeError: Cannot read properties of undefined (reading 'x')` at `layer.baseTransform` — the field was never there.
-- **After the fix:** the harness passes and its verification table reports the real workload (masks, parents and visibility matching the parameters).
-- **Baseline (measured, `352d272`, Node v24.18.0 on win32/x64, 60 iterations, p50/p95 ms):**
+`LIVE_DOCUMENTS` names the documents that describe the current state; `checkLiveDocuments` fails when one is missing, so a rename cannot silently drop coverage. Two new rules, scoped to that set:
 
-| Scene | `evaluateFrame` @ 60 | `evaluateFrame` @ 4 frames | `evaluateTransform` | `interpolateChannel` |
-|---|---|---|---|---|
-| small | 0.0218 / 0.0462 | 0.0466 / 0.0852 | 0.0022 / 0.0026 | 0.0005 / 0.0007 |
-| medium | 0.1262 / 0.2255 | 0.4663 / 0.5815 | 0.0021 / 0.0025 | 0.0005 / 0.0005 |
-| large | 1.2923 / 1.5192 | 5.5438 / 6.0446 | 0.0029 / 0.0036 | 0.0006 / 0.0007 |
-| masks | 0.1457 / 0.2193 | 0.5580 / 0.6764 | 0.0021 / 0.0027 | 0.0005 / 0.0006 |
+- **`checkLiveRevisionClaims`** — a labelled `Checkout:` claim must name `main` or the branch really checked out; `` `main` is at <sha> `` must name the current `main`; `` `main` at or after <sha> `` must name an ancestor. A past merge ("merged into `main` at `c2dcb22`") is history and is deliberately not matched.
+- **`checkLiveReleaseClaims`** — a line tying the release tag or "tag target" to a revision must tie it to the pinned target (no git facts needed, so it works in a fixture).
 
-**These are numbers, not conclusions:** no comparison is drawn to the previous (unverified) numbers, because those measured a different scene, and no optimisation is proposed or implied.
+## 4) REPRODUCTION, ON IDENTICAL CONTENT
 
-## 5) VALIDATION
+The pre-task tree was extracted with `git archive` and made a throwaway repository, then both checker versions ran against it:
+
+- **Old checker:** every live-document rule passed, including `roadmap status rows … F next` — it accepted "F is NEXT" while the same file recorded item 12 as complete and merged.
+- **New checker:** additionally reports `live documents contradict the repository — PROJECT_STATE.md:9 says main is at 47d3368a2b54; NEXT_SESSION.md:5 says main is at or after 12b71a5, which is not an ancestor…`
+
+## 5) RECONCILED
+
+`PROJECT_STATE.md` (the checkpoint sentence now quotes the revision it recorded; the validation table is labelled "at the last reconciliation" and its perishable specifics were replaced), `NEXT_SESSION.md` (ancestor-form checkout claim, current validation, the first next-scoped item names the roadmap's NEXT milestone), the roadmap (F is **COMPLETE**, a new row **G — Post-review correctness follow-up** is **NEXT** with each finding's merge commit, and the recommended prompt describes the current work), the release summary (method instead of stored counts; the offline closure is stated correctly), the docs index and the cleanup map (the live set), and the four historical records (a note naming the live set; content otherwise untouched).
+
+## 6) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npx vitest run --config perf/vitest.perf.config.ts` | PASS — 1 test, asserting every scene's verification |
-| Same harness against the pre-fix builder | FAIL — the reproduction above |
-| `npm test` | PASS — 126 files / 1,926 tests (the harness stays out of the default suite) |
+| `src/tests/stateConsistencyCheck.test.ts` | PASS — 36 tests (6 new) |
+| `node scripts/check-state-consistency.mjs` on the real repository | PASS — 35 checks |
+| `npm test` | PASS — 126 files / 1,932 tests |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npm run lint` | clean |
-| `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
-## 6) SELF-REVIEW NOTES
+## 7) SELF-REVIEW NOTES
 
-- **Why the verification is runtime, not compile-time:** `perf/` is in no `tsconfig` (`tsconfig.app.json` includes `src` only), so removing the cast does not by itself restore type checking. The verification reads the canonical fields on every layer, so a renamed field now fails the harness loudly — which is exactly what the cast had prevented. Adding `perf` to a project would drag the app's `lib`/`types` settings into it: a build-config change of its own.
-- **Determinism preserved:** no randomness, clock or generated id; mask geometry steps through six sizes and repeats, so keyframes differ while every path stays valid and topologically identical.
-- **Nothing in `src/`:** the change is confined to `perf/`; no optimisation, no caching, no threshold on any timing.
-- **The generated baseline is not committed** (it carries a revision and a timestamp and would go stale); the numbers are recorded in the report with the command that produces them.
+- The rules are narrow on purpose: only three claim shapes, each one a reader acts on. A wrong match on "merged into `main` at `<sha>`" would have failed the whole live set on legitimate prose, which is how a checker gets switched off.
+- The historical exemption is the document class, not a wording trick, and a test pins that an old revision under a historical heading inside a live document is accepted.
+- **Deliberately not checked:** test counts, run ids and other perishable numbers. The checker cannot verify them without running the suite, and asserting prose it cannot check manufactures a false `PASS`.
+- The roadmap gained a row rather than a rewritten history: F keeps every fact and only changes its headline status.
+- No document was deleted and no historical file was rewritten.
 
-## 7) NEXT
+## 8) NEXT
 
-- Task G (live docs and the state checker: M-05), then the final correctness gate and the summary that maps every review finding.
+- The final correctness gate on `main`, then the summary that maps every review finding (H-01…M-05) to its status, fix, evidence and tests.

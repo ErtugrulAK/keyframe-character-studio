@@ -1,5 +1,10 @@
 # KCS Open Tasks
 
+> **Historical record — superseded.** This document describes a closed programme (the
+> release-candidate work and its task chain) and is kept unchanged as an audit record.
+> Nothing here is a statement about the current repository state. For the current state read
+> `PROJECT_STATE.md`, `NEXT_SESSION.md` and `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`.
+
 ## Completed roadmap tasks
 
 - Tasks 1–6 are complete and merged into `main`.

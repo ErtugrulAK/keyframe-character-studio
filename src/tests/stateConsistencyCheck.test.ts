@@ -13,6 +13,7 @@ import { fileURLToPath } from 'node:url';
  * repository created with plain git commands.
  */
 
+const nl = '\n';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const script = path.join(repoRoot, 'scripts', 'check-state-consistency.mjs');
 
@@ -52,6 +53,23 @@ Milestone C is merged. Milestone D item 6 is implemented.
 - Item 9 requires explicit approval.
 `;
 
+const RC_TAG_TARGET = '46d2a3e59e065816d972dcd56951803951b577f6';
+
+const RELEASE_SUMMARY = `# KCS Release Candidate Summary
+
+Annotated tag \`v1.1.0-rc.1\` was created at workflow-tested code candidate \`${RC_TAG_TARGET}\`.
+`;
+
+const README_INDEX = `# KCS Documentation Index
+
+1. \`PROJECT_STATE.md\` — current position.
+`;
+
+const DOCS_CLEANUP_MAP = `# KCS Documentation Cleanup Map
+
+1. \`PROJECT_STATE.md\` — current position.
+`;
+
 const README = `# Bundle
 
 Upload only \`chatgpt_handoff\\CHATGPT_UPLOAD_ONEFILE.md\` to ChatGPT.
@@ -86,6 +104,9 @@ function makeFixture(overrides: Record<string, string> = {}): string {
   dirs.push(root);
   const files: Record<string, string> = {
     'docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md': ROADMAP,
+    'docs/KCS_RELEASE_CANDIDATE_SUMMARY.md': RELEASE_SUMMARY,
+    'docs/README_INDEX.md': README_INDEX,
+    'docs/KCS_DOCS_CLEANUP_MAP.md': DOCS_CLEANUP_MAP,
     'NEXT_SESSION.md': NEXT_SESSION,
     'PROJECT_STATE.md': PROJECT_STATE,
     'CHANGELOG.md': '# Changelog\n\n## [Unreleased]\n\n### Added\n- Item 6.\n',
@@ -353,6 +374,80 @@ describe('check-state-consistency — text rules', () => {
     expect(status).toBe(1);
     expect(output).toContain('KCS state consistency: FAIL');
     expect(output).not.toContain('at Object.');
+  });
+});
+
+/**
+ * The live documents are the only ones whose claims are checked against the
+ * repository, and the classification is the point: a revision recorded by a
+ * checkpoint or an audit report is history, not a contradiction.
+ */
+describe('check-state-consistency — live documents', () => {
+  it('fails when a live document claims a checkout that is not the real one', () => {
+    const root = makeGitFixture();
+    const claim = `# Next Session Handoff${nl}${nl}## Repository state${nl}${nl}- Checkout: \`feat/lottie-import-core\` on top of \`main\`.${nl}${nl}## Next scoped work${nl}${nl}1. Milestone D item 6 is implemented; the current decision is item 9.${nl}`;
+    // Both copies change together, so only the checkout rule can fail.
+    writeFixtureFile(root, 'NEXT_SESSION.md', claim);
+    writeFixtureFile(root, 'chatgpt_handoff/latest/NEXT_SESSION.md', claim);
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(1);
+    expect(output).toContain('says the checkout is "feat/lottie-import-core"');
+  });
+
+  it('fails when a live document says main is at another revision', () => {
+    const root = makeGitFixture();
+    const stale = PROJECT_STATE.replace('## Remaining work', 'The state documents record that `main` is at `deadbeef`.\n\n## Remaining work');
+    writeFixtureFile(root, 'PROJECT_STATE.md', stale);
+    writeFixtureFile(root, 'chatgpt_handoff/latest/PROJECT_STATE.md', stale);
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(1);
+    expect(output).toContain('says main is at deadbeef');
+  });
+
+  it('accepts an "at or after" revision that really is an ancestor', () => {
+    const root = makeGitFixture();
+    const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
+    const claim = `# Next Session Handoff${nl}${nl}## Repository state${nl}${nl}- Checkout: \`main\` at or after \`${head.slice(0, 7)}\`, matching \`origin/main\`.${nl}${nl}## Next scoped work${nl}${nl}1. Milestone D item 6 is implemented; the current decision is item 9.${nl}`;
+    writeFixtureFile(root, 'NEXT_SESSION.md', claim);
+    writeFixtureFile(root, 'chatgpt_handoff/latest/NEXT_SESSION.md', claim);
+    const { output } = runCheck(root);
+
+    expect(output).toContain('live documents agree with the checked-out branch and main');
+    expect(output).not.toContain('live documents contradict the repository');
+  });
+
+  it('fails when a live document ties the release tag to another candidate', () => {
+    const { status, output } = runCheck(makeFixture({
+      'docs/KCS_RELEASE_CANDIDATE_SUMMARY.md': RELEASE_SUMMARY.replace(RC_TAG_TARGET, 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef'),
+    }));
+
+    expect(status).toBe(1);
+    expect(output).toContain('ties v1.1.0-rc.1 to deadbeef');
+  });
+
+  it('does not fail on an old revision a historical record keeps', () => {
+    const root = makeGitFixture();
+    // A checkpoint records the revision it was written from.
+    writeFixtureFile(root, 'docs/checkpoints/2026-09-18-after-lottie-core/README.md', '# Checkpoint\n\n`main` is at `47d3368a2b54` at the time of this checkpoint.\n');
+    // A live document may keep one under a heading marked historical.
+    const withHistory = `${PROJECT_STATE}\n\n## Historical record\n\nThe state documents then recorded that \`main\` is at \`47d3368a2b54\`.\n`;
+    writeFixtureFile(root, 'PROJECT_STATE.md', withHistory);
+    writeFixtureFile(root, 'chatgpt_handoff/latest/PROJECT_STATE.md', withHistory);
+    const { output } = runCheck(root);
+
+    expect(output).toContain('live documents agree with the checked-out branch and main');
+    expect(output).not.toContain('live documents contradict the repository');
+  });
+
+  it('fails when a live document is missing from the repository', () => {
+    const root = makeFixture();
+    rmSync(path.join(root, 'docs', 'README_INDEX.md'));
+    const { status, output } = runCheck(root);
+
+    expect(status).toBe(1);
+    expect(output).toContain('live documents missing');
   });
 });
 

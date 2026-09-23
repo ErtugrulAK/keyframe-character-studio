@@ -1,5 +1,10 @@
 # KCS Current State
 
+> **Historical record — superseded.** This document describes a closed programme (the
+> release-candidate work and its task chain) and is kept unchanged as an audit record.
+> Nothing here is a statement about the current repository state. For the current state read
+> `PROJECT_STATE.md`, `NEXT_SESSION.md` and `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`.
+
 The accepted KCS product and release-readiness blocker resolution is integrated into main. Annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease exist for workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`; no npm publication occurred.
 
 ## Completed security and OGraf work

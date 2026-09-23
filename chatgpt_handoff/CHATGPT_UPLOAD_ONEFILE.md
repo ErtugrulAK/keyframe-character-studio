@@ -17,88 +17,87 @@
 
 ## 1. OMP Final Response
 
-# KCS Post-Review Correctness Fix — Task F Final Response (evaluator profile fixtures)
+# KCS Post-Review Correctness Fix — Task G Final Response (live documents and the state checker)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** implemented on `fix/evaluator-profile-fixtures` (base `main` at `352d272`); the merge decision is with the user.
-- **Report:** `reports/progress_139_evaluator_profile_fixture_fix.md`.
-- **Finding closed:** M-04 — the harness did not construct or measure the workload it described.
+- **Status:** implemented on `fix/state-consistency-live-docs` (base `main` at `16e1610`); the merge decision is with the user.
+- **Report:** `reports/progress_140_state_consistency_live_docs.md`.
+- **Finding closed:** M-05 — live-state documents could contradict each other and the repository while the checker still passed.
 
-## 2) WHAT WAS WRONG
+## 2) THE AUDIT AND THE CLASSIFICATION
 
-`perf/sceneBuilder.ts` wrote two fields the evaluator never reads, behind an `as CharacterPart` cast that hid both: `transform` instead of `baseTransform`, and `layers` instead of `masks` (plus a `type: 'custom'` that is not a member of the type union). Measured against the old builder: 0 layers with a `baseTransform`, 0 mask arrays against a scenario declaring 40, every evaluated opacity non-finite, and **0 visible layers** — the harness timed a scene that could not be rendered and printed the numbers as its profile.
+The checker read four documents plus the handoff bundle. Everything else was never read, which is why six stale documents sat next to a `PASS`: `PROJECT_STATE.md` put `main` at a checkpoint's revision, `NEXT_SESSION.md` described a long-merged branch, the roadmap said milestone F was **NEXT** while its own text recorded items 10–12 as complete, the release summary still claimed offline schema validation "is not claimed", and the docs index and cleanup map presented the closed-programme documents as current.
 
-## 3) WHAT CHANGED
+Classified: six **live** documents (the four above, the docs index and the cleanup map), four **historical** ones (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md` — each describing a finished programme and restating the live set), and the **record** class (`reports/**`, `docs/checkpoints/**`, the studies, the audit and plan documents).
 
-- **Builder:** `baseTransform` + `pivot`, `type: 'custom_freeform'` with a real `path`, masks on `masks` as `LayerMask` with canonical `BezierPath` geometry, mask channel keys from the production helpers (`layerMaskChannel`, `layerMaskPathChannel`), and `maskPathChannels` — which the scenario's own description claimed and never provided. **No cast.**
-- **Harness:** `verifyScene(name, scene)` runs **before** anything is timed and asserts the built layer/track/mask/parent counts, finite base transforms, finite evaluated transforms, opacity and mask values, and that every layer is visible. The report carries a Scene verification table, so a reader sees what was measured.
-- **Report path:** Vitest rejects an unknown `--out`, so the harness reads `KCS_PROFILE_OUT`; without it, "re-run the baseline" could not produce a file at all.
+The four closed-programme documents are marked as historical records with a note naming the live set. Keeping them live would mean maintaining a second copy of the current state — the drift this task exists to remove.
 
-## 4) EVIDENCE
+## 3) THE CHECKER NOW HAS ONE AUTHORITY
 
-- **Reproduction:** the new verification against the **old** builder fails with `TypeError: Cannot read properties of undefined (reading 'x')` at `layer.baseTransform` — the field was never there.
-- **After the fix:** the harness passes and its verification table reports the real workload (masks, parents and visibility matching the parameters).
-- **Baseline (measured, `352d272`, Node v24.18.0 on win32/x64, 60 iterations, p50/p95 ms):**
+`LIVE_DOCUMENTS` names the documents that describe the current state; `checkLiveDocuments` fails when one is missing, so a rename cannot silently drop coverage. Two new rules, scoped to that set:
 
-| Scene | `evaluateFrame` @ 60 | `evaluateFrame` @ 4 frames | `evaluateTransform` | `interpolateChannel` |
-|---|---|---|---|---|
-| small | 0.0218 / 0.0462 | 0.0466 / 0.0852 | 0.0022 / 0.0026 | 0.0005 / 0.0007 |
-| medium | 0.1262 / 0.2255 | 0.4663 / 0.5815 | 0.0021 / 0.0025 | 0.0005 / 0.0005 |
-| large | 1.2923 / 1.5192 | 5.5438 / 6.0446 | 0.0029 / 0.0036 | 0.0006 / 0.0007 |
-| masks | 0.1457 / 0.2193 | 0.5580 / 0.6764 | 0.0021 / 0.0027 | 0.0005 / 0.0006 |
+- **`checkLiveRevisionClaims`** — a labelled `Checkout:` claim must name `main` or the branch really checked out; `` `main` is at <sha> `` must name the current `main`; `` `main` at or after <sha> `` must name an ancestor. A past merge ("merged into `main` at `c2dcb22`") is history and is deliberately not matched.
+- **`checkLiveReleaseClaims`** — a line tying the release tag or "tag target" to a revision must tie it to the pinned target (no git facts needed, so it works in a fixture).
 
-**These are numbers, not conclusions:** no comparison is drawn to the previous (unverified) numbers, because those measured a different scene, and no optimisation is proposed or implied.
+## 4) REPRODUCTION, ON IDENTICAL CONTENT
 
-## 5) VALIDATION
+The pre-task tree was extracted with `git archive` and made a throwaway repository, then both checker versions ran against it:
+
+- **Old checker:** every live-document rule passed, including `roadmap status rows … F next` — it accepted "F is NEXT" while the same file recorded item 12 as complete and merged.
+- **New checker:** additionally reports `live documents contradict the repository — PROJECT_STATE.md:9 says main is at 47d3368a2b54; NEXT_SESSION.md:5 says main is at or after 12b71a5, which is not an ancestor…`
+
+## 5) RECONCILED
+
+`PROJECT_STATE.md` (the checkpoint sentence now quotes the revision it recorded; the validation table is labelled "at the last reconciliation" and its perishable specifics were replaced), `NEXT_SESSION.md` (ancestor-form checkout claim, current validation, the first next-scoped item names the roadmap's NEXT milestone), the roadmap (F is **COMPLETE**, a new row **G — Post-review correctness follow-up** is **NEXT** with each finding's merge commit, and the recommended prompt describes the current work), the release summary (method instead of stored counts; the offline closure is stated correctly), the docs index and the cleanup map (the live set), and the four historical records (a note naming the live set; content otherwise untouched).
+
+## 6) VALIDATION
 
 | Check | Result |
 |---|---|
-| `npx vitest run --config perf/vitest.perf.config.ts` | PASS — 1 test, asserting every scene's verification |
-| Same harness against the pre-fix builder | FAIL — the reproduction above |
-| `npm test` | PASS — 126 files / 1,926 tests (the harness stays out of the default suite) |
+| `src/tests/stateConsistencyCheck.test.ts` | PASS — 36 tests (6 new) |
+| `node scripts/check-state-consistency.mjs` on the real repository | PASS — 35 checks |
+| `npm test` | PASS — 126 files / 1,932 tests |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npm run lint` | clean |
-| `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
-## 6) SELF-REVIEW NOTES
+## 7) SELF-REVIEW NOTES
 
-- **Why the verification is runtime, not compile-time:** `perf/` is in no `tsconfig` (`tsconfig.app.json` includes `src` only), so removing the cast does not by itself restore type checking. The verification reads the canonical fields on every layer, so a renamed field now fails the harness loudly — which is exactly what the cast had prevented. Adding `perf` to a project would drag the app's `lib`/`types` settings into it: a build-config change of its own.
-- **Determinism preserved:** no randomness, clock or generated id; mask geometry steps through six sizes and repeats, so keyframes differ while every path stays valid and topologically identical.
-- **Nothing in `src/`:** the change is confined to `perf/`; no optimisation, no caching, no threshold on any timing.
-- **The generated baseline is not committed** (it carries a revision and a timestamp and would go stale); the numbers are recorded in the report with the command that produces them.
+- The rules are narrow on purpose: only three claim shapes, each one a reader acts on. A wrong match on "merged into `main` at `<sha>`" would have failed the whole live set on legitimate prose, which is how a checker gets switched off.
+- The historical exemption is the document class, not a wording trick, and a test pins that an old revision under a historical heading inside a live document is accepted.
+- **Deliberately not checked:** test counts, run ids and other perishable numbers. The checker cannot verify them without running the suite, and asserting prose it cannot check manufactures a false `PASS`.
+- The roadmap gained a row rather than a rewritten history: F keeps every fact and only changes its headline status.
+- No document was deleted and no historical file was rewritten.
 
-## 7) NEXT
+## 8) NEXT
 
-- Task G (live docs and the state checker: M-05), then the final correctness gate and the summary that maps every review finding.
+- The final correctness gate on `main`, then the summary that maps every review finding (H-01…M-05) to its status, fix, evidence and tests.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — Task F (evaluator profile fixtures)
+# KCS ChatGPT Upload Manifest — Task G (live documents and the state checker)
 
 Clean refreshed: YES
-Bundle purpose: the evaluator profile harness builds and verifies the workload it measures (review finding M-04)
+Bundle purpose: the live-document coverage of the state checker (review finding M-05)
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: fix/evaluator-profile-fixtures, base main at 352d272 — not merged; the merge decision is with the user
-Task record: reports/progress_139_evaluator_profile_fixture_fix.md
-What changed: perf/sceneBuilder.ts (baseTransform, real masks on `masks` with canonical BezierPath geometry, production mask channel keys, maskPathChannels, no cast), perf/evaluator-profile.perf.ts (verifyScene runs before any timing and the report carries the verification; KCS_PROFILE_OUT writes the report)
-Root cause: the builder wrote `transform` and `layers`, which the evaluator never reads, behind an `as CharacterPart` cast — 0 layers with a baseTransform, 0 masks against a scenario declaring 40, non-finite opacity, 0 visible layers
-Reproduction: the new verification against the old builder fails with TypeError: Cannot read properties of undefined (reading 'x') at layer.baseTransform
-Baseline: recorded in the report (measured on 352d272, Node v24.18.0 win32/x64, 60 iterations) — numbers only; no comparison to the previous unverified run and no optimisation proposed
-Not changed: no production code, no caching or optimisation, no threshold on any timing, no dependency/workflow/tag/release change
-Validation: perf harness PASS (1 test asserting every scene's verification); npm test PASS (126 files / 1,926 tests); npm run build PASS (tsc -b + vite); npm run lint clean; state check PASS; git diff --check clean
-Next work: Task G (live docs and the state checker — M-05), then the final correctness gate and the finding summary
+Branch: fix/state-consistency-live-docs, base main at 16e1610 — not merged; the merge decision is with the user
+Task record: reports/progress_140_state_consistency_live_docs.md
+What changed: scripts/check-state-consistency.mjs (LIVE_DOCUMENTS is the authority, checkLiveDocuments guards coverage, checkLiveRevisionClaims and checkLiveReleaseClaims are the new rules, the roadmap row range covers A–H), src/tests/stateConsistencyCheck.test.ts (6 new cases), and the document reconciliation (PROJECT_STATE.md, NEXT_SESSION.md, the roadmap, the release summary, the docs index, the cleanup map; four closed-programme documents marked historical)
+Reproduction: on the pre-task tree the old rules passed every live-document check — including "roadmap status rows … F next" while the same file recorded item 12 as complete — and the new rules report the contradictions
+Not checked on purpose: test counts, run ids and other perishable numbers (the checker cannot verify them without running the suite)
+Validation: stateConsistencyCheck suite PASS (36 tests); node scripts/check-state-consistency.mjs PASS (35 checks) on the real repository; npm test PASS (126 files / 1,932 tests); npm run build PASS (tsc -b + vite); npm run lint clean; git diff --check clean
+Next work: the final correctness gate on main, then the summary that maps every review finding H-01…M-05 to its status, fix, evidence and tests
 v1.1.0-rc.1 tag target: 46d2a3e59e065816d972dcd56951803951b577f6 (unchanged)
 Tag/release/npm changed: NO
 npm publish: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_139_evaluator_profile_fixture_fix.md
+Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_140_state_consistency_live_docs.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
@@ -109,33 +108,35 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Task F (evaluator profile fixtures)
+# KCS Minimal ChatGPT Upload Bundle — Task G (live documents and the state checker)
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this task.
 
 ## What this bundle covers
 
-M-04 from the full-project review, on `fix/evaluator-profile-fixtures` from `main` at `352d272`:
+M-05 from the full-project review, on `fix/state-consistency-live-docs` from `main` at `16e1610`:
 
-- The evaluator profile harness now builds the workload it measures. Its scenes carried `transform`
-  instead of `baseTransform` and `layers` instead of `masks` — neither is a field the evaluator reads —
-  behind an `as CharacterPart` cast that hid both, so the profile timed default transforms and **no
-  masks at all** while reporting the scene parameters as if it had.
-- The builder now writes the canonical fields (and real mask geometry on `masks`, with channel keys
-  from the production helpers), and the harness **verifies the built scene before anything is timed**:
-  layer, track, mask and parent counts, finite base transforms, finite evaluated transforms, opacity and
-  mask values, and visible layers. The report carries that verification table.
-- Reproduced: the new verification against the old builder fails with a `TypeError` on
-  `layer.baseTransform`. A re-run baseline is recorded in the report — numbers only, with no comparison
-  to the previous unverified run and no optimisation proposed.
-- The report path also works now (`KCS_PROFILE_OUT`; Vitest rejects the `--out` flag the harness
-  expected). No production code, dependency, workflow, tag or release change.
+- The state consistency check read four documents plus this bundle, so six stale live documents sat
+  next to a `PASS`. `LIVE_DOCUMENTS` in `scripts/check-state-consistency.mjs` is now the authority:
+  it names the documents that describe the current state, a missing one fails the check, and two new
+  rules catch a live document that claims the wrong checkout, puts `main` at another revision, or ties
+  the release tag to another candidate. A past merge — "merged into `main` at `<sha>`" — is history and
+  is deliberately not matched.
+- The closed-programme documents (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`,
+  `docs/KCS_BRANCH_STATUS.md`) are marked as historical records naming the live set; the live ones were
+  reconciled (`PROJECT_STATE.md`, `NEXT_SESSION.md`, the roadmap, the release summary, the docs index
+  and the cleanup map). The roadmap records milestone F as complete and the post-review follow-up as
+  NEXT.
+- Proven on identical content: against the pre-task tree the old rules passed (including "F next"),
+  while the new ones name the contradictions.
+- Six new checker tests: a stale checkout, a stale `main` revision, an accepted ancestor claim, a stale
+  release candidate, an old revision kept by a historical record, and a missing live document.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this task
-- `progress_139_evaluator_profile_fixture_fix.md` — the task record
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap with the milestone status
+- `progress_140_state_consistency_live_docs.md` — the task record
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap, now with milestone F complete and G as NEXT
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -165,120 +166,83 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 139 — Task F: the evaluator profile harness measures the workload it claims
+# Progress 140 — Task G: the state checker covers the live documents
 
-Branch: `fix/evaluator-profile-fixtures` (base `main` at `352d272`).
-Finding: **M-04** — the performance harness did not construct or measure the workload it described.
+Branch: `fix/state-consistency-live-docs` (base `main` at `16e1610`).
+Finding: **M-05** — live-state documents could contradict each other and the repository while the checker still passed.
 
-## 1. What was open
+## 1. The audit: what each document is
 
-`perf/sceneBuilder.ts` built its layers with two fields the evaluator never reads, and cast the
-result with `as CharacterPart`, which hid both:
+The checker's scope was four documents (`PROJECT_STATE.md`, `NEXT_SESSION.md`, the roadmap, the one-file) plus the handoff bundle. Everything else in the repository was simply never read, which is why six stale documents could sit next to a `PASS`.
 
-| Written | The canonical field | Consequence |
+| Document | Class | State found |
 |---|---|---|
-| `transform: {…}` | `baseTransform` | every layer was evaluated with the **default** transform — the profile measured zeros |
-| `layers: [mask]` | `masks` | **no layer carried a mask**, so the "masked-heavy" scene measured no mask work at all |
-| `type: 'custom'` | a member of the `BodyPartType` union | not a real type; only the cast accepted it |
+| `PROJECT_STATE.md` | **LIVE** | `main` revision claim pointed at a checkpoint's revision; validation table carried 121 files / 1,836 tests |
+| `NEXT_SESSION.md` | **LIVE** | checkout claimed `main` "at or after `12b71a5`"; validation line described a long-merged branch |
+| `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` | **LIVE** | milestone F still said **NEXT** while its own text recorded items 10, 11 and 12 as complete and merged; the recommended next prompt pointed at finished work |
+| `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` | **LIVE** | validation status carried 101 files / 1,495 tests, and it still claimed offline schema validation "is not claimed" — the offline closure merged long before |
+| `docs/README_INDEX.md` | **LIVE** | "Current checkpoint" pointed at a checkpoint's revision as if it were today's |
+| `docs/KCS_DOCS_CLEANUP_MAP.md` | **LIVE** | listed the closed-programme documents as "canonical first-read" current state |
+| `SESSION.md` | HISTORICAL | claimed a `feat/lottie-import-core` checkout and an open merge decision |
+| `docs/KCS_CURRENT_STATE.md` | HISTORICAL | claimed schema validation requires network access |
+| `docs/KCS_OPEN_TASKS.md` | HISTORICAL | claimed `main@1ad3f60` and "production release remains HOLD pending Task 8" |
+| `docs/KCS_BRANCH_STATUS.md` | HISTORICAL | claimed `main@1ad3f60` and a Task 1–8 chain |
+| `reports/**`, `docs/checkpoints/**`, `docs/design/**`, `docs/research/**`, the audit and plan documents | RECORD | the audit trail, unchanged |
 
-Measured against the old builder: 0 layers with a `baseTransform`, 0 mask arrays (against a scenario
-that declares 40), every evaluated opacity non-finite (`NaN`), and **0 visible layers** — the harness
-was timing a scene that could not be rendered, and printing the numbers as a profile of a workload it
-had not built.
+**Classification decision.** The four closed-programme documents each describe a programme that is finished (the release-candidate work and its Task 1–8 chain) and each restated the same facts as the live set. Keeping them "live" would mean maintaining a second copy of the current state — the exact drift this task exists to remove — so they are marked as historical records, each carrying a note that names the live set instead. That is the classification the task asked for, not a silent rewrite: the note is at the top of every one of them.
 
-## 2. Applied — the builder
+## 2. The checker now has one authority
 
-- `baseTransform` and `pivot`, `type: 'custom_freeform'` with a real `path`, and the mask carried on
-  `masks` as a `LayerMask` with canonical `BezierPath` geometry.
-- The mask channel keys come from the production helpers (`layerMaskChannel`,
-  `layerMaskPathChannel`), so the track cannot drift from what `evaluateLayerMasks` reads — and
-  `maskPathChannels` now exists, which the scenario's own description ("animated mask scalars **and a
-  mask path**") had claimed without providing.
-- **No cast.** The layer is a `CharacterPart` literal, so the field names are the canonical ones.
+`LIVE_DOCUMENTS` in `scripts/check-state-consistency.mjs` is the list of documents that describe the current state, and the only ones whose claims are checked. `checkLiveDocuments` fails when one of them is missing, so a rename cannot silently drop coverage. The stale-phrase scan, the roadmap rule, the next-action rule and the mirror rule all read that set (plus the one-file and the bundle).
 
-## 3. Applied — the harness
+Two new rules, both scoped to the live documents only:
 
-`verifyScene(name, scene)` runs **before** anything is timed and asserts, per scene:
+- **`checkLiveRevisionClaims`** — the checked-out branch and the revision `main` is at. A labelled `Checkout:` claim must name `main` or the branch that is really checked out; `` `main` is at `<sha>` `` must name the current `main`; `` `main` at or after `<sha>` `` must name an ancestor. A past merge — "merged into `main` at `c2dcb22`" — is history about that merge and is deliberately not matched.
+- **`checkLiveReleaseClaims`** — a line that ties the release tag (or "tag target") to a revision must tie it to the pinned target. This needs no git facts, so it is caught even in a fixture.
 
-- the built layer and track counts equal the parameters;
-- the layers carrying a mask equal `maskedLayers`, and the layers with a parent equal `parentedLayers`;
-- every layer has a finite base transform, and every evaluated transform, opacity and mask value is
-  finite with a path of at least two points;
-- **every layer is visible** after evaluation (the old scene produced none).
+## 3. Reproduction, on identical content
 
-The report now carries a **Scene verification** table with the counts it asserted, so a reader can see
-what was measured rather than trusting the parameter line. A scene that is not the workload it claims
-fails the harness instead of being timed and reported as one.
+The pre-task tree was extracted with `git archive` and made a throwaway repository, then both versions of the checker ran against it:
 
-The report path also works now: Vitest rejects an unknown `--out`, so the harness reads
-`KCS_PROFILE_OUT` from the environment. Without that, "re-run the baseline" could not produce a file
-at all.
+| | Old checker | New checker |
+|---|---|---|
+| Live-document rules | every one passed, including `roadmap status rows … F next` — it accepted "F is NEXT" while the same file recorded item 12 as complete and merged | **`live documents contradict the repository`** — `PROJECT_STATE.md:9 says main is at 47d3368a2b54; NEXT_SESSION.md:5 says main is at or after 12b71a5, which is not an ancestor…` |
+| Other failures | only the git facts a throwaway repository cannot have (the RC tag and the three milestone commits) | the same, plus the above |
 
-## 4. Evidence
+The same tree, the same facts: the old rules accepted it, the new rules name the contradiction.
 
-| Check | Result |
-|---|---|
-| Reproduction | the new verification against the **old** builder fails: `TypeError: Cannot read properties of undefined (reading 'x')` at `layer.baseTransform` — the field was never there |
-| After the fix | the harness passes and its verification table reports the real workload |
-| Old builder, measured | 0/`maskedLayers` masks, 0 visible layers, non-finite opacity, default transforms |
-| New builder, measured | masks, parents and visibility all match the parameters (table below) |
+## 4. What was reconciled
 
-## 5. The re-run baseline (measured, `352d272`, Node v24.18.0 on win32/x64)
+- **`PROJECT_STATE.md`** — the checkpoint sentence now says the checkpoint records the revision it was written from (`main` stood at `47d3368a2b54…` then) instead of asserting that `main` is there; the validation table is labelled "at the last reconciliation" and its perishable specifics (test count, run id, baseline SHA) were replaced by the current numbers and by the method where a number would go stale within a task.
+- **`NEXT_SESSION.md`** — the checkout claim is the ancestor form against the last merged task, the validation line describes the current run, and the first next-scoped item names the roadmap's NEXT milestone.
+- **`docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`** — milestone F is **COMPLETE** (items 10, 11 and 12 are merged) and a new row **G — Post-review correctness follow-up** is **NEXT**, listing each finding's merge commit; the recommended next prompt describes the current work instead of the finished Option B follow-up.
+- **`docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`** — the validation section states the method and points at `NEXT_SESSION.md` for the current numbers; the schema constraint now says the closure is offline by default with `--online` as the refresh path.
+- **`docs/README_INDEX.md`** and **`docs/KCS_DOCS_CLEANUP_MAP.md`** — the read-first lists name the live set, and the checkpoint sentence is reframed as the most recent historical record.
+- **`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md`** — a historical-record note at the top of each, naming the live set. Their content is otherwise untouched.
 
-Scene verification, asserted before anything was timed:
-
-| Scene | Layers | Tracks | Parented | Masked | Mask scalar kfs | Mask path kfs | Animated kfs | Evaluated | Visible |
-|---|---|---|---|---|---|---|---|---|---|
-| small | 5 | 5 | 0 | 0 | 0 | 0 | 100 | 5 | 5 |
-| medium | 25 | 25 | 5 | 5 | 60 | 60 | 1500 | 25 | 25 |
-| large | 100 | 100 | 20 | 20 | 480 | 480 | 12000 | 100 | 100 |
-| masks | 40 | 40 | 0 | 40 | 480 | 480 | 2400 | 40 | 40 |
-
-Measurements (milliseconds per operation, 60 iterations, p50 / p95):
-
-| Scene | `evaluateFrame` @ frame 60 | `evaluateFrame` @ 4 frames | `evaluateTransform` (first layer) | `interpolateChannel` | `applyEasing` (1k) |
-|---|---|---|---|---|---|
-| small | 0.0218 / 0.0462 | 0.0466 / 0.0852 | 0.0022 / 0.0026 | 0.0005 / 0.0007 | 0.0811 / 0.1021 |
-| medium | 0.1262 / 0.2255 | 0.4663 / 0.5815 | 0.0021 / 0.0025 | 0.0005 / 0.0005 | 0.0683 / 0.0687 |
-| large | 1.2923 / 1.5192 | 5.5438 / 6.0446 | 0.0029 / 0.0036 | 0.0006 / 0.0007 | 0.0685 / 0.0702 |
-| masks | 0.1457 / 0.2193 | 0.5580 / 0.6764 | 0.0021 / 0.0027 | 0.0005 / 0.0006 | 0.0685 / 0.0692 |
-
-**These are numbers, not conclusions.** They are the first baseline produced on a scene whose masks,
-parents and visibility were verified; no comparison to the previous (unverified) numbers is drawn,
-because those measured a different scene, and no optimisation is proposed or implied. A caching
-proposal may cite this table as its "before", on the same scenes and revision.
-
-## 6. Validation
+## 5. Validation
 
 | Check | Result |
 |---|---|
-| `npx vitest run --config perf/vitest.perf.config.ts` | PASS — 1 test (it asserts every scene's verification) |
-| Same harness against the pre-fix builder | FAIL — `TypeError` on `baseTransform` (the reproduction above) |
-| `npm test` | PASS — 126 files / 1,926 tests (the harness stays out of the default suite) |
+| `src/tests/stateConsistencyCheck.test.ts` | PASS — 36 tests (6 new: stale checkout, stale `main` revision, an accepted ancestor claim, a stale release candidate, an old revision kept by a historical record, a missing live document) |
+| `node scripts/check-state-consistency.mjs` on the real repository | PASS |
+| `npm test` | PASS — 126 files / 1,932 tests |
 | `npm run build` (`tsc -b` + vite) | PASS |
 | `npm run lint` | clean |
-| `node scripts/check-state-consistency.mjs` | PASS |
 | `git diff --check` | clean |
 
-## 7. Self-review (read-only, same model)
+## 6. Self-review (read-only, same model)
 
-- **Why the verification is runtime, not compile-time.** `perf/` is not part of any `tsconfig`
-  (`tsconfig.app.json` includes `src` only), so removing the cast does not by itself restore type
-  checking. The verification reads the canonical fields on every layer, so a renamed field now fails
-  the harness loudly — which is what the cast had prevented. Adding `perf` to a project would drag the
-  app's `lib`/`types` settings into it, and that is a build-config change of its own.
-- **Determinism is unchanged.** No randomness, clock or generated id was introduced; the mask geometry
-  steps through six sizes and repeats, so keyframes differ while every path stays valid and topologically
-  identical (which is what the path interpolator needs).
-- **No optimisation, no caching, nothing in `src/`.** The change is confined to `perf/`; the production
-  evaluator is untouched.
-- **The generated baseline is not committed.** It carries a revision and a timestamp and would go stale;
-  the numbers are recorded here instead, with the command that produces them.
+- **The rules are narrow on purpose.** Only three claim shapes are checked, and each is one a reader acts on. "Merged into `main` at `<sha>`" is history and is not matched; a wrong match there would have failed the whole live set on legitimate prose, which is how a checker gets switched off.
+- **The historical exemption is the document class, not a wording trick.** Records are outside `LIVE_DOCUMENTS`; the existing heading-based exemption still applies inside a live document, and a test pins that an old revision under a historical heading is accepted.
+- **What is deliberately *not* checked:** test counts, run ids and other perishable numbers. The checker cannot verify them without running the suite, and asserting prose it cannot check is how a false `PASS` is manufactured. `PROJECT_STATE.md` now labels that table as of the last reconciliation instead.
+- **The roadmap gained a row rather than a rewritten history.** F's row keeps every fact it had and only changes its headline status; G records the current programme and the merges it has produced so far.
+- **No document was deleted and no historical file was rewritten**, per the repository's preservation rules.
 
-## 8. Not changed
+## 7. Not changed
 
-- No production code, dependency, workflow, tag or release action.
-- No threshold is asserted on any timing: the harness still treats a number as evidence, not a gate.
+- The release tag, draft release, package metadata and every dependency are untouched.
+- The audit trail (`reports/**`) and the checkpoints are byte-for-byte what they were.
 
 ---
 
@@ -288,7 +252,7 @@ proposal may cite this table as its "before", on the same scenes and revision.
 
 ## Repository state
 
-- Checkout: `main` at or after `12b71a5` (the accepted code baseline), matching `origin/main`. **Milestone F item 10 is complete**: the import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are merged; the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base and stays historical. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **all four Milestone F item 10 slices (merged at `ff32d6c`, `8670b2a`, `bda62cb` and `3b30bff`)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
+- Checkout: `main` at or after `16e1610` (the last merged correctness task), matching `origin/main`. **Milestone F item 10 is complete**: the import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are merged; the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base and stays historical. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **all four Milestone F item 10 slices (merged at `ff32d6c`, `8670b2a`, `bda62cb` and `3b30bff`)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Checkout after the item 12 merge: `main` at or after `a4f8642` (the OGraf package import and its handoff refresh), matching `origin/main`
@@ -314,11 +278,11 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-On `chore/engines-allow-scripts` (HEAD `610ab8c`, plus this documentation-sync commit): full Vitest (124 files / 1,858 tests), `npx playwright test e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests, candidate `610ab8c`), `npm run build`, `npx tsc --noEmit`, `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` (PASS: 33 checks) all pass; `npm audit` reports 0 vulnerabilities, `npm install-scripts ls` reports nothing blocked, the `sqlite3` binding opens an in-memory database, and `node server/index.js` serves `GET /api/health` with 200. The newest CI run on `main` at the time of writing is `35704676331` (success).
+On `fix/state-consistency-live-docs` (the live-doc reconciliation): full Vitest (126 files / 1,926 tests), `npx playwright test e2e/ograf-matte-visual.spec.ts` (4 pixel cases) and `e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run build` (`tsc -b` + vite — the gate CI runs; `npx tsc --noEmit` alone checks no project file here), `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` all pass, `npm audit` reports 0 vulnerabilities, and the API serves `GET /api/health` with 200 on `127.0.0.1` (its default bind).
 
 ## Next scoped work
 
-1. **Milestone F item 12 is complete and merged, and Milestone D item 9 Option B is merged too** (`reports/progress_130_dependency_maintenance_option_b.md`, fast-forwarded into `main` at `73426e5` and pushed; branch kept). **The next work is the approval-gated Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair), plus the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) with their own triage — each needs explicit approval. The `engines`/`allowScripts` follow-up is answered on `chore/engines-allow-scripts` and only needs its merge decision. For context, **Milestone F item 12 is complete and merged** (`reports/progress_128_unified_import_entry.md`, `reports/progress_129_ograf_editable_import.md`): item 10's four slices, the unified import entry and the OGraf package import are all in `main` (the package flow merged at `419fc6a`, its handoff refresh at `a4f8642`), so no Milestone F work is waiting on a merge. **The only open merge decision is `chore/engines-allow-scripts`** (`reports/progress_131_engines_allow_scripts.md`): the locked toolchain's supported Node intersection plus the version-pinned npm-12 `allowScripts` approval for `sqlite3@6.0.1`, with only the lockfile root engine metadata synchronized and no dependency-graph change. The Option B details — the 16 refreshed packages, the reverted `oxlint` 1.85 / `jsdom` 30.1 specifiers and the `@asamuzakjp/dom-selector` selector change — stay recorded in `reports/progress_130_dependency_maintenance_option_b.md`, because that branch is already merged.
+1. **Milestone G — the post-review correctness follow-up is the active work.** The full-project review's release-blocking findings are closed one at a time, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge: H-01 (a blocking dialog left the editor's global commands live) at `0c19751`; H-03, H-04 and M-03 (import boundary validation, the track authoring-state round-trip, the document transaction) at `fc672f2`; M-01, M-02 and H-05 (Lottie parent resolution by `ind`, the static hierarchy, the multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05 (this reconciliation) and the final correctness gate remain** — see `reports/progress_134_…` through `reports/progress_140_…`.
 2. Approval-gated follow-ups that remain open: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) with their own triage. The `engines`/`allowScripts` follow-up is answered on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and only needs its merge decision. Every release/tag/draft-release change still needs explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -361,7 +325,7 @@ The accepted product and security follow-up line is integrated into main, and th
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-**Checkpoint `2026-09-18-after-lottie-core`** (`docs/checkpoints/2026-09-18-after-lottie-core/`) records this state: `main` / `origin/main` is at `47d3368a2b54…`, the Lottie import core (Milestone F item 10, first slice) was merged with `--no-ff` at `ff32d6c` and pushed, and its branch `feat/lottie-import-core` is kept at `f76ae6a` as the review artefact. The checkpoint folder carries the summary (`README.md`), the tasklist (`TASKLIST.md`), a copy-paste next-session prompt (`RESUME_PROMPT.md`) and a machine-readable summary (`STATE.json`); the task record is `reports/progress_124_checkpoint_after_lottie_core.md`. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; item 10’s **first implementation slice (the import core)** is **merged into `main`** at `ff32d6c` (`reports/progress_123_lottie_import_core.md`), its **second slice — layer masks + track mattes — is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice — text, image and precomp layers — is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice — the import entry point with the report-before-replace UX — is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`): a separate "Import Lottie" control parses the document in memory, shows blockers and losses before anything is applied, cancels as a true no-op, applies only on an explicit confirm through the existing project authority, and reconciles imported layer types onto existing KCS types the OGraf export accepts; item 10 is therefore complete. Milestone F item 10 is then complete apart from the follow-ups listed below.
+**Checkpoint `2026-09-18-after-lottie-core`** (`docs/checkpoints/2026-09-18-after-lottie-core/`) records the state it was written from: `main` stood at `47d3368a2b54…` then, the Lottie import core (Milestone F item 10, first slice) was merged with `--no-ff` at `ff32d6c` and pushed, and its branch `feat/lottie-import-core` is kept at `f76ae6a` as the review artefact. The checkpoint folder carries the summary (`README.md`), the tasklist (`TASKLIST.md`), a copy-paste next-session prompt (`RESUME_PROMPT.md`) and a machine-readable summary (`STATE.json`); the task record is `reports/progress_124_checkpoint_after_lottie_core.md`. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; item 10’s **first implementation slice (the import core)** is **merged into `main`** at `ff32d6c` (`reports/progress_123_lottie_import_core.md`), its **second slice — layer masks + track mattes — is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice — text, image and precomp layers — is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice — the import entry point with the report-before-replace UX — is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`): a separate "Import Lottie" control parses the document in memory, shows blockers and losses before anything is applied, cancels as a true no-op, applies only on an explicit confirm through the existing project authority, and reconciles imported layer types onto existing KCS types the OGraf export accepts; item 10 is therefore complete. Milestone F item 10 is then complete apart from the follow-ups listed below.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -375,20 +339,20 @@ The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` b
 
 Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
 
-## Validation status
+## Validation status (at the last reconciliation)
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 121 files / 1,836 tests |
+| Full Vitest | PASS | 126 files / 1,926 tests |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure, every document pin-verified (`reports/progress_115_ograf_offline_schema_closure.md`) |
-| OGraf release smoke | PASS | `npm run qa:release`; 2 Playwright tests — latest run at `12b71a5` on `main` |
+| OGraf release smoke | PASS | `npm run qa:release`; 2 Chromium tests on `main` |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
-| State consistency | PASS | `node scripts/check-state-consistency.mjs` — 32 checks at the accepted code baseline `12b71a5`, 33 with this reconciliation's bundle (the total scales with the number of bundle documents scanned) |
+| State consistency | PASS | `node scripts/check-state-consistency.mjs` — the total scales with the number of live and bundle documents scanned |
 | TypeScript | PASS | `npm run build` (`tsc -b && vite build`) — the gate CI runs; `npx tsc --noEmit` alone does not cover the same project program (see `reports/progress_122_ci_hotfix_import_boundary_types.md`) |
 | Lint | PASS | clean — the Fast Refresh warning was removed in `reports/progress_113_warning_maintenance.md` |
 | Production build | PASS | no chunk-size advisory — split into 382.19 kB app + react-vendor/icons/geometry chunks (see `reports/progress_113_warning_maintenance.md`) |
 | Independent review | PASS | Milestone A `READY` in round 6 of six; the item-9 audit closed `READY WITH WARNINGS` in round 6 of six (`reports/progress_112_dependency_warning_audit.md` §12); the Option A change closed with `READY WITH WARNINGS` from the read-only `scout` round (the reviewer model hit a provider usage limit) after `reviewer-agent` rounds 1–3 closed every finding (`reports/progress_113_warning_maintenance.md` §2) |
-| CI on `main` | PASS | run `35704676331` (the Lottie import entry handoff) — success at the time of this reconciliation |
+| CI on `main` | PASS | the newest `main` push run is green at the time of this reconciliation (`gh run list --branch main`) |
 
 ## Remaining work
 
@@ -444,7 +408,8 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
 | D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 and `jsdom` 30.1 deferred for documented reasons. The `engines` declaration and npm-12 `allowScripts` policy are answered on `chore/engines-allow-scripts` and await their merge decision. Still approval-gated: Option C (TypeScript 7 / Vitest 5) and the two deferred minor bumps |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
-| F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **NEXT** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
+| F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **COMPLETE** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
+| G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **NEXT** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. Still open: M-05 (this reconciliation) and the final correctness gate. The approval-gated Option C majors and the two deferred minor bumps stay behind their own approval. |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -500,7 +465,7 @@ The deliverables are the study, the Lottie import mapping design and the editabl
 
 ## Recommended next prompt
 
-"KCS OPTION B FOLLOW-UP — DEPENDENCY MAINTENANCE AND TOOLCHAIN DECISION (approval-gated). Milestone F item 12 is complete and merged (unified import entry and OGraf package import, `main` at `a4f8642`), and Milestone D item 9 Option B is merged into `main` at `73426e5`. Review that branch, decide the merge, then take the remaining approval-gated follow-ups one at a time: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair), and the two minor bumps that were applied, measured and reverted (`oxlint` 1.85 with 33 new rule warnings, `jsdom` 30.1 whose `URL.createObjectURL` throws for a Blob). Every package/lockfile/workflow change needs explicit approval, and every release/tag/npm action stays behind its own explicit approval."
+"KCS POST-REVIEW CORRECTNESS FOLLOW-UP (Milestone G). The full-project review's release-blocking findings are closed one at a time, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge. The remaining work is the live-document reconciliation (M-05) and the final correctness gate, then the approval-gated Option C (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x). Every package/lockfile/workflow change needs explicit approval, and every release/tag/npm action stays behind its own explicit approval."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
@@ -546,6 +511,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - An inverted track matte in an exported OGraf graphic now actually inverts: it is expressed as a luminance mask with a white backdrop and the source painted black, the technique the editor's own matte authority documents, instead of an alpha mask whose black source stayed opaque and left the target unmatted. The inverted luminance matte had the same defect — it had no backdrop, so the mask was transparent everywhere outside the source — and both modes now share one construction. Text matte sources are painted black for the hole as well, instead of keeping their own colour and emitting a duplicate, ignored `fill` attribute. The generated runtime mirrors all of it.
 - The REST API now binds `127.0.0.1` instead of every interface, so the unauthenticated project store is reachable from this machine only. Publishing it to a network is an explicit opt-in (`KCS_API_HOST`), and the server warns with what it published and how to undo it. `README.md` and `docs/API.md` state that the API has no authentication and that CORS is not access control.
 - The evaluator profile harness now builds the workload it measures: its scenes carry a real `baseTransform` and real layer masks (the previous builder wrote `transform` and `layers`, which the evaluator never reads, behind a cast that hid both), and the harness verifies the built scene — layer, track, mask and parent counts, finite transforms and masks, and visible layers — before anything is timed. The report carries that verification, and `KCS_PROFILE_OUT` writes it to a file (Vitest rejects the `--out` flag the harness previously expected).
+- The state consistency check now covers the live documents instead of four of them: `LIVE_DOCUMENTS` names the documents that describe the current state, a missing one fails the check, and two new rules catch a live document that claims the wrong checkout, puts `main` at another revision, or ties the release tag to another candidate. The closed-programme documents (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md`) are marked as historical records and reconciled where they were live, the roadmap records milestone F as complete with the post-review follow-up as NEXT, and the release summary no longer repeats validation counts that go stale within a task.
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.
@@ -595,14 +561,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 12948 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 14451 bytes
-- `NEXT_SESSION.md` — 12211 bytes
-- `OMP_FINAL_RESPONSE.md` — 4702 bytes
-- `PROJECT_STATE.md` — 16433 bytes
-- `README.md` — 2994 bytes
-- `manifest.txt` — 2612 bytes
-- `progress_139_evaluator_profile_fixture_fix.md` — 6660 bytes
+- `CHANGELOG.md` — 13658 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 15543 bytes
+- `NEXT_SESSION.md` — 11453 bytes
+- `OMP_FINAL_RESPONSE.md` — 5186 bytes
+- `PROJECT_STATE.md` — 16364 bytes
+- `README.md` — 3134 bytes
+- `manifest.txt` — 2473 bytes
+- `progress_140_state_consistency_live_docs.md` — 8164 bytes
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

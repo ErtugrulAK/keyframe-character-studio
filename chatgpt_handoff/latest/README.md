@@ -6,7 +6,7 @@ the Milestone H hold state.
 ## What this bundle covers
 
 Milestone H is complete through H6 and its release decision (H7) is **held**, with the live documents and
-this handoff reconciled to the repository truth (`main == origin/main == 5b68543`):
+this handoff reconciled to the repository truth (`main` at or after `5b68543`):
 
 - **The audit** (`progress_142_release_readiness_audit.md`) found 7 items, **one of them required**: the
   CI step named "TypeScript Type Check" ran `npx tsc --noEmit`, which builds no referenced project and so

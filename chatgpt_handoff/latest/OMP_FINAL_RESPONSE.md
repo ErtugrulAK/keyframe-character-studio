@@ -37,7 +37,7 @@ merge had explicit approval.
 | export, Lottie and matte browser specs | PASS — 8 tests |
 | `npm run qa:v6` | PASS — 3 tests |
 | `npm run check` | PASS |
-| `node scripts/check-state-consistency.mjs` | PASS — 35 checks at that commit, 45 now that the documents and the bundle grew |
+| `node scripts/check-state-consistency.mjs` | PASS — 35 checks at that commit; the total scales with the number of live and bundle documents scanned |
 | `npm audit` | 0 vulnerabilities |
 | API health + `sqlite3` binding on this machine | 200 `online` / in-memory table created |
 | `git diff --check` and the working tree | clean |

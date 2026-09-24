@@ -58,7 +58,7 @@ merge had explicit approval.
 | export, Lottie and matte browser specs | PASS — 8 tests |
 | `npm run qa:v6` | PASS — 3 tests |
 | `npm run check` | PASS |
-| `node scripts/check-state-consistency.mjs` | PASS — 35 checks at that commit, 45 now that the documents and the bundle grew |
+| `node scripts/check-state-consistency.mjs` | PASS — 35 checks at that commit; the total scales with the number of live and bundle documents scanned |
 | `npm audit` | 0 vulnerabilities |
 | API health + `sqlite3` binding on this machine | 200 `online` / in-memory table created |
 | `git diff --check` and the working tree | clean |
@@ -100,7 +100,7 @@ Clean refreshed: YES
 Bundle purpose: the final handoff for the held state — the Milestone H release-readiness evidence (audit, fix, triages, gate), the documents/handoff reconciliation, and the hold decision itself
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: main at 5b68543 (== origin/main); H1-H6 are merged and pushed
+Branch: main at or after 5b68543; H1-H6 are merged and pushed, and this refresh is the branch docs/final-handoff-after-hold, to be fast-forward merged on approval
 Task record: reports/progress_142_release_readiness_audit.md ... reports/progress_148_final_handoff_after_hold.md
 H1 audit: 7 items, 1 REQUIRED (the CI type-check step checked no project file); the required one fixed. reports/progress_142_release_readiness_audit.md
 H2 fix: MERGED at b4bf3c0 — .github/workflows/ci.yml and the check script now run npx tsc -b --pretty false, which checks 151 project files instead of none. CLOSED. reports/progress_143_ci_typecheck_step.md
@@ -111,7 +111,7 @@ Gate verdict: RELEASE READY WITH DOCUMENTED DEFERRALS
 H6: live documents and handoff reconciled, MERGED at 5b68543. That merge changed documents only: the code delta between the gated c1431db and 5b68543 is empty. reports/progress_147_milestone_h_docs_handoff.md
 H7: HOLD by user decision — no tag, release or npm action. reports/progress_148_final_handoff_after_hold.md
 CI: main is green at 5b68543 (run 35996899896); the gate commit's own run is 35988804952
-State check: PASS 45 checks (35 at the gate commit, before the documents and the bundle grew)
+State check: PASS 35 checks at the gate commit; the total scales with the number of live and bundle documents scanned (48 on this refresh's committed tree)
 Option C (typescript 6->7, vitest + @vitest/coverage-v8 4->5): DEFERRED BY DECISION, not a release blocker
 engines + npm-12 allowScripts: CLOSED, merged at 1a12d79
 Gate limits stated, not hidden: CI runs no browser test (the 2-spec release-smoke.yml is manual); CI is ubuntu-latest only, so the Windows run above is the local evidence; qa:release is the only automated package round-trip
@@ -142,7 +142,7 @@ the Milestone H hold state.
 ## What this bundle covers
 
 Milestone H is complete through H6 and its release decision (H7) is **held**, with the live documents and
-this handoff reconciled to the repository truth (`main == origin/main == 5b68543`):
+this handoff reconciled to the repository truth (`main` at or after `5b68543`):
 
 - **The audit** (`progress_142_release_readiness_audit.md`) found 7 items, **one of them required**: the
   CI step named "TypeScript Type Check" ran `npx tsc --noEmit`, which builds no referenced project and so
@@ -798,7 +798,7 @@ appended to the previous file. The upload instruction still names
 
 | Check | Result |
 |---|---|
-| `node scripts/check-state-consistency.mjs` | **PASS — 45 checks** (bundle mirrors, live documents, roadmap rows, the tag/revision rule, the one-file staleness and secret scans) |
+| `node scripts/check-state-consistency.mjs` | **PASS** — 45 checks at precheck and 48 on the committed tree (the total scales with the number of live and bundle documents scanned, which is why no live document states a current total) |
 | `git diff --check` | clean |
 | Changed paths | documents only — no `src/`, `server/`, `perf/`, `e2e/`, `scripts/`, `package.json`, `package-lock.json` or `.github/workflows/` |
 
@@ -931,7 +931,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - **Option C (TypeScript 6→7, Vitest 4→5): deferred by user decision** — not a blocker; the current toolchain builds, tests and lints cleanly, and the majors' breakage surface cannot be established without installing them.
 - **`oxlint` 1.85: deferred** — 34 new warnings, 31 of which flag patterns this codebase uses deliberately (the documented latest-ref mirror, and synchronisation effects the rule's own guidance allows); the three genuine ones would not make the run clean.
 - **`jsdom` 30.1.x: closed** — the bump was taken at `c1431db` with one test-only object-URL shim in `src/tests/setup.ts`; jsdom implements neither `createObjectURL` nor `revokeObjectURL`, and 30.1.1's Blob no longer carries what Node's implementation follows.
-- **Final release gate: RELEASE READY WITH DOCUMENTED DEFERRALS** on clean `main` at `c1431db` — build, type check, 126 files / 1,934 tests, lint, `validate:ograf`, `qa:release` (2 Chromium), the Lottie/matte/export browser specs (8), `qa:v6` (3), `npm run check`, the state check (35 checks at that commit, 45 once the documents and the bundle grew), `npm audit` (0), `git diff --check`, and the API health plus the sqlite3 binding on this machine.
+- **Final release gate: RELEASE READY WITH DOCUMENTED DEFERRALS** on clean `main` at `c1431db` — build, type check, 126 files / 1,934 tests, lint, `validate:ograf`, `qa:release` (2 Chromium), the Lottie/matte/export browser specs (8), `qa:v6` (3), `npm run check`, the state check (35 checks at that commit — the total scales with the number of live and bundle documents scanned, so a later count is not comparable), `npm audit` (0), `git diff --check`, and the API health plus the sqlite3 binding on this machine.
 - **H6 — the live documents and the handoff are reconciled** at `5b68543` (`reports/progress_147_milestone_h_docs_handoff.md`), and the final handoff refresh for the held state followed it (`reports/progress_148_final_handoff_after_hold.md`). That merge changed documents only: the code delta between the gated `c1431db` and `5b68543` is empty.
 - **H7 — the release decision: HELD by user decision.** No tag, release or npm action was taken. `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft prerelease, the package is private at `1.1.0-rc.1`, and nothing was published. The decision is no longer open — it is a hold — and a future release still needs explicit user instruction.
 
@@ -1159,17 +1159,17 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `CHANGELOG.md` — 14512 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 16996 bytes
 - `NEXT_SESSION.md` — 11752 bytes
-- `OMP_FINAL_RESPONSE.md` — 4832 bytes
-- `PROJECT_STATE.md` — 20464 bytes
-- `README.md` — 4305 bytes
-- `manifest.txt` — 4670 bytes
+- `OMP_FINAL_RESPONSE.md` — 4856 bytes
+- `PROJECT_STATE.md` — 20531 bytes
+- `README.md` — 4301 bytes
+- `manifest.txt` — 4825 bytes
 - `progress_142_release_readiness_audit.md` — 7928 bytes
 - `progress_143_ci_typecheck_step.md` — 2791 bytes
 - `progress_144_oxlint_1_85_triage.md` — 6194 bytes
 - `progress_145_jsdom_30_1_triage.md` — 6486 bytes
 - `progress_146_final_release_gate.md` — 5200 bytes
 - `progress_147_milestone_h_docs_handoff.md` — 3877 bytes
-- `progress_148_final_handoff_after_hold.md` — 4858 bytes
+- `progress_148_final_handoff_after_hold.md` — 4914 bytes
 
 ---
 

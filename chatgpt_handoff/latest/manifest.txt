@@ -4,7 +4,7 @@ Clean refreshed: YES
 Bundle purpose: the final handoff for the held state — the Milestone H release-readiness evidence (audit, fix, triages, gate), the documents/handoff reconciliation, and the hold decision itself
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: main at 5b68543 (== origin/main); H1-H6 are merged and pushed
+Branch: main at or after 5b68543; H1-H6 are merged and pushed, and this refresh is the branch docs/final-handoff-after-hold, to be fast-forward merged on approval
 Task record: reports/progress_142_release_readiness_audit.md ... reports/progress_148_final_handoff_after_hold.md
 H1 audit: 7 items, 1 REQUIRED (the CI type-check step checked no project file); the required one fixed. reports/progress_142_release_readiness_audit.md
 H2 fix: MERGED at b4bf3c0 — .github/workflows/ci.yml and the check script now run npx tsc -b --pretty false, which checks 151 project files instead of none. CLOSED. reports/progress_143_ci_typecheck_step.md
@@ -15,7 +15,7 @@ Gate verdict: RELEASE READY WITH DOCUMENTED DEFERRALS
 H6: live documents and handoff reconciled, MERGED at 5b68543. That merge changed documents only: the code delta between the gated c1431db and 5b68543 is empty. reports/progress_147_milestone_h_docs_handoff.md
 H7: HOLD by user decision — no tag, release or npm action. reports/progress_148_final_handoff_after_hold.md
 CI: main is green at 5b68543 (run 35996899896); the gate commit's own run is 35988804952
-State check: PASS 45 checks (35 at the gate commit, before the documents and the bundle grew)
+State check: PASS 35 checks at the gate commit; the total scales with the number of live and bundle documents scanned (48 on this refresh's committed tree)
 Option C (typescript 6->7, vitest + @vitest/coverage-v8 4->5): DEFERRED BY DECISION, not a release blocker
 engines + npm-12 allowScripts: CLOSED, merged at 1a12d79
 Gate limits stated, not hidden: CI runs no browser test (the 2-spec release-smoke.yml is manual); CI is ubuntu-latest only, so the Windows run above is the local evidence; qa:release is the only automated package round-trip

@@ -60,7 +60,7 @@ appended to the previous file. The upload instruction still names
 
 | Check | Result |
 |---|---|
-| `node scripts/check-state-consistency.mjs` | **PASS — 45 checks** (bundle mirrors, live documents, roadmap rows, the tag/revision rule, the one-file staleness and secret scans) |
+| `node scripts/check-state-consistency.mjs` | **PASS** — 45 checks at precheck and 48 on the committed tree (the total scales with the number of live and bundle documents scanned, which is why no live document states a current total) |
 | `git diff --check` | clean |
 | Changed paths | documents only — no `src/`, `server/`, `perf/`, `e2e/`, `scripts/`, `package.json`, `package-lock.json` or `.github/workflows/` |
 

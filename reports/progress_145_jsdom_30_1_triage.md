@@ -1,78 +1,101 @@
-# Progress 145 — H4 jsdom 30.1.x triage (audit only, no change)
+# Progress 145 — H4 jsdom 30.1.x: triage, then the verified bump
 
-Milestone H, task H4. **No repository change**: the candidate jsdom versions were measured in an
-isolated directory outside the repository (`npm install jsdom@30.0.1` / `jsdom@30.1.1` there), so the
-project keeps `jsdom` 30.0.1 (specifier `^30.0.1`, lockfile 30.0.1) and its suite stays green.
+Milestone H, task H4. The audit ran first and the user then approved a bounded attempt, so this report
+carries both: what the triage found, and the result of taking the bump.
 
-## 1. The recorded reasons for deferring, re-measured
+> **Correction to the first version of this report.** It concluded, from probes run outside the test
+> environment, that the recorded `createObjectURL` blocker did not reproduce. That conclusion was
+> wrong, and the error was mine: a standalone jsdom `Blob` is not the object the *test environment*
+> produces. Probing inside the environment reproduces the recorded failure exactly, and the section
+> below records that evidence instead. Nothing else in the triage changed.
 
-`reports/progress_130_dependency_maintenance_option_b.md` recorded two blockers for `jsdom` 30.1.x.
-Neither reproduces in this checkout.
+## 1. The recorded blocker, reproduced in the environment that matters
 
-### 1.1 "`URL.createObjectURL` stops accepting the Blob this environment produces" — does not reproduce as a jsdom regression
+`reports/progress_130_dependency_maintenance_option_b.md` recorded that `jsdom` 30.1.x makes
+`URL.createObjectURL` stop accepting the Blob the test environment produces. A throwaway probe test
+inside the vitest environment reports the pairing directly:
 
-| Probe (isolated, outside the repository) | jsdom 30.0.1 | jsdom 30.1.1 |
+| Probe value | `jsdom` 30.0.1 | `jsdom` 30.1.1 |
 |---|---|---|
-| `typeof window.URL.createObjectURL` on a bare jsdom window | **undefined** | **undefined** |
-| jsdom `Blob` passed to **Node's** `URL.createObjectURL` | throws (`must be an instance of Blob`) | throws (`must be an instance of Blob`) |
-| **Node** `Blob` passed to Node's `URL.createObjectURL` (same realm) | works (`blob:nodedata:…`) | works |
+| `blob.constructor.name` | `Blob` | `Blob` |
+| `Object.getOwnPropertySymbols(blob)` | `Symbol(impl)` | **(none)** |
+| `typeof URL.createObjectURL` | `function` (Node's) | `function` (Node's) |
+| `URL.createObjectURL(new Blob([…]))` | works (the suite passes) | **throws `Cannot read properties of undefined (reading '_buffer')`** |
 
-`URL.createObjectURL` is **not implemented by jsdom at all** in either version, and the failing pairing
-is *Node's* implementation receiving a *jsdom* `Blob` — a cross-realm type check that fails identically
-on both versions. It is a property of the test environment's mixing of realms, not a 30.1.x regression.
+So the failure is real and its mechanism is precise: **jsdom implements neither `createObjectURL` nor
+`revokeObjectURL`** (both are `undefined` on a bare jsdom window in *either* version), so the
+environment always pairs **Node's `URL`** with **jsdom's `Blob`**. Node's implementation looks for its
+own Blob internals; `jsdom` 30.0.1's Blob happened to carry the `Symbol(impl)` it could follow, and
+30.1.1's Blob carries no such symbol, so the call fails on the very Blob the environment produces.
 
-That is also why the repository is unaffected: the two test files that drive a download already stub the
-API, with the reason written down at the call site —
+Why the suite was affected at all: `src/tests/presetExportImportUi.test.tsx:68` and
+`src/tests/ografBrowserZip.test.tsx:97` already stub the API locally, with the reason written at the
+call site (`// jsdom lacks URL.createObjectURL — stub it for the export download flow`).
+`src/tests/firstExportFlow.test.tsx` — the OGraf package export path — did not, so
+`src/components/Header/HeaderBar.tsx:222` threw inside its `try`, the success toast never fired, and
+the test's `waitFor` timed out at line 143. **One test failed; the other 1,933 passed.**
 
-```ts
-// src/tests/presetExportImportUi.test.tsx:68
-// jsdom lacks URL.createObjectURL — stub it for the export download flow
-vi.stubGlobal('URL', { createObjectURL: vi.fn(() => 'blob:mock'), revokeObjectURL: vi.fn() });
-```
+### The other recorded claim does not reproduce
+`@asamuzakjp/dom-selector`'s capitalised attribute selectors were claimed to break in 8.3.2. Measured
+through jsdom's own `querySelectorAll` — the path eleven test files use — with a document carrying
+`aria-label="Enabled"`, `data-x="Enabled"` and `data-y="Inverted"`:
 
-and the same in `src/tests/ografBrowserZip.test.tsx:97`. In a real browser both objects come from one
-realm, and the real download path is proven in Chromium by `e2e/export-onboarding.spec.ts` and
-`e2e/ograf-editor-export.spec.ts`.
+| Selector | dom-selector 8.3.0 | 8.3.2 | 9.2.1 (what jsdom 30.1.1 resolves) |
+|---|---|---|---|
+| `[aria-label="Enabled"]` | 1 | 1 | **1** |
+| `[data-y="Inverted"]` | 1 | 1 | **1** |
+| `[aria-label="enabled"]` (wrong case, must not match) | 0 | 0 | **0** |
 
-### 1.2 "`@asamuzakjp/dom-selector` 8.3.2 stops matching capitalised attribute selectors" — does not reproduce
-
-Probe: a jsdom document with `aria-label="Enabled"`, `data-x="Enabled"` and `data-y="Inverted"`,
-queried through jsdom's own `querySelectorAll` — the path the suite uses
-(`src/tests/styleMatteSection.test.tsx` and ten other test files use this form).
-
-| Selector | dom-selector 8.3.0 | dom-selector 8.3.2 (what jsdom 30.1.1 resolves) |
-|---|---|---|
-| `[aria-label="Enabled"]` | 1 | **1** |
-| `[data-y="Inverted"]` | 1 | **1** |
-| `[data-x="Enabled"]` | 1 | **1** |
-| `[aria-label="enabled"]` (wrong case, must not match) | 0 | **0** |
-
-The case-sensitive behaviour is correct in 8.3.2. jsdom 30.1.1 resolves `@asamuzakjp/dom-selector` to
-8.3.2 in a clean tree, and that build matches capitalised attribute values.
+Case-sensitive matching is correct in every version, so the bump does not threaten those selectors.
 
 ## 2. Classification
 
 | Question | Answer |
 |---|---|
-| **A — product bug?** | **No.** The production code uses the platform API correctly, and the browser path is proven by two Playwright export specs. |
-| **B — test-environment mismatch?** | **Yes, for `createObjectURL`.** The vitest jsdom environment pairs Node's `URL` with the environment's `Blob`; jsdom implements neither. The repository already handles it by stubbing in the two tests that need it. |
-| **C — jsdom behaviour/regression?** | **Not demonstrated.** Both recorded claims fail to reproduce (above). Nothing in the two versions breaks `createObjectURL` differently or the selectors. |
-| **D — shim the browser API in tests?** | **Already done, in place.** A setup-level shim would centralise two per-test stubs and is a cleanup, not a requirement; the prompt's rule against adding fake browser behaviour to *production* code is respected either way. |
+| **A — product bug?** | **No.** The production code uses the platform API correctly; in a browser both `Blob` and `URL` come from one realm, and the real download path is proven by `e2e/export-onboarding.spec.ts`, `e2e/ograf-editor-export.spec.ts` and `e2e/ograf-phase2d-interoperability.spec.ts`. |
+| **B — test-environment mismatch?** | **Yes.** Node's `URL` receiving jsdom's `Blob` is the whole failure. |
+| **C — jsdom behaviour change?** | **Yes, as the trigger:** 30.1.1's Blob stopped exposing what the Node implementation needs. Not a defect in either project's contract — a pairing nothing guarantees. |
+| **D — shim the browser API in tests?** | **Yes, and that is the fix.** No fake browser behaviour was added to production code. |
 
-## 3. Verdict: **DEFERRED — on a corrected record, with a bounded verification needed to adopt it**
+## 3. Applied (branch `chore/jsdom-30-1`)
 
-- The bump is an **in-range minor** (`^30.0.1`), pinned back by the lockfile; the release is verified on
-  30.0.1, so nothing in the release depends on this decision.
-- The reasons previously recorded for deferring **do not hold**, so the honest state is "plausibly safe,
-  **unverified**": the only way to know is to install 30.1.1 and run the suite, the export smoke and the
-  state check under it — a bounded experiment, not a refactor.
-- **Recommended:** take it as its own small task (branch `chore/jsdom-30-1`): bump the one devDependency,
-  run `npm test`, `npm run lint`, `npm run build`, `npm run validate:ograf`, `npm run qa:release` and the
-  export Playwright spec, and fix only what actually fails. If it is green, the bump is a one-line
-  manifest change; if something fails, the failure — not a remembered one — decides the follow-up.
+| File | Change |
+|---|---|
+| `package.json` | `"jsdom": "^30.0.1"` → `"^30.1.1"` (one line; the only manifest change) |
+| `package-lock.json` | jsdom 30.0.1 → 30.1.1 and its own tree: `@asamuzakjp/dom-selector` 8.3.2 → 9.2.1, `@asamuzakjp/css-color` 6.0.7 → 7.0.1, `html-encoding-sniffer` 6.0.0 → 7.0.0, two entries removed. No unrelated package moved. |
+| `src/tests/setup.ts` | one definition of `URL.createObjectURL`/`revokeObjectURL` for the test environment, with the mechanism written down — the same place, and the same reasoning, as the existing download-link shim |
 
-## 4. State left behind
+`jsdom` 30.1.1 declares `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` — exactly the intersection
+this project already declares and CI already pins, so the bump is inside the supported toolchain.
 
-- `package.json` and `package-lock.json`: **untouched** (`jsdom` stays 30.0.1).
-- No test, source or setup file changed.
-- Probe artefacts live only in the system temp directory.
+## 4. Validation (with the bump and the shim in place)
+
+| Check | Result |
+|---|---|
+| `npm test` | PASS — 126 files / **1,934 tests** (the failing test now passes; no other change) |
+| `npm run lint` | clean |
+| `npm run build` (`tsc -b` + vite) | PASS |
+| `npx tsc -b --pretty false` | exit 0 |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium tests |
+| `npx playwright test e2e/export-onboarding.spec.ts` | PASS — 1 test (the real download path) |
+| `npx playwright test e2e/lottie-import-report.spec.ts e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests |
+| `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
+| `git diff --check` | clean |
+
+## 5. Self-review (read-only, same model)
+
+- **The shim is test-only and central.** It replaces an API the environment does not implement with the
+  one property the download helpers use (a stable object URL), and it lives next to the download-link
+  shim that exists for the same class of reason. The two tests that assert on their own object-URL calls
+  stub locally, which still overrides it.
+- **Determinism improved:** the suite no longer depends on the accident that jsdom's Blob matched Node's
+  internals, which is what made a jsdom patch silently change test behaviour.
+- **Blast radius of the manifest change:** one devDependency specifier plus its transitive tree. No
+  runtime dependency, script, engine, workflow or source file is touched.
+- **Not a product change:** no file under `src/` outside `src/tests/` is modified.
+
+## 6. Not changed
+
+- The `oxlint` deferral (H3) is untouched: the linter stays 1.74.0.
+- No release, tag, draft or npm action.

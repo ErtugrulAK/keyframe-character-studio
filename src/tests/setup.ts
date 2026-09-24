@@ -74,3 +74,23 @@ if (typeof HTMLAnchorElement !== 'undefined') {
     }
   };
 }
+
+/**
+ * jsdom implements neither `URL.createObjectURL` nor `URL.revokeObjectURL`. The
+ * environment therefore pairs **Node's** `URL` with the `Blob` jsdom provides, and
+ * whether that pairing works is an accident of jsdom's internals: `jsdom` 30.0.1's
+ * Blob carried the symbol the Node implementation looks for, and 30.1.1's does not,
+ * so `createObjectURL` throws `Cannot read properties of undefined (reading
+ * '_buffer')` on the very Blob this environment produces.
+ *
+ * The download helpers only build an anchor around the URL and click it, so a
+ * stable object URL is all a test needs — and one definition here keeps every
+ * download test independent of the jsdom version instead of each test depending on
+ * the pairing. Tests that assert on their own object-URL calls still stub the API
+ * locally, which overrides this.
+ */
+if (typeof URL !== 'undefined') {
+  let objectUrlCounter = 0;
+  URL.createObjectURL = () => `blob:kcs-test-${(objectUrlCounter += 1)}`;
+  URL.revokeObjectURL = () => undefined;
+}

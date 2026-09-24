@@ -17,90 +17,106 @@
 
 ## 1. OMP Final Response
 
-# KCS Post-Review Correctness Follow-Up — Final Response (the closing checkpoint)
+---
+
+# KCS Milestone H Release Readiness — Final Response (the closing checkpoint)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** the follow-up is complete and merged; the final correctness gate ran on clean `main` at `dcbf9f5`, and the record update followed at `64291bc` (`main == origin/main`).
-- **Report:** `reports/progress_141_astra_correctness_followup_summary.md` — the finding map, the scope boundaries, the residual observations and the gate.
-- **Findings:** H-01, H-02, H-03, H-04, H-05, H-06, M-01, M-02, M-03, M-04, M-05 — **all CLOSED**. None deferred, none blocked, none dropped.
+- **Status:** the release-readiness pass is complete. The audit ran, its one required fix is merged, both dependency decisions are recorded, and the final gate is green on clean `main` at `c1431db`.
+- **Gate verdict:** **RELEASE READY WITH DOCUMENTED DEFERRALS** — `reports/progress_146_final_release_gate.md`.
+- **Reports:** the audit (`progress_142_release_readiness_audit.md`), the fix (`progress_143_ci_typecheck_step.md`), the two triages (`progress_144_oxlint_1_85_triage.md`, `progress_145_jsdom_30_1_triage.md`), the gate (`progress_146_final_release_gate.md`) and this reconciliation (`progress_147_milestone_h_docs_handoff.md`).
+- **Nothing was released:** the tag, the draft prerelease, the package metadata and npm are untouched. The release decision is the one open item, and it is the user's.
 
 ## 2) HOW IT RAN
 
-One task per finding group, each on its own branch with its own validation, a read-only self-review by the same model, a report under `reports/`, and an approval-gated fast-forward merge. No rebase, no force push, no merge commit, no history rewrite, no release/tag/npm action.
+| Task | Work | Branch | Merged at |
+|---|---|---|---|
+| H1 | release-readiness audit — 7 findings, 1 of them required | `docs/milestone-h-audit` | `cc1ce8e` |
+| H2 | the required fix: the CI type-check step now checks the project | `chore/ci-typecheck-step` | `b4bf3c0` |
+| H3 | `oxlint` 1.85 triage → **deferred** | `docs/milestone-h-triage` | `cc1ce8e` |
+| H4 | `jsdom` 30.1.x triage → **taken**, with a test-only shim | `chore/jsdom-30-1` | `c1431db` |
+| H5 | the final release gate on clean merged `main` | — (read-only) | — |
+| H6 | live documents and this handoff reconciled | `docs/milestone-h-release-readiness` | awaiting the merge gate |
 
-| Task | Findings | Merged at |
-|---|---|---|
-| Phase 0 | Task 4 (`engines` + npm-12 `allowScripts`) | `1a12d79` |
-| A | H-01 | `0c19751` |
-| B | H-03, H-04, M-03 | `fc672f2` |
-| C | M-01, M-02, H-05 | `85c3929` |
-| D | H-02 | `ac3bda1` |
-| E | H-06 | `352d272` |
-| F | M-04 | `16e1610` |
-| G | M-05 | `2b0bba0` |
-| CI fix | the Task G shallow-checkout regression | `dcbf9f5` |
+No rebase, no force push, no merge commit, no history rewrite. Every package/lockfile change and every
+merge had explicit approval.
 
-## 3) THE FINAL GATE (clean `main` at `dcbf9f5`, after the CI fix)
+## 3) THE GATE (clean `main` at `c1431db`)
 
 | Check | Result |
 |---|---|
 | `npm run build` (`tsc -b` + vite) | PASS |
-| `npx tsc --noEmit` | exits 0 — and checks no project file (see §5); `tsc -b` covers 151 |
+| `npx tsc -b --pretty false` | exit 0 — 151 project files |
 | `npm test` | PASS — 126 files / 1,934 tests |
-| Focused regression suites from Tasks A–G | PASS — 389 tests across 10 files |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `dcbf9f5` |
-| `e2e/lottie-import-report.spec.ts` + `e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests |
-| `perf` harness | PASS — every scene verified before timing |
+| `npm run qa:release` | PASS — 2 Chromium tests, candidate `c1431db` |
+| export, Lottie and matte browser specs | PASS — 8 tests |
+| `npm run qa:v6` | PASS — 3 tests |
+| `npm run check` | PASS |
 | `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
 | `npm audit` | 0 vulnerabilities |
-| `git diff --check` | clean |
+| API health + `sqlite3` binding on this machine | 200 `online` / in-memory table created |
+| `git diff --check` and the working tree | clean |
 
-CI on `main` is green at `64291bc` (run `35880658380`).
+CI on `main` is green at `c1431db` (run `35988804952`, Node 22 with `npm ci`).
 
-## 4) SCOPE BOUNDARIES, STATED NOT HIDDEN
+## 4) THE AUDIT'S ONE REQUIRED FINDING, AND HOW IT WAS CLOSED
 
-- **H-02 with an image matte source** follows the editor authority (the image's luminance), which its own browser spec pins.
-- **H-06 added no authentication:** the product is local and does not claim a shared deployment, so the exposure is removed by binding loopback and the documentation says the API has no authentication and that CORS is not access control.
-- **H-04 leaves `SceneLayer.visible` alone:** it is the document's layer visibility, not the editor's mute, and changing it changes what an exported graphic renders.
-- **M-03 leaves the legacy project-template registry out of the scene history:** it belongs to the template manager, and a modern scene import is fully covered.
+The CI step named "TypeScript Type Check" ran `npx tsc --noEmit`. The root `tsconfig.json` is a solution
+file, so that command builds no referenced project and checked **no project file**: a broken type could
+have merged behind a green tick. The step and the `check` script now run `npx tsc -b --pretty false`,
+which checks all 151 project files, committed at `b4bf3c0`.
 
-## 5) RESIDUAL OBSERVATIONS (need their own decision)
+## 5) DECISIONS AND DEFERRALS
 
-`npx tsc --noEmit` checks zero project files (the root `tsconfig.json` is a solution file), so the CI step named "TypeScript Type Check" verifies nothing — `npm run build` is the real gate. Also recorded: the constant `SceneLayer.visible`, unrestricted CORS, the tracked SQLite file in git, `vite --host` publishing the dev frontend, the missing focus restoration on two dialogs, and one unreproduced full-suite failure during Task B. Each is listed with its evidence in `reports/progress_141_…` §4.
+- **Option C** (`typescript` 6→7, `vitest` + `@vitest/coverage-v8` 4→5): **deferred by decision.** The configuration surface is vanilla and the peer engines are satisfied, but the breakage surface cannot be measured without installing the majors, and the current toolchain is clean.
+- **`oxlint` 1.85:** **deferred.** 34 new warnings, 31 of which flag patterns this codebase uses deliberately (the documented latest-ref mirror, and synchronisation effects the rule's own guidance allows); the three genuine ones would not make the run clean.
+- **`jsdom` 30.1.x:** **closed.** The bump is taken at `c1431db`. jsdom implements neither `createObjectURL` nor `revokeObjectURL`, so the test environment pairs Node's `URL` with jsdom's `Blob`, and 30.1.1's Blob no longer carries what that implementation follows; one test was affected and the test environment now defines the two functions itself.
+- **Carried follow-ups that need their own task:** unrestricted CORS, the tracked `server/db/keyframe_studio.sqlite`, and focus restoration for two dialogs. **Accepted and documented:** the constant `SceneLayer.visible` and `vite --host` publishing the dev frontend.
+- **Stated limits of the gate:** CI runs no browser test (the 2-spec `release-smoke.yml` is manual), CI is `ubuntu-latest` only so this run is the Windows evidence, and `qa:release` is the only automated package round-trip.
 
 ## 6) RELEASE VIEW
 
-The tag, draft prerelease and package metadata are unchanged (`v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the package stays private at `1.1.0-rc.1`, nothing published). The review's release blockers are closed. What remains is a human decision, not a fix: **Milestone H — release finalization**, being the approval-gated Option C majors, the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), and any publish/finalize instruction. **Option C stays deferred and is not a blocker:** the current toolchain builds, tests and lints cleanly.
+The tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is
+still a draft, the package is private at `1.1.0-rc.1`, and npm publication did not occur. What remains is
+a decision, not a fix: finalize the draft, re-tag at a newer `main`, or hold. The repository states no
+default for that, and this pass took none.
 
 ---
 
 ## 2. Handoff Manifest
 
-# KCS ChatGPT Upload Manifest — final live-state reconciliation
+---
+
+# KCS ChatGPT Upload Manifest — Milestone H release readiness
 
 Clean refreshed: YES
-Bundle purpose: the completed post-review correctness follow-up, its final gate, and the live documents reconciled to the repository truth
+Bundle purpose: the Milestone H release-readiness pass — the audit, its one required fix, the two dependency decisions, the final gate on clean main, and the live documents reconciled to the repository truth
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: main at 64291bc (== origin/main); the follow-up, its CI fix and the reconciliation are merged and pushed
-Task record: reports/progress_141_astra_correctness_followup_summary.md
-Phase 0: Task 4 (engines + npm-12 allowScripts) MERGED at 1a12d79 — no live text says its merge decision is pending; package.json/package-lock.json were not modified by this reconciliation
-Findings closed: H-01 (0c19751), H-03/H-04/M-03 (fc672f2), M-01/M-02/H-05 (85c3929), H-02 (ac3bda1), H-06 (352d272), M-04 (16e1610), M-05 (2b0bba0) — 11/11, none deferred, none blocked
-Milestone G: COMPLETE. The Task G merge turned main red for one push (the new live-revision rule used `git merge-base --is-ancestor`, which cannot resolve the older commits in CI's depth-1 checkout); the fix is dcbf9f5, verified in a real shallow clone
-Final gate on clean main at dcbf9f5, re-run after that fix: npm run build PASS; npx tsc --noEmit exits 0 and checks zero project files (the root tsconfig is a solution file, so npm run build / tsc -b is the real type gate, 151 files); npm test PASS (126 files / 1,934 tests); focused regression suites PASS (389 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate dcbf9f5); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
-CI: main is green at 64291bc (run 35880658380)
-Milestone H: NEXT. Option C (typescript 6→7, vitest + @vitest/coverage-v8 4→5) is deferred and NOT a release blocker; deferred minors are oxlint 1.85 and jsdom 30.1.x; every package/lockfile/workflow change and every release/tag/npm action is approval-gated
+Branch: main at c1431db (== origin/main); the audit, the CI fix, the triages and the jsdom bump are merged and pushed
+Task record: reports/progress_142_release_readiness_audit.md ... reports/progress_147_milestone_h_docs_handoff.md
+H1 audit: 7 items, 1 REQUIRED (the CI type-check step checked no project file); 5 accepted/recorded, the required one fixed. reports/progress_142_release_readiness_audit.md
+H2 fix: MERGED at b4bf3c0 (chore/ci-typecheck-step) — .github/workflows/ci.yml and the check script now run npx tsc -b --pretty false, which checks 151 project files instead of none. reports/progress_143_ci_typecheck_step.md
+H3 oxlint 1.85: DEFERRED. 34 new warnings, 31 flagging patterns this codebase uses deliberately; the three genuine ones would not make the run clean. reports/progress_144_oxlint_1_85_triage.md
+H4 jsdom 30.1.x: TAKEN at c1431db (chore/jsdom-30-1). jsdom implements neither createObjectURL nor revokeObjectURL, so the environment pairs Node's URL with jsdom's Blob, and 30.1.1's Blob no longer carries what that implementation follows; one test was affected and src/tests/setup.ts now defines the two functions. reports/progress_145_jsdom_30_1_triage.md
+Option C (typescript 6→7, vitest + @vitest/coverage-v8 4→5): DEFERRED BY DECISION, not a release blocker
+Final gate on clean main at c1431db: npm run build PASS; npx tsc -b --pretty false exit 0 (151 files); npm test PASS (126 files / 1,934 tests); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate c1431db, 2 Chromium tests); e2e/export-onboarding + e2e/lottie-import-report + e2e/ograf-matte-visual PASS (8 tests); npm run qa:v6 PASS (3 tests); npm run check PASS; state check PASS (35 checks); npm audit 0; git diff --check clean; API health 200 (sqlite) and the sqlite3 in-memory binding on this Windows machine. reports/progress_146_final_release_gate.md
+Gate verdict: RELEASE READY WITH DOCUMENTED DEFERRALS
+CI: main is green at c1431db (run 35988804952, Node 22 with npm ci)
+Gate limits stated, not hidden: CI runs no browser test (the 2-spec release-smoke.yml is manual); CI is ubuntu-latest only, so the Windows run above is the local evidence; qa:release is the only automated package round-trip
+Carried follow-ups (need their own task): unrestricted CORS; the tracked server/db/keyframe_studio.sqlite; focus restoration on two dialogs
+Accepted and documented: constant SceneLayer.visible; vite --host publishing the dev frontend; one unreproduced full-suite failure during an earlier task
+H6: live documents reconciled on docs/milestone-h-release-readiness (awaiting the fast-forward merge gate). reports/progress_147_milestone_h_docs_handoff.md
+Milestone H: NEXT — the audit, the fixes and the gate are complete; what remains is the release decision (finalize the draft, re-tag at a newer main, or hold), under explicit user instruction. reports/README.md still stops at progress_129 for 130+, recorded as a separate task, not changed here
 Release state: tag v1.1.0-rc.1 target unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub draft prerelease unchanged; package private at 1.1.0-rc.1; npm publish NO
-Scope boundaries stated, not hidden: H-02 with an image matte source follows the editor authority; H-06 added no authentication (loopback bind plus documentation instead); H-04 leaves SceneLayer.visible alone; M-03 leaves the legacy project-template registry out of the scene history
-Residual observations (need their own decision): npx tsc --noEmit verifies nothing in CI; constant SceneLayer.visible; unrestricted CORS; the tracked SQLite file; vite --host publishing the dev frontend; missing focus restoration on two dialogs; one unreproduced full-suite failure during Task B
 Tag/release/npm changed: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_141_astra_correctness_followup_summary.md
+Copied files (12): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_142_release_readiness_audit.md, progress_143_ci_typecheck_step.md, progress_144_oxlint_1_85_triage.md, progress_145_jsdom_30_1_triage.md, progress_146_final_release_gate.md, progress_147_milestone_h_docs_handoff.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
@@ -111,41 +127,42 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ## 3. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — final live-state reconciliation
+---
+
+# KCS Minimal ChatGPT Upload Bundle — Milestone H release readiness
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this checkpoint.
 
 ## What this bundle covers
 
-The post-review correctness follow-up, complete and merged into `main`, with the live documents and
-this handoff reconciled to the repository truth (`main == origin/main == 64291bc`):
+The Milestone H release-readiness pass, complete through its final gate, with the live documents and
+this handoff reconciled to the repository truth (`main == origin/main == c1431db`):
 
-- Every release-blocking finding from the full-project review is closed — **H-01…H-06 and M-01…M-05** —
-  one task per finding group, each on its own branch with its own validation, a read-only self-review
-  and an approval-gated fast-forward merge. Phase 0 closed Task 4 (`engines` + npm-12 `allowScripts`)
-  at `1a12d79`. The finding map is in `progress_141_astra_correctness_followup_summary.md`.
-- The Task G merge turned `main` red for one push: the new live-revision rule compared an "at or after"
-  claim with `git merge-base --is-ancestor`, and CI's `--depth 1` checkout does not carry the older
-  commits. The fix at `dcbf9f5` reports that limit as skipped, exactly as the tag and milestone checks
-  already do, and keeps failing when a *full* checkout cannot resolve the commit at all.
-- The final correctness gate ran on clean `main` at `dcbf9f5`: build, the full suite (126 files /
-  1,934 tests), the focused regression suites from every task (389 tests), lint, `validate:ograf`,
-  `qa:release`, the two browser specs (7 tests), the profiling harness, the state check (35 checks),
-  `npm audit` (0) and `git diff --check` — all green. CI on `main` is green at `64291bc`
-  (run `35880658380`).
-- The summary also records the scope boundaries that were stated rather than hidden (the image matte
-  source, the decision not to invent an authentication system, `SceneLayer.visible`, the legacy
-  template registry) and the residual observations that need their own decision (the type-check step
-  that verifies nothing, unrestricted CORS, the tracked SQLite file, and the rest).
-- The release tag, draft prerelease and package metadata are unchanged. **Milestone H — release
-  finalization** is NEXT: the approval-gated Option C majors, the two deferred minor bumps
-  (`oxlint` 1.85, `jsdom` 30.1.x), and any publish/finalize instruction. Option C stays deferred and
-  is **not** a blocker.
+- **The audit** (`progress_142_release_readiness_audit.md`) found 7 items, **one of them required**: the
+  CI step named "TypeScript Type Check" ran `npx tsc --noEmit`, which builds no referenced project and
+  so checked no project file — a broken type could have merged behind a green tick.
+- **The fix** (`progress_143_ci_typecheck_step.md`) is merged at `b4bf3c0`: the CI step and the `check`
+  script now run `npx tsc -b --pretty false`, which checks all 151 project files.
+- **Two dependency decisions.** `oxlint` 1.85 is **deferred** (`progress_144_oxlint_1_85_triage.md`: 34
+  new warnings, 31 flagging deliberate patterns). `jsdom` 30.1.x is **taken** at `c1431db`
+  (`progress_145_jsdom_30_1_triage.md`: jsdom implements neither object-URL function, so the test
+  environment now defines them itself instead of depending on which Blob shape a jsdom patch ships).
+  Option C (TypeScript 6→7, Vitest 4→5) is **deferred by decision** and is not a blocker.
+- **The final gate** (`progress_146_final_release_gate.md`) ran on clean `main` at `c1431db` and reports
+  **RELEASE READY WITH DOCUMENTED DEFERRALS**: build, type check, 126 files / 1,934 tests, lint,
+  `validate:ograf`, `qa:release` (2 Chromium), the export/Lottie/matte browser specs (8), `qa:v6` (3),
+  `npm run check`, the state check (35), `npm audit` (0), `git diff --check`, plus the API health and the
+  `sqlite3` binding on the Windows machine. CI on `main` is green at `c1431db` (run `35988804952`).
+- **This reconciliation** (`progress_147_milestone_h_docs_handoff.md`) moved the live documents to the new
+  baseline and rewrote the handoff.
+- **No release artefact moved.** `v1.1.0-rc.1` still points at `46d2a3e`, the GitHub release is still a
+  draft, the package is private at `1.1.0-rc.1`, and nothing was published. Finalizing, re-tagging or
+  holding is the user's decision.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this checkpoint
-- `progress_141_astra_correctness_followup_summary.md` — the finding map, the gate and the observations
+- `progress_142_release_readiness_audit.md` … `progress_147_milestone_h_docs_handoff.md` — this task's records
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap, with milestones A–G complete and H as NEXT
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
@@ -176,111 +193,548 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ## 4. Task Record
 
-# Progress 141 — the post-review correctness follow-up: final summary
+---
 
-Branch: `docs/final-correctness-gate` (base `main` at `2b0bba0`; merged and pushed through `64291bc`, the final live-state reconciliation).
-Scope: every finding from the full-project review, closed one task at a time, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge.
+# Progress 142 — H1 release readiness audit (read-only)
 
-## 1. Finding map
+Milestone H, task H1. **No repository change was made by this audit**; this report is its deliverable.
+Audited at `main == origin/main == a9c78e7`, newest `main` CI run `35977973099` (success), working tree
+clean, `npm audit` 0 vulnerabilities, `node scripts/check-state-consistency.mjs` PASS.
 
-| Finding | Status | Task | Branch | Merged at | Report |
-|---|---|---|---|---|---|
-| **H-01** — a blocking dialog left the editor's global commands live | **CLOSED** | A | `fix/modal-shortcut-isolation` | `0c19751` | `reports/progress_134_modal_shortcut_isolation.md` |
-| **H-02** — the OGraf inverted alpha matte did not invert alpha | **CLOSED** | D | `fix/ograf-inverse-alpha-matte` | `ac3bda1` | `reports/progress_137_ograf_inverse_alpha_matte.md` |
-| **H-03** — the import boundary accepted malformed values | **CLOSED** | B | `fix/import-serialization-transaction-integrity` | `fc672f2` | `reports/progress_135_import_serialization_integrity.md` |
-| **H-04** — save/load lost persistent authoring state | **CLOSED** | B | `fix/import-serialization-transaction-integrity` | `fc672f2` | `reports/progress_135_import_serialization_integrity.md` |
-| **H-05** — multiple geometry in one Lottie layer was silently overwritten | **CLOSED** | C | `fix/lottie-structure-correctness` | `85c3929` | `reports/progress_136_lottie_structure_correctness.md` |
-| **H-06** — the writable API was exposed on every interface without authentication | **CLOSED** | E | `fix/api-network-trust-boundary` | `352d272` | `reports/progress_138_api_trust_boundary.md` |
-| **M-01** — a Lottie parent resolved by array offset instead of `ind` | **CLOSED** | C | `fix/lottie-structure-correctness` | `85c3929` | `reports/progress_136_lottie_structure_correctness.md` |
-| **M-02** — a static child skipped its parent transform | **CLOSED** | C | `fix/lottie-structure-correctness` | `85c3929` | `reports/progress_136_lottie_structure_correctness.md` |
-| **M-03** — import undo did not restore the whole document | **CLOSED** | B | `fix/import-serialization-transaction-integrity` | `fc672f2` | `reports/progress_135_import_serialization_integrity.md` |
-| **M-04** — the profile harness did not build the workload it measured | **CLOSED** | F | `fix/evaluator-profile-fixtures` | `16e1610` | `reports/progress_139_evaluator_profile_fixture_fix.md` |
-| **M-05** — live documents could contradict each other while the check passed | **CLOSED** | G | `fix/state-consistency-live-docs` | `2b0bba0` | `reports/progress_140_state_consistency_live_docs.md` |
+## 1. Current truth
 
-**No finding is deferred, blocked or silently dropped.** Two were closed with a scope boundary stated in their own report and repeated below (§3): H-02's image-source behaviour follows the editor authority, and H-06 added no authentication.
+| Fact | Value |
+|---|---|
+| `main` / `origin/main` | `a9c78e78b863cc04931a9979bb33d43e63f8048c` (equal) |
+| Newest `main` CI | `35977973099` — success (1m48s) |
+| Milestones | A–G **COMPLETE**; H (release finalization) **NEXT** |
+| Review findings | 11/11 CLOSED (H-01…H-06, M-01…M-05) |
+| Task 4 (`engines` + npm-12 `allowScripts`) | MERGED at `1a12d79` |
+| Final correctness gate | re-run after the shallow-checkout fix `dcbf9f5` |
+| Full suite | 126 files / 1,934 tests |
+| Focused A–G regression suites | 389 tests / 10 files |
 
-## 2. What each fix is, in one line
+## 2. Release artefacts
 
-- **H-01.** The global shortcut handler reads the dialogs' own `aria-modal` contract and returns before any command; `NewItemModal` declares the contract it was missing and owns `Escape` at the dialog level.
-- **H-02.** An inverted matte is a **luminance** mask with a white backdrop and the source painted black (the technique the editor documents) instead of an alpha mask whose black source stayed opaque; the inverted luminance branch had the same defect and both modes now share one construction. The generated runtime mirrors it.
-- **H-03.** A semantic pass at the boundary refuses a scene version this build does not know, a non-positive frame rate or timeline, a canvas size that is not positive, a non-text `textValue`, a layer without a usable id or z-order, duplicate layer ids, a path the geometry builder cannot walk, a mask without a path, a channel that is not a keyframe list and a keyframe value that is not finite — each with a stable code and the offending path, before any state is touched.
-- **H-04.** A track's `visible`, `editVisible` and `locked` flags and its sequence link are written on export and read back on import, with the documented defaults for older files.
-- **H-05.** A layer carrying more than one geometry item is reported instead of silently keeping the last one.
-- **H-06.** The API binds `127.0.0.1` by default; a wider interface is an explicit opt-in (`KCS_API_HOST`) and the server warns with what it published and how to undo it.
-- **M-01.** Parents resolve through an `ind` map after the layer loop, so order no longer matters; a missing index, a self-reference and a duplicated index are reported, and the depth walk is cycle-safe.
-- **M-02.** The hierarchy is resolved for every layer; only the keyframe evaluation is skipped.
-- **M-03.** The history snapshot carries the document-level state, so one undo restores the whole document.
-- **M-04.** The scenes carry real `baseTransform` and real masks, and the harness verifies the built scene before anything is timed.
-- **M-05.** `LIVE_DOCUMENTS` is the checker's authority, with rules for the checkout, the `main` revision and the release tag, and the stale live documents reconciled.
+| Artefact | State |
+|---|---|
+| `v1.1.0-rc.1` | **annotated tag** (object `81d5149`), target commit `46d2a3e59e065816d972dcd56951803951b577f6` — unchanged |
+| `v1.1.0-public-controls` | annotated tag → `0a71bd8` — unchanged |
+| GitHub release | `v1.1.0-rc.1 — Public Controls / OGraf hardening release candidate`, **Draft**, created 2026-09-15, unchanged |
+| `package.json` | `private: true`, `version: 1.1.0-rc.1` — not published to npm |
+| npm publish | **NO** |
 
-## 3. Scope boundaries that were stated, not hidden
+The tag target is 40 commits behind `main` by design: `main` carries documentation and follow-up work
+after the workflow-tested candidate. Nothing in this milestone moves either tag.
 
-- **H-02, image matte sources.** An image cannot be repainted, so the luminance mask reads the image's own luminance — which is exactly what the editor does for an inverted image matte, and its spec pins that structure. A true inverse of an image's *alpha* would need a filter chain the editor does not use either.
-- **H-06, authentication.** None was added: the product does not claim a shared deployment, and inventing an auth architecture is a decision of its own. The exposure is removed by binding loopback, and the documentation says plainly that the API has no authentication and that CORS is not access control.
-- **H-04, `SceneLayer.visible`.** Written as a constant and read by the OGraf evaluation; it is the *document's* layer visibility, not the editor's per-track mute. Mapping the mute onto it changes what an exported package renders — a separate product decision.
-- **M-03, the legacy project-template registry.** A legacy (non-scene) import also registers a project tab, which belongs to the template manager rather than the scene document. A modern scene import — the normal path — is fully covered.
+## 3. Toolchain and install policy
 
-## 4. Residual observations (recorded, deliberately not changed)
+| Item | Value |
+|---|---|
+| `engines.node` | `^22.22.2 \|\| ^24.15.0 \|\| >=26.0.0` (the locked toolchain's supported intersection) |
+| CI Node | `22` on `ubuntu-latest` |
+| Local Node / npm | `v24.18.0` / **npm 12.0.2** |
+| `allowScripts` | `{"sqlite3@6.0.1": true}` — a version-pinned approval for npm 12 |
+| `npm install-scripts ls` | `{"allowScripts": []}` — nothing blocked or pending |
+| `sqlite3` binding | **OK** — a fresh `require` opens an in-memory database and creates a table |
 
-These are not review findings; they were found while closing the ones above, and each needs its own decision.
+The npm-12 policy is doing what it was added for: the local npm is 12, the install script is approved
+by exact version, and the native binding loads.
 
-| Observation | Evidence | Why it is not changed here |
+## 4. What the gates actually cover
+
+| Gate | Runs | Covers |
 |---|---|---|
-| `npx tsc --noEmit` checks **zero** project files | `tsc -b --listFiles` reports 151 source files; `npx tsc --noEmit --listFiles` reports none (the root `tsconfig.json` is a solution file with `files: []`) | The CI workflow and the documented validation steps are outside every finding's scope; the real gate is `npm run build` (`tsc -b`), which is what this run used |
-| `SceneLayer.visible` is a constant `true` | `toSceneData` writes `visible: true`; the OGraf evaluation reads it | Changing it changes what an exported graphic renders |
-| CORS is unrestricted and is not access control | `cors()` with no allowlist; `docs/API.md` now says so | Narrowing it changes behaviour for any other frontend origin; the finding was about network exposure |
-| `server/db/keyframe_studio.sqlite` is **tracked** in git | `git ls-files server/db/` lists it | Repository hygiene outside the findings; it is also why the API trust test is a unit test plus a recorded run rather than a process-level test |
-| `vite --host` publishes the frontend dev server | `package.json` `dev` script | A deliberate dev convenience for a static editor with no server-side data, and not the writable API |
-| Focus is not restored when the import report or the confirmation dialog closes | Those two dialogs have no previous-focus capture (the bezier editor does) | An accessibility change beyond H-01's command-isolation scope; recorded in `reports/progress_134_…` §6 |
-| One full-suite run in Task B reported a single failure that never reproduced | Six further full runs, ten runs of the new integration case and six runs of the state-check suite are clean | No failure name was captured before the output was trimmed; recorded in `reports/progress_135_…` §6 |
+| `.github/workflows/ci.yml` (push to `main`, PRs, manual) | `npm ci`, `validate:ograf`, `npm run lint`, `npx tsc --noEmit`, `npm test`, `npm run build` | unit/integration tests, lint, the production build, the OGraf fixture gate |
+| `.github/workflows/release-smoke.yml` (manual, needs a full candidate SHA) | verifies the resolved checkout, Node 22, `npm ci`, installs Chromium, `npm run qa:release` | the OGraf import/export/runtime smoke in a real browser |
+| `npm run qa:release` | 2 Chromium specs: `e2e/ograf-phase2d-interoperability`, `e2e/ograf-editor-export` | OGraf package round-trip and editor export |
+| On demand only | `e2e/*.spec.ts` (38 files), `perf` harness, `qa:v6` | Lottie import report, matte pixels, canvas/timeline interaction, profiling |
 
-## 5. The final gate (clean `main` at `dcbf9f5`, after the CI fix in §7)
+**Coverage gaps found:**
+
+1. **CI runs no browser test at all.** Every E2E spec — including the Lottie import report and the
+   OGraf matte pixel proof added in this follow-up — runs only when someone invokes Playwright. The
+   single automated browser gate is the *manual* `release-smoke.yml`, and it runs two of the 38 specs.
+2. **No Windows job.** CI is Linux-only (`ubuntu-latest`) while the project is developed on Windows;
+   the `engines` range and `.gitattributes` line-ending work are the only guards for that platform.
+   Node 24 is covered by the declared range but never executed in CI.
+3. **`npx tsc --noEmit` in CI checks no project file** (see §5.1), so the type gate is effectively the
+   `npm run build` step that follows it.
+
+## 5. The residual observations, classified
+
+### 5.1 `npx tsc --noEmit` checks zero project files — **SHOULD FIX BEFORE RELEASE**
+The CI step named "Run TypeScript Type Check" runs `npx tsc --noEmit`, and the root `tsconfig.json` is
+a solution file (`files: []` with references), which that command does not build: `tsc -b --listFiles`
+reports 151 source files, `npx tsc --noEmit --listFiles` reports none. **Type coverage is not lost** —
+`npm run build` runs `tsc -b` in the same job, so a type error still fails CI — but the step as written
+verifies nothing and its green tick is misleading in exactly the evidence a release audit reads. The
+fix is a one-line workflow change (`npx tsc -b --pretty false`), which is a workflow edit and therefore
+needs approval rather than being applied by this audit.
+
+### 5.2 `SceneLayer.visible` is a constant `true` — **ACCEPTED-DOCUMENTED**
+`toSceneData` writes `visible: true` for every layer, and the OGraf evaluation reads it. The editor's
+two mutes are different controls: `editVisible` is a canvas-only authoring aid, and `visible` is the
+"Broadcast Live Eye" that drives live-director playback — neither is a statement that the layer is
+absent from the graphic. The exported document's layer visibility is therefore its own flag, and no
+specification says an export must honour the live mute. Recorded as a product question, not a defect.
+
+### 5.3 Unrestricted CORS — **DEFERRED FOLLOW-UP**
+`cors()` allows any origin. H-06 closed the *network* exposure by binding loopback by default, and
+`docs/API.md` now states that CORS is not access control. The residual vector — a page in a browser on
+this machine reaching the loopback API — needs a product decision (an origin allowlist changes
+behaviour for any other frontend origin), and the editor itself never calls the API.
+
+### 5.4 `server/db/keyframe_studio.sqlite` is tracked in git — **DEFERRED FOLLOW-UP**
+A binary database is part of the repository, so a clone starts from whatever state it holds. It is
+outside every release artefact (the package is private and the OGraf exports do not include it), and
+removing it needs approval plus an ignore rule.
+
+### 5.5 `vite --host` publishes the dev frontend — **ACCEPTED-DOCUMENTED**
+The `dev` script exposes the Vite dev server on the network. It serves a static editor with no data and
+is not the API; it is a deliberate development convenience.
+
+### 5.6 No focus restoration when two dialogs close — **DEFERRED FOLLOW-UP**
+`ImportReportDialog` and `ConfirmationDialog` do not restore focus to the control that opened them
+(only the cubic-bezier editor captures and restores it). An accessibility improvement that was recorded
+in Task A and needs its own task; no functional impact.
+
+### 5.7 One unreproduced suite failure during Task B — **ACCEPTED-DOCUMENTED (monitored)**
+One full-suite run reported a single failure whose name was lost to a truncated tail; six further full
+runs, ten runs of the new integration case and six runs of the state-check suite are clean. No defect
+is evidenced. If it recurs, the failure name must be captured before the output is trimmed.
+
+## 6. Verdict
+
+**READY WITH REQUIRED FIXES** — one required item, and it is a clarity fix rather than a product risk:
+
+| # | Item | Why it is required | Type |
+|---|---|---|---|
+| 1 | The CI "TypeScript Type Check" step verifies nothing | The release evidence contains a green tick that means nothing; the real type gate is the build step | Workflow edit (needs approval) |
+
+**There is no product-correctness or security blocker.** The toolchain installs and runs, the native
+binding loads, the OGraf fixture gate and the release smoke pass, the full suite is green, and every
+severity-1 finding from the full-project review is closed. H2 may proceed.
+
+The three coverage gaps in §4 are stated so they are not mistaken for coverage: no browser test in CI,
+no Windows job, and a manual-only release smoke. They are not required fixes for this release; they are
+what the release is *not* proven by.
+
+---
+
+# Progress 143 — the CI type-check step (H1's required fix)
+
+Branch: `chore/ci-typecheck-step` (base `main` at `951bbf5`).
+Origin: the one required item from `reports/progress_142_release_readiness_audit.md` §5.1, approved by the user.
+
+## 1. What was wrong
+
+`.github/workflows/ci.yml` carried a step named **"Run TypeScript Type Check"** that ran
+`npx tsc --noEmit`. The root `tsconfig.json` is a solution file (`files: []` with two project
+references), and `--noEmit` does not build references, so that command type-checks **no project file**:
+
+```
+npx tsc -b --listFiles        → 151 files under src/
+npx tsc --noEmit --listFiles  → 0
+```
+
+Type coverage was never lost — the step below it, `npm run build`, runs `tsc -b` and would fail on a
+type error — but the release evidence contained a green tick that meant nothing, and `package.json`'s
+`check` script had the same flaw.
+
+## 2. Applied
+
+| File | Before | After |
+|---|---|---|
+| `.github/workflows/ci.yml` | `run: npx tsc --noEmit` | `run: npx tsc -b --pretty false` |
+| `package.json` (`check` script) | `npm run lint && npx tsc --noEmit && …` | `npm run lint && npx tsc -b --pretty false && …` |
+
+No dependency, version or lockfile change: `package-lock.json` is untouched, and the only manifest edit
+is one script string.
+
+## 3. Evidence
 
 | Check | Result |
 |---|---|
-| `git pull --ff-only origin main` | up to date; `main == origin/main == dcbf9f5` at the gate, `64291bc` after the record update |
-| `npm run build` (`tsc -b` + vite) | PASS |
-| `npx tsc --noEmit` | exits 0 — and checks no project file (see §4); `tsc -b` covers 151 |
+| The new command actually checks the project | `npx tsc -b --listFiles` → **151** files under `src/` |
+| The new command passes | `npx tsc -b --pretty false` → exit 0 |
+| The old command, for contrast | `npx tsc --noEmit --listFiles` → **0** files |
+| The changed script end to end | `npm run check` (lint → `tsc -b` → test → build) → PASS |
 | `npm test` | PASS — 126 files / 1,934 tests |
-| Focused regression suites from Tasks A–G (10 files) | PASS — 389 tests |
+| `npm run build` | PASS |
 | `npm run lint` | clean |
 | `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `dcbf9f5` |
-| `npx playwright test e2e/lottie-import-report.spec.ts e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests (3 + 4) |
-| `npx vitest run --config perf/vitest.perf.config.ts` | PASS — the harness verifies every scene before timing |
 | `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
-| `npm audit` | 0 vulnerabilities |
 | `git diff --check` | clean |
 
-Every one of these ran on the merged `main`, not on a branch.
+## 4. Self-review (read-only, same model)
 
-## 6. Release view
+- **The CI job's outcome cannot change for the worse.** `tsc -b` is what `npm run build` already runs
+  in the same job, so a type error that fails the new step already failed the build step; the step now
+  reports what it claims.
+- **`tsc -b` writes build info** to `node_modules/.tmp/` (the path the tsconfigs already declare) and
+  emits nothing else (`noEmit: true` in both projects), so it leaves no artefact in the tree.
+- **`--pretty false`** keeps CI logs free of terminal colour codes.
+- **One string in `package.json`** and one line in the workflow: no other script, dependency, engine
+  or lockfile entry is touched.
 
-- The release **tag, draft prerelease and package metadata are unchanged**: `v1.1.0-rc.1` still points at the workflow-tested candidate `46d2a3e59e065816d972dcd56951803951b577f6`, the package stays private at `1.1.0-rc.1`, and nothing was published.
-- **The review's release blockers are closed.** The remaining release work is the human decision the repository already defers: the approval-gated **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), plus any publish/finalize instruction.
-- **Option C is still deferred**, and it is not a blocker: the current toolchain builds, tests and lints cleanly.
-- The findings that were about *user-visible correctness* (H-01, H-02, H-03, H-04, M-01, M-02, M-03) each carry a reproduction that fails before their fix and passes after it, at the level a user observes — a deleted layer, a matte pixel, a refused import, a restored document, a placed child.
+## 5. Not changed
 
-## 7. How this run behaved
+- No dependency version, `engines` range, `allowScripts` entry or lockfile content.
+- No test, source or `src/` file.
+- No tag, release, draft or npm action.
 
-- One branch per task, each fast-forward merged only after the user approved the merge gate; no rebase, no force push, no merge commit, no history rewrite.
-- Every task carried a read-only self-review by the same model and a report under `reports/`.
-- The handoff bundle was rebuilt after every merged task, and the one-file regenerated from scratch.
-- **Two working-tree accidents were recorded rather than hidden.** The Task A changelog edit landed after the state check had run, which turned `main` red for one push; a docs-only commit (`1291bb8`) fixed it before the next task started, and the Task B branch was recreated on top of it.
-- **The Task G merge turned `main` red for one push, and the cause was a real gap in the new rule.** The live-revision check compared an "at or after" claim with `git merge-base --is-ancestor`, but CI checks out with `--depth 1`, so the older commits are not fetched and every such claim failed there while passing locally. The fix (`dcbf9f5`) reports that limit as skipped, exactly as the tag and milestone checks already did, and keeps failing when a *full* checkout cannot resolve the commit at all.
-  - Reproduced faithfully: in a real shallow clone checked out on `main`, the pre-fix checker fails with `NEXT_SESSION.md:5 says main is at or after 16e1610, which is not an ancestor of …` — the CI message — and the fixed checker reports `PASS (35 checks)`.
-  - Two tests pin it: a shallow checkout that cannot carry the claim is reported as skipped, and a full checkout that does not have the commit fails.
-- CI on `main` is green at `64291bc` (run `35880658380`).
+---
+
+# Progress 144 — H3 oxlint 1.85 triage (audit only, no change)
+
+Milestone H, task H3. **No repository change**: the audit ran the candidate linter from the npx cache,
+which installs nothing into the project. The installed linter stays `oxlint` 1.74.0 (specifier
+`^1.71.0`, lockfile 1.74.0) and the lint run stays clean.
+
+## 1. How the warnings were obtained
+
+```
+npx oxlint --version                    → 1.74.0 (installed, the version CI and the release use)
+npx -y oxlint@1.85.0 src                → the candidate linter, run read-only from the npx cache
+```
+
+`package.json`, `package-lock.json` and `.oxlintrc.json` are untouched: the audit needed the warning
+list, not the upgrade. The prior measurement (`reports/progress_130_dependency_maintenance_option_b.md`
+§limits) reported "33 new rule warnings" from three rule families; this audit re-measured the exact
+sites and classified them.
+
+## 2. The warnings, by rule
+
+| Rule | Count | What it flags |
+|---|---|---|
+| `react(refs)` | 17 | accessing `ref.current` during render |
+| `react(set-state-in-effect)` | 14 | calling `setState` synchronously inside an effect |
+| `react(purity)` | 2 | calling an impure function (`performance.now`) during render |
+| `typescript(no-non-null-asserted-optional-chain)` | 1 | `?.…!` — asserting non-null on a value that may be undefined by design |
+
+## 3. Classification
+
+### 3.1 `react(refs)` — 17 sites — **B (rule/style churn against a deliberate pattern)**
+Sixteen of the seventeen are the codebase's documented **latest-ref mirror**:
+
+- `src/hooks/useHistory.ts:75,76,81` — `historyRef.current = history`, with the source comment
+  *"Mirrors of the latest committed history/index (safe to read in callbacks)"*;
+- `src/hooks/useProjectState.ts:10,13` (`tracksRef`/`characterPartsRef`), `src/hooks/usePlayback.ts:21`
+  (`fpsRef`), `src/hooks/usePresets.ts:44`, `src/components/Canvas/StageCanvas.tsx:70,71`, and two in
+  `src/tests/freeformTangentHistory.test.tsx`.
+
+The pattern exists so callbacks and effects can read the newest value without re-subscribing; the rule
+targets exactly it. The seventeenth, `src/components/Inspector/TemporalGraphPanel.tsx:61-63`, reads
+`dragDomainRef.current?.min/max` during render to clamp a drag domain — a render-time ref read that only
+changes while a drag is in progress (and each change also sets state).
+
+Converting any of these is a refactor across hooks, context and canvas components with real behaviour
+risk in the animation core. The task's own rule for that case is to stop and ask, not to do it here.
+
+### 3.2 `react(set-state-in-effect)` — 14 sites — **B (performance advice, not correctness)**
+The sites are synchronisation with things outside React: the playback loop
+(`usePlayback.ts:34`), the broadcast loop (`useBroadcast.ts:41,80`), the freeform draw overlay
+(`useFreeformDraw.ts:156`, `FreeformTangentOverlay.tsx:145`), the autosave restore
+(`useSerialization.ts:441`), the dialog's focus/select timing (`NewItemModal.tsx:31`), the bezier
+editor (`InteractiveCubicBezierEditor.tsx:64`) and prop→local-state sync in the small input controls
+(`SmartHexInput.tsx:27`, `SmartNumberInput.tsx:36`, `TransformInOutPresetCard.tsx:208,268`),
+plus `StageCanvas.tsx:75,155`.
+
+The rule's own guidance allows an effect when synchronising with an external system, which is what
+these are. Restructuring them (deriving during render, keying components, moving the state to its
+cause) is a per-site design change in the animation core, not a dependency task.
+
+### 3.3 `react(purity)` — 2 sites — **C (small bounded fix)**
+`usePlayback.ts:24` and `useBroadcast.ts:196`: `useRef<number>(performance.now())`. The argument is
+evaluated on **every** render even though only the first value is kept, so an impure clock call runs
+during render. The impact is invisible (the value is discarded), but the rule is correct. Bounded fix:
+initialise the timestamp inside the effect that starts the loop.
+
+### 3.4 `typescript(no-non-null-asserted-optional-chain)` — 1 site — **C (small bounded fix)**
+`src/tests/trackMutations.test.ts:46`: `next[0].channels?.opacity?.[0].id!`. The `?.` can be
+`undefined` by design and the `!` asserts it away; in a test the honest form is to assert the value
+first. One line in one test file.
+
+## 4. Verdict: **DEFER** — no change in this milestone
+
+- **31 of 34 warnings are class B**: they flag patterns this codebase uses on purpose, or give
+  performance advice for synchronisation effects. Clearing them is a refactor of the hooks, the canvas
+  and the inspector — not a lint bump.
+- **3 are class C**, but fixing them would **not** make the run clean: 31 class-B warnings would
+  remain. A lint run with 31 warnings is not the project's standard, and the only ways to a clean run
+  would be a broad refactor or silencing the new rules — which the task explicitly forbids
+  ("Do not suppress warnings wholesale. Do not disable broad rules just to get green").
+- **Nothing here is a release blocker.** The release is being finalized on a toolchain whose lint run
+  is clean, and the 1.85 rules report no user-visible defect: the two purity sites call a clock whose
+  value is thrown away, and the one optional-chain assertion is in a test.
+- Adopting 1.85 while keeping the rules enabled would *lower* the project's lint floor. Keeping 1.74.0
+  keeps it at zero warnings while the new rules get the triage they need.
+
+**Recommended follow-up (its own task, not this milestone):** take the three rule families one at a
+time — `react(purity)` first (2 sites, mechanical), then decide per family whether the codebase's
+latest-ref mirror is a pattern to keep (with a documented `allow` for those specific call sites) or to
+replace, and only then consider the linter bump. That decision needs approval because it either
+changes the animation core or narrows a rule.
+
+## 5. State left behind
+
+- `.oxlintrc.json`, `package.json` and `package-lock.json`: **untouched**.
+- `chore/oxlint-1-85` was created at `main` (`b4bf3c0`) before the audit concluded; it holds **no
+  commits** and can be deleted with approval.
+- The lint run on the installed linter remains clean (`npm run lint` → no output).
+
+---
+
+# Progress 145 — H4 jsdom 30.1.x: triage, then the verified bump
+
+Milestone H, task H4. The audit ran first and the user then approved a bounded attempt, so this report
+carries both: what the triage found, and the result of taking the bump.
+
+> **Correction to the first version of this report.** It concluded, from probes run outside the test
+> environment, that the recorded `createObjectURL` blocker did not reproduce. That conclusion was
+> wrong, and the error was mine: a standalone jsdom `Blob` is not the object the *test environment*
+> produces. Probing inside the environment reproduces the recorded failure exactly, and the section
+> below records that evidence instead. Nothing else in the triage changed.
+
+## 1. The recorded blocker, reproduced in the environment that matters
+
+`reports/progress_130_dependency_maintenance_option_b.md` recorded that `jsdom` 30.1.x makes
+`URL.createObjectURL` stop accepting the Blob the test environment produces. A throwaway probe test
+inside the vitest environment reports the pairing directly:
+
+| Probe value | `jsdom` 30.0.1 | `jsdom` 30.1.1 |
+|---|---|---|
+| `blob.constructor.name` | `Blob` | `Blob` |
+| `Object.getOwnPropertySymbols(blob)` | `Symbol(impl)` | **(none)** |
+| `typeof URL.createObjectURL` | `function` (Node's) | `function` (Node's) |
+| `URL.createObjectURL(new Blob([…]))` | works (the suite passes) | **throws `Cannot read properties of undefined (reading '_buffer')`** |
+
+So the failure is real and its mechanism is precise: **jsdom implements neither `createObjectURL` nor
+`revokeObjectURL`** (both are `undefined` on a bare jsdom window in *either* version), so the
+environment always pairs **Node's `URL`** with **jsdom's `Blob`**. Node's implementation looks for its
+own Blob internals; `jsdom` 30.0.1's Blob happened to carry the `Symbol(impl)` it could follow, and
+30.1.1's Blob carries no such symbol, so the call fails on the very Blob the environment produces.
+
+Why the suite was affected at all: `src/tests/presetExportImportUi.test.tsx:68` and
+`src/tests/ografBrowserZip.test.tsx:97` already stub the API locally, with the reason written at the
+call site (`// jsdom lacks URL.createObjectURL — stub it for the export download flow`).
+`src/tests/firstExportFlow.test.tsx` — the OGraf package export path — did not, so
+`src/components/Header/HeaderBar.tsx:222` threw inside its `try`, the success toast never fired, and
+the test's `waitFor` timed out at line 143. **One test failed; the other 1,933 passed.**
+
+### The other recorded claim does not reproduce
+`@asamuzakjp/dom-selector`'s capitalised attribute selectors were claimed to break in 8.3.2. Measured
+through jsdom's own `querySelectorAll` — the path eleven test files use — with a document carrying
+`aria-label="Enabled"`, `data-x="Enabled"` and `data-y="Inverted"`:
+
+| Selector | dom-selector 8.3.0 | 8.3.2 | 9.2.1 (what jsdom 30.1.1 resolves) |
+|---|---|---|---|
+| `[aria-label="Enabled"]` | 1 | 1 | **1** |
+| `[data-y="Inverted"]` | 1 | 1 | **1** |
+| `[aria-label="enabled"]` (wrong case, must not match) | 0 | 0 | **0** |
+
+Case-sensitive matching is correct in every version, so the bump does not threaten those selectors.
+
+## 2. Classification
+
+| Question | Answer |
+|---|---|
+| **A — product bug?** | **No.** The production code uses the platform API correctly; in a browser both `Blob` and `URL` come from one realm, and the real download path is proven by `e2e/export-onboarding.spec.ts`, `e2e/ograf-editor-export.spec.ts` and `e2e/ograf-phase2d-interoperability.spec.ts`. |
+| **B — test-environment mismatch?** | **Yes.** Node's `URL` receiving jsdom's `Blob` is the whole failure. |
+| **C — jsdom behaviour change?** | **Yes, as the trigger:** 30.1.1's Blob stopped exposing what the Node implementation needs. Not a defect in either project's contract — a pairing nothing guarantees. |
+| **D — shim the browser API in tests?** | **Yes, and that is the fix.** No fake browser behaviour was added to production code. |
+
+## 3. Applied (branch `chore/jsdom-30-1`)
+
+| File | Change |
+|---|---|
+| `package.json` | `"jsdom": "^30.0.1"` → `"^30.1.1"` (one line; the only manifest change) |
+| `package-lock.json` | jsdom 30.0.1 → 30.1.1 and its own tree: `@asamuzakjp/dom-selector` 8.3.2 → 9.2.1, `@asamuzakjp/css-color` 6.0.7 → 7.0.1, `html-encoding-sniffer` 6.0.0 → 7.0.0, two entries removed. No unrelated package moved. |
+| `src/tests/setup.ts` | one definition of `URL.createObjectURL`/`revokeObjectURL` for the test environment, with the mechanism written down — the same place, and the same reasoning, as the existing download-link shim |
+
+`jsdom` 30.1.1 declares `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` — exactly the intersection
+this project already declares and CI already pins, so the bump is inside the supported toolchain.
+
+## 4. Validation (with the bump and the shim in place)
+
+| Check | Result |
+|---|---|
+| `npm test` | PASS — 126 files / **1,934 tests** (the failing test now passes; no other change) |
+| `npm run lint` | clean |
+| `npm run build` (`tsc -b` + vite) | PASS |
+| `npx tsc -b --pretty false` | exit 0 |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium tests |
+| `npx playwright test e2e/export-onboarding.spec.ts` | PASS — 1 test (the real download path) |
+| `npx playwright test e2e/lottie-import-report.spec.ts e2e/ograf-matte-visual.spec.ts` | PASS — 7 tests |
+| `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
+| `git diff --check` | clean |
+
+## 5. Self-review (read-only, same model)
+
+- **The shim is test-only and central.** It replaces an API the environment does not implement with the
+  one property the download helpers use (a stable object URL), and it lives next to the download-link
+  shim that exists for the same class of reason. The two tests that assert on their own object-URL calls
+  stub locally, which still overrides it.
+- **Determinism improved:** the suite no longer depends on the accident that jsdom's Blob matched Node's
+  internals, which is what made a jsdom patch silently change test behaviour.
+- **Blast radius of the manifest change:** one devDependency specifier plus its transitive tree. No
+  runtime dependency, script, engine, workflow or source file is touched.
+- **Not a product change:** no file under `src/` outside `src/tests/` is modified.
+
+## 6. Not changed
+
+- The `oxlint` deferral (H3) is untouched: the linter stays 1.74.0.
+- No release, tag, draft or npm action.
+
+---
+
+# Progress 146 — H5 final release gate
+
+Milestone H, task H5. Run on **clean merged `main`** only.
+
+## 1. What it ran on
+
+| Fact | Value |
+|---|---|
+| `git rev-parse HEAD` | `c1431dba88238063ce49e97d611e69313cf3f42b` |
+| `git rev-parse origin/main` | `c1431dba88238063ce49e97d611e69313cf3f42b` (equal) |
+| `git status --short --branch` | `## main...origin/main` — clean before and after every command below |
+| CI on this commit | `35988804952` — **success** (Node 22, `npm ci`) |
+| Local platform | Windows 11, Node `v24.18.0`, npm `12.0.2` |
+
+Milestone H changed three things before this gate, so the release evidence is traceable:
+
+| Commit | Change |
+|---|---|
+| `b4bf3c0` | the CI type-check step and the `check` script now run `npx tsc -b --pretty false` (the old `--noEmit` checked no project file) |
+| `cc1ce8e` | the H3/H4 triage reports |
+| `c1431db` | `jsdom` 30.0.1 → 30.1.1 with the test-environment object-URL shim |
+
+## 2. The gate
+
+| Check | Command | Result |
+|---|---|---|
+| Production build | `npm run build` (`tsc -b` + vite) | **PASS** |
+| Type gate | `npx tsc -b --pretty false` | **exit 0** (151 project files) |
+| Full suite | `npm test` | **PASS — 126 files / 1,934 tests** |
+| Lint | `npm run lint` | **clean** (0 warnings) |
+| OGraf fixture gate | `npm run validate:ograf` | **PASS** |
+| Release smoke | `npm run qa:release` | **PASS — 2 Chromium tests**, candidate `c1431db` |
+| Lottie import + OGraf matte pixels | `npx playwright test e2e/lottie-import-report.spec.ts e2e/ograf-matte-visual.spec.ts` | **PASS — 7 tests** |
+| Export download path | `npx playwright test e2e/export-onboarding.spec.ts` | **PASS — 1 test** |
+| V6 QA | `npm run qa:v6` | **PASS — 3 tests** |
+| Developer gate | `npm run check` (lint → type check → test → build) | **PASS** |
+| State consistency | `node scripts/check-state-consistency.mjs` | **PASS — 35 checks** |
+| Dependency audit | `npm audit` | **0 vulnerabilities** |
+| Whitespace / conflict check | `git diff --check` | **clean** |
+| API health | `node server/index.js`, then `GET /api/health` | **200** — `status: online`, `SQLite (Embedded Local DB)` |
+| API project route | `GET /api/projects` | `success: true`, `source: sqlite` |
+| Native binding | fresh `require('sqlite3')` + in-memory `CREATE TABLE` | **OK** |
+| Working tree after the gate | `git status --short` | **clean** (the tracked database file was not written) |
+
+## 3. What this gate does *not* prove
+
+Stated so the verdict is not read as more than it is:
+
+1. **CI runs no browser test.** The 38 Playwright specs run here on Windows; in CI the only automated
+   browser gate is the *manual* `release-smoke.yml` (2 specs).
+2. **No Windows job.** CI is `ubuntu-latest` only; this run is the Windows/local evidence.
+3. **`qa:release` is the only automated package round-trip.** The full E2E set is on demand.
+
+These are the coverage gaps the H1 audit recorded (§4). They are unchanged by this milestone.
+
+## 4. Deferrals carried into the release
+
+| Item | Status | Evidence |
+|---|---|---|
+| **Option C** (`typescript` 6→7, `vitest` + `@vitest/coverage-v8` 4→5) | **Deferred by user decision** in this milestone; not a blocker | H2 audit: the config surface is vanilla and the peer engines are satisfied, but the breakage surface is unmeasurable without installing, and the current toolchain is clean |
+| **`oxlint` 1.85** | **Deferred**, with a corrected triage | `reports/progress_144_oxlint_1_85_triage.md`: 34 new warnings, 31 of them flagging patterns this codebase uses deliberately; the three genuine ones would not make the run clean |
+| **jsdom 30.1.x** | **Closed** — the bump was taken at `c1431db` | `reports/progress_145_jsdom_30_1_triage.md`: one test needed a test-only shim; 1,934/1,934 green and CI green after the merge |
+| Residual: unrestricted CORS | **Deferred follow-up** | H1 §5.3 |
+| Residual: tracked `server/db/keyframe_studio.sqlite` | **Deferred follow-up** | H1 §5.4 |
+| Residual: no focus restoration on two dialogs | **Deferred follow-up** | H1 §5.6 |
+| Residual: constant `SceneLayer.visible` | **Accepted, documented** | H1 §5.2 |
+| Residual: `vite --host` publishes the dev frontend | **Accepted, documented** | H1 §5.5 |
+| Residual: one unreproduced Task B suite failure | **Accepted, monitored** | H1 §5.7; six clean full runs since |
+| Residual: the CI type-check step verified nothing | **FIXED** at `b4bf3c0` | `reports/progress_143_ci_typecheck_step.md` |
+
+## 5. Verdict
+
+# READY WITH DOCUMENTED DEFERRALS
+
+Every gate above is green on clean, merged `main` at `c1431db`, whose CI run is also green, and the one
+required fix from the H1 audit is applied. Nothing outstanding is a product-correctness or security
+blocker: the deferrals are two dependency decisions the user owns (Option C, `oxlint` 1.85), three
+follow-ups that need their own task, and three documented behaviours.
+
+**No release/tag/npm action was taken.** `v1.1.0-rc.1` still points at
+`46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft, the package is still
+private at `1.1.0-rc.1`, and nothing was published. Whether to finalize, re-tag or publish is H7's
+question and the user's decision.
+
+---
+
+# Progress 147 — Milestone H docs and handoff reconciliation
+
+Milestone H, task H6. Every number and revision below comes from the repository or from git on the
+machine that ran it.
+
+## 1. What was reconciled
+
+| Document | Change |
+|---|---|
+| `PROJECT_STATE.md` | the `main` baseline moves from `64291bc` to `c1431db`; the TypeScript row states the fixed type gate and links `progress_143`; a new **Milestone H** section records the audit verdict, the one required fix, both dependency decisions, the jsdom bump and the final gate verdict, and states that the release artefacts did not move |
+| `NEXT_SESSION.md` | checkout baseline `c1431db`; the validation line now points at the final gate run; item 1 names **Milestone H** as the open item (the release decision) and Milestone G as complete; item 2 records Option C as deferred by decision, `oxlint` 1.85 as deferred and `jsdom` 30.1.1 as closed |
+| `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` | row H keeps **NEXT** and now names the three Milestone H branches, the five records, the fix at `b4bf3c0`, the bump at `c1431db`, the gate verdict and the two deferred decisions |
+| `CHANGELOG.md` | two entries under `[Unreleased]`: the CI type-check fix (the step checked no project file) and the `jsdom` 30.1.1 bump with the reason the test environment now defines the object-URL functions |
+| `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md` | the release boundary and the release decision name the audit and the final gate, restate that the tag and draft still point at `46d2a3e`, and list the documented deferrals with the jsdom deferral marked closed |
+| `chatgpt_handoff/` | rebuilt per its own standing rules: the four mirrored documents re-copied, the task record replaced with this task's reports, the manifest and bundle README rewritten, the final response replaced, and the one-file regenerated from `latest/` |
+
+## 2. Why the wording is what it is
+
+- **`main` is at or after `c1431db`** — the live documents are allowed to say "at or after" because the
+  state check fails a claim about a revision `main` has not reached, and a document written on a branch
+  must still be true after the branch merges.
+- **The release decision is stated as open.** The audit, the fixes and the gate are complete; nothing in
+  this task touched the tag, the draft release, the package metadata or npm. A document that implied the
+  release was authorized would be false.
+- **The deferrals are named with their reasons.** "Deferred" without a reason reads as an omission; each
+  entry points at the triage that measured it.
+
+## 3. What was deliberately not touched
+
+- **`reports/README.md`** is described in its own header as a chronological historical audit trail. Its
+  "latest relevant reports" list stops at `progress_129`; entries for `progress_130`–`progress_147` are
+  missing. Extending that historical index is a separate documentation task with its own review, not a
+  live-state claim, so it is recorded here instead of changed in passing.
+- **Every earlier report and current-state document** is unchanged.
+- **No release artefact**: the tag still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub
+  release is still a draft, the package is still private at `1.1.0-rc.1`, and nothing was published.
+
+## 4. Validation
+
+| Check | Result |
+|---|---|
+| `node scripts/check-state-consistency.mjs` | **PASS — 35 checks**, including the bundle mirrors, the live documents, the roadmap status rows and the one-file staleness/secret scans |
+| `git diff --check` | clean |
+| The live documents' git claims | branch `docs/milestone-h-release-readiness`, `main` at `c1431db` — both true of the repository at the time of writing |
+
+**Stop point:** the reconciliation is complete and awaits the approval gate for merging
+`docs/milestone-h-release-readiness` into `main` (fast-forward only). No merge was performed.
 
 ---
 
 ## 5. Next Session
 
+---
+
 # Next Session Handoff
 
 ## Repository state
 
-- Checkout: `main` at or after `64291bc` (the final live-state reconciliation), matching `origin/main`. **Milestone F item 10 is complete**: the import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are merged; the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base and stays historical. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **all four Milestone F item 10 slices (merged at `ff32d6c`, `8670b2a`, `bda62cb` and `3b30bff`)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
+- Checkout: `main` at or after `c1431db` (the Milestone H release-readiness work), matching `origin/main`. **Milestone F item 10 is complete**: the import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are merged; the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base and stays historical. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **all four Milestone F item 10 slices (merged at `ff32d6c`, `8670b2a`, `bda62cb` and `3b30bff`)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Checkout after the item 12 merge: `main` at or after `a4f8642` (the OGraf package import and its handoff refresh), matching `origin/main`
@@ -306,12 +760,12 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-On `main` at `64291bc` (the final live-state reconciliation): full Vitest (126 files / 1,934 tests), `npx playwright test e2e/ograf-matte-visual.spec.ts` (4 pixel cases) and `e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run build` (`tsc -b` + vite — the gate CI runs; `npx tsc --noEmit` alone checks no project file here), `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` all pass, `npm audit` reports 0 vulnerabilities, and the API serves `GET /api/health` with 200 on `127.0.0.1` (its default bind).
+On `main` at `c1431db` (the Milestone H release-readiness work): full Vitest (126 files / 1,934 tests), `npx playwright test e2e/ograf-matte-visual.spec.ts` (4 pixel cases) and `e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run build` (`tsc -b` + vite — and the CI type-check step and the `check` script now run `tsc -b` too, so all 151 project files are checked), `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` all pass, `npm audit` reports 0 vulnerabilities, and the API serves `GET /api/health` with 200 on `127.0.0.1` (its default bind).
 
 ## Next scoped work
 
-1. **Milestone G — the post-review correctness follow-up is complete.** Every finding from the full-project review is closed, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge: H-01 at `0c19751`; H-03, H-04 and M-03 at `fc672f2`; M-01, M-02 and H-05 at `85c3929`; H-02 at `ac3bda1`; H-06 at `352d272`; M-04 at `16e1610`; M-05 at `2b0bba0`. The final correctness gate ran on `main` after the shallow-checkout fix (`dcbf9f5`) and is recorded in `reports/progress_141_astra_correctness_followup_summary.md`, which also lists the residual observations that need their own decision. **Milestone H (release finalization) is the next work.**
-2. Approval-gated follow-ups that remain open: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x) with their own triage. The `engines`/`allowScripts` follow-up is answered on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and is **merged** at `1a12d79`. Every release/tag/draft-release change still needs explicit approval.
+1. **Milestone H — release readiness is complete and the release decision is the open item.** The audit (`reports/progress_142_release_readiness_audit.md`), the one required fix (the CI type-check step and the `check` script now run `npx tsc -b --pretty false`; `reports/progress_143_ci_typecheck_step.md`), the two dependency triages (`reports/progress_144_oxlint_1_85_triage.md`, `reports/progress_145_jsdom_30_1_triage.md`) and the final release gate (`reports/progress_146_final_release_gate.md`) are all done, and `jsdom` 30.1.1 was taken at `c1431db`. The gate verdict is **RELEASE READY WITH DOCUMENTED DEFERRALS**. What remains is the release decision itself — finalize the draft, re-tag, or hold — which needs explicit user instruction. **Milestone G — the post-review correctness follow-up — is complete.** Every finding from the full-project review is closed, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge: H-01 at `0c19751`; H-03, H-04 and M-03 at `fc672f2`; M-01, M-02 and H-05 at `85c3929`; H-02 at `ac3bda1`; H-06 at `352d272`; M-04 at `16e1610`; M-05 at `2b0bba0`. The final correctness gate ran on `main` after the shallow-checkout fix (`dcbf9f5`) and is recorded in `reports/progress_141_astra_correctness_followup_summary.md`, which also lists the residual observations that need their own decision. **Milestone H (release finalization) is the next work.**
+2. Approval-gated follow-ups that remain open: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair), **deferred by decision** in Milestone H, and the `oxlint` 1.85 bump, **deferred** with its triage recorded. **`jsdom` 30.1.1 is closed** — the bump was taken at `c1431db`. The `engines`/`allowScripts` follow-up is answered on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and is **merged** at `1a12d79`. Every release/tag/draft-release change still needs explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
 
@@ -345,11 +799,13 @@ On `main` at `64291bc` (the final live-state reconciliation): full Vitest (126 f
 
 ## 6. Project State
 
+---
+
 # KCS Project State
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into main, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `64291bc` (the live-state reconciliation). Milestone F is complete (its item 10 slices — the Lottie import core `ff32d6c`, the mask/track-matte slice `8670b2a`, the text/image/precomp slice `bda62cb` and the import entry point `3b30bff` — item 11 and item 12 are all merged), milestone G (the post-review correctness follow-up) is complete, and **milestone H (release finalization) is NEXT**.
+The accepted product and security follow-up line is integrated into main, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `c1431db` (the Milestone H release-readiness work). Milestone F is complete (its item 10 slices — the Lottie import core `ff32d6c`, the mask/track-matte slice `8670b2a`, the text/image/precomp slice `bda62cb` and the import entry point `3b30bff` — item 11 and item 12 are all merged), milestone G (the post-review correctness follow-up) is complete, and **milestone H (release finalization) is NEXT**.
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
@@ -376,7 +832,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Chromium tests on `main` |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
 | State consistency | PASS | `node scripts/check-state-consistency.mjs` — the total scales with the number of live and bundle documents scanned |
-| TypeScript | PASS | `npm run build` (`tsc -b && vite build`) — the gate CI runs; `npx tsc --noEmit` alone does not cover the same project program (see `reports/progress_122_ci_hotfix_import_boundary_types.md`) |
+| TypeScript | PASS | `npm run build` (`tsc -b && vite build`), and the CI step and the `check` script now run `npx tsc -b --pretty false` themselves — the previous `npx tsc --noEmit` built no referenced project and checked no project file (`reports/progress_143_ci_typecheck_step.md`) |
 | Lint | PASS | clean — the Fast Refresh warning was removed in `reports/progress_113_warning_maintenance.md` |
 | Production build | PASS | no chunk-size advisory — split into 382.19 kB app + react-vendor/icons/geometry chunks (see `reports/progress_113_warning_maintenance.md`) |
 | Independent review | PASS | Milestone A `READY` in round 6 of six; the item-9 audit closed `READY WITH WARNINGS` in round 6 of six (`reports/progress_112_dependency_warning_audit.md` §12); the Option A change closed with `READY WITH WARNINGS` from the read-only `scout` round (the reviewer model hit a provider usage limit) after `reviewer-agent` rounds 1–3 closed every finding (`reports/progress_113_warning_maintenance.md` §2) |
@@ -384,7 +840,18 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ## Post-review correctness follow-up (complete)
 
-The full-project review's release-blocking findings are closed, one task at a time and one branch each: **H-01** at `0c19751`, **H-03/H-04/M-03** at `fc672f2`, **M-01/M-02/H-05** at `85c3929`, **H-02** at `ac3bda1`, **H-06** at `352d272`, **M-04** at `16e1610`, **M-05** at `2b0bba0`. The Task G merge then turned `main` red for one push — the new live-revision rule compared an "at or after" claim with `git merge-base --is-ancestor`, and CI's `--depth 1` checkout does not carry the older commits — and the fix at `dcbf9f5` reports that limit as skipped, exactly as the tag and milestone checks already do. Every fix carries a reproduction that fails before it and passes after it, at the level a user observes. The final correctness gate and the finding map are in `reports/progress_141_astra_correctness_followup_summary.md`; the residual observations it records (the type-check step that verifies nothing, the tracked SQLite file, CORS, and the rest) each need their own decision.
+The full-project review's release-blocking findings are closed, one task at a time and one branch each: **H-01** at `0c19751`, **H-03/H-04/M-03** at `fc672f2`, **M-01/M-02/H-05** at `85c3929`, **H-02** at `ac3bda1`, **H-06** at `352d272`, **M-04** at `16e1610`, **M-05** at `2b0bba0`. The Task G merge then turned `main` red for one push — the new live-revision rule compared an "at or after" claim with `git merge-base --is-ancestor`, and CI's `--depth 1` checkout does not carry the older commits — and the fix at `dcbf9f5` reports that limit as skipped, exactly as the tag and milestone checks already do. Every fix carries a reproduction that fails before it and passes after it, at the level a user observes. The final correctness gate and the finding map are in `reports/progress_141_astra_correctness_followup_summary.md`; the residual observations it records (the type-check step that verified nothing — since fixed, see the Milestone H section — the tracked SQLite file, CORS, and the rest) each need their own decision.
+
+## Milestone H — release readiness (audit, fixes and gate complete; the release decision is open)
+
+The controlled release-readiness pass ran end to end and its evidence is `reports/progress_142_release_readiness_audit.md` (audit), `reports/progress_144_oxlint_1_85_triage.md` and `reports/progress_145_jsdom_30_1_triage.md` (the two dependency triages), `reports/progress_143_ci_typecheck_step.md` (the audit's one required fix) and `reports/progress_146_final_release_gate.md` (the gate).
+
+- **Audit verdict:** READY WITH REQUIRED FIXES — one required item, and it was fixed: the CI step named "TypeScript Type Check" ran `npx tsc --noEmit`, which builds no referenced project and therefore checked no project file, so its green tick meant nothing. The step and the `check` script now run `npx tsc -b --pretty false` (151 project files), committed at `b4bf3c0`.
+- **Option C (TypeScript 6→7, Vitest 4→5): deferred by user decision** — not a blocker; the current toolchain builds, tests and lints cleanly, and the majors' breakage surface cannot be established without installing them.
+- **`oxlint` 1.85: deferred** — 34 new warnings, 31 of which flag patterns this codebase uses deliberately (the documented latest-ref mirror, and synchronisation effects the rule's own guidance allows); the three genuine ones would not make the run clean.
+- **`jsdom` 30.1.x: closed** — the bump was taken at `c1431db` with one test-only object-URL shim in `src/tests/setup.ts`; jsdom implements neither `createObjectURL` nor `revokeObjectURL`, and 30.1.1's Blob no longer carries what Node's implementation follows.
+- **Final release gate: RELEASE READY WITH DOCUMENTED DEFERRALS** on clean `main` at `c1431db` — build, type check, 126 files / 1,934 tests, lint, `validate:ograf`, `qa:release` (2 Chromium), the Lottie/matte/export browser specs (8), `qa:v6` (3), `npm run check`, the state check (35), `npm audit` (0), `git diff --check`, and the API health plus the sqlite3 binding on this machine.
+- **The release artefacts are unchanged:** `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft, the package is private at `1.1.0-rc.1`, and nothing was published. Finalizing, re-tagging or publishing is an explicit decision that has not been taken.
 
 ## Remaining work
 
@@ -427,6 +894,8 @@ The full-project review's release-blocking findings are closed, one task at a ti
 
 ## 7. Current Roadmap Plan and Changelog
 
+---
+
 # KCS Grouped Roadmap Execution Plan
 
 Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9's audit and its approved Option A are merged and only its follow-ups stay behind an explicit approval gate — Option B is now merged into `main` at `73426e5`, while Option C and the two deferred minor bumps remain gated (the `engines`/`allowScripts` answer is on `chore/engines-allow-scripts`, awaiting its merge decision) (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and merged at `22335a5`, and Milestone F's study is delivered while its implementation proceeds slice by slice under separate approvals: item 10 is complete (all four slices merged), item 11 is implemented, and item 12 is complete: the unified import entry and the OGraf package import are merged.
@@ -442,7 +911,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **COMPLETE** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
 | G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **COMPLETE** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05** (the live-document reconciliation) is merged at `2b0bba0`, and the shallow-checkout CI regression it caused was fixed at `dcbf9f5`, and the final correctness gate ran on `main` after that fix (`reports/progress_141_astra_correctness_followup_summary.md`): every finding is closed. |
-| H — Release finalization and the approval-gated toolchain majors | review follow-up decisions | — (one branch per change) | **NEXT** — the correctness follow-up is complete, so what remains is the human decision the repository already defers: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), each with its own triage, then any publish/finalize instruction for the draft release. Every package/lockfile/workflow change needs explicit approval, and the release tag and draft stay untouched until then. |
+| H — Release finalization and the approval-gated toolchain majors | review follow-up decisions | `chore/ci-typecheck-step`, `chore/jsdom-30-1`, `docs/milestone-h-triage` | **NEXT** — **the audit, the fixes and the final gate are complete** (`reports/progress_142_release_readiness_audit.md`, `progress_143_ci_typecheck_step.md`, `progress_144_oxlint_1_85_triage.md`, `progress_145_jsdom_30_1_triage.md`, `progress_146_final_release_gate.md`): the audit's one required item is fixed at `b4bf3c0` (the CI type-check step ran `npx tsc --noEmit`, which checked no project file), `jsdom` 30.1.1 is taken at `c1431db`, and the gate verdict on clean `main` is **RELEASE READY WITH DOCUMENTED DEFERRALS**. **Option C is deferred by decision** and **`oxlint` 1.85 is deferred** with its triage; both stay approval-gated. What is left is the release decision itself — finalize the draft, re-tag, or hold — under explicit user instruction. |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -502,6 +971,8 @@ The deliverables are the study, the Lottie import mapping design and the editabl
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
+---
+
 # Changelog
 
 All notable changes to **Keyframe Character Studio** will be documented in this file.
@@ -531,9 +1002,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Freeform paths that only carry legacy `points` normalize a repeated closing vertex before the editing overlay materializes a canonical `path` on first edit; the legacy array itself is preserved.
 - Matte relationship resolution went through one shared helper that mirrors the rendered result, so the outliner indicator and the stage agree for enabled, disabled, missing, and unusable sources.
 - The project now declares the locked toolchain's supported Node runtime intersection (`^22.22.2 || ^24.15.0 || >=26.0.0`) and approves the `sqlite3` install step for npm 12 with a version-pinned entry, so a fresh install fetches that package's prebuilt native binding instead of silently leaving the API server without a database driver; the lockfile mirrors only the root engine metadata and its dependency graph is unchanged.
+- `jsdom` moved 30.0.1 → 30.1.1, whose `Blob` no longer carries what Node's `URL.createObjectURL` follows; the test environment now defines the two object-URL functions itself instead of depending on that pairing, so a jsdom patch can no longer change test behaviour.
 - Runtime and toolchain dependencies were refreshed within their current major versions (React 19.3, Vite 8.3, Vitest 4.1.11, lucide-react 1.47 and the test-library patches) on an isolated branch; the linter and jsdom keep their previously verified versions because the newer ones need work of their own (33 new lint rules; with jsdom 30.1 any `URL.createObjectURL` call on a Blob throws, which fails the export-download test).
 
 ### Fixed
+- The CI step named "TypeScript Type Check" now checks the project: it ran `npx tsc --noEmit`, which builds no referenced project and therefore verified no project file, so a broken type could have merged behind a green tick. The step and the `check` script run `npx tsc -b --pretty false` (151 project files).
 - The editor's global commands no longer reach project state while a blocking dialog is open: the shortcut handler now reads the dialog's own `aria-modal` contract, so `Delete`/`Backspace`, undo/redo, copy/paste, duplicate and the tool and zoom keys stay inert until the import report, the confirmation dialog or the naming dialog closes. Each dialog keeps `Escape` for itself, and the naming dialog now handles it at the dialog level (and declares the dialog contract it was missing) so it works from its buttons too.
 - An imported scene is now checked against the values the renderers and the evaluator read, not only the fields the apply path touches: a scene version this build does not know, a frame rate or timeline length that is not a positive number, a canvas size that is not a positive number, a non-text `textValue`, a layer without a usable id or z-order, duplicate layer ids, a freeform path the geometry builder cannot walk, a mask without a path, a channel that is not a keyframe list and a keyframe value that is not a finite number are refused with a stable code and the offending path before any state is touched. The legacy `layerId` track shape and every documented default stay accepted.
 - A track's `visible`, `editVisible` and `locked` flags and its sequence link are written on export and read back on import, so a muted, canvas-hidden or locked track no longer returns visible after a save/load round-trip. The generated track name, its colour and its expanded flag remain session state and are not persisted.
@@ -593,16 +1066,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## 8. File Inventory
 
+---
+
 Every file present in `chatgpt_handoff/latest/` at generation time:
 
-- `CHANGELOG.md` — 13931 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 16303 bytes
-- `NEXT_SESSION.md` — 11256 bytes
-- `OMP_FINAL_RESPONSE.md` — 4175 bytes
-- `PROJECT_STATE.md` — 17452 bytes
-- `README.md` — 3863 bytes
-- `manifest.txt` — 3512 bytes
-- `progress_141_astra_correctness_followup_summary.md` — 12055 bytes
+---
+
+- `CHANGELOG.md` — 14512 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 16620 bytes
+- `NEXT_SESSION.md` — 12140 bytes
+- `OMP_FINAL_RESPONSE.md` — 4938 bytes
+- `PROJECT_STATE.md` — 19895 bytes
+- `README.md` — 3821 bytes
+- `manifest.txt` — 4408 bytes
+- `progress_142_release_readiness_audit.md` — 7928 bytes
+- `progress_143_ci_typecheck_step.md` — 2791 bytes
+- `progress_144_oxlint_1_85_triage.md` — 6194 bytes
+- `progress_145_jsdom_30_1_triage.md` — 6486 bytes
+- `progress_146_final_release_gate.md` — 5200 bytes
+- `progress_147_milestone_h_docs_handoff.md` — 3877 bytes
+
+---
 
 - Source/test copies present: NO
 - Test-glob matching files present: NO

@@ -2,7 +2,7 @@
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into main, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `64291bc` (the live-state reconciliation). Milestone F is complete (its item 10 slices — the Lottie import core `ff32d6c`, the mask/track-matte slice `8670b2a`, the text/image/precomp slice `bda62cb` and the import entry point `3b30bff` — item 11 and item 12 are all merged), milestone G (the post-review correctness follow-up) is complete, and **milestone H (release finalization) is NEXT**.
+The accepted product and security follow-up line is integrated into main, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `c1431db` (the Milestone H release-readiness work). Milestone F is complete (its item 10 slices — the Lottie import core `ff32d6c`, the mask/track-matte slice `8670b2a`, the text/image/precomp slice `bda62cb` and the import entry point `3b30bff` — item 11 and item 12 are all merged), milestone G (the post-review correctness follow-up) is complete, and **milestone H (release finalization) is NEXT**.
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
@@ -29,7 +29,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Chromium tests on `main` |
 | Real-browser milestone smoke | PASS | `e2e/graph-accessibility.spec.ts` and the live editor smoke with port 5000 closed (layer authoring, readiness check, real export) |
 | State consistency | PASS | `node scripts/check-state-consistency.mjs` — the total scales with the number of live and bundle documents scanned |
-| TypeScript | PASS | `npm run build` (`tsc -b && vite build`) — the gate CI runs; `npx tsc --noEmit` alone does not cover the same project program (see `reports/progress_122_ci_hotfix_import_boundary_types.md`) |
+| TypeScript | PASS | `npm run build` (`tsc -b && vite build`), and the CI step and the `check` script now run `npx tsc -b --pretty false` themselves — the previous `npx tsc --noEmit` built no referenced project and checked no project file (`reports/progress_143_ci_typecheck_step.md`) |
 | Lint | PASS | clean — the Fast Refresh warning was removed in `reports/progress_113_warning_maintenance.md` |
 | Production build | PASS | no chunk-size advisory — split into 382.19 kB app + react-vendor/icons/geometry chunks (see `reports/progress_113_warning_maintenance.md`) |
 | Independent review | PASS | Milestone A `READY` in round 6 of six; the item-9 audit closed `READY WITH WARNINGS` in round 6 of six (`reports/progress_112_dependency_warning_audit.md` §12); the Option A change closed with `READY WITH WARNINGS` from the read-only `scout` round (the reviewer model hit a provider usage limit) after `reviewer-agent` rounds 1–3 closed every finding (`reports/progress_113_warning_maintenance.md` §2) |
@@ -37,7 +37,18 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 ## Post-review correctness follow-up (complete)
 
-The full-project review's release-blocking findings are closed, one task at a time and one branch each: **H-01** at `0c19751`, **H-03/H-04/M-03** at `fc672f2`, **M-01/M-02/H-05** at `85c3929`, **H-02** at `ac3bda1`, **H-06** at `352d272`, **M-04** at `16e1610`, **M-05** at `2b0bba0`. The Task G merge then turned `main` red for one push — the new live-revision rule compared an "at or after" claim with `git merge-base --is-ancestor`, and CI's `--depth 1` checkout does not carry the older commits — and the fix at `dcbf9f5` reports that limit as skipped, exactly as the tag and milestone checks already do. Every fix carries a reproduction that fails before it and passes after it, at the level a user observes. The final correctness gate and the finding map are in `reports/progress_141_astra_correctness_followup_summary.md`; the residual observations it records (the type-check step that verifies nothing, the tracked SQLite file, CORS, and the rest) each need their own decision.
+The full-project review's release-blocking findings are closed, one task at a time and one branch each: **H-01** at `0c19751`, **H-03/H-04/M-03** at `fc672f2`, **M-01/M-02/H-05** at `85c3929`, **H-02** at `ac3bda1`, **H-06** at `352d272`, **M-04** at `16e1610`, **M-05** at `2b0bba0`. The Task G merge then turned `main` red for one push — the new live-revision rule compared an "at or after" claim with `git merge-base --is-ancestor`, and CI's `--depth 1` checkout does not carry the older commits — and the fix at `dcbf9f5` reports that limit as skipped, exactly as the tag and milestone checks already do. Every fix carries a reproduction that fails before it and passes after it, at the level a user observes. The final correctness gate and the finding map are in `reports/progress_141_astra_correctness_followup_summary.md`; the residual observations it records (the type-check step that verified nothing — since fixed, see the Milestone H section — the tracked SQLite file, CORS, and the rest) each need their own decision.
+
+## Milestone H — release readiness (audit, fixes and gate complete; the release decision is open)
+
+The controlled release-readiness pass ran end to end and its evidence is `reports/progress_142_release_readiness_audit.md` (audit), `reports/progress_144_oxlint_1_85_triage.md` and `reports/progress_145_jsdom_30_1_triage.md` (the two dependency triages), `reports/progress_143_ci_typecheck_step.md` (the audit's one required fix) and `reports/progress_146_final_release_gate.md` (the gate).
+
+- **Audit verdict:** READY WITH REQUIRED FIXES — one required item, and it was fixed: the CI step named "TypeScript Type Check" ran `npx tsc --noEmit`, which builds no referenced project and therefore checked no project file, so its green tick meant nothing. The step and the `check` script now run `npx tsc -b --pretty false` (151 project files), committed at `b4bf3c0`.
+- **Option C (TypeScript 6→7, Vitest 4→5): deferred by user decision** — not a blocker; the current toolchain builds, tests and lints cleanly, and the majors' breakage surface cannot be established without installing them.
+- **`oxlint` 1.85: deferred** — 34 new warnings, 31 of which flag patterns this codebase uses deliberately (the documented latest-ref mirror, and synchronisation effects the rule's own guidance allows); the three genuine ones would not make the run clean.
+- **`jsdom` 30.1.x: closed** — the bump was taken at `c1431db` with one test-only object-URL shim in `src/tests/setup.ts`; jsdom implements neither `createObjectURL` nor `revokeObjectURL`, and 30.1.1's Blob no longer carries what Node's implementation follows.
+- **Final release gate: RELEASE READY WITH DOCUMENTED DEFERRALS** on clean `main` at `c1431db` — build, type check, 126 files / 1,934 tests, lint, `validate:ograf`, `qa:release` (2 Chromium), the Lottie/matte/export browser specs (8), `qa:v6` (3), `npm run check`, the state check (35), `npm audit` (0), `git diff --check`, and the API health plus the sqlite3 binding on this machine.
+- **The release artefacts are unchanged:** `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft, the package is private at `1.1.0-rc.1`, and nothing was published. Finalizing, re-tagging or publishing is an explicit decision that has not been taken.
 
 ## Remaining work
 

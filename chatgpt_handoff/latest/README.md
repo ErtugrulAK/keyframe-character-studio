@@ -1,38 +1,37 @@
-# KCS Minimal ChatGPT Upload Bundle — final live-state reconciliation
+# KCS Minimal ChatGPT Upload Bundle — Milestone H release readiness
 
 This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this checkpoint.
 
 ## What this bundle covers
 
-The post-review correctness follow-up, complete and merged into `main`, with the live documents and
-this handoff reconciled to the repository truth (`main == origin/main == 64291bc`):
+The Milestone H release-readiness pass, complete through its final gate, with the live documents and
+this handoff reconciled to the repository truth (`main == origin/main == c1431db`):
 
-- Every release-blocking finding from the full-project review is closed — **H-01…H-06 and M-01…M-05** —
-  one task per finding group, each on its own branch with its own validation, a read-only self-review
-  and an approval-gated fast-forward merge. Phase 0 closed Task 4 (`engines` + npm-12 `allowScripts`)
-  at `1a12d79`. The finding map is in `progress_141_astra_correctness_followup_summary.md`.
-- The Task G merge turned `main` red for one push: the new live-revision rule compared an "at or after"
-  claim with `git merge-base --is-ancestor`, and CI's `--depth 1` checkout does not carry the older
-  commits. The fix at `dcbf9f5` reports that limit as skipped, exactly as the tag and milestone checks
-  already do, and keeps failing when a *full* checkout cannot resolve the commit at all.
-- The final correctness gate ran on clean `main` at `dcbf9f5`: build, the full suite (126 files /
-  1,934 tests), the focused regression suites from every task (389 tests), lint, `validate:ograf`,
-  `qa:release`, the two browser specs (7 tests), the profiling harness, the state check (35 checks),
-  `npm audit` (0) and `git diff --check` — all green. CI on `main` is green at `64291bc`
-  (run `35880658380`).
-- The summary also records the scope boundaries that were stated rather than hidden (the image matte
-  source, the decision not to invent an authentication system, `SceneLayer.visible`, the legacy
-  template registry) and the residual observations that need their own decision (the type-check step
-  that verifies nothing, unrestricted CORS, the tracked SQLite file, and the rest).
-- The release tag, draft prerelease and package metadata are unchanged. **Milestone H — release
-  finalization** is NEXT: the approval-gated Option C majors, the two deferred minor bumps
-  (`oxlint` 1.85, `jsdom` 30.1.x), and any publish/finalize instruction. Option C stays deferred and
-  is **not** a blocker.
+- **The audit** (`progress_142_release_readiness_audit.md`) found 7 items, **one of them required**: the
+  CI step named "TypeScript Type Check" ran `npx tsc --noEmit`, which builds no referenced project and
+  so checked no project file — a broken type could have merged behind a green tick.
+- **The fix** (`progress_143_ci_typecheck_step.md`) is merged at `b4bf3c0`: the CI step and the `check`
+  script now run `npx tsc -b --pretty false`, which checks all 151 project files.
+- **Two dependency decisions.** `oxlint` 1.85 is **deferred** (`progress_144_oxlint_1_85_triage.md`: 34
+  new warnings, 31 flagging deliberate patterns). `jsdom` 30.1.x is **taken** at `c1431db`
+  (`progress_145_jsdom_30_1_triage.md`: jsdom implements neither object-URL function, so the test
+  environment now defines them itself instead of depending on which Blob shape a jsdom patch ships).
+  Option C (TypeScript 6→7, Vitest 4→5) is **deferred by decision** and is not a blocker.
+- **The final gate** (`progress_146_final_release_gate.md`) ran on clean `main` at `c1431db` and reports
+  **RELEASE READY WITH DOCUMENTED DEFERRALS**: build, type check, 126 files / 1,934 tests, lint,
+  `validate:ograf`, `qa:release` (2 Chromium), the export/Lottie/matte browser specs (8), `qa:v6` (3),
+  `npm run check`, the state check (35), `npm audit` (0), `git diff --check`, plus the API health and the
+  `sqlite3` binding on the Windows machine. CI on `main` is green at `c1431db` (run `35988804952`).
+- **This reconciliation** (`progress_147_milestone_h_docs_handoff.md`) moved the live documents to the new
+  baseline and rewrote the handoff.
+- **No release artefact moved.** `v1.1.0-rc.1` still points at `46d2a3e`, the GitHub release is still a
+  draft, the package is private at `1.1.0-rc.1`, and nothing was published. Finalizing, re-tagging or
+  holding is the user's decision.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this checkpoint
-- `progress_141_astra_correctness_followup_summary.md` — the finding map, the gate and the observations
+- `progress_142_release_readiness_audit.md` … `progress_147_milestone_h_docs_handoff.md` — this task's records
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap, with milestones A–G complete and H as NEXT
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action

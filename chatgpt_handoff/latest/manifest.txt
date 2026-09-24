@@ -1,23 +1,28 @@
-# KCS ChatGPT Upload Manifest — final live-state reconciliation
+# KCS ChatGPT Upload Manifest — Milestone H release readiness
 
 Clean refreshed: YES
-Bundle purpose: the completed post-review correctness follow-up, its final gate, and the live documents reconciled to the repository truth
+Bundle purpose: the Milestone H release-readiness pass — the audit, its one required fix, the two dependency decisions, the final gate on clean main, and the live documents reconciled to the repository truth
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: main at 64291bc (== origin/main); the follow-up, its CI fix and the reconciliation are merged and pushed
-Task record: reports/progress_141_astra_correctness_followup_summary.md
-Phase 0: Task 4 (engines + npm-12 allowScripts) MERGED at 1a12d79 — no live text says its merge decision is pending; package.json/package-lock.json were not modified by this reconciliation
-Findings closed: H-01 (0c19751), H-03/H-04/M-03 (fc672f2), M-01/M-02/H-05 (85c3929), H-02 (ac3bda1), H-06 (352d272), M-04 (16e1610), M-05 (2b0bba0) — 11/11, none deferred, none blocked
-Milestone G: COMPLETE. The Task G merge turned main red for one push (the new live-revision rule used `git merge-base --is-ancestor`, which cannot resolve the older commits in CI's depth-1 checkout); the fix is dcbf9f5, verified in a real shallow clone
-Final gate on clean main at dcbf9f5, re-run after that fix: npm run build PASS; npx tsc --noEmit exits 0 and checks zero project files (the root tsconfig is a solution file, so npm run build / tsc -b is the real type gate, 151 files); npm test PASS (126 files / 1,934 tests); focused regression suites PASS (389 tests across 10 files); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate dcbf9f5); e2e/lottie-import-report + e2e/ograf-matte-visual PASS (7 tests); perf harness PASS (every scene verified before timing); state check PASS (35 checks); npm audit 0; git diff --check clean
-CI: main is green at 64291bc (run 35880658380)
-Milestone H: NEXT. Option C (typescript 6→7, vitest + @vitest/coverage-v8 4→5) is deferred and NOT a release blocker; deferred minors are oxlint 1.85 and jsdom 30.1.x; every package/lockfile/workflow change and every release/tag/npm action is approval-gated
+Branch: main at c1431db (== origin/main); the audit, the CI fix, the triages and the jsdom bump are merged and pushed
+Task record: reports/progress_142_release_readiness_audit.md ... reports/progress_147_milestone_h_docs_handoff.md
+H1 audit: 7 items, 1 REQUIRED (the CI type-check step checked no project file); 5 accepted/recorded, the required one fixed. reports/progress_142_release_readiness_audit.md
+H2 fix: MERGED at b4bf3c0 (chore/ci-typecheck-step) — .github/workflows/ci.yml and the check script now run npx tsc -b --pretty false, which checks 151 project files instead of none. reports/progress_143_ci_typecheck_step.md
+H3 oxlint 1.85: DEFERRED. 34 new warnings, 31 flagging patterns this codebase uses deliberately; the three genuine ones would not make the run clean. reports/progress_144_oxlint_1_85_triage.md
+H4 jsdom 30.1.x: TAKEN at c1431db (chore/jsdom-30-1). jsdom implements neither createObjectURL nor revokeObjectURL, so the environment pairs Node's URL with jsdom's Blob, and 30.1.1's Blob no longer carries what that implementation follows; one test was affected and src/tests/setup.ts now defines the two functions. reports/progress_145_jsdom_30_1_triage.md
+Option C (typescript 6→7, vitest + @vitest/coverage-v8 4→5): DEFERRED BY DECISION, not a release blocker
+Final gate on clean main at c1431db: npm run build PASS; npx tsc -b --pretty false exit 0 (151 files); npm test PASS (126 files / 1,934 tests); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate c1431db, 2 Chromium tests); e2e/export-onboarding + e2e/lottie-import-report + e2e/ograf-matte-visual PASS (8 tests); npm run qa:v6 PASS (3 tests); npm run check PASS; state check PASS (35 checks); npm audit 0; git diff --check clean; API health 200 (sqlite) and the sqlite3 in-memory binding on this Windows machine. reports/progress_146_final_release_gate.md
+Gate verdict: RELEASE READY WITH DOCUMENTED DEFERRALS
+CI: main is green at c1431db (run 35988804952, Node 22 with npm ci)
+Gate limits stated, not hidden: CI runs no browser test (the 2-spec release-smoke.yml is manual); CI is ubuntu-latest only, so the Windows run above is the local evidence; qa:release is the only automated package round-trip
+Carried follow-ups (need their own task): unrestricted CORS; the tracked server/db/keyframe_studio.sqlite; focus restoration on two dialogs
+Accepted and documented: constant SceneLayer.visible; vite --host publishing the dev frontend; one unreproduced full-suite failure during an earlier task
+H6: live documents reconciled on docs/milestone-h-release-readiness (awaiting the fast-forward merge gate). reports/progress_147_milestone_h_docs_handoff.md
+Milestone H: NEXT — the audit, the fixes and the gate are complete; what remains is the release decision (finalize the draft, re-tag at a newer main, or hold), under explicit user instruction. reports/README.md still stops at progress_129 for 130+, recorded as a separate task, not changed here
 Release state: tag v1.1.0-rc.1 target unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub draft prerelease unchanged; package private at 1.1.0-rc.1; npm publish NO
-Scope boundaries stated, not hidden: H-02 with an image matte source follows the editor authority; H-06 added no authentication (loopback bind plus documentation instead); H-04 leaves SceneLayer.visible alone; M-03 leaves the legacy project-template registry out of the scene history
-Residual observations (need their own decision): npx tsc --noEmit verifies nothing in CI; constant SceneLayer.visible; unrestricted CORS; the tracked SQLite file; vite --host publishing the dev frontend; missing focus restoration on two dialogs; one unreproduced full-suite failure during Task B
 Tag/release/npm changed: NO
 
-Copied files (8): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_141_astra_correctness_followup_summary.md
+Copied files (12): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_142_release_readiness_audit.md, progress_143_ci_typecheck_step.md, progress_144_oxlint_1_85_triage.md, progress_145_jsdom_30_1_triage.md, progress_146_final_release_gate.md, progress_147_milestone_h_docs_handoff.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

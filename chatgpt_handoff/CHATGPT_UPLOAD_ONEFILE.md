@@ -19,27 +19,28 @@
 
 ---
 
-# KCS Milestone H Release Readiness — Final Response (the closing checkpoint)
+# KCS Milestone H Release Readiness — Final Response (the held state)
 
 This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 1) RESULT
 
-- **Status:** the release-readiness pass is complete. The audit ran, its one required fix is merged, both dependency decisions are recorded, and the final gate is green on clean `main` at `c1431db`.
+- **Status:** Milestone H is **complete** (H1–H6 merged) and its release decision (H7) is **HELD** by user decision. The final handoff refresh for that state is the last task, and it changed documents only.
 - **Gate verdict:** **RELEASE READY WITH DOCUMENTED DEFERRALS** — `reports/progress_146_final_release_gate.md`.
-- **Reports:** the audit (`progress_142_release_readiness_audit.md`), the fix (`progress_143_ci_typecheck_step.md`), the two triages (`progress_144_oxlint_1_85_triage.md`, `progress_145_jsdom_30_1_triage.md`), the gate (`progress_146_final_release_gate.md`) and this reconciliation (`progress_147_milestone_h_docs_handoff.md`).
-- **Nothing was released:** the tag, the draft prerelease, the package metadata and npm are untouched. The release decision is the one open item, and it is the user's.
+- **Reports:** the audit (`progress_142_release_readiness_audit.md`), the fix (`progress_143_ci_typecheck_step.md`), the two triages (`progress_144_oxlint_1_85_triage.md`, `progress_145_jsdom_30_1_triage.md`), the gate (`progress_146_final_release_gate.md`), the reconciliation (`progress_147_milestone_h_docs_handoff.md`) and this refresh (`progress_148_final_handoff_after_hold.md`).
+- **Nothing was released:** no tag, release or npm action. The artefacts are unchanged, and that is now the recorded decision rather than an open question.
 
 ## 2) HOW IT RAN
 
-| Task | Work | Branch | Merged at |
-|---|---|---|---|
-| H1 | release-readiness audit — 7 findings, 1 of them required | `docs/milestone-h-audit` | `cc1ce8e` |
-| H2 | the required fix: the CI type-check step now checks the project | `chore/ci-typecheck-step` | `b4bf3c0` |
-| H3 | `oxlint` 1.85 triage → **deferred** | `docs/milestone-h-triage` | `cc1ce8e` |
-| H4 | `jsdom` 30.1.x triage → **taken**, with a test-only shim | `chore/jsdom-30-1` | `c1431db` |
-| H5 | the final release gate on clean merged `main` | — (read-only) | — |
-| H6 | live documents and this handoff reconciled | `docs/milestone-h-release-readiness` | awaiting the merge gate |
+| Task | Work | Merged at |
+|---|---|---|
+| H1 | release-readiness audit — 7 findings, 1 of them required | `cc1ce8e` |
+| H2 | the required fix: the CI type-check step now checks the project | `b4bf3c0` |
+| H3 | `oxlint` 1.85 triage → **deferred** | `cc1ce8e` |
+| H4 | `jsdom` 30.1.x triage → **taken**, with a test-only shim | `c1431db` |
+| H5 | the final release gate on clean merged `main` | `3b5a2f3` |
+| H6 | live documents and the handoff reconciled | `5b68543` |
+| H7 | the release decision → **HELD** | no action taken |
 
 No rebase, no force push, no merge commit, no history rewrite. Every package/lockfile change and every
 merge had explicit approval.
@@ -57,34 +58,35 @@ merge had explicit approval.
 | export, Lottie and matte browser specs | PASS — 8 tests |
 | `npm run qa:v6` | PASS — 3 tests |
 | `npm run check` | PASS |
-| `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
+| `node scripts/check-state-consistency.mjs` | PASS — 35 checks at that commit, 45 now that the documents and the bundle grew |
 | `npm audit` | 0 vulnerabilities |
 | API health + `sqlite3` binding on this machine | 200 `online` / in-memory table created |
 | `git diff --check` and the working tree | clean |
 
-CI on `main` is green at `c1431db` (run `35988804952`, Node 22 with `npm ci`).
+CI is green on `main` at `5b68543` (run `35996899896`); the gate commit's own run is `35988804952`.
 
 ## 4) THE AUDIT'S ONE REQUIRED FINDING, AND HOW IT WAS CLOSED
 
 The CI step named "TypeScript Type Check" ran `npx tsc --noEmit`. The root `tsconfig.json` is a solution
 file, so that command builds no referenced project and checked **no project file**: a broken type could
 have merged behind a green tick. The step and the `check` script now run `npx tsc -b --pretty false`,
-which checks all 151 project files, committed at `b4bf3c0`.
+which checks all 151 project files, committed at `b4bf3c0`. This is closed, not pending.
 
 ## 5) DECISIONS AND DEFERRALS
 
-- **Option C** (`typescript` 6→7, `vitest` + `@vitest/coverage-v8` 4→5): **deferred by decision.** The configuration surface is vanilla and the peer engines are satisfied, but the breakage surface cannot be measured without installing the majors, and the current toolchain is clean.
-- **`oxlint` 1.85:** **deferred.** 34 new warnings, 31 of which flag patterns this codebase uses deliberately (the documented latest-ref mirror, and synchronisation effects the rule's own guidance allows); the three genuine ones would not make the run clean.
-- **`jsdom` 30.1.x:** **closed.** The bump is taken at `c1431db`. jsdom implements neither `createObjectURL` nor `revokeObjectURL`, so the test environment pairs Node's `URL` with jsdom's `Blob`, and 30.1.1's Blob no longer carries what that implementation follows; one test was affected and the test environment now defines the two functions itself.
-- **Carried follow-ups that need their own task:** unrestricted CORS, the tracked `server/db/keyframe_studio.sqlite`, and focus restoration for two dialogs. **Accepted and documented:** the constant `SceneLayer.visible` and `vite --host` publishing the dev frontend.
-- **Stated limits of the gate:** CI runs no browser test (the 2-spec `release-smoke.yml` is manual), CI is `ubuntu-latest` only so this run is the Windows evidence, and `qa:release` is the only automated package round-trip.
+- **H7 — the release decision: HELD.** The tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft prerelease, the package is private at `1.1.0-rc.1`, and nothing was published. Publishing, finalizing or re-tagging still needs explicit user instruction.
+- **Option C** (`typescript` 6→7, `vitest` + `@vitest/coverage-v8` 4→5): **deferred by decision**, not a blocker.
+- **`oxlint` 1.85:** **deferred** — 34 new warnings, 31 of which flag patterns this codebase uses deliberately.
+- **`jsdom` 30.1.x:** **closed** — the bump is taken at `c1431db`, with one test-only shim in `src/tests/setup.ts`.
+- **`engines` + npm-12 `allowScripts`:** **closed** — merged at `1a12d79`.
+- **Carried follow-ups that need their own task:** unrestricted CORS, the tracked `server/db/keyframe_studio.sqlite`, and focus restoration for two dialogs. **Accepted and documented:** the constant `SceneLayer.visible`, `vite --host` publishing the dev frontend, and one unreproduced full-suite failure during an earlier task.
+- **Stated limits of the gate:** CI runs no browser test (the 2-spec `release-smoke.yml` is manual), CI is `ubuntu-latest` only so the Windows run above is the local evidence, and `qa:release` is the only automated package round-trip.
 
 ## 6) RELEASE VIEW
 
-The tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is
-still a draft, the package is private at `1.1.0-rc.1`, and npm publication did not occur. What remains is
-a decision, not a fix: finalize the draft, re-tag at a newer `main`, or hold. The repository states no
-default for that, and this pass took none.
+There is no open release question left in this milestone. The decision was taken as a hold, the artefacts
+were verified unchanged, and the repository states no default for a future release: finalizing the draft,
+re-tagging at a newer `main`, or holding again all need a new explicit instruction.
 
 ---
 
@@ -92,31 +94,34 @@ default for that, and this pass took none.
 
 ---
 
-# KCS ChatGPT Upload Manifest — Milestone H release readiness
+# KCS ChatGPT Upload Manifest — final handoff, Milestone H held
 
 Clean refreshed: YES
-Bundle purpose: the Milestone H release-readiness pass — the audit, its one required fix, the two dependency decisions, the final gate on clean main, and the live documents reconciled to the repository truth
+Bundle purpose: the final handoff for the held state — the Milestone H release-readiness evidence (audit, fix, triages, gate), the documents/handoff reconciliation, and the hold decision itself
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: main at c1431db (== origin/main); the audit, the CI fix, the triages and the jsdom bump are merged and pushed
-Task record: reports/progress_142_release_readiness_audit.md ... reports/progress_147_milestone_h_docs_handoff.md
-H1 audit: 7 items, 1 REQUIRED (the CI type-check step checked no project file); 5 accepted/recorded, the required one fixed. reports/progress_142_release_readiness_audit.md
-H2 fix: MERGED at b4bf3c0 (chore/ci-typecheck-step) — .github/workflows/ci.yml and the check script now run npx tsc -b --pretty false, which checks 151 project files instead of none. reports/progress_143_ci_typecheck_step.md
+Branch: main at 5b68543 (== origin/main); H1-H6 are merged and pushed
+Task record: reports/progress_142_release_readiness_audit.md ... reports/progress_148_final_handoff_after_hold.md
+H1 audit: 7 items, 1 REQUIRED (the CI type-check step checked no project file); the required one fixed. reports/progress_142_release_readiness_audit.md
+H2 fix: MERGED at b4bf3c0 — .github/workflows/ci.yml and the check script now run npx tsc -b --pretty false, which checks 151 project files instead of none. CLOSED. reports/progress_143_ci_typecheck_step.md
 H3 oxlint 1.85: DEFERRED. 34 new warnings, 31 flagging patterns this codebase uses deliberately; the three genuine ones would not make the run clean. reports/progress_144_oxlint_1_85_triage.md
-H4 jsdom 30.1.x: TAKEN at c1431db (chore/jsdom-30-1). jsdom implements neither createObjectURL nor revokeObjectURL, so the environment pairs Node's URL with jsdom's Blob, and 30.1.1's Blob no longer carries what that implementation follows; one test was affected and src/tests/setup.ts now defines the two functions. reports/progress_145_jsdom_30_1_triage.md
-Option C (typescript 6→7, vitest + @vitest/coverage-v8 4→5): DEFERRED BY DECISION, not a release blocker
-Final gate on clean main at c1431db: npm run build PASS; npx tsc -b --pretty false exit 0 (151 files); npm test PASS (126 files / 1,934 tests); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate c1431db, 2 Chromium tests); e2e/export-onboarding + e2e/lottie-import-report + e2e/ograf-matte-visual PASS (8 tests); npm run qa:v6 PASS (3 tests); npm run check PASS; state check PASS (35 checks); npm audit 0; git diff --check clean; API health 200 (sqlite) and the sqlite3 in-memory binding on this Windows machine. reports/progress_146_final_release_gate.md
+H4 jsdom 30.1.x: TAKEN at c1431db. CLOSED. jsdom implements neither createObjectURL nor revokeObjectURL, so the environment pairs Node's URL with jsdom's Blob, and 30.1.1's Blob no longer carries what that implementation follows; one test was affected and src/tests/setup.ts now defines the two functions. reports/progress_145_jsdom_30_1_triage.md
+H5 final gate on clean main at c1431db: npm run build PASS; npx tsc -b --pretty false exit 0 (151 files); npm test PASS (126 files / 1,934 tests); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate c1431db, 2 Chromium tests); e2e/export-onboarding + e2e/lottie-import-report + e2e/ograf-matte-visual PASS (8 tests); npm run qa:v6 PASS (3 tests); npm run check PASS; npm audit 0; git diff --check clean; API health 200 (sqlite) and the sqlite3 in-memory binding on this Windows machine. reports/progress_146_final_release_gate.md
 Gate verdict: RELEASE READY WITH DOCUMENTED DEFERRALS
-CI: main is green at c1431db (run 35988804952, Node 22 with npm ci)
+H6: live documents and handoff reconciled, MERGED at 5b68543. That merge changed documents only: the code delta between the gated c1431db and 5b68543 is empty. reports/progress_147_milestone_h_docs_handoff.md
+H7: HOLD by user decision — no tag, release or npm action. reports/progress_148_final_handoff_after_hold.md
+CI: main is green at 5b68543 (run 35996899896); the gate commit's own run is 35988804952
+State check: PASS 45 checks (35 at the gate commit, before the documents and the bundle grew)
+Option C (typescript 6->7, vitest + @vitest/coverage-v8 4->5): DEFERRED BY DECISION, not a release blocker
+engines + npm-12 allowScripts: CLOSED, merged at 1a12d79
 Gate limits stated, not hidden: CI runs no browser test (the 2-spec release-smoke.yml is manual); CI is ubuntu-latest only, so the Windows run above is the local evidence; qa:release is the only automated package round-trip
 Carried follow-ups (need their own task): unrestricted CORS; the tracked server/db/keyframe_studio.sqlite; focus restoration on two dialogs
 Accepted and documented: constant SceneLayer.visible; vite --host publishing the dev frontend; one unreproduced full-suite failure during an earlier task
-H6: live documents reconciled on docs/milestone-h-release-readiness (awaiting the fast-forward merge gate). reports/progress_147_milestone_h_docs_handoff.md
-Milestone H: NEXT — the audit, the fixes and the gate are complete; what remains is the release decision (finalize the draft, re-tag at a newer main, or hold), under explicit user instruction. reports/README.md still stops at progress_129 for 130+, recorded as a separate task, not changed here
+Roadmap: A-G merged; Milestone H is complete through H6 and its row keeps the plan's single NEXT marker because the state checker requires exactly one and the only item the plan still holds is the held release decision. reports/README.md still stops at progress_129 for 130+, recorded as a separate task, not changed here
 Release state: tag v1.1.0-rc.1 target unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub draft prerelease unchanged; package private at 1.1.0-rc.1; npm publish NO
 Tag/release/npm changed: NO
 
-Copied files (12): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_142_release_readiness_audit.md, progress_143_ci_typecheck_step.md, progress_144_oxlint_1_85_triage.md, progress_145_jsdom_30_1_triage.md, progress_146_final_release_gate.md, progress_147_milestone_h_docs_handoff.md
+Copied files (14): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_142_release_readiness_audit.md, progress_143_ci_typecheck_step.md, progress_144_oxlint_1_85_triage.md, progress_145_jsdom_30_1_triage.md, progress_146_final_release_gate.md, progress_147_milestone_h_docs_handoff.md, progress_148_final_handoff_after_hold.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
@@ -129,41 +134,46 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files list
 
 ---
 
-# KCS Minimal ChatGPT Upload Bundle — Milestone H release readiness
+# KCS Minimal ChatGPT Upload Bundle — final handoff, Milestone H held
 
-This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for this checkpoint.
+This is a minimal, task-specific ChatGPT upload bundle. It was clean-refreshed for the final handoff of
+the Milestone H hold state.
 
 ## What this bundle covers
 
-The Milestone H release-readiness pass, complete through its final gate, with the live documents and
-this handoff reconciled to the repository truth (`main == origin/main == c1431db`):
+Milestone H is complete through H6 and its release decision (H7) is **held**, with the live documents and
+this handoff reconciled to the repository truth (`main == origin/main == 5b68543`):
 
 - **The audit** (`progress_142_release_readiness_audit.md`) found 7 items, **one of them required**: the
-  CI step named "TypeScript Type Check" ran `npx tsc --noEmit`, which builds no referenced project and
-  so checked no project file — a broken type could have merged behind a green tick.
+  CI step named "TypeScript Type Check" ran `npx tsc --noEmit`, which builds no referenced project and so
+  checked no project file — a broken type could have merged behind a green tick.
 - **The fix** (`progress_143_ci_typecheck_step.md`) is merged at `b4bf3c0`: the CI step and the `check`
-  script now run `npx tsc -b --pretty false`, which checks all 151 project files.
+  script now run `npx tsc -b --pretty false`, which checks all 151 project files. Closed, not pending.
 - **Two dependency decisions.** `oxlint` 1.85 is **deferred** (`progress_144_oxlint_1_85_triage.md`: 34
   new warnings, 31 flagging deliberate patterns). `jsdom` 30.1.x is **taken** at `c1431db`
-  (`progress_145_jsdom_30_1_triage.md`: jsdom implements neither object-URL function, so the test
-  environment now defines them itself instead of depending on which Blob shape a jsdom patch ships).
-  Option C (TypeScript 6→7, Vitest 4→5) is **deferred by decision** and is not a blocker.
+  (`progress_145_jsdom_30_1_triage.md`): jsdom implements neither object-URL function, so the test
+  environment now defines them itself instead of depending on which Blob shape a jsdom patch ships.
+  Option C (TypeScript 6→7, Vitest 4→5) is **deferred by decision** and is not a blocker. The
+  `engines`/npm-12 `allowScripts` answer is **closed** — merged at `1a12d79`.
 - **The final gate** (`progress_146_final_release_gate.md`) ran on clean `main` at `c1431db` and reports
   **RELEASE READY WITH DOCUMENTED DEFERRALS**: build, type check, 126 files / 1,934 tests, lint,
   `validate:ograf`, `qa:release` (2 Chromium), the export/Lottie/matte browser specs (8), `qa:v6` (3),
-  `npm run check`, the state check (35), `npm audit` (0), `git diff --check`, plus the API health and the
-  `sqlite3` binding on the Windows machine. CI on `main` is green at `c1431db` (run `35988804952`).
-- **This reconciliation** (`progress_147_milestone_h_docs_handoff.md`) moved the live documents to the new
-  baseline and rewrote the handoff.
-- **No release artefact moved.** `v1.1.0-rc.1` still points at `46d2a3e`, the GitHub release is still a
-  draft, the package is private at `1.1.0-rc.1`, and nothing was published. Finalizing, re-tagging or
-  holding is the user's decision.
+  `npm run check`, the state check, `npm audit` (0), `git diff --check`, plus the API health and the
+  `sqlite3` binding on the Windows machine. CI is green on `main` at `5b68543` (run `35996899896`).
+- **The reconciliation** (`progress_147_milestone_h_docs_handoff.md`) moved the live documents to the
+  `c1431db` baseline, and **this refresh** (`progress_148_final_handoff_after_hold.md`) records the hold
+  and clears the claims that predated it. The H6 merge changed documents only: the code delta between the
+  gated `c1431db` and `5b68543` is empty.
+- **H7 — the release decision: HELD.** `v1.1.0-rc.1` still points at
+  `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft prerelease, the package
+  is private at `1.1.0-rc.1`, and nothing was published. Finalizing, re-tagging or holding again needs a
+  new explicit instruction.
 
 ## Files
 
 - `OMP_FINAL_RESPONSE.md` — the final response for this checkpoint
-- `progress_142_release_readiness_audit.md` … `progress_147_milestone_h_docs_handoff.md` — this task's records
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap, with milestones A–G complete and H as NEXT
+- `progress_142_release_readiness_audit.md` … `progress_148_final_handoff_after_hold.md` — the milestone's records, which are also the release evidence
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — the roadmap: A–G merged, H complete through H6 with its release decision held
 - `CHANGELOG.md` — the repository changelog
 - `NEXT_SESSION.md` — repository state and the current next action
 - `PROJECT_STATE.md` — project state, validation status and the handoff policy
@@ -726,6 +736,77 @@ machine that ran it.
 
 ---
 
+# Progress 148 — final handoff refresh after the Milestone H hold
+
+Documentation and handoff reconciliation only. No source, test, package, lockfile or workflow file was
+touched, and no release, tag or npm action was taken.
+
+## 1. Precheck (read-only)
+
+| Fact | Value |
+|---|---|
+| `git status --short --branch` | `## main...origin/main` — clean |
+| `git rev-parse HEAD` / `main` / `origin/main` | `5b68543` — all three equal |
+| Latest `main` CI | `35996899896` — success (the run for `5b68543`) |
+| `node scripts/check-state-consistency.mjs` | PASS — 45 checks |
+| `git diff --check` | clean |
+
+## 2. Stale claims found, and what each now says
+
+The handoff was generated before the H6 merge and the H7 hold, so it carried the state of that moment.
+
+| Stale claim | Where | Now |
+|---|---|---|
+| `main` at `c1431db` as the current truth | `PROJECT_STATE.md`, `NEXT_SESSION.md`, the bundle manifest, the final response | `main` at or after `5b68543` |
+| "the release decision is the open item" | `NEXT_SESSION.md`, `PROJECT_STATE.md`'s Milestone H heading | **H7 = HELD by user decision**; the decision is no longer open |
+| "H6 … awaiting the fast-forward merge gate" | the bundle manifest and the final response | H6 merged at `5b68543` |
+| "the roadmap, with milestones A–G complete and H as NEXT" | the bundle README | milestones A–G complete; Milestone H complete through H6 with its release decision held |
+| run `35988804952` presented as the latest CI | the bundle README, manifest and final response | `35996899896` is the run for the current `main`; the earlier run is named as the gate-commit run |
+| "the state check (35)" as the current total | the final response's gate table, `PROJECT_STATE.md` | 45 now — 35 at the gate commit, before the documents and the bundle grew |
+| "`engines`/`allowScripts` … awaiting its merge decision" | the roadmap's close-out paragraph | merged into `main` at `1a12d79` |
+| "the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x)" as one open pair | the roadmap's recommended next prompt | `jsdom` 30.1.1 taken at `c1431db`; only `oxlint` 1.85 stays deferred, with Option C deferred by decision |
+| "the remaining work is a decision, not a fix … then any publish/finalize instruction" | the roadmap's recommended next prompt | rewritten for the held state: H1–H6 merged, H7 held, nothing actionable without a new instruction |
+
+**Not changed, deliberately:** `reports/README.md` still stops at `progress_129` for its "latest relevant
+reports" list (a separate documentation task, recorded in `progress_147`), and every earlier report keeps
+its intermediate facts — a report is a historical record, and rewriting one would falsify it.
+
+## 3. The roadmap's NEXT marker, and why Milestone H keeps it
+
+The attachment asked for Milestone H to stop being NEXT. The repository's own gate makes that
+impossible to state literally: `checkRoadmapStatus` parses the milestone table, accepts only the letters
+`A`–`H`, and fails unless **exactly one** row's status contains `NEXT`
+(`scripts/check-state-consistency.mjs`, "expected exactly one NEXT milestone"). Every row is taken —
+`A`/`B`/`C` must read MERGED, `E`/`F` must stay plan-only — so the single NEXT marker can only sit on
+`D`, `G` or `H`, and only `H` has anything left in the plan.
+
+The row therefore keeps the marker and states the truth in its text: **H1–H6 COMPLETE and merged,
+H7 HELD**, with the marker explained as "the only item the plan still holds is that future release
+decision". The alternative — dropping the marker or editing the checker — would either break the gate or
+weaken it, and neither is a documentation change. This is recorded here rather than hidden.
+
+## 4. Handoff rebuild
+
+`chatgpt_handoff/latest/` was cleaned and rebuilt for this state: the four mirrored documents re-copied,
+the Milestone H record set (the audit, the fix, the two triages, the gate, the reconciliation) kept as the
+release evidence, this report added, and `OMP_FINAL_RESPONSE.md`, `manifest.txt` and `README.md`
+rewritten. `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` was regenerated from `latest/` — no section was
+appended to the previous file. The upload instruction still names
+`chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
+
+## 5. Validation
+
+| Check | Result |
+|---|---|
+| `node scripts/check-state-consistency.mjs` | **PASS — 45 checks** (bundle mirrors, live documents, roadmap rows, the tag/revision rule, the one-file staleness and secret scans) |
+| `git diff --check` | clean |
+| Changed paths | documents only — no `src/`, `server/`, `perf/`, `e2e/`, `scripts/`, `package.json`, `package-lock.json` or `.github/workflows/` |
+
+**Stop point:** the refresh awaits the approval gate for merging `docs/final-handoff-after-hold` into
+`main` (fast-forward only). No merge was performed, and H7 was not reopened.
+
+---
+
 ## 5. Next Session
 
 ---
@@ -734,7 +815,7 @@ machine that ran it.
 
 ## Repository state
 
-- Checkout: `main` at or after `c1431db` (the Milestone H release-readiness work), matching `origin/main`. **Milestone F item 10 is complete**: the import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are merged; the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base and stays historical. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **all four Milestone F item 10 slices (merged at `ff32d6c`, `8670b2a`, `bda62cb` and `3b30bff`)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
+- Checkout: `main` at or after `5b68543` (the Milestone H final handoff), matching `origin/main`. **Milestone F item 10 is complete**: the import core (`ff32d6c`), the mask/track-matte slice (`8670b2a`), the text/image/precomp slice (`bda62cb`) and the import entry point with the report-before-replace UX (`3b30bff`) are merged; the checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` records the earlier base and stays historical. Milestones A–E, the Milestone F study, the item-11 harness, item 12's first step and product half, the CI hotfix and **all four Milestone F item 10 slices (merged at `ff32d6c`, `8670b2a`, `bda62cb` and `3b30bff`)** are in `main`. The feature branches `feat/export-onboarding`, `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance`, `docs/milestone-e-ograf-qa-study` and `feat/lottie-import-core` are retained as review artefacts.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Checkout after the item 12 merge: `main` at or after `a4f8642` (the OGraf package import and its handoff refresh), matching `origin/main`
@@ -760,11 +841,11 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-On `main` at `c1431db` (the Milestone H release-readiness work): full Vitest (126 files / 1,934 tests), `npx playwright test e2e/ograf-matte-visual.spec.ts` (4 pixel cases) and `e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run build` (`tsc -b` + vite — and the CI type-check step and the `check` script now run `tsc -b` too, so all 151 project files are checked), `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` all pass, `npm audit` reports 0 vulnerabilities, and the API serves `GET /api/health` with 200 on `127.0.0.1` (its default bind).
+On `main` at `5b68543` (the Milestone H final handoff): full Vitest (126 files / 1,934 tests), `npx playwright test e2e/ograf-matte-visual.spec.ts` (4 pixel cases) and `e2e/lottie-import-report.spec.ts` (3 real-browser tests), `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run build` (`tsc -b` + vite — and the CI type-check step and the `check` script now run `tsc -b` too, so all 151 project files are checked), `npm run lint` (clean), `git diff --check` and `node scripts/check-state-consistency.mjs` all pass, `npm audit` reports 0 vulnerabilities, and the API serves `GET /api/health` with 200 on `127.0.0.1` (its default bind).
 
 ## Next scoped work
 
-1. **Milestone H — release readiness is complete and the release decision is the open item.** The audit (`reports/progress_142_release_readiness_audit.md`), the one required fix (the CI type-check step and the `check` script now run `npx tsc -b --pretty false`; `reports/progress_143_ci_typecheck_step.md`), the two dependency triages (`reports/progress_144_oxlint_1_85_triage.md`, `reports/progress_145_jsdom_30_1_triage.md`) and the final release gate (`reports/progress_146_final_release_gate.md`) are all done, and `jsdom` 30.1.1 was taken at `c1431db`. The gate verdict is **RELEASE READY WITH DOCUMENTED DEFERRALS**. What remains is the release decision itself — finalize the draft, re-tag, or hold — which needs explicit user instruction. **Milestone G — the post-review correctness follow-up — is complete.** Every finding from the full-project review is closed, each on its own branch with its own validation, a read-only self-review and an approval-gated fast-forward merge: H-01 at `0c19751`; H-03, H-04 and M-03 at `fc672f2`; M-01, M-02 and H-05 at `85c3929`; H-02 at `ac3bda1`; H-06 at `352d272`; M-04 at `16e1610`; M-05 at `2b0bba0`. The final correctness gate ran on `main` after the shallow-checkout fix (`dcbf9f5`) and is recorded in `reports/progress_141_astra_correctness_followup_summary.md`, which also lists the residual observations that need their own decision. **Milestone H (release finalization) is the next work.**
+1. **Milestone H — release readiness is COMPLETE (H1–H6) and its release decision (H7) is HELD.** The audit (`reports/progress_142_release_readiness_audit.md`), the one required fix (the CI type-check step and the `check` script now run `npx tsc -b --pretty false`; `reports/progress_143_ci_typecheck_step.md`), the two dependency triages (`reports/progress_144_oxlint_1_85_triage.md`, `reports/progress_145_jsdom_30_1_triage.md`) and the final release gate (`reports/progress_146_final_release_gate.md`) are all done and merged, `jsdom` 30.1.1 was taken at `c1431db`, and the live documents and the handoff were reconciled at `5b68543` (`reports/progress_147_milestone_h_docs_handoff.md`, `reports/progress_148_final_handoff_after_hold.md`). The gate verdict is **RELEASE READY WITH DOCUMENTED DEFERRALS**. H7 was decided as a **hold**: no tag, release or npm action, and the artefacts stay at `46d2a3e`. Nothing in the plan is actionable without a new explicit instruction. **Milestone G — the post-review correctness follow-up — is complete.**
 2. Approval-gated follow-ups that remain open: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair), **deferred by decision** in Milestone H, and the `oxlint` 1.85 bump, **deferred** with its triage recorded. **`jsdom` 30.1.1 is closed** — the bump was taken at `c1431db`. The `engines`/`allowScripts` follow-up is answered on `chore/engines-allow-scripts` (`reports/progress_131_engines_allow_scripts.md`) and is **merged** at `1a12d79`. Every release/tag/draft-release change still needs explicit approval.
 3. Preserve the tag and draft release, and run an independent review before every merge.
 4. Publish/finalize the GitHub draft only with further explicit user instruction.
@@ -793,7 +874,7 @@ On `main` at `c1431db` (the Milestone H release-readiness work): full Vitest (12
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
-- Roadmap status when this milestone landed: D was next (items 6 and 9) and C was merged. Current status: milestones A–G are complete and Milestone H (release finalization) is NEXT (see "Current result" above).
+- Roadmap status when this milestone landed: D was next (items 6 and 9) and C was merged. Current status: milestones A–G are complete, and Milestone H is complete through H6 with its release decision held (H7), see "Current result" above.
 
 ---
 
@@ -805,7 +886,7 @@ On `main` at `c1431db` (the Milestone H release-readiness work): full Vitest (12
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into main, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `c1431db` (the Milestone H release-readiness work). Milestone F is complete (its item 10 slices — the Lottie import core `ff32d6c`, the mask/track-matte slice `8670b2a`, the text/image/precomp slice `bda62cb` and the import entry point `3b30bff` — item 11 and item 12 are all merged), milestone G (the post-review correctness follow-up) is complete, and **milestone H (release finalization) is NEXT**.
+The accepted product and security follow-up line is integrated into main, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `5b68543` (the Milestone H final handoff). Milestone F is complete (its item 10 slices — the Lottie import core `ff32d6c`, the mask/track-matte slice `8670b2a`, the text/image/precomp slice `bda62cb` and the import entry point `3b30bff` — item 11 and item 12 are all merged), milestone G (the post-review correctness follow-up) is complete, and **milestone H (release finalization) is complete through H6 with its release decision held (H7)**.
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
@@ -842,7 +923,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 The full-project review's release-blocking findings are closed, one task at a time and one branch each: **H-01** at `0c19751`, **H-03/H-04/M-03** at `fc672f2`, **M-01/M-02/H-05** at `85c3929`, **H-02** at `ac3bda1`, **H-06** at `352d272`, **M-04** at `16e1610`, **M-05** at `2b0bba0`. The Task G merge then turned `main` red for one push — the new live-revision rule compared an "at or after" claim with `git merge-base --is-ancestor`, and CI's `--depth 1` checkout does not carry the older commits — and the fix at `dcbf9f5` reports that limit as skipped, exactly as the tag and milestone checks already do. Every fix carries a reproduction that fails before it and passes after it, at the level a user observes. The final correctness gate and the finding map are in `reports/progress_141_astra_correctness_followup_summary.md`; the residual observations it records (the type-check step that verified nothing — since fixed, see the Milestone H section — the tracked SQLite file, CORS, and the rest) each need their own decision.
 
-## Milestone H — release readiness (audit, fixes and gate complete; the release decision is open)
+## Milestone H — release readiness (COMPLETE — H1–H6 merged; H7 held)
 
 The controlled release-readiness pass ran end to end and its evidence is `reports/progress_142_release_readiness_audit.md` (audit), `reports/progress_144_oxlint_1_85_triage.md` and `reports/progress_145_jsdom_30_1_triage.md` (the two dependency triages), `reports/progress_143_ci_typecheck_step.md` (the audit's one required fix) and `reports/progress_146_final_release_gate.md` (the gate).
 
@@ -850,14 +931,15 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - **Option C (TypeScript 6→7, Vitest 4→5): deferred by user decision** — not a blocker; the current toolchain builds, tests and lints cleanly, and the majors' breakage surface cannot be established without installing them.
 - **`oxlint` 1.85: deferred** — 34 new warnings, 31 of which flag patterns this codebase uses deliberately (the documented latest-ref mirror, and synchronisation effects the rule's own guidance allows); the three genuine ones would not make the run clean.
 - **`jsdom` 30.1.x: closed** — the bump was taken at `c1431db` with one test-only object-URL shim in `src/tests/setup.ts`; jsdom implements neither `createObjectURL` nor `revokeObjectURL`, and 30.1.1's Blob no longer carries what Node's implementation follows.
-- **Final release gate: RELEASE READY WITH DOCUMENTED DEFERRALS** on clean `main` at `c1431db` — build, type check, 126 files / 1,934 tests, lint, `validate:ograf`, `qa:release` (2 Chromium), the Lottie/matte/export browser specs (8), `qa:v6` (3), `npm run check`, the state check (35), `npm audit` (0), `git diff --check`, and the API health plus the sqlite3 binding on this machine.
-- **The release artefacts are unchanged:** `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft, the package is private at `1.1.0-rc.1`, and nothing was published. Finalizing, re-tagging or publishing is an explicit decision that has not been taken.
+- **Final release gate: RELEASE READY WITH DOCUMENTED DEFERRALS** on clean `main` at `c1431db` — build, type check, 126 files / 1,934 tests, lint, `validate:ograf`, `qa:release` (2 Chromium), the Lottie/matte/export browser specs (8), `qa:v6` (3), `npm run check`, the state check (35 checks at that commit, 45 once the documents and the bundle grew), `npm audit` (0), `git diff --check`, and the API health plus the sqlite3 binding on this machine.
+- **H6 — the live documents and the handoff are reconciled** at `5b68543` (`reports/progress_147_milestone_h_docs_handoff.md`), and the final handoff refresh for the held state followed it (`reports/progress_148_final_handoff_after_hold.md`). That merge changed documents only: the code delta between the gated `c1431db` and `5b68543` is empty.
+- **H7 — the release decision: HELD by user decision.** No tag, release or npm action was taken. `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft prerelease, the package is private at `1.1.0-rc.1`, and nothing was published. The decision is no longer open — it is a hold — and a future release still needs explicit user instruction.
 
 ## Remaining work
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is complete too: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is merged as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's implementation slices are merged**, the first at `ff32d6c` (`reports/progress_123_lottie_import_core.md`). Milestone F item 10 is complete: its four slices are merged (`ff32d6c`, `8670b2a`, `bda62cb`, `3b30bff`), and **item 12's unified import entry is merged** (`reports/progress_128_unified_import_entry.md`): one header control classifies a selected file by its content and routes it to the KCS/legacy boundary, the Lottie importer with its report dialog, or the OGraf package reader — merged into `main` with its handoff refresh at `a4f8642`. Its **OGraf package/editable import** is merged at `419fc6a` (`reports/progress_129_ograf_editable_import.md`): a `.zip`/`.ograf` package is decoded in memory under entry-count, entry-size and path-safety guards, its `scene.kcs` goes through the same validated path as a project import, and a bare `.ograf.json` manifest still points the user at the package. After it landed: Option B was taken up and merged into `main` at `73426e5`; `engines`/`allowScripts` is answered on `chore/engines-allow-scripts` and awaits its merge decision, while Option C remains open. The state-consistency checker does not yet detect a stale sentence inside a current section, so these documents are still reviewed by hand after every task. The branch declares the locked toolchain's supported Node intersection (`^22.22.2 || ^24.15.0 || >=26.0.0`), approves `sqlite3@6.0.1`'s prebuilt-binding install step, and synchronizes only the lockfile root engine metadata; the dependency graph is unchanged. Any further `package.json`, lockfile or workflow change stays approval-gated: Option C and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x).
+- **Milestone C (first export / onboarding flow, item 5) — MERGED** at `c2dcb22` (final gate verdict READY WITH WARNINGS): an opt-in "First export help" panel, a readiness check that reads the same OGraf diagnostics authority the export reads, and one shared compile path used by the readiness check and both export actions. **Milestone D is complete** — item 6 and item 9 (audit, the approved Option A and the local SQLite repair) are merged at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`). Milestone E (study plus items 7 and 8) is complete, and Milestone F is complete too: its study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`), item 11 is merged as measurement only, item 12's first step and product half are merged, item 10's mapping design is delivered (`docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`) and **item 10's implementation slices are merged**, the first at `ff32d6c` (`reports/progress_123_lottie_import_core.md`). Milestone F item 10 is complete: its four slices are merged (`ff32d6c`, `8670b2a`, `bda62cb`, `3b30bff`), and **item 12's unified import entry is merged** (`reports/progress_128_unified_import_entry.md`): one header control classifies a selected file by its content and routes it to the KCS/legacy boundary, the Lottie importer with its report dialog, or the OGraf package reader — merged into `main` with its handoff refresh at `a4f8642`. Its **OGraf package/editable import** is merged at `419fc6a` (`reports/progress_129_ograf_editable_import.md`): a `.zip`/`.ograf` package is decoded in memory under entry-count, entry-size and path-safety guards, its `scene.kcs` goes through the same validated path as a project import, and a bare `.ograf.json` manifest still points the user at the package. After it landed: Option B was taken up and merged into `main` at `73426e5`; `engines`/`allowScripts` is answered on `chore/engines-allow-scripts` and merged into `main` at `1a12d79`, while Option C is deferred by decision. The state-consistency checker does not yet detect a stale sentence inside a current section, so these documents are still reviewed by hand after every task. The branch declares the locked toolchain's supported Node intersection (`^22.22.2 || ^24.15.0 || >=26.0.0`), approves `sqlite3@6.0.1`'s prebuilt-binding install step, and synchronizes only the lockfile root engine metadata; the dependency graph is unchanged. Any further `package.json`, lockfile or workflow change stays approval-gated: Option C and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x).
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -887,7 +969,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
 - **Milestone D item 6 — state consistency check — MERGED** at `b91e8b9` (follow-up `be76df9`): `node scripts/check-state-consistency.mjs` fails when the live docs contradict the tag/`main` SHA, when the roadmap and the next action disagree, when the handoff upload instruction is superseded, or when the bundle carries source/test/binary copies, collapsed Windows paths or secret markers (see `reports/progress_111_state_hygiene_gate.md`).
-- **Item 9 (dependency and warning maintenance) — Option A MERGED at `3923141`; Option B merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**; `oxlint` 1.85 and `jsdom` 30.1 are deferred with evidence. The paragraph below records the merged Option A.
+- **Item 9 (dependency and warning maintenance) — Option A MERGED at `3923141`; Option B merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**; `oxlint` 1.85 is deferred with evidence, and `jsdom` 30.1 was later taken at `c1431db`. The paragraph below records the merged Option A.
 - **Item 9 (dependency and warning maintenance) — MERGED at `3923141`** (audit, Option A warning maintenance and the local SQLite repair). The audit is complete (`reports/progress_112_dependency_warning_audit.md`, review closed READY WITH WARNINGS in round 6 of six) and the approved **Option A is implemented** on `chore/warning-maintenance` (`reports/progress_113_warning_maintenance.md`): W1 Fast Refresh split, W2 chunk splitting, W3 jsdom stubs, W4 honest dependency arrays, W5 `.gitattributes`, the D9-2 checker rule and the repair of **D9-1** (the local `sqlite3` NAPI binding is extracted; `node server/index.js` starts and `GET /api/health` returns 200 in this working copy). No dependency was updated and `package.json`, `package-lock.json` and the workflows were left unchanged by that maintenance work; its approval-gated follow-ups were taken up separately, starting with Option B. The 7 catalogued warnings are resolved except W6 (`e2e/**` outside the Vitest glob by design) and W7 (environment `NO_COLOR`/`FORCE_COLOR`). The audit's open items were then taken up one by one: **Option B was applied and merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`) — 16 patch/minor packages refreshed (React 19.3, Vite 8.3, Vitest 4.1.11, testing-library patches, `lucide-react`, `pg`, `concurrently`, `@types`) and a bounded `npm audit fix` took `npm audit` from 1 high + 6 moderate to **0**. Still open by decision: Option C (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair), the `engines` declaration, the npm-12 `allowScripts` pin, and the two minor bumps that were applied, measured and reverted (`oxlint` 1.85 with 33 new rule warnings, `jsdom` 30.1 whose `URL.createObjectURL` throws for a Blob).
 
 ---
@@ -898,7 +980,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9's audit and its approved Option A are merged and only its follow-ups stay behind an explicit approval gate — Option B is now merged into `main` at `73426e5`, while Option C and the two deferred minor bumps remain gated (the `engines`/`allowScripts` answer is on `chore/engines-allow-scripts`, awaiting its merge decision) (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and merged at `22335a5`, and Milestone F's study is delivered while its implementation proceeds slice by slice under separate approvals: item 10 is complete (all four slices merged), item 11 is implemented, and item 12 is complete: the unified import entry and the OGraf package import are merged.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was later completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_108_canvas_tangent_authoring.md`); milestone B was completed, re-reviewed, and fast-forward merged into `main` (see `reports/progress_109_graph_accessibility.md`); milestone C was completed, re-reviewed (final gate verdict READY WITH WARNINGS), and fast-forward merged into `main` (see `reports/progress_110_export_onboarding.md`); milestone D item 6 (state consistency check) was completed, re-reviewed, and fast-forward merged into `main` while item 9's audit and its approved Option A are merged and only its follow-ups stay behind an explicit approval gate — Option B is now merged into `main` at `73426e5`, while Option C stays deferred by decision and the `oxlint` 1.85 bump stays deferred, `jsdom` 30.1.1 having been taken at `c1431db` (the `engines`/`allowScripts` answer is merged into `main` at `1a12d79`) (see `reports/progress_111_state_hygiene_gate.md`); milestone E items 7 and 8 are implemented and merged at `22335a5`, and Milestone F's study is delivered while its implementation proceeds slice by slice under separate approvals: item 10 is complete (all four slices merged), item 11 is implemented, and item 12 is complete: the unified import entry and the OGraf package import are merged.
 
 ## Milestone map and status
 
@@ -907,11 +989,11 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestone A was late
 | A — Canvas path authoring UX (tangent handles) | 3 | `feat/canvas-tangent-authoring` (replayed as `feat/canvas-tangent-authoring-replay`) | **MERGED** — five review findings closed across six rounds (final verdict READY), fast-forward merged into `main` |
 | B — Graph + keyboard accessibility | 4 | `feat/graph-accessibility` | **MERGED** — one review round returned BLOCKED (3 findings, 6 over-claims), all closed; re-review returned READY WITH WARNINGS; fast-forward merged at `96e8f9d` |
 | C — First export / onboarding flow | 5 | `feat/export-onboarding` | **MERGED** — six review rounds; final gate verdict READY WITH WARNINGS; fast-forward merged into `main` at `c2dcb22` |
-| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 and `jsdom` 30.1 deferred for documented reasons. The `engines` declaration and npm-12 `allowScripts` policy are answered on `chore/engines-allow-scripts` and are **merged into `main` at `1a12d79`**. Still approval-gated: Option C (TypeScript 7 / Vitest 5) and the two deferred minor bumps |
+| D — State / CI / warning hygiene | 6, 9 | `chore/state-hygiene-gate`, `chore/dependency-warning-audit`, `chore/warning-maintenance` | **COMPLETE** — **item 6 MERGED** (`node scripts/check-state-consistency.mjs`); **item 9 MERGED** at `3923141` (`reports/progress_112_dependency_warning_audit.md`, `reports/progress_113_warning_maintenance.md`): the audit, then the approved Option A (W1, W2, W3, W4, W5, D9-2) and the local SQLite repair, fast-forward merged with green CI run `35322372675`. **Option B is merged into `main` at `73426e5`** (`reports/progress_130_dependency_maintenance_option_b.md`): 16 patch/minor packages refreshed and a bounded `npm audit fix` brought `npm audit` to zero, with `oxlint` 1.85 deferred for documented reasons and `jsdom` 30.1.1 later taken at `c1431db`. The `engines` declaration and npm-12 `allowScripts` policy are answered on `chore/engines-allow-scripts` and are **merged into `main` at `1a12d79`**. Still approval-gated: Option C (TypeScript 7 / Vitest 5, deferred by decision) and the `oxlint` 1.85 bump |
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **COMPLETE** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
 | G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **COMPLETE** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05** (the live-document reconciliation) is merged at `2b0bba0`, and the shallow-checkout CI regression it caused was fixed at `dcbf9f5`, and the final correctness gate ran on `main` after that fix (`reports/progress_141_astra_correctness_followup_summary.md`): every finding is closed. |
-| H — Release finalization and the approval-gated toolchain majors | review follow-up decisions | `chore/ci-typecheck-step`, `chore/jsdom-30-1`, `docs/milestone-h-triage` | **NEXT** — **the audit, the fixes and the final gate are complete** (`reports/progress_142_release_readiness_audit.md`, `progress_143_ci_typecheck_step.md`, `progress_144_oxlint_1_85_triage.md`, `progress_145_jsdom_30_1_triage.md`, `progress_146_final_release_gate.md`): the audit's one required item is fixed at `b4bf3c0` (the CI type-check step ran `npx tsc --noEmit`, which checked no project file), `jsdom` 30.1.1 is taken at `c1431db`, and the gate verdict on clean `main` is **RELEASE READY WITH DOCUMENTED DEFERRALS**. **Option C is deferred by decision** and **`oxlint` 1.85 is deferred** with its triage; both stay approval-gated. What is left is the release decision itself — finalize the draft, re-tag, or hold — under explicit user instruction. |
+| H — Release finalization and the approval-gated toolchain majors | review follow-up decisions | `chore/ci-typecheck-step`, `chore/jsdom-30-1`, `docs/milestone-h-audit`, `docs/milestone-h-triage`, `docs/milestone-h-release-readiness`, `docs/final-handoff-after-hold` | **NEXT (held)** — **H1–H6 are COMPLETE and merged**: the audit `cc1ce8e`, the required CI type-check fix `b4bf3c0`, the `oxlint` 1.85 triage (deferred), the `jsdom` 30.1.1 bump `c1431db`, the final gate `3b5a2f3` (**RELEASE READY WITH DOCUMENTED DEFERRALS**) and the docs/handoff reconciliation `5b68543`. **H7 = HOLD** by user decision: no tag, release or npm action, and the artefacts stay at `46d2a3e`. This row carries the plan's single NEXT marker because the state checker requires exactly one and the only item the plan still holds is that future release decision — every change to it stays approval-gated. |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -967,7 +1049,9 @@ The deliverables are the study, the Lottie import mapping design and the editabl
 
 ## Recommended next prompt
 
-"KCS RELEASE FINALIZATION (Milestone H, approval-gated). The post-review correctness follow-up is complete and every finding H-01…M-05 is closed (`reports/progress_141_astra_correctness_followup_summary.md`). The remaining work is a decision, not a fix: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the two deferred minor bumps (`oxlint` 1.85, `jsdom` 30.1.x), each on its own branch with its own validation, then any publish/finalize instruction for the GitHub draft. Every package/lockfile/workflow change needs explicit approval, and the release tag and draft stay untouched until then."
+"KCS RELEASE FINALIZATION (Milestone H, approval-gated — currently HELD). Milestone H's work is complete: the release-readiness audit, the CI type-check fix at `b4bf3c0`, the `oxlint` 1.85 and `jsdom` 30.1.x triages (`jsdom` 30.1.1 was taken at `c1431db`) and the final gate (RELEASE READY WITH DOCUMENTED DEFERRALS) are merged, and the live documents and handoff are reconciled at `5b68543`.
+
+The release decision (H7) was taken as a HOLD: the tag `v1.1.0-rc.1`, the GitHub draft prerelease and the package metadata are unchanged at `46d2a3e59e065816d972dcd56951803951b577f6`, and nothing was published. What a future session may take up is a decision, not a fix: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair) and the deferred `oxlint` 1.85 bump, each on its own branch with its own validation, or a publish/finalize instruction for the draft. Every package/lockfile/workflow change and every release action needs explicit approval."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
@@ -1073,18 +1157,19 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 ---
 
 - `CHANGELOG.md` — 14512 bytes
-- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 16620 bytes
-- `NEXT_SESSION.md` — 12140 bytes
-- `OMP_FINAL_RESPONSE.md` — 4938 bytes
-- `PROJECT_STATE.md` — 19895 bytes
-- `README.md` — 3821 bytes
-- `manifest.txt` — 4408 bytes
+- `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 16996 bytes
+- `NEXT_SESSION.md` — 11752 bytes
+- `OMP_FINAL_RESPONSE.md` — 4832 bytes
+- `PROJECT_STATE.md` — 20464 bytes
+- `README.md` — 4305 bytes
+- `manifest.txt` — 4670 bytes
 - `progress_142_release_readiness_audit.md` — 7928 bytes
 - `progress_143_ci_typecheck_step.md` — 2791 bytes
 - `progress_144_oxlint_1_85_triage.md` — 6194 bytes
 - `progress_145_jsdom_30_1_triage.md` — 6486 bytes
 - `progress_146_final_release_gate.md` — 5200 bytes
 - `progress_147_milestone_h_docs_handoff.md` — 3877 bytes
+- `progress_148_final_handoff_after_hold.md` — 4858 bytes
 
 ---
 

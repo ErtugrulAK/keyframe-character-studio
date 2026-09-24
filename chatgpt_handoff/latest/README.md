@@ -19,8 +19,8 @@ this handoff reconciled to the repository truth (`main` at or after `5ad9e04`):
   environment now defines them itself instead of depending on which Blob shape a jsdom patch ships.
   Option C (TypeScript 6→7, Vitest 4→5) is **deferred by decision** and is not a blocker. The
   `engines`/npm-12 `allowScripts` answer is **closed** — merged at `1a12d79`. A final cleanup patch
-  (`progress_149_final_jsdom_state_cleanup.md`) removed the last live sentences that still grouped
-  `jsdom` with the deferred bumps.
+  (`progress_149_final_jsdom_state_cleanup.md`) made every live sentence agree on the dependency states.
+  `jsdom` is closed at `c1431db`. The `oxlint` 1.85 bump stays deferred. Option C stays deferred.
 - **The final gate** (`progress_146_final_release_gate.md`) ran on clean `main` at `c1431db` and reports
   **RELEASE READY WITH DOCUMENTED DEFERRALS**: build, type check, 126 files / 1,934 tests, lint,
   `validate:ograf`, `qa:release` (2 Chromium), the export/Lottie/matte browser specs (8), `qa:v6` (3),

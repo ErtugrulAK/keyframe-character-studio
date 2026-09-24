@@ -78,7 +78,7 @@ which checks all 151 project files, committed at `b4bf3c0`. This is closed, not 
 - **H7 — the release decision: HELD.** The tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft prerelease, the package is private at `1.1.0-rc.1`, and nothing was published. Publishing, finalizing or re-tagging still needs explicit user instruction.
 - **Option C** (`typescript` 6→7, `vitest` + `@vitest/coverage-v8` 4→5): **deferred by decision**, not a blocker.
 - **`oxlint` 1.85:** **deferred** — 34 new warnings, 31 of which flag patterns this codebase uses deliberately.
-- **`jsdom` 30.1.x:** **closed** — the bump is taken at `c1431db`, with one test-only shim in `src/tests/setup.ts`. The last live-document sentences that still grouped `jsdom` with the deferred bumps were corrected in the final cleanup patch (`reports/progress_149_final_jsdom_state_cleanup.md`); no live document classifies it as deferred or reverted.
+- **`jsdom` 30.1.x:** **closed** — the bump is taken at `c1431db`, with one test-only shim in `src/tests/setup.ts`. The final cleanup patch (`reports/progress_149_final_jsdom_state_cleanup.md`) makes every live document state that, and the repository's stale-claim searches now come back empty.
 - **`engines` + npm-12 `allowScripts`:** **closed** — merged at `1a12d79`.
 - **Carried follow-ups that need their own task:** unrestricted CORS, the tracked `server/db/keyframe_studio.sqlite`, and focus restoration for two dialogs. **Accepted and documented:** the constant `SceneLayer.visible`, `vite --host` publishing the dev frontend, and one unreproduced full-suite failure during an earlier task.
 - **Stated limits of the gate:** CI runs no browser test (the 2-spec `release-smoke.yml` is manual), CI is `ubuntu-latest` only so the Windows run above is the local evidence, and `qa:release` is the only automated package round-trip.
@@ -111,7 +111,8 @@ H5 final gate on clean main at c1431db: npm run build PASS; npx tsc -b --pretty 
 Gate verdict: RELEASE READY WITH DOCUMENTED DEFERRALS
 H6: live documents and handoff reconciled, MERGED at 5b68543. That merge changed documents only: the code delta between the gated c1431db and 5b68543 is empty. reports/progress_147_milestone_h_docs_handoff.md
 H7: HOLD by user decision — no tag, release or npm action. reports/progress_148_final_handoff_after_hold.md
-Final jsdom cleanup: the live sentences that still grouped jsdom with the deferred bumps are corrected; jsdom 30.1.1 is CLOSED at c1431db, oxlint 1.85 stays DEFERRED, Option C stays DEFERRED. reports/progress_149_final_jsdom_state_cleanup.md
+Final cleanup: every live sentence now states jsdom 30.1.1 is CLOSED at c1431db. reports/progress_149_final_jsdom_state_cleanup.md
+oxlint 1.85 stays DEFERRED. Option C stays DEFERRED.
 CI: main is green at 5ad9e04 (run 36014071780); the gate commit's own run is 35988804952
 State check: PASS 35 checks at the gate commit; the total scales with the number of live and bundle documents scanned and with whether the checked-out branch is ahead of origin/main
 Option C (typescript 6->7, vitest + @vitest/coverage-v8 4->5): DEFERRED BY DECISION, not a release blocker
@@ -157,8 +158,8 @@ this handoff reconciled to the repository truth (`main` at or after `5ad9e04`):
   environment now defines them itself instead of depending on which Blob shape a jsdom patch ships.
   Option C (TypeScript 6→7, Vitest 4→5) is **deferred by decision** and is not a blocker. The
   `engines`/npm-12 `allowScripts` answer is **closed** — merged at `1a12d79`. A final cleanup patch
-  (`progress_149_final_jsdom_state_cleanup.md`) removed the last live sentences that still grouped
-  `jsdom` with the deferred bumps.
+  (`progress_149_final_jsdom_state_cleanup.md`) made every live sentence agree on the dependency states.
+  `jsdom` is closed at `c1431db`. The `oxlint` 1.85 bump stays deferred. Option C stays deferred.
 - **The final gate** (`progress_146_final_release_gate.md`) ran on clean `main` at `c1431db` and reports
   **RELEASE READY WITH DOCUMENTED DEFERRALS**: build, type check, 126 files / 1,934 tests, lint,
   `validate:ograf`, `qa:release` (2 Chromium), the export/Lottie/matte browser specs (8), `qa:v6` (3),
@@ -1232,10 +1233,10 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `CHANGELOG.md` — 14575 bytes
 - `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` — 17052 bytes
 - `NEXT_SESSION.md` — 11840 bytes
-- `OMP_FINAL_RESPONSE.md` — 5300 bytes
+- `OMP_FINAL_RESPONSE.md` — 5242 bytes
 - `PROJECT_STATE.md` — 20695 bytes
-- `README.md` — 4474 bytes
-- `manifest.txt` — 5167 bytes
+- `README.md` — 4543 bytes
+- `manifest.txt` — 5109 bytes
 - `progress_142_release_readiness_audit.md` — 7928 bytes
 - `progress_143_ci_typecheck_step.md` — 2791 bytes
 - `progress_144_oxlint_1_85_triage.md` — 6194 bytes

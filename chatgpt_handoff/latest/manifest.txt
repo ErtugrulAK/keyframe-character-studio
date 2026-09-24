@@ -1,11 +1,11 @@
 # KCS ChatGPT Upload Manifest — final handoff, Milestone H held
 
 Clean refreshed: YES
-Bundle purpose: the final handoff for the held state — the Milestone H release-readiness evidence (audit, fix, triages, gate), the documents/handoff reconciliation, and the hold decision itself
+Bundle purpose: the final handoff for the held state — the Milestone H release-readiness evidence (audit, fix, triages, gate), the documents/handoff reconciliation, the hold decision, and the final jsdom cleanup
 Bundle scope: minimal and task-specific; this folder is not an archive
 
-Branch: main at or after 5b68543; H1-H6 are merged and pushed, and this refresh is the branch docs/final-handoff-after-hold, to be fast-forward merged on approval
-Task record: reports/progress_142_release_readiness_audit.md ... reports/progress_148_final_handoff_after_hold.md
+Branch: main at or after 5ad9e04; H1-H6 are merged and pushed, and the jsdom cleanup patch is the branch docs/final-jsdom-state-cleanup, to be fast-forward merged on approval
+Task record: reports/progress_142_release_readiness_audit.md ... reports/progress_149_final_jsdom_state_cleanup.md
 H1 audit: 7 items, 1 REQUIRED (the CI type-check step checked no project file); the required one fixed. reports/progress_142_release_readiness_audit.md
 H2 fix: MERGED at b4bf3c0 — .github/workflows/ci.yml and the check script now run npx tsc -b --pretty false, which checks 151 project files instead of none. CLOSED. reports/progress_143_ci_typecheck_step.md
 H3 oxlint 1.85: DEFERRED. 34 new warnings, 31 flagging patterns this codebase uses deliberately; the three genuine ones would not make the run clean. reports/progress_144_oxlint_1_85_triage.md
@@ -14,8 +14,9 @@ H5 final gate on clean main at c1431db: npm run build PASS; npx tsc -b --pretty 
 Gate verdict: RELEASE READY WITH DOCUMENTED DEFERRALS
 H6: live documents and handoff reconciled, MERGED at 5b68543. That merge changed documents only: the code delta between the gated c1431db and 5b68543 is empty. reports/progress_147_milestone_h_docs_handoff.md
 H7: HOLD by user decision — no tag, release or npm action. reports/progress_148_final_handoff_after_hold.md
-CI: main is green at 5b68543 (run 35996899896); the gate commit's own run is 35988804952
-State check: PASS 35 checks at the gate commit; the total scales with the number of live and bundle documents scanned (48 on this refresh's committed tree)
+Final jsdom cleanup: the live sentences that still grouped jsdom with the deferred bumps are corrected; jsdom 30.1.1 is CLOSED at c1431db, oxlint 1.85 stays DEFERRED, Option C stays DEFERRED. reports/progress_149_final_jsdom_state_cleanup.md
+CI: main is green at 5ad9e04 (run 36014071780); the gate commit's own run is 35988804952
+State check: PASS 35 checks at the gate commit; the total scales with the number of live and bundle documents scanned and with whether the checked-out branch is ahead of origin/main
 Option C (typescript 6->7, vitest + @vitest/coverage-v8 4->5): DEFERRED BY DECISION, not a release blocker
 engines + npm-12 allowScripts: CLOSED, merged at 1a12d79
 Gate limits stated, not hidden: CI runs no browser test (the 2-spec release-smoke.yml is manual); CI is ubuntu-latest only, so the Windows run above is the local evidence; qa:release is the only automated package round-trip
@@ -25,7 +26,7 @@ Roadmap: A-G merged; Milestone H is complete through H6 and its row keeps the pl
 Release state: tag v1.1.0-rc.1 target unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub draft prerelease unchanged; package private at 1.1.0-rc.1; npm publish NO
 Tag/release/npm changed: NO
 
-Copied files (14): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_142_release_readiness_audit.md, progress_143_ci_typecheck_step.md, progress_144_oxlint_1_85_triage.md, progress_145_jsdom_30_1_triage.md, progress_146_final_release_gate.md, progress_147_milestone_h_docs_handoff.md, progress_148_final_handoff_after_hold.md
+Copied files (15): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_142_release_readiness_audit.md, progress_143_ci_typecheck_step.md, progress_144_oxlint_1_85_triage.md, progress_145_jsdom_30_1_triage.md, progress_146_final_release_gate.md, progress_147_milestone_h_docs_handoff.md, progress_148_final_handoff_after_hold.md, progress_149_final_jsdom_state_cleanup.md
 
 Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
 Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.

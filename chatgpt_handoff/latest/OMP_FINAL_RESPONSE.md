@@ -4,10 +4,10 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 
 ## 1) RESULT
 
-- **Status:** Milestone H is **complete** (H1–H6 merged) and its release decision (H7) is **HELD** by user decision. The final handoff refresh for that state is the last task, and it changed documents only.
+- **Status:** Milestone H is **complete** (H1–H6 merged) and its release decision (H7) is **HELD** by user decision. The final handoff refresh for that state is done, and the last stale `jsdom` sentences are corrected.
 - **Gate verdict:** **RELEASE READY WITH DOCUMENTED DEFERRALS** — `reports/progress_146_final_release_gate.md`.
-- **Reports:** the audit (`progress_142_release_readiness_audit.md`), the fix (`progress_143_ci_typecheck_step.md`), the two triages (`progress_144_oxlint_1_85_triage.md`, `progress_145_jsdom_30_1_triage.md`), the gate (`progress_146_final_release_gate.md`), the reconciliation (`progress_147_milestone_h_docs_handoff.md`) and this refresh (`progress_148_final_handoff_after_hold.md`).
-- **Nothing was released:** no tag, release or npm action. The artefacts are unchanged, and that is now the recorded decision rather than an open question.
+- **Reports:** the audit (`progress_142_release_readiness_audit.md`), the fix (`progress_143_ci_typecheck_step.md`), the two triages (`progress_144_oxlint_1_85_triage.md`, `progress_145_jsdom_30_1_triage.md`), the gate (`progress_146_final_release_gate.md`), the reconciliation (`progress_147_milestone_h_docs_handoff.md`), the held-state refresh (`progress_148_final_handoff_after_hold.md`) and the jsdom cleanup (`progress_149_final_jsdom_state_cleanup.md`).
+- **Nothing was released:** no tag, release or npm action. The artefacts are unchanged, and that is the recorded decision rather than an open question.
 
 ## 2) HOW IT RAN
 
@@ -20,6 +20,7 @@ This file is the OMP final response for this task. It is copied into `chatgpt_ha
 | H5 | the final release gate on clean merged `main` | `3b5a2f3` |
 | H6 | live documents and the handoff reconciled | `5b68543` |
 | H7 | the release decision → **HELD** | no action taken |
+| final refresh | the held state recorded, and the last stale `jsdom` sentences cleared | `5ad9e04` and the cleanup patch |
 
 No rebase, no force push, no merge commit, no history rewrite. Every package/lockfile change and every
 merge had explicit approval.
@@ -42,7 +43,7 @@ merge had explicit approval.
 | API health + `sqlite3` binding on this machine | 200 `online` / in-memory table created |
 | `git diff --check` and the working tree | clean |
 
-CI is green on `main` at `5b68543` (run `35996899896`); the gate commit's own run is `35988804952`.
+CI is green on `main` at `5ad9e04` (run `36014071780`); the gate commit's own run is `35988804952`.
 
 ## 4) THE AUDIT'S ONE REQUIRED FINDING, AND HOW IT WAS CLOSED
 
@@ -56,7 +57,7 @@ which checks all 151 project files, committed at `b4bf3c0`. This is closed, not 
 - **H7 — the release decision: HELD.** The tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft prerelease, the package is private at `1.1.0-rc.1`, and nothing was published. Publishing, finalizing or re-tagging still needs explicit user instruction.
 - **Option C** (`typescript` 6→7, `vitest` + `@vitest/coverage-v8` 4→5): **deferred by decision**, not a blocker.
 - **`oxlint` 1.85:** **deferred** — 34 new warnings, 31 of which flag patterns this codebase uses deliberately.
-- **`jsdom` 30.1.x:** **closed** — the bump is taken at `c1431db`, with one test-only shim in `src/tests/setup.ts`.
+- **`jsdom` 30.1.x:** **closed** — the bump is taken at `c1431db`, with one test-only shim in `src/tests/setup.ts`. The last live-document sentences that still grouped `jsdom` with the deferred bumps were corrected in the final cleanup patch (`reports/progress_149_final_jsdom_state_cleanup.md`); no live document classifies it as deferred or reverted.
 - **`engines` + npm-12 `allowScripts`:** **closed** — merged at `1a12d79`.
 - **Carried follow-ups that need their own task:** unrestricted CORS, the tracked `server/db/keyframe_studio.sqlite`, and focus restoration for two dialogs. **Accepted and documented:** the constant `SceneLayer.visible`, `vite --host` publishing the dev frontend, and one unreproduced full-suite failure during an earlier task.
 - **Stated limits of the gate:** CI runs no browser test (the 2-spec `release-smoke.yml` is manual), CI is `ubuntu-latest` only so the Windows run above is the local evidence, and `qa:release` is the only automated package round-trip.

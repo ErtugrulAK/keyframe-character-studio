@@ -31,7 +31,7 @@ jobs:
         run: npm run lint
 
       - name: Run TypeScript Type Check
-        run: npx tsc --noEmit
+        run: npx tsc -b --pretty false
 
       - name: Run Unit & Integration Tests (Vitest)
         run: npm test

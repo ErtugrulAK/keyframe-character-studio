@@ -15,7 +15,7 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "check": "npm run lint && npx tsc --noEmit && npm test && npm run build",
+    "check": "npm run lint && npx tsc -b --pretty false && npm test && npm run build",
     "preview": "vite preview",
     "test:e2e": "playwright test",
     "qa:release": "node scripts/run-release-gate.mjs",

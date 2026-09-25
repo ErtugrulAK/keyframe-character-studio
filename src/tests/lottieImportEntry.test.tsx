@@ -172,7 +172,8 @@ describe('Lottie import entry point', () => {
     const cancel = screen.getByRole('button', { name: 'Cancel' });
     const confirm = screen.getByRole('button', { name: 'Import and replace project' });
 
-    expect(document.activeElement).toBe(cancel);
+    // The dialog focuses Cancel on open; await it so a slow render cannot flake the test.
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
     fireEvent.keyDown(document, { key: 'Tab' });
     expect(document.activeElement).toBe(cancel);
     confirm.focus();

@@ -60,7 +60,24 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `reports/progress_127_lottie_import_entry_report_ux.md` — Milestone F item 10 final slice: the Lottie import entry point and its report-before-replace flow.
 - `reports/progress_128_unified_import_entry.md` — Milestone F item 12: one import control that dispatches `.kcs`, legacy, OGraf and Lottie by content.
 - `reports/progress_129_ograf_editable_import.md` — Milestone F item 12: OGraf package import, decoded under guards into its editable scene.
-- `reports/progress_128_unified_import_entry.md` — Milestone F item 12: one import control that dispatches `.kcs`, legacy, OGraf and Lottie by content.
+- `reports/progress_130_dependency_maintenance_option_b.md` — Milestone D item 9 Option B: the patch and minor group plus a bounded `npm audit fix`, fast-forward merged into `main` at `73426e5`.
+- `reports/progress_131_engines_allow_scripts.md` — Milestone D item 9 follow-up: the `engines` declaration and the npm-12 install-script policy, merged into `main`.
+- `reports/progress_134_modal_shortcut_isolation.md` — Milestone G task A: while a blocking dialog is open, the editor's global commands are inert.
+- `reports/progress_135_import_serialization_integrity.md` — Milestone G task B: the import boundary, the round-trip and the document transaction.
+- `reports/progress_136_lottie_structure_correctness.md` — Milestone G task C: Lottie structure correctness.
+- `reports/progress_137_ograf_inverse_alpha_matte.md` — Milestone G task D: the OGraf inverse alpha matte.
+- `reports/progress_138_api_trust_boundary.md` — Milestone G task E: the API trust boundary.
+- `reports/progress_139_evaluator_profile_fixture_fix.md` — Milestone G task F: the evaluator profile harness measures the workload it claims.
+- `reports/progress_140_state_consistency_live_docs.md` — Milestone G task G: the state checker covers the live documents.
+- `reports/progress_141_astra_correctness_followup_summary.md` — Milestone G: the post-review correctness follow-up, its final gate and the finding map.
+- `reports/progress_142_release_readiness_audit.md` — Milestone H: the read-only release-readiness audit and its verdict (READY WITH REQUIRED FIXES, one required item).
+- `reports/progress_143_ci_typecheck_step.md` — Milestone H: the required fix from that audit — the CI type-check step verified no project file and now runs `tsc -b`.
+- `reports/progress_144_oxlint_1_85_triage.md` — Milestone H: the `oxlint` 1.85 triage; deferred, with no repository change.
+- `reports/progress_145_jsdom_30_1_triage.md` — Milestone H: the `jsdom` 30.1.x triage and the verified bump to 30.1.1 at `c1431db`.
+- `reports/progress_146_final_release_gate.md` — Milestone H: the final release gate on clean merged `main` — RELEASE READY WITH DOCUMENTED DEFERRALS.
+- `reports/progress_147_milestone_h_docs_handoff.md` — Milestone H: the live documents and the handoff reconciled, merged at `5b68543`.
+- `reports/progress_148_final_handoff_after_hold.md` — Milestone H: the final handoff refresh after the release decision was taken as a hold.
+- `reports/progress_149_final_jsdom_state_cleanup.md` — Milestone H: the cleanup that removed the last stale `jsdom` claims from the live documents.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

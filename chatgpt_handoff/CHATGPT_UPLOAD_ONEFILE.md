@@ -120,7 +120,7 @@ engines + npm-12 allowScripts: CLOSED, merged at 1a12d79
 Gate limits stated, not hidden: CI runs no browser test (the 2-spec release-smoke.yml is manual); CI is ubuntu-latest only, so the Windows run above is the local evidence; qa:release is the only automated package round-trip
 Carried follow-ups (need their own task): unrestricted CORS; the tracked server/db/keyframe_studio.sqlite; focus restoration on two dialogs
 Accepted and documented: constant SceneLayer.visible; vite --host publishing the dev frontend; one unreproduced full-suite failure during an earlier task
-Roadmap: A-G merged; Milestone H is complete through H6 and its row keeps the plan's single NEXT marker because the state checker requires exactly one and the only item the plan still holds is the held release decision. reports/README.md still stops at progress_129 for 130+, recorded as a separate task, not changed here
+Roadmap: A-G merged; Milestone H is complete through H6 and its row keeps the plan's single NEXT marker because the state checker requires exactly one and the only item the plan still holds is the held release decision. The reports index is refreshed: reports/README.md and docs/README_INDEX.md now list progress_130 through progress_149, and the duplicated progress_128 entry is removed from both
 Release state: tag v1.1.0-rc.1 target unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub draft prerelease unchanged; package private at 1.1.0-rc.1; npm publish NO
 Tag/release/npm changed: NO
 
@@ -1237,7 +1237,7 @@ Every file present in `chatgpt_handoff/latest/` at generation time:
 - `OMP_FINAL_RESPONSE.md` — 5242 bytes
 - `PROJECT_STATE.md` — 20695 bytes
 - `README.md` — 4545 bytes
-- `manifest.txt` — 5109 bytes
+- `manifest.txt` — 5185 bytes
 - `progress_142_release_readiness_audit.md` — 7928 bytes
 - `progress_143_ci_typecheck_step.md` — 2791 bytes
 - `progress_144_oxlint_1_85_triage.md` — 6194 bytes

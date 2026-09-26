@@ -43,6 +43,7 @@ export const StageCanvas: React.FC = () => {
     broadcastState,
     broadcastSessionActivated,
     namedSequenceRuntime,
+    activeTemplateId,
     tracks,
     setCharacterParts,
     setFocusModeNodeId,
@@ -882,6 +883,7 @@ export const StageCanvas: React.FC = () => {
                 broadcastState={broadcastState}
                 broadcastSessionActivated={broadcastSessionActivated}
                 namedSequenceRuntime={namedSequenceRuntime}
+                activeTemplateId={activeTemplateId}
                 currentFrame={currentFrame}
                 totalFrames={totalFrames}
                 tracks={tracks}

@@ -47,6 +47,7 @@ interface StagePartLayersProps {
   broadcastState: Record<string, BroadcastObjectState>;
   broadcastSessionActivated?: boolean;
   namedSequenceRuntime?: NamedSequenceRuntimeState;
+  activeTemplateId: string;
   currentFrame: number;
   selectedPartId: string | null;
   selectedPartIds?: string[];
@@ -97,6 +98,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   broadcastState,
   broadcastSessionActivated = true,
   namedSequenceRuntime,
+  activeTemplateId,
   currentFrame,
   selectedPartId,
   selectedPartIds = [],
@@ -171,7 +173,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
     runtime,
     customPresets,
     activeNamedSequence ? undefined : frameOverrides,
-    activeNamedSequence?.sequenceId ?? 'Sequence',
+    appMode === 'edit' ? activeTemplateId : activeNamedSequence?.sequenceId ?? 'Sequence',
   );
   const booleanContoursByGroup = new Map<string, CharacterPart['booleanContours']>();
   for (const group of sortedParts) {

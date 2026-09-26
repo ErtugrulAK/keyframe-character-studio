@@ -64,6 +64,33 @@ describe('TrackMutations Utility', () => {
     expect(final[0].channels?.opacity?.[0].id).toBe(kf30!.id);
     expect(final[0].channels?.opacity?.[0].frame).toBe(15);
   });
+  it.each(['x', 'opacity'] as const)('isolates same-frame %s edits across sequences', (channel) => {
+    const original = {
+      id: 'first-sequence', frame: 30, value: 0.2, easing: 'linear' as const,
+      bezierControlPoints: [0.1, 0.2, 0.8, 0.9] as [number, number, number, number],
+    };
+    const track: Track = {
+      ...mockTrack,
+      channels: { ...mockTrack.channels!, [channel]: [original] },
+    };
+    const added = addPropertyKeyframeMutator([track], track.id, channel, 30, 0.8, 'linear', 'Outro');
+    expect(added[0].channels?.[channel].find((keyframe) => keyframe.id === original.id)).toEqual(original);
+    const outro = added[0].channels?.[channel].find((keyframe) => keyframe.templateId === 'Outro');
+    expect(outro).toMatchObject({ frame: 30, value: 0.8, templateId: 'Outro' });
+    expect(outro?.id).not.toBe(original.id);
+
+    const edited = addPropertyKeyframeMutator(added, track.id, channel, 30, 0.9, 'easeInOut', 'Outro');
+    expect(edited[0].channels?.[channel]).toHaveLength(2);
+    expect(edited[0].channels?.[channel].find((keyframe) => keyframe.id === outro?.id))
+      .toMatchObject({ value: 0.9, easing: 'easeInOut', templateId: 'Outro' });
+    const firstEdited = addPropertyKeyframeMutator(edited, track.id, channel, 30, 0.4, 'linear', 'Sequence');
+    expect(firstEdited[0].channels?.[channel].find((keyframe) => keyframe.id === original.id))
+      .toEqual({ ...original, value: 0.4 });
+    expect(firstEdited[0].channels?.[channel].find((keyframe) => keyframe.id === outro?.id))
+      .toMatchObject({ value: 0.9, templateId: 'Outro' });
+    expect(track.channels?.[channel]).toEqual([original]);
+  });
+
   it('keeps same-frame scalar mask keyframes isolated by sequence', () => {
     const maskTrack: Track = {
       ...mockTrack,

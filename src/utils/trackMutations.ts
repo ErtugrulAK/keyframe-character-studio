@@ -55,7 +55,7 @@ export const addPropertyKeyframeMutator = (
     const isMask = isLayerMaskChannel(channel);
     const channelMap = (isMask ? (t.maskChannels ?? {}) : (t.channels ?? makeEmptyChannels())) as Record<string, PropertyKeyframe[]>;
     const keyframes = channelMap[channel] ?? [];
-    const existing = keyframes.find((k) => k.frame === frame && (!isMask || (k.templateId || 'Sequence') === templateId));
+    const existing = keyframes.find((k) => k.frame === frame && (k.templateId || 'Sequence') === templateId);
     const newKf: PropertyKeyframe = {
       id: existing?.id ?? generateId(`pkf_${channel}`),
       frame,

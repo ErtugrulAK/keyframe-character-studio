@@ -43,6 +43,9 @@ test('Named Sequence V2 — stable IDs, authoring metadata, Broadcast status, an
 
   // Add canonical channels to the named sequence, then rename the display label.
   await page.getByTitle('Add Composite Keyframe').click();
+  const shape = page.locator('.stage-svg [data-part-id] rect[fill]:not([fill="none"])').last();
+  const firstPose = await shape.boundingBox();
+  if (!firstPose) throw new Error('Shape bounds unavailable');
   await page.locator('.timeline-seq-tab-name').filter({ hasText: 'IN' }).dblclick();
   await page.locator('.timeline-seq-tab input').fill('Lower Third Enter');
   await page.locator('.timeline-seq-tab input').press('Enter');
@@ -55,6 +58,26 @@ test('Named Sequence V2 — stable IDs, authoring metadata, Broadcast status, an
   await page.locator('.duration-control-box input[type="number"]').fill('0.5');
   await page.locator('.duration-control-box input[type="number"]').press('Tab');
   await page.getByTitle('Add Composite Keyframe').click();
+
+  // The active sequence must drive both painted geometry and the selection
+  // gizmo. Previously a named-sequence edit moved only the gizmo because the
+  // stage evaluated the default sequence instead of the selected one.
+  await page.mouse.move(firstPose.x + firstPose.width / 2, firstPose.y + firstPose.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(firstPose.x + firstPose.width / 2 + 100, firstPose.y + firstPose.height / 2 + 40, { steps: 5 });
+  await page.mouse.up();
+  const specialPose = await shape.boundingBox();
+  if (!specialPose) throw new Error('Edited shape bounds unavailable');
+  expect(specialPose.x).toBeCloseTo(firstPose.x + 100, 0);
+  expect(specialPose.y).toBeCloseTo(firstPose.y + 40, 0);
+  await page.locator('.timeline-seq-tab-name').filter({ hasText: 'Lower Third Enter' }).click();
+  const restoredPose = await shape.boundingBox();
+  expect(restoredPose?.x).toBeCloseTo(firstPose.x, 0);
+  expect(restoredPose?.y).toBeCloseTo(firstPose.y, 0);
+  await page.locator('.timeline-seq-tab-name').filter({ hasText: 'SPECIAL' }).click();
+  const returnedPose = await shape.boundingBox();
+  expect(returnedPose?.x).toBeCloseTo(specialPose.x, 0);
+  expect(returnedPose?.y).toBeCloseTo(specialPose.y, 0);
 
   const sceneBeforeBroadcast = await saveAndReadScene(page);
   const renamed = sceneBeforeBroadcast.motionTemplates.find((template: { name: string }) => template.name === 'Lower Third Enter');

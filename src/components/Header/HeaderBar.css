@@ -99,6 +99,16 @@
   font-weight: 700;
 }
 
+.tab-close-icon {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
 .header-tab.add-tab {
   display: flex;
   align-items: center;

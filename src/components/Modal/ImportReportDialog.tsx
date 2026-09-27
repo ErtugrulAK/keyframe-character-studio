@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import { useDialogFocusRestoration } from '../../hooks/useDialogFocusRestoration';
 import { sanitizeOGrafDiagnosticText } from '../../ograf/diagnostics';
 /**
  * The report entry every importer produces: the Lottie importer and the OGraf
@@ -54,6 +55,7 @@ export const ImportReportDialog: React.FC<ImportReportDialogProps> = ({
 }) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  useDialogFocusRestoration(isOpen, cancelRef);
 
   const { blockers, warnings, hidden, visible } = useMemo(() => {
     const ordered = [...diagnostics].sort((left, right) => severityRank(left) - severityRank(right));
@@ -68,7 +70,7 @@ export const ImportReportDialog: React.FC<ImportReportDialogProps> = ({
 
   useEffect(() => {
     if (!isOpen) return;
-    cancelRef.current?.focus();
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
+import { useDialogFocusRestoration } from '../../hooks/useDialogFocusRestoration';
 import './ConfirmationDialog.css';
 
 interface ConfirmationDialogProps {
@@ -21,10 +22,11 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
 }) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
+  useDialogFocusRestoration(isOpen, cancelRef);
 
   useEffect(() => {
     if (!isOpen) return;
-    cancelRef.current?.focus();
+
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();

@@ -453,16 +453,18 @@ export const HeaderBar: React.FC = () => {
                   )}
 
                   {projectTemplates.length > 1 && (
-                    <span
+                    <button
+                      type="button"
                       className="tab-close-icon"
                       onClick={(e) => {
                         e.stopPropagation();
                         setPendingDeleteTemplate({ id: tmpl.id, name: tmpl.name });
                       }}
                       title="Delete template"
+                      aria-label={`Delete template ${tmpl.name}`}
                     >
                       ✕
-                    </span>
+                    </button>
                   )}
                 </div>
               );

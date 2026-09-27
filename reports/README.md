@@ -71,3 +71,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_147_milestone_h_docs_handoff.md` — Milestone H: the live documents and the handoff reconciled, merged at `5b68543`.
 - `progress_148_final_handoff_after_hold.md` — Milestone H: the final handoff refresh after the release decision was taken as a hold.
 - `progress_149_final_jsdom_state_cleanup.md` — Milestone H: the cleanup that removed the last stale `jsdom` claims from the live documents.
+- `progress_150_final_maintenance_reconciliation.md` — the five-task post-hold maintenance close-out, validation evidence, live-document reconciliation, and handoff rebuild.

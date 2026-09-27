@@ -78,6 +78,7 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `reports/progress_147_milestone_h_docs_handoff.md` — Milestone H: the live documents and the handoff reconciled, merged at `5b68543`.
 - `reports/progress_148_final_handoff_after_hold.md` — Milestone H: the final handoff refresh after the release decision was taken as a hold.
 - `reports/progress_149_final_jsdom_state_cleanup.md` — Milestone H: the cleanup that removed the last stale `jsdom` claims from the live documents.
+- `reports/progress_150_final_maintenance_reconciliation.md` — the five-task post-hold maintenance close-out, validation evidence, live-document reconciliation, and handoff rebuild.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

@@ -1,69 +1,53 @@
-# KCS Milestone H Release Readiness — Final Response (the held state)
+# KCS Final Maintenance Reconciliation — OMP Response
 
-This file is the OMP final response for this task. It is copied into `chatgpt_handoff/latest/` and included verbatim in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+## 1) Phase 0 baseline
 
-## 1) RESULT
+The run started from clean synchronized `main` at `c5bed46`, with the latest CI green, the state checker passing, and no Git operation in progress.
 
-- **Status:** Milestone H is **complete** (H1–H6 merged) and its release decision (H7) is **HELD** by user decision. The final handoff refresh for that state is done, and the last stale `jsdom` sentences are corrected.
-- **Gate verdict:** **RELEASE READY WITH DOCUMENTED DEFERRALS** — `reports/progress_146_final_release_gate.md`.
-- **Reports:** the audit (`progress_142_release_readiness_audit.md`), the fix (`progress_143_ci_typecheck_step.md`), the two triages (`progress_144_oxlint_1_85_triage.md`, `progress_145_jsdom_30_1_triage.md`), the gate (`progress_146_final_release_gate.md`), the reconciliation (`progress_147_milestone_h_docs_handoff.md`), the held-state refresh (`progress_148_final_handoff_after_hold.md`) and the jsdom cleanup (`progress_149_final_jsdom_state_cleanup.md`).
-- **Nothing was released:** no tag, release or npm action. The artefacts are unchanged, and that is the recorded decision rather than an open question.
+## 2) Task 1 — dialog focus restoration
 
-## 2) HOW IT RAN
+Merged at `5cb8a45`. Confirmation and import-report dialogs focus their initial action and restore focus to a connected opener after Cancel, Confirm, or `Escape`. A removed opener is ignored safely. Focused tests, full regression, build, lint, and an actual browser focus smoke passed. CI `36314400055` passed.
 
-| Task | Work | Merged at |
-|---|---|---|
-| H1 | release-readiness audit — 7 findings, 1 of them required | `cc1ce8e` |
-| H2 | the required fix: the CI type-check step now checks the project | `b4bf3c0` |
-| H3 | `oxlint` 1.85 triage → **deferred** | `cc1ce8e` |
-| H4 | `jsdom` 30.1.x triage → **taken**, with a test-only shim | `c1431db` |
-| H5 | the final release gate on clean merged `main` | `3b5a2f3` |
-| H6 | live documents and the handoff reconciled | `5b68543` |
-| H7 | the release decision → **HELD** | no action taken |
-| final refresh | the held state recorded, and the last stale `jsdom` sentences cleared | `5ad9e04` and the cleanup patch |
+## 3) Task 2 — SQLite repository hygiene
 
-No rebase, no force push, no merge commit, no history rewrite. Every package/lockfile change and every
-merge had explicit approval.
+Merged at `b3f3c6c`. `server/db/keyframe_studio.sqlite` is runtime-generated and Git-ignored rather than tracked. A clean first start recreated and seeded the file; health and project routes passed. CI `36314754294` passed.
 
-## 3) THE GATE (clean `main` at `c1431db`)
+## 4) Task 3 — API CORS policy
 
-| Check | Result |
-|---|---|
-| `npm run build` (`tsc -b` + vite) | PASS |
-| `npx tsc -b --pretty false` | exit 0 — 151 project files |
-| `npm test` | PASS — 126 files / 1,934 tests |
-| `npm run lint` | clean |
-| `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests, candidate `c1431db` |
-| export, Lottie and matte browser specs | PASS — 8 tests |
-| `npm run qa:v6` | PASS — 3 tests |
-| `npm run check` | PASS |
-| `node scripts/check-state-consistency.mjs` | PASS — 35 checks at that commit; the total scales with the number of live and bundle documents scanned |
-| `npm audit` | 0 vulnerabilities |
-| API health + `sqlite3` binding on this machine | 200 `online` / in-memory table created |
-| `git diff --check` and the working tree | clean |
+Merged at `2a313d7`. Browser access defaults to exact local editor/QA origins; `KCS_CORS_ORIGINS` adds exact `http(s)` origins, and malformed or widening forms fail startup. Origin-less clients remain supported. Actual API and test coverage passed. CI `36315091917` passed.
 
-CI is green on `main` at `5ad9e04` (run `36014071780`); the gate commit's own run is `35988804952`.
+## 5) Task 4 — Oxlint 1.85
 
-## 4) THE AUDIT'S ONE REQUIRED FINDING, AND HOW IT WAS CLOSED
+Merged at `feca773`. Three genuine findings were fixed; deliberate latest-ref and synchronization effects retain line-specific suppressions with adjacent rationale. No broad or file-level rule disable was added. Full validation and unused-disable enforcement passed. CI `36315413652` passed.
 
-The CI step named "TypeScript Type Check" ran `npx tsc --noEmit`. The root `tsconfig.json` is a solution
-file, so that command builds no referenced project and checked **no project file**: a broken type could
-have merged behind a green tick. The step and the `check` script now run `npx tsc -b --pretty false`,
-which checks all 151 project files, committed at `b4bf3c0`. This is closed, not pending.
+## 6) Task 5 — TypeScript 7 and Vitest 5
 
-## 5) DECISIONS AND DEFERRALS
+Merged at `37904fb`. TypeScript 7.0.2, Vitest 5.0.2, and `@vitest/coverage-v8` 5.0.2 are aligned. No source compatibility patch was required. A fresh install, type check, 128 files / 1,951 tests, lint, build, OGraf validation, release QA, eight focused browser tests, V6 QA, the combined check, state consistency, audit, diff hygiene, and CI `36315904883` passed.
 
-- **H7 — the release decision: HELD.** The tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`, the GitHub release is still a draft prerelease, the package is private at `1.1.0-rc.1`, and nothing was published. Publishing, finalizing or re-tagging still needs explicit user instruction.
-- **Option C** (`typescript` 6→7, `vitest` + `@vitest/coverage-v8` 4→5): **deferred by decision**, not a blocker.
-- **`oxlint` 1.85:** **deferred** — 34 new warnings, 31 of which flag patterns this codebase uses deliberately.
-- **`jsdom` 30.1.x:** **closed** — the bump is taken at `c1431db`, with one test-only shim in `src/tests/setup.ts`. The final cleanup patch (`reports/progress_149_final_jsdom_state_cleanup.md`) makes every live document state that, and the repository's stale-claim searches now come back empty.
-- **`engines` + npm-12 `allowScripts`:** **closed** — merged at `1a12d79`.
-- **Carried follow-ups that need their own task:** unrestricted CORS, the tracked `server/db/keyframe_studio.sqlite`, and focus restoration for two dialogs. **Accepted and documented:** the constant `SceneLayer.visible`, `vite --host` publishing the dev frontend, and one unreproduced full-suite failure during an earlier task.
-- **Stated limits of the gate:** CI runs no browser test (the 2-spec `release-smoke.yml` is manual), CI is `ubuntu-latest` only so the Windows run above is the local evidence, and `qa:release` is the only automated package round-trip.
+## 7) Task 6 — docs and handoff reconciliation
 
-## 6) RELEASE VIEW
+The live documents now record all five tasks as closed. `reports/progress_150_final_maintenance_reconciliation.md` is the durable report. `chatgpt_handoff/latest/` was cleaned and rebuilt with eight documents, and the one-file upload was regenerated from those current sources only.
 
-There is no open release question left in this milestone. The decision was taken as a hold, the artefacts
-were verified unchanged, and the repository states no default for a future release: finalizing the draft,
-re-tagging at a newer `main`, or holding again all need a new explicit instruction.
+## 8) Validation and CI matrix
+
+All five implementation commits were fast-forwarded to `main`, pushed, and followed by green CI. The final implementation baseline reports zero npm vulnerabilities. The documentation patch is documents-only and uses the state checker plus diff/stale-claim gates before integration.
+
+## 9) Branch, commit, merge, and push summary
+
+Implementation commits: `5cb8a45`, `b3f3c6c`, `2a313d7`, `feca773`, `37904fb`. Documentation branch: `docs/final-maintenance-reconciliation`; commit message: `docs: reconcile final maintenance state`. Integration is fast-forward only. Branches are retained. No rebase, reset, force push, branch deletion, or history rewrite occurred.
+
+## 10) Handoff paths
+
+- Bundle sources: `chatgpt_handoff\latest\`
+- Upload artifact: `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`
+- Engineering record: `reports\progress_150_final_maintenance_reconciliation.md`
+
+## 11) Final release-readiness verdict
+
+The technical baseline is ready for a read-only release audit. H7 nevertheless remains HOLD by user decision. The GitHub Actions Node runtime and Ubuntu runner migration annotations are non-blocking workflow-maintenance warnings, not evidence of a product failure.
+
+## 12) Explicit no-release statement
+
+No tag was created, moved, or deleted. The GitHub draft prerelease was not published or finalized. No npm package was published. `v1.1.0-rc.1` remains at `46d2a3e59e065816d972dcd56951803951b577f6`, and the package remains private at `1.1.0-rc.1`.
+
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.

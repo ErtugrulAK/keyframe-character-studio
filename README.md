@@ -1,8 +1,8 @@
 # 🎬 Keyframe Character Studio & Live Broadcast Motion Graphics Sequencer Pro
 
-[![React 19](https://img.shields.io/badge/React-19.2-61DAFB?logo=react&logoColor=black)](https://react.dev/)
-[![TypeScript 6](https://img.shields.io/badge/TypeScript-6.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Vite 8](https://img.shields.io/badge/Vite-8.1-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![React 19](https://img.shields.io/badge/React-19.3-61DAFB?logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript 7](https://img.shields.io/badge/TypeScript-7.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite 8](https://img.shields.io/badge/Vite-8.3-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Express.js](https://img.shields.io/badge/Express-5.2-000000?logo=express&logoColor=white)](https://expressjs.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -79,7 +79,7 @@ Keyframe Character Studio provides a browser-based timeline animation editor and
 
 ### 6. 🗄️ Dual Database Architecture & REST API Server
 - **PostgreSQL Database (`server/db/schema.sql` & `server/db/seed.sql`)**: Relational database for production environments.
-- **Embedded SQLite Local Database (`keyframe_studio.sqlite`)**: Automatic fallback embedded database enabling zero-config execution without external software requirements.
+- **Embedded SQLite Local Database (`server/db/keyframe_studio.sqlite`)**: Runtime-generated, Git-ignored fallback database enabling zero-config execution without external software requirements.
 - **Express REST API Backend**: Handlers for project serialization, motion presets, and system health checks.
 
 ---
@@ -177,7 +177,7 @@ keyframe-character-studio/
 │   ├── components/             # UI components (Canvas, Header, Inspector, Timeline, Broadcast)
 │   ├── context/                # AnimatorContext orchestrator
 │   ├── hooks/                  # 15 domain-specific React hooks
-│   ├── tests/                  # 21 Vitest unit & integration test suites
+│   ├── tests/                  # Vitest unit & integration test suites
 │   ├── types/                  # TypeScript interface definitions
 │   └── utils/                  # Pure mathematical and state utility functions
 ├── index.html                  # Main HTML entrypoint
@@ -194,11 +194,11 @@ keyframe-character-studio/
 
 | Layer | Technology |
 | :--- | :--- |
-| **Frontend UI** | React 19.2, TypeScript 6.0, Vite 8.1, Lucide React, CSS3 Glassmorphism |
+| **Frontend UI** | React 19.3, TypeScript 7.0, Vite 8.3, Lucide React, CSS3 Glassmorphism |
 | **Animation & Render Engine** | SVG Vector Engine, Matrix Trigonometry, Cubic Bezier Interpolation |
 | **Backend REST API** | Node.js, Express 5.2, CORS, Dotenv |
 | **Database Layer** | PostgreSQL 16 (Production) + Embedded SQLite 3 (Zero-config Fallback) |
-| **Testing & Quality** | Vitest 4.1, React Testing Library, Playwright 1.62, Oxlint |
+| **Testing & Quality** | Vitest 5.0, React Testing Library, Playwright 1.62, Oxlint 1.85 |
 
 ---
 
@@ -235,7 +235,7 @@ npm run server
 ```
 
 ### 4. Database Setup (Optional)
-By default, the backend automatically creates and uses an embedded local SQLite database (`keyframe_studio.sqlite`). If PostgreSQL is installed:
+By default, the backend automatically creates and uses the Git-ignored embedded local SQLite database at `server/db/keyframe_studio.sqlite`. If PostgreSQL is installed:
 ```bash
 npm run db:setup
 ```
@@ -246,7 +246,7 @@ npm run db:setup
 ## 🧪 Testing & Validation
 
 ### Unit & Integration Tests (Vitest)
-Run the Vitest test suite covering 21 test files (62 tests):
+Run the current Vitest unit and integration suite:
 ```bash
 npx vitest run
 ```

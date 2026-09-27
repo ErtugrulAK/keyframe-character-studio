@@ -2,7 +2,8 @@
 
 ## Release boundary
 
-The release-readiness blocker work is integrated into main. Annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease were created at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. This document does not authorize draft publication or npm publication. The release-readiness audit (`reports/progress_142_release_readiness_audit.md`) and the final release gate on clean `main` (`reports/progress_146_final_release_gate.md`) stand behind the boundary, and the release decision that followed is a **HOLD** (`reports/progress_147_milestone_h_docs_handoff.md`, `reports/progress_148_final_handoff_after_hold.md`); **no release artefact moved** during any of that work.
+The release-readiness blocker work is integrated into `main`. Annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease remain at workflow-tested candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The release decision remains **HOLD**.
+The later maintenance line through `37904fb` closed dialog focus restoration, runtime SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5 without moving the tag, publishing the draft, or publishing npm.
 
 ## Accepted milestones
 
@@ -13,7 +14,7 @@ The release-readiness blocker work is integrated into main. Annotated tag `v1.1.
 
 ## Validation status
 
-The release gate is the method, not a stored count: `npm test`, `npm run build` (`tsc -b` + vite — the type gate CI runs), `npm run lint`, `npm run validate:ograf` and `npm run qa:release`, plus the per-task browser specs. The current numbers and the run ids live in `NEXT_SESSION.md` and in the task reports under `reports/`; they are deliberately not repeated here, because a count copied into a boundary document goes stale faster than it is read.
+The release gate is the method, not a stored count: type check, full Vitest, lint, production build, OGraf validation, release QA, focused browser specs, V6 QA, the combined check, state consistency, dependency audit, and diff hygiene. The latest maintenance baseline and command evidence are recorded in `NEXT_SESSION.md` and `reports/progress_150_final_maintenance_reconciliation.md`.
 
 - `validate:ograf`: PASS — offline and deterministic by default against the vendored closure, every pin verified; `--online` is the refresh path that fetches the pinned bytes.
 - `qa:release`: PASS — 2 Chromium tests. `.github/workflows/release-smoke.yml` is the manual gate and requires an explicit candidate SHA.
@@ -27,6 +28,6 @@ The release gate is the method, not a stored count: `npm test`, `npm run build` 
 
 ## Release decision
 
-**READY WITH WARNINGS**, and the release-readiness pass that followed the review raises no blocker: its final gate on clean `main` at `c1431db` reports **RELEASE READY WITH DOCUMENTED DEFERRALS** (`reports/progress_146_final_release_gate.md`). The annotated tag and draft prerelease exist, both pointing at `46d2a3e`. **The release decision was taken as a hold (H7):** the draft stays a draft, the tag is not moved and nothing is published. Publishing, finalizing or re-tagging still needs explicit user instruction, and re-tagging to a newer `main` is a decision rather than a default. No npm publication occurred.
+**READY WITH WARNINGS** remains the technical release stance, while **H7 remains HOLD by user decision**. The original final gate at `c1431db` reported **RELEASE READY WITH DOCUMENTED DEFERRALS**; the maintenance run subsequently closed every deferral and follow-up named there. The tag and draft prerelease still point at `46d2a3e`, the package remains private at `1.1.0-rc.1`, and no npm publication occurred. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
 
-Documented deferrals, none of them a product-correctness or security blocker: **Option C** (the `typescript` 6→7 major and the `vitest` + `@vitest/coverage-v8` 4→5 pair, deferred by decision), **`oxlint` 1.85** (deferred; the 34 new warnings mostly flag deliberate patterns), and three follow-ups that need their own task — unrestricted CORS, the tracked local database file, and focus restoration for two dialogs. The `jsdom` 30.1.x deferral is **closed**: the bump was taken at `c1431db`.
+The prior maintenance deferrals are closed: Oxlint 1.85 at `feca773`, TypeScript 7 / Vitest 5 at `37904fb`, runtime SQLite repository hygiene at `b3f3c6c`, the API CORS allowlist at `2a313d7`, and dialog focus restoration at `5cb8a45`. GitHub Actions currently emits non-blocking annotations for Node 20-based action runtimes being forced onto Node 24 and for the announced `ubuntu-latest` migration to Ubuntu 26.

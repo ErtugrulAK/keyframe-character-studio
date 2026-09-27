@@ -1,35 +1,31 @@
-# KCS ChatGPT Upload Manifest — final handoff, Milestone H held
+# KCS ChatGPT Upload Manifest — final maintenance reconciliation
 
 Clean refreshed: YES
-Bundle purpose: the final handoff for the held state — the Milestone H release-readiness evidence (audit, fix, triages, gate), the documents/handoff reconciliation, the hold decision, and the final jsdom cleanup
-Bundle scope: minimal and task-specific; this folder is not an archive
+Bundle scope: minimal and task-specific; not an archive
+Task record: reports/progress_150_final_maintenance_reconciliation.md
 
-Branch: main at or after 5ad9e04; H1-H6 are merged and pushed, and the jsdom cleanup patch is the branch docs/final-jsdom-state-cleanup, to be fast-forward merged on approval
-Task record: reports/progress_142_release_readiness_audit.md ... reports/progress_149_final_jsdom_state_cleanup.md
-H1 audit: 7 items, 1 REQUIRED (the CI type-check step checked no project file); the required one fixed. reports/progress_142_release_readiness_audit.md
-H2 fix: MERGED at b4bf3c0 — .github/workflows/ci.yml and the check script now run npx tsc -b --pretty false, which checks 151 project files instead of none. CLOSED. reports/progress_143_ci_typecheck_step.md
-H3 oxlint 1.85: DEFERRED. 34 new warnings, 31 flagging patterns this codebase uses deliberately; the three genuine ones would not make the run clean. reports/progress_144_oxlint_1_85_triage.md
-H4 jsdom 30.1.x: TAKEN at c1431db. CLOSED. jsdom implements neither createObjectURL nor revokeObjectURL, so the environment pairs Node's URL with jsdom's Blob, and 30.1.1's Blob no longer carries what that implementation follows; one test was affected and src/tests/setup.ts now defines the two functions. reports/progress_145_jsdom_30_1_triage.md
-H5 final gate on clean main at c1431db: npm run build PASS; npx tsc -b --pretty false exit 0 (151 files); npm test PASS (126 files / 1,934 tests); npm run lint clean; npm run validate:ograf PASS; npm run qa:release PASS (candidate c1431db, 2 Chromium tests); e2e/export-onboarding + e2e/lottie-import-report + e2e/ograf-matte-visual PASS (8 tests); npm run qa:v6 PASS (3 tests); npm run check PASS; npm audit 0; git diff --check clean; API health 200 (sqlite) and the sqlite3 in-memory binding on this Windows machine. reports/progress_146_final_release_gate.md
-Gate verdict: RELEASE READY WITH DOCUMENTED DEFERRALS
-H6: live documents and handoff reconciled, MERGED at 5b68543. That merge changed documents only: the code delta between the gated c1431db and 5b68543 is empty. reports/progress_147_milestone_h_docs_handoff.md
-H7: HOLD by user decision — no tag, release or npm action. reports/progress_148_final_handoff_after_hold.md
-Final cleanup: every live sentence now states jsdom 30.1.1 is CLOSED at c1431db. reports/progress_149_final_jsdom_state_cleanup.md
-oxlint 1.85 stays DEFERRED. Option C stays DEFERRED.
-CI: main is green at 5ad9e04 (run 36014071780); the gate commit's own run is 35988804952
-State check: PASS 35 checks at the gate commit; the total scales with the number of live and bundle documents scanned and with whether the checked-out branch is ahead of origin/main
-Option C (typescript 6->7, vitest + @vitest/coverage-v8 4->5): DEFERRED BY DECISION, not a release blocker
-engines + npm-12 allowScripts: CLOSED, merged at 1a12d79
-Gate limits stated, not hidden: CI runs no browser test (the 2-spec release-smoke.yml is manual); CI is ubuntu-latest only, so the Windows run above is the local evidence; qa:release is the only automated package round-trip
-Carried follow-ups (need their own task): unrestricted CORS; the tracked server/db/keyframe_studio.sqlite; focus restoration on two dialogs
-Accepted and documented: constant SceneLayer.visible; vite --host publishing the dev frontend; one unreproduced full-suite failure during an earlier task
-Roadmap: A-G merged; Milestone H is complete through H6 and its row keeps the plan's single NEXT marker because the state checker requires exactly one and the only item the plan still holds is the held release decision. The reports index is refreshed: reports/README.md and docs/README_INDEX.md now list progress_130 through progress_149, and the duplicated progress_128 entry is removed from both
-Release state: tag v1.1.0-rc.1 target unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub draft prerelease unchanged; package private at 1.1.0-rc.1; npm publish NO
-Tag/release/npm changed: NO
+Implementation baseline: main at or after 37904fb
+Dialog focus restoration: CLOSED at 5cb8a45; CI 36314400055 PASS
+Runtime SQLite repository hygiene: CLOSED at b3f3c6c; CI 36314754294 PASS
+Exact API CORS policy: CLOSED at 2a313d7; CI 36315091917 PASS
+Oxlint 1.85 adoption: CLOSED at feca773; CI 36315413652 PASS
+TypeScript 7 / Vitest 5: CLOSED at 37904fb; CI 36315904883 PASS
+Latest full suite: 128 files / 1,951 tests PASS
+Dependency audit: 0 vulnerabilities
+Release state: H7 HOLD; tag v1.1.0-rc.1 remains at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub release remains draft prerelease; package remains private at 1.1.0-rc.1; npm publish NO
+Non-blocking CI annotations: Node 20 action runtime forced to Node 24; announced ubuntu-latest migration to Ubuntu 26
 
-Copied files (15): CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, OMP_FINAL_RESPONSE.md, PROJECT_STATE.md, README.md, manifest.txt, progress_142_release_readiness_audit.md, progress_143_ci_typecheck_step.md, progress_144_oxlint_1_85_triage.md, progress_145_jsdom_30_1_triage.md, progress_146_final_release_gate.md, progress_147_milestone_h_docs_handoff.md, progress_148_final_handoff_after_hold.md, progress_149_final_jsdom_state_cleanup.md
+Copied files (8):
+- CHANGELOG.md
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
+- NEXT_SESSION.md
+- OMP_FINAL_RESPONSE.md
+- PROJECT_STATE.md
+- README.md
+- manifest.txt
+- progress_150_final_maintenance_reconciliation.md
 
-Omitted categories: source, test and design files; package/lock files; older reports and current-state documents; QA output, assets, archives, caches.
-Omitted files were not deleted from the repository. Not copied and never touched: .git, secrets, backups, caches, `C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
+Omitted: source, tests, package/lock files, workflows, historical reports, binaries, archives, assets, caches, and QA output.
+Never touched: C:\Users\ertugrul.ak\Desktop\KCS; C:\Users\ertugrul.ak\Desktop\ograf-graphics; origin/without-mask; global OMP configuration.
 
-Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files listed above are the sources of that one-file artifact.
+Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.

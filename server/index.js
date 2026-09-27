@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { initSqliteDb } from './db/sqlite.js';
 import { bindMessage, resolveBindHost } from './bindHost.js';
+import { createCorsOptions } from './corsPolicy.js';
 import healthRouter from './routes/health.js';
 import projectsRouter from './routes/projects.js';
 import presetsRouter from './routes/presets.js';
@@ -13,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const bind = resolveBindHost();
 
-app.use(cors());
+app.use(cors(createCorsOptions()));
 app.use(express.json({ limit: '50mb' }));
 
 // Initialize SQLite Database

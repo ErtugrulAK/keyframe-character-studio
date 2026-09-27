@@ -294,9 +294,10 @@ The Express backend exposes endpoints for project persistence, motion presets, a
 ### Where the API listens
 
 The API binds **`127.0.0.1` by default**, so only this machine can reach it. It has **no
-authentication and no authorization**, and CORS does not restrict who may call it — cross-origin
-requests are enabled, and CORS is a browser rule, not access control. Exposing it beyond this
-machine therefore publishes a writable project store to that network.
+authentication and no authorization**. Browser CORS responses are limited to the exact documented
+local editor and QA origins (`localhost`/`127.0.0.1` on ports `5173`, `5187`, `5188`, and `5189`);
+Origin-less CLI and server-to-server requests still work. CORS is a browser rule, not access control,
+so exposing the API beyond this machine still publishes a writable project store to that network.
 
 Reaching a wider interface is an explicit opt-in:
 
@@ -305,8 +306,11 @@ KCS_API_HOST=0.0.0.0 npm run server   # every interface — the server warns whe
 KCS_API_HOST=192.168.1.10 npm run server
 ```
 
-Leave `KCS_API_HOST` unset (or `127.0.0.1`) to keep the API local. Putting it on a network should be
-paired with authentication of your own; nothing in this repository provides it.
+Leave `KCS_API_HOST` unset (or `127.0.0.1`) to keep the API local. If a browser UI needs another
+origin, add exact comma-separated `http(s)` origins with `KCS_CORS_ORIGINS`; wildcard, paths,
+credentials, queries, fragments, and malformed values are rejected at startup. Putting the API on a
+network should still be paired with authentication of your own; nothing in this repository provides
+it.
 
 ---
 

@@ -15,17 +15,19 @@ Default API Server URL: `http://localhost:5000`
 - **Authentication**: none. There is no authentication or authorization anywhere in `server/`, so
   any client that can reach the port can read, overwrite and delete the stored projects. Do not put
   this API on a network without adding authentication first.
-- **CORS is not authorization**: cross-origin requests are enabled (`cors()` with no allowlist), and
-  CORS is enforced by browsers, not by the server. It does not stop a non-browser client, and it does
-  not stop a page on this machine from reaching a local API. Treat it as a convenience for browser
-  clients, never as access control.
+- **CORS is not authorization**: browser response access is limited by default to the exact local
+  editor and QA origins on `localhost`/`127.0.0.1` ports `5173`, `5187`, `5188`, and `5189`.
+  Origin-less CLI/server requests still work. Add other exact `http(s)` origins with the
+  comma-separated `KCS_CORS_ORIGINS` environment variable; malformed values fail startup instead of
+  silently widening the policy. Browsers enforce CORS, but non-browser clients do not, so it does not
+  replace authentication.
 
 ---
 
 ## Headers & Content Types
 
 - **Content-Type**: `application/json`
-- **CORS**: Enabled for cross-origin requests (see "Binding and exposure" — this is not access control).
+- **CORS**: Exact browser-origin allowlist; disallowed origins receive no CORS allow header.
 - **Payload Limit**: `50mb`
 
 ---

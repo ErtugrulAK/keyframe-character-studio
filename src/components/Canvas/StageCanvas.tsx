@@ -67,11 +67,16 @@ export const StageCanvas: React.FC = () => {
   const editViewportRef = useRef({ zoom: 1, pan: { x: 0, y: 0 } });
   const zoomRef = useRef(zoomLevel);
   const panRef = useRef(panOffset);
+  // Intentional latest-value mirrors preserve the edit viewport across mode changes.
+  // oxlint-disable-next-line react/refs
   zoomRef.current = zoomLevel;
+  // oxlint-disable-next-line react/refs
   panRef.current = panOffset;
   useEffect(() => {
     if (appMode === 'broadcast') {
       editViewportRef.current = { zoom: zoomRef.current, pan: panRef.current };
+      // Mode changes intentionally synchronize the viewport state with the active surface.
+      // oxlint-disable-next-line react/set-state-in-effect
       setZoomLevel(1);
       setPanOffset({ x: 0, y: 0 });
     } else {
@@ -152,6 +157,8 @@ export const StageCanvas: React.FC = () => {
 
   useEffect(() => {
     if (activeTool !== 'shape_create' && (shapeCreationStart || shapeCreationPreview)) {
+      // Leaving shape-create mode clears its transient pointer session.
+      // oxlint-disable-next-line react/set-state-in-effect
       setShapeCreationStart(null);
       setShapeCreationPreview(null);
     }

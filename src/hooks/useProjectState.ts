@@ -7,9 +7,12 @@ export const useProjectState = () => {
   const [characterParts, setCharacterParts] = useState<CharacterPart[]>(DEFAULT_CHARACTER_PARTS);
 
   const tracksRef = useRef(tracks);
+  // Intentional latest-value mirrors are consumed by stable domain callbacks.
+  // oxlint-disable-next-line react/refs
   tracksRef.current = tracks;
 
   const characterPartsRef = useRef(characterParts);
+  // oxlint-disable-next-line react/refs
   characterPartsRef.current = characterParts;
 
   return {

@@ -438,6 +438,8 @@ export const useSerialization = ({
           const savedTotalFrames = readOptionalNumber(parsed.totalFrames);
           if (savedTotalFrames !== undefined) setTotalFrames(savedTotalFrames);
           const savedAt = readOptionalDate(parsed.lastSavedTime);
+          // Autosave restoration synchronizes React state with persisted storage.
+          // oxlint-disable-next-line react/set-state-in-effect
           setLastSavedAt(savedAt ?? new Date());
 
           const allIds: string[] = [];

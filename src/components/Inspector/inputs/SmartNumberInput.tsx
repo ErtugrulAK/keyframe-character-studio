@@ -33,6 +33,8 @@ export const SmartNumberInput: React.FC<SmartNumberInputProps> = ({ value, min, 
 
   React.useEffect(() => {
     if (!isFocused) {
+      // Keep the unfocused edit buffer synchronized with the external value.
+      // oxlint-disable-next-line react/set-state-in-effect
       setEditingValue(String(displayVal));
     }
   }, [displayVal, isFocused]);

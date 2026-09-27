@@ -153,6 +153,8 @@ export const useFreeformDraw = ({ enabled, getStagePoint, onComplete, onCancel }
   // Deactivating the tool mid-draw silently discards the session (no notification).
   useEffect(() => {
     if (!enabled) {
+      // Tool deactivation is the external signal that cancels an active draw session.
+      // oxlint-disable-next-line react/set-state-in-effect
       cancel(false);
     }
   }, [enabled, cancel]);

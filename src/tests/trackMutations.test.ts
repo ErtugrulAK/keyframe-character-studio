@@ -43,7 +43,9 @@ describe('TrackMutations Utility', () => {
 
   it('deletes a property keyframe', () => {
     const next = addPropertyKeyframeMutator(tracks, 'track_1', 'opacity', 20, 0.5, 'linear');
-    const addedKfId = next[0].channels?.opacity?.[0].id!;
+    const addedKfId = next[0].channels?.opacity?.[0].id;
+    expect(addedKfId).toBeDefined();
+    if (addedKfId === undefined) throw new Error('Expected the added opacity keyframe to have an id.');
     const final = deletePropertyKeyframeMutator(next, 'track_1', 'opacity', addedKfId);
     
     expect(final[0].channels?.opacity?.length).toBe(0);

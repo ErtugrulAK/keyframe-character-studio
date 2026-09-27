@@ -39,7 +39,10 @@ function HistoryHarness() {
   const [tracks, setTracks] = useState<Track[]>([]);
   const characterPartsRef = useRef(characterParts);
   const tracksRef = useRef(tracks);
+  // Mirrors the production latest-ref wiring that this integration harness exercises.
+  // oxlint-disable-next-line react/refs
   characterPartsRef.current = characterParts;
+  // oxlint-disable-next-line react/refs
   tracksRef.current = tracks;
 
   const { startBatchInteraction, endBatchInteraction, undo, redo, canUndo, canRedo } = useHistory({

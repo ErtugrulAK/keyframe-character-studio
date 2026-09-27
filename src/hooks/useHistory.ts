@@ -72,12 +72,17 @@ export const useHistory = ({
   // Mirrors of the latest committed history/index (safe to read in callbacks).
   const historyRef = useRef<HistoryState[]>([]);
   const historyIndexRef = useRef<number>(-1);
+  // Intentional latest-value mirrors keep stable callbacks on current state.
+  // oxlint-disable-next-line react/refs
   historyRef.current = history;
+  // oxlint-disable-next-line react/refs
   historyIndexRef.current = historyIndex;
 
   // Mirror of the latest document-level state, so the callbacks below keep a
   // stable identity while still snapshotting what is on screen right now.
   const documentStateRef = useRef<HistoryDocumentState>(documentState);
+  // Intentional latest-value mirror for document snapshots in stable callbacks.
+  // oxlint-disable-next-line react/refs
   documentStateRef.current = documentState;
 
   /**

@@ -41,6 +41,8 @@ export const usePresets = () => {
   });
 
   const customPresetsRef = useRef(customPresets);
+  // Intentional latest-value mirror keeps preset consumers on current state.
+  // oxlint-disable-next-line react/refs
   customPresetsRef.current = customPresets;
 
   useEffect(() => {

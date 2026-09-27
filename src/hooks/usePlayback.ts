@@ -18,10 +18,12 @@ export const usePlayback = () => {
   const [isLooping, setIsLooping] = useState<boolean>(false);
 
   const fpsRef = useRef(fps);
+  // Intentional latest-value mirror keeps the animation loop on the current FPS.
+  // oxlint-disable-next-line react/refs
   fpsRef.current = fps;
 
   const animationFrameRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number>(performance.now());
+  const lastTimeRef = useRef<number>(0);
 
   // Playback Loop
   useEffect(() => {
@@ -31,6 +33,8 @@ export const usePlayback = () => {
     }
 
     // Automatically rewind to frame 0 if playback is started at or past totalFrames
+    // Starting playback synchronizes the cursor with the playable frame range.
+    // oxlint-disable-next-line react/set-state-in-effect
     setCurrentFrame((prev) => (prev >= totalFrames ? 0 : prev));
 
     const frameInterval = 1000 / fps;

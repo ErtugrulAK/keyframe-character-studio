@@ -142,6 +142,8 @@ export const FreeformTangentOverlay: React.FC<FreeformTangentOverlayProps> = ({
 
   useEffect(() => {
     if (!pendingCancel) return;
+    // The pending flag sequences Escape restoration before closing the history batch.
+    // oxlint-disable-next-line react/set-state-in-effect
     setPendingCancel(false);
     onBatchEnd();
   }, [pendingCancel, onBatchEnd]);

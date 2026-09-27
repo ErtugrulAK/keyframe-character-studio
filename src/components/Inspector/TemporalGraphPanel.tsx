@@ -58,8 +58,12 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   const minValue = Math.min(...graphValues, 0);
   const maxValue = Math.max(...graphValues, 1);
   const valueRange = Math.max(1e-6, maxValue - minValue);
+  // The ref freezes the graph domain for the active drag; state updates accompany drag changes.
+  // oxlint-disable-next-line react/refs
   const activeMinValue = dragDomainRef.current?.min ?? minValue;
+  // oxlint-disable-next-line react/refs
   const activeMaxValue = dragDomainRef.current?.max ?? maxValue;
+  // oxlint-disable-next-line react/refs
   const activeValueRange = Math.max(1e-6, activeMaxValue - activeMinValue);
   const startFrame = sorted[0]?.frame ?? 0;
   const endFrame = sorted[sorted.length - 1]?.frame ?? 1;

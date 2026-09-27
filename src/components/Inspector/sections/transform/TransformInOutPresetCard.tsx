@@ -205,6 +205,8 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
       || selectedDuration !== saveContext.duration
       || !hasPresetSource(saveContext.presetId)
     ) {
+      // External selection changes invalidate the open save dialog context.
+      // oxlint-disable-next-line react/set-state-in-effect
       closeSavePreset();
     }
   }, [closeSavePreset, hasPresetSource, inDur, inPreset, outDur, outPreset, saveContext, selectedPart.id]);
@@ -265,6 +267,8 @@ export const TransformInOutPresetCard: React.FC<TransformInOutPresetCardProps> =
       || selectedPresetId !== editContext.presetId
       || !targetStillExists
     ) {
+      // External selection or preset deletion invalidates the edit dialog context.
+      // oxlint-disable-next-line react/set-state-in-effect
       closeEditPreset();
     }
   }, [closeEditPreset, customPresets, editContext, inPreset, outPreset, selectedPart.id]);

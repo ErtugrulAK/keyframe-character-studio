@@ -28,6 +28,8 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      // Opening the modal resets its local draft from the caller-owned default.
+      // oxlint-disable-next-line react/set-state-in-effect
       setVal(defaultValue);
       setTimeout(() => {
         inputRef.current?.focus();

@@ -61,6 +61,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   const [p2, setP2] = useState<{ x: number; y: number }>({ x: controlPoints[2], y: controlPoints[3] });
 
   useEffect(() => {
+    // The editor draft follows externally selected control points.
+    // oxlint-disable-next-line react/set-state-in-effect
     setP1({ x: controlPoints[0], y: controlPoints[1] });
     setP2({ x: controlPoints[2], y: controlPoints[3] });
   }, [controlPoints]);

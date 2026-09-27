@@ -38,6 +38,8 @@ export const useBroadcast = ({
   useEffect(() => {
     if (appMode === 'broadcast') {
       setIsPlaying(false);
+      // Mode changes reset the external broadcast session state as one transition.
+      // oxlint-disable-next-line react/set-state-in-effect
       setBroadcastState({});
       setBroadcastSessionActivated(false);
     } else {
@@ -77,6 +79,8 @@ export const useBroadcast = ({
   // behaves like pressing Play in the edit timeline.
   useEffect(() => {
     if (appMode !== 'broadcast') return;
+    // The live part list is an external input synchronized into broadcast runtime state.
+    // oxlint-disable-next-line react/set-state-in-effect
     setBroadcastState((prev) => syncBroadcastParts(prev, characterParts));
   }, [appMode, characterParts]);
 
@@ -193,7 +197,7 @@ export const useBroadcast = ({
   }, [showToast]);
 
   // Broadcast Loop
-  const broadcastLastTimeRef = useRef<number>(performance.now());
+  const broadcastLastTimeRef = useRef<number>(0);
   const broadcastReqRef = useRef<number | null>(null);
 
   useEffect(() => {

@@ -60,6 +60,52 @@ describe('usePresets Hook', () => {
   });
 });
 
+/**
+ * Astra F-07: `localStorage` is an external boundary, and a blocked or full
+ * store throws on the call itself. The library has to keep working for the
+ * session instead of failing the mount or the edit that produced it.
+ */
+describe('usePresets — storage boundaries', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('mounts with the defaults when reading the store throws', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new DOMException('Access denied', 'SecurityError');
+    });
+
+    const { result } = renderHook(() => usePresets());
+
+    expect(result.current.customPresets).toEqual(DEFAULT_INITIAL_PRESETS);
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it('keeps the in-memory library when writing throws', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    });
+
+    const { result } = renderHook(() => usePresets());
+    let created: CustomMotionPreset | null = null;
+    act(() => {
+      created = result.current.savePreset(validInput({ name: 'Kept in memory' }));
+    });
+
+    expect(result.current.customPresets).toHaveLength(DEFAULT_INITIAL_PRESETS.length + 1);
+    expect(result.current.customPresets.at(-1)?.id).toBe(created?.id);
+    expect(result.current.savePreset(validInput({ name: '', type: 'in' }))).toBeNull();
+    expect(warn).toHaveBeenCalled();
+  });
+});
+
 describe('usePresets — M25 savePreset / deletePreset (data layer)', () => {
   beforeEach(() => {
     vi.spyOn(Storage.prototype, 'getItem');

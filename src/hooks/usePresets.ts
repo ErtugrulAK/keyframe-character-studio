@@ -7,6 +7,28 @@ const STORAGE_KEY = 'keyframe_custom_motion_presets';
 
 const PRESET_TYPES = ['in', 'out', 'stunt'] as const;
 
+/**
+ * The stored library, or the defaults.
+ *
+ * Storage is an external boundary: a blocked or unavailable store throws on
+ * access itself, and that must not take the editor down while it mounts. A
+ * malformed value is the same kind of input and falls back the same way.
+ */
+const readStoredPresets = (): CustomMotionPreset[] => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return DEFAULT_INITIAL_PRESETS;
+    const parsed = JSON.parse(saved);
+    // A parsed non-array (object/string/number) is corrupt storage — fall back
+    // to defaults instead of returning a value that would crash
+    // `customPresets.map(...)` downstream.
+    return Array.isArray(parsed) ? parsed : DEFAULT_INITIAL_PRESETS;
+  } catch (error) {
+    console.warn('[Presets] Could not read the saved preset library; using the defaults.', error);
+    return DEFAULT_INITIAL_PRESETS;
+  }
+};
+
 export interface SavePresetInput {
   name: string;
   type: 'in' | 'out' | 'stunt';
@@ -24,21 +46,7 @@ export interface UpdatePresetInput {
 }
 
 export const usePresets = () => {
-  const [customPresets, setCustomPresets] = useState<CustomMotionPreset[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // BUGFIX/robustness: a parsed non-array (object/string/number) is
-        // corrupt storage — fall back to defaults instead of returning a
-        // value that would crash `customPresets.map(...)` downstream.
-        return Array.isArray(parsed) ? parsed : DEFAULT_INITIAL_PRESETS;
-      } catch {
-        return DEFAULT_INITIAL_PRESETS;
-      }
-    }
-    return DEFAULT_INITIAL_PRESETS;
-  });
+  const [customPresets, setCustomPresets] = useState<CustomMotionPreset[]>(readStoredPresets);
 
   const customPresetsRef = useRef(customPresets);
   // Intentional latest-value mirror keeps preset consumers on current state.
@@ -46,7 +54,13 @@ export const usePresets = () => {
   customPresetsRef.current = customPresets;
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(customPresets));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(customPresets));
+    } catch (error) {
+      // A full or blocked store must not fail the edit that is already in
+      // memory; the library keeps working for this session.
+      console.warn('[Presets] Could not persist the preset library.', error);
+    }
   }, [customPresets]);
 
   /**

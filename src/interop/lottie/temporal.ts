@@ -28,12 +28,25 @@ export interface LottieKeyframe {
    */
   values: number[];
   hold?: boolean;
-  /** Outgoing control point of the segment that starts here. */
-  out?: { x: number; y: number };
-  /** Incoming control point of the segment that ends at the next keyframe. */
-  in?: { x: number; y: number };
+  /** Outgoing handle of the segment that starts here. */
+  out?: LottieHandleComponent;
+  /** Incoming handle of the segment that ends at the next keyframe. */
+  in?: LottieHandleComponent;
   roving?: boolean;
   expression?: string;
+}
+
+/**
+ * One easing handle of a segment, exactly as the document wrote it.
+ *
+ * Lottie stores each component per dimension (`x: [0.667, 0.667]`) and some
+ * tools write it as a bare number (`x: 0.5`). The dimension that a channel maps
+ * selects its own entry, so the handle is resolved per channel rather than
+ * collapsed to `0` while the document is read.
+ */
+export interface LottieHandleComponent {
+  x?: number[];
+  y?: number[];
 }
 
 export interface TemporalMappingContext {
@@ -80,6 +93,30 @@ export interface SegmentTimingResult {
 const readDimension = (keyframe: LottieKeyframe, dimension: number): number =>
   keyframe.values[dimension] ?? keyframe.values[keyframe.values.length - 1] ?? 0;
 
+/**
+ * The component this channel's dimension uses. A handle list carries one entry
+ * per dimension and readers fall back to its last entry when the document wrote
+ * fewer of them, so a one-entry list applies to every dimension.
+ */
+const readHandleDimension = (component: number[] | undefined, dimension: number): number | undefined =>
+  component === undefined ? undefined : component[dimension] ?? component[component.length - 1];
+
+/**
+ * The `{x, y}` control point this channel can use, or `undefined` when the
+ * document carries no readable handle for it. An unusable handle is never
+ * replaced with zeros: a zero control point is a valid-looking curve that the
+ * source never described.
+ */
+const resolveHandle = (
+  handle: LottieHandleComponent | undefined,
+  dimension: number,
+): { x: number; y: number } | undefined => {
+  if (!handle) return undefined;
+  const x = readHandleDimension(handle.x, dimension);
+  const y = readHandleDimension(handle.y, dimension);
+  return x === undefined || y === undefined ? undefined : { x, y };
+};
+
 const toSceneFrame = (time: number, context: TemporalMappingContext): number =>
   Math.max(0, Math.round(time - context.documentInPoint - (context.layerStartTime ?? 0)));
 
@@ -114,14 +151,24 @@ export const mapLottieSegmentTiming = (
     // would claim a curve the source does not actually describe.
     const unsupportedSegment = keyframe.roving === true || keyframe.expression !== undefined;
     const hold = keyframe.hold === true;
-    const startsSegment = !hold && !unsupportedSegment && keyframe.out !== undefined && accepted[index + 1] !== undefined;
+    const continues = !hold && !unsupportedSegment && accepted[index + 1] !== undefined;
+    const outHandle = continues ? resolveHandle(keyframe.out, context.dimension) : undefined;
     const mapped: SegmentTiming = {
       frame: toSceneFrame(keyframe.time, context),
       easing: hold ? 'hold' : 'linear',
     };
-    if (startsSegment && keyframe.out) {
+    if (outHandle) {
       mapped.easing = 'bezier';
-      mapped.bezierOut = { x: keyframe.out.x, y: keyframe.out.y };
+      mapped.bezierOut = outHandle;
+    } else if (continues && keyframe.out !== undefined) {
+      diagnostics.push({
+        code: 'LOTTIE_UNREADABLE_EASING',
+        severity: 'warning',
+        feature: 'lottie-import',
+        path: `${context.path}[${index}].o`,
+        message: `The outgoing easing handle of keyframe ${index} of "${context.channel}" carries no value this channel can read, so the segment that starts there was imported as linear.`,
+        action: 'Export the document again from its source application so the keyframe handles carry numeric values.',
+      });
     }
     if (keyframe.roving) {
       diagnostics.push({
@@ -150,11 +197,22 @@ export const mapLottieSegmentTiming = (
   // segment *starts* from, so it becomes bezierIn on the keyframe that ends it.
   accepted.forEach((keyframe, index) => {
     if (keyframe.hold === true || keyframe.roving === true || keyframe.expression !== undefined) return;
-    const incoming = keyframe.in;
     const target = timing[index + 1];
-    if (!incoming || !target) return;
+    if (!keyframe.in || !target) return;
+    const inHandle = resolveHandle(keyframe.in, context.dimension);
+    if (!inHandle) {
+      diagnostics.push({
+        code: 'LOTTIE_UNREADABLE_EASING',
+        severity: 'warning',
+        feature: 'lottie-import',
+        path: `${context.path}[${index}].i`,
+        message: `The incoming easing handle of keyframe ${index} of "${context.channel}" carries no value this channel can read, so the segment that ends at keyframe ${index + 1} was imported as linear.`,
+        action: 'Export the document again from its source application so the keyframe handles carry numeric values.',
+      });
+      return;
+    }
     target.easing = 'bezier';
-    target.bezierIn = { x: incoming.x, y: incoming.y };
+    target.bezierIn = inHandle;
   });
 
   return { accepted, timing, diagnostics };

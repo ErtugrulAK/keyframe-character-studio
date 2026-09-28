@@ -545,6 +545,124 @@ describe('Lottie import — dimensions and fallbacks (review round)', () => {
   });
 });
 
+describe('Lottie import — numeric property forms (F-03)', () => {
+  /** A solid whose position property is written in the form under test. */
+  const layerWithPosition = (position: unknown) => solidLayer({
+    ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: position },
+  });
+
+  it('reads a split static position instead of importing both axes as zero', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      layerWithPosition({ s: true, x: { a: 0, k: 120 }, y: { a: 0, k: 80 } }),
+    ])));
+
+    expect(result.scene?.layers[0]?.x).toBe(120);
+    expect(result.scene?.layers[0]?.y).toBe(80);
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_UNREADABLE_POSITION');
+  });
+
+  it('maps each axis of a split animated position to its own channel', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      layerWithPosition({
+        s: true,
+        x: { a: 1, k: [{ t: 0, s: [0] }, { t: 24, s: [90] }] },
+        y: { a: 1, k: [{ t: 0, s: [10] }, { t: 24, s: [45] }] },
+      }),
+    ])));
+    const track = result.scene?.tracks[0];
+
+    expect(track?.channels.x?.map((keyframe) => keyframe.value)).toEqual([0, 90]);
+    expect(track?.channels.y?.map((keyframe) => keyframe.value)).toEqual([10, 45]);
+  });
+
+  it('reports a split position axis it cannot read instead of defaulting silently', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      layerWithPosition({ s: true, x: { a: 1, k: [{ t: 0, s: [5] }, { t: 24, s: [95] }] } }),
+    ])));
+
+    const position = result.diagnostics.find((entry) => entry.code === 'LOTTIE_UNREADABLE_POSITION');
+    expect(result.ok).toBe(true);
+    expect(position?.path).toBe('layers[0].ks.p.y');
+    expect(position?.action.length).toBeGreaterThan(0);
+  });
+
+  it('resolves a vector handle per dimension instead of collapsing it to zero', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      layerWithPosition({
+        a: 1,
+        k: [
+          { t: 0, s: [0, 0], o: { x: [0.25, 0.3], y: [0.1, 0.2] }, i: { x: [0.75, 0.7], y: [0.9, 0.8] } },
+          { t: 24, s: [100, 50] },
+        ],
+      }),
+    ])));
+    const track = result.scene?.tracks[0];
+
+    expect(track?.channels.x?.[0]?.bezierOut).toEqual({ x: 0.25, y: 0.1 });
+    expect(track?.channels.x?.[1]?.bezierIn).toEqual({ x: 0.75, y: 0.9 });
+    expect(track?.channels.y?.[0]?.bezierOut).toEqual({ x: 0.3, y: 0.2 });
+    expect(track?.channels.y?.[1]?.bezierIn).toEqual({ x: 0.7, y: 0.8 });
+  });
+
+  it('accepts a one-entry handle list and a bare-number handle', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      layerWithPosition({
+        a: 1,
+        k: [
+          { t: 0, s: [0], o: { x: [0.25], y: 0.1 }, i: { x: 0.75, y: [0.9] } },
+          { t: 24, s: [100] },
+        ],
+      }),
+    ])));
+    const keyframes = result.scene?.tracks[0]?.channels.x ?? [];
+
+    expect(keyframes[0]?.bezierOut).toEqual({ x: 0.25, y: 0.1 });
+    expect(keyframes[1]?.bezierIn).toEqual({ x: 0.75, y: 0.9 });
+    expect(codes(result.diagnostics)).not.toContain('LOTTIE_UNREADABLE_EASING');
+  });
+
+  it('keeps the segment linear and reports a handle it cannot read', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      layerWithPosition({
+        a: 1,
+        k: [
+          { t: 0, s: [0], o: { x: 'fast', y: [0.1] }, i: { x: 0.75, y: 0.9 } },
+          { t: 24, s: [100] },
+        ],
+      }),
+    ])));
+    const keyframes = result.scene?.tracks[0]?.channels.x ?? [];
+
+    // No fabricated curve: the segment stays linear and the loss is reported.
+    expect(keyframes[0]?.easing).toBe('linear');
+    expect(keyframes[0]?.bezierOut).toBeUndefined();
+    const unreadable = result.diagnostics.find((entry) => entry.code === 'LOTTIE_UNREADABLE_EASING');
+    expect(unreadable?.path).toBe('layers[0].ks.p[0].o');
+    expect(unreadable?.action.length).toBeGreaterThan(0);
+  });
+
+  it('reports a split anchor, which the importer converts in neither form', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      solidLayer({
+        ks: { o: { k: 100 }, r: { k: 0 }, s: { k: 100 }, p: { k: 10 }, a: { s: true, x: { k: 0 }, y: { k: 0 } } },
+      }),
+    ])));
+
+    expect(codes(result.diagnostics)).toContain('LOTTIE_UNSUPPORTED_ANCHOR');
+  });
+
+  it('imports a scene that passes the KCS boundary and stays exportable', () => {
+    const result = importLottieDocument(JSON.stringify(baseDocument([
+      layerWithPosition({ s: true, x: { a: 0, k: 120 }, y: { a: 0, k: 80 } }),
+    ])));
+
+    expect(result.ok).toBe(true);
+    const validated = validateImportedDocument(JSON.stringify(result.scene));
+    expect(validated.ok).toBe(true);
+    expect(validateSceneForOGraf(result.scene as never).diagnostics.filter((entry) => entry.severity === 'ERROR')).toEqual([]);
+  });
+});
+
 describe('Lottie import — shapes and unsupported constructs', () => {
   it('maps a path, a rectangle, a fill, a stroke and a trim item', () => {
     const shapeLayer = {

@@ -5,7 +5,7 @@ import { isPrototypeSensitiveKey } from '../../utils/pathSafety';
 import { KCS_DEFAULT_TEXT_FONT, matchTextFontFamily, normalizeTextFontName } from '../../utils/textFonts';
 import { isSupportedEmbeddedImage } from '../../ograf/legacyCompatibility';
 import { LOTTIE_IMPORT_LIMITS, lottieError, lottieWarning, type LottieImportDiagnostic } from './diagnostics';
-import { mapLottieKeyframes, mapLottieSegmentTiming, type LottieKeyframe } from './temporal';
+import { mapLottieKeyframes, mapLottieSegmentTiming, type LottieHandleComponent, type LottieKeyframe } from './temporal';
 
 /**
  * Lottie import core (Milestone F, item 10).
@@ -111,6 +111,28 @@ const isAnimatedProperty = (value: unknown): boolean => {
   return typeof first?.t === 'number';
 };
 
+/**
+ * Reads one component of a segment handle. The specification allows a list with
+ * one entry per dimension (`x: [0.667, 0.667]`) and tools also write a bare
+ * number; both forms are kept, and a missing entry stays missing so the channel
+ * that reads it can report the loss instead of inventing a zero handle.
+ */
+const readHandleComponent = (value: unknown): number[] | undefined => {
+  if (Array.isArray(value)) {
+    const numbers = value.filter((entry): entry is number => typeof entry === 'number' && Number.isFinite(entry));
+    return numbers.length > 0 ? numbers : undefined;
+  }
+  const single = readNumber(value);
+  return single === undefined ? undefined : [single];
+};
+
+/** Both components of a keyframe handle, or `undefined` when the document has none. */
+const readHandle = (value: unknown): LottieHandleComponent | undefined => {
+  const record = asRecord(value);
+  if (!record) return undefined;
+  return { x: readHandleComponent(record.x), y: readHandleComponent(record.y) };
+};
+
 /** A Lottie property object holds either `k` (static) or keyframed entries. */
 /** Reads `{ k: number | number[] }` or `{ k: [ { t, s, i, o, h, r, x } … ] }`. */
 const readNumericProperty = (value: unknown): LottieNumericProperty | undefined => {
@@ -132,17 +154,17 @@ const readNumericProperty = (value: unknown): LottieNumericProperty | undefined 
     const keyframe = asRecord(entry);
     const time = readNumber(keyframe?.t);
     if (!keyframe || time === undefined) continue;
-    const incoming = asRecord(keyframe.i);
-    const outgoing = asRecord(keyframe.o);
     const rawValues = Array.isArray(keyframe.s) ? keyframe.s : [keyframe.s];
     const values = rawValues.map((entry) => readNumber(entry)).filter((entry): entry is number => entry !== undefined);
     if (values.length === 0) continue;
+    const outgoing = readHandle(keyframe.o);
+    const incoming = readHandle(keyframe.i);
     keyframes.push({
       time,
       values,
       hold: keyframe.h === 1,
-      ...(outgoing ? { out: { x: readNumber(outgoing.x) ?? 0, y: readNumber(outgoing.y) ?? 0 } } : {}),
-      ...(incoming ? { in: { x: readNumber(incoming.x) ?? 0, y: readNumber(incoming.y) ?? 0 } } : {}),
+      ...(outgoing ? { out: outgoing } : {}),
+      ...(incoming ? { in: incoming } : {}),
       ...(keyframe.r === 1 ? { roving: true } : {}),
       ...(readString(keyframe.x) ? { expression: readString(keyframe.x) as string } : {}),
     });
@@ -234,16 +256,16 @@ const readPathKeyframes = (property: unknown): { keyframes: LottieKeyframe[]; sh
     // A path keyframe carries its shape in a single-entry array ().
     const shape = asRecord(Array.isArray(keyframe?.s) ? keyframe.s[0] : keyframe?.s);
     if (!keyframe || time === undefined || !shape) continue;
-    const incoming = asRecord(keyframe.i);
-    const outgoing = asRecord(keyframe.o);
+    const incoming = readHandle(keyframe.i);
+    const outgoing = readHandle(keyframe.o);
     keyframes.push({
       time,
       // A path keyframe carries no scalar value; the geometry travels beside
       // the timing in `mapPathChannel`, so this placeholder is never read.
       values: [0],
       hold: keyframe.h === 1,
-      ...(outgoing ? { out: { x: readNumber(outgoing.x) ?? 0, y: readNumber(outgoing.y) ?? 0 } } : {}),
-      ...(incoming ? { in: { x: readNumber(incoming.x) ?? 0, y: readNumber(incoming.y) ?? 0 } } : {}),
+      ...(outgoing ? { out: outgoing } : {}),
+      ...(incoming ? { in: incoming } : {}),
       ...(keyframe.r === 1 ? { roving: true } : {}),
       ...(readString(keyframe.x) ? { expression: readString(keyframe.x) as string } : {}),
     });
@@ -905,14 +927,35 @@ export const mapLottieDocument = (document: unknown): LottieImportResult => {
       diagnostics.push(lottieWarning('LOTTIE_MISSING_SOLID_PAINT', path, 'Solid layer ' + index + ' does not carry both a colour (`sc`) and a size (`sw`/`sh`): a missing colour falls back to white, and a missing size leaves the layer with no rectangle to draw.', 'Set the solid colour and size in the source document.'));
     }
     const transform = asRecord(layer.ks) ?? {};
-    if (asRecord(transform.a)?.k !== undefined) {
+    const anchor = asRecord(transform.a);
+    // A split anchor (`s: true`) is an anchor by another shape, and the importer
+    // converts neither form — reporting it keeps the loss visible.
+    if (anchor?.k !== undefined || anchor?.s === true) {
       diagnostics.push(lottieWarning('LOTTIE_UNSUPPORTED_ANCHOR', path + '.ks.a', 'Layer ' + index + ' uses an anchor point; KCS derives the pivot instead, so the anchor is not converted.', 'Re-check the layer position after import, or move the anchor in the source document.'));
     }
     const layerStartTime = readNumber(layer.st);
     const context = { documentInPoint: inPoint, layerStartTime, path: `${path}.ks`, channel: '' };
-    const position = readNumericProperty(transform.p);
-    const x = toTransformChannel(position, { ...context, dimension: 0, path: `${path}.ks.p`, channel: 'x' });
-    const y = toTransformChannel(position, { ...context, dimension: 1, path: `${path}.ks.p`, channel: 'y' });
+    // "Separate dimensions" (`p: { s: true, x: {...}, y: {...} }`) is a standard
+    // Lottie form and each axis is an ordinary scalar property; reading it as a
+    // combined vector would silently import both axes as zero.
+    const splitPosition = asRecord(transform.p)?.s === true ? asRecord(transform.p) : undefined;
+    const xProperty = splitPosition ? readNumericProperty(splitPosition.x) : readNumericProperty(transform.p);
+    const yProperty = splitPosition ? readNumericProperty(splitPosition.y) : xProperty;
+    const positionPath = `${path}.ks.p`;
+    const x = toTransformChannel(xProperty, { ...context, dimension: 0, path: positionPath, channel: 'x' });
+    const y = toTransformChannel(yProperty, { ...context, dimension: 1, path: positionPath, channel: 'y' });
+    if (splitPosition) {
+      for (const [axis, property] of [['x', xProperty], ['y', yProperty]] as const) {
+        if (property === undefined) {
+          diagnostics.push(lottieWarning(
+            'LOTTIE_UNREADABLE_POSITION',
+            `${positionPath}.${axis}`,
+            `Layer ${index} separates its position into x/y, but the ${axis} property carries no readable value, so that axis was imported as 0.`,
+            'Re-export the document so both split position axes carry their values.',
+          ));
+        }
+      }
+    }
     const rotation = toTransformChannel(readNumericProperty(transform.r), { ...context, path: `${path}.ks.r`, channel: 'rotation' });
     const scaleProperty = readNumericProperty(transform.s);
     const scaleX = toTransformChannel(scaleProperty, { ...context, dimension: 0, path: `${path}.ks.s`, channel: 'scaleX' });

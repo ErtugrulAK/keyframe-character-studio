@@ -10,57 +10,56 @@
 
 ## 1. OMP Final Response
 
-# KCS Final Maintenance Reconciliation — OMP Response
+# KCS Final Astra Remediation — OMP Response
 
 ## 1) Phase 0 baseline
 
-The run started from clean synchronized `main` at `c5bed46`, with the latest CI green, the state checker passing, and no Git operation in progress.
+The run started from clean synchronized `main` at `7daacce`, with green CI, a passing state check, a clean tree, zero audit findings, and no Git operation in progress.
 
-## 2) Task 1 — dialog focus restoration
+## 2) Findings closed
 
-Merged at `5cb8a45`. Confirmation and import-report dialogs focus their initial action and restore focus to a connected opener after Cancel, Confirm, or `Escape`. A removed opener is ignored safely. Focused tests, full regression, build, lint, and an actual browser focus smoke passed. CI `36314400055` passed.
+Nine findings were reproduced first, fixed one at a time on their own branch, and fast-forwarded into `main`:
 
-## 3) Task 2 — SQLite repository hygiene
+- F-01 mixed legacy/channel round trip — `2c6e013`
+- F-02 legacy project import validation — `b8718d2`
+- F-03 Lottie numeric property forms — `e19b5fe`
+- F-04 OGraf procedural animation — `8002659`
+- F-05 OGraf ZIP size accounting — `3fa71ff`
+- F-06 dropped-media persistence — `645927a`
+- F-07 preset storage boundaries — `c12d773`
+- F-08 naming-dialog focus lifecycle — `4cd276b`
+- F-09 React `act` warnings — `8a4ca22`
 
-Merged at `b3f3c6c`. `server/db/keyframe_studio.sqlite` is runtime-generated and Git-ignored rather than tracked. A clean first start recreated and seeded the file; health and project routes passed. CI `36314754294` passed.
+F-10 (stale live-document claims) is the documentation reconciliation that carries this bundle: the README's type-check command, the replay-branch claim in `NEXT_SESSION.md` and `PROJECT_STATE.md`, and the unified import control.
 
-## 4) Task 3 — API CORS policy
+## 3) What changed for users
 
-Merged at `2a313d7`. Browser access defaults to exact local editor/QA origins; `KCS_CORS_ORIGINS` adds exact `http(s)` origins, and malformed or widening forms fail startup. Origin-less clients remain supported. Actual API and test coverage passed. CI `36315091917` passed.
+- A scene saved with a partly canonical, partly legacy animation plays the same after loading it again.
+- A legacy project file that the editor cannot apply is refused before anything is replaced.
+- A Lottie document that separates its position into x/y, or writes keyframe handles per dimension, imports the animation it actually describes; an unreadable handle is reported instead of becoming a zero curve.
+- An OGraf export refuses a scene whose layer carries an in/out motion preset, because the exported graphic renders the timeline only and would otherwise play a different animation. `none` and `custom_timeline` stay exportable.
+- An OGraf package is measured by the bytes it will materialise, so a member cannot be admitted by under-declaring its size.
+- An image dropped on the stage is stored in the document itself and survives a reload.
+- A blocked or full `localStorage` no longer fails the preset library's mount or the edit that triggered the write.
+- The naming dialog keeps the keyboard inside itself, names its close control, and returns focus to its opener.
 
-## 5) Task 4 — Oxlint 1.85
+## 4) Validation
 
-Merged at `feca773`. Three genuine findings were fixed; deliberate latest-ref and synchronization effects retain line-specific suppressions with adjacent rationale. No broad or file-level rule disable was added. Full validation and unused-disable enforcement passed. CI `36315413652` passed.
+Per finding: focused tests, `npx tsc -b --pretty false`, `npm run lint`, `npm run build`, `npm run validate:ograf`, the full Vitest suite, the state check, and `git diff --check`; the OGraf tasks also ran `npm run qa:release` and `npm run qa:v6`, and the UI tasks ran their own real-browser smoke. Final suite: 128 files / 1,995 tests with no React `act` warning. Each implementation commit has its own green `main` CI run.
 
-## 6) Task 5 — TypeScript 7 and Vitest 5
+## 5) Branch, commit, merge, and push summary
 
-Merged at `37904fb`. TypeScript 7.0.2, Vitest 5.0.2, and `@vitest/coverage-v8` 5.0.2 are aligned. No source compatibility patch was required. A fresh install, type check, 128 files / 1,951 tests, lint, build, OGraf validation, release QA, eight focused browser tests, V6 QA, the combined check, state consistency, audit, diff hygiene, and CI `36315904883` passed.
+One branch per finding, fast-forward only, pushed to `origin/main`; the documentation branch `docs/audit-state-reconciliation` carries this reconciliation. No rebase, reset, force push, branch deletion, or history rewrite.
 
-## 7) Task 6 — docs and handoff reconciliation
-
-The live documents now record all five tasks as closed. `reports/progress_150_final_maintenance_reconciliation.md` is the durable report. `chatgpt_handoff/latest/` was cleaned and rebuilt with eight documents, and the one-file upload was regenerated from those current sources only.
-
-## 8) Validation and CI matrix
-
-All five implementation commits were fast-forwarded to `main`, pushed, and followed by green CI. The final implementation baseline reports zero npm vulnerabilities. The documentation patch is documents-only and uses the state checker plus diff/stale-claim gates before integration.
-
-## 9) Branch, commit, merge, and push summary
-
-Implementation commits: `5cb8a45`, `b3f3c6c`, `2a313d7`, `feca773`, `37904fb`. Documentation branch: `docs/final-maintenance-reconciliation`; commit message: `docs: reconcile final maintenance state`. Integration is fast-forward only. Branches are retained. No rebase, reset, force push, branch deletion, or history rewrite occurred.
-
-## 10) Handoff paths
+## 6) Handoff paths
 
 - Bundle sources: `chatgpt_handoff\latest\`
 - Upload artifact: `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`
-- Engineering record: `reports\progress_150_final_maintenance_reconciliation.md`
+- Engineering record: `reports\progress_151_astra_remediation.md`
 
-## 11) Final release-readiness verdict
+## 7) Release stance
 
-The technical baseline is ready for a read-only release audit. H7 nevertheless remains HOLD by user decision. The GitHub Actions Node runtime and Ubuntu runner migration annotations are non-blocking workflow-maintenance warnings, not evidence of a product failure.
-
-## 12) Explicit no-release statement
-
-No tag was created, moved, or deleted. The GitHub draft prerelease was not published or finalized. No npm package was published. `v1.1.0-rc.1` remains at `46d2a3e59e065816d972dcd56951803951b577f6`, and the package remains private at `1.1.0-rc.1`.
+H7 remains HOLD. No tag was created, moved, or deleted; the GitHub draft prerelease was not published or finalized; nothing was published to npm. `v1.1.0-rc.1` remains at `46d2a3e59e065816d972dcd56951803951b577f6`, and the package remains private at `1.1.0-rc.1`.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
 
@@ -68,29 +67,33 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — final maintenance reconciliation
+# KCS Minimal ChatGPT Upload Bundle — Astra remediation reconciliation
 
-This is the clean, task-specific handoff for the five-task post-hold maintenance run. It replaces the previous bundle; it is not an archive.
+This is the clean, task-specific handoff for the post-hold Astra remediation run (findings F-01…F-10). It replaces the previous bundle; it is not an archive.
 
 ## Current truth
 
-- `main` contains the five implementation commits through `37904fb`.
-- Dialog focus restoration: closed at `5cb8a45`.
-- Runtime SQLite repository hygiene: closed at `b3f3c6c`.
-- Exact API browser-origin policy: closed at `2a313d7`.
-- Oxlint 1.85 adoption: closed at `feca773`.
-- TypeScript 7 plus Vitest and coverage-v8 5: closed at `37904fb`.
-- Each implementation commit has a green `main` CI run; the latest implementation run is `36315904883`.
+- `main` contains the nine remediation implementation commits through `8a4ca22`, each fast-forwarded and each with its own green `main` CI run.
+- Mixed legacy/channel round trips: closed at `2c6e013`.
+- Legacy project import validation: closed at `b8718d2`.
+- Lottie numeric property forms: closed at `e19b5fe`.
+- OGraf procedural animation: closed at `8002659`.
+- OGraf ZIP size accounting: closed at `3fa71ff`.
+- Dropped-media persistence: closed at `645927a`.
+- Preset storage boundaries: closed at `c12d773`.
+- Naming-dialog focus lifecycle: closed at `4cd276b`.
+- React `act` warnings: closed at `8a4ca22`.
+- Stale live-document claims (F-10): closed by this reconciliation.
 - Milestone H remains complete through H6 and H7 remains HOLD. The release tag, draft prerelease, private package version, and npm publication state are unchanged.
 
 ## Verification baseline
 
-The TypeScript/Vitest baseline passed a fresh `npm ci`, TypeScript build mode, Oxlint, 128 Vitest files / 1,951 tests, production build, OGraf validation, release QA, export/Lottie/matte browser specs, V6 QA, the combined check, state consistency, `npm audit` with zero vulnerabilities, diff hygiene, and Linux CI.
+The final baseline passed TypeScript build mode, Oxlint, 128 Vitest files / 1,995 tests with no React `act` warning, the production build, OGraf validation, the release QA gate, the export/Lottie/matte/dropped-media/naming-dialog browser specs, V6 QA, the combined check, state consistency, `npm audit` with zero vulnerabilities, and diff hygiene.
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — maintenance close-out response.
-- `progress_150_final_maintenance_reconciliation.md` — durable engineering record.
+- `OMP_FINAL_RESPONSE.md` — remediation close-out response.
+- `progress_151_astra_remediation.md` — durable engineering record.
 - `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md` — current mirrored documents.
 - `manifest.txt` — bundle inventory and boundaries.
 - `README.md` — this guide.
@@ -107,21 +110,26 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in
 
 ---
 
-## 3. Bundle Manifest
+## 3. Manifest
 
-# KCS ChatGPT Upload Manifest — final maintenance reconciliation
+# KCS ChatGPT Upload Manifest — Astra remediation reconciliation
 
 Clean refreshed: YES
 Bundle scope: minimal and task-specific; not an archive
-Task record: reports/progress_150_final_maintenance_reconciliation.md
+Task record: reports/progress_151_astra_remediation.md
 
-Implementation baseline: main at or after 37904fb
-Dialog focus restoration: CLOSED at 5cb8a45; CI 36314400055 PASS
-Runtime SQLite repository hygiene: CLOSED at b3f3c6c; CI 36314754294 PASS
-Exact API CORS policy: CLOSED at 2a313d7; CI 36315091917 PASS
-Oxlint 1.85 adoption: CLOSED at feca773; CI 36315413652 PASS
-TypeScript 7 / Vitest 5: CLOSED at 37904fb; CI 36315904883 PASS
-Latest full suite: 128 files / 1,951 tests PASS
+Implementation baseline: main at or after 8a4ca22
+F-01 mixed legacy/channel round trip: CLOSED at 2c6e013
+F-02 legacy project import validation: CLOSED at b8718d2
+F-03 Lottie numeric property forms: CLOSED at e19b5fe
+F-04 OGraf procedural animation: CLOSED at 8002659
+F-05 OGraf ZIP size accounting: CLOSED at 3fa71ff
+F-06 dropped-media persistence: CLOSED at 645927a
+F-07 preset storage boundaries: CLOSED at c12d773
+F-08 naming-dialog focus lifecycle: CLOSED at 4cd276b
+F-09 React act warnings: CLOSED at 8a4ca22
+F-10 stale live-document claims: CLOSED by this reconciliation
+Latest full suite: 128 files / 1,995 tests PASS, no React act warning
 Dependency audit: 0 vulnerabilities
 Release state: H7 HOLD; tag v1.1.0-rc.1 remains at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub release remains draft prerelease; package remains private at 1.1.0-rc.1; npm publish NO
 Non-blocking CI annotations: Node 20 action runtime forced to Node 24; announced ubuntu-latest migration to Ubuntu 26
@@ -134,7 +142,7 @@ Copied files (8):
 - PROJECT_STATE.md
 - README.md
 - manifest.txt
-- progress_150_final_maintenance_reconciliation.md
+- progress_151_astra_remediation.md
 
 Omitted: source, tests, package/lock files, workflows, historical reports, binaries, archives, assets, caches, and QA output.
 Never touched: C:\Users\ertugrul.ak\Desktop\KCS; C:\Users\ertugrul.ak\Desktop\ograf-graphics; origin/without-mask; global OMP configuration.
@@ -143,234 +151,13 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files abov
 
 ---
 
-## 4. Development Report 150
-
-# KCS Development Report — Final Post-Hold Maintenance Reconciliation
-
-Metadata:
-- Date: 2026-09-27
-- Milestone: Five-task post-hold maintenance close-out
-- Branch: `docs/final-maintenance-reconciliation`
-- Starting HEAD: `37904fb178b36aabb7f8bcb3ec11b8caa1162ceb`
-- Ending HEAD: the focused documentation commit named `docs: reconcile final maintenance state`; its hash cannot be embedded in its own content
-- Commit status: five implementation commits are merged and pushed; this report is part of the final documentation commit
-- Report number: 150
-
-# 1. Executive Summary
-
-Five approved maintenance tasks were completed sequentially, each on its own branch and focused commit, then fast-forwarded to `main` only after local validation and green CI. Dialogs restore opener focus, the runtime SQLite database is no longer tracked, browser CORS uses an exact allowlist, Oxlint 1.85 is adopted, and TypeScript 7 plus Vitest 5 are adopted as an aligned toolchain pair. Live documents and the ChatGPT handoff now state that these items are closed. The release decision remains HOLD; no tag, GitHub release, npm publication, or package version changed.
-
-# 2. Original Objectives
-
-In scope: execute the five named maintenance tasks in order, preserve runtime and public contracts except for the explicitly approved fixes, validate each task, integrate by fast-forward only, reconcile live documents, and rebuild the handoff. Out of scope: release publication, tag movement, npm publication, branch deletion, unrelated refactors, OMP configuration, `origin/without-mask`, `C:\Users\ertugrul.ak\Desktop\KCS`, and `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
-
-# 3. Problems Discovered
-
-1. Confirmation and import-report dialogs did not restore focus to their opener. Root cause: no shared focus-lifecycle authority. Status: fixed at `5cb8a45`.
-2. `server/db/keyframe_studio.sqlite` was tracked even though the server creates and seeds it at runtime. Status: removed from Git tracking and ignored at `b3f3c6c`.
-3. Express used unrestricted browser CORS. Status: exact local allowlist plus validated opt-in origins at `2a313d7`.
-4. Oxlint 1.85 surfaced 34 warnings. Three represented genuine problems; 31 represented intentional latest-ref or synchronization-effect patterns. Status: three fixes plus line-specific documented suppressions at `feca773`.
-5. TypeScript 7 and Vitest 5 had been deferred without an installed compatibility result. Status: aligned upgrade completed at `37904fb` with no source compatibility patch required.
-6. GitHub Actions reports non-blocking platform annotations: Node 20-based action runtimes are forced onto Node 24, and `ubuntu-latest` is scheduled to migrate to Ubuntu 26.
-
-# 4. Files Created
-
-- `src/hooks/useDialogFocusRestoration.ts` — shared capture, initial-focus, and connected-opener restoration authority.
-- `src/tests/dialogFocusRestoration.test.tsx` — observable focus lifecycle coverage for both dialogs.
-- `server/corsPolicy.js` — exact-origin parsing and Express CORS options.
-- `src/tests/apiCorsPolicy.test.ts` — allowed, disallowed, origin-less, opt-in, and malformed-origin behavior.
-- `reports/progress_150_final_maintenance_reconciliation.md` — this durable close-out record.
-
-# 5. Files Modified
-
-- `src/components/Modal/ConfirmationDialog.tsx`, `src/components/Modal/ImportReportDialog.tsx` — use the shared focus-restoration hook.
-- `src/components/Header/HeaderBar.tsx`, `src/components/Header/HeaderBar.css` — make the template-delete opener a semantic focusable button without visual regression.
-- `.gitignore`, `server/db/keyframe_studio.sqlite` — ignore the runtime database and remove its tracked copy; local runtime creation remains unchanged.
-- `server/index.js`, `.env.example`, `README.md`, `docs/API.md` — apply and document the CORS policy and API boundary.
-- `src/hooks/usePlayback.ts`, `src/hooks/useBroadcast.ts`, `src/tests/trackMutations.test.ts` — fix the three genuine Oxlint 1.85 findings.
-- `src/components/Canvas/StageCanvas.tsx`, `src/components/Canvas/overlays/FreeformTangentOverlay.tsx`, `src/components/Inspector/InteractiveCubicBezierEditor.tsx`, `src/components/Inspector/TemporalGraphPanel.tsx`, `src/components/Inspector/inputs/SmartHexInput.tsx`, `src/components/Inspector/inputs/SmartNumberInput.tsx`, `src/components/Inspector/sections/transform/TransformInOutPresetCard.tsx`, `src/components/Modal/NewItemModal.tsx`, `src/hooks/useFreeformDraw.ts`, `src/hooks/useHistory.ts`, `src/hooks/usePresets.ts`, `src/hooks/useProjectState.ts`, `src/hooks/useSerialization.ts`, and `src/tests/freeformTangentHistory.test.tsx` — add only line-specific Oxlint suppressions with adjacent rationale for deliberate React synchronization patterns.
-- `package.json`, `package-lock.json` — adopt Oxlint 1.85, TypeScript 7.0.2, Vitest 5.0.2, and `@vitest/coverage-v8` 5.0.2 with their aligned lockfile graph.
-- `CHANGELOG.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`, `docs/README_INDEX.md`, `reports/README.md` — reconcile the live state and report indexes.
-- `chatgpt_handoff/latest/**`, `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` — clean, minimal handoff rebuilt from current documents only.
-
-# 6. Architecture Overview
-
-```text
-Dialog opener -> shared focus hook -> initial action -> close/unmount -> connected opener
-Browser Origin -> corsPolicy exact set -> Express cors middleware -> response headers
-API startup -> SQLite module -> runtime file creation/seed (ignored by Git)
-package.json -> aligned TypeScript/Vitest/Oxlint versions -> existing build/test/lint gates
-```
-
-No parallel state, evaluation, playback, serialization, or timing authority was introduced.
-
-# 7. Data Model Changes
-
-No authored, serialized, evaluated, or transient animation data model changed. SQLite schema and seed behavior are unchanged; only repository ownership of the runtime file changed.
-
-# 8. Coordinate Space Model
-
-Not applicable. The maintenance work does not change canvas, transform, selection, hit-test, drag, mask, or animation coordinate spaces.
-
-# 9. Component / Module Walkthrough
-
-`useDialogFocusRestoration` captures the active connected element when a dialog opens, focuses the supplied initial-action ref, and restores the opener during cleanup only when it remains connected. `corsPolicy.js` owns the default local-origin set, parses `KCS_CORS_ORIGINS`, rejects widening or malformed forms, and returns Express CORS options that continue to allow origin-less clients. Existing dialog key traps, server routes, SQLite initialization, and toolchain configuration remain the consumers.
-
-# 10. Important Code Changes
-
-The focus hook centralizes a lifecycle that had been missing from two dialogs. The CORS parser fails startup on invalid configuration instead of silently weakening the browser boundary. The SQLite database remains created by the existing server path; Git simply stops treating that generated state as source. Toolchain upgrades required no compatibility shim or production fallback.
-
-# 11. Public Interfaces
-
-- New internal hook: `useDialogFocusRestoration(isOpen, initialFocusRef)`; no public package API changed.
-- New server exports in `server/corsPolicy.js` support policy tests and server wiring.
-- New environment variable: `KCS_CORS_ORIGINS`, a comma-separated list of exact `http(s)` origins.
-- No API endpoint, response schema, saved-project format, or component public prop changed.
-
-# 12. Algorithms and Geometry
-
-No geometry algorithm changed. CORS parsing is linear in the number of configured origin tokens and validates each token with `URL`. Focus restoration performs constant-time DOM checks and focus operations per dialog lifecycle.
-
-# 13. Interaction / UX Behavior
-
-Before: closing either affected dialog could leave keyboard focus without a useful destination. After: Cancel, Confirm, and `Escape` return focus to a still-connected opener; a removed opener is ignored safely. The dialog's existing initial Cancel focus and focus trap remain intact. No other interaction changed.
-
-# 14. Design Decisions
-
-- Reuse one focus-lifecycle hook rather than duplicate effects in dialogs.
-- Make the non-focusable template delete span a real button so restoration has a valid target.
-- Keep CORS as a browser response policy, not pretend it is authentication; disallowed-origin requests can still receive an HTTP response, but browsers receive no allow-origin header.
-- Reject malformed CORS configuration at startup rather than fall back to a wider policy.
-- Preserve intentional React synchronization patterns with narrow comments instead of broad rule disables or behavioral rewrites.
-- Upgrade Vitest and its coverage provider together to satisfy the exact peer contract.
-
-# 15. Invariants That Must Be Preserved
-
-- Dialog key traps and Escape ownership remain unchanged.
-- Focus restoration never targets a disconnected element.
-- Origin-less CLI/server clients remain supported.
-- CORS never substitutes for authentication; wider network bind still requires explicit `KCS_API_HOST`.
-- The SQLite file is runtime state, not a fixture or migration authority.
-- Oxlint suppressions remain line-specific and rationale-bearing; no global or file-wide rule disable.
-- TypeScript project references continue to be checked with `tsc -b`.
-- H7 remains HOLD until a new explicit release instruction.
-
-# 16. Testing and Verification
-
-- Dialog task: 43 focused tests; full suite 127 files / 1,942 tests; TypeScript, lint, build; actual browser focus smoke; CI run `36314400055` PASS.
-- SQLite task: first-start API generation and seed proof; health and projects endpoints; 12 focused tests; full suite 127 / 1,942; build, lint, state check; CI `36314754294` PASS.
-- CORS task: 21 focused tests; actual allowed, disallowed, origin-less, opt-in, and malformed-startup API runs; full suite 128 / 1,951; TypeScript, lint, build, state check; CI `36315091917` PASS.
-- Oxlint task: focused 4 files / 22 tests; full suite 128 / 1,951; lint plus unused-disable reporting at error severity; TypeScript, build, OGraf validation, state check, audit; CI `36315413652` PASS.
-- Toolchain task: `npm ci`; TypeScript; lint; full suite 128 / 1,951; build; OGraf validation; release QA 2; browser specs 1 + 3 + 4; V6 QA 3; combined check; state check; audit 0; diff check; CI `36315904883` PASS.
-- Documentation task: `node scripts/check-state-consistency.mjs` PASS (35 checks with the clean eight-document bundle); `git diff --check` PASS; exact stale-claim searches returned no matches; the changed-path guard returned no product, server, test, script, package, lockfile, or workflow path.
-
-# 17. Manual QA Results
-
-- PASS — actual confirmation dialog opened from a template delete button, initial Cancel focus observed, and `Escape` restored focus to the connected opener.
-- PASS — clean SQLite first startup created a 28,672-byte database, initialized the health route, and returned the seed project.
-- PASS — actual API responses carried the exact allow-origin header for allowed origins, omitted it for a disallowed origin, accepted origin-less requests, accepted an exact configured origin, and refused malformed startup configuration.
-
-# 18. Regression Risk Assessment
-
-- Focus lifecycle: LOW; shared hook is limited to two dialogs and covered across close paths and disconnected openers.
-- SQLite hygiene: LOW; runtime generation was proven from a missing file.
-- CORS: MEDIUM for custom browser deployments because they must list exact origins; this is the intended approved boundary and is documented.
-- Oxlint: LOW; three direct fixes and deliberate narrow suppressions, with full regression coverage.
-- Toolchain majors: MEDIUM inherent ecosystem risk, reduced by fresh install, full local gate, focused browser suites, and green Linux CI.
-
-# 19. Performance Considerations
-
-No measured runtime regression. Focus work occurs only on dialog lifecycle. CORS set lookup is constant-time after startup parsing. Removing the tracked SQLite file does not change database runtime work. Toolchain changes affect development and CI only.
-
-# 20. Dependencies
-
-- `oxlint`: `^1.85.0`, development lint tool, upgraded from the prior 1.74 lock.
-- `typescript`: `~7.0.2`, development compiler, upgraded from 6.0.
-- `vitest`: `^5.0.2`, development test runner, upgraded from 4.1.
-- `@vitest/coverage-v8`: `^5.0.2`, aligned coverage provider, upgraded with Vitest.
-- Vite 8.3.0 and `@vitejs/plugin-react` 6.1.1 remain unchanged.
-
-# 21. Compatibility
-
-Verified on Windows 11 with Node 24.18.0 and on the repository's Ubuntu GitHub Actions job. TypeScript 7, Vitest 5, Vite 8.3, React 19.3, jsdom 30.1, and the existing strict configurations work together. Saved projects, OGraf manifests, API payloads, and database schema remain backward compatible.
-
-# 22. Known Limitations
-
-- CORS is not authentication and does not protect the API from non-browser clients.
-- CI does not run the focused browser suites automatically; those were run locally on Windows.
-- `v1.1.0-rc.1` still targets the older workflow-tested commit by deliberate HOLD decision.
-- GitHub Actions emits the two non-blocking platform migration annotations recorded above.
-
-# 23. Technical Debt
-
-Only the GitHub Actions runtime/platform annotations are identified by this maintenance run. Address them in a separate workflow task after checking available action majors and runner compatibility; do not mix them into release publication.
-
-# 24. Git Summary
-
-Implementation commits, all fast-forwarded to `main` and pushed:
-
-- `5cb8a45` — `fix: restore focus after dialogs close`
-- `b3f3c6c` — `chore: stop tracking runtime sqlite state`
-- `2a313d7` — `fix: restrict api cors origins`
-- `feca773` — `chore: adopt oxlint 1.85`
-- `37904fb` — `chore: upgrade typescript and vitest majors`
-
-Documentation branch: `docs/final-maintenance-reconciliation`. Documentation commit message: `docs: reconcile final maintenance state`. Integration policy: fast-forward only. No rebase, reset, force push, branch deletion, tag, release, or npm action.
-
-# 25. Updated Project Tree
-
-```text
-server/
-  corsPolicy.js                         [new]
-src/
-  hooks/useDialogFocusRestoration.ts    [new]
-  tests/apiCorsPolicy.test.ts           [new]
-  tests/dialogFocusRestoration.test.tsx [new]
-reports/
-  progress_150_final_maintenance_reconciliation.md [new]
-chatgpt_handoff/
-  CHATGPT_UPLOAD_ONEFILE.md             [rebuilt]
-  latest/                               [clean rebuilt document bundle]
-```
-
-# 26. Self Review
-
-Good: each task had isolated scope, observable proof, full regression coverage, fast-forward integration, and green CI. The final documents distinguish the historical release gate from the newer maintenance baseline and preserve H7. Could improve: CI browser coverage and action-runtime maintenance remain separate. Uncertainty: host-specific behavior outside the tested Windows and Ubuntu environments. Score: 9/10 because evidence is strong but release-host/browser coverage is intentionally not universal.
-
-# 27. Next Recommended Task
-
-Run one read-only final release-readiness audit against the reconciled `main`; do not publish, finalize, or retag.
-
-# 28. Project Status
-
-Milestones A–G are complete. Milestone H is complete through H6; H7 is held by user decision. All five post-hold maintenance tasks are complete and integrated through `37904fb`. The release tag, draft prerelease, private package version, and npm state are unchanged.
-
-# 29. AI Development Notes
-
-The focus hook is the authority for opener restoration in the two affected dialogs. `server/corsPolicy.js` is the authority for browser origin policy; route code must not grow ad hoc headers. `server/db/keyframe_studio.sqlite` is generated state. The narrow Oxlint comments document intentional React synchronization; replacing them requires behavior-level evidence. TypeScript and Vitest majors are an aligned baseline, not independent downgrade candidates.
-
-## DO NOT CHANGE CASUALLY
-
-- Do not broaden CORS with `*`, origin reflection, or silent malformed-config fallback.
-- Do not re-track the runtime SQLite database.
-- Do not restore focus without checking `isConnected`.
-- Do not replace exact Vitest/coverage major alignment with a peer-invalid mix.
-- Do not weaken or globally disable Oxlint rules to remove warnings.
-- Do not move the release tag or publish the draft/package without explicit approval.
-
-# 30. Lessons Learned
-
-A small shared lifecycle hook is safer than repeating dialog focus effects. Runtime-created databases should not be repository fixtures unless explicitly designed as such. CORS configuration needs fail-closed parsing and precise documentation because it is often mistaken for authorization. Linter upgrades require classifying findings rather than either blindly refactoring or broadly disabling rules. Major toolchain compatibility is established by a fresh install plus the real build/test/browser gates, not by version metadata alone.
-
----
-
-## 5. Next Session
+## 4. Next Session Handoff
 
 # Next Session Handoff
 
 ## Repository state
 
-- Checkout: `main` at or after `37904fb`, matching `origin/main` after the five-task maintenance run. The run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the exact API CORS allowlist (`2a313d7`), Oxlint 1.85 adoption (`feca773`), and the aligned TypeScript 7 / Vitest 5 upgrade (`37904fb`). Milestones A–G remain complete, Milestone H remains complete through H6, and its release decision remains held (H7). The historical checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` remains unchanged.
+- Checkout: `main` at or after `8a4ca22`, matching `origin/main` after the Astra remediation run. That run closed the audit's findings F-01…F-10, one branch and one focused regression each (mixed legacy/channel round trips, legacy import validation, Lottie numeric property forms, the OGraf procedural-animation mismatch, archive size accounting, dropped-media persistence, preset storage boundaries, the naming dialog's focus lifecycle, the React `act` warnings, and the stale live-document claims) — see `reports/progress_151_astra_remediation.md`. Before it, the five-task maintenance run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the exact API CORS allowlist (`2a313d7`), Oxlint 1.85 adoption (`feca773`), and the aligned TypeScript 7 / Vitest 5 upgrade (`37904fb`). Milestones A–G remain complete, Milestone H remains complete through H6, and its release decision remains held (H7). The historical checkpoint `docs/checkpoints/2026-09-18-after-lottie-core/` remains unchanged.
 - Milestone A (canvas tangent handles) is integrated into `main` by approved replay + fast-forward; `main` is a strict superset of its previous state
 - Task 105 (export diagnostics UX) and Task 107 (track-matte source selection) are integrated by fast-forward; both are retained
 - Checkout after the item 12 merge: `main` at or after `a4f8642` (the OGraf package import and its handoff refresh), matching `origin/main`
@@ -378,13 +165,13 @@ A small shared lifecycle hook is safer than repeating dialog focus effects. Runt
 - The **`engines` declaration and the npm-12 `allowScripts` question are answered on `chore/engines-allow-scripts`** (`reports/progress_131_engines_allow_scripts.md`): `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` (the locked toolchain's supported intersection) plus a version-pinned `allowScripts` approval for `sqlite3@6.0.1`; `package-lock.json` mirrors only the root engine metadata and its dependency graph is unchanged (**merged into `main` at `1a12d79`**)
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
-- Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (identical to `main`; deleting it needs approval)
+- Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch, now behind `main`; deleting it needs approval)
 
 ## Current result
 
 Milestones A–E are complete, and Milestone F item 10 is complete (all four slices merged):
 
-- Milestone F item 10, first slice — **the Lottie import core is merged into `main`** at `ff32d6c` (base `06a5dfcf`, `--no-ff`, pushed; branch `feat/lottie-import-core` kept at `f76ae6a`): `importLottieDocument(text)` maps document timing, shape/solid/null layers, transforms, paths, primitives and fill/stroke/trim, applies the segment-to-keyframe easing rules, and reports every construct it does not convert through the loss-report contract. 37 contract cases; five independent read-only review rounds (BLOCKED, BLOCKED, BLOCKED, READY WITH WARNINGS, READY WITH WARNINGS) plus a merge-eligibility review of the last delta. The importer now has a user-facing entry point (`3b30bff`): the header offers a separate "Import Lottie" control that parses the document in memory, shows the report before anything is applied, and applies only on an explicit confirm.
+- Milestone F item 10, first slice — **the Lottie import core is merged into `main`** at `ff32d6c` (base `06a5dfcf`, `--no-ff`, pushed; branch `feat/lottie-import-core` kept at `f76ae6a`): `importLottieDocument(text)` maps document timing, shape/solid/null layers, transforms, paths, primitives and fill/stroke/trim, applies the segment-to-keyframe easing rules, and reports every construct it does not convert through the loss-report contract. 37 contract cases; five independent read-only review rounds (BLOCKED, BLOCKED, BLOCKED, READY WITH WARNINGS, READY WITH WARNINGS) plus a merge-eligibility review of the last delta. The importer has a user-facing entry point (`3b30bff`), which the unified import control later folded into the single `Import` button in the header: one control classifies the chosen file by its **content** (KCS project, legacy project, Lottie document, OGraf manifest/package), and a Lottie document still opens its report before anything is applied and applies only on an explicit confirm.
 
 - Milestone A — canvas tangent authoring (`077911b`): vertex selection shows Bezier handles on the stage, dragging reshapes the path live, one history entry per completed drag, `Escape` cancels.
 - Milestone B — graph + keyboard accessibility (`96e8f9d`): named keyframe diamonds with a lane-local arrow walk, a labelled value graph with keyboard-editable points, decorative SVG hidden from assistive tech, focus rings.
@@ -396,14 +183,15 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-On `main` at `37904fb`: TypeScript 7.0.2 and Vitest 5.0.2 pass `npx tsc -b --pretty false`, full Vitest (128 files / 1,951 tests), `npm run lint`, `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), the export/Lottie/matte browser specs (8 tests), `npm run qa:v6` (3 tests), `npm run check`, `node scripts/check-state-consistency.mjs`, `npm audit` (0 vulnerabilities), and `git diff --check`. The five maintenance commits each have a green `main` CI run; the latest is `36315904883`.
+On `main` at or after `8a4ca22`: TypeScript 7.0.2 and Vitest 5.0.2 pass `npx tsc -b --pretty false`, the full Vitest suite (128 files / 1,995 tests) with no React `act` warning, `npm run lint`, `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), the export/Lottie/matte/dropped-media/naming-dialog browser specs (10 tests), `npm run qa:v6` (3 tests), `npm run check`, `node scripts/check-state-consistency.mjs`, `npm audit` (0 vulnerabilities), and `git diff --check`. Each remediation commit has its own green `main` CI run.
 
 ## Next scoped work
 
 1. **Milestone H remains HELD at H7.** H1–H6 are complete, the release artefacts remain at `46d2a3e`, and no tag, GitHub release, or npm publication action was taken.
-2. The five maintenance tasks that followed the hold are complete: focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5 are merged with green CI.
-3. Preserve the tag and draft prerelease. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
-4. The GitHub Actions Node 20 deprecation annotation and the announced `ubuntu-latest` migration to Ubuntu 26 are non-blocking workflow-maintenance warnings; they do not change the held release decision.
+2. The Astra remediation findings F-01…F-10 are closed and merged with green CI, one branch per finding; `reports/progress_151_astra_remediation.md` records the reproduction evidence and the remaining limitations.
+3. The five maintenance tasks that preceded the remediation are complete: focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5.
+4. Preserve the tag and draft prerelease. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
+5. The GitHub Actions Node 20 deprecation annotation and the announced `ubuntu-latest` migration to Ubuntu 26 are non-blocking workflow-maintenance warnings; they do not change the held release decision.
 
 ## Guardrails
 
@@ -433,17 +221,17 @@ On `main` at `37904fb`: TypeScript 7.0.2 and Vitest 5.0.2 pass `npx tsc -b --pre
 
 ---
 
-## 6. Project State
+## 5. Project State
 
 # KCS Project State
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into `main`, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `37904fb`. Milestone F and the post-review correctness follow-up are complete. Milestone H is complete through H6 with its release decision held (H7). The subsequent five-task maintenance run is also integrated: dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the exact API CORS allowlist (`2a313d7`), Oxlint 1.85 adoption (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`).
+The accepted product and security follow-up line is integrated into `main`, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `37904fb`. Milestone F and the post-review correctness follow-up are complete. Milestone H is complete through H6 with its release decision held (H7). The subsequent five-task maintenance run is also integrated: dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the exact API CORS allowlist (`2a313d7`), Oxlint 1.85 adoption (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`). The post-hold Astra remediation is integrated as well: findings F-01…F-10 are closed through `8a4ca22`, one branch and one focused regression per finding (`reports/progress_151_astra_remediation.md`).
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
-**Checkpoint `2026-09-18-after-lottie-core`** (`docs/checkpoints/2026-09-18-after-lottie-core/`) records the state it was written from: `main` stood at `47d3368a2b54…` then, the Lottie import core (Milestone F item 10, first slice) was merged with `--no-ff` at `ff32d6c` and pushed, and its branch `feat/lottie-import-core` is kept at `f76ae6a` as the review artefact. The checkpoint folder carries the summary (`README.md`), the tasklist (`TASKLIST.md`), a copy-paste next-session prompt (`RESUME_PROMPT.md`) and a machine-readable summary (`STATE.json`); the task record is `reports/progress_124_checkpoint_after_lottie_core.md`. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; item 10’s **first implementation slice (the import core)** is **merged into `main`** at `ff32d6c` (`reports/progress_123_lottie_import_core.md`), its **second slice — layer masks + track mattes — is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice — text, image and precomp layers — is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice — the import entry point with the report-before-replace UX — is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`): a separate "Import Lottie" control parses the document in memory, shows blockers and losses before anything is applied, cancels as a true no-op, applies only on an explicit confirm through the existing project authority, and reconciles imported layer types onto existing KCS types the OGraf export accepts; item 10 is therefore complete. Milestone F item 10 is then complete apart from the follow-ups listed below.
+**Checkpoint `2026-09-18-after-lottie-core`** (`docs/checkpoints/2026-09-18-after-lottie-core/`) records the state it was written from: `main` stood at `47d3368a2b54…` then, the Lottie import core (Milestone F item 10, first slice) was merged with `--no-ff` at `ff32d6c` and pushed, and its branch `feat/lottie-import-core` is kept at `f76ae6a` as the review artefact. The checkpoint folder carries the summary (`README.md`), the tasklist (`TASKLIST.md`), a copy-paste next-session prompt (`RESUME_PROMPT.md`) and a machine-readable summary (`STATE.json`); the task record is `reports/progress_124_checkpoint_after_lottie_core.md`. The Milestone F study is merged (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`); **item 11 (evaluator profiling) is implemented** on `chore/evaluator-profiling-harness` as measurement only (`reports/progress_118_evaluator_profiling.md`), **item 12’s first step (validated import boundary)** is merged at `44218a6` (`reports/progress_119_kcs_import_boundary.md`), its **product half** (compatibility matrix executed as fixtures, the legacy migration report, and the autosave restore routed through the same boundary) is implemented on `feat/kcs-import-product-half` (`reports/progress_121_kcs_import_product_half.md`), and **item 10’s mapping design** is delivered in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`; item 10’s **first implementation slice (the import core)** is **merged into `main`** at `ff32d6c` (`reports/progress_123_lottie_import_core.md`), its **second slice — layer masks + track mattes — is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice — text, image and precomp layers — is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice — the import entry point with the report-before-replace UX — is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`): the entry point that slice added was later folded into the single `Import` control in the header, which classifies the chosen file by its content — a Lottie document parses in memory, shows blockers and losses before anything is applied, cancels as a true no-op, applies only on an explicit confirm through the existing project authority, and reconciles imported layer types onto existing KCS types the OGraf export accepts; item 10 is therefore complete. Milestone F item 10 is then complete apart from the follow-ups listed below.
 
 - Task 105 (export diagnostics remediation UX): blocking OGraf export diagnostics carry a stable title, the failing layer or feature, and a concrete next step; warnings are grouped into one non-blocking notification; user-authored values are formatted at every construction site so machine paths, URL credentials/query, embedded payloads, and raw OS messages never reach a diagnostic, a thrown error, or a toast.
 - Task 107 (track-matte source selection affordance): the matte source relation, whichever model holds it, is resolved by one shared helper that mirrors the rendered relationship, so the outliner indicator shows what the stage actually applies; the Track Matte V2 card keeps its self-excluded source list, `None` clearing, and field preservation, and unnamed layers fall back to their ids in both source pickers.
@@ -461,20 +249,24 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 128 files / 1,951 tests on Vitest 5.0.2 |
+| Full Vitest | PASS | 128 files / 1,995 tests on Vitest 5.0.2, with no React `act` warning |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Chromium tests |
-| Focused browser smoke | PASS | export onboarding (1), Lottie import report (3), and OGraf matte visual (4) |
+| Focused browser smoke | PASS | export onboarding (1), Lottie import report (3), OGraf matte visual (4), dropped-media reload (1), naming-dialog focus (1) |
 | State consistency | PASS | `node scripts/check-state-consistency.mjs` |
 | TypeScript | PASS | TypeScript 7.0.2; `npx tsc -b --pretty false` and the build/check paths pass |
 | Lint | PASS | Oxlint 1.85.0 clean, including unused-disable reporting at error severity |
 | Production build | PASS | Vite 8.3.0 production bundle |
 | Dependency audit | PASS | `npm audit` reports 0 vulnerabilities |
-| CI on `main` | PASS | maintenance commits `5cb8a45`, `b3f3c6c`, `2a313d7`, `feca773`, and `37904fb`; latest run `36315904883` |
+| CI on `main` | PASS | maintenance commits `5cb8a45`, `b3f3c6c`, `2a313d7`, `feca773`, `37904fb` and the nine remediation commits through `8a4ca22`, each with its own green run |
 
 ## Post-review correctness follow-up (complete)
 
 The full-project review's release-blocking findings are closed, one task at a time and one branch each: **H-01** at `0c19751`, **H-03/H-04/M-03** at `fc672f2`, **M-01/M-02/H-05** at `85c3929`, **H-02** at `ac3bda1`, **H-06** at `352d272`, **M-04** at `16e1610`, **M-05** at `2b0bba0`. The final correctness gate and finding map are in `reports/progress_141_astra_correctness_followup_summary.md`. Its later maintenance observations are now closed: the tracked runtime SQLite file at `b3f3c6c`, unrestricted browser CORS at `2a313d7`, and dialog opener focus restoration at `5cb8a45`.
+
+## Post-hold Astra remediation (complete)
+
+The Astra audit's findings are closed, one branch and one focused regression each: **F-01** mixed legacy/channel round trip at `2c6e013`; **F-02** legacy import validation at `b8718d2`; **F-03** Lottie numeric property forms at `e19b5fe`; **F-04** OGraf procedural animation at `8002659`; **F-05** archive size accounting at `3fa71ff`; **F-06** dropped-media persistence at `645927a`; **F-07** preset storage boundaries at `c12d773`; **F-08** naming-dialog focus lifecycle at `4cd276b`; **F-09** React `act` warnings at `8a4ca22`; **F-10** the stale live-document claims this reconciliation closes. The record, the reproduction evidence and the remaining limitations are in `reports/progress_151_astra_remediation.md`. An OGraf export now refuses a scene whose layer carries an in/out motion preset (`OGRAF_UNSUPPORTED_PROCEDURAL`) because the generated runtime renders the timeline only — that is a deliberate capability boundary, not a defect.
 
 ## Milestone H — release readiness (COMPLETE — H1–H6 merged; H7 held)
 
@@ -496,7 +288,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - Milestones A–G and H1–H6 are complete. The release decision H7 remains held. The maintenance follow-ups previously listed as deferred or open are closed through `37904fb`: dialog focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5. No further package, workflow, tag, release, or npm action is implicit; each requires explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
-- Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` is identical to `main` and can be deleted whenever the user approves; `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
+- Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` was replayed into `main` at `077911b` and is now behind it (the branch is kept only as an artefact); `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
 
 ## ChatGPT handoff policy
 
@@ -528,11 +320,11 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 
 ---
 
-## 7. Grouped Roadmap
+## 6. Grouped Roadmap Execution Plan
 
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are complete. Milestone H is complete through H6 and its release decision remains held at H7. The later approved maintenance run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the API CORS allowlist (`2a313d7`), Oxlint 1.85 (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`) without moving any release artefact.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are complete. Milestone H is complete through H6 and its release decision remains held at H7. The later approved maintenance run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the API CORS allowlist (`2a313d7`), Oxlint 1.85 (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`) without moving any release artefact. The post-hold Astra remediation then closed findings F-01…F-10 through `8a4ca22` (see `reports/progress_151_astra_remediation.md`), also without moving any release artefact.
 
 ## Milestone map and status
 
@@ -545,7 +337,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **COMPLETE** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
 | G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **COMPLETE** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05** (the live-document reconciliation) is merged at `2b0bba0`, and the shallow-checkout CI regression it caused was fixed at `dcbf9f5`, and the final correctness gate ran on `main` after that fix (`reports/progress_141_astra_correctness_followup_summary.md`): every finding is closed. |
-| H — Release finalization and approval-gated maintenance | review follow-up decisions | Milestone H branches plus the five maintenance branches | **NEXT (held)** — **H1–H6 are COMPLETE** and the post-hold maintenance tasks are merged through `37904fb`. **H7 = HOLD** by user decision: no tag, release, or npm action; artefacts stay at `46d2a3e`. This row keeps the plan's single NEXT marker because the only remaining plan decision is a future explicitly authorized release action. |
+| H — Release finalization and approval-gated maintenance | review follow-up decisions | Milestone H branches plus the five maintenance branches plus the nine remediation branches | **NEXT (held)** — **H1–H6 are COMPLETE**, the post-hold maintenance tasks are merged through `37904fb`, and the Astra remediation findings F-01…F-10 are closed through `8a4ca22`. **H7 = HOLD** by user decision: no tag, release, or npm action; artefacts stay at `46d2a3e`. This row keeps the plan's single NEXT marker because the only remaining plan decision is a future explicitly authorized release action. |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -609,6 +401,373 @@ Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items c
 
 ---
 
+## 7. Progress Report 151 — Astra Remediation
+
+# KCS Development Report — Astra Correctness/Security Remediation
+
+Metadata:
+- Date: 2026-09-28
+- Milestone: post-hold remediation of the Astra correctness/security findings F-01…F-10
+- Starting HEAD: `7daacce46f0892649e15172d072d310ae4b4dbf0` (main, matching `origin/main`)
+- Ending HEAD: the focused documentation commit named `docs: reconcile astra remediation state`; its hash cannot be embedded in its own content
+- Integration: one branch per finding, fast-forward only; every implementation commit has a green `main` CI run
+- Report number: 151
+
+# 1. Executive Summary
+
+Nine findings were reproduced first and fixed one at a time, each on its own branch with its own
+focused regression test, then fast-forwarded into `main` and pushed. The tenth (stale live-document
+claims) is this documentation task itself.
+
+The six release-blocking findings were behavioural: a mixed legacy/channel animation lost the
+channels the evaluator still resolved from the legacy composite on a save/load cycle; a legacy
+project document could bypass the semantic validation that a scene receives; a standard Lottie
+position/handle form was silently imported as zero; an OGraf export produced a different animation
+than the editor; an OGraf package member could be admitted by under-declaring its size; and a file
+dropped on the stage was persisted as a `blob:` URL that died with the page.
+
+Two medium findings (preset storage exceptions, naming-dialog focus lifecycle) and the test-hygiene
+finding (101 CI-reported React `act` warnings) were closed as well.
+
+No release action was taken: H7 remains HOLD, the tag, the GitHub draft prerelease and the private
+package metadata are unchanged.
+
+# 2. Original Objectives
+
+In scope: reproduce each finding, fix it narrowly on its own branch, add a consumer-visible
+regression test, validate locally, fast-forward into `main`, push, confirm green CI, then reconcile
+the live documents and the handoff. Out of scope: any release action, branch deletion, dependency or
+workflow change, and any change to `C:\Users\ertugrul.ak\Desktop\KCS`,
+`C:\Users\ertugrul.ak\Desktop\ograf-graphics`, `origin/without-mask` or the global OMP configuration.
+
+# 3. Problems Discovered and Closed
+
+1. **F-01 — mixed legacy/channel round trip lost the fallback.** `toSceneData` wrote the canonical
+   channels *instead of* the legacy composite keyframes, but `evaluateTransform` reads a channel only
+   when it carries keyframes for the active template and otherwise falls back to the composite. A
+   track with a populated `x` channel and a legacy `y` animation therefore changed on save/load
+   (`y = 150` became `0`). Fixed at `2c6e013`.
+2. **F-02 — the legacy project format bypassed semantic validation.** A document whose
+   `characterParts` array merely existed was accepted, so `{"characterParts":[null]}` imported
+   "successfully", applied `[null]`, and crashed the evaluator on the first frame. Fixed at `b8718d2`.
+3. **F-03 — Lottie numeric property forms were silently zeroed.** A split position
+   (`p: {s: true, x: …, y: …}`) imported both axes as `0`, and a handle written per dimension
+   (`o: {x: [0.25, 0.3], y: [0.1, 0.2]}`) became a `{x: 0, y: 0}` curve — both with no diagnostic.
+   Fixed at `e19b5fe`.
+4. **F-04 — the OGraf export did not reproduce procedural animation.** For `inAnimPreset: 'fade'` with
+   `inAnimDuration: 60` at frame 15, the editor produced opacity `0.578125`, the OGraf evaluator
+   `0.875` (it never received the duration) and the generated runtime `1` (it renders the timeline
+   only). The export now refuses such a scene with `OGRAF_UNSUPPORTED_PROCEDURAL` instead of shipping
+   a graphic that plays a different animation. Fixed at `8002659`.
+5. **F-05 — the OGraf ZIP budget trusted one declared size.** A stored member of 33,554,433 bytes
+   (limit 33,554,432) was admitted after its declared uncompressed size was tampered to `1`, because
+   the budget counted the declaration while the reader copied the compressed size. Fixed at `3fa71ff`.
+6. **F-06 — dropped media did not survive a reload.** The stage stored `URL.createObjectURL(file)` in
+   the document, so the autosave persisted a page-scoped `blob:` URL and the image failed to load
+   after a reload. Fixed at `645927a`.
+7. **F-07 — preset storage exceptions escaped the hook.** A `getItem` `SecurityError` failed the
+   mount and a `setItem` `QuotaExceededError` failed the write, because `localStorage` was used
+   without the try/catch this project requires for external boundaries. Fixed at `c12d773`.
+8. **F-08 — the naming dialog's focus lifecycle was incomplete.** Tab walked out of the modal, Cancel
+   left focus on `body`, the dialog had a delayed focus callback that could target an unmounted node,
+   and its icon-only close control had no accessible name. Fixed at `4cd276b`.
+9. **F-09 — the suite reported 101 React `act` warnings on CI.** The serialization tests applied
+   documents outside `act`, and the environment never declared React's act environment, so the
+   warnings appeared only on a slower machine. Fixed at `8a4ca22`.
+10. **F-10 — stale live-document claims.** `README.md` recommended `npx tsc --noEmit`, which checks no
+    project file; `NEXT_SESSION.md` and `PROJECT_STATE.md` called the replay branch "identical to
+    `main`" while it is 152 commits behind; and `NEXT_SESSION.md` still described a separate
+    "Import Lottie" control that the unified import entry replaced. Fixed by this task.
+
+# 4. Files Created
+
+- `e2e/dropped-media-persistence.spec.ts` — real drop → autosave → reload proof for F-06.
+- `e2e/new-item-modal-focus.spec.ts` — real keyboard smoke for the F-08 focus trap.
+- `reports/progress_151_astra_remediation.md` — this record.
+
+# 5. Files Modified
+
+- `src/utils/legacyKeyframeConversion.ts`, `src/hooks/useSerialization.ts` — F-01: a
+  `fillChannelsFromLegacyKeyframes` helper (channels the evaluator would resolve from the composite
+  are written with those values) and its use in `toSceneData`; the hook also exports
+  `UseSerializationApi`, its public surface as a named type.
+- `src/utils/importValidation.ts`, `src/tests/importValidation.test.ts`,
+  `src/tests/importCompatibilityMatrix.test.ts`, `src/tests/useSerialization.test.ts` — F-02: the
+  legacy semantic pass (`legacyPartProblem`, `legacyProjectProblem`), the shared layer-value checks
+  both shapes use, and the fixtures that had described unapplyable legacy documents.
+- `src/interop/lottie/mapDocument.ts`, `src/interop/lottie/temporal.ts`,
+  `src/tests/lottieImport.test.ts` — F-03: split positions, per-dimension handle components, and
+  `LOTTIE_UNREADABLE_POSITION` / `LOTTIE_UNREADABLE_EASING` reports instead of fabricated zeros.
+- `src/ograf/types.ts`, `src/ograf/diagnostics.ts`, `src/ograf/validation.ts`,
+  `src/tests/ografDiagnostics.test.ts`, `src/tests/ografExport.test.ts`,
+  `src/tests/ografGeneratedParity.test.ts` — F-04: the `OGRAF_UNSUPPORTED_PROCEDURAL` rule with its
+  remediation, and the three-way editor/evaluator/runtime parity test for a supported scene.
+- `src/ograf/packageImport.ts`, `src/tests/ografPackageImport.test.ts` — F-05: per-method size
+  accounting, the stored-entry consistency rule and the unsupported-compression refusal.
+- `src/components/Canvas/StageCanvas.tsx`, `src/tests/ografLegacyCompatibility.test.ts` — F-06: the
+  drop handler stores the file's own bytes and the export resolves that form.
+- `src/hooks/usePresets.ts`, `src/tests/usePresets.test.ts` — F-07: the storage boundary.
+- `src/hooks/useDialogFocusRestoration.ts`, `src/components/Modal/NewItemModal.tsx`,
+  `src/components/Modal/ConfirmationDialog.tsx`, `src/components/Modal/ImportReportDialog.tsx`,
+  `src/tests/dialogFocusRestoration.test.tsx` — F-08: the shared focus trap and the dialog migrations.
+- `src/tests/setup.ts`, `src/tests/importAtomicity.test.tsx` — F-09: the declared act environment and
+  the document calls moved inside `act`.
+- `README.md`, `CHANGELOG.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`,
+  `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`,
+  `docs/README_INDEX.md`, `reports/README.md` — F-10 and the record of the fixes.
+- `chatgpt_handoff/latest/**`, `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` — the bundle rebuilt from
+  the current documents only.
+
+# 6. Architecture Overview
+
+```text
+Editor document -> toSceneData -> channels (+ the composite values the evaluator would fall back for)
+Legacy document -> importValidation (legacy semantic pass) -> the legacy apply path
+Lottie document -> readNumericProperty/handle readers -> per-channel timing -> KCS channels
+Scene -> validateSceneForOGraf -> compileOGrafPackage -> generated runtime (timeline only)
+Untrusted archive -> admitPackageEntry (per method, materialised bytes) -> fflate -> guarded decode
+Dropped file -> FileReader data URL -> document -> autosave -> reload
+Dialog open -> shared focus restoration + shared focus trap -> close -> opener restored
+```
+
+No parallel geometry, animation, playback or serialization authority was introduced; each fix either
+extended the authority that already owned the behaviour or made the export refuse what it cannot
+reproduce.
+
+# 7. Data Model Changes
+
+No serialized field was added or removed. `SceneData` still writes channels and no `keyframes[]`
+(`fillChannelsFromLegacyKeyframes` only fills channels the evaluator would otherwise resolve from the
+composite), the Lottie keyframe type keeps the document's handle lists until the channel that maps a
+dimension resolves its own component, and a dropped image now reaches the document as a `data:` URL
+instead of a `blob:` URL.
+
+# 8. Coordinate Space Model
+
+Unchanged. No canvas, transform, selection, hit-test, drag, mask or animation coordinate space was
+altered.
+
+# 9. Component / Module Walkthrough
+
+`fillChannelsFromLegacyKeyframes` states the evaluator's own precedence rule (a channel scope with
+canonical keyframes wins; the others are filled from the converted composite). `legacyProjectProblem`
+reuses the scene pass's layer-value checks and adds the part rules the verbatim legacy apply path
+needs. `mapLottieSegmentTiming` now resolves each handle component for the dimension its channel
+maps. `validateLayer` refuses a procedural preset the runtime cannot reproduce.
+`admitPackageEntry` derives the budget from the compression method. `StageCanvas` reads the dropped
+file once and stores its bytes. `useDialogFocusTrap` owns the keyboard contract the three modals
+share.
+
+# 10. Important Code Changes
+
+F-02 split the layer-value checks out of `layerProblem` into `sharedLayerValueProblem` so the scene
+and legacy passes cannot drift. F-04 added `OGRAF_UNSUPPORTED_PROCEDURAL` to the diagnostic contract
+(a `Record<OGrafDiagnosticCode, …>` entry is required, so the code cannot be emitted without a
+remediation). F-05 replaced "declared size" with "materialised bytes by method". F-06 removed
+`URL.createObjectURL` from the drop path entirely, which also removed the object URL that had no
+revocation.
+
+# 11. Public Interfaces
+
+- `useSerialization` now exports `UseSerializationApi`, the type of its return value (additive).
+- New server-free diagnostics: `LOTTIE_UNREADABLE_POSITION`, `LOTTIE_UNREADABLE_EASING`,
+  `OGRAF_PACKAGE_INCONSISTENT_SIZE`, `OGRAF_PACKAGE_UNSUPPORTED_COMPRESSION`,
+  `OGRAF_UNSUPPORTED_PROCEDURAL`.
+- `admitPackageEntry` takes the archive reader's full entry header (`name`, `size`, `originalSize`,
+  `compression`); it is exported for tests only.
+- No endpoint, response schema, saved-project format or component prop changed.
+
+# 12. Algorithms and Geometry
+
+F-01's fill is a per-channel set operation over `(channel, template scope)` covered by canonical
+keyframes. F-05's accounting is O(entries). F-03's handle resolution is a per-dimension index with a
+last-entry fallback, matching the value reader that already existed.
+
+# 13. Interaction / UX Behavior
+
+A dropped image now survives a reload. The naming dialog keeps the keyboard inside itself, names its
+close control, and returns focus to its opener on Cancel, submit and Escape; the confirmation and
+import-report dialogs use the same trap. An OGraf export of a scene whose layer carries an in/out
+preset now reports a blocker with an actionable remedy instead of producing a graphic that plays a
+different animation, and the first-export readiness check reports the same blocker because it reads
+the same authority.
+
+# 14. Design Decisions
+
+- Fix the fallback by writing the values the evaluator would resolve, rather than by re-introducing
+  `keyframes[]` to the file: the import path drops a legacy keyframe's `templateId`, so the canonical
+  form is the one that survives a round trip faithfully.
+- Validate legacy documents against the values the consumer dereferences, and only those, so a valid
+  legacy file is never refused.
+- Report an unreadable Lottie handle and keep the segment linear instead of inventing a zero curve.
+- Refuse an export the runtime cannot reproduce instead of shipping a different animation; the
+  alternative (porting a second preset engine into the generated runtime, or baking preset motion
+  into `scene.kcs`) would either duplicate an authority or cost the package its editable scene.
+- Measure the archive budget by the bytes the reader will materialise for that compression method,
+  and refuse a method whose output cannot be bounded, rather than parsing the ZIP grammar a second
+  time.
+- Declare React's act environment in the test setup so the suite reports the defect on every machine.
+
+# 15. Invariants That Must Be Preserved
+
+- Canonical channels win where they carry data for a template scope; the composite fallback stays the
+  fallback.
+- The import boundary refuses before any state update; a refused document leaves the editor untouched.
+- The generated OGraf runtime renders the timeline; anything it cannot reproduce is refused at
+  validation, never silently dropped.
+- An archive member is measured by the bytes it materialises, and the archive is decoded under the
+  existing count, path, duplicate and prototype-key guards.
+- A persisted document never depends on a page-scoped object URL.
+- `localStorage` is an external boundary: a failure is contained, never propagated as a crash.
+- Dialog focus is owned by one authority; a disabled action is not a focus stop.
+- H7 remains HOLD until a new explicit release instruction.
+
+# 16. Testing and Verification
+
+Per finding: the focused files passed, then `npx tsc -b --pretty false`, `npm run lint`,
+`npm run build`, `npm run validate:ograf`, the full Vitest suite, `node scripts/check-state-consistency.mjs`
+and `git diff --check`; the OGraf-affecting tasks also ran `npm run qa:release`, `npm run qa:v6` and
+the export/Lottie/matte browser specs, and the UI tasks ran their own browser smoke.
+
+- F-01: 104 tests in `useSerialization.test.ts`; the suite reached 1,957 tests.
+- F-02: 38 tests in `importValidation.test.ts`; `sequencer-project.json` and the server's seed project
+  were verified to still validate.
+- F-03: 103 tests in `lottieImport.test.ts` plus `e2e/lottie-import-report.spec.ts` (3 tests).
+- F-04: `ografExport`/`ografGeneratedParity`/`ografSvg`/`ografV6Parity`/`ografDiagnostics` (114 tests),
+  `qa:release` (2), `qa:v6` (3).
+- F-05: 14 tests in `ografPackageImport.test.ts`, including the tampered stored member and the
+  deflated total-budget case.
+- F-06: `e2e/dropped-media-persistence.spec.ts` passed with the fix and was shown to fail against the
+  pre-fix handler (it persisted `blob:http://127.0.0.1:5188/…`).
+- F-07: 29 tests in `usePresets.test.ts`.
+- F-08: 19 tests in `dialogFocusRestoration.test.tsx` plus `e2e/new-item-modal-focus.spec.ts`.
+- F-09: full-suite `act` warnings measured 110 with the environment declared, 0 after the fix
+  (128 files / 1,995 tests pass).
+- F-10: `node scripts/check-state-consistency.mjs` PASS and `git diff --check` clean.
+
+# 17. Manual QA Results
+
+- PASS — a PNG dropped on the stage is stored as `data:image/png;base64,…`, and after a page reload
+  the rendered `<image>` resolves with HTTP 200 from the document's own bytes.
+- PASS — the naming dialog focuses its field, six Tabs and three Shift+Tabs never leave the modal,
+  and `Escape` returns focus to the "Create New Sequence" opener.
+- PASS — the OGraf editor/evaluator/runtime parity scene renders the same transform at frames
+  0/15/30/45/60 through `evaluateOGrafScene`, `renderOGrafSvg` and the generated runtime.
+
+# 18. Regression Risk Assessment
+
+- F-01: LOW-MEDIUM — the fill is per template scope and the round-trip is pinned by six tests,
+  including canonical precedence and stability across a second cycle.
+- F-02: MEDIUM — it refuses documents that were previously accepted. The pass validates only the
+  values the legacy apply path dereferences, and both real legacy samples in this repository still
+  import; the risk is a legacy file that is genuinely unapplyable.
+- F-03: LOW — the changed numbers are the ones the document actually describes.
+- F-04: MEDIUM — an OGraf export of a preset-carrying scene is now blocked. That is the finding's
+  remedy, and the readiness check reports it before the export is attempted.
+- F-05: LOW — the budgets are the same constants, measured against materialised bytes.
+- F-06: LOW — a data URL is the form the Media drawer already writes and the export already packages.
+- F-07: LOW — a failure that previously escaped now stops at the boundary.
+- F-08: LOW-MEDIUM — three dialogs share one trap; the existing dialog tests (44) still pass.
+- F-09: LOW — the production change is a type-only export.
+
+# 19. Performance Considerations
+
+No measured regression. F-01 adds a bounded per-channel merge with a set lookup per keyframe;
+F-05 adds one comparison per entry; F-06 replaces an object URL with a file read that the drawer
+path already performs.
+
+# 20. Dependencies
+
+None added, removed or upgraded. No package, lockfile, workflow or dependency change was made.
+
+# 21. Compatibility
+
+Saved scenes, OGraf packages, manifests, Lottie documents and the API payloads keep their formats.
+Legacy project documents are now checked before they are applied, and the two legacy samples in this
+repository still import.
+
+# 22. Known Limitations
+
+- The OGraf export cannot carry procedural in/out preset motion; a scene that uses one is refused
+  with a remedy (clear the preset and author keyframes, or do not export that scene as a graphic).
+- `evaluateOGrafScene` applies the editor's procedural delta without the export gate only when a
+  caller bypasses validation; the export path always validates first.
+- The archive preflight cannot observe a local/central header disagreement through fflate's API, so
+  the budget is bounded per compression method and the decoded scene still passes the KCS boundary.
+- Full Vitest on this Windows machine needs a raised per-test timeout for the two tests that spawn
+  `git` many times; with the default 5s they can time out under parallel load, which is a pre-existing
+  property of those tests, not of this work.
+
+# 23. Technical Debt
+
+The GitHub Actions Node 20 runtime and Ubuntu 26 migration annotations remain (workflow maintenance,
+not a product failure). The two CI-reported `act` warnings that originally motivated F-09 were a
+symptom of an undeclared test environment; the environment is now declared, so the contract is
+enforced on every machine.
+
+# 24. Git Summary
+
+Implementation commits, all fast-forwarded into `main` and pushed:
+
+- `2c6e013` — `fix: preserve mixed channel animation round trips`
+- `b8718d2` — `fix: validate legacy imports before apply`
+- `e19b5fe` — `fix: preserve lottie numeric property forms`
+- `8002659` — `fix: align ograf procedural animation runtime`
+- `3fa71ff` — `fix: enforce ograf zip materialization budgets`
+- `645927a` — `fix: persist dropped media across reloads`
+- `c12d773` — `fix: contain preset storage failures`
+- `4cd276b` — `fix: complete new item modal focus lifecycle`
+- `8a4ca22` — `test: eliminate react act warnings`
+
+Documentation branch: `docs/audit-state-reconciliation`; commit message
+`docs: reconcile astra remediation state`. Integration policy: fast-forward only. No rebase, reset,
+force push, branch deletion, tag, release or npm action.
+
+# 25. Updated Project Tree
+
+```text
+e2e/
+  dropped-media-persistence.spec.ts   [new]
+  new-item-modal-focus.spec.ts        [new]
+reports/
+  progress_151_astra_remediation.md   [new]
+chatgpt_handoff/
+  CHATGPT_UPLOAD_ONEFILE.md           [rebuilt]
+  latest/                             [clean rebuilt document bundle]
+```
+
+# 26. Self Review
+
+Good: every finding was reproduced before it was fixed, each fix carries a consumer-visible
+regression, the branches stayed small, and the integration was fast-forward only with green CI per
+commit. F-04 is the one finding whose remedy is a refusal rather than a new capability, and that is
+the contract the finding itself allows. Could improve: the F-05 preflight still cannot see a
+local/central header disagreement; the OGraf procedural restriction deserves a dedicated product
+decision (bake at export, or implement the presets in the runtime). Uncertainty: F-02 narrows what a
+legacy document may contain, so an unapplyable legacy file that used to import and then break is now
+refused. Score: 9/10.
+
+# 27. Next Recommended Task
+
+Run the full post-fix regression gate on `main` (this run's Task 11) and then a read-only
+release-readiness audit for a future RC candidate; do not publish, finalize or retag.
+
+# 28. Project Status
+
+Milestones A–G are complete, Milestone H is complete through H6 with its release decision held (H7),
+and the Astra remediation findings F-01…F-10 are closed. The release tag, draft prerelease, private
+package version and npm state are unchanged.
+
+# 29. AI Development Notes
+
+The authorities to reuse: `fillChannelsFromLegacyKeyframes` for the evaluator's channel precedence;
+`legacyProjectProblem` (with `sharedLayerValueProblem`) for legacy documents; `resolveHandle` for
+Lottie handles; `validateSceneForOGraf`'s procedural rule for anything the generated runtime cannot
+reproduce; `admitPackageEntry` for archive budgets; the Media drawer's data-URL form for dropped
+media; `useDialogFocusTrap`/`useDialogFocusRestoration` for dialog focus.
+
+---
+
 ## 8. Changelog
 
 # Changelog
@@ -636,6 +795,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Package materialization failures now carry stable failure codes; filesystem guidance states the trusted-directory requirement, the unsupported hostile-concurrency case, and avoids claiming perfect OS-level protection. Machine paths are reduced to a display-safe form.
 
 ### Changed
+- An OGraf export now refuses a layer whose animation the exported graphic cannot reproduce: a layer carrying an in/out motion preset resolves to a different frame in the editor than in the generated runtime, which renders the timeline only, so the export reports `OGRAF_UNSUPPORTED_PROCEDURAL` and stops instead of shipping a graphic that plays a different animation. `none` and `custom_timeline` resolve to no delta in the evaluated mode and stay exportable, and the export's existing `OGRAF_UNSUPPORTED_NONDETERMINISTIC_PROCEDURAL` rule for shake/random presets is unchanged.
+- The dialog focus lifecycle lives in one authority: the naming dialog uses the shared opener restoration and the shared focus trap, so Tab and Shift+Tab wrap the dialog's own stops (a disabled action is not a stop) and Escape dismisses through the dialog's own handler; its close control has an accessible name. The confirmation and import-report dialogs use the same trap instead of their own two-stop copies.
+- The test environment declares React's act environment for the whole run, so a state update outside `act` is reported on every machine instead of only on a slower one, and the serialization and import-atomicity tests make their document calls inside `act`. The suite went from 101 warnings reported by CI to none.
+- The preset library treats `localStorage` as the external boundary it is: a blocked or full store no longer fails the mount or the edit that triggered the write, and the library keeps working in memory for the session.
 - The value and speed graphs are exposed as labelled groups instead of images, and focus rings were added for the timeline diamonds and the graph keyframe points.
 - Freeform paths that only carry legacy `points` normalize a repeated closing vertex before the editing overlay materializes a canonical `path` on first edit; the legacy array itself is preserved.
 - Matte relationship resolution went through one shared helper that mirrors the rendered result, so the outliner indicator and the stage agree for enabled, disabled, missing, and unusable sources.
@@ -646,6 +809,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The embedded SQLite fallback remains runtime-generated, but `server/db/keyframe_studio.sqlite` is no longer tracked; a clean checkout creates and seeds it on first API start.
 
 ### Fixed
+- An OGraf package's per-entry and total size budgets are taken from what the archive reader will actually materialise rather than from one declared field: a stored member is measured by the bytes it is copied from and must declare a single size, a deflated member is measured by the buffer it is inflated into, and a compression method whose output cannot be bounded is refused. A member can no longer be admitted by under-declaring its size.
+- Dropped media is stored in the document as a self-contained source (the same durable form the Media drawer writes) instead of a `blob:` URL that dies with the page, so an image dropped on the stage survives a reload.
+- A split Lottie position (`p: { s: true, x: …, y: … }`) is read as the two scalar properties it is, and a keyframe easing handle written per dimension (`o: { x: [0.25, 0.3], y: [0.1, 0.2] }`) resolves the component its channel maps. A handle with no readable value keeps its segment linear and is reported instead of becoming a fabricated zero curve.
+- Legacy project documents are validated before they are applied: a part that is not an object, has no usable id or type, has no finite z-order, or carries a base transform the evaluator cannot multiply is refused with a stable code and the offending path, instead of importing "successfully" and failing on the stage. Valid legacy documents — including `sequencer-project.json` and the server's seed project — still import.
+- A track whose canonical channels cover only part of its animation no longer loses the rest on a save/load round trip: the channels the evaluator would still resolve from the legacy composite keyframes are written with those values, so the animation a document produced before saving is the animation it produces after loading.
 - The CI step named "TypeScript Type Check" now checks the project: it ran `npx tsc --noEmit`, which builds no referenced project and therefore verified no project file, so a broken type could have merged behind a green tick. The step and the `check` script run `npx tsc -b --pretty false` (151 project files).
 - The editor's global commands no longer reach project state while a blocking dialog is open: the shortcut handler now reads the dialog's own `aria-modal` contract, so `Delete`/`Backspace`, undo/redo, copy/paste, duplicate and the tool and zoom keys stay inert until the import report, the confirmation dialog or the naming dialog closes. Each dialog keeps `Escape` for itself, and the naming dialog now handles it at the dialog level (and declares the dialog contract it was missing) so it works from its buttons too.
 - Confirmation and import-report dialogs now focus their initial action on open and restore focus to the connected opener after Cancel, Confirm, or `Escape`; removing the opener while the dialog is open remains safe.
@@ -703,3 +871,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Playwright end-to-end (E2E) workflow test suite (`e2e/workflow.spec.ts`).
   - TypeScript strict mode compilation and Oxlint linting integration.
   - Agent governance guidelines, project context specification, and domain-driven branch strategy (`.agents/`).
+
+---

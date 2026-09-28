@@ -1,16 +1,21 @@
-# KCS ChatGPT Upload Manifest — final maintenance reconciliation
+# KCS ChatGPT Upload Manifest — Astra remediation reconciliation
 
 Clean refreshed: YES
 Bundle scope: minimal and task-specific; not an archive
-Task record: reports/progress_150_final_maintenance_reconciliation.md
+Task record: reports/progress_151_astra_remediation.md
 
-Implementation baseline: main at or after 37904fb
-Dialog focus restoration: CLOSED at 5cb8a45; CI 36314400055 PASS
-Runtime SQLite repository hygiene: CLOSED at b3f3c6c; CI 36314754294 PASS
-Exact API CORS policy: CLOSED at 2a313d7; CI 36315091917 PASS
-Oxlint 1.85 adoption: CLOSED at feca773; CI 36315413652 PASS
-TypeScript 7 / Vitest 5: CLOSED at 37904fb; CI 36315904883 PASS
-Latest full suite: 128 files / 1,951 tests PASS
+Implementation baseline: main at or after 8a4ca22
+F-01 mixed legacy/channel round trip: CLOSED at 2c6e013
+F-02 legacy project import validation: CLOSED at b8718d2
+F-03 Lottie numeric property forms: CLOSED at e19b5fe
+F-04 OGraf procedural animation: CLOSED at 8002659
+F-05 OGraf ZIP size accounting: CLOSED at 3fa71ff
+F-06 dropped-media persistence: CLOSED at 645927a
+F-07 preset storage boundaries: CLOSED at c12d773
+F-08 naming-dialog focus lifecycle: CLOSED at 4cd276b
+F-09 React act warnings: CLOSED at 8a4ca22
+F-10 stale live-document claims: CLOSED by this reconciliation
+Latest full suite: 128 files / 1,995 tests PASS, no React act warning
 Dependency audit: 0 vulnerabilities
 Release state: H7 HOLD; tag v1.1.0-rc.1 remains at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub release remains draft prerelease; package remains private at 1.1.0-rc.1; npm publish NO
 Non-blocking CI annotations: Node 20 action runtime forced to Node 24; announced ubuntu-latest migration to Ubuntu 26
@@ -23,7 +28,7 @@ Copied files (8):
 - PROJECT_STATE.md
 - README.md
 - manifest.txt
-- progress_150_final_maintenance_reconciliation.md
+- progress_151_astra_remediation.md
 
 Omitted: source, tests, package/lock files, workflows, historical reports, binaries, archives, assets, caches, and QA output.
 Never touched: C:\Users\ertugrul.ak\Desktop\KCS; C:\Users\ertugrul.ak\Desktop\ograf-graphics; origin/without-mask; global OMP configuration.

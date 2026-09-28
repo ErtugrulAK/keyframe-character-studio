@@ -1,26 +1,30 @@
-# KCS Minimal ChatGPT Upload Bundle — final maintenance reconciliation
+# KCS Minimal ChatGPT Upload Bundle — Astra remediation reconciliation
 
-This is the clean, task-specific handoff for the five-task post-hold maintenance run. It replaces the previous bundle; it is not an archive.
+This is the clean, task-specific handoff for the post-hold Astra remediation run (findings F-01…F-10). It replaces the previous bundle; it is not an archive.
 
 ## Current truth
 
-- `main` contains the five implementation commits through `37904fb`.
-- Dialog focus restoration: closed at `5cb8a45`.
-- Runtime SQLite repository hygiene: closed at `b3f3c6c`.
-- Exact API browser-origin policy: closed at `2a313d7`.
-- Oxlint 1.85 adoption: closed at `feca773`.
-- TypeScript 7 plus Vitest and coverage-v8 5: closed at `37904fb`.
-- Each implementation commit has a green `main` CI run; the latest implementation run is `36315904883`.
+- `main` contains the nine remediation implementation commits through `8a4ca22`, each fast-forwarded and each with its own green `main` CI run.
+- Mixed legacy/channel round trips: closed at `2c6e013`.
+- Legacy project import validation: closed at `b8718d2`.
+- Lottie numeric property forms: closed at `e19b5fe`.
+- OGraf procedural animation: closed at `8002659`.
+- OGraf ZIP size accounting: closed at `3fa71ff`.
+- Dropped-media persistence: closed at `645927a`.
+- Preset storage boundaries: closed at `c12d773`.
+- Naming-dialog focus lifecycle: closed at `4cd276b`.
+- React `act` warnings: closed at `8a4ca22`.
+- Stale live-document claims (F-10): closed by this reconciliation.
 - Milestone H remains complete through H6 and H7 remains HOLD. The release tag, draft prerelease, private package version, and npm publication state are unchanged.
 
 ## Verification baseline
 
-The TypeScript/Vitest baseline passed a fresh `npm ci`, TypeScript build mode, Oxlint, 128 Vitest files / 1,951 tests, production build, OGraf validation, release QA, export/Lottie/matte browser specs, V6 QA, the combined check, state consistency, `npm audit` with zero vulnerabilities, diff hygiene, and Linux CI.
+The final baseline passed TypeScript build mode, Oxlint, 128 Vitest files / 1,995 tests with no React `act` warning, the production build, OGraf validation, the release QA gate, the export/Lottie/matte/dropped-media/naming-dialog browser specs, V6 QA, the combined check, state consistency, `npm audit` with zero vulnerabilities, and diff hygiene.
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — maintenance close-out response.
-- `progress_150_final_maintenance_reconciliation.md` — durable engineering record.
+- `OMP_FINAL_RESPONSE.md` — remediation close-out response.
+- `progress_151_astra_remediation.md` — durable engineering record.
 - `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md` — current mirrored documents.
 - `manifest.txt` — bundle inventory and boundaries.
 - `README.md` — this guide.

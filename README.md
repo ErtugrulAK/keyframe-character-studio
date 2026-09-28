@@ -263,8 +263,11 @@ npm run test:e2e
 ```
 
 ### Type Checking & Linting
+The type check builds the referenced projects (`tsconfig.app.json` and
+`tsconfig.node.json`); a bare `tsc --noEmit` at the repository root checks no
+project file, because the root `tsconfig.json` only references them.
 ```bash
-npx tsc --noEmit
+npx tsc -b --pretty false
 npm run lint
 ```
 

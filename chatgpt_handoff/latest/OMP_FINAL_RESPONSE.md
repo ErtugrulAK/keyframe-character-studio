@@ -1,53 +1,52 @@
-# KCS Final Maintenance Reconciliation — OMP Response
+# KCS Final Astra Remediation — OMP Response
 
 ## 1) Phase 0 baseline
 
-The run started from clean synchronized `main` at `c5bed46`, with the latest CI green, the state checker passing, and no Git operation in progress.
+The run started from clean synchronized `main` at `7daacce`, with green CI, a passing state check, a clean tree, zero audit findings, and no Git operation in progress.
 
-## 2) Task 1 — dialog focus restoration
+## 2) Findings closed
 
-Merged at `5cb8a45`. Confirmation and import-report dialogs focus their initial action and restore focus to a connected opener after Cancel, Confirm, or `Escape`. A removed opener is ignored safely. Focused tests, full regression, build, lint, and an actual browser focus smoke passed. CI `36314400055` passed.
+Nine findings were reproduced first, fixed one at a time on their own branch, and fast-forwarded into `main`:
 
-## 3) Task 2 — SQLite repository hygiene
+- F-01 mixed legacy/channel round trip — `2c6e013`
+- F-02 legacy project import validation — `b8718d2`
+- F-03 Lottie numeric property forms — `e19b5fe`
+- F-04 OGraf procedural animation — `8002659`
+- F-05 OGraf ZIP size accounting — `3fa71ff`
+- F-06 dropped-media persistence — `645927a`
+- F-07 preset storage boundaries — `c12d773`
+- F-08 naming-dialog focus lifecycle — `4cd276b`
+- F-09 React `act` warnings — `8a4ca22`
 
-Merged at `b3f3c6c`. `server/db/keyframe_studio.sqlite` is runtime-generated and Git-ignored rather than tracked. A clean first start recreated and seeded the file; health and project routes passed. CI `36314754294` passed.
+F-10 (stale live-document claims) is the documentation reconciliation that carries this bundle: the README's type-check command, the replay-branch claim in `NEXT_SESSION.md` and `PROJECT_STATE.md`, and the unified import control.
 
-## 4) Task 3 — API CORS policy
+## 3) What changed for users
 
-Merged at `2a313d7`. Browser access defaults to exact local editor/QA origins; `KCS_CORS_ORIGINS` adds exact `http(s)` origins, and malformed or widening forms fail startup. Origin-less clients remain supported. Actual API and test coverage passed. CI `36315091917` passed.
+- A scene saved with a partly canonical, partly legacy animation plays the same after loading it again.
+- A legacy project file that the editor cannot apply is refused before anything is replaced.
+- A Lottie document that separates its position into x/y, or writes keyframe handles per dimension, imports the animation it actually describes; an unreadable handle is reported instead of becoming a zero curve.
+- An OGraf export refuses a scene whose layer carries an in/out motion preset, because the exported graphic renders the timeline only and would otherwise play a different animation. `none` and `custom_timeline` stay exportable.
+- An OGraf package is measured by the bytes it will materialise, so a member cannot be admitted by under-declaring its size.
+- An image dropped on the stage is stored in the document itself and survives a reload.
+- A blocked or full `localStorage` no longer fails the preset library's mount or the edit that triggered the write.
+- The naming dialog keeps the keyboard inside itself, names its close control, and returns focus to its opener.
 
-## 5) Task 4 — Oxlint 1.85
+## 4) Validation
 
-Merged at `feca773`. Three genuine findings were fixed; deliberate latest-ref and synchronization effects retain line-specific suppressions with adjacent rationale. No broad or file-level rule disable was added. Full validation and unused-disable enforcement passed. CI `36315413652` passed.
+Per finding: focused tests, `npx tsc -b --pretty false`, `npm run lint`, `npm run build`, `npm run validate:ograf`, the full Vitest suite, the state check, and `git diff --check`; the OGraf tasks also ran `npm run qa:release` and `npm run qa:v6`, and the UI tasks ran their own real-browser smoke. Final suite: 128 files / 1,995 tests with no React `act` warning. Each implementation commit has its own green `main` CI run.
 
-## 6) Task 5 — TypeScript 7 and Vitest 5
+## 5) Branch, commit, merge, and push summary
 
-Merged at `37904fb`. TypeScript 7.0.2, Vitest 5.0.2, and `@vitest/coverage-v8` 5.0.2 are aligned. No source compatibility patch was required. A fresh install, type check, 128 files / 1,951 tests, lint, build, OGraf validation, release QA, eight focused browser tests, V6 QA, the combined check, state consistency, audit, diff hygiene, and CI `36315904883` passed.
+One branch per finding, fast-forward only, pushed to `origin/main`; the documentation branch `docs/audit-state-reconciliation` carries this reconciliation. No rebase, reset, force push, branch deletion, or history rewrite.
 
-## 7) Task 6 — docs and handoff reconciliation
-
-The live documents now record all five tasks as closed. `reports/progress_150_final_maintenance_reconciliation.md` is the durable report. `chatgpt_handoff/latest/` was cleaned and rebuilt with eight documents, and the one-file upload was regenerated from those current sources only.
-
-## 8) Validation and CI matrix
-
-All five implementation commits were fast-forwarded to `main`, pushed, and followed by green CI. The final implementation baseline reports zero npm vulnerabilities. The documentation patch is documents-only and uses the state checker plus diff/stale-claim gates before integration.
-
-## 9) Branch, commit, merge, and push summary
-
-Implementation commits: `5cb8a45`, `b3f3c6c`, `2a313d7`, `feca773`, `37904fb`. Documentation branch: `docs/final-maintenance-reconciliation`; commit message: `docs: reconcile final maintenance state`. Integration is fast-forward only. Branches are retained. No rebase, reset, force push, branch deletion, or history rewrite occurred.
-
-## 10) Handoff paths
+## 6) Handoff paths
 
 - Bundle sources: `chatgpt_handoff\latest\`
 - Upload artifact: `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`
-- Engineering record: `reports\progress_150_final_maintenance_reconciliation.md`
+- Engineering record: `reports\progress_151_astra_remediation.md`
 
-## 11) Final release-readiness verdict
+## 7) Release stance
 
-The technical baseline is ready for a read-only release audit. H7 nevertheless remains HOLD by user decision. The GitHub Actions Node runtime and Ubuntu runner migration annotations are non-blocking workflow-maintenance warnings, not evidence of a product failure.
-
-## 12) Explicit no-release statement
-
-No tag was created, moved, or deleted. The GitHub draft prerelease was not published or finalized. No npm package was published. `v1.1.0-rc.1` remains at `46d2a3e59e065816d972dcd56951803951b577f6`, and the package remains private at `1.1.0-rc.1`.
+H7 remains HOLD. No tag was created, moved, or deleted; the GitHub draft prerelease was not published or finalized; nothing was published to npm. `v1.1.0-rc.1` remains at `46d2a3e59e065816d972dcd56951803951b577f6`, and the package remains private at `1.1.0-rc.1`.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.

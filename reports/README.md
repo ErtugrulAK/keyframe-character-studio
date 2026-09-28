@@ -72,3 +72,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_148_final_handoff_after_hold.md` — Milestone H: the final handoff refresh after the release decision was taken as a hold.
 - `progress_149_final_jsdom_state_cleanup.md` — Milestone H: the cleanup that removed the last stale `jsdom` claims from the live documents.
 - `progress_150_final_maintenance_reconciliation.md` — the five-task post-hold maintenance close-out, validation evidence, live-document reconciliation, and handoff rebuild.
+- `progress_151_astra_remediation.md` — the Astra correctness/security findings F-01…F-10: reproduction, one branch and one focused test per finding, validation evidence, integration record, and the remaining limitations.

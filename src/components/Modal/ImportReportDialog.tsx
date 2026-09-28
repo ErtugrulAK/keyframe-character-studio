@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef } from 'react';
+import React, { useMemo, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { useDialogFocusRestoration } from '../../hooks/useDialogFocusRestoration';
+import { useDialogFocusRestoration, useDialogFocusTrap } from '../../hooks/useDialogFocusRestoration';
 import { sanitizeOGrafDiagnosticText } from '../../ograf/diagnostics';
 /**
  * The report entry every importer produces: the Lottie importer and the OGraf
@@ -54,8 +54,12 @@ export const ImportReportDialog: React.FC<ImportReportDialogProps> = ({
   onConfirm,
 }) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const confirmRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocusRestoration(isOpen, cancelRef);
+  // Escape dismisses; the trap wraps the dialog's own stops, and a disabled
+  // confirm simply is not one — so the keyboard stays on Cancel until importing
+  // becomes possible.
+  useDialogFocusTrap(isOpen, dialogRef, onCancel);
 
   const { blockers, warnings, hidden, visible } = useMemo(() => {
     const ordered = [...diagnostics].sort((left, right) => severityRank(left) - severityRank(right));
@@ -67,35 +71,6 @@ export const ImportReportDialog: React.FC<ImportReportDialogProps> = ({
       hidden: Math.max(0, ordered.length - VISIBLE_DIAGNOSTIC_LIMIT),
     };
   }, [diagnostics]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onCancel();
-        return;
-      }
-      if (event.key === 'Tab') {
-        const active = document.activeElement;
-        // When confirming is not possible, Cancel is the only stop in the dialog:
-        // Tab and Shift+Tab must stay on it instead of walking out of the modal.
-        if (confirmRef.current?.disabled) {
-          event.preventDefault();
-          cancelRef.current?.focus();
-        } else if (event.shiftKey && active === cancelRef.current) {
-          event.preventDefault();
-          confirmRef.current?.focus();
-        } else if (!event.shiftKey && active === confirmRef.current) {
-          event.preventDefault();
-          cancelRef.current?.focus();
-        }
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onCancel]);
 
   if (!isOpen) return null;
 
@@ -109,6 +84,7 @@ export const ImportReportDialog: React.FC<ImportReportDialogProps> = ({
     <div className="lottie-report-backdrop" onMouseDown={onCancel}>
       <div
         className="lottie-report-dialog"
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="lottie-report-title"
@@ -153,7 +129,6 @@ export const ImportReportDialog: React.FC<ImportReportDialogProps> = ({
           <button
             type="button"
             className="lottie-report-confirm"
-            ref={confirmRef}
             onClick={onConfirm}
             disabled={refused || blockers > 0}
           >

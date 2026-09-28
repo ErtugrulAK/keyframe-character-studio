@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Sparkles } from 'lucide-react';
+import { useDialogFocusRestoration, useDialogFocusTrap } from '../../hooks/useDialogFocusRestoration';
 import './NewItemModal.css';
 
 interface NewItemModalProps {
@@ -25,37 +26,23 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
 }) => {
   const [val, setVal] = useState(defaultValue);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // The shared dialog lifecycle owns focus: it moves the caret into the field
+  // when the dialog opens, wraps Tab/Shift+Tab inside it, keeps Escape as the
+  // dialog's own dismiss, and returns focus to the opener once it closes.
+  useDialogFocusRestoration(isOpen, inputRef);
+  useDialogFocusTrap(isOpen, dialogRef, onClose);
 
   useEffect(() => {
-    if (isOpen) {
-      // Opening the modal resets its local draft from the caller-owned default.
-      // oxlint-disable-next-line react/set-state-in-effect
-      setVal(defaultValue);
-      setTimeout(() => {
-        inputRef.current?.focus();
-        inputRef.current?.select();
-      }, 50);
-    }
+    // Opening the modal resets its local draft from the caller-owned default.
+    // oxlint-disable-next-line react/set-state-in-effect
+    if (isOpen) setVal(defaultValue);
   }, [isOpen, defaultValue]);
-
-  // Escape belongs to the dialog, not to the focused control, so it works from
-  // the buttons too — and the global shortcut guard stays out of the way because
-  // this dialog declares `aria-modal`.
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = (e?: React.FormEvent<HTMLFormElement>) => {
     if (e) e.preventDefault();
     if (val.trim()) {
       onSubmit(val.trim());
@@ -67,6 +54,7 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
     <div className="new-item-modal-overlay" onClick={onClose}>
       <div
         className="new-item-modal-card"
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="new-item-modal-title"
@@ -77,7 +65,7 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
             <Sparkles size={16} className="text-cyan" />
             <h3 className="modal-title" id="new-item-modal-title">{title}</h3>
           </div>
-          <button className="modal-close-btn" onClick={onClose}>
+          <button type="button" className="modal-close-btn" aria-label="Close" onClick={onClose}>
             <X size={16} />
           </button>
         </div>

@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { useDialogFocusRestoration } from '../../hooks/useDialogFocusRestoration';
+import { useDialogFocusRestoration, useDialogFocusTrap } from '../../hooks/useDialogFocusRestoration';
 import './ConfirmationDialog.css';
 
 interface ConfirmationDialogProps {
@@ -21,32 +21,11 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
   onCancel,
 }) => {
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const confirmRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   useDialogFocusRestoration(isOpen, cancelRef);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onCancel();
-        return;
-      }
-      if (event.key === 'Tab') {
-        const active = document.activeElement;
-        if (event.shiftKey && active === cancelRef.current) {
-          event.preventDefault();
-          confirmRef.current?.focus();
-        } else if (!event.shiftKey && active === confirmRef.current) {
-          event.preventDefault();
-          cancelRef.current?.focus();
-        }
-      }
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onCancel]);
+  // Escape dismisses through the caller's handler; Tab wraps the dialog's own
+  // stops (Cancel and Confirm) instead of walking into the editor behind it.
+  useDialogFocusTrap(isOpen, dialogRef, onCancel);
 
   if (!isOpen) return null;
 
@@ -54,6 +33,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
     <div className="confirmation-dialog-backdrop" onMouseDown={onCancel}>
       <div
         className="confirmation-dialog"
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirmation-dialog-title"
@@ -66,7 +46,7 @@ export const ConfirmationDialog: React.FC<ConfirmationDialogProps> = ({
           <button type="button" className="confirmation-dialog-cancel" ref={cancelRef} onClick={onCancel}>
             Cancel
           </button>
-          <button type="button" className="confirmation-dialog-confirm" ref={confirmRef} onClick={onConfirm}>
+          <button type="button" className="confirmation-dialog-confirm" onClick={onConfirm}>
             {confirmLabel}
           </button>
         </div>

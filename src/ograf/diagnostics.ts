@@ -90,6 +90,10 @@ const DIAGNOSTIC_REMEDIATIONS: Record<OGrafDiagnosticCode, OGrafDiagnosticRemedi
     title: 'Unsupported procedural animation',
     action: 'Replace the shake/random preset on this layer with explicit keyframes, then export again.',
   },
+  OGRAF_UNSUPPORTED_PROCEDURAL: {
+    title: 'Procedural animation not carried into the export',
+    action: 'Clear the layer\'s in/out preset and author the motion as keyframes, or keep the preset and do not export this scene as an OGraf graphic.',
+  },
   OGRAF_EXTERNAL_ASSET_REJECTED: {
     title: 'External asset rejected',
     action: `Re-import the file as a local asset and keep it in a trusted dedicated source directory, then export again. ${OGRAF_TRUSTED_DIRECTORY_NOTE}`,

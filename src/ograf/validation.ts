@@ -438,6 +438,9 @@ function validateFont(
   });
 }
 
+/** Preset ids the edit-mode evaluator resolves to no delta at all. */
+const INERT_PRESETS: readonly string[] = ['none', 'custom_timeline'];
+
 function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnostics: OGrafExportDiagnostic[], assets: OGrafAssetPlan[]): void {
   validateLayerInput(layer, diagnostics);
   if (isPrototypeSensitiveKey(layer.id)) {
@@ -496,6 +499,22 @@ function validateLayer(layer: SceneLayer, options: OGrafExportOptions, diagnosti
   const proceduralValues = [layer.inAnimPreset, layer.outAnimPreset].filter((value): value is string => Boolean(value));
   if (proceduralValues.some((value) => /(?:shake|random)/iu.test(value))) {
     diagnostics.push(diagnostic('OGRAF_UNSUPPORTED_NONDETERMINISTIC_PROCEDURAL', 'ERROR', 'Non-deterministic procedural animation is not supported by OGraf Export V1.', layer, 'procedural-animation'));
+  }
+  // F-04: the generated runtime renders the timeline (transform/opacity/mask
+  // channels) and nothing else, so a layer whose frame output the *editor*
+  // resolves from an in/out preset would play a different animation in the
+  // exported graphic. That is a silent difference, so the export is refused
+  // instead of shipping it; `none` and `custom_timeline` are inert in edit mode
+  // (`applyPreset` returns the identity for both) and stay exportable.
+  const unrepresentablePresets = proceduralValues.filter((value) => !INERT_PRESETS.includes(value) && !/(?:shake|random)/iu.test(value));
+  if (unrepresentablePresets.length > 0) {
+    diagnostics.push(diagnostic(
+      'OGRAF_UNSUPPORTED_PROCEDURAL',
+      'ERROR',
+      `Layer uses the procedural preset(s) ${unrepresentablePresets.map((value) => `"${describeOGrafValueForDiagnostics(value)}"`).join(', ')}; the exported graphic renders the timeline only, so it would play a different animation than the editor.`,
+      layer,
+      'procedural-animation',
+    ));
   }
 }
 

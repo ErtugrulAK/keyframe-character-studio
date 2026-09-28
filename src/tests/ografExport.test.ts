@@ -233,6 +233,34 @@ describe('OGraf Export V1 Phase 1', () => {
     ]);
   });
 
+  test('blocks procedural in/out presets the generated runtime cannot reproduce', () => {
+    // F-04: the editor resolves this fade from the preset while the exported
+    // graphic renders the timeline only, so the export has to refuse the scene
+    // instead of shipping a graphic that plays a different animation.
+    const scene = makeScene([makeLayer({ inAnimPreset: 'fade', inAnimDuration: 60 })]);
+
+    expect(errorCodes(scene)).toEqual(['OGRAF_UNSUPPORTED_PROCEDURAL']);
+
+    const diagnostic = validateSceneForOGraf(scene).diagnostics.find((entry) => entry.code === 'OGRAF_UNSUPPORTED_PROCEDURAL');
+    expect(diagnostic?.severity).toBe('ERROR');
+    expect(diagnostic?.layerId).toBe('layer-1');
+    expect(diagnostic?.feature).toBe('procedural-animation');
+    expect(diagnostic?.message).toContain('"fade"');
+
+    const plan = compileOGrafPackage(scene);
+    expect(plan.status).toBe('blocked');
+    expect(plan.files).toEqual([]);
+  });
+
+  test('keeps a layer whose presets resolve to no motion exportable', () => {
+    // `none` and `custom_timeline` are inert in edit mode, which is the mode the
+    // export evaluates, so neither changes a frame and neither is refused.
+    const scene = makeScene([makeLayer({ inAnimPreset: 'none', outAnimPreset: 'custom_timeline' })]);
+
+    expect(errorCodes(scene)).toEqual([]);
+    expect(compileOGrafPackage(scene).status).toBe('ready-to-materialize');
+  });
+
   test('diagnoses a portable clip matte as conditional without rejecting it', () => {
     const result = validateSceneForOGraf(makeScene([
       makeLayer({ id: 'mask' }),

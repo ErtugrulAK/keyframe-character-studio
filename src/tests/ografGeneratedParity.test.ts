@@ -59,6 +59,9 @@ function scene(layers: SceneLayer[], tracks: AnimationTrackData[] = []): SceneDa
 }
 
 type GeneratedGraphic = HTMLElement & {
+  /** The generated runtime's own frame cursor and its render step. */
+  _currentFrame: number;
+  _render: () => void;
   load: (params: { renderType: 'realtime'; data?: unknown }) => Promise<Record<string, unknown>>;
   dispose: () => Promise<Record<string, unknown>>;
   updateAction: (params: { data?: Record<string, string> }) => Promise<Record<string, unknown>>;
@@ -82,6 +85,36 @@ function instantiateGraphic(source: string): GeneratedGraphic {
 }
 
 describe('generated runtime parity', () => {
+  test('editor, evaluator and generated runtime agree frame by frame on a timeline scene', async () => {
+    // F-04: the same authored frame has to come out of all three paths, so a
+    // graphic exported from the editor plays what the editor showed.
+    const authored = scene(
+      [layer({ trimPathEnabled: undefined, strokeAlignment: 'center' })],
+      [track('shape', [
+        { id: 'x0', frame: 0, value: 0, easing: 'linear' },
+        { id: 'x1', frame: 30, value: 90, easing: 'linear' },
+        { id: 'x2', frame: 60, value: 30, easing: 'linear' },
+      ])],
+    );
+    const plan = compileOGrafPackage(authored);
+    expect(plan.status).toBe('ready-to-materialize');
+    const graphic = instantiateGraphic(plan.files.find((file) => file.path === 'graphic.mjs')?.content || '');
+    await graphic.load({ renderType: 'realtime', data: {} });
+
+    // 320x180 scene: the runtime and the canonical renderer both place the
+    // origin at the artboard centre (160, 90).
+    for (const frame of [0, 15, 30, 45, 60]) {
+      const evaluated = evaluateOGrafScene(authored, frame).layers[0];
+      const translation = `translate(${160 + evaluated.transform.x} ${90 + evaluated.transform.y})`;
+
+      expect(renderOGrafSvg(evaluateOGrafScene(authored, frame))).toContain(translation);
+      graphic._currentFrame = frame;
+      graphic._render();
+      expect(graphic.innerHTML).toContain(translation);
+    }
+    await graphic.dispose();
+  });
+
   test('generated runtime matches Phase 2A SVG semantics for trim and stroke alignment', async () => {
     const authored = scene([layer()]);
     const plan = compileOGrafPackage(authored);

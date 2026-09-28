@@ -3,7 +3,7 @@ import type { AnimationTrackData, CharacterPart, Track, MotionTemplate, Property
 import type { PersistedTrackState, SceneCoordinateSystem, SceneData, SceneLayer } from '../types/composition';
 import { initializeIdCounter } from '../utils/idGenerator';
 import { makeEmptyChannels, DEFAULT_TRACKS, DEFAULT_CHARACTER_PARTS } from '../utils/defaults';
-import { convertLegacyKeyframesToChannels } from '../utils/legacyKeyframeConversion';
+import { convertLegacyKeyframesToChannels, fillChannelsFromLegacyKeyframes } from '../utils/legacyKeyframeConversion';
 import { AUTOSAVE_STORAGE_KEY, DEFAULT_MOTION_TEMPLATES } from '../utils/constants';
 import { DEFAULT_SCENE_COORDINATE_SYSTEM, isSceneCoordinateSystem, migrateSceneCoordinates } from '../utils/coordinateMigration';
 import { normalizeMotionTemplates } from '../utils/motionTemplates';
@@ -143,10 +143,14 @@ function toSceneData(
   // M8e: channels-only export policy. keyframes[] is NOT exported anymore —
   // legacy-only tracks (empty channels + populated keyframes[]) are converted
   // to canonical channels at export time so no animation data is lost.
+  // F-01: a track with *partly* populated channels still resolves its remaining
+  // channels from the legacy composite at evaluation time, so those channels are
+  // filled here. Writing only the populated ones dropped that fallback and
+  // changed the animation the next load produced.
   const animTracks: (AnimationTrackData & PersistedTrackState)[] = tracks.map(t => {
     const hasChannelData = !!t.channels && Object.values(t.channels).some((arr) => arr.length > 0);
     const channels = hasChannelData
-      ? (t.channels || {})
+      ? fillChannelsFromLegacyKeyframes(t.channels, t.keyframes || [])
       : convertLegacyKeyframesToChannels(t.keyframes || []);
     return {
       partId: t.partId,

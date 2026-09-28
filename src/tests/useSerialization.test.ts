@@ -1,8 +1,9 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useSerialization } from '../hooks/useSerialization';
-import { AnimationProject, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
+import { AnimationProject, CharacterPart, Keyframe, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
 import { makeEmptyChannels } from '../utils/defaults';
+import { evaluateTransform } from '../utils/evaluateTransform';
 import { applyTransitionToTrackCanonicalMutator } from '../utils/trackMutations';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
 import { normalizeFeather, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../utils/matte';
@@ -1388,7 +1389,7 @@ describe('useSerialization Hook', () => {
     expect(restored.channels.x.find((k: any) => k.frame === 0)!.value).toBe(10);
   });
 
-  it('M8f-2: "none" transition stays cleared after export → import; other templates preserved', () => {
+  it('M8f-2: "none" transition clears the target scope and keeps the rest', () => {
     const legacyTrack = makeLegacyOnlyTrack();
     // 'none' → clear active template (Sequence) channels; Outro template kept
     const [cleared] = applyTransitionToTrackCanonicalMutator([legacyTrack], 'trk_leg', null, 'Sequence');
@@ -1397,18 +1398,28 @@ describe('useSerialization Hook', () => {
     expect(cleared.channels.opacity.filter((k) => (k.templateId || 'Sequence') === 'Sequence')).toHaveLength(0);
     expect(cleared.channels.x.filter((k) => (k.templateId || 'Sequence') === 'Outro')).toHaveLength(1);
 
+    // The in-memory evaluation is the contract the file has to reproduce. For the
+    // Sequence scope the cleared channel makes the evaluator resolve the values
+    // from the legacy composite keyframes; Outro keeps its canonical channel.
+    const sequenceBefore = evaluateTransform([], [cleared], 'Sequence', 'L1', 15);
+    const outroBefore = evaluateTransform([], [cleared], 'Outro', 'L1', 15);
+    expect(sequenceBefore).toMatchObject({ x: 10, opacity: 0 });
+
     const { result } = renderSerialization([cleared]);
     const exported = result.current.exportProject();
     const parsed = JSON.parse(exported);
-    expect(parsed.tracks[0].channels.opacity.filter((k: any) => (k.templateId || 'Sequence') === 'Sequence')).toHaveLength(0);
-    expect(parsed.tracks[0].channels.x.filter((k: any) => (k.templateId || 'Sequence') === 'Outro')).toHaveLength(1);
+    expect(parsed.tracks[0].channels.x.filter((k: { templateId?: string }) => (k.templateId || 'Sequence') === 'Outro')).toHaveLength(1);
 
-    // Import keeps it cleared
+    // Import reproduces the cleared state: the untouched scope survives and the
+    // evaluated animation is the same as before the save.
     mockSetTracks.mockClear();
     expect(result.current.importProject(exported).ok).toBe(true);
-    const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
-    expect(restored.channels.opacity.filter((k) => (k.templateId || 'Sequence') === 'Sequence')).toHaveLength(0);
+    const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find((t) => t.partId === 'L1')!;
     expect(restored.channels.x.filter((k) => (k.templateId || 'Sequence') === 'Outro')).toHaveLength(1);
+    // Same animation on both sides: the legacy fallback now travels in the file
+    // as canonical channel data instead of disappearing with the save.
+    expect(evaluateTransform([], [restored], 'Sequence', 'L1', 15)).toMatchObject(sequenceBefore);
+    expect(evaluateTransform([], [restored], 'Outro', 'L1', 15)).toMatchObject(outroBefore);
   });
 
   // ─── M11 Step 2B: track matte serialization ────────────────────────
@@ -2379,6 +2390,156 @@ describe('useSerialization — M21 image matte serialization contract', () => {
     expect(buildBezierPathD(restored.path!)).toBe(buildBezierPathD(materialized));
     // The legacy array is preserved next to the canonical path.
     expect(restored.points).toEqual(legacyPoints);
+  });
+
+  // ─── F-01: mixed legacy composite + canonical channels ──────────────
+
+  /**
+   * The evaluator reads a channel when it carries keyframes for the active
+   * template and otherwise resolves that channel from the legacy composite
+   * keyframes. Export writes channels only, so a channel that is still supplied
+   * by the composite has to be carried into the file; these cases pin the
+   * evaluated transform before and after a real save/load cycle.
+   */
+  describe('F-01 mixed legacy/channel round trips', () => {
+    const F01_PART: CharacterPart = {
+      id: 'p1', name: 'P1', type: 'custom_rect', zIndex: 1,
+      fillColor: '#ffffff', strokeColor: '#000000',
+      pivot: { x: 0, y: 0 },
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    };
+
+    const keyframe = (
+      id: string,
+      frame: number,
+      transform: Partial<Transform>,
+      templateId = 'Sequence',
+    ): Keyframe => ({
+      id, frame, templateId, easing: 'linear',
+      transform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1, ...transform },
+    });
+
+    const makeTrack = (overrides: Partial<Track> = {}): Track => ({
+      id: 'trk_p1', partId: 'p1', name: 'Track P1', color: '#3b82f6',
+      visible: true, locked: false, expanded: false,
+      keyframes: [],
+      channels: makeEmptyChannels(),
+      ...overrides,
+    });
+
+    /** Export, re-import and report the evaluated transform on both sides. */
+    const roundTrip = (track: Track, frame: number, templateId = 'Sequence') => {
+      const before = evaluateTransform([F01_PART], [track], templateId, 'p1', frame);
+      const { result } = renderSerializationWithPart(F01_PART, [track]);
+      const exported = result.current.exportProject();
+      expect(JSON.parse(exported).tracks[0].keyframes).toBeUndefined();
+      mockSetTracks.mockClear();
+      expect(result.current.importProject(exported).ok).toBe(true);
+      const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find((t) => t.partId === 'p1')!;
+      return { before, after: evaluateTransform([F01_PART], [restored], templateId, 'p1', frame), restored, exported };
+    };
+
+    it('keeps a channel the legacy composite still supplies (canonical x + legacy y)', () => {
+      const track = makeTrack({
+        keyframes: [
+          keyframe('kf0', 0, { y: 0 }),
+          keyframe('kf1', 30, { y: 300 }),
+        ],
+        channels: { ...makeEmptyChannels(), x: [{ id: 'cx0', frame: 0, value: 25, easing: 'linear', templateId: 'Sequence' }] },
+      });
+
+      const { before, after, restored } = roundTrip(track, 15);
+
+      expect(before.y).toBe(150); // the fallback the editor applies today
+      expect(after).toEqual(before);
+      expect(after.x).toBe(25);
+      expect(after.y).toBe(150);
+      expect(restored.channels.y).toHaveLength(2);
+    });
+
+    it('keeps a legacy x while the canonical channel carries y', () => {
+      const track = makeTrack({
+        keyframes: [
+          keyframe('kf0', 0, { x: 0 }),
+          keyframe('kf1', 30, { x: 80 }),
+        ],
+        channels: { ...makeEmptyChannels(), y: [{ id: 'cy0', frame: 0, value: 10, easing: 'linear', templateId: 'Sequence' }] },
+      });
+
+      const { before, after } = roundTrip(track, 15);
+
+      expect(before.x).toBe(40);
+      expect(after).toEqual(before);
+    });
+
+    it('keeps legacy rotation, scale and interpolation-free opacity beside a canonical channel', () => {
+      const track = makeTrack({
+        keyframes: [
+          keyframe('kf0', 0, { rotation: 0, scaleX: 1, scaleY: 1, opacity: 0 }),
+          keyframe('kf1', 30, { rotation: 90, scaleX: 2, scaleY: 3, opacity: 1 }),
+        ],
+        channels: { ...makeEmptyChannels(), x: [{ id: 'cx0', frame: 0, value: 7, easing: 'linear', templateId: 'Sequence' }] },
+      });
+
+      const { before, after } = roundTrip(track, 15);
+
+      expect(before).toMatchObject({ rotation: 45, scaleX: 1.5, scaleY: 2 });
+      expect(after).toEqual(before);
+      // A legacy opacity of 0 is a value, never a missing one.
+      const zero = roundTrip(track, 0);
+      expect(zero.after.opacity).toBe(0);
+    });
+
+    it('lets the canonical channel win when both carry the same channel and template', () => {
+      const track = makeTrack({
+        keyframes: [
+          keyframe('kf0', 0, { x: 999 }),
+          keyframe('kf1', 30, { x: 999 }),
+        ],
+        channels: { ...makeEmptyChannels(), x: [{ id: 'cx0', frame: 0, value: 12, easing: 'linear', templateId: 'Sequence' }] },
+      });
+
+      const { after, restored } = roundTrip(track, 15);
+
+      expect(after.x).toBe(12); // never 999
+      expect(restored.channels.x).toHaveLength(1);
+    });
+
+    it('fills the legacy fallback per template scope, not just per channel', () => {
+      const track = makeTrack({
+        keyframes: [
+          keyframe('o0', 0, { y: 0 }, 'Outro'),
+          keyframe('o1', 30, { y: 300 }, 'Outro'),
+        ],
+        channels: { ...makeEmptyChannels(), x: [{ id: 'cx0', frame: 0, value: 25, easing: 'linear', templateId: 'Sequence' }] },
+      });
+
+      const outro = roundTrip(track, 15, 'Outro');
+      expect(outro.before).toMatchObject({ x: 0, y: 150 });
+      expect(outro.after).toEqual(outro.before);
+
+      // The 'Sequence' scope keeps its own canonical value.
+      const sequence = roundTrip(track, 15, 'Sequence');
+      expect(sequence.after.x).toBe(25);
+    });
+
+    it('is stable across a second round trip', () => {
+      const track = makeTrack({
+        keyframes: [
+          keyframe('kf0', 0, { y: 0, rotation: 0 }),
+          keyframe('kf1', 30, { y: 300, rotation: 90 }),
+        ],
+        channels: { ...makeEmptyChannels(), x: [{ id: 'cx0', frame: 0, value: 25, easing: 'linear', templateId: 'Sequence' }] },
+      });
+
+      const first = roundTrip(track, 15);
+      const second = roundTrip(first.restored, 15);
+
+      // The import normalizes authoring defaults (visible/editable/locked), so
+      // stability is asserted on the animation the file carries.
+      expect(JSON.parse(second.exported).tracks[0].channels).toEqual(JSON.parse(first.exported).tracks[0].channels);
+      expect(second.after).toEqual(first.after);
+    });
   });
 
 });

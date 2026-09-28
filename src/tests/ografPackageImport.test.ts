@@ -73,14 +73,15 @@ describe('OGraf package import', () => {
 
   it('refuses a repeated entry name and a prototype-sensitive segment in the admission rule', () => {
     // The writer cannot emit two members with the same name, so the rule is tested
-    // through the seam the archive reader itself uses.
+    // through the seam the archive reader itself uses: a deflated entry, whose
+    // materialised size is its uncompressed size.
     const state: PackagePreflightState = { count: 0, total: 0, names: new Set<string>() };
-    expect(admitPackageEntry({ name: 'scene.kcs', originalSize: 10 }, state)).toBe(true);
-    expect(admitPackageEntry({ name: 'SCENE.KCS', originalSize: 10 }, state)).toBe(false);
+    expect(admitPackageEntry({ name: 'scene.kcs', size: 10, originalSize: 10, compression: 8 }, state)).toBe(true);
+    expect(admitPackageEntry({ name: 'SCENE.KCS', size: 10, originalSize: 10, compression: 8 }, state)).toBe(false);
     expect(state.problem?.code).toBe('OGRAF_PACKAGE_DUPLICATE_PATH');
 
     const protoState: PackagePreflightState = { count: 0, total: 0, names: new Set<string>() };
-    expect(admitPackageEntry({ name: 'assets/__proto__/x.png', originalSize: 10 }, protoState)).toBe(false);
+    expect(admitPackageEntry({ name: 'assets/__proto__/x.png', size: 10, originalSize: 10, compression: 8 }, protoState)).toBe(false);
     expect(protoState.problem?.code).toBe('OGRAF_PACKAGE_UNSAFE_PATH');
   });
 
@@ -110,5 +111,82 @@ describe('OGraf package import', () => {
     expect(result.ok).toBe(true);
     expect(result.sceneText).toBe(scene);
     expect(codes(result)).toContain('OGRAF_PACKAGE_UNREADABLE_MANIFEST');
+  });
+
+  /** Rewrite one entry's declared sizes in the central directory, leaving its bytes. */
+  const tamperCentralDirectory = (
+    bytes: Uint8Array,
+    entryName: string,
+    sizes: { compressedSize?: number; uncompressedSize?: number },
+  ) => {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    let offset = view.getUint32(bytes.length - 6, true);
+    const decoder = new TextDecoder();
+    while (view.getUint32(offset, true) === 0x02014b50) {
+      const nameLength = view.getUint16(offset + 28, true);
+      const extraLength = view.getUint16(offset + 30, true);
+      const commentLength = view.getUint16(offset + 32, true);
+      const name = decoder.decode(bytes.subarray(offset + 46, offset + 46 + nameLength));
+      if (name === entryName) {
+        if (sizes.compressedSize !== undefined) view.setUint32(offset + 20, sizes.compressedSize, true);
+        if (sizes.uncompressedSize !== undefined) view.setUint32(offset + 24, sizes.uncompressedSize, true);
+      }
+      offset += 46 + nameLength + extraLength + commentLength;
+    }
+  };
+
+  it('bounds a stored entry by the bytes it actually materialises', () => {
+    // Astra F-05: a stored member larger than the per-entry limit declared a
+    // one-byte uncompressed size, and the budget trusted that declaration.
+    const payload = new Uint8Array(OGRAF_PACKAGE_LIMITS.entryBytes + 1);
+    const bytes = zipSync({ 'scene.kcs': encode(scene), 'payload.bin': payload }, { level: 0 });
+    tamperCentralDirectory(bytes, 'payload.bin', { uncompressedSize: 1 });
+
+    expect(codes(readOGrafPackage(bytes))).toEqual(['OGRAF_PACKAGE_INCONSISTENT_SIZE']);
+
+    // The same mismatch inside the per-entry limit is refused as well: a stored
+    // entry has one size, and two declarations mean neither can be trusted.
+    const small = zipSync({ 'scene.kcs': encode(scene), 'payload.bin': new Uint8Array(16) }, { level: 0 });
+    tamperCentralDirectory(small, 'payload.bin', { uncompressedSize: 1 });
+    expect(codes(readOGrafPackage(small))).toEqual(['OGRAF_PACKAGE_INCONSISTENT_SIZE']);
+  });
+
+  it('counts every member by the bytes it will materialise against the total budget', () => {
+    // A deflated archive is tiny while its declared contents are not: each member
+    // is inside the per-entry limit, and together they are not.
+    const compressible = new Uint8Array(30 * 1024 * 1024);
+    const bytes = zipSync({
+      'scene.kcs': encode(scene),
+      'a.bin': compressible,
+      'b.bin': compressible,
+      'c.bin': compressible,
+    });
+
+    expect(bytes.length).toBeLessThan(OGRAF_PACKAGE_LIMITS.totalBytes);
+    expect(codes(readOGrafPackage(bytes))).toEqual(['OGRAF_PACKAGE_TOO_LARGE']);
+  });
+
+  it('bounds a deflated entry by the buffer it will be inflated into', () => {
+    const payload = new Uint8Array(OGRAF_PACKAGE_LIMITS.entryBytes + 1);
+    const bytes = zipSync({ 'scene.kcs': encode(scene), 'payload.bin': payload });
+
+    expect(codes(readOGrafPackage(bytes))).toEqual(['OGRAF_PACKAGE_ENTRY_TOO_LARGE']);
+  });
+
+  it('refuses a compression method whose materialised size cannot be bounded', () => {
+    const bytes = zipSync({ 'scene.kcs': encode(scene) });
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const offset = view.getUint32(bytes.length - 6, true);
+    view.setUint16(offset + 10, 99, true); // method on the scene.kcs entry
+
+    expect(codes(readOGrafPackage(bytes))).toEqual(['OGRAF_PACKAGE_UNSUPPORTED_COMPRESSION']);
+  });
+
+  it('still reads a package whose stored entries declare consistent sizes', () => {
+    const bytes = zipSync({ 'demo.ograf.json': encode(manifest), 'scene.kcs': encode(scene) }, { level: 0 });
+    const result = readOGrafPackage(bytes);
+
+    expect(result.ok).toBe(true);
+    expect(result.sceneText).toBe(scene);
   });
 });

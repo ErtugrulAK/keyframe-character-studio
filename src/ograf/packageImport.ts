@@ -6,11 +6,12 @@ import { hasCaseInsensitiveCollision, isPrototypeSensitiveKey, isReservedWindows
  * Reads an OGraf package back into the editable scene it was exported from.
  *
  * Preflight (`admitPackageEntry`) runs on each central-directory entry immediately
- * before that entry is inflated: its name is validated and its declared size
+ * before that entry is inflated: its name is validated and the bytes it will
+ * actually materialise (by compression method, not by one declared field) are
  * counted, so no name can hide behind the result object and the cumulative
- * declared output is bounded before it is materialised. The post-unzip checks
- * below only confirm what the preflight already admitted.
-
+ * output is bounded before it is allocated. The post-unzip checks below only
+ * confirm what the preflight already admitted.
+ *
  * A package is a zip the exporter wrote; it always carries `scene.kcs`, the
  * canonical KCS scene. Importing therefore needs no reconstruction — it needs a
  * **guarded** decode: the archive is untrusted input, so entry count, entry size
@@ -117,18 +118,36 @@ export interface PackagePreflightProblem {
   action: string;
 }
 
+/** A central-directory entry as the archive reader hands it to the admission rule. */
+export interface PackageEntryHeader {
+  name: string;
+  /** Declared compressed size — the bytes a stored entry is copied from. */
+  size: number;
+  /** Declared uncompressed size — the buffer a deflated entry is inflated into. */
+  originalSize: number;
+  /** ZIP compression method: `0` stored, `8` deflate. */
+  compression: number;
+}
+
 /**
  * Validates one archive member from its central-directory entry, immediately
  * before the library inflates it: its name is normalised and checked against the
- * same authorities the rest of the app uses, and its declared size counts against
- * the per-entry and total budgets. Returning `false` keeps that entry out, so the
- * archive never materialises more than the budget allows.
+ * same authorities the rest of the app uses, and the size it will *materialise*
+ * counts against the per-entry and total budgets. Returning `false` keeps that
+ * entry out, so the archive never materialises more than the budget allows.
+ *
+ * The budget is taken from the compression method rather than from one
+ * attacker-chosen field, because the two declared sizes mean different things:
+ * a stored entry is copied from its compressed size, while a deflated entry is
+ * inflated into a buffer of its uncompressed size (the reader never grows a
+ * caller-provided buffer). A stored entry declaring two different sizes, or a
+ * method the reader cannot bound, is refused instead of counted.
  *
  * Exported because it is the archive rule itself: the writer cannot emit two
  * members with the same name, so the duplicate branch is only reachable here.
  */
 export const admitPackageEntry = (
-  file: { name: string; originalSize: number },
+  file: PackageEntryHeader,
   state: PackagePreflightState,
 ): boolean => {
   state.count += 1;
@@ -136,8 +155,19 @@ export const admitPackageEntry = (
     state.problem ??= { code: 'OGRAF_PACKAGE_TOO_MANY_ENTRIES', path: file.name, message: `The package carries more than the ${OGRAF_PACKAGE_LIMITS.entries}-file import limit.`, action: 'Import a package the exporter produced without extra files.' };
     return false;
   }
-  state.total += file.originalSize;
-  if (file.originalSize > OGRAF_PACKAGE_LIMITS.entryBytes) {
+  if (file.compression !== 0 && file.compression !== 8) {
+    state.problem ??= { code: 'OGRAF_PACKAGE_UNSUPPORTED_COMPRESSION', path: file.name, message: `The package contains an entry compressed with method ${file.compression}, which the importer cannot bound.`, action: 'Export the graphic again; a package the exporter wrote stores or deflates its entries.' };
+    return false;
+  }
+  // A stored entry is copied byte for byte, so the two declared sizes have to be
+  // the same one; a mismatch means one of them is wrong and neither is trusted.
+  if (file.compression === 0 && file.size !== file.originalSize) {
+    state.problem ??= { code: 'OGRAF_PACKAGE_INCONSISTENT_SIZE', path: file.name, message: 'The package contains a stored entry that declares two different sizes.', action: 'Export the graphic again and import the new package.' };
+    return false;
+  }
+  const materializedBytes = file.compression === 0 ? file.size : file.originalSize;
+  state.total += materializedBytes;
+  if (materializedBytes > OGRAF_PACKAGE_LIMITS.entryBytes) {
     state.problem ??= { code: 'OGRAF_PACKAGE_ENTRY_TOO_LARGE', path: file.name, message: 'The package carries a file larger than the import limit.', action: 'Import a package without that file.' };
     return false;
   }

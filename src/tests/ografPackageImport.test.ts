@@ -137,40 +137,49 @@ describe('OGraf package import', () => {
 
   it('bounds a stored entry by the bytes it actually materialises', () => {
     // Astra F-05: a stored member larger than the per-entry limit declared a
-    // one-byte uncompressed size, and the budget trusted that declaration.
+    // one-byte uncompressed size, and the budget trusted that declaration. A
+    // stored member is copied from its compressed size, so the two declared
+    // sizes are the same one; a disagreement is refused instead of trusted.
     const payload = new Uint8Array(OGRAF_PACKAGE_LIMITS.entryBytes + 1);
     const bytes = zipSync({ 'scene.kcs': encode(scene), 'payload.bin': payload }, { level: 0 });
     tamperCentralDirectory(bytes, 'payload.bin', { uncompressedSize: 1 });
 
     expect(codes(readOGrafPackage(bytes))).toEqual(['OGRAF_PACKAGE_INCONSISTENT_SIZE']);
-
-    // The same mismatch inside the per-entry limit is refused as well: a stored
-    // entry has one size, and two declarations mean neither can be trusted.
-    const small = zipSync({ 'scene.kcs': encode(scene), 'payload.bin': new Uint8Array(16) }, { level: 0 });
-    tamperCentralDirectory(small, 'payload.bin', { uncompressedSize: 1 });
-    expect(codes(readOGrafPackage(small))).toEqual(['OGRAF_PACKAGE_INCONSISTENT_SIZE']);
   });
 
-  it('counts every member by the bytes it will materialise against the total budget', () => {
-    // A deflated archive is tiny while its declared contents are not: each member
-    // is inside the per-entry limit, and together they are not.
-    const compressible = new Uint8Array(30 * 1024 * 1024);
-    const bytes = zipSync({
-      'scene.kcs': encode(scene),
-      'a.bin': compressible,
-      'b.bin': compressible,
-      'c.bin': compressible,
-    });
+  it('measures each member by the bytes it will materialise', () => {
+    // The end-to-end cases above would each have to allocate a full limit-sized
+    // payload; the rule itself is exercised through the seam the reader uses.
+    const state = (): PackagePreflightState => ({ count: 0, total: 0, names: new Set<string>() });
+    const atLimit = OGRAF_PACKAGE_LIMITS.entryBytes;
 
-    expect(bytes.length).toBeLessThan(OGRAF_PACKAGE_LIMITS.totalBytes);
-    expect(codes(readOGrafPackage(bytes))).toEqual(['OGRAF_PACKAGE_TOO_LARGE']);
-  });
+    // A stored member declaring two different sizes, at any magnitude.
+    const inconsistent = state();
+    expect(admitPackageEntry({ name: 'a.bin', size: 16, originalSize: 1, compression: 0 }, inconsistent)).toBe(false);
+    expect(inconsistent.problem?.code).toBe('OGRAF_PACKAGE_INCONSISTENT_SIZE');
 
-  it('bounds a deflated entry by the buffer it will be inflated into', () => {
-    const payload = new Uint8Array(OGRAF_PACKAGE_LIMITS.entryBytes + 1);
-    const bytes = zipSync({ 'scene.kcs': encode(scene), 'payload.bin': payload });
+    // A stored member is measured by its real size, which here is the archived one.
+    const storedTooLarge = state();
+    expect(admitPackageEntry({ name: 'a.bin', size: atLimit + 1, originalSize: atLimit + 1, compression: 0 }, storedTooLarge)).toBe(false);
+    expect(storedTooLarge.problem?.code).toBe('OGRAF_PACKAGE_ENTRY_TOO_LARGE');
 
-    expect(codes(readOGrafPackage(bytes))).toEqual(['OGRAF_PACKAGE_ENTRY_TOO_LARGE']);
+    // A deflated member is measured by the buffer it is inflated into.
+    const deflatedTooLarge = state();
+    expect(admitPackageEntry({ name: 'a.bin', size: 8, originalSize: atLimit + 1, compression: 8 }, deflatedTooLarge)).toBe(false);
+    expect(deflatedTooLarge.problem?.code).toBe('OGRAF_PACKAGE_ENTRY_TOO_LARGE');
+
+    // Every member is counted against the total budget, not just the largest one.
+    const overBudget = state();
+    const memberBytes = Math.ceil(OGRAF_PACKAGE_LIMITS.totalBytes / 3);
+    expect(admitPackageEntry({ name: 'a.bin', size: 8, originalSize: memberBytes, compression: 8 }, overBudget)).toBe(true);
+    expect(admitPackageEntry({ name: 'b.bin', size: 8, originalSize: memberBytes, compression: 8 }, overBudget)).toBe(true);
+    expect(admitPackageEntry({ name: 'c.bin', size: 8, originalSize: memberBytes, compression: 8 }, overBudget)).toBe(false);
+    expect(overBudget.problem?.code).toBe('OGRAF_PACKAGE_TOO_LARGE');
+
+    // A method whose materialised size cannot be bounded is refused.
+    const unbounded = state();
+    expect(admitPackageEntry({ name: 'a.bin', size: 8, originalSize: 8, compression: 99 }, unbounded)).toBe(false);
+    expect(unbounded.problem?.code).toBe('OGRAF_PACKAGE_UNSUPPORTED_COMPRESSION');
   });
 
   it('refuses a compression method whose materialised size cannot be bounded', () => {

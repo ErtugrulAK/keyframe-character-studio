@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { useSerialization } from '../hooks/useSerialization';
+import type { ImportResult } from '../utils/importValidation';
 import type { SceneLayer } from '../types/composition';
 
 /**
@@ -78,8 +79,14 @@ describe('project import applies atomically', () => {
 
     // The boundary accepts both documents (arrays at the top level), while the
     // apply path cannot convert their nested values.
-    const channelShape = hook.result.current.importProject(sceneText({ tracks: [{ partId: 'p', channels: { x: { length: 1 } } }] }));
-    const templateShape = hook.result.current.importProject(sceneText({ motionTemplates: [null] }));
+    // Applying a document updates the hook's own saved-at state, so the calls
+    // run inside `act` exactly as they do from the editor's event handlers.
+    let channelShape!: ImportResult;
+    let templateShape!: ImportResult;
+    act(() => {
+      channelShape = hook.result.current.importProject(sceneText({ tracks: [{ partId: 'p', channels: { x: { length: 1 } } }] }));
+      templateShape = hook.result.current.importProject(sceneText({ motionTemplates: [null] }));
+    });
 
     expect(channelShape.ok).toBe(false);
     expect(templateShape.ok).toBe(false);
@@ -91,7 +98,10 @@ describe('project import applies atomically', () => {
   it('applies a scene it can use', () => {
     const { hook, setters } = renderSerialization();
 
-    const result = hook.result.current.importProject(sceneText({}));
+    let result!: ImportResult;
+    act(() => {
+      result = hook.result.current.importProject(sceneText({}));
+    });
 
     expect(result.ok).toBe(true);
     expect(setters.setCharacterParts).toHaveBeenCalledTimes(1);

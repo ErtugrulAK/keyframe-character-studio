@@ -380,6 +380,20 @@ interface UseSerializationOptions {
   setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
+/**
+ * The serialization hook's public surface. Exported so consumers (and tests that
+ * have to hold a rendered hook's value) name the contract instead of deriving it
+ * from the implementation.
+ */
+export interface UseSerializationApi {
+  lastSavedAt: Date | null;
+  triggerManualSave: () => void;
+  exportProject: () => string;
+  importProject: (jsonStr: string, defaultName?: string) => ImportResult;
+  resetProject: () => void;
+  migrateLegacyCoordinates: () => boolean;
+}
+
 export const useSerialization = ({
   fps,
   setFps,
@@ -405,7 +419,7 @@ export const useSerialization = ({
   setTemplateCanvasStore,
   setCurrentFrame,
   setIsPlaying,
-}: UseSerializationOptions) => {
+}: UseSerializationOptions): UseSerializationApi => {
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
   // 1. Initial Load: Restore from LocalStorage (SceneData v1 or legacy AnimationProject)

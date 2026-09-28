@@ -1,6 +1,8 @@
-import { renderHook, act } from '@testing-library/react';
+import { renderHook as renderHookBase, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useSerialization } from '../hooks/useSerialization';
+import type { UseSerializationApi } from '../hooks/useSerialization';
+import type { ImportResult } from '../utils/importValidation';
 import { AnimationProject, CharacterPart, Keyframe, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
 import { makeEmptyChannels } from '../utils/defaults';
 import { evaluateTransform } from '../utils/evaluateTransform';
@@ -9,6 +11,36 @@ import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
 import { normalizeFeather, normalizeGradientAngle, normalizeGradientStops, normalizeGradientType } from '../utils/matte';
 import { resolveFreeformPath } from '../utils/freeform';
 import { buildBezierPathD, initializeSmoothHandles } from '../utils/bezierPath';
+
+/**
+ * `useSerialization` stamps its saved-at state while it applies or saves a
+ * document, and the editor makes those calls from React event handlers — in a
+ * test they are state updates, which React requires inside `act`. Every rendered
+ * hook goes through this wrapper, so the contract is stated once instead of at
+ * each of the call sites; `exportProject` stays untouched because it only reads.
+ */
+const renderHook = (callback: () => UseSerializationApi) => {
+  const rendered = renderHookBase(callback);
+  return {
+    ...rendered,
+    result: {
+      get current(): UseSerializationApi {
+        const live = rendered.result.current;
+        return {
+          ...live,
+          importProject: (text: string, name?: string): ImportResult => {
+            let outcome!: ImportResult;
+            act(() => { outcome = live.importProject(text, name); });
+            return outcome;
+          },
+          triggerManualSave: () => {
+            act(() => { live.triggerManualSave(); });
+          },
+        };
+      },
+    },
+  };
+};
 
 describe('useSerialization Hook', () => {
   const mockSetFps = vi.fn();

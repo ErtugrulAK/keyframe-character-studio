@@ -35,6 +35,15 @@ afterEach(() => {
 });
 
 /**
+ * React reports a state update that happens outside `act` only while this flag
+ * is set, and React Testing Library sets it for the duration of its own `act`
+ * calls alone. Without it here the same test reports nothing on a fast machine
+ * and prints the warning on a slower one, so the flag is declared for the whole
+ * run: the suite states the contract instead of leaving it to timing.
+ */
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+/**
  * jsdom has no canvas implementation: `HTMLCanvasElement.prototype.getContext`
  * logs "Not implemented" and returns null. The production text-measurement
  * helper (`src/utils/bounds.ts`) already falls back when the context is

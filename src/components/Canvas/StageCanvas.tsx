@@ -679,16 +679,17 @@ export const StageCanvas: React.FC = () => {
       const file = e.dataTransfer.files[0];
       const isVideo = file.type.startsWith('video/');
       const isImage = file.type.startsWith('image/');
-      
+
       if (isVideo || isImage) {
-        const url = URL.createObjectURL(file);
-        
-        // Check if dropped over an existing shape
+        // Which shape the drop landed on has to be decided now: the transfer's
+        // file list is emptied as soon as the handler returns.
+        const dropX = Math.round(svgX - EDITOR_CAMERA_CENTER.x);
+        const dropY = Math.round(svgY - EDITOR_CAMERA_CENTER.y);
         let targetShapeId = null;
         for (let i = characterParts.length - 1; i >= 0; i--) {
           const part = characterParts[i];
           const transform = getComputedTransform(part.id, currentFrame);
-          
+
           const dx = svgX - (EDITOR_CAMERA_CENTER.x + transform.x);
           const dy = svgY - (EDITOR_CAMERA_CENTER.y + transform.y);
           const rad = -transform.rotation * Math.PI / 180;
@@ -696,9 +697,9 @@ export const StageCanvas: React.FC = () => {
           const localY = dx * Math.sin(rad) + dy * Math.cos(rad);
           const unscaledX = localX / Math.abs(transform.scaleX || 1);
           const unscaledY = localY / Math.abs(transform.scaleY || 1);
-          
+
           const { halfW, halfH } = getPartBounds(part, transform);
-          
+
           if (Math.abs(unscaledX) <= halfW && Math.abs(unscaledY) <= halfH) {
             // Only mask if it's a shape type
             if (part.type === 'custom_rect' || part.type === 'custom_card' || part.type === 'custom_banner') {
@@ -708,15 +709,30 @@ export const StageCanvas: React.FC = () => {
           }
         }
 
-        if (targetShapeId) {
-          updatePartMedia(targetShapeId, url, isVideo ? 'video' : 'image');
-        } else {
-          // Drop in empty area -> create new media part
-          addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
-            baseTransform: { x: Math.round(svgX - EDITOR_CAMERA_CENTER.x), y: Math.round(svgY - EDITOR_CAMERA_CENTER.y), rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
-            ...(isVideo ? { videoUrl: url } : { imageUrl: url }),
-          });
-        }
+        // A `blob:` URL belongs to this document only: persisting one left the
+        // saved project pointing at an address that dies with the page, so the
+        // media came back as a broken image after a reload. The Media drawer
+        // already stores self-contained data URLs, so a drop uses that same
+        // durable form and keeps the file's bytes in the document.
+        const reader = new FileReader();
+        reader.onload = () => {
+          const url = reader.result;
+          if (typeof url !== 'string') {
+            showToast(`"${file.name}" could not be read.`, 'error');
+            return;
+          }
+          if (targetShapeId) {
+            updatePartMedia(targetShapeId, url, isVideo ? 'video' : 'image');
+          } else {
+            // Drop in empty area -> create new media part
+            addCustomPart(isVideo ? 'custom_video' : 'custom_image', file.name, {
+              baseTransform: { x: dropX, y: dropY, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+              ...(isVideo ? { videoUrl: url } : { imageUrl: url }),
+            });
+          }
+        };
+        reader.onerror = () => showToast(`"${file.name}" could not be read.`, 'error');
+        reader.readAsDataURL(file);
         return;
       }
     }

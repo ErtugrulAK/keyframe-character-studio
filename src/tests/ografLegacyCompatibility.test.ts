@@ -50,6 +50,20 @@ describe('legacy OGraf asset compatibility', () => {
     expect(new TextDecoder().decode(files['graphic.mjs'])).not.toContain('data:image/svg+xml');
   });
 
+  test('packages a dropped image\'s data URL into the export', async () => {
+    // The stage stores a dropped file as a data URL (the same durable form the
+    // Media drawer writes), so the export has to resolve that form.
+    const pixelPng = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=';
+    const prepared = prepareLegacyOGrafExport(makeScene(makeLayer({ imageUrl: `data:image/png;base64,${pixelPng}` })));
+    const result = prepared instanceof Promise ? await prepared : prepared;
+    const packagedPath = result.sceneData.layers[0].imageUrl || '';
+
+    expect(packagedPath).toMatch(/^assets\/images\/legacy-[0-9a-f]{8}\.png$/u);
+    const bytes = result.options.assetCatalog?.[packagedPath]?.binaryContent;
+    expect(bytes ? new TextDecoder().decode(bytes.subarray(1, 4)) : '').toBe('PNG');
+    expect(compileOGrafPackage(result.sceneData, result.options).status).toBe('ready-to-materialize');
+  });
+
   test('keeps remote and executable image sources rejected by the canonical policy', () => {
     for (const imageUrl of ['https://example.com/image.png', 'javascript:alert(1)', 'file:///tmp/image.png', 'data:text/html;base64,PGh0bWw+', unsafeSvgUrl]) {
       const plan = compileOGrafPackage(makeScene(makeLayer({ imageUrl })));

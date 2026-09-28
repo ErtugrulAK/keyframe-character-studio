@@ -250,6 +250,45 @@ const masksProblem = (value: unknown, path: string, owner: string): SceneProblem
   return undefined;
 };
 
+/**
+ * The layer values that are handed to a renderer, a geometry helper or the
+ * matte authority. Both the scene layer shape and the legacy part shape reach
+ * the same renderers, so the rules live in one place.
+ */
+const sharedLayerValueProblem = (record: Record<string, unknown>, path: string, owner: string): SceneProblem | undefined => {
+  if (record.points !== undefined) {
+    const points = pointListProblem(record.points, `${path}.points`, owner, 'KCS_IMPORT_INVALID_LAYER');
+    if (points) return points;
+  }
+  if (record.path !== undefined) {
+    const pathShape = pathProblem(record.path, `${path}.path`, owner, 'KCS_IMPORT_INVALID_LAYER');
+    if (pathShape) return pathShape;
+  }
+  if (record.masks !== undefined) {
+    const masks = masksProblem(record.masks, `${path}.masks`, owner);
+    if (masks) return masks;
+  }
+  for (const field of ['matte', 'trackMatte'] as const) {
+    if (record[field] !== undefined && !asRecord(record[field])) {
+      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.${field}`, `${owner} declares a ${field} that is not an object.`);
+    }
+  }
+  if (record.booleanOperandIds !== undefined
+    && !(Array.isArray(record.booleanOperandIds) && record.booleanOperandIds.every((entry) => typeof entry === 'string'))) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.booleanOperandIds`, `${owner} lists boolean operands that are not layer ids.`);
+  }
+  if (record.booleanContours !== undefined) {
+    if (!Array.isArray(record.booleanContours)) {
+      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.booleanContours`, `${owner} carries boolean contours that are not a list.`);
+    }
+    for (const [contourIndex, contour] of record.booleanContours.entries()) {
+      const contourProblem = pointListProblem(contour, `${path}.booleanContours[${contourIndex}]`, owner, 'KCS_IMPORT_INVALID_LAYER');
+      if (contourProblem) return contourProblem;
+    }
+  }
+  return undefined;
+};
+
 const layerProblem = (value: unknown, index: number, seenIds: Set<string>): SceneProblem | undefined => {
   const path = `$.layers[${index}]`;
   const record = asRecord(value);
@@ -290,37 +329,71 @@ const layerProblem = (value: unknown, index: number, seenIds: Set<string>): Scen
   }
 
   const owner = `Layer "${id}"`;
-  if (record.points !== undefined) {
-    const points = pointListProblem(record.points, `${path}.points`, owner, 'KCS_IMPORT_INVALID_LAYER');
-    if (points) return points;
+  return sharedLayerValueProblem(record, path, owner);
+};
+
+/**
+ * A `characterParts` entry of a legacy project document.
+ *
+ * The legacy apply path keeps the part verbatim (`setCharacterParts(parsed.characterParts)`),
+ * so unlike a scene layer — which `fromSceneData` normalizes with defaults —
+ * nothing here can fall back on a documented default. Only the fields that path
+ * actually dereferences are required; every other consumed field is checked
+ * when present, exactly like the scene pass.
+ */
+const legacyPartProblem = (value: unknown, index: number, seenIds: Set<string>): SceneProblem | undefined => {
+  const path = `$.characterParts[${index}]`;
+  const record = asRecord(value);
+  if (!record) return sceneProblem('KCS_IMPORT_INVALID_LAYER', path, `Layer ${index} of the legacy project is not an object.`);
+
+  const id = record.id;
+  if (typeof id !== 'string' || id.length === 0) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.id`, `Layer ${index} has no usable id, and the editor addresses every layer by id.`);
   }
-  if (record.path !== undefined) {
-    const pathShape = pathProblem(record.path, `${path}.path`, owner, 'KCS_IMPORT_INVALID_LAYER');
-    if (pathShape) return pathShape;
+  if (seenIds.has(id)) {
+    return sceneProblem(
+      'KCS_IMPORT_DUPLICATE_LAYER_ID',
+      `${path}.id`,
+      `Two layers share the id "${id}", so only one of them can be selected and animated.`,
+      'Give the layers distinct ids in the source document, or re-export the project.',
+    );
   }
-  if (record.masks !== undefined) {
-    const masks = masksProblem(record.masks, `${path}.masks`, owner);
-    if (masks) return masks;
+  seenIds.add(id);
+
+  if (typeof record.type !== 'string' || record.type.length === 0) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.type`, `Layer "${id}" has no type, so no renderer can draw it.`);
   }
-  for (const field of ['matte', 'trackMatte'] as const) {
-    if (record[field] !== undefined && !asRecord(record[field])) {
-      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.${field}`, `${owner} declares a ${field} that is not an object.`);
+  if (!isFiniteNumberValue(record.zIndex)) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.zIndex`, `Layer "${id}" has no finite z-order, so the draw order cannot be resolved.`);
+  }
+
+  // The evaluator multiplies every one of these without a default, so a missing
+  // or non-numeric field would reach the stage as NaN rather than an error.
+  const baseTransform = asRecord(record.baseTransform);
+  if (!baseTransform) {
+    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.baseTransform`, `Layer "${id}" has no base transform, which the evaluator reads for every frame.`);
+  }
+  for (const field of ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const) {
+    if (!isFiniteNumberValue(baseTransform[field])) {
+      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.baseTransform.${field}`, `Layer "${id}" has a base transform without a finite ${field}.`);
     }
   }
-  if (record.booleanOperandIds !== undefined
-    && !(Array.isArray(record.booleanOperandIds) && record.booleanOperandIds.every((entry) => typeof entry === 'string'))) {
-    return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.booleanOperandIds`, `${owner} lists boolean operands that are not layer ids.`);
-  }
-  if (record.booleanContours !== undefined) {
-    if (!Array.isArray(record.booleanContours)) {
-      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.booleanContours`, `${owner} carries boolean contours that are not a list.`);
-    }
-    for (const [contourIndex, contour] of record.booleanContours.entries()) {
-      const contourProblem = pointListProblem(contour, `${path}.booleanContours[${contourIndex}]`, owner, 'KCS_IMPORT_INVALID_LAYER');
-      if (contourProblem) return contourProblem;
+
+  for (const field of NUMERIC_LAYER_FIELDS) {
+    if (field === 'zIndex') continue;
+    const fieldValue = record[field];
+    if (fieldValue !== undefined && !isFiniteNumberValue(fieldValue)) {
+      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.${field}`, `Layer "${id}" has a non-numeric ${field}.`);
     }
   }
-  return undefined;
+  for (const field of STRING_LAYER_FIELDS) {
+    const fieldValue = record[field];
+    if (fieldValue !== undefined && typeof fieldValue !== 'string') {
+      return sceneProblem('KCS_IMPORT_INVALID_LAYER', `${path}.${field}`, `Layer "${id}" has a ${field} that is not text, which the renderer cannot draw.`);
+    }
+  }
+
+  return sharedLayerValueProblem(record, path, `Layer "${id}"`);
 };
 
 /** Numeric channels (`channels`, `maskChannels`): the evaluator interpolates every value. */
@@ -417,6 +490,28 @@ const trackProblem = (value: unknown, index: number): SceneProblem | undefined =
   }
   if (record.sequencerTemplateId !== undefined && typeof record.sequencerTemplateId !== 'string') {
     return sceneProblem('KCS_IMPORT_INVALID_TRACK', `${path}.sequencerTemplateId`, `${owner} names a sequence that is not text.`);
+  }
+  return undefined;
+};
+
+/**
+ * The semantic pass over a legacy project document.
+ *
+ * The legacy shape is *applied* by a different path than a scene (the parts go
+ * into state verbatim and the tracks are migrated one by one), so it cannot
+ * reuse the scene pass — but it does read the same values at frame time. The
+ * track rules are shared; the part rules are the ones `legacyPartProblem`
+ * documents.
+ */
+const legacyProjectProblem = (project: LegacyProjectDocument): SceneProblem | undefined => {
+  const seenIds = new Set<string>();
+  for (const [index, part] of project.characterParts.entries()) {
+    const partProblem = legacyPartProblem(part, index, seenIds);
+    if (partProblem) return partProblem;
+  }
+  for (const [index, track] of project.tracks.entries()) {
+    const trackIssue = trackProblem(track, index);
+    if (trackIssue) return trackIssue;
   }
   return undefined;
 };
@@ -561,6 +656,16 @@ export const validateImportedDocument = (text: string): ImportValidationResult =
       `The document declares ${declaredLayers} layers/tracks, above the ${MAX_IMPORT_LAYERS} import limit.`,
       'Split the project into smaller templates before importing it.',
     );
+  }
+
+  // A legacy project is applied by its own path, so its consumer-facing values
+  // are checked here — before any state update — instead of surfacing as a
+  // broken stage after a "successful" import.
+  if (document.kind === 'legacy-project') {
+    const legacyProblem = legacyProjectProblem(document.project);
+    if (legacyProblem) {
+      return refuse(legacyProblem.code, legacyProblem.path, legacyProblem.message, legacyProblem.action);
+    }
   }
 
   // The legacy shape is accepted, but importing it runs a migration: say so

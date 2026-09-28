@@ -2392,6 +2392,48 @@ describe('useSerialization — M21 image matte serialization contract', () => {
     expect(restored.points).toEqual(legacyPoints);
   });
 
+  // ─── F-02: legacy project import boundary ───────────────────────────
+
+  describe('F-02 legacy project import boundary', () => {
+    it('refuses a legacy document the editor cannot apply, without touching state', () => {
+      const { result } = renderSerialization([]);
+      const setters = [
+        mockSetTracks, mockSetCharacterParts, mockSetMotionTemplates, mockSetSceneTitleState,
+        mockSetProjectTemplates, mockSetTemplateCanvasStore, mockSetActiveProjectTemplateIdState,
+        mockSetActiveTemplateIdState, mockSetFps, mockSetTotalFrames, mockSetProjectResolution,
+      ];
+      for (const setter of setters) setter.mockClear();
+
+      const outcome = result.current.importProject(
+        JSON.stringify({ version: '5.0', characterParts: [null], tracks: [], fps: 30, totalFrames: 60 }),
+        'Broken',
+      );
+
+      expect(outcome.ok).toBe(false);
+      expect(outcome.diagnostics[0]?.code).toBe('KCS_IMPORT_INVALID_LAYER');
+      for (const setter of setters) expect(setter).not.toHaveBeenCalled();
+    });
+
+    it('applies a legacy document that carries the values the editor reads', () => {
+      const { result } = renderSerialization([]);
+      mockSetCharacterParts.mockClear();
+
+      const outcome = result.current.importProject(JSON.stringify({
+        version: '5.0', fps: 24, totalFrames: 90,
+        characterParts: [{
+          id: 'p1', name: 'P', type: 'custom_rect', zIndex: 1,
+          baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+        }],
+        tracks: [],
+      }), 'Legacy');
+
+      expect(outcome.ok).toBe(true);
+      const parts = mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[];
+      expect(parts.map((part) => part.id)).toEqual(['p1']);
+      expect(mockSetFps).toHaveBeenCalledWith(24);
+    });
+  });
+
   // ─── F-01: mixed legacy composite + canonical channels ──────────────
 
   /**

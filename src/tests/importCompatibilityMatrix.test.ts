@@ -23,7 +23,17 @@ const LEGACY_PROJECT = {
   sceneTitle: 'Legacy Fixture',
   fps: 24,
   totalFrames: 48,
-  characterParts: [{ id: 'part-1', name: 'Head', type: 'head' }],
+  // The legacy apply path keeps each part verbatim, so the fixture carries the
+  // values that path dereferences: id, type, z-order and a full base transform.
+  characterParts: [{
+    id: 'part-1',
+    name: 'Head',
+    type: 'head',
+    zIndex: 1,
+    fillColor: '#ffffff',
+    strokeColor: '#000000',
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+  }],
   tracks: [{ id: 'track-1', partId: 'part-1', channels: {}, keyframes: [] }],
   motionTemplates: [{ id: 'seq-1', name: 'Sequence' }],
 };

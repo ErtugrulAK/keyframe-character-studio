@@ -214,6 +214,16 @@ describe('KCS import boundary — values the renderers and the evaluator read', 
 });
 
 describe('project import boundary', () => {
+  /** The smallest legacy project the editor can actually apply. */
+  const legacyProject = (overrides: Record<string, unknown> = {}) => JSON.stringify({
+    characterParts: [{
+      id: 'p1', name: 'Part', type: 'custom_rect', zIndex: 1,
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    }],
+    tracks: [{ partId: 'p1', channels: {} }],
+    ...overrides,
+  });
+
   it('accepts a current scene document', () => {
     const result = validateImportedDocument(JSON.stringify({ version: 1, name: 'Scene', layers: [], tracks: [] }));
 
@@ -222,7 +232,7 @@ describe('project import boundary', () => {
   });
 
   it('accepts a legacy project document', () => {
-    const result = validateImportedDocument(JSON.stringify({ characterParts: [{ id: 'p1' }], tracks: [{ partId: 'p1', channels: {} }] }));
+    const result = validateImportedDocument(legacyProject());
 
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.document.kind).toBe('legacy-project');
@@ -267,5 +277,88 @@ describe('project import boundary', () => {
     const characterParts = Array.from({ length: MAX_IMPORT_LAYERS + 1 }, (_, index) => ({ id: `p${index}` }));
 
     expect(refusalCode(JSON.stringify({ characterParts, tracks: [] }))).toBe('KCS_IMPORT_TOO_MANY_LAYERS');
+  });
+});
+
+/**
+ * A legacy project reaches the stage through its own apply path, which keeps
+ * every part verbatim — so a part the renderers cannot lay out used to import
+ * "successfully" and only fail later, when the editor tried to draw it.
+ */
+describe('KCS import boundary — legacy project values the editor applies verbatim', () => {
+  const part = (overrides: Record<string, unknown> = {}) => ({
+    id: 'p1', name: 'Part', type: 'custom_rect', zIndex: 1,
+    fillColor: '#ffffff', strokeColor: '#000000',
+    baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    ...overrides,
+  });
+  const legacyProject = (characterParts: unknown[], tracks: unknown[] = []) =>
+    JSON.stringify({ version: '5.0', characterParts, tracks, fps: 30, totalFrames: 60 });
+
+  const refusal = (characterParts: unknown[], tracks: unknown[] = []) => {
+    const result = validateImportedDocument(legacyProject(characterParts, tracks));
+    return result.ok ? undefined : result.diagnostics[0];
+  };
+
+  it('refuses a part that is not an object instead of applying it', () => {
+    const diagnostic = refusal([null]);
+
+    expect(diagnostic?.code).toBe('KCS_IMPORT_INVALID_LAYER');
+    expect(diagnostic?.path).toBe('$.characterParts[0]');
+    expect(diagnostic?.action.length).toBeGreaterThan(0);
+  });
+
+  it('refuses a part without a usable id, type or z-order', () => {
+    expect(refusal([part({ id: undefined })])?.path).toBe('$.characterParts[0].id');
+    expect(refusal([part({ id: '' })])?.path).toBe('$.characterParts[0].id');
+    expect(refusal([part({ type: undefined })])?.path).toBe('$.characterParts[0].type');
+    expect(refusal([part({ zIndex: 'first' })])?.path).toBe('$.characterParts[0].zIndex');
+  });
+
+  it('refuses a part whose base transform the evaluator cannot multiply', () => {
+    expect(refusal([part({ baseTransform: undefined })])?.path).toBe('$.characterParts[0].baseTransform');
+    expect(refusal([part({ baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 } })])?.path)
+      .toBe('$.characterParts[0].baseTransform.opacity');
+    expect(refusal([part({ baseTransform: { ...part().baseTransform, y: 'top' } })])?.path)
+      .toBe('$.characterParts[0].baseTransform.y');
+  });
+
+  it('refuses duplicate ids and non-numeric renderer fields', () => {
+    expect(refusal([part(), part({ id: 'p1' })])?.code).toBe('KCS_IMPORT_DUPLICATE_LAYER_ID');
+    expect(refusal([part({ textValue: { nested: true } })])?.path).toBe('$.characterParts[0].textValue');
+    expect(refusal([part({ fontSize: Number.NaN })])?.path).toBe('$.characterParts[0].fontSize');
+  });
+
+  it('refuses a track whose channels or keyframes the evaluator cannot read', () => {
+    const track = (overrides: Record<string, unknown>) => ({ partId: 'p1', channels: {}, ...overrides });
+
+    expect(refusal([part()], [track({ partId: undefined })])?.path).toBe('$.tracks[0].partId');
+    expect(refusal([part()], [track({ channels: { x: [{ id: 'k', frame: 0, value: Number.NaN, easing: 'linear' }] } })])?.path)
+      .toBe('$.tracks[0].channels.x[0].value');
+    expect(refusal([part()], [track({ keyframes: [{ id: 'k', frame: 'zero', transform: {} }] })])?.path)
+      .toBe('$.tracks[0].keyframes[0]');
+  });
+
+  it('still accepts a legacy project that carries the values the editor reads', () => {
+    const path = {
+      version: 1,
+      coordinateSpace: 'local',
+      closed: true,
+      points: [{ x: 0, y: 0 }, { x: 40, y: 0 }, { x: 40, y: 40 }],
+    };
+    const result = validateImportedDocument(legacyProject(
+      [part({ path, points: [{ x: 0, y: 0 }, { x: 5, y: 5 }], masks: [{ id: 'm1', path }] })],
+      [{
+        partId: 'p1',
+        channels: { x: [{ id: 'cx', frame: 0, value: 12, easing: 'linear' }] },
+        keyframes: [{ id: 'kf', frame: 0, transform: { x: 1, y: 2 }, easing: 'linear' }],
+      }],
+    ));
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.document.kind).toBe('legacy-project');
+      expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toContain('KCS_IMPORT_LEGACY_MIGRATED');
+    }
   });
 });

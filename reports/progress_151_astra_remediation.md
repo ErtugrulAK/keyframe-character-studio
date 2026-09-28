@@ -230,8 +230,11 @@ the export/Lottie/matte browser specs, and the UI tasks ran their own browser sm
 - F-03: 103 tests in `lottieImport.test.ts` plus `e2e/lottie-import-report.spec.ts` (3 tests).
 - F-04: `ografExport`/`ografGeneratedParity`/`ografSvg`/`ografV6Parity`/`ografDiagnostics` (114 tests),
   `qa:release` (2), `qa:v6` (3).
-- F-05: 14 tests in `ografPackageImport.test.ts`, including the tampered stored member and the
-  deflated total-budget case.
+- F-05: 13 tests in `ografPackageImport.test.ts`: the tampered stored member end to end, the
+  per-method size and total-budget rules through the reader's own seam, and the unsupported-method
+  refusal. (The first version of these tests allocated ~150 MB of payloads, which made an unrelated
+  allocation-heavy test in the same file time out under parallel load; the rule-level cases replaced
+  the redundant end-to-end ones, and the file is now faster than before the fix.)
 - F-06: `e2e/dropped-media-persistence.spec.ts` passed with the fix and was shown to fail against the
   pre-fix handler (it persisted `blob:http://127.0.0.1:5188/…`).
 - F-07: 29 tests in `usePresets.test.ts`.

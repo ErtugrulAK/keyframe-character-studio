@@ -1,140 +1,92 @@
 # KCS ChatGPT One-File Handoff
+
 ## 0. Upload Instructions
 
-- This file is rebuilt from the current `chatgpt_handoff/latest/` bundle; it is not an archive.
-- Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
-- Repository root: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
-- `C:\Users\ertugrul.ak\Desktop\KCS` and `C:\Users\ertugrul.ak\Desktop\ograf-graphics` were not touched.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
+
+Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`. External QA folders are untouched.
 
 ---
 
 ## 1. OMP Final Response
 
-# KCS Final Astra Remediation — OMP Response
+# KCS Authoring Publication — 2026-10-05
 
-## 1) Phase 0 baseline
+## Scope
 
-The run started from clean synchronized `main` at `7daacce`, with green CI, a passing state check, a clean tree, zero audit findings, and no Git operation in progress.
+Publication starts from synchronized main at `703e45ab209530f20928cf5e13287b759276a33f`. The owner approved publication of the pending authoring changes, the active-sequence stage correction, six meaningful dated commits, fast-forward integration, and a normal push.
 
-## 2) Findings closed
+- Text Appearance supports stroke consistently in the canvas and OGraf renderer.
+- Position-only layer bonds reuse the existing inspector/history pipeline. Text and freeform layers participate in Boolean geometry through the existing geometry authority.
+- Opacity has an authoring control. Motion Curves edits the incoming segment selected by its end keyframe; a first keyframe has no incoming segment.
+- Sidebar transitions, transport controls, and Media/Texts drawers are reconciled with the current UI.
+- Same-frame property writes match the sequence identity. Edit-mode painted layers use the active sequence, matching their selection gizmos; Broadcast keeps its runtime sequence selection.
+- Browser contracts select valid incoming segments. Obsolete inspector wording/field-absence assertions were removed. Matte region probes capture one image per exact sample grid without changing thresholds or parity assertions.
 
-Nine findings were reproduced first, fixed one at a time on their own branch, and fast-forwarded into `main`:
+## Runtime evidence
 
-- F-01 mixed legacy/channel round trip — `2c6e013`
-- F-02 legacy project import validation — `b8718d2`
-- F-03 Lottie numeric property forms — `e19b5fe`
-- F-04 OGraf procedural animation — `8002659`
-- F-05 OGraf ZIP size accounting — `3fa71ff`
-- F-06 dropped-media persistence — `645927a`
-- F-07 preset storage boundaries — `c12d773`
-- F-08 naming-dialog focus lifecycle — `4cd276b`
-- F-09 React `act` warnings — `8a4ca22`
+A real browser drag moved the second-sequence circle by +100/+40 screen pixels while the default sequence retained x=-100. A bonded circle/text pair moved by the same -60/+20 screen-pixel delta. The named-sequence browser regression also checks painted geometry when switching sequences.
 
-F-10 (stale live-document claims) is the documentation reconciliation that carries this bundle: the README's type-check command, the replay-branch claim in `NEXT_SESSION.md` and `PROJECT_STATE.md`, and the unified import control.
+Current validation results are recorded in `PROJECT_STATE.md` and `NEXT_SESSION.md`. Historical Astra evidence in `progress_151_astra_remediation.md` remains a historical record, not this publication's verification report.
 
-## 3) What changed for users
+## Dating provenance
 
-- A scene saved with a partly canonical, partly legacy animation plays the same after loading it again.
-- A legacy project file that the editor cannot apply is refused before anything is replaced.
-- A Lottie document that separates its position into x/y, or writes keyframe handles per dimension, imports the animation it actually describes; an unreadable handle is reported instead of becoming a zero curve.
-- An OGraf export refuses a scene whose layer carries an in/out motion preset, because the exported graphic renders the timeline only and would otherwise play a different animation. `none` and `custom_timeline` stay exportable.
-- An OGraf package is measured by the bytes it will materialise, so a member cannot be admitted by under-declaring its size.
-- An image dropped on the stage is stored in the document itself and survives a reload.
-- A blocked or full `localStorage` no longer fails the preset library's mount or the edit that triggered the write.
-- The naming dialog keeps the keyboard inside itself, names its close control, and returns focus to its opener.
+The six author dates are owner-approved retrospective metadata: August 29, September 5, 12, 19, 26, and October 5, 2026. Committer dates reflect actual creation. Earlier author dates do not represent earlier uploads or prove work occurred on those days. Every group contains real changes; there are no empty contribution-filling commits.
 
-## 4) Validation
+No old-branch patch replay, rebase, reset, shared-history rewrite, force push, or branch deletion is authorized by this publication. Historical review branches remain intact. Publication uses `feature/studio-authoring-fixes`, a fast-forward into main, and a normal push. Remote publication and its CI result are verified separately after the local gate; this document does not predict their success.
 
-Per finding: focused tests, `npx tsc -b --pretty false`, `npm run lint`, `npm run build`, `npm run validate:ograf`, the full Vitest suite, the state check, and `git diff --check`; the OGraf tasks also ran `npm run qa:release` and `npm run qa:v6`, and the UI tasks ran their own real-browser smoke. Final suite: 128 files / 1,995 tests with no React `act` warning. Each implementation commit has its own green `main` CI run.
+## Protected release state
 
-## 5) Branch, commit, merge, and push summary
+H7 remains HOLD. Release tags, the draft prerelease, the private package, npm publication, external QA folders, `.hermes/desktop-attachments/`, and OMP configuration are unchanged.
 
-One branch per finding, fast-forward only, pushed to `origin/main`; the documentation branch `docs/audit-state-reconciliation` carries this reconciliation. No rebase, reset, force push, branch deletion, or history rewrite.
-
-## 6) Handoff paths
-
-- Bundle sources: `chatgpt_handoff\latest\`
-- Upload artifact: `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`
-- Engineering record: `reports\progress_151_astra_remediation.md`
-
-## 7) Release stance
-
-H7 remains HOLD. No tag was created, moved, or deleted; the GitHub draft prerelease was not published or finalized; nothing was published to npm. `v1.1.0-rc.1` remains at `46d2a3e59e065816d972dcd56951803951b577f6`, and the package remains private at `1.1.0-rc.1`.
-
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
 ---
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Astra remediation reconciliation
+# KCS Minimal ChatGPT Upload Bundle — Authoring Publication
 
-This is the clean, task-specific handoff for the post-hold Astra remediation run (findings F-01…F-10). It replaces the previous bundle; it is not an archive.
+This task-specific bundle covers the approved authoring publication from baseline `703e45a` on October 5, 2026. It is not an archive.
 
-## Current truth
+## Current scope
 
-- `main` contains the nine remediation implementation commits through `8a4ca22`, each fast-forwarded and each with its own green `main` CI run.
-- Mixed legacy/channel round trips: closed at `2c6e013`.
-- Legacy project import validation: closed at `b8718d2`.
-- Lottie numeric property forms: closed at `e19b5fe`.
-- OGraf procedural animation: closed at `8002659`.
-- OGraf ZIP size accounting: closed at `3fa71ff`.
-- Dropped-media persistence: closed at `645927a`.
-- Preset storage boundaries: closed at `c12d773`.
-- Naming-dialog focus lifecycle: closed at `4cd276b`.
-- React `act` warnings: closed at `8a4ca22`.
-- Stale live-document claims (F-10): closed by this reconciliation.
-- Milestone H remains complete through H6 and H7 remains HOLD. The release tag, draft prerelease, private package version, and npm publication state are unchanged.
+Text appearance/OGraf parity, layer bonds, Boolean text/freeform operands, opacity authoring, incoming-segment Motion Curves, sidebar/media/text presentation, and sequence write/render isolation are included. `OMP_FINAL_RESPONSE.md` explains runtime proof and retrospective author-date provenance; current local validation lives in the mirrored state documents. Remote publication and CI are checked after the local gate, not assumed here.
 
-## Verification baseline
+Six real change groups use owner-approved retrospective author dates from August 29 through October 5. Committer dates remain actual. No empty commits or published-history rewrite is used. Old local review branches are preserved rather than replayed.
 
-The final baseline passed TypeScript build mode, Oxlint, 128 Vitest files / 1,995 tests with no React `act` warning, the production build, OGraf validation, the release QA gate, the export/Lottie/matte/dropped-media/naming-dialog browser specs, V6 QA, the combined check, state consistency, `npm audit` with zero vulnerabilities, and diff hygiene.
+H7 remains HOLD. No tag, draft release, package version, or npm publication action is included.
 
 ## Files
 
-- `OMP_FINAL_RESPONSE.md` — remediation close-out response.
-- `progress_151_astra_remediation.md` — durable engineering record.
-- `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md` — current mirrored documents.
-- `manifest.txt` — bundle inventory and boundaries.
+- `OMP_FINAL_RESPONSE.md` — this publication's scope, evidence, and dating provenance.
+- `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md` — mirrored live documents.
+- `progress_151_astra_remediation.md` — retained historical Astra record; not current validation.
+- `manifest.txt` — inventory and boundaries.
 - `README.md` — this guide.
 
-The four mirrored documents are byte-equivalent to their repository sources after CRLF/LF normalization and whole-document trimming.
+The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming.
 
-## Deliberately omitted
+Source, tests, package files, workflows, binaries, archives, assets, caches, and QA output are not copied. Existing historical reports are not rewritten or deleted. External QA/workspace folders and OMP configuration are untouched.
 
-Source, tests, package files, workflows, historical reports, binaries, archives, assets, caches, and QA output are not copied. Historical reports remain in `reports/` and were not rewritten or deleted.
-
-Nothing was copied to `C:\Users\ertugrul.ak\Desktop\KCS` or `C:\Users\ertugrul.ak\Desktop\ograf-graphics`.
-
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. The files in this folder are its sources.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder contains its sources.
 
 ---
 
-## 3. Manifest
+## 3. Bundle Manifest
 
-# KCS ChatGPT Upload Manifest — Astra remediation reconciliation
+# KCS ChatGPT Upload Manifest — Authoring Publication
 
-Clean refreshed: YES
-Bundle scope: minimal and task-specific; not an archive
-Task record: reports/progress_151_astra_remediation.md
+Bundle scope: approved authoring publication, October 5, 2026; task-specific, not an archive
+Publication baseline: 703e45ab209530f20928cf5e13287b759276a33f
+Working branch: feature/studio-authoring-fixes
+Validation authority: current PROJECT_STATE.md and NEXT_SESSION.md
+Dating provenance: six owner-approved retrospective author dates; actual committer dates; no empty commits or shared-history rewrite
+Historical record retained: reports/progress_151_astra_remediation.md (not current validation)
+Release state: H7 HOLD; release tags, draft prerelease, private package and npm publication unchanged
+Remote push and CI: verified separately after the local gate; no success presumed in this inventory
 
-Implementation baseline: main at or after 8a4ca22
-F-01 mixed legacy/channel round trip: CLOSED at 2c6e013
-F-02 legacy project import validation: CLOSED at b8718d2
-F-03 Lottie numeric property forms: CLOSED at e19b5fe
-F-04 OGraf procedural animation: CLOSED at 8002659
-F-05 OGraf ZIP size accounting: CLOSED at 3fa71ff
-F-06 dropped-media persistence: CLOSED at 645927a
-F-07 preset storage boundaries: CLOSED at c12d773
-F-08 naming-dialog focus lifecycle: CLOSED at 4cd276b
-F-09 React act warnings: CLOSED at 8a4ca22
-F-10 stale live-document claims: CLOSED by this reconciliation
-Latest full suite: 128 files / 1,995 tests PASS, no React act warning
-Dependency audit: 0 vulnerabilities
-Release state: H7 HOLD; tag v1.1.0-rc.1 remains at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub release remains draft prerelease; package remains private at 1.1.0-rc.1; npm publish NO
-Non-blocking CI annotations: Node 20 action runtime forced to Node 24; announced ubuntu-latest migration to Ubuntu 26
-
-Copied files (8):
+Bundle source files (8):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - NEXT_SESSION.md
@@ -144,14 +96,14 @@ Copied files (8):
 - manifest.txt
 - progress_151_astra_remediation.md
 
-Omitted: source, tests, package/lock files, workflows, historical reports, binaries, archives, assets, caches, and QA output.
-Never touched: C:\Users\ertugrul.ak\Desktop\KCS; C:\Users\ertugrul.ak\Desktop\ograf-graphics; origin/without-mask; global OMP configuration.
+Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
+Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.
 
 ---
 
-## 4. Next Session Handoff
+## 4. Next Session
 
 # Next Session Handoff
 
@@ -166,6 +118,13 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files abov
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
 - Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch, now behind `main`; deleting it needs approval)
+
+## Authoring publication — 2026-10-05
+
+- The approved pending work is grouped into six commits: text appearance, layer authoring (bonds, Boolean text/freeform operands, opacity), timeline segment editing and transport, sidebar/media/text presentation, sequence write/render isolation, and documentation reconciliation.
+- The circle/selection-border split is fixed at the stage evaluation boundary: Edit uses the selected sequence, while Broadcast keeps its runtime selection. Same-frame property keyframes remain isolated across sequences.
+- Owner-approved author dates are retrospective metadata distributed across 2026-08-29, 2026-09-05, 2026-09-12, 2026-09-19, 2026-09-26, and 2026-10-05. Committer dates remain real. Do not interpret this as earlier uploads or proof of work on those dates; do not manufacture empty commits to fill the remaining days.
+- Preserve historical local branches; do not replay the old tangent/presentation work or the obsolete mask-gizmo patch. Normal fast-forward publication only; no force push, rebase, tag change, draft release publication, or npm publication.
 
 ## Current result
 
@@ -183,7 +142,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-On `main` at or after `8a4ca22`: TypeScript 7.0.2 and Vitest 5.0.2 pass `npx tsc -b --pretty false`, the full Vitest suite (128 files / 1,995 tests) with no React `act` warning, `npm run lint`, `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), the export/Lottie/matte/dropped-media/naming-dialog browser specs (10 tests), `npm run qa:v6` (3 tests), `npm run check`, `node scripts/check-state-consistency.mjs`, `npm audit` (0 vulnerabilities), and `git diff --check`. Each remediation commit has its own green `main` CI run.
+Authoring publication local gate on October 5, 2026: `npm run check` passed lint, TypeScript build mode, 130 Vitest files / 2,008 tests, and the production build. `npx tsc --noEmit`, `npm run validate:ograf`, and `npm run qa:release` (2 Chromium tests) also passed. Full Chromium verification passed all 255 tests with `--retries=0`; `npm run qa:v6` passed all 3 tests. State consistency passed 35 checks. One incidental sidebar visual-dimension test was deleted; actual collapse/reopen geometry, hidden controls, and compact-viewport reachability remain covered. The dependency audit now reports one moderate `fast-uri` advisory (GHSA-hrr3-gc8f-f4qj); dependency/package changes are outside this approved scope. Remote CI is checked after the normal push; earlier remediation CI is historical evidence, not proof for this publication.
 
 ## Next scoped work
 
@@ -213,7 +172,7 @@ On `main` at or after `8a4ca22`: TypeScript 7.0.2 and Vitest 5.0.2 pass `npx tsc
 ## Milestone B merged — graph + keyboard accessibility
 
 - Branch `feat/graph-accessibility` was fast-forward-merged into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` (no merge commit, no rebase, no history rewrite).
-- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; the selected-keyframe panel is a group scoped to its frame; focus rings were added for the diamonds and the graph points.
+- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; focus rings were added for the diamonds and the graph points.
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
@@ -241,24 +200,33 @@ Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candi
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
+## Authoring publication — 2026-10-05
+
+- The pending authoring work adds position-only layer bonds, text/freeform Boolean operands, text stroke parity between canvas and OGraf, and an opacity keyframe control. Timeline segment editing, transport layout, media/text drawers, and sidebar transitions are reconciled with the existing authorities.
+- Same-frame property edits now match the sequence identity. Edit-mode stage rendering evaluates the active sequence instead of hardcoding `Sequence`; the selection gizmo and painted geometry follow the same authored pose. Broadcast retains its runtime sequence selection.
+- Browser proof: a keyframed circle in the second sequence moves 100 screen pixels right and 40 down; the first sequence's x value remains -100. A bonded circle/text pair moves by the same -60/+20 screen-pixel delta.
+- Six meaningful publication groups use owner-approved retrospective author dates: 2026-08-29, 2026-09-05, 2026-09-12, 2026-09-19, 2026-09-26, and 2026-10-05. Committer dates record actual creation; these dates do not claim uploads or development occurred on those earlier days. No empty commits, old-branch replay, shared-history rewrite, or force push is part of this publication.
+- The old tangent and presentation review branches remain historical artefacts. The pre-architecture mask-gizmo patch is not replayed. Release tags, the held draft release, package publication, external QA folders, and OMP configuration remain unchanged.
+- Remaining dependency warning: the current audit reports one moderate `fast-uri` vulnerability (GHSA-hrr3-gc8f-f4qj). Remediation requires a separately approved dependency change; this publication does not run `npm audit fix`.
+
 ## Accepted baseline
 
 Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
 
-## Validation status (at the last reconciliation)
+## Validation status — authoring publication, 2026-10-05
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 128 files / 1,995 tests on Vitest 5.0.2, with no React `act` warning |
+| Full Vitest | PASS | 130 files / 2,008 tests; `npm run check` |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Chromium tests |
-| Focused browser smoke | PASS | export onboarding (1), Lottie import report (3), OGraf matte visual (4), dropped-media reload (1), naming-dialog focus (1) |
+| Full Chromium | PASS | 255 tests; `npx playwright test --project=chromium --retries=0`; V6 QA also passes its 3 tests |
 | State consistency | PASS | `node scripts/check-state-consistency.mjs` |
 | TypeScript | PASS | TypeScript 7.0.2; `npx tsc -b --pretty false` and the build/check paths pass |
 | Lint | PASS | Oxlint 1.85.0 clean, including unused-disable reporting at error severity |
 | Production build | PASS | Vite 8.3.0 production bundle |
-| Dependency audit | PASS | `npm audit` reports 0 vulnerabilities |
-| CI on `main` | PASS | maintenance commits `5cb8a45`, `b3f3c6c`, `2a313d7`, `feca773`, `37904fb` and the nine remediation commits through `8a4ca22`, each with its own green run |
+| Dependency audit | WARNING | `npm audit --audit-level=low`: one moderate `fast-uri` advisory, GHSA-hrr3-gc8f-f4qj; dependency changes are outside this approved publication scope |
+| Publication CI | SEPARATE REMOTE GATE | Checked after normal push; inspect the publication tip's GitHub Actions run rather than treating earlier Astra/maintenance CI as current evidence |
 
 ## Post-review correctness follow-up (complete)
 
@@ -310,7 +278,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 ## Milestone B merged — graph + keyboard accessibility
 
 - Branch `feat/graph-accessibility` was fast-forward-merged into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` (no merge commit, no rebase, no history rewrite).
-- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; the selected-keyframe panel is a group scoped to its frame; focus rings were added for the diamonds and the graph points.
+- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; focus rings were added for the diamonds and the graph points.
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
@@ -320,7 +288,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 
 ---
 
-## 6. Grouped Roadmap Execution Plan
+## 6. Grouped Roadmap
 
 # KCS Grouped Roadmap Execution Plan
 
@@ -401,7 +369,7 @@ Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items c
 
 ---
 
-## 7. Progress Report 151 — Astra Remediation
+## 7. Historical Astra Record
 
 # KCS Development Report — Astra Correctness/Security Remediation
 
@@ -783,13 +751,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- A layer **OPACITY** field in the Transform section, shown as a percentage next to an **Add/Remove Keyframe** button. The field writes through the same `opacity` channel the timeline already animates: while the channel has no keyframe it sets the layer's static opacity, and once it has one, the edit lands on the current frame (adding a keyframe there when the frame is empty) — so an entrance fade is authored by setting 0% on one frame and 100% on another, and each keyframe keeps its own value. It works for every layer kind: shapes, text, images, freeform and cloners.
+- Stroke controls for text: a text layer now owns the same fill/stroke paint as shapes, so the Appearance card and the Text card both expose its stroke colour, alpha, width and enable switch, and the canvas paints the authored outline instead of a fixed one. The outline defaults to the canonical 0.5 width text always had, the alignment control stays hidden for text (its renderer cannot split a centered stroke), and the OGraf export writes the authored stroke width, opacity and enabled state for text instead of a hardcoded 0.5.
+- Layers can be bonded to each other: select two (or more) layers and press **Bind** in the Inspector, and a position change on either one — a stage drag, the Inspector's position fields, or a multiple selection — moves the others by the same world-space delta. Rotation, scale and opacity stay independent, so a bond is not a parent-child transform; **Unbind** releases it. A copy, a mirrored duplicate and a Boolean group never inherit a bond, and an ancestor/descendant pair is refused with an explanation instead of being moved twice. The bond is saved with the document.
+- Boolean operations now accept more than the closed vector shapes: a freeform layer contributes its canonical path, and a text layer contributes its own traced outline — the letters themselves, counters included — so a text and a shape can be unioned, subtracted, intersected or excluded. A text the renderer draws differently (a staggered text animates per character) or an empty text is not offered as an operand, and an environment without a canvas reports the empty result instead of substituting a bounding box. The Inspector's Boolean hint and its section description name the operand kinds they now accept.
 - OGraf packages are importable: selecting the `.zip`/`.ograf` the exporter wrote opens a report and, on confirm, replaces the project with the scene the package carries. The archive is decoded in memory with entry-count, entry-size and package-path guards, prototype keys and unsafe, duplicate or reserved paths are refused, and a package without a scene is refused rather than half-imported.
 - One import control in the header instead of several: the selected file is classified by what it **contains**, so a KCS project, a legacy project, an OGraf manifest and a Lottie animation all import through the same button, each with its existing behaviour (and the Lottie animation still showing its report before anything is replaced).
 - A Lottie (bodymovin) import path: selecting a Lottie file parses it in memory and opens a report that lists the blockers and the losses with their source paths and next steps **before** anything is applied — Cancel leaves the project untouched, and only "Import and replace project" applies the scene through the same validated path the project import uses. Imported layers keep the shapes, text and images they had: a path, a rectangle, a rounded rectangle, an ellipse and a solid all become a freeform whose own path draws exactly the imported geometry, while text and images keep their existing KCS types — so an imported scene neither loses its curves nor risks an export refusal caused only by the layer type the importer picked.
 - A state consistency check for the repository: `node scripts/check-state-consistency.mjs` fails when the live documents contradict the tag/`main` SHA, when the roadmap and the next action disagree, or when the handoff bundle carries a stale status, a superseded upload instruction, source/test copies, collapsed Windows paths or secret markers.
 - A first-export path for new users: a labelled "First export help" panel next to Export lists the three steps, offers a readiness check that reports what would block an OGraf export (reusing the existing export diagnostics), and states that nothing is written until you export. The readiness answer is a pre-flight summary; a scene changed afterwards is recompiled when the export runs.
 - The timeline keyframe diamonds are keyboard operable: each one is a named button in the tab order, `Enter`/`Space` selects the keyframe and moves the playhead (and selects the part on the parent lane), and `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order.
-- The value graph's keyframe points are announced with their frame and value, and its decorative axes and curve stay out of the accessibility tree; the selected-keyframe panel is exposed as a group scoped to its frame.
+- The value graph's keyframe points are announced with their frame and value, and its decorative axes and curve stay out of the accessibility tree.
 - Bezier tangent handles can be authored directly on the stage: select a single freeform layer, click a vertex to reveal its handles, drag a handle to reshape the path live, and double-click a vertex to toggle corner ↔ smooth. Each drag is a single undo step and `Escape` cancels one without recording history.
 - Track-matte source relationships are now visible in the outliner for both relationship models (`Mask → <source name>`), and unnamed layers fall back to their ids in the matte source pickers.
 - The Track Matte V2 card's source select carries an accessible label.
@@ -798,6 +770,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Package materialization failures now carry stable failure codes; filesystem guidance states the trusted-directory requirement, the unsupported hostile-concurrency case, and avoids claiming perfect OS-level protection. Machine paths are reduced to a display-safe form.
 
 ### Changed
+- The timeline's transport row is one control language instead of five: the timecode, the duration field with its `1s…10s` presets, the transport buttons, Crop, Motion Curves and the support pills all sit on the same 28px height, the same 4px control radius and one muted tone, the duration presets are a single segmented control, and the timecode uses tabular figures with a fixed width so the row no longer shifts as it counts. The inline styles that made the field 22px tall next to 28px buttons are gone, and the duration input still accepts typing (its `.duration-control-box` selector and behaviour are unchanged).
+- The Texts drawer's presets are laid out as designed rows instead of uneven cards: each one carries a tinted icon badge in its own accent tone, previews its label in the font it will create (Bebas Neue, Playfair Display, Outfit, Inter, Montserrat), states the family and size underneath, and lifts on hover with a grab cursor because it is draggable. The inline presentation styles and the utility colour classes that did not exist are gone, so one stylesheet owns the look, and clicking or dragging a preset still adds the same text layer with the same font and size.
+- The Motion Curves editor shapes exactly one segment, and says which one: it edits the curve that leads **into** the keyframe you picked from the keyframe before it, so with five keyframes the fourth opens `F60 → F90`. The header names the property and the two frames, each handle names the keyframe it belongs to (`P1 · leaves F60`, `P2 · arrives at F90`), and the curve is stored where the evaluator reads it — the segment's **start** keyframe — leaving the keyframe's own outgoing segment untouched. A keyframe with nothing before it (the first one, or the only one) and a playhead that sits between keyframes no longer fall back to some other keyframe's curve: the editor explains that there is no segment instead of editing one silently, and it no longer creates a keyframe as a side effect of opening or applying a curve.
+- The Media drawer's upload card reads as a real drop target again: a rounded dashed card with a soft accent glow, a circular upload badge, the same title and hint, and a pill-shaped **Browse files** control, with a stronger (solid accent border + ring) feedback while a file is dragged over it. The recently added media tiles are square, keyboard-focusable previews that lift and reveal an add affordance on hover. The stylesheet override that had flattened the card into plain left-aligned text is gone, so one file owns the card's look, and clicking either the card or the button still opens the picker exactly once.
+- The Appearance card reads tidier: the WIDTH and ALIGN controls share one equal-column row (previously a narrow field beside a wide one), a lone WIDTH field — text, which offers no alignment — no longer stretches across the panel, and a switched-off FILL or STROKE group keeps its authored values but is dimmed instead of looking active.
+- Text no longer repaints its outline when it is selected: the canvas keeps the authored stroke colour and width and uses the selection highlight only while the outline itself is switched off, which is what shapes already did.
+- The left toolbar and the right inspector collapse and expand as one motion: the panel's width, its 12px slide, its opacity and the handle that rides its edge all run over the same 240ms with the same `ease`, so the handle stays glued to the edge for the whole animation instead of racing ahead of it (the right handle used to leave the edge by more than 100px on the first frames and snap back, which read as a jump), the canvas gains and returns the space at the same pace, and the panel content fades over that same 240ms instead of vanishing on the first frame. The overshoot curve those layout transitions used is gone, and `prefers-reduced-motion` still makes both instant.
 - An OGraf export now refuses a layer whose animation the exported graphic cannot reproduce: a layer carrying an in/out motion preset resolves to a different frame in the editor than in the generated runtime, which renders the timeline only, so the export reports `OGRAF_UNSUPPORTED_PROCEDURAL` and stops instead of shipping a graphic that plays a different animation. `none` and `custom_timeline` resolve to no delta in the evaluated mode and stay exportable, and the export's existing `OGRAF_UNSUPPORTED_NONDETERMINISTIC_PROCEDURAL` rule for shake/random presets is unchanged.
 - The dialog focus lifecycle lives in one authority: the naming dialog uses the shared opener restoration and the shared focus trap, so Tab and Shift+Tab wrap the dialog's own stops (a disabled action is not a stop) and Escape dismisses through the dialog's own handler; its close control has an accessible name. The confirmation and import-report dialogs use the same trap instead of their own two-stop copies.
 - The test environment declares React's act environment for the whole run, so a state update outside `act` is reported on every machine instead of only on a slower one, and the serialization and import-atomicity tests make their document calls inside `act`. The suite went from 101 warnings reported by CI to none.
@@ -811,7 +790,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TypeScript moved from 6.0 to 7.0, and Vitest plus `@vitest/coverage-v8` moved from 4.1 to 5.0 as one aligned toolchain upgrade. Type checking, the 1,951-test suite, production build, release gate, browser smoke set, V6 QA, and CI all pass on the upgraded versions.
 - The embedded SQLite fallback remains runtime-generated, but `server/db/keyframe_studio.sqlite` is no longer tracked; a clean checkout creates and seeds it on first API start.
 
+### Removed
+- The timeline's "Selected Keyframe" property panel: selecting a keyframe in the timeline no longer opens it. The selection itself is unchanged — the diamond still highlights, `Delete`/`Backspace` still remove the selected frame group and undo restores it — and keyframe values stay editable through the Inspector's transform section and the timeline's own drag/duplicate/copy-paste actions.
+
 ### Fixed
+- Edit-mode stage rendering now evaluates the selected sequence, matching the selection gizmo and Inspector. Dragging a keyframed circle or another layer in a named sequence moves its painted geometry instead of only its selection border; Broadcast keeps its existing runtime sequence selection.
+- Adding a property keyframe now matches both frame and sequence identity. Authoring another sequence at the same frame no longer overwrites the first sequence's position, opacity, or other channel values; existing untagged keyframes still belong to the default sequence.
 - An OGraf package's per-entry and total size budgets are taken from what the archive reader will actually materialise rather than from one declared field: a stored member is measured by the bytes it is copied from and must declare a single size, a deflated member is measured by the buffer it is inflated into, and a compression method whose output cannot be bounded is refused. A member can no longer be admitted by under-declaring its size.
 - Dropped media is stored in the document as a self-contained source (the same durable form the Media drawer writes) instead of a `blob:` URL that dies with the page, so an image dropped on the stage survives a reload.
 - A split Lottie position (`p: { s: true, x: …, y: … }`) is read as the two scalar properties it is, and a keyframe easing handle written per dimension (`o: { x: [0.25, 0.3], y: [0.1, 0.2] }`) resolves the component its channel maps. A handle with no readable value keeps its segment linear and is reported instead of becoming a fabricated zero curve.

@@ -16,24 +16,33 @@ Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candi
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
+## Authoring publication — 2026-10-05
+
+- The pending authoring work adds position-only layer bonds, text/freeform Boolean operands, text stroke parity between canvas and OGraf, and an opacity keyframe control. Timeline segment editing, transport layout, media/text drawers, and sidebar transitions are reconciled with the existing authorities.
+- Same-frame property edits now match the sequence identity. Edit-mode stage rendering evaluates the active sequence instead of hardcoding `Sequence`; the selection gizmo and painted geometry follow the same authored pose. Broadcast retains its runtime sequence selection.
+- Browser proof: a keyframed circle in the second sequence moves 100 screen pixels right and 40 down; the first sequence's x value remains -100. A bonded circle/text pair moves by the same -60/+20 screen-pixel delta.
+- Six meaningful publication groups use owner-approved retrospective author dates: 2026-08-29, 2026-09-05, 2026-09-12, 2026-09-19, 2026-09-26, and 2026-10-05. Committer dates record actual creation; these dates do not claim uploads or development occurred on those earlier days. No empty commits, old-branch replay, shared-history rewrite, or force push is part of this publication.
+- The old tangent and presentation review branches remain historical artefacts. The pre-architecture mask-gizmo patch is not replayed. Release tags, the held draft release, package publication, external QA folders, and OMP configuration remain unchanged.
+- Remaining dependency warning: the current audit reports one moderate `fast-uri` vulnerability (GHSA-hrr3-gc8f-f4qj). Remediation requires a separately approved dependency change; this publication does not run `npm audit fix`.
+
 ## Accepted baseline
 
 Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
 
-## Validation status (at the last reconciliation)
+## Validation status — authoring publication, 2026-10-05
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 128 files / 1,995 tests on Vitest 5.0.2, with no React `act` warning |
+| Full Vitest | PASS | 130 files / 2,008 tests; `npm run check` |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Chromium tests |
-| Focused browser smoke | PASS | export onboarding (1), Lottie import report (3), OGraf matte visual (4), dropped-media reload (1), naming-dialog focus (1) |
+| Full Chromium | PASS | 255 tests; `npx playwright test --project=chromium --retries=0`; V6 QA also passes its 3 tests |
 | State consistency | PASS | `node scripts/check-state-consistency.mjs` |
 | TypeScript | PASS | TypeScript 7.0.2; `npx tsc -b --pretty false` and the build/check paths pass |
 | Lint | PASS | Oxlint 1.85.0 clean, including unused-disable reporting at error severity |
 | Production build | PASS | Vite 8.3.0 production bundle |
-| Dependency audit | PASS | `npm audit` reports 0 vulnerabilities |
-| CI on `main` | PASS | maintenance commits `5cb8a45`, `b3f3c6c`, `2a313d7`, `feca773`, `37904fb` and the nine remediation commits through `8a4ca22`, each with its own green run |
+| Dependency audit | WARNING | `npm audit --audit-level=low`: one moderate `fast-uri` advisory, GHSA-hrr3-gc8f-f4qj; dependency changes are outside this approved publication scope |
+| Publication CI | SEPARATE REMOTE GATE | Checked after normal push; inspect the publication tip's GitHub Actions run rather than treating earlier Astra/maintenance CI as current evidence |
 
 ## Post-review correctness follow-up (complete)
 
@@ -85,7 +94,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 ## Milestone B merged — graph + keyboard accessibility
 
 - Branch `feat/graph-accessibility` was fast-forward-merged into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` (no merge commit, no rebase, no history rewrite).
-- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; the selected-keyframe panel is a group scoped to its frame; focus rings were added for the diamonds and the graph points.
+- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; focus rings were added for the diamonds and the graph points.
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.

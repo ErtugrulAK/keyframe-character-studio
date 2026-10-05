@@ -1,26 +1,15 @@
-# KCS ChatGPT Upload Manifest — Astra remediation reconciliation
+# KCS ChatGPT Upload Manifest — Authoring Publication
 
-Clean refreshed: YES
-Bundle scope: minimal and task-specific; not an archive
-Task record: reports/progress_151_astra_remediation.md
+Bundle scope: approved authoring publication, October 5, 2026; task-specific, not an archive
+Publication baseline: 703e45ab209530f20928cf5e13287b759276a33f
+Working branch: feature/studio-authoring-fixes
+Validation authority: current PROJECT_STATE.md and NEXT_SESSION.md
+Dating provenance: six owner-approved retrospective author dates; actual committer dates; no empty commits or shared-history rewrite
+Historical record retained: reports/progress_151_astra_remediation.md (not current validation)
+Release state: H7 HOLD; release tags, draft prerelease, private package and npm publication unchanged
+Remote push and CI: verified separately after the local gate; no success presumed in this inventory
 
-Implementation baseline: main at or after 8a4ca22
-F-01 mixed legacy/channel round trip: CLOSED at 2c6e013
-F-02 legacy project import validation: CLOSED at b8718d2
-F-03 Lottie numeric property forms: CLOSED at e19b5fe
-F-04 OGraf procedural animation: CLOSED at 8002659
-F-05 OGraf ZIP size accounting: CLOSED at 3fa71ff
-F-06 dropped-media persistence: CLOSED at 645927a
-F-07 preset storage boundaries: CLOSED at c12d773
-F-08 naming-dialog focus lifecycle: CLOSED at 4cd276b
-F-09 React act warnings: CLOSED at 8a4ca22
-F-10 stale live-document claims: CLOSED by this reconciliation
-Latest full suite: 128 files / 1,995 tests PASS, no React act warning
-Dependency audit: 0 vulnerabilities
-Release state: H7 HOLD; tag v1.1.0-rc.1 remains at 46d2a3e59e065816d972dcd56951803951b577f6; GitHub release remains draft prerelease; package remains private at 1.1.0-rc.1; npm publish NO
-Non-blocking CI annotations: Node 20 action runtime forced to Node 24; announced ubuntu-latest migration to Ubuntu 26
-
-Copied files (8):
+Bundle source files (8):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - NEXT_SESSION.md
@@ -30,7 +19,7 @@ Copied files (8):
 - manifest.txt
 - progress_151_astra_remediation.md
 
-Omitted: source, tests, package/lock files, workflows, historical reports, binaries, archives, assets, caches, and QA output.
-Never touched: C:\Users\ertugrul.ak\Desktop\KCS; C:\Users\ertugrul.ak\Desktop\ograf-graphics; origin/without-mask; global OMP configuration.
+Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
+Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.

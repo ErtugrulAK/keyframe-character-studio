@@ -12,6 +12,13 @@
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
 - Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch, now behind `main`; deleting it needs approval)
 
+## Authoring publication — 2026-10-05
+
+- The approved pending work is grouped into six commits: text appearance, layer authoring (bonds, Boolean text/freeform operands, opacity), timeline segment editing and transport, sidebar/media/text presentation, sequence write/render isolation, and documentation reconciliation.
+- The circle/selection-border split is fixed at the stage evaluation boundary: Edit uses the selected sequence, while Broadcast keeps its runtime selection. Same-frame property keyframes remain isolated across sequences.
+- Owner-approved author dates are retrospective metadata distributed across 2026-08-29, 2026-09-05, 2026-09-12, 2026-09-19, 2026-09-26, and 2026-10-05. Committer dates remain real. Do not interpret this as earlier uploads or proof of work on those dates; do not manufacture empty commits to fill the remaining days.
+- Preserve historical local branches; do not replay the old tangent/presentation work or the obsolete mask-gizmo patch. Normal fast-forward publication only; no force push, rebase, tag change, draft release publication, or npm publication.
+
 ## Current result
 
 Milestones A–E are complete, and Milestone F item 10 is complete (all four slices merged):
@@ -28,7 +35,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-On `main` at or after `8a4ca22`: TypeScript 7.0.2 and Vitest 5.0.2 pass `npx tsc -b --pretty false`, the full Vitest suite (128 files / 1,995 tests) with no React `act` warning, `npm run lint`, `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), the export/Lottie/matte/dropped-media/naming-dialog browser specs (10 tests), `npm run qa:v6` (3 tests), `npm run check`, `node scripts/check-state-consistency.mjs`, `npm audit` (0 vulnerabilities), and `git diff --check`. Each remediation commit has its own green `main` CI run.
+Authoring publication local gate on October 5, 2026: `npm run check` passed lint, TypeScript build mode, 130 Vitest files / 2,008 tests, and the production build. `npx tsc --noEmit`, `npm run validate:ograf`, and `npm run qa:release` (2 Chromium tests) also passed. Full Chromium verification passed all 255 tests with `--retries=0`; `npm run qa:v6` passed all 3 tests. State consistency passed 35 checks. One incidental sidebar visual-dimension test was deleted; actual collapse/reopen geometry, hidden controls, and compact-viewport reachability remain covered. The dependency audit now reports one moderate `fast-uri` advisory (GHSA-hrr3-gc8f-f4qj); dependency/package changes are outside this approved scope. Remote CI is checked after the normal push; earlier remediation CI is historical evidence, not proof for this publication.
 
 ## Next scoped work
 
@@ -58,7 +65,7 @@ On `main` at or after `8a4ca22`: TypeScript 7.0.2 and Vitest 5.0.2 pass `npx tsc
 ## Milestone B merged — graph + keyboard accessibility
 
 - Branch `feat/graph-accessibility` was fast-forward-merged into `main` at `96e8f9d0313cb81752c04fe58d6e7d00d700a6f4` (no merge commit, no rebase, no history rewrite).
-- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; the selected-keyframe panel is a group scoped to its frame; focus rings were added for the diamonds and the graph points.
+- What it adds: timeline keyframe diamonds are named, focusable buttons (`Enter`/`Space` selects the keyframe and moves the playhead, `ArrowLeft`/`ArrowRight` walk focus along the lane in frame order and are consumed at the ends); the value graph is a labelled group whose keyframe points are Tab-reachable and announced with frame and value, editable with the arrow keys; decorative SVG geometry is hidden from assistive technology; focus rings were added for the diamonds and the graph points.
 - Review: one focused round returned BLOCKED (3 findings, 6 documentation over-claims) — all closed; the re-review returned READY WITH WARNINGS.
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.

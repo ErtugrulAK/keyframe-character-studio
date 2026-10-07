@@ -2,7 +2,7 @@
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into `main`, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `37904fb`. Milestone F and the post-review correctness follow-up are complete. Milestone H is complete through H6 with its release decision held (H7). The subsequent five-task maintenance run is also integrated: dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the exact API CORS allowlist (`2a313d7`), Oxlint 1.85 adoption (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`). The post-hold Astra remediation is integrated as well: findings F-01…F-10 are closed through `8a4ca22`, one branch and one focused regression per finding (`reports/progress_151_astra_remediation.md`).
+The accepted product and security follow-up line is integrated into `main`, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `37904fb`. Milestone F and the post-review correctness follow-up are complete. Milestone H is complete through H6 with its release decision held (H7). The subsequent five-task maintenance run is also integrated: dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the exact API CORS allowlist (`2a313d7`), Oxlint 1.85 adoption (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`). The post-hold Astra remediation is integrated as well: findings F-01…F-10 are closed through `8a4ca22`, one branch and one focused regression per finding (`reports/progress_151_astra_remediation.md`). The post-compaction Astra review of the uncommitted authoring work then closed all 16 of its findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) and published them as six commits on `main` on 2026-10-07; see the section below and `reports/progress_152_post_astra_focused_remediation.md`.
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
@@ -15,6 +15,19 @@ Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candi
   - Not covered: vertex add/remove, multi-vertex transforms, keyboard nudging, handle constraints, boolean or trim-enabled freeform layers, broadcast mode.
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
+
+## Post-Astra focused remediation publication — 2026-10-07
+
+The Astra post-compaction review found 16 concrete defects in the authoring work that was sitting uncommitted on `main` (3 HIGH, 12 MEDIUM, 1 LOW; no BLOCKER). All 16 are closed, published as six commits on `main`, and covered by focused regressions.
+
+- Commit groups: text Boolean geometry `a3f5b09`; bonded layer movement `78450f5`; timeline curve targeting `0a20dd6`; Playfair OGraf portability `aa392a9`; the pre-existing visual-only editor refresh `fb8ed96`; this documentation reconciliation.
+- HIGH: a quoted or fallback-list font family traced no Boolean geometry; a parented bonded layer dragged by a local-space delta (buddy 300 -> 210 instead of 310); the Motion Curves modal wrote a curve into the wrong layer when the selected layer had no canonical channel data.
+- MEDIUM: the text-outline cache kept a pre-load raster; a failed operand was silently dropped so a three-operand Subtract ran as a two-box Subtract; a closed freeform ring closed on the wrong vertex; SVG/Canvas whitespace disagreed; a multi-selection propagated only the primary bond; a moving ancestor applied its delta twice; an X-only bond edit rewrote the partner's Y animation; mask curve edits never reached persisted mask state; a zero-duration segment was offered as editable; a fallback-list family produced an invalid `@font-face` identity; the legacy single-file export dropped its packaged font and license; a 4-byte sfnt signature was accepted as a valid owned font.
+- LOW: live documents listed the no-op root `npx tsc --noEmit` as project type-check evidence.
+- The Playfair Display correction and the visual-only editor refresh from the previous working tree are now committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked.
+- Real Chromium proof: family matrix and whitespace parity for the text trace, the font load -> settled retrace, an untraceable operand refusing the Boolean, a parented bonded drag against a calibration group, and the legacy single-file export refusing an asset-dependent graphic while an asset-free graphic still exports.
+- This publication adds no dependency, workflow, package, tag, release, or npm change. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
+- Remaining dependency warnings: the audit reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js`, and the previously recorded moderate `fast-uri` advisory. Remediation needs a separately approved dependency change; no `npm audit fix` was run. The API server does not enable `trust proxy`, so the `proxy-addr` path is not reachable from the current configuration.
 
 ## Authoring publication — 2026-10-05
 
@@ -29,19 +42,19 @@ The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` b
 
 Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
 
-## Validation status — authoring publication, 2026-10-05
+## Validation status — post-Astra focused remediation, 2026-10-07
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 130 files / 2,008 tests; `npm run check` |
+| Full Vitest | PASS | 135 files / 2,055 tests; `npm test` |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Chromium tests |
-| Full Chromium | PASS | 255 tests; `npx playwright test --project=chromium --retries=0`; V6 QA also passes its 3 tests |
-| State consistency | PASS | `node scripts/check-state-consistency.mjs` |
+| Full Chromium | PASS | 268 tests; `npx playwright test --retries=0`; V6 QA also passes its 3 tests |
+| State consistency | PASS | `node scripts/check-state-consistency.mjs` — 35 checks |
 | TypeScript | PASS | TypeScript 7.0.2; `npx tsc -b --pretty false` and the build/check paths pass |
 | Lint | PASS | Oxlint 1.85.0 clean, including unused-disable reporting at error severity |
 | Production build | PASS | Vite 8.3.0 production bundle |
-| Dependency audit | WARNING | `npm audit --audit-level=low`: one moderate `fast-uri` advisory, GHSA-hrr3-gc8f-f4qj; dependency changes are outside this approved publication scope |
+| Dependency audit | WARNING | `npm audit --audit-level=low`: `concurrently`/`shell-quote` (critical, dev), `proxy-addr` (critical, transitive through Express), `source-map-js` (high, transitive), and the previously recorded moderate `fast-uri`; dependency changes are outside this approved scope and no `npm audit fix` was run |
 | Publication CI | SEPARATE REMOTE GATE | Checked after normal push; inspect the publication tip's GitHub Actions run rather than treating earlier Astra/maintenance CI as current evidence |
 
 ## Post-review correctness follow-up (complete)

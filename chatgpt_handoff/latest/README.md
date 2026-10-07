@@ -1,25 +1,24 @@
-# KCS Minimal ChatGPT Upload Bundle — Authoring Publication
+# KCS Minimal ChatGPT Upload Bundle — Post-Astra Focused Remediation
 
-This task-specific bundle covers the approved authoring publication from baseline `703e45a` on October 5, 2026. It is not an archive.
+Task-specific handoff for the 2026-10-07 remediation of the 16 Astra findings in the previously uncommitted authoring work. This is not an archive.
 
-## Current scope
+## Current truth
 
-Text appearance/OGraf parity, layer bonds, Boolean text/freeform operands, opacity authoring, incoming-segment Motion Curves, sidebar/media/text presentation, and sequence write/render isolation are included. `OMP_FINAL_RESPONSE.md` explains runtime proof and retrospective author-date provenance; current local validation lives in the mirrored state documents. Remote publication and CI are checked after the local gate, not assumed here.
+All 16 findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) are fixed and published as six commits on `main`: `a3f5b09`, `78450f5`, `0a20dd6`, `aa392a9`, `fb8ed96`, and the documentation reconciliation. The Playfair Display correction and the visual-only editor refresh from the previous working tree are committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked.
 
-Six real change groups use owner-approved retrospective author dates from August 29 through October 5. Committer dates remain actual. No empty commits or published-history rewrite is used. Old local review branches are preserved rather than replayed.
+The full local gate passes: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), the full Chromium suite (268 tests with `--retries=0`), and the state consistency check (35 checks). Retries, assertions and thresholds are unchanged.
 
-H7 remains HOLD. No tag, draft release, package version, or npm publication action is included.
+No dependency, workflow, package, version, tag, release or npm change is part of this publication. The dependency audit still reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js` and the moderate `fast-uri` advisory; remediation requires separate approval. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
 
-## Files
+## Evidence and files
 
-- `OMP_FINAL_RESPONSE.md` — this publication's scope, evidence, and dating provenance.
-- `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md` — mirrored live documents.
-- `progress_151_astra_remediation.md` — retained historical Astra record; not current validation.
-- `manifest.txt` — inventory and boundaries.
-- `README.md` — this guide.
+- OMP_FINAL_RESPONSE.md: scope, evidence, gate and release boundary.
+- PROJECT_STATE.md and NEXT_SESSION.md: current local validation and continuation constraints.
+- CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
+- progress_152_post_astra_focused_remediation.md: the current per-finding record.
+- progress_151_astra_remediation.md: retained historical record, not current validation.
+- manifest.txt: inventory and protected boundaries.
 
-The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming.
+The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. Historical reports are not rewritten or deleted; external workspaces and OMP configuration are untouched.
 
-Source, tests, package files, workflows, binaries, archives, assets, caches, and QA output are not copied. Existing historical reports are not rewritten or deleted. External QA/workspace folders and OMP configuration are untouched.
-
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder contains its sources.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder holds its sources.

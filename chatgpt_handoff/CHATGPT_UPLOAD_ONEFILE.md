@@ -10,34 +10,29 @@ Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`. External Q
 
 ## 1. OMP Final Response
 
-# KCS Authoring Publication — 2026-10-05
+# KCS Post-Astra Focused Remediation — 2026-10-07
 
-## Scope
+## Latest approved correction
 
-Publication starts from synchronized main at `703e45ab209530f20928cf5e13287b759276a33f`. The owner approved publication of the pending authoring changes, the active-sequence stage correction, six meaningful dated commits, fast-forward integration, and a normal push.
+The Astra review of the uncommitted authoring work found 16 concrete defects (3 HIGH, 12 MEDIUM, 1 LOW; no BLOCKER). All 16 are fixed, published as six commits on `main`, and covered by focused regressions: text Boolean geometry `a3f5b09`, bonded layer movement `78450f5`, timeline curve targeting `0a20dd6`, Playfair OGraf portability `aa392a9`, the pre-existing visual-only editor refresh `fb8ed96`, and the documentation reconciliation.
 
-- Text Appearance supports stroke consistently in the canvas and OGraf renderer.
-- Position-only layer bonds reuse the existing inspector/history pipeline. Text and freeform layers participate in Boolean geometry through the existing geometry authority.
-- Opacity has an authoring control. Motion Curves edits the incoming segment selected by its end keyframe; a first keyframe has no incoming segment.
-- Sidebar transitions, transport controls, and Media/Texts drawers are reconciled with the current UI.
-- Same-frame property writes match the sequence identity. Edit-mode painted layers use the active sequence, matching their selection gizmos; Broadcast keeps its runtime sequence selection.
-- Browser contracts select valid incoming segments. Obsolete inspector wording/field-absence assertions were removed. Matte region probes capture one image per exact sample grid without changing thresholds or parity assertions.
+The HIGH defects: a quoted or fallback-list font family traced no Boolean geometry; a parented bonded layer dragged by a local-space delta instead of the world delta (buddy 300 → 210 instead of 310); and the Motion Curves modal wrote a curve into a different layer when the selected layer carried legacy keyframes rather than canonical channel data.
 
-## Runtime evidence
+The Playfair Display correction and the visual-only editor refresh from the previous working tree are now committed unchanged in substance, together with the three owned Playfair files (normal TTF, italic TTF, OFL.txt).
 
-A real browser drag moved the second-sequence circle by +100/+40 screen pixels while the default sequence retained x=-100. A bonded circle/text pair moved by the same -60/+20 screen-pixel delta. The named-sequence browser regression also checks painted geometry when switching sequences.
+## Evidence
 
-Current validation results are recorded in `PROJECT_STATE.md` and `NEXT_SESSION.md`. Historical Astra evidence in `progress_151_astra_remediation.md` remains a historical record, not this publication's verification report.
+Real Chromium proof covers the font family matrix (bare, quoted, fallback-list, JetBrains Mono), the SVG whitespace parity of the trace, the font load → settled retrace, an untraceable operand refusing the Boolean, a parented bonded drag calibrated against a parentless group, and the legacy single-file export refusing an asset-dependent graphic while an asset-free graphic still exports. Unit coverage adds the closed freeform ring closure, mask curve dispatch, zero-duration segment refusal, multi-selection and moving-ancestor bond dispatch, the untouched-axis guarantee, the pinned font integrity, and the exact wrong-layer repro rendered through the real SequencerTimeline.
 
-## Dating provenance
+Final local gate: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), the full Chromium suite (268 tests with `--retries=0`), and `node scripts/check-state-consistency.mjs` (35 checks) all pass. Retries, assertions and thresholds are unchanged.
 
-The six author dates are owner-approved retrospective metadata: August 29, September 5, 12, 19, 26, and October 5, 2026. Committer dates reflect actual creation. Earlier author dates do not represent earlier uploads or prove work occurred on those days. Every group contains real changes; there are no empty contribution-filling commits.
+## Scope boundaries
 
-No old-branch patch replay, rebase, reset, shared-history rewrite, force push, or branch deletion is authorized by this publication. Historical review branches remain intact. Publication uses `feature/studio-authoring-fixes`, a fast-forward into main, and a normal push. Remote publication and its CI result are verified separately after the local gate; this document does not predict their success.
+No dependency, workflow, package, version, tag, release or npm change is part of this publication. Only Playfair Display is covered by the owned-font path; general font upload, other built-in font portability, and package asset relinking are not added. The audit now reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js` and the previously recorded moderate `fast-uri` advisory; remediation needs a separately approved dependency change and no `npm audit fix` was run.
 
-## Protected release state
+## Release state
 
-H7 remains HOLD. Release tags, the draft prerelease, the private package, npm publication, external QA folders, `.hermes/desktop-attachments/`, and OMP configuration are unchanged.
+H7 remains HOLD. Annotated tag `v1.1.0-rc.1` and the GitHub draft prerelease stay at `46d2a3e`. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
@@ -45,48 +40,46 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Authoring Publication
+# KCS Minimal ChatGPT Upload Bundle — Post-Astra Focused Remediation
 
-This task-specific bundle covers the approved authoring publication from baseline `703e45a` on October 5, 2026. It is not an archive.
+Task-specific handoff for the 2026-10-07 remediation of the 16 Astra findings in the previously uncommitted authoring work. This is not an archive.
 
-## Current scope
+## Current truth
 
-Text appearance/OGraf parity, layer bonds, Boolean text/freeform operands, opacity authoring, incoming-segment Motion Curves, sidebar/media/text presentation, and sequence write/render isolation are included. `OMP_FINAL_RESPONSE.md` explains runtime proof and retrospective author-date provenance; current local validation lives in the mirrored state documents. Remote publication and CI are checked after the local gate, not assumed here.
+All 16 findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) are fixed and published as six commits on `main`: `a3f5b09`, `78450f5`, `0a20dd6`, `aa392a9`, `fb8ed96`, and the documentation reconciliation. The Playfair Display correction and the visual-only editor refresh from the previous working tree are committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked.
 
-Six real change groups use owner-approved retrospective author dates from August 29 through October 5. Committer dates remain actual. No empty commits or published-history rewrite is used. Old local review branches are preserved rather than replayed.
+The full local gate passes: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), the full Chromium suite (268 tests with `--retries=0`), and the state consistency check (35 checks). Retries, assertions and thresholds are unchanged.
 
-H7 remains HOLD. No tag, draft release, package version, or npm publication action is included.
+No dependency, workflow, package, version, tag, release or npm change is part of this publication. The dependency audit still reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js` and the moderate `fast-uri` advisory; remediation requires separate approval. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
 
-## Files
+## Evidence and files
 
-- `OMP_FINAL_RESPONSE.md` — this publication's scope, evidence, and dating provenance.
-- `NEXT_SESSION.md`, `PROJECT_STATE.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `CHANGELOG.md` — mirrored live documents.
-- `progress_151_astra_remediation.md` — retained historical Astra record; not current validation.
-- `manifest.txt` — inventory and boundaries.
-- `README.md` — this guide.
+- OMP_FINAL_RESPONSE.md: scope, evidence, gate and release boundary.
+- PROJECT_STATE.md and NEXT_SESSION.md: current local validation and continuation constraints.
+- CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
+- progress_152_post_astra_focused_remediation.md: the current per-finding record.
+- progress_151_astra_remediation.md: retained historical record, not current validation.
+- manifest.txt: inventory and protected boundaries.
 
-The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming.
+The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. Historical reports are not rewritten or deleted; external workspaces and OMP configuration are untouched.
 
-Source, tests, package files, workflows, binaries, archives, assets, caches, and QA output are not copied. Existing historical reports are not rewritten or deleted. External QA/workspace folders and OMP configuration are untouched.
-
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder contains its sources.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder holds its sources.
 
 ---
 
 ## 3. Bundle Manifest
 
-# KCS ChatGPT Upload Manifest — Authoring Publication
+# KCS ChatGPT Upload Manifest — Post-Astra Focused Remediation
 
-Bundle scope: approved authoring publication, October 5, 2026; task-specific, not an archive
-Publication baseline: 703e45ab209530f20928cf5e13287b759276a33f
-Working branch: feature/studio-authoring-fixes
-Validation authority: current PROJECT_STATE.md and NEXT_SESSION.md
-Dating provenance: six owner-approved retrospective author dates; actual committer dates; no empty commits or shared-history rewrite
-Historical record retained: reports/progress_151_astra_remediation.md (not current validation)
+Scope: the 16 Astra findings in the previously uncommitted authoring work, plus the committed Playfair Display correction and the visual-only editor refresh
+Baseline: main at ed75ea4304a85be7c931893e0316bdfe92255a3d before the six remediation commits
+Current changes: committed on main as a3f5b09, 78450f5, 0a20dd6, aa392a9, fb8ed96 and the documentation reconciliation
+Validation authority: the Post-Astra focused remediation publication section in PROJECT_STATE.md and NEXT_SESSION.md
+Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
+Historical record retained: progress_151_astra_remediation.md (not current validation)
 Release state: H7 HOLD; release tags, draft prerelease, private package and npm publication unchanged
-Remote push and CI: verified separately after the local gate; no success presumed in this inventory
 
-Bundle source files (8):
+Bundle source files (9):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - NEXT_SESSION.md
@@ -95,9 +88,11 @@ Bundle source files (8):
 - README.md
 - manifest.txt
 - progress_151_astra_remediation.md
+- progress_152_post_astra_focused_remediation.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
+No empty contribution-filling commits or retrospective UI dates are authorized.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.
 
@@ -118,6 +113,14 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files abov
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
 - Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch, now behind `main`; deleting it needs approval)
+
+## Post-Astra focused remediation — committed, 2026-10-07
+
+- The Astra post-compaction review of the uncommitted authoring work found 16 defects (3 HIGH, 12 MEDIUM, 1 LOW; no BLOCKER). All 16 are closed and published as six commits on `main`: text Boolean geometry `a3f5b09`, bonded layer movement `78450f5`, timeline curve targeting `0a20dd6`, Playfair OGraf portability `aa392a9`, the pre-existing visual-only editor refresh `fb8ed96`, and this documentation reconciliation.
+- The Playfair Display correction and the UI refresh are now committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked. No dependency, workflow, package, tag, release, or npm change is part of this publication.
+- Focused regressions were added for every finding, and the real-browser proofs cover the family matrix, the whitespace parity, the font load -> settled retrace, the untraceable-operand refusal, the parented bonded drag, and the legacy single-file refusal. Retries, assertions and thresholds are unchanged.
+- Remaining dependency warnings: `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js`, and the moderate `fast-uri` advisory. Remediation needs a separately approved dependency change; no `npm audit fix` was run.
+- H7 remains HOLD. Publishing, finalizing, or re-tagging the release requires a new explicit user instruction; release artefacts stay at `46d2a3e`.
 
 ## Authoring publication — 2026-10-05
 
@@ -142,15 +145,16 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Authoring publication local gate on October 5, 2026: `npm run check` passed lint, TypeScript build mode, 130 Vitest files / 2,008 tests, and the production build. `npx tsc --noEmit`, `npm run validate:ograf`, and `npm run qa:release` (2 Chromium tests) also passed. Full Chromium verification passed all 255 tests with `--retries=0`; `npm run qa:v6` passed all 3 tests. State consistency passed 35 checks. One incidental sidebar visual-dimension test was deleted; actual collapse/reopen geometry, hidden controls, and compact-viewport reachability remain covered. The dependency audit now reports one moderate `fast-uri` advisory (GHSA-hrr3-gc8f-f4qj); dependency/package changes are outside this approved scope. Remote CI is checked after the normal push; earlier remediation CI is historical evidence, not proof for this publication.
+Post-Astra remediation local gate on October 7, 2026: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run qa:v6` (3 Chromium tests), and the full Chromium suite (268 tests with `--retries=0`) all passed. State consistency passed 35 checks; `npm audit --audit-level=low` reports the dependency warnings recorded in PROJECT_STATE.md. One incidental sidebar visual-dimension test was deleted; actual collapse/reopen geometry, hidden controls, and compact-viewport reachability remain covered. The dependency audit now reports one moderate `fast-uri` advisory (GHSA-hrr3-gc8f-f4qj); dependency/package changes are outside this approved scope. Remote CI is checked after the normal push; earlier remediation CI is historical evidence, not proof for this publication.
 
 ## Next scoped work
 
 1. **Milestone H remains HELD at H7.** H1–H6 are complete, the release artefacts remain at `46d2a3e`, and no tag, GitHub release, or npm publication action was taken.
 2. The Astra remediation findings F-01…F-10 are closed and merged with green CI, one branch per finding; `reports/progress_151_astra_remediation.md` records the reproduction evidence and the remaining limitations.
-3. The five maintenance tasks that preceded the remediation are complete: focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5.
-4. Preserve the tag and draft prerelease. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
-5. The GitHub Actions Node 20 deprecation annotation and the announced `ubuntu-latest` migration to Ubuntu 26 are non-blocking workflow-maintenance warnings; they do not change the held release decision.
+3. The post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01 are closed and published on `main` in six commits; `reports/progress_152_post_astra_focused_remediation.md` records the per-finding reproduction, fix, test and result.
+4. The five maintenance tasks that preceded the remediation are complete: focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5.
+5. Preserve the tag and draft prerelease. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
+6. The GitHub Actions Node 20 deprecation annotation and the announced `ubuntu-latest` migration to Ubuntu 26 are non-blocking workflow-maintenance warnings; they do not change the held release decision.
 
 ## Guardrails
 
@@ -186,7 +190,7 @@ Authoring publication local gate on October 5, 2026: `npm run check` passed lint
 
 ## Current position
 
-The accepted product and security follow-up line is integrated into `main`, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `37904fb`. Milestone F and the post-review correctness follow-up are complete. Milestone H is complete through H6 with its release decision held (H7). The subsequent five-task maintenance run is also integrated: dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the exact API CORS allowlist (`2a313d7`), Oxlint 1.85 adoption (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`). The post-hold Astra remediation is integrated as well: findings F-01…F-10 are closed through `8a4ca22`, one branch and one focused regression per finding (`reports/progress_151_astra_remediation.md`).
+The accepted product and security follow-up line is integrated into `main`, the grouped post-RC roadmap has completed milestones A–G, and `main` is at or after `37904fb`. Milestone F and the post-review correctness follow-up are complete. Milestone H is complete through H6 with its release decision held (H7). The subsequent five-task maintenance run is also integrated: dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the exact API CORS allowlist (`2a313d7`), Oxlint 1.85 adoption (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`). The post-hold Astra remediation is integrated as well: findings F-01…F-10 are closed through `8a4ca22`, one branch and one focused regression per finding (`reports/progress_151_astra_remediation.md`). The post-compaction Astra review of the uncommitted authoring work then closed all 16 of its findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) and published them as six commits on `main` on 2026-10-07; see the section below and `reports/progress_152_post_astra_focused_remediation.md`.
 
 Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The GitHub release exists as a draft prerelease; no npm publication occurred.
 
@@ -199,6 +203,19 @@ Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candi
   - Not covered: vertex add/remove, multi-vertex transforms, keyboard nudging, handle constraints, boolean or trim-enabled freeform layers, broadcast mode.
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
+
+## Post-Astra focused remediation publication — 2026-10-07
+
+The Astra post-compaction review found 16 concrete defects in the authoring work that was sitting uncommitted on `main` (3 HIGH, 12 MEDIUM, 1 LOW; no BLOCKER). All 16 are closed, published as six commits on `main`, and covered by focused regressions.
+
+- Commit groups: text Boolean geometry `a3f5b09`; bonded layer movement `78450f5`; timeline curve targeting `0a20dd6`; Playfair OGraf portability `aa392a9`; the pre-existing visual-only editor refresh `fb8ed96`; this documentation reconciliation.
+- HIGH: a quoted or fallback-list font family traced no Boolean geometry; a parented bonded layer dragged by a local-space delta (buddy 300 -> 210 instead of 310); the Motion Curves modal wrote a curve into the wrong layer when the selected layer had no canonical channel data.
+- MEDIUM: the text-outline cache kept a pre-load raster; a failed operand was silently dropped so a three-operand Subtract ran as a two-box Subtract; a closed freeform ring closed on the wrong vertex; SVG/Canvas whitespace disagreed; a multi-selection propagated only the primary bond; a moving ancestor applied its delta twice; an X-only bond edit rewrote the partner's Y animation; mask curve edits never reached persisted mask state; a zero-duration segment was offered as editable; a fallback-list family produced an invalid `@font-face` identity; the legacy single-file export dropped its packaged font and license; a 4-byte sfnt signature was accepted as a valid owned font.
+- LOW: live documents listed the no-op root `npx tsc --noEmit` as project type-check evidence.
+- The Playfair Display correction and the visual-only editor refresh from the previous working tree are now committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked.
+- Real Chromium proof: family matrix and whitespace parity for the text trace, the font load -> settled retrace, an untraceable operand refusing the Boolean, a parented bonded drag against a calibration group, and the legacy single-file export refusing an asset-dependent graphic while an asset-free graphic still exports.
+- This publication adds no dependency, workflow, package, tag, release, or npm change. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
+- Remaining dependency warnings: the audit reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js`, and the previously recorded moderate `fast-uri` advisory. Remediation needs a separately approved dependency change; no `npm audit fix` was run. The API server does not enable `trust proxy`, so the `proxy-addr` path is not reachable from the current configuration.
 
 ## Authoring publication — 2026-10-05
 
@@ -213,19 +230,19 @@ The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` b
 
 Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
 
-## Validation status — authoring publication, 2026-10-05
+## Validation status — post-Astra focused remediation, 2026-10-07
 
 | Area | Status | Evidence |
 |---|---|---|
-| Full Vitest | PASS | 130 files / 2,008 tests; `npm run check` |
+| Full Vitest | PASS | 135 files / 2,055 tests; `npm test` |
 | OGraf fixture validation | PASS | `npm run validate:ograf` — offline against the vendored closure |
 | OGraf release smoke | PASS | `npm run qa:release`; 2 Chromium tests |
-| Full Chromium | PASS | 255 tests; `npx playwright test --project=chromium --retries=0`; V6 QA also passes its 3 tests |
-| State consistency | PASS | `node scripts/check-state-consistency.mjs` |
+| Full Chromium | PASS | 268 tests; `npx playwright test --retries=0`; V6 QA also passes its 3 tests |
+| State consistency | PASS | `node scripts/check-state-consistency.mjs` — 35 checks |
 | TypeScript | PASS | TypeScript 7.0.2; `npx tsc -b --pretty false` and the build/check paths pass |
 | Lint | PASS | Oxlint 1.85.0 clean, including unused-disable reporting at error severity |
 | Production build | PASS | Vite 8.3.0 production bundle |
-| Dependency audit | WARNING | `npm audit --audit-level=low`: one moderate `fast-uri` advisory, GHSA-hrr3-gc8f-f4qj; dependency changes are outside this approved publication scope |
+| Dependency audit | WARNING | `npm audit --audit-level=low`: `concurrently`/`shell-quote` (critical, dev), `proxy-addr` (critical, transitive through Express), `source-map-js` (high, transitive), and the previously recorded moderate `fast-uri`; dependency changes are outside this approved scope and no `npm audit fix` was run |
 | Publication CI | SEPARATE REMOTE GATE | Checked after normal push; inspect the publication tip's GitHub Actions run rather than treating earlier Astra/maintenance CI as current evidence |
 
 ## Post-review correctness follow-up (complete)
@@ -292,7 +309,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are complete. Milestone H is complete through H6 and its release decision remains held at H7. The later approved maintenance run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the API CORS allowlist (`2a313d7`), Oxlint 1.85 (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`) without moving any release artefact. The post-hold Astra remediation then closed findings F-01…F-10 through `8a4ca22` (see `reports/progress_151_astra_remediation.md`), also without moving any release artefact.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are complete. Milestone H is complete through H6 and its release decision remains held at H7. The later approved maintenance run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the API CORS allowlist (`2a313d7`), Oxlint 1.85 (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`) without moving any release artefact. The post-hold Astra remediation then closed findings F-01…F-10 through `8a4ca22` (see `reports/progress_151_astra_remediation.md`), also without moving any release artefact. The later post-compaction Astra review of the uncommitted authoring work closed all 16 of its findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) in six commits on `main` on 2026-10-07 (see `reports/progress_152_post_astra_focused_remediation.md`), likewise without a dependency, workflow, package, tag, release or npm change.
 
 ## Milestone map and status
 
@@ -305,7 +322,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **COMPLETE** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
 | G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **COMPLETE** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05** (the live-document reconciliation) is merged at `2b0bba0`, and the shallow-checkout CI regression it caused was fixed at `dcbf9f5`, and the final correctness gate ran on `main` after that fix (`reports/progress_141_astra_correctness_followup_summary.md`): every finding is closed. |
-| H — Release finalization and approval-gated maintenance | review follow-up decisions | Milestone H branches plus the five maintenance branches plus the nine remediation branches | **NEXT (held)** — **H1–H6 are COMPLETE**, the post-hold maintenance tasks are merged through `37904fb`, and the Astra remediation findings F-01…F-10 are closed through `8a4ca22`. **H7 = HOLD** by user decision: no tag, release, or npm action; artefacts stay at `46d2a3e`. This row keeps the plan's single NEXT marker because the only remaining plan decision is a future explicitly authorized release action. |
+| H — Release finalization and approval-gated maintenance | review follow-up decisions | Milestone H branches plus the five maintenance branches plus the nine remediation branches | **NEXT (held)** — **H1–H6 are COMPLETE**, the post-hold maintenance tasks are merged through `37904fb`, the Astra remediation findings F-01…F-10 are closed through `8a4ca22`, and the post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01 are closed in six commits on `main` (2026-10-07). **H7 = HOLD** by user decision: no tag, release, or npm action; artefacts stay at `46d2a3e`. This row keeps the plan's single NEXT marker because the only remaining plan decision is a future explicitly authorized release action. |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -739,7 +756,138 @@ media; `useDialogFocusTrap`/`useDialogFocusRestoration` for dialog focus.
 
 ---
 
-## 8. Changelog
+## 8. Post-Astra Remediation Record
+
+# Progress 152 — Post-Astra focused remediation of the dirty authoring tree
+
+Date: 2026-10-07. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
+
+A read-only Astra review had found 16 concrete defects (3 HIGH, 12 MEDIUM, 1 LOW; no BLOCKER) in the authoring work that was sitting uncommitted on `main`. This report records the remediation: every finding reproduced, fixed, covered by a focused regression, published in six commits, and validated end to end.
+
+## Baseline and dirty-tree classification
+
+| Field | Value |
+|---|---|
+| Branch | `main` |
+| HEAD / `main` / `origin/main` at start | `ed75ea4304a85be7c931893e0316bdfe92255a3d` |
+| Staged | 0 |
+| Tracked unstaged | 28 files |
+| Untracked | `src/assets/fonts/playfair-display/` (normal TTF, italic TTF, OFL.txt) |
+
+Classification of every dirty path:
+
+- **A — approved visual-only UI refresh (12):** `HeaderBar.css`, `PropertyInspector.css`, `Inspector/sections/StyleTab.tsx`, `Inspector/sections/TransformTab.tsx`, `ConfirmationDialog.css`, `ImportReportDialog.css`, `NewItemModal.css`, `SequencerTimeline.css`, `ToastPortal.tsx`, `LeftToolbar.css`, `Toolbar/drawers/ProjectDrawer.tsx`, `kcsEditorTheme.css`.
+- **B — Playfair / OGraf (5 + 3 untracked):** `index.css`, `ograf/legacyCompatibility.ts`, `ograf/packageCompiler.ts`, `ograf/types.ts`, `ograf/validation.ts`, `tests/ografLegacyCompatibility.test.ts`, and the three untracked Playfair source files.
+- **C — docs / handoff (10):** `CHANGELOG.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`, and the six mirrored/auxiliary files under `chatgpt_handoff/latest/`.
+- **D — unknown:** none. No divergence, no in-progress Git operation, no corruption.
+
+### External safety copy
+
+Created outside the repository, under the OS temp directory:
+
+`C:\Users\ertugrul.ak\AppData\Local\Temp\kcs-post-astra-safety-20261007-172448\`
+
+- `tracked-diff.patch` — the full tracked diff (141,877 bytes).
+- `untracked-inventory.txt` — the untracked file list plus SHA-256 and size of each Playfair file.
+- `fonts/` — copies of `OFL.txt`, `PlayfairDisplay.ttf`, `PlayfairDisplay-Italic.ttf`.
+
+Owned-font hashes recorded before any edit: normal `c40f2293766a503bc70cce9e512ef844a4ccb7cbcde792fe2ea31d191917d8d6`, italic `a5e26dc5e2e77fb2803a0bf02fd4f81ee136ec8dea863ccdb0c59a263b21378b`. No `reset`, `stash` or `checkout --` was used at any point.
+
+## Per-finding remediation
+
+Every finding below was reproduced first, then fixed, then covered. "Unit" means a Vitest case; "browser" means a real-Chromium Playwright case.
+
+### A — Text Boolean geometry
+
+| ID | Repro / root cause | Fix | Test | Result |
+|---|---|---|---|---|
+| A-01 | `traceText` rejected any family the canvas re-serialised, because it matched the caller's raw string against `context.font`. A quoted name or a fallback list (`"'Playfair Display', serif"`) traced nothing. | The accepted family is read from the canvas's serialized family list (`canvasAcceptedFamilies`), compared against the primary family of the requested CSS list (`primaryFontFamily`). | Unit: quoted/unquoted/fallback-list identity. Browser: bare, quoted, fallback-list and JetBrains Mono each trace an `O` with its counter. | PASS |
+| A-02 | The outline cache returned a raster traced before the faces settled, forever: `document.fonts.status` became `loaded` but the provisional entry was still served. | The cache entry records whether it was traced while settled. While loading the provisional raster is reused (no per-frame thrash); once settled it is retraced exactly once. | Browser probe: `document.fonts.status` is `loading` during the trace, the provisional array is reused, the post-load trace is a different object, and that one is reused. | PASS |
+| A-03 | `computeBooleanContours` filtered out any operand whose geometry could not be produced, so a three-operand Subtract with an untraceable text silently ran as a two-box Subtract. | The operation refuses atomically when any operand has no geometry; `inspectBooleanOperands` names the unresolved layers, and the Inspector refuses creation and operation switches with that list. | Unit: readiness inspection + atomic refusal + the two-box result still differs. Browser: a text too large to rasterise refuses the three-operand Subtract (no group is created). | PASS |
+| A-04 | `sampleBezierPath` pushed the last authored vertex at the end of a closed path, dropping the curved closing edge back to the first point. | A closed path closes on its first point; an open path is unchanged. | Unit: last sample is the first vertex, area matches a high-resolution sample within 2 %, and the straight-edge ring keeps its exact polygon area. | PASS |
+| A-05 | The trace drew the raw text while the renderer draws it with SVG's default whitespace handling, so `"A A"` and `"A  A"` produced different geometry. | `normalizeSvgText` collapses internal whitespace runs and trims the edges before both the metrics and the raster. | Unit: normalisation table and equal-geometry mapping. Browser: `"A A"`, `"A  A"`, `"A   A"` and `"  A A  "` trace to identical JSON. | PASS |
+
+### B — Bonded layer movement
+
+One contract now: every caller passes world x/y, and `updateCurrentTransform` converts each written part to its own container-local space.
+
+| ID | Repro / root cause | Fix | Test | Result |
+|---|---|---|---|---|
+| B-01 | The stage drag converted a parented layer to container-local space and the helper converted it again, so a parented bonded drag landed wrong and pushed the partner the wrong way (buddy 300 → 210 instead of 310). | The stage passes world coordinates for every drag mode; the helper owns the conversion. `initialTransforms` became dead and was removed. | Unit: parented drag reaches the requested world position and the buddy moves by the same delta, matching the Inspector path. Browser: a parented bonded drag calibrated against a parentless group moves both by the same world delta. | PASS |
+| B-02 | A multi-selection propagated only the primary layer's bond. | Every selected source propagates its own bond once; a part already written by the gesture is never written again. | Unit: `A↔B`, `C↔D` with `A`+`C` selected moves all four exactly once. | PASS |
+| B-03 | A partner parented to a layer moving in the same gesture was converted against the parent's old world, so it received the delta twice (120 → 140 instead of 130). | Conversion uses the parent's post-gesture world, tracked per gesture. | Unit: `A↔B` with `B` under `P`, `A`+`P` selected, moves `B` by the total delta once. | PASS |
+| B-04 | An X-only edit wrote both axes for a parentless partner, adding a keyframe to the partner's untouched Y animation and changing its evaluation. | Only the axes that actually move are written; a rotated parent still writes the local Y it genuinely changes. | Unit: the partner's Y channel and its frame-10 evaluation are unchanged; the rotated-parent case still lands on the requested world point. | PASS |
+
+### C — Timeline curve targeting
+
+| ID | Repro / root cause | Fix | Test | Result |
+|---|---|---|---|---|
+| C-01 | The modal resolved its target with a fallback chain that could leave the selected layer: with layer A holding canonical `x` keyframes and the selected layer B holding live legacy keyframes, applying an easing preset to B's F30 segment changed A's `x@0` easing. | `resolveCurveTarget` resolves the exact channel (or the legacy keyframe list) inside the selected track only — the channel that owns the selected keyframe, else the first active channel, else that track's legacy keyframes — and never falls back to another layer. | Unit: exact repro, two canonical layers, multiple properties, multiple sequences, unknown selection, mask channel, no-data → null, reorder/delete. Integration: the real `SequencerTimeline` inside the real `AnimatorProvider` — the preset edits B's legacy segment and leaves A untouched, and re-selecting A while the modal is open retargets the edit. | PASS |
+| C-02 | `updateKeyframeBezierPointsMutator` covered legacy and canonical channels but not `maskChannels`, so a mask scalar segment resolved in the modal changed nothing. | The mutator also writes mask channels. | Unit: the mask curve is written, a transform channel is unaffected, and the evaluator's mid-frame value changes (0.5 → 0.3153). | PASS |
+| C-03 | `resolveCurveSegment` accepted two keyframes on the same frame as an editable segment. | A strictly positive duration is required; a zero-duration selection offers no edit and never silently picks another segment. | Unit: duplicate-frame selection returns null while distinct first/middle/reordered cases stay correct. | PASS |
+
+### D — Playfair OGraf portability
+
+| ID | Repro / root cause | Fix | Test | Result |
+|---|---|---|---|---|
+| D-01 | The `@font-face` family came from the layer's raw `fontFamily`, so a fallback list produced a family-list descriptor the browser cannot register as one face; the text fell back to serif although the font shipped. | `fontFaceFamily` reduces the reference to the primary family (unquoted); the element keeps the authored fallback list. | Unit: the runtime registers `[["Playfair Display","assets/fonts/playfair-display.ttf"]]`, the element keeps `"'Playfair Display', serif"`, bare and quoted forms match, and the ZIP keeps the font and its license. | PASS |
+| D-02 | The legacy single-file export wrote only the runtime `.mjs`, silently dropping the packaged font and its license. | It fails closed with an actionable message when the plan carries asset or license files, and points at the ZIP package; an asset-free graphic still exports. | Browser: a Playfair title refuses the legacy export with no download; a shape-only scene still downloads a `.mjs`. | PASS |
+| D-03 | The bundled font was accepted on its 4-byte sfnt signature alone. | The project-owned bytes are pinned to their exact SHA-256; a caller-supplied catalog font is never checked against it. | Unit: the real font is accepted; a 4-byte signature, a one-byte mutation and a truncated file are refused with `OGRAF_FONT_UNVERIFIED`; an explicit catalog font still passes. | PASS |
+
+### DOC — Live-document accuracy
+
+| ID | Repro / root cause | Fix | Test | Result |
+|---|---|---|---|---|
+| DOC-01 | Live documents listed the no-op root `npx tsc --noEmit` as project type-check evidence; the root `tsconfig.json` only references the app and node projects, so it checks no project file. | The false PASS evidence was removed from `PROJECT_STATE.md`, `NEXT_SESSION.md` and the handoff mirrors; `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md` and `docs/KCS_CI_STATUS.md` now name the effective gate `npx tsc -b --pretty false`. Historical explanatory mentions (the CI-step story and the F-10 record) were kept. | `node scripts/check-state-consistency.mjs` (35 checks) plus a `--listFilesOnly` probe confirming the root command lists no project file. | PASS |
+
+## Verdicts by area
+
+- **Boolean / text:** the trace now accepts every family form the editor offers, follows the renderer's whitespace semantics, retraces once the faces settle, refuses a Boolean atomically when an operand has no geometry, and closes a closed freeform ring on the right vertex.
+- **Bonding:** one explicit world/local contract; every selected source propagates its bond exactly once; a moving ancestor is not applied twice; an untouched axis is never written. Bonding remains position-write propagation, not a playback constraint.
+- **Timeline / Motion Curves:** the modal edits the selected layer's own channel, mask scalar segments reach persisted state and the evaluator, and only strictly positive-duration segments are editable.
+- **OGraf / Playfair:** the `@font-face` identity is the primary face, the legacy single-file export fails closed when it cannot carry its assets, and the owned font bytes are pinned to their exact SHA-256.
+
+## Validation
+
+| Command | Result |
+|---|---|
+| `npx tsc -b --pretty false` | PASS |
+| `npm run lint` (Oxlint 1.85.0) | PASS — clean, no new warnings |
+| `npm test` (Vitest 5) | PASS — 135 files / 2,055 tests |
+| `npm run build` | PASS — Vite 8.3.0, 2,034 modules |
+| `npm run validate:ograf` | PASS — offline against the vendored closure |
+| `npm run qa:release` | PASS — 2 Chromium tests |
+| `npm run qa:v6` | PASS — 3 Chromium tests |
+| `npx playwright test --retries=0` | PASS — 268 tests |
+| `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
+| `git diff --check` | One trailing-whitespace line in the verbatim upstream `OFL.txt` (deliberately not edited) |
+| `npm audit --audit-level=low` | WARNING — `concurrently`/`shell-quote` (critical, dev), `proxy-addr` (critical, transitive through Express), `source-map-js` (high, transitive), moderate `fast-uri`; no `npm audit fix` was run |
+
+## Commit split
+
+| Commit | Message | Scope |
+|---|---|---|
+| `a3f5b09` | `fix: harden text boolean geometry` | A-01…A-05 + tests |
+| `78450f5` | `fix: correct bonded layer movement` | B-01…B-04 + tests |
+| `0a20dd6` | `fix: target timeline curve edits correctly` | C-01…C-03 + tests |
+| `aa392a9` | `fix: harden playfair ograf portability` | D-01…D-03 + the owned Playfair source and license |
+| `fb8ed96` | `style: finalize editor visual refresh` | the pre-existing approved visual-only changes |
+| (this commit) | `docs: reconcile post-astra authoring fixes` | DOC-01 + live docs, this report and the handoff rebuild |
+
+The six already-published authoring commits were not rewritten.
+
+## Remaining limitations
+
+1. **Dependency advisories** — the four advisories above are recorded, not fixed; remediation needs a separately approved dependency change. The API server does not enable `trust proxy`, so the `proxy-addr` code path is not reachable from the current configuration, but the advisory remains in the production tree.
+2. **`OFL.txt` trailing whitespace** — the verbatim upstream license carries one trailing-whitespace line; editing a license file to satisfy a diff check is worse than leaving it.
+3. **Boolean browser matrix** — Union/Subtract/Intersect/Exclude, text+shape, text+freeform, text+text and a three-operand Subtract are covered in Chromium, but the letter matrix (O/A/B/P/R/8/i/j/punctuation) is asserted as "traces with its counter" rather than per-letter ring counts.
+4. **Bonding coverage** — parentless, parented source, parented partner, moving ancestor, two bond groups, selected source+partner, X-only with an animated other axis, rotated parent, deleted partner and stage-vs-Inspector parity are covered. A full browser Bind → move → undo/redo → copy/paste → save/reload → delete → reorder chain is still not exercised end to end.
+5. **`.agents/*` and `AGENTS.md`** — these agent templates still name `npx tsc --noEmit` as an example; `AGENTS.md` already allows "the repository's equivalent local runner", and both files are outside this approved scope.
+6. **A-03 renderer surface** — when the derived geometry refuses, the group renders no path for that frame rather than a stale result; there is no separate in-stage refusal banner.
+
+---
+
+## 9. Changelog
 
 # Changelog
 
@@ -770,7 +918,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Package materialization failures now carry stable failure codes; filesystem guidance states the trusted-directory requirement, the unsupported hostile-concurrency case, and avoids claiming perfect OS-level protection. Machine paths are reduced to a display-safe form.
 
 ### Changed
-- The timeline's transport row is one control language instead of five: the timecode, the duration field with its `1s…10s` presets, the transport buttons, Crop, Motion Curves and the support pills all sit on the same 28px height, the same 4px control radius and one muted tone, the duration presets are a single segmented control, and the timecode uses tabular figures with a fixed width so the row no longer shifts as it counts. The inline styles that made the field 22px tall next to 28px buttons are gone, and the duration input still accepts typing (its `.duration-control-box` selector and behaviour are unchanged).
+- The editor now shares the Media upload card's visual language: soft dark surfaces, rounded Inspector and drawer cards, restrained teal feature washes, pill-shaped primary actions, and consistent focus states. Header controls, Layers, timeline transport, Motion Curves, naming/confirmation/import dialogs, and notifications use the existing semantic theme tokens. Dense timeline geometry and all authoring/import/export behavior are unchanged; reduced-motion preferences also suppress drawer-card hover motion and the naming dialog entrance.
+- Inspector disclosures now form one flat list: Transform, Control Points, Animation Data, Appearance, Text and matte sections no longer sit inside two separately painted parent cards. Boolean and binding workflow separators keep an 8px gap before the next card instead of touching its rounded border; each disclosure retains its own expand/collapse state.
+- The timeline's transport row uses a consistent compact control height, token-based rounded corners, muted secondary actions, a segmented duration control, and tabular timecode figures. Its duration field and `1s…10s` presets, transport buttons, Crop, Motion Curves and support controls retain their existing authoring behavior.
 - The Texts drawer's presets are laid out as designed rows instead of uneven cards: each one carries a tinted icon badge in its own accent tone, previews its label in the font it will create (Bebas Neue, Playfair Display, Outfit, Inter, Montserrat), states the family and size underneath, and lifts on hover with a grab cursor because it is draggable. The inline presentation styles and the utility colour classes that did not exist are gone, so one stylesheet owns the look, and clicking or dragging a preset still adds the same text layer with the same font and size.
 - The Motion Curves editor shapes exactly one segment, and says which one: it edits the curve that leads **into** the keyframe you picked from the keyframe before it, so with five keyframes the fourth opens `F60 → F90`. The header names the property and the two frames, each handle names the keyframe it belongs to (`P1 · leaves F60`, `P2 · arrives at F90`), and the curve is stored where the evaluator reads it — the segment's **start** keyframe — leaving the keyframe's own outgoing segment untouched. A keyframe with nothing before it (the first one, or the only one) and a playhead that sits between keyframes no longer fall back to some other keyframe's curve: the editor explains that there is no segment instead of editing one silently, and it no longer creates a keyframe as a side effect of opening or applying a curve.
 - The Media drawer's upload card reads as a real drop target again: a rounded dashed card with a soft accent glow, a circular upload badge, the same title and hint, and a pill-shaped **Browse files** control, with a stronger (solid accent border + ring) feedback while a file is dragged over it. The recently added media tiles are square, keyboard-focusable previews that lift and reveal an add affordance on hover. The stylesheet override that had flattened the card into plain left-aligned text is gone, so one file owns the card's look, and clicking either the card or the button still opens the picker exactly once.
@@ -794,6 +944,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The timeline's "Selected Keyframe" property panel: selecting a keyframe in the timeline no longer opens it. The selection itself is unchanged — the diamond still highlights, `Delete`/`Backspace` still remove the selected frame group and undo restores it — and keyframe values stay editable through the Inspector's transform section and the timeline's own drag/duplicate/copy-paste actions.
 
 ### Fixed
+- Cinematic Title can now export as editable OGraf text: KCS owns the original Playfair Display variable font, loads its normal/italic faces locally in the editor, and packages the normal face with its full SIL Open Font License. The existing asset preparation and validation authorities handle the bytes; unavailable fonts still block export, explicitly supplied font sources retain precedence, and quoted Inspector family names resolve to the same packaged face. The ZIP retains `scene.kcs` and its public text field; no text rasterization or general package-asset import change is introduced.
 - Edit-mode stage rendering now evaluates the selected sequence, matching the selection gizmo and Inspector. Dragging a keyframed circle or another layer in a named sequence moves its painted geometry instead of only its selection border; Broadcast keeps its existing runtime sequence selection.
 - Adding a property keyframe now matches both frame and sequence identity. Authoring another sequence at the same frame no longer overwrites the first sequence's position, opacity, or other channel values; existing untagged keyframes still belong to the default sequence.
 - An OGraf package's per-entry and total size budgets are taken from what the archive reader will actually materialise rather than from one declared field: a stored member is measured by the bytes it is copied from and must declare a single size, a deflated member is measured by the buffer it is inflated into, and a compression method whose output cannot be bounded is refused. A member can no longer be admitted by under-declaring its size.
@@ -816,6 +967,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The evaluator profile harness now builds the workload it measures: its scenes carry a real `baseTransform` and real layer masks (the previous builder wrote `transform` and `layers`, which the evaluator never reads, behind a cast that hid both), and the harness verifies the built scene — layer, track, mask and parent counts, finite transforms and masks, and visible layers — before anything is timed. The report carries that verification, and `KCS_PROFILE_OUT` writes it to a file (Vitest rejects the `--out` flag the harness previously expected).
 - The state consistency check now covers the live documents instead of four of them: `LIVE_DOCUMENTS` names the documents that describe the current state, a missing one fails the check, and two new rules catch a live document that claims the wrong checkout, puts `main` at another revision, or ties the release tag to another candidate. The closed-programme documents (`SESSION.md`, `docs/KCS_CURRENT_STATE.md`, `docs/KCS_OPEN_TASKS.md`, `docs/KCS_BRANCH_STATUS.md`) are marked as historical records and reconciled where they were live, the roadmap records milestone F as complete with the post-review follow-up as NEXT, and the release summary no longer repeats validation counts that go stale within a task.
 - The post-review correctness follow-up is complete: every release-blocking finding from the full-project review is closed, one task at a time and one branch each, and the final correctness gate ran on `main` (`reports/progress_141_astra_correctness_followup_summary.md`).
+- A text Boolean operand now traces the family it was given: the accepted family is read from the canvas's serialized `font` string instead of matching the caller's raw text against it, so a quoted name and a CSS fallback list (`"'Playfair Display', serif"`) produce geometry instead of being refused. The outline cache retraces once when the faces settle, so a trace taken while a webfont was still loading no longer keeps the fallback face's geometry forever.
+- A Boolean operation now refuses atomically when one of its operands has no geometry. A three-operand Subtract whose first operand was an untraceable text used to drop that operand and run as a two-box Subtract, silently producing a different shape; the operation is refused instead and the Inspector names the layer it could not trace.
+- A closed freeform path's ring now closes on its first point instead of its last authored vertex, so a curved closing edge is represented and the ring's area matches the SVG fill instead of collapsing onto the straight triangle through the vertices.
+- The text trace now follows the renderer's SVG whitespace semantics, so `"A A"` and `"A  A"` — which the stage draws identically — produce the same Boolean geometry.
+- A parented bonded layer now drags by the world delta the pointer asked for: the stage drag passed container-local coordinates into a helper that converts world coordinates to local space, so the layer landed in the wrong place and pushed its bonded partner the wrong way. Every caller now passes world x/y and one helper converts each written part to its own container-local space.
+- Every selected layer now propagates its own bond exactly once, a partner parented to a layer that moves in the same gesture no longer receives the delta twice, and a bond edit on one axis no longer writes the partner's other axis — which used to add a keyframe to an untouched animation and change its evaluation.
+- The Motion Curves editor now targets the selected layer's own channel. When the selected layer carried legacy keyframes instead of canonical channel data, the modal fell back to another layer's track and wrote the curve there, so shaping one layer's segment changed a different layer's animation. The target is resolved inside the selected track only, and a segment must have a strictly positive duration — two keyframes on the same frame are no longer offered as an editable segment.
+- A mask scalar curve edit now reaches persisted mask state: the dual bezier mutator wrote legacy and canonical channels but not `maskChannels`, so a mask segment resolved in the modal changed nothing and the evaluator's value stayed the same.
+- A packaged font's `@font-face` identity is now the primary family of the layer's CSS family list, so `"'Playfair Display', serif"` registers `Playfair Display` (the full list stays on the element) instead of an unregisterable family-list descriptor that made the text fall back to serif even though the font shipped.
+- The legacy single-file OGraf export now fails closed when the graphic depends on packaged assets: it writes one `.mjs` file, so a font or license it cannot carry would have been silently dropped. The export explains that and points at the ZIP package; an asset-free graphic still exports.
+- The project-owned Playfair Display font is now verified against its pinned SHA-256 instead of its 4-byte sfnt signature alone, so a truncated or mutated file is refused instead of shipping as ready and failing in the decoder. A caller-supplied catalog font is never checked against that hash.
+- The live documents no longer list the root `npx tsc --noEmit` as project type-check evidence; the root `tsconfig.json` only references the app and node projects, so that command checks no project file. The effective gate is `npx tsc -b --pretty false`, and the contributing guide, the pull-request checklist and the CI status document now name it.
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.

@@ -1,15 +1,14 @@
-# KCS ChatGPT Upload Manifest — Authoring Publication
+# KCS ChatGPT Upload Manifest — Post-Astra Focused Remediation
 
-Bundle scope: approved authoring publication, October 5, 2026; task-specific, not an archive
-Publication baseline: 703e45ab209530f20928cf5e13287b759276a33f
-Working branch: feature/studio-authoring-fixes
-Validation authority: current PROJECT_STATE.md and NEXT_SESSION.md
-Dating provenance: six owner-approved retrospective author dates; actual committer dates; no empty commits or shared-history rewrite
-Historical record retained: reports/progress_151_astra_remediation.md (not current validation)
+Scope: the 16 Astra findings in the previously uncommitted authoring work, plus the committed Playfair Display correction and the visual-only editor refresh
+Baseline: main at ed75ea4304a85be7c931893e0316bdfe92255a3d before the six remediation commits
+Current changes: committed on main as a3f5b09, 78450f5, 0a20dd6, aa392a9, fb8ed96 and the documentation reconciliation
+Validation authority: the Post-Astra focused remediation publication section in PROJECT_STATE.md and NEXT_SESSION.md
+Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
+Historical record retained: progress_151_astra_remediation.md (not current validation)
 Release state: H7 HOLD; release tags, draft prerelease, private package and npm publication unchanged
-Remote push and CI: verified separately after the local gate; no success presumed in this inventory
 
-Bundle source files (8):
+Bundle source files (9):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - NEXT_SESSION.md
@@ -18,8 +17,10 @@ Bundle source files (8):
 - README.md
 - manifest.txt
 - progress_151_astra_remediation.md
+- progress_152_post_astra_focused_remediation.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
+No empty contribution-filling commits or retrospective UI dates are authorized.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.

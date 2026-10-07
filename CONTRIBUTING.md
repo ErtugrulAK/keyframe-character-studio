@@ -83,8 +83,8 @@ npm install
 Before submitting a pull request, ensure all checks pass:
 
 ```bash
-# 1. Type Check
-npx tsc --noEmit
+# 1. Type Check (builds the referenced projects; a bare root `tsc --noEmit` checks no project file)
+npx tsc -b --pretty false
 
 # 2. Linting
 npm run lint

@@ -1,30 +1,25 @@
-# KCS Authoring Publication — 2026-10-05
+# KCS Post-Astra Focused Remediation — 2026-10-07
 
-## Scope
+## Latest approved correction
 
-Publication starts from synchronized main at `703e45ab209530f20928cf5e13287b759276a33f`. The owner approved publication of the pending authoring changes, the active-sequence stage correction, six meaningful dated commits, fast-forward integration, and a normal push.
+The Astra review of the uncommitted authoring work found 16 concrete defects (3 HIGH, 12 MEDIUM, 1 LOW; no BLOCKER). All 16 are fixed, published as six commits on `main`, and covered by focused regressions: text Boolean geometry `a3f5b09`, bonded layer movement `78450f5`, timeline curve targeting `0a20dd6`, Playfair OGraf portability `aa392a9`, the pre-existing visual-only editor refresh `fb8ed96`, and the documentation reconciliation.
 
-- Text Appearance supports stroke consistently in the canvas and OGraf renderer.
-- Position-only layer bonds reuse the existing inspector/history pipeline. Text and freeform layers participate in Boolean geometry through the existing geometry authority.
-- Opacity has an authoring control. Motion Curves edits the incoming segment selected by its end keyframe; a first keyframe has no incoming segment.
-- Sidebar transitions, transport controls, and Media/Texts drawers are reconciled with the current UI.
-- Same-frame property writes match the sequence identity. Edit-mode painted layers use the active sequence, matching their selection gizmos; Broadcast keeps its runtime sequence selection.
-- Browser contracts select valid incoming segments. Obsolete inspector wording/field-absence assertions were removed. Matte region probes capture one image per exact sample grid without changing thresholds or parity assertions.
+The HIGH defects: a quoted or fallback-list font family traced no Boolean geometry; a parented bonded layer dragged by a local-space delta instead of the world delta (buddy 300 → 210 instead of 310); and the Motion Curves modal wrote a curve into a different layer when the selected layer carried legacy keyframes rather than canonical channel data.
 
-## Runtime evidence
+The Playfair Display correction and the visual-only editor refresh from the previous working tree are now committed unchanged in substance, together with the three owned Playfair files (normal TTF, italic TTF, OFL.txt).
 
-A real browser drag moved the second-sequence circle by +100/+40 screen pixels while the default sequence retained x=-100. A bonded circle/text pair moved by the same -60/+20 screen-pixel delta. The named-sequence browser regression also checks painted geometry when switching sequences.
+## Evidence
 
-Current validation results are recorded in `PROJECT_STATE.md` and `NEXT_SESSION.md`. Historical Astra evidence in `progress_151_astra_remediation.md` remains a historical record, not this publication's verification report.
+Real Chromium proof covers the font family matrix (bare, quoted, fallback-list, JetBrains Mono), the SVG whitespace parity of the trace, the font load → settled retrace, an untraceable operand refusing the Boolean, a parented bonded drag calibrated against a parentless group, and the legacy single-file export refusing an asset-dependent graphic while an asset-free graphic still exports. Unit coverage adds the closed freeform ring closure, mask curve dispatch, zero-duration segment refusal, multi-selection and moving-ancestor bond dispatch, the untouched-axis guarantee, the pinned font integrity, and the exact wrong-layer repro rendered through the real SequencerTimeline.
 
-## Dating provenance
+Final local gate: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), the full Chromium suite (268 tests with `--retries=0`), and `node scripts/check-state-consistency.mjs` (35 checks) all pass. Retries, assertions and thresholds are unchanged.
 
-The six author dates are owner-approved retrospective metadata: August 29, September 5, 12, 19, 26, and October 5, 2026. Committer dates reflect actual creation. Earlier author dates do not represent earlier uploads or prove work occurred on those days. Every group contains real changes; there are no empty contribution-filling commits.
+## Scope boundaries
 
-No old-branch patch replay, rebase, reset, shared-history rewrite, force push, or branch deletion is authorized by this publication. Historical review branches remain intact. Publication uses `feature/studio-authoring-fixes`, a fast-forward into main, and a normal push. Remote publication and its CI result are verified separately after the local gate; this document does not predict their success.
+No dependency, workflow, package, version, tag, release or npm change is part of this publication. Only Playfair Display is covered by the owned-font path; general font upload, other built-in font portability, and package asset relinking are not added. The audit now reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js` and the previously recorded moderate `fast-uri` advisory; remediation needs a separately approved dependency change and no `npm audit fix` was run.
 
-## Protected release state
+## Release state
 
-H7 remains HOLD. Release tags, the draft prerelease, the private package, npm publication, external QA folders, `.hermes/desktop-attachments/`, and OMP configuration are unchanged.
+H7 remains HOLD. Annotated tag `v1.1.0-rc.1` and the GitHub draft prerelease stay at `46d2a3e`. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.

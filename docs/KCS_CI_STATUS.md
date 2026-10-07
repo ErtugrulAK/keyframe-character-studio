@@ -8,7 +8,7 @@ The checked-in `.github/workflows/ci.yml` runs on pushes to `main`, pull request
 2. `npm ci`;
 3. `npm run validate:ograf`;
 4. `npm run lint`;
-5. `npx tsc --noEmit`;
+5. `npx tsc -b --pretty false`;
 6. `npm test` with the configured memory limit;
 7. `npm run build`.
 

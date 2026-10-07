@@ -21,7 +21,7 @@ Select the domain branch matching this change:
 
 Please check all items that apply:
 
-- [ ] `npx tsc --noEmit` completes with 0 type errors
+- [ ] `npx tsc -b --pretty false` completes with 0 type errors
 - [ ] `npm run lint` completes cleanly
 - [ ] `npx vitest run` passes all 21 test suites (62 tests)
 - [ ] `npm run build` completes successfully

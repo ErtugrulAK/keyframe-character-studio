@@ -73,3 +73,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_149_final_jsdom_state_cleanup.md` — Milestone H: the cleanup that removed the last stale `jsdom` claims from the live documents.
 - `progress_150_final_maintenance_reconciliation.md` — the five-task post-hold maintenance close-out, validation evidence, live-document reconciliation, and handoff rebuild.
 - `progress_151_astra_remediation.md` — the Astra correctness/security findings F-01…F-10: reproduction, one branch and one focused test per finding, validation evidence, integration record, and the remaining limitations.
+- `progress_152_post_astra_focused_remediation.md` — the post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01: per-finding reproduction, root cause, fix, test and result, the six-commit publication, the full gate, and the remaining limitations.

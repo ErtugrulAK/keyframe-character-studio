@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { unzipSync } from 'fflate';
+import { readFileSync } from 'node:fs';
 import type { SceneData, SceneLayer } from '../types/composition';
 import { prepareLegacyOGrafExport } from '../ograf/legacyCompatibility';
 import { compileOGrafPackage } from '../ograf/packageCompiler';
@@ -22,6 +23,8 @@ const embeddedSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="2" height="2
 const embeddedSvgUrl = `data:image/svg+xml;base64,${btoa(embeddedSvg)}`;
 
 const unsafeSvgUrl = `data:image/svg+xml;base64,${btoa('<svg><script>alert(1)</script></svg>')}`;
+afterEach(() => vi.unstubAllGlobals());
+
 describe('legacy OGraf asset compatibility', () => {
   test('normalizes embedded images into deterministic package bytes without mutating SceneData', async () => {
     const scene = makeScene(makeLayer({ imageUrl: embeddedSvgUrl }));
@@ -79,6 +82,48 @@ describe('legacy OGraf asset compatibility', () => {
     expect(result.sceneData.layers[0].imageUrl).toBe(source);
     expect(Object.keys(result.options.assetCatalog || {})).toHaveLength(0);
     expect(compileOGrafPackage(result.sceneData, result.options).status).toBe('blocked');
+  });
+
+  test.each(['Playfair Display', "'Playfair Display'"])('exports %s as editable text with its owned font and redistribution license', async (fontFamily) => {
+    const font = readFileSync('src/assets/fonts/playfair-display/PlayfairDisplay.ttf');
+    vi.stubGlobal('fetch', async () => new Response(font));
+    const scene = makeScene(makeLayer({
+      type: 'custom_text', imageUrl: undefined, name: 'Cinematic Title', textValue: 'Editable title', fontFamily,
+    }));
+    const prepared = await prepareLegacyOGrafExport(scene);
+    const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
+    expect(plan.status).toBe('ready-to-materialize');
+    const files = unzipSync((await createOGrafBrowserZip(plan)).bytes);
+    expect(files['assets/fonts/playfair-display.ttf']).toEqual(new Uint8Array(font));
+    expect(new TextDecoder().decode(files['assets/fonts/playfair-display.ttf.LICENSE.txt'])).toContain('SIL OPEN FONT LICENSE Version 1.1');
+    const exported = JSON.parse(new TextDecoder().decode(files['scene.kcs'])) as SceneData;
+    expect(exported.layers[0]).toEqual(scene.layers[0]);
+    expect(Object.values(plan.manifest.schema.properties)).toContainEqual(expect.objectContaining({ type: 'string', default: 'Editable title' }));
+    expect(scene.layers[0].fontFamily).toBe(fontFamily);
+  });
+
+  test.each(['missing', 'unreadable', 'not-a-font'])('keeps export blocked when the bundled font is %s', async (failure) => {
+    vi.stubGlobal('fetch', async () => {
+      if (failure === 'unreadable') throw new TypeError('Font unavailable');
+      return new Response('<html>Not a font</html>', { status: failure === 'missing' ? 404 : 200 });
+    });
+    const prepared = await prepareLegacyOGrafExport(makeScene(makeLayer({
+      type: 'custom_text', imageUrl: undefined, textValue: 'Title', fontFamily: 'Playfair Display',
+    })));
+    const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
+    expect(plan.status).toBe('blocked');
+    expect(plan.diagnostics).toContainEqual(expect.objectContaining({ code: 'OGRAF_FONT_UNVERIFIED', severity: 'ERROR' }));
+  });
+
+  test('preserves an explicitly supplied Playfair font instead of replacing its bytes', async () => {
+    const supplied = new Uint8Array([0, 1, 0, 0, 7, 8]);
+    const prepared = await prepareLegacyOGrafExport(makeScene(makeLayer({
+      type: 'custom_text', imageUrl: undefined, textValue: 'Title', fontFamily: 'Playfair Display',
+    })), { assetCatalog: { 'font:Playfair Display': { kind: 'local', packagedPath: 'fonts/owned.ttf', binaryContent: supplied } } });
+    const plan = compileOGrafPackage(prepared.sceneData, prepared.options);
+    const files = unzipSync((await createOGrafBrowserZip(plan)).bytes);
+    expect(files['fonts/owned.ttf']).toEqual(supplied);
+    expect(files['assets/fonts/playfair-display.ttf']).toBeUndefined();
   });
 
   test('packages a verified local font and blocks an unverified font with remediation', async () => {

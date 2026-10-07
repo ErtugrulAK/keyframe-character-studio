@@ -255,6 +255,24 @@ export const HeaderBar: React.FC = () => {
       if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
       const runtime = plan.files.find((file) => file.kind === 'runtime' && file.content !== undefined);
       if (!runtime?.content) throw new Error('Generated OGraf runtime is unavailable.');
+      // The legacy export writes ONE .mjs file. When the runtime depends on
+      // packaged assets (fonts, licenses, images) the download alone would be a
+      // broken, unlicensed graphic, so the export fails closed and points at the
+      // ZIP package instead of silently shipping a runtime without them.
+      const packagedDependencies = plan.files.filter((file) => file.kind === 'asset' || file.kind === 'license');
+      if (packagedDependencies.length > 0) {
+        const kinds = Array.from(new Set(packagedDependencies.map((file) => file.kind))).sort().join(' and ');
+        showToast(
+          `The single-file legacy export cannot carry its ${packagedDependencies.length} packaged ${kinds} file(s). Export the OGraf package (ZIP) so the fonts and licenses ship with the runtime.`,
+          'error',
+          {
+            title: 'Legacy export blocked',
+            action: 'Use "Export OGraf Package" (ZIP) for a graphic that needs packaged assets.',
+            durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
+          },
+        );
+        return;
+      }
       const fileName = `${sanitizeOGrafDownloadName(plan.manifest.name)}.mjs`;
       const url = URL.createObjectURL(new Blob([runtime.content], { type: 'text/javascript' }));
       const anchor = document.createElement('a');

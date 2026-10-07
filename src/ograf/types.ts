@@ -56,6 +56,8 @@ export interface OGrafAssetCatalogEntry {
   sourcePath?: string;
   /** Browser-safe bytes used by the browser ZIP materializer when available. */
   binaryContent?: Uint8Array;
+  /** Original redistribution license, emitted beside the packaged asset. */
+  licenseText?: string;
 }
 
 export interface OGrafPublicTextField {
@@ -133,7 +135,7 @@ export interface OGrafManifest {
 
 export interface OGrafPackageFile {
   path: string;
-  kind: 'manifest' | 'scene' | 'runtime' | 'asset';
+  kind: 'manifest' | 'scene' | 'runtime' | 'asset' | 'license';
   status: 'planned' | 'generated' | 'pending-phase-2';
   content?: string;
   binaryContent?: Uint8Array;
@@ -145,6 +147,7 @@ export interface OGrafAssetPlan {
   kind: 'image' | 'font';
   sourcePath?: string;
   binaryContent?: Uint8Array;
+  licenseText?: string;
 }
 
 export interface OGrafPackagePlan {

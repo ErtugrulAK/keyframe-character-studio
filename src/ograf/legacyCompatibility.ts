@@ -1,5 +1,8 @@
 import type { SceneData, SceneLayer } from '../types/composition';
 import type { OGrafExportOptions } from './types';
+import { matchTextFontFamily } from '../utils/textFonts';
+import playfairDisplayUrl from '../assets/fonts/playfair-display/PlayfairDisplay.ttf?url';
+import playfairDisplayLicense from '../assets/fonts/playfair-display/OFL.txt?raw';
 
 const EMBEDDED_IMAGE_MIME_TYPES: Record<string, string> = {
   'image/gif': 'gif',
@@ -80,6 +83,44 @@ async function readBlobUrl(source: string): Promise<{ bytes: Uint8Array; mimeTyp
   }
 }
 
+/**
+ * Pinned integrity of the project-owned Playfair Display face.
+ *
+ * The 4-byte sfnt signature alone is a weak gate: a truncated or mutated file
+ * passes it and then fails in the font decoder, so a broken asset could ship as
+ * a "ready" package. The owned bytes are pinned to their exact SHA-256, and any
+ * other bytes are refused. This applies to the PROJECT-OWNED asset only — a
+ * caller-supplied catalog font is never checked against this hash.
+ */
+const PLAYFAIR_DISPLAY_SHA256 = 'c40f2293766a503bc70cce9e512ef844a4ccb7cbcde792fe2ea31d191917d8d6';
+
+const sha256Hex = async (bytes: Uint8Array): Promise<string | undefined> => {
+  try {
+    const subtle = globalThis.crypto?.subtle;
+    if (!subtle) return undefined;
+    const digest = await subtle.digest('SHA-256', bytes.slice());
+    return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('');
+  } catch {
+    return undefined;
+  }
+};
+
+async function readBundledPlayfairFont(): Promise<PreparedAsset | undefined> {
+  try {
+    const response = await fetch(playfairDisplayUrl);
+    if (!response.ok) return undefined;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    if (bytes.length < 4 || new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(0) !== 0x00010000) return undefined;
+    // Integrity, not just the sfnt signature: the pinned hash IS the identity of
+    // the owned face, so truncated or mutated bytes are refused.
+    if (await sha256Hex(bytes) !== PLAYFAIR_DISPLAY_SHA256) return undefined;
+    return { packagedPath: 'assets/fonts/playfair-display.ttf', binaryContent: bytes };
+  } catch {
+    // Missing owned bytes remain a blocking diagnostic in the canonical validator.
+    return undefined;
+  }
+}
+
 function createPreparedAsset(bytes: Uint8Array, mimeType: string): PreparedAsset {
   return {
     packagedPath: `assets/images/legacy-${hashBytes(bytes)}.${EMBEDDED_IMAGE_MIME_TYPES[mimeType]}`,
@@ -103,12 +144,12 @@ function finishPreparation(state: PreparationState, baseOptions: OGrafExportOpti
 }
 
 /**
- * Converts only same-document embedded image sources into owned package bytes.
- * Remote, executable, file, and unsupported data sources remain untouched so
- * the canonical OGraf validator rejects them instead of weakening policy.
+ * Converts same-document embedded images and the bundled Playfair Display font
+ * into owned package bytes. Remote, executable, file, and unsupported sources
+ * remain untouched so the canonical OGraf validator keeps rejecting them.
  *
- * Data URLs are handled synchronously to preserve the existing export flow;
- * blob URLs return a Promise because their browser bytes require fetch().
+ * Data-only images retain the synchronous flow; blob images and bundled fonts
+ * return a Promise because their browser bytes require fetch().
  */
 export function prepareLegacyOGrafExport(sceneData: SceneData, baseOptions: OGrafExportOptions = {}): LegacyOGrafPreparation | Promise<LegacyOGrafPreparation> {
   const state: PreparationState = {
@@ -117,8 +158,13 @@ export function prepareLegacyOGrafExport(sceneData: SceneData, baseOptions: OGra
     preparedBySource: new Map<string, PreparedAsset>(),
   };
   const blobLayers: Array<{ layer: SceneLayer; source: string }> = [];
+  const bundledFontFamilies = new Set<string>();
 
   for (const layer of state.sceneData.layers) {
+    if (layer.fontFamily && matchTextFontFamily(layer.fontFamily) === "'Playfair Display'"
+      && !baseOptions.assetCatalog?.[`font:${layer.fontFamily}`] && !baseOptions.assetCatalog?.[layer.fontFamily]) {
+      bundledFontFamilies.add(layer.fontFamily);
+    }
     if (layer.type !== 'custom_image' || !layer.imageUrl) continue;
     const source = layer.imageUrl;
     const embedded = decodeDataUrl(source);
@@ -126,8 +172,16 @@ export function prepareLegacyOGrafExport(sceneData: SceneData, baseOptions: OGra
     else if (source.startsWith('blob:')) blobLayers.push({ layer, source });
   }
 
-  if (blobLayers.length === 0) return finishPreparation(state, baseOptions);
+  if (blobLayers.length === 0 && bundledFontFamilies.size === 0) return finishPreparation(state, baseOptions);
   return (async () => {
+    if (bundledFontFamilies.size > 0) {
+      const font = await readBundledPlayfairFont();
+      if (font) {
+        for (const family of bundledFontFamilies) {
+          state.assetCatalog[`font:${family}`] = { kind: 'local', ...font, licenseText: playfairDisplayLicense };
+        }
+      }
+    }
     for (const { layer, source } of blobLayers) {
       const embedded = await readBlobUrl(source);
       if (embedded) applyPreparedAsset(layer, source, embedded, state);

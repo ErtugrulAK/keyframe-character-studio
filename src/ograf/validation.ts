@@ -435,6 +435,7 @@ function validateFont(
     kind: 'font',
     ...(entry.sourcePath ? { sourcePath: entry.sourcePath } : {}),
     ...(entry.binaryContent ? { binaryContent: entry.binaryContent } : {}),
+    ...(entry.licenseText ? { licenseText: entry.licenseText } : {}),
   });
 }
 

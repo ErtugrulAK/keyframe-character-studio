@@ -84,6 +84,20 @@ function packageAssetDiagnostics(sceneData: SceneData, options: OGrafExportOptio
   }
 }
 
+/**
+ * The `@font-face` family identity of a packaged font.
+ *
+ * A layer may name a CSS fallback list (`'Playfair Display', serif`). The
+ * `font-family` descriptor of an `@font-face` rule takes ONE family name, so
+ * the reference must be the primary face — the full fallback list stays on the
+ * element, where the renderer uses it.
+ */
+const fontFaceFamily = (source: string): string => {
+  const familyList = source.slice('font:'.length);
+  const primary = (familyList.split(',')[0] ?? '').trim();
+  return primary.replace(/^(['"])(.*)\1$/u, '$2').trim() || familyList;
+};
+
 function generatedFiles(
   sceneData: SceneData,
   options: OGrafExportOptions,
@@ -93,7 +107,10 @@ function generatedFiles(
 ): OGrafPackageFile[] {
   const graphicName = sanitizeOGrafId(options.name?.trim() || sceneData.name?.trim() || 'graphic');
   const imageReferences = Object.fromEntries(assets.filter((asset) => asset.kind === 'image').map((asset) => [asset.source, asset.packagedPath]));
-  const fontReferences = Object.fromEntries(assets.filter((asset) => asset.kind === 'font').map((asset) => [asset.source.slice('font:'.length), asset.packagedPath]));
+  const fontReferences = Object.fromEntries(assets.filter((asset) => asset.kind === 'font').map((asset) => [
+    fontFaceFamily(asset.source),
+    asset.packagedPath,
+  ]));
   const runtime = generateGraphicModule(
     sceneData,
     publicControls.textFields,
@@ -107,6 +124,12 @@ function generatedFiles(
     { path: 'scene.kcs', kind: 'scene', status: 'generated', content: `${JSON.stringify(sceneData, null, 2)}\n` },
     { path: manifest.main, kind: 'runtime', status: 'generated', content: runtime },
     ...assets.map((asset) => ({ path: asset.packagedPath, kind: 'asset' as const, status: 'planned' as const, ...(asset.binaryContent ? { binaryContent: asset.binaryContent } : {}) })),
+    ...assets.filter((asset) => asset.licenseText).map((asset) => ({
+      path: `${asset.packagedPath}.LICENSE.txt`,
+      kind: 'license' as const,
+      status: 'generated' as const,
+      content: asset.licenseText,
+    })),
   ];
 }
 

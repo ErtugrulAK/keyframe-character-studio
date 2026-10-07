@@ -33,10 +33,25 @@ export const updateKeyframeBezierPointsMutator = (
       });
     }
 
+    let updatedMaskChannels = tr.maskChannels;
+    if (tr.maskChannels) {
+      updatedMaskChannels = { ...tr.maskChannels };
+      Object.keys(tr.maskChannels).forEach((chKey) => {
+        const ch = chKey as LayerMaskChannel;
+        const list = updatedMaskChannels![ch];
+        if (list) {
+          updatedMaskChannels![ch] = list.map((pk) =>
+            pk.id === keyframeId ? { ...pk, easing: 'cubic_bezier' as EasingType, bezierControlPoints: points } : pk
+          );
+        }
+      });
+    }
+
     return {
       ...tr,
       keyframes: updatedKfs,
       channels: updatedChannels,
+      maskChannels: updatedMaskChannels,
     };
   });
 };

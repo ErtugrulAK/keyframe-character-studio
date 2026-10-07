@@ -6,7 +6,7 @@
  * component.
  */
 
-import type { Track, TrackChannel } from '../types/animator';
+import type { AnimationChannel, LayerMaskChannel, PropertyKeyframe, Track, TrackChannel } from '../types/animator';
 import { TRACK_CHANNELS } from '../types/animator';
 
 /**
@@ -91,9 +91,77 @@ export function resolveCurveSegment(
     index = list.findIndex((keyframe) => keyframe.id === selectedKeyframeId);
   }
   if (index < 1) return null;
+  // A segment must have a strictly positive duration: two keyframes on the same
+  // frame own no time to shape, and the evaluator never reads a curve from
+  // them. Refuse instead of silently choosing a different segment.
+  if (list[index].frame <= list[index - 1].frame) return null;
 
   return { from: list[index - 1], to: list[index], list };
 }
 
 /** Channel display order (same as DISPLAY_CHANNELS in the editor panel) */
 export const TIMELINE_CHANNEL_ORDER: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];
+
+/**
+ * The exact identity a curve edit belongs to, resolved *inside one track*.
+ *
+ * The Motion Curves modal must never write a curve into a layer the user did
+ * not select. This helper answers "which channel — or legacy keyframe list —
+ * of THIS track owns the segment?" so the caller cannot fall back to another
+ * layer. `channel` is `null` for the legacy composite-keyframe route.
+ */
+export interface CurveTarget {
+  /** Canonical channel that owns the segment, or `null` for legacy keyframes. */
+  channel: AnimationChannel | null;
+  /** Active-sequence keyframes of that exact identity, in document order. */
+  keyframes: CurveSegmentKeyframe[];
+  /**
+   * Canonical channel keyframes for the value/handle editor (they carry
+   * `value`/`easing`); empty on the legacy composite-keyframe route, which has
+   * no per-property value surface.
+   */
+  channelKeyframes: PropertyKeyframe[];
+}
+
+/**
+ * Resolve the curve target of a single selected track:
+ *   1. the channel that owns the selected keyframe (when the selection is known),
+ *   2. else the first canonical channel carrying active-sequence keyframes,
+ *   3. else the track's legacy composite keyframes.
+ *
+ * Returns `null` when the track carries no keyframes for the active sequence,
+ * so the caller offers no edit instead of guessing another layer's curve.
+ */
+export function resolveCurveTarget(
+  track: Track | null,
+  activeTemplateId: string,
+  selectedKeyframeId: string | null,
+): CurveTarget | null {
+  if (!track) return null;
+  const isActive = (keyframe: { templateId?: string }) => (keyframe.templateId || 'Sequence') === activeTemplateId;
+  const readChannel = (channel: AnimationChannel): CurveSegmentKeyframe[] =>
+    (TRACK_CHANNELS as string[]).includes(channel)
+      ? (track.channels?.[channel as TrackChannel] ?? [])
+      : (track.maskChannels?.[channel as LayerMaskChannel] ?? []);
+  const channelKeys: AnimationChannel[] = [
+    ...TRACK_CHANNELS.filter((channel) => (track.channels?.[channel] ?? []).length > 0),
+    ...Object.keys(track.maskChannels ?? {}) as AnimationChannel[],
+  ];
+
+  if (selectedKeyframeId) {
+    for (const channel of channelKeys) {
+      const keyframes = readChannel(channel) as PropertyKeyframe[];
+      if (keyframes.some((keyframe) => keyframe.id === selectedKeyframeId && isActive(keyframe))) {
+        const active = keyframes.filter(isActive);
+        return { channel, keyframes: active, channelKeyframes: active };
+      }
+    }
+  }
+  for (const channel of channelKeys) {
+    const active = (readChannel(channel) as PropertyKeyframe[]).filter(isActive);
+    if (active.length > 0) return { channel, keyframes: active, channelKeyframes: active };
+  }
+
+  const legacy = (track.keyframes ?? []).filter(isActive);
+  return legacy.length > 0 ? { channel: null, keyframes: legacy, channelKeyframes: [] } : null;
+}

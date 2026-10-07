@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/useAnimator';
 import { type PropertyKeyframe, type TrackChannel, type AnimationChannel } from '../../types/animator';
-import { computeMaxFrame, hasChannelDataForTemplate, resolveCurveSegment, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
+import { computeMaxFrame, hasChannelDataForTemplate, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
 import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, buildTransformSnapshot } from '../../utils/channelKeyframeGroups';
 import {
   Plus,
@@ -94,29 +94,13 @@ export const SequencerTimeline: React.FC = () => {
     ? tracks.find((track) => track.partId === selectedPartId) ?? null
     : null;
   const activeGraphTemplate = activeTemplateId || 'Sequence';
-  const hasActiveChannelData = (track: typeof tracks[number]): boolean => (
-    Object.values(track.maskChannels ?? {}).some((keyframes) =>
-      keyframes.some((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate),
-    )
-    || Object.values(track.channels).some((keyframes) =>
-      keyframes.some((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate),
-    )
-  );
-  const graphTrack = selectedTrack && hasActiveChannelData(selectedTrack)
-    ? selectedTrack
-    : tracks.find(hasActiveChannelData) ?? tracks[0] ?? null;
-  const graphChannel = graphTrack
-    ? Object.keys(graphTrack.channels).find((channel) =>
-      graphTrack.channels[channel as TrackChannel]?.some((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate),
-    )
-      ?? Object.keys(graphTrack.maskChannels ?? {}).find((channel) =>
-        graphTrack.maskChannels?.[channel as keyof NonNullable<typeof graphTrack.maskChannels>]?.some((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate),
-      )
-    : undefined;
-  const graphKeyframes = graphChannel
-    ? (graphTrack?.channels[graphChannel as TrackChannel] ?? graphTrack?.maskChannels?.[graphChannel as keyof NonNullable<typeof graphTrack.maskChannels>] ?? [])
-      .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate)
-    : [];
+  // The Motion Curves modal edits the SELECTED layer only. `resolveCurveTarget`
+  // resolves the exact channel (or legacy keyframe list) inside that one track;
+  // the modal never falls back to another layer, because a fallback would write
+  // the curve into a layer the user did not select.
+  const curveTarget = resolveCurveTarget(selectedTrack, activeGraphTemplate, selectedKeyframeId);
+  const graphChannel = curveTarget?.channel ?? undefined;
+  const graphKeyframes = curveTarget?.keyframes ?? [];
   const activeSequenceDurationFrames = motionTemplates.find((template) => template.id === activeTemplateId)?.durationFrames ?? totalFrames;
 
   /**
@@ -127,9 +111,7 @@ export const SequencerTimeline: React.FC = () => {
    * or the only one) owns no segment — the modal then explains that instead of
    * silently editing another keyframe.
    */
-  const curveKeyframes: CurveSegmentKeyframe[] = graphKeyframes.length > 0
-    ? graphKeyframes
-    : (graphTrack?.keyframes ?? []).filter((keyframe) => (keyframe.templateId || 'Sequence') === activeGraphTemplate);
+  const curveKeyframes: CurveSegmentKeyframe[] = graphKeyframes;
   const curveSegment = resolveCurveSegment(curveKeyframes, activeGraphTemplate, selectedKeyframeId, currentFrame);
   const curveSegmentFrames = curveSegment ? { from: curveSegment.from.frame, to: curveSegment.to.frame } : undefined;
   const curveChannelLabel = graphChannel
@@ -137,9 +119,11 @@ export const SequencerTimeline: React.FC = () => {
     : undefined;
   const curveInactiveReason = curveSegment
     ? null
-    : curveKeyframes.length < 2
-      ? 'This property carries a single keyframe, and a curve belongs to the segment between two keyframes. Add a second keyframe, then select the later one to shape the segment that leads into it.'
-      : 'Select a keyframe other than the first one. A curve shapes the segment that leads into a keyframe from the one before it, so the first keyframe — and a keyframe with nothing before it — has no curve to edit.';
+    : curveTarget === null
+      ? 'The selected layer carries no keyframes for the active sequence, so there is no segment to shape. Select a keyframed layer or add a second keyframe to this property.'
+      : curveKeyframes.length < 2
+        ? 'This property carries a single keyframe, and a curve belongs to the segment between two keyframes. Add a second keyframe, then select the later one to shape the segment that leads into it.'
+        : 'Select a keyframe other than the first one. A curve shapes the segment that leads into a keyframe from the one before it, so the first keyframe — and a keyframe with nothing before it — has no curve to edit.';
 
 
   useEffect(() => {
@@ -730,17 +714,18 @@ export const SequencerTimeline: React.FC = () => {
           segmentChannelLabel={curveChannelLabel}
           inactiveReason={curveInactiveReason}
           onChange={(points) => {
-            if (!curveSegment || !graphTrack) return;
+            if (!curveSegment || !selectedTrack) return;
             // The segment's curve lives on the keyframe it starts at; the
-            // mutator is dual, so this covers legacy and channel keyframes.
-            updateKeyframeBezierPoints(graphTrack.id, curveSegment.from.id, points);
+            // mutator is dual (legacy + canonical + mask channels), and the
+            // target is always the SELECTED track — never a fallback layer.
+            updateKeyframeBezierPoints(selectedTrack.id, curveSegment.from.id, points);
           }}
-          valueKeyframes={graphKeyframes.filter((keyframe) => (keyframe.templateId || 'Sequence') === (activeTemplateId || 'Sequence'))}
+          valueKeyframes={curveTarget?.channelKeyframes ?? []}
           onChangeKeyframeValue={(keyframeId, value) => {
-            if (graphTrack && graphChannel) updatePropertyKeyframeValue(graphTrack.id, graphChannel as AnimationChannel, keyframeId, value);
+            if (selectedTrack && graphChannel) updatePropertyKeyframeValue(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, value);
           }}
           onChangeKeyframeHandles={(keyframeId, patch) => {
-            if (graphTrack && graphChannel) updatePropertyKeyframeTemporalHandles(graphTrack.id, graphChannel as AnimationChannel, keyframeId, patch);
+            if (selectedTrack && graphChannel) updatePropertyKeyframeTemporalHandles(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, patch);
           }}
           initialModalOpen={true}
           onCloseModal={() => setIsCurveModalOpen(false)}

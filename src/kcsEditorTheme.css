@@ -4,32 +4,62 @@
   color-scheme: dark;
   --kcs-bg-app: #0b0e13;
   --kcs-bg-canvas: #080b10;
-  --kcs-bg-panel: #11151c;
-  --kcs-bg-surface: #171c24;
-  --kcs-bg-elevated: #1d2430;
-  --kcs-bg-input: #0c1016;
-  --kcs-bg-hover: #202a36;
-  --kcs-bg-active: rgba(41, 211, 183, 0.14);
-  --kcs-border-subtle: rgba(148, 163, 184, 0.13);
-  --kcs-border-default: rgba(148, 163, 184, 0.22);
+  --kcs-bg-panel: #111922;
+  --kcs-bg-surface: #171e28;
+  --kcs-bg-elevated: #1d2833;
+  --kcs-bg-input: #0c121a;
+  --kcs-bg-hover: #22313d;
+  --kcs-bg-active: rgba(53, 200, 176, .14);
+  --kcs-bg-active-muted: rgba(148, 163, 184, .09);
+  --kcs-bg-selected: rgba(53, 200, 176, .12);
+  --kcs-bg-shell: #101720;
+  --kcs-bg-rail: #0e151d;
+  --kcs-bg-drawer: #111922;
+  --kcs-bg-inspector: #101720;
+  --kcs-bg-timeline: #0c131b;
+  --kcs-bg-graph: #0c141c;
+  --kcs-border-subtle: rgba(148, 163, 184, .13);
+  --kcs-border-default: rgba(148, 163, 184, .22);
+  --kcs-border-strong: rgba(148, 163, 184, .3);
   --kcs-border-focus: #52e2c7;
-  --kcs-text-primary: #f1f5f9;
-  --kcs-text-secondary: #b5c0ce;
-  --kcs-text-muted: #788596;
-  --kcs-text-disabled: #4f5a68;
-  --kcs-accent: #29d3b7;
-  --kcs-accent-hover: #61e6d0;
+  --kcs-text-primary: #edf3f8;
+  --kcs-text-secondary: #b7c5d2;
+  --kcs-text-muted: #8b9baa;
+  --kcs-text-label: #a5b4c2;
+  --kcs-text-disabled: #627180;
+  --kcs-accent: #35c8b0;
+  --kcs-accent-hover: #55d8c1;
   --kcs-accent-keyframe: #e7b75b;
   --kcs-warning: #f1b75b;
   --kcs-danger: #f16f78;
   --kcs-control-xs: 24px;
   --kcs-control-sm: 28px;
   --kcs-control-md: 32px;
-  --kcs-radius-control: 3px;
-  --kcs-radius-panel: 5px;
+  --kcs-radius-control: 6px;
+  --kcs-radius-panel: 12px;
+  --kcs-radius-pill: 999px;
+  --kcs-shadow-card: 0 4px 14px rgba(0, 0, 0, .16);
+  --kcs-shadow-dialog: 0 24px 64px rgba(0, 0, 0, .48);
+  --kcs-surface-feature: radial-gradient(130% 100% at 50% 0%, rgba(53, 200, 176, .10), transparent 68%), var(--kcs-bg-panel);
   --kcs-motion-fast: 120ms;
   --kcs-motion-standard: 180ms;
   --kcs-motion-panel: 240ms;
+  --kcs-panel-subtle: var(--kcs-bg-panel);
+  --kcs-panel-elevated: var(--kcs-bg-elevated);
+  --kcs-selected: var(--kcs-bg-selected);
+  --kcs-hover: var(--kcs-bg-hover);
+  --kcs-focus: var(--kcs-border-focus);
+  /* Existing domain styles share the editor palette without a second theme. */
+  --bg-darkest: var(--kcs-bg-canvas);
+  --bg-dark: var(--kcs-bg-rail);
+  --bg-panel: var(--kcs-bg-panel);
+  --bg-panel-hover: var(--kcs-bg-hover);
+  --bg-input: var(--kcs-bg-input);
+  --border-color: var(--kcs-border-default);
+  --border-light: var(--kcs-border-strong);
+  --text-primary: var(--kcs-text-primary);
+  --text-secondary: var(--kcs-text-secondary);
+  --text-muted: var(--kcs-text-muted);
 }
 
 html, body, #root { background: var(--kcs-bg-app); }
@@ -57,7 +87,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .header-tab.active { color: var(--kcs-text-primary); background: var(--kcs-bg-elevated); border-color: var(--kcs-accent); box-shadow: inset 0 -2px var(--kcs-accent); }
 .header-tab.add-tab { width: 28px; height: 28px; color: var(--kcs-text-muted); }
 .header-center-controls { gap: 8px; }
-.header-center-controls > div { background: var(--kcs-bg-input) !important; border: 1px solid var(--kcs-border-subtle); border-radius: 4px !important; padding: 2px !important; }
+.header-center-controls > div { background: var(--kcs-bg-input) !important; border: 1px solid var(--kcs-border-subtle); border-radius: var(--kcs-radius-control) !important; padding: 2px !important; }
 .header-center-controls button { height: 26px; padding: 0 10px !important; font-size: 10px !important; letter-spacing: .06em; }
 .header-center-controls button[style*="background"] { background: var(--kcs-accent) !important; color: #071713 !important; }
 .autosave-status-badge { padding: 4px 8px; border-radius: 3px; background: rgba(41,211,183,.08); border-color: rgba(41,211,183,.24); font-size: 10px; }
@@ -73,7 +103,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .left-drawer-panel { width: 280px; background: #11161e; border-right-color: var(--kcs-border-default); }
 .drawer-content { padding: 12px; gap: 10px; }
 .drawer-header { padding-bottom: 8px; border-bottom-color: var(--kcs-border-subtle); }
-.drawer-item-card { padding: 10px 6px; border-radius: 4px; background: var(--kcs-bg-surface); border-color: var(--kcs-border-subtle); }
+.drawer-item-card { padding: 10px 6px; border-radius: var(--kcs-radius-panel); background: var(--kcs-bg-surface); border-color: var(--kcs-border-subtle); }
 
 .motion-design-right-sidebar { --right-inspector-width: 360px; background: #10151c; border-left-color: var(--kcs-border-default); box-shadow: -8px 0 24px rgba(0,0,0,.2); }
 .outliner-dock { background: #11161e; border-bottom-color: var(--kcs-border-default); }
@@ -225,12 +255,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   cursor: pointer;
 }
 
-.bezier-modal-shell {
-  max-width: 960px !important;
-  border-radius: 8px !important;
-  border-color: var(--kcs-border-default) !important;
-  background: var(--kcs-bg-panel) !important;
-}
 
 .bezier-modal-grid {
   gap: 16px !important;
@@ -251,14 +275,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   gap: 8px !important;
 }
 
-.bezier-handle-card,
-.bezier-value-graph-card,
-.bezier-preview-card,
-.bezier-css-card {
-  border-radius: 6px !important;
-  border-color: var(--kcs-border-subtle) !important;
-  background: var(--kcs-bg-surface) !important;
-}
 
 .bezier-handle-card {
   padding: 10px !important;
@@ -332,12 +348,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     grid-template-columns: 1fr !important;
   }
 }
-:root {
-  --kcs-bg-active-muted: rgba(148, 163, 184, 0.09);
-  --kcs-bg-selected: rgba(41, 211, 183, 0.12);
-  --kcs-border-strong: rgba(148, 163, 184, 0.3);
-  --kcs-text-label: #9ca9b8;
-}
 
 /* V2 hierarchy: primary action color is reserved for meaningful state. */
 .header-center-controls > div {
@@ -351,7 +361,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   height: 28px !important;
   padding: 0 10px !important;
   border: 1px solid transparent;
-  border-radius: 3px !important;
+  border-radius: var(--kcs-radius-control) !important;
   color: var(--kcs-text-secondary) !important;
   background: transparent !important;
   transition: background-color var(--kcs-motion-fast) ease, border-color var(--kcs-motion-fast) ease, color var(--kcs-motion-fast) ease !important;
@@ -520,33 +530,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   box-shadow: none;
 }
 
-.bezier-handle-card,
-.bezier-value-graph-card,
-.bezier-preview-card,
-.bezier-css-card {
-  border-color: transparent !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
 
-.bezier-handle-card,
-.bezier-value-graph-card,
-.bezier-preview-card,
-.bezier-css-card {
-  border-bottom: 1px solid var(--kcs-border-subtle) !important;
-}
 
-.bezier-handle-card {
-  padding-inline: 0 !important;
-  padding-top: 4px !important;
-}
 
-.bezier-value-graph-card,
-.bezier-preview-card,
-.bezier-css-card {
-  padding-inline: 0 !important;
-}
 
 .bezier-modal-side {
   gap: 10px !important;
@@ -560,19 +546,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 
 .bezier-presets-grid button {
-  border-color: transparent !important;
-  border-radius: 0 !important;
-  background: transparent !important;
-  border-bottom: 1px solid var(--kcs-border-subtle) !important;
   justify-content: flex-start !important;
   gap: 8px;
 }
 
-.bezier-presets-grid button:hover,
-.bezier-presets-grid button:focus-visible {
-  background: var(--kcs-bg-active-muted) !important;
-  border-color: var(--kcs-border-subtle) !important;
-}
 
 .keyframe-diamond.selected,
 .ue-prop-diamond.selected {
@@ -700,9 +677,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .temporal-graph-panel {
   padding: 12px;
-  background: #0b1219;
-  border: 1px solid #2a3946;
-  border-radius: 4px;
+  background: var(--kcs-bg-graph);
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-panel);
 }
 
 .temporal-graph-panel svg {
@@ -723,10 +700,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 /* V3 Graph Editor: graph-first technical workspace. */
 .bezier-modal-shell {
   max-width: 1120px !important;
-  background: #0b1219 !important;
-  border: 1px solid #304655 !important;
-  border-radius: 4px !important;
-  box-shadow: 0 18px 50px rgba(0,0,0,.52) !important;
+  background: var(--kcs-surface-feature) !important;
+  border: 1px solid var(--kcs-border-default) !important;
+  border-radius: var(--kcs-radius-panel) !important;
+  box-shadow: var(--kcs-shadow-dialog) !important;
 }
 
 .bezier-modal-grid {
@@ -745,25 +722,25 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   min-width: 0;
   gap: 0 !important;
   padding: 12px;
-  background: #0f171f;
+  background: var(--kcs-bg-panel);
 }
 
 .bezier-graph-surface {
   min-height: 340px;
-  background: #071017 !important;
-  border: 1px solid #34505d !important;
-  border-radius: 3px !important;
+  background: var(--kcs-bg-graph) !important;
+  border: 1px solid var(--kcs-border-default) !important;
+  border-radius: var(--kcs-radius-control) !important;
 }
 
 .bezier-handle-card,
 .bezier-value-graph-card,
 .bezier-preview-card,
 .bezier-css-card {
-  background: transparent !important;
-  border: 0 !important;
-  border-bottom: 1px solid #2a3946 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
+  background: var(--kcs-bg-surface) !important;
+  border: 1px solid var(--kcs-border-subtle) !important;
+  border-radius: var(--kcs-radius-control) !important;
+  padding: 10px !important;
+  box-shadow: var(--kcs-shadow-card) !important;
 }
 
 .bezier-handle-grid {
@@ -772,20 +749,20 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .bezier-presets-grid button {
   min-height: 28px;
-  background: #15232c !important;
-  border-color: #304655 !important;
-  border-radius: 3px !important;
+  background: var(--kcs-bg-surface) !important;
+  border-color: var(--kcs-border-subtle) !important;
+  border-radius: var(--kcs-radius-control) !important;
 }
 
 .bezier-presets-grid button:hover,
 .bezier-presets-grid button:focus-visible {
-  background: #1c353b !important;
-  border-color: #5a8d8c !important;
+  background: var(--kcs-bg-hover) !important;
+  border-color: var(--kcs-border-focus) !important;
 }
 
 .bezier-apply-button {
   min-height: 32px;
-  border-radius: 3px !important;
+  border-radius: var(--kcs-radius-pill) !important;
   background: var(--kcs-accent) !important;
   color: #061613 !important;
   font-weight: 800;
@@ -821,11 +798,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   min-width: 0;
   gap: 8px !important;
   padding: 10px !important;
-  background: #0f171f;
+  background: var(--kcs-bg-panel);
 }
 
 .v3-graph-support .bezier-preview-card {
-  padding: 0 !important;
+  padding: 10px !important;
 }
 
 .v3-graph-support .bezier-preview-card > div:first-child {
@@ -926,9 +903,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 .bezier-preview-card {
   padding: 10px !important;
-  background: #101b24 !important;
-  border: 1px solid #304655 !important;
-  border-radius: 4px !important;
+  background: var(--kcs-bg-surface) !important;
+  border: 1px solid var(--kcs-border-subtle) !important;
+  border-radius: var(--kcs-radius-control) !important;
 }
 
 .bezier-preview-toolbar {
@@ -1109,34 +1086,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   outline-offset: -2px;
 }
 
-/* V3.5 semantic dark-editor palette: flat surfaces, restrained accent, explicit states. */
-:root {
-  --kcs-bg-shell: #0b0e13;
-  --kcs-bg-rail: #0e131a;
-  --kcs-bg-drawer: #11161e;
-  --kcs-bg-inspector: #10151c;
-  --kcs-bg-timeline: #0c1117;
-  --kcs-bg-graph: #0f151c;
-  --kcs-bg-elevated: #1a222d;
-  --kcs-bg-selected: rgba(41, 211, 183, .12);
-  --kcs-bg-hover: #1b2530;
-  --kcs-border-focus: #52e2c7;
-  --kcs-text-primary: #e7edf3;
-  --kcs-text-secondary: #b7c2ce;
-  --kcs-text-muted: #8290a0;
-  --kcs-text-disabled: #56616f;
-  --kcs-accent: #35c8b0;
-  --kcs-accent-hover: #55d8c1;
-  --kcs-panel-subtle: #121922;
-  --kcs-panel-elevated: var(--kcs-bg-elevated);
-  --kcs-selected: var(--kcs-bg-selected);
-  --kcs-hover: var(--kcs-bg-hover);
-  --kcs-focus: var(--kcs-border-focus);
-}
+/* Shared editor surfaces: soft cards around a precise, unchanged workspace. */
 
 .header-bar {
   background: var(--kcs-bg-shell);
-  box-shadow: none;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, .025);
 }
 
 .left-sidebar-nav { background: var(--kcs-bg-rail); }
@@ -1153,7 +1107,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .canvas-viewport-toolbar,
 .viewport-toolbar {
   background: var(--kcs-bg-elevated);
-  box-shadow: none;
+  border-radius: var(--kcs-radius-control);
+  box-shadow: var(--kcs-shadow-card);
 }
 .header-tab:hover,
 .sidebar-nav-item:hover,
@@ -1167,5 +1122,86 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .ue-track-lane.selected {
   background: var(--kcs-bg-selected);
 }
-.header-tab.active { border-color: var(--kcs-border-subtle); }
+.header-tab.active { border-color: rgba(53, 200, 176, .4); }
 .playhead { box-shadow: none; }
+
+.header-tab,
+.timeline-seq-tab {
+  border-radius: var(--kcs-radius-control);
+}
+
+.header-actions button,
+.header-actions .btn-icon {
+  border-radius: var(--kcs-radius-control);
+}
+
+.header-actions .export-btn {
+  border-radius: var(--kcs-radius-pill);
+}
+
+.style-card,
+.transform-card,
+.panel-card {
+  background: var(--kcs-bg-surface);
+  border-color: var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-panel);
+  box-shadow: var(--kcs-shadow-card);
+}
+
+.details-empty-state {
+  margin: 12px;
+  padding: 20px 14px;
+  border: 1px dashed var(--kcs-border-default);
+  border-radius: var(--kcs-radius-panel);
+  background: var(--kcs-surface-feature);
+  color: var(--kcs-text-secondary);
+}
+
+.tree-node:hover:not(.selected) {
+  background: var(--kcs-bg-hover);
+}
+
+.input-field,
+.input-control,
+.select-control,
+.textarea-control,
+.search-input-wrapper {
+  border-radius: var(--kcs-radius-control);
+}
+
+.input-control:disabled,
+.select-control:disabled,
+button:disabled {
+  cursor: not-allowed;
+}
+
+.style-card-header,
+.transform-card-header,
+.section-header {
+  background: transparent;
+  border-color: var(--kcs-border-subtle);
+}
+
+.timeline-template-tabs-bar,
+.timeline-header {
+  background: var(--kcs-bg-panel);
+}
+
+.timeline-transport-group,
+.transport-btn,
+.zoom-btn,
+.fit-pill-btn {
+  border-radius: var(--kcs-radius-control);
+}
+
+.timeline-seq-tab.active {
+  background: var(--kcs-bg-selected);
+  border-color: rgba(53, 200, 176, .4);
+}
+
+.actor-mode-action:focus-visible,
+.bezier-presets-grid button:focus-visible,
+.header-center-controls > div > button:focus-visible {
+  outline: 2px solid var(--kcs-border-focus);
+  outline-offset: 2px;
+}

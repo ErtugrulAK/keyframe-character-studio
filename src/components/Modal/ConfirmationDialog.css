@@ -14,9 +14,9 @@
   width: min(420px, 100%);
   padding: var(--space-md);
   border: 1px solid var(--kcs-border-subtle);
-  border-radius: var(--kcs-radius-control);
+  border-radius: var(--kcs-radius-panel);
   background: var(--kcs-bg-elevated);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--kcs-shadow-dialog);
 }
 
 .confirmation-dialog h2 {
@@ -57,16 +57,21 @@
 .confirmation-dialog-cancel:hover,
 .confirmation-dialog-cancel:focus-visible {
   border-color: var(--kcs-border-focus);
+  background: var(--kcs-bg-hover);
   color: var(--kcs-text-primary);
 }
 
+/* Destructive confirmation stays on the danger token: outlined at rest, solid on intent. */
 .confirmation-dialog-confirm {
-  border: 1px solid #b45309;
-  background: #9a3412;
-  color: #fff7ed;
+  border: 1px solid var(--kcs-danger);
+  background: transparent;
+  color: var(--kcs-danger);
+  font-weight: 700;
 }
 
 .confirmation-dialog-confirm:hover,
 .confirmation-dialog-confirm:focus-visible {
-  background: #c2410c;
+  background: var(--kcs-danger);
+  border-color: var(--kcs-danger);
+  color: var(--kcs-bg-canvas);
 }

@@ -26,10 +26,10 @@
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
-  background: #161a24;
+  background: var(--kcs-bg-surface);
   padding: var(--space-2xs) var(--space-xs);
-  border-radius: var(--radius-sm);
-  border: 1px solid #282d3c;
+  border-radius: var(--kcs-radius-control);
+  border: 1px solid var(--kcs-border-subtle);
   flex-shrink: 0;
 }
 
@@ -335,14 +335,14 @@
 }
 
 .import-btn {
-  background: #1e293b;
-  border: 1px solid #334155;
-  color: #e2e8f0;
+  background: var(--kcs-bg-surface);
+  border: 1px solid var(--kcs-border-default);
+  color: var(--kcs-text-secondary);
 }
 .import-btn:hover {
-  background: #2b394e;
-  border-color: #475569;
-  color: #ffffff;
+  background: var(--kcs-bg-hover);
+  border-color: var(--kcs-border-strong);
+  color: var(--kcs-text-primary);
 }
 
 .export-btn {
@@ -381,9 +381,9 @@
   bottom: 4px;
   left: 4px;
   width: calc(50% - 6px);
-  border: 1px solid #4b8f87;
-  border-radius: 3px;
-  background: rgba(41,211,183,.16);
+  border: 1px solid var(--kcs-accent);
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-bg-selected);
   transform-origin: center;
   transition: transform 300ms cubic-bezier(.65,0,.35,1), background-color 180ms ease, border-color 180ms ease;
   animation-duration: 300ms;
@@ -503,7 +503,7 @@
   outline-offset: -2px;
 }
 
-/* Keep the centered mode rail open; its moving indicator remains the sole state marker. */
+/* Keep one calm boundary around the mode rail and its state indicator. */
 .header-mode-switch {
-  border: none;
+  border: 1px solid var(--kcs-border-subtle);
 }

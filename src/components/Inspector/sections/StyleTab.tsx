@@ -44,7 +44,7 @@ export const StyleTab: React.FC<StyleTabProps> = ({
     selectedPart.type === 'custom_banner';
 
   return (
-    <div className="inspector-section" style={{ paddingTop: 8 }}>
+    <>
       {isTrimPathEligible(selectedPart.type) && <TrimPathSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
       {isShapeAppearanceEligible(selectedPart.type) && <StyleAppearanceSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
       {!isTextBearing && (
@@ -69,6 +69,6 @@ export const StyleTab: React.FC<StyleTabProps> = ({
       />
       <StyleClonerSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
       <StyleParticleSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />
-    </div>
+    </>
   );
 };

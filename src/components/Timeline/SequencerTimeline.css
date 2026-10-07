@@ -1137,7 +1137,7 @@
 .timeline-header .timecode-total {
   min-width: 56px;
   font-size: 11.5px;
-  color: #7f96a4;
+  color: var(--kcs-text-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1152,16 +1152,16 @@
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.5px;
-  color: #7f96a4;
+  color: var(--kcs-text-muted);
 }
 
 .timeline-header .duration-input-group {
   display: flex;
   align-items: center;
   height: 28px;
-  background: #101b24;
-  border: 1px solid #2c414e;
-  border-radius: 4px;
+  background: var(--kcs-bg-input);
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-control);
   overflow: hidden;
   transition: border-color 140ms ease;
 }
@@ -1176,7 +1176,7 @@
   padding: 0 4px;
   border: 0;
   background: transparent;
-  color: #e6edf3;
+  color: var(--kcs-text-primary);
   font-size: 11.5px;
   font-weight: 700;
   text-align: center;
@@ -1191,7 +1191,7 @@
   padding-right: 6px;
   font-size: 10.5px;
   font-weight: 700;
-  color: #7f96a4;
+  color: var(--kcs-text-muted);
 }
 
 .timeline-header .duration-preset-group {
@@ -1200,9 +1200,9 @@
   gap: 2px;
   height: 28px;
   padding: 3px;
-  background: #101b24;
-  border: 1px solid #2c414e;
-  border-radius: 5px;
+  background: var(--kcs-bg-input);
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-control);
 }
 
 .timeline-header .duration-preset-pill {
@@ -1214,8 +1214,8 @@
   padding: 0 5px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 3px;
-  color: #7f96a4;
+  border-radius: var(--kcs-radius-control);
+  color: var(--kcs-text-muted);
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
@@ -1223,14 +1223,14 @@
 }
 
 .timeline-header .duration-preset-pill:hover {
-  background: #1a2a36;
-  color: #d4e3e7;
+  background: var(--kcs-bg-hover);
+  color: var(--kcs-text-primary);
 }
 
 .timeline-header .duration-preset-pill.active {
-  background: #1c3036;
-  border-color: #4e7a7c;
-  color: #c7e2df;
+  background: var(--kcs-bg-selected);
+  border-color: var(--kcs-border-strong);
+  color: var(--kcs-text-primary);
 }
 
 .timeline-header .crop-btn {
@@ -1255,10 +1255,10 @@
   gap: 5px;
   height: 28px;
   padding: 0 10px;
-  border-radius: 4px;
-  background: rgba(56, 189, 248, 0.15);
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  color: var(--accent-cyan);
+  border-radius: var(--kcs-radius-pill);
+  background: var(--kcs-bg-surface);
+  border: 1px solid var(--kcs-border-default);
+  color: var(--kcs-text-secondary);
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.3px;
@@ -1267,6 +1267,6 @@
 }
 
 .timeline-header .motion-curves-btn:hover {
-  background: rgba(56, 189, 248, 0.24);
-  border-color: rgba(56, 189, 248, 0.62);
+  background: var(--kcs-bg-hover);
+  border-color: var(--kcs-accent);
 }

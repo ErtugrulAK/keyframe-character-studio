@@ -728,9 +728,9 @@
   margin-bottom: var(--space-xs);
 }
 .motion-design-right-sidebar .panel-card {
-  background: var(--bg-panel);
-  border-color: var(--border-color);
-  border-radius: var(--radius-xs);
+  background: var(--kcs-bg-surface);
+  border-color: var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-panel);
   padding: var(--space-xs);
 }
 
@@ -1448,6 +1448,7 @@
 }
 .shape-operations-section {
   padding: 10px 12px;
+  margin-bottom: var(--space-xs);
   border-bottom: 1px solid var(--border-color);
 }
 .shape-operations-hint p {
@@ -1494,6 +1495,7 @@
 }
 .boolean-editor-section {
   padding: 10px 12px;
+  margin-bottom: var(--space-xs);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -1730,7 +1732,7 @@
 .param-label,
 .appearance-field-label,
 .transform-field-label {
-  color: #91a5b1;
+  color: var(--kcs-text-secondary);
   font-size: 10px;
 }
 
@@ -1740,8 +1742,8 @@
 .motion-design-right-sidebar .input-control,
 .motion-design-right-sidebar .select-control {
   font-variant-numeric: tabular-nums;
-  background: #091118;
-  border-color: #2c414e;
+  background: var(--kcs-bg-input);
+  border-color: var(--kcs-border-default);
 }
 
 .motion-design-right-sidebar input:focus-visible,
@@ -1756,7 +1758,7 @@
     transition: none;
   }
 }
-/* V3.1 Inspector correction: restore scanable grouping without card nesting. */
+/* Inspector cards share the Media surface language without changing field geometry. */
 .details-body {
   padding: 10px 10px 18px;
   line-height: 1.35;
@@ -1766,10 +1768,10 @@
 .inspector-section-card {
   margin: 0 0 8px;
   padding: 8px 8px 10px;
-  background: #111c25;
-  border: 1px solid #263a47;
-  border-radius: 4px;
-  box-shadow: inset 0 1px rgba(255,255,255,.018);
+  background: var(--kcs-bg-surface);
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-panel);
+  box-shadow: var(--kcs-shadow-card);
 }
 
 .inspector-section:last-child,
@@ -1780,10 +1782,9 @@
 .panel-card {
   margin: 0 0 8px;
   padding: 8px 8px 10px;
-  background: #111c25;
-  border: 1px solid #263a47;
-  border-bottom-color: #263a47;
-  border-radius: 4px;
+  background: var(--kcs-bg-surface);
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-panel);
 }
 
 .panel-card:last-child {
@@ -1795,7 +1796,7 @@
   min-height: 30px;
   padding: 0 0 7px;
   margin-bottom: 8px;
-  border-bottom: 1px solid #304653;
+  border-bottom: 1px solid var(--kcs-border-subtle);
 }
 
 .inspector-section-content {
@@ -1841,8 +1842,8 @@
 .inspector-subsection-heading {
   padding: 5px 0 4px;
   margin: 2px 0 0;
-  color: #6f8a9a;
-  border-bottom: 1px solid rgba(74,105,119,.55);
+  color: var(--kcs-text-muted);
+  border-bottom: 1px solid var(--kcs-border-subtle);
   font-size: 9px;
   letter-spacing: .11em;
   line-height: 1.35;
@@ -1861,7 +1862,7 @@
 
 .inspector-section-header:hover,
 .section-title-bar:hover {
-  border-bottom-color: #4a6978;
+  border-bottom-color: var(--kcs-border-strong);
 }
 
 .inspector-disclosure-button {
@@ -1951,21 +1952,10 @@
 }
 
 .details-body {
-  background: var(--kcs-panel);
+  background: var(--kcs-bg-inspector);
 }
 
-.inspector-section,
-.inspector-section-card,
-.panel-card {
-  background: transparent;
-  border-color: var(--kcs-border-quiet);
-  box-shadow: none;
-}
 
-.inspector-section-header,
-.section-title-bar {
-  border-bottom-color: var(--kcs-border-quiet);
-}
 
 @media (prefers-reduced-motion: reduce) {
   .motion-design-right-sidebar,

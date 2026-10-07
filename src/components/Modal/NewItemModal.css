@@ -27,10 +27,10 @@
 .new-item-modal-card {
   width: 380px;
   max-width: 90vw;
-  background: #141722;
-  border: 1px solid #282f42;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  background: var(--kcs-surface-feature);
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-panel);
+  box-shadow: var(--kcs-shadow-dialog);
   padding: var(--space-md);
   display: flex;
   flex-direction: column;
@@ -52,7 +52,7 @@
 .modal-title {
   font-size: var(--font-size-body-lg);
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--kcs-text-primary);
   margin: 0;
   letter-spacing: 0.2px;
 }
@@ -61,9 +61,14 @@
   color: #38bdf8;
 }
 
+/* The title mark follows this dialog's feature accent, not the shared utility hue. */
+.modal-title-group svg {
+  color: var(--kcs-accent);
+}
+
 .modal-subtitle {
   font-size: var(--font-size-mono);
-  color: #94a3b8;
+  color: var(--kcs-text-secondary);
   margin: 0;
   line-height: 1.4;
 }
@@ -71,19 +76,20 @@
 .modal-close-btn {
   background: transparent;
   border: none;
-  color: #64748b;
+  color: var(--kcs-text-muted);
   cursor: pointer;
   padding: var(--space-2xs);
-  border-radius: var(--radius-xs);
+  border-radius: var(--kcs-radius-control);
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s ease;
 }
 
-.modal-close-btn:hover {
-  color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.08);
+.modal-close-btn:hover,
+.modal-close-btn:focus-visible {
+  color: var(--kcs-text-primary);
+  background: var(--kcs-bg-hover);
 }
 
 .modal-body {
@@ -100,10 +106,10 @@
 .modal-input {
   width: 100%;
   height: 38px;
-  background: #0b0d14;
-  border: 1px solid #2a3246;
-  border-radius: var(--radius-sm);
-  color: #fff;
+  background: var(--kcs-bg-input);
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-control);
+  color: var(--kcs-text-primary);
   font-size: var(--font-size-body);
   font-weight: 600;
   padding: 0 var(--space-sm);
@@ -113,8 +119,8 @@
 }
 
 .modal-input:focus {
-  border-color: #38bdf8;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+  border-color: var(--kcs-border-focus);
+  box-shadow: 0 0 0 3px var(--kcs-bg-active);
 }
 
 .modal-footer {
@@ -126,43 +132,48 @@
 
 .btn-cancel {
   padding: var(--space-xs) var(--space-md);
-  border-radius: var(--radius-sm);
+  border-radius: var(--kcs-radius-control);
   font-size: var(--font-size-mono);
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
+  background: transparent;
+  border: 1px solid var(--kcs-border-default);
+  color: var(--kcs-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
-.btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+.btn-cancel:hover,
+.btn-cancel:focus-visible {
+  background: var(--kcs-bg-hover);
+  border-color: var(--kcs-border-strong);
+  color: var(--kcs-text-primary);
 }
 
 .btn-confirm {
   padding: var(--space-xs) var(--space-md);
-  border-radius: var(--radius-sm);
+  border-radius: var(--kcs-radius-control);
   font-size: var(--font-size-mono);
   font-weight: 700;
-  background: #182232;
-  border: 1px solid #2b394e;
-  color: #38bdf8;
+  background: var(--kcs-accent);
+  border: 1px solid var(--kcs-accent);
+  color: var(--kcs-bg-app);
   cursor: pointer;
-  box-shadow: none;
   transition: all 0.15s ease;
 }
 
 .btn-confirm:hover:not(:disabled) {
-  background: #0284c7;
-  border-color: #38bdf8;
-  color: #fff;
-  box-shadow: none;
+  background: var(--kcs-accent-hover);
+  border-color: var(--kcs-accent-hover);
+  color: var(--kcs-bg-app);
 }
 
 .btn-confirm:disabled {
   opacity: 0.4;
   cursor: not-allowed;
-  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .new-item-modal-overlay {
+    animation: none;
+  }
 }

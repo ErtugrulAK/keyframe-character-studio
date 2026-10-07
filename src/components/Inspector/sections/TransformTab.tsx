@@ -59,7 +59,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   return (
     <>
       {editWorkflowContent}
-      <div className="inspector-section" style={{ paddingTop: 8 }}>
         <StyleCard title="TRANSFORM" collapsible defaultOpen={false}>
           <div className="transform-property-list">
             <TransformPositionRotationCard
@@ -143,7 +142,6 @@ export const TransformTab: React.FC<TransformTabProps> = ({
             </div>
           </StyleCard>
         )}
-      </div>
     </>
   );
 };

@@ -15,11 +15,11 @@
   flex-direction: column;
   gap: 10px;
   padding: 20px;
-  border: 1px solid #1f2a3a;
-  border-radius: 10px;
-  background: #0e141d;
-  color: #e6edf7;
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-panel);
+  background: var(--kcs-bg-panel);
+  color: var(--kcs-text-primary);
+  box-shadow: var(--kcs-shadow-dialog);
 }
 
 .lottie-report-dialog h2 {
@@ -31,7 +31,7 @@
 .lottie-report-source {
   margin: 0;
   font-size: 12px;
-  color: #9fb0c6;
+  color: var(--kcs-text-secondary);
   overflow-wrap: anywhere;
 }
 
@@ -44,19 +44,19 @@
 
 .lottie-report-count {
   padding: 2px 8px;
-  border: 1px solid #24303f;
-  border-radius: 999px;
-  color: #9fb0c6;
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-pill);
+  color: var(--kcs-text-muted);
 }
 
 .lottie-report-count.blocking {
-  border-color: #7f2b2b;
-  color: #ff9a9a;
+  border-color: var(--kcs-danger);
+  color: var(--kcs-danger);
 }
 
 .lottie-report-count.warning {
-  border-color: #7d6220;
-  color: #ffd479;
+  border-color: var(--kcs-warning);
+  color: var(--kcs-warning);
 }
 
 .lottie-report-list {
@@ -64,16 +64,16 @@
   padding: 0;
   list-style: none;
   overflow-y: auto;
-  border: 1px solid #1b2431;
-  border-radius: 8px;
-  background: #0b1017;
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-bg-input);
 }
 
 .lottie-report-entry {
   display: grid;
   gap: 2px;
   padding: 8px 10px;
-  border-bottom: 1px solid #161f2b;
+  border-bottom: 1px solid var(--kcs-border-subtle);
   font-size: 11px;
 }
 
@@ -82,38 +82,38 @@
 }
 
 .lottie-report-entry.blocking {
-  border-left: 3px solid #b03a3a;
+  border-left: 3px solid var(--kcs-danger);
 }
 
 .lottie-report-entry.warning {
-  border-left: 3px solid #b0892f;
+  border-left: 3px solid var(--kcs-warning);
 }
 
 .lottie-report-code {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: #7fd6ff;
+  color: var(--kcs-accent);
 }
 
 .lottie-report-message {
-  color: #e6edf7;
+  color: var(--kcs-text-primary);
 }
 
 .lottie-report-path {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;
-  color: #8fa1b8;
+  color: var(--kcs-text-muted);
   overflow-wrap: anywhere;
 }
 
 .lottie-report-action {
-  color: #9fb0c6;
+  color: var(--kcs-text-secondary);
 }
 
 .lottie-report-hidden {
   margin: 0;
   font-size: 11px;
-  color: #9fb0c6;
+  color: var(--kcs-text-muted);
 }
 
 .lottie-report-actions {
@@ -125,27 +125,42 @@
 
 .lottie-report-actions button {
   padding: 7px 14px;
-  border-radius: 7px;
-  border: 1px solid #24303f;
-  background: #151d28;
-  color: #e6edf7;
+  border-radius: var(--kcs-radius-control);
+  border: 1px solid var(--kcs-border-default);
+  background: var(--kcs-bg-surface);
+  color: var(--kcs-text-primary);
   font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.lottie-report-actions button:hover:not(:disabled) {
+  background: var(--kcs-bg-hover);
+  border-color: var(--kcs-border-strong);
 }
 
 .lottie-report-actions button:focus-visible {
-  outline: 2px solid #00d2ff;
+  outline: 2px solid var(--kcs-border-focus);
   outline-offset: 2px;
 }
 
-.lottie-report-confirm {
-  border-color: #1f6f5c;
-  background: #123528;
+/* Scoped to the action row so it outranks `.lottie-report-actions button`. */
+.lottie-report-actions .lottie-report-confirm {
+  border-color: var(--kcs-accent);
+  background: var(--kcs-accent);
+  color: var(--kcs-bg-app);
+  font-weight: 700;
 }
 
-.lottie-report-confirm:disabled {
-  border-color: #2a3441;
-  background: #141a22;
-  color: #6b7a8d;
+.lottie-report-actions .lottie-report-confirm:hover:not(:disabled) {
+  border-color: var(--kcs-accent-hover);
+  background: var(--kcs-accent-hover);
+}
+
+.lottie-report-actions .lottie-report-confirm:disabled {
+  border-color: var(--kcs-border-default);
+  background: var(--kcs-bg-surface);
+  color: var(--kcs-text-disabled);
   cursor: not-allowed;
 }

@@ -139,3 +139,44 @@ test('two text layers can be bonded as well', async ({ page }) => {
   expect(positionOf(after, 'two').x).toBeCloseTo(positionOf(before, 'two').x! + deltaX, 0);
   expect(positionOf(after, 'two').y).toBeCloseTo(positionOf(before, 'two').y! + deltaY, 0);
 });
+
+/**
+ * B-01: the stage drag passes WORLD coordinates. A child that sits in a parent
+ * container must land where the pointer moved it, and its bonded partner must
+ * receive the same world delta — never a delta measured against the child's
+ * local value.
+ */
+test('a parented bonded layer drags by the same world delta as a free layer', async ({ page }) => {
+  await seed(page, [
+    // Calibration group: two parentless layers bonded to each other.
+    layer('ref1', 'Ref1', 'custom_box', -400, 0, { boundPartIds: ['ref2'] }),
+    layer('ref2', 'Ref2', 'custom_box', -150, 0, { boundPartIds: ['ref1'] }),
+    // Parented group: the child lives at local (100, 0) inside a parent at (200, 0).
+    layer('p', 'Parent', 'custom_box', 200, 0),
+    layer('child', 'Child', 'custom_box', 100, 0, { parentId: 'p', boundPartIds: ['buddy'] }),
+    layer('buddy', 'Buddy', 'custom_box', 500, 0, { boundPartIds: ['child'] }),
+  ]);
+
+  // 1. Calibrate the world delta with a parentless drag.
+  await page.locator('.actor-node', { hasText: 'Ref1' }).first().click();
+  await dragPart(page, '.stage-svg [data-part-id="ref1"]', 120, 60);
+  await saveNow(page);
+  const ref = await storedLayers(page);
+  const deltaX = positionOf(ref, 'ref1').x! - (-400);
+  const deltaY = positionOf(ref, 'ref1').y! - 0;
+  expect(Math.abs(deltaX)).toBeGreaterThan(10);
+
+  // 2. Drag the parented child by the same pointer delta.
+  await page.locator('.actor-node', { hasText: 'Child' }).first().click();
+  await dragPart(page, '.stage-svg [data-part-id="child"]', 120, 60);
+  await saveNow(page);
+
+  const after = await storedLayers(page);
+  const parentX = positionOf(after, 'p').x!;
+  const childWorldX = parentX + positionOf(after, 'child').x!;
+  const childWorldY = positionOf(after, 'p').y! + positionOf(after, 'child').y!;
+  expect(childWorldX).toBeCloseTo(300 + deltaX, 0); // world start = 200 parent + 100 local
+  expect(childWorldY).toBeCloseTo(0 + deltaY, 0);
+  expect(positionOf(after, 'buddy').x).toBeCloseTo(500 + deltaX, 0);
+  expect(positionOf(after, 'buddy').y).toBeCloseTo(0 + deltaY, 0);
+});

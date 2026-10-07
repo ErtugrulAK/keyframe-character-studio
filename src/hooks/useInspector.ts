@@ -155,20 +155,25 @@ export const useInspector = ({
   /**
    * Bonded layers follow the same world-space position delta.
    *
-   * `requested` is the incoming patch (world-space x/y, exactly what the caller
-   * asked for), so the delta is measured against the source's current world
-   * position. Layers that are already part of this write — the dragged layer
-   * itself or a multi-selection — are skipped, or they would move twice.
+   * ONE contract: every patch that reaches this helper is world-space, so the
+   * delta is measured against the source's current world position. `writtenIds`
+   * accumulates every part this gesture already wrote — the dragged layer(s)
+   * and every partner already moved — so a part moves exactly once even when
+   * two selected sources share a partner. `postWorld` carries the world
+   * transform a part will have AFTER this gesture, so a partner parented to a
+   * layer that is moving in the same gesture is converted against the parent's
+   * new world and does not receive the delta twice.
    */
   const applyBondedPositionDelta = (
     sourcePartId: string,
     requested: Partial<Transform>,
-    alreadyUpdated: string[],
+    writtenIds: string[],
+    postWorld: Record<string, Transform>,
     activeTmpl: string,
   ) => {
     if (requested.x === undefined && requested.y === undefined) return;
     const partners = resolveBoundPartners(characterParts ?? [], sourcePartId)
-      .filter((partner) => !alreadyUpdated.includes(partner.id));
+      .filter((partner) => !writtenIds.includes(partner.id));
     if (partners.length === 0) return;
 
     const sourceWorld = getComputedTransform(sourcePartId, currentFrame);
@@ -178,16 +183,30 @@ export const useInspector = ({
 
     for (const partner of partners) {
       const partnerWorld = getComputedTransform(partner.id, currentFrame);
-      const desiredWorld = { ...partnerWorld, x: partnerWorld.x + deltaX, y: partnerWorld.y + deltaY };
-      const partnerParentId = partner.parentId ?? partner.booleanGroupId;
-      if (partnerParentId) {
-        // A parented partner stores its own local space, exactly like the
-        // single-target path above.
-        const local = worldToContainerLocal(desiredWorld, getComputedTransform(partnerParentId, currentFrame));
-        applyTransformToPart(partner.id, { x: local.x, y: local.y }, activeTmpl);
-      } else {
-        applyTransformToPart(partner.id, { x: desiredWorld.x, y: desiredWorld.y }, activeTmpl);
+      const desiredWorld: Transform = {
+        ...partnerWorld,
+        x: requested.x === undefined ? partnerWorld.x : partnerWorld.x + deltaX,
+        y: requested.y === undefined ? partnerWorld.y : partnerWorld.y + deltaY,
+      };
+      const parentId = partner.parentId ?? partner.booleanGroupId;
+      const containerT = parentId ? (postWorld[parentId] ?? getComputedTransform(parentId, currentFrame)) : null;
+      const currentLocal = containerT ? worldToContainerLocal(partnerWorld, containerT) : partnerWorld;
+      const desiredLocal = containerT ? worldToContainerLocal(desiredWorld, containerT) : desiredWorld;
+
+      // Write only the axes that actually move. A world-space X edit on an
+      // unrotated parent leaves local Y untouched, so the partner's Y
+      // animation must not gain a keyframe; a rotated parent genuinely changes
+      // local Y, so both axes are written there.
+      const localPatch: Partial<Transform> = {};
+      if (requested.x !== undefined && desiredLocal.x !== currentLocal.x) localPatch.x = desiredLocal.x;
+      if (requested.y !== undefined && desiredLocal.y !== currentLocal.y) localPatch.y = desiredLocal.y;
+      if (localPatch.x === undefined && localPatch.y === undefined) {
+        writtenIds.push(partner.id);
+        continue;
       }
+      applyTransformToPart(partner.id, localPatch, activeTmpl);
+      postWorld[partner.id] = desiredWorld;
+      writtenIds.push(partner.id);
     }
   };
 
@@ -195,59 +214,65 @@ export const useInspector = ({
     const targetPartId = partIdOverride || selectedPartId;
     if (!targetPartId) return;
 
-    const targetPart = characterParts?.find((part) => part.id === targetPartId);
-    const relationshipParentId = !partIdOverride && selectedPartIds.length <= 1
-      ? targetPart?.parentId ?? targetPart?.booleanGroupId
-      : undefined;
-    const normalizedTransform = relationshipParentId
-      ? (() => {
-        const parentTransform = getComputedTransform(relationshipParentId, currentFrame);
-        const currentWorld = getComputedTransform(targetPartId, currentFrame);
-        const desiredWorld = { ...currentWorld, ...newTransform };
-        const local = worldToContainerLocal(desiredWorld, parentTransform);
-        const localPatch: Partial<Transform> = {};
-        (['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const).forEach((key) => {
-          if (newTransform[key] !== undefined) localPatch[key] = local[key];
-        });
-        return localPatch;
-      })()
-      : newTransform;
-
-    const partsToUpdate = (!partIdOverride && selectedPartIds.length > 1)
-      ? selectedPartIds
-      : [targetPartId];
-
     const activeTmpl = activeTemplateId || 'Sequence';
+    // ONE coordinate contract: x/y (and rotation/scale/opacity) arrive in WORLD
+    // space, and this helper converts every written part into its own
+    // container-local space. `partIdOverride` only picks the target part; it
+    // never changes the coordinate space.
+    const postWorld: Record<string, Transform> = {};
+    const writtenIds: string[] = [];
 
-    // If updating multiple parts via inspector delta
-    if (!partIdOverride && selectedPartIds.length > 1) {
-      const primaryPartT = getComputedTransform(targetPartId, currentFrame);
-
-      const deltaX = normalizedTransform.x !== undefined ? normalizedTransform.x - primaryPartT.x : 0;
-      const deltaY = normalizedTransform.y !== undefined ? normalizedTransform.y - primaryPartT.y : 0;
-      const deltaRot = normalizedTransform.rotation !== undefined ? normalizedTransform.rotation - primaryPartT.rotation : 0;
-      const deltaScaleX = normalizedTransform.scaleX !== undefined ? normalizedTransform.scaleX - primaryPartT.scaleX : 0;
-      const deltaScaleY = normalizedTransform.scaleY !== undefined ? normalizedTransform.scaleY - primaryPartT.scaleY : 0;
-      const deltaOpacity = normalizedTransform.opacity !== undefined ? normalizedTransform.opacity - primaryPartT.opacity : 0;
-
-      partsToUpdate.forEach(id => {
-        const t = getComputedTransform(id, currentFrame);
-        const relativeUpdate: Partial<Transform> = {};
-        if (normalizedTransform.x !== undefined) relativeUpdate.x = t.x + deltaX;
-        if (normalizedTransform.y !== undefined) relativeUpdate.y = t.y + deltaY;
-        if (normalizedTransform.rotation !== undefined) relativeUpdate.rotation = t.rotation + deltaRot;
-        if (normalizedTransform.scaleX !== undefined) relativeUpdate.scaleX = t.scaleX + deltaScaleX;
-        if (normalizedTransform.scaleY !== undefined) relativeUpdate.scaleY = t.scaleY + deltaScaleY;
-        if (normalizedTransform.opacity !== undefined) relativeUpdate.opacity = t.opacity + deltaOpacity;
-
-        applyTransformToPart(id, relativeUpdate, activeTmpl);
+    const toLocalPatch = (id: string, worldPatch: Partial<Transform>): Partial<Transform> => {
+      const part = characterParts?.find((p) => p.id === id);
+      const parentId = part?.parentId ?? part?.booleanGroupId;
+      if (!parentId) return worldPatch;
+      const containerT = postWorld[parentId] ?? getComputedTransform(parentId, currentFrame);
+      const currentWorld = getComputedTransform(id, currentFrame);
+      const desiredWorld = { ...currentWorld, ...worldPatch };
+      const local = worldToContainerLocal(desiredWorld, containerT);
+      const localPatch: Partial<Transform> = {};
+      (['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const).forEach((key) => {
+        if (worldPatch[key] !== undefined) localPatch[key] = local[key];
       });
-      applyBondedPositionDelta(targetPartId, newTransform, partsToUpdate, activeTmpl);
+      return localPatch;
+    };
+
+    // Multi-selection: one world delta applied to every selected part, then
+    // every selected source propagates its own bond exactly once.
+    if (!partIdOverride && selectedPartIds.length > 1) {
+      const primaryWorld = getComputedTransform(targetPartId, currentFrame);
+      const deltaX = newTransform.x !== undefined ? newTransform.x - primaryWorld.x : 0;
+      const deltaY = newTransform.y !== undefined ? newTransform.y - primaryWorld.y : 0;
+      const deltaRot = newTransform.rotation !== undefined ? newTransform.rotation - primaryWorld.rotation : 0;
+      const deltaScaleX = newTransform.scaleX !== undefined ? newTransform.scaleX - primaryWorld.scaleX : 0;
+      const deltaScaleY = newTransform.scaleY !== undefined ? newTransform.scaleY - primaryWorld.scaleY : 0;
+      const deltaOpacity = newTransform.opacity !== undefined ? newTransform.opacity - primaryWorld.opacity : 0;
+
+      const worldPatches: Record<string, Partial<Transform>> = {};
+      selectedPartIds.forEach((id) => {
+        const t = getComputedTransform(id, currentFrame);
+        const worldPatch: Partial<Transform> = {};
+        if (newTransform.x !== undefined) worldPatch.x = t.x + deltaX;
+        if (newTransform.y !== undefined) worldPatch.y = t.y + deltaY;
+        if (newTransform.rotation !== undefined) worldPatch.rotation = t.rotation + deltaRot;
+        if (newTransform.scaleX !== undefined) worldPatch.scaleX = t.scaleX + deltaScaleX;
+        if (newTransform.scaleY !== undefined) worldPatch.scaleY = t.scaleY + deltaScaleY;
+        if (newTransform.opacity !== undefined) worldPatch.opacity = t.opacity + deltaOpacity;
+        worldPatches[id] = worldPatch;
+        postWorld[id] = { ...t, ...worldPatch };
+        applyTransformToPart(id, toLocalPatch(id, worldPatch), activeTmpl);
+        writtenIds.push(id);
+      });
+      selectedPartIds.forEach((id) => {
+        applyBondedPositionDelta(id, worldPatches[id], writtenIds, postWorld, activeTmpl);
+      });
       return;
     }
 
-    applyTransformToPart(targetPartId, normalizedTransform, activeTmpl);
-    applyBondedPositionDelta(targetPartId, newTransform, partsToUpdate, activeTmpl);
+    postWorld[targetPartId] = { ...getComputedTransform(targetPartId, currentFrame), ...newTransform };
+    applyTransformToPart(targetPartId, toLocalPatch(targetPartId, newTransform), activeTmpl);
+    writtenIds.push(targetPartId);
+    applyBondedPositionDelta(targetPartId, newTransform, writtenIds, postWorld, activeTmpl);
   };
 
   const updateCurrentPropertyChannel = (channel: TrackChannel, value: number, partIdOverride?: string) => {

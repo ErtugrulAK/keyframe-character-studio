@@ -6,7 +6,6 @@ import { getPartBounds } from '../../utils/bounds';
 import { clientToSVGPoint, clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
-import { worldToContainerLocal } from '../../utils/containerMath';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
@@ -91,7 +90,7 @@ export const StageCanvas: React.FC = () => {
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [shapeCreationStart, setShapeCreationStart] = useState<{ clientX: number; clientY: number; svgX: number; svgY: number } | null>(null);
   const [shapeCreationPreview, setShapeCreationPreview] = useState<{ type: NonNullable<typeof pendingShapeType>; bounds: ReturnType<typeof getShapeCreationBounds> } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; initialTransforms?: Record<string, Transform>; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number }>({
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
@@ -191,18 +190,10 @@ export const StageCanvas: React.FC = () => {
     setDragMode('translate');
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
 
-    const initialTransforms: Record<string, Transform> = {};
-    const relevantIds = selectedPartIds.includes(partId) ? selectedPartIds : [partId];
-    relevantIds.forEach(id => {
-      const t = getComputedTransform(id, currentFrame);
-      if (t) initialTransforms[id] = { ...t };
-    });
-
     setDragStart({
       x: svgX,
       y: svgY,
       initialTransform: { ...transform },
-      initialTransforms,
     });
   };
 
@@ -377,38 +368,23 @@ export const StageCanvas: React.FC = () => {
         const factor = initDist > 0.001 ? curDist / initDist : 1;
         const newWorldScale = Math.max(0.05, Math.round((dragStart.initialChildScaleX || 1) * factor * 100) / 100);
         const targetId = dragStart.partId ?? selectedPartId;
-        const part = characterParts.find((p) => p.id === targetId);
-        const relationshipParentId = part?.parentId ?? part?.booleanGroupId;
-        const parentT = relationshipParentId ? getComputedTransform(relationshipParentId, currentFrame) : null;
-        if (parentT) {
-          const worldT = { ...dragStart.initialTransform, scaleX: newWorldScale, scaleY: newWorldScale };
-          const local = worldToContainerLocal(worldT, parentT);
-          updateCurrentTransform({ scaleX: local.scaleX, scaleY: local.scaleY }, targetId);
-        } else {
-          updateCurrentTransform({ scaleX: newWorldScale, scaleY: newWorldScale });
-        }
+        // World-space contract: updateCurrentTransform converts to the target's
+        // container-local space itself.
+        updateCurrentTransform({ scaleX: newWorldScale, scaleY: newWorldScale }, targetId);
         return;
       }
 
       if (dragMode === 'child_frame_rotate') {
-        // Rotate a shape child around its center (world space), then convert
-        // the new world rotation into container-local space.
+        // Rotate a shape child around its center (world space); the world
+        // rotation is converted to container-local space by
+        // updateCurrentTransform, exactly like every other caller.
         const c = dragStart.mediaCenter!;
         const initAngle = (Math.atan2(dragStart.y - c.y, dragStart.x - c.x) * 180) / Math.PI;
-        const curAngle = (Math.atan2(svgX - c.y, svgY - c.x) * 180) / Math.PI;
+        const curAngle = (Math.atan2(svgY - c.y, svgX - c.x) * 180) / Math.PI;
         const delta = ((curAngle - initAngle + 540) % 360) - 180;
         const newWorldRot = Math.round(((dragStart.initialChildRot || 0) + delta) * 100) / 100;
         const targetId = dragStart.partId ?? selectedPartId;
-        const part = characterParts.find((p) => p.id === targetId);
-        const relationshipParentId = part?.parentId ?? part?.booleanGroupId;
-        const parentT = relationshipParentId ? getComputedTransform(relationshipParentId, currentFrame) : null;
-        if (parentT) {
-          const worldT = { ...dragStart.initialTransform, rotation: newWorldRot };
-          const local = worldToContainerLocal(worldT, parentT);
-          updateCurrentTransform({ rotation: local.rotation }, targetId);
-        } else {
-          updateCurrentTransform({ rotation: newWorldRot });
-        }
+        updateCurrentTransform({ rotation: newWorldRot }, targetId);
         return;
       }
 
@@ -419,34 +395,13 @@ export const StageCanvas: React.FC = () => {
           { x: dragStart.x, y: dragStart.y },
           { x: svgX, y: svgY },
         );
-        // If we have multiple selections and the dragged part is in it, move all of them.
-        if (dragStart.initialTransforms) {
-          Object.keys(dragStart.initialTransforms).forEach(id => {
-            const initT = dragStart.initialTransforms![id];
-            const movedPart = characterParts.find((x) => x.id === id);
-            const relationshipParentId = movedPart?.parentId ?? movedPart?.booleanGroupId;
-            if (relationshipParentId) {
-              const pt = getComputedTransform(relationshipParentId, currentFrame);
-              const local = worldToContainerLocal({ ...initT, x: initT.x + deltaX, y: initT.y + deltaY }, pt);
-              updateCurrentTransform({ x: local.x, y: local.y }, id);
-            } else {
-              updateCurrentTransform({ x: initT.x + deltaX, y: initT.y + deltaY }, id);
-            }
-          });
-        } else {
-          const draggedPart = characterParts.find((x) => x.id === selectedPartId);
-          const relationshipParentId = draggedPart?.parentId ?? draggedPart?.booleanGroupId;
-          if (relationshipParentId) {
-            const pt = getComputedTransform(relationshipParentId, currentFrame);
-            const local = worldToContainerLocal(
-              { ...dragStart.initialTransform, x: dragStart.initialTransform.x + deltaX, y: dragStart.initialTransform.y + deltaY },
-              pt,
-            );
-            updateCurrentTransform({ x: local.x, y: local.y });
-          } else {
-            updateCurrentTransform({ x: dragStart.initialTransform.x + deltaX, y: dragStart.initialTransform.y + deltaY });
-          }
-        }
+        // ONE contract: updateCurrentTransform takes WORLD x/y and converts to
+        // container-local per part (and propagates bonds). Passing the primary
+        // part's world position moves the whole selection when it is multi.
+        updateCurrentTransform({
+          x: dragStart.initialTransform.x + deltaX,
+          y: dragStart.initialTransform.y + deltaY,
+        });
         return;
       }
 
@@ -555,7 +510,7 @@ export const StageCanvas: React.FC = () => {
       }
     },
     // The pointer-up effect owns the current mouse-up callback; adding the later-declared callback here would create a declaration cycle.
-    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, shapeCreationStart, pendingShapeType, currentFrame, getComputedTransform, isScaleLocked]
+    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked]
   );
 
   const handleMouseUp = useCallback((commitShape: boolean = true) => {

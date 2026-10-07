@@ -138,3 +138,123 @@ test('a text layer and a shape can be subtracted, and the operands stay editable
   expect(operands.layers).toContain('text');
   expect(operands.layers).toContain('box');
 });
+
+/**
+ * A-01: the trace must accept every family form the editor offers — a bare
+ * name, a quoted name, and a quoted name inside a CSS fallback list — because
+ * the canvas re-serialises the family it accepted.
+ */
+const familyTextLayer = (id: string, value: string, x: number, y: number, fontSize: number, fontFamily: string) => ({
+  ...textLayer(id, value, x, y, fontSize),
+  fontFamily,
+});
+
+for (const [label, fontFamily] of [
+  ['Outfit', 'Outfit'],
+  ['quoted Playfair Display', "'Playfair Display'"],
+  ['fallback-list Playfair Display', "'Playfair Display', serif"],
+  ['quoted JetBrains Mono', "'JetBrains Mono'"],
+] as const) {
+  test(`a ${label} text traces into a Boolean group`, async ({ page }) => {
+    const consoleErrors: string[] = [];
+    page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
+
+    await seed(page, [
+      familyTextLayer('text', 'O', 0, 0, 220, fontFamily),
+      boxLayer('box', 'Box', 0, -78, 8),
+    ]);
+
+    await combine(page, 'Box', 'O text', 'Intersect');
+    await saveNow(page);
+
+    const group = await storedGroup(page);
+    expect(group?.type).toBe('custom_freeform');
+    expect(group?.booleanOperation).toBe('intersect');
+    // 'O' has a counter, so a successful trace carries at least two rings.
+    expect((group?.booleanContours ?? []).length).toBeGreaterThanOrEqual(2);
+    expect(consoleErrors).toEqual([]);
+  });
+}
+
+/**
+ * A-03: a failed operand refuses the operation instead of being dropped. A
+ * text too large to rasterise cannot be traced, so a three-operand Subtract
+ * must NOT silently become the two-box Subtract.
+ */
+test('an untraceable text operand refuses the Boolean instead of changing it', async ({ page }) => {
+  await seed(page, [
+    // 60000px of text cannot fit the 4096px raster, so the trace refuses it.
+    textLayer('text', 'O', 0, 0, 60000),
+    boxLayer('box1', 'Box One', -60, 0, 6),
+    boxLayer('box2', 'Box Two', 60, 0, 6),
+  ]);
+
+  await page.locator('.actor-node', { hasText: 'Box One' }).first().click();
+  await page.locator('.actor-node', { hasText: 'Box Two' }).first().click({ modifiers: ['Control'] });
+  await page.locator('.actor-node', { hasText: 'O text' }).first().click({ modifiers: ['Control'] });
+  await page.getByRole('button', { name: 'Subtract', exact: true }).click();
+  await saveNow(page);
+
+  const created = await page.evaluate((key) => {
+    const scene = JSON.parse(localStorage.getItem(key) ?? '{}') as {
+      layers?: { booleanOperation?: string; booleanOperandIds?: string[] }[];
+    };
+    return (scene.layers ?? []).filter((layer) => layer.booleanOperation || layer.booleanOperandIds?.length).length;
+  }, STORAGE_KEY);
+  expect(created).toBe(0);
+});
+
+/**
+ * The operand matrix beyond text+shape: text+freeform, text+text, three
+ * operands, and the Exclude operation.
+ */
+test('text combines with a freeform and with another text', async ({ page }) => {
+  const freeform = {
+    id: 'shape', name: 'Free Shape', type: 'custom_freeform', x: 0, y: 0, rotation: 0,
+    scaleX: 1, scaleY: 1, opacity: 1, visible: true, zIndex: 1,
+    fillColor: '#ff2080', strokeColor: '#101218',
+    points: [{ x: -120, y: -120 }, { x: 120, y: -120 }, { x: 120, y: 120 }, { x: -120, y: 120 }],
+  };
+  await seed(page, [
+    familyTextLayer('text', 'A', 0, 0, 220, "'Playfair Display', serif"),
+    freeform,
+  ]);
+
+  await combine(page, 'Free Shape', 'A text', 'Union');
+  await saveNow(page);
+  const group = await storedGroup(page);
+  expect(group?.booleanOperation).toBe('union');
+  expect((group?.booleanContours ?? []).length).toBeGreaterThan(0);
+
+  await seed(page, [
+    familyTextLayer('text', 'A', -60, 0, 220, 'Outfit'),
+    familyTextLayer('text2', 'B', 60, 0, 220, "'JetBrains Mono'"),
+  ]);
+  await combine(page, 'A text', 'B text2', 'Exclude');
+  await saveNow(page);
+  const textGroup = await storedGroup(page);
+  expect(textGroup?.booleanOperation).toBe('exclude');
+  expect((textGroup?.booleanContours ?? []).length).toBeGreaterThan(0);
+});
+
+test('a three-operand Subtract keeps every operand', async ({ page }) => {
+  await seed(page, [
+    familyTextLayer('text', 'O', 0, 0, 220, "'Playfair Display', serif"),
+    boxLayer('box1', 'Box One', 0, -78, 8),
+    boxLayer('box2', 'Box Two', 0, -40, 4),
+  ]);
+
+  await page.locator('.actor-node', { hasText: 'Box One' }).first().click();
+  await page.locator('.actor-node', { hasText: 'O text' }).first().click({ modifiers: ['Control'] });
+  await page.locator('.actor-node', { hasText: 'Box Two' }).first().click({ modifiers: ['Control'] });
+  await page.getByRole('button', { name: 'Subtract', exact: true }).click();
+  await saveNow(page);
+
+  const operandIds = await page.evaluate((key) => {
+    const scene = JSON.parse(localStorage.getItem(key) ?? '{}') as {
+      layers?: { booleanOperandIds?: string[] }[];
+    };
+    return (scene.layers ?? []).find((layer) => layer.booleanOperandIds?.length)?.booleanOperandIds ?? [];
+  }, STORAGE_KEY);
+  expect(operandIds).toEqual(['box1', 'text', 'box2']);
+});

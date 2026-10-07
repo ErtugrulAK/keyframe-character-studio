@@ -8,7 +8,7 @@ import { updateTrimPath, type TrimPathAuthoringPatch } from '../../utils/trimPat
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import { DuplicateTab } from './sections/DuplicateTab';
-import { isBooleanEligible, computeBooleanContours, deriveBooleanGeometry, dissolveBooleanGroup as dissolveBooleanGroupState, createBooleanDisplayName, isGeneratedBooleanName, type BooleanOperation } from '../../utils/booleanGeometry';
+import { isBooleanEligible, computeBooleanContours, deriveBooleanGeometry, inspectBooleanOperands, dissolveBooleanGroup as dissolveBooleanGroupState, createBooleanDisplayName, isGeneratedBooleanName, type BooleanOperation } from '../../utils/booleanGeometry';
 import { generateId } from '../../utils/idGenerator';
 import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../../utils/partBinding';
 import { layerMaskChannel } from '../../types/animator';
@@ -68,11 +68,14 @@ export const DetailsPanel: React.FC = () => {
 
   const createBooleanGroup = (operation: BooleanOperation) => {
     if (booleanEligibleParts.length < 2) return;
-    const contours = computeBooleanContours(
-      operation,
-      booleanEligibleParts,
-      Object.fromEntries(booleanEligibleParts.map((part) => [part.id, getComputedTransform(part.id, currentFrame)])),
-    );
+    const transforms = Object.fromEntries(booleanEligibleParts.map((part) => [part.id, getComputedTransform(part.id, currentFrame)]));
+    const readiness = inspectBooleanOperands(booleanEligibleParts, transforms);
+    if (!readiness.ready) {
+      const names = readiness.unresolved.map((part) => part.name).join(', ');
+      showToast(`Could not build the Boolean: no geometry for ${names}. Nothing was created.`, 'error');
+      return;
+    }
+    const contours = computeBooleanContours(operation, booleanEligibleParts, transforms);
     if (contours.length === 0) {
       showToast('The selected shapes produce an empty result.', 'info');
       return;
@@ -132,6 +135,14 @@ export const DetailsPanel: React.FC = () => {
     );
     const groupTransform = getComputedTransform(selectedBooleanGroup.id, currentFrame);
     const operandNames = operands.map((operand) => operand.name);
+    // Switching the operation is refused when an operand has no geometry, so a
+    // failed trace never silently becomes a different operation.
+    const readiness = inspectBooleanOperands(operands, transforms);
+    if (!readiness.ready) {
+      const names = readiness.unresolved.map((part) => part.name).join(', ');
+      showToast(`Could not switch the Boolean operation: no geometry for ${names}.`, 'error');
+      return;
+    }
     const derived = deriveBooleanGeometry(operation, operands, transforms, groupTransform);
     const contours = derived.localContours;
     startBatchInteraction();

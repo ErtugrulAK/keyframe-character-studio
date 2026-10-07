@@ -319,7 +319,11 @@ export const sampleBezierPath = (path: BezierPath | undefined, samplesPerSegment
       samples.push(cubic(p0, p1, p2, p3, step / count));
     }
   }
-  const last = path.points[path.points.length - 1];
-  samples.push({ x: last.x, y: last.y });
+  // A closed path's last segment already runs back to the first vertex (the
+  // loop samples it at t in [0,1)), so the ring must close on the FIRST point.
+  // Pushing the last authored vertex instead left the curved closing edge
+  // unrepresented, and the ring's area disagreed with the SVG fill.
+  const closing = path.closed ? path.points[0] : path.points[path.points.length - 1];
+  samples.push({ x: closing.x, y: closing.y });
   return samples;
 };

@@ -250,8 +250,8 @@ export const traceBinaryMask = (mask: BinaryMask, tolerance = SIMPLIFY_TOLERANCE
 
 interface CachedOutline {
   polygons: OutlinePolygon[];
-  /** Traced before the font was reported ready; retraced on the next lookup. */
-  provisional: boolean;
+  /** True when the trace was taken while `document.fonts` reported every face loaded. */
+  settled: boolean;
 }
 
 const outlineCache = new Map<string, CachedOutline>();
@@ -287,16 +287,54 @@ const isFontSettled = (): boolean => {
   }
 };
 
+/**
+ * SVG's default text whitespace processing (`xml:space="default"`): leading and
+ * trailing whitespace is dropped and every internal run of whitespace collapses
+ * to one space. The trace must follow the renderer's own semantics, or two
+ * visually identical texts would produce different Boolean geometry.
+ */
+export const normalizeSvgText = (text: string): string => text.replace(/\s+/g, ' ').trim();
+
+/**
+ * The primary family of a CSS font-family list, without surrounding quotes.
+ * `"'Playfair Display', serif"` → `Playfair Display`.
+ */
+export const primaryFontFamily = (fontFamily: string): string => {
+  const first = (fontFamily.split(',')[0] ?? '').trim();
+  const unquoted = first.replace(/^["']+|["']+$/g, '').trim();
+  return unquoted || first;
+};
+
+/**
+ * The family names the canvas accepted for a `context.font` assignment.
+ *
+ * The canvas re-serialises `font` (quoting families that need it, dropping the
+ * caller's quotes), so the caller's raw string must never be matched against it
+ * verbatim. This reads the serialized family list instead.
+ */
+export const canvasAcceptedFamilies = (normalizedFont: string): string[] => {
+  const sizeIndex = normalizedFont.indexOf('px');
+  const familyList = sizeIndex >= 0 ? normalizedFont.slice(sizeIndex + 2) : normalizedFont;
+  return familyList
+    .split(',')
+    .map((entry) => entry.trim().replace(/^["']+|["']+$/g, '').toLowerCase())
+    .filter(Boolean);
+};
+
 const traceText = (text: string, fontSize: number, fontFamily: string): OutlinePolygon[] | null => {
   if (typeof document === 'undefined') return null;
   try {
+    // The renderer draws the raw value with SVG's default whitespace handling,
+    // so the raster and the metrics must both use the normalised string.
+    const drawn = normalizeSvgText(text);
+    if (!drawn) return null;
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d');
     if (!context) return null;
 
     // The same metric authority the hit test uses, so the raster covers what the
     // renderer draws: `getTextMetrics` measures the bold advance width.
-    const { halfW, halfH, offsetY } = getTextMetrics(text, fontSize, fontFamily);
+    const { halfW, halfH, offsetY } = getTextMetrics(drawn, fontSize, fontFamily);
     const padding = fontSize * 0.5;
     const width = 2 * (halfW + padding);
     const height = 2 * (halfH + padding);
@@ -310,13 +348,16 @@ const traceText = (text: string, fontSize: number, fontFamily: string): OutlineP
 
     const font = `bold ${fontSize * scale}px ${fontFamily}`;
     context.font = font;
-    if (!context.font.includes(fontFamily)) return null; // the canvas refused the family
+    // The canvas re-serialises the family (quoting families that need it), so the
+    // accepted family is read from the serialized list, never matched verbatim.
+    const requestedFamily = primaryFontFamily(fontFamily).toLowerCase();
+    if (!canvasAcceptedFamilies(context.font).includes(requestedFamily)) return null;
     context.textAlign = 'center';
     // The stage draws the non-staggered text with the SVG default baseline, so
     // the canvas matches it: the anchor sits on the baseline, centred.
     context.textBaseline = 'alphabetic';
     context.fillStyle = '#000000';
-    context.fillText(text, anchorX, anchorY);
+    context.fillText(drawn, anchorX, anchorY);
 
     const image = context.getImageData(0, 0, canvas.width, canvas.height);
     const alpha = new Uint8Array(canvas.width * canvas.height);
@@ -338,7 +379,7 @@ const traceText = (text: string, fontSize: number, fontFamily: string): OutlineP
  * traced (see the module note). Cached per text, family and size.
  */
 export const getTextOutlinePolygons = (part: CharacterPart): OutlinePolygon[] | null => {
-  const text = part.textValue?.trim();
+  const text = normalizeSvgText(part.textValue ?? '');
   if (!text) return null;
   const fontSize = part.fontSize || 24;
   const fontFamily = part.fontFamily || 'Outfit';
@@ -346,10 +387,14 @@ export const getTextOutlinePolygons = (part: CharacterPart): OutlinePolygon[] | 
 
   const settled = isFontSettled();
   const cached = outlineCache.get(key);
-  if (cached && (settled || !cached.provisional)) return cached.polygons;
+  // A trace taken before the faces settled can show the fallback face. While
+  // loading continues the provisional raster is reused (no per-frame thrash);
+  // once loading has settled it is retraced ONCE and kept, so the geometry
+  // matches what the renderer now draws.
+  if (cached && (cached.settled || !settled)) return cached.polygons;
 
   const traced = traceText(text, fontSize, fontFamily);
   if (!traced) return cached?.polygons ?? null;
-  rememberOutline(key, { polygons: traced, provisional: !settled });
+  rememberOutline(key, { polygons: traced, settled });
   return traced;
 };

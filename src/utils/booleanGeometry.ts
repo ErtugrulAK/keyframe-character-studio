@@ -216,6 +216,32 @@ export const partToWorldPolygons = (part: CharacterPart, transform?: Transform):
   )));
 };
 
+export interface BooleanOperandReadiness {
+  /** True when every operand produced real geometry for this frame. */
+  ready: boolean;
+  /** Operands whose geometry could not be produced (e.g. a failed text trace). */
+  unresolved: CharacterPart[];
+}
+
+/**
+ * Whether every operand has real geometry right now.
+ *
+ * A Boolean operation is a set of ALL its operands: when one cannot be produced
+ * (a text whose font cannot be traced, a freeform with no path) the operation
+ * must refuse rather than silently drop it and run a different operation on the
+ * remaining shapes. Callers use this to surface an actionable diagnostic.
+ */
+export const inspectBooleanOperands = (
+  operands: CharacterPart[],
+  transforms?: Record<string, Transform>,
+): BooleanOperandReadiness => {
+  const unresolved = operands.filter((part) => {
+    const polygons = partToWorldPolygons(part, transforms?.[part.id]);
+    return !polygons || polygons.length === 0;
+  });
+  return { ready: unresolved.length === 0, unresolved };
+};
+
 const flattenResult = (result: MultiPolygon): BooleanContours => result.flatMap((polygon) => (
   polygon.map((ring) => normalizeClosedPoints(ring.map(([x, y]) => ({ x, y }))))
 ));
@@ -228,9 +254,16 @@ export const computeBooleanContours = (
   // An operand is a *set* of regions (a text is several glyphs, each with its own
   // holes), so the first operand's regions are the Boolean subject and the rest
   // are its clippers.
-  const geometries = operands
-    .map((part) => partToWorldPolygons(part, transforms?.[part.id]))
-    .filter((polygons): polygons is Polygon[] => polygons !== null && polygons.length > 0);
+  //
+  // Every operand must resolve: a failed trace is refused atomically (empty
+  // result) instead of being filtered out, which would silently change which
+  // operation runs.
+  const geometries: Polygon[][] = [];
+  for (const part of operands) {
+    const polygons = partToWorldPolygons(part, transforms?.[part.id]);
+    if (!polygons || polygons.length === 0) return [];
+    geometries.push(polygons);
+  }
   if (geometries.length < 2) return [];
 
   const [subject, ...clippers] = geometries;

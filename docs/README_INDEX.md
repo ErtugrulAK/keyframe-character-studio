@@ -83,6 +83,7 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `reports/progress_152_post_astra_focused_remediation.md` — the post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01: per-finding reproduction, root cause, fix, test and result, the six-commit publication, the full gate, and the remaining limitations.
 - `reports/progress_153_dependency_advisory_maintenance.md` — the five npm advisories: the fresh matrix, the reachability proofs, the bounded change set, the validation, and the condition for removing the scoped override.
 - `reports/progress_154_exact_sha_release_smoke.md` — the exact-SHA Release Smoke Gate run: dispatch path, run ID, log evidence, coverage boundaries, and the tested-code-SHA vs docs-tip distinction.
+- `reports/progress_155_h7_rc2_release.md` — the H7 GO execution: the rc.2 candidate, its draft prerelease, the metadata decision and the verification results.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

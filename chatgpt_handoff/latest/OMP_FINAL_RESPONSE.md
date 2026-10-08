@@ -1,29 +1,34 @@
-# KCS Exact-SHA Release Smoke Gate — 2026-10-08
+# KCS H7 GO — v1.1.0-rc.2 Release Candidate — 2026-10-08
 
-## Latest verified result
+## Latest approved release action
 
-The manual `Release Smoke Gate` was dispatched against the exact candidate and **passed**: run `37752015020`, **TESTED CODE SHA `6c27ef35d48d61a5e1163d2c91734c864fcafa01`**, 46 s, every step `success`.
+The approved H7 GO decision was executed. A **new** release candidate, `v1.1.0-rc.2`, was created from the exact smoke-tested code commit — `v1.1.0-rc.1` was not moved, retargeted or deleted, and npm remains unpublished.
 
-The workflow is verification-only: it declares `permissions: contents: read`, checks out the `candidate_sha` input with `fetch-depth: 1`, asserts `git rev-parse HEAD == EXPECTED_SHA`, then runs `npm ci`, installs Chromium for Playwright, and runs `npm run qa:release`. No step creates or moves a tag, publishes or finalizes a GitHub release, or runs `npm publish`.
+| Field | Value |
+|---|---|
+| Tested code commit (candidate) | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
+| Annotated release candidate | `v1.1.0-rc.2` — dereferences to exactly the tested commit |
+| Release Smoke Gate | run `37752015020` — success, every step green |
+| GitHub release | `KCS v1.1.0-rc.2`, id `RE_kwDOTexJrc4YPnCt` — **draft prerelease**, `targetCommitish` pinned to the tested commit |
+| Earlier candidate | `v1.1.0-rc.1` unchanged at `46d2a3e59e065816d972dcd56951803951b577f6` |
+| Package | private, metadata version `1.1.0-rc.1`; npm returns 404 |
 
-Independently read from the run log: the runner's `EXPECTED_SHA` was the candidate, the gate printed `Release gate candidate SHA: 6c27ef3…`, the OGraf fixture validated (`minimal.ograf.json: valid OGraf v1 manifest`), both Chromium specs passed (`2 passed`), and the gate printed `Release gate passed for candidate SHA: 6c27ef3…`.
+Package metadata deliberately stays at `1.1.0-rc.1` (PATH A): the candidate is the exact smoke-tested commit, so no metadata commit — which would have created a new, untested commit — was introduced.
 
-## Candidate identity
+The documentation tip `c650da18c731dfac85d31ba00d059a8430c40b43` is newer than the candidate and is docs-only: no source, test, workflow, package, lock or asset byte differs. The candidate identity is therefore unchanged, and the docs tip is **not** itself smoke-tested.
 
-`6c27ef3` is the tested **code** SHA. The documentation commit that records this run moves the branch tip forward without changing a source, test, workflow, package or asset byte, and is **not** itself smoke-tested. A future release decision must treat `6c27ef3` as the tested candidate and re-run the gate on any later SHA that changes code.
+## What the candidate contains
 
-## What the gate proves, and what it does not
+The release notes carry the full list. In summary: the 16 post-Astra correctness fixes (text Boolean geometry, bonded layer movement, Motion Curves targeting and mask dispatch, Playfair OGraf portability), the authoring and presentation work (layer bonds, Boolean operands, text stroke parity, opacity keyframes, sequence isolation, segment editing, the visual-only editor refresh), the hardening shipped in the same line (Lottie import, OGraf package import, loopback API bind with an exact CORS allowlist, inverted matte, Lottie parent resolution, boundary scene validation), and the toolchain/dependency work (TypeScript 7, Vitest 5, Oxlint 1.85, jsdom 30.1.1, the CI type-check and state-consistency gates, and `npm audit` at 0 vulnerabilities).
 
-It proves the candidate installs cleanly from its own lockfile on a fresh Ubuntu runner, the OGraf fixture manifest validates offline against the vendored SHA-256-pinned closure, a KCS OGraf package materialized on the runner interoperates with Chromium, and the real editor exports the current project as an OGraf ZIP through the UI.
+## What the smoke gate proved, and what it did not
 
-It is not the full suite. The Vitest suite (135 files / 2,055 tests), the full Chromium suite (268 tests with `--retries=0`), the API health endpoint on the loopback bind, the `sqlite3` binding and the CORS posture were validated locally on the same code line and are recorded in PROJECT_STATE.md.
+It proved the candidate installs cleanly from its own lockfile on a fresh Ubuntu runner, the OGraf fixture manifest validates offline against the vendored SHA-256-pinned closure, a KCS OGraf package materialized on the runner interoperates with Chromium, and the editor exports an OGraf ZIP through the UI.
 
-## Verdict
+It is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line. This is a pre-release candidate, not a claim of full production certification.
 
-**EXACT-SHA RELEASE SMOKE PASSED — READY FOR H7 RELEASE DECISION.**
+## Next step
 
-## Release state
-
-H7 remains HOLD. Annotated tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`; the GitHub draft prerelease is unchanged; `package.json` is private at `1.1.0-rc.1`; npm still returns 404 for the package. Creating or moving a tag, publishing or finalizing the draft release, and npm publication all require a new explicit user instruction.
+The user decides whether to publish the rc.2 draft prerelease and/or run the user QA pass. Publishing the draft does not create a tag (it already exists) and does not publish to npm. Any later commit that touches source, tests, workflows, packages or assets invalidates this exact-SHA smoke result for the new commit.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.

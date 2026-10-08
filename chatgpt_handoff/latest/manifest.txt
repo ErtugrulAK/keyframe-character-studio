@@ -1,16 +1,18 @@
-# KCS ChatGPT Upload Manifest — Exact-SHA Release Smoke Gate
+# KCS ChatGPT Upload Manifest — H7 GO / v1.1.0-rc.2 Release Candidate
 
-Scope: the manual Release Smoke Gate run against the exact candidate SHA, and the documentation that records it
+Scope: the H7 GO execution and the v1.1.0-rc.2 release candidate cut from the exact smoke-tested commit
 TESTED CODE SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01
-Workflow run: Release Smoke Gate 37752015020 (workflow_dispatch, conclusion success)
-Current docs tip: the documentation commit that records this run; it is NOT smoke-tested and changes no source, test, workflow, package or asset byte
-Baseline before this task: main at 6c27ef35d48d61a5e1163d2c91734c864fcafa01
-Validation authority: the Exact-SHA release smoke gate sections in PROJECT_STATE.md and NEXT_SESSION.md
+Release candidate: annotated v1.1.0-rc.2, dereferences to 6c27ef35d48d61a5e1163d2c91734c864fcafa01
+Release Smoke Gate: run 37752015020 (workflow_dispatch, conclusion success)
+GitHub release: KCS v1.1.0-rc.2, id RE_kwDOTexJrc4YPnCt, draft prerelease, targetCommitish pinned to the tested commit
+Earlier candidate: v1.1.0-rc.1 unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; its draft prerelease unmodified
+Package: private, metadata version 1.1.0-rc.1; npm publication not performed (registry returns 404)
+Current docs tip: c650da18c731dfac85d31ba00d059a8430c40b43 — docs-only, newer than the candidate, NOT smoke-tested
+Validation authority: the H7 GO sections in PROJECT_STATE.md and NEXT_SESSION.md
 Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
 Historical records retained in reports/ only (not copied into this minimal bundle): progress_151, progress_152, progress_153
-Release state: H7 HOLD; release tags, draft prerelease, private package and npm publication unchanged
 
-Bundle source files (9):
+Bundle source files (10):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - KCS_RELEASE_CANDIDATE_SUMMARY.md
@@ -20,6 +22,7 @@ Bundle source files (9):
 - README.md
 - manifest.txt
 - progress_154_exact_sha_release_smoke.md
+- progress_155_h7_rc2_release.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.

@@ -20,6 +20,14 @@
 - The dependency advisories recorded here were resolved on 2026-10-08 in a bounded maintenance run: `proxy-addr`, `source-map-js` and `fast-uri` by lock refreshes inside their parents' declared ranges, and `shell-quote` by a scoped `overrides` entry under `concurrently`. `npm audit --audit-level=low` now reports 0 vulnerabilities; see `reports/progress_153_dependency_advisory_maintenance.md`.
 - H7 remains HOLD. Publishing, finalizing, or re-tagging the release requires a new explicit user instruction; release artefacts stay at `46d2a3e`.
 
+## H7 GO — v1.1.0-rc.2 release candidate — 2026-10-08
+
+- H7 GO was executed. A NEW release candidate was cut from the exact smoke-tested commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (Release Smoke Gate run `37752015020`). The annotated candidate `v1.1.0-rc.2` dereferences to that commit and its GitHub release entry is a draft prerelease with `targetCommitish` pinned to it.
+- The earlier candidate is untouched at `46d2a3e59e065816d972dcd56951803951b577f6`; its draft prerelease is unmodified.
+- Package metadata stays private at `1.1.0-rc.1` (PATH A): the candidate is the exact smoke-tested commit, and npm remains unpublished.
+- The documentation tip is newer than the candidate and docs-only; it is NOT itself smoke-tested. Any commit that touches source, tests, workflows, packages or assets invalidates the result for the new commit, so re-run the gate before a further release decision.
+- Next step: the user decides whether to publish the rc.2 draft prerelease and/or run the user QA pass. Publishing the draft does not create a tag (it already exists) and does not publish to npm. Record: `reports/progress_155_h7_rc2_release.md`.
+
 ## Exact-SHA release smoke gate — passed, 2026-10-08
 
 - The manual `Release Smoke Gate` passed on the exact candidate: run `37752015020`, **TESTED CODE SHA `6c27ef35d48d61a5e1163d2c91734c864fcafa01`**. Verdict: EXACT-SHA RELEASE SMOKE PASSED — READY FOR H7 RELEASE DECISION.
@@ -62,7 +70,7 @@ Post-Astra remediation local gate on October 7, 2026: `npx tsc -b --pretty false
 
 ## Next scoped work
 
-1. **Milestone H remains HELD at H7.** H1–H6 are complete, the release artefacts remain at `46d2a3e`, and no tag, GitHub release, or npm publication action was taken.
+1. **Milestone H: H7 GO executed.** H1–H6 are complete and the new release candidate `v1.1.0-rc.2` has been cut from the exact smoke-tested commit `6c27ef3`; its draft prerelease awaits the user's publish/QA decision. The earlier candidate remains at `46d2a3e` and npm publication is still out of scope. Re-run the exact-SHA smoke gate on any later commit that changes code before a further release decision.
 2. The Astra remediation findings F-01…F-10 are closed and merged with green CI, one branch per finding; `reports/progress_151_astra_remediation.md` records the reproduction evidence and the remaining limitations.
 3. The post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01 are closed and published on `main` in six commits; `reports/progress_152_post_astra_focused_remediation.md` records the per-finding reproduction, fix, test and result.
 4. The five maintenance tasks that preceded the remediation are complete: focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5.

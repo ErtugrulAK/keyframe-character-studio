@@ -1,24 +1,26 @@
-# KCS Minimal ChatGPT Upload Bundle — Dependency Advisory Maintenance
+# KCS Minimal ChatGPT Upload Bundle — Exact-SHA Release Smoke Gate
 
-Task-specific handoff for the 2026-10-08 dependency-advisory maintenance on the clean post-Astra `main` line. This is not an archive.
+Task-specific handoff for the 2026-10-08 exact-SHA Release Smoke Gate. This is not an archive.
 
 ## Current truth
 
-Five advisories (3 critical, 1 high, 1 moderate) were removed by one bounded commit, `7f1e679 chore: remediate dependency advisories`. `proxy-addr` 2.0.7 → 2.0.8, `source-map-js` 1.2.1 → 1.2.2 and `fast-uri` 3.1.7 → 3.1.8 are lock refreshes inside the ranges their parents already declare; `shell-quote` 1.9.0 → 1.12.0 uses a scoped `overrides` entry under `concurrently`, which pins the exact vulnerable version and has no newer release. `npm audit --audit-level=low` now reports 0 vulnerabilities.
+The manual `Release Smoke Gate` passed on the exact candidate: run `37752015020`, **TESTED CODE SHA `6c27ef35d48d61a5e1163d2c91734c864fcafa01`**. Verdict: EXACT-SHA RELEASE SMOKE PASSED — READY FOR H7 RELEASE DECISION.
 
-No direct dependency, script, engine, workflow or application source change is part of this work, and no `npm audit fix` was run. The full gate passes: `npm ls --all`, `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npm run check`, the full Chromium suite (268 tests with `--retries=0`), the state consistency check, the API health endpoint on the loopback bind, and the `sqlite3` binding.
+The workflow is verification-only (`permissions: contents: read`): it pins the `candidate_sha` input, verifies `git rev-parse HEAD`, and runs `npm ci` + Chromium + `npm run qa:release` — OGraf fixture validation plus two Chromium OGraf specs. It cannot tag, release or publish.
 
-The `overrides` entry is a temporary bridge; remove it once `concurrently` declares `shell-quote >= 1.11.0`. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
+`6c27ef3` is the tested **code** SHA. The documentation commit that records this run is not itself smoke-tested; re-run the gate on any later SHA that changes code before making a release decision. The gate is not the full suite: the Vitest suite (135 files / 2,055 tests), the full Chromium suite (268 tests with `--retries=0`), the API/SQLite checks and the CORS posture were validated locally on the same code line and are recorded in PROJECT_STATE.md.
+
+H7 remains HOLD. The tag, the draft prerelease, the private package version and the npm state are unchanged; npm still returns 404 for the package.
 
 ## Evidence and files
 
-- OMP_FINAL_RESPONSE.md: the change set, the reachability proofs, the gate and the release boundary.
+- OMP_FINAL_RESPONSE.md: the verified result, the coverage boundaries and the release boundary.
 - PROJECT_STATE.md and NEXT_SESSION.md: current local validation and continuation constraints.
+- KCS_RELEASE_CANDIDATE_SUMMARY.md: the release boundary with the exact-SHA smoke result.
 - CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
-- progress_153_dependency_advisory_maintenance.md: the current per-advisory record.
-- progress_152_post_astra_focused_remediation.md and progress_151_astra_remediation.md: retained historical records, not current validation.
+- progress_154_exact_sha_release_smoke.md: the full run record — dispatch path, run ID, log evidence and the tested-code-SHA vs docs-tip distinction.
 - manifest.txt: inventory and protected boundaries.
 
-The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. Historical reports are not rewritten or deleted; external workspaces and OMP configuration are untouched.
+The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. The earlier progress reports remain in `reports/` and are linked from the report indexes; they are not copied into this minimal bundle. Historical reports are not rewritten or deleted, and external workspaces and OMP configuration are untouched.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder holds its sources.

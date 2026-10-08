@@ -1,23 +1,29 @@
-# KCS Dependency Advisory Maintenance — 2026-10-08
+# KCS Exact-SHA Release Smoke Gate — 2026-10-08
 
-## Latest approved correction
+## Latest verified result
 
-`npm audit --audit-level=low` reported five advisories on the clean post-Astra `main` line (3 critical, 1 high, 1 moderate). All five are resolved by one bounded commit, `7f1e679 chore: remediate dependency advisories`, and the audit now reports **0 vulnerabilities**.
+The manual `Release Smoke Gate` was dispatched against the exact candidate and **passed**: run `37752015020`, **TESTED CODE SHA `6c27ef35d48d61a5e1163d2c91734c864fcafa01`**, 46 s, every step `success`.
 
-Three are lock refreshes inside the ranges their parents already declare, so no direct dependency moved: `proxy-addr` 2.0.7 → 2.0.8 (critical, through Express), `source-map-js` 1.2.1 → 1.2.2 (high, through postcss/magicast/css-tree), and `fast-uri` 3.1.7 → 3.1.8 (moderate, through ajv). The fourth, `shell-quote` 1.9.0 → 1.12.0 (critical, through concurrently), needed a scoped `overrides` entry: concurrently pins the exact vulnerable version and has no newer release, so no range-based or parent-bump fix exists, and the alternative npm proposes is a semver-major downgrade of concurrently.
+The workflow is verification-only: it declares `permissions: contents: read`, checks out the `candidate_sha` input with `fetch-depth: 1`, asserts `git rev-parse HEAD == EXPECTED_SHA`, then runs `npm ci`, installs Chromium for Playwright, and runs `npm run qa:release`. No step creates or moves a tag, publishes or finalizes a GitHub release, or runs `npm publish`.
 
-## Evidence
+Independently read from the run log: the runner's `EXPECTED_SHA` was the candidate, the gate printed `Release gate candidate SHA: 6c27ef3…`, the OGraf fixture validated (`minimal.ograf.json: valid OGraf v1 manifest`), both Chromium specs passed (`2 passed`), and the gate printed `Release gate passed for candidate SHA: 6c27ef3…`.
 
-Reachability was proven from code rather than assumed. Express evaluates the proxy chain only in `req.ip`/`req.ips`, and KCS never sets `trust proxy` (Express defaults it to `false`) nor reads either accessor, so the `proxy-addr` parsing path was already unreachable — and is fixed anyway. concurrently's only `quote()` consumer is `ExpandArguments`, which requires additional CLI arguments the `dev` script never passes; `shell-quote` 1.11.0+ exports the same `quote`/`parse` API with no dependencies and the same engine range, so the override cannot change this repository's behaviour.
+## Candidate identity
 
-The full gate is green: `npm ls --all` with no extraneous or missing packages, `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npm run check`, the full Chromium suite (268 tests with `--retries=0`), the state consistency check, and `git diff --check`. Runtime checks confirm the security posture is unchanged: the API still binds `127.0.0.1` by default, the exact CORS allowlist is unchanged, `/api/health` answers on loopback, and the `sqlite3` native binding round-trips.
+`6c27ef3` is the tested **code** SHA. The documentation commit that records this run moves the branch tip forward without changing a source, test, workflow, package or asset byte, and is **not** itself smoke-tested. A future release decision must treat `6c27ef3` as the tested candidate and re-run the gate on any later SHA that changes code.
 
-## Scope boundaries
+## What the gate proves, and what it does not
 
-No direct dependency, script, engine, workflow or application source change. No new install script; the `allowScripts` rule still pins `sqlite3@6.0.1`. No `npm audit fix` was run. The `overrides` entry is a temporary bridge and should be removed once concurrently declares `shell-quote >= 1.11.0`.
+It proves the candidate installs cleanly from its own lockfile on a fresh Ubuntu runner, the OGraf fixture manifest validates offline against the vendored SHA-256-pinned closure, a KCS OGraf package materialized on the runner interoperates with Chromium, and the real editor exports the current project as an OGraf ZIP through the UI.
+
+It is not the full suite. The Vitest suite (135 files / 2,055 tests), the full Chromium suite (268 tests with `--retries=0`), the API health endpoint on the loopback bind, the `sqlite3` binding and the CORS posture were validated locally on the same code line and are recorded in PROJECT_STATE.md.
+
+## Verdict
+
+**EXACT-SHA RELEASE SMOKE PASSED — READY FOR H7 RELEASE DECISION.**
 
 ## Release state
 
-H7 remains HOLD. Annotated tag `v1.1.0-rc.1` and the GitHub draft prerelease stay at `46d2a3e`. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
+H7 remains HOLD. Annotated tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`; the GitHub draft prerelease is unchanged; `package.json` is private at `1.1.0-rc.1`; npm still returns 404 for the package. Creating or moving a tag, publishing or finalizing the draft release, and npm publication all require a new explicit user instruction.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.

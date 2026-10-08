@@ -10,27 +10,33 @@ Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`. External Q
 
 ## 1. OMP Final Response
 
-# KCS Dependency Advisory Maintenance — 2026-10-08
+# KCS Exact-SHA Release Smoke Gate — 2026-10-08
 
-## Latest approved correction
+## Latest verified result
 
-`npm audit --audit-level=low` reported five advisories on the clean post-Astra `main` line (3 critical, 1 high, 1 moderate). All five are resolved by one bounded commit, `7f1e679 chore: remediate dependency advisories`, and the audit now reports **0 vulnerabilities**.
+The manual `Release Smoke Gate` was dispatched against the exact candidate and **passed**: run `37752015020`, **TESTED CODE SHA `6c27ef35d48d61a5e1163d2c91734c864fcafa01`**, 46 s, every step `success`.
 
-Three are lock refreshes inside the ranges their parents already declare, so no direct dependency moved: `proxy-addr` 2.0.7 → 2.0.8 (critical, through Express), `source-map-js` 1.2.1 → 1.2.2 (high, through postcss/magicast/css-tree), and `fast-uri` 3.1.7 → 3.1.8 (moderate, through ajv). The fourth, `shell-quote` 1.9.0 → 1.12.0 (critical, through concurrently), needed a scoped `overrides` entry: concurrently pins the exact vulnerable version and has no newer release, so no range-based or parent-bump fix exists, and the alternative npm proposes is a semver-major downgrade of concurrently.
+The workflow is verification-only: it declares `permissions: contents: read`, checks out the `candidate_sha` input with `fetch-depth: 1`, asserts `git rev-parse HEAD == EXPECTED_SHA`, then runs `npm ci`, installs Chromium for Playwright, and runs `npm run qa:release`. No step creates or moves a tag, publishes or finalizes a GitHub release, or runs `npm publish`.
 
-## Evidence
+Independently read from the run log: the runner's `EXPECTED_SHA` was the candidate, the gate printed `Release gate candidate SHA: 6c27ef3…`, the OGraf fixture validated (`minimal.ograf.json: valid OGraf v1 manifest`), both Chromium specs passed (`2 passed`), and the gate printed `Release gate passed for candidate SHA: 6c27ef3…`.
 
-Reachability was proven from code rather than assumed. Express evaluates the proxy chain only in `req.ip`/`req.ips`, and KCS never sets `trust proxy` (Express defaults it to `false`) nor reads either accessor, so the `proxy-addr` parsing path was already unreachable — and is fixed anyway. concurrently's only `quote()` consumer is `ExpandArguments`, which requires additional CLI arguments the `dev` script never passes; `shell-quote` 1.11.0+ exports the same `quote`/`parse` API with no dependencies and the same engine range, so the override cannot change this repository's behaviour.
+## Candidate identity
 
-The full gate is green: `npm ls --all` with no extraneous or missing packages, `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npm run check`, the full Chromium suite (268 tests with `--retries=0`), the state consistency check, and `git diff --check`. Runtime checks confirm the security posture is unchanged: the API still binds `127.0.0.1` by default, the exact CORS allowlist is unchanged, `/api/health` answers on loopback, and the `sqlite3` native binding round-trips.
+`6c27ef3` is the tested **code** SHA. The documentation commit that records this run moves the branch tip forward without changing a source, test, workflow, package or asset byte, and is **not** itself smoke-tested. A future release decision must treat `6c27ef3` as the tested candidate and re-run the gate on any later SHA that changes code.
 
-## Scope boundaries
+## What the gate proves, and what it does not
 
-No direct dependency, script, engine, workflow or application source change. No new install script; the `allowScripts` rule still pins `sqlite3@6.0.1`. No `npm audit fix` was run. The `overrides` entry is a temporary bridge and should be removed once concurrently declares `shell-quote >= 1.11.0`.
+It proves the candidate installs cleanly from its own lockfile on a fresh Ubuntu runner, the OGraf fixture manifest validates offline against the vendored SHA-256-pinned closure, a KCS OGraf package materialized on the runner interoperates with Chromium, and the real editor exports the current project as an OGraf ZIP through the UI.
+
+It is not the full suite. The Vitest suite (135 files / 2,055 tests), the full Chromium suite (268 tests with `--retries=0`), the API health endpoint on the loopback bind, the `sqlite3` binding and the CORS posture were validated locally on the same code line and are recorded in PROJECT_STATE.md.
+
+## Verdict
+
+**EXACT-SHA RELEASE SMOKE PASSED — READY FOR H7 RELEASE DECISION.**
 
 ## Release state
 
-H7 remains HOLD. Annotated tag `v1.1.0-rc.1` and the GitHub draft prerelease stay at `46d2a3e`. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
+H7 remains HOLD. Annotated tag `v1.1.0-rc.1` still points at `46d2a3e59e065816d972dcd56951803951b577f6`; the GitHub draft prerelease is unchanged; `package.json` is private at `1.1.0-rc.1`; npm still returns 404 for the package. Creating or moving a tag, publishing or finalizing the draft release, and npm publication all require a new explicit user instruction.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
@@ -38,28 +44,30 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Dependency Advisory Maintenance
+# KCS Minimal ChatGPT Upload Bundle — Exact-SHA Release Smoke Gate
 
-Task-specific handoff for the 2026-10-08 dependency-advisory maintenance on the clean post-Astra `main` line. This is not an archive.
+Task-specific handoff for the 2026-10-08 exact-SHA Release Smoke Gate. This is not an archive.
 
 ## Current truth
 
-Five advisories (3 critical, 1 high, 1 moderate) were removed by one bounded commit, `7f1e679 chore: remediate dependency advisories`. `proxy-addr` 2.0.7 → 2.0.8, `source-map-js` 1.2.1 → 1.2.2 and `fast-uri` 3.1.7 → 3.1.8 are lock refreshes inside the ranges their parents already declare; `shell-quote` 1.9.0 → 1.12.0 uses a scoped `overrides` entry under `concurrently`, which pins the exact vulnerable version and has no newer release. `npm audit --audit-level=low` now reports 0 vulnerabilities.
+The manual `Release Smoke Gate` passed on the exact candidate: run `37752015020`, **TESTED CODE SHA `6c27ef35d48d61a5e1163d2c91734c864fcafa01`**. Verdict: EXACT-SHA RELEASE SMOKE PASSED — READY FOR H7 RELEASE DECISION.
 
-No direct dependency, script, engine, workflow or application source change is part of this work, and no `npm audit fix` was run. The full gate passes: `npm ls --all`, `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npm run check`, the full Chromium suite (268 tests with `--retries=0`), the state consistency check, the API health endpoint on the loopback bind, and the `sqlite3` binding.
+The workflow is verification-only (`permissions: contents: read`): it pins the `candidate_sha` input, verifies `git rev-parse HEAD`, and runs `npm ci` + Chromium + `npm run qa:release` — OGraf fixture validation plus two Chromium OGraf specs. It cannot tag, release or publish.
 
-The `overrides` entry is a temporary bridge; remove it once `concurrently` declares `shell-quote >= 1.11.0`. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
+`6c27ef3` is the tested **code** SHA. The documentation commit that records this run is not itself smoke-tested; re-run the gate on any later SHA that changes code before making a release decision. The gate is not the full suite: the Vitest suite (135 files / 2,055 tests), the full Chromium suite (268 tests with `--retries=0`), the API/SQLite checks and the CORS posture were validated locally on the same code line and are recorded in PROJECT_STATE.md.
+
+H7 remains HOLD. The tag, the draft prerelease, the private package version and the npm state are unchanged; npm still returns 404 for the package.
 
 ## Evidence and files
 
-- OMP_FINAL_RESPONSE.md: the change set, the reachability proofs, the gate and the release boundary.
+- OMP_FINAL_RESPONSE.md: the verified result, the coverage boundaries and the release boundary.
 - PROJECT_STATE.md and NEXT_SESSION.md: current local validation and continuation constraints.
+- KCS_RELEASE_CANDIDATE_SUMMARY.md: the release boundary with the exact-SHA smoke result.
 - CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
-- progress_153_dependency_advisory_maintenance.md: the current per-advisory record.
-- progress_152_post_astra_focused_remediation.md and progress_151_astra_remediation.md: retained historical records, not current validation.
+- progress_154_exact_sha_release_smoke.md: the full run record — dispatch path, run ID, log evidence and the tested-code-SHA vs docs-tip distinction.
 - manifest.txt: inventory and protected boundaries.
 
-The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. Historical reports are not rewritten or deleted; external workspaces and OMP configuration are untouched.
+The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. The earlier progress reports remain in `reports/` and are linked from the report indexes; they are not copied into this minimal bundle. Historical reports are not rewritten or deleted, and external workspaces and OMP configuration are untouched.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder holds its sources.
 
@@ -67,27 +75,28 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder 
 
 ## 3. Bundle Manifest
 
-# KCS ChatGPT Upload Manifest — Dependency Advisory Maintenance
+# KCS ChatGPT Upload Manifest — Exact-SHA Release Smoke Gate
 
-Scope: the five npm advisories on the clean post-Astra main line, resolved without a direct dependency, script, engine, workflow or source change
-Baseline: main at c1e618efdb5fa6ff2268cd2851fbed770280ec19 before the maintenance commit
-Current changes: committed on main as 7f1e679 (chore: remediate dependency advisories)
-Validation authority: the Dependency advisory maintenance sections in PROJECT_STATE.md and NEXT_SESSION.md
+Scope: the manual Release Smoke Gate run against the exact candidate SHA, and the documentation that records it
+TESTED CODE SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01
+Workflow run: Release Smoke Gate 37752015020 (workflow_dispatch, conclusion success)
+Current docs tip: the documentation commit that records this run; it is NOT smoke-tested and changes no source, test, workflow, package or asset byte
+Baseline before this task: main at 6c27ef35d48d61a5e1163d2c91734c864fcafa01
+Validation authority: the Exact-SHA release smoke gate sections in PROJECT_STATE.md and NEXT_SESSION.md
 Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
-Historical records retained: progress_151_astra_remediation.md and progress_152_post_astra_focused_remediation.md (not current validation)
+Historical records retained in reports/ only (not copied into this minimal bundle): progress_151, progress_152, progress_153
 Release state: H7 HOLD; release tags, draft prerelease, private package and npm publication unchanged
 
-Bundle source files (10):
+Bundle source files (9):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
+- KCS_RELEASE_CANDIDATE_SUMMARY.md
 - NEXT_SESSION.md
 - OMP_FINAL_RESPONSE.md
 - PROJECT_STATE.md
 - README.md
 - manifest.txt
-- progress_151_astra_remediation.md
-- progress_152_post_astra_focused_remediation.md
-- progress_153_dependency_advisory_maintenance.md
+- progress_154_exact_sha_release_smoke.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
@@ -120,6 +129,14 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files abov
 - Focused regressions were added for every finding, and the real-browser proofs cover the family matrix, the whitespace parity, the font load -> settled retrace, the untraceable-operand refusal, the parented bonded drag, and the legacy single-file refusal. Retries, assertions and thresholds are unchanged.
 - The dependency advisories recorded here were resolved on 2026-10-08 in a bounded maintenance run: `proxy-addr`, `source-map-js` and `fast-uri` by lock refreshes inside their parents' declared ranges, and `shell-quote` by a scoped `overrides` entry under `concurrently`. `npm audit --audit-level=low` now reports 0 vulnerabilities; see `reports/progress_153_dependency_advisory_maintenance.md`.
 - H7 remains HOLD. Publishing, finalizing, or re-tagging the release requires a new explicit user instruction; release artefacts stay at `46d2a3e`.
+
+## Exact-SHA release smoke gate — passed, 2026-10-08
+
+- The manual `Release Smoke Gate` passed on the exact candidate: run `37752015020`, **TESTED CODE SHA `6c27ef35d48d61a5e1163d2c91734c864fcafa01`**. Verdict: EXACT-SHA RELEASE SMOKE PASSED — READY FOR H7 RELEASE DECISION.
+- The workflow is verification-only; it checked out the `candidate_sha` input, verified `git rev-parse HEAD`, and ran `npm ci` + Chromium + `npm run qa:release` (OGraf fixture validation plus two Chromium OGraf specs). It cannot tag, release or publish.
+- **Candidate identity:** `6c27ef3` is the tested CODE sha. The documentation commit that records this run is not smoke-tested. Re-run the gate on any later SHA that changes code before making a release decision.
+- The smoke gate is not the full suite: the Vitest suite (135 files / 2,055 tests), the full Chromium suite (268 tests), the API/SQLite checks and the CORS posture were validated locally on the same code line and are recorded in PROJECT_STATE.md.
+- H7 remains HOLD. Creating or moving a tag, publishing or finalizing the draft release, and npm publication require a new explicit user instruction; the tag, draft, package version and npm state are unchanged.
 
 ## Dependency advisory maintenance — committed, 2026-10-08
 
@@ -236,6 +253,15 @@ The Astra post-compaction review found 16 concrete defects in the authoring work
 
 Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
 
+## Exact-SHA release smoke gate — 2026-10-08
+
+- The manual `Release Smoke Gate` workflow was dispatched against the exact candidate and passed: run `37752015020`, **TESTED CODE SHA `6c27ef35d48d61a5e1163d2c91734c864fcafa01`**, 46 s, every step `success`.
+- The workflow is verification-only (`permissions: contents: read`, checks out the `candidate_sha` input, asserts `git rev-parse HEAD == EXPECTED_SHA`, then `npm ci` + Chromium + `npm run qa:release`). It cannot tag, release or publish.
+- Independently read from the run log: the runner's `EXPECTED_SHA` was the candidate, the gate printed `Release gate candidate SHA: 6c27ef3…`, the OGraf fixture validated, both Chromium specs passed (`2 passed`), and the gate printed `Release gate passed for candidate SHA: 6c27ef3…`.
+- What it proves: the candidate installs from its own lockfile on a fresh runner, the OGraf fixture validates offline, a materialized KCS OGraf package interoperates with Chromium, and the editor exports an OGraf ZIP through the UI. What it does not prove: the Vitest suite, the full Chromium suite, the API/SQLite/CORS posture, or any other SHA — including this documentation tip.
+- **Candidate identity:** `6c27ef3` is the tested CODE sha. This documentation commit moves the tip forward without changing a source, test, workflow, package or asset byte, and is not itself smoke-tested. A later release decision must treat `6c27ef3` as the tested candidate and re-run the gate on any later SHA that changes code.
+- Record: `reports/progress_154_exact_sha_release_smoke.md`. H7 remains HOLD; the tag, draft prerelease, package version and npm state are unchanged.
+
 ## Dependency advisory maintenance — 2026-10-08
 
 - A fresh `npm audit --audit-level=low` reported five advisories (3 critical, 1 high, 1 moderate). All are resolved without a direct dependency, script, engine, workflow or source change: `proxy-addr` 2.0.7 -> 2.0.8, `source-map-js` 1.2.1 -> 1.2.2 and `fast-uri` 3.1.7 -> 3.1.8 are lock refreshes inside their parents' declared ranges, and `shell-quote` 1.9.0 -> 1.12.0 uses a scoped `overrides` entry under `concurrently` (exact pin, no newer release).
@@ -319,7 +345,47 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 
 ---
 
-## 6. Grouped Roadmap
+## 6. Release Candidate Summary
+
+# KCS Release Candidate Summary
+
+## Release boundary
+
+The release-readiness blocker work is integrated into `main`. Annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease remain at workflow-tested candidate `46d2a3e59e065816d972dcd56951803951b577f6`. The release decision remains **HOLD**.
+The later maintenance line through `37904fb` closed dialog focus restoration, runtime SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5 without moving the tag, publishing the draft, or publishing npm.
+The post-hold Astra remediation then closed the correctness/security findings F-01…F-10 through `8a4ca22` (`reports/progress_151_astra_remediation.md`): mixed legacy/channel round trips, legacy import validation, Lottie numeric property forms, the OGraf procedural-animation mismatch, archive size accounting, dropped-media persistence, preset storage boundaries, the naming dialog's focus lifecycle, the suite's React `act` warnings, and the stale live-document claims. It added no dependency, workflow or package change. The post-compaction Astra review of the uncommitted authoring work then closed all 16 of its findings in six commits on `main` on 2026-10-07 (`reports/progress_152_post_astra_focused_remediation.md`), again with no dependency, workflow, package, tag, release or npm change; the release decision remains HOLD.
+
+## Accepted milestones
+
+- Public Controls V1 and OGraf Package Export V2.
+- Windows path, parent-cycle/broadcast, SourcePath/filesystem, and mask/matte parity hardening.
+- Deterministic OGraf fixture/schema validation gate.
+- Isolated full OGraf release smoke gate.
+
+## Validation status
+
+The release gate is the method, not a stored count: type check, full Vitest, lint, production build, OGraf validation, release QA, focused browser specs, V6 QA, the combined check, state consistency, dependency audit, and diff hygiene. The latest maintenance baseline and command evidence are recorded in `NEXT_SESSION.md` and `reports/progress_150_final_maintenance_reconciliation.md`.
+
+- `validate:ograf`: PASS — offline and deterministic by default against the vendored closure, every pin verified; `--online` is the refresh path that fetches the pinned bytes.
+- `qa:release`: PASS — 2 Chromium tests. `.github/workflows/release-smoke.yml` is the manual gate and requires an explicit candidate SHA.
+- **Exact-SHA release smoke: PASSED on 2026-10-08** — run `37752015020` against **TESTED CODE SHA `6c27ef35d48d61a5e1163d2c91734c864fcafa01`** (`reports/progress_154_exact_sha_release_smoke.md`). The workflow is verification-only (`contents: read`), pins the `candidate_sha` input, verifies `git rev-parse HEAD`, and runs `npm ci` + Chromium + `npm run qa:release`. It proves the candidate installs from its own lockfile, the OGraf fixture validates offline, a materialized package interoperates with Chromium, and the editor exports an OGraf ZIP; it is not the full Vitest or Chromium suite. The documentation commit that records this run is not itself smoke-tested — re-run the gate on any later code SHA.
+
+## Accepted blocker constraints
+
+1. **SourcePath/output TOCTOU:** Existing source and output protections remain. Two residual hostile-concurrency races are explicitly accepted: `lstat → open` on the source pathname and output preflight → pathname write. These are not claimed as complete OS-level no-follow protection. Release materialization requires trusted, dedicated source ownership and output directories; hostile multi-tenant filesystem mutation is outside the supported threat model.
+2. **OGraf schema validation:** The complete schema graph is SHA-256 pinned and fails closed on mismatch or unpinned references. The eight pinned documents are vendored under `fixtures/ograf/schema/`, so `npm run validate:ograf` validates offline and deterministically; `--online` re-fetches the pinned bytes and needs network access.
+3. **Playwright browser gate:** `.github/workflows/release-smoke.yml` provides a manual, checked-in Ubuntu Chromium gate. It requires a full candidate SHA, verifies the resolved checkout, installs Chromium, and runs `npm run qa:release`.
+4. **Release metadata:** `package.json` and `package-lock.json` use private version `1.1.0-rc.1`. `CHANGELOG.md` retains `[Unreleased]` for package metadata; npm publication was not performed.
+
+## Release decision
+
+**READY WITH WARNINGS** remains the technical release stance, while **H7 remains HOLD by user decision**. The original final gate at `c1431db` reported **RELEASE READY WITH DOCUMENTED DEFERRALS**; the maintenance run subsequently closed every deferral and follow-up named there. The tag and draft prerelease still point at `46d2a3e`, the package remains private at `1.1.0-rc.1`, and no npm publication occurred. Publishing, finalizing, or re-tagging requires a new explicit user instruction.
+
+The prior maintenance deferrals are closed: Oxlint 1.85 at `feca773`, TypeScript 7 / Vitest 5 at `37904fb`, runtime SQLite repository hygiene at `b3f3c6c`, the API CORS allowlist at `2a313d7`, and dialog focus restoration at `5cb8a45`. GitHub Actions currently emits non-blocking annotations for Node 20-based action runtimes being forced onto Node 24 and for the announced `ubuntu-latest` migration to Ubuntu 26.
+
+---
+
+## 7. Grouped Roadmap
 
 # KCS Grouped Roadmap Execution Plan
 
@@ -400,618 +466,101 @@ Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items c
 
 ---
 
-## 7. Historical Astra Record
+## 8. Exact-SHA Release Smoke Record
 
-# KCS Development Report — Astra Correctness/Security Remediation
-
-Metadata:
-- Date: 2026-09-28
-- Milestone: post-hold remediation of the Astra correctness/security findings F-01…F-10
-- Starting HEAD: `7daacce46f0892649e15172d072d310ae4b4dbf0` (main, matching `origin/main`)
-- Ending HEAD: the focused documentation commit named `docs: reconcile astra remediation state`; its hash cannot be embedded in its own content
-- Integration: one branch per finding, fast-forward only; every implementation commit has a green `main` CI run
-- Report number: 151
-
-# 1. Executive Summary
-
-Nine findings were reproduced first and fixed one at a time, each on its own branch with its own
-focused regression test, then fast-forwarded into `main` and pushed. The tenth (stale live-document
-claims) is this documentation task itself.
-
-The six release-blocking findings were behavioural: a mixed legacy/channel animation lost the
-channels the evaluator still resolved from the legacy composite on a save/load cycle; a legacy
-project document could bypass the semantic validation that a scene receives; a standard Lottie
-position/handle form was silently imported as zero; an OGraf export produced a different animation
-than the editor; an OGraf package member could be admitted by under-declaring its size; and a file
-dropped on the stage was persisted as a `blob:` URL that died with the page.
-
-Two medium findings (preset storage exceptions, naming-dialog focus lifecycle) and the test-hygiene
-finding (101 CI-reported React `act` warnings) were closed as well.
-
-No release action was taken: H7 remains HOLD, the tag, the GitHub draft prerelease and the private
-package metadata are unchanged.
-
-# 2. Original Objectives
-
-In scope: reproduce each finding, fix it narrowly on its own branch, add a consumer-visible
-regression test, validate locally, fast-forward into `main`, push, confirm green CI, then reconcile
-the live documents and the handoff. Out of scope: any release action, branch deletion, dependency or
-workflow change, and any change to `C:\Users\ertugrul.ak\Desktop\KCS`,
-`C:\Users\ertugrul.ak\Desktop\ograf-graphics`, `origin/without-mask` or the global OMP configuration.
-
-# 3. Problems Discovered and Closed
-
-1. **F-01 — mixed legacy/channel round trip lost the fallback.** `toSceneData` wrote the canonical
-   channels *instead of* the legacy composite keyframes, but `evaluateTransform` reads a channel only
-   when it carries keyframes for the active template and otherwise falls back to the composite. A
-   track with a populated `x` channel and a legacy `y` animation therefore changed on save/load
-   (`y = 150` became `0`). Fixed at `2c6e013`.
-2. **F-02 — the legacy project format bypassed semantic validation.** A document whose
-   `characterParts` array merely existed was accepted, so `{"characterParts":[null]}` imported
-   "successfully", applied `[null]`, and crashed the evaluator on the first frame. Fixed at `b8718d2`.
-3. **F-03 — Lottie numeric property forms were silently zeroed.** A split position
-   (`p: {s: true, x: …, y: …}`) imported both axes as `0`, and a handle written per dimension
-   (`o: {x: [0.25, 0.3], y: [0.1, 0.2]}`) became a `{x: 0, y: 0}` curve — both with no diagnostic.
-   Fixed at `e19b5fe`.
-4. **F-04 — the OGraf export did not reproduce procedural animation.** For `inAnimPreset: 'fade'` with
-   `inAnimDuration: 60` at frame 15, the editor produced opacity `0.578125`, the OGraf evaluator
-   `0.875` (it never received the duration) and the generated runtime `1` (it renders the timeline
-   only). The export now refuses such a scene with `OGRAF_UNSUPPORTED_PROCEDURAL` instead of shipping
-   a graphic that plays a different animation. Fixed at `8002659`.
-5. **F-05 — the OGraf ZIP budget trusted one declared size.** A stored member of 33,554,433 bytes
-   (limit 33,554,432) was admitted after its declared uncompressed size was tampered to `1`, because
-   the budget counted the declaration while the reader copied the compressed size. Fixed at `3fa71ff`.
-6. **F-06 — dropped media did not survive a reload.** The stage stored `URL.createObjectURL(file)` in
-   the document, so the autosave persisted a page-scoped `blob:` URL and the image failed to load
-   after a reload. Fixed at `645927a`.
-7. **F-07 — preset storage exceptions escaped the hook.** A `getItem` `SecurityError` failed the
-   mount and a `setItem` `QuotaExceededError` failed the write, because `localStorage` was used
-   without the try/catch this project requires for external boundaries. Fixed at `c12d773`.
-8. **F-08 — the naming dialog's focus lifecycle was incomplete.** Tab walked out of the modal, Cancel
-   left focus on `body`, the dialog had a delayed focus callback that could target an unmounted node,
-   and its icon-only close control had no accessible name. Fixed at `4cd276b`.
-9. **F-09 — the suite reported 101 React `act` warnings on CI.** The serialization tests applied
-   documents outside `act`, and the environment never declared React's act environment, so the
-   warnings appeared only on a slower machine. Fixed at `8a4ca22`.
-10. **F-10 — stale live-document claims.** `README.md` recommended `npx tsc --noEmit`, which checks no
-    project file; `NEXT_SESSION.md` and `PROJECT_STATE.md` called the replay branch "identical to
-    `main`" while it is 152 commits behind; and `NEXT_SESSION.md` still described a separate
-    "Import Lottie" control that the unified import entry replaced. Fixed by this task.
-
-# 4. Files Created
-
-- `e2e/dropped-media-persistence.spec.ts` — real drop → autosave → reload proof for F-06.
-- `e2e/new-item-modal-focus.spec.ts` — real keyboard smoke for the F-08 focus trap.
-- `reports/progress_151_astra_remediation.md` — this record.
-
-# 5. Files Modified
-
-- `src/utils/legacyKeyframeConversion.ts`, `src/hooks/useSerialization.ts` — F-01: a
-  `fillChannelsFromLegacyKeyframes` helper (channels the evaluator would resolve from the composite
-  are written with those values) and its use in `toSceneData`; the hook also exports
-  `UseSerializationApi`, its public surface as a named type.
-- `src/utils/importValidation.ts`, `src/tests/importValidation.test.ts`,
-  `src/tests/importCompatibilityMatrix.test.ts`, `src/tests/useSerialization.test.ts` — F-02: the
-  legacy semantic pass (`legacyPartProblem`, `legacyProjectProblem`), the shared layer-value checks
-  both shapes use, and the fixtures that had described unapplyable legacy documents.
-- `src/interop/lottie/mapDocument.ts`, `src/interop/lottie/temporal.ts`,
-  `src/tests/lottieImport.test.ts` — F-03: split positions, per-dimension handle components, and
-  `LOTTIE_UNREADABLE_POSITION` / `LOTTIE_UNREADABLE_EASING` reports instead of fabricated zeros.
-- `src/ograf/types.ts`, `src/ograf/diagnostics.ts`, `src/ograf/validation.ts`,
-  `src/tests/ografDiagnostics.test.ts`, `src/tests/ografExport.test.ts`,
-  `src/tests/ografGeneratedParity.test.ts` — F-04: the `OGRAF_UNSUPPORTED_PROCEDURAL` rule with its
-  remediation, and the three-way editor/evaluator/runtime parity test for a supported scene.
-- `src/ograf/packageImport.ts`, `src/tests/ografPackageImport.test.ts` — F-05: per-method size
-  accounting, the stored-entry consistency rule and the unsupported-compression refusal.
-- `src/components/Canvas/StageCanvas.tsx`, `src/tests/ografLegacyCompatibility.test.ts` — F-06: the
-  drop handler stores the file's own bytes and the export resolves that form.
-- `src/hooks/usePresets.ts`, `src/tests/usePresets.test.ts` — F-07: the storage boundary.
-- `src/hooks/useDialogFocusRestoration.ts`, `src/components/Modal/NewItemModal.tsx`,
-  `src/components/Modal/ConfirmationDialog.tsx`, `src/components/Modal/ImportReportDialog.tsx`,
-  `src/tests/dialogFocusRestoration.test.tsx` — F-08: the shared focus trap and the dialog migrations.
-- `src/tests/setup.ts`, `src/tests/importAtomicity.test.tsx` — F-09: the declared act environment and
-  the document calls moved inside `act`.
-- `README.md`, `CHANGELOG.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`,
-  `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`,
-  `docs/README_INDEX.md`, `reports/README.md` — F-10 and the record of the fixes.
-- `chatgpt_handoff/latest/**`, `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` — the bundle rebuilt from
-  the current documents only.
-
-# 6. Architecture Overview
-
-```text
-Editor document -> toSceneData -> channels (+ the composite values the evaluator would fall back for)
-Legacy document -> importValidation (legacy semantic pass) -> the legacy apply path
-Lottie document -> readNumericProperty/handle readers -> per-channel timing -> KCS channels
-Scene -> validateSceneForOGraf -> compileOGrafPackage -> generated runtime (timeline only)
-Untrusted archive -> admitPackageEntry (per method, materialised bytes) -> fflate -> guarded decode
-Dropped file -> FileReader data URL -> document -> autosave -> reload
-Dialog open -> shared focus restoration + shared focus trap -> close -> opener restored
-```
-
-No parallel geometry, animation, playback or serialization authority was introduced; each fix either
-extended the authority that already owned the behaviour or made the export refuse what it cannot
-reproduce.
-
-# 7. Data Model Changes
-
-No serialized field was added or removed. `SceneData` still writes channels and no `keyframes[]`
-(`fillChannelsFromLegacyKeyframes` only fills channels the evaluator would otherwise resolve from the
-composite), the Lottie keyframe type keeps the document's handle lists until the channel that maps a
-dimension resolves its own component, and a dropped image now reaches the document as a `data:` URL
-instead of a `blob:` URL.
-
-# 8. Coordinate Space Model
-
-Unchanged. No canvas, transform, selection, hit-test, drag, mask or animation coordinate space was
-altered.
-
-# 9. Component / Module Walkthrough
-
-`fillChannelsFromLegacyKeyframes` states the evaluator's own precedence rule (a channel scope with
-canonical keyframes wins; the others are filled from the converted composite). `legacyProjectProblem`
-reuses the scene pass's layer-value checks and adds the part rules the verbatim legacy apply path
-needs. `mapLottieSegmentTiming` now resolves each handle component for the dimension its channel
-maps. `validateLayer` refuses a procedural preset the runtime cannot reproduce.
-`admitPackageEntry` derives the budget from the compression method. `StageCanvas` reads the dropped
-file once and stores its bytes. `useDialogFocusTrap` owns the keyboard contract the three modals
-share.
-
-# 10. Important Code Changes
-
-F-02 split the layer-value checks out of `layerProblem` into `sharedLayerValueProblem` so the scene
-and legacy passes cannot drift. F-04 added `OGRAF_UNSUPPORTED_PROCEDURAL` to the diagnostic contract
-(a `Record<OGrafDiagnosticCode, …>` entry is required, so the code cannot be emitted without a
-remediation). F-05 replaced "declared size" with "materialised bytes by method". F-06 removed
-`URL.createObjectURL` from the drop path entirely, which also removed the object URL that had no
-revocation.
-
-# 11. Public Interfaces
-
-- `useSerialization` now exports `UseSerializationApi`, the type of its return value (additive).
-- New server-free diagnostics: `LOTTIE_UNREADABLE_POSITION`, `LOTTIE_UNREADABLE_EASING`,
-  `OGRAF_PACKAGE_INCONSISTENT_SIZE`, `OGRAF_PACKAGE_UNSUPPORTED_COMPRESSION`,
-  `OGRAF_UNSUPPORTED_PROCEDURAL`.
-- `admitPackageEntry` takes the archive reader's full entry header (`name`, `size`, `originalSize`,
-  `compression`); it is exported for tests only.
-- No endpoint, response schema, saved-project format or component prop changed.
-
-# 12. Algorithms and Geometry
-
-F-01's fill is a per-channel set operation over `(channel, template scope)` covered by canonical
-keyframes. F-05's accounting is O(entries). F-03's handle resolution is a per-dimension index with a
-last-entry fallback, matching the value reader that already existed.
-
-# 13. Interaction / UX Behavior
-
-A dropped image now survives a reload. The naming dialog keeps the keyboard inside itself, names its
-close control, and returns focus to its opener on Cancel, submit and Escape; the confirmation and
-import-report dialogs use the same trap. An OGraf export of a scene whose layer carries an in/out
-preset now reports a blocker with an actionable remedy instead of producing a graphic that plays a
-different animation, and the first-export readiness check reports the same blocker because it reads
-the same authority.
-
-# 14. Design Decisions
-
-- Fix the fallback by writing the values the evaluator would resolve, rather than by re-introducing
-  `keyframes[]` to the file: the import path drops a legacy keyframe's `templateId`, so the canonical
-  form is the one that survives a round trip faithfully.
-- Validate legacy documents against the values the consumer dereferences, and only those, so a valid
-  legacy file is never refused.
-- Report an unreadable Lottie handle and keep the segment linear instead of inventing a zero curve.
-- Refuse an export the runtime cannot reproduce instead of shipping a different animation; the
-  alternative (porting a second preset engine into the generated runtime, or baking preset motion
-  into `scene.kcs`) would either duplicate an authority or cost the package its editable scene.
-- Measure the archive budget by the bytes the reader will materialise for that compression method,
-  and refuse a method whose output cannot be bounded, rather than parsing the ZIP grammar a second
-  time.
-- Declare React's act environment in the test setup so the suite reports the defect on every machine.
-
-# 15. Invariants That Must Be Preserved
-
-- Canonical channels win where they carry data for a template scope; the composite fallback stays the
-  fallback.
-- The import boundary refuses before any state update; a refused document leaves the editor untouched.
-- The generated OGraf runtime renders the timeline; anything it cannot reproduce is refused at
-  validation, never silently dropped.
-- An archive member is measured by the bytes it materialises, and the archive is decoded under the
-  existing count, path, duplicate and prototype-key guards.
-- A persisted document never depends on a page-scoped object URL.
-- `localStorage` is an external boundary: a failure is contained, never propagated as a crash.
-- Dialog focus is owned by one authority; a disabled action is not a focus stop.
-- H7 remains HOLD until a new explicit release instruction.
-
-# 16. Testing and Verification
-
-Per finding: the focused files passed, then `npx tsc -b --pretty false`, `npm run lint`,
-`npm run build`, `npm run validate:ograf`, the full Vitest suite, `node scripts/check-state-consistency.mjs`
-and `git diff --check`; the OGraf-affecting tasks also ran `npm run qa:release`, `npm run qa:v6` and
-the export/Lottie/matte browser specs, and the UI tasks ran their own browser smoke.
-
-- F-01: 104 tests in `useSerialization.test.ts`; the suite reached 1,957 tests.
-- F-02: 38 tests in `importValidation.test.ts`; `sequencer-project.json` and the server's seed project
-  were verified to still validate.
-- F-03: 103 tests in `lottieImport.test.ts` plus `e2e/lottie-import-report.spec.ts` (3 tests).
-- F-04: `ografExport`/`ografGeneratedParity`/`ografSvg`/`ografV6Parity`/`ografDiagnostics` (114 tests),
-  `qa:release` (2), `qa:v6` (3).
-- F-05: 13 tests in `ografPackageImport.test.ts`: the tampered stored member end to end, the
-  per-method size and total-budget rules through the reader's own seam, and the unsupported-method
-  refusal. (The first version of these tests allocated ~150 MB of payloads, which made an unrelated
-  allocation-heavy test in the same file time out under parallel load; the rule-level cases replaced
-  the redundant end-to-end ones, and the file is now faster than before the fix.)
-- F-06: `e2e/dropped-media-persistence.spec.ts` passed with the fix and was shown to fail against the
-  pre-fix handler (it persisted `blob:http://127.0.0.1:5188/…`).
-- F-07: 29 tests in `usePresets.test.ts`.
-- F-08: 19 tests in `dialogFocusRestoration.test.tsx` plus `e2e/new-item-modal-focus.spec.ts`.
-- F-09: full-suite `act` warnings measured 110 with the environment declared, 0 after the fix
-  (128 files / 1,995 tests pass).
-- F-10: `node scripts/check-state-consistency.mjs` PASS and `git diff --check` clean.
-
-# 17. Manual QA Results
-
-- PASS — a PNG dropped on the stage is stored as `data:image/png;base64,…`, and after a page reload
-  the rendered `<image>` resolves with HTTP 200 from the document's own bytes.
-- PASS — the naming dialog focuses its field, six Tabs and three Shift+Tabs never leave the modal,
-  and `Escape` returns focus to the "Create New Sequence" opener.
-- PASS — the OGraf editor/evaluator/runtime parity scene renders the same transform at frames
-  0/15/30/45/60 through `evaluateOGrafScene`, `renderOGrafSvg` and the generated runtime.
-
-# 18. Regression Risk Assessment
-
-- F-01: LOW-MEDIUM — the fill is per template scope and the round-trip is pinned by six tests,
-  including canonical precedence and stability across a second cycle.
-- F-02: MEDIUM — it refuses documents that were previously accepted. The pass validates only the
-  values the legacy apply path dereferences, and both real legacy samples in this repository still
-  import; the risk is a legacy file that is genuinely unapplyable.
-- F-03: LOW — the changed numbers are the ones the document actually describes.
-- F-04: MEDIUM — an OGraf export of a preset-carrying scene is now blocked. That is the finding's
-  remedy, and the readiness check reports it before the export is attempted.
-- F-05: LOW — the budgets are the same constants, measured against materialised bytes.
-- F-06: LOW — a data URL is the form the Media drawer already writes and the export already packages.
-- F-07: LOW — a failure that previously escaped now stops at the boundary.
-- F-08: LOW-MEDIUM — three dialogs share one trap; the existing dialog tests (44) still pass.
-- F-09: LOW — the production change is a type-only export.
-
-# 19. Performance Considerations
-
-No measured regression. F-01 adds a bounded per-channel merge with a set lookup per keyframe;
-F-05 adds one comparison per entry; F-06 replaces an object URL with a file read that the drawer
-path already performs.
-
-# 20. Dependencies
-
-None added, removed or upgraded. No package, lockfile, workflow or dependency change was made.
-
-# 21. Compatibility
-
-Saved scenes, OGraf packages, manifests, Lottie documents and the API payloads keep their formats.
-Legacy project documents are now checked before they are applied, and the two legacy samples in this
-repository still import.
-
-# 22. Known Limitations
-
-- The OGraf export cannot carry procedural in/out preset motion; a scene that uses one is refused
-  with a remedy (clear the preset and author keyframes, or do not export that scene as a graphic).
-- `evaluateOGrafScene` applies the editor's procedural delta without the export gate only when a
-  caller bypasses validation; the export path always validates first.
-- The archive preflight cannot observe a local/central header disagreement through fflate's API, so
-  the budget is bounded per compression method and the decoded scene still passes the KCS boundary.
-- Full Vitest on this Windows machine needs a raised per-test timeout for the two tests that spawn
-  `git` many times; with the default 5s they can time out under parallel load, which is a pre-existing
-  property of those tests, not of this work.
-
-# 23. Technical Debt
-
-The GitHub Actions Node 20 runtime and Ubuntu 26 migration annotations remain (workflow maintenance,
-not a product failure). The two CI-reported `act` warnings that originally motivated F-09 were a
-symptom of an undeclared test environment; the environment is now declared, so the contract is
-enforced on every machine.
-
-# 24. Git Summary
-
-Implementation commits, all fast-forwarded into `main` and pushed:
-
-- `2c6e013` — `fix: preserve mixed channel animation round trips`
-- `b8718d2` — `fix: validate legacy imports before apply`
-- `e19b5fe` — `fix: preserve lottie numeric property forms`
-- `8002659` — `fix: align ograf procedural animation runtime`
-- `3fa71ff` — `fix: enforce ograf zip materialization budgets`
-- `645927a` — `fix: persist dropped media across reloads`
-- `c12d773` — `fix: contain preset storage failures`
-- `4cd276b` — `fix: complete new item modal focus lifecycle`
-- `8a4ca22` — `test: eliminate react act warnings`
-
-Documentation branch: `docs/audit-state-reconciliation`; commit message
-`docs: reconcile astra remediation state`. Integration policy: fast-forward only. No rebase, reset,
-force push, branch deletion, tag, release or npm action.
-
-# 25. Updated Project Tree
-
-```text
-e2e/
-  dropped-media-persistence.spec.ts   [new]
-  new-item-modal-focus.spec.ts        [new]
-reports/
-  progress_151_astra_remediation.md   [new]
-chatgpt_handoff/
-  CHATGPT_UPLOAD_ONEFILE.md           [rebuilt]
-  latest/                             [clean rebuilt document bundle]
-```
-
-# 26. Self Review
-
-Good: every finding was reproduced before it was fixed, each fix carries a consumer-visible
-regression, the branches stayed small, and the integration was fast-forward only with green CI per
-commit. F-04 is the one finding whose remedy is a refusal rather than a new capability, and that is
-the contract the finding itself allows. Could improve: the F-05 preflight still cannot see a
-local/central header disagreement; the OGraf procedural restriction deserves a dedicated product
-decision (bake at export, or implement the presets in the runtime). Uncertainty: F-02 narrows what a
-legacy document may contain, so an unapplyable legacy file that used to import and then break is now
-refused. Score: 9/10.
-
-# 27. Next Recommended Task
-
-Run the full post-fix regression gate on `main` (this run's Task 11) and then a read-only
-release-readiness audit for a future RC candidate; do not publish, finalize or retag.
-
-# 28. Project Status
-
-Milestones A–G are complete, Milestone H is complete through H6 with its release decision held (H7),
-and the Astra remediation findings F-01…F-10 are closed. The release tag, draft prerelease, private
-package version and npm state are unchanged.
-
-# 29. AI Development Notes
-
-The authorities to reuse: `fillChannelsFromLegacyKeyframes` for the evaluator's channel precedence;
-`legacyProjectProblem` (with `sharedLayerValueProblem`) for legacy documents; `resolveHandle` for
-Lottie handles; `validateSceneForOGraf`'s procedural rule for anything the generated runtime cannot
-reproduce; `admitPackageEntry` for archive budgets; the Media drawer's data-URL form for dropped
-media; `useDialogFocusTrap`/`useDialogFocusRestoration` for dialog focus.
-
----
-
-## 8. Post-Astra Remediation Record
-
-# Progress 152 — Post-Astra focused remediation of the dirty authoring tree
-
-Date: 2026-10-07. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
-
-A read-only Astra review had found 16 concrete defects (3 HIGH, 12 MEDIUM, 1 LOW; no BLOCKER) in the authoring work that was sitting uncommitted on `main`. This report records the remediation: every finding reproduced, fixed, covered by a focused regression, published in six commits, and validated end to end.
-
-## Baseline and dirty-tree classification
-
-| Field | Value |
-|---|---|
-| Branch | `main` |
-| HEAD / `main` / `origin/main` at start | `ed75ea4304a85be7c931893e0316bdfe92255a3d` |
-| Staged | 0 |
-| Tracked unstaged | 28 files |
-| Untracked | `src/assets/fonts/playfair-display/` (normal TTF, italic TTF, OFL.txt) |
-
-Classification of every dirty path:
-
-- **A — approved visual-only UI refresh (12):** `HeaderBar.css`, `PropertyInspector.css`, `Inspector/sections/StyleTab.tsx`, `Inspector/sections/TransformTab.tsx`, `ConfirmationDialog.css`, `ImportReportDialog.css`, `NewItemModal.css`, `SequencerTimeline.css`, `ToastPortal.tsx`, `LeftToolbar.css`, `Toolbar/drawers/ProjectDrawer.tsx`, `kcsEditorTheme.css`.
-- **B — Playfair / OGraf (5 + 3 untracked):** `index.css`, `ograf/legacyCompatibility.ts`, `ograf/packageCompiler.ts`, `ograf/types.ts`, `ograf/validation.ts`, `tests/ografLegacyCompatibility.test.ts`, and the three untracked Playfair source files.
-- **C — docs / handoff (10):** `CHANGELOG.md`, `NEXT_SESSION.md`, `PROJECT_STATE.md`, `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`, and the six mirrored/auxiliary files under `chatgpt_handoff/latest/`.
-- **D — unknown:** none. No divergence, no in-progress Git operation, no corruption.
-
-### External safety copy
-
-Created outside the repository, under the OS temp directory:
-
-`C:\Users\ertugrul.ak\AppData\Local\Temp\kcs-post-astra-safety-20261007-172448\`
-
-- `tracked-diff.patch` — the full tracked diff (141,877 bytes).
-- `untracked-inventory.txt` — the untracked file list plus SHA-256 and size of each Playfair file.
-- `fonts/` — copies of `OFL.txt`, `PlayfairDisplay.ttf`, `PlayfairDisplay-Italic.ttf`.
-
-Owned-font hashes recorded before any edit: normal `c40f2293766a503bc70cce9e512ef844a4ccb7cbcde792fe2ea31d191917d8d6`, italic `a5e26dc5e2e77fb2803a0bf02fd4f81ee136ec8dea863ccdb0c59a263b21378b`. No `reset`, `stash` or `checkout --` was used at any point.
-
-## Per-finding remediation
-
-Every finding below was reproduced first, then fixed, then covered. "Unit" means a Vitest case; "browser" means a real-Chromium Playwright case.
-
-### A — Text Boolean geometry
-
-| ID | Repro / root cause | Fix | Test | Result |
-|---|---|---|---|---|
-| A-01 | `traceText` rejected any family the canvas re-serialised, because it matched the caller's raw string against `context.font`. A quoted name or a fallback list (`"'Playfair Display', serif"`) traced nothing. | The accepted family is read from the canvas's serialized family list (`canvasAcceptedFamilies`), compared against the primary family of the requested CSS list (`primaryFontFamily`). | Unit: quoted/unquoted/fallback-list identity. Browser: bare, quoted, fallback-list and JetBrains Mono each trace an `O` with its counter. | PASS |
-| A-02 | The outline cache returned a raster traced before the faces settled, forever: `document.fonts.status` became `loaded` but the provisional entry was still served. | The cache entry records whether it was traced while settled. While loading the provisional raster is reused (no per-frame thrash); once settled it is retraced exactly once. | Browser probe: `document.fonts.status` is `loading` during the trace, the provisional array is reused, the post-load trace is a different object, and that one is reused. | PASS |
-| A-03 | `computeBooleanContours` filtered out any operand whose geometry could not be produced, so a three-operand Subtract with an untraceable text silently ran as a two-box Subtract. | The operation refuses atomically when any operand has no geometry; `inspectBooleanOperands` names the unresolved layers, and the Inspector refuses creation and operation switches with that list. | Unit: readiness inspection + atomic refusal + the two-box result still differs. Browser: a text too large to rasterise refuses the three-operand Subtract (no group is created). | PASS |
-| A-04 | `sampleBezierPath` pushed the last authored vertex at the end of a closed path, dropping the curved closing edge back to the first point. | A closed path closes on its first point; an open path is unchanged. | Unit: last sample is the first vertex, area matches a high-resolution sample within 2 %, and the straight-edge ring keeps its exact polygon area. | PASS |
-| A-05 | The trace drew the raw text while the renderer draws it with SVG's default whitespace handling, so `"A A"` and `"A  A"` produced different geometry. | `normalizeSvgText` collapses internal whitespace runs and trims the edges before both the metrics and the raster. | Unit: normalisation table and equal-geometry mapping. Browser: `"A A"`, `"A  A"`, `"A   A"` and `"  A A  "` trace to identical JSON. | PASS |
-
-### B — Bonded layer movement
-
-One contract now: every caller passes world x/y, and `updateCurrentTransform` converts each written part to its own container-local space.
-
-| ID | Repro / root cause | Fix | Test | Result |
-|---|---|---|---|---|
-| B-01 | The stage drag converted a parented layer to container-local space and the helper converted it again, so a parented bonded drag landed wrong and pushed the partner the wrong way (buddy 300 → 210 instead of 310). | The stage passes world coordinates for every drag mode; the helper owns the conversion. `initialTransforms` became dead and was removed. | Unit: parented drag reaches the requested world position and the buddy moves by the same delta, matching the Inspector path. Browser: a parented bonded drag calibrated against a parentless group moves both by the same world delta. | PASS |
-| B-02 | A multi-selection propagated only the primary layer's bond. | Every selected source propagates its own bond once; a part already written by the gesture is never written again. | Unit: `A↔B`, `C↔D` with `A`+`C` selected moves all four exactly once. | PASS |
-| B-03 | A partner parented to a layer moving in the same gesture was converted against the parent's old world, so it received the delta twice (120 → 140 instead of 130). | Conversion uses the parent's post-gesture world, tracked per gesture. | Unit: `A↔B` with `B` under `P`, `A`+`P` selected, moves `B` by the total delta once. | PASS |
-| B-04 | An X-only edit wrote both axes for a parentless partner, adding a keyframe to the partner's untouched Y animation and changing its evaluation. | Only the axes that actually move are written; a rotated parent still writes the local Y it genuinely changes. | Unit: the partner's Y channel and its frame-10 evaluation are unchanged; the rotated-parent case still lands on the requested world point. | PASS |
-
-### C — Timeline curve targeting
-
-| ID | Repro / root cause | Fix | Test | Result |
-|---|---|---|---|---|
-| C-01 | The modal resolved its target with a fallback chain that could leave the selected layer: with layer A holding canonical `x` keyframes and the selected layer B holding live legacy keyframes, applying an easing preset to B's F30 segment changed A's `x@0` easing. | `resolveCurveTarget` resolves the exact channel (or the legacy keyframe list) inside the selected track only — the channel that owns the selected keyframe, else the first active channel, else that track's legacy keyframes — and never falls back to another layer. | Unit: exact repro, two canonical layers, multiple properties, multiple sequences, unknown selection, mask channel, no-data → null, reorder/delete. Integration: the real `SequencerTimeline` inside the real `AnimatorProvider` — the preset edits B's legacy segment and leaves A untouched, and re-selecting A while the modal is open retargets the edit. | PASS |
-| C-02 | `updateKeyframeBezierPointsMutator` covered legacy and canonical channels but not `maskChannels`, so a mask scalar segment resolved in the modal changed nothing. | The mutator also writes mask channels. | Unit: the mask curve is written, a transform channel is unaffected, and the evaluator's mid-frame value changes (0.5 → 0.3153). | PASS |
-| C-03 | `resolveCurveSegment` accepted two keyframes on the same frame as an editable segment. | A strictly positive duration is required; a zero-duration selection offers no edit and never silently picks another segment. | Unit: duplicate-frame selection returns null while distinct first/middle/reordered cases stay correct. | PASS |
-
-### D — Playfair OGraf portability
-
-| ID | Repro / root cause | Fix | Test | Result |
-|---|---|---|---|---|
-| D-01 | The `@font-face` family came from the layer's raw `fontFamily`, so a fallback list produced a family-list descriptor the browser cannot register as one face; the text fell back to serif although the font shipped. | `fontFaceFamily` reduces the reference to the primary family (unquoted); the element keeps the authored fallback list. | Unit: the runtime registers `[["Playfair Display","assets/fonts/playfair-display.ttf"]]`, the element keeps `"'Playfair Display', serif"`, bare and quoted forms match, and the ZIP keeps the font and its license. | PASS |
-| D-02 | The legacy single-file export wrote only the runtime `.mjs`, silently dropping the packaged font and its license. | It fails closed with an actionable message when the plan carries asset or license files, and points at the ZIP package; an asset-free graphic still exports. | Browser: a Playfair title refuses the legacy export with no download; a shape-only scene still downloads a `.mjs`. | PASS |
-| D-03 | The bundled font was accepted on its 4-byte sfnt signature alone. | The project-owned bytes are pinned to their exact SHA-256; a caller-supplied catalog font is never checked against it. | Unit: the real font is accepted; a 4-byte signature, a one-byte mutation and a truncated file are refused with `OGRAF_FONT_UNVERIFIED`; an explicit catalog font still passes. | PASS |
-
-### DOC — Live-document accuracy
-
-| ID | Repro / root cause | Fix | Test | Result |
-|---|---|---|---|---|
-| DOC-01 | Live documents listed the no-op root `npx tsc --noEmit` as project type-check evidence; the root `tsconfig.json` only references the app and node projects, so it checks no project file. | The false PASS evidence was removed from `PROJECT_STATE.md`, `NEXT_SESSION.md` and the handoff mirrors; `CONTRIBUTING.md`, `.github/PULL_REQUEST_TEMPLATE.md` and `docs/KCS_CI_STATUS.md` now name the effective gate `npx tsc -b --pretty false`. Historical explanatory mentions (the CI-step story and the F-10 record) were kept. | `node scripts/check-state-consistency.mjs` (35 checks) plus a `--listFilesOnly` probe confirming the root command lists no project file. | PASS |
-
-## Verdicts by area
-
-- **Boolean / text:** the trace now accepts every family form the editor offers, follows the renderer's whitespace semantics, retraces once the faces settle, refuses a Boolean atomically when an operand has no geometry, and closes a closed freeform ring on the right vertex.
-- **Bonding:** one explicit world/local contract; every selected source propagates its bond exactly once; a moving ancestor is not applied twice; an untouched axis is never written. Bonding remains position-write propagation, not a playback constraint.
-- **Timeline / Motion Curves:** the modal edits the selected layer's own channel, mask scalar segments reach persisted state and the evaluator, and only strictly positive-duration segments are editable.
-- **OGraf / Playfair:** the `@font-face` identity is the primary face, the legacy single-file export fails closed when it cannot carry its assets, and the owned font bytes are pinned to their exact SHA-256.
-
-## Validation
-
-| Command | Result |
-|---|---|
-| `npx tsc -b --pretty false` | PASS |
-| `npm run lint` (Oxlint 1.85.0) | PASS — clean, no new warnings |
-| `npm test` (Vitest 5) | PASS — 135 files / 2,055 tests |
-| `npm run build` | PASS — Vite 8.3.0, 2,034 modules |
-| `npm run validate:ograf` | PASS — offline against the vendored closure |
-| `npm run qa:release` | PASS — 2 Chromium tests |
-| `npm run qa:v6` | PASS — 3 Chromium tests |
-| `npx playwright test --retries=0` | PASS — 268 tests |
-| `node scripts/check-state-consistency.mjs` | PASS — 35 checks |
-| `git diff --check` | One trailing-whitespace line in the verbatim upstream `OFL.txt` (deliberately not edited) |
-| `npm audit --audit-level=low` | WARNING — `concurrently`/`shell-quote` (critical, dev), `proxy-addr` (critical, transitive through Express), `source-map-js` (high, transitive), moderate `fast-uri`; no `npm audit fix` was run |
-
-## Commit split
-
-| Commit | Message | Scope |
-|---|---|---|
-| `a3f5b09` | `fix: harden text boolean geometry` | A-01…A-05 + tests |
-| `78450f5` | `fix: correct bonded layer movement` | B-01…B-04 + tests |
-| `0a20dd6` | `fix: target timeline curve edits correctly` | C-01…C-03 + tests |
-| `aa392a9` | `fix: harden playfair ograf portability` | D-01…D-03 + the owned Playfair source and license |
-| `fb8ed96` | `style: finalize editor visual refresh` | the pre-existing approved visual-only changes |
-| (this commit) | `docs: reconcile post-astra authoring fixes` | DOC-01 + live docs, this report and the handoff rebuild |
-
-The six already-published authoring commits were not rewritten.
-
-## Remaining limitations
-
-1. **Dependency advisories** — the four advisories above are recorded, not fixed; remediation needs a separately approved dependency change. The API server does not enable `trust proxy`, so the `proxy-addr` code path is not reachable from the current configuration, but the advisory remains in the production tree.
-2. **`OFL.txt` trailing whitespace** — the verbatim upstream license carries one trailing-whitespace line; editing a license file to satisfy a diff check is worse than leaving it.
-3. **Boolean browser matrix** — Union/Subtract/Intersect/Exclude, text+shape, text+freeform, text+text and a three-operand Subtract are covered in Chromium, but the letter matrix (O/A/B/P/R/8/i/j/punctuation) is asserted as "traces with its counter" rather than per-letter ring counts.
-4. **Bonding coverage** — parentless, parented source, parented partner, moving ancestor, two bond groups, selected source+partner, X-only with an animated other axis, rotated parent, deleted partner and stage-vs-Inspector parity are covered. A full browser Bind → move → undo/redo → copy/paste → save/reload → delete → reorder chain is still not exercised end to end.
-5. **`.agents/*` and `AGENTS.md`** — these agent templates still name `npx tsc --noEmit` as an example; `AGENTS.md` already allows "the repository's equivalent local runner", and both files are outside this approved scope.
-6. **A-03 renderer surface** — when the derived geometry refuses, the group renders no path for that frame rather than a stale result; there is no separate in-stage refusal banner.
-
----
-
-## 9. Dependency Advisory Maintenance
-
-# Progress 153 — Dependency advisory maintenance
+# Progress 154 — Exact-SHA Release Smoke Gate
 
 Date: 2026-10-08. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
 
-`npm audit --audit-level=low` reported five advisories on the clean post-Astra `main` line (3 critical, 1 high, 1 moderate). Four are removed by a bounded change set: three lock refreshes inside the parents' declared semver ranges, plus one scoped override where no range-based fix exists. `npm audit` now reports **0 vulnerabilities**. No direct dependency, script, engine, workflow or application source change is part of this work.
+The manual Release Smoke Gate was dispatched against the exact candidate SHA and passed. No tag, release, package or npm action was taken; H7 remains HOLD.
 
-## Baseline
+## Candidate identity
 
 | Field | Value |
 |---|---|
-| Branch | `main` |
-| HEAD / `main` / `origin/main` | `c1e618efdb5fa6ff2268cd2851fbed770280ec19` |
-| Working tree | clean; no in-progress Git operation |
-| npm / node | 12.0.2 / v24.18.0 |
-| Previous main CI | run `37642461107` — success |
+| **TESTED CODE SHA** | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
+| Workflow | `Release Smoke Gate` (`release-smoke.yml`) |
+| Run ID | `37752015020` |
+| Run URL | https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/37752015020 |
+| Trigger | `workflow_dispatch`, `--ref main`, input `candidate_sha=6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
+| Dispatched at | 2026-10-08T08:45:56Z |
+| Finished at | 2026-10-08T08:46:42Z (46 s) |
+| Requested SHA | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
+| Actually tested SHA | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
+| Conclusion | **success** |
 
-## Fresh advisory matrix
+**Candidate identity rule.** The smoke gate tests a code SHA. This run tested `6c27ef3`. The documentation commit that records this run (`docs: record exact-sha release smoke`) moves the branch tip forward without changing a single source, test, workflow, package or asset byte — the docs-only tip is **not** itself smoke-tested. A future release decision must treat `6c27ef3` as the tested code candidate, and must re-run the gate on any later SHA that changes code.
 
-Every row was re-derived from the current `npm audit --json` output, `npm ls <pkg> --all` and the published manifests — the earlier names and severities were re-checked, not trusted.
+## Why the workflow is verification-only
 
-| Advisory | Severity | Installed | Path | Direct? | Prod / dev | Reachable in KCS? | Fix |
-|---|---|---|---|---|---|---|---|
-| GHSA-pqg4-j6r4-53mv (`shell-quote`) | critical | 1.9.0 | `concurrently@10.0.5` → `shell-quote` | no (parent is dev-only) | dev/build | **NOT REACHABLE UNDER CURRENT CONFIG** (proof below) | `>=1.11.0` |
-| GHSA-jqcg-44mw-7w3h (`proxy-addr`) | critical | 2.0.7 | `express@5.2.1` → `proxy-addr` | no | production | **NOT REACHABLE UNDER CURRENT CONFIG** (proof below) | `>=2.0.8` |
-| GHSA-68fv-2mgg-jv7q (`source-map-js`) | high | 1.2.1 | `vite@8.3.0` → `postcss` → `source-map-js`; `@vitest/coverage-v8` → `magicast`; `jsdom` → `css-tree` | no | dev/build/test | dev-only consumers; the advisory needs an attacker-controlled source map | `>=1.2.2` |
-| GHSA-hrr3-gc8f-f4qj (`fast-uri`) | moderate | 3.1.7 | `ajv@8.20.0` → `fast-uri` | no | dev/build | `ajv` is used only by `scripts/validate-ograf-manifest.mjs` against vendored fixtures | `>=3.1.8` |
+`.github/workflows/release-smoke.yml`:
 
-### Reachability proofs
+- triggers only on `workflow_dispatch`, with one required string input `candidate_sha`;
+- declares `permissions: contents: read` — the job cannot push, tag, or publish a release;
+- checks out `ref: ${{ inputs.candidate_sha }}` with `fetch-depth: 1`, so the tested tree is pinned to the exact commit;
+- asserts `[[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]` before doing any work;
+- runs `npm ci`, installs Chromium for Playwright, and runs `npm run qa:release`.
 
-- **`proxy-addr` (critical).** Express evaluates the proxy chain only in `req.ip` and `req.ips`, which call `proxyaddr(this, trust)` (`node_modules/express/lib/request.js:329,346`). `trust` comes from the `trust proxy` setting, which Express initialises to `false` (`lib/application.js:99`) and only compiles through `app.set('trust proxy', val)` (`lib/application.js:370-371` → `lib/utils.js:213`). A repository-wide search of `server/`, `scripts/` and `src/` finds **no** `trust proxy`, `app.set`, `X-Forwarded`, `req.ip` or `req.ips` usage. With `trust proxy` at its default, `compileTrust(false || [])` builds a trust function that trusts nothing; no address parsing of a forwarded chain happens. Verified live: the API binds `127.0.0.1` only and `/api/health` answers on the loopback interface.
-- **`shell-quote` (critical).** The advisory names `quote()`: "command injection via a line terminator in a token after a `{ comment }` token". concurrently's only `quote` import is `dist/lib/command-parser/expand-arguments.js`, whose `ExpandArguments.parse` calls `quote(...)` **only** when `this.additionalArguments.length > 0`, and `ExpandArguments` is pushed onto the parser chain only when the CLI supplies additional arguments (`dist/lib/concurrently.js:34`). The `dev` script is `concurrently "node server/index.js" "vite --host"` — no placeholders (`{1}`, `{@}`, `{*}`) and no trailing arguments — so `quote()` is never called by this repository's tooling. The script's command strings are developer-authored constants, not user input.
-- **`source-map-js` (high).** Consumers are `postcss` (through Vite), `magicast` (through the coverage provider) and `css-tree` (through jsdom). All three run in build/test only; the advisory is an event-loop denial of service through indexed source-map section offsets, which requires a hostile source map — none is consumed from an untrusted source.
-- **`fast-uri` (moderate).** `ajv`'s only consumer in the repository is the offline OGraf schema validator, which resolves `$id`/`$ref` against vendored, SHA-256-pinned schema documents.
+No step creates or moves a tag, publishes or finalizes a GitHub release, or runs `npm publish`. `scripts/run-release-gate.mjs` reads `git rev-parse HEAD` for its own candidate banner, validates the OGraf fixture manifest, and runs two Chromium specs — it writes only inside the OS temp directory the interoperability spec creates and removes.
 
-## Chosen remediation
+## Dispatch path
 
-| PACKAGE | FROM | TO | WHY | DIRECT/TRANSITIVE | SEMVER RISK |
-|---|---|---|---|---|---|
-| proxy-addr | 2.0.7 | 2.0.8 | GHSA-jqcg-44mw-7w3h (critical) | transitive — express declares `^2.0.7` | none: lock refresh inside the declared range |
-| source-map-js | 1.2.1 | 1.2.2 | GHSA-68fv-2mgg-jv7q (high) | transitive — postcss / magicast / css-tree declare `^1.2.1` | none: lock refresh inside the declared range |
-| fast-uri | 3.1.7 | 3.1.8 | GHSA-hrr3-gc8f-f4qj (moderate) | transitive — ajv declares `^3.0.1` | none: lock refresh inside the declared range |
-| shell-quote | 1.9.0 | 1.12.0 | GHSA-pqg4-j6r4-53mv (critical) | transitive — concurrently pins the exact version `1.9.0` | none in code: same `quote`/`parse` exports, no dependencies, same engine range |
-
-### Why the shell-quote fix needs a scoped override
-
-`concurrently@10.0.5` declares `"shell-quote": "1.9.0"` — an **exact** pin, not a range — and 10.0.5 is the newest published release (checked against the registry: the latest version is 10.0.5). So:
-
-- option A (direct compatible bump) — not applicable, the package is transitive;
-- option B (transitive resolution via parent bump) — no newer parent exists;
-- option C (lock refresh inside the declared range) — impossible against an exact pin;
-- option D (override) — the only bounded fix;
-- the npm-proposed "fix" is `concurrently@9.2.1`, a **semver-major downgrade** (10 → 9) with real script-behaviour risk, which is not a preferable alternative.
-
-The override is scoped to `concurrently` alone and is provably behaviour-neutral for this repository: the only `quote()` consumer requires additional CLI arguments that KCS never passes, and `shell-quote` 1.11.0/1.12.0 exports the same `quote`/`parse` pair with no dependencies and the same `engines` (`>= 0.4`). It should be removed once concurrently publishes a release that declares `shell-quote >= 1.11.0`.
-
-## Exact changes
-
-`package.json` — one added block, nothing else:
-
-```json
-"overrides": {
-  "concurrently": {
-    "shell-quote": "^1.11.0"
-  }
-}
+```bash
+gh workflow run release-smoke.yml \
+  --ref main \
+  -f candidate_sha=6c27ef35d48d61a5e1163d2c91734c864fcafa01
 ```
 
-`package-lock.json` — four version entries and their integrity/resolved hashes (plus the `funding` field npm now records for `proxy-addr@2.0.8`). No package was added or removed; the root `dependencies` (10) and `devDependencies` (21) counts are unchanged; `engines`, `scripts` and `allowScripts` are unchanged.
+`--ref main` selects the workflow definition at `main`; the tested checkout comes from the `candidate_sha` input, which the workflow pins and then verifies.
 
-## Validation
+## Evidence from the run log
 
-| Command | Result |
+| Evidence | Log line |
 |---|---|
-| `npm audit --audit-level=low` | **0 vulnerabilities** |
-| `npm ls --all` | PASS — no extraneous or missing packages |
-| `npx tsc -b --pretty false` | PASS |
-| `npm run lint` | PASS |
-| `npm test` | PASS — 135 files / 2,055 tests |
-| `npm run build` | PASS |
-| `npm run validate:ograf` | PASS |
-| `npm run qa:release` | PASS — 2 Chromium tests |
-| `npm run qa:v6` | PASS — 3 Chromium tests |
-| `npm run check` | PASS |
-| `npx playwright test --project=chromium --retries=0` | PASS — 268 tests |
-| `node scripts/check-state-consistency.mjs` | PASS |
-| `git diff --check` | PASS |
+| Candidate input received | `EXPECTED_SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
+| Runner checkout equals the candidate | the `Verify candidate SHA` assertion passed |
+| Candidate banner from the gate itself | `Release gate candidate SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
+| OGraf fixture validation | `fixtures/ograf/minimal.ograf.json: valid OGraf v1 manifest` |
+| Chromium specs | `Running 2 tests using 2 workers` → `2 passed (3.3s)` |
+| Gate result | `Release gate passed for candidate SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
 
-Runtime checks after the install:
+Every job step concluded `success`: `Set up job`, `Checkout candidate`, `Verify candidate SHA`, `Setup Node.js Environment`, `Install Dependencies`, `Install Chromium for Playwright`, `Run Release Smoke Gate`, and the post/complete steps. The run has no uploaded artifacts (the workflow has no artifact step) and only the two pre-existing non-blocking runner annotations (Node 20 deprecation, the `ubuntu-latest` → Ubuntu 26 notice).
 
-- `server/bindHost.js`: default bind resolves to `127.0.0.1` (loopback), `KCS_API_HOST` still the only opt-in.
-- `server/corsPolicy.js`: `http://localhost:5173` allowed, an unknown origin refused, no-`Origin` requests allowed — the exact allowlist is unchanged.
-- API started on `127.0.0.1:5000` (netstat confirms the loopback address only); `GET /api/health` returned `{"status":"online","service":"Keyframe Studio API","database":"SQLite (Embedded Local DB)"}`.
-- `sqlite3` native binding: version 3.52.0, in-memory create/insert/select round-trip returned `{"x":42}`.
-- No `trust proxy` state changed (it was never set).
+## What the smoke gate proves
 
-## Commit
+- The exact candidate `6c27ef3` installs cleanly from its own lockfile on a fresh Ubuntu runner (`npm ci`).
+- The OGraf fixture manifest validates offline against the vendored, SHA-256-pinned schema closure.
+- A KCS OGraf package compiled and materialized on the runner interoperates with Chromium: the spec serves the package files over an isolated HTTP server and drives the generated runtime (`e2e/ograf-phase2d-interoperability.spec.ts`).
+- The real editor exports the current project as an OGraf ZIP through the UI (`e2e/ograf-editor-export.spec.ts`).
 
-`7f1e679` — `chore: remediate dependency advisories`. Pushed normally to `origin/main` (`c1e618e..7f1e679`); no force push.
+## What the smoke gate does not prove
 
-## Remaining items
+- It is not the full test suite: it does not run the 135 Vitest files or the 268-test Chromium suite. Those ran locally on the same code line and are recorded in `PROJECT_STATE.md`.
+- It does not cover the text-Boolean, bonding, Motion Curves, Playfair font-portability or dependency-advisory work beyond what the two OGraf specs touch.
+- It does not exercise the REST API, the SQLite binding, or the localhost/CORS posture.
+- It does not test any SHA other than the one passed to it — including the docs-only tip created after this run.
 
-None for advisories. Two notes for the future:
+## Post-run repository facts
 
-1. The `overrides` entry is a temporary bridge; delete it when concurrently declares `shell-quote >= 1.11.0`.
-2. `fsevents` (macOS-only, optional) and `sqlite3` are the only packages in the tree with install scripts; the `allowScripts` rule still pins `sqlite3@6.0.1` exactly, and no new install script was introduced.
+| Check | Result |
+|---|---|
+| `main` == `origin/main` | yes |
+| Working tree | clean |
+| `npm audit --audit-level=low` | 0 vulnerabilities |
+| Tag `v1.1.0-rc.1` target | `46d2a3e59e065816d972dcd56951803951b577f6` (unchanged) |
+| GitHub draft prerelease | unchanged (`v1.1.0-rc.1`, Draft) |
+| `package.json` | `1.1.0-rc.1`, `private: true` |
+| npm registry | 404 — not published |
+
+## Verdict
+
+**EXACT-SHA RELEASE SMOKE PASSED — READY FOR H7 RELEASE DECISION.**
+
+H7 remains HOLD. Creating or moving a tag, publishing or finalizing the draft release, and npm publication all require a new explicit user instruction.
 
 ---
 
-## 10. Changelog
+## 9. Changelog
 
 # Changelog
 

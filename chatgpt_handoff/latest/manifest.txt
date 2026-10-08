@@ -1,16 +1,18 @@
-# KCS ChatGPT Upload Manifest — H7 GO / v1.1.0-rc.2 Release Candidate
+# KCS ChatGPT Upload Manifest — v1.1.0-rc.2 Public Prerelease
 
-Scope: the H7 GO execution and the v1.1.0-rc.2 release candidate cut from the exact smoke-tested commit
+Scope: publishing the existing v1.1.0-rc.2 draft as a public prerelease, and the documentation that records the publication state
 TESTED CODE SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01
-Release candidate: annotated v1.1.0-rc.2, dereferences to 6c27ef35d48d61a5e1163d2c91734c864fcafa01
+Release candidate: annotated v1.1.0-rc.2, dereferences to 6c27ef35d48d61a5e1163d2c91734c864fcafa01 (tag object unchanged)
+GitHub release: KCS v1.1.0-rc.2, id RE_kwDOTexJrc4YPnCt, isDraft false, isPrerelease true, publishedAt 2026-10-08T13:11:16Z
+Public URL: https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2
 Release Smoke Gate: run 37752015020 (workflow_dispatch, conclusion success)
-GitHub release: KCS v1.1.0-rc.2, id RE_kwDOTexJrc4YPnCt, draft prerelease, targetCommitish pinned to the tested commit
-Earlier candidate: v1.1.0-rc.1 unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; its draft prerelease unmodified
+Earlier candidate: v1.1.0-rc.1 unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; its draft release untouched
 Package: private, metadata version 1.1.0-rc.1; npm publication not performed (registry returns 404)
-Current docs tip: c650da18c731dfac85d31ba00d059a8430c40b43 — docs-only, newer than the candidate, NOT smoke-tested
-Validation authority: the H7 GO sections in PROJECT_STATE.md and NEXT_SESSION.md
+Current docs tip: the documentation commit that records this publication — docs-only, newer than the candidate, NOT smoke-tested
+Not a stable release: no stable/final GitHub release exists; this is a prerelease for user QA
+Validation authority: the v1.1.0-rc.2 PUBLISHED PRERELEASE and H7 GO sections in PROJECT_STATE.md and NEXT_SESSION.md
 Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
-Historical records retained in reports/ only (not copied into this minimal bundle): progress_151, progress_152, progress_153
+Historical records retained in reports/ only (not copied into this minimal bundle): progress_151, progress_152, progress_153, progress_154
 
 Bundle source files (10):
 - CHANGELOG.md
@@ -21,8 +23,8 @@ Bundle source files (10):
 - PROJECT_STATE.md
 - README.md
 - manifest.txt
-- progress_154_exact_sha_release_smoke.md
 - progress_155_h7_rc2_release.md
+- progress_156_rc2_prerelease_publish.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.

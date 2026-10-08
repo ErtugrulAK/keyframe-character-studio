@@ -10,38 +10,38 @@ Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`. External Q
 
 ## 1. OMP Final Response
 
-# KCS H7 GO — v1.1.0-rc.2 Release Candidate — 2026-10-08
+# KCS v1.1.0-rc.2 — PUBLIC PRERELEASE — 2026-10-08
 
 ## Latest approved release action
 
-The approved H7 GO decision was executed. A **new** release candidate, `v1.1.0-rc.2`, was created from the exact smoke-tested code commit — `v1.1.0-rc.1` was not moved, retargeted or deleted, and npm remains unpublished.
+The existing `v1.1.0-rc.2` draft was **published as a public prerelease**. It is **RC.2 READY FOR USER QA** — this is NOT a stable release.
 
 | Field | Value |
 |---|---|
 | Tested code commit (candidate) | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Annotated release candidate | `v1.1.0-rc.2` — dereferences to exactly the tested commit |
+| Annotated release candidate | `v1.1.0-rc.2` — dereferences to exactly the tested commit (tag object unchanged) |
 | Release Smoke Gate | run `37752015020` — success, every step green |
-| GitHub release | `KCS v1.1.0-rc.2`, id `RE_kwDOTexJrc4YPnCt` — **draft prerelease**, `targetCommitish` pinned to the tested commit |
-| Earlier candidate | `v1.1.0-rc.1` unchanged at `46d2a3e59e065816d972dcd56951803951b577f6` |
+| GitHub release | `KCS v1.1.0-rc.2`, id `RE_kwDOTexJrc4YPnCt` |
+| State | `isDraft: false`, `isPrerelease: true`, `publishedAt: 2026-10-08T13:11:16Z` |
+| Public URL | https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2 |
+| Earlier candidate | `v1.1.0-rc.1` unchanged at `46d2a3e59e065816d972dcd56951803951b577f6`; its draft release untouched |
 | Package | private, metadata version `1.1.0-rc.1`; npm returns 404 |
 
-Package metadata deliberately stays at `1.1.0-rc.1` (PATH A): the candidate is the exact smoke-tested commit, so no metadata commit — which would have created a new, untested commit — was introduced.
+Publication transitioned the **same** release object from draft to published; no tag was created or moved, no release was recreated or retargeted, nothing was marked latest-stable, and no stable release exists. The release notes were already complete, so they were not rewritten.
 
-The documentation tip `c650da18c731dfac85d31ba00d059a8430c40b43` is newer than the candidate and is docs-only: no source, test, workflow, package, lock or asset byte differs. The candidate identity is therefore unchanged, and the docs tip is **not** itself smoke-tested.
-
-## What the candidate contains
-
-The release notes carry the full list. In summary: the 16 post-Astra correctness fixes (text Boolean geometry, bonded layer movement, Motion Curves targeting and mask dispatch, Playfair OGraf portability), the authoring and presentation work (layer bonds, Boolean operands, text stroke parity, opacity keyframes, sequence isolation, segment editing, the visual-only editor refresh), the hardening shipped in the same line (Lottie import, OGraf package import, loopback API bind with an exact CORS allowlist, inverted matte, Lottie parent resolution, boundary scene validation), and the toolchain/dependency work (TypeScript 7, Vitest 5, Oxlint 1.85, jsdom 30.1.1, the CI type-check and state-consistency gates, and `npm audit` at 0 vulnerabilities).
+The candidate is the exact smoke-tested commit. The documentation tip is newer and docs-only — no source, test, workflow, package, lock or asset byte differs — so the candidate identity is unchanged and the docs tip is **not** itself smoke-tested.
 
 ## What the smoke gate proved, and what it did not
 
 It proved the candidate installs cleanly from its own lockfile on a fresh Ubuntu runner, the OGraf fixture manifest validates offline against the vendored SHA-256-pinned closure, a KCS OGraf package materialized on the runner interoperates with Chromium, and the editor exports an OGraf ZIP through the UI.
 
-It is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line. This is a pre-release candidate, not a claim of full production certification.
+It is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line. This is a prerelease candidate, not a claim of full production certification.
 
-## Next step
+## Next step — user QA
 
-The user decides whether to publish the rc.2 draft prerelease and/or run the user QA pass. Publishing the draft does not create a tag (it already exists) and does not publish to npm. Any later commit that touches source, tests, workflows, packages or assets invalidates this exact-SHA smoke result for the new commit.
+Run the twelve-step manual QA checklist in `progress_156_rc2_prerelease_publish.md` against this prerelease: app opens, project basics, shape manipulation, text rendering, opacity keyframes, a bonded pair drag, one Motion Curves easing edit, one mask/matte case, an OGraf ZIP export, an OGraf re-import, the Playfair / Cinematic Title export path, and a clean stability pass.
+
+Classify every finding as BLOCKER, MAJOR, MINOR or COSMETIC. **Any BLOCKER or MAJOR code defect means do not proceed to a stable release**, and any code change produces a new commit that invalidates this exact-SHA smoke result — a new Release Smoke Gate run is then required before any further candidate or stable decision.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
@@ -49,31 +49,35 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — H7 GO / v1.1.0-rc.2 Release Candidate
+# KCS Minimal ChatGPT Upload Bundle — v1.1.0-rc.2 Public Prerelease
 
-Task-specific handoff for the 2026-10-08 H7 GO release-candidate cut. This is not an archive.
+Task-specific handoff for the 2026-10-08 rc.2 prerelease publication. This is not an archive.
 
 ## Current truth
 
-The approved H7 GO decision was executed. A **new** release candidate, `v1.1.0-rc.2`, was created from the exact smoke-tested code commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (Release Smoke Gate run `37752015020`, success). The annotated candidate dereferences to exactly that commit, and its GitHub release entry is a **draft prerelease** whose `targetCommitish` is pinned to the same commit.
+The `v1.1.0-rc.2` release is now a **PUBLISHED PRERELEASE** (`isDraft: false`, `isPrerelease: true`, release id `RE_kwDOTexJrc4YPnCt`, `publishedAt` 2026-10-08T13:11:16Z, public at https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2). It is **RC.2 READY FOR USER QA** and is **not** a stable release.
 
-`v1.1.0-rc.1` was not moved, retargeted or deleted — it still dereferences to `46d2a3e59e065816d972dcd56951803951b577f6`, and its draft prerelease is unmodified. The package remains private at metadata version `1.1.0-rc.1` (PATH A: the candidate is the exact smoke-tested commit, so no untested metadata commit was introduced) and npm still returns 404.
+The candidate is the exact smoke-tested code commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (Release Smoke Gate run `37752015020`, success). Its annotated release dereferences to exactly that commit and the tag object was not recreated or moved. Publication transitioned the same release object from draft to published: no tag was created, no release was recreated or retargeted, and nothing was marked latest-stable.
 
-The documentation tip `c650da18c731dfac85d31ba00d059a8430c40b43` is newer than the candidate and docs-only; it is **not** itself smoke-tested. Any commit that touches source, tests, workflows, packages or assets invalidates the result for the new commit.
+`v1.1.0-rc.1` is unchanged at `46d2a3e59e065816d972dcd56951803951b577f6` and its draft release is untouched. The package remains private at metadata version `1.1.0-rc.1` and npm returns 404 — no npm publication occurred.
 
-The smoke gate is not the full suite: it runs `npm ci`, installs Chromium, validates the OGraf fixture offline, and runs two OGraf Chromium specs. The Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line and are recorded in PROJECT_STATE.md.
+The documentation tip is newer than the candidate and docs-only; it is **not** itself smoke-tested. The smoke gate is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line.
+
+## Next step
+
+The user QA pass: the twelve-step checklist in `progress_156_rc2_prerelease_publish.md`. Any BLOCKER or MAJOR code defect means do not proceed to a stable release, and any code change requires a new commit plus a fresh exact-SHA smoke run.
 
 ## Evidence and files
 
-- OMP_FINAL_RESPONSE.md: the release action, the candidate identity and the boundaries.
+- OMP_FINAL_RESPONSE.md: the published state, the candidate identity and the boundaries.
 - PROJECT_STATE.md and NEXT_SESSION.md: current state and the exact next step.
-- KCS_RELEASE_CANDIDATE_SUMMARY.md: the release boundary with the rc.2 candidate.
+- KCS_RELEASE_CANDIDATE_SUMMARY.md: the release boundary with the published rc.2 prerelease.
 - CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
-- progress_155_h7_rc2_release.md: the release execution record — phases, verification, and the tested-code-SHA vs docs-tip distinction.
-- progress_154_exact_sha_release_smoke.md: the underlying smoke-gate evidence for the candidate, including what the gate does and does not prove.
+- progress_156_rc2_prerelease_publish.md: pre-publish state, the publish action, post-publish verification and the user QA checklist.
+- progress_155_h7_rc2_release.md: the candidate cut, the metadata decision and the tested-code-SHA vs docs-tip distinction.
 - manifest.txt: inventory and protected boundaries.
 
-The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. The earlier progress reports remain in `reports/` and are linked from the report indexes; they are not copied into this minimal bundle. Historical reports are not rewritten or deleted, and external workspaces and OMP configuration are untouched.
+The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. Earlier progress reports remain in `reports/` and are linked from the report indexes; they are not copied into this minimal bundle. Historical reports are not rewritten or deleted, and external workspaces and OMP configuration are untouched.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder holds its sources.
 
@@ -81,19 +85,21 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder 
 
 ## 3. Bundle Manifest
 
-# KCS ChatGPT Upload Manifest — H7 GO / v1.1.0-rc.2 Release Candidate
+# KCS ChatGPT Upload Manifest — v1.1.0-rc.2 Public Prerelease
 
-Scope: the H7 GO execution and the v1.1.0-rc.2 release candidate cut from the exact smoke-tested commit
+Scope: publishing the existing v1.1.0-rc.2 draft as a public prerelease, and the documentation that records the publication state
 TESTED CODE SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01
-Release candidate: annotated v1.1.0-rc.2, dereferences to 6c27ef35d48d61a5e1163d2c91734c864fcafa01
+Release candidate: annotated v1.1.0-rc.2, dereferences to 6c27ef35d48d61a5e1163d2c91734c864fcafa01 (tag object unchanged)
+GitHub release: KCS v1.1.0-rc.2, id RE_kwDOTexJrc4YPnCt, isDraft false, isPrerelease true, publishedAt 2026-10-08T13:11:16Z
+Public URL: https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2
 Release Smoke Gate: run 37752015020 (workflow_dispatch, conclusion success)
-GitHub release: KCS v1.1.0-rc.2, id RE_kwDOTexJrc4YPnCt, draft prerelease, targetCommitish pinned to the tested commit
-Earlier candidate: v1.1.0-rc.1 unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; its draft prerelease unmodified
+Earlier candidate: v1.1.0-rc.1 unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; its draft release untouched
 Package: private, metadata version 1.1.0-rc.1; npm publication not performed (registry returns 404)
-Current docs tip: c650da18c731dfac85d31ba00d059a8430c40b43 — docs-only, newer than the candidate, NOT smoke-tested
-Validation authority: the H7 GO sections in PROJECT_STATE.md and NEXT_SESSION.md
+Current docs tip: the documentation commit that records this publication — docs-only, newer than the candidate, NOT smoke-tested
+Not a stable release: no stable/final GitHub release exists; this is a prerelease for user QA
+Validation authority: the v1.1.0-rc.2 PUBLISHED PRERELEASE and H7 GO sections in PROJECT_STATE.md and NEXT_SESSION.md
 Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
-Historical records retained in reports/ only (not copied into this minimal bundle): progress_151, progress_152, progress_153
+Historical records retained in reports/ only (not copied into this minimal bundle): progress_151, progress_152, progress_153, progress_154
 
 Bundle source files (10):
 - CHANGELOG.md
@@ -104,8 +110,8 @@ Bundle source files (10):
 - PROJECT_STATE.md
 - README.md
 - manifest.txt
-- progress_154_exact_sha_release_smoke.md
 - progress_155_h7_rc2_release.md
+- progress_156_rc2_prerelease_publish.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
@@ -137,15 +143,22 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files abov
 - The Playfair Display correction and the UI refresh are now committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked. No dependency, workflow, package, tag, release, or npm change is part of this publication.
 - Focused regressions were added for every finding, and the real-browser proofs cover the family matrix, the whitespace parity, the font load -> settled retrace, the untraceable-operand refusal, the parented bonded drag, and the legacy single-file refusal. Retries, assertions and thresholds are unchanged.
 - The dependency advisories recorded here were resolved on 2026-10-08 in a bounded maintenance run: `proxy-addr`, `source-map-js` and `fast-uri` by lock refreshes inside their parents' declared ranges, and `shell-quote` by a scoped `overrides` entry under `concurrently`. `npm audit --audit-level=low` now reports 0 vulnerabilities; see `reports/progress_153_dependency_advisory_maintenance.md`.
-- H7 remains HOLD. Publishing, finalizing, or re-tagging the release requires a new explicit user instruction; release artefacts stay at `46d2a3e`.
+- At that point the release artefacts were still at `46d2a3e`; publishing, finalizing or re-tagging required — and still requires — a new explicit user instruction.
+
+## v1.1.0-rc.2 PUBLIC PRERELEASE published — 2026-10-08
+
+- The `v1.1.0-rc.2` release is now a **PUBLISHED PRERELEASE** (`isDraft: false`, `isPrerelease: true`, release id `RE_kwDOTexJrc4YPnCt`, `publishedAt` 2026-10-08T13:11:16Z). It is RC.2 READY FOR USER QA — not a stable release.
+- No tag was created or moved, no release was recreated or retargeted, rc.1 is unchanged, and npm remains unpublished (404; package private at `1.1.0-rc.1`).
+- The candidate is the exact smoke-tested code commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01`; the documentation tip is newer and docs-only, and is not itself smoke-tested.
+- Next input: the user QA checklist in `reports/progress_156_rc2_prerelease_publish.md`. A BLOCKER or MAJOR code defect, or any code change, requires a new commit and a new exact-SHA smoke run before any further RC or stable decision.
 
 ## H7 GO — v1.1.0-rc.2 release candidate — 2026-10-08
 
-- H7 GO was executed. A NEW release candidate was cut from the exact smoke-tested commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (Release Smoke Gate run `37752015020`). The annotated candidate `v1.1.0-rc.2` dereferences to that commit and its GitHub release entry is a draft prerelease with `targetCommitish` pinned to it.
+- H7 GO was executed. A NEW release candidate was cut from the exact smoke-tested commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (Release Smoke Gate run `37752015020`). The annotated candidate `v1.1.0-rc.2` dereferences to that commit, and its GitHub release entry was then published as a PUBLIC PRERELEASE on 2026-10-08 (id `RE_kwDOTexJrc4YPnCt`, still `prerelease: true`, never stable).
 - The earlier candidate is untouched at `46d2a3e59e065816d972dcd56951803951b577f6`; its draft prerelease is unmodified.
 - Package metadata stays private at `1.1.0-rc.1` (PATH A): the candidate is the exact smoke-tested commit, and npm remains unpublished.
 - The documentation tip is newer than the candidate and docs-only; it is NOT itself smoke-tested. Any commit that touches source, tests, workflows, packages or assets invalidates the result for the new commit, so re-run the gate before a further release decision.
-- Next step: the user decides whether to publish the rc.2 draft prerelease and/or run the user QA pass. Publishing the draft does not create a tag (it already exists) and does not publish to npm. Record: `reports/progress_155_h7_rc2_release.md`.
+- The rc.2 prerelease was published on 2026-10-08; publishing it created no new tag and published nothing to npm. Record: `reports/progress_155_h7_rc2_release.md` and `reports/progress_156_rc2_prerelease_publish.md`.
 
 ## Exact-SHA release smoke gate — passed, 2026-10-08
 
@@ -153,14 +166,14 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files abov
 - The workflow is verification-only; it checked out the `candidate_sha` input, verified `git rev-parse HEAD`, and ran `npm ci` + Chromium + `npm run qa:release` (OGraf fixture validation plus two Chromium OGraf specs). It cannot tag, release or publish.
 - **Candidate identity:** `6c27ef3` is the tested CODE sha. The documentation commit that records this run is not smoke-tested. Re-run the gate on any later SHA that changes code before making a release decision.
 - The smoke gate is not the full suite: the Vitest suite (135 files / 2,055 tests), the full Chromium suite (268 tests), the API/SQLite checks and the CORS posture were validated locally on the same code line and are recorded in PROJECT_STATE.md.
-- H7 remains HOLD. Creating or moving a tag, publishing or finalizing the draft release, and npm publication require a new explicit user instruction; the tag, draft, package version and npm state are unchanged.
+- Creating or moving a tag, publishing a stable release, and npm publication each require a new explicit user instruction; the earlier candidate and the package metadata were unchanged by that task.
 
 ## Dependency advisory maintenance — committed, 2026-10-08
 
 - A fresh audit reported five advisories (3 critical, 1 high, 1 moderate). All are resolved by `chore: remediate dependency advisories` (`7f1e679`): three lock refreshes inside the parents' declared ranges and one scoped `overrides` entry under `concurrently` for `shell-quote`.
 - No direct dependency, script, engine, workflow or application source change. Reachability was proven from code for `proxy-addr` (Express defaults `trust proxy` to `false`; KCS never sets it or reads `req.ip`/`req.ips`) and for `shell-quote` (concurrently's only `quote()` consumer requires additional CLI arguments the `dev` script never passes).
 - `npm audit --audit-level=low` reports 0 vulnerabilities. The full gate is green: 135 Vitest files / 2,055 tests, 268 Chromium tests with `--retries=0`, `npm run check`, OGraf validation, both QA gates, the state consistency check, the API health endpoint on the loopback bind, and the `sqlite3` binding.
-- The `overrides` entry is a temporary bridge; remove it once `concurrently` declares `shell-quote >= 1.11.0`. H7 remains HOLD.
+- The `overrides` entry is a temporary bridge; remove it once `concurrently` declares `shell-quote >= 1.11.0`.
 
 ## Authoring publication — 2026-10-05
 
@@ -189,7 +202,7 @@ Post-Astra remediation local gate on October 7, 2026: `npx tsc -b --pretty false
 
 ## Next scoped work
 
-1. **Milestone H: H7 GO executed.** H1–H6 are complete and the new release candidate `v1.1.0-rc.2` has been cut from the exact smoke-tested commit `6c27ef3`; its draft prerelease awaits the user's publish/QA decision. The earlier candidate remains at `46d2a3e` and npm publication is still out of scope. Re-run the exact-SHA smoke gate on any later commit that changes code before a further release decision.
+1. **Milestone H: H7 GO executed, `v1.1.0-rc.2` PUBLIC PRERELEASE published.** H1–H6 are complete and the new candidate was cut from and verified against the exact smoke-tested commit `6c27ef3`; its GitHub release is a published prerelease awaiting the user QA pass. The earlier candidate remains at `46d2a3e`, and npm publication plus any stable release stay separate explicit decisions. Re-run the exact-SHA smoke gate on any later commit that changes code before a further RC or stable decision.
 2. The Astra remediation findings F-01…F-10 are closed and merged with green CI, one branch per finding; `reports/progress_151_astra_remediation.md` records the reproduction evidence and the remaining limitations.
 3. The post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01 are closed and published on `main` in six commits; `reports/progress_152_post_astra_focused_remediation.md` records the per-finding reproduction, fix, test and result.
 4. The five maintenance tasks that preceded the remediation are complete: focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5.
@@ -254,7 +267,7 @@ The Astra post-compaction review found 16 concrete defects in the authoring work
 - LOW: live documents listed the no-op root `npx tsc --noEmit` as project type-check evidence.
 - The Playfair Display correction and the visual-only editor refresh from the previous working tree are now committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked.
 - Real Chromium proof: family matrix and whitespace parity for the text trace, the font load -> settled retrace, an untraceable operand refusing the Boolean, a parented bonded drag against a calibration group, and the legacy single-file export refusing an asset-dependent graphic while an asset-free graphic still exports.
-- This publication adds no dependency, workflow, package, tag, release, or npm change. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
+- This publication added no dependency, workflow, package, tag, release, or npm change; at that point the release artefacts were still at `46d2a3e`.
 - The dependency advisories recorded here were then resolved in a separate bounded maintenance run: `proxy-addr`, `source-map-js` and `fast-uri` by lock refreshes inside their parents' declared ranges, and `shell-quote` by a scoped `overrides` entry under `concurrently` (which pins the exact vulnerable version and has no newer release). `npm audit --audit-level=low` now reports 0 vulnerabilities; see `reports/progress_153_dependency_advisory_maintenance.md`.
 
 ## Authoring publication — 2026-10-05
@@ -270,10 +283,18 @@ The Astra post-compaction review found 16 concrete defects in the authoring work
 
 Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
 
+## v1.1.0-rc.2 PUBLIC PRERELEASE published — 2026-10-08
+
+- The existing `v1.1.0-rc.2` draft was published as a **public prerelease**: release id `RE_kwDOTexJrc4YPnCt`, `isDraft: false`, `isPrerelease: true`, `publishedAt` 2026-10-08T13:11:16Z, public at https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2. The same release object was transitioned; no release was recreated, no tag was created or moved, and nothing was marked latest-stable.
+- The candidate is the exact smoke-tested code commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (Release Smoke Gate run `37752015020`). Its annotated release still dereferences to that commit, with the same tag object.
+- `v1.1.0-rc.1` is unchanged at `46d2a3e59e065816d972dcd56951803951b577f6` and its draft prerelease is untouched. The package remains private at metadata version `1.1.0-rc.1`; npm returns 404.
+- **This is NOT a stable release.** The next input is the user QA pass against this prerelease. A stable release, a further candidate, or any code-affecting commit remains a separate explicit decision, and any code-affecting commit requires a new exact-SHA smoke run.
+- Record: `reports/progress_156_rc2_prerelease_publish.md` (publication + post-publish verification + the QA checklist).
+
 ## H7 GO — v1.1.0-rc.2 release candidate — 2026-10-08
 
 - The approved H7 GO decision was executed: a NEW release candidate was cut from the exact smoke-tested code commit. The candidate commit is `6c27ef35d48d61a5e1163d2c91734c864fcafa01`, verified by Release Smoke Gate run `37752015020`.
-- The annotated candidate `v1.1.0-rc.2` dereferences to exactly that commit, and its GitHub release entry is a draft prerelease with `targetCommitish` pinned to the same commit.
+- The annotated candidate `v1.1.0-rc.2` dereferences to exactly that commit. Its GitHub release entry was created as a draft prerelease with `targetCommitish` pinned to the same commit, and was then PUBLISHED AS A PUBLIC PRERELEASE on 2026-10-08 (release id `RE_kwDOTexJrc4YPnCt`, `publishedAt` 2026-10-08T13:11:16Z, still `prerelease: true`, never a stable release).
 - The earlier candidate is untouched: `v1.1.0-rc.1` still dereferences to `46d2a3e59e065816d972dcd56951803951b577f6` and its draft prerelease is unmodified.
 - Package metadata decision (PATH A): the package stays private at the metadata version `1.1.0-rc.1`. The candidate is the exact smoke-tested commit, and no untested metadata commit was introduced; npm remains unpublished.
 - The documentation tip `c650da18c731dfac85d31ba00d059a8430c40b43` is newer than the candidate and is docs-only — no source, test, workflow, package, lock or asset byte differs — so the candidate identity is unchanged and the docs tip is NOT itself smoke-tested.
@@ -286,7 +307,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Independently read from the run log: the runner's `EXPECTED_SHA` was the candidate, the gate printed `Release gate candidate SHA: 6c27ef3…`, the OGraf fixture validated, both Chromium specs passed (`2 passed`), and the gate printed `Release gate passed for candidate SHA: 6c27ef3…`.
 - What it proves: the candidate installs from its own lockfile on a fresh runner, the OGraf fixture validates offline, a materialized KCS OGraf package interoperates with Chromium, and the editor exports an OGraf ZIP through the UI. What it does not prove: the Vitest suite, the full Chromium suite, the API/SQLite/CORS posture, or any other SHA — including this documentation tip.
 - **Candidate identity:** `6c27ef3` is the tested CODE sha. This documentation commit moves the tip forward without changing a source, test, workflow, package or asset byte, and is not itself smoke-tested. A later release decision must treat `6c27ef3` as the tested candidate and re-run the gate on any later SHA that changes code.
-- Record: `reports/progress_154_exact_sha_release_smoke.md`. H7 remains HOLD; the tag, draft prerelease, package version and npm state are unchanged.
+- Record: `reports/progress_154_exact_sha_release_smoke.md`. That run changed no tag, release, package version or npm state.
 
 ## Dependency advisory maintenance — 2026-10-08
 
@@ -294,7 +315,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 - Reachability was proven from code, not assumed: Express only evaluates the proxy chain through `req.ip`/`req.ips` and KCS never sets `trust proxy`, and concurrently's only `quote()` consumer requires additional CLI arguments the `dev` script never passes.
 - The runtime checks after the install confirm the security posture is unchanged: the API still binds `127.0.0.1` by default, the exact CORS allowlist is unchanged, `/api/health` answers on loopback, and the `sqlite3` native binding round-trips.
 - The full gate is green: 135 Vitest files / 2,055 tests, 268 Chromium tests with `--retries=0`, `npm run check`, OGraf validation, both QA gates, the state consistency check, and `git diff --check`.
-- The `overrides` entry is a temporary bridge and should be removed once `concurrently` declares `shell-quote >= 1.11.0`. H7 remains HOLD; no tag, release or npm action.
+- The `overrides` entry is a temporary bridge and should be removed once `concurrently` declares `shell-quote >= 1.11.0`. That task took no tag, release or npm action.
 
 ## Validation status — post-Astra focused remediation, 2026-10-07
 
@@ -336,7 +357,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 
 - Grouped roadmap execution plan: `docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`; roadmap items 1 and 2 are completed, and **Milestone A is merged**.
 - **Milestone B (graph + keyboard accessibility, item 4) — MERGED** at `96e8f9d`: the timeline keyframe diamonds are named keyboard buttons with a lane-local arrow walk, the value graph exposes a labelled group with keyboard-editable points, decorative SVG geometry is hidden from assistive tech, and focus rings were added. One review round returned BLOCKED (3 findings, 6 over-claims), all closed; the re-review returned READY WITH WARNINGS.
-- Milestones A–G and H1–H6 are complete. The release decision H7 remains held. The maintenance follow-ups previously listed as deferred or open are closed through `37904fb`: dialog focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5. No further package, workflow, tag, release, or npm action is implicit; each requires explicit approval.
+- Milestones A–G and H1–H6 are complete, and the H7 release decision has since been executed (the `v1.1.0-rc.2` candidate is a published prerelease awaiting the user QA pass). The maintenance follow-ups previously listed as deferred or open are closed through `37904fb`: dialog focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5. No further package, workflow, tag, release, or npm action is implicit; each requires explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
 - Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` was replayed into `main` at `077911b` and is now behind it (the branch is kept only as an artefact); `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
@@ -378,7 +399,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 ## Release boundary
 
 The release-readiness blocker work is integrated into `main`. Annotated tag `v1.1.0-rc.1` and a GitHub draft prerelease remain at workflow-tested candidate `46d2a3e59e065816d972dcd56951803951b577f6`; that candidate is historical and must not move.
-The H7 GO decision then cut a NEW release candidate on 2026-10-08: the annotated `v1.1.0-rc.2` release candidate dereferences to the exact smoke-tested commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01`, verified by Release Smoke Gate run `37752015020`. Its GitHub release entry is a draft prerelease whose `targetCommitish` is pinned to the same commit. `reports/progress_155_h7_rc2_release.md` records the run.
+The H7 GO decision then cut a NEW release candidate on 2026-10-08: the annotated `v1.1.0-rc.2` release candidate dereferences to the exact smoke-tested commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01`, verified by Release Smoke Gate run `37752015020`. Its GitHub release entry was published as a PUBLIC PRERELEASE on 2026-10-08 (release id `RE_kwDOTexJrc4YPnCt`, `publishedAt` 2026-10-08T13:11:16Z, `prerelease: true`, `targetCommitish` pinned to the same commit). `reports/progress_155_h7_rc2_release.md` records the cut and `reports/progress_156_rc2_prerelease_publish.md` records the publication.
 The later maintenance line through `37904fb` closed dialog focus restoration, runtime SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5 without moving the tag, publishing the draft, or publishing npm.
 The post-hold Astra remediation then closed the correctness/security findings F-01…F-10 through `8a4ca22` (`reports/progress_151_astra_remediation.md`): mixed legacy/channel round trips, legacy import validation, Lottie numeric property forms, the OGraf procedural-animation mismatch, archive size accounting, dropped-media persistence, preset storage boundaries, the naming dialog's focus lifecycle, the suite's React `act` warnings, and the stale live-document claims. It added no dependency, workflow or package change. The post-compaction Astra review of the uncommitted authoring work then closed all 16 of its findings in six commits on `main` on 2026-10-07 (`reports/progress_152_post_astra_focused_remediation.md`), again with no dependency, workflow, package, tag, release or npm change; the release decision remains HOLD.
 
@@ -408,7 +429,7 @@ The release gate is the method, not a stored count: type check, full Vitest, lin
 
 **READY WITH WARNINGS** remains the technical release stance. The original final gate at `c1431db` reported **RELEASE READY WITH DOCUMENTED DEFERRALS**; the maintenance run subsequently closed every deferral and follow-up named there, and the exact-SHA Release Smoke Gate then passed on the new candidate.
 
-The H7 GO decision has been executed: the `v1.1.0-rc.2` candidate exists as an annotated release and a draft prerelease, and the earlier rc.1 candidate remains historical and unchanged. The package remains private at metadata version `1.1.0-rc.1` and no npm publication occurred.
+The H7 GO decision has been executed: the `v1.1.0-rc.2` candidate exists as an annotated release and a **publicly published prerelease**, and the earlier rc.1 candidate remains historical and unchanged. The package remains private at metadata version `1.1.0-rc.1` and no npm publication occurred. This is a prerelease for user QA — not a stable release.
 
 Publishing the rc.2 draft prerelease, running the user QA pass, publishing to npm, or cutting a stable release each require a new explicit user instruction. Publishing the draft does not create a tag (it already exists) and does not publish to npm.
 
@@ -420,7 +441,7 @@ The prior maintenance deferrals are closed: Oxlint 1.85 at `feca773`, TypeScript
 
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are complete. Milestone H is complete through H6 and its release decision remains held at H7. The later approved maintenance run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the API CORS allowlist (`2a313d7`), Oxlint 1.85 (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`) without moving any release artefact. The post-hold Astra remediation then closed findings F-01…F-10 through `8a4ca22` (see `reports/progress_151_astra_remediation.md`), also without moving any release artefact. The later post-compaction Astra review of the uncommitted authoring work closed all 16 of its findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) in six commits on `main` on 2026-10-07 (see `reports/progress_152_post_astra_focused_remediation.md`), likewise without a dependency, workflow, package, tag, release or npm change.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are complete. Milestone H is complete through H6, and its H7 release decision has since been executed: the `v1.1.0-rc.2` candidate was cut from the exact smoke-tested commit and is now a published prerelease awaiting the user QA pass (no stable release, no npm publication). The later approved maintenance run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the API CORS allowlist (`2a313d7`), Oxlint 1.85 (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`) without moving any release artefact. The post-hold Astra remediation then closed findings F-01…F-10 through `8a4ca22` (see `reports/progress_151_astra_remediation.md`), also without moving any release artefact. The later post-compaction Astra review of the uncommitted authoring work closed all 16 of its findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) in six commits on `main` on 2026-10-07 (see `reports/progress_152_post_astra_focused_remediation.md`), likewise without a dependency, workflow, package, tag, release or npm change.
 
 ## Milestone map and status
 
@@ -433,7 +454,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **COMPLETE** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
 | G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **COMPLETE** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05** (the live-document reconciliation) is merged at `2b0bba0`, and the shallow-checkout CI regression it caused was fixed at `dcbf9f5`, and the final correctness gate ran on `main` after that fix (`reports/progress_141_astra_correctness_followup_summary.md`): every finding is closed. |
-| H — Release finalization and approval-gated maintenance | review follow-up decisions | Milestone H branches plus the five maintenance branches plus the nine remediation branches | **NEXT (held)** — **H1–H6 are COMPLETE**, the post-hold maintenance tasks are merged through `37904fb`, the Astra remediation findings F-01…F-10 are closed through `8a4ca22`, and the post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01 are closed in six commits on `main` (2026-10-07). **H7 = HOLD** by user decision: no tag, release, or npm action; artefacts stay at `46d2a3e`. This row keeps the plan's single NEXT marker because the only remaining plan decision is a future explicitly authorized release action. |
+| H — Release finalization and approval-gated maintenance | review follow-up decisions | Milestone H branches plus the five maintenance branches plus the nine remediation branches | **NEXT (user QA)** — **H1–H6 are COMPLETE**, the post-hold maintenance tasks are merged through `37904fb`, the Astra remediation findings F-01…F-10 are closed through `8a4ca22`, and the post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01 are closed in six commits on `main` (2026-10-07). **H7 = GO (executed)** — the `v1.1.0-rc.2` candidate was cut from the exact smoke-tested commit and its GitHub release is now a PUBLISHED PRERELEASE (not stable); the earlier candidate stays at `46d2a3e` and npm was not published. This row keeps the plan's single NEXT marker because the remaining plan decision is the user QA pass and a future explicitly authorized stable release. |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -491,107 +512,15 @@ The deliverables are the study, the Lottie import mapping design and the editabl
 
 "KCS RELEASE FINALIZATION (Milestone H, approval-gated — currently HELD). Milestone H is complete through H6, and the five approved post-hold maintenance tasks are merged with green CI through `37904fb`: dialog focus restoration, runtime SQLite repository hygiene, the exact API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5.
 
-The release decision H7 remains a HOLD. `v1.1.0-rc.1`, the GitHub draft prerelease, and the private package metadata are unchanged at `46d2a3e59e065816d972dcd56951803951b577f6`; nothing was published. A future publish, finalization, or re-tag remains a separate explicit decision."
+The older candidate and its GitHub draft prerelease, together with the private package metadata, are unchanged at `46d2a3e59e065816d972dcd56951803951b577f6`.
+The H7 GO decision was then executed: the newer `v1.1.0-rc.2` candidate was cut from the exact smoke-tested commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01`, verified by Release Smoke Gate run `37752015020`, and its GitHub release is now a PUBLISHED PRERELEASE (never a stable release). npm was not published.
+The user QA pass against that prerelease is the next input; a stable release, a further candidate, or any code-affecting commit (which would require a new exact-SHA smoke run) remains a separate explicit decision."
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
 ---
 
-## 8. Exact-SHA Release Smoke Record
-
-# Progress 154 — Exact-SHA Release Smoke Gate
-
-Date: 2026-10-08. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
-
-The manual Release Smoke Gate was dispatched against the exact candidate SHA and passed. No tag, release, package or npm action was taken; H7 remains HOLD.
-
-## Candidate identity
-
-| Field | Value |
-|---|---|
-| **TESTED CODE SHA** | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Workflow | `Release Smoke Gate` (`release-smoke.yml`) |
-| Run ID | `37752015020` |
-| Run URL | https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/37752015020 |
-| Trigger | `workflow_dispatch`, `--ref main`, input `candidate_sha=6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Dispatched at | 2026-10-08T08:45:56Z |
-| Finished at | 2026-10-08T08:46:42Z (46 s) |
-| Requested SHA | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Actually tested SHA | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Conclusion | **success** |
-
-**Candidate identity rule.** The smoke gate tests a code SHA. This run tested `6c27ef3`. The documentation commit that records this run (`docs: record exact-sha release smoke`) moves the branch tip forward without changing a single source, test, workflow, package or asset byte — the docs-only tip is **not** itself smoke-tested. A future release decision must treat `6c27ef3` as the tested code candidate, and must re-run the gate on any later SHA that changes code.
-
-## Why the workflow is verification-only
-
-`.github/workflows/release-smoke.yml`:
-
-- triggers only on `workflow_dispatch`, with one required string input `candidate_sha`;
-- declares `permissions: contents: read` — the job cannot push, tag, or publish a release;
-- checks out `ref: ${{ inputs.candidate_sha }}` with `fetch-depth: 1`, so the tested tree is pinned to the exact commit;
-- asserts `[[ "$(git rev-parse HEAD)" == "$EXPECTED_SHA" ]]` before doing any work;
-- runs `npm ci`, installs Chromium for Playwright, and runs `npm run qa:release`.
-
-No step creates or moves a tag, publishes or finalizes a GitHub release, or runs `npm publish`. `scripts/run-release-gate.mjs` reads `git rev-parse HEAD` for its own candidate banner, validates the OGraf fixture manifest, and runs two Chromium specs — it writes only inside the OS temp directory the interoperability spec creates and removes.
-
-## Dispatch path
-
-```bash
-gh workflow run release-smoke.yml \
-  --ref main \
-  -f candidate_sha=6c27ef35d48d61a5e1163d2c91734c864fcafa01
-```
-
-`--ref main` selects the workflow definition at `main`; the tested checkout comes from the `candidate_sha` input, which the workflow pins and then verifies.
-
-## Evidence from the run log
-
-| Evidence | Log line |
-|---|---|
-| Candidate input received | `EXPECTED_SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Runner checkout equals the candidate | the `Verify candidate SHA` assertion passed |
-| Candidate banner from the gate itself | `Release gate candidate SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| OGraf fixture validation | `fixtures/ograf/minimal.ograf.json: valid OGraf v1 manifest` |
-| Chromium specs | `Running 2 tests using 2 workers` → `2 passed (3.3s)` |
-| Gate result | `Release gate passed for candidate SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-
-Every job step concluded `success`: `Set up job`, `Checkout candidate`, `Verify candidate SHA`, `Setup Node.js Environment`, `Install Dependencies`, `Install Chromium for Playwright`, `Run Release Smoke Gate`, and the post/complete steps. The run has no uploaded artifacts (the workflow has no artifact step) and only the two pre-existing non-blocking runner annotations (Node 20 deprecation, the `ubuntu-latest` → Ubuntu 26 notice).
-
-## What the smoke gate proves
-
-- The exact candidate `6c27ef3` installs cleanly from its own lockfile on a fresh Ubuntu runner (`npm ci`).
-- The OGraf fixture manifest validates offline against the vendored, SHA-256-pinned schema closure.
-- A KCS OGraf package compiled and materialized on the runner interoperates with Chromium: the spec serves the package files over an isolated HTTP server and drives the generated runtime (`e2e/ograf-phase2d-interoperability.spec.ts`).
-- The real editor exports the current project as an OGraf ZIP through the UI (`e2e/ograf-editor-export.spec.ts`).
-
-## What the smoke gate does not prove
-
-- It is not the full test suite: it does not run the 135 Vitest files or the 268-test Chromium suite. Those ran locally on the same code line and are recorded in `PROJECT_STATE.md`.
-- It does not cover the text-Boolean, bonding, Motion Curves, Playfair font-portability or dependency-advisory work beyond what the two OGraf specs touch.
-- It does not exercise the REST API, the SQLite binding, or the localhost/CORS posture.
-- It does not test any SHA other than the one passed to it — including the docs-only tip created after this run.
-
-## Post-run repository facts
-
-| Check | Result |
-|---|---|
-| `main` == `origin/main` | yes |
-| Working tree | clean |
-| `npm audit --audit-level=low` | 0 vulnerabilities |
-| Tag `v1.1.0-rc.1` target | `46d2a3e59e065816d972dcd56951803951b577f6` (unchanged) |
-| GitHub draft prerelease | unchanged (`v1.1.0-rc.1`, Draft) |
-| `package.json` | `1.1.0-rc.1`, `private: true` |
-| npm registry | 404 — not published |
-
-## Verdict
-
-**EXACT-SHA RELEASE SMOKE PASSED — READY FOR H7 RELEASE DECISION.**
-
-H7 remains HOLD. Creating or moving a tag, publishing or finalizing the draft release, and npm publication all require a new explicit user instruction.
-
----
-
-## 9. H7 GO / rc.2 Release Record
+## 8. H7 GO / rc.2 Release Record
 
 # Progress 155 — H7 GO: v1.1.0-rc.2 release candidate
 
@@ -659,6 +588,98 @@ The notes state plainly that the smoke gate is not the full suite: the Vitest su
 - The rc.2 GitHub release is a **draft** prerelease, matching the `v1.1.0-rc.1` convention. Publishing it turns it into a public prerelease; it does not create a tag (the tag already exists) and does not publish to npm.
 - `scripts/check-state-consistency.mjs` still pins `v1.1.0-rc.1` to `46d2a3e` — that assertion remains correct and valuable (that candidate must never move). Adding rc.2 to the checker is a tooling change and needs separate approval.
 - Any later commit that touches source, tests, workflows, packages or assets invalidates this exact-SHA smoke result for the new SHA; re-run the gate before making a further release decision.
+
+---
+
+## 9. rc.2 Prerelease Publication Record
+
+# Progress 156 — v1.1.0-rc.2 public prerelease publish
+
+Date: 2026-10-08. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
+
+The existing `v1.1.0-rc.2` **draft** prerelease was published as a **public prerelease**. No new tag was created, no release was recreated or retargeted, `v1.1.0-rc.1` is untouched, and no npm publication occurred.
+
+## Candidate identity
+
+| Field | Value |
+|---|---|
+| **TESTED CODE SHA (candidate)** | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
+| Annotated tag | `v1.1.0-rc.2` — tag object `3d17e584704fcf534f9e885167ad300e904a332f` (unchanged) |
+| Tag dereferences to | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` — exact match |
+| Release Smoke Gate | run `37752015020` — success, `headSha` = the candidate |
+| **CURRENT DOCS TIP** | `f0a34c2eceaaa0f973ed1e0600fe474b2ab6b9a8` before this record; the record commit moves it forward and is **not** smoke-tested |
+
+No source, test, workflow, package, lock or asset byte differs between the candidate and the documentation tip: the only commits after `6c27ef3` are docs-only (`c650da1`, `f0a34c2`), verified with `git diff --name-only 6c27ef3..HEAD` filtered to non-documentation paths (empty).
+
+## Publication
+
+| Field | Value |
+|---|---|
+| Action | `gh release edit v1.1.0-rc.2 --draft=false --prerelease` |
+| Release ID | `RE_kwDOTexJrc4YPnCt` — the **same** release object as the draft (not recreated) |
+| Title | `KCS v1.1.0-rc.2` |
+| Tag | `v1.1.0-rc.2` |
+| `isDraft` | **false** |
+| `isPrerelease` | **true** |
+| `targetCommitish` | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (unchanged) |
+| `createdAt` | 2026-10-08T11:19:15Z |
+| `publishedAt` | 2026-10-08T13:11:16Z |
+| Public URL | https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2 (HTTP 200) |
+
+The release is listed as **Pre-release**, not latest-stable. It is not a stable release and no `v1.1.0` release exists.
+
+## Pre-publish state (verified before the mutation)
+
+- `main` == `origin/main` == `f0a34c2eceaaa0f973ed1e0600fe474b2ab6b9a8`; working tree clean; no in-progress Git operation.
+- The candidate commit existed locally and was an ancestor of `origin/main`.
+- `v1.1.0-rc.2` existed locally and remotely, annotated, dereferencing exactly to the tested SHA.
+- `v1.1.0-rc.1` dereferenced exactly to `46d2a3e59e065816d972dcd56951803951b577f6`.
+- The release was `isDraft: true`, `isPrerelease: true`, `targetCommitish` = the tested SHA, `publishedAt: null`.
+- npm returned 404 and `package.json` read private `1.1.0-rc.1`.
+- Smoke run `37752015020` was `success` with `headSha` = the tested SHA.
+- The release notes already carried every required fact (candidate identity, tested SHA, smoke run, delta summary, the "not the full suite" boundary, npm unpublished, prerelease status), so **no notes edit was made**.
+
+## Post-publish verification
+
+| Check | Result |
+|---|---|
+| rc.2 tag local + remote, annotated, dereference | PASS — exactly the tested SHA; tag object unchanged |
+| rc.2 tag object recreated or moved | NO |
+| rc.2 releases with that tag | exactly 1 |
+| rc.2 draft / prerelease / `publishedAt` | `false` / `true` / 2026-10-08T13:11:16Z |
+| rc.2 public URL | HTTP 200 |
+| rc.2 marked latest stable | NO (it is a prerelease) |
+| rc.1 tag | `46d2a3e59e065816d972dcd56951803951b577f6` — unchanged |
+| rc.1 release | id `RE_kwDOTexJrc4XM00N`, still draft, `publishedAt: null` — unchanged |
+| npm | 404 — not published |
+| `package.json` | `1.1.0-rc.1`, `private: true` — unchanged |
+| Source/test/workflow/package/asset changes from this task | none |
+| Working tree before this record | clean |
+
+## User QA checklist — v1.1.0-rc.2
+
+Run the editor locally (`npm install` then `npm run dev`, editor `http://localhost:5173/`, API `http://127.0.0.1:5000`) and walk this short pass. Classify every finding as **BLOCKER**, **MAJOR**, **MINOR** or **COSMETIC**.
+
+1. **App opens** — the editor loads, no page error in the console, the canvas and timeline render.
+2. **Project basics** — create or open a project; the Layers panel, timeline and Inspector all respond.
+3. **Basic shape** — add a shape, drag it on the canvas, resize and rotate it; the Inspector numbers follow the drag.
+4. **Text** — add a text layer, edit its value and font size, and confirm the stage repaints the glyphs (not a placeholder box).
+5. **Opacity keyframes** — set opacity keyframes at two frames and scrub/play; the layer fades between them.
+6. **Bonded pair** — select two layers, Bind them, drag one on the canvas, and confirm the partner follows by the same world delta (in particular when the dragged layer sits inside a parent container).
+7. **Motion Curves** — select a keyframed layer, open Motion Curves on a real incoming segment, apply one visible easing edit, and confirm only that layer's segment changes.
+8. **Mask / matte** — apply one layer mask or a track matte and confirm the target is masked as expected.
+9. **OGraf export** — Export → OGraf Package; the ZIP downloads and contains the scene, manifest and runtime.
+10. **OGraf re-import** — import that ZIP back and confirm the project is replaced by the package's editable scene.
+11. **Playfair / Cinematic Title** — create the Cinematic Title preset (Playfair Display), export an OGraf package, and confirm the ZIP carries the font plus its OFL license and that the text stays editable.
+12. **Stability** — during the whole pass, no obvious crash, freeze or unhandled console error.
+
+**QA rule.** Any **BLOCKER** or **MAJOR** code defect means **do not proceed to a stable release**. Any code change produces a new commit SHA, which invalidates the current exact-SHA smoke result: a new Release Smoke Gate run is required before any further RC or stable decision.
+
+This checklist has **not** been executed by this task — it is the next user action.
+
+## Next step
+
+The user runs the QA pass above against the published prerelease. A stable `v1.1.0` release stays a separate, explicit decision that also requires a fresh smoke run on whatever commit it targets.
 
 ---
 
@@ -761,6 +782,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The Release Smoke Gate passed on that exact commit: run 37752015020, every step success. The gate is verification-only and is not the full Vitest or Chromium suite.
 - The package is private and was not published. Its metadata still reads the private version `1.1.0-rc.1`, because the candidate is the exact smoke-tested commit and no untested metadata commit was introduced.
 - `npm audit --audit-level=low` reports 0 vulnerabilities; the shipped changes are listed above under `[Unreleased]`.
+- This candidate was then PUBLISHED AS A PUBLIC PRERELEASE on 2026-10-08 (release id `RE_kwDOTexJrc4YPnCt`, `prerelease: true`, never a stable release), ready for user QA. No tag was created or moved and npm was not published.
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.

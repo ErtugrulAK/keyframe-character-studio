@@ -84,6 +84,7 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `reports/progress_153_dependency_advisory_maintenance.md` — the five npm advisories: the fresh matrix, the reachability proofs, the bounded change set, the validation, and the condition for removing the scoped override.
 - `reports/progress_154_exact_sha_release_smoke.md` — the exact-SHA Release Smoke Gate run: dispatch path, run ID, log evidence, coverage boundaries, and the tested-code-SHA vs docs-tip distinction.
 - `reports/progress_155_h7_rc2_release.md` — the H7 GO execution: the rc.2 candidate, its draft prerelease, the metadata decision and the verification results.
+- `reports/progress_156_rc2_prerelease_publish.md` — the rc.2 public-prerelease publication: pre-publish verification, the publish action, post-publish checks, and the user QA checklist.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

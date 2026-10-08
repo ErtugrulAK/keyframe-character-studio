@@ -1,14 +1,14 @@
-# KCS ChatGPT Upload Manifest — Post-Astra Focused Remediation
+# KCS ChatGPT Upload Manifest — Dependency Advisory Maintenance
 
-Scope: the 16 Astra findings in the previously uncommitted authoring work, plus the committed Playfair Display correction and the visual-only editor refresh
-Baseline: main at ed75ea4304a85be7c931893e0316bdfe92255a3d before the six remediation commits
-Current changes: committed on main as a3f5b09, 78450f5, 0a20dd6, aa392a9, fb8ed96 and the documentation reconciliation
-Validation authority: the Post-Astra focused remediation publication section in PROJECT_STATE.md and NEXT_SESSION.md
+Scope: the five npm advisories on the clean post-Astra main line, resolved without a direct dependency, script, engine, workflow or source change
+Baseline: main at c1e618efdb5fa6ff2268cd2851fbed770280ec19 before the maintenance commit
+Current changes: committed on main as 7f1e679 (chore: remediate dependency advisories)
+Validation authority: the Dependency advisory maintenance sections in PROJECT_STATE.md and NEXT_SESSION.md
 Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
-Historical record retained: progress_151_astra_remediation.md (not current validation)
+Historical records retained: progress_151_astra_remediation.md and progress_152_post_astra_focused_remediation.md (not current validation)
 Release state: H7 HOLD; release tags, draft prerelease, private package and npm publication unchanged
 
-Bundle source files (9):
+Bundle source files (10):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - NEXT_SESSION.md
@@ -18,6 +18,7 @@ Bundle source files (9):
 - manifest.txt
 - progress_151_astra_remediation.md
 - progress_152_post_astra_focused_remediation.md
+- progress_153_dependency_advisory_maintenance.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.

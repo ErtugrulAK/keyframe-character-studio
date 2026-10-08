@@ -81,6 +81,7 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `reports/progress_150_final_maintenance_reconciliation.md` — the five-task post-hold maintenance close-out, validation evidence, live-document reconciliation, and handoff rebuild.
 - `reports/progress_151_astra_remediation.md` — the Astra findings F-01…F-10: one branch, one focused regression and one green CI run per fix, plus the remaining limitations.
 - `reports/progress_152_post_astra_focused_remediation.md` — the post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01: per-finding reproduction, root cause, fix, test and result, the six-commit publication, the full gate, and the remaining limitations.
+- `reports/progress_153_dependency_advisory_maintenance.md` — the five npm advisories: the fresh matrix, the reachability proofs, the bounded change set, the validation, and the condition for removing the scoped override.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

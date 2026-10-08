@@ -10,25 +10,23 @@ Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`. External Q
 
 ## 1. OMP Final Response
 
-# KCS Post-Astra Focused Remediation — 2026-10-07
+# KCS Dependency Advisory Maintenance — 2026-10-08
 
 ## Latest approved correction
 
-The Astra review of the uncommitted authoring work found 16 concrete defects (3 HIGH, 12 MEDIUM, 1 LOW; no BLOCKER). All 16 are fixed, published as six commits on `main`, and covered by focused regressions: text Boolean geometry `a3f5b09`, bonded layer movement `78450f5`, timeline curve targeting `0a20dd6`, Playfair OGraf portability `aa392a9`, the pre-existing visual-only editor refresh `fb8ed96`, and the documentation reconciliation.
+`npm audit --audit-level=low` reported five advisories on the clean post-Astra `main` line (3 critical, 1 high, 1 moderate). All five are resolved by one bounded commit, `7f1e679 chore: remediate dependency advisories`, and the audit now reports **0 vulnerabilities**.
 
-The HIGH defects: a quoted or fallback-list font family traced no Boolean geometry; a parented bonded layer dragged by a local-space delta instead of the world delta (buddy 300 → 210 instead of 310); and the Motion Curves modal wrote a curve into a different layer when the selected layer carried legacy keyframes rather than canonical channel data.
-
-The Playfair Display correction and the visual-only editor refresh from the previous working tree are now committed unchanged in substance, together with the three owned Playfair files (normal TTF, italic TTF, OFL.txt).
+Three are lock refreshes inside the ranges their parents already declare, so no direct dependency moved: `proxy-addr` 2.0.7 → 2.0.8 (critical, through Express), `source-map-js` 1.2.1 → 1.2.2 (high, through postcss/magicast/css-tree), and `fast-uri` 3.1.7 → 3.1.8 (moderate, through ajv). The fourth, `shell-quote` 1.9.0 → 1.12.0 (critical, through concurrently), needed a scoped `overrides` entry: concurrently pins the exact vulnerable version and has no newer release, so no range-based or parent-bump fix exists, and the alternative npm proposes is a semver-major downgrade of concurrently.
 
 ## Evidence
 
-Real Chromium proof covers the font family matrix (bare, quoted, fallback-list, JetBrains Mono), the SVG whitespace parity of the trace, the font load → settled retrace, an untraceable operand refusing the Boolean, a parented bonded drag calibrated against a parentless group, and the legacy single-file export refusing an asset-dependent graphic while an asset-free graphic still exports. Unit coverage adds the closed freeform ring closure, mask curve dispatch, zero-duration segment refusal, multi-selection and moving-ancestor bond dispatch, the untouched-axis guarantee, the pinned font integrity, and the exact wrong-layer repro rendered through the real SequencerTimeline.
+Reachability was proven from code rather than assumed. Express evaluates the proxy chain only in `req.ip`/`req.ips`, and KCS never sets `trust proxy` (Express defaults it to `false`) nor reads either accessor, so the `proxy-addr` parsing path was already unreachable — and is fixed anyway. concurrently's only `quote()` consumer is `ExpandArguments`, which requires additional CLI arguments the `dev` script never passes; `shell-quote` 1.11.0+ exports the same `quote`/`parse` API with no dependencies and the same engine range, so the override cannot change this repository's behaviour.
 
-Final local gate: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), the full Chromium suite (268 tests with `--retries=0`), and `node scripts/check-state-consistency.mjs` (35 checks) all pass. Retries, assertions and thresholds are unchanged.
+The full gate is green: `npm ls --all` with no extraneous or missing packages, `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npm run check`, the full Chromium suite (268 tests with `--retries=0`), the state consistency check, and `git diff --check`. Runtime checks confirm the security posture is unchanged: the API still binds `127.0.0.1` by default, the exact CORS allowlist is unchanged, `/api/health` answers on loopback, and the `sqlite3` native binding round-trips.
 
 ## Scope boundaries
 
-No dependency, workflow, package, version, tag, release or npm change is part of this publication. Only Playfair Display is covered by the owned-font path; general font upload, other built-in font portability, and package asset relinking are not added. The audit now reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js` and the previously recorded moderate `fast-uri` advisory; remediation needs a separately approved dependency change and no `npm audit fix` was run.
+No direct dependency, script, engine, workflow or application source change. No new install script; the `allowScripts` rule still pins `sqlite3@6.0.1`. No `npm audit fix` was run. The `overrides` entry is a temporary bridge and should be removed once concurrently declares `shell-quote >= 1.11.0`.
 
 ## Release state
 
@@ -40,25 +38,25 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Post-Astra Focused Remediation
+# KCS Minimal ChatGPT Upload Bundle — Dependency Advisory Maintenance
 
-Task-specific handoff for the 2026-10-07 remediation of the 16 Astra findings in the previously uncommitted authoring work. This is not an archive.
+Task-specific handoff for the 2026-10-08 dependency-advisory maintenance on the clean post-Astra `main` line. This is not an archive.
 
 ## Current truth
 
-All 16 findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) are fixed and published as six commits on `main`: `a3f5b09`, `78450f5`, `0a20dd6`, `aa392a9`, `fb8ed96`, and the documentation reconciliation. The Playfair Display correction and the visual-only editor refresh from the previous working tree are committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked.
+Five advisories (3 critical, 1 high, 1 moderate) were removed by one bounded commit, `7f1e679 chore: remediate dependency advisories`. `proxy-addr` 2.0.7 → 2.0.8, `source-map-js` 1.2.1 → 1.2.2 and `fast-uri` 3.1.7 → 3.1.8 are lock refreshes inside the ranges their parents already declare; `shell-quote` 1.9.0 → 1.12.0 uses a scoped `overrides` entry under `concurrently`, which pins the exact vulnerable version and has no newer release. `npm audit --audit-level=low` now reports 0 vulnerabilities.
 
-The full local gate passes: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), the full Chromium suite (268 tests with `--retries=0`), and the state consistency check (35 checks). Retries, assertions and thresholds are unchanged.
+No direct dependency, script, engine, workflow or application source change is part of this work, and no `npm audit fix` was run. The full gate passes: `npm ls --all`, `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npm run check`, the full Chromium suite (268 tests with `--retries=0`), the state consistency check, the API health endpoint on the loopback bind, and the `sqlite3` binding.
 
-No dependency, workflow, package, version, tag, release or npm change is part of this publication. The dependency audit still reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js` and the moderate `fast-uri` advisory; remediation requires separate approval. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
+The `overrides` entry is a temporary bridge; remove it once `concurrently` declares `shell-quote >= 1.11.0`. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
 
 ## Evidence and files
 
-- OMP_FINAL_RESPONSE.md: scope, evidence, gate and release boundary.
+- OMP_FINAL_RESPONSE.md: the change set, the reachability proofs, the gate and the release boundary.
 - PROJECT_STATE.md and NEXT_SESSION.md: current local validation and continuation constraints.
 - CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
-- progress_152_post_astra_focused_remediation.md: the current per-finding record.
-- progress_151_astra_remediation.md: retained historical record, not current validation.
+- progress_153_dependency_advisory_maintenance.md: the current per-advisory record.
+- progress_152_post_astra_focused_remediation.md and progress_151_astra_remediation.md: retained historical records, not current validation.
 - manifest.txt: inventory and protected boundaries.
 
 The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. Historical reports are not rewritten or deleted; external workspaces and OMP configuration are untouched.
@@ -69,17 +67,17 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder 
 
 ## 3. Bundle Manifest
 
-# KCS ChatGPT Upload Manifest — Post-Astra Focused Remediation
+# KCS ChatGPT Upload Manifest — Dependency Advisory Maintenance
 
-Scope: the 16 Astra findings in the previously uncommitted authoring work, plus the committed Playfair Display correction and the visual-only editor refresh
-Baseline: main at ed75ea4304a85be7c931893e0316bdfe92255a3d before the six remediation commits
-Current changes: committed on main as a3f5b09, 78450f5, 0a20dd6, aa392a9, fb8ed96 and the documentation reconciliation
-Validation authority: the Post-Astra focused remediation publication section in PROJECT_STATE.md and NEXT_SESSION.md
+Scope: the five npm advisories on the clean post-Astra main line, resolved without a direct dependency, script, engine, workflow or source change
+Baseline: main at c1e618efdb5fa6ff2268cd2851fbed770280ec19 before the maintenance commit
+Current changes: committed on main as 7f1e679 (chore: remediate dependency advisories)
+Validation authority: the Dependency advisory maintenance sections in PROJECT_STATE.md and NEXT_SESSION.md
 Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
-Historical record retained: progress_151_astra_remediation.md (not current validation)
+Historical records retained: progress_151_astra_remediation.md and progress_152_post_astra_focused_remediation.md (not current validation)
 Release state: H7 HOLD; release tags, draft prerelease, private package and npm publication unchanged
 
-Bundle source files (9):
+Bundle source files (10):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - NEXT_SESSION.md
@@ -89,6 +87,7 @@ Bundle source files (9):
 - manifest.txt
 - progress_151_astra_remediation.md
 - progress_152_post_astra_focused_remediation.md
+- progress_153_dependency_advisory_maintenance.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
@@ -119,8 +118,15 @@ Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files abov
 - The Astra post-compaction review of the uncommitted authoring work found 16 defects (3 HIGH, 12 MEDIUM, 1 LOW; no BLOCKER). All 16 are closed and published as six commits on `main`: text Boolean geometry `a3f5b09`, bonded layer movement `78450f5`, timeline curve targeting `0a20dd6`, Playfair OGraf portability `aa392a9`, the pre-existing visual-only editor refresh `fb8ed96`, and this documentation reconciliation.
 - The Playfair Display correction and the UI refresh are now committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked. No dependency, workflow, package, tag, release, or npm change is part of this publication.
 - Focused regressions were added for every finding, and the real-browser proofs cover the family matrix, the whitespace parity, the font load -> settled retrace, the untraceable-operand refusal, the parented bonded drag, and the legacy single-file refusal. Retries, assertions and thresholds are unchanged.
-- Remaining dependency warnings: `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js`, and the moderate `fast-uri` advisory. Remediation needs a separately approved dependency change; no `npm audit fix` was run.
+- The dependency advisories recorded here were resolved on 2026-10-08 in a bounded maintenance run: `proxy-addr`, `source-map-js` and `fast-uri` by lock refreshes inside their parents' declared ranges, and `shell-quote` by a scoped `overrides` entry under `concurrently`. `npm audit --audit-level=low` now reports 0 vulnerabilities; see `reports/progress_153_dependency_advisory_maintenance.md`.
 - H7 remains HOLD. Publishing, finalizing, or re-tagging the release requires a new explicit user instruction; release artefacts stay at `46d2a3e`.
+
+## Dependency advisory maintenance — committed, 2026-10-08
+
+- A fresh audit reported five advisories (3 critical, 1 high, 1 moderate). All are resolved by `chore: remediate dependency advisories` (`7f1e679`): three lock refreshes inside the parents' declared ranges and one scoped `overrides` entry under `concurrently` for `shell-quote`.
+- No direct dependency, script, engine, workflow or application source change. Reachability was proven from code for `proxy-addr` (Express defaults `trust proxy` to `false`; KCS never sets it or reads `req.ip`/`req.ips`) and for `shell-quote` (concurrently's only `quote()` consumer requires additional CLI arguments the `dev` script never passes).
+- `npm audit --audit-level=low` reports 0 vulnerabilities. The full gate is green: 135 Vitest files / 2,055 tests, 268 Chromium tests with `--retries=0`, `npm run check`, OGraf validation, both QA gates, the state consistency check, the API health endpoint on the loopback bind, and the `sqlite3` binding.
+- The `overrides` entry is a temporary bridge; remove it once `concurrently` declares `shell-quote >= 1.11.0`. H7 remains HOLD.
 
 ## Authoring publication — 2026-10-05
 
@@ -145,7 +151,7 @@ The release stance is unchanged: annotated tag `v1.1.0-rc.1` and a GitHub draft 
 
 ## Validation
 
-Post-Astra remediation local gate on October 7, 2026: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run qa:v6` (3 Chromium tests), and the full Chromium suite (268 tests with `--retries=0`) all passed. State consistency passed 35 checks; `npm audit --audit-level=low` reports the dependency warnings recorded in PROJECT_STATE.md. One incidental sidebar visual-dimension test was deleted; actual collapse/reopen geometry, hidden controls, and compact-viewport reachability remain covered. The dependency audit now reports one moderate `fast-uri` advisory (GHSA-hrr3-gc8f-f4qj); dependency/package changes are outside this approved scope. Remote CI is checked after the normal push; earlier remediation CI is historical evidence, not proof for this publication.
+Post-Astra remediation local gate on October 7, 2026: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (135 files / 2,055 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium tests), `npm run qa:v6` (3 Chromium tests), and the full Chromium suite (268 tests with `--retries=0`) all passed. State consistency passed 35 checks; `npm audit --audit-level=low` reported the dependency warnings recorded in PROJECT_STATE.md. One incidental sidebar visual-dimension test was deleted; actual collapse/reopen geometry, hidden controls, and compact-viewport reachability remain covered. The dependency audit at that time reported one moderate `fast-uri` advisory (GHSA-hrr3-gc8f-f4qj), resolved later with the other advisories. Remote CI is checked after the normal push; earlier remediation CI is historical evidence, not proof for this publication.
 
 ## Next scoped work
 
@@ -215,7 +221,7 @@ The Astra post-compaction review found 16 concrete defects in the authoring work
 - The Playfair Display correction and the visual-only editor refresh from the previous working tree are now committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked.
 - Real Chromium proof: family matrix and whitespace parity for the text trace, the font load -> settled retrace, an untraceable operand refusing the Boolean, a parented bonded drag against a calibration group, and the legacy single-file export refusing an asset-dependent graphic while an asset-free graphic still exports.
 - This publication adds no dependency, workflow, package, tag, release, or npm change. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
-- Remaining dependency warnings: the audit reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js`, and the previously recorded moderate `fast-uri` advisory. Remediation needs a separately approved dependency change; no `npm audit fix` was run. The API server does not enable `trust proxy`, so the `proxy-addr` path is not reachable from the current configuration.
+- The dependency advisories recorded here were then resolved in a separate bounded maintenance run: `proxy-addr`, `source-map-js` and `fast-uri` by lock refreshes inside their parents' declared ranges, and `shell-quote` by a scoped `overrides` entry under `concurrently` (which pins the exact vulnerable version and has no newer release). `npm audit --audit-level=low` now reports 0 vulnerabilities; see `reports/progress_153_dependency_advisory_maintenance.md`.
 
 ## Authoring publication — 2026-10-05
 
@@ -224,11 +230,19 @@ The Astra post-compaction review found 16 concrete defects in the authoring work
 - Browser proof: a keyframed circle in the second sequence moves 100 screen pixels right and 40 down; the first sequence's x value remains -100. A bonded circle/text pair moves by the same -60/+20 screen-pixel delta.
 - Six meaningful publication groups use owner-approved retrospective author dates: 2026-08-29, 2026-09-05, 2026-09-12, 2026-09-19, 2026-09-26, and 2026-10-05. Committer dates record actual creation; these dates do not claim uploads or development occurred on those earlier days. No empty commits, old-branch replay, shared-history rewrite, or force push is part of this publication.
 - The old tangent and presentation review branches remain historical artefacts. The pre-architecture mask-gizmo patch is not replayed. Release tags, the held draft release, package publication, external QA folders, and OMP configuration remain unchanged.
-- Remaining dependency warning: the current audit reports one moderate `fast-uri` vulnerability (GHSA-hrr3-gc8f-f4qj). Remediation requires a separately approved dependency change; this publication does not run `npm audit fix`.
+- Dependency warning at that time: one moderate `fast-uri` advisory (GHSA-hrr3-gc8f-f4qj), subsequently resolved with the other advisories in `reports/progress_153_dependency_advisory_maintenance.md`. No `npm audit fix` was run in this publication.
 
 ## Accepted baseline
 
 Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
+
+## Dependency advisory maintenance — 2026-10-08
+
+- A fresh `npm audit --audit-level=low` reported five advisories (3 critical, 1 high, 1 moderate). All are resolved without a direct dependency, script, engine, workflow or source change: `proxy-addr` 2.0.7 -> 2.0.8, `source-map-js` 1.2.1 -> 1.2.2 and `fast-uri` 3.1.7 -> 3.1.8 are lock refreshes inside their parents' declared ranges, and `shell-quote` 1.9.0 -> 1.12.0 uses a scoped `overrides` entry under `concurrently` (exact pin, no newer release).
+- Reachability was proven from code, not assumed: Express only evaluates the proxy chain through `req.ip`/`req.ips` and KCS never sets `trust proxy`, and concurrently's only `quote()` consumer requires additional CLI arguments the `dev` script never passes.
+- The runtime checks after the install confirm the security posture is unchanged: the API still binds `127.0.0.1` by default, the exact CORS allowlist is unchanged, `/api/health` answers on loopback, and the `sqlite3` native binding round-trips.
+- The full gate is green: 135 Vitest files / 2,055 tests, 268 Chromium tests with `--retries=0`, `npm run check`, OGraf validation, both QA gates, the state consistency check, and `git diff --check`.
+- The `overrides` entry is a temporary bridge and should be removed once `concurrently` declares `shell-quote >= 1.11.0`. H7 remains HOLD; no tag, release or npm action.
 
 ## Validation status — post-Astra focused remediation, 2026-10-07
 
@@ -242,7 +256,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 | TypeScript | PASS | TypeScript 7.0.2; `npx tsc -b --pretty false` and the build/check paths pass |
 | Lint | PASS | Oxlint 1.85.0 clean, including unused-disable reporting at error severity |
 | Production build | PASS | Vite 8.3.0 production bundle |
-| Dependency audit | WARNING | `npm audit --audit-level=low`: `concurrently`/`shell-quote` (critical, dev), `proxy-addr` (critical, transitive through Express), `source-map-js` (high, transitive), and the previously recorded moderate `fast-uri`; dependency changes are outside this approved scope and no `npm audit fix` was run |
+| Dependency audit | PASS | `npm audit --audit-level=low`: 0 vulnerabilities after the bounded remediation in `reports/progress_153_dependency_advisory_maintenance.md` |
 | Publication CI | SEPARATE REMOTE GATE | Checked after normal push; inspect the publication tip's GitHub Actions run rather than treating earlier Astra/maintenance CI as current evidence |
 
 ## Post-review correctness follow-up (complete)
@@ -887,7 +901,117 @@ The six already-published authoring commits were not rewritten.
 
 ---
 
-## 9. Changelog
+## 9. Dependency Advisory Maintenance
+
+# Progress 153 — Dependency advisory maintenance
+
+Date: 2026-10-08. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
+
+`npm audit --audit-level=low` reported five advisories on the clean post-Astra `main` line (3 critical, 1 high, 1 moderate). Four are removed by a bounded change set: three lock refreshes inside the parents' declared semver ranges, plus one scoped override where no range-based fix exists. `npm audit` now reports **0 vulnerabilities**. No direct dependency, script, engine, workflow or application source change is part of this work.
+
+## Baseline
+
+| Field | Value |
+|---|---|
+| Branch | `main` |
+| HEAD / `main` / `origin/main` | `c1e618efdb5fa6ff2268cd2851fbed770280ec19` |
+| Working tree | clean; no in-progress Git operation |
+| npm / node | 12.0.2 / v24.18.0 |
+| Previous main CI | run `37642461107` — success |
+
+## Fresh advisory matrix
+
+Every row was re-derived from the current `npm audit --json` output, `npm ls <pkg> --all` and the published manifests — the earlier names and severities were re-checked, not trusted.
+
+| Advisory | Severity | Installed | Path | Direct? | Prod / dev | Reachable in KCS? | Fix |
+|---|---|---|---|---|---|---|---|
+| GHSA-pqg4-j6r4-53mv (`shell-quote`) | critical | 1.9.0 | `concurrently@10.0.5` → `shell-quote` | no (parent is dev-only) | dev/build | **NOT REACHABLE UNDER CURRENT CONFIG** (proof below) | `>=1.11.0` |
+| GHSA-jqcg-44mw-7w3h (`proxy-addr`) | critical | 2.0.7 | `express@5.2.1` → `proxy-addr` | no | production | **NOT REACHABLE UNDER CURRENT CONFIG** (proof below) | `>=2.0.8` |
+| GHSA-68fv-2mgg-jv7q (`source-map-js`) | high | 1.2.1 | `vite@8.3.0` → `postcss` → `source-map-js`; `@vitest/coverage-v8` → `magicast`; `jsdom` → `css-tree` | no | dev/build/test | dev-only consumers; the advisory needs an attacker-controlled source map | `>=1.2.2` |
+| GHSA-hrr3-gc8f-f4qj (`fast-uri`) | moderate | 3.1.7 | `ajv@8.20.0` → `fast-uri` | no | dev/build | `ajv` is used only by `scripts/validate-ograf-manifest.mjs` against vendored fixtures | `>=3.1.8` |
+
+### Reachability proofs
+
+- **`proxy-addr` (critical).** Express evaluates the proxy chain only in `req.ip` and `req.ips`, which call `proxyaddr(this, trust)` (`node_modules/express/lib/request.js:329,346`). `trust` comes from the `trust proxy` setting, which Express initialises to `false` (`lib/application.js:99`) and only compiles through `app.set('trust proxy', val)` (`lib/application.js:370-371` → `lib/utils.js:213`). A repository-wide search of `server/`, `scripts/` and `src/` finds **no** `trust proxy`, `app.set`, `X-Forwarded`, `req.ip` or `req.ips` usage. With `trust proxy` at its default, `compileTrust(false || [])` builds a trust function that trusts nothing; no address parsing of a forwarded chain happens. Verified live: the API binds `127.0.0.1` only and `/api/health` answers on the loopback interface.
+- **`shell-quote` (critical).** The advisory names `quote()`: "command injection via a line terminator in a token after a `{ comment }` token". concurrently's only `quote` import is `dist/lib/command-parser/expand-arguments.js`, whose `ExpandArguments.parse` calls `quote(...)` **only** when `this.additionalArguments.length > 0`, and `ExpandArguments` is pushed onto the parser chain only when the CLI supplies additional arguments (`dist/lib/concurrently.js:34`). The `dev` script is `concurrently "node server/index.js" "vite --host"` — no placeholders (`{1}`, `{@}`, `{*}`) and no trailing arguments — so `quote()` is never called by this repository's tooling. The script's command strings are developer-authored constants, not user input.
+- **`source-map-js` (high).** Consumers are `postcss` (through Vite), `magicast` (through the coverage provider) and `css-tree` (through jsdom). All three run in build/test only; the advisory is an event-loop denial of service through indexed source-map section offsets, which requires a hostile source map — none is consumed from an untrusted source.
+- **`fast-uri` (moderate).** `ajv`'s only consumer in the repository is the offline OGraf schema validator, which resolves `$id`/`$ref` against vendored, SHA-256-pinned schema documents.
+
+## Chosen remediation
+
+| PACKAGE | FROM | TO | WHY | DIRECT/TRANSITIVE | SEMVER RISK |
+|---|---|---|---|---|---|
+| proxy-addr | 2.0.7 | 2.0.8 | GHSA-jqcg-44mw-7w3h (critical) | transitive — express declares `^2.0.7` | none: lock refresh inside the declared range |
+| source-map-js | 1.2.1 | 1.2.2 | GHSA-68fv-2mgg-jv7q (high) | transitive — postcss / magicast / css-tree declare `^1.2.1` | none: lock refresh inside the declared range |
+| fast-uri | 3.1.7 | 3.1.8 | GHSA-hrr3-gc8f-f4qj (moderate) | transitive — ajv declares `^3.0.1` | none: lock refresh inside the declared range |
+| shell-quote | 1.9.0 | 1.12.0 | GHSA-pqg4-j6r4-53mv (critical) | transitive — concurrently pins the exact version `1.9.0` | none in code: same `quote`/`parse` exports, no dependencies, same engine range |
+
+### Why the shell-quote fix needs a scoped override
+
+`concurrently@10.0.5` declares `"shell-quote": "1.9.0"` — an **exact** pin, not a range — and 10.0.5 is the newest published release (checked against the registry: the latest version is 10.0.5). So:
+
+- option A (direct compatible bump) — not applicable, the package is transitive;
+- option B (transitive resolution via parent bump) — no newer parent exists;
+- option C (lock refresh inside the declared range) — impossible against an exact pin;
+- option D (override) — the only bounded fix;
+- the npm-proposed "fix" is `concurrently@9.2.1`, a **semver-major downgrade** (10 → 9) with real script-behaviour risk, which is not a preferable alternative.
+
+The override is scoped to `concurrently` alone and is provably behaviour-neutral for this repository: the only `quote()` consumer requires additional CLI arguments that KCS never passes, and `shell-quote` 1.11.0/1.12.0 exports the same `quote`/`parse` pair with no dependencies and the same `engines` (`>= 0.4`). It should be removed once concurrently publishes a release that declares `shell-quote >= 1.11.0`.
+
+## Exact changes
+
+`package.json` — one added block, nothing else:
+
+```json
+"overrides": {
+  "concurrently": {
+    "shell-quote": "^1.11.0"
+  }
+}
+```
+
+`package-lock.json` — four version entries and their integrity/resolved hashes (plus the `funding` field npm now records for `proxy-addr@2.0.8`). No package was added or removed; the root `dependencies` (10) and `devDependencies` (21) counts are unchanged; `engines`, `scripts` and `allowScripts` are unchanged.
+
+## Validation
+
+| Command | Result |
+|---|---|
+| `npm audit --audit-level=low` | **0 vulnerabilities** |
+| `npm ls --all` | PASS — no extraneous or missing packages |
+| `npx tsc -b --pretty false` | PASS |
+| `npm run lint` | PASS |
+| `npm test` | PASS — 135 files / 2,055 tests |
+| `npm run build` | PASS |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS — 2 Chromium tests |
+| `npm run qa:v6` | PASS — 3 Chromium tests |
+| `npm run check` | PASS |
+| `npx playwright test --project=chromium --retries=0` | PASS — 268 tests |
+| `node scripts/check-state-consistency.mjs` | PASS |
+| `git diff --check` | PASS |
+
+Runtime checks after the install:
+
+- `server/bindHost.js`: default bind resolves to `127.0.0.1` (loopback), `KCS_API_HOST` still the only opt-in.
+- `server/corsPolicy.js`: `http://localhost:5173` allowed, an unknown origin refused, no-`Origin` requests allowed — the exact allowlist is unchanged.
+- API started on `127.0.0.1:5000` (netstat confirms the loopback address only); `GET /api/health` returned `{"status":"online","service":"Keyframe Studio API","database":"SQLite (Embedded Local DB)"}`.
+- `sqlite3` native binding: version 3.52.0, in-memory create/insert/select round-trip returned `{"x":42}`.
+- No `trust proxy` state changed (it was never set).
+
+## Commit
+
+`7f1e679` — `chore: remediate dependency advisories`. Pushed normally to `origin/main` (`c1e618e..7f1e679`); no force push.
+
+## Remaining items
+
+None for advisories. Two notes for the future:
+
+1. The `overrides` entry is a temporary bridge; delete it when concurrently declares `shell-quote >= 1.11.0`.
+2. `fsevents` (macOS-only, optional) and `sqlite3` are the only packages in the tree with install scripts; the `allowScripts` rule still pins `sqlite3@6.0.1` exactly, and no new install script was introduced.
+
+---
+
+## 10. Changelog
 
 # Changelog
 
@@ -979,6 +1103,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The legacy single-file OGraf export now fails closed when the graphic depends on packaged assets: it writes one `.mjs` file, so a font or license it cannot carry would have been silently dropped. The export explains that and points at the ZIP package; an asset-free graphic still exports.
 - The project-owned Playfair Display font is now verified against its pinned SHA-256 instead of its 4-byte sfnt signature alone, so a truncated or mutated file is refused instead of shipping as ready and failing in the decoder. A caller-supplied catalog font is never checked against that hash.
 - The live documents no longer list the root `npx tsc --noEmit` as project type-check evidence; the root `tsconfig.json` only references the app and node projects, so that command checks no project file. The effective gate is `npx tsc -b --pretty false`, and the contributing guide, the pull-request checklist and the CI status document now name it.
+- The dependency audit is clean again. `proxy-addr` 2.0.7 -> 2.0.8, `source-map-js` 1.2.1 -> 1.2.2 and `fast-uri` 3.1.7 -> 3.1.8 are lock refreshes inside the ranges their parents already declare, so no direct dependency moved. `shell-quote` needed a scoped `overrides` entry under `concurrently`: concurrently pins the exact vulnerable version `1.9.0` and has no newer release, so no range-based or parent-bump fix exists, and the alternative npm proposes is a semver-major downgrade of concurrently. The override cannot change this repository's behaviour — concurrently's only `quote()` consumer requires additional CLI arguments the `dev` script never passes, and 1.11.0+ exports the same `quote`/`parse` API with no dependencies. The Express `proxy-addr` advisory was already unreachable (KCS never sets `trust proxy`, and Express defaults it to `false`), and is fixed anyway. No script, engine, workflow or application source change; the API still binds loopback only and the CORS allowlist is unchanged.
 
 ### Release candidate `1.1.0-rc.1` (unreleased package metadata)
 - Consolidates the accepted Public Controls, OGraf packaging, filesystem hardening, schema-validation, and release-smoke work.

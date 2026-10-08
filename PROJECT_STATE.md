@@ -27,7 +27,7 @@ The Astra post-compaction review found 16 concrete defects in the authoring work
 - The Playfair Display correction and the visual-only editor refresh from the previous working tree are now committed unchanged in substance; the three owned Playfair files (normal TTF, italic TTF, OFL.txt) are tracked.
 - Real Chromium proof: family matrix and whitespace parity for the text trace, the font load -> settled retrace, an untraceable operand refusing the Boolean, a parented bonded drag against a calibration group, and the legacy single-file export refusing an asset-dependent graphic while an asset-free graphic still exports.
 - This publication adds no dependency, workflow, package, tag, release, or npm change. H7 remains HOLD and the release artefacts stay at `46d2a3e`.
-- Remaining dependency warnings: the audit reports `concurrently`/`shell-quote`, `proxy-addr`, `source-map-js`, and the previously recorded moderate `fast-uri` advisory. Remediation needs a separately approved dependency change; no `npm audit fix` was run. The API server does not enable `trust proxy`, so the `proxy-addr` path is not reachable from the current configuration.
+- The dependency advisories recorded here were then resolved in a separate bounded maintenance run: `proxy-addr`, `source-map-js` and `fast-uri` by lock refreshes inside their parents' declared ranges, and `shell-quote` by a scoped `overrides` entry under `concurrently` (which pins the exact vulnerable version and has no newer release). `npm audit --audit-level=low` now reports 0 vulnerabilities; see `reports/progress_153_dependency_advisory_maintenance.md`.
 
 ## Authoring publication — 2026-10-05
 
@@ -36,11 +36,19 @@ The Astra post-compaction review found 16 concrete defects in the authoring work
 - Browser proof: a keyframed circle in the second sequence moves 100 screen pixels right and 40 down; the first sequence's x value remains -100. A bonded circle/text pair moves by the same -60/+20 screen-pixel delta.
 - Six meaningful publication groups use owner-approved retrospective author dates: 2026-08-29, 2026-09-05, 2026-09-12, 2026-09-19, 2026-09-26, and 2026-10-05. Committer dates record actual creation; these dates do not claim uploads or development occurred on those earlier days. No empty commits, old-branch replay, shared-history rewrite, or force push is part of this publication.
 - The old tangent and presentation review branches remain historical artefacts. The pre-architecture mask-gizmo patch is not replayed. Release tags, the held draft release, package publication, external QA folders, and OMP configuration remain unchanged.
-- Remaining dependency warning: the current audit reports one moderate `fast-uri` vulnerability (GHSA-hrr3-gc8f-f4qj). Remediation requires a separately approved dependency change; this publication does not run `npm audit fix`.
+- Dependency warning at that time: one moderate `fast-uri` advisory (GHSA-hrr3-gc8f-f4qj), subsequently resolved with the other advisories in `reports/progress_153_dependency_advisory_maintenance.md`. No `npm audit fix` was run in this publication.
 
 ## Accepted baseline
 
 Public Controls V1, OGraf Package Export V2, host compatibility work, Windows path hardening, parent/broadcast hardening, SourcePath/filesystem hardening, mask/matte parity, deterministic OGraf fixture validation, the isolated release smoke gate, the export diagnostics remediation UX, the track-matte source selection affordance, and Milestone A canvas tangent handle authoring are present in the accepted main line. OMP tooling remains separate.
+
+## Dependency advisory maintenance — 2026-10-08
+
+- A fresh `npm audit --audit-level=low` reported five advisories (3 critical, 1 high, 1 moderate). All are resolved without a direct dependency, script, engine, workflow or source change: `proxy-addr` 2.0.7 -> 2.0.8, `source-map-js` 1.2.1 -> 1.2.2 and `fast-uri` 3.1.7 -> 3.1.8 are lock refreshes inside their parents' declared ranges, and `shell-quote` 1.9.0 -> 1.12.0 uses a scoped `overrides` entry under `concurrently` (exact pin, no newer release).
+- Reachability was proven from code, not assumed: Express only evaluates the proxy chain through `req.ip`/`req.ips` and KCS never sets `trust proxy`, and concurrently's only `quote()` consumer requires additional CLI arguments the `dev` script never passes.
+- The runtime checks after the install confirm the security posture is unchanged: the API still binds `127.0.0.1` by default, the exact CORS allowlist is unchanged, `/api/health` answers on loopback, and the `sqlite3` native binding round-trips.
+- The full gate is green: 135 Vitest files / 2,055 tests, 268 Chromium tests with `--retries=0`, `npm run check`, OGraf validation, both QA gates, the state consistency check, and `git diff --check`.
+- The `overrides` entry is a temporary bridge and should be removed once `concurrently` declares `shell-quote >= 1.11.0`. H7 remains HOLD; no tag, release or npm action.
 
 ## Validation status — post-Astra focused remediation, 2026-10-07
 
@@ -54,7 +62,7 @@ Public Controls V1, OGraf Package Export V2, host compatibility work, Windows pa
 | TypeScript | PASS | TypeScript 7.0.2; `npx tsc -b --pretty false` and the build/check paths pass |
 | Lint | PASS | Oxlint 1.85.0 clean, including unused-disable reporting at error severity |
 | Production build | PASS | Vite 8.3.0 production bundle |
-| Dependency audit | WARNING | `npm audit --audit-level=low`: `concurrently`/`shell-quote` (critical, dev), `proxy-addr` (critical, transitive through Express), `source-map-js` (high, transitive), and the previously recorded moderate `fast-uri`; dependency changes are outside this approved scope and no `npm audit fix` was run |
+| Dependency audit | PASS | `npm audit --audit-level=low`: 0 vulnerabilities after the bounded remediation in `reports/progress_153_dependency_advisory_maintenance.md` |
 | Publication CI | SEPARATE REMOTE GATE | Checked after normal push; inspect the publication tip's GitHub Actions run rather than treating earlier Astra/maintenance CI as current evidence |
 
 ## Post-review correctness follow-up (complete)

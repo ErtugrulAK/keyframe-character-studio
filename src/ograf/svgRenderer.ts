@@ -4,6 +4,7 @@ import type { EvaluatedLayer, LayerContent } from '../types/composition';
 import { buildBezierPathD } from '../utils/bezierPath';
 import { buildFreeformPath } from '../utils/freeform';
 import { buildLayerMaskDefinition, layerMaskFilterId } from '../utils/layerMasks';
+import { resolveMatteSource } from '../utils/matte';
 import { stackingOrder } from '../utils/stackingOrder';
 import { getShapeGeometry, polygonPointsToString } from '../utils/shapeGeometry';
 import { resolveShapeAppearance } from '../utils/shapeAppearance';
@@ -222,26 +223,35 @@ function renderLayerMaskDefinitions(scene: OGrafEvaluatedScene, target: Evaluate
   return { defs: definitions.join(''), ids: previousId ? [previousId] : [] };
 }
 
+/**
+ * The one matte relationship the painted output uses.
+ *
+ * The precedence (an enabled Track Matte V2 wins, a disabled one falls back to
+ * the legacy matte) is KCS's shared `resolveMatteSource`, so the editor and this
+ * renderer cannot disagree about which source a layer uses. Only the clip
+ * exclusion stays local: the resolver names the source, this renderer decides
+ * which SVG mechanism consumes it.
+ */
 function getMatteRelationship(layer: EvaluatedLayer): MatteRelationship | undefined {
+  const ref = resolveMatteSource({ matte: layer.content.matte, trackMatte: layer.content.trackMatte });
+  if (!ref) return undefined;
+  if (ref.kind === 'legacy') {
+    const legacy = layer.content.matte;
+    if (!legacy || (legacy.mode || 'clip') === 'clip') return undefined;
+    return {
+      sourceLayerId: ref.sourceId,
+      mode: (legacy.mode || 'alpha') as 'alpha' | 'luminance',
+      inverted: legacy.inverted === true,
+      sourceVisible: true,
+    };
+  }
   const v2 = layer.content.trackMatte;
-  if (v2 && v2.enabled !== false) return {
+  if (!v2) return undefined;
+  return {
     sourceLayerId: v2.sourceLayerId,
     mode: v2.mode,
     inverted: v2.inverted === true,
     sourceVisible: v2.sourceVisible !== false,
-  };
-  // A DISABLED V2 relation falls through to the legacy matte, exactly like the
-  // editor authority (`resolveMatteSource`): `trackMatte` is the preferred
-  // relationship, not a switch that suppresses the older one. Stopping here made
-  // a layer with `trackMatte.enabled === false` plus a legacy matte render the
-  // legacy matte in the editor and nothing at all in the exported graphic.
-  const legacy = layer.content.matte;
-  if (!legacy || (legacy.mode || 'clip') === 'clip') return undefined;
-  return {
-    sourceLayerId: legacy.sourcePartId,
-    mode: (legacy.mode || 'alpha') as 'alpha' | 'luminance',
-    inverted: legacy.inverted === true,
-    sourceVisible: true,
   };
 }
 

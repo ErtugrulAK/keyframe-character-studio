@@ -66,10 +66,10 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
       {!isGroup && (
         <>
           {[
-            { x: left, y: top, key: 'top-left' },
-            { x: right, y: top, key: 'top-right' },
-            { x: left, y: bottom, key: 'bottom-left' },
-            { x: right, y: bottom, key: 'bottom-right' },
+            { x: left, y: top, key: 'top-left', cursor: 'nwse-resize' },
+            { x: right, y: top, key: 'top-right', cursor: 'nesw-resize' },
+            { x: left, y: bottom, key: 'bottom-left', cursor: 'nesw-resize' },
+            { x: right, y: bottom, key: 'bottom-right', cursor: 'nwse-resize' },
           ].map((corner) => (
             <g key={`corner-${corner.key}`}>
               <rect
@@ -80,7 +80,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
                 fill="#00d2ff"
                 stroke="#ffffff"
                 strokeWidth={1.5 * zScale}
-                style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
+                style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
                 onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
               />
               <rect
@@ -91,7 +91,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
                 height={metrics.hitRadius * 2}
                 fill="transparent"
                 pointerEvents="auto"
-                style={{ cursor: 'nwse-resize' }}
+                style={{ cursor: corner.cursor }}
                 onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
               />
             </g>

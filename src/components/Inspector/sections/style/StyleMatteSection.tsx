@@ -313,6 +313,12 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   return (
     <>
     <StyleCard title="MASK / TRACK MATTE" collapsible defaultOpen={false}>
+      {trackMatte && trackMatte.enabled !== false && (
+        <div className="matte-span-full" style={{ fontSize: 11, color: '#f59e0b', marginBottom: 8 }}>
+          An enabled <strong>Track Matte V2</strong> relation is active on this layer, so these
+          settings are not applied. Clear it in the TRACK MATTE V2 card to use this matte.
+        </div>
+      )}
       <div className="matte-control-grid">
         <div className="matte-field matte-source-field matte-span-full">
           <label className="form-label">MASK SOURCE</label>

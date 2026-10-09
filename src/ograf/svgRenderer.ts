@@ -230,7 +230,11 @@ function getMatteRelationship(layer: EvaluatedLayer): MatteRelationship | undefi
     inverted: v2.inverted === true,
     sourceVisible: v2.sourceVisible !== false,
   };
-  if (v2) return undefined;
+  // A DISABLED V2 relation falls through to the legacy matte, exactly like the
+  // editor authority (`resolveMatteSource`): `trackMatte` is the preferred
+  // relationship, not a switch that suppresses the older one. Stopping here made
+  // a layer with `trackMatte.enabled === false` plus a legacy matte render the
+  // legacy matte in the editor and nothing at all in the exported graphic.
   const legacy = layer.content.matte;
   if (!legacy || (legacy.mode || 'clip') === 'clip') return undefined;
   return {

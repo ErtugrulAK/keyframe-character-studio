@@ -164,6 +164,37 @@ describe('track matte keeps its place in the stack', () => {
     expect(svg).toContain(`<mask id="${reference}"`);
   });
 
+  test('a disabled V2 relation falls through to the legacy matte in both paths', () => {
+    // `trackMatte` is the preferred relationship, not a switch that suppresses
+    // the older one: the editor authority (`resolveMatteSource`) falls back to
+    // the legacy matte, so both export paths must too.
+    const authored = scene([
+      foreground('fish', 2, {
+        trackMatte: matte({ enabled: false }),
+        matte: { sourcePartId: 'lake', mode: 'alpha', enabled: true } as never,
+      }),
+      background('lake', 1),
+    ]);
+    for (const markup of [runtimeMarkup(authored), staticMarkup(authored)]) {
+      expect(markup).toContain('mask-type="alpha"');
+      expect(markup).toContain('mask="url(#');
+    }
+  });
+
+  test('an enabled V2 relation still wins over the legacy matte', () => {
+    const authored = scene([
+      foreground('fish', 2, {
+        trackMatte: matte({ mode: 'luminance' }),
+        matte: { sourcePartId: 'lake', mode: 'alpha', enabled: true } as never,
+      }),
+      background('lake', 1),
+    ]);
+    for (const markup of [runtimeMarkup(authored), staticMarkup(authored)]) {
+      expect(markup).toContain('mask-type="luminance"');
+      expect(markup).not.toContain('mask-type="alpha"');
+    }
+  });
+
   test('the matte source is authored below the target and still resolves', () => {
     const authored = scene([
       background('lake', 1),

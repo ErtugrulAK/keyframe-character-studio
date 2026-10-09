@@ -174,9 +174,13 @@ function maskPathD(layer, mask, scene) {
   const radians = layer.transform.rotation * Math.PI / 180;
   return pathD(mask.path, (point) => { const local = mask.path.coordinateSpace === 'normalized' ? { x: (point.x - 0.5) * width, y: (point.y - 0.5) * height } : point; const x = local.x * layer.transform.scaleX; const y = local.y * layer.transform.scaleY; return { x: scene.width / 2 + layer.transform.x + x * Math.cos(radians) - y * Math.sin(radians), y: scene.height / 2 + layer.transform.y + x * Math.sin(radians) + y * Math.cos(radians) }; });
 }
+// The same stacking rule the editor stage uses: ascending zIndex paints first.
+// The authored array order is NOT the paint order (the outliner keeps index 0 on
+// top), so painting the array directly inverts the scene in a standards renderer.
+function stackingOrder(items) { return items.slice().sort((a, b) => a.zIndex - b.zIndex); }
 function evaluateScene(scene, frame) {
   const transforms = Object.create(null); const visiting = new Set(); const evaluateTransform = (layer) => { if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id]; const track = scene.tracks.find((item) => item.partId === layer.id); const channels = track && track.channels ? track.channels : {}; let result = { x: channelValue(channels.x, frame, layer.x), y: channelValue(channels.y, frame, layer.y), rotation: channelValue(channels.rotation, frame, layer.rotation), scaleX: channelValue(channels.scaleX, frame, layer.scaleX), scaleY: channelValue(channels.scaleY, frame, layer.scaleY), opacity: channelValue(channels.opacity, frame, layer.opacity) }; if (visiting.has(layer.id)) return result; visiting.add(layer.id); if (layer.parentId || layer.booleanGroupId) { const parentId = layer.parentId || layer.booleanGroupId; const parent = scene.layers.find((item) => item.id === parentId); if (parent) { const parentTransform = evaluateTransform(parent); const radians = parentTransform.rotation * Math.PI / 180; const sx = result.x * parentTransform.scaleX; const sy = result.y * parentTransform.scaleY; result = { x: parentTransform.x + sx * Math.cos(radians) - sy * Math.sin(radians), y: parentTransform.y + sx * Math.sin(radians) + sy * Math.cos(radians), rotation: parentTransform.rotation + result.rotation, scaleX: parentTransform.scaleX * result.scaleX, scaleY: parentTransform.scaleY * result.scaleY, opacity: result.opacity }; } } visiting.delete(layer.id); transforms[layer.id] = result; return result; };
-  return scene.layers.map((layer) => {
+  return stackingOrder(scene.layers).map((layer) => {
     const track = scene.tracks.find((item) => item.partId === layer.id);
     const channels = track && track.channels ? track.channels : {};
     const transformValue = evaluateTransform(layer);

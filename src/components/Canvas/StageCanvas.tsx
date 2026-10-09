@@ -3,6 +3,7 @@ import { useAnimator } from '../../context/useAnimator';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
+import { stackingOrder } from '../../utils/stackingOrder';
 import { clientToSVGPoint, clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
@@ -714,7 +715,7 @@ export const StageCanvas: React.FC = () => {
     }
   };
 
-  const sortedParts = [...characterParts].sort((a, b) => a.zIndex - b.zIndex);
+  const sortedParts = stackingOrder(characterParts);
   const isPanning = activeTool === 'pan' || (isDragging && dragMode === 'pan');
 
   return (

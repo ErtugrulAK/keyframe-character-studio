@@ -27,6 +27,7 @@ import { evaluateTransform } from './evaluateTransform';
 import { computeProceduralDelta } from './proceduralAnimation';
 import { evaluateLayerMasks } from './evaluateLayerMasks';
 import { evaluateTrimPath } from './trimPath';
+import { compareByStackingOrder } from './stackingOrder';
 
 /**
  * Evaluate one complete frame with full animation evaluation.
@@ -114,7 +115,7 @@ export function evaluateFrame(
     });
   }
 
-  evaluated.sort((a, b) => a.zIndex - b.zIndex);
+  evaluated.sort(compareByStackingOrder);
 
   return { frame, layers: evaluated };
 }

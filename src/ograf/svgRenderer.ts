@@ -4,6 +4,7 @@ import type { EvaluatedLayer, LayerContent } from '../types/composition';
 import { buildBezierPathD } from '../utils/bezierPath';
 import { buildFreeformPath } from '../utils/freeform';
 import { buildLayerMaskDefinition, layerMaskFilterId } from '../utils/layerMasks';
+import { stackingOrder } from '../utils/stackingOrder';
 import { getShapeGeometry, polygonPointsToString } from '../utils/shapeGeometry';
 import { resolveShapeAppearance } from '../utils/shapeAppearance';
 import { getTrimPathDashProps, resolveTrimPath } from '../utils/trimPath';
@@ -323,6 +324,7 @@ export function renderOGrafSvg(scene: OGrafEvaluatedScene, options: OGrafSvgRend
     if (matte.id) matteIds.set(target.id, matte.id);
     if (matte.relationship && !matte.relationship.sourceVisible) hiddenSources.add(matte.relationship.sourceLayerId);
   }
-  const layers = scene.layers.map((layer) => renderLayer(scene, layer, options, maskIds.get(layer.id) || [], matteIds.get(layer.id), hiddenSources.has(layer.id))).join('');
+  // The paint order is the stacking order, never the authored array order.
+  const layers = stackingOrder(scene.layers).map((layer) => renderLayer(scene, layer, options, maskIds.get(layer.id) || [], matteIds.get(layer.id), hiddenSources.has(layer.id))).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${scene.width}" height="${scene.height}" viewBox="0 0 ${scene.width} ${scene.height}"><defs>${defs.join('')}</defs>${layers}</svg>`;
 }

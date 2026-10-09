@@ -22,6 +22,20 @@ export interface PathHandle {
 export type PathCoordinateSpace = 'local' | 'normalized';
 export type PathVertexKind = 'corner' | 'smooth';
 
+/**
+ * A rectangle in a layer's own local space (the space `width`/`height` use).
+ *
+ * Named here because both the editor model (`CharacterPart`) and the persisted
+ * scene model (`SceneLayer`) carry it, and their agreement is what makes a
+ * round trip preserve the measured content.
+ */
+export interface ImageContentBounds {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
 export interface BezierVertex {
   id: string;
   x: number;
@@ -374,6 +388,18 @@ export interface CharacterPart {
   borderRadius?: number;
   width?: number;
   height?: number;
+  /**
+   * Measured non-transparent content of an image layer, in the same local units
+   * as `width`/`height` (centred on the part origin).
+   *
+   * A PNG usually carries transparent padding, and the drawn box is the whole
+   * bitmap. Every bounds consumer — the Inspector's control points, the
+   * selection gizmo, the resize handles, marquee hit-testing — must describe the
+   * visible art instead, so the rectangle is measured once at import and kept
+   * on the layer. Absent (or malformed) means "the whole bitmap is visible",
+   * which is what every layer created before this field behaved as.
+   */
+  imageContentBounds?: ImageContentBounds;
   // Freeform drawn shape: vertices relative to the part center (stage units)
   points?: FreeformPoint[];
   /** V6 canonical freeform path; `points` remains a legacy compatibility field. */

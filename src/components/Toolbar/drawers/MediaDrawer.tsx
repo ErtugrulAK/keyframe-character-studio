@@ -1,6 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { useAnimator } from '../../../context/useAnimator';
 import { Upload } from 'lucide-react';
+import type { ImageContentBounds } from '../../../types/animator';
+import { contentBoundsInLocalUnits, visibleContentRectOfImage } from '../../../utils/imageContentBounds';
 
 export const MediaDrawer: React.FC = () => {
   const { characterParts, addCustomPart } = useAnimator();
@@ -18,6 +20,7 @@ export const MediaDrawer: React.FC = () => {
           img.onload = () => {
             let w = 140;
             let h = 140;
+            let imageContentBounds: ImageContentBounds | undefined;
             if (img.naturalWidth && img.naturalHeight) {
               const maxDim = 150;
               if (img.naturalWidth >= img.naturalHeight) {
@@ -27,8 +30,20 @@ export const MediaDrawer: React.FC = () => {
                 h = maxDim;
                 w = Math.round(maxDim * (img.naturalWidth / img.naturalHeight));
               }
+              // The drawn box is the whole bitmap, transparent padding included.
+              // Measuring the visible pixels here is what keeps the layer's
+              // bounds — control points, gizmo, resize handles — on the art.
+              const content = visibleContentRectOfImage(img);
+              if (content) {
+                imageContentBounds = contentBoundsInLocalUnits(content, img.naturalWidth, img.naturalHeight, w, h);
+              }
             }
-            addCustomPart('custom_image', cleanName, { imageUrl: dataUrl, width: w, height: h });
+            addCustomPart('custom_image', cleanName, {
+              imageUrl: dataUrl,
+              width: w,
+              height: h,
+              ...(imageContentBounds ? { imageContentBounds } : {}),
+            });
           };
           img.src = dataUrl;
         };

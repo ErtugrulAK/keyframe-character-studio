@@ -130,6 +130,29 @@ const fallbackBounds = (): PartLocalBounds => ({
 });
 
 /**
+ * The two corners of a media layer's bounds.
+ *
+ * An image measured at import carries its non-transparent content rectangle, so
+ * the bounds describe the visible art instead of the padded bitmap; a video, and
+ * any image imported before that measurement existed, uses the whole box.
+ */
+const mediaBoundsCorners = (part: CharacterPart): { x: number; y: number }[] => {
+  const content = part.imageContentBounds;
+  if (content
+    && [content.minX, content.minY, content.maxX, content.maxY].every(Number.isFinite)
+    && content.maxX > content.minX
+    && content.maxY > content.minY) {
+    return [
+      { x: content.minX, y: content.minY },
+      { x: content.maxX, y: content.maxY },
+    ];
+  }
+  const halfW = part.width ? part.width / 2 : (part.type === 'custom_video' ? 100 : 90);
+  const halfH = part.height ? part.height / 2 : 60;
+  return [{ x: -halfW, y: -halfH }, { x: halfW, y: halfH }];
+};
+
+/**
  * Return the exact local geometry bounds used by the renderer. For Boolean
  * groups all contours participate; using only `points` would lose holes and
  * can produce stale, oversized selection rectangles.
@@ -190,10 +213,7 @@ export const getPartLocalBounds = (
       }
       case 'custom_image':
       case 'custom_video':
-        bounds = boundsFromPoints([
-          { x: -(part.width ? part.width / 2 : (part.type === 'custom_video' ? 100 : 90)), y: -(part.height ? part.height / 2 : 60) },
-          { x: part.width ? part.width / 2 : (part.type === 'custom_video' ? 100 : 90), y: part.height ? part.height / 2 : 60 },
-        ]);
+        bounds = boundsFromPoints(mediaBoundsCorners(part));
         break;
       case 'mograph_cloner': {
         const cfg = part.clonerConfig;

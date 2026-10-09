@@ -117,3 +117,48 @@ describe('precise geometry bounds', () => {
     expect(bounds).toEqual({ minX: 280, minY: 165, maxX: 420, maxY: 345 });
   });
 });
+
+/**
+ * A media layer's bounds describe the art, not the whole bitmap.
+ *
+ * A PNG with transparent padding is drawn into a box sized from its natural
+ * pixels, so the measured non-transparent rectangle — recorded on the layer at
+ * import — is what the Inspector's edge points, the selection gizmo and the
+ * resize handles must follow.
+ */
+describe('image layer bounds follow the measured content', () => {
+  const imagePart = (overrides: Partial<CharacterPart> = {}) => makePart('custom_image', {
+    width: 150, height: 150, ...overrides,
+  });
+
+  it('uses the measured content rect instead of the padded bitmap box', () => {
+    const bounds = getPartBounds(imagePart({ imageContentBounds: { minX: -45, minY: -45, maxX: 45, maxY: 45 } }), { scaleX: 1, scaleY: 1 });
+    expect(bounds).toEqual({ halfW: 45, halfH: 45 });
+  });
+
+  it('keeps the content rect asymmetric on the side the art occupies', () => {
+    // Art against the left edge: the right point sits at the part origin.
+    const local = getPartLocalBounds(imagePart({ imageContentBounds: { minX: -75, minY: -75, maxX: 0, maxY: 75 } }));
+    expect(local.minX).toBe(-75);
+    expect(local.maxX).toBe(0);
+    expect(local.halfW).toBe(37.5);
+    expect(local.offsetX).toBe(-37.5);
+  });
+
+  it('falls back to the whole box when the layer carries no measurement', () => {
+    expect(getPartBounds(imagePart(), { scaleX: 1, scaleY: 1 })).toEqual({ halfW: 75, halfH: 75 });
+  });
+
+  it('falls back to the whole box when the measurement is malformed', () => {
+    const malformed = imagePart({ imageContentBounds: { minX: Number.NaN, minY: 0, maxX: 10, maxY: 10 } });
+    expect(getPartBounds(malformed, { scaleX: 1, scaleY: 1 })).toEqual({ halfW: 75, halfH: 75 });
+
+    const inverted = imagePart({ imageContentBounds: { minX: 10, minY: 10, maxX: 10, maxY: 10 } });
+    expect(getPartBounds(inverted, { scaleX: 1, scaleY: 1 })).toEqual({ halfW: 75, halfH: 75 });
+  });
+
+  it('keeps an unmeasured video on the whole box, like a pre-measurement image', () => {
+    const video = makePart('custom_video', { width: 200, height: 100 });
+    expect(getPartBounds(video, { scaleX: 1, scaleY: 1 })).toEqual({ halfW: 100, halfH: 50 });
+  });
+});

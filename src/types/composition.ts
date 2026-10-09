@@ -8,7 +8,7 @@
 // Animation track model is defined once in `animator.ts` as `AnimationTrackData`
 // (partId-based, canonical). `SceneData.tracks` references it directly —
 // there is no separate AnimationTrack type (P4-S3).
-import type { AnimationTrackData, BezierPath, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
+import type { AnimationTrackData, BezierPath, ImageContentBounds, LayerMask, MotionTemplate, PartMatte, TrackMatteV2 } from './animator';
 /**
  * Coordinate-unit semantics for persisted scene data.
  *
@@ -94,6 +94,11 @@ export interface SceneLayer {
   booleanOperation?: 'union' | 'subtract' | 'intersect' | 'exclude';
   booleanOperandIds?: string[];
   booleanContours?: { x: number; y: number }[][];
+  /**
+   * Measured non-transparent content rectangle of an image layer (local units).
+   * Carried through save/load so the bounds survive a round trip.
+   */
+  imageContentBounds?: ImageContentBounds;
   // Visibility (editor toggle)
   visible: boolean;
 

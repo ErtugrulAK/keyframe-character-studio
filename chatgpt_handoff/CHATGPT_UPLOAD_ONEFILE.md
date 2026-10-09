@@ -520,78 +520,7 @@ Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items c
 
 ---
 
-## 8. H7 GO / rc.2 Release Record
-
-# Progress 155 — H7 GO: v1.1.0-rc.2 release candidate
-
-Date: 2026-10-08. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
-
-The approved H7 GO decision was executed: a **new** release candidate, `v1.1.0-rc.2`, was created from the **exact smoke-tested code commit**. `v1.1.0-rc.1` was not moved, rewritten or deleted, and no npm publication occurred.
-
-## Candidate identity
-
-| Field | Value |
-|---|---|
-| **TESTED CODE SHA (candidate)** | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Annotated tag | `v1.1.0-rc.2` (tag object `3d17e584704fcf534f9e885167ad300e904a332f`) |
-| Tag dereferences to | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` — exact match |
-| Release Smoke Gate | run `37752015020` — success, `headSha` = the candidate |
-| GitHub release | `KCS v1.1.0-rc.2`, id `RE_kwDOTexJrc4YPnCt`, **draft + prerelease** |
-| `targetCommitish` | pinned to `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Documentation tip at the time of this record | `c650da18c731dfac85d31ba00d059a8430c40b43` (docs-only, **not** the candidate) |
-
-**Why the draft tip is not the candidate.** The only commit after the tested SHA is `c650da1 docs: record exact-sha release smoke`, whose changed files are documentation only (CHANGELOG, NEXT_SESSION, PROJECT_STATE, the handoff bundle, the report indexes and the progress report). No source, test, workflow, package, lock or asset byte changed, so the exact-SHA smoke result still describes it. The candidate tag therefore points at `6c27ef3`, not at the newer docs tip.
-
-## Package metadata decision — PATH A
-
-`package.json` stays at the private version `1.1.0-rc.1`; no metadata commit was introduced. Chosen because:
-
-- the package is private and never published, so the npm version is inert metadata;
-- no repository policy requires the package version to equal the tag name (searched: none found);
-- PATH B would require a metadata commit that creates a **new** SHA, plus a fresh exact-SHA smoke run — and the candidate identity rule forbids tagging an untested commit;
-- PATH A keeps the candidate equal to the smoke-tested commit.
-
-The release notes and the state documents state the mismatch explicitly, and npm remains unpublished.
-
-## Phase results
-
-| Phase | Result |
-|---|---|
-| Preflight | clean tree, no in-progress Git operation, `main` == `origin/main`, rc.1 unchanged at `46d2a3e`, no existing rc.2 tag or release, smoke run success |
-| Metadata decision | PATH A — package stays private `1.1.0-rc.1` |
-| Pre-tag checks | target SHA resolves exactly, no tag collision (local and remote), no release collision, origin reachable |
-| Tag | annotated `v1.1.0-rc.2` created; `git rev-list -n 1 v1.1.0-rc.2` == the tested SHA |
-| Push | only `refs/tags/v1.1.0-rc.2` pushed; remote dereference == the tested SHA; rc.1 remote unchanged |
-| GitHub release | draft prerelease created for `v1.1.0-rc.2`, `targetCommitish` pinned to the tested SHA; rc.1 release untouched |
-| Post-release verification | local and remote tags, dereference, release flags, rc.1 unchanged, npm unpublished, tree clean |
-
-## Release notes content
-
-The `v1.1.0-rc.2` notes cover: the 16 post-Astra correctness fixes (text Boolean geometry, bonded layer movement, Motion Curves targeting/mask dispatch/zero-duration guards, Playfair OGraf portability), the authoring and presentation work (layer bonds, Boolean operands, text stroke parity, opacity keyframes, sequence isolation, segment editing, the visual-only editor refresh), the hardening shipped in the same line (Lottie import, OGraf package import, loopback API bind with an exact CORS allowlist, inverted matte, Lottie parent resolution, boundary scene validation), and the toolchain/dependency work (TypeScript 7, Vitest 5, Oxlint 1.85, jsdom 30.1.1, the CI type-check and state-consistency gates, and the audit at 0 vulnerabilities).
-
-The notes state plainly that the smoke gate is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line.
-
-## Release state after this task
-
-| Check | Result |
-|---|---|
-| `v1.1.0-rc.2` tag (local + remote) | present, dereferences to `6c27ef3…` |
-| `v1.1.0-rc.1` | unchanged — `46d2a3e59e065816d972dcd56951803951b577f6`, draft prerelease untouched |
-| GitHub release rc.2 | draft, prerelease, `publishedAt: null` |
-| `package.json` | `1.1.0-rc.1`, `private: true` |
-| npm registry | 404 — not published |
-| `npm audit --audit-level=low` | 0 vulnerabilities |
-| Working tree | clean; `main` == `origin/main` |
-
-## Notes for the next step
-
-- The rc.2 GitHub release is a **draft** prerelease, matching the `v1.1.0-rc.1` convention. Publishing it turns it into a public prerelease; it does not create a tag (the tag already exists) and does not publish to npm.
-- `scripts/check-state-consistency.mjs` still pins `v1.1.0-rc.1` to `46d2a3e` — that assertion remains correct and valuable (that candidate must never move). Adding rc.2 to the checker is a tooling change and needs separate approval.
-- Any later commit that touches source, tests, workflows, packages or assets invalidates this exact-SHA smoke result for the new SHA; re-run the gate before making a further release decision.
-
----
-
-## 9. rc.2 Prerelease Publication Record
+## 8. rc.2 Prerelease Publication Record
 
 # Progress 156 — v1.1.0-rc.2 public prerelease publish
 
@@ -683,6 +612,94 @@ The user runs the QA pass above against the published prerelease. A stable `v1.1
 
 ---
 
+## 9. Reality Hub OGraf Parity Record
+
+# Progress 157 — Reality Hub OGraf layer order and track matte parity
+
+Date: 2026-10-09. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
+
+Reality Hub manual QA after the rc.2 publication reported two OGraf portability defects: the layer stacking was inverted for a template without a matte, and a template with a track matte did not surface at all. The first is reproduced, root-caused and fixed here. The second is narrowed to the same runtime defect; no matte-specific defect could be reproduced locally.
+
+## Candidate identity
+
+| Field | Value |
+|---|---|
+| **OLD PUBLIC RC.2 SHA** | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` — the published rc.2 prerelease, unchanged |
+| **NEW FIXED CODE SHA** | `8968abfe6861bb7299756e885d915f7fd794fce5` |
+| Branch | `fix/reality-hub-ograf-layer-matte-parity`, fast-forward merged into `main`, kept |
+| Prior main | `fa63c29` (docs tip of the rc.2 publication) |
+
+## Root cause — layer order (PROVEN KCS bug)
+
+Three ordering facts disagreed:
+
+| Authority | Rule |
+|---|---|
+| `StageCanvas` (`sortedParts`) | ascending `zIndex` paints first → higher `zIndex` on top |
+| `evaluateFrame:117` | `evaluated.sort((a, b) => a.zIndex - b.zIndex)` — the same rule |
+| `toSceneData` array | the authored array, which is **descending** `zIndex`: `addCustomPart` prepends with `max + 1` and `reorderParts` assigns `zIndex = total - index` |
+| `runtimeTemplate.evaluateScene` | `scene.layers.map(...)` — **array order**, never sorted |
+| `svgRenderer` paint list | `scene.layers.map(...)` — array order, correct only because its caller is pre-sorted |
+
+`graphic.mjs` is what an OGraf host loads, so the runtime painted the array front-to-back: index 0 (the topmost layer in the editor) was drawn FIRST and therefore ended up at the bottom. That is exactly the reported "fish is above lake in KCS but below in Reality Hub".
+
+The static `svgRenderer` output and the editor both looked correct, which is why the defect only appeared in a host consuming the runtime.
+
+## Root cause — track matte (NARROWED, not a separate defect)
+
+The matte emission itself is structurally valid, verified on both paths:
+
+- `<mask id maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="...">` in `<defs>`, and the target carries `mask="url(#id)"` for an id the same document defines.
+- The mask-only source is excluded from the painted list when the contract says `sourceVisible: false`, and keeps its sibling position when it is visible.
+- The target keeps its own stacking position and resolves its source whether the source is authored above or below it.
+
+The reported "the template does not appear at all with a matte" is consistent with the ordering defect emptying the frame: the matte makes its source mask-only, so the only remaining painted layers are the target and any other sibling — and those were being drawn in the inverted order. No host-specific rule is claimed here; the remaining question belongs to the Reality Hub retest below.
+
+## Fix
+
+`src/utils/stackingOrder.ts` is the one authority:
+
+```ts
+export const compareByStackingOrder = (a, b) => a.zIndex - b.zIndex;
+export const stackingOrder = (items) => [...items].sort(compareByStackingOrder);
+```
+
+Ascending `zIndex` paints first, `Array.prototype.sort` is stable so a shared `zIndex` keeps the authored order, and a copy is always sorted so the input array is never mutated.
+
+Applied at every painter's-model site: `StageCanvas` (the stage), `evaluateFrame` (the frame evaluator), `svgRenderer` (the static SVG) and `runtimeTemplate` (the generated runtime, which inlines the comparator the way it inlines its other mirror helpers).
+
+Nothing else changed: the OGraf package structure, `scene.kcs`, public controls, asset packaging, path security, mask/matte semantics and matte parity behaviour are untouched.
+
+## Regression
+
+`src/tests/ografLayerStacking.test.ts` — 13 cases: two layers, three layers, the stable tie, array immutability, the packaged runtime, and the matte matrix (mask-only source, unrelated sibling, `sourceVisible: true`, source authored below the target, mask id resolution).
+
+**Proof it catches the defect:** reverting only the runtime sort turns four cases red, reporting `['fish','lake']` where `['lake','fish']` is required.
+
+## Validation
+
+`npx tsc -b --pretty false`, `npm run lint`, `npm test` (136 files / 2,079 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npx playwright test --project=chromium --retries=0` (265 tests), `node scripts/check-state-consistency.mjs`, `npm audit --audit-level=low` (0 vulnerabilities) and `git diff --check` all pass.
+
+## Reality Hub retest artifacts
+
+Two packages were compiled with the fixed authorities and written outside the repository:
+
+```
+C:\Users\ertugrul.ak\AppData\Local\Temp\kcs-reality-hub-retest\reality-hub-layer-order-repro-fixed.zip
+C:\Users\ertugrul.ak\AppData\Local\Temp\kcs-reality-hub-retest\reality-hub-track-matte-repro-fixed.zip
+```
+
+- `reality-hub-layer-order-repro-fixed.zip` — a full-frame `lake` under a smaller `fish`, both authored with the outliner order (array index 0 = top). Expected: the fish is visible on top of the lake.
+- `reality-hub-track-matte-repro-fixed.zip` — the same pair plus a `lens` circle as the fish's alpha track-matte source with `sourceVisible: false`. Expected: the fish appears with the lens-shaped alpha cut and the lake stays visible behind it.
+
+Both contain `manifest` + `scene.kcs` + `graphic.mjs`. They are QA outputs, not tracked source; the user copies them into the Reality Hub OGraf projects folder.
+
+## Remaining question for the user
+
+The layer-order fix is proven locally by the regression and by the pre-fix/fix comparison. **Reality Hub itself has not been exercised** — that retest belongs to the user. If the track-matte package still fails to surface in Reality Hub while the layer-order package works, the remaining evidence is host-side and the next step is to capture the host's own error/report for that specific package.
+
+---
+
 ## 10. Changelog
 
 # Changelog
@@ -741,6 +758,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The header's `?` (First export help) button and the **OGraf Single File (Legacy)** export entry. The export menu now offers exactly **JSON** and **OGraf Package**; the legacy single-file `.mjs` export is gone, so its fail-closed guard went with it, and the first-export guidance component is no longer reachable from the header.
 
 ### Fixed
+- An OGraf export now paints in the editor's stacking order. The generated runtime walked the authored `scene.layers` array, but that array is NOT the paint order — the outliner keeps index 0 on top, `addCustomPart` prepends with `max + 1` and `reorderParts` assigns `zIndex = total - index` — so a host loading `graphic.mjs` drew the scene upside down and showed the background over the foreground. `stackingOrder` is now the one authority (ascending `zIndex` paints first, stable for a shared `zIndex`, never mutating the input) and the stage, the frame evaluator, the static SVG renderer and the generated runtime all use it. `evaluateFrame` already sorted, which is why only the runtime diverged.
 - An imported image layer's bounds now describe the visible art instead of the whole bitmap. The drawn box is sized from `naturalWidth`/`naturalHeight`, so a PNG with transparent padding left every bounds consumer — the Inspector's edge control points, the selection gizmo, the resize handles, marquee hit-testing — out on the padding, and a padded file showed empty space beside the letters. The non-transparent content rectangle is measured once at import (an alpha scan, `VISIBLE_ALPHA_THRESHOLD`) and kept on the layer in local units, so a 100x100 PNG whose art covers x 20..79 and y 30..69 now reports edge points at +/-45 and +/-30 inside its 150x150 box instead of +/-75 and +/-75. The rectangle survives save/load and the OGraf package; a layer without one — every layer imported before this change, and every video — keeps exactly the previous whole-box bounds.
 - Cinematic Title can now export as editable OGraf text: KCS owns the original Playfair Display variable font, loads its normal/italic faces locally in the editor, and packages the normal face with its full SIL Open Font License. The existing asset preparation and validation authorities handle the bytes; unavailable fonts still block export, explicitly supplied font sources retain precedence, and quoted Inspector family names resolve to the same packaged face. The ZIP retains `scene.kcs` and its public text field; no text rasterization or general package-asset import change is introduced.
 - Edit-mode stage rendering now evaluates the selected sequence, matching the selection gizmo and Inspector. Dragging a keyframed circle or another layer in a named sequence moves its painted geometry instead of only its selection border; Broadcast keeps its existing runtime sequence selection.

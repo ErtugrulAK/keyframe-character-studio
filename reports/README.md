@@ -78,3 +78,4 @@ Use `docs/README_INDEX.md` first for current project state, approval boundaries,
 - `progress_154_exact_sha_release_smoke.md` — the manual Release Smoke Gate on the exact candidate SHA: dispatch path, run ID, the log evidence, what the gate does and does not prove, and the tested-code-SHA vs docs-tip distinction.
 - `progress_155_h7_rc2_release.md` — the H7 GO execution: the rc.2 candidate tag and draft prerelease, the PATH A metadata decision, the verification results, and the tested-code-SHA vs docs-tip distinction.
 - `progress_156_rc2_prerelease_publish.md` — publishing the existing rc.2 draft as a public prerelease: pre-publish state, the publication action, the post-publish verification, and the user QA checklist.
+- `progress_157_reality_hub_ograf_layer_matte_parity.md` — the Reality Hub OGraf layer-order defect: the three disagreeing ordering authorities, the proof that the regression catches it, the fix, and the retest artifacts.

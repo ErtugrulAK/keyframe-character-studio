@@ -6,8 +6,8 @@ Final branch SHA: 3f41400ee79f69cf489f3acf67166c7bd0a98f51
 Base: origin/main c46e698bb8cfe82d8d75886281f602c9c89c1020
 Stable QA checkout: unchanged at c46e698; UI 5173 and API 5000 kept the same PIDs (untouched)
 Isolated ports used: UI 5187 / 5188 / 5189, API 5001
-Merge state: withheld, waiting for user approval
-Remote CI: pending a PR or approval (branch pushes do not trigger ci.yml)
+Merge state: withheld, waiting for user approval (PR #3 open, MERGEABLE)
+Remote CI: PR #3 run 37938283542 (CI Pipeline, pull_request) — success on e5a2b8a
 Exact-SHA smoke: required on the final candidate SHA, as a separate zero-modification task
 Release state: v1.1.0-rc.2 unchanged at 6c27ef35d48d61a5e1163d2c91734c864fcafa01; no tag/release/npm action
 

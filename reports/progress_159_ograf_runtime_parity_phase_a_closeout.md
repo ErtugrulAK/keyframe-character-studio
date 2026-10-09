@@ -76,7 +76,15 @@ No fake `generate`/`check` script was added, and no dependency was introduced.
 
 ## CI
 
-No remote CI evidence. `ci.yml` triggers on `main` pushes and pull requests only; a branch push does not start a run, and opening a PR is an external action that needs separate approval. **LOCAL GATES GREEN — REMOTE CI PENDING PR/APPROVAL.**
+Pull request **#3** (https://github.com/ErtugrulAK/keyframe-character-studio/pull/3) was opened from `fix/ograf-runtime-parity-phase-a` into `main` at head `e5a2b8a1de5c47902559305eb63d5312d6e1e701`. `ci.yml` triggers on `pull_request`, so the PR produced the branch's first remote run:
+
+| Run | Workflow | Event | Head SHA | Conclusion |
+|---|---|---|---|---|
+| `37938283542` | CI Pipeline | `pull_request` | `e5a2b8a` | **success** |
+
+Both runner annotations are the pre-existing non-blocking ones (Node 20 deprecation, the `ubuntu-latest` → Ubuntu 26 notice). The PR is `MERGEABLE` and open.
+
+No earlier remote CI existed for this branch. `ci.yml` triggers on `main` pushes and pull requests only; a branch push does not start a run, and opening a PR is an external action that needs separate approval. **LOCAL GATES GREEN — REMOTE CI PENDING PR/APPROVAL.**
 
 ## Exact-SHA smoke
 

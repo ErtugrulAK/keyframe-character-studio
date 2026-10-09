@@ -19,6 +19,6 @@ Isolated ports only: `PORT=5001 npm run qa:release` (UI 5189) 2 passed; `PORT=50
 
 ## State
 
-Merge is withheld — the user's QA session is still active. No tag, release or npm action. A fresh exact-SHA Release Smoke Gate is required on the final candidate SHA, as a separate zero-modification task.
+Pull request #3 (https://github.com/ErtugrulAK/keyframe-character-studio/pull/3) is open at head `e5a2b8a`, and its `pull_request` CI run `37938283542` concluded **success**. Merge is withheld — the user's QA session is still active. No tag, release or npm action. A fresh exact-SHA Release Smoke Gate is required on the final candidate SHA, as a separate zero-modification task.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.

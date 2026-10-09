@@ -31,7 +31,7 @@ Isolated ports only: `PORT=5001 npm run qa:release` (UI 5189) 2 passed; `PORT=50
 
 ## State
 
-Merge is withheld — the user's QA session is still active. No tag, release or npm action. A fresh exact-SHA Release Smoke Gate is required on the final candidate SHA, as a separate zero-modification task.
+Pull request #3 (https://github.com/ErtugrulAK/keyframe-character-studio/pull/3) is open at head `e5a2b8a`, and its `pull_request` CI run `37938283542` concluded **success**. Merge is withheld — the user's QA session is still active. No tag, release or npm action. A fresh exact-SHA Release Smoke Gate is required on the final candidate SHA, as a separate zero-modification task.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
@@ -75,8 +75,8 @@ Final branch SHA: 3f41400ee79f69cf489f3acf67166c7bd0a98f51
 Base: origin/main c46e698bb8cfe82d8d75886281f602c9c89c1020
 Stable QA checkout: unchanged at c46e698; UI 5173 and API 5000 kept the same PIDs (untouched)
 Isolated ports used: UI 5187 / 5188 / 5189, API 5001
-Merge state: withheld, waiting for user approval
-Remote CI: pending a PR or approval (branch pushes do not trigger ci.yml)
+Merge state: withheld, waiting for user approval (PR #3 open, MERGEABLE)
+Remote CI: PR #3 run 37938283542 (CI Pipeline, pull_request) — success on e5a2b8a
 Exact-SHA smoke: required on the final candidate SHA, as a separate zero-modification task
 Release state: v1.1.0-rc.2 unchanged at 6c27ef35d48d61a5e1163d2c91734c864fcafa01; no tag/release/npm action
 
@@ -577,7 +577,15 @@ No fake `generate`/`check` script was added, and no dependency was introduced.
 
 ## CI
 
-No remote CI evidence. `ci.yml` triggers on `main` pushes and pull requests only; a branch push does not start a run, and opening a PR is an external action that needs separate approval. **LOCAL GATES GREEN — REMOTE CI PENDING PR/APPROVAL.**
+Pull request **#3** (https://github.com/ErtugrulAK/keyframe-character-studio/pull/3) was opened from `fix/ograf-runtime-parity-phase-a` into `main` at head `e5a2b8a1de5c47902559305eb63d5312d6e1e701`. `ci.yml` triggers on `pull_request`, so the PR produced the branch's first remote run:
+
+| Run | Workflow | Event | Head SHA | Conclusion |
+|---|---|---|---|---|
+| `37938283542` | CI Pipeline | `pull_request` | `e5a2b8a` | **success** |
+
+Both runner annotations are the pre-existing non-blocking ones (Node 20 deprecation, the `ubuntu-latest` → Ubuntu 26 notice). The PR is `MERGEABLE` and open.
+
+No earlier remote CI existed for this branch. `ci.yml` triggers on `main` pushes and pull requests only; a branch push does not start a run, and opening a PR is an external action that needs separate approval. **LOCAL GATES GREEN — REMOTE CI PENDING PR/APPROVAL.**
 
 ## Exact-SHA smoke
 

@@ -1,20 +1,17 @@
-# KCS ChatGPT Upload Manifest — v1.1.0-rc.2 Public Prerelease
+# KCS ChatGPT Upload Manifest — OGraf Runtime Parity Phase A
 
-Scope: publishing the existing v1.1.0-rc.2 draft as a public prerelease, and the documentation that records the publication state
-TESTED CODE SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01
-Release candidate: annotated v1.1.0-rc.2, dereferences to 6c27ef35d48d61a5e1163d2c91734c864fcafa01 (tag object unchanged)
-GitHub release: KCS v1.1.0-rc.2, id RE_kwDOTexJrc4YPnCt, isDraft false, isPrerelease true, publishedAt 2026-10-08T13:11:16Z
-Public URL: https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2
-Release Smoke Gate: run 37752015020 (workflow_dispatch, conclusion success)
-Earlier candidate: v1.1.0-rc.1 unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; its draft release untouched
-Package: private, metadata version 1.1.0-rc.1; npm publication not performed (registry returns 404)
-Current docs tip: the documentation commit that records this publication — docs-only, newer than the candidate, NOT smoke-tested
-Not a stable release: no stable/final GitHub release exists; this is a prerelease for user QA
-Validation authority: the v1.1.0-rc.2 PUBLISHED PRERELEASE and H7 GO sections in PROJECT_STATE.md and NEXT_SESSION.md
-Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
-Historical records retained in reports/ only (not copied into this minimal bundle): progress_151, progress_152, progress_153, progress_154
+Scope: the Phase A runtime-parity branch (isolated worktree), its validation and its closeout decisions
+Branch: fix/ograf-runtime-parity-phase-a
+Final branch SHA: 3f41400ee79f69cf489f3acf67166c7bd0a98f51
+Base: origin/main c46e698bb8cfe82d8d75886281f602c9c89c1020
+Stable QA checkout: unchanged at c46e698; UI 5173 and API 5000 kept the same PIDs (untouched)
+Isolated ports used: UI 5187 / 5188 / 5189, API 5001
+Merge state: withheld, waiting for user approval (PR #3 open, MERGEABLE)
+Remote CI: PR #3 run 37938283542 (CI Pipeline, pull_request) — success on e5a2b8a
+Exact-SHA smoke: required on the final candidate SHA, as a separate zero-modification task
+Release state: v1.1.0-rc.2 unchanged at 6c27ef35d48d61a5e1163d2c91734c864fcafa01; no tag/release/npm action
 
-Bundle source files (10):
+Bundle source files (9):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - KCS_RELEASE_CANDIDATE_SUMMARY.md
@@ -23,11 +20,9 @@ Bundle source files (10):
 - PROJECT_STATE.md
 - README.md
 - manifest.txt
-- progress_155_h7_rc2_release.md
-- progress_156_rc2_prerelease_publish.md
+- progress_159_ograf_runtime_parity_phase_a_closeout.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
-No empty contribution-filling commits or retrospective UI dates are authorized.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.

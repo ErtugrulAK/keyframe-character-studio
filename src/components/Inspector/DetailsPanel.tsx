@@ -7,6 +7,8 @@ import { isTrimPathEligible } from '../../utils/trimPath';
 import { updateTrimPath, type TrimPathAuthoringPatch } from '../../utils/trimPathAuthoring';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
+import type { TrimPathChannel } from './sections/style/TrimPathSection';
+import { evaluateTrimPath } from '../../utils/trimPath';
 import { DuplicateTab } from './sections/DuplicateTab';
 import { isBooleanEligible, computeBooleanContours, deriveBooleanGeometry, inspectBooleanOperands, dissolveBooleanGroup as dissolveBooleanGroupState, createBooleanDisplayName, isGeneratedBooleanName, type BooleanOperation } from '../../utils/booleanGeometry';
 import { generateId } from '../../utils/idGenerator';
@@ -194,6 +196,40 @@ export const DetailsPanel: React.FC = () => {
       (keyframe) => keyframe.frame === currentFrame && (keyframe.templateId || 'Sequence') === (activeTemplateId || 'Sequence'),
     )
     : undefined;
+
+  /**
+   * Trim Path authoring follows the same rule as every other scalar channel:
+   * the field shows the EVALUATED value at the current frame (so a keyed
+   * property stops reading as a global edit), and an edit writes the current
+   * frame's keyframe once the channel is keyed. `evaluateTrimPath` and
+   * `updateCurrentPropertyChannel` are the existing authorities for both halves.
+   */
+  const activeTrimTemplate = activeTemplateId || 'Sequence';
+  const trimChannel = (channel: TrimPathChannel) =>
+    (selectedTrack?.channels?.[channel] ?? []).filter(
+      (keyframe) => (keyframe.templateId || 'Sequence') === activeTrimTemplate,
+    );
+  const evaluatedTrim = selectedPart
+    ? (() => {
+      const resolved = evaluateTrimPath(selectedPart, selectedTrack, currentFrame, activeTrimTemplate);
+      return { start: resolved.start, end: resolved.end, offset: resolved.offset };
+    })()
+    : undefined;
+  const trimKeyframedAtFrame: Record<TrimPathChannel, boolean> = {
+    trimPathStart: trimChannel('trimPathStart').some((keyframe) => keyframe.frame === currentFrame),
+    trimPathEnd: trimChannel('trimPathEnd').some((keyframe) => keyframe.frame === currentFrame),
+    trimPathOffset: trimChannel('trimPathOffset').some((keyframe) => keyframe.frame === currentFrame),
+  };
+  const handleToggleTrimKeyframe = (channel: TrimPathChannel) => {
+    if (!selectedTrack || !evaluatedTrim) return;
+    const atFrame = trimChannel(channel).find((keyframe) => keyframe.frame === currentFrame);
+    if (atFrame) {
+      deletePropertyKeyframe(selectedTrack.id, channel, atFrame.id);
+      return;
+    }
+    const value = channel === 'trimPathStart' ? evaluatedTrim.start : channel === 'trimPathEnd' ? evaluatedTrim.end : evaluatedTrim.offset;
+    addPropertyKeyframe(selectedTrack.id, channel, currentFrame, value);
+  };
 
   const handlePartPropChange = (key: keyof CharacterPart, value: unknown) => {
     if (!selectedPartId) return;
@@ -522,6 +558,10 @@ export const DetailsPanel: React.FC = () => {
                 handlePartColorChange={handlePartColorChange}
                 handleZIndexChange={handleZIndexChange}
                 currentFrame={currentFrame}
+                evaluatedTrim={evaluatedTrim}
+                trimKeyframedAtFrame={trimKeyframedAtFrame}
+                onUpdateTrimChannel={updateCurrentPropertyChannel}
+                onToggleTrimKeyframe={handleToggleTrimKeyframe}
                 onAddMaskKeyframe={(maskId, property, value) => {
                   if (selectedTrack) addPropertyKeyframe(selectedTrack.id, layerMaskChannel(maskId, property), currentFrame, value);
                 }}

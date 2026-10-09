@@ -9,7 +9,7 @@ import { StyleParticleSection } from './style/StyleParticleSection';
 import { TransformVertexEditor } from './transform/TransformVertexEditor';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import { StyleMatteSection } from './style/StyleMatteSection';
-import { TrimPathSection } from './style/TrimPathSection';
+import { TrimPathSection, type TrimPathChannel } from './style/TrimPathSection';
 import { isTrimPathEligible } from '../../../utils/trimPath';
 
 interface StyleTabProps {
@@ -24,6 +24,12 @@ interface StyleTabProps {
   onAddMaskKeyframe?: (maskId: string, property: LayerMaskChannelProperty, value: number) => void;
   onAddMaskPathKeyframe?: (maskId: string, path: BezierPath) => void;
   onChangeMaskPath?: (maskId: string, path: BezierPath) => void;
+  /** Evaluated Trim Path at the current frame; the fields must show what the stage draws. */
+  evaluatedTrim?: { start: number; end: number; offset: number };
+  /** Which Trim Path channels carry a keyframe exactly at the current frame. */
+  trimKeyframedAtFrame?: Record<TrimPathChannel, boolean>;
+  onUpdateTrimChannel?: (channel: TrimPathChannel, value: number) => void;
+  onToggleTrimKeyframe?: (channel: TrimPathChannel) => void;
 }
 
 export const StyleTab: React.FC<StyleTabProps> = ({
@@ -37,6 +43,10 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   onAddMaskKeyframe,
   onAddMaskPathKeyframe,
   onChangeMaskPath,
+  evaluatedTrim,
+  trimKeyframedAtFrame,
+  onUpdateTrimChannel,
+  onToggleTrimKeyframe,
 }) => {
   const isTextBearing =
     selectedPart.type === 'custom_card' ||
@@ -45,7 +55,16 @@ export const StyleTab: React.FC<StyleTabProps> = ({
 
   return (
     <>
-      {isTrimPathEligible(selectedPart.type) && <TrimPathSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
+      {isTrimPathEligible(selectedPart.type) && (
+        <TrimPathSection
+          selectedPart={selectedPart}
+          onPartPropChange={handlePartPropChange}
+          evaluatedTrim={evaluatedTrim}
+          keyframedAtFrame={trimKeyframedAtFrame}
+          onUpdateTrimChannel={onUpdateTrimChannel}
+          onToggleTrimKeyframe={onToggleTrimKeyframe}
+        />
+      )}
       {isShapeAppearanceEligible(selectedPart.type) && <StyleAppearanceSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
       {!isTextBearing && (
         <StyleColorSection selectedPart={selectedPart} onPartColorChange={handlePartColorChange} onPartPropChange={handlePartPropChange} />

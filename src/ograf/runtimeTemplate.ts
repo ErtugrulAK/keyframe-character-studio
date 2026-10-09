@@ -1,5 +1,6 @@
 import type { SceneData } from '../types/composition';
 import type { OGrafPublicColorField, OGrafPublicImageField, OGrafPublicTextField } from './types';
+import { runtimeCompareByStackingOrder, runtimeResolveMatteSource } from './runtimeSnippets';
 
 function imageReferenceLookup(imageReferences: Record<string, string>): Record<string, string> {
   return Object.entries(imageReferences).reduce<Record<string, string>>((lookup, [source, packagedPath]) => {
@@ -177,7 +178,10 @@ function maskPathD(layer, mask, scene) {
 // The same stacking rule the editor stage uses: ascending zIndex paints first.
 // The authored array order is NOT the paint order (the outliner keeps index 0 on
 // top), so painting the array directly inverts the scene in a standards renderer.
-function stackingOrder(items) { return items.slice().sort((a, b) => a.zIndex - b.zIndex); }
+// The comparator is KCS's own helper, embedded from its single definition in
+// src/utils/stackingOrder.ts; only the array wrapper is plumbing.
+const compareByStackingOrder = ${runtimeCompareByStackingOrder()};
+function stackingOrder(items) { return items.slice().sort(compareByStackingOrder); }
 function evaluateScene(scene, frame) {
   const transforms = Object.create(null); const visiting = new Set(); const evaluateTransform = (layer) => { if (Object.prototype.hasOwnProperty.call(transforms, layer.id)) return transforms[layer.id]; const track = scene.tracks.find((item) => item.partId === layer.id); const channels = track && track.channels ? track.channels : {}; let result = { x: channelValue(channels.x, frame, layer.x), y: channelValue(channels.y, frame, layer.y), rotation: channelValue(channels.rotation, frame, layer.rotation), scaleX: channelValue(channels.scaleX, frame, layer.scaleX), scaleY: channelValue(channels.scaleY, frame, layer.scaleY), opacity: channelValue(channels.opacity, frame, layer.opacity) }; if (visiting.has(layer.id)) return result; visiting.add(layer.id); if (layer.parentId || layer.booleanGroupId) { const parentId = layer.parentId || layer.booleanGroupId; const parent = scene.layers.find((item) => item.id === parentId); if (parent) { const parentTransform = evaluateTransform(parent); const radians = parentTransform.rotation * Math.PI / 180; const sx = result.x * parentTransform.scaleX; const sy = result.y * parentTransform.scaleY; result = { x: parentTransform.x + sx * Math.cos(radians) - sy * Math.sin(radians), y: parentTransform.y + sx * Math.sin(radians) + sy * Math.cos(radians), rotation: parentTransform.rotation + result.rotation, scaleX: parentTransform.scaleX * result.scaleX, scaleY: parentTransform.scaleY * result.scaleY, opacity: result.opacity }; } } visiting.delete(layer.id); transforms[layer.id] = result; return result; };
   return stackingOrder(scene.layers).map((layer) => {
@@ -207,7 +211,11 @@ function text(layer, props, fillOverride) { return '<text x="0" y="0" text-ancho
 function image(layer, imageReferences, props) { const width = layer.width || 180; const height = layer.height || 120; const href = imageReferences[layer.imageUrl] || layer.imageUrl || ''; return '<image href="' + escapeXml(resourceUrl(href)) + '" x="' + (-width / 2) + '" y="' + (-height / 2) + '" width="' + width + '" height="' + height + '" preserveAspectRatio="xMidYMid slice"' + (props || '') + ' />'; }
 function content(layer, imageReferences, props, fillOverride) { if (layer.type === 'custom_text') return text(layer, props, fillOverride); if (layer.type === 'custom_image') return image(layer, imageReferences, props); return geometry(layer, props); }
 function transform(scene, layer) { return 'translate(' + (scene.width / 2 + layer.transform.x) + ' ' + (scene.height / 2 + layer.transform.y) + ') rotate(' + layer.transform.rotation + ') scale(' + layer.transform.scaleX + ' ' + layer.transform.scaleY + ')'; }
-function matteRelationship(layer) { if (layer.trackMatte && layer.trackMatte.enabled !== false) return { sourceLayerId: layer.trackMatte.sourceLayerId, mode: layer.trackMatte.mode, inverted: layer.trackMatte.inverted === true, sourceVisible: layer.trackMatte.sourceVisible !== false }; const matte = layer.matte; if (!matte || (matte.mode || 'clip') === 'clip') return undefined; return { sourceLayerId: matte.sourcePartId, mode: matte.mode || 'alpha', inverted: matte.inverted === true, sourceVisible: true }; }
+// The precedence decision is KCS's own resolver, embedded from its single
+// definition in src/utils/matte.ts. Only the clip exclusion stays local: the
+// resolver names the source, it does not decide which SVG mechanism consumes it.
+const resolveMatteSource = ${runtimeResolveMatteSource()};
+function matteRelationship(layer) { const ref = resolveMatteSource(layer); if (!ref) return undefined; if (ref.kind === 'legacy') { const matte = layer.matte; if ((matte.mode || 'clip') === 'clip') return undefined; return { sourceLayerId: ref.sourceId, mode: matte.mode || 'alpha', inverted: matte.inverted === true, sourceVisible: true }; } const v2 = layer.trackMatte; return { sourceLayerId: v2.sourceLayerId, mode: v2.mode, inverted: v2.inverted === true, sourceVisible: v2.sourceVisible !== false }; }
 function maskDefs(scene, layer) {
   const masks = layer.masks || []; const defs = []; const ids = []; const region = 'M 0 0 H ' + scene.width + ' V ' + scene.height + ' H 0 Z'; let previousId = null;
   const filterMarkup = (id, mask) => { const filterId = 'kcs-layer-mask-filter-' + id; return mask.feather > 0 || mask.expansion !== 0 ? '<filter id="' + filterId + '" filterUnits="userSpaceOnUse"><feMorphology operator="' + (mask.expansion > 0 ? 'dilate' : 'erode') + '" radius="' + Math.abs(mask.expansion) + '" />' + (mask.feather > 0 ? '<feGaussianBlur stdDeviation="' + (mask.feather / 2) + '" />' : '') + '</filter>' : ''; };

@@ -767,8 +767,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  /* The icon stays small, but the target is a comfortable 32px: the negative
+     margins absorb the extra box so the header row keeps its height and the
+     button stays flush with the right edge. */
+  width: 32px;
+  height: 32px;
+  margin: -5px -5px -5px 0;
   padding: 0;
   border: 1px solid transparent;
   border-radius: var(--radius-xs);

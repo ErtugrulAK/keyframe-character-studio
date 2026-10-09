@@ -47,18 +47,40 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   const orientationScaleY = selectedTransform.scaleY < 0 ? -1 : 1;
   const metrics = getTransformGizmoMetrics(halfW * 2, halfH * 2, zScale);
 
+  /**
+   * The selection frame is drawn twice: a wide dark halo underneath the accent
+   * dash. A single accent stroke vanished whenever the artwork was a similar
+   * cyan, so the halo gives the frame a contrast partner on light, dark and
+   * accent-like content alike. Both strokes are non-interactive, so the frame
+   * never changes what the pointer hits.
+   */
   const renderBounds = (
-    <rect
-      x={left}
-      y={top}
-      width={halfW * 2}
-      height={halfH * 2}
-      fill="none"
-      stroke="#00d2ff"
-      strokeWidth={1.5 * zScale}
-      strokeDasharray={`${5 * zScale} ${4 * zScale}`}
-      vectorEffect="non-scaling-stroke"
-    />
+    <>
+      <rect
+        data-testid="selection-frame-halo"
+        x={left}
+        y={top}
+        width={halfW * 2}
+        height={halfH * 2}
+        fill="none"
+        pointerEvents="none"
+        style={{ stroke: 'var(--bg-darkest)' }}
+        strokeWidth={3.5 * zScale}
+        vectorEffect="non-scaling-stroke"
+      />
+      <rect
+        x={left}
+        y={top}
+        width={halfW * 2}
+        height={halfH * 2}
+        fill="none"
+        pointerEvents="none"
+        stroke="#00d2ff"
+        strokeWidth={1.5 * zScale}
+        strokeDasharray={`${5 * zScale} ${4 * zScale}`}
+        vectorEffect="non-scaling-stroke"
+      />
+    </>
   );
   const renderIndividualSelection = () => (
     <>

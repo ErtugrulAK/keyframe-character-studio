@@ -738,6 +738,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 - The timeline's "Selected Keyframe" property panel: selecting a keyframe in the timeline no longer opens it. The selection itself is unchanged — the diamond still highlights, `Delete`/`Backspace` still remove the selected frame group and undo restores it — and keyframe values stay editable through the Inspector's transform section and the timeline's own drag/duplicate/copy-paste actions.
+- The header's `?` (First export help) button and the **OGraf Single File (Legacy)** export entry. The export menu now offers exactly **JSON** and **OGraf Package**; the legacy single-file `.mjs` export is gone, so its fail-closed guard went with it, and the first-export guidance component is no longer reachable from the header.
 
 ### Fixed
 - Cinematic Title can now export as editable OGraf text: KCS owns the original Playfair Display variable font, loads its normal/italic faces locally in the editor, and packages the normal face with its full SIL Open Font License. The existing asset preparation and validation authorities handle the bytes; unavailable fonts still block export, explicitly supplied font sources retain precedence, and quoted Inspector family names resolve to the same packaged face. The ZIP retains `scene.kcs` and its public text field; no text rasterization or general package-asset import change is introduced.

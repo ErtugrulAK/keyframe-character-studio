@@ -8,24 +8,21 @@ import {
   CheckCircle2,
   Plus,
   ChevronDown,
-  HelpCircle,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { InlineRename } from '../Shared/InlineRename';
 import { compileOGrafPackage } from '../../ograf/packageCompiler';
-import { createOGrafBrowserZip, sanitizeOGrafDownloadName } from '../../ograf/browserZip';
+import { createOGrafBrowserZip } from '../../ograf/browserZip';
 import { prepareLegacyOGrafExport } from '../../ograf/legacyCompatibility';
 import {
   describeOGrafPackageWriteFailure,
   getOGrafExportRemediationReport,
   sanitizeOGrafDiagnosticText,
-  summarizeOGrafExportReadiness,
   type OGrafDiagnosticRemediation,
 } from '../../ograf/diagnostics';
 import type { OGrafExportDiagnostic } from '../../ograf/types';
 import type { ToastOptions } from '../../hooks/useToast';
-import { FirstExportGuide } from './FirstExportGuide';
 import { ImportReportDialog } from '../Modal/ImportReportDialog';
 import { classifyImport } from '../../utils/importDispatch';
 import { readOGrafPackage, type OGrafPackageReadResult } from '../../ograf/packageImport';
@@ -105,53 +102,19 @@ export const HeaderBar: React.FC = () => {
   const [editingTmplName, setEditingTmplName] = useState<string>('');
   const [pendingDeleteTemplate, setPendingDeleteTemplate] = useState<{ id: string; name: string } | null>(null);
   const [isOGrafExporting, setIsOGrafExporting] = useState<boolean>(false);
-  const [isFirstExportGuideOpen, setIsFirstExportGuideOpen] = useState<boolean>(false);
-  const [isCheckingOGrafReadiness, setIsCheckingOGrafReadiness] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
 
   /**
-   * The one OGraf compile path: the package export, the legacy single-file
-   * export, and the first-export readiness check all compile the current scene
-   * through it, so the check and the export always read the same diagnostics
-   * authority for whatever the scene is at the moment each one runs.
+   * The one OGraf compile path: the package export compiles the current scene
+   * through it, so the export always reads the same diagnostics authority for
+   * whatever the scene is at the moment it runs.
    */
   const compileOGrafPlan = async () => {
     const sceneData = JSON.parse(exportProject()) as SceneData;
     const preparation = prepareLegacyOGrafExport(sceneData);
     const prepared = preparation instanceof Promise ? await preparation : preparation;
     return compileOGrafPackage(prepared.sceneData, prepared.options);
-  };
-
-  const handleCheckOGrafReadiness = async () => {
-    if (isCheckingOGrafReadiness) return;
-    setIsCheckingOGrafReadiness(true);
-    try {
-      const plan = await compileOGrafPlan();
-      const readiness = summarizeOGrafExportReadiness(plan.diagnostics, sanitizeOGrafDownloadName(plan.manifest.name));
-      showToast(readiness.message, readiness.status === 'blocked' ? 'error' : readiness.status === 'warnings' ? 'info' : 'success', {
-        title: readiness.title,
-        action: readiness.action,
-        durationMs: readiness.status === 'blocked' ? OGRAF_BLOCKING_TOAST_DURATION_MS : OGRAF_WARNING_TOAST_DURATION_MS,
-      });
-    } catch (error) {
-      const remediation = describeOGrafPackageWriteFailure(error);
-      if (remediation) {
-        showToast(remediation.message, 'error', {
-          title: remediationLabel(remediation),
-          action: remediation.action,
-          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
-        });
-      } else {
-        const message = error instanceof Error ? error.message : 'Unexpected OGraf export failure.';
-        showToast(`Could not check OGraf export: ${sanitizeOGrafDiagnosticText(message)}`, 'error', {
-          action: OGRAF_UNCLASSIFIED_FAILURE_ACTION,
-          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
-        });
-      }
-    } finally {
-      setIsCheckingOGrafReadiness(false);
-    }
   };
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -247,62 +210,6 @@ export const HeaderBar: React.FC = () => {
       setIsOGrafExporting(false);
     }
   };
-  const handleOGrafLegacyExport = async () => {
-    if (isOGrafExporting) return;
-    setIsOGrafExporting(true);
-    try {
-      const plan = await compileOGrafPlan();
-      if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
-      const runtime = plan.files.find((file) => file.kind === 'runtime' && file.content !== undefined);
-      if (!runtime?.content) throw new Error('Generated OGraf runtime is unavailable.');
-      // The legacy export writes ONE .mjs file. When the runtime depends on
-      // packaged assets (fonts, licenses, images) the download alone would be a
-      // broken, unlicensed graphic, so the export fails closed and points at the
-      // ZIP package instead of silently shipping a runtime without them.
-      const packagedDependencies = plan.files.filter((file) => file.kind === 'asset' || file.kind === 'license');
-      if (packagedDependencies.length > 0) {
-        const kinds = Array.from(new Set(packagedDependencies.map((file) => file.kind))).sort().join(' and ');
-        showToast(
-          `The single-file legacy export cannot carry its ${packagedDependencies.length} packaged ${kinds} file(s). Export the OGraf package (ZIP) so the fonts and licenses ship with the runtime.`,
-          'error',
-          {
-            title: 'Legacy export blocked',
-            action: 'Use "Export OGraf Package" (ZIP) for a graphic that needs packaged assets.',
-            durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
-          },
-        );
-        return;
-      }
-      const fileName = `${sanitizeOGrafDownloadName(plan.manifest.name)}.mjs`;
-      const url = URL.createObjectURL(new Blob([runtime.content], { type: 'text/javascript' }));
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = fileName;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
-      showToast(`Exported "${fileName}"`, 'success');
-    } catch (error) {
-      const remediation = describeOGrafPackageWriteFailure(error);
-      if (remediation) {
-        showToast(remediation.message, 'error', {
-          title: remediationLabel(remediation),
-          action: remediation.action,
-          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
-        });
-      } else {
-        const message = error instanceof Error ? error.message : 'Unexpected OGraf legacy export failure.';
-        showToast(`Could not export OGraf legacy file: ${sanitizeOGrafDiagnosticText(message)}`, 'error', {
-          action: OGRAF_UNCLASSIFIED_FAILURE_ACTION,
-          durationMs: OGRAF_BLOCKING_TOAST_DURATION_MS,
-        });
-      }
-    } finally {
-      setIsOGrafExporting(false);
-    }
-  };
-
   /**
    * The one import entry: it decides what the file is from its **content** and
    * routes it to the importer that owns that kind. Only a Lottie document opens
@@ -626,40 +533,6 @@ export const HeaderBar: React.FC = () => {
                 >
                   {isOGrafExporting ? 'Exporting OGraf…' : 'OGraf Package'}
                 </button>
-                <button
-                  type="button"
-                  role="menuitem"
-                  className="header-action-btn"
-                  style={{ width: '100%', justifyContent: 'flex-start' }}
-                  disabled={isOGrafExporting}
-                  onClick={() => {
-                    setIsExportMenuOpen(false);
-                    void handleOGrafLegacyExport();
-                  }}
-                >
-                  OGraf Single File (Legacy)
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div style={{ position: 'relative' }}>
-            <button
-              className="header-action-btn"
-              onClick={() => setIsFirstExportGuideOpen((open) => !open)}
-              aria-expanded={isFirstExportGuideOpen}
-              aria-controls="first-export-guide"
-              aria-label="First export help"
-              title="First export help"
-            >
-              <HelpCircle size={14} />
-            </button>
-            {isFirstExportGuideOpen && (
-              <div id="first-export-guide">
-                <FirstExportGuide
-                  onCheckReadiness={() => { void handleCheckOGrafReadiness(); }}
-                  isChecking={isCheckingOGrafReadiness}
-                />
               </div>
             )}
           </div>

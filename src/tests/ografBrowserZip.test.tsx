@@ -104,19 +104,15 @@ describe('HeaderBar OGraf export integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     expect(screen.getByRole('menuitem', { name: 'JSON', exact: true })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true })).toBeTruthy();
-    expect(screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true })).toBeTruthy();
+    // The single-file legacy export is gone: the menu offers exactly these two.
+    expect(screen.getAllByRole('menuitem')).toHaveLength(2);
     fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
     expect(downloads[0]).toBe('my-project-demo-ograf.zip');
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }));
-    await waitFor(() => expect(click).toHaveBeenCalledTimes(2));
-    expect(context.exportProject).toHaveBeenCalledTimes(2);
-    expect(downloads[1]).toBe('my-project-demo.mjs');
-    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     fireEvent.click(screen.getByRole('menuitem', { name: 'JSON', exact: true }));
-    expect(context.exportProject).toHaveBeenCalledTimes(3);
+    expect(context.exportProject).toHaveBeenCalledTimes(2);
   });
 
   it('blocks unsupported and missing-asset scenes with actionable diagnostics', async () => {
@@ -198,26 +194,6 @@ describe('HeaderBar OGraf export integration', () => {
     expect(options.action).toContain('Verify the output location is writable');
   });
 
-  it('redacts a machine path from an unclassified legacy export failure', async () => {
-    context.exportProject.mockReturnValue(JSON.stringify(makeScene()));
-    vi.stubGlobal('URL', {
-      createObjectURL: vi.fn(() => { throw new Error('/home/alice/private/out: permission denied'); }),
-      revokeObjectURL: vi.fn(),
-    });
-
-    render(<HeaderBar />);
-    fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }));
-
-    await waitFor(() => expect(context.showToast).toHaveBeenCalled());
-    const [message, type, options] = context.showToast.mock.calls[0];
-    expect(type).toBe('error');
-    expect(message).toContain('Could not export OGraf legacy file');
-    expect(message).toContain('out: permission denied');
-    expect(message).not.toContain('/home/alice');
-    expect(options.action).toContain('Verify the output location is writable');
-  });
-
   it('surfaces warnings without blocking the export', async () => {
     const scene = makeScene();
     scene.layers = [
@@ -267,13 +243,16 @@ describe('HeaderBar OGraf export integration', () => {
     await waitFor(() => expect(createZipMock).toHaveBeenCalledTimes(1));
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
-    const menuItem = screen.getByRole('menuitem', { name: 'OGraf Single File (Legacy)', exact: true }) as HTMLButtonElement;
-    expect(menuItem.disabled).toBe(true);
-    fireEvent.click(menuItem);
+    // The OGraf item reports its in-flight state through both its label and its
+    // disabled flag; JSON stays available throughout.
+    const menuItems = screen.getAllByRole('menuitem') as HTMLButtonElement[];
+    expect(menuItems.map((item) => item.disabled)).toEqual([false, true]);
+    expect(menuItems[1].textContent).toContain('Exporting OGraf');
+    fireEvent.click(menuItems[1]);
     expect(createZipMock).toHaveBeenCalledTimes(1);
 
     resolveZip?.({ fileName: 'project-ograf.zip', bytes: new Uint8Array([1]) });
-    await waitFor(() => expect(menuItem.disabled).toBe(false));
+    await waitFor(() => expect((screen.getAllByRole('menuitem') as HTMLButtonElement[])[1].disabled).toBe(false));
   });
   it('explains when an OGraf manifest is supplied to KCS project import', async () => {
     render(<HeaderBar />);

@@ -87,6 +87,7 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `reports/progress_156_rc2_prerelease_publish.md` — the rc.2 public-prerelease publication: pre-publish verification, the publish action, post-publish checks, and the user QA checklist.
 - `reports/progress_157_reality_hub_ograf_layer_matte_parity.md` — the Reality Hub OGraf stacking fix and the layer-order retest artifacts.
 - `reports/progress_158_trim_path_keyframe_authoring.md` — Trim Path authoring made frame-specific, with the retest steps.
+- `reports/progress_159_ograf_runtime_parity_phase_a_closeout.md` — the Phase A runtime-parity closeout: isolated-port validation and the merge state.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

@@ -1,34 +1,24 @@
-# KCS v1.1.0-rc.2 — PUBLIC PRERELEASE — 2026-10-08
+# KCS OGraf Runtime Parity — Phase A (branch validated, not merged)
 
-## Latest approved release action
+Branch `fix/ograf-runtime-parity-phase-a` at `3f41400ee79f69cf489f3acf67166c7bd0a98f51`, validated in an isolated worktree. The stable QA checkout stayed clean at `c46e698` and its editor/API (5173/5000) were never touched.
 
-The existing `v1.1.0-rc.2` draft was **published as a public prerelease**. It is **RC.2 READY FOR USER QA** — this is NOT a stable release.
+## What the branch does
 
-| Field | Value |
-|---|---|
-| Tested code commit (candidate) | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Annotated release candidate | `v1.1.0-rc.2` — dereferences to exactly the tested commit (tag object unchanged) |
-| Release Smoke Gate | run `37752015020` — success, every step green |
-| GitHub release | `KCS v1.1.0-rc.2`, id `RE_kwDOTexJrc4YPnCt` |
-| State | `isDraft: false`, `isPrerelease: true`, `publishedAt: 2026-10-08T13:11:16Z` |
-| Public URL | https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2 |
-| Earlier candidate | `v1.1.0-rc.1` unchanged at `46d2a3e59e065816d972dcd56951803951b577f6`; its draft release untouched |
-| Package | private, metadata version `1.1.0-rc.1`; npm returns 404 |
+The generated runtime hand-copied two KCS rules and both copies drifted — the painted order was inverted (the runtime sorted the authored array while the editor sorted by `zIndex`) and a disabled Track Matte V2 suppressed the legacy matte in the export but not in the editor.
 
-Publication transitioned the **same** release object from draft to published; no tag was created or moved, no release was recreated or retargeted, nothing was marked latest-stable, and no stable release exists. The release notes were already complete, so they were not rewritten.
+The copies are gone. `src/ograf/runtimeSnippets.ts` embeds each canonical helper's own source with `Function.prototype.toString`, so the runtime runs the same text the editor runs: the stacking comparator from `src/utils/stackingOrder.ts` and the matte precedence from `src/utils/matte.ts`. `svgRenderer` calls the same resolver directly instead of carrying a third copy. `ografRuntimeParity.test.ts` asserts the embedded text IS the canonical source, that the generated module holds no hand-written rule, and that editor, static renderer and runtime agree on painted order, matte precedence, no-source fallback and `sourceVisible`.
 
-The candidate is the exact smoke-tested commit. The documentation tip is newer and docs-only — no source, test, workflow, package, lock or asset byte differs — so the candidate identity is unchanged and the docs tip is **not** itself smoke-tested.
+## Validation
 
-## What the smoke gate proved, and what it did not
+Isolated ports only: `PORT=5001 npm run qa:release` (UI 5189) 2 passed; `PORT=5001 npm run qa:v6` (UI 5187) 3 passed; `CI=1 PORT=5001 npx playwright test --project=chromium --retries=0` (UI 5188) 265 passed. Full local gate green: tsc, lint, 138 Vitest files / 2,102 tests, build, `validate:ograf`, `npm run check`, state consistency (38 checks), audit 0, `git diff --check`.
 
-It proved the candidate installs cleanly from its own lockfile on a fresh Ubuntu runner, the OGraf fixture manifest validates offline against the vendored SHA-256-pinned closure, a KCS OGraf package materialized on the runner interoperates with Chromium, and the editor exports an OGraf ZIP through the UI.
+## Decisions
 
-It is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line. This is a prerelease candidate, not a claim of full production certification.
+- `sourceVisible: v2.sourceVisible !== false` stays local: it is a one-field default normalisation, not a branching policy, and the parity test covers its behaviour in both paths.
+- No drift-gate script was added: KCS has no tracked generated artifact. Vendored OGraf schema drift is already guaranteed by SHA-256 pin validation, and this branch's runtime duplication is guarded by the parity tests.
 
-## Next step — user QA
+## State
 
-Run the twelve-step manual QA checklist in `progress_156_rc2_prerelease_publish.md` against this prerelease: app opens, project basics, shape manipulation, text rendering, opacity keyframes, a bonded pair drag, one Motion Curves easing edit, one mask/matte case, an OGraf ZIP export, an OGraf re-import, the Playfair / Cinematic Title export path, and a clean stability pass.
-
-Classify every finding as BLOCKER, MAJOR, MINOR or COSMETIC. **Any BLOCKER or MAJOR code defect means do not proceed to a stable release**, and any code change produces a new commit that invalidates this exact-SHA smoke result — a new Release Smoke Gate run is then required before any further candidate or stable decision.
+Merge is withheld — the user's QA session is still active. No tag, release or npm action. A fresh exact-SHA Release Smoke Gate is required on the final candidate SHA, as a separate zero-modification task.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.

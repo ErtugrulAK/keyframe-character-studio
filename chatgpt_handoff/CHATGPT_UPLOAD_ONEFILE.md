@@ -520,187 +520,93 @@ Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items c
 
 ---
 
-## 8. rc.2 Prerelease Publication Record
+## 8. Trim Path Keyframe Authoring
 
-# Progress 156 — v1.1.0-rc.2 public prerelease publish
-
-Date: 2026-10-08. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
-
-The existing `v1.1.0-rc.2` **draft** prerelease was published as a **public prerelease**. No new tag was created, no release was recreated or retargeted, `v1.1.0-rc.1` is untouched, and no npm publication occurred.
-
-## Candidate identity
-
-| Field | Value |
-|---|---|
-| **TESTED CODE SHA (candidate)** | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Annotated tag | `v1.1.0-rc.2` — tag object `3d17e584704fcf534f9e885167ad300e904a332f` (unchanged) |
-| Tag dereferences to | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` — exact match |
-| Release Smoke Gate | run `37752015020` — success, `headSha` = the candidate |
-| **CURRENT DOCS TIP** | `f0a34c2eceaaa0f973ed1e0600fe474b2ab6b9a8` before this record; the record commit moves it forward and is **not** smoke-tested |
-
-No source, test, workflow, package, lock or asset byte differs between the candidate and the documentation tip: the only commits after `6c27ef3` are docs-only (`c650da1`, `f0a34c2`), verified with `git diff --name-only 6c27ef3..HEAD` filtered to non-documentation paths (empty).
-
-## Publication
-
-| Field | Value |
-|---|---|
-| Action | `gh release edit v1.1.0-rc.2 --draft=false --prerelease` |
-| Release ID | `RE_kwDOTexJrc4YPnCt` — the **same** release object as the draft (not recreated) |
-| Title | `KCS v1.1.0-rc.2` |
-| Tag | `v1.1.0-rc.2` |
-| `isDraft` | **false** |
-| `isPrerelease` | **true** |
-| `targetCommitish` | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (unchanged) |
-| `createdAt` | 2026-10-08T11:19:15Z |
-| `publishedAt` | 2026-10-08T13:11:16Z |
-| Public URL | https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2 (HTTP 200) |
-
-The release is listed as **Pre-release**, not latest-stable. It is not a stable release and no `v1.1.0` release exists.
-
-## Pre-publish state (verified before the mutation)
-
-- `main` == `origin/main` == `f0a34c2eceaaa0f973ed1e0600fe474b2ab6b9a8`; working tree clean; no in-progress Git operation.
-- The candidate commit existed locally and was an ancestor of `origin/main`.
-- `v1.1.0-rc.2` existed locally and remotely, annotated, dereferencing exactly to the tested SHA.
-- `v1.1.0-rc.1` dereferenced exactly to `46d2a3e59e065816d972dcd56951803951b577f6`.
-- The release was `isDraft: true`, `isPrerelease: true`, `targetCommitish` = the tested SHA, `publishedAt: null`.
-- npm returned 404 and `package.json` read private `1.1.0-rc.1`.
-- Smoke run `37752015020` was `success` with `headSha` = the tested SHA.
-- The release notes already carried every required fact (candidate identity, tested SHA, smoke run, delta summary, the "not the full suite" boundary, npm unpublished, prerelease status), so **no notes edit was made**.
-
-## Post-publish verification
-
-| Check | Result |
-|---|---|
-| rc.2 tag local + remote, annotated, dereference | PASS — exactly the tested SHA; tag object unchanged |
-| rc.2 tag object recreated or moved | NO |
-| rc.2 releases with that tag | exactly 1 |
-| rc.2 draft / prerelease / `publishedAt` | `false` / `true` / 2026-10-08T13:11:16Z |
-| rc.2 public URL | HTTP 200 |
-| rc.2 marked latest stable | NO (it is a prerelease) |
-| rc.1 tag | `46d2a3e59e065816d972dcd56951803951b577f6` — unchanged |
-| rc.1 release | id `RE_kwDOTexJrc4XM00N`, still draft, `publishedAt: null` — unchanged |
-| npm | 404 — not published |
-| `package.json` | `1.1.0-rc.1`, `private: true` — unchanged |
-| Source/test/workflow/package/asset changes from this task | none |
-| Working tree before this record | clean |
-
-## User QA checklist — v1.1.0-rc.2
-
-Run the editor locally (`npm install` then `npm run dev`, editor `http://localhost:5173/`, API `http://127.0.0.1:5000`) and walk this short pass. Classify every finding as **BLOCKER**, **MAJOR**, **MINOR** or **COSMETIC**.
-
-1. **App opens** — the editor loads, no page error in the console, the canvas and timeline render.
-2. **Project basics** — create or open a project; the Layers panel, timeline and Inspector all respond.
-3. **Basic shape** — add a shape, drag it on the canvas, resize and rotate it; the Inspector numbers follow the drag.
-4. **Text** — add a text layer, edit its value and font size, and confirm the stage repaints the glyphs (not a placeholder box).
-5. **Opacity keyframes** — set opacity keyframes at two frames and scrub/play; the layer fades between them.
-6. **Bonded pair** — select two layers, Bind them, drag one on the canvas, and confirm the partner follows by the same world delta (in particular when the dragged layer sits inside a parent container).
-7. **Motion Curves** — select a keyframed layer, open Motion Curves on a real incoming segment, apply one visible easing edit, and confirm only that layer's segment changes.
-8. **Mask / matte** — apply one layer mask or a track matte and confirm the target is masked as expected.
-9. **OGraf export** — Export → OGraf Package; the ZIP downloads and contains the scene, manifest and runtime.
-10. **OGraf re-import** — import that ZIP back and confirm the project is replaced by the package's editable scene.
-11. **Playfair / Cinematic Title** — create the Cinematic Title preset (Playfair Display), export an OGraf package, and confirm the ZIP carries the font plus its OFL license and that the text stays editable.
-12. **Stability** — during the whole pass, no obvious crash, freeze or unhandled console error.
-
-**QA rule.** Any **BLOCKER** or **MAJOR** code defect means **do not proceed to a stable release**. Any code change produces a new commit SHA, which invalidates the current exact-SHA smoke result: a new Release Smoke Gate run is required before any further RC or stable decision.
-
-This checklist has **not** been executed by this task — it is the next user action.
-
-## Next step
-
-The user runs the QA pass above against the published prerelease. A stable `v1.1.0` release stays a separate, explicit decision that also requires a fresh smoke run on whatever commit it targets.
-
----
-
-## 9. Reality Hub OGraf Parity Record
-
-# Progress 157 — Reality Hub OGraf layer order and track matte parity
+# Progress 158 — Trim Path keyframe authoring
 
 Date: 2026-10-09. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
 
-Reality Hub manual QA after the rc.2 publication reported two OGraf portability defects: the layer stacking was inverted for a template without a matte, and a template with a track matte did not surface at all. The first is reproduced, root-caused and fixed here. The second is narrowed to the same runtime defect; no matte-specific defect could be reproduced locally.
+Trim Path authoring behaved like a global property edit: a keyed Start/End/Offset read as one shared value, and editing a later frame appeared to rewrite the earlier keyframe. Root-caused, fixed, and covered by regressions.
 
 ## Candidate identity
 
 | Field | Value |
 |---|---|
-| **OLD PUBLIC RC.2 SHA** | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` — the published rc.2 prerelease, unchanged |
-| **NEW FIXED CODE SHA** | `8968abfe6861bb7299756e885d915f7fd794fce5` |
-| Branch | `fix/reality-hub-ograf-layer-matte-parity`, fast-forward merged into `main`, kept |
-| Prior main | `fa63c29` (docs tip of the rc.2 publication) |
+| Fix commit | `b4e8e948675466135c3e56ae3d331cec0441ccb3` |
+| Branch | `fix/trim-path-keyframe-authoring`, fast-forward merged into `main`, kept |
+| Prior main | `231070c` |
 
-## Root cause — layer order (PROVEN KCS bug)
+## Reproduction and root cause
 
-Three ordering facts disagreed:
+`TrimPathSection` was a purely static component:
 
-| Authority | Rule |
-|---|---|
-| `StageCanvas` (`sortedParts`) | ascending `zIndex` paints first → higher `zIndex` on top |
-| `evaluateFrame:117` | `evaluated.sort((a, b) => a.zIndex - b.zIndex)` — the same rule |
-| `toSceneData` array | the authored array, which is **descending** `zIndex`: `addCustomPart` prepends with `max + 1` and `reorderParts` assigns `zIndex = total - index` |
-| `runtimeTemplate.evaluateScene` | `scene.layers.map(...)` — **array order**, never sorted |
-| `svgRenderer` paint list | `scene.layers.map(...)` — array order, correct only because its caller is pre-sorted |
+```tsx
+onChange={(value) => onPartPropChange('trimPathEnd', value)}   // writes CharacterPart.trimPathEnd
+value={selectedPart.trimPathEnd ?? 1}                          // displays the static field
+```
 
-`graphic.mjs` is what an OGraf host loads, so the runtime painted the array front-to-back: index 0 (the topmost layer in the editor) was drawn FIRST and therefore ended up at the bottom. That is exactly the reported "fish is above lake in KCS but below in Reality Hub".
+It had **no keyframe awareness at all** — no channel read, no channel write, no add/remove keyframe. So while a channel was keyed:
 
-The static `svgRenderer` output and the editor both looked correct, which is why the defect only appeared in a host consuming the runtime.
+- the field displayed the static value at every frame, which is why the same number appeared on the earlier frame and the edit read as global;
+- the write landed on the static field, which `evaluateTrimPath` ignores once the channel has keyframes.
 
-## Root cause — track matte (NARROWED, not a separate defect)
-
-The matte emission itself is structurally valid, verified on both paths:
-
-- `<mask id maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" mask-type="...">` in `<defs>`, and the target carries `mask="url(#id)"` for an id the same document defines.
-- The mask-only source is excluded from the painted list when the contract says `sourceVisible: false`, and keeps its sibling position when it is visible.
-- The target keeps its own stacking position and resolves its source whether the source is authored above or below it.
-
-The reported "the template does not appear at all with a matte" is consistent with the ordering defect emptying the frame: the matte makes its source mask-only, so the only remaining painted layers are the target and any other sibling — and those were being drawn in the inverted order. No host-specific rule is claimed here; the remaining question belongs to the Reality Hub retest below.
+The evaluator and the export were **not** at fault: `evaluateTrimPath` already prefers keyframes and interpolates, and `evaluateFrame` already routes trim through it.
 
 ## Fix
 
-`src/utils/stackingOrder.ts` is the one authority:
+Both halves now use authorities that already existed for every other scalar channel:
 
-```ts
-export const compareByStackingOrder = (a, b) => a.zIndex - b.zIndex;
-export const stackingOrder = (items) => [...items].sort(compareByStackingOrder);
-```
+| Concern | Authority |
+|---|---|
+| Display | `evaluateTrimPath(part, track, currentFrame, template)` — what the stage draws at this frame; static field only while unkeyed |
+| Write | `updateCurrentPropertyChannel(channel, value)` — static field while unkeyed, the current frame's keyframe once keyed |
+| Add/remove keyframe | `addPropertyKeyframe` / `deletePropertyKeyframe`, mirroring the opacity card |
 
-Ascending `zIndex` paints first, `Array.prototype.sort` is stable so a shared `zIndex` keeps the authored order, and a copy is always sorted so the input array is never mutated.
+Each of the three fields gained an Add/Remove keyframe control matching the opacity card's classes, `aria-pressed` and labels, capturing the evaluated value at the current frame. `TrimPathSection` keeps its previous behaviour when the new props are absent, so its standalone contract is unchanged.
 
-Applied at every painter's-model site: `StageCanvas` (the stage), `evaluateFrame` (the frame evaluator), `svgRenderer` (the static SVG) and `runtimeTemplate` (the generated runtime, which inlines the comparator the way it inlines its other mirror helpers).
+## Authoring semantics now
 
-Nothing else changed: the OGraf package structure, `scene.kcs`, public controls, asset packaging, path security, mask/matte semantics and matte parity behaviour are untouched.
+- No keyframes → the edit changes the static field only.
+- Channel keyed → the edit updates the keyframe at the current frame, inserting one if the frame is empty; no other frame is touched.
+- The static field never overwrites a keyed value (the evaluator already preferred the channel; the display now agrees).
+- A same-frame keyframe in another sequence is left alone.
+- One edit is one history entry (the write goes through the existing channel mutator).
 
 ## Regression
 
-`src/tests/ografLayerStacking.test.ts` — 13 cases: two layers, three layers, the stable tie, array immutability, the packaged runtime, and the matte matrix (mask-only source, unrelated sibling, `sourceVisible: true`, source authored below the target, mask id resolution).
+`src/tests/trimPathAuthoring.test.tsx` — 11 cases: evaluated display, static fallback, channel write, keyframe toggle, `A=0 / B=100` (A stays 0), update-in-place, unkeyed static write, sequence isolation, midpoint interpolation, per-frame resolution, unkeyed fallback.
 
-**Proof it catches the defect:** reverting only the runtime sort turns four cases red, reporting `['fish','lake']` where `['lake','fish']` is required.
+**Sensitivity:** reverting the evaluated display and the channel write turns 2 cases red.
 
 ## Validation
 
-`npx tsc -b --pretty false`, `npm run lint`, `npm test` (136 files / 2,079 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npx playwright test --project=chromium --retries=0` (265 tests), `node scripts/check-state-consistency.mjs`, `npm audit --audit-level=low` (0 vulnerabilities) and `git diff --check` all pass.
+`npx tsc -b --pretty false`, `npm run lint`, `npm test` (137 files / 2,092 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npx playwright test e2e/trim-path-v2.spec.ts --retries=0` (2 tests), `node scripts/check-state-consistency.mjs`, `npm audit --audit-level=low` (0 vulnerabilities) and `git diff --check` all pass.
 
-## Reality Hub retest artifacts
+## Exact-SHA smoke
 
-Two packages were compiled with the fixed authorities and written outside the repository:
+**Not run, and not required for this change.** The fix changes the Inspector's authoring path only: `evaluateTrimPath`, `evaluateFrame`, the static SVG renderer, the generated runtime and the package format are untouched, so exported/runtime OGraf behaviour is identical. The previous smoke still describes the export behaviour. Any later commit that changes export or runtime code needs its own exact-SHA smoke.
 
-```
-C:\Users\ertugrul.ak\AppData\Local\Temp\kcs-reality-hub-retest\reality-hub-layer-order-repro-fixed.zip
-C:\Users\ertugrul.ak\AppData\Local\Temp\kcs-reality-hub-retest\reality-hub-track-matte-repro-fixed.zip
-```
+## User retest
 
-- `reality-hub-layer-order-repro-fixed.zip` — a full-frame `lake` under a smaller `fish`, both authored with the outliner order (array index 0 = top). Expected: the fish is visible on top of the lake.
-- `reality-hub-track-matte-repro-fixed.zip` — the same pair plus a `lens` circle as the fish's alpha track-matte source with `sourceVisible: false`. Expected: the fish appears with the lens-shaped alpha cut and the lake stays visible behind it.
+1. Create a freeform/path layer with a visible stroke.
+2. Enable Trim Path.
+3. At frame 0: add an End keyframe, set End = 0.
+4. At frame 30: add an End keyframe, set End = 100.
+5. Return to frame 0: End must read **0** again (it used to read 100).
+6. Scrub 0 → 30: the stroke draws on progressively.
+7. Play: the animation reveals the path.
+8. Save and reload: both keyframes remain 0 and 100.
+9. Export an OGraf package and play it in the host: the same reveal.
 
-Both contain `manifest` + `scene.kcs` + `graphic.mjs`. They are QA outputs, not tracked source; the user copies them into the Reality Hub OGraf projects folder.
+Optional second pass: Start 0 → 50, and Offset 0 → 180.
 
-## Remaining question for the user
+## Release state
 
-The layer-order fix is proven locally by the regression and by the pre-fix/fix comparison. **Reality Hub itself has not been exercised** — that retest belongs to the user. If the track-matte package still fails to surface in Reality Hub while the layer-order package works, the remaining evidence is host-side and the next step is to capture the host's own error/report for that specific package.
+Unchanged: `v1.1.0-rc.2` remains the published prerelease at `6c27ef35d48d61a5e1163d2c91734c864fcafa01`, npm still returns 404, and no tag, release or npm action was taken.
 
 ---
 
-## 10. Changelog
+## 9. Changelog
 
 # Changelog
 
@@ -758,6 +664,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The header's `?` (First export help) button and the **OGraf Single File (Legacy)** export entry. The export menu now offers exactly **JSON** and **OGraf Package**; the legacy single-file `.mjs` export is gone, so its fail-closed guard went with it, and the first-export guidance component is no longer reachable from the header.
 
 ### Fixed
+- Trim Path authoring is frame-specific again. The Inspector's Start/End/Offset fields wrote and displayed the layer's **static** field and never looked at the channel, so a keyed Trim Path read as a global edit: the same number appeared at every frame, and editing a later frame looked like it rewrote the earlier keyframe. The fields now show the value `evaluateTrimPath` resolves for the current frame and write through `updateCurrentPropertyChannel` — the existing authority that edits the static field while a channel is unkeyed and the current frame's keyframe once it is keyed, never another frame's. Each field also carries an Add/Remove keyframe control that mirrors the opacity card and captures the evaluated value, and a same-frame keyframe in another sequence is left alone.
 - A disabled Track Matte V2 relation no longer suppresses the layer's legacy matte in an export. The editor authority (`resolveMatteSource`) treats `trackMatte` as the *preferred* relationship and falls back to the legacy `matte` when the V2 record is disabled, but both export paths stopped at the disabled record and emitted no matte at all — so a layer with `trackMatte.enabled === false` plus a legacy alpha/luminance matte rendered the legacy matte in the editor and nothing in the exported graphic. The static SVG renderer and the generated runtime now follow the same fallback. The Inspector also says so: the legacy card states that an enabled Track Matte V2 relation is active and that its settings are not applied.
 - An OGraf export now paints in the editor's stacking order. The generated runtime walked the authored `scene.layers` array, but that array is NOT the paint order — the outliner keeps index 0 on top, `addCustomPart` prepends with `max + 1` and `reorderParts` assigns `zIndex = total - index` — so a host loading `graphic.mjs` drew the scene upside down and showed the background over the foreground. `stackingOrder` is now the one authority (ascending `zIndex` paints first, stable for a shared `zIndex`, never mutating the input) and the stage, the frame evaluator, the static SVG renderer and the generated runtime all use it. `evaluateFrame` already sorted, which is why only the runtime diverged.
 - An imported image layer's bounds now describe the visible art instead of the whole bitmap. The drawn box is sized from `naturalWidth`/`naturalHeight`, so a PNG with transparent padding left every bounds consumer — the Inspector's edge control points, the selection gizmo, the resize handles, marquee hit-testing — out on the padding, and a padded file showed empty space beside the letters. The non-transparent content rectangle is measured once at import (an alpha scan, `VISIBLE_ALPHA_THRESHOLD`) and kept on the layer in local units, so a 100x100 PNG whose art covers x 20..79 and y 30..69 now reports edge points at +/-45 and +/-30 inside its 150x150 box instead of +/-75 and +/-75. The rectangle survives save/load and the OGraf package; a layer without one — every layer imported before this change, and every video — keeps exactly the previous whole-box bounds.

@@ -47,18 +47,40 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   const orientationScaleY = selectedTransform.scaleY < 0 ? -1 : 1;
   const metrics = getTransformGizmoMetrics(halfW * 2, halfH * 2, zScale);
 
+  /**
+   * The selection frame is drawn twice: a wide dark halo underneath the accent
+   * dash. A single accent stroke vanished whenever the artwork was a similar
+   * cyan, so the halo gives the frame a contrast partner on light, dark and
+   * accent-like content alike. Both strokes are non-interactive, so the frame
+   * never changes what the pointer hits.
+   */
   const renderBounds = (
-    <rect
-      x={left}
-      y={top}
-      width={halfW * 2}
-      height={halfH * 2}
-      fill="none"
-      stroke="#00d2ff"
-      strokeWidth={1.5 * zScale}
-      strokeDasharray={`${5 * zScale} ${4 * zScale}`}
-      vectorEffect="non-scaling-stroke"
-    />
+    <>
+      <rect
+        data-testid="selection-frame-halo"
+        x={left}
+        y={top}
+        width={halfW * 2}
+        height={halfH * 2}
+        fill="none"
+        pointerEvents="none"
+        style={{ stroke: 'var(--bg-darkest)' }}
+        strokeWidth={3.5 * zScale}
+        vectorEffect="non-scaling-stroke"
+      />
+      <rect
+        x={left}
+        y={top}
+        width={halfW * 2}
+        height={halfH * 2}
+        fill="none"
+        pointerEvents="none"
+        stroke="#00d2ff"
+        strokeWidth={1.5 * zScale}
+        strokeDasharray={`${5 * zScale} ${4 * zScale}`}
+        vectorEffect="non-scaling-stroke"
+      />
+    </>
   );
   const renderIndividualSelection = () => (
     <>
@@ -66,10 +88,10 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
       {!isGroup && (
         <>
           {[
-            { x: left, y: top, key: 'top-left' },
-            { x: right, y: top, key: 'top-right' },
-            { x: left, y: bottom, key: 'bottom-left' },
-            { x: right, y: bottom, key: 'bottom-right' },
+            { x: left, y: top, key: 'top-left', cursor: 'nwse-resize' },
+            { x: right, y: top, key: 'top-right', cursor: 'nesw-resize' },
+            { x: left, y: bottom, key: 'bottom-left', cursor: 'nesw-resize' },
+            { x: right, y: bottom, key: 'bottom-right', cursor: 'nwse-resize' },
           ].map((corner) => (
             <g key={`corner-${corner.key}`}>
               <rect
@@ -80,7 +102,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
                 fill="#00d2ff"
                 stroke="#ffffff"
                 strokeWidth={1.5 * zScale}
-                style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
+                style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
                 onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
               />
               <rect
@@ -91,7 +113,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
                 height={metrics.hitRadius * 2}
                 fill="transparent"
                 pointerEvents="auto"
-                style={{ cursor: 'nwse-resize' }}
+                style={{ cursor: corner.cursor }}
                 onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
               />
             </g>

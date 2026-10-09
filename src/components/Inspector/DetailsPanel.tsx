@@ -11,6 +11,7 @@ import type { TrimPathChannel } from './sections/style/TrimPathSection';
 import { evaluateTrimPath } from '../../utils/trimPath';
 import { DuplicateTab } from './sections/DuplicateTab';
 import { isBooleanEligible, computeBooleanContours, deriveBooleanGeometry, inspectBooleanOperands, dissolveBooleanGroup as dissolveBooleanGroupState, createBooleanDisplayName, isGeneratedBooleanName, type BooleanOperation } from '../../utils/booleanGeometry';
+import { BooleanOperationIcon } from './BooleanOperationIcon';
 import { generateId } from '../../utils/idGenerator';
 import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../../utils/partBinding';
 import { layerMaskChannel } from '../../types/animator';
@@ -445,8 +446,16 @@ export const DetailsPanel: React.FC = () => {
       <p className="shape-operations-description">Combine the selected shapes, freeform paths or text layers into a non-destructive Boolean result.</p>
       <div className="shape-operations-grid">
         {(['union', 'subtract', 'intersect', 'exclude'] as const).map((operation) => (
-          <button key={operation} type="button" onClick={() => createBooleanGroup(operation)} title={`Create ${operation} Boolean`}>
-            {operation[0].toUpperCase() + operation.slice(1)}
+          <button
+            key={operation}
+            type="button"
+            className="shape-operation-button"
+            onClick={() => createBooleanGroup(operation)}
+            title={`Create ${operation} Boolean`}
+            aria-label={`Create ${operation} Boolean`}
+          >
+            <BooleanOperationIcon operation={operation} />
+            <span>{operation[0].toUpperCase() + operation.slice(1)}</span>
           </button>
         ))}
       </div>

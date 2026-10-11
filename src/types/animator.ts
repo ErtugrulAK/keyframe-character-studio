@@ -373,6 +373,19 @@ export interface CharacterPart {
    * independent, so this is not a parent-child transform.
    */
   boundPartIds?: string[];
+  /**
+   * True for a layer that exists only as an authoring container: it owns no
+   * geometry of its own and exists so that its `parentId` children move, scale
+   * and rotate together through the ordinary parent-child transform
+   * (`utils/evaluateTransform`). It is not a Boolean group (`booleanOperandIds`)
+   * and not a bond (`boundPartIds`): those keep their own contracts.
+   *
+   * Distinct from a Lottie-imported parent, whose `parentId` children are real
+   * art and which is therefore never offered as a group. Carried through
+   * save/load; ignored by evaluation and by OGraf export, which render the
+   * children from their evaluated world transforms either way.
+   */
+  isGroup?: boolean;
   baseTransform: Transform;
   textValue?: string;
   fontSize?: number;

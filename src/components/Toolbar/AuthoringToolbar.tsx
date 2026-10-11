@@ -1,7 +1,8 @@
 import React from 'react';
-import { Compass, Grid, Hand, MousePointer2, Unlink, ZoomIn, ZoomOut } from 'lucide-react';
+import { Compass, Grid, Group, Hand, MousePointer2, Ungroup, Unlink, ZoomIn, ZoomOut } from 'lucide-react';
 import { useAnimator } from '../../context/useAnimator';
 import { useBooleanAuthoring } from '../../hooks/useBooleanAuthoring';
+import { useLayerGrouping } from '../../hooks/useLayerGrouping';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { BooleanOperationIcon } from '../Inspector/BooleanOperationIcon';
 import { ColorPickerPopover } from '../Inspector/inputs/ColorPickerPopover';
@@ -56,6 +57,7 @@ export const AuthoringToolbar: React.FC = () => {
     dissolveBooleanGroup,
   } = useBooleanAuthoring();
   const { handlePartColorChange, handlePartPropChange } = usePartPropertyAuthoring();
+  const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
 
   const selectedPart = characterParts.find((part) => part.id === selectedPartId);
   // Creation needs two Boolean-eligible operands; an existing group switches
@@ -129,7 +131,7 @@ export const AuthoringToolbar: React.FC = () => {
         </button>
       </div>
 
-      {selectedPart && (
+      {selectedPart && !selectedPart.isGroup && (
         <>
           <span className="authoring-toolbar-divider" aria-hidden="true" />
           <div className="authoring-toolbar-group" role="group" aria-label="Fill and stroke">
@@ -159,6 +161,34 @@ export const AuthoringToolbar: React.FC = () => {
               onInteractionStart={startBatchInteraction}
               onInteractionEnd={endBatchInteraction}
             />
+          </div>
+        </>
+      )}
+
+      {(canGroup || selectedGroup) && (
+        <>
+          <span className="authoring-toolbar-divider" aria-hidden="true" />
+          <div className="authoring-toolbar-group" role="group" aria-label="Layer group">
+            <button
+              type="button"
+              className="authoring-toolbar-button"
+              aria-label="Group layers"
+              title="Group the selected layers"
+              disabled={!canGroup}
+              onClick={groupSelection}
+            >
+              <Group size={14} />
+            </button>
+            <button
+              type="button"
+              className="authoring-toolbar-button"
+              aria-label="Ungroup layers"
+              title="Ungroup and keep every layer in place"
+              disabled={!selectedGroup}
+              onClick={ungroupSelection}
+            >
+              <Ungroup size={14} />
+            </button>
           </div>
         </>
       )}

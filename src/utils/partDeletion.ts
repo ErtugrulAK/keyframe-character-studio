@@ -7,9 +7,13 @@ export interface DeletePartsResult {
 }
 
 /**
- * Expand requested removals through Boolean-parent ownership without touching
+ * Expand requested removals through container ownership without touching
  * unrelated parts. A Set makes duplicate parent/operand requests harmless and
  * the queue guard makes malformed cyclic references finite.
+ *
+ * Two containers own their contents: a Boolean group owns its operands, and a
+ * layer group (`isGroup`) owns its `parentId` children — deleting a group takes
+ * its layers with it rather than leaving them orphaned at their local poses.
  */
 export const collectOwnedDeletionIds = (
   parts: CharacterPart[],
@@ -23,11 +27,15 @@ export const collectOwnedDeletionIds = (
     const id = pending.pop();
     if (!id) continue;
     const part = partById.get(id);
-    if (!part?.booleanOperandIds) continue;
-    for (const operandId of part.booleanOperandIds) {
-      if (!partById.has(operandId) || ids.has(operandId)) continue;
-      ids.add(operandId);
-      pending.push(operandId);
+    if (!part) continue;
+    const owned = [
+      ...(part.booleanOperandIds ?? []),
+      ...(part.isGroup ? parts.filter((candidate) => candidate.parentId === part.id).map((candidate) => candidate.id) : []),
+    ];
+    for (const ownedId of owned) {
+      if (!partById.has(ownedId) || ids.has(ownedId)) continue;
+      ids.add(ownedId);
+      pending.push(ownedId);
     }
   }
 

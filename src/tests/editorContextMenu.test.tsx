@@ -84,7 +84,7 @@ describe('EditorContextMenu', () => {
     vi.clearAllMocks();
   });
 
-  it('offers only supported object actions — no Inspect and no Group/Ungroup', () => {
+  it('offers only supported object actions — no Inspect, and no Group action for one layer', () => {
     renderMenu();
     openObjectMenu();
 
@@ -92,8 +92,41 @@ describe('EditorContextMenu', () => {
       expect(menuItem(label)).toBeTruthy();
     }
     expect(screen.queryByRole('menuitem', { name: /inspect/i })).toBeNull();
+    // Grouping needs two layers and ungrouping a container, so neither is on
+    // offer for a single ordinary layer.
     expect(queryMenuItem('Group')).toBeNull();
     expect(queryMenuItem('Ungroup')).toBeNull();
+  });
+
+  it('groups a multi-selection through the shared layer-group authority', () => {
+    animatorCtx.selectedPartIds = ['a', 'b'];
+    animatorCtx.selectedPartId = 'b';
+    renderMenu();
+    openObjectMenu();
+
+    fireEvent.click(menuItem('Group Layers'));
+    expect(animatorCtx.setCharacterParts).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.setTracks).toHaveBeenCalledTimes(1);
+    const next = animatorCtx.setCharacterParts.mock.calls[0][0] as CharacterPart[];
+    const container = next.find((part) => part.isGroup)!;
+    expect(next.filter((part) => part.parentId === container.id).map((part) => part.id)).toEqual(['a', 'b']);
+  });
+
+  it('ungroups a selected container from the menu', () => {
+    animatorCtx.characterParts = [
+      shape('a', { parentId: 'g' }),
+      shape('g', { isGroup: true, type: 'custom_freeform' }),
+    ];
+    animatorCtx.selectedPartIds = ['g'];
+    animatorCtx.selectedPartId = 'g';
+    renderMenu();
+    openObjectMenu();
+
+    expect(queryMenuItem('Group Layers')).toBeNull();
+    fireEvent.click(menuItem('Ungroup'));
+    const next = animatorCtx.setCharacterParts.mock.calls[0][0] as CharacterPart[];
+    expect(next.map((part) => part.id)).toEqual(['a']);
+    expect(next[0].parentId).toBeUndefined();
   });
 
   it('runs Delete, Duplicate, Copy and Paste through the existing editor actions', () => {

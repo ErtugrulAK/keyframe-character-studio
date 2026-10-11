@@ -12,6 +12,8 @@ import { DuplicateTab } from './sections/DuplicateTab';
 import { isBooleanEligible, type BooleanOperation } from '../../utils/booleanGeometry';
 import { BooleanOperationIcon } from './BooleanOperationIcon';
 import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../../utils/partBinding';
+import { getGroupChildren } from '../../utils/layerGrouping';
+import { useLayerGrouping } from '../../hooks/useLayerGrouping';
 import { layerMaskChannel } from '../../types/animator';
 import {
   Sliders,
@@ -19,6 +21,7 @@ import {
   Trash2,
   CopyPlus,
   Unlink,
+  Ungroup,
   Lock,
   Unlock,
 } from 'lucide-react';
@@ -68,6 +71,7 @@ export const DetailsPanel: React.FC = () => {
     updateBooleanOperation,
     dissolveBooleanGroup,
   } = useBooleanAuthoring();
+  const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
@@ -220,6 +224,40 @@ export const DetailsPanel: React.FC = () => {
     </section>
   ) : null;
 
+  const groupChildren = selectedGroup ? getGroupChildren(characterParts, selectedGroup.id) : [];
+  const groupWorkflowContent = selectedGroup ? (
+    <section className="boolean-editor-section" aria-label="Layer group">
+      <div className="inspector-section-label">GROUP</div>
+      <p className="boolean-description">Layers in this group move, scale and rotate together. Opacity stays per layer.</p>
+      <div className="boolean-operands-list" aria-label="Grouped layers">
+        {groupChildren.map((child) => (
+          <button
+            key={child.id}
+            type="button"
+            className="boolean-operand-button"
+            onClick={() => {
+              setSelectedPartIds([child.id]);
+              setSelectedPartId(child.id);
+            }}
+          >
+            {child.name}
+          </button>
+        ))}
+      </div>
+      <button type="button" className="btn-secondary boolean-dissolve-button" onClick={ungroupSelection}>
+        <Ungroup size={12} /> Ungroup
+      </button>
+    </section>
+  ) : canGroup ? (
+    <section className="shape-operations-section" aria-label="Layer grouping">
+      <div className="inspector-section-label">GROUP</div>
+      <p className="shape-operations-description">Group the selected layers so they move, scale and rotate together.</p>
+      <div className="shape-operations-grid">
+        <button type="button" onClick={groupSelection} title="Group the selected layers">Group</button>
+      </div>
+    </section>
+  ) : null;
+
   const booleanWorkflowContent = selectedBooleanGroup ? (
     <section className="boolean-editor-section" aria-label="Boolean operation">
       <div className="inspector-section-label">BOOLEAN</div>
@@ -315,7 +353,7 @@ export const DetailsPanel: React.FC = () => {
         <div className="details-actor-header">
           <div className="actor-title-box">
             <span className="actor-main-name">{selectedPart.name}</span>
-            <span className="actor-type-label">{selectedPart.type.replace('custom_', '')}</span>
+            <span className="actor-type-label">{selectedPart.isGroup ? 'group' : selectedPart.type.replace('custom_', '')}</span>
           </div>
 
           <div className="actor-action-row" role="group" aria-label="Inspector object actions">
@@ -378,7 +416,7 @@ export const DetailsPanel: React.FC = () => {
                 } : undefined}
                 handlePartPropChange={handlePartPropChange}
                 handleZIndexChange={handleZIndexChange}
-                editWorkflowContent={<>{booleanWorkflowContent}{bindWorkflowContent}</>}
+                editWorkflowContent={<>{groupWorkflowContent}{booleanWorkflowContent}{bindWorkflowContent}</>}
                 customPresets={customPresets}
                 onSavePreset={savePreset}
                 onUpdatePreset={updatePreset}
@@ -391,7 +429,10 @@ export const DetailsPanel: React.FC = () => {
                 clipboardSourceId={clipboardData?.part.id ?? null}
               />
 
-              <StyleTab
+              {/* A group container owns no geometry, so paint, masks and Trim
+                  Path would be controls over nothing. Its transform stays. */}
+              {!selectedPart.isGroup && (
+                <StyleTab
                 selectedPart={inspectorPart ?? selectedPart}
                 characterParts={characterParts}
                 transform={transform}
@@ -416,6 +457,7 @@ export const DetailsPanel: React.FC = () => {
                 onColorInteractionStart={startBatchInteraction}
                 onColorInteractionEnd={endBatchInteraction}
               />
+              )}
 
             </>
           )}

@@ -4,6 +4,7 @@ import { generateId } from '../utils/idGenerator';
 import { makeEmptyChannels } from '../utils/defaults';
 import { mirrorChannelValue, mirrorTransform, type MirrorAxis } from '../utils/mirror';
 import { cloneAnimationOntoTarget } from '../utils/animationTransfer';
+import { getGroupDescendants } from '../utils/layerGrouping';
 
 interface UseClipboardOptions {
   characterParts: CharacterPart[];
@@ -103,36 +104,32 @@ export const useClipboard = ({
     if (!selectedPartId) return;
     const part = characterParts.find((p) => p.id === selectedPartId);
     if (!part) return;
-    const track = tracks.find((t) => t.partId === selectedPartId);
 
+    // A layer group is a container: duplicating it copies the whole group with
+    // fresh ids so the copy is not an empty shell, and every clone re-parents to
+    // the cloned container. Duplicating one layer of a group instead leaves the
+    // copy in that same group, which is what re-parenting by id already does.
+    const sources = part.isGroup ? [part, ...getGroupDescendants(characterParts, part.id)] : [part];
     const newPartId = generateId('part');
-    const newPart: CharacterPart = {
-      ...structuredClone(part),
-      id: newPartId,
-      name: `${part.name} Copy`,
-      zIndex: characterParts.length + 1,
-      boundPartIds: undefined,
-      baseTransform: {
-        ...part.baseTransform,
-        x: part.baseTransform.x + 20,
-        y: part.baseTransform.y + 20,
-      },
-    };
+    const idMap = new Map<string, string>();
+    sources.forEach((source) => idMap.set(source.id, source.id === part.id ? newPartId : generateId('part')));
 
-    let newTrack: Track = {
-      id: generateId('track'),
-      partId: newPartId,
-      name: newPart.name,
-      color: track?.color || '#3b82f6',
-      keyframes: [],
-      channels: makeEmptyChannels(),
-      visible: true,
-      locked: false,
-      expanded: false,
-    };
-
-    if (track) {
-      const clonedTrack: Track = structuredClone(track);
+    const cloneTrackFor = (sourceId: string, cloneId: string, name: string): Track => {
+      const source = tracks.find((t) => t.partId === sourceId);
+      if (!source) {
+        return {
+          id: generateId('track'),
+          partId: cloneId,
+          name,
+          color: '#3b82f6',
+          keyframes: [],
+          channels: makeEmptyChannels(),
+          visible: true,
+          locked: false,
+          expanded: false,
+        };
+      }
+      const clonedTrack: Track = structuredClone(source);
       const newChannels = makeEmptyChannels();
       if (clonedTrack.channels) {
         (Object.keys(clonedTrack.channels) as TrackChannel[]).forEach((ch) => {
@@ -141,23 +138,44 @@ export const useClipboard = ({
           }
         });
       }
-      newTrack = {
+      return {
         ...clonedTrack,
         id: generateId('track'),
-        partId: newPartId,
-        name: newPart.name,
-        keyframes: (clonedTrack.keyframes || []).map((k) => ({
-          ...k,
-          id: generateId('kf'),
-        })),
+        partId: cloneId,
+        name,
+        keyframes: (clonedTrack.keyframes || []).map((k) => ({ ...k, id: generateId('kf') })),
         channels: newChannels,
       };
-    }
+    };
 
-    setTracks((prevTracks) => [newTrack, ...prevTracks]);
-    setCharacterParts((prevParts) => [newPart, ...prevParts]);
+    const newParts: CharacterPart[] = [];
+    const newTracks: Track[] = [];
+    sources.forEach((source, index) => {
+      const cloneId = idMap.get(source.id)!;
+      const name = `${source.name} Copy`;
+      const clone: CharacterPart = {
+        ...structuredClone(source),
+        id: cloneId,
+        name,
+        zIndex: characterParts.length + 1 + index,
+        boundPartIds: undefined,
+        baseTransform: index === 0
+          ? { ...source.baseTransform, x: source.baseTransform.x + 20, y: source.baseTransform.y + 20 }
+          : { ...source.baseTransform },
+      };
+      const cloneParentId = source.parentId ? idMap.get(source.parentId) : undefined;
+      if (cloneParentId) clone.parentId = cloneParentId;
+      newParts.push(clone);
+      newTracks.push(cloneTrackFor(source.id, cloneId, name));
+    });
+
+    setTracks((prevTracks) => [...newTracks, ...prevTracks]);
+    setCharacterParts((prevParts) => [...newParts, ...prevParts]);
     setSelectedPartId(newPartId);
-    showToast(`Duplicated "${newPart.name}"`, 'success');
+    showToast(
+      part.isGroup ? `Duplicated "${part.name}" with ${sources.length - 1} layers` : `Duplicated "${part.name}"`,
+      'success',
+    );
   }, [selectedPartId, characterParts, tracks, setTracks, setCharacterParts, setSelectedPartId, showToast]);
 
   /**

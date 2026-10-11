@@ -1,6 +1,7 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CharacterPart, LayerMask, Track } from '../types/animator';
+import { makeEmptyChannels } from '../utils/defaults';
 import { layerMaskChannel } from '../types/animator';
 import { updateShapeAppearance } from '../utils/shapeAppearance';
 import { updateTrimPath } from '../utils/trimPathAuthoring';
@@ -32,7 +33,9 @@ const animatorCtx = {
   updatePropertyKeyframeValue: vi.fn(),
   setSelectedPartId: vi.fn(),
   setSelectedPartIds: vi.fn(),
-  getComputedTransform: vi.fn(() => ({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 })),
+  getComputedTransform: vi.fn((partId: string) => animatorCtx.characterParts
+    .find((part) => part.id === partId)?.baseTransform
+    ?? { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }),
   showToast: vi.fn(),
   startBatchInteraction: vi.fn(),
   endBatchInteraction: vi.fn(),
@@ -43,12 +46,14 @@ const animatorCtx = {
 vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx }));
 
 import { useBooleanAuthoring } from '../hooks/useBooleanAuthoring';
+import { useLayerGrouping } from '../hooks/useLayerGrouping';
 import { usePartPropertyAuthoring } from '../hooks/usePartPropertyAuthoring';
 
 /** Renders both extracted authorities exactly as DetailsPanel/toolbar consume them. */
 const renderAuthoring = () => renderHook(() => ({
   part: usePartPropertyAuthoring(),
   boolean: useBooleanAuthoring(),
+  grouping: useLayerGrouping(),
 }));
 
 /** The document the most recent `setCharacterParts` write would produce. */
@@ -165,5 +170,68 @@ describe('shared authoring authorities', () => {
 
     authoring.boolean.createBooleanGroup('union');
     expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
+  });
+
+  it('groups the selection in one batch, re-parents the layers and selects the container', () => {
+    const a = shape('a', { baseTransform: { x: -100, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
+    const b = shape('b', { baseTransform: { x: 100, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } });
+    animatorCtx.characterParts = [a, b];
+    animatorCtx.selectedPartIds = ['a', 'b'];
+    animatorCtx.selectedPartId = 'b';
+    const authoring = renderAuthoring().result.current;
+
+    expect(authoring.grouping.canGroup).toBe(true);
+    authoring.grouping.groupSelection();
+
+    expect(animatorCtx.startBatchInteraction).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.endBatchInteraction).toHaveBeenCalledTimes(1);
+    const next = animatorCtx.setCharacterParts.mock.calls[0][0] as CharacterPart[];
+    const group = next.find((part) => part.isGroup)!;
+    expect(group.type).toBe('custom_freeform');
+    expect(group.baseTransform.x).toBe(0);
+    expect(next.filter((part) => part.parentId === group.id).map((part) => part.id)).toEqual(['a', 'b']);
+    expect(animatorCtx.setTracks).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.setSelectedPartIds).toHaveBeenCalledWith([group.id]);
+    expect(animatorCtx.setSelectedPartId).toHaveBeenCalledWith(group.id);
+    expect(animatorCtx.showToast).toHaveBeenCalledWith('Grouped 2 layers', 'success');
+  });
+
+  it('reports why a single layer cannot be grouped instead of writing state', () => {
+    animatorCtx.characterParts = [shape('a')];
+    animatorCtx.selectedPartIds = ['a'];
+    animatorCtx.selectedPartId = 'a';
+    const authoring = renderAuthoring().result.current;
+
+    expect(authoring.grouping.canGroup).toBe(false);
+    expect(authoring.grouping.groupBlockReason).toBe('Select at least two layers to group.');
+    authoring.grouping.groupSelection();
+    expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
+    expect(animatorCtx.showToast).toHaveBeenCalledWith('Select at least two layers to group.', 'error');
+  });
+
+  it('ungroups the selected container, keeps the layers and removes the container track', () => {
+    const group = shape('g', { isGroup: true }) as CharacterPart;
+    const a = shape('a', { parentId: 'g' });
+    const b = shape('b', { parentId: 'g' });
+    animatorCtx.characterParts = [a, b, group];
+    animatorCtx.tracks = [
+      { id: 't_a', partId: 'a', name: 'a', color: '#fff', visible: true, locked: false, keyframes: [], channels: makeEmptyChannels() },
+      { id: 't_g', partId: 'g', name: 'g', color: '#fff', visible: true, locked: false, keyframes: [], channels: makeEmptyChannels() },
+    ];
+    animatorCtx.selectedPartIds = ['g'];
+    animatorCtx.selectedPartId = 'g';
+    const authoring = renderAuthoring().result.current;
+
+    expect(authoring.grouping.selectedGroup?.id).toBe('g');
+    authoring.grouping.ungroupSelection();
+
+    const next = animatorCtx.setCharacterParts.mock.calls[0][0] as CharacterPart[];
+    expect(next.map((part) => part.id)).toEqual(['a', 'b']);
+    expect(next.every((part) => part.parentId === undefined)).toBe(true);
+    const nextTracks = animatorCtx.setTracks.mock.calls[0][0] as Track[];
+    expect(nextTracks.map((track) => track.partId)).toEqual(['a']);
+    expect(animatorCtx.setSelectedPartIds).toHaveBeenCalledWith(['a', 'b']);
+    expect(animatorCtx.setSelectedPartId).toHaveBeenCalledWith('a');
+    expect(animatorCtx.showToast).toHaveBeenCalledWith('Ungrouped 2 layers; positions kept.', 'success');
   });
 });

@@ -82,6 +82,8 @@ export interface SceneLayer {
 
   // Hierarchy
   parentId?: string;
+  /** Authoring-only container layer (see `CharacterPart.isGroup`). */
+  isGroup?: boolean;
   /** Layers bonded to this one for position-only movement (see `partBinding`). */
   boundPartIds?: string[];
 

@@ -87,6 +87,7 @@ function toSceneData(
   const layers: SceneLayer[] = characterParts.map(p => ({
     id: p.id,
     parentId: p.parentId,
+    ...(p.isGroup ? { isGroup: true } : {}),
     ...(p.boundPartIds?.length ? { boundPartIds: p.boundPartIds } : {}),
     name: p.name,
     type: p.type,
@@ -103,7 +104,11 @@ function toSceneData(
     booleanOperation: p.booleanOperation,
     booleanOperandIds: p.booleanOperandIds,
     booleanContours: p.booleanContours,
-    visible: true,
+    // A layer-group container is a structural layer with no geometry: it is
+    // saved as not visible so neither the OGraf SVG renderer nor the generated
+    // runtime tries to paint it, while its transform still composes into the
+    // children. Every other layer stays visible.
+    visible: !p.isGroup,
     zIndex: p.zIndex,
     fillColor: p.fillColor,
     strokeColor: p.strokeColor,
@@ -214,6 +219,7 @@ function fromSceneData(
     ...(l.strokeEnabled !== undefined ? { strokeEnabled: l.strokeEnabled } : {}),
     pivot: { x: 0, y: 0 },
     parentId: l.parentId,
+    ...(l.isGroup ? { isGroup: true } : {}),
     ...(l.boundPartIds && l.boundPartIds.length > 0 ? { boundPartIds: l.boundPartIds } : {}),
     matte: l.matte,
     masks: l.masks,

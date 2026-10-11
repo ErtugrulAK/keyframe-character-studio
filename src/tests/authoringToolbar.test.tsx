@@ -185,4 +185,58 @@ describe('AuthoringToolbar', () => {
     expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute('title', 'Select tool (V)');
     expect(screen.getByRole('button', { name: 'Pan' })).toHaveAttribute('title', 'Pan tool (H)');
   });
+
+  it('groups the selection through the shared layer-group authority', () => {
+    animatorCtx.characterParts = [shape('a'), shape('b', { baseTransform: { x: 40, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } })];
+    setSelection(['a', 'b'], 'b');
+    renderToolbar();
+
+    const groupButton = screen.getByRole('button', { name: 'Group layers' });
+    expect(groupButton).not.toBeDisabled();
+    expect(screen.getByRole('group', { name: 'Layer group' })).toBeTruthy();
+    fireEvent.click(groupButton);
+
+    expect(animatorCtx.setCharacterParts).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.setTracks).toHaveBeenCalledTimes(1);
+    const next = animatorCtx.setCharacterParts.mock.calls[0][0] as CharacterPart[];
+    const container = next.find((part) => part.isGroup)!;
+    expect(next.filter((part) => part.parentId === container.id).map((part) => part.id)).toEqual(['a', 'b']);
+  });
+
+  it('hides the group actions until the selection can use them', () => {
+    renderToolbar();
+    expect(screen.queryByRole('button', { name: 'Group layers' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Ungroup layers' })).toBeNull();
+
+    animatorCtx.characterParts = [shape('a')];
+    setSelection(['a'], 'a');
+    renderToolbar();
+    expect(screen.queryByRole('group', { name: 'Layer group' })).toBeNull();
+  });
+
+  it('offers Ungroup for a container and keeps Group disabled while only one layer is selected', () => {
+    animatorCtx.characterParts = [
+      shape('a', { parentId: 'g' }),
+      shape('g', { isGroup: true, type: 'custom_freeform' }),
+    ];
+    setSelection(['g'], 'g');
+    renderToolbar();
+
+    expect(screen.getByRole('button', { name: 'Group layers' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Ungroup layers' })).not.toBeDisabled();
+  });
+
+  it('ungroups the selected container from the toolbar', () => {
+    animatorCtx.characterParts = [
+      shape('a', { parentId: 'g' }),
+      shape('g', { isGroup: true, type: 'custom_freeform' }),
+    ];
+    setSelection(['g'], 'g');
+    renderToolbar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Ungroup layers' }));
+    const next = animatorCtx.setCharacterParts.mock.calls[0][0] as CharacterPart[];
+    expect(next.map((part) => part.id)).toEqual(['a']);
+    expect(next[0].parentId).toBeUndefined();
+  });
 });

@@ -103,6 +103,7 @@ export const OutlinerPanel: React.FC = () => {
         className={`tree-node actor-node ${selectedPartIds?.includes(part.id) ? 'selected' : ''} ${selectedPartId === part.id ? 'primary-selected' : ''} ${hasChildren ? 'has-children' : ''} ${depth > 0 ? 'nested-node' : ''} ${draggedIdx === index ? 'dragging' : ''} ${dragOverIdx === index ? 'drag-over' : ''}`}
         data-parent-id={(part.parentId ?? part.booleanGroupId) ?? ''}
         data-tree-depth={depth}
+        data-group-container={part.isGroup ? 'true' : undefined}
         onClick={(e) => {
           // Selecting a part outside the active Boolean structure exits the
           // transient operand editing mode.
@@ -191,7 +192,7 @@ export const OutlinerPanel: React.FC = () => {
 
         {/* Item Label Column */}
         <div className="col-label" style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          {getActorIcon(part.type, Boolean(part.booleanOperandIds?.length))}
+          {getActorIcon(part.type, Boolean(part.booleanOperandIds?.length) || Boolean(part.isGroup))}
           <span className="actor-name" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {part.name}
           </span>

@@ -24,11 +24,19 @@ export const resolveBondGroup = (parts: CharacterPart[], partId: string): string
   ...resolveBoundPartners(parts, partId).map((part) => part.id),
 ];
 
+/**
+ * The relationship a part inherits its transform from, or `undefined` when it
+ * is a root. Both container models use one chain (`parentId` wins over the
+ * Boolean group), which is the same precedence the evaluator applies.
+ */
+export const relationshipParentId = (part: CharacterPart | undefined): string | undefined => (
+  part?.parentId ?? part?.booleanGroupId
+);
+
 /** The relationship a part inherits its transform from; both models use one chain. */
-const relationshipParentOf = (parts: CharacterPart[], partId: string): string | undefined => {
-  const part = parts.find((candidate) => candidate.id === partId);
-  return part?.parentId ?? part?.booleanGroupId;
-};
+const relationshipParentOf = (parts: CharacterPart[], partId: string): string | undefined => (
+  relationshipParentId(parts.find((candidate) => candidate.id === partId))
+);
 
 /**
  * True when one part is the other's ancestor or descendant.

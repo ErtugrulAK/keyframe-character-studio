@@ -72,12 +72,16 @@ export const TransformTab: React.FC<TransformTabProps> = ({
               onUpdate={updateCurrentTransform}
             />
 
-            <TransformOpacityCard
-              opacity={transform.opacity}
-              onOpacityChange={(opacity) => updateCurrentTransform({ opacity })}
-              keyframedAtCurrentFrame={opacityKeyframedAtCurrentFrame ?? false}
-              onToggleKeyframe={onToggleOpacityKeyframe}
-            />
+            {/* Opacity is never inherited, so a container's opacity would not
+                reach the layers inside it — the control is not offered. */}
+            {!selectedPart.isGroup && (
+              <TransformOpacityCard
+                opacity={transform.opacity}
+                onOpacityChange={(opacity) => updateCurrentTransform({ opacity })}
+                keyframedAtCurrentFrame={opacityKeyframedAtCurrentFrame ?? false}
+                onToggleKeyframe={onToggleOpacityKeyframe}
+              />
+            )}
 
             {handleZIndexChange && (
               <TransformZIndexCard

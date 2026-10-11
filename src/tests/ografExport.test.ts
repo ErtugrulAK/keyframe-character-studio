@@ -5,6 +5,8 @@ import {
   compileOGrafManifest,
   compileOGrafPackage,
   compileOGrafPackagePlan,
+  evaluateOGrafScene,
+  renderOGrafSvg,
   validateSceneForOGraf,
 } from '../ograf';
 
@@ -481,5 +483,31 @@ describe('OGraf Export V1 Phase 1', () => {
     const child = makeLayer({ id: 'child', parentId: 'root' });
     const grandchild = makeLayer({ id: 'grandchild', parentId: 'child' });
     expect(compileOGrafPackage(makeScene([root, child, grandchild])).status).toBe('ready-to-materialize');
+  });
+});
+
+describe('OGraf Export — layer groups', () => {
+  const groupedScene = () => makeScene([
+    makeLayer({
+      id: 'g', name: 'Group', type: 'custom_freeform', isGroup: true, x: 40, y: 0, zIndex: 2,
+      // Exactly what createLayerGroup writes and toSceneData saves: a
+      // structural container with no paint and no geometry.
+      opacity: 0, visible: false, fillColor: 'none', strokeColor: 'none', width: undefined, height: undefined,
+    }),
+    makeLayer({ id: 'a', name: 'A', parentId: 'g', x: -100, y: 0, zIndex: 1 }),
+  ]);
+
+  test('exports a group container and its children without a diagnostic', () => {
+    expect(errorCodes(groupedScene())).toEqual([]);
+    expect(compileOGrafPackage(groupedScene()).status).toBe('ready-to-materialize');
+  });
+
+  test('draws the children at their evaluated world pose, exactly as before grouping', () => {
+    const svg = renderOGrafSvg(evaluateOGrafScene(groupedScene(), 0));
+    // The child keeps its own local -100 and inherits the container's +40, so
+    // it lands at canvas centre 960 - 60.
+    expect(svg).toContain('translate(900 540)');
+    // The container itself carries no geometry, so it draws no element.
+    expect(svg).not.toContain('data-layer="g"');
   });
 });

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useAnimator } from './useAnimator';
 import { EditorContextMenuContext, type ContextMenuRequest } from './editorContextMenu';
 import { useBooleanAuthoring } from '../hooks/useBooleanAuthoring';
+import { useLayerGrouping } from '../hooks/useLayerGrouping';
 import { EditorContextMenu, type ContextMenuGroup } from '../components/Canvas/EditorContextMenu';
 import { isBlockingModalOpen } from '../utils/modalBoundary';
 
@@ -33,6 +34,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     setBooleanOperandEditingGroupId,
   } = useAnimator();
   const { selectedBooleanGroup, dissolveBooleanGroup } = useBooleanAuthoring();
+  const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
   const [menu, setMenu] = useState<ContextMenuRequest | null>(null);
 
   const closeContextMenu = useCallback(() => setMenu(null), []);
@@ -106,18 +108,34 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
       { id: 'send-to-back', label: 'Send to Back', disabled: !single || index < 0 || index >= total - 1, run: () => reorderParts(index, total - 1) },
     ];
 
-    return [clipboardGroup, [{ id: 'select-all', label: 'Select All', run: selectAll }], arrangement];
+    // Grouping is offered only when it would actually run: an existing group is
+    // ungrouped, a valid multi-selection is grouped. Both run the same shared
+    // layer-grouping authority the toolbar and the Inspector use.
+    const groupActions: ContextMenuGroup = [];
+    if (selectedGroup) groupActions.push({ id: 'ungroup', label: 'Ungroup', run: ungroupSelection });
+    else if (canGroup) groupActions.push({ id: 'group', label: 'Group Layers', run: groupSelection });
+
+    return [
+      clipboardGroup,
+      ...(groupActions.length > 0 ? [groupActions] : []),
+      [{ id: 'select-all', label: 'Select All', run: selectAll }],
+      arrangement,
+    ];
   }, [
     characterParts,
     clipboardData,
     copySelectedPart,
+    canGroup,
     deleteSelection,
     duplicateSelectedPart,
+    groupSelection,
     pasteCopiedPart,
     reorderParts,
     selectAll,
+    selectedGroup,
     selectedPartId,
     selectedPartIds,
+    ungroupSelection,
   ]);
 
   const openContextMenu = useCallback((request: ContextMenuRequest) => {

@@ -142,6 +142,45 @@ describe('useSerialization Hook', () => {
     expect(jsonStr).toContain('My Scene');
   });
 
+  it('round-trips a layer group through export and import', () => {
+    const container: CharacterPart = {
+      id: 'g', name: 'Group', type: 'custom_freeform', isGroup: true, zIndex: 3,
+      fillColor: 'none', strokeColor: 'none', pivot: { x: 0, y: 0 },
+      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    };
+    const child: CharacterPart = {
+      id: 'a', name: 'A', type: 'custom_rect', parentId: 'g', zIndex: 1,
+      fillColor: '#fff', strokeColor: '#101218', pivot: { x: 0, y: 0 },
+      baseTransform: { x: -50, y: 10, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+    };
+    const { result } = renderHook(() => useSerialization({
+      fps: 30, setFps: mockSetFps,
+      totalFrames: 100, setTotalFrames: mockSetTotalFrames,
+      projectResolution: { width: 800, height: 600 }, setProjectResolution: mockSetProjectResolution,
+      tracks: [], setTracks: mockSetTracks,
+      characterParts: [child, container], setCharacterParts: mockSetCharacterParts,
+      activeProjectTemplateId: 'default', setActiveProjectTemplateIdState: mockSetActiveProjectTemplateIdState,
+      motionTemplates: [], setMotionTemplates: mockSetMotionTemplates,
+      activeTemplateId: 'Sequence', setActiveTemplateIdState: mockSetActiveTemplateIdState,
+      sceneTitle: 'Grouped', setSceneTitleState: mockSetSceneTitleState,
+      projectTemplates: [], setProjectTemplates: mockSetProjectTemplates,
+      setTemplateCanvasStore: mockSetTemplateCanvasStore,
+      setCurrentFrame: mockSetCurrentFrame,
+      setIsPlaying: mockSetIsPlaying
+    }));
+
+    const exported = result.current.exportProject();
+    const savedContainer = JSON.parse(exported).layers.find((layer: { id: string }) => layer.id === 'g');
+    expect(savedContainer.isGroup).toBe(true);
+    expect(JSON.parse(exported).layers.find((layer: { id: string }) => layer.id === 'a').parentId).toBe('g');
+
+    mockSetCharacterParts.mockClear();
+    expect(result.current.importProject(exported).ok).toBe(true);
+    const restored = mockSetCharacterParts.mock.calls.at(-1)![0] as CharacterPart[];
+    expect(restored.find((part) => part.id === 'g')?.isGroup).toBe(true);
+    expect(restored.find((part) => part.id === 'a')?.parentId).toBe('g');
+  });
+
   it('imports project string', () => {
     const { result } = renderHook(() => useSerialization({
       fps: 30, setFps: mockSetFps,

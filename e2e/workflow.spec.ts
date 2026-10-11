@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 test.describe('Phase 6.4 E2E Workflows', () => {
   test.beforeEach(async ({ page }) => {
@@ -6,15 +6,33 @@ test.describe('Phase 6.4 E2E Workflows', () => {
     await page.goto('/');
   });
 
-async function createShapeByDrag(page: import('@playwright/test').Page, name: string, offsetX = 0, offsetY = 0): Promise<void> {
+/**
+ * The gesture is expressed from the stage box's own centre (an 80x80 CSS px
+ * drag), so a changed stage height — the docked authoring strip owns 40 px of
+ * the layout — can never push a drag onto the timeline panel below.
+ */
+async function createShapeByDrag(page: Page, name: string, offsetX = 0, offsetY = 0, halfSize = 40): Promise<void> {
   await page.getByRole('button', { name, exact: true }).click();
   const canvas = page.locator('.stage-canvas-container');
   const box = await canvas.boundingBox();
   if (!box) throw new Error('Canvas bounds unavailable');
-  await page.mouse.move(box.x + 360 + offsetX, box.y + 280 + offsetY);
+  const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(center.x + halfSize + offsetX, center.y + halfSize + offsetY);
   await page.mouse.down();
-  await page.mouse.move(box.x + 280 + offsetX, box.y + 200 + offsetY);
+  await page.mouse.move(center.x - halfSize + offsetX, center.y - halfSize + offsetY);
   await page.mouse.up();
+}
+
+/** A point on the stage SVG at an offset from the stage centre, measured live. */
+async function stagePoint(page: Page, offsetX: number, offsetY: number): Promise<{ x: number; y: number }> {
+  const box = await page.locator('.stage-svg').boundingBox();
+  if (!box) throw new Error('Stage bounds unavailable');
+  return { x: box.width / 2 + offsetX, y: box.height / 2 + offsetY };
+}
+
+/** A click on the stage SVG at an offset from the stage centre, measured live. */
+async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Promise<void> {
+  await page.locator('.stage-svg').click({ position: await stagePoint(page, offsetX, offsetY) });
 }
 
   test('Create a new project, add parts, edit, and play', async ({ page }) => {
@@ -79,10 +97,9 @@ async function createShapeByDrag(page: import('@playwright/test').Page, name: st
     await page.getByRole('button', { name: 'Free Draw', exact: true }).click();
     await page.getByRole('button', { name: 'Hide Left Toolbar', exact: true }).click();
 
-    const svg = page.locator('.stage-svg');
-    await svg.click({ position: { x: 220, y: 180 } });
-    await svg.click({ position: { x: 360, y: 200 } });
-    await svg.click({ position: { x: 300, y: 280 } });
+    await clickStagePoint(page, -80, 20);
+    await clickStagePoint(page, 80, 0);
+    await clickStagePoint(page, 0, 50);
     await page.keyboard.press('Enter');
 
     await expect(page.locator('.ue-outliner').getByText('Freeform Shape').first()).toBeVisible();
@@ -98,11 +115,10 @@ async function createShapeByDrag(page: import('@playwright/test').Page, name: st
     await page.getByRole('button', { name: 'Free Draw', exact: true }).click();
 
     // Draw an irregular polygon: 3 corner clicks + double-click to finish
-    const svg = page.locator('.stage-svg');
-    await svg.click({ position: { x: 220, y: 180 } });
-    await svg.click({ position: { x: 360, y: 200 } });
-    await svg.click({ position: { x: 300, y: 280 } });
-    await svg.dblclick({ position: { x: 300, y: 280 } });
+    await clickStagePoint(page, -80, 20);
+    await clickStagePoint(page, 80, 0);
+    await clickStagePoint(page, 0, 50);
+    await page.locator('.stage-svg').dblclick({ position: await stagePoint(page, 0, 50) });
 
     // The finished shape appears in the timeline outliner
     await expect(page.locator('.ue-outliner').getByText('Freeform Shape').first()).toBeVisible();
@@ -112,18 +128,21 @@ async function createShapeByDrag(page: import('@playwright/test').Page, name: st
     test.setTimeout(60000);
     await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
-    // Add a Rectangle (the container) using interactive creation.
     await page.getByRole('button', { name: 'Vector Shapes & Graphic Elements' }).click();
-    await createShapeByDrag(page, 'Rectangle');
 
-    // Draw a small freeform INSIDE the rectangle's area (rect sits at center 300,240)
+    // Draw the small freeform first, at the stage centre: a mousedown that lands
+    // on an existing layer belongs to that layer, so the freeform tool only ever
+    // receives clicks on empty canvas.
     await page.getByRole('button', { name: 'Free Draw', exact: true }).click();
-    const svg = page.locator('.stage-svg');
-    await svg.click({ position: { x: 275, y: 220 } });
-    await svg.click({ position: { x: 325, y: 225 } });
-    await svg.click({ position: { x: 300, y: 255 } });
-    await svg.dblclick({ position: { x: 300, y: 255 } });
+    await clickStagePoint(page, -80, 20);
+    await clickStagePoint(page, 80, 0);
+    await clickStagePoint(page, 0, 50);
+    await page.locator('.stage-svg').dblclick({ position: await stagePoint(page, 0, 50) });
     await expect(page.locator('.ue-outliner').getByText('Freeform Shape').first()).toBeVisible();
+
+    // Surround it with the container rectangle, so the freeform stays INSIDE
+    // the container's area.
+    await createShapeByDrag(page, 'Rectangle', 0, 0, 100);
 
     // Container authoring no longer has a Transform-tab control. Preserve the
     // renderer/interaction regression through the supported persisted relation.

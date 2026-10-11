@@ -12,9 +12,12 @@ async function createShapeByDrag(page: Page, name: string): Promise<void> {
   await page.getByRole('button', { name, exact: true }).click();
   const box = await page.locator('.stage-canvas-container').boundingBox();
   if (!box) throw new Error('Canvas bounds unavailable');
-  await page.mouse.move(box.x + 360, box.y + 280);
+  // Measured from the stage centre, so the docked authoring strip's layout
+  // share can never push the drag onto the timeline panel.
+  const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  await page.mouse.move(center.x + 40, center.y + 40);
   await page.mouse.down();
-  await page.mouse.move(box.x + 280, box.y + 200);
+  await page.mouse.move(center.x - 40, center.y - 40);
   await page.mouse.up();
 }
 

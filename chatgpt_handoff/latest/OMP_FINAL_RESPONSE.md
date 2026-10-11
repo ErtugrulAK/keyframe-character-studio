@@ -1,89 +1,124 @@
-# KCS — OGraf runtime parity Phase A replay: clean branch, application-only delta, full validation, one replacement PR
+# KCS — PR #8 integrated by fast-forward, fully validated, exact-SHA smoke passed, 5173 on canonical main, redundant worktrees removed
 
 ## Latest action
 
-The OGraf Runtime Parity Phase A work is synchronized with the new integrated `main` by a clean
-replay. A new worktree and branch were cut from the current `origin/main` (`b7a0141`), and **only**
-the single application/test commit `3f41400` was cherry-picked; it applied cleanly and kept its
-authorship, message and author date. The old branch's two docs-only commits were deliberately not
-replayed, so the six docs/handoff bookkeeping conflicts were avoided rather than hand-resolved — the
-live docs and this bundle are regenerated from current truth instead. The branch was fully validated,
-pushed, and offered as **one replacement PR (#8)**. PR #3 was **not rewritten, not closed and its
-branch was not deleted**; it remains open. Nothing was merged, tagged, released or published to npm.
+Replacement **PR #8 was integrated into `main` by fast-forward only**. `git merge --ff-only
+origin/fix/ograf-runtime-parity-phase-a-replay` moved `main` from `b7a0141` to `7712dee`, adding three
+commits (`023d4d0` application/test, `4e0eebb` group parity test, `7712dee` docs) and creating **no
+merge commit** — `git log --merges b7a0141..HEAD` is empty, and GitHub records the fast-forward tip
+itself as PR #8's merge commit. The push was a normal fast-forward (`b7a0141..7712dee main -> main`)
+and PR #8 is **MERGED**. No branch was deleted and PR #3 was not rewritten, closed or deleted.
+
+One **vacuous assertion** was corrected as a test-only fix: `src/tests/ografExport.test.ts` asserted
+`not.toContain('data-layer="g"')`, an attribute no renderer emits because the layer wrapper is
+`data-layer-id="<id>"`. A throwaway probe (written, run, deleted) rendered a hidden container and a
+painting container: the hidden one emitted no `data-layer-id="g"` but did emit `data-layer-id="a"`
+for the child, and the painting one emitted `data-layer-id="g"` while the old form never appeared.
+The assertion now targets the real attribute; commit `7abee17` is the final **TESTED CODE SHA** and
+no product behaviour changed.
+
+After the smoke passed, live **5173 was switched to the canonical stable repo** and all six
+redundant Desktop worktrees were removed with **`git worktree remove` only**.
 
 | Field | Value |
 |---|---|
-| Repository | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (stable checkout, branch `main`) |
-| Base | `origin/main` = `b7a0141501a8057214065734b59915b10cec2e43` |
-| Replay worktree | `keyframe-character-studio-omp-runtime-parity-replay` |
-| Replay branch | `fix/ograf-runtime-parity-phase-a-replay` |
-| Tested application head | `4e0eebb59d077f76e9b4fa446302699c7a877a9e` |
-| Replacement PR | #8 — OPEN, `MERGEABLE`, base `main` |
-| Old PR #3 | OPEN, unmerged, `CONFLICTING` — untouched |
-| Live preview | `http://localhost:5173/` — pid 34956, not restarted |
-| API | `127.0.0.1:5000` — pid 24896, unchanged |
+| Repository | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (canonical stable checkout, branch `main`) |
+| Old `main` | `b7a0141501a8057214065734b59915b10cec2e43` |
+| Integrated `main` | `7712deeb12221a4262f4de9c4ce4d820d1231777` (fast-forward, no merge commit) |
+| Tested code SHA | `7abee1783039c606b6fbe6f2263bc09b09640885` |
+| PR #8 | **MERGED** (base `main`, head `fix/ograf-runtime-parity-phase-a-replay`) |
+| PR #3 | OPEN, unmerged, superseded — untouched, recommended for later closure |
+| Smoke run | `38172157643` — SUCCESS on `7abee17` |
+| Live preview | `http://localhost:5173/` — pid 34504, canonical repo, `main` @ `7abee17` |
+| API | `127.0.0.1:5000` — pid 24896, never restarted, `/api/health` 200 |
 
-## Diff boundary (proved read-only, before creating anything)
+## Integration record
 
-`git merge-base origin/main origin/fix/ograf-runtime-parity-phase-a` = `c46e698`; the old branch
-carries exactly three commits. Classification of all 13 changed files:
+- FF eligibility was re-proven immediately before merging (`git merge-base --is-ancestor origin/main
+  origin/fix/ograf-runtime-parity-phase-a-replay` exits 0; `--left-right --count` = `0 3`).
+- Commits added: `023d4d0` `fix: derive ograf runtime parity rules from shared authorities`,
+  `4e0eebb` `test: prove the layer-group model in runtime/export parity`, `7712dee` `docs: reconcile
+  the live docs and handoff for the runtime parity replay`.
+- `git log --merges b7a0141..HEAD` is **empty** — this integration created no merge commit, rewrote
+  no history and force-pushed nothing.
 
-- **(A) application/test** — `src/ograf/runtimeSnippets.ts`, `src/ograf/runtimeTemplate.ts`,
-  `src/ograf/svgRenderer.ts`, `src/tests/ografRuntimeParity.test.ts` (all of `3f41400`).
-- **(B) docs/handoff** — the nine bundle/report/index files of `e5a2b8a` and `f53398f`.
-- **(C) unexpected** — **none**.
+## Validation on the integrated `main` (isolated `CI=1 PORT=5008` → UI 5188 / API 5008)
 
-`git merge-tree --write-tree origin/main origin/fix/ograf-runtime-parity-phase-a` conflicts in
-exactly six docs/handoff bookkeeping files; the application delta is conflict-free.
+`npx tsc -b --pretty false` clean; `npm run lint` clean; `npm test` **146 files / 2,234 tests**;
+`npm run build`; `npm run validate:ograf`; the focused runtime-parity/stacking/matte/generated-parity/
+export/grouping set **10 files / 508 tests**; `qa:release` **2 passed**; `qa:v6` **3 passed**;
+`npm run check`; `node scripts/check-state-consistency.mjs` **PASS (47 checks)**;
+`npm audit --audit-level=low` **0 vulnerabilities**; `git diff --check` clean; and the FULL Chromium
+suite with `--retries=0`: **334 passed / 0 failed / 0 flaky**. `npm run dev` was never used.
 
-## Semantic audit against the new `main`
+The gates affected by the test-only commit were re-run at the final code SHA `7abee17`: `npm run
+check` (2,234 tests), the focused set (508), both QA gates, the full Chromium suite (334 passed) and
+the state checker — all green again.
 
-The Authoring-UX integration (`68fc28d` and the four fast-forward PRs) did not change
-`src/utils/stackingOrder.ts`, `src/utils/matte.ts` or any file under `src/ograf/`, and
-`src/ograf/evaluation.ts` still composes the `parentId` hierarchy through `evaluateFrame`.
-**No shared runtime semantic moved, so no adaptation was needed** and the replay is the Phase A delta
-verbatim: the generated runtime embeds the canonical `compareByStackingOrder` and
-`resolveMatteSource` sources (no build step, no loader, no `eval`, no second definition), and the
-static renderer calls the same shared matte resolver.
+## Self-review of the integrated diff
 
-## Authoring-UX group compatibility
+- `src/ograf/runtimeSnippets.ts` embeds KCS's own helpers via `Function.prototype.toString`, so the
+  runtime carries `compareByStackingOrder` (`src/utils/stackingOrder.ts`) and `resolveMatteSource`
+  (`src/utils/matte.ts`) as their single definitions — no build step, no loader, no `eval`, no
+  second copy.
+- `src/ograf/svgRenderer.ts` delegates matte precedence to the same shared resolver and keeps only
+  the SVG-mechanism choice local; the static renderer and the generated runtime agree.
+- Ascending-`zIndex` paint order is stable for equal `zIndex` (native stable sort); input arrays are
+  copied before sorting and never mutated.
+- A disabled Track Matte V2 still falls back to the legacy matte, and a V2 record naming no usable
+  source still suppresses the legacy matte — unchanged behaviour. Inverse matte is untouched.
+- Group containers: a geometryless container emits no layer element, its children keep the composed
+  parent transform and the shared stacking order, and a matte between group siblings resolves
+  identically with the same deterministic mask id in both paths.
+- No package, schema, public-controls, prototype-key or unrelated UX source change; the diff is the
+  four Phase A files plus docs/handoff.
 
-The new group model (`isGroup`, geometryless, `baseTransform.opacity: 0`, exported with
-`visible: !p.isGroup`) is explicitly covered by five runtime/export parity cases that drive all three
-paths (the editor authority `evaluateOGrafScene`, the static renderer `renderOGrafSvg` and the
-generated `graphic.mjs`): grouped layers keep the parent transform in the generated runtime; the
-geometryless container renders no invalid geometry; group children obey stacking order; a matte
-between two group siblings resolves identically with the same deterministic mask id; and the runtime
-result matches the editor/static authority, deterministically and without mutating the authored
-layers.
+## Exact-SHA release smoke
 
-## Validation (replay worktree only, isolated)
+Release Smoke Gate run **`38172157643`** (`.github/workflows/release-smoke.yml`, verification only,
+`permissions: contents: read`), candidate SHA `7abee1783039c606b6fbe6f2263bc09b09640885`,
+conclusion **success**: the run checked out the exact requested SHA, passed the expected-SHA
+assertion, `npm ci`, the Chromium setup, the OGraf fixture validation and `qa:release`. `7abee17` is
+the TESTED CODE SHA; the docs/handoff tip above it is docs-only and was deliberately not
+smoke-tested. No tag was created or moved, no release was published or finalized and nothing was
+published to npm.
 
-`tsc -b` clean, oxlint clean, vitest **146 files / 2,234 tests**, `vite build`, `validate:ograf`,
-focused OGraf runtime-parity **15 passed**, focused stacking/matte **398 passed**, the existing
-generated-runtime drift checks **20 passed**, `qa:release` **2 passed**, `qa:v6` **3 passed**,
-`npm run check`, `check-state-consistency` **PASS**, `npm audit --audit-level=low`
-**0 vulnerabilities**, `git diff --check` clean, and the FULL Chromium suite
-`CI=1 PORT=5007 npx playwright test --retries=0`: **334 passed / 0 failed / 0 flaky**. No retry,
-assertion or threshold was weakened and no parity contract test was skipped.
+## Live surfaces and worktree cleanup
 
-## CI
+- 5173: the old final-UX worktree vite process (pid 34956, from
+  `keyframe-character-studio-omp-authoring-ux-final`) was stopped; `npx vite --host --port 5173` now
+  runs from the canonical stable repo (pid 34504), answers 200, and serves `main` @ `7abee17`
+  including the runtime-parity modules — proved by reading the process working directory and fetching
+  the served `src/ograf/runtimeSnippets.ts` and `src/ograf/runtimeTemplate.ts`.
+- API 5000: pid **24896**, never stopped or restarted, `/api/health` and `/api/projects` answer 200.
+- Removed with `git worktree remove` only, each after proving a clean tree, zero untracked files, a
+  branch reachable from `main` or fully pushed to origin, no user data and no dependent process:
+  `keyframe-character-studio-omp-authoring-ux` (`7d7ebe2`), `-omp-authoring-ux-final` (`a56ed01`),
+  `-omp-camera-invariance` (`55a4ab2`), `-omp-corner-anchor` (`b453ba1`),
+  `-omp-runtime-parity-replay` (`7712dee`) and `-omp-runtime-parity` (`f53398f`, PR #3's branch, all
+  three commits already on origin).
+- The only ignored content was `node_modules/`, `dist/`, `playwright-report/`, `test-results/` and
+  `server/db/keyframe_studio.sqlite`; every worktree copy of that SQLite file held exactly the
+  seeded row (`sample_sequencer_project`), and the live API uses the canonical database, so nothing
+  user-authored was lost.
+- `git worktree prune` then listed only the canonical checkout; the Desktop now holds
+  `keyframe-character-studio` alone.
 
-CI Pipeline run `38170238329` on the tested application head
-`4e0eebb59d077f76e9b4fa446302699c7a877a9e`: **success** — `Build, Lint & Test Verification` passed
-`npm ci`, the OGraf fixture validation, oxlint, `tsc -b`, the Vitest suite and the production build.
+## Branches and PRs
 
-## Integration readiness
+Six branches were **retained**: `fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`,
+`fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`,
+`fix/ograf-runtime-parity-phase-a-replay` (all ancestors of `main`) and the superseded
+`fix/ograf-runtime-parity-phase-a`. They could be deleted later, but **only with explicit user
+approval**; no branch was deleted in this task, and `origin/without-mask` was not touched.
 
-`git merge-base --is-ancestor origin/main origin/fix/ograf-runtime-parity-phase-a-replay` is TRUE, so
-the replacement PR is fast-forward eligible. Nothing was merged and no release smoke was run because
-`main` has not changed.
+**PR #3** remains OPEN and is now superseded by the merged PR #8 — its application delta is in `main`
+and only its docs/handoff bookkeeping is stale. It is **recommended for closure as superseded**, but
+it was not closed, rewritten or deleted here; closing it is a separate explicit user decision.
 
 ## Constraints honoured
 
-No rebase, no force push, no `reset --hard`, no `git clean`, no branch deletion or rename, no
-rewriting or auto-closing of PR #3, no merge to `main`, no tag create/move/delete, no GitHub release,
-no npm publish, no deploy, no dependency/package/workflow change, no OMP global config change.
-`C:\Users\ertugrul.ak\Desktop\KCS`, `C:\Users\ertugrul.ak\Desktop\ograf-graphics`,
-`origin/without-mask`, the stable checkout, the old runtime-parity worktree, the other worktrees and
-`.hermes/desktop-attachments/` were not touched.
+No rebase, no force push, no `reset --hard`, no `git clean`, no manual deletion of a registered
+worktree, no branch deletion or rename, no tag create/move/delete, no GitHub release, no npm publish,
+no deploy, no dependency/package/workflow change, no OMP global config change, and nothing touching
+`origin/without-mask`, `C:\Users\ertugrul.ak\Desktop\KCS` or the canonical stable checkout.

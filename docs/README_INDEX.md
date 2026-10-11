@@ -93,6 +93,7 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `reports/progress_161_authoring_ux_final_slices.md` — the final authoring-UX slices: the colour picker, the authoring toolbar, the context menu, layer grouping and the aggregate group frame.
 - `reports/progress_162_authoring_ux_integration.md` — the Authoring UX stacked PR integration (PRs #4–#7, fast-forward only), the full validation counts, the exact-SHA smoke, and the read-only PR #3 audit.
 - `reports/progress_163_ograf_runtime_parity_phase_a_replay.md` — the OGraf runtime-parity Phase A replay onto current `main` from a clean branch, with the diff-boundary proof, the group-model parity cases, the full validation counts, and the replacement PR.
+- `reports/progress_164_ograf_runtime_parity_integration.md` — the fast-forward-only integration of replacement PR #8, the post-merge validation and self-review, the exact-SHA release smoke, the 5173 switch to the canonical stable repo, and the safe `git worktree remove` cleanup of the six redundant Desktop worktrees.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

@@ -210,6 +210,7 @@ describe('SelectionGizmo — layer group frame', () => {
     children: CharacterPart[],
     world: Record<string, Transform>,
     zScale = 1,
+    onScaleStart: () => void = () => {},
   ) => render(
     <svg>
       <SelectionGizmo
@@ -222,7 +223,7 @@ describe('SelectionGizmo — layer group frame', () => {
         tracks={[]}
         zScale={zScale}
         onRotateStart={() => {}}
-        onScaleStart={() => {}}
+        onScaleStart={onScaleStart}
         onTranslateStart={() => {}}
       />
     </svg>,
@@ -293,6 +294,19 @@ describe('SelectionGizmo — layer group frame', () => {
     // Box centre is the live aggregate centre (-100), not the container origin.
     expect(Number(accent.getAttribute('x')) + Number(accent.getAttribute('width')) / 2).toBe(-100);
     expect(halo.getAttribute('width')).toBe('500');
+  });
+
+  it('hands a corner drag the aggregate box, not the container geometry', () => {
+    const onScaleStart = vi.fn();
+    renderGroup([imagePart('a'), imagePart('b')], { g: identity(0), a: identity(-100), b: identity(100) }, 1, onScaleStart);
+
+    // A container owns no geometry, so anchoring the drag on its own bounds
+    // would scale the frame around the wrong box. The first four hit targets
+    // are the corner handles.
+    fireEvent.mouseDown(screen.getAllByTestId('gizmo-hit-target')[0], { button: 0 });
+
+    expect(onScaleStart).toHaveBeenCalledTimes(1);
+    expect(onScaleStart.mock.calls[0][2]).toEqual({ minX: -150, minY: -20, maxX: 150, maxY: 20 });
   });
 
   it('falls back to the container box for a group with no layers', () => {

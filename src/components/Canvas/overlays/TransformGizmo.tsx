@@ -30,6 +30,11 @@ interface TransformGizmoProps {
   /** Box centre in local units; used with the override extents (a group's own origin is not its centre). */
   overrideCenterX?: number;
   overrideCenterY?: number;
+  /**
+   * The local box a corner drag solves against, when the drawn frame is not the
+   * part's own geometry bounds (a layer group draws its aggregate box).
+   */
+  overrideBounds?: { minX: number; minY: number; maxX: number; maxY: number };
   outputOrigin?: CoordinatePoint;
 }
 
@@ -44,9 +49,13 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   overrideHalfH,
   overrideCenterX = 0,
   overrideCenterY = 0,
+  overrideBounds,
   outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
   const baseBounds = getPartLocalBounds(selectedPart, selectedTransform);
+  // The corner drag re-expresses pointer travel through this box, so a frame
+  // drawn from an override box must hand the drag the box it actually drew.
+  const resizeBounds = overrideBounds ?? baseBounds;
 
   // Keep the authored transform origin, but draw the selection frame around
   // the actual local geometry. This preserves asymmetric polygon bounds while
@@ -119,7 +128,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
                 stroke="#ffffff"
                 strokeWidth={1.5 * zScale}
                 style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
-                onMouseDown={(e) => onScaleMouseDown(e, corner.mode, baseBounds)}
+                onMouseDown={(e) => onScaleMouseDown(e, corner.mode, resizeBounds)}
               />
               <rect
                 data-testid="gizmo-hit-target"
@@ -130,7 +139,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
                 fill="transparent"
                 pointerEvents="auto"
                 style={{ cursor: corner.cursor }}
-                onMouseDown={(e) => onScaleMouseDown(e, corner.mode, baseBounds)}
+                onMouseDown={(e) => onScaleMouseDown(e, corner.mode, resizeBounds)}
               />
             </g>
           ))}

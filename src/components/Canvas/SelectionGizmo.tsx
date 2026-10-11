@@ -143,6 +143,15 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
           overrideHalfH: groupBounds.halfH * absoluteScaleY,
           overrideCenterX: groupBounds.offsetX * absoluteScaleX,
           overrideCenterY: groupBounds.offsetY * absoluteScaleY,
+          // The corner drag solves in the container's local units, so the box
+          // it anchors on must be the aggregate box the frame draws — the
+          // container's own (geometryless) bounds would anchor on nothing.
+          overrideBounds: {
+            minX: groupBounds.minX,
+            minY: groupBounds.minY,
+            maxX: groupBounds.maxX,
+            maxY: groupBounds.maxY,
+          },
         } : {})}
       />
     );

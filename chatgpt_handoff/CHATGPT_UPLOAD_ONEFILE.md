@@ -6,179 +6,123 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. No other fil
 `chatgpt_handoff\latest\` bundle needs to be uploaded.
 
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (canonical stable checkout, branch `main`).
-Task (2026-10-11): integrate replacement PR #8 into `main` by **fast-forward only**, fully validate the
-integrated `main`, run a fresh exact-SHA release smoke, switch the live 5173 QA surface to the canonical
-stable repo, and then remove the redundant Desktop Git worktrees **through `git worktree remove` only**.
+Task (2026-10-11): final pre-QA repository housekeeping — close the superseded PR #3 without merging, delete only the six branches proven obsolete, reconcile the live documents and the handoff, and leave MANUAL QA as the only remaining task.
 
-- Old `main`: `b7a0141501a8057214065734b59915b10cec2e43`
-- Integrated `main`: `7712deeb12221a4262f4de9c4ce4d820d1231777` (three commits added, **no merge commit created**)
-- Replacement PR: **#8 — MERGED**; old PR #3 remains OPEN, unmerged and superseded — not closed, rewritten or deleted
-- Test-only vacuous-assertion fix commit `7abee1783039c606b6fbe6f2263bc09b09640885` — the **TESTED CODE SHA**
-- Full validation on integrated `main`: 146 files / 2,234 vitest tests; FULL Chromium suite **334 passed / 0 failed / 0 flaky** with `--retries=0`
-- Exact-SHA Release Smoke Gate run `38172157643` on `7abee17`: **success**
-- Live preview: UI 5173 switched to the canonical stable repo (vite listener pid 4412, `npx vite` wrapper pid 34504); API 5000 (pid 24896) was never stopped
-- Six redundant Desktop worktrees removed with `git worktree remove` only; no branch was deleted
-- No tag, no release, no npm publication, no dependency/package/workflow change
-
-The sections below carry the response this task produced, the one-screen manifest, the bundle
-README, the live documents at this tip, and the progress record.
+- PR #3: **CLOSED as superseded (not merged)**, closed 2026-10-11T20:58:45Z (head `f53398f`)
+- PR #8: **MERGED** (2026-10-11T20:16:03Z); OGraf Runtime Parity Phase A is in `main`
+- Branches deleted (local and origin): `fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`, `fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`, `fix/ograf-runtime-parity-phase-a-replay`, `fix/ograf-runtime-parity-phase-a`
+- Branches retained: `feat/canvas-tangent-authoring`, `feat/canvas-tangent-authoring-replay`, `origin/without-mask`
+- `main` = `origin/main` = `c5ff4b783c7ed52a15ddf9bb3b0010e8382ffb9e`
+- Tested code SHA `7abee1783039c606b6fbe6f2263bc09b09640885` (smoke run `38172157643`, success) — unchanged; this cleanup touched docs only
+- Live preview UI 5173 = 200 (canonical repo); API 5000 (pid 24896) unchanged, `/api/health` 200
+- No tag, release or npm action — **NEXT = MANUAL QA ONLY**
 
 ---
 
 ## 1. OMP Final Response
 
-# KCS — PR #8 integrated by fast-forward, fully validated, exact-SHA smoke passed, 5173 on canonical main, redundant worktrees removed
+# KCS — final pre-QA repository housekeeping: PR #3 closed as superseded, six obsolete branches deleted, MANUAL QA is the only task left
 
 ## Latest action
 
-Replacement **PR #8 was integrated into `main` by fast-forward only**. `git merge --ff-only
-origin/fix/ograf-runtime-parity-phase-a-replay` moved `main` from `b7a0141` to `7712dee`, adding three
-commits (`023d4d0` application/test, `4e0eebb` group parity test, `7712dee` docs) and creating **no
-merge commit** — `git log --merges b7a0141..HEAD` is empty, and GitHub records the fast-forward tip
-itself as PR #8's merge commit. The push was a normal fast-forward (`b7a0141..7712dee main -> main`)
-and PR #8 is **MERGED**. No branch was deleted and PR #3 was not rewritten, closed or deleted.
-
-One **vacuous assertion** was corrected as a test-only fix: `src/tests/ografExport.test.ts` asserted
-`not.toContain('data-layer="g"')`, an attribute no renderer emits because the layer wrapper is
-`data-layer-id="<id>"`. A throwaway probe (written, run, deleted) rendered a hidden container and a
-painting container: the hidden one emitted no `data-layer-id="g"` but did emit `data-layer-id="a"`
-for the child, and the painting one emitted `data-layer-id="g"` while the old form never appeared.
-The assertion now targets the real attribute; commit `7abee17` is the final **TESTED CODE SHA** and
-no product behaviour changed.
-
-After the smoke passed, live **5173 was switched to the canonical stable repo** and all six
-redundant Desktop worktrees were removed with **`git worktree remove` only**.
+The final pre-QA repository housekeeping is complete on the canonical checkout
+(`C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`, branch `main`). The superseded **PR #3 was
+closed without merging**; six branches proven obsolete were deleted locally and on `origin`; the live
+documents and the handoff were reconciled; and the only remaining task is **MANUAL QA**.
 
 | Field | Value |
 |---|---|
 | Repository | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (canonical stable checkout, branch `main`) |
-| Old `main` | `b7a0141501a8057214065734b59915b10cec2e43` |
-| Integrated `main` | `7712deeb12221a4262f4de9c4ce4d820d1231777` (fast-forward, no merge commit) |
-| Tested code SHA | `7abee1783039c606b6fbe6f2263bc09b09640885` |
-| PR #8 | **MERGED** (base `main`, head `fix/ograf-runtime-parity-phase-a-replay`) |
-| PR #3 | OPEN, unmerged, superseded — untouched, recommended for later closure |
-| Smoke run | `38172157643` — SUCCESS on `7abee17` |
-| Live preview | `http://localhost:5173/` — vite listener pid 4412 (`npx vite` wrapper pid 34504), canonical repo, `main` application code (tested code SHA `7abee17`) |
+| `main` | `c5ff4b783c7ed52a15ddf9bb3b0010e8382ffb9e`, matching `origin/main` (before this docs commit) |
+| PR #3 | **CLOSED as superseded (not merged)** — closed 2026-10-11T20:58:45Z, head `f53398f` |
+| PR #8 | **MERGED** (2026-10-11T20:16:03Z) — OGraf Runtime Parity Phase A is in `main` |
+| Tested code SHA | `7abee1783039c606b6fbe6f2263bc09b09640885` (`7abee17`) — unchanged |
+| Tested-code smoke | Release Smoke Gate run `38172157643` — **success** |
+| Live preview | `http://localhost:5173/` — HTTP 200, canonical repo, `main` application code |
 | API | `127.0.0.1:5000` — pid 24896, never restarted, `/api/health` 200 |
+| Next task | **MANUAL QA ONLY** |
 
-## Integration record
+## PR #3 — closed as superseded (proof)
 
-- FF eligibility was re-proven immediately before merging (`git merge-base --is-ancestor origin/main
-  origin/fix/ograf-runtime-parity-phase-a-replay` exits 0; `--left-right --count` = `0 3`).
-- Commits added: `023d4d0` `fix: derive ograf runtime parity rules from shared authorities`,
-  `4e0eebb` `test: prove the layer-group model in runtime/export parity`, `7712dee` `docs: reconcile
-  the live docs and handoff for the runtime parity replay`.
-- `git log --merges b7a0141..HEAD` is **empty** — this integration created no merge commit, rewrote
-  no history and force-pushed nothing.
+PR #3 (`fix/ograf-runtime-parity-phase-a`, head `f53398f227569188a5ec663c23acd439caf8415b`, fully
+pushed to `origin`) carried no unique required application behaviour:
 
-## Validation on the integrated `main` (isolated `CI=1 PORT=5008` → UI 5188 / API 5008)
+- `git diff main fix/ograf-runtime-parity-phase-a -- src/ograf/runtimeSnippets.ts
+  src/ograf/runtimeTemplate.ts src/ograf/svgRenderer.ts` is **empty** — the three application source
+  files are byte-identical to `main`, with identical `merge-base → branch` and `merge-base → main`
+  deltas (`+40/0`, `+10/-2`, `+24/-14`).
+- `main`'s `src/tests/ografRuntimeParity.test.ts` is a **strict superset**: every test name on the
+  closed branch is present in `main` (branch-only tests = none).
+- `git log main..fix/ograf-runtime-parity-phase-a` is exactly `3f41400` (the shared-authorities fix,
+  already in `main` through the merged PR #8) plus the docs-only `e5a2b8a` and `f53398f`.
 
-`npx tsc -b --pretty false` clean; `npm run lint` clean; `npm test` **146 files / 2,234 tests**;
-`npm run build`; `npm run validate:ograf`; the focused runtime-parity/stacking/matte/generated-parity/
-export/grouping set **10 files / 508 tests**; `qa:release` **2 passed**; `qa:v6` **3 passed**;
-`npm run check`; `node scripts/check-state-consistency.mjs` **PASS (47 checks)**;
-`npm audit --audit-level=low` **0 vulnerabilities**; `git diff --check` clean; and the FULL Chromium
-suite with `--retries=0`: **334 passed / 0 failed / 0 flaky**. `npm run dev` was never used.
+It was closed with a comment naming PR #8 and was not merged, rewritten, force-pushed or edited.
 
-The gates affected by the test-only commit were re-run at the final code SHA `7abee17`: `npm run
-check` (2,234 tests), the focused set (508), both QA gates, the full Chromium suite (334 passed) and
-the state checker — all green again.
+## Branch cleanup — deleted vs retained
 
-## Self-review of the integrated diff
+Deleted locally (via `git branch -d`) and on `origin` (via `git push origin --delete`):
 
-- `src/ograf/runtimeSnippets.ts` embeds KCS's own helpers via `Function.prototype.toString`, so the
-  runtime carries `compareByStackingOrder` (`src/utils/stackingOrder.ts`) and `resolveMatteSource`
-  (`src/utils/matte.ts`) as their single definitions — no build step, no loader, no `eval`, no
-  second copy.
-- `src/ograf/svgRenderer.ts` delegates matte precedence to the same shared resolver and keeps only
-  the SVG-mechanism choice local; the static renderer and the generated runtime agree.
-- Ascending-`zIndex` paint order is stable for equal `zIndex` (native stable sort); input arrays are
-  copied before sorting and never mutated.
-- A disabled Track Matte V2 still falls back to the legacy matte, and a V2 record naming no usable
-  source still suppresses the legacy matte — unchanged behaviour. Inverse matte is untouched.
-- Group containers: a geometryless container emits no layer element, its children keep the composed
-  parent transform and the shared stacking order, and a matte between group siblings resolves
-  identically with the same deterministic mask id in both paths.
-- No package, schema, public-controls, prototype-key or unrelated UX source change; the diff is the
-  four Phase A files plus docs/handoff.
+- `fix/authoring-ux-transform-toolbar` (`7d7ebe2`, PR #4 MERGED, ancestor of `main`, 0 unique)
+- `fix/authoring-ux-camera-invariance` (`55a4ab2`, PR #5 MERGED, ancestor, 0 unique)
+- `fix/authoring-ux-corner-anchor` (`b453ba1`, PR #6 MERGED, ancestor, 0 unique)
+- `fix/authoring-ux-final-slices` (`a56ed01`, PR #7 MERGED, ancestor, 0 unique)
+- `fix/ograf-runtime-parity-phase-a-replay` (`7712dee`, PR #8 MERGED, ancestor, 0 unique)
+- `fix/ograf-runtime-parity-phase-a` (`f53398f`, PR #3 CLOSED not merged, not an ancestor, 3 unique =
+  the already-integrated fix plus two docs commits)
 
-## Exact-SHA release smoke
+For the sixth, `git branch -d` **succeeded** with only the informational warning that the branch is
+merged to its own upstream but not to HEAD; **no `-D` and no force flag was used**, and every proof
+held. Retained: `feat/canvas-tangent-authoring` (Milestone A review artefact),
+`feat/canvas-tangent-authoring-replay` (its replayed integration branch), `origin/without-mask`
+(ARCHIVE), and every branch outside the six candidates. `main` and `origin/main` are
+`c5ff4b783c7ed52a15ddf9bb3b0010e8382ffb9e`; the working tree is clean.
 
-Release Smoke Gate run **`38172157643`** (`.github/workflows/release-smoke.yml`, verification only,
-`permissions: contents: read`), candidate SHA `7abee1783039c606b6fbe6f2263bc09b09640885`,
-conclusion **success**: the run checked out the exact requested SHA, passed the expected-SHA
-assertion, `npm ci`, the Chromium setup, the OGraf fixture validation and `qa:release`. `7abee17` is
-the TESTED CODE SHA; the docs/handoff tip above it is docs-only and was deliberately not
-smoke-tested. No tag was created or moved, no release was published or finalized and nothing was
-published to npm.
+## Docs tip vs tested code
 
-## Live surfaces and worktree cleanup
+This housekeeping changed **docs/handoff only** — no source, test, workflow, package, lockfile or asset
+byte — so the tested code SHA stays `7abee17` (smoke run `38172157643`), the smoke was not re-run, and
+the docs tip above `7abee17` is docs-only.
 
-- 5173: the old final-UX worktree vite process (pid 34956, from
-  `keyframe-character-studio-omp-authoring-ux-final`) was stopped; `npx vite --host --port 5173` now
-  runs from the canonical stable repo (vite listener pid 4412, `npx vite` wrapper pid 34504), answers 200, and serves `main`'s application code (the tested code SHA `7abee17`)
-  including the runtime-parity modules — proved by reading the process working directory and fetching
-  the served `src/ograf/runtimeSnippets.ts` and `src/ograf/runtimeTemplate.ts`.
-- API 5000: pid **24896**, never stopped or restarted, `/api/health` and `/api/projects` answer 200.
-- Removed with `git worktree remove` only, each after proving a clean tree, zero untracked files, a
-  branch reachable from `main` or fully pushed to origin, no user data and no dependent process:
-  `keyframe-character-studio-omp-authoring-ux` (`7d7ebe2`), `-omp-authoring-ux-final` (`a56ed01`),
-  `-omp-camera-invariance` (`55a4ab2`), `-omp-corner-anchor` (`b453ba1`),
-  `-omp-runtime-parity-replay` (`7712dee`) and `-omp-runtime-parity` (`f53398f`, PR #3's branch, all
-  three commits already on origin).
-- The only ignored content was `node_modules/`, `dist/`, `playwright-report/`, `test-results/` and
-  `server/db/keyframe_studio.sqlite`; every worktree copy of that SQLite file held exactly the
-  seeded row (`sample_sequencer_project`), and the live API uses the canonical database, so nothing
-  user-authored was lost.
-- `git worktree prune` then listed only the canonical checkout; the Desktop now holds
-  `keyframe-character-studio` alone.
+## Release state
 
-## Branches and PRs
+No tag was created, moved or deleted; no GitHub release was published or finalized; nothing was
+published to npm. `v1.1.0-rc.2` remains the published prerelease at its historical candidate, and
+`v1.1.0-rc.1` (target `46d2a3e59e065816d972dcd56951803951b577f6`) plus `v1.1.0-public-controls` are
+unchanged.
 
-Six branches were **retained**: `fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`,
-`fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`,
-`fix/ograf-runtime-parity-phase-a-replay` (all ancestors of `main`) and the superseded
-`fix/ograf-runtime-parity-phase-a`. They could be deleted later, but **only with explicit user
-approval**; no branch was deleted in this task, and `origin/without-mask` was not touched.
+## Next step
 
-**PR #3** remains OPEN and is now superseded by the merged PR #8 — its application delta is in `main`
-and only its docs/handoff bookkeeping is stale. It is **recommended for closure as superseded**, but
-it was not closed, rewritten or deleted here; closing it is a separate explicit user decision.
+**MANUAL QA ONLY.** The user QA pass against 5173 is the next input; a stable release, a further
+candidate, or any code-affecting commit (which would require a new exact-SHA smoke run) remains a
+separate explicit decision.
 
-## Constraints honoured
+## Evidence
 
-No rebase, no force push, no `reset --hard`, no `git clean`, no manual deletion of a registered
-worktree, no branch deletion or rename, no tag create/move/delete, no GitHub release, no npm publish,
-no deploy, no dependency/package/workflow change, no OMP global config change, and nothing touching
-`origin/without-mask`, `C:\Users\ertugrul.ak\Desktop\KCS` or the canonical stable checkout.
+- `reports/progress_165_pre_qa_repository_cleanup.md` — the full record: the PR #3 audit proof and its
+  post-close state, the per-candidate safety table, the deletions, the post-cleanup audit, and the
+  docs/handoff reconciliation.
+
 
 ---
 
-
-
 ## 2. Upload Manifest
 
+# KCS ChatGPT Upload Manifest — final pre-QA repository housekeeping
 
-# KCS ChatGPT Upload Manifest — PR #8 runtime-parity integration and QA worktree cleanup
-
-Scope: integrate replacement PR #8 into `main` by fast-forward only, fully validate the integrated `main`, run a fresh exact-SHA release smoke, switch live 5173 to the canonical stable repo, and remove the redundant Desktop Git worktrees through `git worktree remove` only. No release, no tag, no npm, no branch deletion, no force push, no rebase, no history rewrite
+Scope: final pre-QA repository housekeeping — close the superseded PR #3 WITHOUT merging, delete only the six branches proven obsolete (locally and on origin), reconcile the live documents and the handoff, and leave MANUAL QA as the only remaining task. No product change, no release, no tag, no npm publication, no force push, no rebase, no history rewrite
 Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (canonical stable checkout, branch main)
-Integration: git merge --ff-only origin/fix/ograf-runtime-parity-phase-a-replay moved main from b7a0141501a8057214065734b59915b10cec2e43 to 7712deeb12221a4262f4de9c4ce4d820d1231777 (three commits: 023d4d0, 4e0eebb, 7712dee); git log --merges b7a0141..HEAD is empty, so no merge commit was created; normal push b7a0141..7712dee
-PR #8: MERGED at 2026-10-11T20:16:03Z with the fast-forward tip recorded as its merge commit; PR #3 (head f53398f) remains OPEN, unmerged and untouched, and no branch was deleted
-Integrity: FF eligibility re-proven immediately before the merge (git merge-base --is-ancestor origin/main origin/fix/ograf-runtime-parity-phase-a-replay exits 0; rev-list --left-right --count = "0 3")
-Test-only fix: the vacuous assertion not.toContain('data-layer="g"') in src/tests/ografExport.test.ts (no renderer emits data-layer="; the layer wrapper is data-layer-id="<id>") was corrected to not.toContain('data-layer-id="g"'); commit 7abee1783039c606b6fbe6f2263bc09b09640885 is the final TESTED CODE SHA; a throwaway probe proved the old form was unsatisfiable and the real attribute appears as soon as a container paints; no product behaviour changed
-Self-review: the generated runtime embeds the canonical compareByStackingOrder (src/utils/stackingOrder.ts) and resolveMatteSource (src/utils/matte.ts); svgRenderer and the generated runtime agree; ascending-zIndex order is stable for equal zIndex; input arrays are not mutated; a disabled Track Matte V2 still falls back to the legacy matte; inverse-matte behaviour is unchanged; group containers emit no layer element while children keep the composed parent transform, the shared stacking order and sibling-matte parity; no package, schema, public-controls, prototype-key or unrelated UX change
-Validation (integrated main, isolated CI=1 PORT=5008 -> UI 5188 / API 5008; npm run dev never used): tsc -b clean; oxlint clean; vitest 146 files / 2234 tests; vite build; validate:ograf; focused runtime-parity/stacking/matte/export/grouping 10 files / 508 tests; qa:release 2 passed; qa:v6 3 passed; npm run check; check-state-consistency PASS (47 checks); npm audit --audit-level=low 0 vulnerabilities; git diff --check clean; FULL Chromium npx playwright test --retries=0 = 334 passed / 0 failed / 0 flaky
-Validation at the final code SHA 7abee17: npm run check green (2234 tests), focused set 508 passed, qa:release 2 passed, qa:v6 3 passed, FULL Chromium 334 passed / 0 failed, check-state-consistency PASS
-Smoke: Release Smoke Gate run 38172157643, candidate_sha 7abee1783039c606b6fbe6f2263bc09b09640885, conclusion success (exact-SHA checkout asserted, npm ci, Chromium setup, OGraf fixture validation and qa:release all passed); verification-only workflow; no tag, release or npm action
-Live surfaces: UI 5173 switched from the final-UX worktree (pid 34956) to the canonical stable repo via npx vite --host --port 5173 (vite listener pid 4412, npx wrapper pid 34504), answers 200 and serves main's application code (tested code SHA 7abee17) including the runtime-parity changes; API 5000 (pid 24896) was never stopped and /api/health answers 200
-Worktrees removed with git worktree remove only (each clean, zero untracked files, branch reachable from main or fully pushed, no user data, no dependent process): keyframe-character-studio-omp-authoring-ux, -omp-authoring-ux-final, -omp-camera-invariance, -omp-corner-anchor, -omp-runtime-parity-replay, -omp-runtime-parity; git worktree prune then listed only the canonical checkout; the only ignored content was node_modules, dist, playwright-report, test-results and the seeded SQLite file
-Branches: none deleted; fix/authoring-ux-transform-toolbar, fix/authoring-ux-camera-invariance, fix/authoring-ux-corner-anchor, fix/authoring-ux-final-slices, fix/ograf-runtime-parity-phase-a-replay and fix/ograf-runtime-parity-phase-a all remain locally and on origin; the merged/superseded set is recommended for later deletion only with explicit approval
-PR #3: OPEN and superseded by the merged PR #8 (its application delta is now in main); recommended for closure as superseded, but it was NOT closed, rewritten or deleted in this task
-Tested code SHA vs docs tip: the smoke tested 7abee1783039c606b6fbe6f2263bc09b09640885; the docs/handoff reconciliation commit above it changes no source, test, workflow, package or asset byte and was deliberately not smoke-tested
-Desktop: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio is now the only keyframe-character-studio folder; C:\Users\ertugrul.ak\Desktop\KCS still exists and was untouched; the guarded path ograf-graphics does not exist on this machine
-Release state: no tag was created, moved or deleted; no release was published or finalized; nothing was published to npm; no dependency, package, workflow or OMP configuration change; v1.1.0-rc.2 remains the published prerelease at its historical candidate, and v1.1.0-rc.1 (46d2a3e59e065816d972dcd56951803951b577f6) plus v1.1.0-public-controls are unchanged
-Protected: origin/without-mask, .hermes/desktop-attachments/, release artefacts, OMP configuration and every denied path were not touched
+PR #3: CLOSED as superseded (not merged) at 2026-10-11T20:58:45Z; head fix/ograf-runtime-parity-phase-a at f53398f227569188a5ec663c23acd439caf8415b; the close comment names PR #8; it was not merged, rewritten, force-pushed or edited
+PR #3 audit proof: git diff main fix/ograf-runtime-parity-phase-a -- src/ograf/runtimeSnippets.ts src/ograf/runtimeTemplate.ts src/ograf/svgRenderer.ts is empty (the three files are byte-identical), each file's merge-base -> branch delta equals its merge-base -> main delta (+40/0, +10/-2, +24/-14), and main's src/tests/ografRuntimeParity.test.ts is a strict superset (every branch test name is present in main); git log main..fix/ograf-runtime-parity-phase-a is exactly 3f41400 (application fix, already in main through PR #8) plus the docs-only e5a2b8a and f53398f, so the only real difference is stale docs/handoff bookkeeping
+PR #8: MERGED at 2026-10-11T20:16:03Z (head fix/ograf-runtime-parity-phase-a-replay at 7712deeb12221a4262f4de9c4ce4d820d1231777); OGraf Runtime Parity Phase A is in main
+Branch safety proof (each candidate): local exists = yes, remote exists = yes, exact SHA recorded, associated PR state recorded, git merge-base --is-ancestor <branch> main, git log main..<branch>, git diff --stat main...<branch>; fix/authoring-ux-transform-toolbar 7d7ebe2 (PR #4 MERGED, ancestor YES, unique 0), fix/authoring-ux-camera-invariance 55a4ab2 (PR #5 MERGED, ancestor YES, unique 0), fix/authoring-ux-corner-anchor b453ba1 (PR #6 MERGED, ancestor YES, unique 0), fix/authoring-ux-final-slices a56ed01 (PR #7 MERGED, ancestor YES, unique 0), fix/ograf-runtime-parity-phase-a-replay 7712dee (PR #8 MERGED, ancestor YES, unique 0), fix/ograf-runtime-parity-phase-a f53398f (PR #3 CLOSED not merged, ancestor NO, unique 3 = application fix already in main plus two docs commits); no open PR depended on any candidate
+Deletions: git branch -d removed the five ancestor-proven branches locally and all six were removed on origin with git push origin --delete; for fix/ograf-runtime-parity-phase-a, git branch -d SUCCEEDED with only the informational warning that it is merged to its own upstream but not to HEAD, so no -D and no force flag was used, and all Phase 1/3 proofs held (PR #3 closed, not an ancestor, application delta in main, remote present, only historical docs/handoff differ)
+Retained branches: feat/canvas-tangent-authoring (Milestone A review artefact), feat/canvas-tangent-authoring-replay (its replayed integration branch, now behind main), origin/without-mask (ARCHIVE), and every branch outside the six candidates
+Protected branches preserved: main, origin/without-mask, feat/canvas-tangent-authoring, feat/canvas-tangent-authoring-replay, every release tag, and C:\Users\ertugrul.ak\Desktop\KCS
+Post-cleanup audit: git fetch --all --prune run; main = origin/main = c5ff4b783c7ed52a15ddf9bb3b0010e8382ffb9e; working tree clean; all six candidates gone locally and on origin; only the six approved branches removed; no source/test/package/workflow file changed
+Tested code SHA vs docs tip: the tested code SHA remains 7abee1783039c606b6fbe6f2263bc09b09640885 (Release Smoke Gate run 38172157643, conclusion success); this cleanup changed docs/handoff only, so no new smoke is required and the docs tip above 7abee17 is docs-only
+Live surfaces: UI 5173 answers 200 and serves the canonical main application code; API 5000 (pid 24896) was never stopped or restarted and /api/health answers 200
+Release state: no tag was created, moved or deleted; no GitHub release was published or finalized; nothing was published to npm; v1.1.0-rc.2 remains the published prerelease at its historical candidate and v1.1.0-rc.1 (46d2a3e59e065816d972dcd56951803951b577f6) plus v1.1.0-public-controls are unchanged
+Next task: MANUAL QA ONLY — the user QA pass against 5173; a stable release, a further candidate, or any code-affecting commit (which would require a new exact-SHA smoke run) remains a separate explicit decision
 
 Bundle source files (9):
 - CHANGELOG.md
@@ -189,23 +133,19 @@ Bundle source files (9):
 - PROJECT_STATE.md
 - README.md
 - manifest.txt
-- progress_164_ograf_runtime_parity_integration.md
+- progress_165_pre_qa_repository_cleanup.md
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md. No other file in the latest bundle needs to be uploaded.
 
 ---
 
-
-
 ## 3. Bundle README
 
+# KCS Minimal ChatGPT Upload Bundle — final pre-QA repository housekeeping
 
-# KCS Minimal ChatGPT Upload Bundle — PR #8 runtime-parity integration and QA worktree cleanup
-
-Task-specific handoff for integrating replacement PR #8 into `main` by fast-forward only, fully
-validating the integrated `main`, running a fresh exact-SHA release smoke, switching live 5173 to the
-canonical stable repo, and safely removing the redundant Desktop Git worktrees (2026-10-11). This is
-not an archive.
+Task-specific handoff for the final pre-QA repository housekeeping (2026-10-11): closing the
+superseded PR #3 without merging, deleting only the branches proven obsolete, reconciling the live
+documents and the handoff, and leaving MANUAL QA as the only remaining task. This is not an archive.
 
 ## Current truth
 
@@ -214,71 +154,41 @@ not an archive.
 | Field | Value |
 |---|---|
 | Repository | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (canonical stable checkout, branch `main`) |
-| Old `main` | `b7a0141501a8057214065734b59915b10cec2e43` |
-| Integration | `git merge --ff-only origin/fix/ograf-runtime-parity-phase-a-replay` → `main` = `7712deeb12221a4262f4de9c4ce4d820d1231777`, **no merge commit created** |
-| Commits added | `023d4d0`, `4e0eebb`, `7712dee` |
-| Replacement PR | **#8 — MERGED** (GitHub records the fast-forward tip as its merge commit) |
-| Test-only fix commit | `7abee1783039c606b6fbe6f2263bc09b09640885` — the **TESTED CODE SHA** |
-| Old PR #3 | **OPEN**, unmerged, superseded — not rewritten, not closed, branch not deleted |
-| Live preview | `http://localhost:5173/` — vite listener pid 4412 (`npx vite` wrapper pid 34504), started from the canonical repo |
-| API | `127.0.0.1:5000` — pid 24896, unchanged |
+| PR #3 | **CLOSED as superseded (not merged)** — closed 2026-10-11T20:58:45Z |
+| PR #8 | **MERGED** (2026-10-11T20:16:03Z); OGraf Runtime Parity Phase A is in `main` |
+| Branches deleted | `fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`, `fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`, `fix/ograf-runtime-parity-phase-a-replay`, `fix/ograf-runtime-parity-phase-a` |
+| Branches retained | `feat/canvas-tangent-authoring`, `feat/canvas-tangent-authoring-replay`, `origin/without-mask` |
+| Tested code SHA | `7abee1783039c606b6fbe6f2263bc09b09640885` (`7abee17`) — unchanged |
+| Tested-code smoke | Release Smoke Gate run `38172157643`, **success** |
+| Live preview | `http://localhost:5173/` — HTTP 200, canonical repo serving `main` |
+| API | `127.0.0.1:5000` — pid 24896, never restarted, `/api/health` 200 |
+| Next task | **MANUAL QA ONLY** |
 
 ## What changed
 
-- The integrated diff is exactly the four Phase A files (`src/ograf/runtimeSnippets.ts`,
+- PR #3 (`fix/ograf-runtime-parity-phase-a`, head `f53398f`) was **closed as superseded, not merged**,
+  with a comment naming PR #8. Its application delta (`src/ograf/runtimeSnippets.ts`,
   `src/ograf/runtimeTemplate.ts`, `src/ograf/svgRenderer.ts`, `src/tests/ografRuntimeParity.test.ts`)
-  plus docs/handoff. The generated runtime embeds KCS's canonical `compareByStackingOrder` and
-  `resolveMatteSource`; the static renderer and the runtime agree; a disabled Track Matte V2 still
-  falls back to the legacy matte; group containers render nothing while their children keep the
-  composed parent transform and the shared stacking order.
-- One vacuous assertion in `src/tests/ografExport.test.ts` (`not.toContain('data-layer="g"')`, an
-  attribute no renderer emits — the wrapper is `data-layer-id="<id>"`) was corrected to
-  `not.toContain('data-layer-id="g"')` as a test-only fix. A throwaway probe proved the old form could
-  never fail while the real attribute appears as soon as a container paints.
+  is represented in `main`: the three `src/ograf` files are byte-identical to the closed branch's and
+  `main`'s parity test file is a strict superset. No unique required application behaviour existed
+  only there.
+- Six branches were deleted locally and on `origin`: five were already ancestors of `main` with zero
+  unique commits, and the sixth (`fix/ograf-runtime-parity-phase-a`) carried only the already-
+  integrated application fix plus two docs/handoff commits. No other branch was touched.
+- This cleanup changed **no source, test, workflow, package, lockfile or asset byte** — docs/handoff
+  only — so the tested code SHA stays `7abee17` and no new smoke was required.
 
-## Validation (isolated `CI=1 PORT=5008` → UI 5188 / API 5008)
+## Protected state
 
-`tsc -b` clean, oxlint clean, vitest **146 files / 2,234 tests**, `vite build`, `validate:ograf`,
-the focused runtime-parity/stacking/matte/export/grouping set **10 files / 508 tests**,
-`qa:release` **2 passed**, `qa:v6` **3 passed**, `npm run check`, `check-state-consistency`
-**PASS (47 checks)**, `npm audit --audit-level=low` **0 vulnerabilities**, `git diff --check` clean,
-and the FULL Chromium suite `npx playwright test --retries=0`: **334 passed / 0 failed / 0 flaky**.
-The gates affected by the test-only commit were re-run at the final code SHA `7abee17` and were green
-again.
-
-## Exact-SHA release smoke
-
-Release Smoke Gate run **`38172157643`**, candidate SHA `7abee1783039c606b6fbe6f2263bc09b09640885`,
-conclusion **success** — exact-SHA checkout asserted, `npm ci`, Chromium setup, OGraf fixture
-validation and `qa:release` all passed. No tag, release or npm action was taken.
-
-## Live surfaces and worktree cleanup
-
-- 5173 was switched to the canonical stable repo: the old worktree vite process (pid 34956) was
-  stopped and `npx vite --host --port 5173` was started from
-  `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (vite listener pid 4412, `npx vite` wrapper
-  pid 34504). API 5000 (pid 24896) was never
-  stopped.
-- All six redundant Desktop worktrees were removed with **`git worktree remove` only**, after each
-  passed every safety check (clean tree, zero untracked files, branch reachable from `main` or fully
-  pushed, no user data, no dependent process): `keyframe-character-studio-omp-authoring-ux`,
-  `-omp-authoring-ux-final`, `-omp-camera-invariance`, `-omp-corner-anchor`,
-  `-omp-runtime-parity-replay`, `-omp-runtime-parity`. `git worktree prune` then listed only the
-  canonical checkout.
-- No branch was deleted. PR #3 remains OPEN and is recommended for closure as superseded by the
-  merged PR #8 — a separate explicit user decision.
-
-## Next step
-
-Continue QA against 5173, which now serves the canonical `main`. Any further release or stable
-decision requires a new explicit user instruction and a fresh exact-SHA smoke on any later code
-change; no tag was created or moved, no release was published or finalized, and nothing was published
-to npm.
+`main`, `origin/without-mask`, `feat/canvas-tangent-authoring`, `feat/canvas-tangent-authoring-replay`,
+every release tag, and `C:\Users\ertugrul.ak\Desktop\KCS` were preserved. No tag was created, moved or
+deleted, no GitHub release was published or finalized, and nothing was published to npm.
 
 ## Evidence and files
 
-- `reports/progress_164_ograf_runtime_parity_integration.md` — the full record (integration, validation
-  counts, self-review, smoke, 5173 switch, per-worktree inventory and removals, branch/PR audit).
+- `reports/progress_165_pre_qa_repository_cleanup.md` — the full record (PR #3 audit proof and post-
+  close state, the per-candidate safety table, the deletions, the post-cleanup audit, the docs/handoff
+  reconciliation).
 
 ## Upload
 
@@ -287,10 +197,7 @@ uploaded.
 
 ---
 
-
-
 ## 4. PROJECT_STATE.md (live)
-
 
 # KCS Project State
 
@@ -310,6 +217,18 @@ Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candi
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
+## Final pre-QA repository housekeeping — 2026-10-11
+
+- **PR #3 (`fix/ograf-runtime-parity-phase-a`) was CLOSED as superseded — not merged** (closed 2026-10-11T20:58:45Z). It was not rewritten, rebased or force-pushed, and its historical commits were left intact.
+- **PR #8 (`fix/ograf-runtime-parity-phase-a-replay`) is MERGED**, so OGraf Runtime Parity Phase A is in `main`. The application delta the closed PR #3 carried (`src/ograf/runtimeSnippets.ts`, `src/ograf/runtimeTemplate.ts`, `src/ograf/svgRenderer.ts`, `src/tests/ografRuntimeParity.test.ts`) is represented in `main`: the three `src/ograf` files are byte-identical to the closed branch's (`git diff main fix/ograf-runtime-parity-phase-a` is empty for them), and `main`'s `src/tests/ografRuntimeParity.test.ts` is a strict superset (every test name on the closed branch is present in `main`). No unique required application behaviour existed only on PR #3; the only real difference was stale docs/handoff bookkeeping.
+- **Six proven-obsolete branches were deleted locally and on `origin`**: `fix/authoring-ux-transform-toolbar` (`7d7ebe2`), `fix/authoring-ux-camera-invariance` (`55a4ab2`), `fix/authoring-ux-corner-anchor` (`b453ba1`), `fix/authoring-ux-final-slices` (`a56ed01`) and `fix/ograf-runtime-parity-phase-a-replay` (`7712dee`) — each already an ancestor of `main` with zero unique commits — plus the superseded `fix/ograf-runtime-parity-phase-a` (`f53398f`), whose only unique commits were the shared-authorities application fix already in `main` through PR #8 and two docs/handoff commits. No other branch was touched.
+- **Retained**: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch), plus `origin/without-mask` (ARCHIVE) and every branch outside the six candidates.
+- **TESTED CODE SHA remains `7abee1783039c606b6fbe6f2263bc09b09640885`**, and exact-SHA Release Smoke Gate run `38172157643` remains the relevant tested-code smoke. This cleanup changed no source, test, workflow, package, lockfile or asset byte — only docs/handoff — so no new smoke is required, and the docs tip above `7abee17` is docs-only.
+- **Live surfaces unchanged**: UI 5173 serves the canonical `main` application code (HTTP 200), and API 5000 (pid 24896) was never stopped or restarted (`/api/health` 200).
+- **No release action**: no tag was created, moved or deleted, no GitHub release was published or finalized, and nothing was published to npm.
+- **NEXT = MANUAL QA ONLY.**
+- Record: `reports/progress_165_pre_qa_repository_cleanup.md`.
+
 ## Authoring UX stacked PR integration — 2026-10-11
 
 - The completed Authoring UX stacked PR chain was integrated into `main` in order by four **fast-forward-only** merges that created no merge commit and rewrote no history: PR #4 `fix/authoring-ux-transform-toolbar` (`c46e698` → `7d7ebe2`), PR #5 `fix/authoring-ux-camera-invariance` (`7d7ebe2` → `55a4ab2`), PR #6 `fix/authoring-ux-corner-anchor` (`55a4ab2` → `b453ba1`), and PR #7 `fix/authoring-ux-final-slices` (`b453ba1` → `a56ed01`). Each step proved `git merge-base --is-ancestor main origin/<head>` first and used `git merge --ff-only`; PRs #4–#7 are **MERGED** and no branch was deleted.
@@ -317,7 +236,7 @@ The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` b
 - Full post-merge validation on that exact checkout was green: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (145 files / 2,219 tests), `npm run build`, `npm run validate:ograf`, both QA gates (`qa:release` 2 tests, `qa:v6` 3 tests), `npm run check`, `node scripts/check-state-consistency.mjs` (43 checks), `npm audit --audit-level=low` (0 vulnerabilities) and `git diff --check`. The FULL Chromium suite ran with `--retries=0`: **334 passed, 0 failed, 0 flaky**. No assertion was weakened and no new contract test was skipped.
 - A fresh verification-only exact-SHA Release Smoke Gate ran on the integrated tip: run `38166764216`, candidate SHA `a56ed017e1df804e255842ca81ef1108b9b48ebc`, conclusion **success** (2026-10-11T19:08:41Z → 19:09:24Z). It resolved the checkout to that SHA, passed the expected-SHA assertion, `npm ci`, the Chromium setup, the OGraf fixture validation and `qa:release`.
 - The live QA preview was switched to the canonical stable repo on 2026-10-11: UI 5173 now serves `keyframe-character-studio` from `main`, whose application code is the tested code SHA `7abee17` (started as `npx vite --host --port 5173`), so it is the current QA surface; API 5000 (pid 24896) was never stopped or restarted.
-- `fix/ograf-runtime-parity-phase-a` (PR #3) stays **OPEN** and unmerged, and is now **superseded by the merged PR #8**: its application delta (`src/ograf/runtimeSnippets.ts`, `src/ograf/runtimeTemplate.ts`, `src/ograf/svgRenderer.ts`, `src/tests/ografRuntimeParity.test.ts`) is in `main`, and only its docs/handoff bookkeeping is stale. Closing it is a separate explicit user decision. The audit recommendation (B) — a controlled sync/replay — was carried out and integrated; see the section below.
+- `fix/ograf-runtime-parity-phase-a` (PR #3) is **CLOSED as superseded (not merged)** — closed on 2026-10-11 at 2026-10-11T20:58:45Z — and was **superseded by the merged PR #8**: its application delta (`src/ograf/runtimeSnippets.ts`, `src/ograf/runtimeTemplate.ts`, `src/ograf/svgRenderer.ts`, `src/tests/ografRuntimeParity.test.ts`) is in `main`, and only its docs/handoff bookkeeping was stale. The audit recommendation (B) — a controlled sync/replay — was carried out and integrated; see the section below and the final pre-QA cleanup section above.
 - No tag was created or moved, no release was published or finalized, and nothing was published to npm. The published `v1.1.0-rc.2` prerelease remains tied to its historical smoke-tested candidate, and `v1.1.0-rc.1` plus `v1.1.0-public-controls` are unchanged. Any future stable or RC decision requires a new explicit user instruction and a new exact-SHA smoke on any later code change.
 
 ## OGraf runtime parity integrated into `main` (PR #8) + QA worktree cleanup — 2026-10-11
@@ -329,7 +248,7 @@ The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` b
 - Full post-merge validation on the integrated `main` was green: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (146 files / 2,234 tests), `npm run build`, `npm run validate:ograf`, the focused runtime-parity/stacking/matte/export/grouping set (10 files / 508 tests), `qa:release` (2), `qa:v6` (3), `npm run check`, `node scripts/check-state-consistency.mjs` (47 checks), `npm audit --audit-level=low` (0 vulnerabilities), `git diff --check`, and the FULL Chromium suite with `--retries=0`: **334 passed, 0 failed, 0 flaky**. All E2E ran isolated (`CI=1 PORT=5008` → UI 5188 / API 5008); `npm run dev` was never used. The gates affected by the test-only commit were re-run at the final code SHA `7abee17` and were green again.
 - **Exact-SHA Release Smoke Gate** on the final code SHA: run `38172157643`, candidate SHA `7abee1783039c606b6fbe6f2263bc09b09640885`, conclusion **success** — exact-SHA checkout asserted, `npm ci`, Chromium setup, OGraf fixture validation and `qa:release` all passed. `7abee17` is the TESTED CODE SHA; the docs tip above it is docs-only and was deliberately not smoke-tested.
 - All six redundant Desktop worktrees were removed **with `git worktree remove` only** after every safety check (clean tree, zero untracked files, branch reachable from `main` or fully pushed, no user data, no dependent process): `keyframe-character-studio-omp-authoring-ux`, `-omp-authoring-ux-final`, `-omp-camera-invariance`, `-omp-corner-anchor`, `-omp-runtime-parity-replay` and `-omp-runtime-parity`. `git worktree prune` then listed only the canonical checkout. The only ignored content was build/test output and the seeded SQLite file, and the live API uses the canonical database.
-- The six branches were **not deleted**; PR #3 stays OPEN and superseded by the merged PR #8. No tag was created or moved, no release was published, nothing was published to npm.
+- PR #3 has since been **CLOSED as superseded (not merged)** and the six proven-obsolete branches were deleted in the final pre-QA cleanup below; PR #8 is MERGED. No tag was created or moved, no release was published, nothing was published to npm.
 - Record: `reports/progress_164_ograf_runtime_parity_integration.md`.
 
 ## Post-Astra focused remediation publication — 2026-10-07
@@ -435,7 +354,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - Milestones A–G and H1–H6 are complete, and the H7 release decision has since been executed (the `v1.1.0-rc.2` candidate is a published prerelease awaiting the user QA pass). The maintenance follow-ups previously listed as deferred or open are closed through `37904fb`: dialog focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5. No further package, workflow, tag, release, or npm action is implicit; each requires explicit approval.
 - Publish/finalize the GitHub draft only with further explicit user instruction.
 - No npm publication occurred; package remains private at `1.1.0-rc.1`.
-- Branch cleanup needs approval: `feat/canvas-tangent-authoring-replay` was replayed into `main` at `077911b` and is now behind it (the branch is kept only as an artefact); `feat/canvas-tangent-authoring` is kept as the Milestone A review artefact.
+- Branch cleanup: the six proven-obsolete branches (`fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`, `fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`, `fix/ograf-runtime-parity-phase-a-replay`, `fix/ograf-runtime-parity-phase-a`) were deleted locally and on `origin` in the final pre-QA cleanup. `feat/canvas-tangent-authoring-replay` (replayed into `main` at `077911b`, now behind it; kept as an artefact) and `feat/canvas-tangent-authoring` (the Milestone A review artefact) are retained; deleting them still needs approval.
 
 ## ChatGPT handoff policy
 
@@ -467,10 +386,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 
 ---
 
-
-
 ## 5. NEXT_SESSION.md (live)
-
 
 # Next Session Handoff
 
@@ -484,7 +400,15 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - The **`engines` declaration and the npm-12 `allowScripts` question are answered on `chore/engines-allow-scripts`** (`reports/progress_131_engines_allow_scripts.md`): `engines.node: "^22.22.2 || ^24.15.0 || >=26.0.0"` (the locked toolchain's supported intersection) plus a version-pinned `allowScripts` approval for `sqlite3@6.0.1`; `package-lock.json` mirrors only the root engine metadata and its dependency graph is unchanged (**merged into `main` at `1a12d79`**)
 - Workflow-tested release code candidate (tag target): `46d2a3e59e065816d972dcd56951803951b577f6`
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
-- Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch, now behind `main`; deleting it needs approval)
+- Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch, now behind `main`); both are retained and deleting them needs approval. The six proven-obsolete branches (`fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`, `fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`, `fix/ograf-runtime-parity-phase-a-replay`, `fix/ograf-runtime-parity-phase-a`) were deleted locally and on `origin` in the final pre-QA cleanup.
+
+## Final pre-QA repository housekeeping — 2026-10-11
+
+- **PR #3 (`fix/ograf-runtime-parity-phase-a`) was CLOSED as superseded — not merged** (closed 2026-10-11T20:58:45Z), and **PR #8 is MERGED**; OGraf Runtime Parity Phase A is in `main`. The closed PR #3's application delta is represented in `main` (the three `src/ograf` files are byte-identical and `main`'s parity test file is a strict superset), so no unique required application behaviour existed only there.
+- The six proven-obsolete branches were deleted locally and on `origin` (five were already ancestors of `main` with zero unique commits; the sixth, `fix/ograf-runtime-parity-phase-a` at `f53398f`, carried only the already-integrated application fix plus two docs commits). `feat/canvas-tangent-authoring`, `feat/canvas-tangent-authoring-replay` and `origin/without-mask` were retained.
+- TESTED CODE SHA remains `7abee1783039c606b6fbe6f2263bc09b09640885`; exact-SHA Release Smoke Gate run `38172157643` remains the relevant tested-code smoke. This cleanup changed docs/handoff only — no source, test, workflow, package or asset byte — so no new smoke is required.
+- Live surfaces unchanged: UI 5173 serves the canonical `main` application code (HTTP 200) and API 5000 (pid 24896) was never stopped or restarted (`/api/health` 200). No tag was created, moved or deleted, no release was published or finalized, and nothing was published to npm.
+- **NEXT = MANUAL QA ONLY.** Record: `reports/progress_165_pre_qa_repository_cleanup.md`.
 
 ## Authoring UX stacked PR integration — 2026-10-11
 
@@ -492,8 +416,8 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - The integrated code tip is `a56ed017e1df804e255842ca81ef1108b9b48ebc` and `main` at or after `a56ed01`, matching `origin/main`.
 - Full post-merge validation on that exact checkout: TypeScript, lint, `npm test` (145 files / 2,219 tests), build, `validate:ograf`, `qa:release` (2) and `qa:v6` (3), `npm run check`, the state-consistency check (43 checks), `npm audit --audit-level=low` (0 vulnerabilities), `git diff --check`, and the FULL Chromium suite with `--retries=0` — **334 passed, 0 failed, 0 flaky**.
 - Exact-SHA Release Smoke Gate on the integrated tip: run `38166764216`, candidate SHA `a56ed017e1df804e255842ca81ef1108b9b48ebc`, **success** (2026-10-11T19:08:41Z → 19:09:24Z). No tag was created or moved, no release was published, and npm was not published.
-- The live QA preview was switched to the canonical stable repo on 2026-10-11 (see the integration section below): UI 5173 now serves `keyframe-character-studio` on `main`, and API 5000 (pid 24896) was never stopped. The four authoring-UX branches are kept (deleting them needs approval).
-- `fix/ograf-runtime-parity-phase-a` (PR #3) stays **OPEN** and unmerged; its application delta is now in `main` through the merged PR #8. Only the docs/handoff bookkeeping files differ, while its application delta is conflict-free. The audit recommendation (B) — a controlled sync/replay — was carried out and integrated; see the section below.
+- The live QA preview was switched to the canonical stable repo on 2026-10-11 (see the integration section below): UI 5173 now serves `keyframe-character-studio` on `main`, and API 5000 (pid 24896) was never stopped. The four authoring-UX branches were deleted in the final pre-QA cleanup (see above).
+- `fix/ograf-runtime-parity-phase-a` (PR #3) is now **CLOSED as superseded — not merged**; its application delta is in `main` through the merged PR #8. Only the docs/handoff bookkeeping files differed. The audit recommendation (B) — a controlled sync/replay — was carried out and integrated; see the section below and the final pre-QA cleanup section.
 - The release decision is unchanged: `v1.1.0-rc.2` remains the published prerelease at its historical smoke-tested candidate, and any future stable or RC decision requires a new explicit user instruction plus a new exact-SHA smoke on any later code change.
 
 ## OGraf runtime parity integrated into `main` (PR #8) + QA worktree cleanup — 2026-10-11
@@ -506,7 +430,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - **Exact-SHA Release Smoke Gate** on the final code SHA: run `38172157643`, candidate SHA `7abee1783039c606b6fbe6f2263bc09b09640885`, conclusion **success** — the run checked out the exact requested SHA, passed the expected-SHA assertion, `npm ci`, the Chromium setup, the OGraf fixture validation and `qa:release`. `7abee17` is the TESTED CODE SHA; the docs tip above it is docs-only and was deliberately not smoke-tested.
 - The live 5173 QA surface was switched to the canonical stable repo: the old final-UX worktree vite process (pid 34956) was stopped and `npx vite --host --port 5173` was started from `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (vite listener pid 4412, spawned by the `npx vite` service wrapper pid 34504). 5173 answers 200 and serves the integrated `main` application code (the tested code SHA `7abee17`) including the runtime-parity changes, verified by reading the process working directory and fetching the served modules. API 5000 (pid 24896) was never stopped and `/api/health` still answers 200.
 - All six redundant Desktop worktrees were removed **with `git worktree remove` only** after passing every safety check (clean tree, zero untracked files, branch reachable from `main` or fully pushed, no user data, no dependent process): `keyframe-character-studio-omp-authoring-ux`, `-omp-authoring-ux-final`, `-omp-camera-invariance`, `-omp-corner-anchor`, `-omp-runtime-parity-replay` and `-omp-runtime-parity`. `git worktree prune` then listed only the canonical checkout. Only denied content was build/test artifacts and the seeded SQLite file; the live API uses the canonical database.
-- The six branches were **not deleted**; `feat/canvas-tangent-authoring(-replay)` remain kept as before. PR #3 stays OPEN and is now superseded by the merged PR #8 — closing it is a separate explicit user decision.
+- The six proven-obsolete branches were deleted locally and on `origin` in the final pre-QA cleanup; `feat/canvas-tangent-authoring(-replay)` remain kept as before. PR #3 was CLOSED as superseded (not merged); PR #8 is MERGED.
 - No tag was created or moved, no release was published or finalized, nothing was published to npm, and no dependency/package/workflow/OMP change was made. Record: `reports/progress_164_ograf_runtime_parity_integration.md`.
 
 ## Post-Astra focused remediation — committed, 2026-10-07
@@ -574,7 +498,7 @@ Post-Astra remediation local gate on October 7, 2026: `npx tsc -b --pretty false
 
 ## Next scoped work
 
-1. **Milestone H: H7 GO executed, `v1.1.0-rc.2` PUBLIC PRERELEASE published.** H1–H6 are complete and the new candidate was cut from and verified against the exact smoke-tested commit `6c27ef3`; its GitHub release is a published prerelease awaiting the user QA pass. The earlier candidate remains at `46d2a3e`, and npm publication plus any stable release stay separate explicit decisions. Re-run the exact-SHA smoke gate on any later commit that changes code before a further RC or stable decision.
+1. **Milestone H — final pre-QA repository housekeeping complete; NEXT = MANUAL QA ONLY.** PR #3 was CLOSED as superseded (not merged), PR #8 is MERGED and the OGraf Runtime Parity Phase A delta is in `main`; the six proven-obsolete branches were deleted locally and on `origin`, while `feat/canvas-tangent-authoring`, `feat/canvas-tangent-authoring-replay` and `origin/without-mask` were retained. The `v1.1.0-rc.2` public prerelease is unchanged and npm was never published. The tested code SHA remains `7abee17` (smoke run `38172157643`) and this cleanup touched docs only. The next input is the user MANUAL QA pass against 5173; a stable release, a further candidate, or any code-affecting commit (which requires a new exact-SHA smoke run) remains a separate explicit decision.
 2. The Astra remediation findings F-01…F-10 are closed and merged with green CI, one branch per finding; `reports/progress_151_astra_remediation.md` records the reproduction evidence and the remaining limitations.
 3. The post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01 are closed and published on `main` in six commits; `reports/progress_152_post_astra_focused_remediation.md` records the per-finding reproduction, fix, test and result.
 4. The five maintenance tasks that preceded the remediation are complete: focus restoration, SQLite repository hygiene, the API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5.
@@ -609,14 +533,11 @@ Post-Astra remediation local gate on October 7, 2026: `npx tsc -b --pretty false
 
 ---
 
-
-
 ## 6. KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md (live)
-
 
 # KCS Grouped Roadmap Execution Plan
 
-Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are complete. Milestone H is complete through H6, and its H7 release decision has since been executed: the `v1.1.0-rc.2` candidate was cut from the exact smoke-tested commit and is now a published prerelease awaiting the user QA pass (no stable release, no npm publication). The later approved maintenance run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the API CORS allowlist (`2a313d7`), Oxlint 1.85 (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`) without moving any release artefact. The post-hold Astra remediation then closed findings F-01…F-10 through `8a4ca22` (see `reports/progress_151_astra_remediation.md`), also without moving any release artefact. The later post-compaction Astra review of the uncommitted authoring work closed all 16 of its findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) in six commits on `main` on 2026-10-07 (see `reports/progress_152_post_astra_focused_remediation.md`), likewise without a dependency, workflow, package, tag, release or npm change.
+Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are complete. Milestone H is complete through H6, and its H7 release decision has since been executed: the `v1.1.0-rc.2` candidate was cut from the exact smoke-tested commit and is now a published prerelease awaiting the user QA pass (no stable release, no npm publication). The later approved maintenance run closed dialog focus restoration (`5cb8a45`), runtime SQLite repository hygiene (`b3f3c6c`), the API CORS allowlist (`2a313d7`), Oxlint 1.85 (`feca773`), and TypeScript 7 / Vitest 5 (`37904fb`) without moving any release artefact. The post-hold Astra remediation then closed findings F-01…F-10 through `8a4ca22` (see `reports/progress_151_astra_remediation.md`), also without moving any release artefact. The later post-compaction Astra review of the uncommitted authoring work closed all 16 of its findings (A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03, DOC-01) in six commits on `main` on 2026-10-07 (see `reports/progress_152_post_astra_focused_remediation.md`), likewise without a dependency, workflow, package, tag, release or npm change. The final pre-QA repository housekeeping then closed PR #3 as superseded (not merged), confirmed PR #8 MERGED, deleted the six proven-obsolete branches (retaining `feat/canvas-tangent-authoring`, `feat/canvas-tangent-authoring-replay` and `origin/without-mask`), and left **MANUAL QA ONLY** as the next task; it changed docs/handoff only, so the tested code SHA is unchanged.
 
 ## Milestone map and status
 
@@ -629,7 +550,7 @@ Orchestrator close-out for the grouped post-RC roadmap run. Milestones A–G are
 | E — OGraf QA / schema hardening study | 7, 8 | `docs/milestone-e-ograf-qa-study`, `chore/ograf-offline-schema-closure`, `test/ograf-folder-qa-automation` | **COMPLETE** — study and plan delivered (`docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md`, `reports/progress_114_ograf_qa_study.md`); **item 7 (7-A) implemented and merged** on `chore/ograf-offline-schema-closure` (`reports/progress_115_ograf_offline_schema_closure.md`) and **item 8 implemented and merged** on `test/ograf-folder-qa-automation` (`reports/progress_116_ograf_folder_qa.md`), integrated at `22335a5` with green CI. **Plan only** for anything beyond those two approved scopes |
 | F — Interop design and its approved slices | 10, 11, 12 | `docs/milestone-f-interop-study` | **COMPLETE** — the study is delivered (`docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md`, `reports/progress_117_interop_study.md`): item 10 Lottie mapping contract, item 11 evaluator profiling plan, item 12 editable-KCS-import product/security plan. **Plan only** for every slice that has not been approved yet. **Item 11 approved and implemented** on `chore/evaluator-profiling-harness` (`reports/progress_118_evaluator_profiling.md`): deterministic scenes, an on-demand harness and a first baseline; measurement only, no caching. **Item 12 first step implemented** on `fix/kcs-import-boundary-hardening` (`reports/progress_119_kcs_import_boundary.md`): a validated import boundary with stable refusal codes and limits; item 10 is designed in `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md`, and **item 10's first implementation slice (the Lottie import core) is merged at `ff32d6c`** (`reports/progress_123_lottie_import_core.md`); its **second slice (layer masks + track mattes) is merged at `8670b2a`** (`reports/progress_125_lottie_mask_matte_slice.md`), its **third slice (text, image and precomp layers) is merged at `bda62cb`** (`reports/progress_126_lottie_text_image_precomp_slice.md`), and its **final slice (the import entry point with the report-before-replace UX) is merged at `3b30bff`** (`reports/progress_127_lottie_import_entry_report_ux.md`) — **item 10 is complete**; **item 12 is complete and merged** (the unified import entry with its handoff refresh at `a4f8642`, the OGraf package/editable import at `419fc6a`); and **item 9 Option B** (dependency maintenance) is merged into `main` at `73426e5`. Checkpoint `2026-09-18-after-lottie-core` |
 | G — Post-review correctness follow-up | review findings H-01…M-05 | one branch per task (`fix/modal-shortcut-isolation`, `fix/import-serialization-transaction-integrity`, `fix/lottie-structure-correctness`, `fix/ograf-inverse-alpha-matte`, `fix/api-network-trust-boundary`, `fix/evaluator-profile-fixtures`, `fix/state-consistency-live-docs`) | **COMPLETE** — the full-project review's release-blocking findings, taken one at a time: each gets its own branch, its own validation, a read-only self-review and an approval-gated fast-forward merge. H-01 (blocking dialogs left the editor's global commands live) is merged at `0c19751`; H-03/H-04/M-03 (import boundary validation, the track authoring-state round-trip and the document transaction) at `fc672f2`; M-01/M-02/H-05 (Lottie parent resolution, static hierarchy and multi-geometry loss) at `85c3929`; H-02 (the OGraf inverted track matte) at `ac3bda1`; H-06 (the unauthenticated API bound to every interface) at `352d272`; M-04 (the evaluator profile fixtures) at `16e1610`. **M-05** (the live-document reconciliation) is merged at `2b0bba0`, and the shallow-checkout CI regression it caused was fixed at `dcbf9f5`, and the final correctness gate ran on `main` after that fix (`reports/progress_141_astra_correctness_followup_summary.md`): every finding is closed. |
-| H — Release finalization and approval-gated maintenance | review follow-up decisions | Milestone H branches plus the five maintenance branches plus the nine remediation branches | **NEXT (user QA)** — **H1–H6 are COMPLETE**, the post-hold maintenance tasks are merged through `37904fb`, the Astra remediation findings F-01…F-10 are closed through `8a4ca22`, and the post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01 are closed in six commits on `main` (2026-10-07). **H7 = GO (executed)** — the `v1.1.0-rc.2` candidate was cut from the exact smoke-tested commit and its GitHub release is now a PUBLISHED PRERELEASE (not stable); the earlier candidate stays at `46d2a3e` and npm was not published. This row keeps the plan's single NEXT marker because the remaining plan decision is the user QA pass and a future explicitly authorized stable release. |
+| H — Release finalization and approval-gated maintenance | review follow-up decisions | Milestone H branches plus the five maintenance branches plus the nine remediation branches | **NEXT (user QA)** — **H1–H6 are COMPLETE**, the post-hold maintenance tasks are merged through `37904fb`, the Astra remediation findings F-01…F-10 are closed through `8a4ca22`, and the post-compaction Astra findings A-01…A-05, B-01…B-04, C-01…C-03, D-01…D-03 and DOC-01 are closed in six commits on `main` (2026-10-07). **H7 = GO (executed)** — the `v1.1.0-rc.2` candidate was cut from the exact smoke-tested commit and its GitHub release is now a PUBLISHED PRERELEASE (not stable); the earlier candidate stays at `46d2a3e` and npm was not published. The final pre-QA repository housekeeping then CLOSED PR #3 as superseded (not merged), confirmed PR #8 MERGED, and deleted the six proven-obsolete branches, retaining `feat/canvas-tangent-authoring`, `feat/canvas-tangent-authoring-replay` and `origin/without-mask`. This row keeps the plan's single NEXT marker because the remaining work is MANUAL QA ONLY, followed by a future explicitly authorized stable release. |
 
 Completed earlier: item 1 (export diagnostics remediation UX, Task 105), item 2 (track-matte source selection affordance, Task 107).
 
@@ -685,7 +606,7 @@ The deliverables are the study, the Lottie import mapping design and the editabl
 
 ## Recommended next prompt
 
-"KCS RELEASE FINALIZATION (Milestone H, approval-gated — currently HELD). Milestone H is complete through H6, and the five approved post-hold maintenance tasks are merged with green CI through `37904fb`: dialog focus restoration, runtime SQLite repository hygiene, the exact API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5.
+"KCS MANUAL QA (Milestone H, approval-gated). The final pre-QA repository housekeeping is complete: PR #3 CLOSED as superseded (not merged), PR #8 MERGED with the runtime-parity delta in `main`, the six proven-obsolete branches deleted locally and on `origin`, and the tested code SHA unchanged at `7abee17`. **NEXT = MANUAL QA ONLY.** Milestone H is complete through H6, and the five approved post-hold maintenance tasks are merged with green CI through `37904fb`: dialog focus restoration, runtime SQLite repository hygiene, the exact API CORS allowlist, Oxlint 1.85, and TypeScript 7 / Vitest 5.
 
 The older candidate and its GitHub draft prerelease, together with the private package metadata, are unchanged at `46d2a3e59e065816d972dcd56951803951b577f6`.
 The H7 GO decision was then executed: the newer `v1.1.0-rc.2` candidate was cut from the exact smoke-tested commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01`, verified by Release Smoke Gate run `37752015020`, and its GitHub release is now a PUBLISHED PRERELEASE (never a stable release). npm was not published.
@@ -695,10 +616,7 @@ Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items c
 
 ---
 
-
-
 ## 7. KCS_RELEASE_CANDIDATE_SUMMARY.md (live)
-
 
 # KCS Release Candidate Summary
 
@@ -741,12 +659,11 @@ Publishing the rc.2 draft prerelease, running the user QA pass, publishing to np
 
 The prior maintenance deferrals are closed: Oxlint 1.85 at `feca773`, TypeScript 7 / Vitest 5 at `37904fb`, runtime SQLite repository hygiene at `b3f3c6c`, the API CORS allowlist at `2a313d7`, and dialog focus restoration at `5cb8a45`. GitHub Actions currently emits non-blocking annotations for Node 20-based action runtimes being forced onto Node 24 and for the announced `ubuntu-latest` migration to Ubuntu 26.
 
+The final pre-QA repository housekeeping changed docs/handoff only — PR #3 was closed as superseded (not merged), PR #8 remains MERGED, and the six proven-obsolete branches were deleted while the protected branches were retained. It took no tag, release or npm action, so the tested code SHA is unchanged and **NEXT = MANUAL QA ONLY**.
+
 ---
 
-
-
 ## 8. CHANGELOG.md (live)
-
 
 # Changelog
 
@@ -897,235 +814,109 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## 9. progress_165_pre_qa_repository_cleanup.md
 
-
-## 9. progress_164_ograf_runtime_parity_integration.md
-
-
-# Progress 164 — OGraf runtime-parity integration (PR #8) and QA worktree cleanup
+# Progress 165 — Final pre-QA repository housekeeping
 
 Date: 2026-10-11
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (canonical stable checkout, branch `main`)
 
 ## Scope
 
-Integrate replacement PR #8 into `main` by **fast-forward only**, fully validate the integrated
-`main`, run a fresh exact-SHA Release Smoke Gate, switch the live 5173 QA surface from the redundant
-Desktop worktree to the canonical stable repo, and then remove the redundant
-`keyframe-character-studio-omp-*` Desktop Git worktrees **through `git worktree remove` only**.
-No release, no tag, no npm publication, no branch deletion, no force push, no rebase, no history
-rewrite.
+Final pre-QA repository housekeeping: close the superseded PR #3 **without merging**, delete only the
+branches proven obsolete, reconcile the live documents and the handoff, and leave **MANUAL QA** as the
+only remaining task. No product change, no release, no tag, no npm publication, no force push, no
+rebase, no history rewrite.
 
-## Phase 2 — Integration record (fast-forward only)
+## Phase 1 — Live PR audit (read-only, before any action)
 
-| Field | Value |
-|---|---|
-| Old `main` | `b7a0141501a8057214065734b59915b10cec2e43` |
-| Merged branch | `origin/fix/ograf-runtime-parity-phase-a-replay`, tip `7712deeb12221a4262f4de9c4ce4d820d1231777` |
-| New `main` | `7712deeb12221a4262f4de9c4ce4d820d1231777` |
-| Commits added | 3 — `023d4d0` `fix: derive ograf runtime parity rules from shared authorities`, `4e0eebb` `test: prove the layer-group model in runtime/export parity`, `7712dee` `docs: reconcile the live docs and handoff for the runtime parity replay` |
-| Merge commits created by this integration | **none** — `git log --merges b7a0141..HEAD` is empty |
-| Push | `b7a0141..7712dee main -> main` (normal fast-forward push) |
-| PR #8 | **MERGED** at 2026-10-11T20:16:03Z; GitHub records `mergeCommit.oid = 7712dee…`, i.e. the fast-forward tip itself, so no merge commit exists |
-| PR #3 | untouched — still **OPEN**, head `f53398f227569188a5ec663c23acd439caf8415b` |
-| Branches deleted | none |
+| PR | State | mergedAt | Head branch | Head OID |
+|---|---|---|---|---|
+| #3 | **OPEN** → audited | null | `fix/ograf-runtime-parity-phase-a` | `f53398f227569188a5ec663c23acd439caf8415b` |
+| #4 | MERGED | 2026-10-11T18:59:10Z | `fix/authoring-ux-transform-toolbar` | `7d7ebe29fa43b9221ba377941904522aa4be3a75` |
+| #5 | MERGED | 2026-10-11T19:00:26Z | `fix/authoring-ux-camera-invariance` | `55a4ab2503a4e8f59c4030e40258ee682627b8fc` |
+| #6 | MERGED | 2026-10-11T19:01:37Z | `fix/authoring-ux-corner-anchor` | `b453ba12ad60e079975884d893dd73280bd91c29` |
+| #7 | MERGED | 2026-10-11T19:02:39Z | `fix/authoring-ux-final-slices` | `a56ed017e1df804e255842ca81ef1108b9b48ebc` |
+| #8 | MERGED | 2026-10-11T20:16:03Z | `fix/ograf-runtime-parity-phase-a-replay` | `7712deeb12221a4262f4de9c4ce4d820d1231777` |
 
-FF eligibility was re-proven immediately before the merge: `git merge-base --is-ancestor origin/main
-origin/fix/ograf-runtime-parity-phase-a-replay` exited 0 and `git rev-list --left-right --count
-origin/main...origin/fix/ograf-runtime-parity-phase-a-replay` was `0 3`.
+Proof that the closed PR #3 carried no unique required application behaviour:
 
-## Test-only correctness fix (the final tested code SHA)
+- Head is `fix/ograf-runtime-parity-phase-a` at `f53398f227569188a5ec663c23acd439caf8415b`, fully pushed
+  (`origin/fix/ograf-runtime-parity-phase-a` = `f53398f`).
+- Merge base with `main`: `c46e698bb8cfe82d8d75886281f602c9c89c1020`.
+- The three application source files are **byte-identical** to `main`:
+  `git diff main fix/ograf-runtime-parity-phase-a -- src/ograf/runtimeSnippets.ts src/ograf/runtimeTemplate.ts src/ograf/svgRenderer.ts`
+  is empty, and each file's `merge-base → branch` delta equals its `merge-base → main` delta
+  (`+40/0`, `+10/-2`, `+24/-14`).
+- `main`'s `src/tests/ografRuntimeParity.test.ts` is a **strict superset**: every test name on the
+  closed branch is present in `main` (branch-only tests = none; `main` adds five more).
+- `git log main..fix/ograf-runtime-parity-phase-a` is exactly three commits: `3f41400` (the shared-
+  authorities application fix, already in `main` through PR #8) and the docs-only `e5a2b8a` and
+  `f53398f`. `3f41400` is not itself an ancestor of `main` because PR #8 replayed the content as a
+  new commit — the content, not the object identity, is what `main` carries.
+- Conclusion: the branch's only real difference from `main` is stale docs/handoff bookkeeping, so
+  closing PR #3 was safe.
 
-Phase 4's bounded decision on the vacuous assertion in `src/tests/ografExport.test.ts`:
+## Phase 2 — PR #3 closed as superseded (not merged)
 
-- The grouped-export test asserted `expect(svg).not.toContain('data-layer="g"')`, but **no renderer
-  ever emits `data-layer="`**: both `src/ograf/svgRenderer.ts` and the generated runtime emit
-  `data-layer-id="<id>"`. The expectation therefore could never fail while reading as a guard on the
-  geometryless group container.
-- **Option A was taken.** A throwaway probe (written, run, deleted; never committed) rendered a
-  container that is hidden and one that paints. The hidden case emitted no `data-layer-id="g"` but
-  did emit `data-layer-id="a"` for the child; the *visible* geometryless container emitted
-  `data-layer-id="g"`, while even then the old form `data-layer="g"` never appeared. That proves the
-  old form was unsatisfiable and the real attribute is meaningful.
-- The assertion now targets `data-layer-id="g"`. Test-only: no product behaviour changed.
-- Commit `7abee1783039c606b6fbe6f2263bc09b09640885` — `test: assert the real layer wrapper attribute
-  in the OGraf group export test` (pushed `7712dee..7abee17`). This is the **TESTED CODE SHA** and
-  the SHA the Release Smoke Gate ran against.
-- Consequence: every gate affected by the test-only change was re-run at `7abee17` (see below), and
-  the smoke was dispatched with `candidate_sha=7abee17…`.
+`gh pr close 3 --comment "Superseded by #8. The validated OGraf Runtime Parity Phase A application
+delta was replayed onto the current main, revalidated, and merged through PR #8. This PR is being
+closed without merge; its historical branch remains available until branch cleanup completes."`
 
-## Phase 3 — Full post-merge validation on the integrated `main`
+Post-close state: **PR #3 = CLOSED, mergedAt = null** (closed 2026-10-11T20:58:45Z); **PR #8 = MERGED**
+(2026-10-11T20:16:03Z). No merge, no rewrite, no force push, no edit of its historical commits.
 
-All E2E ran isolated (`CI=1 PORT=5008` → UI 5188 / API 5008). `npm run dev` was never used.
+## Phase 3 — Six-candidate safety proof
 
-On the integrated `main` `7712dee` (the exact fast-forward result of PR #8):
-
-| Command | Result |
-|---|---|
-| `npx tsc -b --pretty false` | exit 0, no diagnostics |
-| `npm run lint` | exit 0 (oxlint clean) |
-| `npm test` | **146 files / 2,234 tests passed** |
-| `npm run build` | exit 0 (2,050 modules, vite 8.3.0) |
-| `npm run validate:ograf` | exit 0 — `fixtures\ograf\minimal.ograf.json: valid OGraf v1 manifest` |
-| focused `src/tests/ografRuntimeParity.test.ts` + stacking/matte/generated-parity/export/grouping set | **10 files / 508 tests passed** |
-| `PORT=5008 npm run qa:release` | **2 passed** |
-| `PORT=5008 npm run qa:v6` | **3 passed** |
-| `CI=1 PORT=5008 npx playwright test --retries=0` | **334 passed, 0 failed, 0 flaky** |
-| `npm run check` | exit 0 |
-| `node scripts/check-state-consistency.mjs` | PASS (47 checks) |
-| `npm audit --audit-level=low` | **0 vulnerabilities** |
-| `git diff --check` | clean |
-
-Re-run at the final code SHA `7abee17` after the test-only commit:
-
-| Command | Result |
-|---|---|
-| `npm run check` (lint + `tsc -b` + Vitest + build) | exit 0 — **2,234 tests passed** |
-| focused set (same 10 files) | **508 passed** |
-| `PORT=5008 npm run qa:release` | **2 passed** (candidate SHA printed as `7abee17…`) |
-| `PORT=5008 npm run qa:v6` | **3 passed** |
-| `CI=1 PORT=5008 npx playwright test --retries=0` | **334 passed, 0 failed, 0 flaky** |
-| `node scripts/check-state-consistency.mjs` | PASS (47 checks) |
-| `git diff --check` | clean |
-
-No assertion was weakened, no retry was hidden, no parity contract was skipped.
-
-One intermediate `check-state-consistency` failure was observed before the test-fix commit was
-pushed (`main and origin/main differ: 7abee17 vs 7712dee — main is ahead; push it`). That is the
-gate working as designed; it cleared on the push and is not a defect.
-
-## Phase 4 — Self-review of the integrated diff
-
-- `src/ograf/runtimeSnippets.ts` (new) embeds the **canonical** helpers with
-  `Function.prototype.toString`: `compareByStackingOrder` from `src/utils/stackingOrder.ts` and
-  `resolveMatteSource` from `src/utils/matte.ts`. There is one definition of each rule.
-- `src/ograf/runtimeTemplate.ts` now emits `const compareByStackingOrder = <canonical source>` and
-  `const resolveMatteSource = <canonical source>`; the hand-written comparator and the hand-written
-  matte precedence chain are gone. Only the array wrapper (`items.slice().sort(...)`) and the
-  clip-exclusion stay local plumbing.
-- `src/ograf/svgRenderer.ts::getMatteRelationship` now delegates precedence to the shared
-  `resolveMatteSource` and keeps only the SVG-mechanism decision local.
-- `svgRenderer` and the generated runtime agree: both sort by ascending `zIndex` through the same
-  comparator, and `Array.prototype.sort` is stable, so equal-`zIndex` layers keep their authored
-  order in both paths.
-- Input arrays are not mutated: both wrappers copy first (`[...items]` / `items.slice()`); the
-  parity test asserts the authored layer ids are unchanged after generation.
-- A **disabled Track Matte V2 still falls back to the legacy matte** in the runtime exactly as in
-  the editor; a Track Matte V2 that names no usable source still suppresses the legacy matte
-  (the resolver returns `kind: 'track'` and the render sites apply nothing), unchanged from before.
-- Inverse-matte behaviour is untouched: the diff moved only *source resolution*, never the inverse
-  mechanism.
-- Authoring-UX group containers: a real container is `isGroup`, geometryless, no paint, saved
-  `visible: false`; children compose the container transform through the ordinary `parentId` chain.
-  The runtime and the static renderer both paint only the child, at the same composed world pose,
-  and both omit a layer element for the container.
-- Grouped children retain the parent transform and obey the shared stacking order (not the authored
-  array order); a matte between group siblings resolves identically and produces the same
-  deterministic mask id (`kcs-ograf-track-matte-target-source-luminance`) in both paths.
-- No package, schema, public-controls, prototype-key or unrelated UX source change: the integrated
-  diff is exactly the four Phase A files plus docs/handoff.
-
-## Phase 5 — Fresh exact-SHA Release Smoke Gate
-
-| Field | Value |
-|---|---|
-| Workflow | `Release Smoke Gate` (`.github/workflows/release-smoke.yml`, verification only, `permissions: contents: read`) |
-| Dispatch | `gh workflow run release-smoke.yml -f candidate_sha=7abee1783039c606b6fbe6f2263bc09b09640885` |
-| Run id | **38172157643** |
-| Candidate SHA | `7abee1783039c606b6fbe6f2263bc09b09640885` (dispatched, and asserted to equal `origin/main`) |
-| Checked-out SHA | the exact requested SHA (the `Verify candidate SHA` step passed) |
-| Conclusion | **success** — every step green: Checkout candidate, Verify candidate SHA, Setup Node.js, Install Dependencies (`npm ci`), Install Chromium for Playwright, Run Release Smoke Gate (`validate:ograf` + `qa:release`) |
-| Tag / release / npm action | none |
-
-## Phase 6 — Live 5173 switched to the canonical stable repo
-
-| Surface | Before | After |
-|---|---|---|
-| UI 5173 | pid **34956**, `...-omp-authoring-ux-final\node_modules\vite\bin\vite.js --host --port 5173` | pid **4412** (the `npx vite` service wrapper is pid 34504), started from `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
-| UI 5173 HTTP | 200 | 200 |
-| Server working directory | the final-UX worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (verified by reading the process's PEB `CurrentDirectory`) |
-| Branch / HEAD served | `fix/authoring-ux-final-slices` @ `a56ed01` | `main` @ `7abee17` |
-| Application tree contains PR #8 | no | yes — `/src/ograf/runtimeSnippets.ts` serves 200 and `/src/ograf/runtimeTemplate.ts` serves the embedded `compareByStackingOrder` |
-| API 5000 | pid **24896** | pid **24896** (never stopped), `/api/health` 200, `/api/projects` 200 |
-
-Only the 5173 vite process was stopped (`taskkill /PID 34956 /T /F`); the API server was untouched.
-
-## Phases 7–9 — Worktree inventory and removal
-
-Every candidate was clean (`git status --short` empty), had **zero** untracked non-ignored files,
-held no stash, and its branch was either fully reachable from `main` or fully pushed. The only
-ignored content was `node_modules/`, `dist/`, `playwright-report/`, `test-results/` and
-`server/db/keyframe_studio.sqlite`, and every copy of that SQLite file held exactly the seeded row
-(`sample_sequencer_project` / "Unreal 2D Character Sequence") — the canonical DB is the one the live
-API uses, so no user data lived in any worktree.
-
-| Worktree | Branch | HEAD | Merged into `main` | Remote branch | Process | PR | Removed |
+| Branch | SHA | Remote | PR | Ancestor of `main`? | Unique commits | `main...branch` diff | Verdict |
 |---|---|---|---|---|---|---|---|
-| `-omp-authoring-ux` | `fix/authoring-ux-transform-toolbar` | `7d7ebe2` | yes (0 unique) | `origin/…` @ `7d7ebe2` | none | #4 MERGED | yes |
-| `-omp-authoring-ux-final` | `fix/authoring-ux-final-slices` | `a56ed01` | yes (0 unique) | `origin/…` @ `a56ed01` | was 5173 (stopped in Phase 6) | #7 MERGED | yes |
-| `-omp-camera-invariance` | `fix/authoring-ux-camera-invariance` | `55a4ab2` | yes (0 unique) | `origin/…` @ `55a4ab2` | none | #5 MERGED | yes |
-| `-omp-corner-anchor` | `fix/authoring-ux-corner-anchor` | `b453ba1` | yes (0 unique) | `origin/…` @ `b453ba1` | none | #6 MERGED | yes |
-| `-omp-runtime-parity-replay` | `fix/ograf-runtime-parity-phase-a-replay` | `7712dee` | yes (0 unique, now an ancestor of `main`) | `origin/…` @ `7712dee` | none | #8 MERGED | yes |
-| `-omp-runtime-parity` | `fix/ograf-runtime-parity-phase-a` | `f53398f` | no (3 unique, **all pushed**) | `origin/…` @ `f53398f` | none | #3 OPEN | yes |
+| `fix/authoring-ux-transform-toolbar` | `7d7ebe2` | yes | #4 MERGED | YES | 0 | empty | obsolete |
+| `fix/authoring-ux-camera-invariance` | `55a4ab2` | yes | #5 MERGED | YES | 0 | empty | obsolete |
+| `fix/authoring-ux-corner-anchor` | `b453ba1` | yes | #6 MERGED | YES | 0 | empty | obsolete |
+| `fix/authoring-ux-final-slices` | `a56ed01` | yes | #7 MERGED | YES | 0 | empty | obsolete |
+| `fix/ograf-runtime-parity-phase-a-replay` | `7712dee` | yes | #8 MERGED | YES | 0 | empty | obsolete |
+| `fix/ograf-runtime-parity-phase-a` | `f53398f` | yes | #3 CLOSED (not merged) | NO | 3 | docs + already-in-main src/test | obsolete (superseded) |
 
-`-omp-runtime-parity` was removed only after proving: clean tree, zero untracked files, all three
-commits already on `origin/fix/ograf-runtime-parity-phase-a`, the remote branch still present, PR #3
-still open, and no process using the folder.
+No open PR depended on any of the six. Every meaningful application commit is in `main`.
 
-All six removals used `git worktree remove "<exact-path>"` and all six succeeded. No folder was
-deleted by hand. `git worktree prune` (verbose, no output) left a single worktree:
+## Phase 4 — Deletion
 
-```
-worktree C:/Users/ertugrul.ak/Desktop/keyframe-character-studio
-HEAD 7abee1783039c606b6fbe6f2263bc09b09640885
-branch refs/heads/main
-```
+- Local: `git branch -d` deleted the five ancestor-proven branches. For the sixth,
+  `git branch -d fix/ograf-runtime-parity-phase-a` **succeeded** with only the informational warning
+  that it is merged to its own upstream but not to HEAD — git treats a branch merged into its
+  upstream as safe, so **no `-D` was needed and no force flag was used**. All Phase 1/3 proofs held
+  (PR #3 closed; not an ancestor; application delta in `main`; remote present; only historical
+  docs/handoff differ), so deletion was justified.
+- Remote: `git push origin --delete` removed all six from `origin`.
+- After deleting: `git fetch --all --prune`; `main` unchanged; no unexpected PR change (open PR list
+  empty).
 
-## Phase 10 — Branch / PR audit (no deletion)
+## Phase 5 — Post-cleanup audit
 
-Branches fully merged or superseded and therefore deletable later **only with explicit user
-approval**: `fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`,
-`fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`,
-`fix/ograf-runtime-parity-phase-a-replay` (all are ancestors of `main`), and the superseded
-`fix/ograf-runtime-parity-phase-a` (PR #3's branch, whose application delta is now in `main` via
-PR #8). **No branch was deleted in this task.**
+- `main` = `origin/main` = `c5ff4b783c7ed52a15ddf9bb3b0010e8382ffb9e`; working tree clean.
+- All six candidates are GONE locally and on `origin`.
+- Protected branches intact: `main`, `feat/canvas-tangent-authoring` (`f15ac93`),
+  `feat/canvas-tangent-authoring-replay` (`077911b`), `origin/without-mask`.
+- Only the six approved branches were removed; no source, test, package, workflow or asset file changed.
+- Live surfaces: UI 5173 = HTTP 200 (canonical repo); API 5000 = pid 24896 unchanged, `/api/health` 200.
+- PR #3 CLOSED (not merged); PR #8 MERGED.
 
-PR #3 recommendation: it should now be **closed as superseded by the merged PR #8** — its
-application delta is in `main` and only its docs/handoff bookkeeping is stale. It was **not**
-closed, rewritten or deleted here; closing it remains a separate explicit user decision.
+## Phase 6 — Docs / handoff reconciliation
 
-## Phase 11/13 — Docs and handoff reconciliation
+Updated the live documents to the final pre-QA truth (PR #3 CLOSED as superseded; PR #8 MERGED; runtime
+parity in `main`; six obsolete branches deleted; protected branches retained; 5173/5000 unchanged; no
+release/tag/npm action; **NEXT = MANUAL QA ONLY**): `PROJECT_STATE.md`, `NEXT_SESSION.md`,
+`docs/KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`, `docs/KCS_RELEASE_CANDIDATE_SUMMARY.md`,
+`docs/README_INDEX.md`, and the handoff bundle and one-file.
 
-- `NEXT_SESSION.md` and `PROJECT_STATE.md` were rewritten in place (stale sections replaced, not
-  appended to): the checkout claim now reads `main` at or after `7abee17`, the Phase A replay
-  section became the PR #8 integration record, and the stale "5173 still serves the final UX
-  worktree" / "replacement PR is open" / "nothing was merged" claims are gone.
-- `reports/README.md` and `docs/README_INDEX.md` list this report.
-- `chatgpt_handoff/latest/` was refreshed: `NEXT_SESSION.md`, `PROJECT_STATE.md`,
-  `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md` and `CHANGELOG.md` are byte-identical mirrors of their
-  root documents, `README.md` / `manifest.txt` / `OMP_FINAL_RESPONSE.md` were regenerated, and this
-  report is the single task-specific addition.
-- `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` was regenerated from scratch for this task.
+The docs commit changes no source, test, workflow, package or asset byte. Since only docs/handoff
+changed, the **TESTED CODE SHA remains `7abee1783039c606b6fbe6f2263bc09b09640885`** and exact-SHA
+Release Smoke Gate run `38172157643` remains the relevant tested-code smoke; the docs tip above it is
+docs-only and needs no new smoke.
 
-### TESTED CODE SHA vs DOCS TIP
+## Constraints honoured
 
-The tested code SHA is `7abee1783039c606b6fbe6f2263bc09b09640885` (smoke run `38172157643`). The
-docs/handoff reconciliation commit sits above it and changes no source, test, workflow, package or
-asset byte, so it is **not** smoke-tested and the smoke was deliberately not re-run for it.
-
-## Desktop result
-
-`C:\Users\ertugrul.ak\Desktop\keyframe-character-studio*` now lists exactly the canonical stable
-repo. `C:\Users\ertugrul.ak\Desktop\KCS` still exists and was not touched. The brief's protected path
-`C:\Users\ertugrul.ak\Desktop\ograf-graphics` does not exist on this machine (nothing of that name
-was present before or after this task); the similarly named `ograf-studio-stable` folder was not
-touched.
-
-## Release state
-
-No tag was created, moved or deleted; no GitHub release was created, published or finalized; nothing
-was published to npm; no dependency, package, workflow or OMP configuration change was made.
-`v1.1.0-rc.2` remains the published prerelease at its historical smoke-tested candidate, and
-`v1.1.0-rc.1` (target `46d2a3e59e065816d972dcd56951803951b577f6`) plus `v1.1.0-public-controls` are
-unchanged. `origin/without-mask` was not touched.
-
+No rebase, no force push, no `reset --hard`, no `git clean`, no product/source/test/package/workflow
+change, no tag create/move/delete, no GitHub release, no npm publication, no deploy, no deletion of any
+protected branch, and nothing touching `origin/without-mask`, `C:\Users\ertugrul.ak\Desktop\KCS` or the
+OMP global configuration.

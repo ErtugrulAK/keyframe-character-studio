@@ -38,3 +38,5 @@ The H7 GO decision has been executed: the `v1.1.0-rc.2` candidate exists as an a
 Publishing the rc.2 draft prerelease, running the user QA pass, publishing to npm, or cutting a stable release each require a new explicit user instruction. Publishing the draft does not create a tag (it already exists) and does not publish to npm.
 
 The prior maintenance deferrals are closed: Oxlint 1.85 at `feca773`, TypeScript 7 / Vitest 5 at `37904fb`, runtime SQLite repository hygiene at `b3f3c6c`, the API CORS allowlist at `2a313d7`, and dialog focus restoration at `5cb8a45`. GitHub Actions currently emits non-blocking annotations for Node 20-based action runtimes being forced onto Node 24 and for the announced `ubuntu-latest` migration to Ubuntu 26.
+
+The final pre-QA repository housekeeping changed docs/handoff only — PR #3 was closed as superseded (not merged), PR #8 remains MERGED, and the six proven-obsolete branches were deleted while the protected branches were retained. It took no tag, release or npm action, so the tested code SHA is unchanged and **NEXT = MANUAL QA ONLY**.

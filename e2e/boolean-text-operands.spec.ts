@@ -47,11 +47,22 @@ async function seed(page: Page, layers: Record<string, unknown>[]): Promise<void
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 }
 
+/**
+ * The Boolean buttons name themselves through an explicit `aria-label` of
+ * `Create <operation> Boolean`; that label overrides the capitalised visible
+ * caption, so the locator must match the accessible name exactly.
+ */
+type BooleanOperation = 'union' | 'subtract' | 'intersect' | 'exclude';
+
+async function clickBoolean(page: Page, operation: BooleanOperation): Promise<void> {
+  await page.getByRole('button', { name: `Create ${operation} Boolean`, exact: true }).click();
+}
+
 /** Selects two layers in the outliner and runs one Boolean operation. */
-async function combine(page: Page, first: string, second: string, operation: 'Union' | 'Intersect' | 'Subtract'): Promise<void> {
+async function combine(page: Page, first: string, second: string, operation: BooleanOperation): Promise<void> {
   await page.locator('.actor-node', { hasText: first }).first().click();
   await page.locator('.actor-node', { hasText: second }).first().click({ modifiers: ['Control'] });
-  await page.getByRole('button', { name: operation, exact: true }).click();
+  await clickBoolean(page, operation);
 }
 
 /** The autosave runs on a timer; the badge saves now, like the other specs. */
@@ -78,7 +89,7 @@ test('a text layer and a shape combine with the letters traced, counters include
     boxLayer('box', 'Box', 0, -78, 8),
   ]);
 
-  await combine(page, 'Box', 'O text', 'Intersect');
+  await combine(page, 'Box', 'O text', 'intersect');
   await saveNow(page);
 
   const group = await storedGroup(page);
@@ -119,7 +130,7 @@ test('a text layer and a shape can be subtracted, and the operands stay editable
     boxLayer('box', 'Box', 0, -78, 3),
   ]);
 
-  await combine(page, 'Box', 'O text', 'Subtract');
+  await combine(page, 'Box', 'O text', 'subtract');
   await saveNow(page);
 
   const group = await storedGroup(page);
@@ -164,7 +175,7 @@ for (const [label, fontFamily] of [
       boxLayer('box', 'Box', 0, -78, 8),
     ]);
 
-    await combine(page, 'Box', 'O text', 'Intersect');
+    await combine(page, 'Box', 'O text', 'intersect');
     await saveNow(page);
 
     const group = await storedGroup(page);
@@ -192,7 +203,7 @@ test('an untraceable text operand refuses the Boolean instead of changing it', a
   await page.locator('.actor-node', { hasText: 'Box One' }).first().click();
   await page.locator('.actor-node', { hasText: 'Box Two' }).first().click({ modifiers: ['Control'] });
   await page.locator('.actor-node', { hasText: 'O text' }).first().click({ modifiers: ['Control'] });
-  await page.getByRole('button', { name: 'Subtract', exact: true }).click();
+  await clickBoolean(page, 'subtract');
   await saveNow(page);
 
   const created = await page.evaluate((key) => {
@@ -220,7 +231,7 @@ test('text combines with a freeform and with another text', async ({ page }) => 
     freeform,
   ]);
 
-  await combine(page, 'Free Shape', 'A text', 'Union');
+  await combine(page, 'Free Shape', 'A text', 'union');
   await saveNow(page);
   const group = await storedGroup(page);
   expect(group?.booleanOperation).toBe('union');
@@ -230,7 +241,7 @@ test('text combines with a freeform and with another text', async ({ page }) => 
     familyTextLayer('text', 'A', -60, 0, 220, 'Outfit'),
     familyTextLayer('text2', 'B', 60, 0, 220, "'JetBrains Mono'"),
   ]);
-  await combine(page, 'A text', 'B text2', 'Exclude');
+  await combine(page, 'A text', 'B text2', 'exclude');
   await saveNow(page);
   const textGroup = await storedGroup(page);
   expect(textGroup?.booleanOperation).toBe('exclude');
@@ -247,7 +258,7 @@ test('a three-operand Subtract keeps every operand', async ({ page }) => {
   await page.locator('.actor-node', { hasText: 'Box One' }).first().click();
   await page.locator('.actor-node', { hasText: 'O text' }).first().click({ modifiers: ['Control'] });
   await page.locator('.actor-node', { hasText: 'Box Two' }).first().click({ modifiers: ['Control'] });
-  await page.getByRole('button', { name: 'Subtract', exact: true }).click();
+  await clickBoolean(page, 'subtract');
   await saveNow(page);
 
   const operandIds = await page.evaluate((key) => {

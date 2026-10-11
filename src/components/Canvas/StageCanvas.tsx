@@ -674,6 +674,17 @@ export const StageCanvas: React.FC = () => {
   useEffect(() => {
     const handleViewportCommand = (event: Event) => {
       const type = (event as CustomEvent<{ type?: string }>).detail?.type;
+      if (type === 'reset-view') {
+        // Reset view position: re-centre the camera on the (possibly changed)
+        // stage centre and keep the zoom — exactly what the floating viewport
+        // toolbar's Reset View Position does. Only the camera moves.
+        const box = stageBoxRef.current;
+        if (!box) return;
+        setCameraView((view) => (view
+          ? { ...view, center: { x: box.left + box.width / 2, y: box.top + box.height / 2 } }
+          : view));
+        return;
+      }
       if (type !== 'zoom-in' && type !== 'zoom-out') return;
       const nextZoom = clampZoom(zoomRef.current * (type === 'zoom-in' ? 1.1 : 0.9));
       setZoomLevel(nextZoom);

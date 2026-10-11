@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider } from './context/AnimatorContext';
 import { useAnimator } from './context/useAnimator';
 import { HeaderBar } from './components/Header/HeaderBar';
+import { AuthoringToolbar } from './components/Toolbar/AuthoringToolbar';
 import { LeftToolbar } from './components/Toolbar/LeftToolbar';
 import { StageCanvas } from './components/Canvas/StageCanvas';
 import { PropertyInspector } from './components/Inspector/PropertyInspector';
@@ -35,6 +36,7 @@ const MainAppContent: React.FC = () => {
   return (
     <div className="app-container">
       <HeaderBar />
+      {appMode === 'edit' && <AuthoringToolbar />}
       <div className={`main-layout ${isLeftToolbarVisible ? '' : 'left-toolbar-hidden'} ${isInspectorVisible ? '' : 'inspector-hidden'}`}>
         {appMode === 'edit' && (
           <button

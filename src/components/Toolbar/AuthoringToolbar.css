@@ -1,0 +1,76 @@
+/*
+ * Top authoring toolbar.
+ *
+ * A single fixed-height strip docked under the header. The height is fixed on
+ * purpose: the strip only ever changes the stage box, and the stage camera
+ * divides the layout fit back out, so showing, hiding or repopulating it cannot
+ * move or rescale the authored world (see e2e/camera-invariance.spec.ts).
+ */
+.authoring-toolbar {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+  gap: 8px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--kcs-bg-shell);
+  border-bottom: 1px solid var(--kcs-border-subtle);
+  z-index: 90;
+}
+
+.authoring-toolbar-group {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 4px;
+}
+
+.authoring-toolbar-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 20px;
+  background: var(--kcs-border-subtle);
+}
+
+.authoring-toolbar-label {
+  color: var(--kcs-text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-left: 2px;
+}
+
+.authoring-toolbar-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: var(--kcs-text-secondary);
+  cursor: pointer;
+}
+
+.authoring-toolbar-button:hover {
+  background: var(--kcs-hover);
+  color: var(--kcs-text-primary);
+}
+
+.authoring-toolbar-button.active {
+  background: var(--kcs-bg-active);
+  border-color: rgba(53, 200, 176, 0.42);
+  color: var(--kcs-text-primary);
+}
+
+.authoring-toolbar-button:focus-visible {
+  outline: 2px solid var(--kcs-focus);
+  outline-offset: -2px;
+}

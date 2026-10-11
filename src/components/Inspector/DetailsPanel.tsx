@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../context/useAnimator';
+import { useBooleanAuthoring } from '../../hooks/useBooleanAuthoring';
+import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { makeEmptyChannels } from '../../utils/defaults';
 import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
-import { isShapeAppearanceEligible, updateShapeAppearance, type ShapeAppearancePatch } from '../../utils/shapeAppearance';
-import { isTrimPathEligible } from '../../utils/trimPath';
-import { updateTrimPath, type TrimPathAuthoringPatch } from '../../utils/trimPathAuthoring';
 import { TransformTab } from './sections/TransformTab';
 import { StyleTab } from './sections/StyleTab';
 import type { TrimPathChannel } from './sections/style/TrimPathSection';
 import { evaluateTrimPath } from '../../utils/trimPath';
 import { DuplicateTab } from './sections/DuplicateTab';
-import { isBooleanEligible, computeBooleanContours, deriveBooleanGeometry, inspectBooleanOperands, dissolveBooleanGroup as dissolveBooleanGroupState, createBooleanDisplayName, isGeneratedBooleanName, type BooleanOperation } from '../../utils/booleanGeometry';
+import { isBooleanEligible, type BooleanOperation } from '../../utils/booleanGeometry';
 import { BooleanOperationIcon } from './BooleanOperationIcon';
-import { generateId } from '../../utils/idGenerator';
 import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../../utils/partBinding';
 import { layerMaskChannel } from '../../types/animator';
-import type { CharacterPart } from '../../types/animator';
 import {
   Sliders,
   Copy,
@@ -39,7 +36,6 @@ export const DetailsPanel: React.FC = () => {
     getComputedTransform,
     updateCurrentTransform,
     updateCurrentPropertyChannel,
-    updatePropertyKeyframeValue,
     addPropertyKeyframe,
     deletePropertyKeyframe,
     addMaskPathKeyframe,
@@ -65,127 +61,15 @@ export const DetailsPanel: React.FC = () => {
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'edit' | 'duplicate'>('edit');
-  const booleanEligibleParts = selectedPartIds
-    .map((id) => characterParts.find((part) => part.id === id))
-    .filter((part): part is NonNullable<typeof part> => Boolean(part && isBooleanEligible(part)));
-
-  const createBooleanGroup = (operation: BooleanOperation) => {
-    if (booleanEligibleParts.length < 2) return;
-    const transforms = Object.fromEntries(booleanEligibleParts.map((part) => [part.id, getComputedTransform(part.id, currentFrame)]));
-    const readiness = inspectBooleanOperands(booleanEligibleParts, transforms);
-    if (!readiness.ready) {
-      const names = readiness.unresolved.map((part) => part.name).join(', ');
-      showToast(`Could not build the Boolean: no geometry for ${names}. Nothing was created.`, 'error');
-      return;
-    }
-    const contours = computeBooleanContours(operation, booleanEligibleParts, transforms);
-    if (contours.length === 0) {
-      showToast('The selected shapes produce an empty result.', 'info');
-      return;
-    }
-    const groupId = generateId('boolean');
-    const groupPart = {
-      ...booleanEligibleParts[0],
-      id: groupId,
-      name: createBooleanDisplayName(operation, characterParts, undefined, booleanEligibleParts.map((part) => part.name)),
-      type: 'custom_freeform' as const,
-      zIndex: Math.max(...booleanEligibleParts.map((part) => part.zIndex)) + 1,
-      parentId: undefined,
-      booleanGroupId: undefined,
-      boundPartIds: undefined,
-      matte: undefined,
-      booleanOperation: operation,
-      booleanOperandIds: booleanEligibleParts.map((part) => part.id),
-      booleanContours: contours,
-      points: contours[0],
-      baseTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
-    };
-    startBatchInteraction();
-    setCharacterParts((parts) => [
-      ...parts.map((part) => booleanEligibleParts.some((operand) => operand.id === part.id) ? { ...part, booleanGroupId: groupId } : part),
-      groupPart,
-    ]);
-    setTracks((currentTracks) => [
-      ...currentTracks,
-      {
-        id: generateId('track'),
-        partId: groupId,
-        name: groupPart.name,
-        color: '#38bdf8',
-        visible: true,
-        locked: false,
-        channels: makeEmptyChannels(),
-      },
-    ]);
-    endBatchInteraction();
-    setSelectedPartIds([groupId]);
-    setSelectedPartId(groupId);
-    showToast(`${operation[0].toUpperCase()}${operation.slice(1)} boolean created`, 'success');
-  };
+  const {
+    booleanEligibleParts,
+    selectedBooleanGroup,
+    createBooleanGroup,
+    updateBooleanOperation,
+    dissolveBooleanGroup,
+  } = useBooleanAuthoring();
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
-  const selectedBooleanGroup = selectedPart?.booleanOperandIds?.length
-    ? selectedPart
-    : characterParts.find((part) => part.id === selectedPart?.booleanGroupId);
-
-  const updateBooleanOperation = (operation: BooleanOperation) => {
-    if (!selectedBooleanGroup || !selectedBooleanGroup.booleanOperandIds) return;
-    const operands = selectedBooleanGroup.booleanOperandIds
-      .map((id) => characterParts.find((part) => part.id === id))
-      .filter((part): part is NonNullable<typeof part> => Boolean(part));
-    const transforms = Object.fromEntries(
-      operands.map((operand) => [operand.id, getComputedTransform(operand.id, currentFrame)]),
-    );
-    const groupTransform = getComputedTransform(selectedBooleanGroup.id, currentFrame);
-    const operandNames = operands.map((operand) => operand.name);
-    // Switching the operation is refused when an operand has no geometry, so a
-    // failed trace never silently becomes a different operation.
-    const readiness = inspectBooleanOperands(operands, transforms);
-    if (!readiness.ready) {
-      const names = readiness.unresolved.map((part) => part.name).join(', ');
-      showToast(`Could not switch the Boolean operation: no geometry for ${names}.`, 'error');
-      return;
-    }
-    const derived = deriveBooleanGeometry(operation, operands, transforms, groupTransform);
-    const contours = derived.localContours;
-    startBatchInteraction();
-    setCharacterParts((parts) => parts.map((part) => part.id === selectedBooleanGroup.id
-      ? {
-        ...part,
-        name: isGeneratedBooleanName(part.name)
-          ? createBooleanDisplayName(operation, parts, part.name, operandNames)
-          : part.name,
-        booleanOperation: operation,
-        booleanContours: contours,
-        points: contours[0] ?? [],
-      }
-      : part));
-    endBatchInteraction();
-    if (contours.length === 0) showToast('Boolean result is empty.', 'info');
-  };
-
-  const dissolveBooleanGroup = () => {
-    if (!selectedBooleanGroup?.booleanOperandIds) return;
-    const operandWorldTransforms = Object.fromEntries(
-      selectedBooleanGroup.booleanOperandIds.map((id) => [id, getComputedTransform(id, currentFrame)]),
-    );
-    const result = dissolveBooleanGroupState(characterParts, tracks, selectedBooleanGroup.id);
-    if (result.operandIds.length === 0) return;
-    const bakedParts = result.parts.map((part) => {
-      const world = operandWorldTransforms[part.id];
-      return world
-        ? { ...part, baseTransform: { ...part.baseTransform, ...world }, booleanGroupId: undefined }
-        : part;
-    });
-    startBatchInteraction();
-    setCharacterParts(bakedParts);
-    setTracks(result.tracks);
-    setBooleanOperandEditingGroupId(null);
-    setSelectedPartIds(result.operandIds);
-    setSelectedPartId(result.operandIds[result.operandIds.length - 1] ?? null);
-    endBatchInteraction();
-    showToast('Boolean dissolved; operands preserved.', 'success');
-  };
   const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
   const evaluatedMasks = selectedPart && selectedTrack
     ? evaluateLayerMasks(selectedPart, selectedTrack, currentFrame)
@@ -232,63 +116,12 @@ export const DetailsPanel: React.FC = () => {
     addPropertyKeyframe(selectedTrack.id, channel, currentFrame, value);
   };
 
-  const handlePartPropChange = (key: keyof CharacterPart, value: unknown) => {
-    if (!selectedPartId) return;
-    setCharacterParts((prev) =>
-      prev.map((p) => {
-        if (p.id !== selectedPartId) return p;
-        if (isShapeAppearanceEligible(p.type) && [
-          'fillEnabled', 'fillColor', 'fillOpacity', 'strokeEnabled', 'strokeColor', 'strokeWidth', 'strokeOpacity', 'strokeAlignment',
-        ].includes(key)) {
-          return updateShapeAppearance(p, { [key]: value } as ShapeAppearancePatch);
-        }
-        if (isTrimPathEligible(p.type) && [
-          'trimPathEnabled', 'trimPathStart', 'trimPathEnd', 'trimPathOffset',
-        ].includes(key)) {
-          return updateTrimPath(p, { [key]: value } as TrimPathAuthoringPatch);
-        }
-        return { ...p, [key]: value };
-      })
-    );
-  };
-
-  const handleDisplayedPartPropChange = (key: keyof CharacterPart, value: unknown) => {
-    if (key === 'masks' && Array.isArray(value)) {
-      const baseMasks = characterParts.find((part) => part.id === selectedPartId)?.masks ?? [];
-      const maskScalarProperties = ['feather', 'opacity', 'expansion'] as const;
-      const baseValue = value.map((mask) => {
-        const baseMask = baseMasks.find((candidate) => candidate.id === mask.id);
-        if (!baseMask || !selectedTrack) return mask;
-        const nextMask = { ...mask };
-        for (const property of maskScalarProperties) {
-          const channel = layerMaskChannel(mask.id, property);
-          const keyframe = selectedTrack.maskChannels?.[channel]?.find(
-            (candidate) => candidate.frame === currentFrame && (candidate.templateId || 'Sequence') === (activeTemplateId || 'Sequence'),
-          );
-          if (keyframe && mask[property] !== keyframe.value) {
-            updatePropertyKeyframeValue(selectedTrack.id, channel, keyframe.id, Number(mask[property]));
-            nextMask[property] = baseMask[property];
-          }
-        }
-        return nextMask;
-      });
-      const mergedMasks = baseValue.map((mask) => {
-        const baseMask = baseMasks.find((candidate) => candidate.id === mask.id);
-        return baseMask ? { ...mask, path: baseMask.path } : mask;
-      });
-      handlePartPropChange(key, mergedMasks);
-      return;
-    }
-    handlePartPropChange(key, value);
-  };
-
-  const handlePartColorChange = (key: 'fillColor' | 'strokeColor', color: string) => {
-    handlePartPropChange(key, color);
-  };
-
-  const handleZIndexChange = (zIndex: number) => {
-    handlePartPropChange('zIndex', zIndex);
-  };
+  const {
+    handlePartPropChange,
+    handleDisplayedPartPropChange,
+    handlePartColorChange,
+    handleZIndexChange,
+  } = usePartPropertyAuthoring();
 
   // M26 — copy/paste/clear ANIMATION (26A data layer + 26B UI).
   // Paste + Clear wrap the two setState halves in ONE batch interaction so

@@ -23,6 +23,14 @@ interface ColorPickerPopoverProps {
   /** Wraps one pointer gesture into one undo entry through the existing history authority. */
   onInteractionStart?: () => void;
   onInteractionEnd?: () => void;
+  /**
+   * Where the popover prefers to open. The Inspector swatches sit on the right
+   * edge, so they keep the default (beside them, over the canvas); a swatch in
+   * the top authoring toolbar opens below itself instead. Both still clamp
+   * inside the viewport.
+   */
+  panelSide?: 'below' | 'left';
+  panelAlign?: 'start' | 'end';
 }
 
 type SliderName = 'hue' | 'alpha';
@@ -61,6 +69,8 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
   onAlphaChange,
   onInteractionStart,
   onInteractionEnd,
+  panelSide = 'left',
+  panelAlign = 'end',
 }) => {
   const rgb = useMemo(() => parseHexColor(color, fallback), [color, fallback]);
   const hsv = useMemo(() => rgbToHsv(rgb), [rgb]);
@@ -115,8 +125,8 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
     isOpen,
     onClose: closeFromOutsidePress,
     anchorRef: swatchRef,
-    align: 'end',
-    side: 'left',
+    align: panelAlign,
+    side: panelSide,
   });
 
   // Opening focuses the saturation/value area, but only once the panel has been

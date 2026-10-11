@@ -2,36 +2,88 @@ import type { BodyPartType, CharacterPart, Transform } from '../types/animator';
 import { getPartWorldBounds } from './bounds';
 import { deriveBooleanGeometry } from './booleanGeometry';
 import { getShapeGeometry, type ShapeGeometry } from './shapeGeometry';
+import type { CoordinatePoint } from './projectCoordinates';
 /** Pure viewport / canvas math for the Stage canvas. */
 export const CANVAS_CENTER_X = 300;
 export const CANVAS_CENTER_Y = 240;
 
 export const clampZoom = (zoom: number): number => Math.min(3, Math.max(0.3, zoom));
 
-export interface ClientToSVGPointInput {
-  rect: { left: number; top: number; width: number; height: number };
-  clientX: number;
-  clientY: number;
+export interface StageBox {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * THE camera model of the edit stage.
+ *
+ * A camera point (a viewBox point) is projected to client pixels as
+ *   client = center + zoom * baseScale * (point - viewBox centre).
+ *
+ * `center` is the client position of the camera centre and `baseScale` is the
+ * screen pixels per viewBox unit at zoom 1. Both are *camera* state: they are
+ * captured when the camera is anchored and never derived from the stage box, so
+ * panels and the timeline can resize the stage freely without moving or
+ * rescaling the authored world. Only the stage fit (how the SVG element maps its
+ * viewBox into its own box) depends on the layout, and the rendered transform
+ * divides it back out.
+ */
+export interface StageCameraView {
+  center: CoordinatePoint;
+  baseScale: number;
+}
+
+/** Aspect-fit of the camera viewBox inside the stage box. */
+export const getStageFitScale = (
+  { width, height }: { width: number; height: number },
+  viewBox: { width: number; height: number },
+): number => Math.min(width / viewBox.width, height / viewBox.height) || 1;
+
+export interface StageCameraTransformInput {
+  view: StageCameraView;
+  stage: StageBox;
   zoom: number;
-  pan: { x: number; y: number };
   viewBox: { width: number; height: number };
 }
 
-/** Fallback client-to-SVG conversion for environments without screen CTM. */
-export const clientToSVGPoint = ({
-  rect,
+/**
+ * CSS transform applied to the stage SVG. `transform-origin` is the element
+ * centre, so the translate is plain screen pixels and the scale divides out the
+ * layout fit — the rendered magnification stays `zoom * baseScale`.
+ */
+export const getStageCameraTransform = ({
+  view,
+  stage,
+  zoom,
+  viewBox,
+}: StageCameraTransformInput): { translateX: number; translateY: number; scale: number } => ({
+  translateX: view.center.x - (stage.left + stage.width / 2),
+  translateY: view.center.y - (stage.top + stage.height / 2),
+  scale: (zoom * view.baseScale) / getStageFitScale(stage, viewBox),
+});
+
+export interface ClientToCameraPointInput {
+  view: StageCameraView;
+  clientX: number;
+  clientY: number;
+  zoom: number;
+  viewBox: { width: number; height: number };
+}
+
+/** Fallback client-to-camera conversion for environments without screen CTM. */
+export const clientToCameraPoint = ({
+  view,
   clientX,
   clientY,
   zoom,
-  pan,
   viewBox,
-}: ClientToSVGPointInput): { x: number; y: number } => {
-  const scale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height) || 1;
-  const viewBoxX = (clientX - rect.left - (rect.width - viewBox.width * scale) / 2) / scale;
-  const viewBoxY = (clientY - rect.top - (rect.height - viewBox.height * scale) / 2) / scale;
+}: ClientToCameraPointInput): CoordinatePoint => {
+  const zoomScale = zoom * view.baseScale;
   return {
-    x: ((viewBoxX - viewBox.width / 2) - pan.x / scale) / zoom + viewBox.width / 2,
-    y: ((viewBoxY - viewBox.height / 2) - pan.y / scale) / zoom + viewBox.height / 2,
+    x: viewBox.width / 2 + (clientX - view.center.x) / zoomScale,
+    y: viewBox.height / 2 + (clientY - view.center.y) / zoomScale,
   };
 };
 
@@ -130,38 +182,31 @@ export const getShapeCreationPlacement = (
   };
 };
 
-export interface CursorAnchoredViewportInput {
-  rect: { left: number; top: number; width: number; height: number };
+export interface CursorAnchoredCameraInput {
+  view: StageCameraView;
   clientX: number;
   clientY: number;
   zoom: number;
-  pan: { x: number; y: number };
   nextZoom: number;
-  viewBox: { width: number; height: number };
 }
-export const getCursorAnchoredViewport = ({
-  rect,
+
+/**
+ * Camera centre that keeps the camera point under the cursor while the zoom
+ * changes. Derived from the camera model alone — never from the stage box — so
+ * panel layout cannot influence the anchoring.
+ */
+export const getCursorAnchoredCameraCenter = ({
+  view,
   clientX,
   clientY,
   zoom,
-  pan,
   nextZoom,
-  viewBox,
-}: CursorAnchoredViewportInput): { zoom: number; pan: { x: number; y: number } } => {
-  const baseScale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height) || 1;
-  const baseTranslateX = rect.left + (rect.width - viewBox.width * baseScale) / 2;
-  const baseTranslateY = rect.top + (rect.height - viewBox.height * baseScale) / 2;
-  const originX = rect.left + rect.width / 2;
-  const originY = rect.top + rect.height / 2;
-  const localX = ((clientX - originX - pan.x) / zoom - (baseTranslateX - originX)) / baseScale;
-  const localY = ((clientY - originY - pan.y) / zoom - (baseTranslateY - originY)) / baseScale;
-  return {
-    zoom: nextZoom,
-    pan: {
-      x: clientX - originX - nextZoom * (baseScale * localX + baseTranslateX - originX),
-      y: clientY - originY - nextZoom * (baseScale * localY + baseTranslateY - originY),
-    },
-  };
+}: CursorAnchoredCameraInput): CoordinatePoint => {
+  const zoomScale = zoom * view.baseScale;
+  const offsetX = (clientX - view.center.x) / zoomScale;
+  const offsetY = (clientY - view.center.y) / zoomScale;
+  const nextZoomScale = nextZoom * view.baseScale;
+  return { x: clientX - offsetX * nextZoomScale, y: clientY - offsetY * nextZoomScale };
 };
 export const getPointerDelta = (
   start: { x: number; y: number },

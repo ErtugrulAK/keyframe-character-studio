@@ -1,10 +1,11 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { useAnimator } from '../../context/useAnimator';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { stackingOrder } from '../../utils/stackingOrder';
-import { clientToSVGPoint, clampZoom, computeEdgeScale, getCursorAnchoredViewport, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../../utils/viewportMath';
+import { clampZoom, clientToCameraPoint, computeEdgeScale, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
@@ -60,31 +61,116 @@ export const StageCanvas: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [zoomLevel, setZoomLevel] = useState<number>(1);
-  const [panOffset, setPanOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  /**
+   * Edit-stage camera. `center` is the client position of the camera centre and
+   * `baseScale` the px-per-unit it was anchored with. Both belong to the camera,
+   * never to the stage box: opening a sidebar or resizing the timeline changes
+   * the visible crop only, it cannot move or rescale the authored world.
+   */
+  const [cameraView, setCameraView] = useState<StageCameraView | null>(null);
+  const [stageBox, setStageBox] = useState<StageBox | null>(null);
+  const cameraViewRef = useRef<StageCameraView | null>(null);
+  const stageBoxRef = useRef<StageBox | null>(null);
+  const windowSizeRef = useRef<{ width: number; height: number } | null>(null);
+  const zoomRef = useRef(zoomLevel);
+  // Intentional latest-value mirrors: observers read the live camera without
+  // re-subscribing on every camera change.
+  // oxlint-disable-next-line react/refs
+  cameraViewRef.current = cameraView;
+  // oxlint-disable-next-line react/refs
+  zoomRef.current = zoomLevel;
+
+  const readStageBox = useCallback((): StageBox | null => {
+    const container = containerRef.current;
+    if (!container) return null;
+    const rect = container.getBoundingClientRect();
+    return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+  }, []);
+
+  /**
+   * Folds a measured stage box into the camera.
+   *
+   * A panel or timeline layout change only replaces `stageBox`; the rendered
+   * transform divides the new layout fit back out, so the world keeps its screen
+   * position and magnification. A window change (`reanchor`) keeps the camera's
+   * pan offset relative to the new stage centre and re-derives its px-per-unit
+   * scale — the long-standing fit behaviour for application-window resizes.
+   */
+  const applyStageBox = useCallback((box: StageBox, reanchor: boolean) => {
+    const previous = stageBoxRef.current;
+    stageBoxRef.current = box;
+    setStageBox(box);
+    const center = { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    const baseScale = getStageFitScale(box, EDITOR_CAMERA_VIEWBOX);
+    setCameraView((view) => {
+      if (!view) return { center, baseScale };
+      if (!reanchor || !previous) return view;
+      const previousCenter = { x: previous.left + previous.width / 2, y: previous.top + previous.height / 2 };
+      return {
+        center: {
+          x: view.center.x + (center.x - previousCenter.x),
+          y: view.center.y + (center.y - previousCenter.y),
+        },
+        baseScale,
+      };
+    });
+  }, []);
 
   // Broadcast shows the FULL artboard, centered — never inherit the edit-mode
   // pan/zoom (that would leave the stage off-center with dark 'curtain' bands).
-  // The edit viewport is remembered and restored when switching back.
+  // The edit camera is remembered and restored when switching back.
   const editViewportRef = useRef({ zoom: 1, pan: { x: 0, y: 0 } });
-  const zoomRef = useRef(zoomLevel);
-  const panRef = useRef(panOffset);
-  // Intentional latest-value mirrors preserve the edit viewport across mode changes.
-  // oxlint-disable-next-line react/refs
-  zoomRef.current = zoomLevel;
-  // oxlint-disable-next-line react/refs
-  panRef.current = panOffset;
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (appMode === 'broadcast') {
-      editViewportRef.current = { zoom: zoomRef.current, pan: panRef.current };
-      // Mode changes intentionally synchronize the viewport state with the active surface.
+      // The committed DOM is already the broadcast layout, so the pan offset is
+      // derived from the last *edit* stage box, not from the live one.
+      const view = cameraViewRef.current;
+      const editBox = stageBoxRef.current;
+      editViewportRef.current = {
+        zoom: zoomRef.current,
+        pan: view && editBox
+          ? { x: view.center.x - (editBox.left + editBox.width / 2), y: view.center.y - (editBox.top + editBox.height / 2) }
+          : { x: 0, y: 0 },
+      };
+      // Mode changes intentionally synchronize the camera state with the active surface.
       // oxlint-disable-next-line react/set-state-in-effect
       setZoomLevel(1);
-      setPanOffset({ x: 0, y: 0 });
-    } else {
-      setZoomLevel(editViewportRef.current.zoom);
-      setPanOffset(editViewportRef.current.pan);
+      return;
     }
-  }, [appMode]);
+    const restored = editViewportRef.current;
+    const box = readStageBox();
+    if (!box) return;
+    stageBoxRef.current = box;
+    windowSizeRef.current = { width: window.innerWidth, height: window.innerHeight };
+    // Mode changes intentionally synchronize the camera state with the active surface.
+    // oxlint-disable-next-line react/set-state-in-effect
+    setStageBox(box);
+    // oxlint-disable-next-line react/set-state-in-effect
+    setZoomLevel(restored.zoom);
+    // oxlint-disable-next-line react/set-state-in-effect
+    setCameraView({
+      center: { x: box.left + box.width / 2 + restored.pan.x, y: box.top + box.height / 2 + restored.pan.y },
+      baseScale: getStageFitScale(box, EDITOR_CAMERA_VIEWBOX),
+    });
+  }, [appMode, readStageBox]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => {
+      const box = readStageBox();
+      if (!box) return;
+      const windowSize = { width: window.innerWidth, height: window.innerHeight };
+      const previousWindow = windowSizeRef.current;
+      const windowResized = !!previousWindow
+        && (previousWindow.width !== windowSize.width || previousWindow.height !== windowSize.height);
+      windowSizeRef.current = windowSize;
+      // The camera must be corrected inside the same frame as the layout change.
+      flushSync(() => applyStageBox(box, windowResized));
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [applyStageBox, readStageBox]);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'shape_create' | 'child_frame_scale' | 'child_frame_rotate' | null>(null);
@@ -106,25 +192,23 @@ export const StageCanvas: React.FC = () => {
   const outputOrigin = appMode === 'broadcast' ? getProjectCenter(projectResolution) : EDITOR_CAMERA_CENTER;
   const clientToSVG = useCallback(
     (clientX: number, clientY: number): { svgX: number; svgY: number } => {
-      if (!containerRef.current) return { svgX: 0, svgY: 0 };
+      if (!containerRef.current || !cameraView) return { svgX: 0, svgY: 0 };
       const svg = containerRef.current.querySelector<SVGSVGElement>('svg.stage-svg');
       const screenMatrix = svg?.getScreenCTM?.();
       if (screenMatrix && typeof DOMPoint !== 'undefined') {
         const point = new DOMPoint(clientX, clientY).matrixTransform(screenMatrix.inverse());
         return { svgX: point.x, svgY: point.y };
       }
-      const rect = containerRef.current.getBoundingClientRect();
-      const point = clientToSVGPoint({
-        rect,
+      const point = clientToCameraPoint({
+        view: cameraView,
         clientX,
         clientY,
         zoom: zoomLevel,
-        pan: panOffset,
         viewBox: EDITOR_CAMERA_VIEWBOX,
       });
       return { svgX: point.x, svgY: point.y };
     },
-    [zoomLevel, panOffset]
+    [zoomLevel, cameraView]
   );
 
   // Freeform drawing state machine (active only while the tool is selected).
@@ -229,7 +313,7 @@ export const StageCanvas: React.FC = () => {
       setDragStart({
         x: e.clientX,
         y: e.clientY,
-        initialTransform: { x: panOffset.x, y: panOffset.y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
+        initialTransform: { x: cameraView?.center.x ?? 0, y: cameraView?.center.y ?? 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
       });
       return;
     }
@@ -325,10 +409,9 @@ export const StageCanvas: React.FC = () => {
         rafPanRef.current = requestAnimationFrame(() => {
           const dx = clientX - dragStart.x;
           const dy = clientY - dragStart.y;
-          setPanOffset({
-            x: dragStart.initialTransform.x + dx,
-            y: dragStart.initialTransform.y + dy,
-          });
+          setCameraView((view) => view
+            ? { ...view, center: { x: dragStart.initialTransform.x + dx, y: dragStart.initialTransform.y + dy } }
+            : view);
         });
         return;
       }
@@ -577,23 +660,21 @@ export const StageCanvas: React.FC = () => {
 
   const handleWheel = useCallback((e: WheelEvent) => {
     e.preventDefault();
-    const container = containerRef.current;
-    const svg = container?.querySelector<SVGSVGElement>('svg.stage-svg');
-    if (!container || !svg || appMode === 'broadcast') return;
-    const cssTransform = new DOMMatrix(getComputedStyle(svg).transform);
-    const currentZoom = cssTransform.a > 0 ? cssTransform.a : zoomRef.current;
+    const view = cameraViewRef.current;
+    if (!containerRef.current || !view || appMode === 'broadcast') return;
+    const currentZoom = zoomRef.current;
     const nextZoom = clampZoom(currentZoom * (e.deltaY < 0 ? 1.1 : 0.9));
-    const anchored = getCursorAnchoredViewport({
-      rect: container.getBoundingClientRect(),
-      clientX: e.clientX,
-      clientY: e.clientY,
-      zoom: currentZoom,
-      pan: { x: cssTransform.e, y: cssTransform.f },
-      nextZoom,
-      viewBox: EDITOR_CAMERA_VIEWBOX,
+    setZoomLevel(nextZoom);
+    setCameraView({
+      baseScale: view.baseScale,
+      center: getCursorAnchoredCameraCenter({
+        view,
+        clientX: e.clientX,
+        clientY: e.clientY,
+        zoom: currentZoom,
+        nextZoom,
+      }),
     });
-    setZoomLevel(anchored.zoom);
-    setPanOffset(anchored.pan);
   }, [appMode]);
   useEffect(() => {
     const container = containerRef.current;
@@ -717,6 +798,19 @@ export const StageCanvas: React.FC = () => {
 
   const sortedParts = stackingOrder(characterParts);
   const isPanning = activeTool === 'pan' || (isDragging && dragMode === 'pan');
+  const cameraTransform = appMode === 'broadcast' || !cameraView || !stageBox
+    ? null
+    : getStageCameraTransform({ view: cameraView, stage: stageBox, zoom: zoomLevel, viewBox: EDITOR_CAMERA_VIEWBOX });
+
+  // The viewport toolbar still resets the camera with an offset from the stage
+  // centre; the camera authority turns that into an absolute view centre.
+  const setPanOffset = useCallback((next: { x: number; y: number }) => {
+    const box = stageBoxRef.current;
+    if (!box) return;
+    setCameraView((view) => view
+      ? { ...view, center: { x: box.left + box.width / 2 + next.x, y: box.top + box.height / 2 + next.y } }
+      : view);
+  }, []);
 
   return (
     <div
@@ -764,7 +858,15 @@ export const StageCanvas: React.FC = () => {
             freeform.finishDraw();
           }
         }}
-        style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px) scale(${zoomLevel})`, transformOrigin: 'center center', cursor: activeTool === 'freeform_draw' ? 'crosshair' : undefined }}
+        style={{
+          // Identity while broadcast shows the fitted artboard and while the
+          // edit camera has not been anchored yet (the mount view).
+          transform: cameraTransform
+            ? `translate(${cameraTransform.translateX}px, ${cameraTransform.translateY}px) scale(${cameraTransform.scale})`
+            : 'translate(0px, 0px) scale(1)',
+          transformOrigin: 'center center',
+          cursor: activeTool === 'freeform_draw' ? 'crosshair' : undefined,
+        }}
       >
         <defs>
           {/* Minor grid: 50px cells anchored at the origin (2 cells = 100px = 1 unit) */}

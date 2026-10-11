@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CharacterPart, Transform } from '../types/animator';
-import { clientToSVGPoint, getCursorAnchoredViewport, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement } from '../utils/viewportMath';
+import { clientToCameraPoint, getCursorAnchoredCameraCenter, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox } from '../utils/viewportMath';
 
 const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart => ({
   id,
@@ -15,24 +15,19 @@ const part = (id: string, overrides: Partial<CharacterPart> = {}): CharacterPart
 });
 
 describe('Canvas Interaction V1 viewport math', () => {
-  it('keeps the project point beneath the cursor stable during zoom', () => {
-    const input = {
-      rect: { left: 100, top: 40, width: 800, height: 600 },
-      clientX: 520,
-      clientY: 320,
+  it('keeps the camera point beneath the cursor stable during zoom', () => {
+    const view = { center: { x: 518, y: 308 }, baseScale: 1.2 };
+    const viewBox = { width: 600, height: 480 };
+    const cursor = { x: 520, y: 320 };
+    const center = getCursorAnchoredCameraCenter({
+      view,
+      clientX: cursor.x,
+      clientY: cursor.y,
       zoom: 1,
-      pan: { x: 18, y: -12 },
       nextZoom: 1.5,
-      viewBox: { width: 600, height: 480 },
-    };
-    const next = getCursorAnchoredViewport(input);
-    const baseScale = Math.min(input.rect.width / 600, input.rect.height / 480);
-    const baseTranslateX = input.rect.left + (input.rect.width - 600 * baseScale) / 2;
-    const baseTranslateY = input.rect.top + (input.rect.height - 480 * baseScale) / 2;
-    const originX = input.rect.left + input.rect.width / 2;
-    const originY = input.rect.top + input.rect.height / 2;
-    const before = { x: ((input.clientX - originX - input.pan.x) / input.zoom - (baseTranslateX - originX)) / baseScale, y: ((input.clientY - originY - input.pan.y) / input.zoom - (baseTranslateY - originY)) / baseScale };
-    const after = { x: ((input.clientX - originX - next.pan.x) / next.zoom - (baseTranslateX - originX)) / baseScale, y: ((input.clientY - originY - next.pan.y) / next.zoom - (baseTranslateY - originY)) / baseScale };
+    });
+    const before = clientToCameraPoint({ view, clientX: cursor.x, clientY: cursor.y, zoom: 1, viewBox });
+    const after = clientToCameraPoint({ view: { ...view, center }, clientX: cursor.x, clientY: cursor.y, zoom: 1.5, viewBox });
     expect(after.x).toBeCloseTo(before.x, 10);
     expect(after.y).toBeCloseTo(before.y, 10);
   });
@@ -59,7 +54,6 @@ describe('Canvas Interaction V1 viewport math', () => {
   });
 
   it('keeps cursor points stable at edges and through repeated zoom changes', () => {
-    const rect = { left: 20, top: 30, width: 1000, height: 700 };
     const viewBox = { width: 600, height: 480 };
     const cursors = [
       { x: 520, y: 380 },
@@ -67,27 +61,20 @@ describe('Canvas Interaction V1 viewport math', () => {
       { x: 990, y: 680 },
     ];
     for (const cursor of cursors) {
-      let state = { zoom: 0.8, pan: { x: 35, y: -22 } };
+      let state = { zoom: 0.8, view: { center: { x: 640, y: 420 }, baseScale: 1.1 } };
       for (const nextZoom of [1.1, 1.6, 0.7, 1.3]) {
-        const baseScale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height);
-        const baseTranslateX = rect.left + (rect.width - viewBox.width * baseScale) / 2;
-        const baseTranslateY = rect.top + (rect.height - viewBox.height * baseScale) / 2;
-        const originX = rect.left + rect.width / 2;
-        const originY = rect.top + rect.height / 2;
-        const before = { x: ((cursor.x - originX - state.pan.x) / state.zoom - (baseTranslateX - originX)) / baseScale, y: ((cursor.y - originY - state.pan.y) / state.zoom - (baseTranslateY - originY)) / baseScale };
-        const next = getCursorAnchoredViewport({
-          rect,
+        const before = clientToCameraPoint({ view: state.view, clientX: cursor.x, clientY: cursor.y, zoom: state.zoom, viewBox });
+        const center = getCursorAnchoredCameraCenter({
+          view: state.view,
           clientX: cursor.x,
           clientY: cursor.y,
           zoom: state.zoom,
-          pan: state.pan,
           nextZoom,
-          viewBox,
         });
-        const after = { x: ((cursor.x - originX - next.pan.x) / next.zoom - (baseTranslateX - originX)) / baseScale, y: ((cursor.y - originY - next.pan.y) / next.zoom - (baseTranslateY - originY)) / baseScale };
+        const after = clientToCameraPoint({ view: { ...state.view, center }, clientX: cursor.x, clientY: cursor.y, zoom: nextZoom, viewBox });
         expect(after.x).toBeCloseTo(before.x, 8);
         expect(after.y).toBeCloseTo(before.y, 8);
-        state = next;
+        state = { zoom: nextZoom, view: { ...state.view, center } };
       }
     }
   });
@@ -120,28 +107,53 @@ describe('Canvas Interaction V1 viewport math', () => {
     expect(parallelogram?.y).toBeCloseTo(0, 8);
   });
 
-  it('inverts client coordinates through aspect-fit, zoom, and pan', () => {
-    const rect = { left: 120, top: 60, width: 840, height: 620 };
+  it('inverts client coordinates through the camera zoom and base scale', () => {
+    const view = { center: { x: 543, y: 371 }, baseScale: 0.86 };
     const viewBox = { width: 600, height: 480 };
     const zoom = 1.5;
-    const pan = { x: 23, y: -11 };
-    const scale = Math.min(rect.width / viewBox.width, rect.height / viewBox.height);
     const point = { x: 420, y: 300 };
     const client = {
-      x: rect.left + rect.width / 2 + (point.x - viewBox.width / 2) * scale * zoom + pan.x,
-      y: rect.top + rect.height / 2 + (point.y - viewBox.height / 2) * scale * zoom + pan.y,
+      x: view.center.x + (point.x - viewBox.width / 2) * view.baseScale * zoom,
+      y: view.center.y + (point.y - viewBox.height / 2) * view.baseScale * zoom,
     };
 
-    expect(clientToSVGPoint({
-      rect,
+    expect(clientToCameraPoint({
+      view,
       clientX: client.x,
       clientY: client.y,
       zoom,
-      pan,
       viewBox,
     })).toMatchObject({
       x: expect.closeTo(point.x, 8),
       y: expect.closeTo(point.y, 8),
     });
+  });
+
+  it('renders a camera point at the same client position when the stage box changes', () => {
+    const view = { center: { x: 600, y: 400 }, baseScale: 0.7 };
+    const viewBox = { width: 600, height: 480 };
+    const zoom = 1.5;
+    const point = { x: 240, y: 180 };
+    const project = (stage: StageBox) => {
+      const transform = getStageCameraTransform({ view, stage, zoom, viewBox });
+      const renderedScale = transform.scale * getStageFitScale(stage, viewBox);
+      return {
+        x: stage.left + stage.width / 2 + transform.translateX + renderedScale * (point.x - viewBox.width / 2),
+        y: stage.top + stage.height / 2 + transform.translateY + renderedScale * (point.y - viewBox.height / 2),
+      };
+    };
+
+    const before = project({ left: 336, top: 79, width: 584, height: 321 });
+    // Inspector closed, then left toolbar collapsed, then timeline collapsed.
+    const wider = project({ left: 336, top: 79, width: 944, height: 321 });
+    const leftShifted = project({ left: 0, top: 79, width: 920, height: 321 });
+    const taller = project({ left: 336, top: 79, width: 584, height: 491 });
+    for (const stage of [wider, leftShifted, taller]) {
+      expect(stage.x).toBeCloseTo(before.x, 10);
+      expect(stage.y).toBeCloseTo(before.y, 10);
+    }
+    // The rendered position is exactly the camera model, not a layout fit.
+    expect(before.x).toBeCloseTo(view.center.x + (point.x - viewBox.width / 2) * view.baseScale * zoom, 10);
+    expect(before.y).toBeCloseTo(view.center.y + (point.y - viewBox.height / 2) * view.baseScale * zoom, 10);
   });
 });

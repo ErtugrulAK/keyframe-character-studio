@@ -41,10 +41,15 @@ async function seed(page: Page) {
   await page.waitForFunction(() => document.querySelectorAll('g[transform^="translate"]').length >= 1, undefined, { timeout: 15000 });
 }
 
+/**
+ * The layout footprint of the canvas surface. The stage SVG itself carries the
+ * camera transform (which deliberately holds the authored world still while the
+ * panels change), so the dock contract is measured on the stage container.
+ */
 function canvasBox(page: Page) {
   return page.evaluate(() => {
-    const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
-    const r = svg.getBoundingClientRect();
+    const stage = document.querySelector('.stage-canvas-container')!;
+    const r = stage.getBoundingClientRect();
     return { width: Math.round(r.width), left: Math.round(r.left) };
   });
 }

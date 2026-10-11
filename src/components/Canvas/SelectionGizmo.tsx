@@ -1,6 +1,7 @@
 import React from 'react';
 import type { CharacterPart, Track, Transform } from '../../types/animator';
 import { getPartLocalBounds } from '../../utils/bounds';
+import type { CornerBounds } from '../../utils/cornerResize';
 import { deriveBooleanGeometry } from '../../utils/booleanGeometry';
 import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../utils/projectCoordinates';
@@ -16,7 +17,7 @@ interface SelectionGizmoProps {
   zScale: number;
   booleanOperandEditingGroupId?: string | null;
   onRotateStart: (e: React.MouseEvent) => void;
-  onScaleStart: (e: React.MouseEvent, mode?: ScaleMode) => void;
+  onScaleStart: (e: React.MouseEvent, mode: ScaleMode, bounds?: CornerBounds) => void;
   onTranslateStart: (partId: string, e: React.MouseEvent) => void;
   outputOrigin?: CoordinatePoint;
 }

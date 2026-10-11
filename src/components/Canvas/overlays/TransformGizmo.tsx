@@ -2,17 +2,28 @@ import React from 'react';
 import type { CharacterPart, Transform } from '../../../types/animator';
 
 import { getPartLocalBounds } from '../../../utils/bounds';
+import type { CornerBounds } from '../../../utils/cornerResize';
 import { getTransformGizmoMetrics } from '../../../utils/transformGizmoMetrics';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../../utils/projectCoordinates';
 
-export type ScaleMode = 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom';
+export type ScaleMode =
+  | 'scale_corner_tl'
+  | 'scale_corner_tr'
+  | 'scale_corner_bl'
+  | 'scale_corner_br'
+  | 'scale_x'
+  | 'scale_y'
+  | 'scale_left'
+  | 'scale_right'
+  | 'scale_top'
+  | 'scale_bottom';
 
 interface TransformGizmoProps {
   selectedPart: CharacterPart;
   selectedTransform: Transform;
   zScale: number;
   onRotateMouseDown: (e: React.MouseEvent) => void;
-  onScaleMouseDown: (e: React.MouseEvent, mode: ScaleMode) => void;
+  onScaleMouseDown: (e: React.MouseEvent, mode: ScaleMode, bounds?: CornerBounds) => void;
   isGroup?: boolean;
   overrideHalfW?: number;
   overrideHalfH?: number;
@@ -88,10 +99,10 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
       {!isGroup && (
         <>
           {[
-            { x: left, y: top, key: 'top-left', cursor: 'nwse-resize' },
-            { x: right, y: top, key: 'top-right', cursor: 'nesw-resize' },
-            { x: left, y: bottom, key: 'bottom-left', cursor: 'nesw-resize' },
-            { x: right, y: bottom, key: 'bottom-right', cursor: 'nwse-resize' },
+            { x: left, y: top, key: 'top-left', cursor: 'nwse-resize', mode: 'scale_corner_tl' as const },
+            { x: right, y: top, key: 'top-right', cursor: 'nesw-resize', mode: 'scale_corner_tr' as const },
+            { x: left, y: bottom, key: 'bottom-left', cursor: 'nesw-resize', mode: 'scale_corner_bl' as const },
+            { x: right, y: bottom, key: 'bottom-right', cursor: 'nwse-resize', mode: 'scale_corner_br' as const },
           ].map((corner) => (
             <g key={`corner-${corner.key}`}>
               <rect
@@ -103,7 +114,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
                 stroke="#ffffff"
                 strokeWidth={1.5 * zScale}
                 style={{ cursor: corner.cursor, pointerEvents: 'auto' }}
-                onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
+                onMouseDown={(e) => onScaleMouseDown(e, corner.mode, baseBounds)}
               />
               <rect
                 data-testid="gizmo-hit-target"
@@ -114,7 +125,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
                 fill="transparent"
                 pointerEvents="auto"
                 style={{ cursor: corner.cursor }}
-                onMouseDown={(e) => onScaleMouseDown(e, 'scale_corner')}
+                onMouseDown={(e) => onScaleMouseDown(e, corner.mode, baseBounds)}
               />
             </g>
           ))}

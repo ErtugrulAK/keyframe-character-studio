@@ -4,6 +4,7 @@ import { useAnimator } from '../../context/useAnimator';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
+import { resolveCornerResize, type CornerBounds, type CornerId } from '../../utils/cornerResize';
 import { stackingOrder } from '../../utils/stackingOrder';
 import { clampZoom, clientToCameraPoint, computeEdgeScale, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
@@ -18,6 +19,17 @@ import { SelectionGizmo } from './SelectionGizmo';
 import { StagePartLayers } from './StagePartLayers';
 import { Sparkles } from 'lucide-react';
 import './StageCanvas.css';
+
+/**
+ * The four corner handles of the transform gizmo, keyed by the scale mode they
+ * report. Edge and single-axis modes intentionally have no corner identity.
+ */
+const CORNER_BY_SCALE_MODE: Record<string, CornerId | undefined> = {
+  scale_corner_tl: 'tl',
+  scale_corner_tr: 'tr',
+  scale_corner_bl: 'bl',
+  scale_corner_br: 'br',
+};
 
 export const StageCanvas: React.FC = () => {
   const {
@@ -173,11 +185,11 @@ export const StageCanvas: React.FC = () => {
   }, [applyStageBox, readStageBox]);
 
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale' | 'scale_corner' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'shape_create' | 'child_frame_scale' | 'child_frame_rotate' | null>(null);
+  const [dragMode, setDragMode] = useState<'translate' | 'rotate' | 'scale_corner_tl' | 'scale_corner_tr' | 'scale_corner_bl' | 'scale_corner_br' | 'scale_x' | 'scale_y' | 'scale_left' | 'scale_right' | 'scale_top' | 'scale_bottom' | 'pan' | 'marquee' | 'shape_create' | 'child_frame_scale' | 'child_frame_rotate' | null>(null);
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [shapeCreationStart, setShapeCreationStart] = useState<{ clientX: number; clientY: number; svgX: number; svgY: number } | null>(null);
   const [shapeCreationPreview, setShapeCreationPreview] = useState<{ type: NonNullable<typeof pendingShapeType>; bounds: ReturnType<typeof getShapeCreationBounds> } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number }>({
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number; corner?: CornerId; localBounds?: CornerBounds }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
@@ -361,7 +373,7 @@ export const StageCanvas: React.FC = () => {
     });
   };
 
-  const startScale = (e: React.MouseEvent, mode: ScaleMode = 'scale_corner') => {
+  const startScale = (e: React.MouseEvent, mode: ScaleMode, bounds?: CornerBounds) => {
     if (appMode === 'broadcast' || e.button !== 0 || !selectedPart || !selectedTransform) return;
     e.stopPropagation();
     startBatchInteraction();
@@ -384,6 +396,8 @@ export const StageCanvas: React.FC = () => {
       x: svgX,
       y: svgY,
       initialTransform: { ...selectedTransform },
+      corner: CORNER_BY_SCALE_MODE[mode],
+      localBounds: bounds,
     });
   };
 
@@ -500,48 +514,22 @@ export const StageCanvas: React.FC = () => {
 
         const newRotation = Math.round(dragStart.initialTransform.rotation + deltaAngleDeg);
         updateCurrentTransform({ rotation: newRotation });
-      } else if (dragMode === 'scale_corner' || dragMode === 'scale') {
-        const centerX = EDITOR_CAMERA_CENTER.x + dragStart.initialTransform.x;
-        const centerY = EDITOR_CAMERA_CENTER.y + dragStart.initialTransform.y;
-
-        // Anchor scaling: the corner opposite the grab point stays fixed.
-        // The grabbed corner is derived from the initial click position.
-        const grabSignX = dragStart.x >= centerX ? 1 : -1;
-        const grabSignY = dragStart.y >= centerY ? 1 : -1;
-
-        // Initial half-extents at drag start (world units, already include scale).
-        const initHalfW = Math.max(0.001, dragInitialLocalX);
-        const initHalfH = Math.max(0.001, dragInitialLocalY);
-
-        const initScaleX = Math.abs(dragStart.initialTransform.scaleX);
-        const initScaleY = Math.abs(dragStart.initialTransform.scaleY);
-
-        const precision = e.shiftKey ? 3 : 2;
-
-        if (isScaleLocked) {
-          // Locked: uniform scale around the center (radial factor), so the
-          // aspect ratio is preserved and there is no initial jump.
-          const dx = svgX - centerX;
-          const dy = svgY - centerY;
-          const currentDist = Math.sqrt(dx * dx + dy * dy);
-          const initDist = Math.hypot(initHalfW, initHalfH);
-          const factor = currentDist / Math.max(0.001, initDist);
-          updateCurrentTransform({
-            scaleX: parseFloat(Math.max(0.05, initScaleX * factor).toFixed(precision)),
-            scaleY: parseFloat(Math.max(0.05, initScaleY * factor).toFixed(precision)),
-          });
-        } else {
-          // Unlocked: per-axis scaling anchored to the opposite corner.
-          // The pointer distance from the anchor spans TWO half-extents.
-          const anchorX = centerX - grabSignX * initHalfW;
-          const anchorY = centerY - grabSignY * initHalfH;
-          const newHalfW = Math.abs(svgX - anchorX);
-          const newHalfH = Math.abs(svgY - anchorY);
-          updateCurrentTransform({
-            scaleX: parseFloat(Math.max(0.05, (newHalfW / (2 * initHalfW)) * initScaleX).toFixed(precision)),
-            scaleY: parseFloat(Math.max(0.05, (newHalfH / (2 * initHalfH)) * initScaleY).toFixed(precision)),
-          });
-        }
+      } else if (CORNER_BY_SCALE_MODE[dragMode]) {
+        // ONE geometry authority: the pure corner solver keeps the diagonally
+        // opposite corner fixed in world space and puts the dragged corner under
+        // the pointer. It answers in WORLD space — the write authority converts
+        // the patch into the layer's container-local space, exactly like every
+        // other canvas gesture.
+        const corner = CORNER_BY_SCALE_MODE[dragMode];
+        if (!corner || !dragStart.localBounds) return;
+        updateCurrentTransform(resolveCornerResize({
+          transform: dragStart.initialTransform,
+          bounds: dragStart.localBounds,
+          corner,
+          startPointer: { x: dragStart.x, y: dragStart.y },
+          pointer: { x: svgX, y: svgY },
+          uniform: isScaleLocked,
+        }));
       } else if (
         dragMode === 'scale_right' ||
         dragMode === 'scale_left' ||

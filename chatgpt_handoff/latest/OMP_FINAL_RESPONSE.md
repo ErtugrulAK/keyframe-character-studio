@@ -9,7 +9,7 @@
 | Fix commit | `df107b894d9e5490a767a169e5c43d2418550be4` |
 | Branch | `fix/authoring-ux-camera-invariance` (base `fix/authoring-ux-transform-toolbar` @ `dea88ab`) |
 | Stacked PR | #5 — base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`, not merged |
-| CI | `CI Pipeline` run `38138294854` (pull_request) |
+| CI | `CI Pipeline` run `38138487966` (pull_request) — success, on the documentation tip `7ca126c`; the earlier run `38138294854` failed because the fix commit updated `CHANGELOG.md` without re-copying the bundle mirror, which the documentation commit repaired |
 | Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` |
 
 ## Root cause

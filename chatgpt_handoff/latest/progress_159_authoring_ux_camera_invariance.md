@@ -11,7 +11,7 @@ Opening or closing a sidebar, or resizing the timeline, panned **and** zoomed th
 | Fix commit | `df107b894d9e5490a767a169e5c43d2418550be4` |
 | Branch | `fix/authoring-ux-camera-invariance`, stacked on `fix/authoring-ux-transform-toolbar` (`dea88ab`) |
 | Stacked PR | [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) — base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`, review/CI only, not merged |
-| CI | `CI Pipeline` run `38138294854` on the pull request (see the PR checks for the final conclusion) |
+| CI | `CI Pipeline` run `38138487966` on the pull request — success (documentation tip `7ca126c`); run `38138294854` failed because the fix commit updated `CHANGELOG.md` without re-copying the bundle mirror, which the documentation commit repaired |
 
 ## Reproduction and measured drift before the fix
 

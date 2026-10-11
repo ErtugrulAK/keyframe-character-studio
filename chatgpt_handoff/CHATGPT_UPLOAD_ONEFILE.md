@@ -20,7 +20,7 @@ Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`. External Q
 | Fix commit | `df107b894d9e5490a767a169e5c43d2418550be4` |
 | Branch | `fix/authoring-ux-camera-invariance` (base `fix/authoring-ux-transform-toolbar` @ `dea88ab`) |
 | Stacked PR | #5 — base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`, not merged |
-| CI | `CI Pipeline` run `38138294854` (pull_request) |
+| CI | `CI Pipeline` run `38138487966` (pull_request) — success, on the documentation tip `7ca126c`; the earlier run `38138294854` failed because the fix commit updated `CHANGELOG.md` without re-copying the bundle mirror, which the documentation commit repaired |
 | Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` |
 
 ## Root cause
@@ -72,7 +72,7 @@ Editor chrome no longer moves the authored world. Opening or closing a sidebar, 
 
 The camera is now its own authority (`StageCameraView` + `getStageCameraTransform` in `src/utils/viewportMath.ts`): a view centre in client pixels plus the px-per-unit scale it was anchored with, with the rendered transform dividing the layout fit back out. A `ResizeObserver` on the stage folds a measured box into the camera inside the same frame; a layout-only change leaves the camera untouched, while a change of the application window itself re-anchors it with its pan offset and a fresh scale. After the fix every transition measures 0.00 px drift on two authored world points and on the rendered node box, with the magnification and the zoom label unchanged.
 
-Branch `fix/authoring-ux-camera-invariance` at `df107b894d9e5490a767a169e5c43d2418550be4`, stacked on `fix/authoring-ux-transform-toolbar` (`dea88ab`). Stacked PR [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) is open for review and CI only and is not merged; `CI Pipeline` run `38138294854` covers it.
+Branch `fix/authoring-ux-camera-invariance` at `df107b894d9e5490a767a169e5c43d2418550be4` (documentation tip `7ca126c`), stacked on `fix/authoring-ux-transform-toolbar` (`dea88ab`). Stacked PR [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) is open for review and CI only and is not merged. Its `CI Pipeline` check passes: run `38138487966` (success) on the documentation tip. The first run, `38138294854`, failed because the fix commit updated `CHANGELOG.md` without re-copying the bundle mirror, which the documentation commit repaired.
 
 The full local Chromium suite reports 262 passed / 11 failed with `--retries=0`, and all 11 failures are inherited from the base commit `dea88ab`: it added `aria-label={\`Create ${operation} Boolean\`}` to the Boolean operation buttons, while `e2e/boolean-text-operands.spec.ts` (9 tests), `e2e/editor-interaction.spec.ts:164` and `e2e/v51-manual-qa.spec.ts:50` still query the accessible name `Union`/`Intersect` with `exact: true`. This branch touches no Boolean markup.
 
@@ -104,7 +104,7 @@ Scope: preserving the edit-stage camera across editor-chrome layout changes, and
 FIX CODE SHA: df107b894d9e5490a767a169e5c43d2418550be4
 Branch: fix/authoring-ux-camera-invariance, stacked on fix/authoring-ux-transform-toolbar (dea88ab)
 Stacked PR: 5 — base fix/authoring-ux-transform-toolbar, head fix/authoring-ux-camera-invariance, review and CI only, not merged
-CI: CI Pipeline run 38138294854 (pull_request, workflow ci.yml — validate:ograf, lint, tsc, vitest, build)
+CI: CI Pipeline run 38138487966 (success, documentation tip 7ca126c); run 38138294854 failed because the fix commit updated CHANGELOG.md without re-copying the bundle mirror
 Measured drift: 0.00 px on two authored world points and the rendered node box across sidebar toggles, timeline collapse/expand/resize and ten repeated toggle cycles
 Magnification: unchanged (0.6687 px/unit on the measured viewport), zoom label unchanged, serialized document byte-identical, undo depth unchanged
 Inherited failures: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; e2e/boolean-text-operands.spec.ts (9), e2e/editor-interaction.spec.ts:164 and e2e/v51-manual-qa.spec.ts:50 still query the accessible name `Union`/`Intersect` with exact: true, so the full Chromium suite reports 262 passed / 11 failed with --retries=0. Not caused by this branch, which touches no Boolean markup.
@@ -544,7 +544,7 @@ Opening or closing a sidebar, or resizing the timeline, panned **and** zoomed th
 | Fix commit | `df107b894d9e5490a767a169e5c43d2418550be4` |
 | Branch | `fix/authoring-ux-camera-invariance`, stacked on `fix/authoring-ux-transform-toolbar` (`dea88ab`) |
 | Stacked PR | [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) — base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`, review/CI only, not merged |
-| CI | `CI Pipeline` run `38138294854` on the pull request (see the PR checks for the final conclusion) |
+| CI | `CI Pipeline` run `38138487966` on the pull request — success (documentation tip `7ca126c`); run `38138294854` failed because the fix commit updated `CHANGELOG.md` without re-copying the bundle mirror, which the documentation commit repaired |
 
 ## Reproduction and measured drift before the fix
 

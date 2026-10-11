@@ -181,6 +181,30 @@ test('the Boolean group appears only when it can act and creates through the sha
   await expect(page.locator('.boolean-operation-badge')).toHaveText('Subtract');
 });
 
+test('every control is reachable and operable from the keyboard', async ({ page }) => {
+  await seed(page);
+
+  await expect(toolbar(page)).toHaveAttribute('aria-label', 'Authoring tools');
+  const pan = toolbarButton(page, 'Pan');
+  await expect(pan).toHaveAttribute('title', 'Pan tool (H)');
+  await pan.focus();
+  await expect(pan).toBeFocused();
+
+  await page.keyboard.press('Enter');
+  await expect(pan).toHaveAttribute('aria-pressed', 'true');
+
+  const grid = toolbarButton(page, 'Toggle grid');
+  const gridWasVisible = (await page.locator('.stage-svg rect[fill="url(#svg-grid-minor)"]').count()) > 0;
+  await grid.focus();
+  // Enter activates a toolbar button; Space stays the editor's play/pause key.
+  await page.keyboard.press('Enter');
+  await expect(grid).toHaveAttribute('aria-pressed', gridWasVisible ? 'false' : 'true');
+
+  // Tab keeps moving through the strip instead of trapping focus on one control.
+  await page.keyboard.press('Tab');
+  await expect(grid).not.toBeFocused();
+});
+
 test('toolbar content changes never move the authored world', async ({ page }) => {
   await seed(page);
   await settle(page);

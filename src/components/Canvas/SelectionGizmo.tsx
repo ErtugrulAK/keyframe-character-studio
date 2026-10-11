@@ -3,6 +3,7 @@ import type { CharacterPart, Track, Transform } from '../../types/animator';
 import { getPartLocalBounds } from '../../utils/bounds';
 import type { CornerBounds } from '../../utils/cornerResize';
 import { deriveBooleanGeometry } from '../../utils/booleanGeometry';
+import { getGroupAggregateBounds } from '../../utils/layerGrouping';
 import { TransformGizmo, type ScaleMode } from './overlays/TransformGizmo';
 import { EDITOR_CAMERA_CENTER, type CoordinatePoint } from '../../utils/projectCoordinates';
 
@@ -118,21 +119,40 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
       </g>
     ) : null;
 
-    const isFreeform = selectionPart.type === 'custom_freeform' && !selectionPart.booleanOperandIds?.length;
+    const isFreeform = !selectedPart.isGroup && selectionPart.type === 'custom_freeform' && !selectionPart.booleanOperandIds?.length;
+
+    // A group owns no geometry, so its frame is ONE aggregate box around the
+    // evaluated local bounds of the layers inside it: the container's handles
+    // scale and rotate exactly that box, and the frame is decorative
+    // (`pointerEvents: none`) like every other selection frame.
+    const groupBounds = selectedPart.isGroup
+      ? getGroupAggregateBounds(characterParts, selectedPart.id, (partId) => getComputedTransform(partId, currentFrame))
+      : null;
+    const absoluteScaleX = Math.abs(selectedTransform.scaleX);
+    const absoluteScaleY = Math.abs(selectedTransform.scaleY);
+    const gizmo = (
+      <TransformGizmo
+        selectedPart={selectionPart}
+        selectedTransform={selectedTransform}
+        zScale={zScale}
+        onRotateMouseDown={onRotateStart}
+        onScaleMouseDown={onScaleStart}
+        outputOrigin={outputOrigin}
+        {...(groupBounds ? {
+          overrideHalfW: groupBounds.halfW * absoluteScaleX,
+          overrideHalfH: groupBounds.halfH * absoluteScaleY,
+          overrideCenterX: groupBounds.offsetX * absoluteScaleX,
+          overrideCenterY: groupBounds.offsetY * absoluteScaleY,
+        } : {})}
+      />
+    );
 
     return (
       <>
         {matteHitArea}
-        {!isFreeform && (
-          <TransformGizmo
-            selectedPart={selectionPart}
-            selectedTransform={selectedTransform}
-            zScale={zScale}
-            onRotateMouseDown={onRotateStart}
-            onScaleMouseDown={onScaleStart}
-            outputOrigin={outputOrigin}
-          />
-        )}
+        {!isFreeform && (groupBounds
+          ? <g data-testid="group-aggregate-box" data-group-id={selectedPart.id}>{gizmo}</g>
+          : gizmo)}
       </>
     );
   }

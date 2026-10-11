@@ -201,3 +201,103 @@ describe('SelectionGizmo — editor-only matte interaction area', () => {
     expect(screen.queryByTestId('matte-editor-hit-area')).toBeNull();
   });
 });
+
+describe('SelectionGizmo — layer group frame', () => {
+  const imagePart = (id: string): CharacterPart => ({ ...makePart('custom_image'), id, name: id, type: 'custom_image', width: 100, height: 40, parentId: 'g' });
+  const groupPart = (): CharacterPart => ({ ...makePart('custom_freeform'), id: 'g', name: 'Group', isGroup: true });
+
+  const renderGroup = (
+    children: CharacterPart[],
+    world: Record<string, Transform>,
+    zScale = 1,
+  ) => render(
+    <svg>
+      <SelectionGizmo
+        selectedPartIds={['g']}
+        characterParts={[...children, groupPart()]}
+        getComputedTransform={(partId) => world[partId]}
+        currentFrame={0}
+        selectedPart={groupPart()}
+        selectedTransform={world.g}
+        tracks={[]}
+        zScale={zScale}
+        onRotateStart={() => {}}
+        onScaleStart={() => {}}
+        onTranslateStart={() => {}}
+      />
+    </svg>,
+  );
+
+  const identity = (x: number, y = 0, rotation = 0): Transform => ({ x, y, rotation, scaleX: 1, scaleY: 1, opacity: 1 });
+
+  it('draws ONE aggregate box around the children instead of per-layer frames', () => {
+    renderGroup([imagePart('a'), imagePart('b')], { g: identity(0), a: identity(-100), b: identity(100) });
+
+    expect(screen.getAllByTestId('transform-gizmo')).toHaveLength(1);
+    const box = screen.getByTestId('group-aggregate-box');
+    const halo = box.querySelector('[data-testid="selection-frame-halo"]')!;
+
+    // Children span -150..150 in the group's own space, whose origin is 0.
+    expect(halo.getAttribute('x')).toBe('-150');
+    expect(halo.getAttribute('y')).toBe('-20');
+    expect(halo.getAttribute('width')).toBe('300');
+    expect(halo.getAttribute('height')).toBe('40');
+    expect(box.getAttribute('data-group-id')).toBe('g');
+  });
+
+  it('keeps the frame decorative: dark halo plus accent stroke, and no extra hitboxes', () => {
+    renderGroup([imagePart('a'), imagePart('b')], { g: identity(0), a: identity(-100), b: identity(100) }, 2);
+
+    const box = screen.getByTestId('group-aggregate-box');
+    const halo = box.querySelector('[data-testid="selection-frame-halo"]')!;
+    const [accent] = [...box.querySelectorAll('rect')].filter((rect) => rect.getAttribute('stroke') === '#00d2ff');
+
+    expect(halo.getAttribute('pointer-events')).toBe('none');
+    expect(halo.getAttribute('style')).toContain('var(--bg-darkest)');
+    // A decorative stroke never scales with zoom, so its width must compensate.
+    expect(halo.getAttribute('stroke-width')).toBe('7');
+    expect(accent.getAttribute('pointer-events')).toBe('none');
+    expect(accent.getAttribute('stroke-width')).toBe('3');
+    // 4 corner + 4 edge + 1 rotation handle: the frame itself adds none.
+    expect(screen.getAllByTestId('gizmo-hit-target')).toHaveLength(9);
+  });
+
+  it('moves with the container transform so the handles stay on the aggregate bounds', () => {
+    renderGroup([imagePart('a'), imagePart('b')], { g: identity(30, -20), a: identity(-70, -20), b: identity(130, -20) });
+
+    const gizmo = screen.getByTestId('transform-gizmo');
+    const halo = screen.getByTestId('selection-frame-halo');
+    // outputOrigin (300, 240) + the container's own position (30, -20).
+    expect(gizmo.getAttribute('transform')).toBe('translate(330, 220) rotate(0)');
+    // Local units: the box travels with the container, it is not re-centred.
+    expect(halo.getAttribute('x')).toBe('-150');
+  });
+
+  it('composes a rotated child into the aggregate box', () => {
+    renderGroup([imagePart('a'), imagePart('b')], { g: identity(0), a: identity(-100, 0, 90), b: identity(100) });
+
+    const halo = screen.getByTestId('selection-frame-halo');
+    // The 100x40 image rotated 90° spans 40x100 about its own centre, so the
+    // left edge is -120 and the whole box is 135 wide around centre 15.
+    expect(halo.getAttribute('height')).toBe('100');
+    expect(halo.getAttribute('width')).toBe('270');
+    expect(halo.getAttribute('x')).toBe('-120');
+  });
+
+  it('re-centres the box on the layers when a child moves after grouping', () => {
+    renderGroup([imagePart('a'), imagePart('b')], { g: identity(0), a: identity(-300), b: identity(100) });
+
+    const halo = screen.getByTestId('selection-frame-halo');
+    const box = screen.getByTestId('group-aggregate-box');
+    const accent = [...box.querySelectorAll('rect')].find((rect) => rect.getAttribute('stroke') === '#00d2ff')!;
+    // Box centre is the live aggregate centre (-100), not the container origin.
+    expect(Number(accent.getAttribute('x')) + Number(accent.getAttribute('width')) / 2).toBe(-100);
+    expect(halo.getAttribute('width')).toBe('500');
+  });
+
+  it('falls back to the container box for a group with no layers', () => {
+    renderGroup([], { g: identity(0) });
+    expect(screen.queryByTestId('group-aggregate-box')).toBeNull();
+    expect(screen.getAllByTestId('transform-gizmo')).toHaveLength(1);
+  });
+});

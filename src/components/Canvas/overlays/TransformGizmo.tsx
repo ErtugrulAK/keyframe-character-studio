@@ -27,6 +27,9 @@ interface TransformGizmoProps {
   isGroup?: boolean;
   overrideHalfW?: number;
   overrideHalfH?: number;
+  /** Box centre in local units; used with the override extents (a group's own origin is not its centre). */
+  overrideCenterX?: number;
+  overrideCenterY?: number;
   outputOrigin?: CoordinatePoint;
 }
 
@@ -39,6 +42,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   isGroup = false,
   overrideHalfW,
   overrideHalfH,
+  overrideCenterX = 0,
+  overrideCenterY = 0,
   outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
   const baseBounds = getPartLocalBounds(selectedPart, selectedTransform);
@@ -48,8 +53,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   // retaining the existing transform/scale semantics.
   const halfW = overrideHalfW ?? ((baseBounds.maxX - baseBounds.minX) / 2) * Math.abs(selectedTransform.scaleX);
   const halfH = overrideHalfH ?? ((baseBounds.maxY - baseBounds.minY) / 2) * Math.abs(selectedTransform.scaleY);
-  const centerX = overrideHalfW === undefined ? ((baseBounds.minX + baseBounds.maxX) / 2) * Math.abs(selectedTransform.scaleX) : 0;
-  const centerY = overrideHalfH === undefined ? ((baseBounds.minY + baseBounds.maxY) / 2) * Math.abs(selectedTransform.scaleY) : 0;
+  const centerX = overrideHalfW === undefined ? ((baseBounds.minX + baseBounds.maxX) / 2) * Math.abs(selectedTransform.scaleX) : overrideCenterX;
+  const centerY = overrideHalfH === undefined ? ((baseBounds.minY + baseBounds.maxY) / 2) * Math.abs(selectedTransform.scaleY) : overrideCenterY;
   const left = centerX - halfW;
   const right = centerX + halfW;
   const top = centerY - halfH;

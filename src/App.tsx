@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AnimatorProvider } from './context/AnimatorContext';
+import { EditorContextMenuProvider } from './context/EditorContextMenuContext';
 import { useAnimator } from './context/useAnimator';
 import { HeaderBar } from './components/Header/HeaderBar';
 import { AuthoringToolbar } from './components/Toolbar/AuthoringToolbar';
@@ -78,7 +79,9 @@ const MainAppContent: React.FC = () => {
 export function App() {
   return (
     <AnimatorProvider>
-      <MainAppContent />
+      <EditorContextMenuProvider>
+        <MainAppContent />
+      </EditorContextMenuProvider>
     </AnimatorProvider>
   );
 }

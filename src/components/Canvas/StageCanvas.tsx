@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { useAnimator } from '../../context/useAnimator';
+import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
@@ -72,6 +73,7 @@ export const StageCanvas: React.FC = () => {
   } = useAnimator();
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const { openContextMenu } = useEditorContextMenu();
   const [zoomLevel, setZoomLevel] = useState<number>(1);
   /**
    * Edit-stage camera. `center` is the client position of the camera centre and
@@ -811,12 +813,26 @@ export const StageCanvas: React.FC = () => {
       : view);
   }, []);
 
+  /**
+   * Right-click on the stage opens the shared authoring menu. The target is the
+   * topmost rendered layer under the pointer, read from the real DOM (the
+   * rendered part node carries `data-part-id`) instead of a second hit-test
+   * implementation; no layer under the pointer means the empty-stage menu.
+   */
+  const handleContextMenu = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    if (appMode === 'broadcast') return;
+    const target = event.target as Element | null;
+    const partId = target?.closest('[data-part-id]')?.getAttribute('data-part-id') ?? null;
+    openContextMenu({ point: { x: event.clientX, y: event.clientY }, targetId: partId });
+  }, [appMode, openContextMenu]);
+
   return (
     <div
       className={`stage-canvas-container ${isPanning ? 'panning' : ''} ${activeTool === 'pan' ? 'hand-tool' : 'select-tool'} ${isDragging ? 'interaction-dragging' : ''}`}
       ref={containerRef}
       onMouseDown={handleMouseDown}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={handleContextMenu}
       onDragOver={handleDragOverStage}
       onDragLeave={handleDragLeaveStage}
       onDrop={handleDropStage}

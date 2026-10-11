@@ -30,6 +30,9 @@ const animatorCtx = {
 vi.mock('../context/useAnimator', () => ({
   useAnimator: () => animatorCtx,
 }));
+vi.mock('../context/editorContextMenu', () => ({
+  useEditorContextMenu: () => ({ openContextMenu: vi.fn(), closeContextMenu: vi.fn() }),
+}));
 
 import { OutlinerPanel } from '../components/Inspector/OutlinerPanel';
 

@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useAnimator } from '../../context/useAnimator';
+import { useEditorContextMenu } from '../../context/editorContextMenu';
 import {
   Eye,
   EyeOff,
@@ -42,6 +43,7 @@ export const OutlinerPanel: React.FC = () => {
     booleanOperandEditingGroupId,
     setBooleanOperandEditingGroupId,
   } = useAnimator();
+  const { openContextMenu } = useEditorContextMenu();
 
   const [isGroupExpanded, setIsGroupExpanded] = useState(true);
   const [collapsedPartIds, setCollapsedPartIds] = useState<Set<string>>(() => new Set());
@@ -116,6 +118,11 @@ export const OutlinerPanel: React.FC = () => {
             setFocusModeNodeId(null);
           }
           handleSelectPart(part.id, e.shiftKey || e.ctrlKey || e.metaKey);
+        }}
+        onContextMenu={(event) => {
+          // The shared authoring menu; the provider selects this layer first.
+          event.preventDefault();
+          openContextMenu({ point: { x: event.clientX, y: event.clientY }, targetId: part.id });
         }}
         draggable={true}
         onDragStart={(e) => {

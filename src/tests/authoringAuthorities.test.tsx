@@ -1,5 +1,4 @@
-import React from 'react';
-import { render } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CharacterPart, LayerMask, Track } from '../types/animator';
 import { layerMaskChannel } from '../types/animator';
@@ -43,15 +42,14 @@ const animatorCtx = {
 
 vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx }));
 
-import { useBooleanAuthoring, type BooleanAuthoring } from '../hooks/useBooleanAuthoring';
-import { usePartPropertyAuthoring, type PartPropertyAuthoring } from '../hooks/usePartPropertyAuthoring';
+import { useBooleanAuthoring } from '../hooks/useBooleanAuthoring';
+import { usePartPropertyAuthoring } from '../hooks/usePartPropertyAuthoring';
 
-let authoring: { part: PartPropertyAuthoring; boolean: BooleanAuthoring };
-
-const Harness: React.FC = () => {
-  authoring = { part: usePartPropertyAuthoring(), boolean: useBooleanAuthoring() };
-  return null;
-};
+/** Renders both extracted authorities exactly as DetailsPanel/toolbar consume them. */
+const renderAuthoring = () => renderHook(() => ({
+  part: usePartPropertyAuthoring(),
+  boolean: useBooleanAuthoring(),
+}));
 
 /** The document the most recent `setCharacterParts` write would produce. */
 const appliedParts = (previous: CharacterPart[]): CharacterPart[] => {
@@ -73,7 +71,7 @@ describe('shared authoring authorities', () => {
     const part = shape('a');
     animatorCtx.characterParts = [part];
     animatorCtx.selectedPartId = 'a';
-    render(<Harness />);
+    const authoring = renderAuthoring().result.current;
 
     authoring.part.handlePartPropChange('fillColor', '#ff0000');
     expect(appliedParts([part])).toEqual([updateShapeAppearance(part, { fillColor: '#ff0000' })]);
@@ -86,7 +84,7 @@ describe('shared authoring authorities', () => {
     const part = shape('a');
     animatorCtx.characterParts = [part];
     animatorCtx.selectedPartId = 'a';
-    render(<Harness />);
+    const authoring = renderAuthoring().result.current;
 
     authoring.part.handlePartPropChange('trimPathEnd', 0.25);
     expect(appliedParts([part])).toEqual([updateTrimPath(part, { trimPathEnd: 0.25 })]);
@@ -96,7 +94,7 @@ describe('shared authoring authorities', () => {
     const part = shape('a');
     animatorCtx.characterParts = [part];
     animatorCtx.selectedPartId = 'a';
-    render(<Harness />);
+    const authoring = renderAuthoring().result.current;
 
     authoring.part.handlePartPropChange('name', 'Renamed');
     expect(appliedParts([part])).toEqual([{ ...part, name: 'Renamed' }]);
@@ -125,7 +123,7 @@ describe('shared authoring authorities', () => {
     animatorCtx.characterParts = [part];
     animatorCtx.tracks = [track];
     animatorCtx.selectedPartId = 'a';
-    render(<Harness />);
+    const authoring = renderAuthoring().result.current;
 
     const edited: LayerMask = { ...mask, feather: 40 };
     authoring.part.handleDisplayedPartPropChange('masks', [edited]);
@@ -142,7 +140,7 @@ describe('shared authoring authorities', () => {
     animatorCtx.characterParts = [a, b];
     animatorCtx.selectedPartIds = ['a', 'b'];
     animatorCtx.selectedPartId = 'b';
-    render(<Harness />);
+    const authoring = renderAuthoring().result.current;
 
     authoring.boolean.createBooleanGroup('union');
 
@@ -163,7 +161,7 @@ describe('shared authoring authorities', () => {
     animatorCtx.characterParts = [a];
     animatorCtx.selectedPartIds = ['a'];
     animatorCtx.selectedPartId = 'a';
-    render(<Harness />);
+    const authoring = renderAuthoring().result.current;
 
     authoring.boolean.createBooleanGroup('union');
     expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();

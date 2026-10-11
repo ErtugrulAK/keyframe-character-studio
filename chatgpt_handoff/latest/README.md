@@ -56,7 +56,8 @@ SHA `aef21de`) passes 2 and `qa:v6` passes 3; `tsc -b`, `oxlint`, `vitest` (138 
 are all clean.
 
 The live preview `http://localhost:5173/` is served from this worktree by
-`vite --host --port 5173` and serves head `aef21de` on branch
+`vite --host --port 5173` and serves the application source of the validated combined
+code head `aef21de` on branch
 `fix/authoring-ux-camera-invariance`; the API on `127.0.0.1:5000` (unchanged PID
 24896) still answers 200. The stable repository (`keyframe-character-studio`, `main`
 at `c46e698`), the runtime-parity worktree and the authoring-UX worktree were not

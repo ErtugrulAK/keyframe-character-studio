@@ -102,8 +102,11 @@ inherited Boolean failures are closed on this line — 273 passed with no retrie
 `http://localhost:5173/` is served from this worktree by `vite --host --port 5173`
 (process command line resolves into
 `...\keyframe-character-studio-omp-camera-invariance\node_modules\.bin\..\vite\bin\vite.js`),
-the served head is `aef21de5aad06592884d7a54004383b2f6eeccb1` on branch
-`fix/authoring-ux-camera-invariance`, and the served camera module exports
+the served application source is the validated combined code head
+`aef21de5aad06592884d7a54004383b2f6eeccb1` on branch
+`fix/authoring-ux-camera-invariance` — the only commits above it on this line are
+handoff-bundle documentation, which changes no application source — and the served
+camera module exports
 `getStageCameraTransform` / `clientToCameraPoint`. During the full suite only
 `127.0.0.1:5188` (vite) and `127.0.0.1:5003` (API) were bound by test processes, and
 all of them resolved into this worktree; `127.0.0.1:5000` (API, unchanged PID

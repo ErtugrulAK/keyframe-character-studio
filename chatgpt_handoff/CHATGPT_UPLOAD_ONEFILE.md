@@ -4,7 +4,7 @@
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
-Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` (branch `fix/authoring-ux-camera-invariance`, base `fix/authoring-ux-transform-toolbar` @ `7d7ebe2`). This line carries both the canvas camera-invariance work and the base branch’s Boolean E2E locator alignment; the live 5173 preview serves this worktree at the synchronized head. External QA folders, the stable repository and the unrelated worktrees are untouched.
+Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` (branch `fix/authoring-ux-camera-invariance`, base `fix/authoring-ux-transform-toolbar` @ `7d7ebe2`). This line carries both the canvas camera-invariance work and the base branch’s Boolean E2E locator alignment, and the live 5173 preview is served from this worktree. External QA folders, the stable repository and the unrelated worktrees are untouched.
 
 ---
 
@@ -114,8 +114,11 @@ inherited Boolean failures are closed on this line — 273 passed with no retrie
 `http://localhost:5173/` is served from this worktree by `vite --host --port 5173`
 (process command line resolves into
 `...\keyframe-character-studio-omp-camera-invariance\node_modules\.bin\..\vite\bin\vite.js`),
-the served head is `aef21de5aad06592884d7a54004383b2f6eeccb1` on branch
-`fix/authoring-ux-camera-invariance`, and the served camera module exports
+the served application source is the validated combined code head
+`aef21de5aad06592884d7a54004383b2f6eeccb1` on branch
+`fix/authoring-ux-camera-invariance` — the only commits above it on this line are
+handoff-bundle documentation, which changes no application source — and the served
+camera module exports
 `getStageCameraTransform` / `clientToCameraPoint`. During the full suite only
 `127.0.0.1:5188` (vite) and `127.0.0.1:5003` (API) were bound by test processes, and
 all of them resolved into this worktree; `127.0.0.1:5000` (API, unchanged PID
@@ -192,7 +195,8 @@ SHA `aef21de`) passes 2 and `qa:v6` passes 3; `tsc -b`, `oxlint`, `vitest` (138 
 are all clean.
 
 The live preview `http://localhost:5173/` is served from this worktree by
-`vite --host --port 5173` and serves head `aef21de` on branch
+`vite --host --port 5173` and serves the application source of the validated combined
+code head `aef21de` on branch
 `fix/authoring-ux-camera-invariance`; the API on `127.0.0.1:5000` (unchanged PID
 24896) still answers 200. The stable repository (`keyframe-character-studio`, `main`
 at `c46e698`), the runtime-parity worktree and the authoring-UX worktree were not
@@ -243,7 +247,7 @@ Measured camera drift: 0.00 px on two authored world points and the rendered nod
 Magnification: unchanged (0.6687 px/unit on the measured viewport), zoom label unchanged, serialized document byte-identical, undo depth unchanged
 Boolean locators: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; eleven assertions queried the old visible-text names, timed out and never dispatched the operation. f13fed0 aligns them with the exact accessible names, and the combined line closes all 11. No application source change.
 Combined validation: tsc -b, oxlint, vitest (138 files / 2095 tests), vite build, validate:ograf, focused Boolean E2E 20 passed, focused camera E2E 5 passed at 0.00 px drift, qa:release 2 passed (candidate SHA aef21de), qa:v6 3 passed, check, check-state-consistency (40 checks), npm audit --audit-level=low (0 vulnerabilities), git diff --check, full Chromium suite 273 passed / 0 failed / 0 flaky / 0 skipped with --retries=0
-Runtime: live preview localhost:5173 served from this worktree by `vite --host --port 5173` at head aef21de; API 127.0.0.1:5000 unchanged (PID 24896, returns 200); browser tests used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187)
+Runtime: live preview localhost:5173 served from this worktree by `vite --host --port 5173`, serving the application source of the validated combined code head aef21de (documentation-only commits sit above it); API 127.0.0.1:5000 unchanged (PID 24896, returns 200); browser tests used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187)
 Protected: the stable repository keyframe-character-studio (main at c46e698), the runtime-parity worktree, the authoring-UX worktree, .hermes/desktop-attachments/, origin/without-mask, release artefacts and OMP configuration
 Not merged to main: nothing was merged to main, tagged, rebased or force-pushed; no version bump, no dependency change, no duplicate pull request
 Validation authority: the combined head aef21de5aad06592884d7a54004383b2f6eeccb1 and the PR checks for pull request 5

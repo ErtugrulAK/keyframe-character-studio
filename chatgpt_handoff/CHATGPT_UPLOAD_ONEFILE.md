@@ -7,77 +7,90 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`. External QA folders are untouched.
 
 ---
-
 ## 1. OMP Final Response
 
-# KCS v1.1.0-rc.2 — PUBLIC PRERELEASE — 2026-10-08
+# KCS — Canvas camera invariance (authoring UX)
 
-## Latest approved release action
+## Latest action
 
-The existing `v1.1.0-rc.2` draft was **published as a public prerelease**. It is **RC.2 READY FOR USER QA** — this is NOT a stable release.
+`fix/authoring-ux-camera-invariance` at `df107b894d9e5490a767a169e5c43d2418550be4` fixes the reported defect where changing editor chrome panned and zoomed the authored world. It is stacked on `fix/authoring-ux-transform-toolbar` (`dea88ab`) and opened as stacked PR [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) for review and CI only; nothing was merged, rebased or force-pushed.
 
 | Field | Value |
 |---|---|
-| Tested code commit (candidate) | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Annotated release candidate | `v1.1.0-rc.2` — dereferences to exactly the tested commit (tag object unchanged) |
-| Release Smoke Gate | run `37752015020` — success, every step green |
-| GitHub release | `KCS v1.1.0-rc.2`, id `RE_kwDOTexJrc4YPnCt` |
-| State | `isDraft: false`, `isPrerelease: true`, `publishedAt: 2026-10-08T13:11:16Z` |
-| Public URL | https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2 |
-| Earlier candidate | `v1.1.0-rc.1` unchanged at `46d2a3e59e065816d972dcd56951803951b577f6`; its draft release untouched |
-| Package | private, metadata version `1.1.0-rc.1`; npm returns 404 |
+| Fix commit | `df107b894d9e5490a767a169e5c43d2418550be4` |
+| Branch | `fix/authoring-ux-camera-invariance` (base `fix/authoring-ux-transform-toolbar` @ `dea88ab`) |
+| Stacked PR | #5 — base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`, not merged |
+| CI | `CI Pipeline` run `38138294854` (pull_request) |
+| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` |
 
-Publication transitioned the **same** release object from draft to published; no tag was created or moved, no release was recreated or retargeted, nothing was marked latest-stable, and no stable release exists. The release notes were already complete, so they were not rewritten.
+## Root cause
 
-The candidate is the exact smoke-tested commit. The documentation tip is newer and docs-only — no source, test, workflow, package, lock or asset byte differs — so the candidate identity is unchanged and the docs tip is **not** itself smoke-tested.
+The edit SVG filled the stage and mapped its 600x480 viewBox with `preserveAspectRatio="xMidYMid meet"` (`StageCanvas.tsx`, base `dea88ab:757-760`), so the camera content was centred on the **stage box centre** and magnified by the layout fit `min(w/600, h/480)`; the pan/zoom CSS transform (`:767`) was applied about that moving centre, and `clientToSVGPoint` / `getCursorAnchoredViewport` (`viewportMath.ts:29`, `:151`) encoded the same assumption. Nothing owned the camera, so half of every panel-width change and every timeline-height change (which changes the fit) landed on the authored world.
 
-## What the smoke gate proved, and what it did not
+## Measured drift before the fix
 
-It proved the candidate installs cleanly from its own lockfile on a fresh Ubuntu runner, the OGraf fixture manifest validates offline against the vendored SHA-256-pinned closure, a KCS OGraf package materialized on the runner interoperates with Chromium, and the editor exports an OGraf ZIP through the UI.
+Real Chromium, isolated ports (UI 5188 / API 5003), stage `336,79 584x321`, 0.6687 px/unit:
 
-It is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line. This is a prerelease candidate, not a claim of full production certification.
+| Transition | world point A dx, dy | world point B dx, dy | px/unit |
+|---|---|---|---|
+| right sidebar open → closed | +180.00, 0.00 | +180.00, 0.00 | 0.6687 |
+| left sidebar open → closed | −168.00, 0.00 | −168.00, 0.00 | 0.6687 |
+| timeline 320 → 150 | −36.55, +66.73 | +42.64, +112.41 | 0.9733 |
+| timeline 490 → 560 | +60.00, −90.00 | −70.00, −165.00 | 0.1688 |
 
-## Next step — user QA
+## Measured drift after the fix
 
-Run the twelve-step manual QA checklist in `progress_156_rc2_prerelease_publish.md` against this prerelease: app opens, project basics, shape manipulation, text rendering, opacity keyframes, a bonded pair drag, one Motion Curves easing edit, one mask/matte case, an OGraf ZIP export, an OGraf re-import, the Playfair / Cinematic Title export path, and a clean stability pass.
+**0.00 px** on both world points and on the rendered node box for every transition: right sidebar close/open, left sidebar close/open, timeline collapse/expand/resize up/resize down, ten repeated toggle cycles per surface, and a panned camera across chrome changes. Magnification (0.6687 px/unit) and the zoom label are unchanged; the serialized document is byte-identical and the undo depth is unchanged. Explicit pan, zoom and `Reset View Position` still move the camera on purpose.
 
-Classify every finding as BLOCKER, MAJOR, MINOR or COSMETIC. **Any BLOCKER or MAJOR code defect means do not proceed to a stable release**, and any code change produces a new commit that invalidates this exact-SHA smoke result — a new Release Smoke Gate run is then required before any further candidate or stable decision.
+## Fix
 
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
+`src/utils/viewportMath.ts` now owns the camera: `StageCameraView` (a view centre in client pixels plus the px-per-unit scale it was anchored with), `getStageCameraTransform` (the rendered transform divides the layout fit back out, so magnification stays `zoom * baseScale`), `getCursorAnchoredCameraCenter` and `clientToCameraPoint`. `src/components/Canvas/StageCanvas.tsx` keeps the camera untouched for layout-only changes and folds a measured stage box in inside the same frame (`ResizeObserver` + `flushSync`); a change of the application window itself re-anchors the camera with its pan offset and a fresh scale, which is the fit behaviour a window resize always had. Initial centring, `Reset View Position`, the broadcast fit and its identity transform string are unchanged.
+
+## Tests and validation
+
+`e2e/camera-invariance.spec.ts` (new, 5 tests) proves the invariance, the unchanged document and the unchanged history in a real browser; `src/tests/viewportMath.test.ts` unit-tests the camera model and the stage-box invariance property; `e2e/left-toolbar-collapse.spec.ts` now measures its dock contract on the stage container.
+
+Local validation on the fix commit: `tsc -b`, `oxlint`, `vitest` (138 files / 2095 tests), `vite build`, `validate:ograf`, the focused camera spec (5 passed), `qa:release` (2 passed), `qa:v6` (3 passed), `check-state-consistency` (38 checks), `npm audit --audit-level=low`, `git diff --check`, and the full Chromium suite with `--retries=0` (262 passed / 11 failed).
+
+The 11 failures are inherited from the base commit `dea88ab`, which added `aria-label={\`Create ${operation} Boolean\`}` to the Boolean operation buttons while `e2e/boolean-text-operands.spec.ts` (9), `e2e/editor-interaction.spec.ts:164` and `e2e/v51-manual-qa.spec.ts:50` still query the accessible name `Union`/`Intersect` with `exact: true`. This branch touches no Boolean markup.
+
+## Boundaries
+
+The user's live QA preview (`keyframe-character-studio-omp-authoring-ux`, UI 5173 / API 5000) and the stable repository (`keyframe-character-studio`, `main` at `c46e698`) were never written to, restarted or killed, and were verified clean before and after the work. Every test used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187), and the vite/server process command lines were verified to come from this worktree. No merge, rebase, force push, tag, release, version bump or dependency change was performed.
 
 ---
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — v1.1.0-rc.2 Public Prerelease
+# KCS Minimal ChatGPT Upload Bundle — Canvas camera invariance
 
-Task-specific handoff for the 2026-10-08 rc.2 prerelease publication. This is not an archive.
+Task-specific handoff for the `fix/authoring-ux-camera-invariance` branch (2026-10-11). This is not an archive.
 
 ## Current truth
 
-The `v1.1.0-rc.2` release is now a **PUBLISHED PRERELEASE** (`isDraft: false`, `isPrerelease: true`, release id `RE_kwDOTexJrc4YPnCt`, `publishedAt` 2026-10-08T13:11:16Z, public at https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2). It is **RC.2 READY FOR USER QA** and is **not** a stable release.
+Editor chrome no longer moves the authored world. Opening or closing a sidebar, or resizing the timeline, used to pan and zoom the stage: the edit SVG filled the stage and mapped its 600x480 viewBox with `preserveAspectRatio="xMidYMid meet"`, so the camera content was centred on the stage box centre and magnified by that box's aspect fit, while the pan/zoom transform was applied about that moving centre. Measured drift before the fix was +180 px (inspector), −168 px (left dock), and up to 60 px × 90 px with a 4x magnification change when the timeline was resized.
 
-The candidate is the exact smoke-tested code commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (Release Smoke Gate run `37752015020`, success). Its annotated release dereferences to exactly that commit and the tag object was not recreated or moved. Publication transitioned the same release object from draft to published: no tag was created, no release was recreated or retargeted, and nothing was marked latest-stable.
+The camera is now its own authority (`StageCameraView` + `getStageCameraTransform` in `src/utils/viewportMath.ts`): a view centre in client pixels plus the px-per-unit scale it was anchored with, with the rendered transform dividing the layout fit back out. A `ResizeObserver` on the stage folds a measured box into the camera inside the same frame; a layout-only change leaves the camera untouched, while a change of the application window itself re-anchors it with its pan offset and a fresh scale. After the fix every transition measures 0.00 px drift on two authored world points and on the rendered node box, with the magnification and the zoom label unchanged.
 
-`v1.1.0-rc.1` is unchanged at `46d2a3e59e065816d972dcd56951803951b577f6` and its draft release is untouched. The package remains private at metadata version `1.1.0-rc.1` and npm returns 404 — no npm publication occurred.
+Branch `fix/authoring-ux-camera-invariance` at `df107b894d9e5490a767a169e5c43d2418550be4`, stacked on `fix/authoring-ux-transform-toolbar` (`dea88ab`). Stacked PR [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) is open for review and CI only and is not merged; `CI Pipeline` run `38138294854` covers it.
 
-The documentation tip is newer than the candidate and docs-only; it is **not** itself smoke-tested. The smoke gate is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line.
+The full local Chromium suite reports 262 passed / 11 failed with `--retries=0`, and all 11 failures are inherited from the base commit `dea88ab`: it added `aria-label={\`Create ${operation} Boolean\`}` to the Boolean operation buttons, while `e2e/boolean-text-operands.spec.ts` (9 tests), `e2e/editor-interaction.spec.ts:164` and `e2e/v51-manual-qa.spec.ts:50` still query the accessible name `Union`/`Intersect` with `exact: true`. This branch touches no Boolean markup.
 
 ## Next step
 
-The user QA pass: the twelve-step checklist in `progress_156_rc2_prerelease_publish.md`. Any BLOCKER or MAJOR code defect means do not proceed to a stable release, and any code change requires a new commit plus a fresh exact-SHA smoke run.
+Review the stacked PR (camera model, its unit tests, the new Chromium spec) and, once the base branch's Boolean accessible-name regression is resolved there, re-run the full Chromium suite on the combined line.
 
 ## Evidence and files
 
-- OMP_FINAL_RESPONSE.md: the published state, the candidate identity and the boundaries.
-- PROJECT_STATE.md and NEXT_SESSION.md: current state and the exact next step.
-- KCS_RELEASE_CANDIDATE_SUMMARY.md: the release boundary with the published rc.2 prerelease.
+- OMP_FINAL_RESPONSE.md: root cause, the measured before/after drift, the fix and the branch/PR/CI identity.
+- progress_159_authoring_ux_camera_invariance.md: the same record in report form, with the per-transition numbers and the full validation list.
+- manifest.txt: inventory, protected boundaries and the state lines.
 - CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
-- progress_156_rc2_prerelease_publish.md: pre-publish state, the publish action, post-publish verification and the user QA checklist.
-- progress_155_h7_rc2_release.md: the candidate cut, the metadata decision and the tested-code-SHA vs docs-tip distinction.
-- manifest.txt: inventory and protected boundaries.
+- NEXT_SESSION.md, PROJECT_STATE.md and KCS_RELEASE_CANDIDATE_SUMMARY.md: the repository's current live state, mirrored unchanged.
 
-The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. Earlier progress reports remain in `reports/` and are linked from the report indexes; they are not copied into this minimal bundle. Historical reports are not rewritten or deleted, and external workspaces and OMP configuration are untouched.
+The mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches and QA output are omitted. Earlier progress reports stay in `reports/` and are not copied into this minimal bundle.
+
+Boundaries: the user's live QA preview (`keyframe-character-studio-omp-authoring-ux`, UI 5173 / API 5000) and the stable repository (`keyframe-character-studio`, `main` at `c46e698`) were never written to, restarted or killed. Every test ran on the isolated UI 5188 / API 5003 pair.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder holds its sources.
 
@@ -85,23 +98,21 @@ Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder 
 
 ## 3. Bundle Manifest
 
-# KCS ChatGPT Upload Manifest — v1.1.0-rc.2 Public Prerelease
+# KCS ChatGPT Upload Manifest — Canvas camera invariance
 
-Scope: publishing the existing v1.1.0-rc.2 draft as a public prerelease, and the documentation that records the publication state
-TESTED CODE SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01
-Release candidate: annotated v1.1.0-rc.2, dereferences to 6c27ef35d48d61a5e1163d2c91734c864fcafa01 (tag object unchanged)
-GitHub release: KCS v1.1.0-rc.2, id RE_kwDOTexJrc4YPnCt, isDraft false, isPrerelease true, publishedAt 2026-10-08T13:11:16Z
-Public URL: https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2
-Release Smoke Gate: run 37752015020 (workflow_dispatch, conclusion success)
-Earlier candidate: v1.1.0-rc.1 unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; its draft release untouched
-Package: private, metadata version 1.1.0-rc.1; npm publication not performed (registry returns 404)
-Current docs tip: the documentation commit that records this publication — docs-only, newer than the candidate, NOT smoke-tested
-Not a stable release: no stable/final GitHub release exists; this is a prerelease for user QA
-Validation authority: the v1.1.0-rc.2 PUBLISHED PRERELEASE and H7 GO sections in PROJECT_STATE.md and NEXT_SESSION.md
-Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
-Historical records retained in reports/ only (not copied into this minimal bundle): progress_151, progress_152, progress_153, progress_154
+Scope: preserving the edit-stage camera across editor-chrome layout changes, and the tests and handoff that record it
+FIX CODE SHA: df107b894d9e5490a767a169e5c43d2418550be4
+Branch: fix/authoring-ux-camera-invariance, stacked on fix/authoring-ux-transform-toolbar (dea88ab)
+Stacked PR: 5 — base fix/authoring-ux-transform-toolbar, head fix/authoring-ux-camera-invariance, review and CI only, not merged
+CI: CI Pipeline run 38138294854 (pull_request, workflow ci.yml — validate:ograf, lint, tsc, vitest, build)
+Measured drift: 0.00 px on two authored world points and the rendered node box across sidebar toggles, timeline collapse/expand/resize and ten repeated toggle cycles
+Magnification: unchanged (0.6687 px/unit on the measured viewport), zoom label unchanged, serialized document byte-identical, undo depth unchanged
+Inherited failures: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; e2e/boolean-text-operands.spec.ts (9), e2e/editor-interaction.spec.ts:164 and e2e/v51-manual-qa.spec.ts:50 still query the accessible name `Union`/`Intersect` with exact: true, so the full Chromium suite reports 262 passed / 11 failed with --retries=0. Not caused by this branch, which touches no Boolean markup.
+Runtime: no server started for the user; tests used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187)
+Protected: the live QA preview keyframe-character-studio-omp-authoring-ux (UI 5173 / API 5000), the stable repository keyframe-character-studio (main at c46e698), the runtime-parity worktree, external QA folders, release artefacts and OMP configuration
+Validation authority: the fix commit df107b894d9e5490a767a169e5c43d2418550be4 and the PR checks for pull request 5
 
-Bundle source files (10):
+Bundle source files (9):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - KCS_RELEASE_CANDIDATE_SUMMARY.md
@@ -110,12 +121,10 @@ Bundle source files (10):
 - PROJECT_STATE.md
 - README.md
 - manifest.txt
-- progress_155_h7_rc2_release.md
-- progress_156_rc2_prerelease_publish.md
+- progress_159_authoring_ux_camera_invariance.md
 
-Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
-Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
-No empty contribution-filling commits or retrospective UI dates are authorized.
+Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches and QA output.
+Historical reports stay in reports/ and are not copied into this minimal bundle.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.
 
@@ -520,89 +529,78 @@ Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items c
 
 ---
 
-## 8. Trim Path Keyframe Authoring
+## 8. Authoring UX Camera Invariance
 
-# Progress 158 — Trim Path keyframe authoring
+# Progress 159 — Authoring UX: canvas camera invariance
 
-Date: 2026-10-09. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
+Date: 2026-10-11. Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` (branch `fix/authoring-ux-camera-invariance`).
 
-Trim Path authoring behaved like a global property edit: a keyed Start/End/Offset read as one shared value, and editing a later frame appeared to rewrite the earlier keyframe. Root-caused, fixed, and covered by regressions.
+Opening or closing a sidebar, or resizing the timeline, panned **and** zoomed the authored world. Root-caused to the stage camera having no authority of its own, fixed at the camera, and covered by a deterministic Chromium spec.
 
 ## Candidate identity
 
 | Field | Value |
 |---|---|
-| Fix commit | `b4e8e948675466135c3e56ae3d331cec0441ccb3` |
-| Branch | `fix/trim-path-keyframe-authoring`, fast-forward merged into `main`, kept |
-| Prior main | `231070c` |
+| Fix commit | `df107b894d9e5490a767a169e5c43d2418550be4` |
+| Branch | `fix/authoring-ux-camera-invariance`, stacked on `fix/authoring-ux-transform-toolbar` (`dea88ab`) |
+| Stacked PR | [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) — base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`, review/CI only, not merged |
+| CI | `CI Pipeline` run `38138294854` on the pull request (see the PR checks for the final conclusion) |
 
-## Reproduction and root cause
+## Reproduction and measured drift before the fix
 
-`TrimPathSection` was a purely static component:
+Playwright, real Chromium, isolated ports (`CI=1 PORT=5003` → UI 5188 / API 5003), Desktop Chrome 1280x720. Stage box `336,79 584x321`, magnification 0.6687 px/unit. Probes: the SVG screen CTM of two authored world points (the selected layer's centre and a second layer) plus the rendered node box.
 
-```tsx
-onChange={(value) => onPartPropChange('trimPathEnd', value)}   // writes CharacterPart.trimPathEnd
-value={selectedPart.trimPathEnd ?? 1}                          // displays the static field
-```
+| Transition | point A dx, dy | point B dx, dy | px/unit |
+|---|---|---|---|
+| right sidebar open → closed | +180.00, 0.00 | +180.00, 0.00 | 0.6687 |
+| right sidebar closed → open | 0.00, 0.00 | 0.00, 0.00 | 0.6687 |
+| left sidebar open → closed | −168.00, 0.00 | −168.00, 0.00 | 0.6687 |
+| left sidebar closed → open | 0.00, 0.00 | 0.00, 0.00 | 0.6687 |
+| timeline 320 → 150 (collapse to the minimum) | −36.55, +66.73 | +42.64, +112.41 | 0.9733 |
+| timeline 150 → 490 | +42.50, −63.75 | −49.58, −116.88 | 0.3146 |
+| timeline 490 → 560 (resize up) | +60.00, −90.00 | −70.00, −165.00 | 0.1688 |
+| timeline 560 → 380 (resize down) | +15.00, −22.50 | −17.50, −41.25 | 0.5437 |
 
-It had **no keyframe awareness at all** — no channel read, no channel write, no add/remove keyframe. So while a channel was keyed:
+## Root cause
 
-- the field displayed the static value at every frame, which is why the same number appeared on the earlier frame and the edit read as global;
-- the write landed on the static field, which `evaluateTrimPath` ignores once the channel has keyframes.
+`src/components/Canvas/StageCanvas.tsx` (`dea88ab:757-760` and `:767`) and `src/utils/viewportMath.ts` (`dea88ab:29`, `:151`):
 
-The evaluator and the export were **not** at fault: `evaluateTrimPath` already prefers keyframes and interpolates, and `evaluateFrame` already routes trim through it.
+- The edit SVG filled the stage (`width/height: 100%`) and mapped its 600x480 viewBox with `preserveAspectRatio="xMidYMid meet"`, so the camera content was centred on the **stage box centre** and magnified by the layout fit `min(w/600, h/480)`.
+- The pan/zoom CSS transform was applied about that moving centre, and the pure helpers (`clientToSVGPoint`, `getCursorAnchoredViewport`) encoded the same assumption.
+- Nothing owned the camera, so half of every panel-width change and every timeline-height change (which changes the fit) landed on the authored world.
 
 ## Fix
 
-Both halves now use authorities that already existed for every other scalar channel:
-
 | Concern | Authority |
 |---|---|
-| Display | `evaluateTrimPath(part, track, currentFrame, template)` — what the stage draws at this frame; static field only while unkeyed |
-| Write | `updateCurrentPropertyChannel(channel, value)` — static field while unkeyed, the current frame's keyframe once keyed |
-| Add/remove keyframe | `addPropertyKeyframe` / `deletePropertyKeyframe`, mirroring the opacity card |
+| Camera state | `StageCameraView` (`viewportMath.ts`): a view centre in client pixels plus the px-per-unit scale it was anchored with |
+| Rendering | `getStageCameraTransform` — the CSS translate is screen pixels and the scale divides the layout fit back out, so the rendered magnification stays `zoom * baseScale` |
+| Pointer mapping | `clientToCameraPoint` (fallback) and the SVG screen CTM (production path, unchanged) |
+| Wheel zoom | `getCursorAnchoredCameraCenter`, anchored from the camera state instead of the CSS matrix |
+| Layout folding | `StageCanvas` `ResizeObserver` + `flushSync`: a layout-only change leaves the camera untouched; a change of the application window itself re-anchors the camera with its pan offset and a fresh scale |
 
-Each of the three fields gained an Add/Remove keyframe control matching the opacity card's classes, `aria-pressed` and labels, capturing the evaluated value at the current frame. `TrimPathSection` keeps its previous behaviour when the new props are absent, so its standalone contract is unchanged.
+Preserved: initial-mount centring, `Reset View Position`, explicit pan/zoom, the broadcast fit and its identity transform string, and the edit-viewport memory across mode switches.
 
-## Authoring semantics now
+## Result
 
-- No keyframes → the edit changes the static field only.
-- Channel keyed → the edit updates the keyframe at the current frame, inserting one if the frame is empty; no other frame is touched.
-- The static field never overwrites a keyed value (the evaluator already preferred the channel; the display now agrees).
-- A same-frame keyframe in another sequence is left alone.
-- One edit is one history entry (the write goes through the existing channel mutator).
+After the fix, every transition in the table above measures **0.00 px** on both world points and on the rendered node box, with the magnification and the zoom label unchanged — including ten repeated toggle cycles per surface. The serialized document stays byte-identical and the undo depth (history) is unchanged across every transition.
 
-## Regression
+## Regression coverage
 
-`src/tests/trimPathAuthoring.test.tsx` — 11 cases: evaluated display, static fallback, channel write, keyframe toggle, `A=0 / B=100` (A stays 0), update-in-place, unkeyed static write, sequence isolation, midpoint interpolation, per-frame resolution, unkeyed fallback.
-
-**Sensitivity:** reverting the evaluated display and the channel write turns 2 cases red.
+- `e2e/camera-invariance.spec.ts` (new, 5 tests, real Chromium): right/left sidebar close and open, timeline collapse/expand/resize up/down, ten repeated cycles, explicit pan/zoom/reset, and a panned camera across chrome changes — each asserting ≤1 px drift, unchanged magnification/zoom, an unchanged document and an unchanged undo depth.
+- `src/tests/viewportMath.test.ts`: the camera model and the stage-box invariance property.
+- `e2e/left-toolbar-collapse.spec.ts`: the dock contract is measured on the stage container, because the stage SVG carries the camera transform by design.
 
 ## Validation
 
-`npx tsc -b --pretty false`, `npm run lint`, `npm test` (137 files / 2,092 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npx playwright test e2e/trim-path-v2.spec.ts --retries=0` (2 tests), `node scripts/check-state-consistency.mjs`, `npm audit --audit-level=low` (0 vulnerabilities) and `git diff --check` all pass.
+`npx tsc -b --pretty false`, `npm run lint`, `npm test` (138 files / 2095 tests), `npm run build`, `npm run validate:ograf`, the focused camera Chromium spec (5 passed), `npm run qa:release` (2 passed), `npm run qa:v6` (3 passed), `npm run check`, `node scripts/check-state-consistency.mjs` (38 checks), `npm audit --audit-level=low`, `git diff --check`, and the full Chromium suite with `--retries=0` on isolated ports (262 passed / 11 failed, see below).
 
-## Exact-SHA smoke
+The 11 full-suite failures are inherited from the base branch commit `dea88ab`, which added `aria-label={\`Create ${operation} Boolean\`}` to the Boolean operation buttons: `e2e/boolean-text-operands.spec.ts` (9 tests), `e2e/editor-interaction.spec.ts:164` and `e2e/v51-manual-qa.spec.ts:50` still query the accessible name `Union`/`Intersect` with `exact: true`, so those locators cannot match any more. This branch touches no Boolean markup; the regression belongs to the base branch.
 
-**Not run, and not required for this change.** The fix changes the Inspector's authoring path only: `evaluateTrimPath`, `evaluateFrame`, the static SVG renderer, the generated runtime and the package format are untouched, so exported/runtime OGraf behaviour is identical. The previous smoke still describes the export behaviour. Any later commit that changes export or runtime code needs its own exact-SHA smoke.
+## Boundaries
 
-## User retest
-
-1. Create a freeform/path layer with a visible stroke.
-2. Enable Trim Path.
-3. At frame 0: add an End keyframe, set End = 0.
-4. At frame 30: add an End keyframe, set End = 100.
-5. Return to frame 0: End must read **0** again (it used to read 100).
-6. Scrub 0 → 30: the stroke draws on progressively.
-7. Play: the animation reveals the path.
-8. Save and reload: both keyframes remain 0 and 100.
-9. Export an OGraf package and play it in the host: the same reveal.
-
-Optional second pass: Start 0 → 50, and Offset 0 → 180.
-
-## Release state
-
-Unchanged: `v1.1.0-rc.2` remains the published prerelease at `6c27ef35d48d61a5e1163d2c91734c864fcafa01`, npm still returns 404, and no tag, release or npm action was taken.
+- The user's live QA preview (`keyframe-character-studio-omp-authoring-ux`, UI 5173 / API 5000) and the stable repository (`keyframe-character-studio`, `main` at `c46e698`) were never written to, restarted or killed; both were clean before and after the work. Every test ran on the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187), and the vite/server process command lines were verified to come from this worktree.
+- No merge, rebase, force push, tag, release, version bump or dependency change.
 
 ---
 
@@ -664,6 +662,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The header's `?` (First export help) button and the **OGraf Single File (Legacy)** export entry. The export menu now offers exactly **JSON** and **OGraf Package**; the legacy single-file `.mjs` export is gone, so its fail-closed guard went with it, and the first-export guidance component is no longer reachable from the header.
 
 ### Fixed
+- Changing editor chrome no longer pans or zooms the authored world. The stage camera was never an authority: the edit SVG mapped its 600×480 viewBox into whatever box the stage happened to occupy (`preserveAspectRatio="xMidYMid meet"`) and the pan/zoom transform was expressed against that box's centre, so opening or closing a sidebar moved the world by half the panel width (+180 px for the inspector, −168 px for the left dock) and every timeline height change also rescaled it, because the aspect-fit factor is derived from the stage size (resizing the timeline from 320 px to 560 px took the magnification from 0.67 px/unit to 0.17 px/unit and slid a world point by up to 60 px × 90 px). The camera is now its own state — a view centre in client pixels plus the px-per-unit scale it was anchored with (`StageCameraView` and `getStageCameraTransform`) — and the rendered transform divides the layout fit back out, so a panel, a disclosure or a timeline drag only changes the visible crop: a world point keeps its screen position and magnification (measured drift 0.00 px across sidebar toggles, timeline collapse/expand/resize and ten repeated toggle cycles), while explicit pan, zoom, `Reset View Position`, the initial centring and the broadcast fit are untouched. A window resize still re-anchors the camera with its pan offset and re-derives the scale, which is the fit behaviour it always had.
 - Trim Path authoring is frame-specific again. The Inspector's Start/End/Offset fields wrote and displayed the layer's **static** field and never looked at the channel, so a keyed Trim Path read as a global edit: the same number appeared at every frame, and editing a later frame looked like it rewrote the earlier keyframe. The fields now show the value `evaluateTrimPath` resolves for the current frame and write through `updateCurrentPropertyChannel` — the existing authority that edits the static field while a channel is unkeyed and the current frame's keyframe once it is keyed, never another frame's. Each field also carries an Add/Remove keyframe control that mirrors the opacity card and captures the evaluated value, and a same-frame keyframe in another sequence is left alone.
 - A disabled Track Matte V2 relation no longer suppresses the layer's legacy matte in an export. The editor authority (`resolveMatteSource`) treats `trackMatte` as the *preferred* relationship and falls back to the legacy `matte` when the V2 record is disabled, but both export paths stopped at the disabled record and emitted no matte at all — so a layer with `trackMatte.enabled === false` plus a legacy alpha/luminance matte rendered the legacy matte in the editor and nothing in the exported graphic. The static SVG renderer and the generated runtime now follow the same fallback. The Inspector also says so: the legacy card states that an enabled Track Matte V2 relation is active and that its settings are not applied.
 - An OGraf export now paints in the editor's stacking order. The generated runtime walked the authored `scene.layers` array, but that array is NOT the paint order — the outliner keeps index 0 on top, `addCustomPart` prepends with `max + 1` and `reorderParts` assigns `zIndex = total - index` — so a host loading `graphic.mjs` drew the scene upside down and showed the background over the foreground. `stackingOrder` is now the one authority (ascending `zIndex` paints first, stable for a shared `zIndex`, never mutating the input) and the stage, the frame evaluator, the static SVG renderer and the generated runtime all use it. `evaluateFrame` already sorted, which is why only the runtime diverged.
@@ -755,3 +754,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Agent governance guidelines, project context specification, and domain-driven branch strategy (`.agents/`).
 
 ---
+

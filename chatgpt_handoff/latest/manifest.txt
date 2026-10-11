@@ -2,17 +2,19 @@
 
 Scope: the combined authoring-UX line — the canvas camera-invariance work stacked on the base branch's Boolean E2E locator alignment — and the tests and handoff that record it
 Branch: fix/authoring-ux-camera-invariance, base fix/authoring-ux-transform-toolbar (new base 7d7ebe2, old merge base dea88ab)
+Combined head: aef21de5aad06592884d7a54004383b2f6eeccb1
 Camera fix commits: df107b894d9e5490a767a169e5c43d2418550be4 (fix), 7ca126c and 3db69a5 (docs) on this branch
 Boolean E2E locator commits: f13fed0bed96280c10f3430595afd787d42d5aaa (test), 7d7ebe2 (docs) on the base branch
-Synchronization: merge commit of origin/fix/authoring-ux-transform-toolbar into this branch — the base advanced from dea88ab to 7d7ebe2 and history rewriting is disallowed, so a merge commit is the only non-history-rewriting option
+Synchronization: merge commit aef21de5aad06592884d7a54004383b2f6eeccb1 of origin/fix/authoring-ux-transform-toolbar into this branch — the base advanced from dea88ab to 7d7ebe2 and history rewriting is disallowed, so a merge commit is the only non-history-rewriting option
 Conflicts: handoff bundle only — chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md, chatgpt_handoff/latest/README.md, chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md and chatgpt_handoff/latest/manifest.txt — resolved by regenerating the bundle for the combined state; chatgpt_handoff/latest/progress_158_trim_path_keyframe_authoring.md auto-resolved (removed from the bundle, kept in reports/). No code or test file conflicted.
 Measured camera drift: 0.00 px on two authored world points and the rendered node box across sidebar toggles, timeline collapse/expand/resize and ten repeated toggle cycles
 Magnification: unchanged (0.6687 px/unit on the measured viewport), zoom label unchanged, serialized document byte-identical, undo depth unchanged
-Boolean locators: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; eleven assertions queried the old visible-text names, timed out and never dispatched the operation. f13fed0 aligns them with the exact accessible names — focused 20 passed, full Chromium 268 passed with --retries=0. No application source change.
-Runtime: no server started for the user; tests used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187)
-Protected: the user's live QA preview, the API on 127.0.0.1:5000, the stable repository keyframe-character-studio (main at c46e698), the runtime-parity worktree, external QA folders, release artefacts and OMP configuration
+Boolean locators: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; eleven assertions queried the old visible-text names, timed out and never dispatched the operation. f13fed0 aligns them with the exact accessible names, and the combined line closes all 11. No application source change.
+Combined validation: tsc -b, oxlint, vitest (138 files / 2095 tests), vite build, validate:ograf, focused Boolean E2E 20 passed, focused camera E2E 5 passed at 0.00 px drift, qa:release 2 passed (candidate SHA aef21de), qa:v6 3 passed, check, check-state-consistency (40 checks), npm audit --audit-level=low (0 vulnerabilities), git diff --check, full Chromium suite 273 passed / 0 failed / 0 flaky / 0 skipped with --retries=0
+Runtime: live preview localhost:5173 served from this worktree by `vite --host --port 5173` at head aef21de; API 127.0.0.1:5000 unchanged (PID 24896, returns 200); browser tests used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187)
+Protected: the stable repository keyframe-character-studio (main at c46e698), the runtime-parity worktree, the authoring-UX worktree, .hermes/desktop-attachments/, origin/without-mask, release artefacts and OMP configuration
 Not merged to main: nothing was merged to main, tagged, rebased or force-pushed; no version bump, no dependency change, no duplicate pull request
-Validation authority: the current combined head of fix/authoring-ux-camera-invariance and the PR checks for pull request 5
+Validation authority: the combined head aef21de5aad06592884d7a54004383b2f6eeccb1 and the PR checks for pull request 5
 
 Bundle source files (10):
 - CHANGELOG.md

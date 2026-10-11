@@ -1,73 +1,69 @@
-# KCS Minimal ChatGPT Upload Bundle — Authoring UX final slices
+# KCS Minimal ChatGPT Upload Bundle — Authoring UX stacked PR integration
 
-Task-specific handoff for the `fix/authoring-ux-final-slices` branch (2026-10-11), stacked on
-`fix/authoring-ux-corner-anchor`. This is not an archive.
+Task-specific handoff for integrating the completed Authoring UX stacked PR chain into `main`
+(2026-10-11). This is not an archive.
 
 ## Current truth
 
-This branch closes the authoring-UX line: the colour picker popover, the docked top authoring
-toolbar, the shared editor context menu, true layer grouping and the aggregate group selection
-frame, plus the validation, the same-model self-review, the stacked pull request and the
-cross-feature interaction suite that proves the new surfaces meet each other and the existing
-editor correctly.
+The completed Authoring UX stacked PR chain (PRs #4–#7) is integrated into `main` by four
+**fast-forward-only** merges, creating no merge commit and rewriting no history:
 
-Two interaction defects found by this task's own review were fixed on the branch:
+| PR | Branch | SHA before | SHA after | Merge |
+|---|---|---|---|---|
+| #4 | `fix/authoring-ux-transform-toolbar` | `c46e698` | `7d7ebe2` | Fast-forward |
+| #5 | `fix/authoring-ux-camera-invariance` | `7d7ebe2` | `55a4ab2` | Fast-forward |
+| #6 | `fix/authoring-ux-corner-anchor` | `55a4ab2` | `b453ba1` | Fast-forward |
+| #7 | `fix/authoring-ux-final-slices` | `b453ba1` | `a56ed01` | Fast-forward |
 
-1. a group's corner drag anchored on the container's own (geometryless) local bounds instead of
-   the aggregate box the frame draws — measured opposite-corner drift ~48 px and a scale that
-   crossed zero. `TransformGizmo` now hands the drag the box it drew (`overrideBounds`), with a
-   unit guard and a real-browser anchor assertion;
-2. three Phase 6.4 specs performed stage gestures at fixed coordinates that the 40 px docked
-   strip pushed onto the timeline panel; they now measure the gesture from the stage box, and
-   the freeform-inside-the-container case stages the freeform before the container exists
-   (the renderer consumes a mousedown that lands on a layer — pre-existing behaviour).
+PRs #4–#7 are MERGED and no branch was deleted. The integrated code tip is
+`a56ed017e1df804e255842ca81ef1108b9b48ebc` and `main` at or after `a56ed01`, matching
+`origin/main`.
 
-## Validation (isolated ports: `CI=1 PORT=5005` → UI 5188 / API 5005)
+## Validation (isolated `CI=1 PORT=5006` → UI 5188 / API 5006; release gate 5189, V6 QA 5187)
 
-oxlint clean, `tsc -b` clean, vitest **145 files / 2219 tests**, `vite build`, OGraf manifest
-validation, release gate **2 passed**, V6 QA **3 passed**, `npm audit --audit-level=low`
-**0 vulnerabilities**, `git diff --check` clean, `check-state-consistency` **pass (42 checks)**,
-and the full Chromium suite with `--retries=0`: **334 passed / 0 failed / 0 flaky / 0 skipped**,
-which includes the new 14-case `e2e/authoring-ux-interactions.spec.ts`.
+`tsc -b` clean, oxlint clean, vitest **145 files / 2,219 tests**, `vite build`, `validate:ograf`,
+`qa:release` **2 passed**, `qa:v6` **3 passed**, `npm run check`, `check-state-consistency`
+**pass (43 checks)**, `npm audit --audit-level=low` **0 vulnerabilities**, `git diff --check`
+clean, and the FULL Chromium suite with `--retries=0`: **334 passed / 0 failed / 0 flaky**.
 
-## Branch state
+## Exact-SHA release smoke (verification only)
 
-| Field | Value |
-|---|---|
-| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-authoring-ux-final` |
-| Branch | `fix/authoring-ux-final-slices` (base `fix/authoring-ux-corner-anchor` @ `b453ba1`) |
-| Validated head | `be645b1` (fix, test and collision-suite commits `ebe3892`, `e1af918`, `be645b1`) |
-| Docs commit | the handoff refresh on top of `be645b1` (documents only) |
-| Stacked PR | [#7](https://github.com/ErtugrulAK/keyframe-character-studio/pull/7) — base `fix/authoring-ux-corner-anchor`, `MERGEABLE`, review and CI only |
-| CI | `CI Pipeline` run `38162773244` — **success** on `be645b1` |
+`Release Smoke Gate` run `38166764216`, candidate SHA
+`a56ed017e1df804e255842ca81ef1108b9b48ebc`, **success** (2026-10-11T19:08:41Z → 19:09:24Z).
+No tag was created or moved, no release was published, and nothing was published to npm.
 
-## Preview and isolation
+## Live surfaces
 
-The live preview `http://localhost:5173/` was moved to this worktree **after** local
-validation, the self-review, the push and green CI: the corner-anchor worktree's vite
-(PID 34208) was stopped, nothing else was signalled, and `npx vite --host --port 5173` now
-serves this worktree (PID 34956, branch `fix/authoring-ux-final-slices`, served SHA `be645b1`).
-The API `127.0.0.1:5000` was never touched: it answers `200` at `/api/health` from the same
-process as before this task (PID 24896). The stable repository
-(`C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`, `main` @ `c46e698`) is clean and
-untouched, and every test ran on the isolated 5188 / 5005 pair.
+UI 5173 still serves the final UX worktree (`keyframe-character-studio-omp-authoring-ux-final`,
+branch `fix/authoring-ux-final-slices`), whose HEAD is `a56ed01` and clean — byte-identical to
+the integrated `main` tip, so 5173 remains a valid QA surface and was not restarted. API 5000
+(pid 24896) was never stopped, rebound or restarted.
+
+## PR #3 audit (read-only)
+
+`fix/ograf-runtime-parity-phase-a` (PR #3) stays OPEN and unmerged and is CONFLICTING against the
+new `main`; only the docs/handoff bookkeeping files conflict, while its application delta
+(`src/ograf/*`, `src/tests/ografRuntimeParity.test.ts`) is conflict-free. Recommendation:
+**(B) needs a controlled sync/replay.** No action was taken.
 
 ## Next step
 
-Review the stacked PR. The recommended integration order and the fresh exact-SHA release-smoke
-requirement are in `progress_161_authoring_ux_final_slices.md` §10; the group limitations that
-are deliberately not fixed here are in §11.
+Review the integration record and decide on a controlled sync/replay for PR #3. Any future stable
+or RC decision requires a new explicit user instruction and a new exact-SHA smoke on any later
+code change.
 
 ## Evidence and files
 
-- `progress_161_authoring_ux_final_slices.md` — the task record: identity, scope, phase results,
-  the colour / toolbar / menu contracts, the group decision and semantics, the interaction
-  coverage, the self-review findings, the validation counts, the preview state, the integration
-  audit, the limitations and the upload list.
+- `progress_162_authoring_ux_integration.md` — the task record: preflight, the four-merge
+  sequence with before/after SHAs and ff-only proof, the validation matrix, the smoke, the
+  5173/5000 state, the PR #3 audit and the constraints honoured.
+- `progress_161_authoring_ux_final_slices.md`, `progress_160_corner_anchor_resize.md`,
+  `progress_159_authoring_ux_camera_invariance.md`,
+  `progress_159_boolean_e2e_locator_alignment.md` — the integrated slices of the same line.
+- `PROJECT_STATE.md`, `NEXT_SESSION.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`,
+  `KCS_RELEASE_CANDIDATE_SUMMARY.md`, `CHANGELOG.md` — the live documents at this tip.
 - `manifest.txt` — the one-screen fact sheet.
 - `OMP_FINAL_RESPONSE.md` — the response this task produced.
-- `progress_160_corner_anchor_resize.md`, `progress_159_authoring_ux_camera_invariance.md`,
-  `progress_159_boolean_e2e_locator_alignment.md` — the earlier slices of the same line.
 
 ## Upload
 

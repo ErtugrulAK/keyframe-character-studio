@@ -1,97 +1,82 @@
-# KCS — Authoring UX final slices: validation, self-review, PR and preview switch
+# KCS — Authoring UX stacked PR integration: ff-only merge, full validation, exact-SHA smoke, docs and handoff
 
 ## Latest action
 
-The authoring-UX line is closed. Its final part validated the whole slice in the isolated
-harness, ran a same-model review of the entire diff from the previous base, fixed the two
-defects that review found, added a 14-case cross-feature interaction suite, pushed the branch
-and opened **one** stacked pull request (#7) for review and CI only, then moved the live
-`localhost:5173` preview onto this worktree. Nothing was merged, rebased, force-pushed, tagged
-or released; the API on `5000` and the stable repository were not touched.
+The completed Authoring UX stacked PR chain is integrated into `main`. The four pull requests
+were merged in order (#4 → #5 → #6 → #7) with **fast-forward-only** merges: each step fetched,
+re-verified `main` == `origin/main` on a clean tree, retargeted the PR base to `main` where
+needed, proved `git merge-base --is-ancestor main origin/<head>`, ran `git merge --ff-only`, ran
+its bounded gate, and pushed. No merge commit was created, no history was rewritten, and no
+branch was deleted. The integrated `main` was then fully validated, a fresh verification-only
+exact-SHA release smoke passed on the integrated tip, the live docs and the handoff bundle were
+reconciled, and the separate runtime-parity PR #3 was audited read-only. Nothing was tagged,
+released or published to npm.
 
 | Field | Value |
 |---|---|
-| Branch | `fix/authoring-ux-final-slices` (stacked on `fix/authoring-ux-corner-anchor` @ `b453ba1`) |
-| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-authoring-ux-final` |
-| Validated head | `be645b1` (commits `ebe3892` fix, `e1af918` test, `be645b1` test) |
-| Docs commit | the handoff refresh on top of `be645b1` (documents only) |
-| Stacked PR | [#7](https://github.com/ErtugrulAK/keyframe-character-studio/pull/7) — base `fix/authoring-ux-corner-anchor`, `MERGEABLE`, review and CI only, not merged |
-| PR CI | `CI Pipeline` run `38162773244` — **success** on `be645b1` |
-| Live preview | `http://localhost:5173/` — this worktree (PID 34956), branch `fix/authoring-ux-final-slices`, served SHA `be645b1`; the corner worktree's vite (PID 34208) was the only process stopped |
-| API | `127.0.0.1:5000` — unchanged, healthy (200 at `/api/health`, PID 24896) |
+| Repository | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (branch `main`) |
+| Pre-integration `main` | `c46e698bb8cfe82d8d75886281f602c9c89c1020` |
+| Integrated code tip | `a56ed017e1df804e255842ca81ef1108b9b48ebc` |
+| PRs merged | #4 `7d7ebe2`, #5 `55a4ab2`, #6 `b453ba1`, #7 `a56ed01` — all fast-forward |
+| Release smoke | run `38166764216`, SHA `a56ed017e1df804e255842ca81ef1108b9b48ebc`, **success** |
+| Live preview | `http://localhost:5173/` — final UX worktree, HEAD `a56ed01` (byte-identical to `main`), not restarted |
+| API | `127.0.0.1:5000` — unchanged (PID 24896) |
 
-## What the slice adds
+## Integration sequence (fast-forward only)
 
-- **Colour** — one swatch per paint opening one floating popover (saturation/value area, hue,
-  alpha, RGBA, hex). It owns display state only: every authored value travels through the
-  caller's existing colour/alpha write path, and one completed pointer gesture is one history
-  entry. Escape closes it and restores focus; an outside press never steals focus from the
-  control the user pressed.
-- **Toolbar** — a fixed 40 px docked strip for the canvas tools, the grid, camera zoom/reset on
-  the established `canvas-viewport-command` channel, the shared paint swatches, and the group
-  and Boolean actions. View-only controls cannot write the document, and mounting, unmounting
-  or repopulating the strip never moves the authored world (<= 1 px measured).
-- **Menu** — the single right-click menu of the editor, shared by the stage and the outliner and
-  openable from the keyboard. Every item runs an authority that already exists, so no action
-  bypasses history; items are built from the live selection, the target is selected (or kept)
-  before opening, a multi-selection survives, the native menu is suppressed, the panel stays in
-  the viewport, and Escape / Tab / an outside press close it with focus restored.
-- **Groups** — a group is a real container layer whose children point at it through the existing
-  `parentId` relationship, so evaluation, save/load and OGraf export are unchanged. Group and
-  ungroup re-express each child exactly (constant children exactly; animated children by an
-  affine per-channel map while the composed container rotation is 0), each as one batch
-  interaction and one history entry. Duplicating a group copies the whole group with fresh ids
-  and re-parents every clone; deleting a group deletes the layers it owns.
-- **Frame** — one aggregate selection frame per group, drawn from the live evaluated bounds of
-  the layers inside it, decorative only (`pointer-events: none`, no hitbox).
+| PR | Branch | SHA before | SHA after | Merge |
+|---|---|---|---|---|
+| #4 | `fix/authoring-ux-transform-toolbar` | `c46e698` | `7d7ebe2` | Fast-forward |
+| #5 | `fix/authoring-ux-camera-invariance` | `7d7ebe2` | `55a4ab2` | Fast-forward |
+| #6 | `fix/authoring-ux-corner-anchor` | `55a4ab2` | `b453ba1` | Fast-forward |
+| #7 | `fix/authoring-ux-final-slices` | `b453ba1` | `a56ed01` | Fast-forward |
 
-## Validation (isolated `CI=1 PORT=5005` → UI 5188 / API 5005)
+Every step printed `Updating <before>..<after>` + `Fast-forward`, and `git log --merges
+<before>..HEAD` was empty after each merge. PR #5's branch already contained one merge commit
+(`aef21de`) from its own history; the ff-only merge preserved it verbatim and this integration
+created zero commits. The PRs are MERGED (#4 18:59:10Z, #5 19:00:26Z, #6 19:01:37Z, #7
+19:02:39Z) and every branch is kept.
 
-oxlint clean, `tsc -b` clean, vitest **145 files / 2219 tests**, `vite build`, OGraf manifest
-validation, `qa:release` **2 passed**, `qa:v6` **3 passed**, `check-state-consistency` **pass
-(42 checks)**, `npm audit --audit-level=low` **0 vulnerabilities**, `git diff --check` clean, and
-the **full Chromium suite with `--retries=0`: 334 passed / 0 failed / 0 flaky / 0 skipped**,
-including the new 14-case `e2e/authoring-ux-interactions.spec.ts`. No assertion, threshold,
-skip or retry was weakened; `playwright.config.ts` was not edited.
+## Validation on the integrated `main`
 
-## Self-review outcome (whole diff from `b453ba1`)
+`tsc -b` clean, oxlint clean, vitest **145 files / 2,219 tests**, `vite build`, `validate:ograf`,
+the focused E2E batch **75 passed**, `qa:release` **2 passed**, `qa:v6` **3 passed**,
+`npm run check`, `check-state-consistency` **pass (43 checks)**, `npm audit --audit-level=low`
+**0 vulnerabilities**, `git diff --check` clean, and the FULL Chromium suite with `--retries=0`:
+**334 passed / 0 failed / 0 flaky**. All E2E ran isolated (`CI=1 PORT=5006` → UI 5188 / API 5006;
+release gate 5189, V6 QA 5187).
 
-Two concrete findings were fixed: the group corner drag anchored on the container's own
-(geometryless) bounds instead of the aggregate box the frame draws (measured ~48 px of
-opposite-corner drift and a scale that crossed zero), and three Phase 6.4 specs measured stage
-gestures at fixed coordinates that the docked 40 px strip pushed onto the timeline. Both fixes
-are committed with a unit guard and real-browser assertions, and the affected suites were
-re-run (plus the full Chromium suite after the product fix).
+## Exact-SHA release smoke
 
-Everything else the review examined — shortcut leakage, focus traps, duplicate state
-authorities, schema/runtime/export changes, colour alpha loss, group world/local transforms,
-parent/group cycles, orphaning, selection hitboxes, camera drift, resize regression,
-keyframe/sequence write leakage, save/load parity, a11y labels, reduced motion, viewport
-overflow, z-index conflicts and stray artefacts — is recorded in
-`progress_161_authoring_ux_final_slices.md` §7 with the outcome. Two pre-existing behaviours
-that this branch did not introduce are reported rather than changed: the frame handles stay
-interactive under the Pan tool (`startScale`/`startRotate` check only `appMode` and the
-button), and a mousedown that lands on a layer belongs to that layer for every tool.
+The checked-in `Release Smoke Gate` workflow was dispatched with
+`candidate_sha=a56ed017e1df804e255842ca81ef1108b9b48ebc`. Run `38166764216` completed **success**
+(2026-10-11T19:08:41Z → 19:09:24Z): the checkout resolved to that SHA, the expected-SHA
+assertion passed, `npm ci` and the Chromium setup passed, and the OGraf fixture validation plus
+`qa:release` passed. No tag was created or moved, no release was published, and npm was not
+published.
 
-## Integration readiness (audit only)
+## Live surfaces
 
-`#4` (`main` ← `fix/authoring-ux-transform-toolbar`) → `#5` → `#6` → `#7` is a contiguous
-stack: each base branch's tip is exactly the previous PR's head, so retargeting after each
-merge is a base-pointer fast-forward that cannot drop a commit. All four are `MERGEABLE` /
-`CLEAN` with green current-head CI. Runtime-parity **#3** was audited separately and is not
-part of this stack. Four branches carry a docs-only tip (`#3`, `#4`, `#5`, `#6`), so the
-validated *application* heads are `e5a2b8a`, `f13fed0`, `73dccbb` and `04dc182` respectively,
-not the tips. After real integration to `main`, any RC or stable decision needs a **fresh
-exact-SHA release smoke on the new `main` SHA**.
+UI 5173 still serves the final UX worktree (`keyframe-character-studio-omp-authoring-ux-final`,
+branch `fix/authoring-ux-final-slices`); its HEAD is `a56ed01` and its tree is clean, so it is
+byte-identical to the integrated `main` tip and remains a valid QA surface — it was not
+restarted. API 5000 (PID 24896) was never stopped, rebound or restarted.
 
-## Known group limitations (deliberately not fixed here)
+## PR #3 read-only audit
 
-Ungroup refuses while the group itself is keyframed; ungroup refuses a rotated group whose
-children carry keyframed transforms (static children and translation/scale-only groups are
-exact); grouping animated layers inside a rotated parent is refused; grouping refuses Boolean
-operands and layers using a stage anchor preset; no canvas body-drag surface was added for a
-selected group. Bind/Bond semantics were not changed or aliased.
+`fix/ograf-runtime-parity-phase-a` (PR #3, head `f53398f`, base `main` @ `c46e698`): OPEN,
+unmerged, merge-base `c46e698`, now **CONFLICTING / DIRTY** against the new `main`. A read-only
+`git merge-tree --write-tree` reports conflicts in exactly six docs/handoff bookkeeping files
+(`chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`, `chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md`,
+`chatgpt_handoff/latest/README.md`, `chatgpt_handoff/latest/manifest.txt`,
+`docs/README_INDEX.md`, `reports/README.md`); its application delta (`src/ograf/*`,
+`src/tests/ografRuntimeParity.test.ts`) is conflict-free, and its validated application head
+`3f41400` differs from its docs tip `f53398f` (two docs-only commits). CI passed on the head.
+**Recommendation: (B) needs a controlled sync/replay.** No action was taken.
 
-## Upload
+## Constraints honoured
 
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
+No rebase, force push, `reset --hard`, `git clean`, branch delete/rename, tag change, GitHub
+release, npm publish or deploy occurred; no package, dependency or workflow change was made;
+`origin/without-mask`, `C:\Users\ertugrul.ak\Desktop\KCS`,
+`C:\Users\ertugrul.ak\Desktop\ograf-graphics` and the runtime-parity worktree were not touched.

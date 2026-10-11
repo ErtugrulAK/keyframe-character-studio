@@ -1,18 +1,20 @@
-# KCS ChatGPT Upload Manifest — Canvas camera invariance
+# KCS ChatGPT Upload Manifest — Combined authoring-UX line (camera invariance + Boolean E2E locators)
 
-Scope: preserving the edit-stage camera across editor-chrome layout changes, and the tests and handoff that record it
-FIX CODE SHA: df107b894d9e5490a767a169e5c43d2418550be4
-Branch: fix/authoring-ux-camera-invariance, stacked on fix/authoring-ux-transform-toolbar (dea88ab)
-Stacked PR: 5 — base fix/authoring-ux-transform-toolbar, head fix/authoring-ux-camera-invariance, review and CI only, not merged
-CI: CI Pipeline run 38138487966 (success, documentation tip 7ca126c); run 38138294854 failed because the fix commit updated CHANGELOG.md without re-copying the bundle mirror
-Measured drift: 0.00 px on two authored world points and the rendered node box across sidebar toggles, timeline collapse/expand/resize and ten repeated toggle cycles
+Scope: the combined authoring-UX line — the canvas camera-invariance work stacked on the base branch's Boolean E2E locator alignment — and the tests and handoff that record it
+Branch: fix/authoring-ux-camera-invariance, base fix/authoring-ux-transform-toolbar (new base 7d7ebe2, old merge base dea88ab)
+Camera fix commits: df107b894d9e5490a767a169e5c43d2418550be4 (fix), 7ca126c and 3db69a5 (docs) on this branch
+Boolean E2E locator commits: f13fed0bed96280c10f3430595afd787d42d5aaa (test), 7d7ebe2 (docs) on the base branch
+Synchronization: merge commit of origin/fix/authoring-ux-transform-toolbar into this branch — the base advanced from dea88ab to 7d7ebe2 and history rewriting is disallowed, so a merge commit is the only non-history-rewriting option
+Conflicts: handoff bundle only — chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md, chatgpt_handoff/latest/README.md, chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md and chatgpt_handoff/latest/manifest.txt — resolved by regenerating the bundle for the combined state; chatgpt_handoff/latest/progress_158_trim_path_keyframe_authoring.md auto-resolved (removed from the bundle, kept in reports/). No code or test file conflicted.
+Measured camera drift: 0.00 px on two authored world points and the rendered node box across sidebar toggles, timeline collapse/expand/resize and ten repeated toggle cycles
 Magnification: unchanged (0.6687 px/unit on the measured viewport), zoom label unchanged, serialized document byte-identical, undo depth unchanged
-Inherited failures: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; e2e/boolean-text-operands.spec.ts (9), e2e/editor-interaction.spec.ts:164 and e2e/v51-manual-qa.spec.ts:50 still query the accessible name `Union`/`Intersect` with exact: true, so the full Chromium suite reports 262 passed / 11 failed with --retries=0. Not caused by this branch, which touches no Boolean markup.
+Boolean locators: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; eleven assertions queried the old visible-text names, timed out and never dispatched the operation. f13fed0 aligns them with the exact accessible names — focused 20 passed, full Chromium 268 passed with --retries=0. No application source change.
 Runtime: no server started for the user; tests used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187)
-Protected: the live QA preview keyframe-character-studio-omp-authoring-ux (UI 5173 / API 5000), the stable repository keyframe-character-studio (main at c46e698), the runtime-parity worktree, external QA folders, release artefacts and OMP configuration
-Validation authority: the fix commit df107b894d9e5490a767a169e5c43d2418550be4 and the PR checks for pull request 5
+Protected: the user's live QA preview, the API on 127.0.0.1:5000, the stable repository keyframe-character-studio (main at c46e698), the runtime-parity worktree, external QA folders, release artefacts and OMP configuration
+Not merged to main: nothing was merged to main, tagged, rebased or force-pushed; no version bump, no dependency change, no duplicate pull request
+Validation authority: the current combined head of fix/authoring-ux-camera-invariance and the PR checks for pull request 5
 
-Bundle source files (9):
+Bundle source files (10):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - KCS_RELEASE_CANDIDATE_SUMMARY.md
@@ -22,8 +24,10 @@ Bundle source files (9):
 - README.md
 - manifest.txt
 - progress_159_authoring_ux_camera_invariance.md
+- progress_159_boolean_e2e_locator_alignment.md
 
-Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches and QA output.
-Historical reports stay in reports/ and are not copied into this minimal bundle.
+Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
+Protected: the stable repository C:\Users\ertugrul.ak\Desktop\keyframe-character-studio, the unrelated worktrees, .hermes/desktop-attachments/, origin/without-mask, release artefacts, and OMP configuration.
+No empty contribution-filling commits or retrospective UI dates are authorized.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.

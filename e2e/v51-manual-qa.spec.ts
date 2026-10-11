@@ -51,7 +51,8 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await seed(page, [layer('a', 'Operand A', 'custom_rect', -40), layer('b', 'Operand B', 'custom_circle', 40)]);
     await page.locator('.actor-node', { hasText: 'Operand A' }).click();
     await page.locator('.actor-node', { hasText: 'Operand B' }).click({ modifiers: ['Control'] });
-    await page.getByRole('button', { name: 'Union', exact: true }).click();
+    // The Boolean buttons expose `Create <operation> Boolean` as their accessible name.
+    await page.getByRole('button', { name: 'Create union Boolean', exact: true }).click();
     await expect(page.getByText('BOOLEAN', { exact: true })).toBeVisible();
     await expect(page.locator('[data-testid="freeform-vertex-marker"]')).toHaveCount(0);
     await expect(page.locator('.nested-node.actor-node', { hasText: 'Operand A' })).toBeVisible();

@@ -4,115 +4,202 @@
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
-Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`. External QA folders are untouched.
+Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` (branch `fix/authoring-ux-camera-invariance`, base `fix/authoring-ux-transform-toolbar` @ `7d7ebe2`). This line carries both the canvas camera-invariance work and the base branch’s Boolean E2E locator alignment, and the live 5173 preview serves this worktree. External QA folders, the stable repository and the unrelated worktrees are untouched.
 
 ---
+
 ## 1. OMP Final Response
 
-# KCS — Canvas camera invariance (authoring UX)
+# KCS — Authoring UX: Boolean E2E locators + canvas camera invariance (combined line)
 
 ## Latest action
 
-`fix/authoring-ux-camera-invariance` at `df107b894d9e5490a767a169e5c43d2418550be4` fixes the reported defect where changing editor chrome panned and zoomed the authored world. It is stacked on `fix/authoring-ux-transform-toolbar` (`dea88ab`) and opened as stacked PR [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) for review and CI only; nothing was merged, rebased or force-pushed.
+The camera-invariance branch `fix/authoring-ux-camera-invariance` now carries the
+current authoring-UX base as well. The base branch
+`fix/authoring-ux-transform-toolbar` advanced from `dea88ab` to `7d7ebe2` (Boolean
+E2E locator alignment) after this camera branch was cut, and rewriting history is
+disallowed on this line, so the advanced base was folded in with a **merge
+commit** — the only non-history-rewriting way to synchronize. Conflicts were
+expected only in the ChatGPT handoff bundle; they were resolved by regenerating
+the bundle for the combined state. No code or test file conflicted.
 
 | Field | Value |
 |---|---|
-| Fix commit | `df107b894d9e5490a767a169e5c43d2418550be4` |
-| Branch | `fix/authoring-ux-camera-invariance` (base `fix/authoring-ux-transform-toolbar` @ `dea88ab`) |
-| Stacked PR | #5 — base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`, not merged |
-| CI | `CI Pipeline` run `38138487966` (pull_request) — success, on the documentation tip `7ca126c`; the earlier run `38138294854` failed because the fix commit updated `CHANGELOG.md` without re-copying the bundle mirror, which the documentation commit repaired |
+| Branch | `fix/authoring-ux-camera-invariance` |
+| Old merge base | `dea88ab` (`feat: improve authoring controls and selection visibility`) |
+| New UX base | `fix/authoring-ux-transform-toolbar` @ `7d7ebe2` |
+| Camera fix commits | `df107b8` (fix), `7ca126c`, `3db69a5` (docs) |
+| Boolean E2E locator commits | `f13fed0` (test), `7d7ebe2` (docs) on the base branch |
+| Synchronization | merge commit of `origin/fix/authoring-ux-transform-toolbar` into this branch; no rebase, no force-push |
+| Conflicts | handoff bundle only: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`, `chatgpt_handoff/latest/README.md`, `chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md`, `chatgpt_handoff/latest/manifest.txt` — resolved by regenerating the bundle; `chatgpt_handoff/latest/progress_158_trim_path_keyframe_authoring.md` auto-resolved (removed from the bundle on this branch, kept in `reports/`) |
+| Stacked PR | [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) — base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`, review and CI only, NOT merged |
 | Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` |
 
-## Root cause
+## Slice 1 — canvas camera invariance (this branch)
 
-The edit SVG filled the stage and mapped its 600x480 viewBox with `preserveAspectRatio="xMidYMid meet"` (`StageCanvas.tsx`, base `dea88ab:757-760`), so the camera content was centred on the **stage box centre** and magnified by the layout fit `min(w/600, h/480)`; the pan/zoom CSS transform (`:767`) was applied about that moving centre, and `clientToSVGPoint` / `getCursorAnchoredViewport` (`viewportMath.ts:29`, `:151`) encoded the same assumption. Nothing owned the camera, so half of every panel-width change and every timeline-height change (which changes the fit) landed on the authored world.
+Editor chrome changing size (opening/closing a sidebar, resizing the timeline) used
+to pan **and** zoom the authored world. Root cause: the edit SVG filled the stage
+and mapped its 600x480 viewBox with `preserveAspectRatio="xMidYMid meet"`, so the
+camera content was centred on the stage box centre and magnified by the layout fit
+`min(w/600, h/480)`, while the pan/zoom transform was applied about that moving
+centre (`StageCanvas.tsx` `dea88ab:757-760`, `:767`; `viewportMath.ts` `dea88ab:29`,
+`:151`). Nothing owned the camera, so half of every panel-width change and every
+timeline-height change landed on the authored world.
 
-## Measured drift before the fix
+The camera is now its own authority: `StageCameraView` (a view centre in client
+pixels plus the px-per-unit scale it was anchored with) and
+`getStageCameraTransform` in `src/utils/viewportMath.ts`, with
+`getCursorAnchoredCameraCenter` / `clientToCameraPoint` for wheel zoom and pointer
+mapping. `StageCanvas` folds a measured stage box into the camera inside the same
+frame (`ResizeObserver` + `flushSync`); a layout-only change leaves the camera
+untouched, while a change of the application window itself re-anchors the camera
+with its pan offset and a fresh scale.
 
-Real Chromium, isolated ports (UI 5188 / API 5003), stage `336,79 584x321`, 0.6687 px/unit:
+Measured drift before the fix (real Chromium, isolated ports, stage `336,79
+584x321`, 0.6687 px/unit): +180.00 px on both world points for the right sidebar
+open → closed, −168.00 px for the left sidebar open → closed, and up to
+(−36.55, +66.73) / (+42.64, +112.41) when the timeline collapsed. After the fix
+every transition — sidebar close/open, timeline collapse/expand/resize up/resize
+down, ten repeated cycles per surface, and a panned camera across chrome changes —
+measures **0.00 px** on both authored world points and on the rendered node box,
+with the magnification (0.6687 px/unit) and the zoom label unchanged, the
+serialized document byte-identical and the undo depth unchanged.
 
-| Transition | world point A dx, dy | world point B dx, dy | px/unit |
-|---|---|---|---|
-| right sidebar open → closed | +180.00, 0.00 | +180.00, 0.00 | 0.6687 |
-| left sidebar open → closed | −168.00, 0.00 | −168.00, 0.00 | 0.6687 |
-| timeline 320 → 150 | −36.55, +66.73 | +42.64, +112.41 | 0.9733 |
-| timeline 490 → 560 | +60.00, −90.00 | −70.00, −165.00 | 0.1688 |
+## Slice 2 — Boolean E2E locator alignment (base branch, now in this line)
 
-## Measured drift after the fix
+`dea88ab` gave the four Boolean buttons `aria-label={`Create ${operation} Boolean`}`
+while adding their icons. An `aria-label` overrides the visible caption as the
+accessible name, so the old names (`Union`, `Subtract`, `Intersect`, `Exclude`) no
+longer matched `getByRole('button', { name, exact: true })`. Eleven assertions —
+9 in `e2e/boolean-text-operands.spec.ts`, 1 in `e2e/editor-interaction.spec.ts` and
+1 in `e2e/v51-manual-qa.spec.ts` — still queried the old names, so the locator
+never resolved, the click timed out, and no Boolean operation was dispatched; the
+full Chromium suite reported 11 failures. `f13fed0` aligns those locators with the
+exact new accessible names through one shared helper (`Create <operation> Boolean`,
+`exact: true`, no regex or text fallback, no accessibility assertion removed) and
+closed all 11: the focused run went from 11 failed / 9 passed to 20 passed, and the
+full Chromium suite reached 268 passed with `--retries=0`. It changes no
+application source (`git diff dea88ab -- src/` is empty).
 
-**0.00 px** on both world points and on the rendered node box for every transition: right sidebar close/open, left sidebar close/open, timeline collapse/expand/resize up/resize down, ten repeated toggle cycles per surface, and a panned camera across chrome changes. Magnification (0.6687 px/unit) and the zoom label are unchanged; the serialized document is byte-identical and the undo depth is unchanged. Explicit pan, zoom and `Reset View Position` still move the camera on purpose.
+## Combined validation
 
-## Fix
-
-`src/utils/viewportMath.ts` now owns the camera: `StageCameraView` (a view centre in client pixels plus the px-per-unit scale it was anchored with), `getStageCameraTransform` (the rendered transform divides the layout fit back out, so magnification stays `zoom * baseScale`), `getCursorAnchoredCameraCenter` and `clientToCameraPoint`. `src/components/Canvas/StageCanvas.tsx` keeps the camera untouched for layout-only changes and folds a measured stage box in inside the same frame (`ResizeObserver` + `flushSync`); a change of the application window itself re-anchors the camera with its pan offset and a fresh scale, which is the fit behaviour a window resize always had. Initial centring, `Reset View Position`, the broadcast fit and its identity transform string are unchanged.
-
-## Tests and validation
-
-`e2e/camera-invariance.spec.ts` (new, 5 tests) proves the invariance, the unchanged document and the unchanged history in a real browser; `src/tests/viewportMath.test.ts` unit-tests the camera model and the stage-box invariance property; `e2e/left-toolbar-collapse.spec.ts` now measures its dock contract on the stage container.
-
-Local validation on the fix commit: `tsc -b`, `oxlint`, `vitest` (138 files / 2095 tests), `vite build`, `validate:ograf`, the focused camera spec (5 passed), `qa:release` (2 passed), `qa:v6` (3 passed), `check-state-consistency` (38 checks), `npm audit --audit-level=low`, `git diff --check`, and the full Chromium suite with `--retries=0` (262 passed / 11 failed).
-
-The 11 failures are inherited from the base commit `dea88ab`, which added `aria-label={\`Create ${operation} Boolean\`}` to the Boolean operation buttons while `e2e/boolean-text-operands.spec.ts` (9), `e2e/editor-interaction.spec.ts:164` and `e2e/v51-manual-qa.spec.ts:50` still query the accessible name `Union`/`Intersect` with `exact: true`. This branch touches no Boolean markup.
+The merge brings both slices together, so the full `--retries=0` Chromium suite,
+the camera Chromium spec, the camera unit tests, the focused Boolean specs and the
+repository gates were re-run on the merged tree on the isolated ports. The combined
+head SHA, the exact counts, the camera drift numbers and the PR #5 CI run are
+recorded in the refreshed bundle that follows this merge commit.
 
 ## Boundaries
 
-The user's live QA preview (`keyframe-character-studio-omp-authoring-ux`, UI 5173 / API 5000) and the stable repository (`keyframe-character-studio`, `main` at `c46e698`) were never written to, restarted or killed, and were verified clean before and after the work. Every test used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187), and the vite/server process command lines were verified to come from this worktree. No merge, rebase, force push, tag, release, version bump or dependency change was performed.
+The user's live QA preview, the API on `127.0.0.1:5000`, the stable repository
+`keyframe-character-studio` (`main` at `c46e698`) and the unrelated worktrees were
+never written to, restarted or killed by this work. Every test used the isolated UI
+5188 / API 5003 pair (release gate 5189, V6 QA 5187), and the vite/server process
+command lines were verified to come from this worktree. No merge to `main`, no
+rebase, no force push, no tag, no release, no version bump and no dependency change
+was performed.
 
 ---
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Canvas camera invariance
+# KCS Minimal ChatGPT Upload Bundle — Combined authoring-UX line
 
-Task-specific handoff for the `fix/authoring-ux-camera-invariance` branch (2026-10-11). This is not an archive.
+Task-specific handoff for the `fix/authoring-ux-camera-invariance` branch
+(2026-10-11), now carrying the current authoring-UX base. This is not an archive.
 
 ## Current truth
 
-Editor chrome no longer moves the authored world. Opening or closing a sidebar, or resizing the timeline, used to pan and zoom the stage: the edit SVG filled the stage and mapped its 600x480 viewBox with `preserveAspectRatio="xMidYMid meet"`, so the camera content was centred on the stage box centre and magnified by that box's aspect fit, while the pan/zoom transform was applied about that moving centre. Measured drift before the fix was +180 px (inspector), −168 px (left dock), and up to 60 px × 90 px with a 4x magnification change when the timeline was resized.
+This line combines two slices of authoring-UX work:
 
-The camera is now its own authority (`StageCameraView` + `getStageCameraTransform` in `src/utils/viewportMath.ts`): a view centre in client pixels plus the px-per-unit scale it was anchored with, with the rendered transform dividing the layout fit back out. A `ResizeObserver` on the stage folds a measured box into the camera inside the same frame; a layout-only change leaves the camera untouched, while a change of the application window itself re-anchors it with its pan offset and a fresh scale. After the fix every transition measures 0.00 px drift on two authored world points and on the rendered node box, with the magnification and the zoom label unchanged.
+1. **Canvas camera invariance** (this branch). Editor chrome changing size used to
+   pan and zoom the authored world, because the edit SVG filled the stage and
+   mapped its 600x480 viewBox with `preserveAspectRatio="xMidYMid meet"` while the
+   pan/zoom CSS transform was applied about that moving centre. The camera is now
+   its own authority (`StageCameraView` + `getStageCameraTransform` in
+   `src/utils/viewportMath.ts`): a view centre in client pixels plus the px-per-unit
+   scale it was anchored with, with the rendered transform dividing the layout fit
+   back out. A `ResizeObserver` on the stage folds a measured box into the camera
+   inside the same frame; a layout-only change leaves the camera untouched, while a
+   change of the application window itself re-anchors it with its pan offset and a
+   fresh scale. Measured drift before the fix was +180 px (inspector), −168 px (left
+   dock) and up to 36.55 × 66.73 px with a magnification change when the timeline
+   was resized; after the fix every transition measures **0.00 px** on two authored
+   world points and on the rendered node box, with the magnification and the zoom
+   label unchanged, the serialized document byte-identical and the undo depth
+   unchanged.
 
-Branch `fix/authoring-ux-camera-invariance` at `df107b894d9e5490a767a169e5c43d2418550be4` (documentation tip `7ca126c`), stacked on `fix/authoring-ux-transform-toolbar` (`dea88ab`). Stacked PR [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) is open for review and CI only and is not merged. Its `CI Pipeline` check passes: run `38138487966` (success) on the documentation tip. The first run, `38138294854`, failed because the fix commit updated `CHANGELOG.md` without re-copying the bundle mirror, which the documentation commit repaired.
+2. **Boolean E2E locator alignment** (folded in from the base branch). `dea88ab`
+   gave the Boolean buttons `aria-label={`Create ${operation} Boolean`}`, which
+   overrides the visible caption as the accessible name; eleven assertions still
+   queried `Union`/`Subtract`/`Intersect` with `exact: true`, timed out and never
+   dispatched the Boolean operation. `f13fed0` aligns those locators with the exact
+   new names (one shared helper, no regex or text fallback, no assertion removed)
+   and closed all 11: focused 20 passed, full Chromium 268 passed with
+   `--retries=0`. It changes no application source.
 
-The full local Chromium suite reports 262 passed / 11 failed with `--retries=0`, and all 11 failures are inherited from the base commit `dea88ab`: it added `aria-label={\`Create ${operation} Boolean\`}` to the Boolean operation buttons, while `e2e/boolean-text-operands.spec.ts` (9 tests), `e2e/editor-interaction.spec.ts:164` and `e2e/v51-manual-qa.spec.ts:50` still query the accessible name `Union`/`Intersect` with `exact: true`. This branch touches no Boolean markup.
+## Synchronization
+
+The base branch `fix/authoring-ux-transform-toolbar` advanced from `dea88ab` to
+`7d7ebe2` after this camera branch was cut, and rewriting history is disallowed on
+this line, so the advanced base was folded in with a **merge commit** — the only
+non-history-rewriting way to synchronize. Conflicts appeared only in the ChatGPT
+handoff bundle and were resolved by regenerating the bundle for the combined state;
+no code or test file conflicted.
 
 ## Next step
 
-Review the stacked PR (camera model, its unit tests, the new Chromium spec) and, once the base branch's Boolean accessible-name regression is resolved there, re-run the full Chromium suite on the combined line.
+Review the merged stacked PR (camera model, its unit tests, the new Chromium spec,
+the aligned Boolean locators) and run the user QA pass against the branch preview.
+Any code change to this branch invalidates the validation results and needs a fresh
+`--retries=0` run.
 
 ## Evidence and files
 
-- OMP_FINAL_RESPONSE.md: root cause, the measured before/after drift, the fix and the branch/PR/CI identity.
-- progress_159_authoring_ux_camera_invariance.md: the same record in report form, with the per-transition numbers and the full validation list.
+- OMP_FINAL_RESPONSE.md: the two slices, the synchronization reason, the combined
+  validation and the branch/PR identity.
+- progress_159_authoring_ux_camera_invariance.md: the camera root cause, the
+  per-transition drift numbers, the fix and the full validation list.
+- progress_159_boolean_e2e_locator_alignment.md: the verbose eleven failures, the
+  locator-only fix and the focused/full Chromium results.
 - manifest.txt: inventory, protected boundaries and the state lines.
 - CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
-- NEXT_SESSION.md, PROJECT_STATE.md and KCS_RELEASE_CANDIDATE_SUMMARY.md: the repository's current live state, mirrored unchanged.
+- NEXT_SESSION.md, PROJECT_STATE.md and KCS_RELEASE_CANDIDATE_SUMMARY.md: the
+  repository's current live state, mirrored unchanged.
 
-The mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches and QA output are omitted. Earlier progress reports stay in `reports/` and are not copied into this minimal bundle.
+The mirrored documents match their repository sources after CRLF/LF normalization
+and whole-document trimming. Source, tests, package files, workflows, binaries,
+assets, caches and QA output are omitted. Earlier progress reports stay in
+`reports/` and are not copied into this minimal bundle.
 
-Boundaries: the user's live QA preview (`keyframe-character-studio-omp-authoring-ux`, UI 5173 / API 5000) and the stable repository (`keyframe-character-studio`, `main` at `c46e698`) were never written to, restarted or killed. Every test ran on the isolated UI 5188 / API 5003 pair.
+Boundaries: the user's live QA preview, the API on `127.0.0.1:5000` and the stable
+repository (`keyframe-character-studio`, `main` at `c46e698`) were never written to,
+restarted or killed. Every test ran on the isolated UI 5188 / API 5003 pair.
 
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder holds its sources.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder
+holds its sources.
 
 ---
 
 ## 3. Bundle Manifest
 
-# KCS ChatGPT Upload Manifest — Canvas camera invariance
+# KCS ChatGPT Upload Manifest — Combined authoring-UX line (camera invariance + Boolean E2E locators)
 
-Scope: preserving the edit-stage camera across editor-chrome layout changes, and the tests and handoff that record it
-FIX CODE SHA: df107b894d9e5490a767a169e5c43d2418550be4
-Branch: fix/authoring-ux-camera-invariance, stacked on fix/authoring-ux-transform-toolbar (dea88ab)
-Stacked PR: 5 — base fix/authoring-ux-transform-toolbar, head fix/authoring-ux-camera-invariance, review and CI only, not merged
-CI: CI Pipeline run 38138487966 (success, documentation tip 7ca126c); run 38138294854 failed because the fix commit updated CHANGELOG.md without re-copying the bundle mirror
-Measured drift: 0.00 px on two authored world points and the rendered node box across sidebar toggles, timeline collapse/expand/resize and ten repeated toggle cycles
+Scope: the combined authoring-UX line — the canvas camera-invariance work stacked on the base branch's Boolean E2E locator alignment — and the tests and handoff that record it
+Branch: fix/authoring-ux-camera-invariance, base fix/authoring-ux-transform-toolbar (new base 7d7ebe2, old merge base dea88ab)
+Camera fix commits: df107b894d9e5490a767a169e5c43d2418550be4 (fix), 7ca126c and 3db69a5 (docs) on this branch
+Boolean E2E locator commits: f13fed0bed96280c10f3430595afd787d42d5aaa (test), 7d7ebe2 (docs) on the base branch
+Synchronization: merge commit of origin/fix/authoring-ux-transform-toolbar into this branch — the base advanced from dea88ab to 7d7ebe2 and history rewriting is disallowed, so a merge commit is the only non-history-rewriting option
+Conflicts: handoff bundle only — chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md, chatgpt_handoff/latest/README.md, chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md and chatgpt_handoff/latest/manifest.txt — resolved by regenerating the bundle for the combined state; chatgpt_handoff/latest/progress_158_trim_path_keyframe_authoring.md auto-resolved (removed from the bundle, kept in reports/). No code or test file conflicted.
+Measured camera drift: 0.00 px on two authored world points and the rendered node box across sidebar toggles, timeline collapse/expand/resize and ten repeated toggle cycles
 Magnification: unchanged (0.6687 px/unit on the measured viewport), zoom label unchanged, serialized document byte-identical, undo depth unchanged
-Inherited failures: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; e2e/boolean-text-operands.spec.ts (9), e2e/editor-interaction.spec.ts:164 and e2e/v51-manual-qa.spec.ts:50 still query the accessible name `Union`/`Intersect` with exact: true, so the full Chromium suite reports 262 passed / 11 failed with --retries=0. Not caused by this branch, which touches no Boolean markup.
+Boolean locators: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; eleven assertions queried the old visible-text names, timed out and never dispatched the operation. f13fed0 aligns them with the exact accessible names — focused 20 passed, full Chromium 268 passed with --retries=0. No application source change.
 Runtime: no server started for the user; tests used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187)
-Protected: the live QA preview keyframe-character-studio-omp-authoring-ux (UI 5173 / API 5000), the stable repository keyframe-character-studio (main at c46e698), the runtime-parity worktree, external QA folders, release artefacts and OMP configuration
-Validation authority: the fix commit df107b894d9e5490a767a169e5c43d2418550be4 and the PR checks for pull request 5
+Protected: the user's live QA preview, the API on 127.0.0.1:5000, the stable repository keyframe-character-studio (main at c46e698), the runtime-parity worktree, external QA folders, release artefacts and OMP configuration
+Not merged to main: nothing was merged to main, tagged, rebased or force-pushed; no version bump, no dependency change, no duplicate pull request
+Validation authority: the current combined head of fix/authoring-ux-camera-invariance and the PR checks for pull request 5
 
-Bundle source files (9):
+Bundle source files (10):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - KCS_RELEASE_CANDIDATE_SUMMARY.md
@@ -122,9 +209,11 @@ Bundle source files (9):
 - README.md
 - manifest.txt
 - progress_159_authoring_ux_camera_invariance.md
+- progress_159_boolean_e2e_locator_alignment.md
 
-Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches and QA output.
-Historical reports stay in reports/ and are not copied into this minimal bundle.
+Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
+Protected: the stable repository C:\Users\ertugrul.ak\Desktop\keyframe-character-studio, the unrelated worktrees, .hermes/desktop-attachments/, origin/without-mask, release artefacts, and OMP configuration.
+No empty contribution-filling commits or retrospective UI dates are authorized.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.
 
@@ -604,7 +693,192 @@ The 11 full-suite failures are inherited from the base branch commit `dea88ab`, 
 
 ---
 
-## 9. Changelog
+## 9. Boolean E2E Locator Alignment
+
+# Progress 159 — Boolean E2E locators aligned with the accessible-name contract
+
+Task: clear the 11 inherited Chromium failures on the authoring-UX branch
+`fix/authoring-ux-transform-toolbar`. E2E locators only; the application source is
+untouched.
+
+| Field | Value |
+|---|---|
+| Branch | `fix/authoring-ux-transform-toolbar` |
+| Base of this work | `dea88ab` (`feat: improve authoring controls and selection visibility`) |
+| Commit | `f13fed0` — `test: align boolean e2e locators with accessible names` |
+| Changed files | `e2e/boolean-text-operands.spec.ts`, `e2e/editor-interaction.spec.ts`, `e2e/v51-manual-qa.spec.ts` |
+| Application source | unchanged — `git diff dea88ab -- src/` is empty |
+| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-authoring-ux` |
+| Pull request | #4 (existing, updated — no duplicate opened, nothing merged) |
+
+## Regression cause
+
+`dea88ab` gave the four Boolean buttons an explicit accessible name while adding
+their icons:
+
+```tsx
+title={`Create ${operation} Boolean`}
+aria-label={`Create ${operation} Boolean`}
+```
+
+`operation` comes from `(['union', 'subtract', 'intersect', 'exclude'] as const)`,
+so the accessible name is `Create union Boolean` (the operation token stays
+lowercase; only the visible `<span>` caption is capitalised). An `aria-label`
+overrides the element's text content in accessible-name computation, so the old
+visible-text names (`Union`, `Intersect`, `Subtract`, `Exclude`) no longer exist
+for `getByRole('button', { name, exact: true })`. The sibling slice spec that
+changed in the same commit (`e2e/authoring-ux-slice1.spec.ts`) already asserted the
+new contract — `Create ${operation} Boolean` with the lowercase token — and stayed
+green, which is what identified the 11 stale call sites as the only defect.
+
+## The 11 inherited failures (before)
+
+Reproduced first, on the isolated ports (`CI=1 PORT=5002`), with the pre-fix
+working tree:
+
+```
+CI=1 PORT=5002 npx playwright test e2e/boolean-text-operands.spec.ts \
+  e2e/editor-interaction.spec.ts e2e/v51-manual-qa.spec.ts --retries=0
+→ 11 failed, 9 passed (4.6m)
+```
+
+Every failing case was the same exact-accessible-name mismatch, and nothing else:
+
+| # | Spec | Failing locator (verbatim from the run log) |
+|---|---|---|
+| 1 | `boolean-text-operands.spec.ts:71` a text layer and a shape combine with the letters traced, counters included | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 2 | `boolean-text-operands.spec.ts:116` a text layer and a shape can be subtracted, and the operands stay editable | `waiting for getByRole('button', { name: 'Subtract', exact: true })` |
+| 3 | `boolean-text-operands.spec.ts:158` a Outfit text traces into a Boolean group | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 4 | `boolean-text-operands.spec.ts:158` a quoted Playfair Display text traces into a Boolean group | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 5 | `boolean-text-operands.spec.ts:158` a fallback-list Playfair Display text traces into a Boolean group | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 6 | `boolean-text-operands.spec.ts:158` a quoted JetBrains Mono text traces into a Boolean group | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 7 | `boolean-text-operands.spec.ts:184` an untraceable text operand refuses the Boolean instead of changing it | `waiting for getByRole('button', { name: 'Subtract', exact: true })` |
+| 8 | `boolean-text-operands.spec.ts:211` text combines with a freeform and with another text | `waiting for getByRole('button', { name: 'Union', exact: true })` |
+| 9 | `boolean-text-operands.spec.ts:240` a three-operand Subtract keeps every operand | `waiting for getByRole('button', { name: 'Subtract', exact: true })` |
+| 10 | `editor-interaction.spec.ts:164` Boolean parent deletion cascades owned operands and restores through undo/redo | `waiting for getByRole('button', { name: 'Union', exact: true })` |
+| 11 | `v51-manual-qa.spec.ts:50` supports Boolean creation, hierarchy, operand inspection, and dissolve preservation | `waiting for getByRole('button', { name: 'Union', exact: true })` |
+
+Each failure was `Test timeout of 30000ms exceeded.` on `locator.click`, e.g.:
+
+```
+Error: locator.click: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Intersect', exact: true })
+```
+
+No assertion, geometry or dispatch failure appeared in the run: the locator never
+resolved, so the Boolean operation was never dispatched.
+
+## Fix — locators only
+
+`e2e/boolean-text-operands.spec.ts` now names the operation token once and builds the
+exact accessible name from it, so the helper and the two standalone call sites
+cannot drift apart again:
+
+```ts
+type BooleanOperation = 'union' | 'subtract' | 'intersect' | 'exclude';
+
+async function clickBoolean(page: Page, operation: BooleanOperation): Promise<void> {
+  await page.getByRole('button', { name: `Create ${operation} Boolean`, exact: true }).click();
+}
+```
+
+`combine()` takes the lowercase operation and delegates to `clickBoolean()`; the
+five `combine(...)` call sites and the two standalone clicks use it.
+`e2e/editor-interaction.spec.ts` and `e2e/v51-manual-qa.spec.ts` use
+`getByRole('button', { name: 'Create union Boolean', exact: true })` with a comment
+naming the contract.
+
+Nothing was weakened: every locator is still an exact accessible-name match on the
+real button, no regex or text fallback was introduced, and no accessibility
+assertion was removed — the tests still dispatch a real Boolean operation through
+the UI and then assert the persisted group, its operands, its contours and the
+dissolve/undo behaviour.
+
+## Result after the fix
+
+```
+CI=1 PORT=5002 npx playwright test e2e/boolean-text-operands.spec.ts \
+  e2e/editor-interaction.spec.ts e2e/v51-manual-qa.spec.ts --retries=0
+→ 20 passed (13.2s)
+```
+
+All 11 previously failing cases pass; the 9 that were already green stay green.
+
+Full Chromium suite, `--retries=0`, no skips and no expected failures:
+
+```
+CI=1 PORT=5002 npx playwright test --retries=0
+→ 268 passed (2.0m)
+```
+
+## Validation matrix
+
+| Command | Result |
+|---|---|
+| `npx tsc -b --pretty false` | exit 0 |
+| `npm run lint` (`oxlint`) | exit 0 |
+| `npm test` (`vitest run`) | 138 files / 2094 tests passed |
+| `npm run build` (`tsc -b` + `vite build`) | exit 0, 2036 modules |
+| `npm run validate:ograf` | valid OGraf v1 manifest |
+| `npm run qa:release` (`PORT=5002`, gate UI 5189) | release gate passed, 2 Chromium tests |
+| `npm run qa:v6` (`PORT=5002`, gate UI 5187) | 3 Chromium tests passed |
+| `npm run check` | exit 0 |
+| `node scripts/check-state-consistency.mjs` | PASS, 38 checks |
+| `npm audit --audit-level=low` | 0 vulnerabilities |
+| `git diff --check` | empty |
+| Full Chromium suite (`CI=1 PORT=5002`, `--retries=0`) | 268 passed |
+
+## Isolation and preview evidence
+
+Browser tests ran only on the isolated ports from this worktree. Process command
+lines captured while the full suite was running:
+
+- `concurrently "node server/index.js" "vite --host 127.0.0.1 --port 5188"` from
+  `...\keyframe-character-studio-omp-authoring-ux\node_modules\.bin\..\concurrently\dist\bin\index.js`
+- `...\node_modules\.bin\..\vite\bin\vite.js --host 127.0.0.1 --port 5188`
+- `node server/index.js` on `127.0.0.1:5002`
+- `...\node_modules\.bin\..\@playwright\test\cli.js test --retries=0`
+
+The port owners during the run were `127.0.0.1:5188` and `127.0.0.1:5002`. The
+user's live services were a separate pair of processes that the run never touched:
+`0.0.0.0:5173` (vite, same worktree, PID 33028) and `127.0.0.1:5000` (API, PID
+24896). No test process bound 5173 or 5000, and neither was stopped or restarted.
+
+`http://localhost:5173/` still returned **200** and is still served by the vite
+process whose command line resolves into this worktree
+(`...\keyframe-character-studio-omp-authoring-ux\node_modules\.bin\..\vite\bin\vite.js`).
+`http://127.0.0.1:5000/api/health` returned **200** with
+`{"status":"online","service":"Keyframe Studio API","database":"SQLite (Embedded Local DB)",...}`.
+
+The change is test-only: `git diff dea88ab -- src/` is empty, so the running
+preview serves byte-identical application source to `dea88ab`.
+
+## Branch, commits and CI
+
+- Commit `f13fed0bed96280c10f3430595afd787d42d5aaa` on
+  `fix/authoring-ux-transform-toolbar`, pushed with a normal
+  `git push origin HEAD:refs/heads/fix/authoring-ux-transform-toolbar`
+  (`dea88ab..f13fed0`); no force push, no rebase, no tag, no version bump.
+- PR #4 (`https://github.com/ErtugrulAK/keyframe-character-studio/pull/4`) was
+  updated in place; no duplicate PR was opened and nothing was merged.
+- CI run `38143843474` is the `pull_request` run for `f13fed0`: **success**
+  (`CI Pipeline` → `Build, Lint & Test Verification`, 2026-10-11T13:36:24Z →
+  13:37:47Z, every step green).
+
+## Limitations
+
+- Only the three affected specs were reproduced at first; the rest of the suite was
+  validated after the fix, once, with `--retries=0`.
+- The regression was visible only in the real browser: the affected specs run
+  against Chromium, and the Vitest suite never queries these buttons by accessible
+  name, so it stayed green throughout.
+- CI does not run the Chromium suite or the state consistency check; the full-suite
+  and state-check results above are local results for `f13fed0`.
+
+---
+
+## 10. Changelog
 
 # Changelog
 

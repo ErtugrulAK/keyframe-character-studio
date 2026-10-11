@@ -173,7 +173,8 @@ test.describe('editor interaction regressions', () => {
     ]);
     await selectPart(page, 'Rectangle');
     await page.locator('.actor-node', { hasText: 'Triangle' }).click({ modifiers: ['Control'] });
-    await page.getByRole('button', { name: 'Union', exact: true }).click();
+    // The Boolean buttons expose `Create <operation> Boolean` as their accessible name.
+    await page.getByRole('button', { name: 'Create union Boolean', exact: true }).click();
     await expect(page.locator('.nested-node.actor-node')).toHaveCount(2);
 
     await page.keyboard.press('Delete');

@@ -4,104 +4,149 @@
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
-Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`. External QA folders are untouched.
+Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-authoring-ux` (branch `fix/authoring-ux-transform-toolbar`). The live 5173 preview is served from this worktree and serves unchanged application source. External QA folders, the stable repository and the unrelated worktrees are untouched.
 
 ---
 
 ## 1. OMP Final Response
 
-# KCS v1.1.0-rc.2 — PUBLIC PRERELEASE — 2026-10-08
+# KCS authoring-UX branch — Boolean E2E locators aligned — 2026-10-11
 
-## Latest approved release action
+## Latest action
 
-The existing `v1.1.0-rc.2` draft was **published as a public prerelease**. It is **RC.2 READY FOR USER QA** — this is NOT a stable release.
+The 11 inherited Chromium failures on `fix/authoring-ux-transform-toolbar` are
+closed by aligning the E2E locators with the accessible-name contract that
+`dea88ab` introduced. E2E spec files only; no application source changed.
 
 | Field | Value |
 |---|---|
-| Tested code commit (candidate) | `6c27ef35d48d61a5e1163d2c91734c864fcafa01` |
-| Annotated release candidate | `v1.1.0-rc.2` — dereferences to exactly the tested commit (tag object unchanged) |
-| Release Smoke Gate | run `37752015020` — success, every step green |
-| GitHub release | `KCS v1.1.0-rc.2`, id `RE_kwDOTexJrc4YPnCt` |
-| State | `isDraft: false`, `isPrerelease: true`, `publishedAt: 2026-10-08T13:11:16Z` |
-| Public URL | https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2 |
-| Earlier candidate | `v1.1.0-rc.1` unchanged at `46d2a3e59e065816d972dcd56951803951b577f6`; its draft release untouched |
-| Package | private, metadata version `1.1.0-rc.1`; npm returns 404 |
+| Branch | `fix/authoring-ux-transform-toolbar` |
+| Base of this work | `dea88ab` (`feat: improve authoring controls and selection visibility`) |
+| Commit | `f13fed0bed96280c10f3430595afd787d42d5aaa` — `test: align boolean e2e locators with accessible names` |
+| Changed files | `e2e/boolean-text-operands.spec.ts`, `e2e/editor-interaction.spec.ts`, `e2e/v51-manual-qa.spec.ts` |
+| Application source | unchanged — `git diff dea88ab -- src/` is empty |
+| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-authoring-ux` |
+| Focused specs | 11 failures → 20 passed |
+| Full Chromium suite | 268 passed with `--retries=0` |
+| Pull request | #4, updated in place; nothing was merged |
+| PR CI | run `38143843474` for `f13fed0` — success (every step green) |
 
-Publication transitioned the **same** release object from draft to published; no tag was created or moved, no release was recreated or retargeted, nothing was marked latest-stable, and no stable release exists. The release notes were already complete, so they were not rewritten.
+`dea88ab` gave the four Boolean buttons an explicit
+`aria-label={`Create ${operation} Boolean`}` while adding their icons. Because an
+`aria-label` overrides text content, their accessible names became
+`Create union Boolean`, `Create subtract Boolean`, `Create intersect Boolean` and
+`Create exclude Boolean` — the operation token stays lowercase; only the visible
+caption is capitalised. Eleven assertions still queried the old visible-text names,
+so the locator never resolved and the click timed out after 30 s; no Boolean
+operation was ever dispatched.
 
-The candidate is the exact smoke-tested commit. The documentation tip is newer and docs-only — no source, test, workflow, package, lock or asset byte differs — so the candidate identity is unchanged and the docs tip is **not** itself smoke-tested.
+## What the fix is, and what it is not
 
-## What the smoke gate proved, and what it did not
+The affected specs now build the exact accessible name once (`Create <operation>
+Boolean`, `exact: true`) through a single helper in
+`e2e/boolean-text-operands.spec.ts`, and the two other specs use the same exact
+form. No regex or text fallback was introduced, every locator still matches the
+real button by exact accessible name, and no accessibility assertion was removed:
+each test still dispatches a real Boolean operation through the UI and then asserts
+the persisted group, its operands, its contours, and the dissolve/undo behaviour.
 
-It proved the candidate installs cleanly from its own lockfile on a fresh Ubuntu runner, the OGraf fixture manifest validates offline against the vendored SHA-256-pinned closure, a KCS OGraf package materialized on the runner interoperates with Chromium, and the editor exports an OGraf ZIP through the UI.
+## Evidence
 
-It is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line. This is a prerelease candidate, not a claim of full production certification.
+- Before (`CI=1 PORT=5002`, pre-fix tree, the three specs, `--retries=0`):
+  **11 failed, 9 passed**. Every failure was
+  `Error: locator.click: Test timeout of 30000ms exceeded.` followed by
+  `waiting for getByRole('button', { name: '<old name>', exact: true })` for
+  `Union`, `Subtract` or `Intersect` — nothing else appeared in the run.
+- After (same command, post-fix tree): **20 passed (13.2s)**.
+- Full Chromium suite (`CI=1 PORT=5002 npx playwright test --retries=0`):
+  **268 passed (2.0m)**, no skips, no expected failures.
+- Local gate for `f13fed0`: `npx tsc -b --pretty false`, `npm run lint`,
+  `npm test` (138 files / 2094 tests), `npm run build`, `npm run validate:ograf`,
+  `npm run qa:release` and `npm run qa:v6` (both `PORT=5002`), `npm run check`,
+  `node scripts/check-state-consistency.mjs` (PASS, 38 checks),
+  `npm audit --audit-level=low` (0 vulnerabilities) and `git diff --check` (empty)
+  all passed.
+- Isolation: the browser runs used `127.0.0.1:5188` (vite) and `127.0.0.1:5002`
+  (API) from this worktree only. The user's live services on `0.0.0.0:5173`
+  (vite, this worktree) and `127.0.0.1:5000` (API) were never bound by a test
+  process and were never restarted; both still answer, and
+  `http://localhost:5173/` returns 200 from the same worktree-served process.
 
-## Next step — user QA
+## Boundaries
 
-Run the twelve-step manual QA checklist in `progress_156_rc2_prerelease_publish.md` against this prerelease: app opens, project basics, shape manipulation, text rendering, opacity keyframes, a bonded pair drag, one Motion Curves easing edit, one mask/matte case, an OGraf ZIP export, an OGraf re-import, the Playfair / Cinematic Title export path, and a clean stability pass.
-
-Classify every finding as BLOCKER, MAJOR, MINOR or COSMETIC. **Any BLOCKER or MAJOR code defect means do not proceed to a stable release**, and any code change produces a new commit that invalidates this exact-SHA smoke result — a new Release Smoke Gate run is then required before any further candidate or stable decision.
-
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
-
----
+Nothing was merged, rebased, force-pushed, tagged or published; there is no version
+bump and no new pull request. The stable repository
+`C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`, the camera-invariance
+worktree and the runtime-parity worktree were read-only and are unchanged. CI does
+not run the Chromium suite or the state consistency check, so those results are
+local results for `f13fed0`. The full detail is in
+`progress_159_boolean_e2e_locator_alignment.md`.
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — v1.1.0-rc.2 Public Prerelease
+# KCS Minimal ChatGPT Upload Bundle — Boolean E2E locator alignment (authoring-UX branch)
 
-Task-specific handoff for the 2026-10-08 rc.2 prerelease publication. This is not an archive.
+Task-specific handoff for clearing the 11 inherited Chromium failures on
+`fix/authoring-ux-transform-toolbar`. This is not an archive.
 
 ## Current truth
 
-The `v1.1.0-rc.2` release is now a **PUBLISHED PRERELEASE** (`isDraft: false`, `isPrerelease: true`, release id `RE_kwDOTexJrc4YPnCt`, `publishedAt` 2026-10-08T13:11:16Z, public at https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2). It is **RC.2 READY FOR USER QA** and is **not** a stable release.
+`dea88ab` gave the four Boolean buttons an explicit `aria-label` of
+`Create <operation> Boolean`, which overrides the visible caption as the accessible
+name. Eleven E2E assertions still queried the old names (`Union`, `Subtract`,
+`Intersect`), so they timed out and never dispatched the Boolean operation —
+9 in `e2e/boolean-text-operands.spec.ts`, 1 in `e2e/editor-interaction.spec.ts` and
+1 in `e2e/v51-manual-qa.spec.ts`.
 
-The candidate is the exact smoke-tested code commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01` (Release Smoke Gate run `37752015020`, success). Its annotated release dereferences to exactly that commit and the tag object was not recreated or moved. Publication transitioned the same release object from draft to published: no tag was created, no release was recreated or retargeted, and nothing was marked latest-stable.
+Commit `f13fed0` on `fix/authoring-ux-transform-toolbar` updates those locators to
+the exact new accessible names (`exact: true`, no regex or text fallback) and
+changes nothing else: `git diff dea88ab -- src/` is empty. The focused run went
+from 11 failed / 9 passed to 20 passed, and the full Chromium suite is 268 passed
+with `--retries=0`. Pull request #4 was updated in place and its CI run
+`38143843474` for `f13fed0` succeeded; nothing was merged.
 
-`v1.1.0-rc.1` is unchanged at `46d2a3e59e065816d972dcd56951803951b577f6` and its draft release is untouched. The package remains private at metadata version `1.1.0-rc.1` and npm returns 404 — no npm publication occurred.
-
-The documentation tip is newer than the candidate and docs-only; it is **not** itself smoke-tested. The smoke gate is not the full suite: the Vitest suite (135 files / 2,055 tests) and the full Chromium suite (268 tests with `--retries=0`) were validated locally on the same code line.
+The application source is byte-identical to `dea88ab`, so the live 5173 preview —
+still served from this worktree — serves unchanged source; it returned 200, and the
+API health endpoint on 127.0.0.1:5000 returned 200 throughout.
 
 ## Next step
 
-The user QA pass: the twelve-step checklist in `progress_156_rc2_prerelease_publish.md`. Any BLOCKER or MAJOR code defect means do not proceed to a stable release, and any code change requires a new commit plus a fresh exact-SHA smoke run.
+Review PR #4's updated head, then run the user QA pass on the branch preview. Any
+code change to this branch invalidates these results and needs a fresh
+`--retries=0` Chromium run.
 
 ## Evidence and files
 
-- OMP_FINAL_RESPONSE.md: the published state, the candidate identity and the boundaries.
-- PROJECT_STATE.md and NEXT_SESSION.md: current state and the exact next step.
-- KCS_RELEASE_CANDIDATE_SUMMARY.md: the release boundary with the published rc.2 prerelease.
+- OMP_FINAL_RESPONSE.md: the task result, the commit, the evidence and the boundaries.
+- PROJECT_STATE.md and NEXT_SESSION.md: the repository's live state and the release line.
+- KCS_RELEASE_CANDIDATE_SUMMARY.md: the release boundary (unchanged by this task).
 - CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
-- progress_156_rc2_prerelease_publish.md: pre-publish state, the publish action, post-publish verification and the user QA checklist.
-- progress_155_h7_rc2_release.md: the candidate cut, the metadata decision and the tested-code-SHA vs docs-tip distinction.
+- progress_159_boolean_e2e_locator_alignment.md: the verbatim eleven failures, the locator-only fix, the focused and full Chromium results, the validation matrix, the isolation evidence and the CI state.
 - manifest.txt: inventory and protected boundaries.
 
-The four mirrored documents match their repository sources after CRLF/LF normalization and whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. Earlier progress reports remain in `reports/` and are linked from the report indexes; they are not copied into this minimal bundle. Historical reports are not rewritten or deleted, and external workspaces and OMP configuration are untouched.
+The four mirrored documents match their repository sources; `reports/progress_159_boolean_e2e_locator_alignment.md` is copied in as this task's progress record. Source, tests, package files, workflows, binaries, assets, caches, and QA output are omitted. Earlier progress reports remain in `reports/` and are linked from the report indexes; they are not copied into this minimal bundle. External workspaces and OMP configuration are untouched.
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder holds its sources.
 
----
-
 ## 3. Bundle Manifest
 
-# KCS ChatGPT Upload Manifest — v1.1.0-rc.2 Public Prerelease
+# KCS ChatGPT Upload Manifest — Boolean E2E locator alignment (authoring-UX branch)
 
-Scope: publishing the existing v1.1.0-rc.2 draft as a public prerelease, and the documentation that records the publication state
-TESTED CODE SHA: 6c27ef35d48d61a5e1163d2c91734c864fcafa01
-Release candidate: annotated v1.1.0-rc.2, dereferences to 6c27ef35d48d61a5e1163d2c91734c864fcafa01 (tag object unchanged)
-GitHub release: KCS v1.1.0-rc.2, id RE_kwDOTexJrc4YPnCt, isDraft false, isPrerelease true, publishedAt 2026-10-08T13:11:16Z
-Public URL: https://github.com/ErtugrulAK/keyframe-character-studio/releases/tag/v1.1.0-rc.2
-Release Smoke Gate: run 37752015020 (workflow_dispatch, conclusion success)
-Earlier candidate: v1.1.0-rc.1 unchanged at 46d2a3e59e065816d972dcd56951803951b577f6; its draft release untouched
-Package: private, metadata version 1.1.0-rc.1; npm publication not performed (registry returns 404)
-Current docs tip: the documentation commit that records this publication — docs-only, newer than the candidate, NOT smoke-tested
-Not a stable release: no stable/final GitHub release exists; this is a prerelease for user QA
-Validation authority: the v1.1.0-rc.2 PUBLISHED PRERELEASE and H7 GO sections in PROJECT_STATE.md and NEXT_SESSION.md
-Runtime: persistent kcs-ui-dev; editor localhost:5173; API 127.0.0.1:5000
-Historical records retained in reports/ only (not copied into this minimal bundle): progress_151, progress_152, progress_153, progress_154
+Scope: clearing the 11 inherited Chromium failures on `fix/authoring-ux-transform-toolbar` by aligning E2E locators with the accessible-name contract; no application source change
+Branch: fix/authoring-ux-transform-toolbar (base dea88ab, commit f13fed0bed96280c10f3430595afd787d42d5aaa)
+Regression cause: the Boolean buttons carry aria-label "Create <operation> Boolean", which replaces the visible caption as the accessible name; eleven assertions still used the old names
+Fix: e2e locator-only change in e2e/boolean-text-operands.spec.ts, e2e/editor-interaction.spec.ts and e2e/v51-manual-qa.spec.ts — exact accessible-name matches, one shared helper, no regex or text fallback
+Focused result: 11 failed / 9 passed before, 20 passed after (CI=1 PORT=5002, --retries=0)
+Full Chromium suite: 268 passed with --retries=0
+Application source: unchanged — git diff dea88ab -- src/ is empty
+Worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-authoring-ux
+Runtime: live preview 0.0.0.0:5173 (this worktree, returned 200) and API 127.0.0.1:5000 (returned 200); browser tests used the isolated 127.0.0.1:5188 and 127.0.0.1:5002 only
+Pull request: #4 updated in place — https://github.com/ErtugrulAK/keyframe-character-studio/pull/4
+PR CI: run 38143843474 for f13fed0 — success
+Not merged: nothing was merged, tagged, rebased, force-pushed or published; no version bump
+Release line (unchanged by this task): v1.1.0-rc.2 remains a published prerelease; tag v1.1.0-rc.1 stays at 46d2a3e59e065816d972dcd56951803951b577f6
 
-Bundle source files (10):
+Bundle source files (9):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - KCS_RELEASE_CANDIDATE_SUMMARY.md
@@ -110,16 +155,13 @@ Bundle source files (10):
 - PROJECT_STATE.md
 - README.md
 - manifest.txt
-- progress_155_h7_rc2_release.md
-- progress_156_rc2_prerelease_publish.md
+- progress_159_boolean_e2e_locator_alignment.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
-Protected: external QA/workspace folders; .hermes/desktop-attachments/; origin/without-mask; release artefacts; OMP configuration.
+Protected: the stable repository C:\Users\ertugrul.ak\Desktop\keyframe-character-studio, the unrelated worktrees, .hermes/desktop-attachments/, origin/without-mask, release artefacts, and OMP configuration.
 No empty contribution-filling commits or retrospective UI dates are authorized.
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md to ChatGPT. The files above are the sources of that one-file artifact.
-
----
 
 ## 4. Next Session
 
@@ -234,8 +276,6 @@ Post-Astra remediation local gate on October 7, 2026: `npx tsc -b --pretty false
 - Validation: 109 files / 1,652 Vitest tests, `validate:ograf`, `qa:release`, build, TypeScript, lint, `git diff --check`, plus the real-browser spec `e2e/graph-accessibility.spec.ts`.
 - Out of scope (unchanged): graph engine or evaluator changes, new shortcut registry, keyframe model or drag redesign, new dependencies, release/package/workflow changes.
 - Roadmap status when this milestone landed: D was next (items 6 and 9) and C was merged. Current status: milestones A–G are complete, and Milestone H is complete through H6 with its release decision held (H7), see "Current result" above.
-
----
 
 ## 5. Project State
 
@@ -390,8 +430,6 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - **Item 9 (dependency and warning maintenance) — COMPLETE.** Option A merged at `3923141`; Option B merged at `73426e5` and brought `npm audit` to zero; `engines`/npm-12 `allowScripts` merged at `1a12d79`; `jsdom` 30.1.1 was taken at `c1431db`; Oxlint 1.85 was adopted at `feca773`; and TypeScript 7 plus Vitest and `@vitest/coverage-v8` 5 merged at `37904fb`.
 - The original Option A preserved dependency versions while fixing the warning catalogue and local sqlite3 binding. Its approval-gated follow-ups were then handled on isolated branches with their own validation. The runtime database is now ignored rather than tracked, and the API starts from a clean checkout by creating and seeding it through the existing SQLite authority.
 
----
-
 ## 6. Release Candidate Summary
 
 # KCS Release Candidate Summary
@@ -434,8 +472,6 @@ The H7 GO decision has been executed: the `v1.1.0-rc.2` candidate exists as an a
 Publishing the rc.2 draft prerelease, running the user QA pass, publishing to npm, or cutting a stable release each require a new explicit user instruction. Publishing the draft does not create a tag (it already exists) and does not publish to npm.
 
 The prior maintenance deferrals are closed: Oxlint 1.85 at `feca773`, TypeScript 7 / Vitest 5 at `37904fb`, runtime SQLite repository hygiene at `b3f3c6c`, the API CORS allowlist at `2a313d7`, and dialog focus restoration at `5cb8a45`. GitHub Actions currently emits non-blocking annotations for Node 20-based action runtimes being forced onto Node 24 and for the announced `ubuntu-latest` migration to Ubuntu 26.
-
----
 
 ## 7. Grouped Roadmap
 
@@ -518,93 +554,188 @@ The user QA pass against that prerelease is the next input; a stable release, a 
 
 Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items closed, READY, replayed and fast-forward merged at `077911b`); "KCS MILESTONE B — GRAPH + KEYBOARD ACCESSIBILITY …" was carried out (merged at `96e8f9d`); "KCS MILESTONE C — FIRST EXPORT / ONBOARDING FLOW …" was carried out: implemented on `feat/export-onboarding`, gate-reviewed (READY WITH WARNINGS) and fast-forward merged at `c2dcb22` (see `reports/progress_110_export_onboarding.md`).
 
----
+## 8. Boolean E2E Locator Alignment
 
-## 8. Trim Path Keyframe Authoring
+# Progress 159 — Boolean E2E locators aligned with the accessible-name contract
 
-# Progress 158 — Trim Path keyframe authoring
-
-Date: 2026-10-09. Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`.
-
-Trim Path authoring behaved like a global property edit: a keyed Start/End/Offset read as one shared value, and editing a later frame appeared to rewrite the earlier keyframe. Root-caused, fixed, and covered by regressions.
-
-## Candidate identity
+Task: clear the 11 inherited Chromium failures on the authoring-UX branch
+`fix/authoring-ux-transform-toolbar`. E2E locators only; the application source is
+untouched.
 
 | Field | Value |
 |---|---|
-| Fix commit | `b4e8e948675466135c3e56ae3d331cec0441ccb3` |
-| Branch | `fix/trim-path-keyframe-authoring`, fast-forward merged into `main`, kept |
-| Prior main | `231070c` |
+| Branch | `fix/authoring-ux-transform-toolbar` |
+| Base of this work | `dea88ab` (`feat: improve authoring controls and selection visibility`) |
+| Commit | `f13fed0` — `test: align boolean e2e locators with accessible names` |
+| Changed files | `e2e/boolean-text-operands.spec.ts`, `e2e/editor-interaction.spec.ts`, `e2e/v51-manual-qa.spec.ts` |
+| Application source | unchanged — `git diff dea88ab -- src/` is empty |
+| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-authoring-ux` |
+| Pull request | #4 (existing, updated — no duplicate opened, nothing merged) |
 
-## Reproduction and root cause
+## Regression cause
 
-`TrimPathSection` was a purely static component:
+`dea88ab` gave the four Boolean buttons an explicit accessible name while adding
+their icons:
 
 ```tsx
-onChange={(value) => onPartPropChange('trimPathEnd', value)}   // writes CharacterPart.trimPathEnd
-value={selectedPart.trimPathEnd ?? 1}                          // displays the static field
+title={`Create ${operation} Boolean`}
+aria-label={`Create ${operation} Boolean`}
 ```
 
-It had **no keyframe awareness at all** — no channel read, no channel write, no add/remove keyframe. So while a channel was keyed:
+`operation` comes from `(['union', 'subtract', 'intersect', 'exclude'] as const)`,
+so the accessible name is `Create union Boolean` (the operation token stays
+lowercase; only the visible `<span>` caption is capitalised). An `aria-label`
+overrides the element's text content in accessible-name computation, so the old
+visible-text names (`Union`, `Intersect`, `Subtract`, `Exclude`) no longer exist
+for `getByRole('button', { name, exact: true })`. The sibling slice spec that
+changed in the same commit (`e2e/authoring-ux-slice1.spec.ts`) already asserted the
+new contract — `Create ${operation} Boolean` with the lowercase token — and stayed
+green, which is what identified the 11 stale call sites as the only defect.
 
-- the field displayed the static value at every frame, which is why the same number appeared on the earlier frame and the edit read as global;
-- the write landed on the static field, which `evaluateTrimPath` ignores once the channel has keyframes.
+## The 11 inherited failures (before)
 
-The evaluator and the export were **not** at fault: `evaluateTrimPath` already prefers keyframes and interpolates, and `evaluateFrame` already routes trim through it.
+Reproduced first, on the isolated ports (`CI=1 PORT=5002`), with the pre-fix
+working tree:
 
-## Fix
+```
+CI=1 PORT=5002 npx playwright test e2e/boolean-text-operands.spec.ts \
+  e2e/editor-interaction.spec.ts e2e/v51-manual-qa.spec.ts --retries=0
+→ 11 failed, 9 passed (4.6m)
+```
 
-Both halves now use authorities that already existed for every other scalar channel:
+Every failing case was the same exact-accessible-name mismatch, and nothing else:
 
-| Concern | Authority |
+| # | Spec | Failing locator (verbatim from the run log) |
+|---|---|---|
+| 1 | `boolean-text-operands.spec.ts:71` a text layer and a shape combine with the letters traced, counters included | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 2 | `boolean-text-operands.spec.ts:116` a text layer and a shape can be subtracted, and the operands stay editable | `waiting for getByRole('button', { name: 'Subtract', exact: true })` |
+| 3 | `boolean-text-operands.spec.ts:158` a Outfit text traces into a Boolean group | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 4 | `boolean-text-operands.spec.ts:158` a quoted Playfair Display text traces into a Boolean group | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 5 | `boolean-text-operands.spec.ts:158` a fallback-list Playfair Display text traces into a Boolean group | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 6 | `boolean-text-operands.spec.ts:158` a quoted JetBrains Mono text traces into a Boolean group | `waiting for getByRole('button', { name: 'Intersect', exact: true })` |
+| 7 | `boolean-text-operands.spec.ts:184` an untraceable text operand refuses the Boolean instead of changing it | `waiting for getByRole('button', { name: 'Subtract', exact: true })` |
+| 8 | `boolean-text-operands.spec.ts:211` text combines with a freeform and with another text | `waiting for getByRole('button', { name: 'Union', exact: true })` |
+| 9 | `boolean-text-operands.spec.ts:240` a three-operand Subtract keeps every operand | `waiting for getByRole('button', { name: 'Subtract', exact: true })` |
+| 10 | `editor-interaction.spec.ts:164` Boolean parent deletion cascades owned operands and restores through undo/redo | `waiting for getByRole('button', { name: 'Union', exact: true })` |
+| 11 | `v51-manual-qa.spec.ts:50` supports Boolean creation, hierarchy, operand inspection, and dissolve preservation | `waiting for getByRole('button', { name: 'Union', exact: true })` |
+
+Each failure was `Test timeout of 30000ms exceeded.` on `locator.click`, e.g.:
+
+```
+Error: locator.click: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Intersect', exact: true })
+```
+
+No assertion, geometry or dispatch failure appeared in the run: the locator never
+resolved, so the Boolean operation was never dispatched.
+
+## Fix — locators only
+
+`e2e/boolean-text-operands.spec.ts` now names the operation token once and builds the
+exact accessible name from it, so the helper and the two standalone call sites
+cannot drift apart again:
+
+```ts
+type BooleanOperation = 'union' | 'subtract' | 'intersect' | 'exclude';
+
+async function clickBoolean(page: Page, operation: BooleanOperation): Promise<void> {
+  await page.getByRole('button', { name: `Create ${operation} Boolean`, exact: true }).click();
+}
+```
+
+`combine()` takes the lowercase operation and delegates to `clickBoolean()`; the
+five `combine(...)` call sites and the two standalone clicks use it.
+`e2e/editor-interaction.spec.ts` and `e2e/v51-manual-qa.spec.ts` use
+`getByRole('button', { name: 'Create union Boolean', exact: true })` with a comment
+naming the contract.
+
+Nothing was weakened: every locator is still an exact accessible-name match on the
+real button, no regex or text fallback was introduced, and no accessibility
+assertion was removed — the tests still dispatch a real Boolean operation through
+the UI and then assert the persisted group, its operands, its contours and the
+dissolve/undo behaviour.
+
+## Result after the fix
+
+```
+CI=1 PORT=5002 npx playwright test e2e/boolean-text-operands.spec.ts \
+  e2e/editor-interaction.spec.ts e2e/v51-manual-qa.spec.ts --retries=0
+→ 20 passed (13.2s)
+```
+
+All 11 previously failing cases pass; the 9 that were already green stay green.
+
+Full Chromium suite, `--retries=0`, no skips and no expected failures:
+
+```
+CI=1 PORT=5002 npx playwright test --retries=0
+→ 268 passed (2.0m)
+```
+
+## Validation matrix
+
+| Command | Result |
 |---|---|
-| Display | `evaluateTrimPath(part, track, currentFrame, template)` — what the stage draws at this frame; static field only while unkeyed |
-| Write | `updateCurrentPropertyChannel(channel, value)` — static field while unkeyed, the current frame's keyframe once keyed |
-| Add/remove keyframe | `addPropertyKeyframe` / `deletePropertyKeyframe`, mirroring the opacity card |
+| `npx tsc -b --pretty false` | exit 0 |
+| `npm run lint` (`oxlint`) | exit 0 |
+| `npm test` (`vitest run`) | 138 files / 2094 tests passed |
+| `npm run build` (`tsc -b` + `vite build`) | exit 0, 2036 modules |
+| `npm run validate:ograf` | valid OGraf v1 manifest |
+| `npm run qa:release` (`PORT=5002`, gate UI 5189) | release gate passed, 2 Chromium tests |
+| `npm run qa:v6` (`PORT=5002`, gate UI 5187) | 3 Chromium tests passed |
+| `npm run check` | exit 0 |
+| `node scripts/check-state-consistency.mjs` | PASS, 38 checks |
+| `npm audit --audit-level=low` | 0 vulnerabilities |
+| `git diff --check` | empty |
+| Full Chromium suite (`CI=1 PORT=5002`, `--retries=0`) | 268 passed |
 
-Each of the three fields gained an Add/Remove keyframe control matching the opacity card's classes, `aria-pressed` and labels, capturing the evaluated value at the current frame. `TrimPathSection` keeps its previous behaviour when the new props are absent, so its standalone contract is unchanged.
+## Isolation and preview evidence
 
-## Authoring semantics now
+Browser tests ran only on the isolated ports from this worktree. Process command
+lines captured while the full suite was running:
 
-- No keyframes → the edit changes the static field only.
-- Channel keyed → the edit updates the keyframe at the current frame, inserting one if the frame is empty; no other frame is touched.
-- The static field never overwrites a keyed value (the evaluator already preferred the channel; the display now agrees).
-- A same-frame keyframe in another sequence is left alone.
-- One edit is one history entry (the write goes through the existing channel mutator).
+- `concurrently "node server/index.js" "vite --host 127.0.0.1 --port 5188"` from
+  `...\keyframe-character-studio-omp-authoring-ux\node_modules\.bin\..\concurrently\dist\bin\index.js`
+- `...\node_modules\.bin\..\vite\bin\vite.js --host 127.0.0.1 --port 5188`
+- `node server/index.js` on `127.0.0.1:5002`
+- `...\node_modules\.bin\..\@playwright\test\cli.js test --retries=0`
 
-## Regression
+The port owners during the run were `127.0.0.1:5188` and `127.0.0.1:5002`. The
+user's live services were a separate pair of processes that the run never touched:
+`0.0.0.0:5173` (vite, same worktree, PID 33028) and `127.0.0.1:5000` (API, PID
+24896). No test process bound 5173 or 5000, and neither was stopped or restarted.
 
-`src/tests/trimPathAuthoring.test.tsx` — 11 cases: evaluated display, static fallback, channel write, keyframe toggle, `A=0 / B=100` (A stays 0), update-in-place, unkeyed static write, sequence isolation, midpoint interpolation, per-frame resolution, unkeyed fallback.
+`http://localhost:5173/` still returned **200** and is still served by the vite
+process whose command line resolves into this worktree
+(`...\keyframe-character-studio-omp-authoring-ux\node_modules\.bin\..\vite\bin\vite.js`).
+`http://127.0.0.1:5000/api/health` returned **200** with
+`{"status":"online","service":"Keyframe Studio API","database":"SQLite (Embedded Local DB)",...}`.
 
-**Sensitivity:** reverting the evaluated display and the channel write turns 2 cases red.
+The change is test-only: `git diff dea88ab -- src/` is empty, so the running
+preview serves byte-identical application source to `dea88ab`.
 
-## Validation
+## Branch, commits and CI
 
-`npx tsc -b --pretty false`, `npm run lint`, `npm test` (137 files / 2,092 tests), `npm run build`, `npm run validate:ograf`, `npm run qa:release` (2 Chromium), `npm run qa:v6` (3 Chromium), `npx playwright test e2e/trim-path-v2.spec.ts --retries=0` (2 tests), `node scripts/check-state-consistency.mjs`, `npm audit --audit-level=low` (0 vulnerabilities) and `git diff --check` all pass.
+- Commit `f13fed0bed96280c10f3430595afd787d42d5aaa` on
+  `fix/authoring-ux-transform-toolbar`, pushed with a normal
+  `git push origin HEAD:refs/heads/fix/authoring-ux-transform-toolbar`
+  (`dea88ab..f13fed0`); no force push, no rebase, no tag, no version bump.
+- PR #4 (`https://github.com/ErtugrulAK/keyframe-character-studio/pull/4`) was
+  updated in place; no duplicate PR was opened and nothing was merged.
+- CI run `38143843474` is the `pull_request` run for `f13fed0`: **success**
+  (`CI Pipeline` → `Build, Lint & Test Verification`, 2026-10-11T13:36:24Z →
+  13:37:47Z, every step green).
 
-## Exact-SHA smoke
+## Limitations
 
-**Not run, and not required for this change.** The fix changes the Inspector's authoring path only: `evaluateTrimPath`, `evaluateFrame`, the static SVG renderer, the generated runtime and the package format are untouched, so exported/runtime OGraf behaviour is identical. The previous smoke still describes the export behaviour. Any later commit that changes export or runtime code needs its own exact-SHA smoke.
-
-## User retest
-
-1. Create a freeform/path layer with a visible stroke.
-2. Enable Trim Path.
-3. At frame 0: add an End keyframe, set End = 0.
-4. At frame 30: add an End keyframe, set End = 100.
-5. Return to frame 0: End must read **0** again (it used to read 100).
-6. Scrub 0 → 30: the stroke draws on progressively.
-7. Play: the animation reveals the path.
-8. Save and reload: both keyframes remain 0 and 100.
-9. Export an OGraf package and play it in the host: the same reveal.
-
-Optional second pass: Start 0 → 50, and Offset 0 → 180.
-
-## Release state
-
-Unchanged: `v1.1.0-rc.2` remains the published prerelease at `6c27ef35d48d61a5e1163d2c91734c864fcafa01`, npm still returns 404, and no tag, release or npm action was taken.
-
----
+- Only the three affected specs were reproduced at first; the rest of the suite was
+  validated after the fix, once, with `--retries=0`.
+- The regression was visible only in the real browser: the affected specs run
+  against Chromium, and the Vitest suite never queries these buttons by accessible
+  name, so it stayed green throughout.
+- CI does not run the Chromium suite or the state consistency check; the full-suite
+  and state-check results above are local results for `f13fed0`.
 
 ## 9. Changelog
 
@@ -753,5 +884,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Playwright end-to-end (E2E) workflow test suite (`e2e/workflow.spec.ts`).
   - TypeScript strict mode compilation and Oxlint linting integration.
   - Agent governance guidelines, project context specification, and domain-driven branch strategy (`.agents/`).
-
----

@@ -16,7 +16,7 @@ stable repo, and then remove the redundant Desktop Git worktrees **through `git 
 - Test-only vacuous-assertion fix commit `7abee1783039c606b6fbe6f2263bc09b09640885` — the **TESTED CODE SHA**
 - Full validation on integrated `main`: 146 files / 2,234 vitest tests; FULL Chromium suite **334 passed / 0 failed / 0 flaky** with `--retries=0`
 - Exact-SHA Release Smoke Gate run `38172157643` on `7abee17`: **success**
-- Live preview: UI 5173 switched to the canonical stable repo (pid 34504); API 5000 (pid 24896) was never stopped
+- Live preview: UI 5173 switched to the canonical stable repo (vite listener pid 4412, `npx vite` wrapper pid 34504); API 5000 (pid 24896) was never stopped
 - Six redundant Desktop worktrees removed with `git worktree remove` only; no branch was deleted
 - No tag, no release, no npm publication, no dependency/package/workflow change
 
@@ -58,7 +58,7 @@ redundant Desktop worktrees were removed with **`git worktree remove` only**.
 | PR #8 | **MERGED** (base `main`, head `fix/ograf-runtime-parity-phase-a-replay`) |
 | PR #3 | OPEN, unmerged, superseded — untouched, recommended for later closure |
 | Smoke run | `38172157643` — SUCCESS on `7abee17` |
-| Live preview | `http://localhost:5173/` — pid 34504, canonical repo, `main` @ `7abee17` |
+| Live preview | `http://localhost:5173/` — vite listener pid 4412 (`npx vite` wrapper pid 34504), canonical repo, `main` @ `7abee17` |
 | API | `127.0.0.1:5000` — pid 24896, never restarted, `/api/health` 200 |
 
 ## Integration record
@@ -116,7 +116,7 @@ published to npm.
 
 - 5173: the old final-UX worktree vite process (pid 34956, from
   `keyframe-character-studio-omp-authoring-ux-final`) was stopped; `npx vite --host --port 5173` now
-  runs from the canonical stable repo (pid 34504), answers 200, and serves `main` @ `7abee17`
+  runs from the canonical stable repo (vite listener pid 4412, `npx vite` wrapper pid 34504), answers 200, and serves `main` @ `7abee17`
   including the runtime-parity modules — proved by reading the process working directory and fetching
   the served `src/ograf/runtimeSnippets.ts` and `src/ograf/runtimeTemplate.ts`.
 - API 5000: pid **24896**, never stopped or restarted, `/api/health` and `/api/projects` answer 200.
@@ -171,7 +171,7 @@ Self-review: the generated runtime embeds the canonical compareByStackingOrder (
 Validation (integrated main, isolated CI=1 PORT=5008 -> UI 5188 / API 5008; npm run dev never used): tsc -b clean; oxlint clean; vitest 146 files / 2234 tests; vite build; validate:ograf; focused runtime-parity/stacking/matte/export/grouping 10 files / 508 tests; qa:release 2 passed; qa:v6 3 passed; npm run check; check-state-consistency PASS (47 checks); npm audit --audit-level=low 0 vulnerabilities; git diff --check clean; FULL Chromium npx playwright test --retries=0 = 334 passed / 0 failed / 0 flaky
 Validation at the final code SHA 7abee17: npm run check green (2234 tests), focused set 508 passed, qa:release 2 passed, qa:v6 3 passed, FULL Chromium 334 passed / 0 failed, check-state-consistency PASS
 Smoke: Release Smoke Gate run 38172157643, candidate_sha 7abee1783039c606b6fbe6f2263bc09b09640885, conclusion success (exact-SHA checkout asserted, npm ci, Chromium setup, OGraf fixture validation and qa:release all passed); verification-only workflow; no tag, release or npm action
-Live surfaces: UI 5173 switched from the final-UX worktree (pid 34956) to the canonical stable repo via npx vite --host --port 5173 (pid 34504), answers 200 and serves main @ 7abee17 including the runtime-parity changes; API 5000 (pid 24896) was never stopped and /api/health answers 200
+Live surfaces: UI 5173 switched from the final-UX worktree (pid 34956) to the canonical stable repo via npx vite --host --port 5173 (vite listener pid 4412, npx wrapper pid 34504), answers 200 and serves main @ 7abee17 including the runtime-parity changes; API 5000 (pid 24896) was never stopped and /api/health answers 200
 Worktrees removed with git worktree remove only (each clean, zero untracked files, branch reachable from main or fully pushed, no user data, no dependent process): keyframe-character-studio-omp-authoring-ux, -omp-authoring-ux-final, -omp-camera-invariance, -omp-corner-anchor, -omp-runtime-parity-replay, -omp-runtime-parity; git worktree prune then listed only the canonical checkout; the only ignored content was node_modules, dist, playwright-report, test-results and the seeded SQLite file
 Branches: none deleted; fix/authoring-ux-transform-toolbar, fix/authoring-ux-camera-invariance, fix/authoring-ux-corner-anchor, fix/authoring-ux-final-slices, fix/ograf-runtime-parity-phase-a-replay and fix/ograf-runtime-parity-phase-a all remain locally and on origin; the merged/superseded set is recommended for later deletion only with explicit approval
 PR #3: OPEN and superseded by the merged PR #8 (its application delta is now in main); recommended for closure as superseded, but it was NOT closed, rewritten or deleted in this task
@@ -220,7 +220,7 @@ not an archive.
 | Replacement PR | **#8 — MERGED** (GitHub records the fast-forward tip as its merge commit) |
 | Test-only fix commit | `7abee1783039c606b6fbe6f2263bc09b09640885` — the **TESTED CODE SHA** |
 | Old PR #3 | **OPEN**, unmerged, superseded — not rewritten, not closed, branch not deleted |
-| Live preview | `http://localhost:5173/` — pid 34504, started from the canonical repo |
+| Live preview | `http://localhost:5173/` — vite listener pid 4412 (`npx vite` wrapper pid 34504), started from the canonical repo |
 | API | `127.0.0.1:5000` — pid 24896, unchanged |
 
 ## What changed
@@ -256,7 +256,8 @@ validation and `qa:release` all passed. No tag, release or npm action was taken.
 
 - 5173 was switched to the canonical stable repo: the old worktree vite process (pid 34956) was
   stopped and `npx vite --host --port 5173` was started from
-  `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (pid 34504). API 5000 (pid 24896) was never
+  `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (vite listener pid 4412, `npx vite` wrapper
+  pid 34504). API 5000 (pid 24896) was never
   stopped.
 - All six redundant Desktop worktrees were removed with **`git worktree remove` only**, after each
   passed every safety check (clean tree, zero untracked files, branch reachable from `main` or fully
@@ -503,7 +504,7 @@ The controlled release-readiness pass ran end to end and its evidence is `report
 - One vacuous assertion in `src/tests/ografExport.test.ts` (`not.toContain('data-layer="g"')`, an attribute no renderer emits — the wrapper is `data-layer-id="<id>"`) was corrected to `not.toContain('data-layer-id="g"')` as a test-only fix, commit `7abee1783039c606b6fbe6f2263bc09b09640885`. A throwaway probe proved the old form is unsatisfiable and the real attribute appears as soon as a container paints.
 - Full post-merge validation on the integrated `main` was green: `npx tsc -b --pretty false`, `npm run lint`, `npm test` (146 files / 2,234 tests), `npm run build`, `npm run validate:ograf`, the focused runtime-parity/stacking/matte/export/grouping set (10 files / 508 tests), `qa:release` (2) and `qa:v6` (3), `npm run check`, `node scripts/check-state-consistency.mjs` (47 checks), `npm audit --audit-level=low` (0 vulnerabilities), `git diff --check`, and the FULL Chromium suite with `--retries=0`: **334 passed, 0 failed, 0 flaky**. All E2E ran isolated (`CI=1 PORT=5008` → UI 5188 / API 5008); `npm run dev` was never used. The affected gates were re-run at the final code SHA `7abee17` (check, focused set, both QA gates, full Chromium, state consistency) and were green again.
 - **Exact-SHA Release Smoke Gate** on the final code SHA: run `38172157643`, candidate SHA `7abee1783039c606b6fbe6f2263bc09b09640885`, conclusion **success** — the run checked out the exact requested SHA, passed the expected-SHA assertion, `npm ci`, the Chromium setup, the OGraf fixture validation and `qa:release`. `7abee17` is the TESTED CODE SHA; the docs tip above it is docs-only and was deliberately not smoke-tested.
-- The live 5173 QA surface was switched to the canonical stable repo: the old final-UX worktree vite process (pid 34956) was stopped and `npx vite --host --port 5173` was started from `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (pid 34504). 5173 answers 200 and serves `main` @ `7abee17` including the runtime-parity changes, verified by reading the process working directory and fetching the served modules. API 5000 (pid 24896) was never stopped and `/api/health` still answers 200.
+- The live 5173 QA surface was switched to the canonical stable repo: the old final-UX worktree vite process (pid 34956) was stopped and `npx vite --host --port 5173` was started from `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (vite listener pid 4412, spawned by the `npx vite` service wrapper pid 34504). 5173 answers 200 and serves `main` @ `7abee17` including the runtime-parity changes, verified by reading the process working directory and fetching the served modules. API 5000 (pid 24896) was never stopped and `/api/health` still answers 200.
 - All six redundant Desktop worktrees were removed **with `git worktree remove` only** after passing every safety check (clean tree, zero untracked files, branch reachable from `main` or fully pushed, no user data, no dependent process): `keyframe-character-studio-omp-authoring-ux`, `-omp-authoring-ux-final`, `-omp-camera-invariance`, `-omp-corner-anchor`, `-omp-runtime-parity-replay` and `-omp-runtime-parity`. `git worktree prune` then listed only the canonical checkout. Only denied content was build/test artifacts and the seeded SQLite file; the live API uses the canonical database.
 - The six branches were **not deleted**; `feat/canvas-tangent-authoring(-replay)` remain kept as before. PR #3 stays OPEN and is now superseded by the merged PR #8 — closing it is a separate explicit user decision.
 - No tag was created or moved, no release was published or finalized, nothing was published to npm, and no dependency/package/workflow/OMP change was made. Record: `reports/progress_164_ograf_runtime_parity_integration.md`.
@@ -1040,7 +1041,7 @@ gate working as designed; it cleared on the push and is not a defect.
 
 | Surface | Before | After |
 |---|---|---|
-| UI 5173 | pid **34956**, `...-omp-authoring-ux-final\node_modules\vite\bin\vite.js --host --port 5173` | pid **34504**, `npx vite --host --port 5173` started from `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
+| UI 5173 | pid **34956**, `...-omp-authoring-ux-final\node_modules\vite\bin\vite.js --host --port 5173` | pid **4412** (the `npx vite` service wrapper is pid 34504), started from `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | UI 5173 HTTP | 200 | 200 |
 | Server working directory | the final-UX worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (verified by reading the process's PEB `CurrentDirectory`) |
 | Branch / HEAD served | `fix/authoring-ux-final-slices` @ `a56ed01` | `main` @ `7abee17` |

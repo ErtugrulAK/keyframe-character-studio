@@ -18,7 +18,7 @@ not an archive.
 | Replacement PR | **#8 — MERGED** (GitHub records the fast-forward tip as its merge commit) |
 | Test-only fix commit | `7abee1783039c606b6fbe6f2263bc09b09640885` — the **TESTED CODE SHA** |
 | Old PR #3 | **OPEN**, unmerged, superseded — not rewritten, not closed, branch not deleted |
-| Live preview | `http://localhost:5173/` — pid 34504, started from the canonical repo |
+| Live preview | `http://localhost:5173/` — vite listener pid 4412 (`npx vite` wrapper pid 34504), started from the canonical repo |
 | API | `127.0.0.1:5000` — pid 24896, unchanged |
 
 ## What changed
@@ -54,7 +54,8 @@ validation and `qa:release` all passed. No tag, release or npm action was taken.
 
 - 5173 was switched to the canonical stable repo: the old worktree vite process (pid 34956) was
   stopped and `npx vite --host --port 5173` was started from
-  `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (pid 34504). API 5000 (pid 24896) was never
+  `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (vite listener pid 4412, `npx vite` wrapper
+  pid 34504). API 5000 (pid 24896) was never
   stopped.
 - All six redundant Desktop worktrees were removed with **`git worktree remove` only**, after each
   passed every safety check (clean tree, zero untracked files, branch reachable from `main` or fully

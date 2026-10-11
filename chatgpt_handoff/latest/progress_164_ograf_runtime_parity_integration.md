@@ -137,7 +137,7 @@ gate working as designed; it cleared on the push and is not a defect.
 
 | Surface | Before | After |
 |---|---|---|
-| UI 5173 | pid **34956**, `...-omp-authoring-ux-final\node_modules\vite\bin\vite.js --host --port 5173` | pid **34504**, `npx vite --host --port 5173` started from `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
+| UI 5173 | pid **34956**, `...-omp-authoring-ux-final\node_modules\vite\bin\vite.js --host --port 5173` | pid **4412** (the `npx vite` service wrapper is pid 34504), started from `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` |
 | UI 5173 HTTP | 200 | 200 |
 | Server working directory | the final-UX worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (verified by reading the process's PEB `CurrentDirectory`) |
 | Branch / HEAD served | `fix/authoring-ux-final-slices` @ `a56ed01` | `main` @ `7abee17` |

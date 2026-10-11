@@ -29,7 +29,7 @@ redundant Desktop worktrees were removed with **`git worktree remove` only**.
 | PR #8 | **MERGED** (base `main`, head `fix/ograf-runtime-parity-phase-a-replay`) |
 | PR #3 | OPEN, unmerged, superseded — untouched, recommended for later closure |
 | Smoke run | `38172157643` — SUCCESS on `7abee17` |
-| Live preview | `http://localhost:5173/` — pid 34504, canonical repo, `main` @ `7abee17` |
+| Live preview | `http://localhost:5173/` — vite listener pid 4412 (`npx vite` wrapper pid 34504), canonical repo, `main` @ `7abee17` |
 | API | `127.0.0.1:5000` — pid 24896, never restarted, `/api/health` 200 |
 
 ## Integration record
@@ -87,7 +87,7 @@ published to npm.
 
 - 5173: the old final-UX worktree vite process (pid 34956, from
   `keyframe-character-studio-omp-authoring-ux-final`) was stopped; `npx vite --host --port 5173` now
-  runs from the canonical stable repo (pid 34504), answers 200, and serves `main` @ `7abee17`
+  runs from the canonical stable repo (vite listener pid 4412, `npx vite` wrapper pid 34504), answers 200, and serves `main` @ `7abee17`
   including the runtime-parity modules — proved by reading the process working directory and fetching
   the served `src/ograf/runtimeSnippets.ts` and `src/ograf/runtimeTemplate.ts`.
 - API 5000: pid **24896**, never stopped or restarted, `/api/health` and `/api/projects` answer 200.

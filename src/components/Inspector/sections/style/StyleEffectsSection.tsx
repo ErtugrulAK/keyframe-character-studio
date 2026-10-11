@@ -7,22 +7,32 @@ import { StyleCard } from './StyleCard';
 interface StyleEffectsSectionProps {
   selectedPart: CharacterPart;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
+  onColorInteractionStart?: () => void;
+  onColorInteractionEnd?: () => void;
   embedded?: boolean;
 }
 
-export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({ selectedPart, onPartPropChange, embedded = false }) => {
+export const StyleEffectsSection: React.FC<StyleEffectsSectionProps> = ({
+  selectedPart,
+  onPartPropChange,
+  onColorInteractionStart,
+  onColorInteractionEnd,
+  embedded = false,
+}) => {
   const controls = (
     <>
       <div className="effects-color-field">
         <div className="form-field-group effects-color-row">
           <div className="effects-color-controls">
+            {/* The shadow color carries no alpha channel, so the picker omits
+                the alpha controls rather than exposing a dead slider. */}
             <ColorPickerPopover
               label="SHADOW / GLOW COLOR"
               color={selectedPart.shadowColor || '#000000'}
-              alpha={1}
               fallback="#000000"
               onColorChange={(value) => onPartPropChange('shadowColor', value)}
-              onAlphaChange={() => undefined}
+              onInteractionStart={onColorInteractionStart}
+              onInteractionEnd={onColorInteractionEnd}
             />
             <button type="button" className="btn-secondary effects-clear-button" onClick={() => onPartPropChange('shadowColor', undefined)}>Clear Shadow</button>
           </div>

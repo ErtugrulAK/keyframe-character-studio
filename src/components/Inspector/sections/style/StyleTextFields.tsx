@@ -11,9 +11,17 @@ interface StyleTextFieldsProps {
   selectedPart: CharacterPart;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
   onPartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
+  onColorInteractionStart?: () => void;
+  onColorInteractionEnd?: () => void;
 }
 
-export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, onPartPropChange, onPartColorChange }) => {
+export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({
+  selectedPart,
+  onPartPropChange,
+  onPartColorChange,
+  onColorInteractionStart,
+  onColorInteractionEnd,
+}) => {
   const applies =
     selectedPart.type === 'custom_card' ||
     selectedPart.type === 'custom_text' ||
@@ -111,6 +119,8 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
                 fallback="#00d2ff"
                 onColorChange={(value) => onPartColorChange('fillColor', value)}
                 onAlphaChange={(value) => onPartPropChange('fillOpacity', value)}
+                onInteractionStart={onColorInteractionStart}
+                onInteractionEnd={onColorInteractionEnd}
               />
             </div>
           </div>
@@ -137,6 +147,8 @@ export const StyleTextFields: React.FC<StyleTextFieldsProps> = ({ selectedPart, 
                   fallback="#101218"
                   onColorChange={(value) => onPartColorChange('strokeColor', value)}
                   onAlphaChange={(value) => onPartPropChange('strokeOpacity', value)}
+                  onInteractionStart={onColorInteractionStart}
+                  onInteractionEnd={onColorInteractionEnd}
                 />
               </div>
               <div className="stroke-inline-fields">

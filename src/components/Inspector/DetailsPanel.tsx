@@ -580,6 +580,8 @@ export const DetailsPanel: React.FC = () => {
                 onChangeMaskPath={(maskId, path) => {
                   if (selectedPartId) authorMaskPath(selectedPartId, maskId, path);
                 }}
+                onColorInteractionStart={startBatchInteraction}
+                onColorInteractionEnd={endBatchInteraction}
               />
 
             </>

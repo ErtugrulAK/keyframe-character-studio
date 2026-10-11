@@ -9,6 +9,8 @@ interface StyleColorSectionProps {
   selectedPart: CharacterPart;
   onPartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
+  onColorInteractionStart?: () => void;
+  onColorInteractionEnd?: () => void;
   embedded?: boolean;
 }
 
@@ -20,6 +22,8 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({
   selectedPart,
   onPartColorChange,
   onPartPropChange,
+  onColorInteractionStart,
+  onColorInteractionEnd,
   embedded = false,
 }) => {
   if (isShapeAppearanceEligible(selectedPart.type)) return null;
@@ -38,6 +42,8 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({
             fallback="#00d2ff"
             onColorChange={(color) => onPartColorChange('fillColor', color)}
             onAlphaChange={(alpha) => onPartPropChange('fillOpacity', alpha)}
+            onInteractionStart={onColorInteractionStart}
+            onInteractionEnd={onColorInteractionEnd}
           />
         </div>
       </div>
@@ -54,10 +60,18 @@ export const StyleColorSection: React.FC<StyleColorSectionProps> = ({
             fallback="#1e293b"
             onColorChange={(color) => onPartColorChange('strokeColor', color)}
             onAlphaChange={(alpha) => onPartPropChange('strokeOpacity', alpha)}
+            onInteractionStart={onColorInteractionStart}
+            onInteractionEnd={onColorInteractionEnd}
           />
         </div>
       </div>
-      <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={onPartPropChange} embedded />
+      <StyleEffectsSection
+        selectedPart={selectedPart}
+        onPartPropChange={onPartPropChange}
+        onColorInteractionStart={onColorInteractionStart}
+        onColorInteractionEnd={onColorInteractionEnd}
+        embedded
+      />
     </>
   );
 

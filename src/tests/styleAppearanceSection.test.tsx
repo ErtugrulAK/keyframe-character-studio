@@ -28,21 +28,35 @@ const makePart = (type: CharacterPart['type']): CharacterPart => ({
   fillColor: '#ff0000', strokeColor: '#101218',
 } as CharacterPart);
 
+/** Opens the one floating paint popover for a swatch, exactly like a user click. */
+const openPicker = (label: string) => fireEvent.click(screen.getByRole('button', { name: `${label} Color Preview` }));
+
+const mockSliderBounds = (element: HTMLElement, width = 100) => {
+  vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+    left: 0, width, top: 0, right: width, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => ({}),
+  });
+};
+
 describe('StyleAppearanceSection', () => {
-  it('renders one inline RGBA editor per property without a native color picker', () => {
+  it('renders one paint swatch per property and opens the shared editor on demand', () => {
     const onChange = vi.fn();
     const part = { ...makePart('custom_rect'), fillEnabled: true, fillOpacity: 0, strokeEnabled: false, strokeWidth: 0, strokeOpacity: 0 };
     const { container } = openAppearance(part, onChange);
 
     expect(screen.getByText('APPEARANCE')).toBeTruthy();
-    expect(screen.getByLabelText('FILL COLOR A')).toHaveValue(0);
-    expect(screen.getByLabelText('STROKE COLOR A')).toHaveValue(0);
-    expect(screen.getByRole('slider', { name: 'FILL COLOR Hue' })).toBeTruthy();
-    expect(screen.getByRole('slider', { name: 'STROKE COLOR Hue' })).toBeTruthy();
-    expect(screen.getAllByLabelText('FILL COLOR Color Preview')).toHaveLength(1);
-    expect(screen.getAllByLabelText('STROKE COLOR Color Preview')).toHaveLength(1);
-    expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
+    // Fill, Stroke and the embedded Effects paint: one swatch each, no popover.
+    expect(container.querySelectorAll('.color-swatch-button')).toHaveLength(3);
     expect(screen.queryByRole('dialog')).toBeNull();
+    expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
+
+    openPicker('FILL COLOR');
+    expect(screen.getByLabelText('FILL COLOR A')).toHaveValue(0);
+    expect(screen.getByRole('slider', { name: 'FILL COLOR Hue' })).toBeTruthy();
+    // A single popover is open at a time.
+    expect(screen.queryByLabelText('STROKE COLOR A')).toBeNull();
+    expect(document.querySelectorAll('.rgba-picker-hue-slider')).toHaveLength(1);
+    // Opening reads the authored paint; it never writes one.
+    expect(onChange).not.toHaveBeenCalled();
 
     const fillHeader = container.querySelector('.appearance-group-header');
     expect(fillHeader).toBeTruthy();
@@ -55,25 +69,44 @@ describe('StyleAppearanceSection', () => {
     expect(onChange).toHaveBeenCalledWith('strokeEnabled', true);
   });
 
-  it('updates hue and alpha through their inline controls', () => {
+  it('updates hue and alpha through the shared popover controls', () => {
     const onChange = vi.fn();
     const part = makePart('custom_rect');
-    const { container } = openAppearance(part, onChange);
+    openAppearance(part, onChange);
+    openPicker('FILL COLOR');
     const hue = screen.getByRole('slider', { name: 'FILL COLOR Hue' });
     const alpha = screen.getByRole('slider', { name: 'FILL COLOR Alpha' });
-    vi.spyOn(hue, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => ({}) });
-    vi.spyOn(alpha, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => ({}) });
+    mockSliderBounds(hue);
+    mockSliderBounds(alpha);
     fireEvent.pointerDown(hue, { clientX: 50, pointerId: 1 });
     expect(onChange).toHaveBeenCalledWith('fillColor', '#00ffff');
     fireEvent.pointerDown(alpha, { clientX: 25, pointerId: 2 });
     expect(onChange).toHaveBeenCalledWith('fillOpacity', 0.25);
-    expect(container.querySelectorAll('.rgba-picker-hue-slider')).toHaveLength(3);
+    expect(document.querySelectorAll('.rgba-picker-hue-slider')).toHaveLength(1);
+  });
+
+  it('persists alpha on its own channel and never rewrites the color', () => {
+    const onChange = vi.fn();
+    const { rerender } = openAppearance(makePart('custom_rect'), onChange);
+    openPicker('FILL COLOR');
+    const alpha = screen.getByRole('slider', { name: 'FILL COLOR Alpha' });
+    mockSliderBounds(alpha);
+
+    fireEvent.pointerDown(alpha, { clientX: 25, pointerId: 5 });
+    fireEvent.pointerUp(alpha, { clientX: 25, pointerId: 5 });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange).toHaveBeenCalledWith('fillOpacity', 0.25);
+
+    // The persisted alpha comes back on the control when the project re-renders.
+    rerender(<StyleAppearanceSection selectedPart={{ ...makePart('custom_rect'), fillOpacity: 0.25 }} onPartPropChange={onChange} />);
+    expect(screen.getByRole('slider', { name: 'FILL COLOR Alpha' })).toHaveAttribute('aria-valuenow', '64');
   });
 
   it('keeps RGB, alpha, hex, and fill/stroke channels independent', () => {
     const onChange = vi.fn();
     const part = makePart('custom_rect');
-    const { container, rerender } = openAppearance(part, onChange);
+    const { rerender } = openAppearance(part, onChange);
+    openPicker('FILL COLOR');
 
     fireEvent.change(screen.getByLabelText('FILL COLOR R'), { target: { value: '128' } });
     expect(onChange).toHaveBeenCalledWith('fillColor', '#800000');
@@ -82,8 +115,11 @@ describe('StyleAppearanceSection', () => {
 
     rerender(<StyleAppearanceSection selectedPart={{ ...part, fillColor: '#800000', fillOpacity: 0.5 }} onPartPropChange={onChange} />);
     expect(screen.getByLabelText('FILL COLOR R')).toHaveValue(128);
-    expect(container.querySelector('.appearance-color-field .color-hex-input')).toHaveValue('#800000');
+    expect(document.querySelector('.rgba-picker-hex .color-hex-input')).toHaveValue('#800000');
 
+    // Opening the stroke swatch closes the fill popover and keeps its own channel.
+    openPicker('STROKE COLOR');
+    expect(screen.queryByLabelText('FILL COLOR R')).toBeNull();
     fireEvent.change(screen.getByLabelText('STROKE COLOR R'), { target: { value: '32' } });
     expect(onChange).toHaveBeenCalledWith('strokeColor', '#201218');
     expect(screen.getByLabelText('STROKE COLOR R')).toHaveValue(16);
@@ -132,11 +168,12 @@ describe('StyleAppearanceSection', () => {
     expect(screen.getByText('APPEARANCE')).toBeTruthy();
     expect(screen.getByText('FILL')).toBeTruthy();
     expect(screen.getByText('STROKE')).toBeTruthy();
+    openPicker('FILL COLOR');
     expect(screen.getByLabelText('FILL COLOR A')).toBeTruthy();
     expect(screen.queryByText('QUICK PALETTE SWATCHES')).toBeNull();
     expect(screen.queryByText('COLOR')).toBeNull();
     expect(container.querySelectorAll('input[type="color"]')).toHaveLength(0);
-    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.getByRole('dialog', { name: 'FILL COLOR Color Picker' })).toBeTruthy();
   });
   it('embeds a single Color control inside the TEXT section', () => {
     const onColorChange = vi.fn();
@@ -151,6 +188,7 @@ describe('StyleAppearanceSection', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Expand TEXT' }));
     expect(screen.getByText('TEXT')).toBeTruthy();
+    openPicker('COLOR');
     expect(screen.getAllByText('COLOR').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText('FILL')).toBeNull();
     // Text owns a STROKE group here; the shape Appearance card stays separate.
@@ -162,8 +200,8 @@ describe('StyleAppearanceSection', () => {
 
     const hue = screen.getByRole('slider', { name: 'COLOR Hue' });
     const alpha = screen.getByRole('slider', { name: 'COLOR Alpha' });
-    vi.spyOn(hue, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => ({}) });
-    vi.spyOn(alpha, 'getBoundingClientRect').mockReturnValue({ left: 0, width: 100, top: 0, right: 100, bottom: 10, height: 10, x: 0, y: 0, toJSON: () => ({}) });
+    mockSliderBounds(hue);
+    mockSliderBounds(alpha);
     fireEvent.pointerDown(hue, { clientX: 50, pointerId: 1 });
     fireEvent.pointerDown(alpha, { clientX: 25, pointerId: 2 });
 

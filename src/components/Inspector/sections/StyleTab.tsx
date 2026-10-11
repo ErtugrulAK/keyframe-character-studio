@@ -30,6 +30,9 @@ interface StyleTabProps {
   trimKeyframedAtFrame?: Record<TrimPathChannel, boolean>;
   onUpdateTrimChannel?: (channel: TrimPathChannel, value: number) => void;
   onToggleTrimKeyframe?: (channel: TrimPathChannel) => void;
+  /** Opens/closes ONE undo entry around a completed color pointer gesture. */
+  onColorInteractionStart?: () => void;
+  onColorInteractionEnd?: () => void;
 }
 
 export const StyleTab: React.FC<StyleTabProps> = ({
@@ -47,6 +50,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
   trimKeyframedAtFrame,
   onUpdateTrimChannel,
   onToggleTrimKeyframe,
+  onColorInteractionStart,
+  onColorInteractionEnd,
 }) => {
   const isTextBearing =
     selectedPart.type === 'custom_card' ||
@@ -65,14 +70,29 @@ export const StyleTab: React.FC<StyleTabProps> = ({
           onToggleTrimKeyframe={onToggleTrimKeyframe}
         />
       )}
-      {isShapeAppearanceEligible(selectedPart.type) && <StyleAppearanceSection selectedPart={selectedPart} onPartPropChange={handlePartPropChange} />}
+      {isShapeAppearanceEligible(selectedPart.type) && (
+        <StyleAppearanceSection
+          selectedPart={selectedPart}
+          onPartPropChange={handlePartPropChange}
+          onColorInteractionStart={onColorInteractionStart}
+          onColorInteractionEnd={onColorInteractionEnd}
+        />
+      )}
       {!isTextBearing && (
-        <StyleColorSection selectedPart={selectedPart} onPartColorChange={handlePartColorChange} onPartPropChange={handlePartPropChange} />
+        <StyleColorSection
+          selectedPart={selectedPart}
+          onPartColorChange={handlePartColorChange}
+          onPartPropChange={handlePartPropChange}
+          onColorInteractionStart={onColorInteractionStart}
+          onColorInteractionEnd={onColorInteractionEnd}
+        />
       )}
       <StyleTextFields
         selectedPart={selectedPart}
         onPartColorChange={handlePartColorChange}
         onPartPropChange={handlePartPropChange}
+        onColorInteractionStart={onColorInteractionStart}
+        onColorInteractionEnd={onColorInteractionEnd}
       />
       {selectedPart.type === 'custom_freeform' && !selectedPart.booleanOperandIds?.length && transform && coordinateSystem && (
         <TransformVertexEditor selectedPart={selectedPart} transform={transform} coordinateSystem={coordinateSystem} onPartPropChange={handlePartPropChange} />

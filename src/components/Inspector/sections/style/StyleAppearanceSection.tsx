@@ -14,6 +14,8 @@ import { StyleEffectsSection } from './StyleEffectsSection';
 interface StyleAppearanceSectionProps {
   selectedPart: CharacterPart;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
+  onColorInteractionStart?: () => void;
+  onColorInteractionEnd?: () => void;
 }
 
 const ColorControl: React.FC<{
@@ -23,7 +25,9 @@ const ColorControl: React.FC<{
   fallback: string;
   onColorChange: (value: string) => void;
   onAlphaChange: (value: number) => void;
-}> = ({ label, value, alpha, fallback, onColorChange, onAlphaChange }) => (
+  onInteractionStart?: () => void;
+  onInteractionEnd?: () => void;
+}> = ({ label, value, alpha, fallback, onColorChange, onAlphaChange, onInteractionStart, onInteractionEnd }) => (
   <div className="appearance-color-field">
     <ColorPickerPopover
       label={label}
@@ -32,11 +36,18 @@ const ColorControl: React.FC<{
       fallback={fallback}
       onColorChange={onColorChange}
       onAlphaChange={onAlphaChange}
+      onInteractionStart={onInteractionStart}
+      onInteractionEnd={onInteractionEnd}
     />
   </div>
 );
 
-export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ selectedPart, onPartPropChange }) => {
+export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
+  selectedPart,
+  onPartPropChange,
+  onColorInteractionStart,
+  onColorInteractionEnd,
+}) => {
   const strokeAlignment = toStrokeAlignmentControlValue(selectedPart.strokeAlignment);
   const hasCornerRadiusControl =
     selectedPart.type === 'custom_rect' ||
@@ -79,6 +90,8 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
           fallback="#00d2ff"
           onColorChange={(value) => onPartPropChange('fillColor', value)}
           onAlphaChange={(value) => onPartPropChange('fillOpacity', value)}
+          onInteractionStart={onColorInteractionStart}
+          onInteractionEnd={onColorInteractionEnd}
         />
       </div>
 
@@ -94,6 +107,8 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
           fallback="#101218"
           onColorChange={(value) => onPartPropChange('strokeColor', value)}
           onAlphaChange={(value) => onPartPropChange('strokeOpacity', value)}
+          onInteractionStart={onColorInteractionStart}
+          onInteractionEnd={onColorInteractionEnd}
         />
         <div className="stroke-inline-fields">
           <div className="appearance-field">
@@ -110,7 +125,13 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({ 
             </div>
           )}
         </div>
-        <StyleEffectsSection selectedPart={selectedPart} onPartPropChange={onPartPropChange} embedded />
+        <StyleEffectsSection
+          selectedPart={selectedPart}
+          onPartPropChange={onPartPropChange}
+          onColorInteractionStart={onColorInteractionStart}
+          onColorInteractionEnd={onColorInteractionEnd}
+          embedded
+        />
       </div>
     </StyleCard>
   );

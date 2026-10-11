@@ -131,8 +131,11 @@ test.describe('modern stroke-aware editor bounds', () => {
     await expect(details.getByText('OPACITY', { exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: 'Expand APPEARANCE' }).click();
     await page.getByLabel('Fill Enabled').uncheck();
+    await page.getByRole('button', { name: 'FILL COLOR Color Preview' }).click();
     await page.getByRole('spinbutton', { name: 'FILL COLOR A' }).fill('128');
+    await page.getByRole('button', { name: 'STROKE COLOR Color Preview' }).click();
     await page.getByRole('spinbutton', { name: 'STROKE COLOR A' }).fill('153');
+    await page.keyboard.press('Escape');
     await page.getByLabel('Stroke Width').fill('8');
     await page.getByLabel('Stroke Width').press('Tab');
     await page.locator('.autosave-status-badge').click();

@@ -158,3 +158,93 @@ describe('editor, static renderer and runtime agree', () => {
     expect(paintedLayerIds(staticMarkup(authored))).toEqual(expected);
   });
 });
+
+/**
+ * The Authoring-UX group model reaches OGraf export too.
+ *
+ * A layer group is a real container layer: `isGroup`, no geometry, no paint and
+ * saved with `visible: false`, whose children point at it through the ordinary
+ * `parentId` transform. The editor, the static SVG renderer and the generated
+ * runtime must agree on three things the group makes reachable for the first
+ * time: the child's composed world pose, the container painting nothing, and the
+ * painted order of the children.
+ */
+describe('layer groups keep runtime and static export in parity', () => {
+  /** Exactly what `layerGrouping`/`toSceneData` write for a container. */
+  const container = (overrides: Partial<SceneLayer> = {}): SceneLayer =>
+    layer({
+      id: 'group', name: 'Group', type: 'custom_freeform',
+      x: 40, y: 0, zIndex: 2, opacity: 0, visible: false,
+      fillColor: 'none', strokeColor: 'none', width: undefined, height: undefined,
+      ...overrides,
+    });
+  const child = (overrides: Partial<SceneLayer> = {}): SceneLayer =>
+    layer({ id: 'child', name: 'Child', parentId: 'group', x: -100, y: 0, zIndex: 1, ...overrides });
+
+  test('the container paints nothing and its child keeps the composed world pose', () => {
+    const authored = scene([container(), child()]);
+    // The editor authority: `evaluateFrame` composes the container's +40 into the
+    // child's local -100, so the child's world x is -60 before any renderer runs.
+    const evaluated = evaluateOGrafScene(authored, 0).layers.find((entry) => entry.id === 'child');
+    expect(evaluated?.transform.x).toBe(-60);
+
+    for (const markup of [runtimeMarkup(authored), staticMarkup(authored)]) {
+      expect(paintedLayerIds(markup)).toEqual(['child']);
+      // centre 400/2 - 60 = 140. Both paths must place the child there.
+      expect(markup).toContain('translate(140 150)');
+      // A geometryless container must never emit a layer element.
+      expect(markup).not.toContain('data-layer-id="group"');
+    }
+  });
+
+  test('a rotated/scaled container still composes into the child in every path', () => {
+    const authored = scene([container({ scaleX: 2, scaleY: 2 }), child({ x: 50 })]);
+    const evaluated = evaluateOGrafScene(authored, 0).layers.find((entry) => entry.id === 'child');
+    // The container's own +40 plus the child's local 50 scaled by 2 → 140, so the
+    // scale really composes rather than the offset happening to match.
+    expect(evaluated?.transform.x).toBe(140);
+    for (const markup of [runtimeMarkup(authored), staticMarkup(authored)]) {
+      expect(paintedLayerIds(markup)).toEqual(['child']);
+      expect(markup).toContain('translate(340 150)');
+      expect(markup).not.toContain('data-layer-id="group"');
+    }
+  });
+
+  test('group children obey the shared stacking order, not the authored order', () => {
+    const authored = scene([
+      container({ zIndex: 9 }),
+      child({ id: 'upper', zIndex: 3 }),
+      child({ id: 'lower', zIndex: 1 }),
+    ]);
+    const expected = stackingOrder(authored.layers).filter((entry) => entry.id !== 'group').map((entry) => entry.id);
+    expect(expected).toEqual(['lower', 'upper']);
+    expect(paintedLayerIds(runtimeMarkup(authored))).toEqual(expected);
+    expect(paintedLayerIds(staticMarkup(authored))).toEqual(expected);
+  });
+
+  test('a matte between group siblings resolves identically in every path', () => {
+    const authored = scene([
+      container(),
+      child({ id: 'source', zIndex: 1 }),
+      child({
+        id: 'target', zIndex: 2,
+        trackMatte: { sourceLayerId: 'source', mode: 'luminance', inverted: false, enabled: true, sourceVisible: false } as TrackMatteV2,
+      }),
+    ]);
+    const [runtime, static_] = [runtimeMarkup(authored), staticMarkup(authored)];
+    for (const markup of [runtime, static_]) {
+      expect(paintedLayerIds(markup)).toEqual(['target']);
+      expect(markup).toContain('mask-type="luminance"');
+    }
+    // Same relationship → same deterministic mask id in both paths.
+    expect(runtime).toContain('kcs-ograf-track-matte-target-source-luminance');
+    expect(static_).toContain('kcs-ograf-track-matte-target-source-luminance');
+  });
+
+  test('the generated module is deterministic and never mutates the authored layers', () => {
+    const authored = scene([container(), child({ id: 'upper', zIndex: 3 }), child({ id: 'lower', zIndex: 1 })]);
+    const before = authored.layers.map((entry) => entry.id);
+    expect(runtimeMarkup(authored)).toBe(runtimeMarkup(authored));
+    expect(authored.layers.map((entry) => entry.id)).toEqual(before);
+  });
+});

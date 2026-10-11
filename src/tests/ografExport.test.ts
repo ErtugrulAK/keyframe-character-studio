@@ -507,7 +507,9 @@ describe('OGraf Export — layer groups', () => {
     // The child keeps its own local -100 and inherits the container's +40, so
     // it lands at canvas centre 960 - 60.
     expect(svg).toContain('translate(900 540)');
-    // The container itself carries no geometry, so it draws no element.
-    expect(svg).not.toContain('data-layer="g"');
+    // The container itself carries no geometry, so it draws no layer element:
+    // the renderer's layer wrapper is `data-layer-id="<id>"`, so this asserts on
+    // that real attribute rather than on a name the output never uses.
+    expect(svg).not.toContain('data-layer-id="g"');
   });
 });

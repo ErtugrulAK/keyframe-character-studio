@@ -88,6 +88,10 @@ Most recent checkpoint (a historical record, kept unchanged): `docs/checkpoints/
 - `reports/progress_157_reality_hub_ograf_layer_matte_parity.md` — the Reality Hub OGraf stacking fix and the layer-order retest artifacts.
 - `reports/progress_158_trim_path_keyframe_authoring.md` — Trim Path authoring made frame-specific, with the retest steps.
 - `reports/progress_159_boolean_e2e_locator_alignment.md` — the 11 inherited Boolean E2E failures: the accessible-name cause, the locator-only fix, and the full-suite result.
+- `reports/progress_159_authoring_ux_camera_invariance.md` — the canvas camera stays fixed when a sidebar opens or the timeline resizes, with the deterministic Chromium spec.
+- `reports/progress_160_corner_anchor_resize.md` — corner resize keeps the opposite corner fixed in world space, with the focused specs.
+- `reports/progress_161_authoring_ux_final_slices.md` — the final authoring-UX slices: the colour picker, the authoring toolbar, the context menu, layer grouping and the aggregate group frame.
+- `reports/progress_162_authoring_ux_integration.md` — the Authoring UX stacked PR integration (PRs #4–#7, fast-forward only), the full validation counts, the exact-SHA smoke, and the read-only PR #3 audit.
 - `docs/design/KCS_LOTTIE_IMPORT_MAPPING.md` — the Lottie import mapping design itself.
 - `docs/design/KCS_MILESTONE_F_INTEROP_STUDY.md` — Milestone F study and per-item approval gates.
 - `docs/design/KCS_MILESTONE_E_OGRAF_QA_STUDY.md` — Milestone E study and implementation plan.

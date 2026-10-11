@@ -4,255 +4,280 @@
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT.
 
-Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` (branch `fix/authoring-ux-camera-invariance`, base `fix/authoring-ux-transform-toolbar` @ `7d7ebe2`). This line carries both the canvas camera-invariance work and the base branch’s Boolean E2E locator alignment, and the live 5173 preview is served from this worktree. External QA folders, the stable repository and the unrelated worktrees are untouched.
+Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-corner-anchor` (branch `fix/authoring-ux-corner-anchor`, stacked on `fix/authoring-ux-camera-invariance` @ `55a4ab2`, application head `aef21de`). This line fixes the transform gizmo's corner resize so the diagonally opposite corner stays fixed in world space; the camera-invariance work and the base branch's Boolean E2E locator alignment it is stacked on are unchanged. The live 5173 preview was NOT moved: it is still served from the camera-invariance worktree, and every test used the isolated UI 5188 / API 5004 pair. Nothing was merged, tagged, rebased or force-pushed. External QA folders, the stable repository and the unrelated worktrees are untouched.
 
 ---
 
 ## 1. OMP Final Response
 
-# KCS — Authoring UX combined line: canvas camera invariance + Boolean E2E locator alignment
+# KCS — Corner resize anchors the opposite corner (stacked on the authoring-UX line)
 
 ## Latest action
 
-The camera-invariance branch `fix/authoring-ux-camera-invariance` now carries the
-current authoring-UX base as well, and the combined line is fully validated. The
-base branch `fix/authoring-ux-transform-toolbar` advanced from `dea88ab` to
-`7d7ebe2` (Boolean E2E locator alignment) after this camera branch was cut, and
-rewriting history is disallowed on this line, so the advanced base was folded in
-with a **merge commit** — the only non-history-rewriting way to synchronize.
-Conflicts appeared only in the ChatGPT handoff bundle and were resolved by
-regenerating the bundle for the combined state; no code or test file conflicted.
-Nothing was merged to `main`.
+Corner-handle resize in the transform gizmo was fixed so the dragged corner follows
+the pointer while the diagonally **opposite** corner stays fixed in world space. The
+fix is one pure geometry authority plus its wiring into the existing canvas → inspector
+write path. It is committed on `fix/authoring-ux-corner-anchor`, a branch stacked on
+`fix/authoring-ux-camera-invariance`, pushed normally, and opened as a stacked pull
+request for review and CI only. Nothing was merged, nothing was rebased or
+force-pushed, no tag/release/npm action was taken, and the live 5173 preview was not
+touched.
 
 | Field | Value |
 |---|---|
-| Branch | `fix/authoring-ux-camera-invariance` |
-| Old merge base | `dea88ab` (`feat: improve authoring controls and selection visibility`) |
-| New UX base | `fix/authoring-ux-transform-toolbar` @ `7d7ebe2` |
-| Camera fix commits | `df107b8` (fix), `7ca126c`, `3db69a5` (docs) |
-| Boolean E2E locator commits | `f13fed0` (test), `7d7ebe2` (docs) on the base branch |
-| Synchronization | merge commit `aef21de5aad06592884d7a54004383b2f6eeccb1` of `origin/fix/authoring-ux-transform-toolbar`; no rebase, no force-push |
-| Combined head | `aef21de5aad06592884d7a54004383b2f6eeccb1` |
-| Conflicts | handoff bundle only: `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`, `chatgpt_handoff/latest/README.md`, `chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md`, `chatgpt_handoff/latest/manifest.txt` — resolved by regenerating the bundle; `chatgpt_handoff/latest/progress_158_trim_path_keyframe_authoring.md` auto-resolved (removed from the bundle on this branch, kept in `reports/`) |
-| Stacked PR | [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5) — base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`, MERGEABLE, review and CI only, NOT merged |
-| PR CI | `CI Pipeline` run `38146201264` (pull_request) — success on the combined head `aef21de` |
-| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance` |
-| Live preview | `http://localhost:5173/` served from this worktree by `vite --host --port 5173` |
+| Branch | `fix/authoring-ux-corner-anchor` (stacked) |
+| Base branch | `fix/authoring-ux-camera-invariance` (branch base `55a4ab2`, application head `aef21de`) |
+| Application commit | `04dc182` (`fix: anchor opposite corner during resize`) |
+| Docs commit | the handoff refresh on top of `04dc182` (documents only) |
+| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-corner-anchor` |
+| Stacked PR | [#6](https://github.com/ErtugrulAK/keyframe-character-studio/pull/6) — base `fix/authoring-ux-camera-invariance`, head `fix/authoring-ux-corner-anchor`, `MERGEABLE`, review and CI only, **NOT merged** |
+| PR CI (code head `04dc182`) | `CI Pipeline` run `38149765766` — **success** (job "Build, Lint & Test Verification", 1m56s) |
+| Live preview | `http://localhost:5173/` — unchanged, still the camera worktree's preview (PID 16844) |
+| API | `127.0.0.1:5000` — unchanged, same process as before this task (PID 24896) |
 
-## Slice 1 — canvas camera invariance (this branch)
+## Root cause (recorded before the patch, with file:line evidence)
 
-Editor chrome changing size (opening/closing a sidebar, resizing the timeline) used
-to pan **and** zoom the authored world. Root cause: the edit SVG filled the stage
-and mapped its 600x480 viewBox with `preserveAspectRatio="xMidYMid meet"`, so the
-camera content was centred on the stage box centre and magnified by the layout fit
-`min(w/600, h/480)`, while the pan/zoom transform was applied about that moving
-centre (`StageCanvas.tsx` `dea88ab:757-760`, `:767`; `viewportMath.ts` `dea88ab:29`,
-`:151`). Nothing owned the camera, so half of every panel-width change and every
-timeline-height change landed on the authored world.
+The corner drag scaled about the layer's **own centre** and never wrote a position:
 
-The camera is now its own authority: `StageCameraView` (a view centre in client
-pixels plus the px-per-unit scale it was anchored with) and
-`getStageCameraTransform` in `src/utils/viewportMath.ts`, with
-`getCursorAnchoredCameraCenter` / `clientToCameraPoint` for wheel zoom and pointer
-mapping. `StageCanvas` folds a measured stage box into the camera inside the same
-frame (`ResizeObserver` + `flushSync`); a layout-only change leaves the camera
-untouched, while a change of the application window itself re-anchors the camera
-with its pan offset and a fresh scale.
+- `src/components/Canvas/StageCanvas.tsx:518-547` (aspect-ratio-lock path) and `:547-560`
+  (free path) called `updateCurrentTransform({ scaleX, scaleY })` only. `useInspector`'s
+  `updateCurrentTransform` (`src/hooks/useInspector.ts:272-275`) writes exactly the keys
+  it is given, so the origin stayed put and both corners moved by half the size change.
+- The "anchor" the free path computed was the world-axis offset
+  `centerX − grabSignX · initHalfW` (`StageCanvas.tsx:547-556`), which is not a corner at
+  all once the layer is rotated.
+- `dragInitialLocalX/Y` were the **pointer's** distance from the origin, not the local
+  geometry (`StageCanvas.tsx:377-383`), so a non-uniformly scaled layer solved against the
+  wrong span.
+- The aspect-ratio lock is ON by default (`src/context/AnimatorContext.tsx:197`) and took a
+  radial branch (`StageCanvas.tsx:521-533`) that ignored the corner identity: the dragged
+  corner moved along the centre ray and never reached the pointer.
 
-Measured drift before the fix (real Chromium, isolated ports, stage `336,79
-584x321`, 0.6687 px/unit): +180.00 px on both world points for the right sidebar
-open → closed, −168.00 px for the left sidebar open → closed, and up to
-(−36.55, +66.73) / (+42.64, +112.41) when the timeline collapsed. After the fix every
-transition measures **0.00 px** on both authored world points and on the rendered
-node box — sidebar close/open, timeline collapse/expand/resize up/resize down, ten
-repeated cycles per surface, and a panned camera across chrome changes — with the
-magnification (0.6687 px/unit) and the zoom label unchanged, the serialized document
-byte-identical and the undo depth unchanged.
+Measured pre-fix in real Chromium (fixed ±36/±24 px drags at 0.6687 px per world unit):
+opposite-corner drift 0.27-28.61 px (unrotated rectangles ≈ 0.4-1.6 px, rotated
+5.9-9.7 px, −45° TR 18.7 px, non-uniformly scaled parent 28.6 px) and a dragged corner
+that missed the pointer by 31-45 px; the keyframed case did not move the layer at all.
 
-## Slice 2 — Boolean E2E locator alignment (base branch, now in this line)
+## Geometry contract (preserved, not invented)
 
-`dea88ab` gave the four Boolean buttons `aria-label={`Create ${operation} Boolean`}`
-while adding their icons. An `aria-label` overrides the visible caption as the
-accessible name, so the old names (`Union`, `Subtract`, `Intersect`, `Exclude`) no
-longer matched `getByRole('button', { name, exact: true })`. Eleven assertions —
-9 in `e2e/boolean-text-operands.spec.ts`, 1 in `e2e/editor-interaction.spec.ts` and
-1 in `e2e/v51-manual-qa.spec.ts` — still queried the old names, so the locator never
-resolved, the click timed out, and no Boolean operation was dispatched. `f13fed0`
-aligns those locators with the exact new accessible names through one shared helper
-(`Create <operation> Boolean`, `exact: true`, no regex or text fallback, no
-accessibility assertion removed) and closed all 11 on the base line. It changes no
-application source (`git diff dea88ab -- src/` is empty).
+Corner handles are **aspect-ratio locked by default**: `isScaleLocked` starts `true` and the
+Inspector's Scale card toggles "Aspect Ratio Locked (Uniform Scale)" / "Aspect Ratio
+Unlocked (Free Scale)" (`src/components/Inspector/sections/transform/TransformScaleCard.tsx`).
+Unlocked, the corner writes independent `scaleX`/`scaleY`. `Shift` was only a
+decimal-precision switch (2 vs 3 decimals) and is **not** an aspect constraint — no new
+`Shift` behaviour was added. Cursors are unchanged: TL/BR `nwse-resize`, TR/BL `nesw-resize`.
 
-## Combined validation (merged tree, isolated ports)
+## Implementation authority
 
-Every command ran in the camera worktree against the combined head `aef21de`.
-Browser tests used the isolated `CI=1 PORT=5003` preset (vite `127.0.0.1:5188`, API
-`127.0.0.1:5003`; release gate `5189`, V6 QA `5187`) with `--retries=0`.
+`src/utils/cornerResize.ts` — `resolveCornerResize({ transform, bounds, corner,
+startPointer, pointer, uniform, minScale }) → { x, y, scaleX, scaleY }` in **world space**:
 
-| Command | Result |
+- uses the renderer's model `cornerWorld = origin + R(rotation)·(local ⊙ scale)`;
+- fixes the diagonally opposite local corner as the gesture invariant;
+- rotates the pointer travel into the layer's local basis and solves it against the fixed
+  local span, giving the next scale with its sign (a crossover mirrors, which the gizmo
+  already renders);
+- rebuilds the next origin from the fixed corner, so the anchor is exact and there is no
+  jump at pointer-down;
+- `uniform: true` projects the travel onto the layer diagonal (exact aspect preservation,
+  same anchor, no jump);
+- clamps the minimum magnitude with the crossed sign kept and rebuilds the origin again, so
+  the clamp cannot move the anchor; zero-extent axes keep their scale.
+
+Wiring: `TransformGizmo` reports the handle identity (`scale_corner_tl|tr|bl|br`) and the
+local bounds it drew; `StageCanvas` stores them at pointer-down and writes the helper's
+world patch through the existing `updateCurrentTransform` authority (world → container-local
+conversion, bonded partners, current-frame channel/keyframe writes). The dead `'scale'` mode
+and the pointer-derived half-extents on the corner path are removed; edge and single-axis
+handles are unchanged. The gesture stays inside `startBatchInteraction`/`endBatchInteraction`.
+
+## Results
+
+| Area | Result |
 |---|---|
-| `npx tsc -b --pretty false` | exit 0 |
-| `npm run lint` (`oxlint`) | exit 0 |
-| `npm test` (`vitest run`) | 138 files / 2095 tests passed |
-| `npm run build` | exit 0 |
-| `npm run validate:ograf` | valid OGraf v1 manifest |
-| focused Boolean E2E (`boolean-text-operands`, `editor-interaction`, `v51-manual-qa`, `--retries=0`) | 20 passed (15.9s) — zero inherited locator failures |
-| focused camera E2E (`e2e/camera-invariance.spec.ts`, `--retries=0`) | 5 passed (38.9s), drift 0.00 px on every transition |
-| `PORT=5003 npm run qa:release` | release gate passed for candidate SHA `aef21de` (2 Chromium tests) |
-| `PORT=5003 npm run qa:v6` | 3 Chromium tests passed |
-| `npm run check` | exit 0 |
-| `node scripts/check-state-consistency.mjs` | PASS, 40 checks |
-| `npm audit --audit-level=low` | 0 vulnerabilities |
-| `git diff --check` | empty |
-| full Chromium suite (`CI=1 PORT=5003 npx playwright test --retries=0`) | **273 passed**, 0 failed / 0 flaky / 0 skipped (2.2m) |
+| Opposite corner, 19 Chromium cases | 0.00 px drift in every case (rotated, non-uniform, parented, keyframed, panned, zoomed, layout-changed, free-scale) |
+| Dragged corner vs pointer | ≤ 0.87 px in every case |
+| Rotation | preserved (the solver never returns a rotation; asserted by the unit file) |
+| Parents | translated, rotated and non-uniformly scaled parents hold the world anchor; the container-local inverse round-trips the authored world transform |
+| Animation | a frame-30 drag rewrites only frame 30 of the active template's `x`/`scaleX`/`scaleY`; the frame-0 keyframe, the keyframe counts and the other template's frame-30 keyframe are identical |
+| History | one drag = one entry; one undo restores the pre-drag document byte-for-byte (undo then disabled), redo restores the post-drag document byte-for-byte |
+| Escape | not a drag cancel in this gizmo (unchanged contract): neither cancels nor corrupts, and the gesture still commits as one entry |
+| Negative scale / minimum size | crossover mirrors; the clamp keeps the fixed corner |
 
-The full suite count is the base line's 268 plus the camera spec's 5, and the 11
-inherited Boolean failures are closed on this line — 273 passed with no retries.
+## Validation (isolated ports, `CI=1 PORT=5004` → UI 5188 / API 5004)
 
-## Preview and isolation
+`npx tsc -b --pretty false` clean · `npm run lint` clean · `npm test` 140 files / 2122
+tests · `npm run build` OK · `npm run validate:ograf` valid · `npm run check` green ·
+`npm audit --audit-level=low` 0 vulnerabilities · `git diff --check` clean ·
+`node scripts/check-state-consistency.mjs` PASS (40 checks) · `npm run qa:release` 2 passed ·
+`npm run qa:v6` 3 passed · focused Chromium (`corner-anchor-resize`, `camera-invariance`,
+`boolean-text-operands`, `editor-interaction`, `v51-manual-qa`) 44 passed · **full Chromium
+suite 292 passed / 0 failed / 0 flaky / 0 skipped with `--retries=0`**. New unit coverage:
+`cornerResize.test.ts` (22 cases) and `cornerResizeAuthoring.test.tsx` (5 cases). No
+assertion, tolerance, retry or threshold was weakened.
 
-`http://localhost:5173/` is served from this worktree by `vite --host --port 5173`
-(process command line resolves into
-`...\keyframe-character-studio-omp-camera-invariance\node_modules\.bin\..\vite\bin\vite.js`),
-the served application source is the validated combined code head
-`aef21de5aad06592884d7a54004383b2f6eeccb1` on branch
-`fix/authoring-ux-camera-invariance` — the only commits above it on this line are
-handoff-bundle documentation, which changes no application source — and the served
-camera module exports
-`getStageCameraTransform` / `clientToCameraPoint`. During the full suite only
-`127.0.0.1:5188` (vite) and `127.0.0.1:5003` (API) were bound by test processes, and
-all of them resolved into this worktree; `127.0.0.1:5000` (API, unchanged PID
-24896) kept answering 200. The stable repository `keyframe-character-studio`
-(`main` at `c46e698`), the runtime-parity worktree and the authoring-UX worktree were
-not written to by this work.
+## Isolation
+
+Port 5173 was never bound, restarted or re-pointed: it is still the camera worktree's
+preview (`...omp-camera-invariance\node_modules\...\vite --host --port 5173`, PID 16844)
+serving the camera line's validated application source. The API on `127.0.0.1:5000` is the
+same PID (24896) as before this task. All tests used Playwright's own isolated pair
+(UI 5188 / API 5004; release gate 5189, V6 QA 5187). The stable repository, the
+authoring-UX worktree, the runtime-parity worktree and `.hermes/desktop-attachments/` were
+not written to.
 
 ## Boundaries
 
-No merge to `main`, no rebase, no force push, no tag, no release, no version bump and
-no dependency change was performed; PR #4 and PR #5 were not merged and no duplicate
-PR was opened. Source, tests, package files, workflows, binaries, assets, caches and
-QA output are outside this bundle.
+- Not merged, not rebased, not force-pushed; no history rewrite, no branch deletion, no tag,
+  release, npm publish, version bump, dependency, package or workflow change.
+- No runtime, export, OGraf, camera-model, snapping, toolbar, colour-picker, context-menu,
+  Group/Ungroup or aggregate-border work is included; no object geometry is mutated.
+- Known limitation: a legacy layer whose `anchor` is not `none` pins its evaluated world
+  position (`src/utils/evaluateTransform.ts:61-66`), so no position write can hold a corner
+  for it. It keeps the previous scale-only behaviour instead of gaining dead keyframes on a
+  pinned axis; a fix needs the anchor model, which is outside this task.
+- The corner path no longer rounds the authored values to 2/3 decimals (the rounding `Shift`
+  used to change). Exactness is what makes the ≤ 1 px contract hold, and the Inspector shows
+  scale as an integer percentage, so nothing user-visible changed.
+
+## ChatGPT upload
+
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. Its sources are this
+response, `chatgpt_handoff/latest/README.md`, `chatgpt_handoff/latest/manifest.txt`,
+`chatgpt_handoff/latest/progress_160_corner_anchor_resize.md` and the mirrored live documents
+(`NEXT_SESSION.md`, `PROJECT_STATE.md`, `CHANGELOG.md`, `KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md`,
+`KCS_RELEASE_CANDIDATE_SUMMARY.md`) plus the stacked base's two progress records.
 
 ---
 
 ## 2. Bundle README
 
-# KCS Minimal ChatGPT Upload Bundle — Combined authoring-UX line
+# KCS Minimal ChatGPT Upload Bundle — Corner resize anchor
 
-Task-specific handoff for the `fix/authoring-ux-camera-invariance` branch
-(2026-10-11), now carrying the current authoring-UX base and fully validated. This
-is not an archive.
+Task-specific handoff for the `fix/authoring-ux-corner-anchor` branch (2026-10-11),
+stacked on `fix/authoring-ux-camera-invariance`. This is not an archive.
 
 ## Current truth
 
-This line combines two slices of authoring-UX work and both are green together:
+The transform gizmo's corner handles resized the layer about its own centre, so a corner
+drag moved **both** corners: the diagonally opposite corner drifted and the dragged corner
+never reached the pointer. One pure geometry authority,
+`src/utils/cornerResize.ts` → `resolveCornerResize`, now solves the gesture: the diagonally
+opposite corner is the fixed point in world space, the pointer travel is rotated into the
+layer's basis and solved against the fixed local span, and the next origin is rebuilt from
+the fixed corner — so the anchor is exact, the drag starts without a jump, rotation is
+preserved, and a crossover mirrors instead of collapsing. `TransformGizmo` reports the
+handle identity and the bounds it drew; `StageCanvas` writes the returned world patch
+through the existing `updateCurrentTransform` authority, so container-local conversion,
+keyframed channel writes and the one-history-entry-per-drag batch interaction are
+unchanged.
 
-1. **Canvas camera invariance** (this branch, `df107b8`). Editor chrome changing
-   size used to pan and zoom the authored world, because the edit SVG filled the
-   stage and mapped its 600x480 viewBox with `preserveAspectRatio="xMidYMid meet"`
-   while the pan/zoom CSS transform was applied about that moving centre. The camera
-   is now its own authority (`StageCameraView` + `getStageCameraTransform` in
-   `src/utils/viewportMath.ts`): a view centre in client pixels plus the px-per-unit
-   scale it was anchored with, with the rendered transform dividing the layout fit
-   back out. A `ResizeObserver` on the stage folds a measured box into the camera
-   inside the same frame; a layout-only change leaves the camera untouched, while a
-   change of the application window itself re-anchors it with its pan offset and a
-   fresh scale. Measured drift before the fix was +180 px (inspector), −168 px (left
-   dock) and up to 36.55 × 66.73 px with a magnification change when the timeline was
-   resized; after the fix every transition measures **0.00 px** on two authored world
-   points and on the rendered node box, with the magnification and the zoom label
-   unchanged, the serialized document byte-identical and the undo depth unchanged.
+Measured on this branch with real Chromium (`--retries=0`): the opposite corner drifts
+**0.00 px in all 19 measured cases** (rotated, non-uniformly scaled, parented, keyframed,
+panned, zoomed, layout-changed, free-scale), and the dragged corner reaches the pointer
+within **0.87 px** everywhere. Before the fix the same spec measured up to 6.43 x 18.73 px
+of opposite-corner drift (28.61 x 17.72 px with a non-uniformly scaled parent) and a
+35-45 px pointer miss; the keyframed case did not move the layer at all.
 
-2. **Boolean E2E locator alignment** (folded in from the base branch, `f13fed0`).
-   `dea88ab` gave the Boolean buttons `aria-label={`Create ${operation} Boolean`}`,
-   which overrides the visible caption as the accessible name; eleven assertions
-   still queried `Union`/`Subtract`/`Intersect` with `exact: true`, timed out and
-   never dispatched the Boolean operation. `f13fed0` aligns those locators with the
-   exact new names (one shared helper, no regex or text fallback, no assertion
-   removed) and closed all 11. It changes no application source.
+Recorded contract facts, verified from the code before the fix and preserved: corner
+handles are **aspect-ratio locked by default** (`isScaleLocked` starts `true`; the
+Inspector's Scale card toggles "Aspect Ratio Locked (Uniform Scale)" / "Aspect Ratio
+Unlocked (Free Scale)"), so the locked corner drag preserves the authored aspect ratio and
+the unlocked one writes independent `scaleX`/`scaleY`; `Shift` was only a decimal-precision
+switch, never an aspect constraint; TL/BR keep `nwse-resize` and TR/BL keep `nesw-resize`.
 
-## Synchronization
+## Stacked base (unchanged, still green)
 
-The base branch `fix/authoring-ux-transform-toolbar` advanced from `dea88ab` to
-`7d7ebe2` after this camera branch was cut, and rewriting history is disallowed on
-this line, so the advanced base was folded in with the merge commit
-`aef21de5aad06592884d7a54004383b2f6eeccb1` — the only non-history-rewriting way to
-synchronize. Conflicts appeared only in the ChatGPT handoff bundle and were resolved
-by regenerating the bundle for the combined state; no code or test file conflicted.
-Nothing was merged to `main`.
+1. **Canvas camera invariance** (`fix/authoring-ux-camera-invariance`, `df107b8`): editor
+   chrome changing size no longer pans/zooms the authored world; the camera is its own
+   authority (`StageCameraView` + `getStageCameraTransform`) and every transition measures
+   0.00 px of drift.
+2. **Boolean E2E locator alignment** (folded in from the base branch, `f13fed0`): the eleven
+   assertions that queried the old Boolean button captions were aligned with the exact
+   accessible names. No application source change.
 
-## Combined state
+The corner branch is stacked on this line and changes none of it.
 
-Combined head `aef21de`, stacked PR [#5](https://github.com/ErtugrulAK/keyframe-character-studio/pull/5)
-(base `fix/authoring-ux-transform-toolbar`, head `fix/authoring-ux-camera-invariance`)
-is MERGEABLE and open for review and CI only. On the merged tree, with `--retries=0`
-and the isolated ports (`CI=1 PORT=5003` → UI 5188 / API 5003): the full Chromium
-suite passes **273 tests, 0 failed / 0 flaky / 0 skipped**; the focused Boolean specs
-pass 20; the focused camera spec passes 5 with 0.00 px drift; `qa:release` (candidate
-SHA `aef21de`) passes 2 and `qa:v6` passes 3; `tsc -b`, `oxlint`, `vitest` (138 files
-/ 2095 tests), `vite build`, `validate:ograf`, `check`, `check-state-consistency`
-(40 checks), `npm audit --audit-level=low` (0 vulnerabilities) and `git diff --check`
-are all clean.
+## Branch state
 
-The live preview `http://localhost:5173/` is served from this worktree by
-`vite --host --port 5173` and serves the application source of the validated combined
-code head `aef21de` on branch
-`fix/authoring-ux-camera-invariance`; the API on `127.0.0.1:5000` (unchanged PID
-24896) still answers 200. The stable repository (`keyframe-character-studio`, `main`
-at `c46e698`), the runtime-parity worktree and the authoring-UX worktree were not
-written to.
+- Head `fix/authoring-ux-corner-anchor` (application commit `04dc182`, docs commit above it),
+  base `fix/authoring-ux-camera-invariance` (branch base `55a4ab2`, application head
+  `aef21de`).
+- Stacked PR [#6](https://github.com/ErtugrulAK/keyframe-character-studio/pull/6)
+  (base `fix/authoring-ux-camera-invariance`, head `fix/authoring-ux-corner-anchor`), opened
+  for review and CI only. Nothing is merged. PR #5 remains the base line's review artifact.
+- Validation on this branch with the isolated ports (`CI=1 PORT=5004` → UI 5188 / API 5004):
+  `tsc -b`, `oxlint`, `vitest` (140 files / 2122 tests), `vite build`, `validate:ograf`,
+  `check`, `qa:release` 2, `qa:v6` 3, state consistency (40 checks),
+  `npm audit --audit-level=low` (0 vulnerabilities), `git diff --check`, the focused
+  Chromium specs (44 passed) and the **full Chromium suite 292 passed / 0 failed / 0 flaky /
+  0 skipped with `--retries=0`** are all green. No assertion, tolerance or retry was
+  weakened.
+
+## Preview and isolation
+
+The live preview `http://localhost:5173/` was **not** moved, restarted or re-pointed: it is
+still served from the camera-invariance worktree
+(`...omp-camera-invariance\node_modules\...\vite --host --port 5173`, PID 16844) at the
+camera line's validated application source. The API on `127.0.0.1:5000` is the same process
+as before this task (PID 24896). Every test ran against the isolated UI 5188 / API 5004 pair
+(release gate 5189, V6 QA 5187) started by Playwright itself; ports 5173 and 5000 were never
+bound, restarted or killed. The stable repository, the authoring-UX worktree, the
+runtime-parity worktree and `.hermes/desktop-attachments/` were not written to.
 
 ## Next step
 
-Review PR #5's merged head (the camera model, its unit tests, the new Chromium spec,
-the aligned Boolean locators) and run the user QA pass against the branch preview. Any
-code change to this branch invalidates the validation results and needs a fresh
-`--retries=0` run.
+Review PR #6 (the geometry helper, the wiring, the 22-case unit file, the 5-case authority
+file and the 19-case Chromium spec) and keep the camera preview as the QA surface. Any
+further code change to this branch invalidates the results and needs a fresh `--retries=0`
+run. Known limitation: a legacy layer whose `anchor` is not `none` pins its evaluated world
+position (`evaluateTransform`), so no position write can hold a corner for it; it keeps the
+previous scale-only behaviour rather than gaining dead keyframes on a pinned axis.
 
 ## Evidence and files
 
-- OMP_FINAL_RESPONSE.md: the two slices, the synchronization reason, the combined
-  validation matrix, the preview identity and the boundaries.
-- progress_159_authoring_ux_camera_invariance.md: the camera root cause, the
-  per-transition drift numbers, the fix and the camera-slice validation list.
-- progress_159_boolean_e2e_locator_alignment.md: the verbose eleven failures, the
-  locator-only fix and the focused/full Chromium results on the base line.
+- OMP_FINAL_RESPONSE.md: the task, the root cause, the fix, the validation matrix, the
+  branch/PR/CI state, the isolation proof and the limitations.
+- progress_160_corner_anchor_resize.md: the pre-fix reproduction table, the file:line root
+  cause, the geometry contract, the per-case results and the full validation matrix.
+- progress_159_authoring_ux_camera_invariance.md and
+  progress_159_boolean_e2e_locator_alignment.md: the stacked base line's records.
 - manifest.txt: inventory, protected boundaries and the state lines.
-- CHANGELOG.md and KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md: mirrored live documents.
-- NEXT_SESSION.md, PROJECT_STATE.md and KCS_RELEASE_CANDIDATE_SUMMARY.md: the
-  repository's current live state, mirrored unchanged.
+- CHANGELOG.md, KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, NEXT_SESSION.md, PROJECT_STATE.md and
+  KCS_RELEASE_CANDIDATE_SUMMARY.md: mirrored live documents of the repository (they describe
+  `main`, not this branch).
 
 The mirrored documents match their repository sources after CRLF/LF normalization and
-whole-document trimming. Source, tests, package files, workflows, binaries, assets,
-caches and QA output are omitted. Earlier progress reports stay in `reports/` and are
-not copied into this minimal bundle.
+whole-document trimming. Source, tests, package files, workflows, binaries, assets, caches
+and QA output are omitted. Earlier progress reports stay in `reports/` and are not copied
+into this minimal bundle.
 
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder
-holds its sources.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` to ChatGPT. This folder holds its
+sources.
 
 ---
 
 ## 3. Bundle Manifest
 
-# KCS ChatGPT Upload Manifest — Combined authoring-UX line (camera invariance + Boolean E2E locators)
+# KCS ChatGPT Upload Manifest — Corner resize anchor (stacked on the combined authoring-UX line)
 
-Scope: the combined authoring-UX line — the canvas camera-invariance work stacked on the base branch's Boolean E2E locator alignment — and the tests and handoff that record it
-Branch: fix/authoring-ux-camera-invariance, base fix/authoring-ux-transform-toolbar (new base 7d7ebe2, old merge base dea88ab)
-Combined head: aef21de5aad06592884d7a54004383b2f6eeccb1
-Camera fix commits: df107b894d9e5490a767a169e5c43d2418550be4 (fix), 7ca126c and 3db69a5 (docs) on this branch
-Boolean E2E locator commits: f13fed0bed96280c10f3430595afd787d42d5aaa (test), 7d7ebe2 (docs) on the base branch
-Synchronization: merge commit aef21de5aad06592884d7a54004383b2f6eeccb1 of origin/fix/authoring-ux-transform-toolbar into this branch — the base advanced from dea88ab to 7d7ebe2 and history rewriting is disallowed, so a merge commit is the only non-history-rewriting option
-Conflicts: handoff bundle only — chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md, chatgpt_handoff/latest/README.md, chatgpt_handoff/latest/OMP_FINAL_RESPONSE.md and chatgpt_handoff/latest/manifest.txt — resolved by regenerating the bundle for the combined state; chatgpt_handoff/latest/progress_158_trim_path_keyframe_authoring.md auto-resolved (removed from the bundle, kept in reports/). No code or test file conflicted.
-Measured camera drift: 0.00 px on two authored world points and the rendered node box across sidebar toggles, timeline collapse/expand/resize and ten repeated toggle cycles
-Magnification: unchanged (0.6687 px/unit on the measured viewport), zoom label unchanged, serialized document byte-identical, undo depth unchanged
-Boolean locators: the base commit dea88ab added aria-label `Create <operation> Boolean` to the Boolean buttons; eleven assertions queried the old visible-text names, timed out and never dispatched the operation. f13fed0 aligns them with the exact accessible names, and the combined line closes all 11. No application source change.
-Combined validation: tsc -b, oxlint, vitest (138 files / 2095 tests), vite build, validate:ograf, focused Boolean E2E 20 passed, focused camera E2E 5 passed at 0.00 px drift, qa:release 2 passed (candidate SHA aef21de), qa:v6 3 passed, check, check-state-consistency (40 checks), npm audit --audit-level=low (0 vulnerabilities), git diff --check, full Chromium suite 273 passed / 0 failed / 0 flaky / 0 skipped with --retries=0
-Runtime: live preview localhost:5173 served from this worktree by `vite --host --port 5173`, serving the application source of the validated combined code head aef21de (documentation-only commits sit above it); API 127.0.0.1:5000 unchanged (PID 24896, returns 200); browser tests used the isolated UI 5188 / API 5003 pair (release gate 5189, V6 QA 5187)
-Protected: the stable repository keyframe-character-studio (main at c46e698), the runtime-parity worktree, the authoring-UX worktree, .hermes/desktop-attachments/, origin/without-mask, release artefacts and OMP configuration
+Scope: the transform gizmo's corner-handle resize now keeps the diagonally opposite corner fixed in world space while the dragged corner follows the pointer — the geometry authority, its wiring into the canvas/inspector write path, and the tests and handoff that record it
+Branch: fix/authoring-ux-corner-anchor, stacked on fix/authoring-ux-camera-invariance (branch base 55a4ab2, application head aef21de, which carries the base fix/authoring-ux-transform-toolbar @ 7d7ebe2)
+Head: 04dc1827db8f925ba365e41c509b395a13ea7754 (fix: anchor opposite corner during resize); the handoff-refresh commit sits on top and changes documents only
+Fixed: the corner drag scaled about the layer centre and never wrote a position (src/components/Canvas/StageCanvas.tsx:518-560 before the fix; useInspector.ts:272-275 writes only the given keys), the free-path anchor ignored rotation, dragInitialLocalX/Y were the pointer distance rather than the geometry (StageCanvas.tsx:377-383), and the aspect-ratio lock (default true, AnimatorContext.tsx:197) took a radial branch that ignored the corner identity
+Measured drift before the fix: opposite corner 0.27-28.61 px (unrotated 0.4-1.6 px, rotated 5.9-9.7 px, -45 deg TR 18.7 px, non-uniformly scaled parent 28.6 px) and a 31-45 px dragged-corner miss; the keyframed case did not move the layer at all
+Measured after the fix: opposite corner 0.00 px in all 19 Chromium cases, dragged corner within 0.87 px of the pointer everywhere, rotation preserved, keyframed frame-30 writes and the one-entry-per-drag history contract verified
+Preserved contract: the corner handles are aspect-ratio locked by default (isScaleLocked starts true; the Inspector Scale card toggles Locked/Free), unlocked writes independent scaleX/scaleY, Shift was only a decimal-precision switch and stays that way, TL/BR keep nwse-resize and TR/BL keep nesw-resize
+Implementation: src/utils/cornerResize.ts (resolveCornerResize) wired through TransformGizmo (handle identity + the bounds it drew) and StageCanvas (world patch through updateCurrentTransform); edge and single-axis handles unchanged, no runtime/export/OGraf/camera-model change, no new dependency
+Stacked PR: https://github.com/ErtugrulAK/keyframe-character-studio/pull/6 (base fix/authoring-ux-camera-invariance, head fix/authoring-ux-corner-anchor), MERGEABLE, review and CI only, NOT merged
+PR CI: CI Pipeline run 38149765766 (pull_request) — success on the code head 04dc182 (job "Build, Lint & Test Verification", 1m56s)
+Validation (isolated ports, CI=1 PORT=5004 -> UI 5188 / API 5004): tsc -b, oxlint, vitest (140 files / 2122 tests), vite build, validate:ograf, check, qa:release 2 passed, qa:v6 3 passed, check-state-consistency (40 checks), npm audit --audit-level=low (0 vulnerabilities), git diff --check, focused Chromium 44 passed, full Chromium suite 292 passed / 0 failed / 0 flaky / 0 skipped with --retries=0; new unit files cornerResize.test.ts (22 cases) and cornerResizeAuthoring.test.tsx (5 cases)
+Runtime: live preview localhost:5173 was NOT moved, restarted or re-pointed — it is still the camera-invariance worktree (C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-camera-invariance, vite --host --port 5173, PID 16844) serving the camera line's validated application source; API 127.0.0.1:5000 unchanged (PID 24896, same process as before this task); ports 5173 and 5000 were never bound or killed; release gate 5189 and V6 QA 5187 were used transiently by the QA scripts
+Protected: the stable repository C:\Users\ertugrul.ak\Desktop\keyframe-character-studio, the camera-invariance worktree, the authoring-UX worktree, the runtime-parity worktree, .hermes/desktop-attachments/, origin/without-mask, release artefacts and OMP configuration
 Not merged to main: nothing was merged to main, tagged, rebased or force-pushed; no version bump, no dependency change, no duplicate pull request
-Validation authority: the combined head aef21de5aad06592884d7a54004383b2f6eeccb1 and the PR checks for pull request 5
+Known limitation: a legacy layer whose anchor is not none pins its evaluated world position (evaluateTransform.ts:61-66), so no position write can hold a corner for it; it keeps the previous scale-only behaviour rather than gaining dead keyframes on a pinned axis
 
-Bundle source files (10):
+Bundle source files (11):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - KCS_RELEASE_CANDIDATE_SUMMARY.md
@@ -263,6 +288,7 @@ Bundle source files (10):
 - manifest.txt
 - progress_159_authoring_ux_camera_invariance.md
 - progress_159_boolean_e2e_locator_alignment.md
+- progress_160_corner_anchor_resize.md
 
 Omitted: source, tests, package/lock files, workflows, binaries, archives, assets, caches, and QA output.
 Protected: the stable repository C:\Users\ertugrul.ak\Desktop\keyframe-character-studio, the unrelated worktrees, .hermes/desktop-attachments/, origin/without-mask, release artefacts, and OMP configuration.
@@ -671,7 +697,186 @@ Historical notes: "KCS MILESTONE A COMPLETION …" was carried out (five items c
 
 ---
 
-## 8. Authoring UX Camera Invariance
+## 8. Corner Resize Anchor
+
+# Progress 160 — corner resize anchors the opposite corner
+
+Task: fix the transform gizmo's corner-handle resize so the dragged corner follows the
+pointer while the diagonally **opposite** corner stays fixed in world space.
+Branch: `fix/authoring-ux-corner-anchor`, stacked on `fix/authoring-ux-camera-invariance`
+(application head `aef21de`, branch base `55a4ab2`).
+Scope: editor-only transform authoring. No runtime, export, OGraf, camera-model, dependency,
+package, workflow, tag or release change. Nothing merged.
+
+## 1. Reproduction before the patch
+
+`e2e/corner-anchor-resize.spec.ts` seeds a layer through the real document format, locates the
+four corner hit targets of `[data-testid="transform-gizmo"]` by matching the **authored** world
+corners (projected through the SVG screen CTM) to the rendered handles, drags one handle with a
+real Chromium pointer, and re-measures. It records, for every case, the dragged and opposite
+corner in world units, the authored centre, `scaleX`/`scaleY` and the rotation.
+
+Recorded pre-fix behaviour (fixed ±36/±24 px drags at zoom 1, 0.6687 px per world unit; the
+implementation scales about the object centre and never writes a position):
+
+| case | opposite-corner drift | dragged corner vs pointer |
+|---|---|---|
+| unrotated TL keeps BR | −0.80, −0.40 px | missed by 36.2 px |
+| unrotated TR keeps BL | +0.40, −0.20 px | missed by 36.2 px |
+| unrotated BL keeps TR | −1.60, +0.80 px | missed by 35.0 px |
+| unrotated BR keeps TL | +0.80, +0.40 px | missed by 36.2 px |
+| rotated 30° TL keeps BR | +5.93, +8.98 px | missed by 39.9 px |
+| rotated 30° BR keeps TL | −6.43, −9.73 px | missed by 40.4 px |
+| rotated −45° TR keeps BL | −6.24, +18.73 px | missed by 36.2 px |
+| rotated 120° BL keeps TR | +0.27, −4.48 px | missed by 34.4 px |
+| non-uniform (rot 20°, 2.4 / 0.6) BR keeps TL | +11.52, +5.90 px | missed by 32.9 px |
+| translated parent, child TL keeps BR | −6.42, −3.21 px | missed by 33.1 px |
+| rotated parent, child BR keeps TL | −8.76, −16.17 px | missed by 45.0 px |
+| non-uniformly scaled parent, child TR keeps BL | +28.61, +17.72 px | missed by 31.2 px |
+| keyframed layer at frame 30, BR keeps TL | 0.00, 0.00 px | missed by 36.0 px (no write at all) |
+| drag then one undo | −5.22, −2.61 px | missed by 31.7 px |
+| Escape mid-drag | +3.21, +1.60 px | missed by 34.5 px |
+| after explicit pan / after layout change | −4.41/−2.21 px, −4.01/+2.01 px | missed by 32.9 px, 34.9 px |
+
+18 of the 19 cases failed with `--retries=0`; the cursor case failed only because the ticket's
+assumed `nesw` mapping for TR/BL is the real mapping and the assertion had been written the
+other way round.
+
+## 2. Root cause (file:line evidence, application head `aef21de`)
+
+1. **The corner drag scaled around the object centre and never wrote a position.**
+   `src/components/Canvas/StageCanvas.tsx:518-547` (aspect-ratio lock path) and `:547-560`
+   (free path) both call `updateCurrentTransform({ scaleX, scaleY })` only. `useInspector`'s
+   `updateCurrentTransform` (`src/hooks/useInspector.ts:272-275`) writes exactly the keys it is
+   given, so the origin — the corner rotation happens about — stayed where it was and *both*
+   corners moved by half the size change. This is the measured drift: 0.8 px on an unrotated
+   rectangle whose drag changed the width by 2.4 px, and 11-28 px wherever the size change was
+   large.
+2. **The "anchor" it did compute was not the opposite corner.**
+   `StageCanvas.tsx:547-556` derived `anchorX = centerX − grabSignX · initHalfW` from the
+   pointer's own distance-to-centre axis-aligned in **world** space, ignoring the layer
+   rotation, so rotated layers anchored at a point that is not a corner at all (−45° TR:
+   +18.73 px of drift where an unrotated case shows −0.4 px).
+3. **The "initial half extents" were the pointer's distance, not the geometry.**
+   `StageCanvas.tsx:377-383` sets `dragInitialLocalX/Y` from the pointer offset, so a handle
+   grabbed anywhere but exactly on the corner — and every non-uniformly scaled layer — solved
+   against the wrong span (2.4/0.6 scale: 11.52 px of drift on the first move).
+4. **The aspect-ratio lock (default ON, `src/context/AnimatorContext.tsx:197`) took a radial
+   branch** (`StageCanvas.tsx:521-533`) that ignored the corner identity entirely: it scaled by
+   `|pointer − centre| / |grab offset|`, so the dragged corner moved along the centre ray and
+   never reached the pointer (the keyframed case moved 0.00 px because the radial factor stayed
+   1 while the pointer moved off the ray).
+5. **Product contract (preserved, not invented):** corner handles are **aspect-ratio locked by
+   default** — `isScaleLocked` starts `true` and the Inspector's Scale card toggles
+   "Aspect Ratio Locked (Uniform Scale)" / "Aspect Ratio Unlocked (Free Scale)"
+   (`src/components/Inspector/sections/transform/TransformScaleCard.tsx:18-47`). Unlocked, the
+   corner writes independent `scaleX`/`scaleY`. `Shift` was used **only** to pick 2 vs 3
+   decimals of rounding — it is not an aspect constraint, and no new `Shift` behaviour was
+   introduced. Corner cursors: TL/BR `nwse-resize`, TR/BL `nesw-resize`
+   (`src/components/Canvas/overlays/TransformGizmo.tsx:91-94`), unchanged.
+
+## 3. Fix — one geometry authority
+
+`src/utils/cornerResize.ts` (new, pure, no React, no dependency) exports
+`resolveCornerResize({ transform, bounds, corner, startPointer, pointer, uniform, minScale })`
+and returns `{ x, y, scaleX, scaleY }` **in world space**.
+
+- The renderer's own model is used: `cornerWorld = origin + R(rotation)·(local ⊙ scale)`
+  (`src/utils/bounds.ts` `getPartWorldBounds`, and the gizmo group transform).
+- The diagonally opposite corner is computed from the local bounds and is the invariant of the
+  gesture; the pointer's travel is rotated into the layer's local basis and solved against the
+  fixed local span, giving the next scale with its sign (crossing a corner mirrors, which the
+  gizmo already renders).
+- The next origin is **rebuilt from the fixed corner**, so the anchor is exact instead of a
+  subtraction of two large numbers, and there is no jump when the pointer-down point is a
+  fraction of a pixel off the handle centre.
+- `uniform: true` (the aspect-ratio lock) projects the travel onto the layer diagonal, which
+  preserves the authored aspect ratio exactly, keeps the same exact anchor, and still starts
+  without a jump.
+- The minimum-size clamp is applied to the magnitude with the crossed sign kept, then the origin
+  is rebuilt from the fixed corner again, so the clamp cannot move the anchor. Zero-extent axes
+  keep their scale, and there are no per-angle branches and no magic offsets.
+
+Wiring:
+
+- `TransformGizmo` reports the handle identity (`scale_corner_tl|tr|bl|br`) and the local bounds
+  it drew (`baseBounds`) through `onScaleMouseDown` — so the solve uses exactly the rectangle the
+  user sees, stroke expansion and Boolean-derived contours included.
+- `StageCanvas` maps the mode to a `CornerId`, stores the corner + bounds at pointer-down, and on
+  every move writes the helper's result through the existing `updateCurrentTransform` authority
+  (world → container-local conversion, bonded partners, current-frame channel/keyframe writes).
+  The dead `'scale'` mode and the pointer-derived local half-extents on the corner path are gone;
+  edge and single-axis handles are untouched.
+- The gesture stays inside `startBatchInteraction`/`endBatchInteraction`, so one drag is one
+  history entry.
+
+## 4. Results
+
+- **Opposite corner:** 0.00 px in all 19 measured cases (world-unit drift 0.000/0.000), including
+  rotated, non-uniformly scaled, parented, keyframed, panned, zoomed and layout-changed runs.
+- **Dragged corner vs pointer:** every case ≤ 0.87 px (largest world-unit residual 1.295).
+- **Rotation:** preserved (the solver never returns a rotation; the helper's unit tests assert the
+  authored rotation survives the write).
+- **Parents:** translated, rotated and non-uniformly scaled parents hold the anchor in world space;
+  the container-local inverse round-trips the authored world transform (`cornerResize.test.ts`).
+- **Animation:** a frame-30 drag rewrites only frame 30 of the active template's `x`, `scaleX` and
+  `scaleY` channels — the frame-0 keyframe, the keyframe counts and the other template's frame-30
+  keyframe are byte-identical (browser snapshot + `cornerResizeAuthoring.test.tsx`).
+- **History:** one drag is exactly one entry; one undo restores the pre-drag document byte-for-byte
+  and disables undo, redo restores the post-drag document byte-for-byte.
+- **Escape:** not a drag cancel in this gizmo (unchanged contract) — Escape mid-drag neither
+  corrupts nor cancels the gesture, which still commits as one entry.
+- **Camera:** resize works after an explicit pan, after a toolbar zoom and after inspector /
+  left-toolbar / timeline-resizer layout changes, with the screen CTM magnification unchanged by
+  the resize; the camera-invariance spec is green (0.00 px drift on its own transitions).
+- **Negative scale / minimum size:** crossovers mirror instead of collapsing, and the clamp holds
+  the fixed corner.
+
+## 5. Validation matrix (isolated ports; `CI=1 PORT=5004` → UI 5188, API 5004)
+
+| Command | Result |
+|---|---|
+| `npx tsc -b --pretty false` | clean |
+| `npm run lint` (Oxlint) | clean |
+| `npm test` (Vitest) | 140 files / 2122 tests passed |
+| `npm run build` | Vite production build OK |
+| `npm run validate:ograf` | minimal fixture valid |
+| `npm run check` | lint + tsc + test + build green |
+| `npm audit --audit-level=low` | 0 vulnerabilities |
+| `git diff --check` | clean |
+| `node scripts/check-state-consistency.mjs` | PASS (40 checks) |
+| `PORT=5004 npm run qa:release` | 2 passed |
+| `PORT=5004 npm run qa:v6` | 3 passed |
+| focused Chromium (`corner-anchor-resize`, `camera-invariance`, `boolean-text-operands`, `editor-interaction`, `v51-manual-qa`) | 44 passed / 0 failed |
+| full Chromium `CI=1 PORT=5004 npx playwright test --retries=0` | 292 passed / 0 failed / 0 flaky / 0 skipped |
+| new unit tests | `cornerResize.test.ts` 22 cases, `cornerResizeAuthoring.test.tsx` 5 cases |
+
+No assertion, tolerance, retry or threshold was weakened; `--retries=0` throughout.
+
+## 6. Isolation
+
+Port 5173 was never bound, restarted or re-pointed: it is still the camera worktree's preview
+(`...omp-camera-invariance\node_modules\...\vite --host --port 5173`, PID 16844) serving the
+camera line. The API on `127.0.0.1:5000` is the same process as before this task
+(PID 24896, `node server/index.js`). Every test used the isolated pair UI 5188 / API 5004
+(release gate 5189, V6 QA 5187) started by Playwright's own `webServer`. The stable repository,
+the authoring-UX worktree, the runtime-parity worktree and `.hermes/desktop-attachments/` were
+not written to.
+
+## 7. Known limitations
+
+- **Legacy anchored layers** (`CharacterPart.anchor !== 'none'`) pin their evaluated world
+  position to a preset offset (`src/utils/evaluateTransform.ts:61-66`), so no position write can
+  hold a corner for them. They keep the previous behaviour (scale only, no position write) rather
+  than gaining dead keyframes on a pinned axis. Fixing that needs the anchor model, which is
+  outside this task's scope.
+- The corner path no longer rounds the authored values to 2/3 decimals (the rounding that
+  `Shift` used to change). Exactness is what makes the ≤ 1 px contract hold; the Inspector shows
+  scale as an integer percentage, so nothing user-visible changed.
+
+---
+
+## 9. Authoring UX Camera Invariance
 
 # Progress 159 — Authoring UX: canvas camera invariance
 
@@ -746,7 +951,7 @@ The 11 full-suite failures are inherited from the base branch commit `dea88ab`, 
 
 ---
 
-## 9. Boolean E2E Locator Alignment
+## 10. Boolean E2E Locator Alignment
 
 # Progress 159 — Boolean E2E locators aligned with the accessible-name contract
 
@@ -931,7 +1136,7 @@ preview serves byte-identical application source to `dea88ab`.
 
 ---
 
-## 10. Changelog
+## 11. Changelog
 
 # Changelog
 
@@ -1079,6 +1284,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Playwright end-to-end (E2E) workflow test suite (`e2e/workflow.spec.ts`).
   - TypeScript strict mode compilation and Oxlint linting integration.
   - Agent governance guidelines, project context specification, and domain-driven branch strategy (`.agents/`).
-
----
-

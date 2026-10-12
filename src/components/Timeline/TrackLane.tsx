@@ -8,12 +8,16 @@ import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
 interface TrackLaneProps {
   track: Track;
   isSelected: boolean;
-  selectedKeyframeId: string | null;
+  /** Every selected keyframe id (the store's canonical selection). */
+  selectedKeyframeIds: string[];
   frameWidth: number;
   totalFrames: number;
   activeTemplateId: string | null;
   isGroupExpanded: (key: string, defaultVal?: boolean) => boolean;
+  /** Replace the selection with this one key (null clears it). */
   onSelectKeyframe: (id: string | null) => void;
+  /** Add/remove one key, leaving the rest of the selection alone. */
+  onToggleKeyframe: (id: string) => void;
   onSelectPart: (partId: string, shiftKey: boolean) => void;
   onSetFrame: (frame: number) => void;
   onStartDragKf: (drag: { trackId: string; keyframeId: string }) => void;
@@ -38,6 +42,14 @@ interface TrackLaneProps {
 
 /** Diamonds that participate in the local arrow-key focus walk inside one lane. */
 const LANE_DIAMOND_SELECTOR = '.keyframe-diamond, .ue-prop-diamond';
+
+/**
+ * The modifier that means "fold this key into the selection instead of
+ * replacing it": Shift, the multi-select modifier the outliner and the canvas
+ * already use, with Ctrl/Cmd as its platform echo.
+ */
+const isAdditiveSelection = (event: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }): boolean =>
+  event.shiftKey || event.ctrlKey || event.metaKey;
 
 /**
  * Keyboard contract for a timeline diamond: focusable button semantics, an
@@ -78,12 +90,13 @@ const diamondKeyboardProps = (
 export const TrackLane: React.FC<TrackLaneProps> = ({
   track,
   isSelected,
-  selectedKeyframeId,
+  selectedKeyframeIds,
   frameWidth,
   totalFrames,
   activeTemplateId,
   isGroupExpanded,
   onSelectKeyframe,
+  onToggleKeyframe,
   onSelectPart,
   onSetFrame,
   onStartDragKf,
@@ -163,6 +176,16 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   const groups = groupChannelKeyframesByFrame(track.channels, activeTmpl);
   const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
   const sortedKfs = [...activeKfs].sort((a, b) => a.frame - b.frame);
+  const selectedKeyframeIdSet = new Set(selectedKeyframeIds);
+
+  /**
+   * A key click either replaces the keyframe selection or folds this single key
+   * into it, according to the multi-select modifier.
+   */
+  const handleKeyframeClick = (id: string, additive: boolean) => {
+    if (additive) onToggleKeyframe(id);
+    else onSelectKeyframe(id);
+  };
 
   // Delete every channel keyframe at a frame (frame-group delete, same as
   // KeyframesTab handleDelete).
@@ -205,26 +228,30 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
         )}
         {chKfs.map((keyframe) => {
           const valueLabel = isPathChannel ? 'geometry' : String((keyframe as PropertyKeyframe).value.toFixed(2));
+          const isSelected = selectedKeyframeIdSet.has(keyframe.id);
           const onDelete = isPathChannel
             ? () => onDeleteMaskPathKeyframe(track.id, ch as LayerMaskPathChannel, keyframe.id)
             : () => onDeletePropertyKeyframe(track.id, ch, keyframe.id);
           return (
             <div
               key={keyframe.id}
-              className={`ue-prop-diamond ${selectedKeyframeId === keyframe.id ? 'selected' : ''}`}
-              style={{ left: `${keyframe.frame * frameWidth}px`, '--diamond-color': meta.color } as React.CSSProperties}
-              onClick={(e) => { e.stopPropagation(); onSelectKeyframe(keyframe.id); onSetFrame(keyframe.frame); }}
-              onMouseDown={(e) => { e.stopPropagation(); onStartDragPKf({ trackId: track.id, channel: ch, keyframeId: keyframe.id }); onSelectKeyframe(keyframe.id); onSetFrame(keyframe.frame); }}
+              className={`ue-prop-diamond ${isSelected ? 'selected' : ''}`}
+              data-keyframe-id={keyframe.id}
+              style={{ left: `${keyframe.frame * frameWidth}px`, color: meta.color } as React.CSSProperties}
+              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(keyframe.id, isAdditiveSelection(e)); onSetFrame(keyframe.frame); }}
+              onMouseDown={(e) => { e.stopPropagation(); onStartDragPKf({ trackId: track.id, channel: ch, keyframeId: keyframe.id }); if (!isAdditiveSelection(e)) onSelectKeyframe(keyframe.id); onSetFrame(keyframe.frame); }}
               onMouseEnter={() => onHoverKf({ frame: keyframe.frame, label: `${meta.label}: ${valueLabel}` })}
               onMouseLeave={() => onHoverKf(null)}
               onContextMenu={(e) => openKfMenu(e, keyframe.frame, onDelete)}
               title={`${meta.label} = ${valueLabel} @ F${keyframe.frame} (Right-click: menu)`}
               {...diamondKeyboardProps(
                 `Keyframe at frame ${keyframe.frame}, ${meta.label}, value ${valueLabel}`,
-                selectedKeyframeId === keyframe.id,
+                isSelected,
                 () => { onSelectKeyframe(keyframe.id); onSetFrame(keyframe.frame); },
               )}
-            />
+            >
+              <span className="diamond-glyph" aria-hidden="true" />
+            </div>
           );
         })}
       </div>
@@ -272,13 +299,14 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
         {/* M6: canonical frame-group diamonds (one per frame, channel info in hover/title) */}
         {useCanonical ? groups.map((group) => {
           const representativeId = group.keyframes[group.channels[0]].id;
-          const isKfSelected = selectedKeyframeId === representativeId;
+          const isKfSelected = selectedKeyframeIdSet.has(representativeId);
           return (
             <div
               key={representativeId}
               className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
-              style={{ left: `${group.frame * frameWidth}px`, borderColor: track.color }}
-              onClick={(e) => { e.stopPropagation(); onSelectKeyframe(representativeId); onSelectPart(track.partId, e.shiftKey); onSetFrame(group.frame); }}
+              data-keyframe-id={representativeId}
+              style={{ left: `${group.frame * frameWidth}px`, color: track.color }}
+              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(representativeId, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(group.frame); }}
               onMouseDown={(e) => {
                 // BUGFIX: canonical frame-group diamonds are draggable too —
                 // the drag moves the WHOLE frame group (all channel keyframes
@@ -286,7 +314,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
                 // composite keyframes; canonical tracks had no drag at all.
                 e.stopPropagation();
                 onStartDragKf({ trackId: track.id, keyframeId: representativeId });
-                onSelectKeyframe(representativeId);
+                if (!isAdditiveSelection(e)) onSelectKeyframe(representativeId);
               }}
               onMouseEnter={() => onHoverKf({ frame: group.frame, label: `${track.name} | ${group.channels.join(',')} | ${group.easing}` })}
               onMouseLeave={() => onHoverKf(null)}
@@ -298,18 +326,19 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
                 () => { onSelectKeyframe(representativeId); onSelectPart(track.partId, false); onSetFrame(group.frame); },
               )}
             >
-              <div className="diamond-inner" style={{ backgroundColor: track.color }} />
+              <span className="diamond-glyph" aria-hidden="true" />
             </div>
           );
         }) : sortedKfs.map((kf) => {
-          const isKfSelected = selectedKeyframeId === kf.id;
+          const isKfSelected = selectedKeyframeIdSet.has(kf.id);
           return (
             <div
               key={kf.id}
               className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
-              style={{ left: `${kf.frame * frameWidth}px`, borderColor: track.color }}
-              onClick={(e) => { e.stopPropagation(); onSelectKeyframe(kf.id); onSelectPart(track.partId, e.shiftKey); onSetFrame(kf.frame); }}
-              onMouseDown={(e) => { e.stopPropagation(); onStartDragKf({ trackId: track.id, keyframeId: kf.id }); onSelectKeyframe(kf.id); }}
+              data-keyframe-id={kf.id}
+              style={{ left: `${kf.frame * frameWidth}px`, color: track.color }}
+              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(kf.id, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(kf.frame); }}
+              onMouseDown={(e) => { e.stopPropagation(); onStartDragKf({ trackId: track.id, keyframeId: kf.id }); if (!isAdditiveSelection(e)) onSelectKeyframe(kf.id); }}
               onMouseEnter={() => onHoverKf({ frame: kf.frame, label: `${track.name} | ${kf.easing}` })}
               onMouseLeave={() => onHoverKf(null)}
               onContextMenu={(e) => openKfMenu(e, kf.frame, () => onDeleteKeyframe(track.id, kf.id))}
@@ -320,7 +349,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
                 () => { onSelectKeyframe(kf.id); onSelectPart(track.partId, false); onSetFrame(kf.frame); },
               )}
             >
-              <div className="diamond-inner" style={{ backgroundColor: track.color }} />
+              <span className="diamond-glyph" aria-hidden="true" />
             </div>
           );
         })}

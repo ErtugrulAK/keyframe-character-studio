@@ -26,20 +26,22 @@ function makeTrack(overrides: Partial<Track> = {}): Track {
   };
 }
 
-function renderLane(track: Track, options: { selectedKeyframeId?: string | null; expanded?: boolean } = {}) {
+function renderLane(track: Track, options: { selectedKeyframeIds?: string[]; expanded?: boolean } = {}) {
   const onSelectKeyframe = vi.fn();
+  const onToggleKeyframe = vi.fn();
   const onSetFrame = vi.fn();
   const onSelectPart = vi.fn();
   const utils = render(
     <TrackLane
       track={track}
       isSelected
-      selectedKeyframeId={options.selectedKeyframeId ?? null}
+      selectedKeyframeIds={options.selectedKeyframeIds ?? []}
       frameWidth={10}
       totalFrames={60}
       activeTemplateId="Sequence"
       isGroupExpanded={() => options.expanded ?? false}
       onSelectKeyframe={onSelectKeyframe}
+      onToggleKeyframe={onToggleKeyframe}
       onSelectPart={onSelectPart}
       onSetFrame={onSetFrame}
       onStartDragKf={vi.fn()}
@@ -56,7 +58,7 @@ function renderLane(track: Track, options: { selectedKeyframeId?: string | null;
       onFrameFromClientX={vi.fn()}
     />,
   );
-  return { ...utils, onSelectKeyframe, onSetFrame, onSelectPart };
+  return { ...utils, onSelectKeyframe, onToggleKeyframe, onSetFrame, onSelectPart };
 }
 
 const diamonds = () => screen.getAllByRole('button', { name: /^Keyframe at frame/ });
@@ -73,7 +75,7 @@ describe('TrackLane keyframe diamonds — keyboard accessibility', () => {
   });
 
   it('reports the selected state through aria-pressed', () => {
-    renderLane(makeTrack(), { selectedKeyframeId: 'x12' });
+    renderLane(makeTrack(), { selectedKeyframeIds: ['x12'] });
 
     const selected = diamonds().filter((button) => button.getAttribute('aria-pressed') === 'true');
     expect(selected).toHaveLength(1);

@@ -33,6 +33,23 @@ import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { InlineRename } from '../Shared/InlineRename';
 import './SequencerTimeline.css';
 
+/**
+ * Anything that already owns a pointer gesture may not begin a marquee: a
+ * keyframe drag, the ruler (scrub), the panel dividers (resize), scrollbars
+ * (which are not part of the scroll surface at all — the press would land on the
+ * container outside its client box), and every form control or menu trigger.
+ */
+const MARQUEE_BLOCKERS = '.keyframe-diamond, .ue-prop-diamond, .time-ruler, .playhead-line, .timeline-resizer-bar, .timeline-column-resizer, input, textarea, select, button, [role="separator"]';
+
+/** A press that travels less than this is a click, not a selection drag. */
+const MARQUEE_DRAG_THRESHOLD_PX = 3;
+
+/** How close to the playhead line a press still counts as "on the playhead". */
+const PLAYHEAD_POINTER_TOLERANCE_PX = 4;
+
+/** A rendered keyframe diamond, the only thing a marquee can hit. */
+const MARQUEE_KEYFRAME_SELECTOR = '.keyframe-diamond[data-keyframe-id], .ue-prop-diamond[data-keyframe-id]';
+
 
 
 export const SequencerTimeline: React.FC = () => {
@@ -51,6 +68,8 @@ export const SequencerTimeline: React.FC = () => {
     handleSelectPart,
     selectedKeyframeId,
     setSelectedKeyframeId,
+    selectedKeyframeIds,
+    selectKeyframes,
     addKeyframeToTrack,
     updateKeyframeFrame,
     toggleTrackVisibility,
@@ -189,6 +208,130 @@ export const SequencerTimeline: React.FC = () => {
     },
     [totalFrames, FRAME_WIDTH]
   );
+
+  /**
+   * Timeline marquee (box) selection.
+   *
+   * The rectangle is a transient gesture, not a selection store: it hit-tests
+   * the diamonds the timeline has actually rendered, so only keys the user can
+   * see are selectable (a collapsed or hidden channel contributes none), and the
+   * timeline keeps no second copy of keyframe geometry — a diamond's centre IS
+   * its frame position. The outcome lands in the one keyframe-selection
+   * authority, `selectKeyframes`.
+   *
+   * Everything is measured in the grid's CONTENT space, captured at pointerdown,
+   * so the drawn rectangle and the hit test can never disagree: a key is selected
+   * exactly when its centre falls inside the rectangle that is on screen.
+   */
+  const [marqueeRect, setMarqueeRect] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
+  const [isMarqueeActive, setIsMarqueeActive] = useState<boolean>(false);
+  const marqueeGestureRef = useRef<{
+    frame: { left: number; top: number; scrollLeft: number; scrollTop: number };
+    originX: number;
+    originY: number;
+    preGestureIds: string[];
+    additive: boolean;
+    candidates: Array<{ id: string; x: number; y: number }>;
+    moved: boolean;
+  } | null>(null);
+
+  const handleMarqueeStart = (event: React.MouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    const grid = timelineGridRef.current;
+    if (!grid) return;
+    const target = event.target as HTMLElement;
+    if (target.closest(MARQUEE_BLOCKERS)) return;
+
+    const box = grid.getBoundingClientRect();
+    // A press on the native scrollbar belongs to the scrollbar: the client box
+    // already excludes it, so the point lands outside the surface.
+    if (event.clientX - box.left >= grid.clientWidth || event.clientY - box.top >= grid.clientHeight) return;
+
+    const originX = event.clientX - box.left + grid.scrollLeft;
+    const originY = event.clientY - box.top + grid.scrollTop;
+    // The playhead line is pointer-transparent chrome, so it can only be
+    // excluded geometrically: its column is the playhead's, not the marquee's.
+    if (Math.abs(originX - currentFrame * FRAME_WIDTH) <= PLAYHEAD_POINTER_TOLERANCE_PX) return;
+
+    const candidates = Array.from(grid.querySelectorAll<HTMLElement>(MARQUEE_KEYFRAME_SELECTOR)).map((element) => {
+      const diamond = element.getBoundingClientRect();
+      return {
+        id: element.dataset.keyframeId as string,
+        x: diamond.left + diamond.width / 2 - box.left + grid.scrollLeft,
+        y: diamond.top + diamond.height / 2 - box.top + grid.scrollTop,
+      };
+    });
+
+    marqueeGestureRef.current = {
+      frame: { left: box.left, top: box.top, scrollLeft: grid.scrollLeft, scrollTop: grid.scrollTop },
+      originX,
+      originY,
+      preGestureIds: selectedKeyframeIds,
+      additive: event.shiftKey || event.ctrlKey || event.metaKey,
+      candidates,
+      moved: false,
+    };
+    setMarqueeRect({ left: originX, top: originY, width: 0, height: 0 });
+    setIsMarqueeActive(true);
+    // The marquee is a selection gesture, never a text selection.
+    event.preventDefault();
+  };
+
+  const updateMarquee = useCallback((clientX: number, clientY: number) => {
+    const gesture = marqueeGestureRef.current;
+    if (!gesture) return;
+    const { frame } = gesture;
+    const currentX = clientX - frame.left + frame.scrollLeft;
+    const currentY = clientY - frame.top + frame.scrollTop;
+    const left = Math.min(gesture.originX, currentX);
+    const top = Math.min(gesture.originY, currentY);
+    const width = Math.abs(currentX - gesture.originX);
+    const height = Math.abs(currentY - gesture.originY);
+    if (Math.max(width, height) > MARQUEE_DRAG_THRESHOLD_PX) gesture.moved = true;
+    setMarqueeRect({ left, top, width, height });
+
+    const hits = gesture.candidates
+      .filter((candidate) => (
+        candidate.x >= left && candidate.x <= left + width
+        && candidate.y >= top && candidate.y <= top + height
+      ))
+      .map((candidate) => candidate.id);
+    selectKeyframes(gesture.additive ? [...gesture.preGestureIds, ...hits] : hits, 'replace');
+  }, [selectKeyframes]);
+
+  const endMarquee = useCallback((restore: boolean) => {
+    const gesture = marqueeGestureRef.current;
+    marqueeGestureRef.current = null;
+    setIsMarqueeActive(false);
+    setMarqueeRect(null);
+    if (!gesture) return;
+    if (restore) {
+      selectKeyframes(gesture.preGestureIds, 'replace');
+      return;
+    }
+    // A press on empty space without a drag clears the keyframe selection; with
+    // the multi-select modifier held there was nothing to add, so it stands.
+    if (!gesture.moved && !gesture.additive) selectKeyframes([], 'replace');
+  }, [selectKeyframes]);
+
+  useEffect(() => {
+    if (!isMarqueeActive) return;
+    const handleMove = (event: MouseEvent) => updateMarquee(event.clientX, event.clientY);
+    const handleUp = () => endMarquee(false);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      endMarquee(true);
+    };
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMarqueeActive, updateMarquee, endMarquee]);
 
   const handleCropToContent = () => {
     // M5: timeline length accounts for BOTH legacy keyframes and canonical
@@ -819,7 +962,7 @@ export const SequencerTimeline: React.FC = () => {
         />
 
         {/* ── RIGHT SCROLLABLE GRID ── */}
-        <div className="timeline-grid-container timeline-graph-pane" ref={timelineGridRef} onScroll={handleGridScroll}>
+        <div className="timeline-grid-container timeline-graph-pane" ref={timelineGridRef} onScroll={handleGridScroll} onMouseDown={handleMarqueeStart}>
           {/* Time Ruler */}
           <TimeRuler
             frameNumbers={frameNumbers}
@@ -842,12 +985,13 @@ export const SequencerTimeline: React.FC = () => {
                 key={track.id}
                 track={track}
                 isSelected={selectedPartId === track.partId}
-                selectedKeyframeId={selectedKeyframeId}
+                selectedKeyframeIds={selectedKeyframeIds}
                 frameWidth={FRAME_WIDTH}
                 totalFrames={totalFrames}
                 activeTemplateId={activeTemplateId}
                 isGroupExpanded={isGroupExpanded}
                 onSelectKeyframe={setSelectedKeyframeId}
+                onToggleKeyframe={(id) => selectKeyframes([id], 'toggle')}
                 onSelectPart={handleSelectPart}
                 onSetFrame={setCurrentFrame}
                 onStartDragKf={setDraggingKf}
@@ -865,6 +1009,21 @@ export const SequencerTimeline: React.FC = () => {
               />
             ))}
           </div>
+
+          {/* Marquee selection rectangle (transient gesture chrome) */}
+          {marqueeRect && (
+            <div
+              className="timeline-marquee"
+              data-testid="timeline-marquee"
+              aria-hidden="true"
+              style={{
+                left: `${marqueeRect.left}px`,
+                top: `${marqueeRect.top}px`,
+                width: `${marqueeRect.width}px`,
+                height: `${marqueeRect.height}px`,
+              }}
+            />
+          )}
         </div>
       </div>
 

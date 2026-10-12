@@ -65,6 +65,9 @@ export interface AnimatorContextType {
   setFocusModeNodeId: (id: string | null) => void;
   selectedKeyframeId: string | null;
   setSelectedKeyframeId: (id: string | null) => void;
+  /** Every selected keyframe; `selectedKeyframeId` is its primary member. */
+  selectedKeyframeIds: string[];
+  selectKeyframes: (ids: string[], mode?: 'replace' | 'toggle') => void;
   activeTool: ToolType;
   setActiveTool: (tool: ToolType) => void;
   pendingShapeType: BodyPartType | null;
@@ -299,6 +302,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setFocusModeNodeId,
     selectedKeyframeId,
     setSelectedKeyframeId,
+    selectedKeyframeIds,
+    selectKeyframes,
   } = useSelection();
   const {
     activeTool,
@@ -562,6 +567,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setFocusModeNodeId,
         selectedKeyframeId,
         setSelectedKeyframeId,
+        selectedKeyframeIds,
+        selectKeyframes,
         activeTool,
         setActiveTool,
         pendingShapeType,

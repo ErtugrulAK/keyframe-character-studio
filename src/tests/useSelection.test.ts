@@ -63,4 +63,59 @@ describe('useSelection Hook', () => {
     act(() => result.current.handleSelectPart(null));
     expect(result.current.booleanOperandEditingGroupId).toBeNull();
   });
+
+  describe('keyframe selection', () => {
+    it('keeps one canonical set where a single key is a one-member selection', () => {
+      const { result } = renderHook(() => useSelection());
+      expect(result.current.selectedKeyframeIds).toEqual([]);
+      expect(result.current.selectedKeyframeId).toBeNull();
+
+      act(() => result.current.setSelectedKeyframeId('k2'));
+      expect(result.current.selectedKeyframeIds).toEqual(['k2']);
+      expect(result.current.selectedKeyframeId).toBe('k2');
+
+      act(() => result.current.setSelectedKeyframeId(null));
+      expect(result.current.selectedKeyframeIds).toEqual([]);
+      expect(result.current.selectedKeyframeId).toBeNull();
+    });
+
+    it('replaces the whole selection with a marquee result and dedupes it', () => {
+      const { result } = renderHook(() => useSelection());
+      act(() => result.current.setSelectedKeyframeId('k1'));
+
+      act(() => result.current.selectKeyframes(['k3', 'k4', 'k3'], 'replace'));
+
+      expect(result.current.selectedKeyframeIds).toEqual(['k3', 'k4']);
+      // The primary key is the last one added: the key the single-key
+      // authorities (curve editor, delete, copy) operate on.
+      expect(result.current.selectedKeyframeId).toBe('k4');
+    });
+
+    it('toggles keys into and out of the selection without disturbing the rest', () => {
+      const { result } = renderHook(() => useSelection());
+      act(() => result.current.selectKeyframes(['k1', 'k2'], 'replace'));
+
+      act(() => result.current.selectKeyframes(['k3'], 'toggle'));
+      expect(result.current.selectedKeyframeIds).toEqual(['k1', 'k2', 'k3']);
+
+      act(() => result.current.selectKeyframes(['k2'], 'toggle'));
+      expect(result.current.selectedKeyframeIds).toEqual(['k1', 'k3']);
+      expect(result.current.selectedKeyframeId).toBe('k3');
+
+      // Removing the last key leaves an empty selection, not a stale primary.
+      act(() => result.current.selectKeyframes(['k1', 'k3'], 'toggle'));
+      expect(result.current.selectedKeyframeIds).toEqual([]);
+      expect(result.current.selectedKeyframeId).toBeNull();
+    });
+
+    it('folds a Shift-marquee addition into the selection it grew from', () => {
+      const { result } = renderHook(() => useSelection());
+      act(() => result.current.selectKeyframes(['k1'], 'replace'));
+
+      // The marquee captured ['k1'] at pointerdown and reports the live union.
+      act(() => result.current.selectKeyframes(['k1', 'k5', 'k6'], 'replace'));
+      expect(result.current.selectedKeyframeIds).toEqual(['k1', 'k5', 'k6']);
+      expect(result.current.selectedKeyframeId).toBe('k6');
+    });
+  });
 });

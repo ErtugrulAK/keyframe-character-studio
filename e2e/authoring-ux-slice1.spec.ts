@@ -79,26 +79,43 @@ test('each Boolean operation renders its own icon and accessible name', async ({
   expect(paths.every((d) => d.length > 0)).toBe(true);
 });
 
-test('the selection frame keeps a contrast halo under the accent stroke', async ({ page }) => {
+test('the selection frame keeps a paired light/dark outline under the accent stroke', async ({ page }) => {
   await seed(page, [shape('a', 'Alpha', 0)]);
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
 
   const frame = page.getByTestId('transform-gizmo').first();
+  const keyline = page.getByTestId('selection-frame-keyline').first();
   const halo = page.getByTestId('selection-frame-halo').first();
+  await expect(keyline).toBeVisible();
   await expect(halo).toBeVisible();
 
-  // The halo is the wider, non-interactive stroke underneath the accent dash.
-  const strokes = await frame.locator('rect').evaluateAll((nodes) => nodes.map((node) => ({
-    width: Number((node as SVGRectElement).style.strokeWidth || node.getAttribute('stroke-width') || 0),
-    dash: node.getAttribute('stroke-dasharray'),
-  })));
-  // The halo is wider than the accent dash and carries no dash itself.
-  const haloStroke = strokes.find((entry) => entry.dash === null);
-  const accentStroke = strokes.find((entry) => entry.dash !== null);
-  expect(haloStroke).toBeTruthy();
-  expect(accentStroke).toBeTruthy();
-  expect(haloStroke!.width).toBeGreaterThan(accentStroke!.width);
+  // What the frame actually paints, in paint order.
+  const strokes = await frame.locator('rect').evaluateAll((nodes) => nodes.map((node) => {
+    const element = node as SVGRectElement;
+    const luminanceOf = (value: string): number | null => {
+      const rgb = (value.match(/\d+/g) ?? []).slice(0, 3).map(Number);
+      if (rgb.length < 3) return null;
+      const [r, g, b] = rgb.map((channel) => channel / 255);
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const computed = getComputedStyle(element).stroke;
+    return {
+      width: Number(element.style.strokeWidth || element.getAttribute('stroke-width') || 0),
+      dash: element.getAttribute('stroke-dasharray'),
+      luminance: luminanceOf(computed) ?? luminanceOf(element.getAttribute('stroke') ?? element.style.stroke),
+    };
+  }));
 
-  // Neither stroke may take the pointer away from the artwork.
+  const solid = strokes.filter((entry) => entry.dash === null && entry.luminance !== null);
+  // One solid stroke reads over dark artwork, the other over light artwork.
+  expect(Math.max(...solid.map((entry) => entry.luminance!))).toBeGreaterThan(0.7);
+  expect(Math.min(...solid.map((entry) => entry.luminance!))).toBeLessThan(0.2);
+  // The pair stays thin: the widest half is narrower than the single black band
+  // the frame used to be backed with.
+  expect(Math.max(...solid.map((entry) => entry.width))).toBeLessThan(7);
+  expect(strokes.some((entry) => entry.dash !== null)).toBe(true);
+
+  // Neither half may take the pointer away from the artwork.
+  await expect(keyline).toHaveCSS('pointer-events', 'none');
   await expect(halo).toHaveCSS('pointer-events', 'none');
 });

@@ -80,14 +80,29 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   const metrics = getTransformGizmoMetrics(halfW * 2, halfH * 2, zScale);
 
   /**
-   * The selection frame is drawn twice: a wide dark halo underneath the accent
-   * dash. A single accent stroke vanished whenever the artwork was a similar
-   * cyan, so the halo gives the frame a contrast partner on light, dark and
-   * accent-like content alike. Both strokes are non-interactive, so the frame
-   * never changes what the pointer hits.
+   * The selection frame is a paired light/dark outline under the accent dash.
+   *
+   * A single accent stroke vanished over accent-like artwork, and a wide black
+   * backing made the frame read as a heavy halo. The pair is the thinner
+   * alternative: a light keyline (outer) keeps the frame readable over dark
+   * artwork, a dark core keeps it readable over light artwork, and the accent
+   * dash stays on top. Every stroke is non-interactive, so the frame never
+   * changes what the pointer hits.
    */
   const renderBounds = (
     <>
+      <rect
+        data-testid="selection-frame-keyline"
+        x={left}
+        y={top}
+        width={halfW * 2}
+        height={halfH * 2}
+        fill="none"
+        pointerEvents="none"
+        style={{ stroke: 'var(--kcs-selection-keyline)' }}
+        strokeWidth={3 * zScale}
+        vectorEffect="non-scaling-stroke"
+      />
       <rect
         data-testid="selection-frame-halo"
         x={left}
@@ -97,7 +112,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
         fill="none"
         pointerEvents="none"
         style={{ stroke: 'var(--bg-darkest)' }}
-        strokeWidth={3.5 * zScale}
+        strokeWidth={1 * zScale}
         vectorEffect="non-scaling-stroke"
       />
       <rect

@@ -246,19 +246,29 @@ describe('SelectionGizmo — layer group frame', () => {
     expect(box.getAttribute('data-group-id')).toBe('g');
   });
 
-  it('keeps the frame decorative: dark halo plus accent stroke, and no extra hitboxes', () => {
+  it('keeps the frame decorative: a paired light/dark outline plus accent stroke, and no extra hitboxes', () => {
     renderGroup([imagePart('a'), imagePart('b')], { g: identity(0), a: identity(-100), b: identity(100) }, 2);
 
     const box = screen.getByTestId('group-aggregate-box');
     const halo = box.querySelector('[data-testid="selection-frame-halo"]')!;
+    const keyline = box.querySelector('[data-testid="selection-frame-keyline"]')!;
     const [accent] = [...box.querySelectorAll('rect')].filter((rect) => rect.getAttribute('stroke') === '#00d2ff');
 
     expect(halo.getAttribute('pointer-events')).toBe('none');
     expect(halo.getAttribute('style')).toContain('var(--bg-darkest)');
-    // A decorative stroke never scales with zoom, so its width must compensate.
-    expect(halo.getAttribute('stroke-width')).toBe('7');
+    expect(keyline.getAttribute('pointer-events')).toBe('none');
+    // The light half of the pair is the contrast partner of the dark core.
+    expect(keyline.getAttribute('style')).toContain('var(--kcs-selection-keyline)');
+    // Decorative strokes never scale with zoom, so their widths must compensate.
+    // The pair is thinner than the single black band it replaced (3 + 1 < 2 x 3.5).
+    expect(keyline.getAttribute('stroke-width')).toBe('6');
+    expect(halo.getAttribute('stroke-width')).toBe('2');
     expect(accent.getAttribute('pointer-events')).toBe('none');
     expect(accent.getAttribute('stroke-width')).toBe('3');
+    // The light keyline frames the dark core, and the accent dash rides on top.
+    expect([...box.querySelectorAll('rect')].indexOf(keyline)).toBeLessThan(
+      [...box.querySelectorAll('rect')].indexOf(halo),
+    );
     // 4 corner + 4 edge + 1 rotation handle: the frame itself adds none.
     expect(screen.getAllByTestId('gizmo-hit-target')).toHaveLength(9);
   });

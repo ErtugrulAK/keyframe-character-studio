@@ -66,7 +66,9 @@ const frame = (page: Page) => page.evaluate(() => {
   const box = document.querySelector('[data-testid="group-aggregate-box"]');
   if (!box) throw new Error('no aggregate box');
   const rects = Array.from(box.querySelectorAll('rect'));
-  const drawn = rects.find((rect) => rect.getAttribute('data-testid') !== 'selection-frame-halo');
+  // The accent dash is the frame geometry itself; the paired light/dark outline
+  // shares its geometry but carries the wider light stroke.
+  const drawn = rects.find((rect) => rect.getAttribute('stroke') === '#00d2ff');
   if (!drawn) throw new Error('no drawn frame');
   const client = drawn.getBoundingClientRect();
   const gizmo = box.querySelector('[data-testid="transform-gizmo"]');

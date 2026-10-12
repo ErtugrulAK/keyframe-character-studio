@@ -568,4 +568,7 @@ input[type="number"] {
   --kcs-focus: var(--kcs-border-focus);
   --kcs-danger: var(--accent-red);
   --kcs-warning: var(--accent-gold);
+  /* Contrast partner of --bg-darkest on the canvas selection frame: the light
+     half of the paired outline, so the frame reads over dark artwork too. */
+  --kcs-selection-keyline: rgba(248, 250, 252, 0.9);
 }

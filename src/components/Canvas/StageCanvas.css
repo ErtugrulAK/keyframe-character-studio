@@ -125,7 +125,17 @@
   height: 100%;
   overflow: visible !important;
   user-select: none;
-  transition: transform 0.1s ease-out;
+  /*
+   * No transition on the camera transform, on purpose.
+   *
+   * The transform is a *projection* of the camera state and the current stage
+   * box (`getStageCameraTransform`), not an animation of it. Easing it makes the
+   * authored world's screen position a function of time: while a sidebar
+   * animates its own width, an eased projection lags the moving stage centre by
+   * the layout delta and then slides back, so the scene visibly counter-moves
+   * against the layout and settles late. A deliberate camera move (pan, zoom,
+   * reset) is applied directly, exactly like a real camera.
+   */
 }
 
 .gizmo-handle {

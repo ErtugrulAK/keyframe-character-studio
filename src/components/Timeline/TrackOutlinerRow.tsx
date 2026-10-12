@@ -30,9 +30,21 @@ interface TrackOutlinerRowProps {
   onToggleSubGroup: (key: string, defaultVal?: boolean) => void;
 }
 
+/** Enter/Space activate a disclosure row the same way a click does. */
+const activateOnKey = (toggle: () => void) => (event: React.KeyboardEvent) => {
+  if (event.key !== 'Enter' && event.key !== ' ') return;
+  event.preventDefault();
+  toggle();
+};
+
 /**
  * One outliner track group: the layer row plus the Transform / sub-group
  * channel rows that appear when the track is expanded.
+ *
+ * Every property row belongs to exactly one layer: the whole property block
+ * carries `data-owner-part-id`, and each header names its owner in its
+ * accessible name, so a Transform row can never read as an orphan that belongs
+ * to no layer (or to the timeline as a whole).
  */
 export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   track,
@@ -76,7 +88,13 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
       ? (track.channels?.[ch] ?? []).filter((k) => (k.templateId || 'Sequence') === activeTmpl)
       : (track.channels?.[ch] ?? []);
     return (
-      <div key={ch} className="ue-channel-row" style={{ height: CHANNEL_ROW_HEIGHT }}>
+      <div
+        key={ch}
+        className="ue-channel-row"
+        data-owner-part-id={track.partId}
+        data-property-channel={ch}
+        style={{ height: CHANNEL_ROW_HEIGHT }}
+      >
         <span className={indentClass} />
         <span className="ue-channel-color-bar" style={{ backgroundColor: meta.color }} />
         <span className="ue-channel-label" style={{ color: meta.color }}>{meta.label}</span>
@@ -169,15 +187,29 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
 
       {/* ── TRANSFORM & SUB-GROUPS (when expanded) ── */}
       {isTrackExpanded && (
-        <div className="ue-channel-group">
+        <div
+          className="ue-channel-group"
+          data-owner-part-id={track.partId}
+          data-owner-name={displayName}
+          aria-label={`Properties of ${displayName}`}
+          role="group"
+        >
           {/* Transform Category Header */}
           <div
             className="ue-transform-header"
+            data-owner-part-id={track.partId}
+            aria-label={`Transform property group of ${displayName}`}
+            aria-expanded={isTransformExpanded}
+            role="button"
+            tabIndex={0}
+            title={`Transform properties of ${displayName}`}
             style={{ height: CHANNEL_ROW_HEIGHT }}
             onClick={() => onToggleSubGroup(`${track.id}_transform`, true)}
+            onKeyDown={activateOnKey(() => onToggleSubGroup(`${track.id}_transform`, true))}
           >
             <span className="ue-sub-chevron">{isTransformExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
             <span className="ue-transform-label">Transform</span>
+            <span className="ue-owner-name">{displayName}</span>
           </div>
 
           {isTransformExpanded && (
@@ -185,8 +217,15 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
               {/* 1. Location Sub-Group */}
               <div
                 className="ue-subgroup-header"
+                data-owner-part-id={track.partId}
+                aria-label={`Location properties of ${displayName}`}
+                aria-expanded={isLocationExpanded}
+                role="button"
+                tabIndex={0}
+                title={`Location properties of ${displayName}`}
                 style={{ height: CHANNEL_ROW_HEIGHT }}
                 onClick={() => onToggleSubGroup(`${track.id}_location`, true)}
+                onKeyDown={activateOnKey(() => onToggleSubGroup(`${track.id}_location`, true))}
               >
                 <span className="ue-sub-chevron">{isLocationExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
                 <span className="ue-subgroup-label">Location</span>
@@ -197,8 +236,15 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
               {/* 2. Rotation Sub-Group */}
               <div
                 className="ue-subgroup-header"
+                data-owner-part-id={track.partId}
+                aria-label={`Rotation properties of ${displayName}`}
+                aria-expanded={isRotationExpanded}
+                role="button"
+                tabIndex={0}
+                title={`Rotation properties of ${displayName}`}
                 style={{ height: CHANNEL_ROW_HEIGHT }}
                 onClick={() => onToggleSubGroup(`${track.id}_rotation`, false)}
+                onKeyDown={activateOnKey(() => onToggleSubGroup(`${track.id}_rotation`, false))}
               >
                 <span className="ue-sub-chevron">{isRotationExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
                 <span className="ue-subgroup-label">Rotation</span>
@@ -209,8 +255,15 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
               {/* 3. Scale Sub-Group */}
               <div
                 className="ue-subgroup-header"
+                data-owner-part-id={track.partId}
+                aria-label={`Scale properties of ${displayName}`}
+                aria-expanded={isScaleExpanded}
+                role="button"
+                tabIndex={0}
+                title={`Scale properties of ${displayName}`}
                 style={{ height: CHANNEL_ROW_HEIGHT }}
                 onClick={() => onToggleSubGroup(`${track.id}_scale`, false)}
+                onKeyDown={activateOnKey(() => onToggleSubGroup(`${track.id}_scale`, false))}
               >
                 <span className="ue-sub-chevron">{isScaleExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
                 <span className="ue-subgroup-label">Scale</span>
@@ -222,7 +275,12 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
               {['opacity'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-sm'))}
 
               {/* 5. Trim Path channels */}
-              <div className="ue-subgroup-header" style={{ height: CHANNEL_ROW_HEIGHT }}>
+              <div
+                className="ue-subgroup-header ue-subgroup-header-static"
+                data-owner-part-id={track.partId}
+                title={`Trim Path properties of ${displayName}`}
+                style={{ height: CHANNEL_ROW_HEIGHT }}
+              >
                 <span className="ue-subgroup-label">Trim Path</span>
               </div>
               {['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-sm'))}

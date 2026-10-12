@@ -613,10 +613,14 @@
 .track-add-kf-btn:hover { color: var(--accent-gold); }
 
 /* ── CHANNEL GROUP ── */
+/* One nesting rail under the layer row: every property row hangs off the layer
+   it belongs to instead of floating as a top-level timeline row. */
 .ue-channel-group {
   display: flex;
   flex-direction: column;
   background: #0b0d10;
+  margin-left: 12px;
+  border-left: 2px solid rgba(148, 163, 184, 0.18);
 }
 
 .ue-transform-header {
@@ -637,6 +641,22 @@
   letter-spacing: 0.5px;
 }
 
+/* The owning layer's name rides on the Transform row itself, so the property
+   group can never read as belonging to no layer. */
+.ue-owner-name {
+  margin-left: auto;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-caption);
+  font-weight: 600;
+  color: #64748b;
+}
+
+/* One nesting rail under the layer row: every property row hangs off the layer
+   it belongs to instead of floating as a top-level timeline row. */
+
 .ue-subgroup-header {
   display: flex;
   align-items: center;
@@ -648,6 +668,9 @@
   user-select: none;
 }
 .ue-subgroup-header:hover { background: #12151d; }
+/* A header with no disclosure state (Trim Path) is not a control. */
+.ue-subgroup-header-static { cursor: default; }
+.ue-subgroup-header-static:hover { background: var(--bg-darkest); }
 .ue-subgroup-label {
   font-size: var(--font-size-caption);
   font-weight: 700;

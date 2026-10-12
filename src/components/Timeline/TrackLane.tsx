@@ -232,7 +232,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   };
 
   return (
-    <div key={track.id} className="ue-lane-group">
+    <div key={track.id} className="ue-lane-group" data-owner-part-id={track.partId}>
       {/* ── PARENT LANE (composite keyframes) ── */}
       <div
         className={`ue-track-lane ${isSelected ? 'selected' : ''}`}

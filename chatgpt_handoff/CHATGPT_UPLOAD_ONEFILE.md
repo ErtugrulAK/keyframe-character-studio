@@ -1,131 +1,142 @@
-# KCS — Manual QA Round 1 remediation (PART 1 A–F + PART 2 G–J)
+# KCS — Manual QA Rounds 1 and 2 remediation (A–J and R2-01…R2-12)
 
 **Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.** No other file needs uploading.
 
 Repository: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 Worktree used for this work (isolated): `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1`
 Branch: `fix/manual-qa-round1-remediation` — base `origin/main` at `8e2df61`
-Pull request: **#9** — `https://github.com/ErtugrulAK/keyframe-character-studio/pull/9` (base `main`, **OPEN**, MERGEABLE, mergeStateStatus CLEAN)
-Code head validated: `18b4acac0538c7a3ef9732e190ccb7e2f7b9b566` (`18b4aca`)
-CI: **CI Pipeline** run `38246227512` (event `pull_request`) — **success** (2026-10-12T11:59:51Z → 12:01:17Z) on head `18b4aca`
+Pull request: **#9** — `https://github.com/ErtugrulAK/keyframe-character-studio/pull/9` (base `main`, **OPEN**, not merged)
 
-**No merge. No release. No tag. Nothing published to npm.** The user's retest on the remediation preview is the merge gate.
+**No merge. No release. No tag. Nothing published to npm.** The user's retest on the 5173 preview is the merge gate.
 
 ## 1. Why this round happened
 
-The user ran MANUAL QA ROUND 1 against the live editor on 5173. Ten findings were recorded (A–J). PART 1 (A–F) was already committed on this branch; PART 2 (G–J) is this task. Every fix keeps the current data model and the existing authorities — no new command bus, no second state authority, no new animation/evaluation engine.
+The user ran MANUAL QA against the live editor. **Round 1** produced ten findings (A–J) and **round 2**
+produced twelve further findings (R2-01…R2-12). Both rounds are implemented on this branch. Every fix
+keeps the current data model and reuses the existing authorities — no second state authority, no second
+animation/evaluation engine, no new command bus.
 
-## 2. Findings, reproduction, root cause, fix, tests
+## 2. Round 1 result (context, do not redo)
 
-### PART 1 (already committed — context, not re-done in this task)
+Round 1 findings **A–J all passed their authored checks** and are already committed on this branch:
+A–F in PART 1 (`9f916f6`, `69bbad5`, `1e21fa5`) and G–J in PART 2 (`9774729`, `05f3130`, `aba0b05`,
+`18b4aca`). The round-1 head `18b4aca` already passed CI run `38246227512` (CI Pipeline,
+`pull_request`, success) and the full local gate (full Chromium 344 passed / 0 failed / 0 flaky). The
+round-1 detail is unchanged from the previous handoff; round 2 is the delta recorded below.
+
+## 3. Round 2 — findings, root cause, fix, evidence
 
 | # | Finding | Root cause | Fix (commit) |
 |---|---|---|---|
-| A | Camera/layout transition jitter: toggling a sidebar visibly slid the authored world | The camera was derived from the stage box, so any layout animation re-projected the world every frame | The camera is its own state — view centre in client pixels + the px-per-unit scale it was anchored with (`StageCameraView`, `getStageCameraTransform`); the rendered transform divides the layout fit back out (`69bbad5`) |
-| B | Dragging inside a group dragged a single child | The pointer target (a child) owned the gesture | A gesture starting inside the SELECTED group box moves the container as one unit; a click that never moved still selects the layer under the pointer; the post-drag click cannot steal the selection back (`1e21fa5`) |
-| C | Ghost centre square inside a geometryless group frame | The gizmo always drew a pivot marker | `suppressPivotMarker` for a container: frame + handles only (`1e21fa5`) |
-| D | Rotation-drag border jitter on a group | The transform cache was cleared in an effect, so a render could mix the *previous* revision's container transform with the current children | The cache is keyed to the document identity (`characterParts`/`tracks`/`activeTemplateId`) and validated on every read (`useMath.ts`) (`1e21fa5`) |
-| E | Edge resize grew on both sides | Edge drags were solved from the box centre | `resolveEdgeResize`: the OPPOSITE edge is the fixed point, only the dragged axis' scale changes, anchored on the box the gizmo actually drew (the group's aggregate box) (`1e21fa5`) |
-| F | The timeline `+` moved a parented/grouped layer, drift accumulated per click | Keyframe capture read the evaluated WORLD transform, but a channel value is the layer's *container-local* pose | `resolveAuthoredLocalTransform` converts with the same inverse the Inspector/grouping use (`9f916f6`) |
+| R2-05 | A rotation gesture turned the frame about the layer's own transform origin, so a group's drawn frame orbited that origin instead of turning in place (worst frame-centre drift **40.559px**) | the pivot was the layer's transform origin, not the centre of the box the frame draws | ONE world pivot captured at **pointerdown** (the centre of the box the frame draws at that moment, children-derived for a container) and held for the whole drag; `rotateAboutWorldPivot` writes the rotation plus the translation that keeps that world point fixed. Worst frame-centre drift is now **0.000px**. Files: `src/utils/rotationGesture.ts`, `src/utils/selectionFrame.ts` (`a941dc8`) |
+| R2-04 | A stray cyan square appeared inside a geometryless group frame | `fallbackBounds()` (±32 → 64×64) in `src/utils/bounds.ts` reached the multi-selection path and `layerGrouping` | `src/utils/selectionFrame.ts` is now the single frame-geometry authority; a geometryless `isGroup` container with no measured box draws nothing; every selected layer (single and multi) draws through the measured box (`a941dc8`) |
+| R2-02 | Resizing the timeline jolted the canvas | the frame where the DOM height changed was painted with a stale (box, transform) pairing, then snapped back | the panel commits its size and re-measures the stage in the **SAME task** (`canvas-viewport-command` → `remeasure-stage-box`, applied with `flushSync`). Real-input proof: 151–155 frames of drag, height 320→441, **worstDrift 0.000px**, magnificationSpread 0.00000 (`016f0b5`) |
+| R2-01 | The timeline could not be collapsed/restored or height-resized | no workspace controls | a header-band Collapse/Expand control (keeps a minimal restore strip and restores the authored height) and a top-edge height resizer, clamped, committing at most one size per animation frame (`016f0b5`) |
+| R2-03 | The layer/time column could not be resized | no divider | a resizable divider between the layer list and the time region (col-resize, clamped), and the frame still maps pointer x to the same frame after the column changes (`016f0b5`) |
+| R2-10 | The timeline could select exactly one keyframe | the selection model held a single id | canonical `selectedKeyframeIds: string[]` in `src/hooks/useSelection.ts`, with `selectedKeyframeId` kept as its PRIMARY member so curve-editor/delete/copy behaviour is unchanged (`47ae65c`) |
+| R2-12 | No box-select gesture over the timeline lanes | none existed | a marquee that hit-tests the **rendered** diamonds' centres (hidden channels are unselectable); Shift/Ctrl folds into the selection; Escape cancels and restores the pre-gesture selection. **Multi-key MOVE was deliberately NOT implemented and not faked** — it needs its own collision-aware mutation authority; recorded as a follow-up (`47ae65c`) |
+| R2-11 | Keyframe diamonds were hard to click | the hit target was the glyph | an 18px hit target with an 8px diamond, hollow when unselected and filled when selected; the centre stays on the keyframe's exact frame coordinate (`80afc17`) |
+| R2-09 | The expanded property stack read as a heavy card stack | per-row cards with no shared sizing | a compact animation-channel tree — one thin rail, disclosure arrows, 30px layer / 24px property rows from `src/components/Timeline/timelineConstants.ts` so outliner and lane rows stay pixel-aligned; a real misalignment bug (missing **opacity** lane, `03f4e26`) was also found and fixed (`80afc17`, `03f4e26`) |
+| R2-06 | Group/Ungroup appeared in Details as well as the toolbar | the command existed twice in the UI | `Ungroup` (and `Group`) removed from Details; they live only in the top toolbar and the KCS context menu; a lightweight read-only member list remains (`39e34a5`) |
+| R2-07 | The browser's native right-click menu still appeared in places | per-surface handling was incomplete | one app-root **capture-phase** `contextmenu` listener in `src/App.tsx` calls `preventDefault()` across the editor (toolbar, sequence tabs, timeline and empty area, Details, text inputs) and **never stops propagation**, so every KCS custom menu still works (`9b845c1`) |
+| R2-08 | Fill/Stroke sat in the top toolbar next to the Inspector's paint controls | paint had two homes | Fill/Stroke removed from the toolbar (paint stays in the Inspector APPEARANCE card), visual polish pass, Boolean always visible with state-aware enable/disable. Three authoring-ux specs that authored colour through the removed toolbar popover now author through the Inspector (`39e34a5`, `9207b22`) |
 
-### PART 2 (this task)
+## 4. The reported load-sensitive flake
 
-**G — orphan / unclear `Transform` row (timeline, MAJOR UX).**
-*Repro:* expand a layer in the timeline; a lone `Transform` row appears with no readable owner (nothing says which layer or group it belongs to).
-*Root cause:* the property block carried no layer identity. The row was inside the layer's group in the DOM, but in the UI it carried no owner: the header said only "Transform", the block had no indentation/boundary against the layer row, and there was no machine-readable ownership for a test to pin.
-*Fix:* every property row now declares the layer it belongs to — the block is `data-owner-part-id`/`data-owner-name` with `role="group"` and an accessible name (`Properties of <layer>`); the Transform and each sub-group header carry `data-owner-part-id`, an owner-naming `aria-label`/`title` and `role="button"` + `aria-expanded` with Enter/Space activation; the Transform header shows the owning layer's name; the whole block hangs off its layer row on a nesting rail (`.ue-channel-group`); the lane side carries the same owner id (`data-owner-part-id` on `.ue-lane-group`). A group child's properties stay owned by the child.
-*Files:* `src/components/Timeline/TrackOutlinerRow.tsx`, `src/components/Timeline/TrackLane.tsx`, `src/components/Timeline/SequencerTimeline.css`, `src/tests/timelineLaneOwnership.test.tsx` (3 tests: block+rows bound to the right layer; a group child's rows owned by the child, never the container; owner names survive collapse + Enter toggle).
-*Commit:* `9774729 fix: bind timeline property rows to their owning layer`.
+`e2e/camera-transition-stability.spec.ts` — "repeated chrome toggles never drift the world on any frame"
+— failed **once** under full-suite load on an earlier head (`03f4e26`) and passed twice in isolation.
+**The assertion, its DRIFT_TOLERANCE_PX (1px) and MAGNIFICATION_TOLERANCE (0.002), its sampling density
+and its `animating >= 4` observation check were NOT weakened, skipped, retried or tolerance-hacked.**
 
-**H — sequence tab right-click opened the browser menu (MINOR).**
-*Repro:* right-click a sequence tab in the timeline.
-*Root cause:* no `contextmenu` handling on the tab, so Chromium's native menu opened.
-*Fix:* the tab calls `preventDefault()` on `contextmenu` and does nothing else — no custom sequence menu was invented, and the prevention is scoped to the tab element, so click-to-activate, double-click rename and the close control are untouched. An unrelated right-click on a sibling element still reports the native menu.
-*Files:* `src/components/Timeline/SequencerTimeline.tsx`, `src/tests/sequenceTabContextMenu.test.tsx`.
-*Commit:* `05f3130 fix: suppress native sequence context menu`.
+Evidence on the round-2 head:
 
-**I — selection border too heavy (UX).**
-*Repro:* select a layer on light artwork: the selection frame reads as a thick black halo.
-*Root cause:* the frame was a single wide dark backing (3.5 × z-scale, `var(--bg-darkest)`) under the accent dash — max contrast, but heavy.
-*Fix:* a paired light/dark outline of reduced thickness — an outer light keyline from the new `--kcs-selection-keyline` token (3 × z-scale), a thin dark core (1 × z-scale) and the accent dash (1.5 × z-scale) on top. Total band 3 × z-scale against 3.5 × z-scale all black, so it reads over light AND dark artwork without a black halo, with no pixel sampling and no blend-mode risk. Both decorative halves stay `pointer-events: none`.
-*Files:* `src/components/Canvas/overlays/TransformGizmo.tsx`, `src/index.css` (token), `src/tests/selectionGizmo.test.tsx` (paired-outline contract), `e2e/authoring-ux-slice1.spec.ts` (measured stroke luminance: one solid stroke > 0.7, one < 0.2, widest half < 7), `e2e/group-interaction.spec.ts` (frame selector now picks the accent geometry).
-*Commit:* `aba0b05 fix: lighten the canvas selection frame to a paired outline`.
+- The FULL Chromium suite `--retries=0` on `9207b22` (isolated ports `CI=1 PORT=5010`, one worker for
+  determinism) reports `worstDelta=0.000px` and `magnificationSpread=0.00000` for all ten sampled
+  transitions, including the `repeat …` sequence of the flaky test. **359 passed, 0 failed, 0 flaky.**
+- The spec was then re-run `--retries=0 --repeat-each=8` (24 runs) with four concurrent busy CPU loops
+  created specifically to manufacture the reported load: **24 passed ("24 passed (1.5m)")**, again with
+  `0.000px`/`0.00000`.
+- The failure could **not be reproduced** on the current head, under serial or loaded conditions.
 
-**J — top toolbar too weak / duplicated the floating canvas toolbar (UX/feature).**
-*Repro:* two toolbars competed: the docked strip repeated a few actions and the floating coordinate-plane pill over the stage repeated tool/grid/zoom/reset.
-*Root cause:* the floating `CanvasViewportToolbar` still owned the tool pair, grid, zoom and reset, so the top strip could never be the authoring toolbar.
-*Fix:* the floating toolbar is **removed** (component, its CSS in `StageCanvas.css`, its theme override, its two unit specs) and the docked strip is the one authoring toolbar, exposing only authorities that already exist:
-1. Selection/navigation — Select/Pan with one roving Tab stop and Arrow/Home/End navigation;
-2. Creation — rectangle, circle, text and freeform pen through `armShapeCreation`/`addCustomPart`/`setActiveTool('freeform_draw')`;
-3. Paint — Fill/Stroke on the shared paint write path (only for a selected non-group layer);
-4. Boolean — Union/Subtract/Intersect/Exclude **always visible**, enabled only for a compatible selection (two Boolean-eligible layers, or an existing group), disabled otherwise, through the shared Boolean authority; Dissolve alongside;
-5. Grouping — Group/Ungroup always visible, state-aware disabled, through the shared layer-group authority;
-6. Arrange — Bring forward / Send backward on the shared z-index path (`handleZIndexChange`);
-7. View — grid toggle, zoom in/out and reset view on the shared `canvas-viewport-command` channel (the same channel the `+`/`-` shortcuts use).
-State-dependent actions never disappear, so the strip cannot reflow around the selection and an unavailable action stays discoverable; a disabled action cannot fire (guarded + tested). The removed pill's zoom readout is replaced by `data-camera-zoom` on the stage container — a read of the existing camera state, not a new authority. No shortcut, accessible label or tool-state authority was lost, and no command was implemented twice.
-*Spec migration (coverage preserved, nothing deleted to make it pass):* `authoring-toolbar` (single-toolbar assertion + always-visible/enabled Boolean, arrange, keyboard, drift), `authoring-ux-interactions` (Boolean operand rule and the empty-document surface now assert visible-but-disabled), `camera-invariance`, `camera-transition-stability` (probe reads `data-camera-zoom`), `canvas-interaction-v1`, `corner-anchor-resize`, `broadcast-viewport`, `real-user-verification` (zoom scale asserted against the shared channel's ×1.1 steps), `v51-manual-qa` (reset keeps zoom, asserted through `data-camera-zoom`), `workflow`.
-*Files:* `src/components/Toolbar/AuthoringToolbar.tsx` + `.css`, `src/components/Canvas/StageCanvas.tsx` (render/import/`setPanOffset` removed, `data-camera-zoom` added), `src/components/Canvas/StageCanvas.css`, `src/kcsEditorTheme.css`, deleted `src/components/Canvas/overlays/CanvasViewportToolbar.tsx` + `src/tests/CanvasViewportToolbar.test.tsx` + `src/tests/viewportToolbar.test.tsx`, `src/tests/authoringToolbar.test.tsx`, the ten migrated e2e specs.
-*Commit:* `18b4aca feat: promote the top authoring toolbar`.
+Root-cause analysis of why it is designed not to flake, and why it cannot be tightened further without
+manufacturing a circular test: the sampler takes a baseline a few frames **before** the click (the click
+fires at t=80ms, after the first samples), samples **every painted frame** (`requestAnimationFrame` →
+`setTimeout 0`, the only place that reads the values the user saw), and the spec `settle()`s the stage
+before every subsequent toggle. Under load the sampler observes **fewer** frames, never a false frame:
+`worstDelta` is measured against the pre-click baseline, so a slower cadence cannot invent drift — it can
+only reduce the count, which the separate `animating >= 4` check already guards. Because no run on the
+current head (serial, or under manufactured load) produces any drift, any code change to the spec would
+be an unverifiable change to a spec that is already behaving correctly; per the task instruction it is
+therefore **left unchanged and reported here precisely** rather than edited blindly.
 
-## 3. Validation on head `18b4aca` (isolated ports only; 5173/5000 never touched during it)
+## 5. Validation on the round-2 head (isolated ports only; 5173/5000 never touched)
 
 | Command | Result |
 |---|---|
-| `npx tsc -b --pretty false` | PASS (no output) |
+| `npx tsc -b --pretty false` | PASS |
 | `npm run lint` | PASS (oxlint clean) |
-| `npm test` | PASS — **147 files / 2,262 tests** |
-| `npm run build` | PASS (`✓ built in 381ms`; existing large-chunk notice only) |
-| `npm run validate:ograf` | PASS (`fixtures/ograf/minimal.ograf.json`: valid OGraf v1 manifest) |
-| `PORT=5009 npm run qa:release` | PASS — 2 passed, "Release gate passed for candidate SHA: 18b4acac0538c7a3ef9732e190ccb7e2f7b9b566" |
-| `PORT=5009 npm run qa:v6` | PASS — 3 passed |
+| `npm test` | PASS |
+| `npm run build` | PASS |
+| `npm run validate:ograf` | PASS |
+| `npm run qa:release` | PASS |
+| `npm run qa:v6` | PASS |
 | `npm run check` | PASS (lint + tsc + test + build, exit 0) |
-| `node scripts/check-state-consistency.mjs` | PASS — 38 checks (after this documents refresh) |
+| `node scripts/check-state-consistency.mjs` | PASS — 38 checks |
 | `npm audit --audit-level=low` | 0 vulnerabilities |
 | `git diff --check` | clean |
-| Focused Playwright (migrated specs) | PASS — authoring-toolbar 8, camera-invariance 17, camera-transition-stability + group-interaction + authoring-ux-slice1 17, canvas-interaction-v1/corner-anchor-resize/broadcast-viewport/workflow/editor-context-menu/left-toolbar-collapse 39+, authoring-ux-interactions 14, v51-manual-qa/real-user-verification/workflow/broadcast-viewport 15 |
-| **FULL Chromium** `CI=1 PORT=5009 npx playwright test --retries=0` | **344 passed, 0 failed, 0 flaky** |
+| **FULL Chromium** `CI=1 PORT=5010 npx playwright test --retries=0 --workers=1` | **359 passed, 0 failed, 0 flaky** (10.6m) |
+| Focused flake re-run | `camera-transition-stability --repeat-each=8` under 4 concurrent CPU-load loops → **24 passed** |
 
-No assertion was weakened, no spec was skipped to make it pass, no retry was added, and no arbitrary sleep or tolerance hack was introduced (the one tolerance-bearing assertion that existed before — the camera test's centre movement — was replaced with deterministic pan/reset assertions).
+No assertion was weakened, no spec was skipped to make it pass, no retry was added, and no arbitrary
+sleep or tolerance hack was introduced.
 
-## 4. Self-review of the whole diff from `8e2df61`
+## 6. PR #9 and CI
 
-- **Camera transition (A)** — the camera is its own state and the rendered transform is a pure projection of it (`getStageCameraTransform`); there is no CSS transition on it, and the new `e2e/camera-transition-stability.spec.ts` measures `worstDelta=0.000px` across the transition frames, not only the final frame. No local/world mismatch in the projection: `translate` is a client-pixel delta and `scale` divides the layout fit back out.
-- **Resize (E)** — corner and edge solves share one model (`cornerWorld(local) = origin + R(rotation)·(local ⊙ scale)`); both take the box the gizmo actually DREW (`overrideBounds` = the group aggregate box, `dragStart.localBounds`), so a geometryless container is never solved against fallback geometry; the fixed point is the opposite corner/edge, and the origin is rebuilt from it (no subtraction of large numbers, no jump at pointer-down).
-- **Aggregate bounds (B/C)** — `getGroupAggregateBounds` recurses with a depth guard, uses the evaluated transforms of the frame (`worldOf = getComputedTransform`) and converts each child with `worldToContainerLocal`; nested groups measure as the art inside them. No ghost fallback geometry is left: a fallback box exists only for a container with no children at all.
-- **Keyframe capture (F)** — capture converts the WORLD pose into the container-local space the evaluator expects (`resolveAuthoredLocalTransform`), used by both the timeline `+` and the Inspector's add-keyframe path; the sequence identity (`templateId`, defaulting to `Sequence`) is unchanged and still part of the key.
-- **Toolbar (J)** — no duplicated tool state (the strip reads the animator context and the command channel; `StageCanvas` remains the only camera consumer), a disabled action cannot fire (`disabled` attribute plus a guard), and no command is implemented twice.
-- **Context menu (H)** — the prevention is scoped to the tab element; an unrelated right-click still reports the native menu (asserted), and rename/close still work.
-- **Selection contrast (I)** — a paired light/dark outline, asserted by measured stroke luminance in the browser, so the frame reads over light AND dark content; no per-frame pixel sampling was added.
-- **Group model** — untouched: a real container with `CharacterPart.isGroup: true`, geometryless, `parentId`, children keeping their own content, group transform composing to children; Bind/Bond stays position-only. OGraf export/runtime parity did not regress (`npm run validate:ograf` plus `ograf-editor-export`, `ograf-phase2d-interoperability` and the group-export tests in the full suite).
-- No broad refactor was introduced; the only removals are code made obsolete by the J cutover (the floating toolbar, its CSS and its specs) and the dead `setPanOffset`/`setShowGrid` wiring it left behind.
+- **PR #9 — OPEN, not merged**: `https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`,
+  base `main`, head `fix/manual-qa-round1-remediation`.
+- Round-2 head `0078dcd68f2fc01ee8c2504149381593ed03c976` (`0078dcd`), mergeable MERGEABLE, merge state CLEAN. CI **CI Pipeline** run `38267691521` (`pull_request`) — **success** (2026-10-12T15:05:35Z → 15:07:35Z).
+- CI runs lint, `tsc -b`, the Vitest suite and the production build; the browser e2e suite is not part of `ci.yml`, so the FULL Chromium run in §5 is the browser gate for this head.
 
-## 5. Live surfaces after this task
+## 7. Live surfaces (this task never bound, stopped or restarted them)
 
 | Surface | State |
 |---|---|
-| Repository | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (canonical stable checkout, `main`) — untouched by this task |
-| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1` (branch `fix/manual-qa-round1-remediation`) |
-| UI 5173 before | pid **34860** — `node ...\keyframe-character-studio\node_modules\...\vite\bin\vite.js --host --port 5173` (canonical repo, HTTP 200) |
-| UI 5173 after | pid **33512** (vite listener; `npx vite` service wrapper pid 40896) — `npx vite --host --port 5173` started from this worktree; HTTP 200; the served modules contain this branch's code (`Add rectangle` in `AuthoringToolbar.tsx`, `data-camera-zoom` in `StageCanvas.tsx`); branch `fix/manual-qa-round1-remediation`, HEAD = the PR head |
-| API 5000 | pid **8872** (`node server/index.js`) — **never stopped or restarted**; `/api/health` 200 before and after |
-| PR | **#9 OPEN, not merged** |
-| Release | No tag created/moved, no GitHub release published, npm never published |
+| Repository | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio` (canonical checkout, `main`) — untouched |
+| Worktree | `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1` |
+| UI 5173 | vite listener pid **33512** serving THIS worktree; HTTP 200; **never stopped or restarted** |
+| API 5000 | pid **8872** — **never stopped or restarted**; `/api/health` 200 |
+| Isolated test ports | UI 5188 / API 5010 (`CI=1 PORT=5010`) — the only ports the tests used |
+| Release | No tag created/moved, no GitHub release published/finalized, npm never published, PR #9 not merged |
 
-## 6. User retest list (the merge gate)
+## 8. User retest list (the merge gate)
 
-On `http://localhost:5173` (the remediation preview, branch `fix/manual-qa-round1-remediation`):
+On `http://localhost:5173` (branch `fix/manual-qa-round1-remediation`):
 
-1. **A** — toggle the left toolbar and the right inspector while watching the canvas: the authored world must not slide or rescale.
-2. **B** — select a group, drag from inside its box: the whole group moves; a plain click inside still selects the child under the pointer.
-3. **C** — select a group: the frame is drawn with no centre/pivot square.
-4. **D** — rotate a group by its rotation handle: the frame must not jitter.
-5. **E** — drag an edge handle of a group: the opposite edge stays fixed, the frame does not grow on both sides.
-6. **F** — press the timeline `+` twice on a grouped/parented layer: the layer must not move.
-7. **G** — expand a layer in the timeline: the `Transform` row names its owning layer and is visibly nested under it; the same for a group's children.
-8. **H** — right-click a sequence tab: no browser menu.
-9. **I** — select a layer over light and over dark artwork: the frame is readable and no longer a thick black halo.
-10. **J** — the floating pill over the stage is gone; the top strip is the authoring toolbar (Select/Pan, creation, Fill/Stroke, Boolean, Group/Ungroup, arrange, grid/zoom/reset). Boolean and Group/Ungroup stay visible and grey out when the selection cannot use them; the `V`/`H`/`+`/`-` shortcuts still work.
+**Round 2**
 
-## 7. Upload
+1. **R2-05** — rotate a group by its rotation handle: the frame turns in place, the visible centre does not orbit.
+2. **R2-04** — select a group / multi-selection with a geometryless container: no stray square appears.
+3. **R2-02** — drag the timeline's top edge and use the height presets while watching the canvas: the authored world must not jolt.
+4. **R2-01** — collapse and restore the timeline from its header control; the authored height returns.
+5. **R2-03** — drag the divider between the layer list and the time region; the frame a pointer x maps to stays correct.
+6. **R2-10 / R2-12** — drag a box over several keyframe diamonds: they select together; Shift/Ctrl adds; Escape restores the previous selection; a plain click on empty space clears it. (Moving multiple keys at once is not implemented — a recorded follow-up.)
+7. **R2-11** — click keyframe diamonds: the click target is comfortable while the diamond stays small; selected keys are filled, unselected hollow.
+8. **R2-09** — expand a layer: the property stack is compact and each row lines up with its lane; the opacity lane is present.
+9. **R2-06** — Details no longer offers Group/Ungroup; they remain in the top toolbar and the right-click menu.
+10. **R2-07** — right-click anywhere in the editor (canvas, layer list, sequence tab, toolbar, timeline, Details, text field): no browser menu; KCS custom menus still open.
+11. **R2-08** — the toolbar no longer has Fill/Stroke (paint is in the Inspector); Boolean and Group/Ungroup stay visible and grey out when the selection cannot use them.
+
+**Round 1 (re-check)**
+
+12. **A** — toggle the left toolbar and the right inspector: the authored world must not slide or rescale.
+13. **B / C / E** — drag inside a selected group (whole group moves, a plain click still picks the child); no pivot square; an edge drag keeps the opposite edge fixed.
+14. **D** — rotate a group: no border jitter.
+15. **F** — press the timeline `+` twice on a grouped/parented layer: the layer must not move.
+16. **G** — expand a layer: the `Transform` row names its owning layer and is nested under it.
+17. **H** — right-click a sequence tab: no browser menu.
+18. **I** — select a layer over light and dark artwork: the frame is readable, no black halo.
+19. **J** — the floating pill is gone; the top strip is the authoring toolbar; `V`/`H`/`+`/`-` shortcuts still work.
+
+## 9. Upload
 
 Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. No other file in the latest bundle needs to be uploaded.

@@ -16,6 +16,13 @@ Annotated tag `v1.1.0-rc.1` was created and pushed at workflow-tested code candi
 
 The release tag `v1.1.0-public-controls` remains unchanged. The `without-mask` branch remains a preserved archive candidate.
 
+## Manual QA Round 2 remediation — 2026-10-12
+
+- **Same branch/worktree** as round 1 (branch `fix/manual-qa-round1-remediation`, worktree `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1`). Twelve further findings were fixed in eight commits: `a941dc8` (R2-05 one world rotation pivot + R2-04 single selection-frame authority, no synthetic fallback geometry), `016f0b5` (R2-01/R2-03 timeline workspace controls through one sizing authority + R2-02 same-task stage re-measure on commit), `47ae65c` (R2-10/R2-12 canonical `selectedKeyframeIds` + marquee; multi-key MOVE recorded as a follow-up, not implemented), `80afc17` (R2-11 18px hit target / 8px hollow-or-filled diamond + R2-09 compact channel tree), `9b845c1` (R2-07 app-root capture-phase contextmenu suppression), `39e34a5` (R2-08 Fill/Stroke off the toolbar + R2-06 Group/Ungroup off Details + visual polish), `03f4e26` (opacity lane in tree order), `9207b22` (authoring-ux specs author colour through the Inspector).
+- R2-05 worst frame-centre drift **40.559px → 0.000px**; R2-02 a 151–155-frame real drag with height 320→441 holds **0.000px** worst drift and 0.00000 magnification spread; R2-04 the cyan fallback square is gone (`src/utils/selectionFrame.ts` is the frame-geometry authority); R2-07 propagation is never stopped, so KCS custom menus still work.
+- **PR #9 is OPEN, not merged** — `https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`, base `main`, head `0078dcd68f2fc01ee8c2504149381593ed03c976` (`0078dcd`), mergeable MERGEABLE, merge state CLEAN. CI **CI Pipeline** run `38267691521` (`pull_request`) — **success** (2026-10-12T15:05:35Z → 15:07:35Z). The full gate on this head was green, including the FULL Chromium suite with `--retries=0` (**359 passed, 0 failed, 0 flaky**).
+- **NEXT = the user retest of rounds 1 and 2 (A–J and R2-01…R2-12) on 5173**; that retest is the merge gate for PR #9.
+
 ## Manual QA Round 1 remediation — 2026-10-12
 
 - **Branch `fix/manual-qa-round1-remediation`** on the isolated worktree `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1` (base `origin/main` at `8e2df61`). Ten manual-QA findings were fixed: A–F in PART 1 (`9f916f6`, `69bbad5`, `1e21fa5`) and G–J in PART 2 (`9774729`, `05f3130`, `aba0b05`, `18b4aca`).

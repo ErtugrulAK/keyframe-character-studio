@@ -1,21 +1,18 @@
-# KCS ChatGPT Upload Manifest — manual QA round 1 remediation (PART 2: G–J)
+# KCS ChatGPT Upload Manifest — manual QA round 2 remediation (R2-01…R2-12)
 
-Scope: finish the MANUAL QA ROUND 1 remediation on the isolated worktree, open ONE PR, switch the 5173 QA preview to that worktree, and refresh this handoff. No merge, no release, no tag, no npm publication, no force push, no rebase, no history rewrite, no package/dependency/workflow change.
+Scope: finish the MANUAL QA ROUND 2 remediation on the isolated worktree, validate the round-2 head green, refresh this handoff and update PR #9. No merge, no release, no tag, no npm publication, no force push, no rebase, no history rewrite, no package/dependency/workflow change.
 Repository: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio (canonical stable checkout, branch main) — untouched
 Worktree: C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1 (branch fix/manual-qa-round1-remediation, base origin/main at 8e2df61)
-PART 1 commits (already on the branch): 9f916f6 (F — keyframe capture preserves the pose), 69bbad5 (A — camera is its own state, layout animation cannot move the world), 1e21fa5 (B group body drag, C no ghost pivot square, D transform cache keyed to the document identity, E edge resize anchored on the fixed opposite edge)
-PART 2 commits (this task): 9774729 (G — every timeline property row declares its owning layer), 05f3130 (H — sequence tab suppresses the native context menu), aba0b05 (I — paired light/dark selection outline instead of a black halo), 18b4aca (J — floating toolbar removed, docked strip promoted to the authoring toolbar)
-PR: #9 OPEN (not merged) at https://github.com/ErtugrulAK/keyframe-character-studio/pull/9, base main, head 18b4acac0538c7a3ef9732e190ccb7e2f7b9b566, mergeable MERGEABLE, mergeStateStatus CLEAN
-CI: CI Pipeline run 38246227512, event pull_request, conclusion success, 2026-10-12T11:59:51Z -> 12:01:17Z, head 18b4acac0538c7a3ef9732e190ccb7e2f7b9b566
-Validation: npx tsc -b --pretty false PASS; npm run lint PASS; npm test PASS 147 files / 2,262 tests; npm run build PASS; npm run validate:ograf PASS (fixtures/ograf/minimal.ograf.json valid OGraf v1 manifest); PORT=5009 npm run qa:release PASS 2 tests (release gate passed for candidate SHA 18b4acac0538c7a3ef9732e190ccb7e2f7b9b566); PORT=5009 npm run qa:v6 PASS 3 tests; npm run check PASS; node scripts/check-state-consistency.mjs PASS 38 checks; npm audit --audit-level=low 0 vulnerabilities; git diff --check clean; FULL Chromium CI=1 PORT=5009 npx playwright test --retries=0 = 344 passed, 0 failed, 0 flaky
-Spec migration: the specs that drove the removed floating toolbar were migrated to the docked strip (authoring-toolbar, authoring-ux-interactions, camera-invariance, camera-transition-stability, canvas-interaction-v1, corner-anchor-resize, broadcast-viewport, real-user-verification, v51-manual-qa, workflow, authoring-ux-slice1, group-interaction); the removed pill's zoom readout became the data-camera-zoom projection of the existing camera state; no assertion was weakened, no spec was skipped, no retry was added
-Live surfaces before: 5173 served the canonical repo (pid 34860, npx vite --host --port 5173 from C:\Users\ertugrul.ak\Desktop\keyframe-character-studio); API 5000 pid 8872, /api/health 200
-Live surfaces after: the canonical 5173 listener (pid 34860) was stopped and npx vite --host --port 5173 was started from the worktree (vite listener pid 33512, npx service wrapper pid 40896); 5173 answers 200 and serves this branch's modules (Add rectangle in AuthoringToolbar.tsx, data-camera-zoom in StageCanvas.tsx); branch fix/manual-qa-round1-remediation; HEAD equals the PR head; API 5000 pid 8872 unchanged and /api/health still 200
-Group model preserved: a real container with CharacterPart.isGroup true, geometryless, parentId, children keeping their own content, group transform composing to children; Bind/Bond stays position-only; OGraf export/runtime parity green
-Release state: no tag created, moved or deleted; no GitHub release published or finalized; nothing published to npm; PR #9 not merged — the user retest on 5173 is the merge gate
-Next task: the user retest of findings A–J against 5173, then the merge decision for PR #9
+Round-2 commits (this task): a941dc8 (R2-05 one world rotation pivot, R2-04 single selection-frame authority), 016f0b5 (R2-01/R2-03 one sizing authority, R2-02 same-task stage re-measure), 47ae65c (R2-10/R2-12 canonical selectedKeyframeIds + marquee), 80afc17 (R2-11 18px/8px diamonds, R2-09 compact channel tree), 9b845c1 (R2-07 editor-wide contextmenu suppression), 39e34a5 (R2-08 Fill/Stroke off the toolbar, R2-06 Group/Ungroup off Details), 03f4e26 (opacity lane in tree order), 9207b22 (authoring-ux specs author colour through the Inspector)
+Round-1 commits (already on the branch): 9f916f6 (F), 69bbad5 (A), 1e21fa5 (B/C/D/E), 9774729 (G), 05f3130 (H), aba0b05 (I), 18b4aca (J)
+PR: #9 OPEN (not merged) at https://github.com/ErtugrulAK/keyframe-character-studio/pull/9, base main, head 0078dcd68f2fc01ee8c2504149381593ed03c976 (0078dcd), mergeable MERGEABLE, merge state CLEAN; CI CI Pipeline run 38267691521 (pull_request) concluded success (2026-10-12T15:05:35Z -> 15:07:35Z)
+Validation on the round-2 head 0078dcd: tsc PASS; oxlint PASS; npm test PASS 149 files / 2,280 tests; build PASS; validate:ograf PASS; qa:release PASS; qa:v6 PASS; npm run check PASS; state consistency PASS 40 checks; npm audit 0 vulnerabilities; git diff --check clean; FULL Chromium CI=1 PORT=5010 npx playwright test --retries=0 --workers=1 = 359 passed, 0 failed, 0 flaky (10.6m)
+Spec migration: the specs that drove the removed floating toolbar were migrated to the docked strip, and the three authoring-ux specs that authored colour through the removed toolbar popover now author through the Inspector's APPEARANCE card; no assertion was weakened, no spec was skipped, no retry was added
+Live surfaces: 5173 serves this worktree (vite listener pid 33512); API 5000 pid 8872 unchanged and /api/health 200
+Runway state: no tag created, moved or deleted; no GitHub release published or finalized; nothing published to npm; PR #9 not merged — the user retest on 5173 is the merge gate
+Next task: the user retest of rounds 1 and 2 (A–J and R2-01…R2-12) against 5173, then the merge decision for PR #9
 
-Bundle source files (9):
+Bundle source files (10):
 - CHANGELOG.md
 - KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md
 - KCS_RELEASE_CANDIDATE_SUMMARY.md
@@ -25,5 +22,6 @@ Bundle source files (9):
 - README.md
 - manifest.txt
 - progress_165_pre_qa_repository_cleanup.md
+- progress_166_manual_qa_round_two_remediation.md
 
 Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md. No other file in the latest bundle needs to be uploaded.

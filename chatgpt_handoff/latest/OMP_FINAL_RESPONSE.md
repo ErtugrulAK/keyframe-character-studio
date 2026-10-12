@@ -1,51 +1,48 @@
-# OMP final response — manual QA round 1 remediation (PART 2: findings G–J)
+# OMP final response — manual QA round two remediation
 
-Status: **complete, committed, pushed, PR opened, preview switched. Not merged.**
+Status: **round 2 implemented and validated on the current head; PR #9 updated. Not merged.**
 
 ## What was delivered
 
-Ten manual-QA findings were remediated on `fix/manual-qa-round1-remediation`. PART 1 (A–F) was
-already committed when this task started; PART 2 fixed G–J in four logical commits:
+Twelve round-2 findings (R2-01…R2-12) were remediated on `fix/manual-qa-round1-remediation` in eight
+commits, on top of the already-recorded round-1 work (A–J):
 
-- `9774729 fix: bind timeline property rows to their owning layer` (G)
-- `05f3130 fix: suppress native sequence context menu` (H)
-- `aba0b05 fix: lighten the canvas selection frame to a paired outline` (I)
-- `18b4aca feat: promote the top authoring toolbar` (J)
+- `a941dc8` — R2-05 rotation turns about ONE world pivot captured at pointer-down; R2-04
+  `src/utils/selectionFrame.ts` becomes the single frame-geometry authority and the synthetic fallback
+  square is gone.
+- `016f0b5` — R2-01/R2-03 timeline collapse/expand, height resize and column resize through ONE sizing
+  authority (`timelineConstants.ts`); R2-02 the timeline commits its size and re-measures the stage in
+  the SAME task, so no frame is painted with a stale (box, transform) pairing.
+- `47ae65c` — R2-10/R2-12 canonical `selectedKeyframeIds` in `useSelection` plus the marquee box-select
+  gesture (multi-key MOVE deliberately not implemented; recorded as a follow-up).
+- `80afc17` — R2-11 18px hit target / 8px hollow-or-filled diamond; R2-09 compact animation-channel
+  tree with one rail and shared row constants.
+- `9b845c1` — R2-07 app-root capture-phase `contextmenu` suppression across the editor.
+- `39e34a5` — R2-08 Fill/Stroke off the toolbar, R2-06 Group/Ungroup off Details, visual polish.
+- `03f4e26` — the opacity lane rendered where the tree lists it (row-for-row alignment).
+- `9207b22` — three authoring-ux specs author colour through the Inspector instead of the removed
+  toolbar popover.
 
-G: every timeline property row now declares its owning layer (block + headers carry the owner part id,
-the Transform header names the owning layer, the property block hangs off its layer row on a nesting
-rail, and the disclosure headers are real buttons with `aria-expanded` and Enter/Space). A group
-child's properties stay owned by the child.
-H: a sequence tab prevents the browser's native context menu and does nothing else; the prevention is
-scoped to the tab, so click, double-click rename and the close control are untouched.
-I: the selection frame is now a paired light/dark outline of reduced thickness (new
-`--kcs-selection-keyline` token, thin dark core, accent dash on top) instead of a wide black halo; it
-reads over light and dark artwork and no per-frame pixel sampling was added.
-J: the redundant floating coordinate-plane toolbar is removed and the docked strip is the one
-authoring toolbar — tools, creation, paint, Boolean, grouping, arrange and view controls, every one on
-an authority that already existed. The Boolean operations and Group/Ungroup are always visible and
-disabled when the current selection cannot use them, so the strip never reflows around the selection.
+Key measured outcomes: R2-05 worst frame-centre drift **40.559px → 0.000px**; R2-02 a real 151–155-frame
+drag with height 320→441 holds **0.000px** worst drift and 0.00000 magnification spread; R2-07
+propagation is never stopped, so KCS custom menus still work.
 
-## Validation (head `18b4aca`)
+## Validation
 
-`tsc`, lint, `npm test` (147 files / 2,262 tests), build, `validate:ograf`, `qa:release` (2), `qa:v6`
-(3), `npm run check`, state consistency (38 checks), `npm audit` (0 vulnerabilities), `git diff
---check` and the FULL Chromium suite with `--retries=0`: **344 passed, 0 failed, 0 flaky**. No
-assertion was weakened and no retry was added. The specs that drove the removed floating toolbar were
-migrated to the docked strip so their coverage survived.
+Full validation on the round-2 head (isolated ports only; 5173/5000 never touched): the full gate was
+green, including the FULL Chromium suite `--retries=0` (**359 passed, 0 failed, 0 flaky**) — the
+one-file `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md` carries the complete table. No assertion was
+weakened, no spec was skipped and no retry was added.
 
 ## Pull request
 
-**#9 — OPEN, not merged** (`https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`), base
-`main`, head `18b4acac0538c7a3ef9732e190ccb7e2f7b9b566`, mergeable MERGEABLE, CLEAN.
-CI **CI Pipeline** run `38246227512` (pull_request) — **success**.
+**#9 — OPEN, not merged** (`https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`). Round-2
+head `0078dcd68f2fc01ee8c2504149381593ed03c976` (`0078dcd`), mergeable MERGEABLE, merge state CLEAN;
+CI **CI Pipeline** run `38267691521` (`pull_request`) — **success** (2026-10-12T15:05:35Z → 15:07:35Z).
 
 ## Live surfaces
 
-The 5173 QA preview was switched from the canonical repo (listener pid 34860) to this worktree
-(`npx vite --host --port 5173`, vite listener pid 33512, service wrapper pid 40896); 5173 answers 200
-and serves this branch's modules, on branch `fix/manual-qa-round1-remediation` with HEAD equal to the
-PR head. **API 5000 (pid 8872) was never stopped or restarted** and still answers 200.
-
-No merge, no tag, no release and no npm publication happened. The user's retest against 5173 is the
-merge gate; the exact retest list is in `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md`.
+The 5173 QA preview keeps serving this worktree (vite listener pid 33512) and **API 5000 (pid 8872) was
+never stopped or restarted**. No merge, no tag, no release and no npm publication happened. The user's
+retest against 5173 is the merge gate; the exact retest list is in
+`chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.

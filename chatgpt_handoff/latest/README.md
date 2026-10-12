@@ -1,9 +1,9 @@
-# KCS Minimal ChatGPT Upload Bundle — manual QA round 1 remediation (PART 2: G–J)
+# KCS Minimal ChatGPT Upload Bundle — manual QA round 2 remediation (R2-01…R2-12)
 
-Task-specific handoff for the MANUAL QA ROUND 1 remediation on branch
-`fix/manual-qa-round1-remediation` (2026-10-12): PART 1 fixed findings A–F, PART 2 fixed G–J, the
-full validation ran green, one PR was opened and the 5173 QA preview was switched to this worktree.
-This is not an archive.
+Task-specific handoff for the MANUAL QA ROUND 2 remediation on branch
+`fix/manual-qa-round1-remediation` (2026-10-12): round 1 fixed findings A–J and round 2 fixed the
+twelve further findings R2-01…R2-12; the full validation ran green on the round-2 head and PR #9 was
+updated. This is not an archive.
 
 ## Current truth
 
@@ -11,30 +11,34 @@ This is not an archive.
 - Worktree that carries this work: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1`
 - Branch: `fix/manual-qa-round1-remediation` (base `origin/main` at `8e2df61`)
 - PR: **#9 OPEN, not merged** — `https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`
-- Code head validated: `18b4acac0538c7a3ef9732e190ccb7e2f7b9b566` (`18b4aca`), mergeable, CLEAN
-- CI: **CI Pipeline** run `38246227512`, `pull_request`, **success** (2026-10-12T11:59:51Z → 12:01:17Z)
-- Findings fixed: **A–F (PART 1, earlier commits) and G–J (PART 2, this task)**
-- Validation: `tsc`, lint, `npm test` (147 files / 2,262 tests), build, `validate:ograf`, `qa:release`
-  (2), `qa:v6` (3), `npm run check`, state consistency (38 checks), `npm audit` (0 vulnerabilities),
-  `git diff --check`, and the FULL Chromium suite `--retries=0` — **344 passed, 0 failed, 0 flaky**
-- Live preview: `http://localhost:5173/` — HTTP 200, now served from THIS worktree
-  (vite listener pid 33512; the previous canonical-repo listener pid 34860 was stopped)
-- API: `127.0.0.1:5000` — pid 8872, **never stopped or restarted**, `/api/health` 200
+- Round-2 code head: `0078dcd68f2fc01ee8c2504149381593ed03c976` (`0078dcd`), mergeable CLEAN; CI **CI Pipeline** run `38267691521` (`pull_request`) — **success**
+- Findings fixed: **round 1 A–J; round 2 R2-01…R2-12**
+- Validation: `tsc`, lint, `npm test` (149 files / 2,280 tests), build, `validate:ograf`, `qa:release`, `qa:v6`, `npm run check` (PASS),
+  the state-consistency check, `npm audit`, `git diff --check`, and the FULL Chromium suite
+  `--retries=0` — see the one-file for the exact counts
+- Live preview: `http://localhost:5173/` — served from THIS worktree (vite listener pid 33512)
+- API: `127.0.0.1:5000` — pid 8872, **never stopped or restarted**
 - Next input: the **user retest on 5173** — that retest is the merge gate
 
-## What changed (G–J)
+## What changed (round 2)
 
-- **G** every timeline property row now declares its owning layer (block + header `data-owner-part-id`,
-  owner-naming accessible labels, a nesting rail under the layer row, real disclosure buttons with
-  `aria-expanded` + Enter/Space). A group child's properties stay owned by the child.
-- **H** a sequence tab prevents the native `contextmenu` and does nothing else; the prevention is
-  scoped to the tab, so rename/close/click still work.
-- **I** the selection frame is a paired light/dark outline of reduced thickness (new
-  `--kcs-selection-keyline` token) instead of a wide black halo; readable over light and dark artwork.
-- **J** the redundant floating coordinate-plane toolbar is removed and the docked strip is the one
-  authoring toolbar (tools, creation, paint, Boolean, grouping, arrange, view), every control on an
-  existing authority; the four Boolean operations and Group/Ungroup stay visible and grey out when
-  the selection cannot use them. Migrated specs preserve the coverage the floating toolbar carried.
+- **R2-05** rotation holds one world pivot captured at pointer-down (worst frame-centre drift
+  40.559px → 0.000px).
+- **R2-04** `src/utils/selectionFrame.ts` is the single frame-geometry authority; the synthetic
+  `fallbackBounds()` square no longer reaches the multi-selection path or `layerGrouping`.
+- **R2-02** a timeline height commit re-measures the stage in the SAME task (151–155 drag frames,
+  height 320→441, 0.000px drift, 0.00000 magnification spread).
+- **R2-01 / R2-03** collapse/expand, height resize and column resize through ONE sizing authority
+  (`src/components/Timeline/timelineConstants.ts`).
+- **R2-10 / R2-12** canonical `selectedKeyframeIds` in `useSelection` + marquee; multi-key MOVE is a
+  recorded follow-up, not faked.
+- **R2-11** 18px hit target with an 8px hollow/filled diamond.
+- **R2-09** compact channel tree (one rail, 30/24px shared row constants); the missing opacity lane was
+  found and fixed.
+- **R2-06** Group/Ungroup removed from Details (toolbar + context menu only; read-only member list kept).
+- **R2-07** editor-wide capture-phase contextmenu suppression; propagation never stopped.
+- **R2-08** Fill/Stroke removed from the toolbar (paint stays in the Inspector APPEARANCE card); visual
+  polish; Boolean always visible with state-aware enable/disable.
 
 ## Protected state
 
@@ -45,8 +49,9 @@ npm, and PR #9 was not merged.
 
 ## Evidence and files
 
-- `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` — the full record: per-finding reproduction, root
-  cause, fix, tests, the validation table, the self-review and the user retest list.
+- `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` — the full record: per-finding reproduction, root cause,
+  fix, tests, the validation table, the flake evidence and the user retest list.
+- `reports/progress_166_manual_qa_round_two_remediation.md` — the round-2 task record.
 - `reports/progress_165_pre_qa_repository_cleanup.md` — the preceding pre-QA housekeeping record.
 
 ## Upload

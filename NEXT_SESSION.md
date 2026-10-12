@@ -12,6 +12,14 @@
 - Release tags: `v1.1.0-rc.1` (annotated) and `v1.1.0-public-controls`, both unchanged
 - Branches kept: `feat/canvas-tangent-authoring` (Milestone A review artefact) and `feat/canvas-tangent-authoring-replay` (its replayed integration branch, now behind `main`); both are retained and deleting them needs approval. The six proven-obsolete branches (`fix/authoring-ux-transform-toolbar`, `fix/authoring-ux-camera-invariance`, `fix/authoring-ux-corner-anchor`, `fix/authoring-ux-final-slices`, `fix/ograf-runtime-parity-phase-a-replay`, `fix/ograf-runtime-parity-phase-a`) were deleted locally and on `origin` in the final pre-QA cleanup.
 
+## Manual QA Round 2 remediation — 2026-10-12
+
+- Same isolated worktree and branch as round 1 (`fix/manual-qa-round1-remediation`); round 2 fixed twelve further findings in eight commits: `a941dc8`, `016f0b5`, `47ae65c`, `80afc17`, `9b845c1`, `39e34a5`, `03f4e26`, `9207b22`.
+- R2-05 rotation now holds one world pivot (worst frame-centre drift 40.559px → **0.000px**); R2-04 the ghost square is gone (`src/utils/selectionFrame.ts` is the single frame-geometry authority); R2-02 a timeline height commit re-measures the stage in the SAME task (151–155 drag frames, height 320→441, **0.000px** drift, 0.00000 magnification spread); R2-01/R2-03 one sizing authority (`src/components/Timeline/timelineConstants.ts`); R2-10/R2-12 canonical `selectedKeyframeIds` + marquee (multi-key MOVE deliberately not implemented — a follow-up needing its own mutation authority); R2-11 18px/8px diamonds; R2-09 compact channel tree; R2-06 Group/Ungroup off Details; R2-07 editor-wide contextmenu suppression; R2-08 Fill/Stroke off the toolbar.
+- PR #9 stays OPEN and not merged; the round-2 head `0078dcd68f2fc01ee8c2504149381593ed03c976` (`0078dcd`) is mergeable CLEAN, its CI **CI Pipeline** run `38267691521` (`pull_request`) concluded **success**, and the full gate on this head was green including the FULL Chromium suite `--retries=0` (**359 passed, 0 failed, 0 flaky**).
+- Live surfaces are unchanged: 5173 serves this worktree (vite listener pid 33512) and API 5000 (pid 8872) was never stopped.
+- The next input is the user retest of rounds 1 and 2 (A–J and R2-01…R2-12) on 5173; PR #9 is merged only after that retest.
+
 ## Manual QA Round 1 remediation — 2026-10-12
 
 - Checkout: the isolated worktree `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1` on branch `fix/manual-qa-round1-remediation` (base `origin/main` at `8e2df61`); the canonical checkout stays on `main` for the stable QA history.

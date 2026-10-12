@@ -199,16 +199,18 @@ test('BUG 4 — broadcast sequence: scene visible, edit playback untouched (real
 test('BUG 5 — broadcast starts FIT, does not inherit edit zoom/pan (real UI)', async ({ page }) => {
   await seed(page, cowLionTigerScene());
 
-  // 1. EDIT: zoom in hard (5× +0.1) — svg transform reflects the zoom
+  // 1. EDIT: zoom in hard (5 toolbar steps on the shared camera command
+  // channel, x1.1 each) — the svg transform reflects the zoom
   for (let i = 0; i < 5; i++) {
-    await page.locator('.viewport-tools-overlay').getByRole('button', { name: 'Zoom In (+)' }).click();
+    await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Zoom in' }).click();
     await page.waitForTimeout(80);
   }
   const editZoom = await page.evaluate(() => {
     const svg = [...document.querySelectorAll('svg')].find((s) => !!s.querySelector('#artboard-clip'))!;
     return svg.getAttribute('style');
   });
-  expect(editZoom).toContain('scale(1.5)'); // zoomed in
+  const zoomedScale = Number(/scale\(([\d.]+)\)/.exec(editZoom ?? '')?.[1] ?? '0');
+  expect(zoomedScale).toBeCloseTo(1.1 ** 5, 6); // zoomed in
 
   // 2. BROADCAST: fit/contain — zoom reset to 1, pan 0
   await page.getByText('BROADCAST', { exact: true }).click();

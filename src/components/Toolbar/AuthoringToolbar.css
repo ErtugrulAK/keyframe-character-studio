@@ -74,3 +74,16 @@
   outline: 2px solid var(--kcs-focus);
   outline-offset: -2px;
 }
+
+/* A state-dependent action stays on screen and reads as unavailable instead of
+   disappearing, so the strip never reflows around the selection. */
+.authoring-toolbar-button:disabled {
+  color: var(--kcs-text-muted);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.authoring-toolbar-button:disabled:hover {
+  background: transparent;
+  color: var(--kcs-text-muted);
+}

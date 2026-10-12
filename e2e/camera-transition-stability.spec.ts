@@ -43,7 +43,7 @@ interface Frame {
   stageLeft: number;
   stageWidth: number;
   stageHeight: number;
-  zoomLabel: string;
+  cameraZoom: string;
 }
 
 async function seed(page: Page): Promise<void> {
@@ -125,7 +125,7 @@ async function sampleTransition(page: Page, toggleLabel: string, durationMs = 60
         stageLeft: stageBox.left,
         stageWidth: stageBox.width,
         stageHeight: stageBox.height,
-        zoomLabel: document.querySelector('.zoom-level-text')?.textContent?.trim() ?? '',
+        cameraZoom: document.querySelector('.stage-canvas-container')?.getAttribute('data-camera-zoom') ?? '',
       });
       const elapsed = performance.now() - started;
       if (!clicked && elapsed >= 80) {
@@ -203,7 +203,7 @@ function expectStable(label: string, frames: Frame[]): void {
       Math.abs(frame.d - baseline.d),
       `${label}: frame ${index} t=${frame.t.toFixed(1)}ms y-magnification changed`,
     ).toBeLessThanOrEqual(MAGNIFICATION_TOLERANCE);
-    expect(frame.zoomLabel, `${label}: frame ${index} zoom label changed`).toBe(baseline.zoomLabel);
+    expect(frame.cameraZoom, `${label}: frame ${index} zoom changed`).toBe(baseline.cameraZoom);
   });
 }
 

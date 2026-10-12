@@ -11,7 +11,6 @@ import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocal
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
-import { CanvasViewportToolbar } from './overlays/CanvasViewportToolbar';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
 import { isFreeformTangentOverlayEligible } from '../../utils/freeformTangentEligibility';
@@ -77,7 +76,6 @@ export const StageCanvas: React.FC = () => {
     addCustomPart,
     updatePartMedia,
     showGrid,
-    setShowGrid,
     totalFrames,
     projectResolution,
     appMode,
@@ -863,16 +861,6 @@ export const StageCanvas: React.FC = () => {
     ? null
     : getStageCameraTransform({ view: cameraView, stage: stageBox, zoom: zoomLevel, viewBox: EDITOR_CAMERA_VIEWBOX });
 
-  // The viewport toolbar still resets the camera with an offset from the stage
-  // centre; the camera authority turns that into an absolute view centre.
-  const setPanOffset = useCallback((next: { x: number; y: number }) => {
-    const box = stageBoxRef.current;
-    if (!box) return;
-    setCameraView((view) => view
-      ? { ...view, center: { x: box.left + box.width / 2 + next.x, y: box.top + box.height / 2 + next.y } }
-      : view);
-  }, []);
-
   /**
    * Right-click on the stage opens the shared authoring menu. The target is the
    * topmost rendered layer under the pointer, read from the real DOM (the
@@ -890,6 +878,7 @@ export const StageCanvas: React.FC = () => {
   return (
     <div
       className={`stage-canvas-container ${isPanning ? 'panning' : ''} ${activeTool === 'pan' ? 'hand-tool' : 'select-tool'} ${isDragging ? 'interaction-dragging' : ''}`}
+      data-camera-zoom={zoomLevel}
       ref={containerRef}
       onMouseDown={handleMouseDown}
       onContextMenu={handleContextMenu}
@@ -904,19 +893,6 @@ export const StageCanvas: React.FC = () => {
             <span>RELEASE TO DROP ELEMENT ONTO STAGE CANVAS</span>
           </div>
         </div>
-      )}
-
-      {/* Viewport Floating Glass Toolbar (Edit Mode Only) */}
-      {appMode !== 'broadcast' && (
-        <CanvasViewportToolbar
-          showGrid={showGrid}
-          setShowGrid={setShowGrid}
-          zoomLevel={zoomLevel}
-          setZoomLevel={setZoomLevel}
-          setPanOffset={setPanOffset}
-          activeTool={activeTool === 'pan' ? 'pan' : 'select'}
-          setActiveTool={setActiveTool}
-        />
       )}
 
       <svg

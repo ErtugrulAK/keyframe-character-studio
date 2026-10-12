@@ -1,5 +1,21 @@
-import React from 'react';
-import { Compass, Grid, Group, Hand, MousePointer2, Ungroup, Unlink, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useRef } from 'react';
+import {
+  ArrowDown,
+  ArrowUp,
+  Circle,
+  Compass,
+  Grid,
+  Group,
+  Hand,
+  MousePointer2,
+  PenTool,
+  Square,
+  Type,
+  Ungroup,
+  Unlink,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react';
 import { useAnimator } from '../../context/useAnimator';
 import { useBooleanAuthoring } from '../../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../../hooks/useLayerGrouping';
@@ -19,6 +35,9 @@ const BOOLEAN_LABEL: Record<BooleanOperation, string> = {
   exclude: 'Exclude',
 };
 
+/** The canvas tools the top strip owns, in the order the toolbar presents them. */
+const CANVAS_TOOLS: Array<'select' | 'pan'> = ['select', 'pan'];
+
 /**
  * Dispatches a camera command on the established `canvas-viewport-command`
  * channel — the same window event the +/- keyboard shortcuts already use, so
@@ -29,14 +48,20 @@ const dispatchViewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') =>
 };
 
 /**
- * The top authoring toolbar: a compact strip of the tools, view controls, paint
- * and Boolean actions the editor already has.
+ * The top authoring toolbar: the strip that carries the tools, creation entry,
+ * paint, Boolean, grouping, arrange and view actions the editor already has.
  *
  * Every control reads and writes the authority the rest of the app uses —
- * `activeTool`/`showGrid` from the animator context, the camera command channel
- * for zoom/reset, the shared paint write path for Fill/Stroke and the shared
- * Boolean authoring authority. It owns no document state of its own, so
- * switching a view-only tool cannot touch the project.
+ * `activeTool`/`showGrid` from the animator context, shape creation through
+ * `armShapeCreation`, camera commands through the shared command channel, the
+ * shared paint/z-index write path, and the shared Boolean and layer-group
+ * authorities. It owns no document state of its own, so a view-only tool cannot
+ * touch the project, and it holds no second copy of any command.
+ *
+ * State-dependent actions (Boolean, grouping, arrange) stay on screen and are
+ * disabled when the current selection cannot use them, so the strip never
+ * reflows around the selection and the action that is unavailable is still
+ * discoverable.
  */
 export const AuthoringToolbar: React.FC = () => {
   const {
@@ -48,6 +73,8 @@ export const AuthoringToolbar: React.FC = () => {
     characterParts,
     startBatchInteraction,
     endBatchInteraction,
+    armShapeCreation,
+    addCustomPart,
   } = useAnimator();
   const {
     booleanEligibleParts,
@@ -56,36 +83,231 @@ export const AuthoringToolbar: React.FC = () => {
     updateBooleanOperation,
     dissolveBooleanGroup,
   } = useBooleanAuthoring();
-  const { handlePartColorChange, handlePartPropChange } = usePartPropertyAuthoring();
+  const { handlePartColorChange, handlePartPropChange, handleZIndexChange } = usePartPropertyAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
 
+  const toolButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedPart = characterParts.find((part) => part.id === selectedPartId);
   // Creation needs two Boolean-eligible operands; an existing group switches
-  // its operation instead. Neither is on screen when it would do nothing.
+  // its operation instead. The group stays visible either way and only its
+  // actions carry the availability.
   const booleanReady = Boolean(selectedBooleanGroup) || booleanEligibleParts.length >= 2;
+  const penActive = activeTool === 'freeform_draw';
+  const activeCanvasToolIndex = CANVAS_TOOLS.indexOf(activeTool as 'select' | 'pan');
+
+  /** One Tab stop for the tool pair; Arrow/Home/End move it like the stage did. */
+  const handleToolKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    const currentIndex = activeCanvasToolIndex < 0 ? 0 : activeCanvasToolIndex;
+    const nextIndex = event.key === 'ArrowRight' || event.key === 'ArrowDown'
+      ? (currentIndex + 1) % CANVAS_TOOLS.length
+      : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+        ? (currentIndex - 1 + CANVAS_TOOLS.length) % CANVAS_TOOLS.length
+        : event.key === 'Home'
+          ? 0
+          : event.key === 'End'
+            ? CANVAS_TOOLS.length - 1
+            : -1;
+    if (nextIndex < 0) return;
+    event.preventDefault();
+    setActiveTool(CANVAS_TOOLS[nextIndex]);
+    toolButtonRefs.current[nextIndex]?.focus();
+  };
 
   return (
     <div className="authoring-toolbar" role="toolbar" aria-label="Authoring tools">
       <div className="authoring-toolbar-group" role="group" aria-label="Canvas tools">
         <button
+          ref={(element) => { toolButtonRefs.current[0] = element; }}
           type="button"
           className={`authoring-toolbar-button${activeTool === 'select' ? ' active' : ''}`}
           aria-label="Select"
           aria-pressed={activeTool === 'select'}
           title="Select tool (V)"
+          tabIndex={activeCanvasToolIndex <= 0 ? 0 : -1}
           onClick={() => setActiveTool('select')}
+          onKeyDown={handleToolKeyDown}
         >
           <MousePointer2 size={14} />
         </button>
         <button
+          ref={(element) => { toolButtonRefs.current[1] = element; }}
           type="button"
           className={`authoring-toolbar-button${activeTool === 'pan' ? ' active' : ''}`}
           aria-label="Pan"
           aria-pressed={activeTool === 'pan'}
           title="Pan tool (H)"
+          tabIndex={activeCanvasToolIndex === 1 ? 0 : -1}
           onClick={() => setActiveTool('pan')}
+          onKeyDown={handleToolKeyDown}
         >
           <Hand size={14} />
+        </button>
+      </div>
+
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+
+      <div className="authoring-toolbar-group" role="group" aria-label="Create">
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Add rectangle"
+          title="Add a rectangle, then drag on the stage to place it"
+          onClick={() => armShapeCreation('custom_rect', 'Rectangle')}
+        >
+          <Square size={14} />
+        </button>
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Add circle"
+          title="Add a circle, then drag on the stage to place it"
+          onClick={() => armShapeCreation('custom_circle', 'Circle')}
+        >
+          <Circle size={14} />
+        </button>
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Add text"
+          title="Add a text layer"
+          onClick={() => addCustomPart('custom_text', 'Text')}
+        >
+          <Type size={14} />
+        </button>
+        <button
+          type="button"
+          className={`authoring-toolbar-button${penActive ? ' active' : ''}`}
+          aria-label="Pen"
+          aria-pressed={penActive}
+          title={penActive ? 'Stop drawing a path' : 'Draw a freeform path'}
+          onClick={() => setActiveTool(penActive ? 'select' : 'freeform_draw')}
+        >
+          <PenTool size={14} />
+        </button>
+      </div>
+
+      {selectedPart && !selectedPart.isGroup && (
+        <>
+          <span className="authoring-toolbar-divider" aria-hidden="true" />
+          <div className="authoring-toolbar-group" role="group" aria-label="Fill and stroke">
+            <span className="authoring-toolbar-label">Fill</span>
+            <ColorPickerPopover
+              label="Fill"
+              color={selectedPart.fillColor || '#00d2ff'}
+              alpha={selectedPart.fillOpacity ?? 1}
+              fallback="#00d2ff"
+              panelSide="below"
+              panelAlign="start"
+              onColorChange={(color) => handlePartColorChange('fillColor', color)}
+              onAlphaChange={(alpha) => handlePartPropChange('fillOpacity', alpha)}
+              onInteractionStart={startBatchInteraction}
+              onInteractionEnd={endBatchInteraction}
+            />
+            <span className="authoring-toolbar-label">Stroke</span>
+            <ColorPickerPopover
+              label="Stroke"
+              color={selectedPart.strokeColor || '#101218'}
+              alpha={selectedPart.strokeOpacity ?? 1}
+              fallback="#101218"
+              panelSide="below"
+              panelAlign="start"
+              onColorChange={(color) => handlePartColorChange('strokeColor', color)}
+              onAlphaChange={(alpha) => handlePartPropChange('strokeOpacity', alpha)}
+              onInteractionStart={startBatchInteraction}
+              onInteractionEnd={endBatchInteraction}
+            />
+          </div>
+        </>
+      )}
+
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+
+      <div className="authoring-toolbar-group" role="group" aria-label="Boolean operations">
+        {BOOLEAN_OPERATIONS.map((operation) => {
+          const active = selectedBooleanGroup?.booleanOperation === operation;
+          const label = BOOLEAN_LABEL[operation];
+          return (
+            <button
+              key={operation}
+              type="button"
+              className={`authoring-toolbar-button${active ? ' active' : ''}`}
+              aria-label={`Boolean ${label}`}
+              aria-pressed={active}
+              disabled={!booleanReady}
+              title={selectedBooleanGroup
+                ? `Switch Boolean to ${label}`
+                : booleanReady
+                  ? `Create ${label} Boolean from the selection`
+                  : `${label} needs two compatible layers`}
+              onClick={() => (selectedBooleanGroup ? updateBooleanOperation(operation) : createBooleanGroup(operation))}
+            >
+              <BooleanOperationIcon operation={operation} />
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Dissolve Boolean"
+          disabled={!selectedBooleanGroup}
+          title={selectedBooleanGroup
+            ? 'Dissolve Boolean and preserve operands'
+            : 'Dissolve needs a Boolean group'}
+          onClick={dissolveBooleanGroup}
+        >
+          <Unlink size={13} />
+        </button>
+      </div>
+
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+
+      <div className="authoring-toolbar-group" role="group" aria-label="Layer group">
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Group layers"
+          title={canGroup ? 'Group the selected layers' : 'Group needs two or more selected layers'}
+          disabled={!canGroup}
+          onClick={groupSelection}
+        >
+          <Group size={14} />
+        </button>
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Ungroup layers"
+          title={selectedGroup
+            ? 'Ungroup and keep every layer in place'
+            : 'Ungroup needs a selected group'}
+          disabled={!selectedGroup}
+          onClick={ungroupSelection}
+        >
+          <Ungroup size={14} />
+        </button>
+      </div>
+
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+
+      <div className="authoring-toolbar-group" role="group" aria-label="Arrange">
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Bring forward"
+          title={selectedPart ? 'Bring layer forward by one' : 'Arrange needs a selected layer'}
+          disabled={!selectedPart}
+          onClick={() => { if (selectedPart) handleZIndexChange(selectedPart.zIndex + 1); }}
+        >
+          <ArrowUp size={14} />
+        </button>
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Send backward"
+          title={selectedPart ? 'Send layer backward by one' : 'Arrange needs a selected layer'}
+          disabled={!selectedPart}
+          onClick={() => { if (selectedPart) handleZIndexChange(Math.max(1, selectedPart.zIndex - 1)); }}
+        >
+          <ArrowDown size={14} />
         </button>
       </div>
 
@@ -130,106 +352,6 @@ export const AuthoringToolbar: React.FC = () => {
           <Compass size={14} />
         </button>
       </div>
-
-      {selectedPart && !selectedPart.isGroup && (
-        <>
-          <span className="authoring-toolbar-divider" aria-hidden="true" />
-          <div className="authoring-toolbar-group" role="group" aria-label="Fill and stroke">
-            <span className="authoring-toolbar-label">Fill</span>
-            <ColorPickerPopover
-              label="Fill"
-              color={selectedPart.fillColor || '#00d2ff'}
-              alpha={selectedPart.fillOpacity ?? 1}
-              fallback="#00d2ff"
-              panelSide="below"
-              panelAlign="start"
-              onColorChange={(color) => handlePartColorChange('fillColor', color)}
-              onAlphaChange={(alpha) => handlePartPropChange('fillOpacity', alpha)}
-              onInteractionStart={startBatchInteraction}
-              onInteractionEnd={endBatchInteraction}
-            />
-            <span className="authoring-toolbar-label">Stroke</span>
-            <ColorPickerPopover
-              label="Stroke"
-              color={selectedPart.strokeColor || '#101218'}
-              alpha={selectedPart.strokeOpacity ?? 1}
-              fallback="#101218"
-              panelSide="below"
-              panelAlign="start"
-              onColorChange={(color) => handlePartColorChange('strokeColor', color)}
-              onAlphaChange={(alpha) => handlePartPropChange('strokeOpacity', alpha)}
-              onInteractionStart={startBatchInteraction}
-              onInteractionEnd={endBatchInteraction}
-            />
-          </div>
-        </>
-      )}
-
-      {(canGroup || selectedGroup) && (
-        <>
-          <span className="authoring-toolbar-divider" aria-hidden="true" />
-          <div className="authoring-toolbar-group" role="group" aria-label="Layer group">
-            <button
-              type="button"
-              className="authoring-toolbar-button"
-              aria-label="Group layers"
-              title="Group the selected layers"
-              disabled={!canGroup}
-              onClick={groupSelection}
-            >
-              <Group size={14} />
-            </button>
-            <button
-              type="button"
-              className="authoring-toolbar-button"
-              aria-label="Ungroup layers"
-              title="Ungroup and keep every layer in place"
-              disabled={!selectedGroup}
-              onClick={ungroupSelection}
-            >
-              <Ungroup size={14} />
-            </button>
-          </div>
-        </>
-      )}
-
-      {booleanReady && (
-        <>
-          <span className="authoring-toolbar-divider" aria-hidden="true" />
-          <div className="authoring-toolbar-group" role="group" aria-label="Boolean operations">
-            {BOOLEAN_OPERATIONS.map((operation) => {
-              const active = selectedBooleanGroup?.booleanOperation === operation;
-              const label = BOOLEAN_LABEL[operation];
-              return (
-                <button
-                  key={operation}
-                  type="button"
-                  className={`authoring-toolbar-button${active ? ' active' : ''}`}
-                  aria-label={`Boolean ${label}`}
-                  aria-pressed={active}
-                  title={selectedBooleanGroup
-                    ? `Switch Boolean to ${label}`
-                    : `Create ${label} Boolean from the selection`}
-                  onClick={() => (selectedBooleanGroup ? updateBooleanOperation(operation) : createBooleanGroup(operation))}
-                >
-                  <BooleanOperationIcon operation={operation} />
-                </button>
-              );
-            })}
-            {selectedBooleanGroup && (
-              <button
-                type="button"
-                className="authoring-toolbar-button"
-                aria-label="Dissolve Boolean"
-                title="Dissolve Boolean and preserve operands"
-                onClick={dissolveBooleanGroup}
-              >
-                <Unlink size={13} />
-              </button>
-            )}
-          </div>
-        </>
-      )}
     </div>
   );
 };

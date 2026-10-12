@@ -103,7 +103,7 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     await page.keyboard.press('Enter');
 
     await expect(page.locator('.ue-outliner').getByText('Freeform Shape').first()).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Select Tool', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Select', exact: true })).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('Draw a freeform shape with the Free Draw tool', async ({ page }) => {

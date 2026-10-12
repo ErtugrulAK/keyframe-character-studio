@@ -669,20 +669,20 @@ test.describe('corner resize with a moved camera and a changed layout', () => {
     expect(box).not.toBeNull();
 
     // Explicit pan with the hand tool.
-    await page.getByRole('button', { name: 'Hand / Pan Tool', exact: true }).click();
+    await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan', exact: true }).click();
     await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
     await page.mouse.down();
     await page.mouse.move(box!.x + box!.width / 2 + 70, box!.y + box!.height / 2 + 45, { steps: 5 });
     await page.mouse.up();
     await settle(page);
-    await page.getByRole('button', { name: 'Select Tool', exact: true }).click();
+    await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Select', exact: true }).click();
     await selectLayer(page, 'Alpha');
 
     const panned = await dragCorner(page, 'alpha', worldOf(alpha), 'tl', 0.6);
     expectDrag('after pan', 'tl', panned);
 
     // Explicit zoom through the toolbar.
-    await page.getByRole('button', { name: 'Zoom In (+)', exact: true }).click();
+    await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Zoom in', exact: true }).click();
     await settle(page);
     await selectLayer(page, 'Alpha');
     const afterPan = await readLayer(page, 'alpha');

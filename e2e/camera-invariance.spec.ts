@@ -85,7 +85,7 @@ interface Probe {
   node: { x: number; y: number };
   /** SVG screen CTM: a/d are the effective screen pixels per camera unit. */
   matrix: { a: number; d: number; e: number; f: number };
-  zoomLabel: string;
+  cameraZoom: string;
   stage: { left: number; top: number; width: number; height: number };
   undoDisabled: boolean;
 }
@@ -109,7 +109,7 @@ async function probe(page: Page): Promise<Probe> {
       beta: toClient(points.beta),
       node: { x: nodeBox.left + nodeBox.width / 2, y: nodeBox.top + nodeBox.height / 2 },
       matrix: { a: matrix.a, d: matrix.d, e: matrix.e, f: matrix.f },
-      zoomLabel: document.querySelector('.zoom-level-text')?.textContent?.trim() ?? '',
+      cameraZoom: document.querySelector('.stage-canvas-container')?.getAttribute('data-camera-zoom') ?? '',
       stage: { left: stageBox.left, top: stageBox.top, width: stageBox.width, height: stageBox.height },
       undoDisabled: document.querySelector<HTMLButtonElement>('button[title="Undo"]')?.disabled ?? false,
     };
@@ -145,7 +145,7 @@ function expectInvariant(label: string, baseline: Probe, current: Probe): void {
   }
   expect(current.matrix.a, `${label}: x magnification changed`).toBeCloseTo(baseline.matrix.a, 6);
   expect(current.matrix.d, `${label}: y magnification changed`).toBeCloseTo(baseline.matrix.d, 6);
-  expect(current.zoomLabel, `${label}: zoom label changed`).toBe(baseline.zoomLabel);
+  expect(current.cameraZoom, `${label}: zoom changed`).toBe(baseline.cameraZoom);
 }
 
 async function snapshot(page: Page): Promise<string> {
@@ -334,7 +334,7 @@ test('explicit pan, zoom and reset view still move the camera on purpose', async
   expect(box).not.toBeNull();
 
   // Explicit pan: the hand tool drags the world with the pointer, 1:1.
-  await page.getByRole('button', { name: 'Hand / Pan Tool', exact: true }).click();
+  await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan', exact: true }).click();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await page.mouse.down();
   await page.mouse.move(box!.x + box!.width / 2 + 60, box!.y + box!.height / 2 + 40, { steps: 5 });
@@ -345,20 +345,20 @@ test('explicit pan, zoom and reset view still move the camera on purpose', async
   expect(Math.abs(panned.alpha.x - baseline.alpha.x)).toBeGreaterThan(60);
   expect(Math.abs(panned.alpha.y - baseline.alpha.y)).toBeGreaterThan(40);
   expect(panned.matrix.a).toBeCloseTo(baseline.matrix.a, 6);
-  expect(panned.zoomLabel).toBe(baseline.zoomLabel);
+  expect(panned.cameraZoom).toBe(baseline.cameraZoom);
 
   // Explicit zoom: the toolbar keeps the zoom state authoritative.
-  await page.getByRole('button', { name: 'Zoom In (+)', exact: true }).click();
+  await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Zoom in', exact: true }).click();
   await settle(page);
   const zoomed = await probe(page);
   expect(zoomed.matrix.a).toBeGreaterThan(panned.matrix.a + 0.01);
-  expect(zoomed.zoomLabel).not.toBe(panned.zoomLabel);
+  expect(zoomed.cameraZoom).not.toBe(panned.cameraZoom);
 
   // Reset View Position restores the mount framing without touching zoom.
-  await page.getByRole('button', { name: 'Reset View Position', exact: true }).click();
+  await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Reset view', exact: true }).click();
   await settle(page);
   const reset = await probe(page);
-  expect(reset.zoomLabel).toBe(zoomed.zoomLabel);
+  expect(reset.cameraZoom).toBe(zoomed.cameraZoom);
   expect(Math.abs(reset.alpha.x - panned.alpha.x)).toBeGreaterThan(60);
 });
 
@@ -367,7 +367,7 @@ test('pan survives chrome changes for the panned camera too', async ({ page }) =
   const canvas = page.locator('.stage-canvas-container');
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
-  await page.getByRole('button', { name: 'Hand / Pan Tool', exact: true }).click();
+  await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan', exact: true }).click();
   await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
   await page.mouse.down();
   await page.mouse.move(box!.x + box!.width / 2 + 90, box!.y + box!.height / 2 + 50, { steps: 5 });

@@ -65,10 +65,10 @@ test.describe('KCS V5.1 manual QA gates', () => {
 
   test('resets pan while preserving zoom, grid, and active tool', async ({ page }) => {
     await seed(page, [layer('a', 'Shape', 'custom_rect', 0)]);
-    await page.getByRole('button', { name: 'Zoom Out (-)' }).click();
-    await expect(page.locator('.zoom-level-text')).toHaveText('90%');
-    await page.getByRole('button', { name: 'Hand / Pan Tool' }).click();
-    await page.getByRole('button', { name: 'Hide Grid' }).click();
+    await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Zoom out' }).click();
+    await expect(page.locator('.stage-canvas-container')).toHaveAttribute('data-camera-zoom', '0.9');
+    await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan' }).click();
+    await page.getByRole('button', { name: 'Toggle grid' }).click();
     const canvas = page.locator('.stage-canvas-container');
     const box = await canvas.boundingBox();
     expect(box).not.toBeNull();
@@ -77,15 +77,15 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await page.mouse.move(box!.x + box!.width / 2 + 80, box!.y + box!.height / 2 + 40);
     await page.mouse.up();
     await expect(page.locator('.stage-svg')).toHaveCSS('transform', /matrix/);
-    await page.getByRole('button', { name: 'Reset View Position' }).click();
-    await expect(page.locator('.zoom-level-text')).toHaveText('90%');
-    await expect(page.getByRole('button', { name: 'Show Grid' })).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.getByRole('button', { name: 'Hand / Pan Tool' })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Reset view' }).click();
+    await expect(page.locator('.stage-canvas-container')).toHaveAttribute('data-camera-zoom', '0.9');
+    await expect(page.getByRole('button', { name: 'Toggle grid' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.stage-svg')).toHaveCSS('transform', 'matrix(0.9, 0, 0, 0.9, 0, 0)');
-    await page.getByRole('button', { name: 'Reset View Position' }).click();
-    await expect(page.locator('.zoom-level-text')).toHaveText('90%');
-    await expect(page.getByRole('button', { name: 'Show Grid' })).toHaveAttribute('aria-pressed', 'false');
-    await expect(page.getByRole('button', { name: 'Hand / Pan Tool' })).toHaveAttribute('aria-pressed', 'true');
+    await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Reset view' }).click();
+    await expect(page.locator('.stage-canvas-container')).toHaveAttribute('data-camera-zoom', '0.9');
+    await expect(page.getByRole('button', { name: 'Toggle grid' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan' })).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.stage-svg')).toHaveCSS('transform', 'matrix(0.9, 0, 0, 0.9, 0, 0)');
   });
 

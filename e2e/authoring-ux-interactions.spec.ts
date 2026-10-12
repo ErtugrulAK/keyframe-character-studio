@@ -292,23 +292,24 @@ test('a group container is never offered as a Boolean operand', async ({ page })
 
   // Positive control: two plain shapes do offer the Boolean authority.
   await selectLayers(page, ['Alpha', 'Beta']);
-  await expect(toolbarButton(page, 'Boolean Union')).toHaveCount(1);
+  await expect(toolbarButton(page, 'Boolean Union')).toBeEnabled();
 
   await groupSelection(page);
-  await expect(toolbarButton(page, 'Boolean Union')).toHaveCount(0);
+  // The action stays on screen and is unavailable for the container alone.
+  await expect(toolbarButton(page, 'Boolean Union')).toBeDisabled();
 
   // The container plus one shape is still not a Boolean: the container owns no
   // geometry of its own.
   await page.locator('.actor-node', { hasText: 'Gamma' }).first().click({ modifiers: ['Control'] });
   await expect(groupRows(page)).toHaveCount(1);
-  await expect(toolbarButton(page, 'Boolean Union')).toHaveCount(0);
-  await expect(toolbarButton(page, 'Boolean Subtract')).toHaveCount(0);
+  await expect(toolbarButton(page, 'Boolean Union')).toBeDisabled();
+  await expect(toolbarButton(page, 'Boolean Subtract')).toBeDisabled();
 
   // Two plain shapes still do, so the rule is about the container.
   await page.keyboard.press('Escape');
   await selectLayers(page, ['Gamma', 'Alpha']);
   await page.locator('.actor-node', { hasText: 'Beta' }).first().click({ modifiers: ['Control'] });
-  await expect(toolbarButton(page, 'Boolean Union')).toHaveCount(1);
+  await expect(toolbarButton(page, 'Boolean Union')).toBeEnabled();
 });
 
 test('an empty document offers no grouping, paint or menu surface', async ({ page }) => {
@@ -318,8 +319,10 @@ test('an empty document offers no grouping, paint or menu surface', async ({ pag
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
 
   await expect(page.getByRole('toolbar', { name: 'Authoring tools' })).toBeVisible();
-  await expect(toolbarButton(page, 'Group layers')).toHaveCount(0);
-  await expect(toolbarButton(page, 'Boolean Union')).toHaveCount(0);
+  // The state-dependent actions are on screen and unavailable with nothing to
+  // act on; the paint group is the only one that is not offered at all.
+  await expect(toolbarButton(page, 'Group layers')).toBeDisabled();
+  await expect(toolbarButton(page, 'Boolean Union')).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Fill Color Preview' })).toHaveCount(0);
   expect(await page.locator('.actor-node').count()).toBe(0);
 

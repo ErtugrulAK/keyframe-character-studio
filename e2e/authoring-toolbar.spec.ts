@@ -80,25 +80,22 @@ test('the toolbar is a compact strip that drives the shared tool and grid state'
   const box = await bar.boundingBox();
   expect(box!.height).toBeLessThanOrEqual(48);
 
-  // One source of truth: the toolbar and the floating viewport toolbar both
-  // report the tool the animator context holds.
+  // The strip is the ONLY toolbar: the redundant floating coordinate-plane
+  // toolbar is gone, so there is exactly one place a tool or view control lives.
+  await expect(page.locator('.viewport-tools-overlay')).toHaveCount(0);
+
   await toolbarButton(page, 'Pan').click();
   await expect(toolbarButton(page, 'Pan')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.locator('.viewport-tools-overlay').getByRole('button', { name: 'Hand / Pan Tool' }))
-    .toHaveAttribute('aria-pressed', 'true');
 
   await toolbarButton(page, 'Select').click();
-  await expect(page.locator('.viewport-tools-overlay').getByRole('button', { name: 'Select Tool' }))
-    .toHaveAttribute('aria-pressed', 'true');
+  await expect(toolbarButton(page, 'Select')).toHaveAttribute('aria-pressed', 'true');
 
   // Grid is the context flag the stage renders from: the grid rects appear and
-  // disappear with it, in the toolbar and in the floating viewport toolbar alike.
+  // disappear with it.
   const gridRects = page.locator('.stage-svg rect[fill="url(#svg-grid-minor)"]');
   const gridWasVisible = (await gridRects.count()) > 0;
   await toolbarButton(page, 'Toggle grid').click();
   await expect(toolbarButton(page, 'Toggle grid')).toHaveAttribute('aria-pressed', gridWasVisible ? 'false' : 'true');
-  await expect(page.locator('.viewport-tools-overlay').getByRole('button', { name: gridWasVisible ? 'Show Grid' : 'Hide Grid' }))
-    .toHaveAttribute('aria-pressed', gridWasVisible ? 'false' : 'true');
   await expect(gridRects).toHaveCount(gridWasVisible ? 0 : 1);
   await toolbarButton(page, 'Toggle grid').click();
   await expect(gridRects).toHaveCount(gridWasVisible ? 1 : 0);
@@ -124,21 +121,37 @@ test('view-only tools never write the document', async ({ page }) => {
 
 test('zoom and reset view move only the camera', async ({ page }) => {
   await seed(page);
-  const zoomLabel = page.locator('.zoom-level-text');
-  await expect(zoomLabel).toHaveText('100%');
+  const cameraZoom = () => page.locator('.stage-canvas-container').getAttribute('data-camera-zoom');
+  await expect.poll(cameraZoom).toBe('1');
+  const home = await partBox(page);
 
+  // Zoom changes only the camera scale.
   await toolbarButton(page, 'Zoom in').click();
-  await expect(zoomLabel).toHaveText('110%');
-
-  const zoomed = await partBox(page);
-  await toolbarButton(page, 'Reset view').click();
+  await expect.poll(cameraZoom).toBe('1.1');
   await settle(page);
-  await expect(zoomLabel).toHaveText('110%');
+  const zoomed = await partBox(page);
+  expect(zoomed.width).toBeGreaterThan(home.width + 1);
 
+  // Pan moves the world with the hand tool.
+  const canvas = page.locator('.stage-canvas-container');
+  const box = (await canvas.boundingBox())!;
+  await toolbarButton(page, 'Pan').click();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 90, box.y + box.height / 2 + 60);
+  await page.mouse.up();
+  await settle(page);
+  const panned = await partBox(page);
+  expect(Math.abs(panned.x - zoomed.x)).toBeGreaterThan(1);
+
+  // Reset re-centres the camera while keeping the zoom the toolbar set: the
+  // world moves back, and its rendered scale does not change.
+  await toolbarButton(page, 'Reset view').click();
+  await expect.poll(cameraZoom).toBe('1.1');
+  await settle(page);
   const reset = await partBox(page);
-  // Reset re-centres the camera on the stage centre: the world returns to the
-  // mount framing, and the zoom the toolbar left behind is preserved.
-  expect(Math.abs(reset.x + reset.width / 2 - (zoomed.x + zoomed.width / 2))).toBeGreaterThan(1);
+  expect(Math.abs(reset.x - panned.x)).toBeGreaterThan(1);
+  expect(Math.abs(reset.width - panned.width)).toBeLessThanOrEqual(1);
 });
 
 test('Fill in the toolbar edits the selected layer through the shared paint path', async ({ page }) => {
@@ -163,22 +176,62 @@ test('Fill in the toolbar edits the selected layer through the shared paint path
   expect(await snapshot(page)).toContain('"fillColor":"#ff0000"');
 });
 
-test('the Boolean group appears only when it can act and creates through the shared authority', async ({ page }) => {
+test('the Boolean group stays visible and is enabled only for a compatible selection', async ({ page }) => {
   await seed(page);
 
-  await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
-  await expect(toolbarButton(page, 'Boolean Union')).toHaveCount(0);
+  // Always on screen, so the action is discoverable before the selection can
+  // use it; disabled while one layer cannot form a Boolean.
+  await expect(toolbarButton(page, 'Boolean Union')).toBeVisible();
+  await expect(toolbarButton(page, 'Boolean Union')).toBeDisabled();
+  await expect(toolbarButton(page, 'Dissolve Boolean')).toBeDisabled();
 
+  await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
+  await expect(toolbarButton(page, 'Boolean Union')).toBeDisabled();
+
+  // Two compatible operands enable the whole group through the shared authority.
   await page.locator('.actor-node', { hasText: 'Beta' }).first().click({ modifiers: ['Control'] });
+  await expect(toolbarButton(page, 'Boolean Union')).toBeEnabled();
   await toolbarButton(page, 'Boolean Union').click();
 
   await expect(page.locator('.boolean-operation-badge')).toHaveCount(1);
   await expect(page.locator('.nested-node.actor-node')).toHaveCount(2);
   // The created group is selected, so the toolbar now switches operations.
   await expect(toolbarButton(page, 'Boolean Union')).toHaveAttribute('aria-pressed', 'true');
+  await expect(toolbarButton(page, 'Dissolve Boolean')).toBeEnabled();
   await toolbarButton(page, 'Boolean Subtract').click();
   await expect(toolbarButton(page, 'Boolean Subtract')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.boolean-operation-badge')).toHaveText('Subtract');
+});
+
+test('group and arrange actions stay visible and follow the selection', async ({ page }) => {
+  await seed(page);
+
+  // Nothing selected: every state-dependent action is present but unavailable.
+  for (const name of ['Group layers', 'Ungroup layers', 'Bring forward', 'Send backward']) {
+    await expect(toolbarButton(page, name)).toBeVisible();
+    await expect(toolbarButton(page, name)).toBeDisabled();
+  }
+
+  await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
+  await expect(toolbarButton(page, 'Group layers')).toBeDisabled();
+  await expect(toolbarButton(page, 'Bring forward')).toBeEnabled();
+
+  // Arrange writes the existing z-index path, so the painted stacking order
+  // follows it: lower z-index paints first.
+  const paintOrder = () => page.locator('.stage-svg [data-part-id]')
+    .evaluateAll((nodes) => nodes.map((node) => node.getAttribute('data-part-id')));
+  const before = await paintOrder();
+  expect(before).toEqual(['alpha', 'beta']);
+
+  await toolbarButton(page, 'Bring forward').click();
+  await expect.poll(paintOrder).toEqual(['beta', 'alpha']);
+  await toolbarButton(page, 'Send backward').click();
+  await expect.poll(paintOrder).toEqual(before);
+
+  await page.locator('.actor-node', { hasText: 'Beta' }).first().click({ modifiers: ['Control'] });
+  await expect(toolbarButton(page, 'Group layers')).toBeEnabled();
+  await toolbarButton(page, 'Group layers').click();
+  await expect(toolbarButton(page, 'Ungroup layers')).toBeEnabled();
 });
 
 test('every control is reachable and operable from the keyboard', async ({ page }) => {
@@ -211,10 +264,12 @@ test('toolbar content changes never move the authored world', async ({ page }) =
   const baseline = await partBox(page);
   const barHeight = (await toolbar(page).boundingBox())!.height;
 
-  // Selecting two Boolean-eligible layers adds the Boolean group to the strip.
+  // The paint group appears when a non-group layer is selected, and the strip
+  // still keeps its height, so the stage box is unchanged.
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
+  await expect(page.getByRole('button', { name: 'Fill Color Preview' })).toBeVisible();
   await page.locator('.actor-node', { hasText: 'Beta' }).first().click({ modifiers: ['Control'] });
-  await expect(toolbarButton(page, 'Boolean Union')).toHaveCount(1);
+  await expect(toolbarButton(page, 'Boolean Union')).toBeEnabled();
   await settle(page);
 
   // The strip keeps its height, so the stage box is unchanged.

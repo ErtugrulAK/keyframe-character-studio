@@ -1046,7 +1046,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   background: var(--kcs-accent);
 }
 
-.viewport-tools-overlay,
 .canvas-footer-legend {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;

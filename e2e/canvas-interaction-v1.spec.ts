@@ -5,8 +5,8 @@ test('canvas tools and cursor-anchored zoom remain in one interaction surface', 
   await expect(page.locator('.app-container')).toBeVisible({ timeout: 30000 });
   await expect(page.locator('.stage-canvas-container')).toBeVisible({ timeout: 30000 });
   const canvas = page.locator('.stage-canvas-container');
-  const selectTool = page.getByRole('button', { name: 'Select Tool', exact: true });
-  const handTool = page.getByRole('button', { name: 'Hand / Pan Tool', exact: true });
+  const selectTool = page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Select', exact: true });
+  const handTool = page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan', exact: true });
   await expect(selectTool).toHaveClass(/active/);
   await handTool.click();
   await expect(handTool).toHaveClass(/active/);
@@ -46,12 +46,12 @@ test('cursor-centered zoom keeps the exact SVG point under the pointer', async (
   const canvasBox = await canvas.boundingBox();
   expect(canvasBox).not.toBeNull();
 
-  await page.getByRole('button', { name: 'Hand / Pan Tool', exact: true }).click();
+  await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Pan', exact: true }).click();
   await page.mouse.move(canvasBox!.x + canvasBox!.width * 0.5, canvasBox!.y + canvasBox!.height * 0.5);
   await page.mouse.down();
   await page.mouse.move(canvasBox!.x + canvasBox!.width * 0.56, canvasBox!.y + canvasBox!.height * 0.54);
   await page.mouse.up();
-  await page.getByRole('button', { name: 'Select Tool', exact: true }).click();
+  await page.getByRole('toolbar', { name: 'Authoring tools' }).getByRole('button', { name: 'Select', exact: true }).click();
   let previousMatrix = '';
   const waitForStableMatrix = async () => {
     previousMatrix = '';

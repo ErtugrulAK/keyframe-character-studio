@@ -40,6 +40,8 @@ const animatorCtx = {
   endBatchInteraction: vi.fn(),
   booleanOperandEditingGroupId: null as string | null,
   setBooleanOperandEditingGroupId: vi.fn(),
+  armShapeCreation: vi.fn(),
+  addCustomPart: vi.fn(),
 };
 
 vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx }));
@@ -203,15 +205,119 @@ describe('AuthoringToolbar', () => {
     expect(next.filter((part) => part.parentId === container.id).map((part) => part.id)).toEqual(['a', 'b']);
   });
 
-  it('hides the group actions until the selection can use them', () => {
-    renderToolbar();
-    expect(screen.queryByRole('button', { name: 'Group layers' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Ungroup layers' })).toBeNull();
+  it('keeps the group actions on screen but disabled until the selection can use them', () => {
+    const view = renderToolbar();
+    expect(screen.getByRole('button', { name: 'Group layers' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Ungroup layers' })).toBeDisabled();
 
     animatorCtx.characterParts = [shape('a')];
     setSelection(['a'], 'a');
+    view.rerender(<AuthoringToolbar />);
+    expect(screen.getByRole('group', { name: 'Layer group' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Group layers' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Ungroup layers' })).toBeDisabled();
+  });
+
+  it('keeps the Boolean group visible and enables it only for a compatible selection', () => {
+    const view = renderToolbar();
+    expect(screen.getByRole('button', { name: 'Boolean Union' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Boolean Subtract' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Boolean Intersect' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Boolean Exclude' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Dissolve Boolean' })).toBeDisabled();
+
+    // One eligible layer is still not a Boolean.
+    animatorCtx.characterParts = [shape('a')];
+    setSelection(['a'], 'a');
+    view.rerender(<AuthoringToolbar />);
+    expect(screen.getByRole('button', { name: 'Boolean Union' })).toBeDisabled();
+
+    // Two compatible operands enable the whole group.
+    animatorCtx.characterParts = [shape('a'), shape('b')];
+    setSelection(['a', 'b'], 'b');
+    view.rerender(<AuthoringToolbar />);
+    expect(screen.getByRole('button', { name: 'Boolean Union' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Boolean Exclude' })).not.toBeDisabled();
+  });
+
+  it('never fires a disabled action', () => {
     renderToolbar();
-    expect(screen.queryByRole('group', { name: 'Layer group' })).toBeNull();
+    const disabled = ['Boolean Union', 'Boolean Subtract', 'Dissolve Boolean', 'Group layers', 'Ungroup layers', 'Bring forward', 'Send backward'];
+    for (const name of disabled) {
+      fireEvent.click(screen.getByRole('button', { name }));
+    }
+    expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
+    expect(animatorCtx.setTracks).not.toHaveBeenCalled();
+  });
+
+  it('arranges the selected layer through the shared z-index path', () => {
+    const part = shape('a');
+    animatorCtx.characterParts = [part];
+    setSelection(['a'], 'a');
+    renderToolbar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Bring forward' }));
+    expect(animatorCtx.setCharacterParts).toHaveBeenCalledTimes(1);
+    const forward = animatorCtx.setCharacterParts.mock.calls[0][0] as (parts: CharacterPart[]) => CharacterPart[];
+    expect(forward([part])[0].zIndex).toBe(part.zIndex + 1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send backward' }));
+    const backward = animatorCtx.setCharacterParts.mock.calls[1][0] as (parts: CharacterPart[]) => CharacterPart[];
+    expect(backward([part])[0].zIndex).toBe(1);
+  });
+
+  it('creates shapes, text and the freeform path through the existing authorities', () => {
+    const view = renderToolbar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add rectangle' }));
+    expect(animatorCtx.armShapeCreation).toHaveBeenCalledWith('custom_rect', 'Rectangle');
+    fireEvent.click(screen.getByRole('button', { name: 'Add circle' }));
+    expect(animatorCtx.armShapeCreation).toHaveBeenCalledWith('custom_circle', 'Circle');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add text' }));
+    expect(animatorCtx.addCustomPart).toHaveBeenCalledWith('custom_text', 'Text');
+
+    const pen = screen.getByRole('button', { name: 'Pen' });
+    fireEvent.click(pen);
+    expect(animatorCtx.setActiveTool).toHaveBeenCalledWith('freeform_draw');
+    animatorCtx.activeTool = 'freeform_draw';
+    view.rerender(<AuthoringToolbar />);
+    expect(screen.getByRole('button', { name: 'Pen' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('keeps one roving Tab stop on the tool pair and moves it with the arrow keys', () => {
+    const view = renderToolbar();
+    const select = screen.getByRole('button', { name: 'Select' });
+    const pan = screen.getByRole('button', { name: 'Pan' });
+    expect(select).toHaveAttribute('tabindex', '0');
+    expect(pan).toHaveAttribute('tabindex', '-1');
+
+    fireEvent.keyDown(select, { key: 'ArrowRight' });
+    expect(animatorCtx.setActiveTool).toHaveBeenCalledWith('pan');
+
+    animatorCtx.activeTool = 'pan';
+    view.rerender(<AuthoringToolbar />);
+    expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute('tabindex', '-1');
+    expect(screen.getByRole('button', { name: 'Pan' })).toHaveAttribute('tabindex', '0');
+
+    animatorCtx.activeTool = 'freeform_draw';
+    view.rerender(<AuthoringToolbar />);
+    expect(screen.getByRole('button', { name: 'Select' })).toHaveAttribute('tabindex', '0');
+  });
+
+  it('sends reset view down the camera channel without touching the zoom', () => {
+    renderToolbar();
+    const dispatched: string[] = [];
+    const listener = (event: Event) => { dispatched.push((event as CustomEvent<{ type: string }>).detail.type); };
+    window.addEventListener('canvas-viewport-command', listener);
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Reset view' }));
+      fireEvent.click(screen.getByRole('button', { name: 'Reset view' }));
+    } finally {
+      window.removeEventListener('canvas-viewport-command', listener);
+    }
+    // Reset is idempotent and never carries a zoom step with it.
+    expect(dispatched).toEqual(['reset-view', 'reset-view']);
   });
 
   it('offers Ungroup for a container and keeps Group disabled while only one layer is selected', () => {

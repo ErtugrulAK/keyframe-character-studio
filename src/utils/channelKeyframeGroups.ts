@@ -3,10 +3,13 @@
  *
  * The editor UI treats "a keyframe" as one frame holding several property
  * keyframes (legacy composite keyframe semantics). This helper groups the
- * canonical per-channel keyframes into that frame-based view.
+ * canonical per-channel keyframes into that frame-based view, and resolves the
+ * authored pose a keyframe must capture (see `resolveAuthoredLocalTransform`).
  */
 
-import type { PropertyKeyframe, TrackChannel } from '../types/animator';
+import type { CharacterPart, PropertyKeyframe, TrackChannel, Transform } from '../types/animator';
+import { worldToContainerLocal } from './containerMath';
+import { relationshipParentId } from './partBinding';
 
 export interface ChannelKeyframeGroup {
   /** Shared frame number */
@@ -79,3 +82,35 @@ export function buildTransformSnapshot(t: {
     scaleX: t.scaleX, scaleY: t.scaleY, opacity: t.opacity,
   };
 }
+
+/** Evaluated world transforms for a document — the app's `getComputedTransform`. */
+export interface EvaluatedPoseSource {
+  /** Every layer, used to resolve the captured layer's relationship parent. */
+  parts: CharacterPart[];
+  /** Evaluated WORLD transform of a layer at a frame (`getComputedTransform`). */
+  worldOf: (partId: string, frame: number) => Transform;
+}
+
+/**
+ * The transform a keyframe must capture for a layer: its own authored pose in
+ * the container that owns it.
+ *
+ * `getComputedTransform` returns the WORLD transform with the whole parent chain
+ * already composed in, while a channel keyframe is authored in the layer's own
+ * space — `evaluateTransform` composes the parent afterwards. Storing the world
+ * pose therefore re-composes the parent on the very next evaluation: adding a
+ * keyframe moved a parented/grouped layer by its container's transform, and
+ * every later add moved it again. Converting with the same exact inverse the
+ * Inspector and grouping use keeps the evaluated pose identical at the captured
+ * frame, including rotated and scaled containers.
+ */
+export const resolveAuthoredLocalTransform = (
+  partId: string,
+  frame: number,
+  source: EvaluatedPoseSource,
+): Transform => {
+  const world = source.worldOf(partId, frame);
+  const parentId = relationshipParentId(source.parts.find((part) => part.id === partId));
+  if (!parentId) return world;
+  return worldToContainerLocal(world, source.worldOf(parentId, frame));
+};

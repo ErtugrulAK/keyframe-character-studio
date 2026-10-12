@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useAnimator } from '../../context/useAnimator';
 import { type PropertyKeyframe, type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, hasChannelDataForTemplate, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
-import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, buildTransformSnapshot } from '../../utils/channelKeyframeGroups';
+import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, buildTransformSnapshot, resolveAuthoredLocalTransform } from '../../utils/channelKeyframeGroups';
 import {
   Plus,
   ZoomIn,
@@ -366,7 +366,7 @@ export const SequencerTimeline: React.FC = () => {
 
   // Add property keyframe at current frame for given channel
   const handleAddChannelKeyframe = (trackId: string, channel: AnimationChannel, partId: string) => {
-    const transform = getComputedTransform(partId, currentFrame);
+    const transform = resolveAuthoredLocalTransform(partId, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
     const part = characterParts.find((candidate) => candidate.id === partId);
     const maskValue = (() => {
       if (!channel.includes(':')) return undefined;
@@ -400,7 +400,7 @@ export const SequencerTimeline: React.FC = () => {
       addKeyframeToTrack(trackId, frame);
       return;
     }
-    const t = getComputedTransform(track.partId, frame);
+    const t = resolveAuthoredLocalTransform(track.partId, frame, { parts: characterParts, worldOf: getComputedTransform });
     const snapshot = buildTransformSnapshot(t);
     for (const ch of DISPLAY_CHANNELS) {
       addPropertyKeyframe(trackId, ch, frame, snapshot[ch], 'easeInOut');

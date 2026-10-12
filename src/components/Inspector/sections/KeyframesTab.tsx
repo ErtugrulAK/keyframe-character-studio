@@ -2,7 +2,7 @@ import React from 'react';
 import { useAnimator } from '../../../context/useAnimator';
 import { Diamond, Plus, Trash2, Play } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
-import { groupChannelKeyframesByFrame, DISPLAY_CHANNELS, TRIM_PATH_CHANNELS } from '../../../utils/channelKeyframeGroups';
+import { groupChannelKeyframesByFrame, DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, resolveAuthoredLocalTransform } from '../../../utils/channelKeyframeGroups';
 import { SmartNumberInput } from '../inputs/SmartNumberInput';
 
 interface KeyframesTabProps {
@@ -17,6 +17,7 @@ interface KeyframesTabProps {
 export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
   const {
     tracks,
+    characterParts,
     currentFrame,
     setCurrentFrame,
     getComputedTransform,
@@ -43,7 +44,7 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
   // composite keyframe add).
   const handleAdd = () => {
     if (!track) return;
-    const t = getComputedTransform(selectedPart.id, currentFrame);
+    const t = resolveAuthoredLocalTransform(selectedPart.id, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
     const snapshot: Record<string, number> = {
       x: t.x,
       y: t.y,

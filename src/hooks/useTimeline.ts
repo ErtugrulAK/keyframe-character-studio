@@ -4,6 +4,7 @@ import { layerMaskPathChannel } from '../types/animator';
 import { generateId } from '../utils/idGenerator';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
 import { hasChannelDataForTemplate } from '../utils/timelineMetrics';
+import { resolveAuthoredLocalTransform } from '../utils/channelKeyframeGroups';
 import { 
   updateKeyframeBezierPointsMutator,
   addPropertyKeyframeMutator,
@@ -108,7 +109,7 @@ export const useTimeline = ({
     setTracks((prevTracks) =>
       prevTracks.map((tr) => {
         if (tr.id !== trackId) return tr;
-        const currentTransform = getComputedTransform(tr.partId, frame);
+        const currentTransform = resolveAuthoredLocalTransform(tr.partId, frame, { parts: characterParts, worldOf: getComputedTransform });
         const activeTmpl = activeTemplateId || 'Sequence';
         const existingIdx = (tr.keyframes || []).findIndex((k) => k.frame === frame && (k.templateId || 'Sequence') === activeTmpl);
 

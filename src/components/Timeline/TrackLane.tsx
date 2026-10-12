@@ -374,6 +374,13 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               {/* Scale Sub-Group */}
               <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
               {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
+
+              {/* Opacity: the outliner lists it between the scale group and the
+                  trim group, so the lane sits in exactly the same place — the
+                  property tree and the lanes stay row-for-row aligned, and
+                  authored opacity keys are visible on the timeline. */}
+              {renderChannelLane('opacity')}
+
               {/* V6 Layer Mask channels share the track and evaluator. */}
               {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
               {Object.keys(track.maskPathChannels ?? {}).map((channel) => renderChannelLane(channel as LayerMaskPathChannel))}

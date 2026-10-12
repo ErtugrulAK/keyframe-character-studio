@@ -326,3 +326,28 @@ test('R2-03 — the divider resizes the outliner column without disturbing the t
   expect(await outlinerWidth(page)).toBeCloseTo(MIN_WIDTH, 0);
   expect(await selectionText(page)).toBe('');
 });
+
+test('R2-09 — the property tree and the timeline lanes stay row-for-row aligned', async ({ page }) => {
+  await seed(page);
+
+  // Expand the first layer's property tree, so the whole stack is on screen.
+  await page.locator('.ue-expand-btn').first().click();
+  await expect(page.locator('.ue-channel-lanes').first()).toBeVisible();
+
+  const rows = await page.evaluate(() => {
+    const top = (selector: string) => [...document.querySelectorAll(selector)]
+      .map((node) => node.getBoundingClientRect().top);
+    // Document order on both sides: the owner row, then its property rows.
+    return {
+      tree: top('.ue-outliner-list .ue-track-row, .ue-outliner-list .ue-transform-header, .ue-outliner-list .ue-subgroup-header, .ue-outliner-list .ue-channel-row'),
+      lanes: top('.ue-track-lanes .ue-track-lane, .ue-track-lanes .ue-channel-header-lane, .ue-track-lanes .ue-channel-lane'),
+    };
+  });
+
+  // One lane per property row — the stack has no orphan row on either side, and
+  // every pair shares the same row band.
+  expect(rows.lanes.length).toBe(rows.tree.length);
+  rows.tree.forEach((top, index) => {
+    expect(Math.abs(rows.lanes[index] - top), `row ${index} is misaligned`).toBeLessThanOrEqual(1);
+  });
+});

@@ -35,6 +35,12 @@ interface TransformGizmoProps {
    * part's own geometry bounds (a layer group draws its aggregate box).
    */
   overrideBounds?: { minX: number; minY: number; maxX: number; maxY: number };
+  /**
+   * A geometryless container (a layer group) owns no geometry, so the gizmo must
+   * not invent one: no pivot/centre marker inside the frame, only the frame and
+   * its handles.
+   */
+  suppressPivotMarker?: boolean;
   outputOrigin?: CoordinatePoint;
 }
 
@@ -50,6 +56,7 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   overrideCenterX = 0,
   overrideCenterY = 0,
   overrideBounds,
+  suppressPivotMarker = false,
   outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
   const baseBounds = getPartLocalBounds(selectedPart, selectedTransform);
@@ -143,7 +150,9 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
               />
             </g>
           ))}
-          <circle cx={centerX} cy={centerY} r={metrics.centerRadius} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+          {!suppressPivotMarker && (
+            <circle cx={centerX} cy={centerY} r={metrics.centerRadius} fill="#00d2ff" stroke="#ffffff" strokeWidth={1.5 * zScale} />
+          )}
         </>
       )}
     </>
@@ -152,8 +161,8 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   const rotationY = top - metrics.rotationOffset;
   const renderEdgeHandle = (cx: number, cy: number, cursor: string, mode: ScaleMode, fill: string) => (
     <g>
-      <circle cx={cx} cy={cy} r={metrics.edgeRadius} fill={fill} stroke="#ffffff" strokeWidth={1.5 * zScale} style={{ cursor, pointerEvents: 'auto' }} onMouseDown={(e) => onScaleMouseDown(e, mode)} />
-      <circle data-testid="gizmo-hit-target" cx={cx} cy={cy} r={metrics.hitRadius} fill="transparent" pointerEvents="auto" style={{ cursor }} onMouseDown={(e) => onScaleMouseDown(e, mode)} />
+      <circle cx={cx} cy={cy} r={metrics.edgeRadius} fill={fill} stroke="#ffffff" strokeWidth={1.5 * zScale} style={{ cursor, pointerEvents: 'auto' }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
+      <circle data-testid="gizmo-hit-target" cx={cx} cy={cy} r={metrics.hitRadius} fill="transparent" pointerEvents="auto" style={{ cursor }} onMouseDown={(e) => onScaleMouseDown(e, mode, resizeBounds)} />
     </g>
   );
 

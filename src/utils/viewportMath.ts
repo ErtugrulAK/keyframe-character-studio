@@ -227,55 +227,6 @@ export const getLocalDelta = (dx: number, dy: number, rotationDeg: number) => {
   };
 };
 
-export interface EdgeScaleParams {
-  dragMode: 'scale_right' | 'scale_left' | 'scale_top' | 'scale_bottom';
-  halfW: number;
-  halfH: number;
-  deltaWorldX: number;
-  deltaWorldY: number;
-  rotation: number;
-  initScaleX: number;
-  initScaleY: number;
-  initX: number;
-  initY: number;
-}
-
-export const computeEdgeScale = ({
-  dragMode, halfW, halfH, deltaWorldX, deltaWorldY, rotation, initScaleX, initScaleY, initX, initY,
-}: EdgeScaleParams): { scaleX: number; scaleY: number; x: number; y: number } => {
-  const { dxLocal, dyLocal, cosR, sinR } = getLocalDelta(deltaWorldX, deltaWorldY, rotation);
-  let newScaleX = initScaleX;
-  let newScaleY = initScaleY;
-  let newX = initX;
-  let newY = initY;
-  if (dragMode === 'scale_right') {
-    const value = Math.max(0.05, initScaleX + dxLocal / (2 * halfW));
-    const delta = value - initScaleX;
-    newScaleX = parseFloat(value.toFixed(2));
-    newX = Math.round(initX + delta * halfW * cosR);
-    newY = Math.round(initY + delta * halfW * sinR);
-  } else if (dragMode === 'scale_left') {
-    const value = Math.max(0.05, initScaleX - dxLocal / (2 * halfW));
-    const delta = value - initScaleX;
-    newScaleX = parseFloat(value.toFixed(2));
-    newX = Math.round(initX - delta * halfW * cosR);
-    newY = Math.round(initY - delta * halfW * sinR);
-  } else if (dragMode === 'scale_bottom') {
-    const value = Math.max(0.05, initScaleY + dyLocal / (2 * halfH));
-    const delta = value - initScaleY;
-    newScaleY = parseFloat(value.toFixed(2));
-    newX = Math.round(initX - delta * halfH * sinR);
-    newY = Math.round(initY + delta * halfH * cosR);
-  } else if (dragMode === 'scale_top') {
-    const value = Math.max(0.05, initScaleY - dyLocal / (2 * halfH));
-    const delta = value - initScaleY;
-    newScaleY = parseFloat(value.toFixed(2));
-    newX = Math.round(initX + delta * halfH * sinR);
-    newY = Math.round(initY - delta * halfH * cosR);
-  }
-  return { scaleX: newScaleX, scaleY: newScaleY, x: newX, y: newY };
-};
-
 export const getPartsInMarquee = (
   characterParts: CharacterPart[],
   getTransform: (partId: string) => Transform,

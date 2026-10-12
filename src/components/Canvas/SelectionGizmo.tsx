@@ -138,6 +138,7 @@ export const SelectionGizmo: React.FC<SelectionGizmoProps> = ({
         onRotateMouseDown={onRotateStart}
         onScaleMouseDown={onScaleStart}
         outputOrigin={outputOrigin}
+        suppressPivotMarker={selectedPart.isGroup === true}
         {...(groupBounds ? {
           overrideHalfW: groupBounds.halfW * absoluteScaleX,
           overrideHalfH: groupBounds.halfH * absoluteScaleY,

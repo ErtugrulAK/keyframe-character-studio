@@ -2,12 +2,12 @@ import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from
 import { flushSync } from 'react-dom';
 import { useAnimator } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
-import type { Transform } from '../../types/animator';
+import type { CharacterPart, Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
-import { resolveCornerResize, type CornerBounds, type CornerId } from '../../utils/cornerResize';
+import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
 import { stackingOrder } from '../../utils/stackingOrder';
-import { clampZoom, clientToCameraPoint, computeEdgeScale, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
+import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
@@ -30,6 +30,33 @@ const CORNER_BY_SCALE_MODE: Record<string, CornerId | undefined> = {
   scale_corner_tr: 'tr',
   scale_corner_bl: 'bl',
   scale_corner_br: 'br',
+};
+
+/**
+ * The four edge handles, keyed by the scale mode they report. A corner and an
+ * edge solve share one authority (`resolveCornerResize` / `resolveEdgeResize`):
+ * both anchor the handle opposite to the one the pointer grabbed.
+ */
+const EDGE_BY_SCALE_MODE: Record<string, EdgeId | undefined> = {
+  scale_left: 'left',
+  scale_right: 'right',
+  scale_top: 'top',
+  scale_bottom: 'bottom',
+};
+
+/**
+ * True when `partId` is a descendant of `groupId` through the relationship
+ * chain (`parentId`, with the Boolean-group link as the other carrier).
+ */
+const isDescendantOf = (parts: CharacterPart[], partId: string, groupId: string): boolean => {
+  const seen = new Set<string>();
+  let current = parts.find((part) => part.id === partId)?.parentId;
+  while (current && !seen.has(current)) {
+    if (current === groupId) return true;
+    seen.add(current);
+    current = parts.find((part) => part.id === current)?.parentId;
+  }
+  return false;
 };
 
 export const StageCanvas: React.FC = () => {
@@ -197,6 +224,16 @@ export const StageCanvas: React.FC = () => {
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
   });
 
+  /**
+   * Group body drags: the pointer lands on a child, but the gesture belongs to
+   * the selected container. This remembers the layer under the pointer so a
+   * click that never moved can still select it, and records whether the gesture
+   * actually moved so the click-select after a real drag is suppressed.
+   */
+  const pendingGroupClickRef = useRef<string | null>(null);
+  const groupDragMovedRef = useRef(false);
+  const suppressClickSelectRef = useRef(false);
+
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
   const [dragInitialLocalX, setDragInitialLocalX] = useState<number>(1);
   const [dragInitialLocalY, setDragInitialLocalY] = useState<number>(1);
@@ -276,12 +313,30 @@ export const StageCanvas: React.FC = () => {
       setBooleanOperandEditingGroupId(null);
     }
     e.stopPropagation();
-    if (!selectedPartIds.includes(partId)) {
-      handleSelectPart(partId);
-    } else {
-      setSelectedPartId(partId);
+
+    // A gesture that starts inside the SELECTED group box moves the container as
+    // one unit: the pointer lands on a child, but the child is not the target of
+    // the drag. The container stays selected, and a click that never moved still
+    // selects the layer under the pointer (see handleMouseUp).
+    const selectedGroup = characterParts.find((part) => part.id === selectedPartId && part.isGroup === true);
+    const insideSelectedGroup = Boolean(
+      selectedGroup
+      && selectedPartIds.length <= 1
+      && partId !== selectedGroup.id
+      && isDescendantOf(characterParts, partId, selectedGroup.id),
+    );
+    pendingGroupClickRef.current = insideSelectedGroup ? partId : null;
+    groupDragMovedRef.current = false;
+    const dragTargetId = insideSelectedGroup ? selectedGroup!.id : partId;
+    if (!insideSelectedGroup) {
+      if (!selectedPartIds.includes(partId)) {
+        handleSelectPart(partId);
+      } else {
+        setSelectedPartId(partId);
+      }
     }
-    const transform = getComputedTransform(partId, currentFrame);
+
+    const transform = getComputedTransform(dragTargetId, currentFrame);
     if (!transform) return;
 
     startBatchInteraction();
@@ -495,6 +550,11 @@ export const StageCanvas: React.FC = () => {
           { x: dragStart.x, y: dragStart.y },
           { x: svgX, y: svgY },
         );
+        // Past pointer jitter this is a drag, not a click on the layer under it.
+        if (Math.hypot(deltaX, deltaY) > 2) {
+          groupDragMovedRef.current = true;
+          suppressClickSelectRef.current = pendingGroupClickRef.current !== null;
+        }
         // ONE contract: updateCurrentTransform takes WORLD x/y and converts to
         // container-local per part (and propagates bonds). Passing the primary
         // part's world position moves the whole selection when it is multi.
@@ -532,31 +592,21 @@ export const StageCanvas: React.FC = () => {
           pointer: { x: svgX, y: svgY },
           uniform: isScaleLocked,
         }));
-      } else if (
-        dragMode === 'scale_right' ||
-        dragMode === 'scale_left' ||
-        dragMode === 'scale_top' ||
-        dragMode === 'scale_bottom'
-      ) {
-        const part = characterParts.find((p) => p.id === selectedPartId);
-        if (!part) return;
-
-        const bounds = getPartBounds(part);
-
-        updateCurrentTransform(
-          computeEdgeScale({
-            dragMode,
-            halfW: bounds.halfW,
-            halfH: bounds.halfH,
-            deltaWorldX: svgX - dragStart.x,
-            deltaWorldY: svgY - dragStart.y,
-            rotation: dragStart.initialTransform.rotation,
-            initScaleX: dragStart.initialTransform.scaleX,
-            initScaleY: dragStart.initialTransform.scaleY,
-            initX: dragStart.initialTransform.x,
-            initY: dragStart.initialTransform.y,
-          })
-        );
+      } else if (EDGE_BY_SCALE_MODE[dragMode]) {
+        // The same geometry authority as the corners, restricted to one axis:
+        // the opposite edge is the fixed point of the gesture, so a group's
+        // aggregate frame resizes from its own box instead of the geometryless
+        // container's fallback extents.
+        const edge = EDGE_BY_SCALE_MODE[dragMode];
+        const bounds = dragStart.localBounds;
+        if (!edge || !bounds) return;
+        updateCurrentTransform(resolveEdgeResize({
+          transform: dragStart.initialTransform,
+          bounds,
+          edge,
+          startPointer: { x: dragStart.x, y: dragStart.y },
+          pointer: { x: svgX, y: svgY },
+        }));
       } else if (dragMode === 'scale_x') {
         const centerX = EDITOR_CAMERA_CENTER.x + dragStart.initialTransform.x;
         const centerY = EDITOR_CAMERA_CENTER.y + dragStart.initialTransform.y;
@@ -584,7 +634,7 @@ export const StageCanvas: React.FC = () => {
       }
     },
     // The pointer-up effect owns the current mouse-up callback; adding the later-declared callback here would create a declaration cycle.
-    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, characterParts, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked]
+    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked]
   );
 
   const handleMouseUp = useCallback((commitShape: boolean = true) => {
@@ -620,11 +670,21 @@ export const StageCanvas: React.FC = () => {
       }
     }
 
+    // A gesture that began inside the selected group and never moved is a plain
+    // click on the layer under the pointer.
+    const pendingClickId = pendingGroupClickRef.current;
+    if (pendingClickId && !groupDragMovedRef.current) {
+      suppressClickSelectRef.current = false;
+      handleSelectPart(pendingClickId);
+    }
+    pendingGroupClickRef.current = null;
+    groupDragMovedRef.current = false;
+
     if (isDragging) endBatchInteraction();
     setIsDragging(false);
     setDragMode(null);
     setMarqueeRect(null);
-  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId, booleanOperandEditingGroupId]);
+  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId, booleanOperandEditingGroupId, handleSelectPart]);
   useEffect(() => {
     handleMouseUpRef.current = handleMouseUp;
   }, [handleMouseUp]);
@@ -964,6 +1024,13 @@ export const StageCanvas: React.FC = () => {
                 selectedPartIds={selectedPartIds}
                 booleanOperandEditingGroupId={booleanOperandEditingGroupId}
                 onSelect={(id, event) => {
+                  // The browser still fires a click when a drag ends on the
+                  // element it started on; that click must not steal the
+                  // selection back from the group the drag just moved.
+                  if (suppressClickSelectRef.current) {
+                    suppressClickSelectRef.current = false;
+                    return;
+                  }
                   handleSelectPart(id, event.ctrlKey || event.metaKey);
                 }}
                 customPresets={customPresets}

@@ -11,9 +11,11 @@ import { describe, expect, it } from 'vitest';
 import {
   MIN_CORNER_SCALE,
   resolveCornerResize,
+  resolveEdgeResize,
   type CornerBounds,
   type CornerId,
   type CornerResizeResult,
+  type EdgeId,
 } from '../utils/cornerResize';
 
 const BOUNDS: CornerBounds = { minX: -60, minY: -30, maxX: 60, maxY: 30 };
@@ -325,5 +327,176 @@ describe('resolveCornerResize — degenerate geometry', () => {
     expect(result.y).toBeCloseTo(world.y, 12);
     expect(result.scaleX).toBeCloseTo(world.scaleX, 12);
     expect(result.scaleY).toBeCloseTo(world.scaleY, 12);
+  });
+});
+
+
+/**
+ * Edge handles share the corner model: the edge the pointer grabbed follows the
+ * pointer along its own local axis and the OPPOSITE edge is the fixed point of
+ * the gesture — never the box centre.
+ */
+const EDGE_OPPOSITE: Record<EdgeId, EdgeId> = { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
+const EDGES: EdgeId[] = ['left', 'right', 'top', 'bottom'];
+const HORIZONTAL_EDGES: EdgeId[] = ['left', 'right'];
+
+const isStartEdge = (edge: EdgeId) => edge === 'left' || edge === 'top';
+
+/** The dragged edge's own local coordinate (the axis it resizes). */
+const localEdge = (edge: EdgeId, bounds: CornerBounds = BOUNDS): number => {
+  const horizontal = HORIZONTAL_EDGES.includes(edge);
+  if (horizontal) return isStartEdge(edge) ? bounds.minX : bounds.maxX;
+  return isStartEdge(edge) ? bounds.minY : bounds.maxY;
+};
+
+/** The local span the gesture solves against (dragged edge − opposite edge). */
+const edgeSpan = (edge: EdgeId, bounds: CornerBounds = BOUNDS): number => localEdge(edge, bounds) - localEdge(EDGE_OPPOSITE[edge], bounds);
+
+/** The midpoint of one edge in world space: origin + R(rotation)·(local ⊙ scale). */
+function worldEdgeMidpoint(world: World, edge: EdgeId, bounds: CornerBounds = BOUNDS): Point {
+  const horizontal = HORIZONTAL_EDGES.includes(edge);
+  const local = {
+    x: horizontal ? localEdge(edge, bounds) : (bounds.minX + bounds.maxX) / 2,
+    y: horizontal ? (bounds.minY + bounds.maxY) / 2 : localEdge(edge, bounds),
+  };
+  const radians = (world.rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return {
+    x: world.x + local.x * world.scaleX * cos - local.y * world.scaleY * sin,
+    y: world.y + local.x * world.scaleX * sin + local.y * world.scaleY * cos,
+  };
+}
+
+/** World travel for `localTravel` units along the layer's own axis. */
+function edgeTravel(world: World, edge: EdgeId, localTravel: number): Point {
+  const radians = (world.rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return HORIZONTAL_EDGES.includes(edge)
+    ? { x: localTravel * cos, y: localTravel * sin }
+    : { x: -localTravel * sin, y: localTravel * cos };
+}
+
+/** Grabs the edge handle and drags it `localTravel` units along its own axis. */
+function dragEdge(world: World, edge: EdgeId, localTravel: number): CornerResizeResult {
+  const startPointer = worldEdgeMidpoint(world, edge);
+  const travel = edgeTravel(world, edge, localTravel);
+  return resolveEdgeResize({
+    transform: world,
+    bounds: BOUNDS,
+    edge,
+    startPointer,
+    pointer: { x: startPointer.x + travel.x, y: startPointer.y + travel.y },
+  });
+}
+
+/** The opposite edge must not move, and the dragged edge must follow the pointer. */
+function expectEdgeAnchorHeld(world: World, edge: EdgeId, result: CornerResizeResult, localTravel: number, tolerance = 1e-9) {
+  const after = resolved(world, result);
+  const opposite = EDGE_OPPOSITE[edge];
+  expect(
+    distance(worldEdgeMidpoint(after, opposite), worldEdgeMidpoint(world, opposite)),
+    `${edge}: ${opposite} edge moved`,
+  ).toBeLessThanOrEqual(tolerance);
+
+  const startPointer = worldEdgeMidpoint(world, edge);
+  const travel = edgeTravel(world, edge, localTravel);
+  expect(
+    distance(worldEdgeMidpoint(after, edge), { x: startPointer.x + travel.x, y: startPointer.y + travel.y }),
+    `${edge}: dragged edge did not follow the pointer`,
+  ).toBeLessThanOrEqual(tolerance);
+}
+
+const BASE_EDGE: World = { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1 };
+
+describe('resolveEdgeResize — unrotated rectangle', () => {
+  EDGES.forEach((edge) => {
+    it(`dragging ${edge} keeps ${EDGE_OPPOSITE[edge]} fixed in world space`, () => {
+      const result = dragEdge(BASE_EDGE, edge, 30);
+      expectEdgeAnchorHeld(BASE_EDGE, edge, result, 30);
+
+      // Only the dragged axis changes, and its scale is travel / span.
+      if (HORIZONTAL_EDGES.includes(edge)) {
+        expect(result.scaleX).toBeCloseTo(1 + 30 / edgeSpan(edge), 12);
+        expect(result.scaleY).toBe(1);
+      } else {
+        expect(result.scaleY).toBeCloseTo(1 + 30 / edgeSpan(edge), 12);
+        expect(result.scaleX).toBe(1);
+      }
+    });
+  });
+
+  it('never grows on both sides: the right edge drag keeps the left edge exactly put', () => {
+    const result = dragEdge(BASE_EDGE, 'right', 60);
+    expect(result.scaleX).toBeCloseTo(1.5, 12);
+    expect(result.x).toBeCloseTo(30, 12);
+    // Left edge: local −60 · scale 1.5 around the new origin, unchanged at −60.
+    expect(result.x - 60 * result.scaleX).toBeCloseTo(-60, 12);
+    // Right edge follows the pointer: 30 + 60 · 1.5 = 120 = 60 + 60 travel.
+    expect(result.x + 60 * result.scaleX).toBeCloseTo(120, 12);
+  });
+});
+
+describe('resolveEdgeResize — rotated rectangle', () => {
+  const ROTATED: World = { x: 40, y: -20, rotation: 30, scaleX: 1, scaleY: 1 };
+
+  EDGES.forEach((edge) => {
+    it(`rotation-safe: ${edge} keeps ${EDGE_OPPOSITE[edge]} fixed`, () => {
+      expectEdgeAnchorHeld(ROTATED, edge, dragEdge(ROTATED, edge, 24), 24);
+    });
+  });
+
+  it('solves the travel in the layer basis, not on the world axes', () => {
+    const result = dragEdge(ROTATED, 'bottom', 30);
+    expect(result.scaleX).toBeCloseTo(1, 12);
+    expect(result.scaleY).toBeCloseTo(1.5, 12);
+    expectEdgeAnchorHeld(ROTATED, 'bottom', result, 30);
+  });
+});
+
+describe('resolveEdgeResize — negative scale, clamp and degenerate input', () => {
+  it('keeps the anchor while the dragged axis is mirrored (negative scale)', () => {
+    const mirrored: World = { x: 12, y: 7, rotation: 0, scaleX: -1, scaleY: 1 };
+    // The mirrored handle sits on the visually opposite side; its identity is
+    // still the local edge, so dragging it inward keeps the local left edge put.
+    const result = dragEdge(mirrored, 'right', -30);
+    expectEdgeAnchorHeld(mirrored, 'right', result, -30);
+    expect(result.scaleX).toBeLessThan(0);
+    expect(result.scaleY).toBe(1);
+  });
+
+  it('crossing the opposite edge mirrors the scale and still holds the anchor', () => {
+    const result = dragEdge(BASE_EDGE, 'left', 400);
+    // 1 + 400 / (−120): the left edge crossed past the right edge.
+    expect(result.scaleX).toBeCloseTo(1 + 400 / edgeSpan('left'), 12);
+    expect(result.scaleX).toBeLessThan(0);
+    // The anchor (the right edge at x = +60) survives the mirror.
+    expect(result.x + 60 * result.scaleX).toBeCloseTo(60, 9);
+    expect(result.scaleY).toBe(1);
+  });
+
+  it('clamps the magnitude without moving the anchor past the limit', () => {
+    const result = dragEdge(BASE_EDGE, 'left', 118);
+    // 1 − 118/120 would leave 0.0167, under the minimum: clamp to +0.05.
+    expect(result.scaleX).toBe(MIN_CORNER_SCALE);
+    expect(result.x + 60 * result.scaleX).toBeCloseTo(60, 9);
+    expect(result.scaleY).toBe(1);
+  });
+
+  it('is a no-op for an edge handle that did not move', () => {
+    const world: World = { x: -8, y: 4, rotation: -37, scaleX: 1.7, scaleY: 0.4 };
+    const startPointer = worldEdgeMidpoint(world, 'right');
+    const result = resolveEdgeResize({
+      transform: world,
+      bounds: BOUNDS,
+      edge: 'right',
+      startPointer,
+      pointer: startPointer,
+    });
+    expect(result.x).toBeCloseTo(world.x, 9);
+    expect(result.y).toBeCloseTo(world.y, 9);
+    expect(result.scaleX).toBeCloseTo(world.scaleX, 9);
+    expect(result.scaleY).toBeCloseTo(world.scaleY, 9);
   });
 });

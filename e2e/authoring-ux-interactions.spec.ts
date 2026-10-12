@@ -220,32 +220,40 @@ test('the menu owns Escape: the shape tool keeps its authoring session', async (
   await expect(page.locator('.actor-node', { hasText: 'Alpha' })).toHaveCount(1);
 });
 
+/** Opens the Inspector's paint card, whatever state it is in. */
+async function openAppearance(page: Page): Promise<void> {
+  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) APPEARANCE/u });
+  if (await disclosure.getAttribute('aria-expanded') === 'false') await disclosure.click();
+}
+
 test('the paint popover keeps authoring through an inspector collapse and reopen', async ({ page }) => {
   await seed(page, [{ id: 'a', name: 'Alpha', x: 0 }]);
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
+  await openAppearance(page);
 
-  const authoredFill = async (): Promise<string> => page.getByRole('button', { name: 'Fill Color Preview' })
+  const authoredFill = async (): Promise<string> => page.getByRole('button', { name: 'FILL COLOR Color Preview' })
     .locator('.color-swatch-color')
     .evaluate((node) => (node as HTMLElement).style.backgroundColor);
 
-  await page.getByRole('button', { name: 'Hide Inspector' }).click();
-  await expect(page.getByRole('button', { name: 'Hide Inspector' })).toHaveCount(0);
-
-  const fillSwatch = page.getByRole('button', { name: 'Fill Color Preview' });
+  // Paint is authored in the Inspector's Appearance card — the one surface that
+  // owns fill and stroke since the toolbar stopped carrying them (R2-08).
+  const fillSwatch = page.getByRole('button', { name: 'FILL COLOR Color Preview' });
   await expect(fillSwatch).toBeVisible();
   await fillSwatch.click();
-  const dialog = page.getByRole('dialog', { name: 'Fill Color Picker' });
+  const dialog = page.getByRole('dialog', { name: 'FILL COLOR Color Picker' });
   await expect(dialog).toBeVisible();
-  await dragWithin(page, dialog.getByRole('slider', { name: 'Fill Saturation and Brightness' }), { fx: 0.2, fy: 0.2 }, { fx: 0.8, fy: 0.7 });
+  await dragWithin(page, dialog.getByRole('slider', { name: 'FILL COLOR Saturation and Brightness' }), { fx: 0.2, fy: 0.2 }, { fx: 0.8, fy: 0.7 });
   const authored = await authoredFill();
   expect(authored).not.toBe('rgb(34, 211, 238)');
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);
 
-  // Reopening the Inspector shows the same authored paint through its own swatch.
+  // Collapsing and reopening the Inspector shows the same authored paint.
+  await page.getByRole('button', { name: 'Hide Inspector' }).click();
+  await expect(page.getByRole('button', { name: 'Hide Inspector' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Show Inspector' }).click();
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
-  await page.getByRole('button', { name: 'Expand APPEARANCE' }).click();
+  await openAppearance(page);
   const inspectorSwatch = page.getByRole('button', { name: 'FILL COLOR Color Preview' });
   await expect(inspectorSwatch.locator('.color-swatch-color')).toHaveCSS('background-color', authored);
   const record = (await persisted(page)).layers.find((layer) => layer.id === 'a');
@@ -612,11 +620,12 @@ test('colour, group and duplicate are one history entry each', async ({ page }) 
   ]);
   const states: string[] = [await snapshot(page)];
 
-  // 1. One paint gesture through the toolbar's shared popover authority.
+  // 1. One paint gesture through the Inspector's shared popover authority.
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
-  await page.getByRole('button', { name: 'Fill Color Preview' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Fill Color Picker' });
-  await dragWithin(page, dialog.getByRole('slider', { name: 'Fill Saturation and Brightness' }), { fx: 0.2, fy: 0.2 }, { fx: 0.85, fy: 0.75 });
+  await openAppearance(page);
+  await page.getByRole('button', { name: 'FILL COLOR Color Preview' }).click();
+  const dialog = page.getByRole('dialog', { name: 'FILL COLOR Color Picker' });
+  await dragWithin(page, dialog.getByRole('slider', { name: 'FILL COLOR Saturation and Brightness' }), { fx: 0.2, fy: 0.2 }, { fx: 0.85, fy: 0.75 });
   await page.keyboard.press('Escape');
   states.push(await snapshot(page));
   expect(states[1]).not.toBe(states[0]);
@@ -654,9 +663,10 @@ test('a group and an authored colour survive a reload, and ungroup still works',
   ], undefined, {}, false);
 
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
-  await page.getByRole('button', { name: 'Fill Color Preview' }).click();
-  const dialog = page.getByRole('dialog', { name: 'Fill Color Picker' });
-  await dragWithin(page, dialog.getByRole('slider', { name: 'Fill Saturation and Brightness' }), { fx: 0.2, fy: 0.2 }, { fx: 0.85, fy: 0.75 });
+  await openAppearance(page);
+  await page.getByRole('button', { name: 'FILL COLOR Color Preview' }).click();
+  const dialog = page.getByRole('dialog', { name: 'FILL COLOR Color Picker' });
+  await dragWithin(page, dialog.getByRole('slider', { name: 'FILL COLOR Saturation and Brightness' }), { fx: 0.2, fy: 0.2 }, { fx: 0.85, fy: 0.75 });
   await page.keyboard.press('Escape');
 
   await selectLayers(page, ['Alpha', 'Beta']);

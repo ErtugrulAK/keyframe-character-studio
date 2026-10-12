@@ -154,25 +154,30 @@ test('zoom and reset view move only the camera', async ({ page }) => {
   expect(Math.abs(reset.width - panned.width)).toBeLessThanOrEqual(1);
 });
 
-test('Fill in the toolbar edits the selected layer through the shared paint path', async ({ page }) => {
+test('fill and stroke are authored in the Inspector, not in the toolbar', async ({ page }) => {
   await seed(page);
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
+
+  // The strip carries no paint control at all: the Inspector's Appearance
+  // section is the one place fill and stroke are authored.
+  await expect(toolbar(page).getByRole('button', { name: 'Fill Color Preview' })).toHaveCount(0);
+  await expect(toolbar(page).getByRole('button', { name: 'Stroke Color Preview' })).toHaveCount(0);
+
   // The Inspector's paint controls live in the collapsed Appearance card.
   await page.getByRole('button', { name: 'Expand APPEARANCE' }).click();
 
-  const fillSwatch = page.getByRole('button', { name: 'Fill Color Preview' });
+  const fillSwatch = page.getByRole('button', { name: 'FILL COLOR Color Preview' });
   await expect(fillSwatch).toBeVisible();
   await fillSwatch.click();
-  const dialog = page.getByRole('dialog', { name: 'Fill Color Picker' });
+  const dialog = page.getByRole('dialog', { name: 'FILL COLOR Color Picker' });
   await expect(dialog).toBeVisible();
 
-  await dialog.getByRole('spinbutton', { name: 'Fill R' }).fill('255');
-  await dialog.getByRole('spinbutton', { name: 'Fill G' }).fill('0');
-  await dialog.getByRole('spinbutton', { name: 'Fill B' }).fill('0');
+  await dialog.getByRole('spinbutton', { name: 'FILL COLOR R' }).fill('255');
+  await dialog.getByRole('spinbutton', { name: 'FILL COLOR G' }).fill('0');
+  await dialog.getByRole('spinbutton', { name: 'FILL COLOR B' }).fill('0');
 
-  // The Inspector's own swatch reads the same authored value.
-  const inspectorSwatch = page.getByRole('button', { name: 'FILL COLOR Color Preview' });
-  await expect(inspectorSwatch.locator('.color-swatch-color')).toHaveCSS('background-color', 'rgb(255, 0, 0)');
+  // The swatch reads the same authored value the document now carries.
+  await expect(fillSwatch.locator('.color-swatch-color')).toHaveCSS('background-color', 'rgb(255, 0, 0)');
   expect(await snapshot(page)).toContain('"fillColor":"#ff0000"');
 });
 
@@ -264,12 +269,13 @@ test('toolbar content changes never move the authored world', async ({ page }) =
   const baseline = await partBox(page);
   const barHeight = (await toolbar(page).boundingBox())!.height;
 
-  // The paint group appears when a non-group layer is selected, and the strip
-  // still keeps its height, so the stage box is unchanged.
+  // Selecting layers enables state-dependent actions, and the strip still keeps
+  // its height, so the stage box is unchanged.
   await page.locator('.actor-node', { hasText: 'Alpha' }).first().click();
-  await expect(page.getByRole('button', { name: 'Fill Color Preview' })).toBeVisible();
+  await expect(toolbarButton(page, 'Bring forward')).toBeEnabled();
   await page.locator('.actor-node', { hasText: 'Beta' }).first().click({ modifiers: ['Control'] });
   await expect(toolbarButton(page, 'Boolean Union')).toBeEnabled();
+  await expect(toolbarButton(page, 'Group layers')).toBeEnabled();
   await settle(page);
 
   // The strip keeps its height, so the stage box is unchanged.

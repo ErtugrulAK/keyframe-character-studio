@@ -21,7 +21,6 @@ import {
   Trash2,
   CopyPlus,
   Unlink,
-  Ungroup,
   Lock,
   Unlock,
 } from 'lucide-react';
@@ -71,7 +70,7 @@ export const DetailsPanel: React.FC = () => {
     updateBooleanOperation,
     dissolveBooleanGroup,
   } = useBooleanAuthoring();
-  const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
+  const { selectedGroup } = useLayerGrouping();
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
@@ -225,7 +224,10 @@ export const DetailsPanel: React.FC = () => {
   ) : null;
 
   const groupChildren = selectedGroup ? getGroupChildren(characterParts, selectedGroup.id) : [];
-  const groupWorkflowContent = selectedGroup ? (
+  // Details reports structure, it does not command it: grouping and ungrouping
+  // are authoring commands and live in the top toolbar and the editor's context
+  // menu. What stays here is the read-only membership of the selected group.
+  const groupWorkflowContent = groupChildren.length > 0 ? (
     <section className="boolean-editor-section" aria-label="Layer group">
       <div className="inspector-section-label">GROUP</div>
       <p className="boolean-description">Layers in this group move, scale and rotate together. Opacity stays per layer.</p>
@@ -243,17 +245,6 @@ export const DetailsPanel: React.FC = () => {
             {child.name}
           </button>
         ))}
-      </div>
-      <button type="button" className="btn-secondary boolean-dissolve-button" onClick={ungroupSelection}>
-        <Ungroup size={12} /> Ungroup
-      </button>
-    </section>
-  ) : canGroup ? (
-    <section className="shape-operations-section" aria-label="Layer grouping">
-      <div className="inspector-section-label">GROUP</div>
-      <p className="shape-operations-description">Group the selected layers so they move, scale and rotate together.</p>
-      <div className="shape-operations-grid">
-        <button type="button" onClick={groupSelection} title="Group the selected layers">Group</button>
       </div>
     </section>
   ) : null;

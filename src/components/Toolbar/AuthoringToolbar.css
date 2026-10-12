@@ -5,13 +5,19 @@
  * purpose: the strip only ever changes the stage box, and the stage camera
  * divides the layout fit back out, so showing, hiding or repopulating it cannot
  * move or rescale the authored world (see e2e/camera-invariance.spec.ts).
+ *
+ * R2-08 — the strip reads as a few logical bands, not a random icon row: one
+ * hitbox size and one icon size everywhere, dividers that separate meaning
+ * rather than decoration, and an active state that marks the current tool
+ * without shouting. Unavailable actions stay on screen and stay legible as
+ * disabled, so the strip never reflows around the selection.
  */
 .authoring-toolbar {
   display: flex;
   align-items: center;
   flex: 0 0 auto;
   flex-wrap: nowrap;
-  gap: 8px;
+  gap: 6px;
   height: 40px;
   min-height: 40px;
   padding: 0 12px;
@@ -26,23 +32,15 @@
   display: flex;
   align-items: center;
   flex: 0 0 auto;
-  gap: 4px;
+  gap: 2px;
 }
 
 .authoring-toolbar-divider {
   flex: 0 0 auto;
   width: 1px;
-  height: 20px;
+  height: 18px;
+  margin: 0 2px;
   background: var(--kcs-border-subtle);
-}
-
-.authoring-toolbar-label {
-  color: var(--kcs-text-muted);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  margin-left: 2px;
 }
 
 .authoring-toolbar-button {
@@ -57,16 +55,21 @@
   background: transparent;
   color: var(--kcs-text-secondary);
   cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
 }
 
-.authoring-toolbar-button:hover {
+.authoring-toolbar-button:hover:not(:disabled) {
   background: var(--kcs-hover);
   color: var(--kcs-text-primary);
 }
 
-.authoring-toolbar-button.active {
+.authoring-toolbar-button:active:not(:disabled) {
   background: var(--kcs-bg-active);
-  border-color: rgba(53, 200, 176, 0.42);
+}
+
+.authoring-toolbar-button.active {
+  background: rgba(53, 200, 176, 0.14);
+  border-color: rgba(53, 200, 176, 0.38);
   color: var(--kcs-text-primary);
 }
 
@@ -81,9 +84,4 @@
   color: var(--kcs-text-muted);
   opacity: 0.4;
   cursor: default;
-}
-
-.authoring-toolbar-button:disabled:hover {
-  background: transparent;
-  color: var(--kcs-text-muted);
 }

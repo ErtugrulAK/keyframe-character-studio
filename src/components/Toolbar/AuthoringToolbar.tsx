@@ -21,7 +21,6 @@ import { useBooleanAuthoring } from '../../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../../hooks/useLayerGrouping';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { BooleanOperationIcon } from '../Inspector/BooleanOperationIcon';
-import { ColorPickerPopover } from '../Inspector/inputs/ColorPickerPopover';
 import type { BooleanOperation } from '../../utils/booleanGeometry';
 import './AuthoringToolbar.css';
 
@@ -49,14 +48,16 @@ const dispatchViewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') =>
 
 /**
  * The top authoring toolbar: the strip that carries the tools, creation entry,
- * paint, Boolean, grouping, arrange and view actions the editor already has.
+ * Boolean, grouping, arrange and view actions the editor already has.
  *
  * Every control reads and writes the authority the rest of the app uses —
  * `activeTool`/`showGrid` from the animator context, shape creation through
  * `armShapeCreation`, camera commands through the shared command channel, the
- * shared paint/z-index write path, and the shared Boolean and layer-group
- * authorities. It owns no document state of its own, so a view-only tool cannot
- * touch the project, and it holds no second copy of any command.
+ * shared z-index write path, and the shared Boolean and layer-group authorities.
+ * It owns no document state of its own, so a view-only tool cannot touch the
+ * project, and it holds no second copy of any command. Paint is deliberately NOT
+ * here: fill and stroke are authored in the Inspector's Appearance section,
+ * which is their one home.
  *
  * State-dependent actions (Boolean, grouping, arrange) stay on screen and are
  * disabled when the current selection cannot use them, so the strip never
@@ -71,8 +72,6 @@ export const AuthoringToolbar: React.FC = () => {
     setShowGrid,
     selectedPartId,
     characterParts,
-    startBatchInteraction,
-    endBatchInteraction,
     armShapeCreation,
     addCustomPart,
   } = useAnimator();
@@ -83,7 +82,7 @@ export const AuthoringToolbar: React.FC = () => {
     updateBooleanOperation,
     dissolveBooleanGroup,
   } = useBooleanAuthoring();
-  const { handlePartColorChange, handlePartPropChange, handleZIndexChange } = usePartPropertyAuthoring();
+  const { handleZIndexChange } = usePartPropertyAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
 
   const toolButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -186,40 +185,6 @@ export const AuthoringToolbar: React.FC = () => {
         </button>
       </div>
 
-      {selectedPart && !selectedPart.isGroup && (
-        <>
-          <span className="authoring-toolbar-divider" aria-hidden="true" />
-          <div className="authoring-toolbar-group" role="group" aria-label="Fill and stroke">
-            <span className="authoring-toolbar-label">Fill</span>
-            <ColorPickerPopover
-              label="Fill"
-              color={selectedPart.fillColor || '#00d2ff'}
-              alpha={selectedPart.fillOpacity ?? 1}
-              fallback="#00d2ff"
-              panelSide="below"
-              panelAlign="start"
-              onColorChange={(color) => handlePartColorChange('fillColor', color)}
-              onAlphaChange={(alpha) => handlePartPropChange('fillOpacity', alpha)}
-              onInteractionStart={startBatchInteraction}
-              onInteractionEnd={endBatchInteraction}
-            />
-            <span className="authoring-toolbar-label">Stroke</span>
-            <ColorPickerPopover
-              label="Stroke"
-              color={selectedPart.strokeColor || '#101218'}
-              alpha={selectedPart.strokeOpacity ?? 1}
-              fallback="#101218"
-              panelSide="below"
-              panelAlign="start"
-              onColorChange={(color) => handlePartColorChange('strokeColor', color)}
-              onAlphaChange={(alpha) => handlePartPropChange('strokeOpacity', alpha)}
-              onInteractionStart={startBatchInteraction}
-              onInteractionEnd={endBatchInteraction}
-            />
-          </div>
-        </>
-      )}
-
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
       <div className="authoring-toolbar-group" role="group" aria-label="Boolean operations">
@@ -241,7 +206,7 @@ export const AuthoringToolbar: React.FC = () => {
                   : `${label} needs two compatible layers`}
               onClick={() => (selectedBooleanGroup ? updateBooleanOperation(operation) : createBooleanGroup(operation))}
             >
-              <BooleanOperationIcon operation={operation} />
+              <BooleanOperationIcon operation={operation} size={14} />
             </button>
           );
         })}
@@ -255,7 +220,7 @@ export const AuthoringToolbar: React.FC = () => {
             : 'Dissolve needs a Boolean group'}
           onClick={dissolveBooleanGroup}
         >
-          <Unlink size={13} />
+          <Unlink size={14} />
         </button>
       </div>
 
@@ -336,20 +301,20 @@ export const AuthoringToolbar: React.FC = () => {
         <button
           type="button"
           className="authoring-toolbar-button"
-          aria-label="Zoom in"
-          title="Zoom in"
-          onClick={() => dispatchViewportCommand('zoom-in')}
-        >
-          <ZoomIn size={14} />
-        </button>
-        <button
-          type="button"
-          className="authoring-toolbar-button"
           aria-label="Reset view"
           title="Reset view position"
           onClick={() => dispatchViewportCommand('reset-view')}
         >
           <Compass size={14} />
+        </button>
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Zoom in"
+          title="Zoom in"
+          onClick={() => dispatchViewportCommand('zoom-in')}
+        >
+          <ZoomIn size={14} />
         </button>
       </div>
     </div>

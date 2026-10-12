@@ -113,28 +113,14 @@ describe('AuthoringToolbar', () => {
     expect(animatorCtx.setTracks).not.toHaveBeenCalled();
   });
 
-  it('offers Fill and Stroke only for a selected layer, on the shared paint write path', () => {
+  it('leaves fill and stroke to the Inspector instead of owning a second paint entry', () => {
     const part = shape('a');
     animatorCtx.characterParts = [part];
     setSelection(['a'], 'a');
     renderToolbar();
 
-    const fill = screen.getByRole('button', { name: 'Fill Color Preview' });
-    expect(fill).toHaveAttribute('title', '#336699 · 50%');
-    fireEvent.click(fill);
-    expect(screen.getByRole('dialog', { name: 'Fill Color Picker' })).toBeTruthy();
-
-    fireEvent.change(screen.getByLabelText('Fill R'), { target: { value: '255' } });
-    expect(animatorCtx.setCharacterParts).toHaveBeenCalledTimes(1);
-    const updater = animatorCtx.setCharacterParts.mock.calls[0][0] as (parts: CharacterPart[]) => CharacterPart[];
-    const next = updater([part]);
-    // Routed through the shared shape-appearance write path, not a raw patch.
-    expect(next[0].fillColor).toBe('#ff6699');
-    expect(next[0].fillOpacity).toBe(0.5);
-  });
-
-  it('hides the paint group when nothing is selected', () => {
-    renderToolbar();
+    // No paint group at all — not with a layer selected, and not without one.
+    expect(screen.queryByRole('group', { name: 'Fill and stroke' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Fill Color Preview' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Stroke Color Preview' })).toBeNull();
   });

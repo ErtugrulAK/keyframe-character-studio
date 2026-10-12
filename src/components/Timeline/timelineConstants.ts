@@ -19,3 +19,40 @@ export const CHANNEL_META: Record<TrackChannel, { label: string; color: string; 
 
 export const TRACK_ROW_HEIGHT = 34;   // parent track row
 export const CHANNEL_ROW_HEIGHT = 28; // sub-channel row
+
+/**
+ * Timeline workspace sizing. These are the ONLY bounds of the timeline panel:
+ * the height resizer and the outliner column divider both clamp through
+ * `clampPanelSize`, so a drag can never leave the workspace in a size the other
+ * control disagrees with.
+ */
+export const TIMELINE_DEFAULT_HEIGHT = 320;
+export const TIMELINE_MIN_HEIGHT = 150;
+export const TIMELINE_MAX_HEIGHT = 700;
+export const OUTLINER_DEFAULT_WIDTH = 280;
+export const OUTLINER_MIN_WIDTH = 180;
+export const OUTLINER_MAX_WIDTH = 520;
+
+export const clampPanelSize = (value: number, min: number, max: number): number => (
+  Math.min(max, Math.max(min, Math.round(value)))
+);
+
+/**
+ * The stage keeps at least this much room. The timeline is chrome: it may crop
+ * the canvas, never swallow it, so the height ceiling is the smaller of the
+ * authored bound and the room the window actually has.
+ */
+export const MIN_STAGE_HEIGHT = 160;
+
+/**
+ * The tallest the timeline may be without squeezing the stage below
+ * `MIN_STAGE_HEIGHT`. `chromeAbove` is the stage's client top — the header,
+ * toolbar and every other band the panel shares the window with.
+ */
+export const resolveTimelineHeightCeiling = (windowHeight: number, chromeAbove: number): number => (
+  clampPanelSize(
+    Math.min(TIMELINE_MAX_HEIGHT, windowHeight - chromeAbove - MIN_STAGE_HEIGHT),
+    TIMELINE_MIN_HEIGHT,
+    TIMELINE_MAX_HEIGHT,
+  )
+);

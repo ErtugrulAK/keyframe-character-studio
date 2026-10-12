@@ -1,5 +1,6 @@
 // Keyframe Studio - 2D Motion Sequencer Timeline Component
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { flushSync } from 'react-dom';
 import { useAnimator } from '../../context/useAnimator';
 import { type PropertyKeyframe, type TrackChannel, type AnimationChannel } from '../../types/animator';
 import { computeMaxFrame, hasChannelDataForTemplate, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
@@ -18,13 +19,15 @@ import {
   Clock,
   Scissors,
   TrendingUp,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezierEditor';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
 import { TrackLane } from './TrackLane';
-import { CHANNEL_META } from './timelineConstants';
+import { CHANNEL_META, clampPanelSize, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_DEFAULT_HEIGHT, TIMELINE_MIN_HEIGHT } from './timelineConstants';
 import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { InlineRename } from '../Shared/InlineRename';
@@ -320,34 +323,151 @@ export const SequencerTimeline: React.FC = () => {
     };
   }, [isScrubbing, draggingKf, draggingPKf, handleMouseMove, handleMouseUp]);
 
-  // Timeline panel height resizing
-  const [timelineHeight, setTimelineHeight] = useState<number>(320);
-  const [isResizingHeight, setIsResizingHeight] = useState<boolean>(false);
-  const resizeStartYRef = useRef<number>(0);
-  const initialHeightRef = useRef<number>(320);
+  /**
+   * Timeline workspace sizing — ONE source of truth.
+   *
+   * `timelineHeight` is the authored (expanded) height: collapsing never
+   * overwrites it, so expanding restores exactly the height the user left. The
+   * outliner column width is its sibling. Both are in-memory UI state like every
+   * other panel size in this editor, which keeps no layout persistence
+   * authority of its own.
+   */
+  const [timelineHeight, setTimelineHeight] = useState<number>(TIMELINE_DEFAULT_HEIGHT);
+  const [isTimelineCollapsed, setIsTimelineCollapsed] = useState<boolean>(false);
+  const [outlinerWidth, setOutlinerWidth] = useState<number>(OUTLINER_DEFAULT_WIDTH);
+  const [resizeAxis, setResizeAxis] = useState<'rows' | 'columns' | null>(null);
+  const timelineRef = useRef<HTMLElement>(null);
+  const resizeStartRef = useRef<{ x: number; y: number; height: number; width: number }>({
+    x: 0,
+    y: 0,
+    height: TIMELINE_DEFAULT_HEIGHT,
+    width: OUTLINER_DEFAULT_WIDTH,
+  });
+  const resizeFrameRef = useRef<number | null>(null);
+  const pendingResizeRef = useRef<{ height?: number; width?: number }>({});
 
-  const handleResizeStart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizingHeight(true);
-    resizeStartYRef.current = e.clientY;
-    initialHeightRef.current = timelineHeight;
-  };
-  const handleResizeMove = useCallback((e: MouseEvent) => {
-    if (!isResizingHeight) return;
-    const dy = resizeStartYRef.current - e.clientY;
-    setTimelineHeight(Math.max(150, Math.min(700, initialHeightRef.current + dy)));
-  }, [isResizingHeight]);
-  const handleResizeEnd = useCallback(() => setIsResizingHeight(false), []);
+  /**
+   * Commits a workspace size and folds the stage's new box into the camera in
+   * the SAME frame.
+   *
+   * The camera is a projection of the stage box: a resize that reached the DOM
+   * and was only measured by the stage's ResizeObserver afterwards painted one
+   * frame of the authored world against a box it no longer had, then snapped
+   * back — the timeline jolt. Committing the size and re-measuring the stage in
+   * one task closes that window; the observer stays as the safety net for every
+   * other layout change (window resize, sidebar toggles, drawers).
+   */
+  const commitWorkspaceLayout = useCallback((apply: () => void) => {
+    flushSync(apply);
+    window.dispatchEvent(new CustomEvent('canvas-viewport-command', { detail: { type: 'remeasure-stage-box' } }));
+  }, []);
+
+  /**
+   * The tallest the panel may be right now: the authored bound, capped by the
+   * room the window actually has, so the stage keeps `MIN_STAGE_HEIGHT`. The
+   * measurement is live because a flex item that stops fitting is silently
+   * shrunk — a height the layout cannot honour makes the drag feel dead, because
+   * the panel stops growing while the pointer keeps travelling.
+   */
+  const timelineHeightCeiling = useCallback(() => {
+    const stage = document.querySelector('.stage-canvas-container');
+    return resolveTimelineHeightCeiling(window.innerHeight, stage?.getBoundingClientRect().top ?? 0);
+  }, []);
+
+  const timelineHeightRef = useRef(timelineHeight);
+  // oxlint-disable-next-line react/refs
+  timelineHeightRef.current = timelineHeight;
+
+  // A window that got shorter re-clamps the authored height, so the panel never
+  // sits at a size the layout silently refuses.
   useEffect(() => {
-    if (isResizingHeight) {
-      window.addEventListener('mousemove', handleResizeMove);
-      window.addEventListener('mouseup', handleResizeEnd);
+    const handleWindowResize = () => {
+      const ceiling = timelineHeightCeiling();
+      if (timelineHeightRef.current <= ceiling) return;
+      commitWorkspaceLayout(() => setTimelineHeight(ceiling));
+    };
+    window.addEventListener('resize', handleWindowResize);
+    return () => window.removeEventListener('resize', handleWindowResize);
+  }, [commitWorkspaceLayout, timelineHeightCeiling]);
+
+  /**
+   * Applies at most one workspace size per frame: the pointer can move several
+   * times between two frames, and the commit has to land inside an animation
+   * frame (before that frame's layout and paint) for the stage to be corrected
+   * before anything is drawn.
+   */
+  const flushPendingResize = useCallback(() => {
+    if (resizeFrameRef.current !== null) {
+      cancelAnimationFrame(resizeFrameRef.current);
+      resizeFrameRef.current = null;
     }
+    const pending = pendingResizeRef.current;
+    if (pending.height === undefined && pending.width === undefined) return;
+    pendingResizeRef.current = {};
+    commitWorkspaceLayout(() => {
+      if (pending.height !== undefined) setTimelineHeight(pending.height);
+      if (pending.width !== undefined) setOutlinerWidth(pending.width);
+    });
+  }, [commitWorkspaceLayout]);
+
+  const beginResize = (axis: 'rows' | 'columns') => (e: React.MouseEvent) => {
+    if (e.button !== 0 || isTimelineCollapsed) return;
+    e.preventDefault();
+    resizeStartRef.current = { x: e.clientX, y: e.clientY, height: timelineHeight, width: outlinerWidth };
+    pendingResizeRef.current = {};
+    setResizeAxis(axis);
+  };
+
+  const toggleTimelineCollapsed = () => {
+    // Collapsing changes the stage box too, so it commits through the same
+    // authority as a drag: the world must not jolt for one frame.
+    commitWorkspaceLayout(() => setIsTimelineCollapsed((collapsed) => !collapsed));
+  };
+
+  useEffect(() => {
+    if (!resizeAxis) return;
+    const handleResizeMove = (e: MouseEvent) => {
+      const start = resizeStartRef.current;
+      if (resizeAxis === 'rows') {
+        pendingResizeRef.current.height = clampPanelSize(
+          start.height + (start.y - e.clientY),
+          TIMELINE_MIN_HEIGHT,
+          timelineHeightCeiling(),
+        );
+      } else {
+        pendingResizeRef.current.width = clampPanelSize(
+          start.width + (e.clientX - start.x),
+          OUTLINER_MIN_WIDTH,
+          OUTLINER_MAX_WIDTH,
+        );
+      }
+      if (resizeFrameRef.current === null) {
+        resizeFrameRef.current = requestAnimationFrame(() => {
+          resizeFrameRef.current = null;
+          flushPendingResize();
+        });
+      }
+    };
+    const handleResizeEnd = () => {
+      // Never lose the last pointer sample: the frame that has not run yet is
+      // applied synchronously before the gesture closes.
+      flushPendingResize();
+      setResizeAxis(null);
+    };
+    window.addEventListener('mousemove', handleResizeMove);
+    window.addEventListener('mouseup', handleResizeEnd);
+    const resizeClass = resizeAxis === 'rows' ? 'kcs-resizing-rows' : 'kcs-resizing-columns';
+    document.body.classList.add(resizeClass);
     return () => {
       window.removeEventListener('mousemove', handleResizeMove);
       window.removeEventListener('mouseup', handleResizeEnd);
+      document.body.classList.remove(resizeClass);
+      if (resizeFrameRef.current !== null) {
+        cancelAnimationFrame(resizeFrameRef.current);
+        resizeFrameRef.current = null;
+      }
     };
-  }, [isResizingHeight, handleResizeMove, handleResizeEnd]);
+  }, [resizeAxis, flushPendingResize, timelineHeightCeiling]);
 
   const handleFitTimeline = () => {
     if (!timelineGridRef.current) return;
@@ -435,11 +555,27 @@ export const SequencerTimeline: React.FC = () => {
   };
 
   return (
-    <footer className="sequencer-timeline" style={{ height: `${timelineHeight}px` }}>
-      {/* Top Resizer Handle Bar */}
-      <div className="timeline-resizer-bar" onMouseDown={handleResizeStart} title="Drag to resize timeline panel">
-        <div className="resizer-handle-pill" />
-      </div>
+    <footer
+      ref={timelineRef}
+      className={`sequencer-timeline ${isTimelineCollapsed ? 'is-collapsed' : ''} ${resizeAxis === 'rows' ? 'is-resizing-rows' : ''}`}
+      style={isTimelineCollapsed ? undefined : { height: `${timelineHeight}px` }}
+      data-collapsed={isTimelineCollapsed ? 'true' : 'false'}
+      data-testid="sequencer-timeline"
+    >
+      {/* Top Resizer Handle Bar (the expanded panel's own height authority) */}
+      {!isTimelineCollapsed && (
+        <div
+          className="timeline-resizer-bar"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label="Resize timeline height"
+          data-testid="timeline-height-resizer"
+          onMouseDown={beginResize('rows')}
+          title="Drag to resize the timeline panel"
+        >
+          <div className="resizer-handle-pill" />
+        </div>
+      )}
 
       {/* Motion Design Sequence Horizontal Browser-Style Tabs Bar */}
       <div className="timeline-template-tabs-bar">
@@ -505,6 +641,28 @@ export const SequencerTimeline: React.FC = () => {
             title="Create New Sequence"
           >
             <Plus size={13} />
+          </button>
+        </div>
+
+        {/*
+          The workspace collapse control lives in the panel's own header band —
+          the same place and shape as every other KCS panel toggle, never a
+          floating tab. It stays reachable while collapsed, which is what makes
+          the collapsed strip a restore affordance.
+        */}
+        <div className="timeline-workspace-actions">
+          <button
+            type="button"
+            className="timeline-collapse-btn"
+            data-testid="timeline-collapse-toggle"
+            aria-expanded={!isTimelineCollapsed}
+            aria-controls="timeline-workspace-body"
+            aria-label={isTimelineCollapsed ? 'Expand timeline' : 'Collapse timeline'}
+            title={isTimelineCollapsed ? 'Expand the timeline panel' : 'Collapse the timeline panel'}
+            onClick={toggleTimelineCollapsed}
+          >
+            {isTimelineCollapsed ? <ChevronUp size={13} aria-hidden="true" /> : <ChevronDown size={13} aria-hidden="true" />}
+            <span>{isTimelineCollapsed ? 'Expand' : 'Collapse'}</span>
           </button>
         </div>
       </div>
@@ -606,10 +764,10 @@ export const SequencerTimeline: React.FC = () => {
       </div>
 
       {/* Body: Left Outliner + Right Grid */}
-      <div className="timeline-body timeline-body-v3" ref={timelineBodyRef}>
+      <div className="timeline-body timeline-body-v3" id="timeline-workspace-body" ref={timelineBodyRef}>
 
         {/* ── LEFT OUTLINER ── */}
-        <div className="track-outliner ue-outliner timeline-layer-pane">
+        <div className="track-outliner ue-outliner timeline-layer-pane" style={{ width: `${outlinerWidth}px` }}>
           {/* Sticky ruler-height spacer to align with grid ruler */}
           <div className="ue-outliner-ruler-spacer">
             <span>LAYERS ({tracks.length})</span>
@@ -648,6 +806,17 @@ export const SequencerTimeline: React.FC = () => {
             })}
           </div>
         </div>
+
+        {/* ── COLUMN DIVIDER: outliner width ── */}
+        <div
+          className={`timeline-column-resizer ${resizeAxis === 'columns' ? 'active' : ''}`}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize layer list width"
+          data-testid="timeline-column-resizer"
+          onMouseDown={beginResize('columns')}
+          title="Drag to resize the layer list"
+        />
 
         {/* ── RIGHT SCROLLABLE GRID ── */}
         <div className="timeline-grid-container timeline-graph-pane" ref={timelineGridRef} onScroll={handleGridScroll}>

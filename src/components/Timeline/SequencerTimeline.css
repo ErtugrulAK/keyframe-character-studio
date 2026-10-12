@@ -13,12 +13,12 @@
   font-family: var(--font-mono);
 }
 
-/* ── RESIZER ── */
+/* ── RESIZER (panel height, dragged by its top edge) ── */
 .timeline-resizer-bar {
   height: 7px;
   width: 100%;
   background: transparent;
-  cursor: ns-resize;
+  cursor: row-resize;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -35,10 +35,91 @@
   border-radius: var(--radius-xs);
   transition: all 0.15s;
 }
-.timeline-resizer-bar:hover .resizer-handle-pill {
+.timeline-resizer-bar:hover .resizer-handle-pill,
+.sequencer-timeline.is-resizing-rows .resizer-handle-pill {
   background: var(--accent-indigo);
   box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
   width: 60px;
+}
+
+/* ── COLUMN RESIZER (outliner width) ── */
+.timeline-column-resizer {
+  flex: 0 0 6px;
+  width: 6px;
+  align-self: stretch;
+  cursor: col-resize;
+  background: transparent;
+  border-left: 1px solid transparent;
+  border-right: 1px solid transparent;
+  z-index: 21;
+  transition: background 0.15s ease;
+}
+.timeline-column-resizer:hover,
+.timeline-column-resizer.active {
+  background: var(--accent-indigo);
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.45);
+}
+
+/*
+ * While a workspace edge is being dragged the whole window carries the resize
+ * cursor and refuses text selection, so the drag never paints a selection or
+ * loses the pointer feedback when it leaves the 6px handle.
+ */
+body.kcs-resizing-rows,
+body.kcs-resizing-rows * { cursor: row-resize !important; user-select: none; }
+body.kcs-resizing-columns,
+body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; }
+
+/* ── WORKSPACE COLLAPSE CONTROL ── */
+.timeline-workspace-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex: none;
+}
+.timeline-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  height: 24px;
+  padding: 0 var(--space-xs);
+  background: var(--bg-dark);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-main);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.timeline-collapse-btn:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--accent-teal);
+  color: var(--text-primary);
+}
+.timeline-collapse-btn:focus-visible {
+  outline: 2px solid var(--kcs-border-focus);
+  outline-offset: 2px;
+}
+
+/*
+ * Collapsed: the panel keeps only its header band (sequence tabs + the restore
+ * control). The authored height is NOT touched, so expanding restores exactly
+ * the height the user left behind.
+ */
+.sequencer-timeline.is-collapsed {
+  height: auto;
+  box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
+}
+.sequencer-timeline.is-collapsed .timeline-header,
+.sequencer-timeline.is-collapsed .timeline-body {
+  display: none;
+}
+.sequencer-timeline.is-collapsed .timeline-template-tabs-bar {
+  border-bottom: none;
 }
 
 /* ── Motion Design Sequence & Browser Tabs Bar ── */

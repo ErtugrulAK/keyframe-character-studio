@@ -766,13 +766,25 @@ export const StageCanvas: React.FC = () => {
           : view));
         return;
       }
+      if (type === 'remeasure-stage-box') {
+        // Layout chrome (the timeline workspace) resizing announces itself in the
+        // task that resized the DOM. The camera is a projection of the stage box,
+        // so folding the new box in HERE — before the frame is painted — is what
+        // keeps the authored world from being drawn for one frame against a box
+        // it no longer has and then snapping back. The ResizeObserver stays as
+        // the general safety net for every other layout change.
+        const box = readStageBox();
+        if (!box) return;
+        flushSync(() => applyStageBox(box, false));
+        return;
+      }
       if (type !== 'zoom-in' && type !== 'zoom-out') return;
       const nextZoom = clampZoom(zoomRef.current * (type === 'zoom-in' ? 1.1 : 0.9));
       setZoomLevel(nextZoom);
     };
     window.addEventListener('canvas-viewport-command', handleViewportCommand);
     return () => window.removeEventListener('canvas-viewport-command', handleViewportCommand);
-  }, []);
+  }, [applyStageBox, readStageBox]);
 
   const [isDropTargetHover, setIsDropTargetHover] = useState<boolean>(false);
   const handleDragOverStage = (e: React.DragEvent) => {

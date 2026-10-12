@@ -17,8 +17,8 @@ export const CHANNEL_META: Record<TrackChannel, { label: string; color: string; 
   trimPathOffset: { label: 'Trim Offset', shortLabel: 'TO°', color: '#a78bfa' },
 };
 
-export const TRACK_ROW_HEIGHT = 34;   // parent track row
-export const CHANNEL_ROW_HEIGHT = 28; // sub-channel row
+export const TRACK_ROW_HEIGHT = 30;   // parent track row
+export const CHANNEL_ROW_HEIGHT = 24; // sub-channel row
 
 /**
  * Timeline workspace sizing. These are the ONLY bounds of the timeline panel:

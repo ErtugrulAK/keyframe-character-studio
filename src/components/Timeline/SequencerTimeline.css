@@ -664,11 +664,14 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 }
 
 .ue-kf-count {
-  font-size: var(--font-size-caption);
+  font-size: 9px;
   font-family: var(--font-main);
   color: #4b5563;
   background: #1a1d24;
-  padding: var(--space-3xs) var(--space-2xs);
+  min-width: 16px;
+  padding: 0 4px;
+  line-height: 14px;
+  text-align: center;
   border-radius: var(--radius-xs);
   border: 1px solid var(--border-color);
   flex-shrink: 0;
@@ -700,26 +703,27 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   display: flex;
   flex-direction: column;
   background: #0b0d10;
-  margin-left: 12px;
-  border-left: 2px solid rgba(148, 163, 184, 0.18);
+  margin-left: 10px;
+  border-left: 1px solid rgba(122, 157, 171, 0.22);
 }
 
 .ue-transform-header {
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
-  padding: 0 var(--space-xs) 0 var(--space-md);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  background: #11141b;
+  padding: 0 var(--space-xs) 0 var(--space-2xs);
+  border-bottom: 1px solid rgba(122, 157, 171, 0.1);
+  background: transparent;
   cursor: pointer;
   user-select: none;
 }
 .ue-transform-header:hover { background: #161a24; }
 .ue-transform-label {
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-caption);
   font-weight: 700;
-  color: var(--text-muted);
-  letter-spacing: 0.5px;
+  color: #9fb3bf;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 
 /* The owning layer's name rides on the Transform row itself, so the property
@@ -732,7 +736,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   white-space: nowrap;
   font-size: var(--font-size-caption);
   font-weight: 600;
-  color: #64748b;
+  color: #5c7180;
 }
 
 /* One nesting rail under the layer row: every property row hangs off the layer
@@ -742,20 +746,20 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
-  padding: 0 var(--space-xs) 0 var(--space-lg);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  background: var(--bg-darkest);
+  padding: 0 var(--space-xs) 0 var(--space-md);
+  border-bottom: none;
+  background: transparent;
   cursor: pointer;
   user-select: none;
 }
 .ue-subgroup-header:hover { background: #12151d; }
 /* A header with no disclosure state (Trim Path) is not a control. */
 .ue-subgroup-header-static { cursor: default; }
-.ue-subgroup-header-static:hover { background: var(--bg-darkest); }
+.ue-subgroup-header-static:hover { background: transparent; }
 .ue-subgroup-label {
   font-size: var(--font-size-caption);
-  font-weight: 700;
-  color: var(--text-muted);
+  font-weight: 600;
+  color: #7d919d;
   letter-spacing: 0.4px;
 }
 
@@ -763,34 +767,36 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
-  width: 12px;
+  color: #5c7180;
+  width: 14px;
 }
 
 /* ── CHANNEL ROW ── */
+/* A channel row is a leaf of the property tree: no card, no divider noise —
+   the rail above it carries the nesting, the coloured tick carries the channel. */
 .ue-channel-row {
   display: flex;
   align-items: center;
   padding: 0 var(--space-2xs) 0 0;
   gap: var(--space-2xs);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  background: #090b0e;
+  border-bottom: none;
+  background: transparent;
   transition: background 0.1s;
 }
 .ue-channel-row:hover { background: #10131a; }
 
 .ue-channel-indent {
-  width: 44px;
+  width: 34px;
   flex-shrink: 0;
 }
 .ue-channel-indent-sm {
-  width: 28px;
+  width: 20px;
   flex-shrink: 0;
 }
 
 .ue-channel-color-bar {
   width: 2px;
-  height: 14px;
+  height: 12px;
   border-radius: var(--radius-xs);
   flex-shrink: 0;
   opacity: 0.85;
@@ -798,7 +804,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 
 .ue-channel-label {
   flex: 1;
-  font-size: var(--font-size-body);
+  font-size: var(--font-size-caption);
   font-weight: 600;
   opacity: 0.9;
   white-space: nowrap;
@@ -932,48 +938,66 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   color: var(--text-muted); text-transform: lowercase; opacity: 0.8;
 }
 
+/*
+ * R2-11 — keyframe markers.
+ *
+ * The element the user clicks is a comfortable 18px hit target; the diamond
+ * they see inside it is a small 8px glyph, so precision clicking and an
+ * uncluttered timeline are no longer a trade-off. An unselected key is a hollow
+ * outline in its channel colour; a selected key is filled with that colour, so
+ * the state reads at a glance without an oversized symbol. The centre of the hit
+ * target — and of the glyph — is the keyframe's exact frame/time coordinate.
+ */
 .keyframe-diamond {
   position: absolute; top: 50%;
-  transform: translate(-50%, -50%) rotate(45deg);
-  width: 11px; height: 11px;
-  background: var(--bg-darkest);
-  border: 2px solid;
+  transform: translate(-50%, -50%);
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
   cursor: grab;
   z-index: 10;
-  transition: transform 0.1s, box-shadow 0.12s;
 }
-.keyframe-diamond:hover { transform: translate(-50%, -50%) rotate(45deg) scale(1.5); box-shadow: 0 0 10px currentColor; }
-.keyframe-diamond.selected { background: currentColor; box-shadow: 0 0 14px currentColor; }
+.keyframe-diamond .diamond-glyph,
+.ue-prop-diamond .diamond-glyph {
+  width: 8px; height: 8px;
+  transform: rotate(45deg);
+  border: 1.5px solid currentColor;
+  background: transparent;
+  pointer-events: none;
+  transition: background 0.12s, box-shadow 0.12s, transform 0.1s;
+}
+/* Hover subtly emphasises the glyph; the hit target never changes size. */
+.keyframe-diamond:hover .diamond-glyph,
+.ue-prop-diamond:hover .diamond-glyph {
+  transform: rotate(45deg) scale(1.25);
+  box-shadow: 0 0 0 3px rgba(41, 211, 183, 0.18);
+}
+.keyframe-diamond.selected .diamond-glyph,
+.ue-prop-diamond.selected .diamond-glyph {
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
 /* Keyboard focus must stay visible on the absolutely positioned diamonds. */
-.keyframe-diamond:focus-visible {
+.keyframe-diamond:focus-visible,
+.ue-prop-diamond:focus-visible {
   outline: 2px solid var(--accent-cyan);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--accent-teal-glow);
+  outline-offset: -1px;
+  border-radius: var(--radius-xs);
 }
-.diamond-inner { width: 100%; height: 100%; opacity: 0.7; }
 
 /* ── PROPERTY CHANNEL DIAMONDS ── */
+/* Same hit target and glyph as a composite key, painted in the channel colour. */
 .ue-prop-diamond {
   position: absolute;
   top: 50%;
-  transform: translate(-50%, -50%) rotate(45deg);
-  width: 9px; height: 9px;
-  background: var(--diamond-color, #6b7280);
-  border: 1.5px solid rgba(255,255,255,0.4);
-  border-radius: var(--radius-xs);
+  transform: translate(-50%, -50%);
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent;
+  border: none;
   cursor: grab;
   z-index: 10;
-  transition: transform 0.1s, box-shadow 0.12s;
-  box-shadow: 0 0 5px var(--diamond-color, #6b7280);
-}
-.ue-prop-diamond:hover {
-  transform: translate(-50%, -50%) rotate(45deg) scale(1.6);
-  box-shadow: 0 0 10px var(--diamond-color, #6b7280);
-}
-.ue-prop-diamond:focus-visible {
-  outline: 2px solid var(--accent-cyan);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 4px var(--accent-teal-glow);
 }
 
 /* ── MARQUEE SELECTION RECTANGLE ── */
@@ -1111,12 +1135,16 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 }
 
 .ue-track-row,
-.ue-channel-row,
 .ue-transform-header,
-.ue-subgroup-header,
 .ue-track-lane,
 .ue-channel-lane {
   border-bottom-color: rgba(122,157,171,.14);
+}
+
+/* The compact property tree keeps its lane dividers quieter than a layer row's
+   boundary, so the layer stays the top-level owner of the stack. */
+.ue-channel-lane {
+  border-bottom-color: rgba(122,157,171,.06);
 }
 
 .ue-track-row:hover,
@@ -1153,9 +1181,9 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   background: var(--kcs-accent);
 }
 
-.keyframe-diamond:hover,
-.ue-prop-diamond:hover {
-  box-shadow: 0 0 0 2px rgba(41,211,183,.22);
+.keyframe-diamond:hover .diamond-glyph,
+.ue-prop-diamond:hover .diamond-glyph {
+  box-shadow: 0 0 0 3px rgba(41,211,183,.22);
 }
 
 @media (prefers-reduced-motion: reduce) {

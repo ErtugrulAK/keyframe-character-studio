@@ -14,6 +14,8 @@ declare global {
   interface Window {
     /** Records whether the editor suppressed the native context menu per right-click. */
     __nativeMenuSuppressed?: boolean[];
+    /** Records `defaultPrevented` on every right-click of the app-wide check. */
+    __contextMenuDefaults?: boolean[];
   }
 }
 
@@ -179,4 +181,37 @@ test('a layer right-click in the outliner opens the same menu', async ({ page })
   await expect(menu(page)).toBeVisible();
   await expect(page.locator('.actor-node.primary-selected', { hasText: 'Beta' })).toBeVisible();
   await expect(menuItem(page, 'Delete')).toHaveCount(1);
+});
+
+test('the native context menu is suppressed across every editor surface, and the custom menu still opens', async ({ page }) => {
+  await seed(page);
+
+  // Registered AFTER the editor's own capture listener, so it reports what the
+  // app decided on every surface — including the ones that stop the event from
+  // bubbling any further.
+  await page.evaluate(() => {
+    window.__contextMenuDefaults = [];
+    document.addEventListener('contextmenu', (event) => {
+      window.__contextMenuDefaults?.push(event.defaultPrevented);
+    }, true);
+  });
+
+  const surfaces = [
+    page.locator('.authoring-toolbar'),
+    page.locator('.timeline-seq-tab').first(),
+    page.locator('.ue-track-lane').first(),
+    page.locator('.details-container'),
+    page.locator('#sequence-duration-input'),
+  ];
+  for (const surface of surfaces) {
+    await surface.click({ button: 'right', position: { x: 5, y: 5 } });
+  }
+
+  expect(await page.evaluate(() => window.__contextMenuDefaults)).toEqual([true, true, true, true, true]);
+
+  // Suppression never cost the editor its own menu: the canvas right-click
+  // still opens the KCS actions, with the native menu already prevented.
+  await rightClickEmptyStage(page);
+  await expect(menu(page)).toBeVisible();
+  expect(await page.evaluate(() => (window.__contextMenuDefaults ?? []).at(-1))).toBe(true);
 });

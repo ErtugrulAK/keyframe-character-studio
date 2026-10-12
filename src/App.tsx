@@ -34,6 +34,20 @@ const MainAppContent: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [setIsPlaying, appMode]);
 
+  // R2-07 — the browser's native context menu is suppressed for the whole
+  // editor: canvas, layer list, sequence tabs, toolbar, timeline, Details and
+  // every text field. The listener runs in the CAPTURE phase on `document`, so
+  // it always gets there first: no component can right-click its way around it,
+  // and the editor's own handlers still call `preventDefault` themselves without
+  // harm. It deliberately does NOT stop propagation, so KCS's custom right-click
+  // menus (canvas, layer, keyframe, lane paste) still open exactly as before.
+  // Outside the app — browser chrome — nothing changes.
+  useEffect(() => {
+    const suppressNativeContextMenu = (event: MouseEvent) => event.preventDefault();
+    document.addEventListener('contextmenu', suppressNativeContextMenu, true);
+    return () => document.removeEventListener('contextmenu', suppressNativeContextMenu, true);
+  }, []);
+
   return (
     <div className="app-container">
       <HeaderBar />

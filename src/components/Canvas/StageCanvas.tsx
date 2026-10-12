@@ -5,6 +5,8 @@ import { useEditorContextMenu } from '../../context/editorContextMenu';
 import type { CharacterPart, Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
+import { getSelectionFrameBounds } from '../../utils/selectionFrame';
+import { rotateAboutWorldPivot, selectionFrameCenterWorld, type WorldPoint } from '../../utils/rotationGesture';
 import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
 import { stackingOrder } from '../../utils/stackingOrder';
 import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
@@ -216,7 +218,7 @@ export const StageCanvas: React.FC = () => {
   const [marqueeRect, setMarqueeRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [shapeCreationStart, setShapeCreationStart] = useState<{ clientX: number; clientY: number; svgX: number; svgY: number } | null>(null);
   const [shapeCreationPreview, setShapeCreationPreview] = useState<{ type: NonNullable<typeof pendingShapeType>; bounds: ReturnType<typeof getShapeCreationBounds> } | null>(null);
-  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number; corner?: CornerId; localBounds?: CornerBounds }>({
+  const [dragStart, setDragStart] = useState<{ x: number; y: number; initialTransform: Transform; mediaCenter?: { x: number; y: number }; partId?: string; initialChildScaleX?: number; initialChildScaleY?: number; initialChildRot?: number; corner?: CornerId; localBounds?: CornerBounds; pivot?: WorldPoint }>({
     x: 0,
     y: 0,
     initialTransform: { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 },
@@ -413,11 +415,23 @@ export const StageCanvas: React.FC = () => {
     setIsDragging(true);
     setDragMode('rotate');
 
+    // ONE pivot, taken at pointerdown and held for the whole gesture: the world
+    // centre of the box the frame draws right now (the group aggregate's centre
+    // for a container). Re-deriving it from the rotating bounds on every move
+    // would let the visible centre wander while the layer turns.
+    const frameBounds = getSelectionFrameBounds(selectedPart, {
+      characterParts,
+      getComputedTransform,
+      currentFrame,
+      transform: selectedTransform,
+    });
+    const pivot = frameBounds
+      ? selectionFrameCenterWorld(selectedTransform, frameBounds)
+      : { x: selectedTransform.x, y: selectedTransform.y };
+
     const { svgX, svgY } = clientToSVG(e.clientX, e.clientY);
-    const centerX = EDITOR_CAMERA_CENTER.x + selectedTransform.x;
-    const centerY = EDITOR_CAMERA_CENTER.y + selectedTransform.y;
-    const dx = svgX - centerX;
-    const dy = svgY - centerY;
+    const dx = svgX - (EDITOR_CAMERA_CENTER.x + pivot.x);
+    const dy = svgY - (EDITOR_CAMERA_CENTER.y + pivot.y);
     const initialAngleRad = Math.atan2(dy, dx);
 
     setDragInitialAngle(initialAngleRad);
@@ -425,6 +439,7 @@ export const StageCanvas: React.FC = () => {
       x: svgX,
       y: svgY,
       initialTransform: { ...selectedTransform },
+      pivot,
     });
   };
 
@@ -564,16 +579,22 @@ export const StageCanvas: React.FC = () => {
       }
 
       if (dragMode === 'rotate') {
-        const centerX = EDITOR_CAMERA_CENTER.x + dragStart.initialTransform.x;
-        const centerY = EDITOR_CAMERA_CENTER.y + dragStart.initialTransform.y;
-        const dx = svgX - centerX;
-        const dy = svgY - centerY;
+        // The pivot was captured at pointerdown and never moves: the write
+        // authority turns the layer AND translates it so the frame's centre
+        // stays exactly where the user grabbed the rotation from.
+        const pivot = dragStart.pivot ?? { x: dragStart.initialTransform.x, y: dragStart.initialTransform.y };
+        const dx = svgX - (EDITOR_CAMERA_CENTER.x + pivot.x);
+        const dy = svgY - (EDITOR_CAMERA_CENTER.y + pivot.y);
         const currentAngleRad = Math.atan2(dy, dx);
         const deltaAngleRad = currentAngleRad - dragInitialAngle;
         const deltaAngleDeg = (deltaAngleRad * 180) / Math.PI;
 
-        const newRotation = Math.round(dragStart.initialTransform.rotation + deltaAngleDeg);
-        updateCurrentTransform({ rotation: newRotation });
+        const rotation = Math.round(dragStart.initialTransform.rotation + deltaAngleDeg);
+        updateCurrentTransform(rotateAboutWorldPivot({
+          transform: dragStart.initialTransform,
+          pivot,
+          rotation,
+        }));
       } else if (CORNER_BY_SCALE_MODE[dragMode]) {
         // ONE geometry authority: the pure corner solver keeps the diagonally
         // opposite corner fixed in world space and puts the dragged corner under

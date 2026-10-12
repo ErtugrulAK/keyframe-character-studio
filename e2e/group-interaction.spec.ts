@@ -322,3 +322,212 @@ test('E — a rotated group still anchors the opposite edge', async ({ page }) =
     await page.mouse.click(4, 4);
   }
 });
+
+/** An image layer, so the pivot cases cover mixed media and shape children. */
+const image = (id: string, name: string, x: number, y: number) => ({
+  id, name, type: 'custom_image', x, y, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1,
+  visible: true, zIndex: 1, imageUrl: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+  width: 180, height: 140, fillColor: '#22d3ee', strokeColor: '#101218',
+});
+
+/** The client centre of the drawn aggregate frame — the point the user sees turn. */
+const frameCentre = (page: Page) => page.evaluate(() => {
+  const box = document.querySelector('[data-testid="group-aggregate-box"]');
+  if (!box) throw new Error('no aggregate box');
+  const drawn = Array.from(box.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#00d2ff');
+  if (!drawn) throw new Error('no drawn frame');
+  const rect = drawn.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+});
+
+/** The rotation the gizmo currently renders. */
+const renderedRotation = async (page: Page): Promise<number> => {
+  const value = await page.getByTestId('transform-gizmo').getAttribute('transform');
+  return Number(/rotate\(([-\d.]+)\)/.exec(value ?? '')?.[1] ?? 'NaN');
+};
+
+/** Waits for one painted frame, so the sample reads committed state. */
+const nextFrame = (page: Page) => page.evaluate(() => new Promise<void>((resolve) => {
+  requestAnimationFrame(() => resolve());
+}));
+
+/**
+ * True distance between the two children's rendered centres: a rotation is a
+ * rigid motion, so it can never change.
+ */
+const childSeparation = (page: Page) => page.evaluate(() => {
+  const read = (id: string) => {
+    const node = document.querySelector(`[data-part-id="${id}"]`);
+    if (!node) throw new Error(`no layer ${id}`);
+    const rect = node.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  };
+  const a = read('a');
+  const b = read('b');
+  return Math.hypot(a.x - b.x, a.y - b.y);
+});
+
+/**
+ * Drags the rotation handle around the frame centre, sampling the drawn frame's
+ * centre on every step. Returns the worst distance the pivot travelled.
+ */
+async function dragRotation(page: Page, sweepRadians: number, steps = 14): Promise<{ worstPivotDrift: number; rotation: number }> {
+  const centre = await frameCentre(page);
+  const handle = await handleCentre(page, '#ffb700');
+  const radius = Math.hypot(handle.x - centre.x, handle.y - centre.y);
+  const startAngle = Math.atan2(handle.y - centre.y, handle.x - centre.x);
+
+  await page.mouse.move(handle.x, handle.y);
+  await page.mouse.down();
+  let worst = 0;
+  for (let step = 1; step <= steps; step += 1) {
+    const angle = startAngle + (sweepRadians * step) / steps;
+    await page.mouse.move(centre.x + Math.cos(angle) * radius, centre.y + Math.sin(angle) * radius);
+    await nextFrame(page);
+    const sample = await frameCentre(page);
+    worst = Math.max(worst, Math.hypot(sample.x - centre.x, sample.y - centre.y));
+  }
+  await page.mouse.up();
+  return { worstPivotDrift: worst, rotation: await renderedRotation(page) };
+}
+
+test('F — the rotation gesture turns the group about one fixed world pivot', async ({ page }) => {
+  // An asymmetric group: an image and a shape, neither centred on the container.
+  await seed(page, [image('a', 'Alpha', -150, -60), shape('b', 'Beta', 130, 90)]);
+  await groupPair(page);
+
+  // Move ONE child after grouping, so the group's visible centre no longer sits
+  // where its transform origin is: this is the case a pivot re-derived from the
+  // rotating box gets wrong.
+  await page.locator('.actor-node', { hasText: 'Beta' }).first().click();
+  await page.getByRole('button', { name: 'Expand TRANSFORM' }).first().click();
+  const childX = page.getByLabel('Position X').first();
+  await childX.fill('210');
+  await childX.blur();
+  await page.locator('.actor-node[data-group-container="true"]').first().click();
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(1);
+
+  const rotationBefore = await renderedRotation(page);
+  const separationBefore = await childSeparation(page);
+
+  const { worstPivotDrift, rotation } = await dragRotation(page, Math.PI * 0.8);
+
+  // The visible centre never leaves the point the drag started from — on ANY
+  // sampled frame, not just at the end.
+  expect(worstPivotDrift, 'the rotation pivot wandered during the gesture').toBeLessThanOrEqual(1);
+  // It really was a rotation...
+  expect(Math.abs(rotation - rotationBefore), 'the group did not rotate').toBeGreaterThan(20);
+  // ...and a rigid one: the layers keep their mutual distance.
+  expect(Math.abs(await childSeparation(page) - separationBefore), 'relative geometry changed').toBeLessThanOrEqual(1);
+
+  // ONE history entry: a single undo puts both the rotation and the position back.
+  await page.locator('.actor-node[data-group-container="true"]').first().click();
+  await page.keyboard.press('Control+z');
+  await nextFrame(page);
+  expect(await renderedRotation(page), 'undo did not restore the rotation').toBeCloseTo(rotationBefore, 3);
+  await page.keyboard.press('Control+Shift+z');
+  await nextFrame(page);
+  expect(await renderedRotation(page), 'redo did not restore the rotation').toBeCloseTo(rotation, 3);
+});
+
+test('G — a translated, already-rotated and nested group keeps the same pivot', async ({ page }) => {
+  await seed(page, [image('a', 'Alpha', -150, -60), shape('b', 'Beta', 130, 90), shape('c', 'Gamma', 260)]);
+  await groupPair(page);
+
+  // Translated group: the container origin is moved off the aggregate centre.
+  await page.getByRole('button', { name: 'Expand TRANSFORM' }).first().click();
+  const positionX = page.getByLabel('Position X').first();
+  await positionX.fill('90');
+  await positionX.blur();
+  // Already-rotated group: the pivot has to survive a non-zero start rotation.
+  const rotationField = page.getByLabel('Rotation', { exact: true }).first();
+  await rotationField.fill('30');
+  await rotationField.blur();
+  await expect(page.getByTestId('transform-gizmo')).toHaveAttribute('transform', /rotate\(30\)/);
+
+  const first = await dragRotation(page, -Math.PI * 0.55);
+  expect(first.worstPivotDrift, 'the pivot wandered on a translated, rotated group').toBeLessThanOrEqual(1);
+
+  // Repeated rotation: the second gesture starts from the first one's result.
+  const second = await dragRotation(page, Math.PI * 0.35);
+  expect(second.worstPivotDrift, 'the pivot wandered on a repeated rotation').toBeLessThanOrEqual(1);
+  expect(Math.abs(second.rotation - first.rotation), 'the second gesture did not rotate further').toBeGreaterThan(5);
+
+  // Nested group: group the container together with a third layer and turn the
+  // OUTER box. Its pivot is still its own aggregate centre.
+  await page.locator('.actor-node', { hasText: 'Gamma' }).first().click();
+  await page.locator('.actor-node[data-group-container="true"]').first().click({ modifiers: ['Control'] });
+  await page.getByRole('button', { name: 'Group layers', exact: true }).click();
+  await expect(page.locator('.actor-node[data-group-container="true"]')).toHaveCount(2);
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(1);
+
+  const nested = await dragRotation(page, Math.PI * 0.4);
+  expect(nested.worstPivotDrift, 'the pivot wandered on a nested group').toBeLessThanOrEqual(1);
+  expect(Math.abs(nested.rotation - second.rotation), 'the nested group did not rotate').toBeGreaterThan(5);
+});
+
+/** The drawn frame rect of every rendered gizmo, in the layer's local units. */
+const drawnFrames = (page: Page) => page.evaluate(() => Array.from(
+  document.querySelectorAll('[data-testid="transform-gizmo"]'),
+).map((gizmo) => {
+  const drawn = Array.from(gizmo.querySelectorAll('rect')).find((rect) => rect.getAttribute('stroke') === '#00d2ff');
+  if (!drawn) throw new Error('gizmo without a drawn frame');
+  return {
+    width: Number(drawn.getAttribute('width')),
+    height: Number(drawn.getAttribute('height')),
+    x: Number(drawn.getAttribute('x')),
+    y: Number(drawn.getAttribute('y')),
+  };
+}));
+
+const selectRow = (page: Page, name: string, additive = false) => page
+  .locator('.actor-node', { hasText: name })
+  .first()
+  .click(additive ? { modifiers: ['Control'] } : {});
+
+test('H — no grouped selection ever draws the container placeholder square', async ({ page }) => {
+  // Image background plus multiple image/shape children, the reported setup.
+  await seed(page, [
+    image('a', 'Alpha', -150, -60),
+    shape('b', 'Beta', 130, 90),
+    image('c', 'Gamma', -40),
+  ]);
+  await groupPair(page);
+
+  // Group selected: one children-derived aggregate frame, never a 64px square.
+  const groupFrames = await drawnFrames(page);
+  expect(groupFrames).toHaveLength(1);
+  expect(groupFrames[0].width, 'the container drew its placeholder square').toBeGreaterThan(64);
+  expect(groupFrames[0].height).toBeGreaterThan(64);
+
+  // A descendant selected: the child's TRUE bounds only.
+  await selectRow(page, 'Alpha');
+  const childFrames = await drawnFrames(page);
+  expect(childFrames).toHaveLength(1);
+  expect(childFrames[0].width).toBe(180);
+
+  // Group + one descendant: the container contributes its aggregate box, the
+  // child its own bounds — and nothing is a placeholder.
+  await page.locator('.actor-node[data-group-container="true"]').first().click();
+  await selectRow(page, 'Alpha', true);
+  const partialFrames = await drawnFrames(page);
+  expect(partialFrames).toHaveLength(2);
+  expect(partialFrames.some((frame) => frame.width > 300), 'the container box is not the children aggregate').toBe(true);
+  expect(partialFrames.every((frame) => frame.width !== 64 && frame.height !== 64)).toBe(true);
+
+  // Group + EVERY descendant: the children draw that exact envelope already, so
+  // no duplicate container rectangle is added on top of them.
+  await selectRow(page, 'Beta', true);
+  const coveredFrames = await drawnFrames(page);
+  expect(coveredFrames).toHaveLength(2);
+  expect(coveredFrames.every((frame) => frame.width !== 64 && frame.height !== 64)).toBe(true);
+  expect(coveredFrames.every((frame) => frame.width < 300), 'a duplicate container envelope was drawn').toBe(true);
+  // And no pivot marker anywhere in the multi-selection.
+  expect(await page.locator('[data-testid="transform-gizmo"] circle[fill="#00d2ff"]').count()).toBe(0);
+
+  // Selecting a nested container's own row still frames it by its children.
+  await page.locator('.actor-node[data-group-container="true"]').first().click();
+  const regrouped = await drawnFrames(page);
+  expect(regrouped).toHaveLength(1);
+  expect(regrouped[0].width).toBeGreaterThan(300);
+});

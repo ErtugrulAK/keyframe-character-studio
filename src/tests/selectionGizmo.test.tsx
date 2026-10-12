@@ -319,9 +319,91 @@ describe('SelectionGizmo — layer group frame', () => {
     expect(onScaleStart.mock.calls[0][2]).toEqual({ minX: -150, minY: -20, maxX: 150, maxY: 20 });
   });
 
-  it('falls back to the container box for a group with no layers', () => {
+  it('draws NOTHING for a group with no measurable layers (no placeholder square)', () => {
+    // R2-04: a geometryless container with nothing inside it has no frame to
+    // draw. `getPartLocalBounds`'s synthetic ±32 square is never a valid frame.
     renderGroup([], { g: identity(0) });
     expect(screen.queryByTestId('group-aggregate-box')).toBeNull();
-    expect(screen.getAllByTestId('transform-gizmo')).toHaveLength(1);
+    expect(screen.queryByTestId('transform-gizmo')).toBeNull();
+    expect(screen.queryByTestId('selection-frame-halo')).toBeNull();
+  });
+
+  it('never measures a container as a placeholder square in a multi-selection', () => {
+    // The user's scenario: a group plus its descendants selected together.
+    render(
+      <svg>
+        <SelectionGizmo
+          selectedPartIds={['g', 'a', 'b']}
+          characterParts={[imagePart('a'), imagePart('b'), groupPart()]}
+          getComputedTransform={(partId) => ({ g: identity(0), a: identity(-100), b: identity(100) }[partId] as Transform)}
+          currentFrame={0}
+          selectedPart={groupPart()}
+          selectedTransform={identity(0)}
+          tracks={[]}
+          zScale={1}
+          onRotateStart={() => {}}
+          onScaleStart={() => {}}
+          onTranslateStart={() => {}}
+        />
+      </svg>,
+    );
+
+    // The children draw the envelope; the covered container adds no duplicate.
+    expect(screen.getAllByTestId('transform-gizmo')).toHaveLength(2);
+    screen.getAllByTestId('selection-frame-halo').forEach((halo) => {
+      expect(Math.abs(Number(halo.getAttribute('width'))), 'a placeholder square was drawn').toBeGreaterThan(64);
+    });
+  });
+
+  it('draws the children-derived box for a selected container in a multi-selection', () => {
+    render(
+      <svg>
+        <SelectionGizmo
+          selectedPartIds={['g', 'a']}
+          characterParts={[imagePart('a'), imagePart('b'), groupPart()]}
+          getComputedTransform={(partId) => ({ g: identity(0), a: identity(-100), b: identity(100) }[partId] as Transform)}
+          currentFrame={0}
+          selectedPart={groupPart()}
+          selectedTransform={identity(0)}
+          tracks={[]}
+          zScale={1}
+          onRotateStart={() => {}}
+          onScaleStart={() => {}}
+          onTranslateStart={() => {}}
+        />
+      </svg>,
+    );
+
+    // `b` is not selected, so the container's aggregate box is not redundant and
+    // must be the union of a and b (-150..150), never a 64px placeholder.
+    const widths = screen.getAllByTestId('selection-frame-halo').map((halo) => Number(halo.getAttribute('width')));
+    expect(widths).toContain(300);
+    expect(widths.every((width) => width > 64)).toBe(true);
+  });
+
+  it('lets an empty nested group contribute nothing to its parent envelope', () => {
+    const nested = { ...makePart('custom_freeform'), id: 'nested', name: 'Nested', isGroup: true, parentId: 'g' };
+    render(
+      <svg>
+        <SelectionGizmo
+          selectedPartIds={['g']}
+          characterParts={[imagePart('a'), imagePart('b'), groupPart(), nested]}
+          getComputedTransform={(partId) => ({ g: identity(0), nested: identity(0), a: identity(-100), b: identity(100) }[partId] as Transform)}
+          currentFrame={0}
+          selectedPart={groupPart()}
+          selectedTransform={identity(0)}
+          tracks={[]}
+          zScale={1}
+          onRotateStart={() => {}}
+          onScaleStart={() => {}}
+          onTranslateStart={() => {}}
+        />
+      </svg>,
+    );
+
+    // -150..150 from the two images; the empty container adds no ±32 square.
+    const halo = screen.getByTestId('selection-frame-halo');
+    expect(halo.getAttribute('width')).toBe('300');
+    expect(halo.getAttribute('x')).toBe('-150');
   });
 });

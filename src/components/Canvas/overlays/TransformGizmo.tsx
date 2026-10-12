@@ -59,6 +59,12 @@ export const TransformGizmo: React.FC<TransformGizmoProps> = ({
   suppressPivotMarker = false,
   outputOrigin = EDITOR_CAMERA_CENTER,
 }) => {
+  // A geometryless container (a layer group) owns no geometry: without the
+  // aggregate box its caller measured (`utils/selectionFrame`), there is nothing
+  // to draw. Fabricating a frame out of `getPartLocalBounds`'s placeholder square
+  // is what put a stray empty selection square on the stage.
+  if (selectedPart.isGroup === true && overrideBounds === undefined) return null;
+
   const baseBounds = getPartLocalBounds(selectedPart, selectedTransform);
   // The corner drag re-expresses pointer travel through this box, so a frame
   // drawn from an override box must hand the drag the box it actually drew.

@@ -218,9 +218,12 @@ const localBoundsInContainer = (
   depth: number,
 ): PartLocalBounds | null => {
   // A group has no geometry of its own: its own children define its box, which
-  // is what makes a nested group measure as the art inside it.
+  // is what makes a nested group measure as the art inside it. A container with
+  // nothing measurable inside contributes NOTHING — falling back to its own
+  // bounds would put `getPartLocalBounds`'s placeholder square inside the parent
+  // group's aggregate envelope.
   const bounds = part.isGroup
-    ? aggregateLocalBounds(parts, part.id, worldOf, depth + 1) ?? getPartLocalBounds(part, local)
+    ? aggregateLocalBounds(parts, part.id, worldOf, depth + 1)
     : getPartLocalBounds(part, local);
   if (!bounds) return null;
   const radians = (local.rotation * Math.PI) / 180;
@@ -279,10 +282,15 @@ const layerWorldBounds = (
   part: CharacterPart,
   worldOf: (partId: string) => Transform,
   depth: number,
-): PartWorldBounds => {
-  if (part.isGroup && depth <= MAX_GROUP_DEPTH) {
-    const childBounds = getGroupChildren(parts, part.id).map((child) => layerWorldBounds(parts, child, worldOf, depth + 1));
-    if (childBounds.length > 0) return unionWorldBounds(childBounds);
+): PartWorldBounds | null => {
+  if (part.isGroup) {
+    if (depth > MAX_GROUP_DEPTH) return null;
+    // A container measures as the art inside it, never as a placeholder box of
+    // its own: an empty group has no world bounds to contribute.
+    const childBounds = getGroupChildren(parts, part.id)
+      .map((child) => layerWorldBounds(parts, child, worldOf, depth + 1))
+      .filter((item): item is PartWorldBounds => item !== null);
+    return childBounds.length > 0 ? unionWorldBounds(childBounds) : null;
   }
   return getPartWorldBounds(part, worldOf(part.id), 0, 0);
 };
@@ -363,7 +371,15 @@ export const createLayerGroup = (
   const parentId = relationshipParentId(selected[0]);
   const parentWorld = parentId ? context.worldOf(parentId) : IDENTITY;
 
-  const worldBounds = selected.map((part) => layerWorldBounds(parts, part, context.worldOf, 0));
+  // A selected container contributes the bounds of the art inside it; one with
+  // nothing measurable inside contributes nothing, so the new container is
+  // centred on real geometry only.
+  const worldBounds = selected
+    .map((part) => layerWorldBounds(parts, part, context.worldOf, 0))
+    .filter((item): item is PartWorldBounds => item !== null);
+  if (worldBounds.length === 0) {
+    return { ok: false, reason: 'Nothing measurable is selected, so there is nothing to group yet.' };
+  }
   const groupWorld: Transform = {
     x: (Math.min(...worldBounds.map((item) => item.minX)) + Math.max(...worldBounds.map((item) => item.maxX))) / 2,
     y: (Math.min(...worldBounds.map((item) => item.minY)) + Math.max(...worldBounds.map((item) => item.maxY))) / 2,

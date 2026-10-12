@@ -453,6 +453,7 @@ export const SequencerTimeline: React.FC = () => {
                 key={tmpl.id}
                 className={`timeline-seq-tab ${isActive ? 'active' : ''}`}
                 onClick={() => setActiveTemplateId(tmpl.id)}
+                onContextMenu={(event) => event.preventDefault()}
                 title={`Sequence: ${tmpl.name}`}
               >
                 {isEditing ? (

@@ -545,25 +545,38 @@ export const moveKeyframesMutator = (
 };
 
 /**
- * Delete the logical keyframe selection used by the timeline: the whole frame
- * group of whichever track holds the selected keyframe (canonical channels,
- * mask channels and the legacy composite list alike).
+ * Delete the timeline's logical keyframe selection: the whole frame group of
+ * every track that holds one of the selected keyframes (canonical channels, mask
+ * channels and the legacy composite list alike), resolved in ONE pass and
+ * applied in ONE document write — so deleting a multi-key selection is a single
+ * undo step, and a selection that spans tracks and channels deletes as a set.
+ *
+ * `deleted` reports whether ANY selected key was found. The caller keeps the
+ * key: a selection the document no longer honours must still not fall through to
+ * the layer deletion the same keypress would otherwise trigger.
  */
-export const deleteSelectedKeyframeGroupMutator = (
+export const deleteSelectedKeyframeGroupsMutator = (
   tracks: Track[],
-  selectedKeyframeId: string,
+  selectedKeyframeIds: string[],
   activeTemplateId: string,
 ): DeleteSelectedKeyframeResult => {
-  for (const track of tracks) {
-    const located = locateKeyframe(track, selectedKeyframeId, activeTemplateId);
-    if (!located) continue;
-    return {
-      deleted: true,
-      tracks: deleteFrameGroupsMutator(tracks, track.id, [located.frame], activeTemplateId),
-    };
+  const framesByTrack = new Map<string, Set<number>>();
+  for (const keyframeId of selectedKeyframeIds) {
+    for (const track of tracks) {
+      const located = locateKeyframe(track, keyframeId, activeTemplateId);
+      if (!located) continue;
+      const frames = framesByTrack.get(track.id) ?? new Set<number>();
+      frames.add(located.frame);
+      framesByTrack.set(track.id, frames);
+      break;
+    }
   }
-
-  return { tracks, deleted: false };
+  if (framesByTrack.size === 0) return { tracks, deleted: false };
+  let next = tracks;
+  framesByTrack.forEach((frames, trackId) => {
+    next = deleteFrameGroupsMutator(next, trackId, [...frames], activeTemplateId);
+  });
+  return { deleted: true, tracks: next };
 };
 
 export const updatePropertyKeyframeFrameMutator = (

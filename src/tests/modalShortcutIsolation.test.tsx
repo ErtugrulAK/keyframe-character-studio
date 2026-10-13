@@ -20,7 +20,7 @@ interface EditorShortcutSpies {
   copySelectedPart: ReturnType<typeof vi.fn>;
   pasteCopiedPart: ReturnType<typeof vi.fn>;
   duplicateSelectedPart: ReturnType<typeof vi.fn>;
-  deleteSelectedKeyframe: ReturnType<typeof vi.fn>;
+  deleteSelectedKeyframes: ReturnType<typeof vi.fn>;
   deletePart: ReturnType<typeof vi.fn>;
   setActiveTool: ReturnType<typeof vi.fn>;
   cancelShapeCreation: ReturnType<typeof vi.fn>;
@@ -33,7 +33,7 @@ const editorSpies = (): EditorShortcutSpies => ({
   copySelectedPart: vi.fn(),
   pasteCopiedPart: vi.fn(),
   duplicateSelectedPart: vi.fn(),
-  deleteSelectedKeyframe: vi.fn(() => false),
+  deleteSelectedKeyframes: vi.fn(() => false),
   deletePart: vi.fn(),
   setActiveTool: vi.fn(),
   cancelShapeCreation: vi.fn(),

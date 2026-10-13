@@ -19,7 +19,7 @@ describe('useKeyboardShortcuts Hook', () => {
       copySelectedPart: mockCopy,
       pasteCopiedPart: mockPaste,
       duplicateSelectedPart: mockDuplicate,
-      deleteSelectedKeyframe: mockDeleteSelectedKeyframe,
+      deleteSelectedKeyframes: mockDeleteSelectedKeyframe,
       deletePart: mockDelete
     }));
 
@@ -54,7 +54,7 @@ describe('useKeyboardShortcuts Hook', () => {
       copySelectedPart: vi.fn(),
       pasteCopiedPart: vi.fn(),
       duplicateSelectedPart: vi.fn(),
-      deleteSelectedKeyframe: vi.fn(() => false),
+      deleteSelectedKeyframes: vi.fn(() => false),
       deletePart: vi.fn()
     }));
 
@@ -72,7 +72,7 @@ describe('useKeyboardShortcuts Hook', () => {
   });
 
   it.each(['Backspace', 'Delete'])('deletes a selected keyframe before the selected part with %s', (key) => {
-    const deleteSelectedKeyframe = vi.fn(() => true);
+    const deleteSelectedKeyframes = vi.fn(() => true);
     const deletePart = vi.fn();
     renderHook(() => useKeyboardShortcuts({
       selectedPartId: 'part_1',
@@ -81,13 +81,13 @@ describe('useKeyboardShortcuts Hook', () => {
       copySelectedPart: vi.fn(),
       pasteCopiedPart: vi.fn(),
       duplicateSelectedPart: vi.fn(),
-      deleteSelectedKeyframe,
+      deleteSelectedKeyframes,
       deletePart,
     }));
 
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key })));
 
-    expect(deleteSelectedKeyframe).toHaveBeenCalledOnce();
+    expect(deleteSelectedKeyframes).toHaveBeenCalledOnce();
     expect(deletePart).not.toHaveBeenCalled();
   });
 
@@ -100,7 +100,7 @@ describe('useKeyboardShortcuts Hook', () => {
       copySelectedPart: vi.fn(),
       pasteCopiedPart: vi.fn(),
       duplicateSelectedPart: vi.fn(),
-      deleteSelectedKeyframe: vi.fn(() => false),
+      deleteSelectedKeyframes: vi.fn(() => false),
       deletePart,
     }));
 
@@ -110,7 +110,7 @@ describe('useKeyboardShortcuts Hook', () => {
   });
 
   it('does not delete a keyframe or part while an editable element has focus', () => {
-    const deleteSelectedKeyframe = vi.fn(() => true);
+    const deleteSelectedKeyframes = vi.fn(() => true);
     const deletePart = vi.fn();
     renderHook(() => useKeyboardShortcuts({
       selectedPartId: 'part_1',
@@ -119,7 +119,7 @@ describe('useKeyboardShortcuts Hook', () => {
       copySelectedPart: vi.fn(),
       pasteCopiedPart: vi.fn(),
       duplicateSelectedPart: vi.fn(),
-      deleteSelectedKeyframe,
+      deleteSelectedKeyframes,
       deletePart,
     }));
     const editor = document.createElement('div');
@@ -131,7 +131,7 @@ describe('useKeyboardShortcuts Hook', () => {
 
     act(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace' })));
 
-    expect(deleteSelectedKeyframe).not.toHaveBeenCalled();
+    expect(deleteSelectedKeyframes).not.toHaveBeenCalled();
     expect(deletePart).not.toHaveBeenCalled();
     editor.remove();
   });
@@ -150,7 +150,7 @@ describe('useKeyboardShortcuts Hook', () => {
       copySelectedPart: vi.fn(),
       pasteCopiedPart: vi.fn(),
       duplicateSelectedPart: vi.fn(),
-      deleteSelectedKeyframe: vi.fn(() => false),
+      deleteSelectedKeyframes: vi.fn(() => false),
       deletePart: vi.fn(),
       setActiveTool,
     }));

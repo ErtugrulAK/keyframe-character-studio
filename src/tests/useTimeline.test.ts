@@ -139,13 +139,16 @@ describe('useTimeline Hook', () => {
     expect(mockSetTracks).toHaveBeenCalled();
   });
 
-  it('deletes the selected canonical frame group in one update and clears selection', () => {
+  it('deletes every selected frame group in ONE update and clears the selection', () => {
     const channels = makeEmptyChannels();
     channels.x = [
       { id: 'x10', frame: 10, value: 10, easing: 'linear', templateId: 'Sequence' },
       { id: 'x20', frame: 20, value: 20, easing: 'linear', templateId: 'Sequence' },
     ];
-    channels.y = [{ id: 'y10', frame: 10, value: 30, easing: 'linear', templateId: 'Sequence' }];
+    channels.y = [
+      { id: 'y10', frame: 10, value: 30, easing: 'linear', templateId: 'Sequence' },
+      { id: 'y20', frame: 20, value: 40, easing: 'linear', templateId: 'Sequence' },
+    ];
     const track = { ...mockTracks[0], channels } as Track;
     const setTracks = vi.fn();
     const setSelectedKeyframeId = vi.fn();
@@ -157,7 +160,8 @@ describe('useTimeline Hook', () => {
       setSelectedPartId: mockSetSelectedPartId,
       selectedPartIds: ['p1'],
       setSelectedPartIds: mockSetSelectedPartIds,
-      selectedKeyframeId: 'x10',
+      selectedKeyframeId: 'y20',
+      selectedKeyframeIds: ['x10', 'y20'],
       setSelectedKeyframeId,
       currentFrame: 10,
       totalFrames: 60,
@@ -167,17 +171,18 @@ describe('useTimeline Hook', () => {
     }));
 
     let deleted = false;
-    act(() => { deleted = result.current.deleteSelectedKeyframe(); });
+    act(() => { deleted = result.current.deleteSelectedKeyframes(); });
 
     expect(deleted).toBe(true);
+    // ONE document write for the whole set: the frames are gone together.
     expect(setTracks).toHaveBeenCalledOnce();
     const updated = setTracks.mock.calls[0][0]([track]) as Track[];
-    expect(updated[0].channels.x.map((keyframe) => keyframe.id)).toEqual(['x20']);
+    expect(updated[0].channels.x.map((keyframe) => keyframe.id)).toEqual([]);
     expect(updated[0].channels.y).toEqual([]);
     expect(setSelectedKeyframeId).toHaveBeenCalledWith(null);
   });
 
-  it('does not mutate or clear an invalid keyframe selection', () => {
+  it('consumes the key for a selection the document no longer honours, so a layer is never deleted', () => {
     const setTracks = vi.fn();
     const setSelectedKeyframeId = vi.fn();
     const { result } = renderHook(() => useTimeline({
@@ -189,6 +194,7 @@ describe('useTimeline Hook', () => {
       selectedPartIds: ['p1'],
       setSelectedPartIds: mockSetSelectedPartIds,
       selectedKeyframeId: 'missing',
+      selectedKeyframeIds: ['missing'],
       setSelectedKeyframeId,
       currentFrame: 0,
       totalFrames: 60,
@@ -197,7 +203,35 @@ describe('useTimeline Hook', () => {
       showToast: mockShowToast,
     }));
 
-    expect(result.current.deleteSelectedKeyframe()).toBe(false);
+    expect(result.current.deleteSelectedKeyframes()).toBe(true);
+    // Nothing matched, so the same document comes back and no history is written.
+    expect(setTracks).toHaveBeenCalledOnce();
+    expect(setTracks.mock.calls[0][0](mockTracks)).toBe(mockTracks);
+    expect(setSelectedKeyframeId).toHaveBeenCalledWith(null);
+  });
+
+  it('leaves the key for other handlers when no keyframe is selected', () => {
+    const setTracks = vi.fn();
+    const setSelectedKeyframeId = vi.fn();
+    const { result } = renderHook(() => useTimeline({
+      setCharacterParts: mockSetCharacterParts,
+      tracks: mockTracks,
+      setTracks,
+      selectedPartId: 'p1',
+      setSelectedPartId: mockSetSelectedPartId,
+      selectedPartIds: ['p1'],
+      setSelectedPartIds: mockSetSelectedPartIds,
+      selectedKeyframeId: null,
+      selectedKeyframeIds: [],
+      setSelectedKeyframeId,
+      currentFrame: 0,
+      totalFrames: 60,
+      activeTemplateId: 'Sequence',
+      getComputedTransform: mockGetComputedTransform,
+      showToast: mockShowToast,
+    }));
+
+    expect(result.current.deleteSelectedKeyframes()).toBe(false);
     expect(setTracks).not.toHaveBeenCalled();
     expect(setSelectedKeyframeId).not.toHaveBeenCalled();
   });

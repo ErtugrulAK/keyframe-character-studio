@@ -28,8 +28,8 @@ import { InteractiveCubicBezierEditor } from '../Inspector/InteractiveCubicBezie
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
 import { TimeRuler } from './TimeRuler';
-import { TrackLane } from './TrackLane';
-import { CHANNEL_META, clampPanelSize, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_DEFAULT_HEIGHT, TIMELINE_MIN_HEIGHT } from './timelineConstants';
+import { TrackLane, type KeyframePress } from './TrackLane';
+import { CHANNEL_META, clampPanelSize, KEYFRAME_DRAG_THRESHOLD_PX, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_DEFAULT_HEIGHT, TIMELINE_MIN_HEIGHT } from './timelineConstants';
 import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
 import { InlineRename } from '../Shared/InlineRename';
@@ -52,6 +52,30 @@ const PLAYHEAD_POINTER_TOLERANCE_PX = 4;
 /** A rendered keyframe diamond, the only thing a marquee can hit. */
 const MARQUEE_KEYFRAME_SELECTOR = '.keyframe-diamond[data-keyframe-id], .ue-prop-diamond[data-keyframe-id]';
 
+/** A keyframe press that has been armed but has not travelled far enough yet. */
+interface KeyframePressArm {
+  ids: string[];
+  /** The frame the gesture started at: the pointer delta is measured from it. */
+  anchorFrame: number;
+  /** True when the grabbed diamond is the layer row's frame-group diamond. */
+  expandFrameGroups: boolean;
+  /** The pointer that armed the press; -1 when the event carried no identity. */
+  pointerId: number;
+  originClientX: number;
+  /** The element the press landed on: it keeps the pointer captured while dragging. */
+  captureTarget: Element | null;
+}
+
+/** The keyframe drag in flight. */
+interface KeyframeDrag {
+  ids: string[];
+  anchorFrame: number;
+  /** The frame the set currently sits at (advances by what actually moved). */
+  appliedFrame: number;
+  expandFrameGroups: boolean;
+  /** The pointer that owns the drag; -1 when the event carried no identity. */
+  pointerId: number;
+}
 
 
 export const SequencerTimeline: React.FC = () => {
@@ -193,22 +217,22 @@ export const SequencerTimeline: React.FC = () => {
   );
 
   /**
-   * The timeline's ONE keyframe drag gesture (R3-04). The moving set is captured
-   * once at press time from the one selection store, and every `mousemove` moves
-   * exactly that set by the pointer's frame delta — a marquee or Shift selection
-   * therefore moves as one set, one gesture is one history entry, and consecutive
-   * moves of one drag can never be applied twice.
+   * The timeline's ONE pointer gesture (R3-04 / R4-03). The moving set is
+   * captured once at press time from the one selection store, and every pointer
+   * move moves exactly that set by the pointer's frame delta — a marquee or Shift
+   * selection therefore moves as one set, one gesture is one history entry, and
+   * consecutive moves of one drag can never be applied twice.
+   *
+   * The gesture lives in REFS, not in render state: nothing here is painted, and
+   * a pointer arrives before React can commit. A listener registration gated on a
+   * state flag would therefore miss the very events that begin and end the
+   * gesture — including the release, which used to leave the drag attached to the
+   * pointer. The window listeners are registered once for the component's
+   * lifetime and read the live record, so a release can never be missed.
    */
-  const [keyframeDrag, setKeyframeDrag] = useState<{
-    ids: string[];
-    /** The frame the gesture started at: the pointer delta is measured from it. */
-    anchorFrame: number;
-    /** The frame the set currently sits at (advances by what actually moved). */
-    appliedFrame: number;
-    /** True when the grabbed diamond is the layer row's frame-group diamond. */
-    expandFrameGroups: boolean;
-  } | null>(null);
-  const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
+  const keyframeDragRef = useRef<KeyframeDrag | null>(null);
+  const pendingKeyframePressRef = useRef<KeyframePressArm | null>(null);
+  const scrubPointerRef = useRef<number | null>(null);
   const [hoveredKf, setHoveredKf] = useState<{ frame: number; label: string } | null>(null);
 
   const FRAME_WIDTH = timelineZoom;
@@ -228,34 +252,40 @@ export const SequencerTimeline: React.FC = () => {
   );
 
   /**
-   * A keyframe press starts the timeline's ONE drag gesture and captures the
-   * moving set: the whole selection when the press lands on a keyframe the user
-   * already selected (that is what makes a marquee/Shift selection movable as a
-   * set), and just that keyframe otherwise. The gesture is batched, so the whole
-   * drag collapses into a single undo step.
+   * A keyframe press ARMS the timeline gesture: the moving set is resolved now
+   * (the whole selection when the press lands on a keyframe the user already
+   * selected — that is what makes a marquee/Shift selection movable as a set, and
+   * just that keyframe otherwise), and the transaction and the drag begin once
+   * the pointer crosses the drag threshold. The pressed element keeps the pointer
+   * captured for the whole gesture, so the release is delivered to it wherever
+   * the pointer goes — including outside the window.
    *
    * `expandFrameGroups` carries the unit that was grabbed: the layer row's
    * diamond stands for its whole frame group, a channel diamond for its own key.
    */
-  const beginKeyframeDrag = (
-    drag: { keyframeId: string; additive: boolean },
-    expandFrameGroups: boolean,
-  ) => {
+  const beginKeyframePress = (press: KeyframePress, expandFrameGroups: boolean) => {
     const templateId = activeTemplateId || 'Sequence';
     let anchorFrame: number | null = null;
     for (const track of tracks) {
-      const located = locateKeyframe(track, drag.keyframeId, templateId);
+      const located = locateKeyframe(track, press.keyframeId, templateId);
       if (located) {
         anchorFrame = located.frame;
         break;
       }
     }
     if (anchorFrame === null) return;
-    const ids = drag.additive || selectedKeyframeIds.includes(drag.keyframeId)
-      ? selectedKeyframeIds
-      : [drag.keyframeId];
-    startBatchInteraction();
-    setKeyframeDrag({ ids, anchorFrame, appliedFrame: anchorFrame, expandFrameGroups });
+    pendingKeyframePressRef.current = {
+      ids: press.additive || selectedKeyframeIds.includes(press.keyframeId)
+        ? selectedKeyframeIds
+        : [press.keyframeId],
+      anchorFrame,
+      expandFrameGroups,
+      // A pointer event that carries no identity (a synthetic or fallback event)
+      // owns the gesture unconditionally; -1 is that "no identity" sentinel.
+      pointerId: Number.isFinite(press.pointerId) ? press.pointerId : -1,
+      originClientX: press.clientX,
+      captureTarget: press.captureTarget,
+    };
   };
 
   /**
@@ -445,51 +475,131 @@ export const SequencerTimeline: React.FC = () => {
     }
   }, []);
 
-  const handleRulerMouseDown = (e: React.MouseEvent) => {
-    setIsScrubbing(true);
+  /**
+   * A press on the ruler starts the scrub. The ruler captures the pointer, so
+   * the playhead keeps following it even when the pointer leaves the window, and
+   * the gesture ends on the release (or on a cancelled capture) rather than on
+   * the next click.
+   */
+  const handleRulerPointerDown = (e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    scrubPointerRef.current = Number.isFinite(e.pointerId) ? e.pointerId : -1;
+    e.currentTarget.setPointerCapture?.(e.pointerId);
     setCurrentFrame(getFrameFromMouse(e.clientX));
   };
 
-  const handleMouseMove = useCallback(
-    (e: MouseEvent) => {
-      if (isScrubbing) {
-        setCurrentFrame(getFrameFromMouse(e.clientX));
-      } else if (keyframeDrag) {
-        // R3-04: ONE drag gesture moves the WHOLE captured set by the pointer's
-        // frame delta. `getFrameFromMouse` clamps to [0, totalFrames], the
-        // mutator clamps again and stops at the first frame it would overwrite,
-        // and `appliedFrame` advances by what actually moved — so a clamped drag
-        // stays pointer-exact instead of drifting.
-        const targetFrame = getFrameFromMouse(e.clientX);
-        const step = targetFrame - keyframeDrag.appliedFrame;
-        if (step !== 0) {
-          const applied = moveSelectedKeyframes(keyframeDrag.ids, step, keyframeDrag.expandFrameGroups);
-          if (applied !== 0) {
-            setKeyframeDrag({ ...keyframeDrag, appliedFrame: keyframeDrag.appliedFrame + applied });
-          }
-        }
-      }
-    },
-    [isScrubbing, keyframeDrag, getFrameFromMouse, setCurrentFrame, moveSelectedKeyframes]
-  );
-
-  const handleMouseUp = useCallback(() => {
-    setIsScrubbing(false);
-    setKeyframeDrag(null);
-    // One gesture = one history entry (idempotent: the global mouseup also ends a batch).
+  /**
+   * The pointer was released, cancelled, or its capture was lost: the gesture is
+   * over AT ONCE. Moving the pointer afterwards must change nothing, and the
+   * whole gesture stays one history entry (idempotent: the global mouseup also
+   * ends a batch, and a second end has nothing left to commit).
+   */
+  const endTimelineGesture = useCallback(() => {
+    keyframeDragRef.current = null;
+    pendingKeyframePressRef.current = null;
+    scrubPointerRef.current = null;
     endBatchInteraction();
   }, [endBatchInteraction]);
 
-  useEffect(() => {
-    if (isScrubbing || keyframeDrag) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
+  /**
+   * The pointer moved. Three stages share this one handler: the scrub, the
+   * keyframe drag in flight, and the press that is still only a click.
+   *
+   * A move that arrives with no button held proves the release was never
+   * delivered (the pointer left the window, or the browser handed the gesture to
+   * a native drag): the gesture ends where it stands instead of following a
+   * pointer that was already lifted.
+   */
+  const handleGestureMove = useCallback((e: PointerEvent) => {
+    const scrubPointer = scrubPointerRef.current;
+    if (scrubPointer !== null) {
+      // A second pointer is a different interaction: it may not scrub the frame.
+      if (scrubPointer >= 0 && e.pointerId !== undefined && e.pointerId !== scrubPointer) return;
+      if (e.buttons === 0) {
+        endTimelineGesture();
+        return;
+      }
+      setCurrentFrame(getFrameFromMouse(e.clientX));
+      return;
     }
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
+
+    const drag = keyframeDragRef.current;
+    if (drag) {
+      // A second pointer is a different interaction: it may not move these keys.
+      if (drag.pointerId >= 0 && e.pointerId !== undefined && e.pointerId !== drag.pointerId) return;
+      if (e.buttons === 0) {
+        endTimelineGesture();
+        return;
+      }
+      // R3-04: ONE drag gesture moves the WHOLE captured set by the pointer's
+      // frame delta. `getFrameFromMouse` clamps to [0, totalFrames], the
+      // mutator clamps again and stops at the first frame it would overwrite,
+      // and `appliedFrame` advances by what actually moved — so a clamped drag
+      // stays pointer-exact instead of drifting.
+      const step = getFrameFromMouse(e.clientX) - drag.appliedFrame;
+      if (step === 0) return;
+      const applied = moveSelectedKeyframes(drag.ids, step, drag.expandFrameGroups);
+      if (applied !== 0) {
+        keyframeDragRef.current = { ...drag, appliedFrame: drag.appliedFrame + applied };
+      }
+      return;
+    }
+
+    const press = pendingKeyframePressRef.current;
+    if (!press) return;
+    // A second pointer is a different interaction: it may not start this drag.
+    if (press.pointerId >= 0 && e.pointerId !== undefined && e.pointerId !== press.pointerId) return;
+    if (e.buttons === 0) {
+      pendingKeyframePressRef.current = null;
+      return;
+    }
+    // Below the threshold the press is still a click: no move, no transaction.
+    if (Math.abs(e.clientX - press.originClientX) <= KEYFRAME_DRAG_THRESHOLD_PX) return;
+    pendingKeyframePressRef.current = null;
+    // The gesture is real now: it owns the pointer from here on, and its whole
+    // travel commits as ONE history entry.
+    startBatchInteraction();
+    if (press.pointerId >= 0) press.captureTarget?.setPointerCapture?.(press.pointerId);
+    const applied = moveSelectedKeyframes(
+      press.ids,
+      getFrameFromMouse(e.clientX) - press.anchorFrame,
+      press.expandFrameGroups,
+    );
+    keyframeDragRef.current = {
+      ids: press.ids,
+      anchorFrame: press.anchorFrame,
+      appliedFrame: press.anchorFrame + applied,
+      expandFrameGroups: press.expandFrameGroups,
+      pointerId: press.pointerId,
     };
-  }, [isScrubbing, keyframeDrag, handleMouseMove, handleMouseUp]);
+  }, [endTimelineGesture, getFrameFromMouse, moveSelectedKeyframes, setCurrentFrame, startBatchInteraction]);
+
+  const gestureMoveRef = useRef(handleGestureMove);
+  const gestureEndRef = useRef(endTimelineGesture);
+  // Latest-value mirrors: the window listeners are registered once, so they must
+  // call the current handlers without re-registering on every render.
+  // oxlint-disable-next-line react/refs
+  gestureMoveRef.current = handleGestureMove;
+  // oxlint-disable-next-line react/refs
+  gestureEndRef.current = endTimelineGesture;
+
+  useEffect(() => {
+    const handleMove = (event: PointerEvent) => gestureMoveRef.current(event);
+    const handleEnd = () => gestureEndRef.current();
+    // Registered for the component's lifetime, and never gated on a state flag:
+    // the release that ends a gesture is the one event that must not be missed.
+    // `lostpointercapture` ends it safely when the browser takes the capture back.
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleEnd);
+    window.addEventListener('pointercancel', handleEnd);
+    window.addEventListener('lostpointercapture', handleEnd);
+    return () => {
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleEnd);
+      window.removeEventListener('pointercancel', handleEnd);
+      window.removeEventListener('lostpointercapture', handleEnd);
+    };
+  }, []);
 
   /**
    * Timeline workspace sizing — ONE source of truth.
@@ -996,7 +1106,7 @@ export const SequencerTimeline: React.FC = () => {
             frameNumbers={frameNumbers}
             frameWidth={FRAME_WIDTH}
             totalFrames={totalFrames}
-            onMouseDown={handleRulerMouseDown}
+            onPointerDown={handleRulerPointerDown}
           />
 
           {/* Playhead */}
@@ -1022,8 +1132,8 @@ export const SequencerTimeline: React.FC = () => {
                 onToggleKeyframe={(id) => selectKeyframes([id], 'toggle')}
                 onSelectPart={handleSelectPart}
                 onSetFrame={setCurrentFrame}
-                onStartDragKf={(drag) => beginKeyframeDrag(drag, true)}
-                onStartDragPKf={(drag) => beginKeyframeDrag(drag, false)}
+                onStartDragKf={(press) => beginKeyframePress(press, true)}
+                onStartDragPKf={(press) => beginKeyframePress(press, false)}
                 onHoverKf={setHoveredKf}
                 onDeleteKeyframe={deleteKeyframe}
                 onDeletePropertyKeyframe={deletePropertyKeyframe}

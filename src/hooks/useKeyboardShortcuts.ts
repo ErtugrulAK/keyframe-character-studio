@@ -9,7 +9,7 @@ interface UseKeyboardShortcutsOptions {
   copySelectedPart: () => void;
   pasteCopiedPart: () => void;
   duplicateSelectedPart: () => void;
-  deleteSelectedKeyframe: () => boolean;
+  deleteSelectedKeyframes: () => boolean;
   deletePart: (partId: string) => void;
   setActiveTool?: (tool: ToolType) => void;
   cancelShapeCreation?: () => void;
@@ -23,7 +23,7 @@ export const useKeyboardShortcuts = ({
   copySelectedPart,
   pasteCopiedPart,
   duplicateSelectedPart,
-  deleteSelectedKeyframe,
+  deleteSelectedKeyframes,
   deletePart,
   setActiveTool,
   cancelShapeCreation,
@@ -92,7 +92,7 @@ export const useKeyboardShortcuts = ({
           duplicateSelectedPart();
         }
       } else if (e.key === 'Backspace' || e.key === 'Delete') {
-        if (deleteSelectedKeyframe()) {
+        if (deleteSelectedKeyframes()) {
           e.preventDefault();
           return;
         }
@@ -105,5 +105,5 @@ export const useKeyboardShortcuts = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPartId, deletePart, deleteSelectedKeyframe, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, setActiveTool, cancelShapeCreation, exitBooleanOperandEditing]);
+  }, [selectedPartId, deletePart, deleteSelectedKeyframes, undo, redo, copySelectedPart, pasteCopiedPart, duplicateSelectedPart, setActiveTool, cancelShapeCreation, exitBooleanOperandEditing]);
 };

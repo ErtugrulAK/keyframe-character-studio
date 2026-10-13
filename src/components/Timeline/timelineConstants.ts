@@ -21,6 +21,14 @@ export const TRACK_ROW_HEIGHT = 30;   // parent track row
 export const CHANNEL_ROW_HEIGHT = 24; // sub-channel row
 
 /**
+ * A press on a keyframe diamond that travels less than this is a click, not a
+ * drag (the same rule the marquee uses). The press is armed on the way down and
+ * only becomes a moving gesture once the pointer crosses it, so a click never
+ * opens a history transaction.
+ */
+export const KEYFRAME_DRAG_THRESHOLD_PX = 3;
+
+/**
  * Timeline workspace sizing. These are the ONLY bounds of the timeline panel:
  * the height resizer and the outliner column divider both clamp through
  * `clampPanelSize`, so a drag can never leave the workspace in a size the other

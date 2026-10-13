@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe } from '../../types/animator';
 import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
-import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
+import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
 import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
 
@@ -21,12 +21,14 @@ interface TrackLaneProps {
   onSelectPart: (partId: string, shiftKey: boolean) => void;
   onSetFrame: (frame: number) => void;
   /**
-   * A keyframe drag started. The handler resolves the moving set itself: a press
-   * on an already-selected keyframe keeps the selection, so the whole selected
-   * set moves as one (`selectedKeyframeIds` is the only selection store).
+   * A keyframe press armed a drag. The handler resolves the moving set itself: a
+   * press on an already-selected keyframe keeps the selection, so the whole
+   * selected set moves as one (`selectedKeyframeIds` is the only selection
+   * store). The pointer identity and the pressed element travel with the press so
+   * the timeline can own the gesture with pointer capture.
    */
-  onStartDragKf: (drag: { trackId: string; keyframeId: string; additive: boolean }) => void;
-  onStartDragPKf: (drag: { trackId: string; channel: AnimationChannel; keyframeId: string; additive: boolean }) => void;
+  onStartDragKf: (drag: KeyframePress) => void;
+  onStartDragPKf: (drag: KeyframePress & { channel: AnimationChannel }) => void;
   onHoverKf: (hover: { frame: number; label: string } | null) => void;
   onDeleteKeyframe: (trackId: string, keyframeId: string) => void;
   onDeletePropertyKeyframe: (trackId: string, channel: AnimationChannel, keyframeId: string) => void;
@@ -52,8 +54,21 @@ interface TrackLaneProps {
  */
 const LANE_DIAMOND_SELECTOR = '.keyframe-diamond, .ue-prop-diamond';
 
-/** A press that travels less than this is a click, not a drag (the marquee rule). */
-const KEYFRAME_DRAG_THRESHOLD_PX = 3;
+/**
+ * The press that arms a keyframe drag: which key was grabbed, on which track,
+ * with which multi-select modifier, and which pointer owns the gesture. The
+ * pressed element travels with it so the timeline can capture that pointer —
+ * every later pointer event of the gesture is then delivered to the element the
+ * user actually pressed, wherever the pointer travels.
+ */
+export interface KeyframePress {
+  trackId: string;
+  keyframeId: string;
+  additive: boolean;
+  pointerId: number;
+  clientX: number;
+  captureTarget: Element | null;
+}
 
 /**
  * The modifier that means "fold this key into the selection instead of
@@ -195,7 +210,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   const keyPressOriginRef = useRef<number | null>(null);
 
   /**
-   * A key click either replaces the keyframe selection or folds this single key
+   * A keyframe click either replaces the keyframe selection or folds this single key
    * into it, according to the multi-select modifier — unless the press was the
    * end of a DRAG. A drag moves the selection it started from, so the click the
    * browser fires afterwards must not collapse that set to the key under the
@@ -210,15 +225,16 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   };
 
   /**
-   * A keyframe press starts a drag. A key that is already part of the selection
+   * A keyframe press arms the drag. A key that is already part of the selection
    * keeps it — that is what lets a marquee/Shift selection be moved as one set —
-   * while a press on an unselected key selects exactly that key.
+   * while a press on an unselected key selects exactly that key. The press itself
+   * writes no animation: the timeline turns it into a gesture (and one history
+   * transaction) only once the pointer travels past the drag threshold.
    */
-  const beginKeyframePress = (event: React.MouseEvent, id: string): boolean => {
+  const beginKeyframePress = (event: React.PointerEvent, id: string): void => {
     const additive = isAdditiveSelection(event);
     keyPressOriginRef.current = event.clientX;
     if (!additive && !selectedKeyframeIdSet.has(id)) onSelectKeyframe(id);
-    return additive;
   };
 
   /**
@@ -271,10 +287,18 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               data-keyframe-id={keyframe.id}
               style={{ left: `${keyframe.frame * frameWidth}px`, color: meta.color } as React.CSSProperties}
               onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, keyframe.id, isAdditiveSelection(e)); onSetFrame(keyframe.frame); }}
-              onMouseDown={(e) => {
+              onPointerDown={(e) => {
                 e.stopPropagation();
-                const additive = beginKeyframePress(e, keyframe.id);
-                onStartDragPKf({ trackId: track.id, channel: ch, keyframeId: keyframe.id, additive });
+                beginKeyframePress(e, keyframe.id);
+                onStartDragPKf({
+                  trackId: track.id,
+                  channel: ch,
+                  keyframeId: keyframe.id,
+                  additive: isAdditiveSelection(e),
+                  pointerId: e.pointerId,
+                  clientX: e.clientX,
+                  captureTarget: e.currentTarget,
+                });
                 onSetFrame(keyframe.frame);
               }}
               onMouseEnter={() => onHoverKf({ frame: keyframe.frame, label: `${meta.label}: ${valueLabel}` })}
@@ -344,13 +368,20 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               data-keyframe-id={representativeId}
               style={{ left: `${group.frame * frameWidth}px`, color: track.color }}
               onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, representativeId, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(group.frame); }}
-              onMouseDown={(e) => {
+              onPointerDown={(e) => {
                 // Canonical frame-group diamonds drag the WHOLE frame group (all
                 // channel keyframes at this frame stay together), or the whole
                 // selected set when this diamond is part of one (R3-04).
                 e.stopPropagation();
-                const additive = beginKeyframePress(e, representativeId);
-                onStartDragKf({ trackId: track.id, keyframeId: representativeId, additive });
+                beginKeyframePress(e, representativeId);
+                onStartDragKf({
+                  trackId: track.id,
+                  keyframeId: representativeId,
+                  additive: isAdditiveSelection(e),
+                  pointerId: e.pointerId,
+                  clientX: e.clientX,
+                  captureTarget: e.currentTarget,
+                });
               }}
               onMouseEnter={() => onHoverKf({ frame: group.frame, label: `${track.name} | ${group.channels.join(',')} | ${group.easing}` })}
               onMouseLeave={() => onHoverKf(null)}
@@ -374,10 +405,17 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               data-keyframe-id={kf.id}
               style={{ left: `${kf.frame * frameWidth}px`, color: track.color }}
               onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, kf.id, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(kf.frame); }}
-              onMouseDown={(e) => {
+              onPointerDown={(e) => {
                 e.stopPropagation();
-                const additive = beginKeyframePress(e, kf.id);
-                onStartDragKf({ trackId: track.id, keyframeId: kf.id, additive });
+                beginKeyframePress(e, kf.id);
+                onStartDragKf({
+                  trackId: track.id,
+                  keyframeId: kf.id,
+                  additive: isAdditiveSelection(e),
+                  pointerId: e.pointerId,
+                  clientX: e.clientX,
+                  captureTarget: e.currentTarget,
+                });
               }}
               onMouseEnter={() => onHoverKf({ frame: kf.frame, label: `${track.name} | ${kf.easing}` })}
               onMouseLeave={() => onHoverKf(null)}

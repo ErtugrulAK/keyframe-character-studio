@@ -17,7 +17,7 @@ import {
   updatePropertyKeyframeFrameMutator,
   updatePropertyKeyframeEasingMutator,
   deletePropertyKeyframeMutator,
-  deleteSelectedKeyframeGroupMutator,
+  deleteSelectedKeyframeGroupsMutator,
   addMaskPathKeyframeMutator,
   updateMaskPathKeyframeValueMutator,
   updateMaskPathKeyframeFrameMutator,
@@ -41,6 +41,8 @@ interface UseTimelineOptions {
   booleanOperandEditingGroupId?: string | null;
   setBooleanOperandEditingGroupId?: (id: string | null) => void;
   selectedKeyframeId: string | null;
+  /** Every selected keyframe; the delete acts on the whole set. */
+  selectedKeyframeIds: string[];
   setSelectedKeyframeId: (id: string | null) => void;
   currentFrame: number;
   totalFrames: number;
@@ -62,6 +64,7 @@ export const useTimeline = ({
   booleanOperandEditingGroupId,
   setBooleanOperandEditingGroupId = () => {},
   selectedKeyframeId,
+  selectedKeyframeIds,
   setSelectedKeyframeId,
   currentFrame,
   totalFrames,
@@ -250,16 +253,25 @@ export const useTimeline = ({
     setTracks((prev) => deletePropertyKeyframeMutator(prev, trackId, channel, keyframeId));
   };
 
-  const deleteSelectedKeyframe = useCallback((): boolean => {
-    if (!selectedKeyframeId) return false;
+  /**
+   * Delete the timeline's whole keyframe selection — every frame group the
+   * selected keys belong to — in ONE document write, so a multi-key deletion is
+   * a single undo step and Undo restores the exact set. The whole set is resolved
+   * against the previous document in one reducer pass, which is what makes the
+   * deletion atomic however many tracks and channels the selection spans.
+   *
+   * The selection itself decides whether the key is consumed: while keyframes are
+   * selected, Delete never falls through to deleting the selected LAYER, even
+   * when the selected keys are staler than the document (a set that matches
+   * nothing writes the same array back, so React records no history entry).
+   */
+  const deleteSelectedKeyframes = useCallback((): boolean => {
+    if (selectedKeyframeIds.length === 0) return false;
     const templateId = activeTemplateId || 'Sequence';
-    const current = deleteSelectedKeyframeGroupMutator(tracks, selectedKeyframeId, templateId);
-    if (!current.deleted) return false;
-
-    setTracks((prev) => deleteSelectedKeyframeGroupMutator(prev, selectedKeyframeId, templateId).tracks);
+    setTracks((prev) => deleteSelectedKeyframeGroupsMutator(prev, selectedKeyframeIds, templateId).tracks);
     setSelectedKeyframeId(null);
     return true;
-  }, [activeTemplateId, selectedKeyframeId, setSelectedKeyframeId, setTracks, tracks]);
+  }, [activeTemplateId, selectedKeyframeIds, setSelectedKeyframeId, setTracks]);
 
   const addMaskPathKeyframe = (
     trackId: string,
@@ -427,7 +439,7 @@ export const useTimeline = ({
     updateMaskPathKeyframeFrame,
     deleteMaskPathKeyframe,
     authorMaskPath,
-    deleteSelectedKeyframe,
+    deleteSelectedKeyframes,
     updatePropertyKeyframeFrame,
     updatePropertyKeyframeEasing,
     applyMotionTransition,

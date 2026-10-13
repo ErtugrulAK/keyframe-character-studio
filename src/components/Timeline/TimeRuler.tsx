@@ -4,15 +4,15 @@ interface TimeRulerProps {
   frameNumbers: number[];
   frameWidth: number;
   totalFrames: number;
-  onMouseDown: (e: React.MouseEvent) => void;
+  onPointerDown: (e: React.PointerEvent) => void;
 }
 
 /**
  * Horizontal time ruler with adaptive label/mark density based on zoom.
  */
-export const TimeRuler: React.FC<TimeRulerProps> = ({ frameNumbers, frameWidth, totalFrames, onMouseDown }) => {
+export const TimeRuler: React.FC<TimeRulerProps> = ({ frameNumbers, frameWidth, totalFrames, onPointerDown }) => {
   return (
-    <div className="time-ruler" onMouseDown={onMouseDown} style={{ width: `${(totalFrames + 30) * frameWidth}px`, minWidth: '100%' }}>
+    <div className="time-ruler" onPointerDown={onPointerDown} style={{ width: `${(totalFrames + 30) * frameWidth}px`, minWidth: '100%' }}>
       {frameNumbers.map((frame) => {
         const labelStep =
           frameWidth >= 20 ? 5 :

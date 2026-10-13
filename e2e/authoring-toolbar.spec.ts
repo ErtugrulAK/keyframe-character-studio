@@ -84,6 +84,25 @@ test('the toolbar is a compact strip that drives the shared tool and grid state'
   // toolbar is gone, so there is exactly one place a tool or view control lives.
   await expect(page.locator('.viewport-tools-overlay')).toHaveCount(0);
 
+  // R4-10 — the command bands are announced in one order, and Bind/Unbind is no
+  // longer one of the strip's controls (the bond model itself is untouched).
+  await expect(bar.getByRole('group')).toHaveCount(6);
+  for (const name of ['Canvas tools', 'Create', 'Boolean operations', 'Layer group', 'Arrange', 'View controls']) {
+    await expect(bar.getByRole('group', { name })).toBeVisible();
+  }
+  await expect(page.getByRole('button', { name: 'Bind selected layers' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Unbind selected layer' })).toHaveCount(0);
+
+  // Every command shares one hitbox and one optical glyph size.
+  const hitboxes = await bar.getByRole('button').evaluateAll((buttons) => buttons.map((button) => {
+    const rect = button.getBoundingClientRect();
+    const glyph = button.querySelector('svg');
+    const glyphRect = glyph?.getBoundingClientRect();
+    return { w: Math.round(rect.width), h: Math.round(rect.height), gw: Math.round(glyphRect?.width ?? 0), gh: Math.round(glyphRect?.height ?? 0) };
+  }));
+  expect(new Set(hitboxes.map((box) => `${box.w}x${box.h}`)).size).toBe(1);
+  expect(new Set(hitboxes.map((box) => `${box.gw}x${box.gh}`)).size).toBe(1);
+
   await toolbarButton(page, 'Pan').click();
   await expect(toolbarButton(page, 'Pan')).toHaveAttribute('aria-pressed', 'true');
 

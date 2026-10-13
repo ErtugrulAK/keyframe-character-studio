@@ -226,9 +226,25 @@ describe('AuthoringToolbar', () => {
     expect(screen.getByRole('button', { name: 'Boolean Exclude' })).not.toBeDisabled();
   });
 
+  it('presents the command bands in one order and offers no bond control', () => {
+    animatorCtx.characterParts = [shape('a')];
+    setSelection(['a'], 'a');
+    renderToolbar();
+
+    // The bands are announced, so the strip's structure is readable and testable
+    // rather than implied by pixels.
+    const bands = ['Canvas tools', 'Create', 'Boolean operations', 'Layer group', 'Arrange', 'View controls'];
+    expect(screen.getAllByRole('group').map((group) => group.getAttribute('aria-label'))).toEqual(bands);
+
+    // R4-10 — Bind/Unbind left the toolbar. The bond model is untouched, so the
+    // strip simply has no control for it.
+    expect(screen.queryByRole('button', { name: 'Bind selected layers' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Unbind selected layer' })).toBeNull();
+  });
+
   it('never fires a disabled action', () => {
     renderToolbar();
-    const disabled = ['Boolean Union', 'Boolean Subtract', 'Dissolve Boolean', 'Group layers', 'Ungroup layers', 'Bind selected layers', 'Unbind selected layer', 'Bring forward', 'Send backward'];
+    const disabled = ['Boolean Union', 'Boolean Subtract', 'Dissolve Boolean', 'Group layers', 'Ungroup layers', 'Bring forward', 'Send backward'];
     for (const name of disabled) {
       fireEvent.click(screen.getByRole('button', { name }));
     }

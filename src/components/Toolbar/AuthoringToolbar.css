@@ -11,6 +11,12 @@
  * rather than decoration, and an active state that marks the current tool
  * without shouting. Unavailable actions stay on screen and stay legible as
  * disabled, so the strip never reflows around the selection.
+ *
+ * R4-10 — the bands are the command groups a motion editor reads left to right
+ * (selection/navigation, creation, Boolean, grouping, arrange, view). The hitbox
+ * takes its size from the shared control-height token so it cannot drift from
+ * the rest of the editor's controls, and the glyph size is declared once, for
+ * every band.
  */
 .authoring-toolbar {
   display: flex;
@@ -38,24 +44,33 @@
 .authoring-toolbar-divider {
   flex: 0 0 auto;
   width: 1px;
-  height: 18px;
-  margin: 0 2px;
-  background: var(--kcs-border-subtle);
+  height: 20px;
+  margin: 0 3px;
+  background: var(--kcs-border-default);
 }
 
+/* One hitbox for every command in the strip and one optical icon size for the
+   glyph inside it: the size is declared once here instead of at each call site,
+   so a new control cannot drift from the rest of the band. */
 .authoring-toolbar-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: var(--kcs-control-sm);
+  height: var(--kcs-control-sm);
   padding: 0;
   border: 1px solid transparent;
   border-radius: var(--kcs-radius-control);
   background: transparent;
   color: var(--kcs-text-secondary);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  transition: background var(--kcs-motion-fast) ease, color var(--kcs-motion-fast) ease, border-color var(--kcs-motion-fast) ease;
+}
+
+.authoring-toolbar-button > svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
 }
 
 .authoring-toolbar-button:hover:not(:disabled) {

@@ -7,7 +7,6 @@ import {
   Grid,
   Group,
   Hand,
-  Link2,
   MousePointer2,
   PenTool,
   Square,
@@ -20,7 +19,6 @@ import {
 import { useAnimator } from '../../context/useAnimator';
 import { useBooleanAuthoring } from '../../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../../hooks/useLayerGrouping';
-import { usePartBindingAuthoring } from '../../hooks/usePartBindingAuthoring';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { BooleanOperationIcon } from '../Inspector/BooleanOperationIcon';
 import type { BooleanOperation } from '../../utils/booleanGeometry';
@@ -52,15 +50,24 @@ const dispatchViewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') =>
  * The top authoring toolbar: the strip that carries the tools, creation entry,
  * Boolean, grouping, arrange and view actions the editor already has.
  *
- * Every control reads and writes the authority the rest of the app uses —
- * `activeTool`/`showGrid` from the animator context, shape creation through
- * `armShapeCreation`, camera commands through the shared command channel, the
- * shared z-index write path, and the shared Boolean, layer-group and layer-bond
- * authorities.
- * It owns no document state of its own, so a view-only tool cannot touch the
- * project, and it holds no second copy of any command. Paint is deliberately NOT
- * here: fill and stroke are authored in the Inspector's Appearance section,
- * which is their one home.
+ * The strip is organised as the command bands a motion editor reads left to
+ * right — selection/navigation, creation, Boolean, grouping, arrange, view — and
+ * each band is one `role="group"`, so the structure is announced, not just
+ * painted. Every control reads and writes the authority the rest of the app
+ * uses: `activeTool`/`showGrid` from the animator context, shape creation
+ * through `armShapeCreation`, camera commands through the shared command
+ * channel, the shared z-index write path, and the shared Boolean and layer-group
+ * authorities. It owns no document state of its own, so a view-only tool cannot
+ * touch the project, and it holds no second copy of any command.
+ *
+ * Paint is deliberately NOT here: fill and stroke are authored in the
+ * Inspector's Appearance section, which is their one home.
+ *
+ * Layer bonding (Bind/Unbind) is deliberately NOT here either: the strip no
+ * longer offers it. The bond model itself is untouched — a document that
+ * carries `boundPartIds` still loads, still moves the bonded layers together,
+ * and still round-trips on export (`utils/partBinding` remains the one bond
+ * authority and `usePartBindingAuthoring` remains its authoring surface).
  *
  * State-dependent actions (Boolean, grouping, arrange) stay on screen and are
  * disabled when the current selection cannot use them, so the strip never
@@ -87,7 +94,6 @@ export const AuthoringToolbar: React.FC = () => {
   } = useBooleanAuthoring();
   const { handleZIndexChange } = usePartPropertyAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
-  const { canBind, bindBlockReason, canRelease, bindSelection, releaseBinding } = usePartBindingAuthoring();
 
   const toolButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedPart = characterParts.find((part) => part.id === selectedPartId);
@@ -130,7 +136,7 @@ export const AuthoringToolbar: React.FC = () => {
           onClick={() => setActiveTool('select')}
           onKeyDown={handleToolKeyDown}
         >
-          <MousePointer2 size={14} />
+          <MousePointer2 />
         </button>
         <button
           ref={(element) => { toolButtonRefs.current[1] = element; }}
@@ -143,7 +149,7 @@ export const AuthoringToolbar: React.FC = () => {
           onClick={() => setActiveTool('pan')}
           onKeyDown={handleToolKeyDown}
         >
-          <Hand size={14} />
+          <Hand />
         </button>
       </div>
 
@@ -157,7 +163,7 @@ export const AuthoringToolbar: React.FC = () => {
           title="Add a rectangle, then drag on the stage to place it"
           onClick={() => armShapeCreation('custom_rect', 'Rectangle')}
         >
-          <Square size={14} />
+          <Square />
         </button>
         <button
           type="button"
@@ -166,7 +172,7 @@ export const AuthoringToolbar: React.FC = () => {
           title="Add a circle, then drag on the stage to place it"
           onClick={() => armShapeCreation('custom_circle', 'Circle')}
         >
-          <Circle size={14} />
+          <Circle />
         </button>
         <button
           type="button"
@@ -175,17 +181,17 @@ export const AuthoringToolbar: React.FC = () => {
           title="Add a text layer"
           onClick={() => addCustomPart('custom_text', 'Text')}
         >
-          <Type size={14} />
+          <Type />
         </button>
         <button
           type="button"
           className={`authoring-toolbar-button${penActive ? ' active' : ''}`}
           aria-label="Pen"
           aria-pressed={penActive}
-          title={penActive ? 'Stop drawing a path' : 'Draw a freeform path'}
+          title={penActive ? 'Stop drawing a path (Esc)' : 'Draw a freeform path'}
           onClick={() => setActiveTool(penActive ? 'select' : 'freeform_draw')}
         >
-          <PenTool size={14} />
+          <PenTool />
         </button>
       </div>
 
@@ -210,7 +216,7 @@ export const AuthoringToolbar: React.FC = () => {
                   : `${label} needs two compatible layers`}
               onClick={() => (selectedBooleanGroup ? updateBooleanOperation(operation) : createBooleanGroup(operation))}
             >
-              <BooleanOperationIcon operation={operation} size={14} />
+              <BooleanOperationIcon operation={operation} />
             </button>
           );
         })}
@@ -224,7 +230,7 @@ export const AuthoringToolbar: React.FC = () => {
             : 'Dissolve needs a Boolean group'}
           onClick={dissolveBooleanGroup}
         >
-          <Unlink size={14} />
+          <Unlink />
         </button>
       </div>
 
@@ -239,7 +245,7 @@ export const AuthoringToolbar: React.FC = () => {
           disabled={!canGroup}
           onClick={groupSelection}
         >
-          <Group size={14} />
+          <Group />
         </button>
         <button
           type="button"
@@ -251,41 +257,17 @@ export const AuthoringToolbar: React.FC = () => {
           disabled={!selectedGroup}
           onClick={ungroupSelection}
         >
-          <Ungroup size={14} />
+          <Ungroup />
         </button>
       </div>
 
       <span className="authoring-toolbar-divider" aria-hidden="true" />
 
       {/*
-        R3-12 — Bind/Bond is a structural command, so it lives here with the other
-        authoring operations instead of in the Details inspector.
+        Arrange writes the layer's z-order through the shared z-index authoring
+        path — the same write the Inspector's layer order uses. Paint order is
+        the truth here: a higher z-index paints later and ends up on top.
       */}
-      <div className="authoring-toolbar-group" role="group" aria-label="Layer bond">
-        <button
-          type="button"
-          className="authoring-toolbar-button"
-          aria-label="Bind selected layers"
-          title={bindBlockReason ?? 'Bond the selected layers: only position follows'}
-          disabled={!canBind}
-          onClick={bindSelection}
-        >
-          <Link2 size={14} />
-        </button>
-        <button
-          type="button"
-          className="authoring-toolbar-button"
-          aria-label="Unbind selected layer"
-          title={canRelease ? 'Release the bond on this layer' : 'Unbind needs a bonded layer'}
-          disabled={!canRelease}
-          onClick={releaseBinding}
-        >
-          <Unlink size={14} />
-        </button>
-      </div>
-
-      <span className="authoring-toolbar-divider" aria-hidden="true" />
-
       <div className="authoring-toolbar-group" role="group" aria-label="Arrange">
         <button
           type="button"
@@ -295,7 +277,7 @@ export const AuthoringToolbar: React.FC = () => {
           disabled={!selectedPart}
           onClick={() => { if (selectedPart) handleZIndexChange(selectedPart.zIndex + 1); }}
         >
-          <ArrowUp size={14} />
+          <ArrowUp />
         </button>
         <button
           type="button"
@@ -305,7 +287,7 @@ export const AuthoringToolbar: React.FC = () => {
           disabled={!selectedPart}
           onClick={() => { if (selectedPart) handleZIndexChange(Math.max(1, selectedPart.zIndex - 1)); }}
         >
-          <ArrowDown size={14} />
+          <ArrowDown />
         </button>
       </div>
 
@@ -320,16 +302,16 @@ export const AuthoringToolbar: React.FC = () => {
           title={showGrid ? 'Hide grid' : 'Show grid'}
           onClick={() => setShowGrid(!showGrid)}
         >
-          <Grid size={14} />
+          <Grid />
         </button>
         <button
           type="button"
           className="authoring-toolbar-button"
           aria-label="Zoom out"
-          title="Zoom out"
+          title="Zoom out (-)"
           onClick={() => dispatchViewportCommand('zoom-out')}
         >
-          <ZoomOut size={14} />
+          <ZoomOut />
         </button>
         <button
           type="button"
@@ -338,16 +320,16 @@ export const AuthoringToolbar: React.FC = () => {
           title="Reset view position"
           onClick={() => dispatchViewportCommand('reset-view')}
         >
-          <Compass size={14} />
+          <Compass />
         </button>
         <button
           type="button"
           className="authoring-toolbar-button"
           aria-label="Zoom in"
-          title="Zoom in"
+          title="Zoom in (+)"
           onClick={() => dispatchViewportCommand('zoom-in')}
         >
-          <ZoomIn size={14} />
+          <ZoomIn />
         </button>
       </div>
     </div>

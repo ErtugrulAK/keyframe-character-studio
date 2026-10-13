@@ -1,10 +1,16 @@
 import { test, expect, type Page } from '@playwright/test';
 
 /**
- * Layer bonding: two selected layers move together (position only). The drag
+ * Layer bonding: two bonded layers move together (position only). The drag
  * path is the one the user asked about, so this drives a real stage drag and
- * checks the persisted document — for a shape bonded to a text, and for the
- * release that makes them independent again.
+ * checks the persisted document — for a shape bonded to a text, and for a
+ * bonded pair of texts.
+ *
+ * R4-10 removed the toolbar's Bind/Unbind controls, so the bond is authored
+ * into the seeded document rather than through the strip. The MODEL is
+ * unchanged and still has to hold: a document that carries `boundPartIds`
+ * loads, moves as one, keeps the bond through the move, and still round-trips
+ * through the autosave/export path.
  */
 const STORAGE_KEY = 'SEQUENCER_STUDIO_PRO_V5';
 
@@ -66,21 +72,20 @@ async function dragPart(page: Page, selector: string, dx: number, dy: number): P
   await page.mouse.up();
 }
 
-test('a shape and a text bonded together move as one, and unbinding separates them', async ({ page }) => {
+test('a bonded shape and text authored in the document move as one', async ({ page }) => {
   await seed(page, [
-    layer('box', 'Box', 'custom_box', -300, 0),
-    layer('label', 'Label', 'custom_text', 300, 0, { textValue: 'Hello', fontSize: 90, fontFamily: 'Outfit' }),
+    layer('box', 'Box', 'custom_box', -300, 0, { boundPartIds: ['label'] }),
+    layer('label', 'Label', 'custom_text', 300, 0, { textValue: 'Hello', fontSize: 90, fontFamily: 'Outfit', boundPartIds: ['box'] }),
   ]);
 
-  // Both selected: the toolbar's bond action is enabled (Bind/Bond is a
-  // structural command and lives on the authoring toolbar, not in Details).
-  await page.locator('.actor-node', { hasText: 'Box' }).first().click();
-  await page.locator('.actor-node', { hasText: 'Label' }).first().click({ modifiers: ['Control'] });
-  const bindButton = page.getByRole('button', { name: 'Bind selected layers' });
-  await expect(bindButton).toBeEnabled();
-  await bindButton.click();
-  await saveNow(page);
+  // R4-10 — the toolbar no longer offers Bind/Unbind, so the strip carries no
+  // bond control at all. The data path is unchanged: a document that carries
+  // `boundPartIds` loads and keeps its bond.
+  await expect(page.getByRole('button', { name: 'Bind selected layers' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Unbind selected layer' })).toHaveCount(0);
 
+  await page.locator('.actor-node', { hasText: 'Box' }).first().click();
+  await saveNow(page);
   const bound = await storedLayers(page);
   expect(bound.find((entry) => entry.id === 'box')?.boundPartIds).toEqual(['label']);
   expect(bound.find((entry) => entry.id === 'label')?.boundPartIds).toEqual(['box']);
@@ -88,7 +93,6 @@ test('a shape and a text bonded together move as one, and unbinding separates th
   const boxBefore = positionOf(bound, 'box');
   const labelBefore = positionOf(bound, 'label');
 
-  await page.locator('.actor-node', { hasText: 'Box' }).first().click();
   await dragPart(page, '.stage-svg [data-part-id="box"]', 120, 60);
   await saveNow(page);
 
@@ -98,40 +102,20 @@ test('a shape and a text bonded together move as one, and unbinding separates th
   const deltaX = boxAfter.x! - boxBefore.x!;
   const deltaY = boxAfter.y! - boxBefore.y!;
   expect(Math.abs(deltaX)).toBeGreaterThan(10);
+  // Position follows, and the bond itself is untouched by the move.
   expect(labelAfter.x).toBeCloseTo(labelBefore.x! + deltaX, 0);
   expect(labelAfter.y).toBeCloseTo(labelBefore.y! + deltaY, 0);
-
-  // Release: the toolbar offers the bond release for the selected bonded layer.
-  await page.locator('.actor-node', { hasText: 'Label' }).first().click();
-  const unbindButton = page.getByRole('button', { name: 'Unbind selected layer' });
-  await expect(unbindButton).toBeEnabled();
-  await unbindButton.click();
-  await saveNow(page);
-
-  const released = await storedLayers(page);
-  expect(released.find((entry) => entry.id === 'label')?.boundPartIds).toBeUndefined();
-  const releasedLabel = positionOf(released, 'label');
-
-  await page.locator('.actor-node', { hasText: 'Box' }).first().click();
-  await dragPart(page, '.stage-svg [data-part-id="box"]', -80, 40);
-  await saveNow(page);
-
-  const independent = await storedLayers(page);
-  expect(positionOf(independent, 'label')).toEqual(releasedLabel);
+  expect(afterDrag.find((entry) => entry.id === 'label')?.boundPartIds).toEqual(['box']);
 });
 
-test('two text layers can be bonded as well', async ({ page }) => {
+test('two text layers bonded in the document move together as well', async ({ page }) => {
   await seed(page, [
-    layer('one', 'Title', 'custom_text', -250, 0, { textValue: 'A', fontSize: 80, fontFamily: 'Outfit' }),
-    layer('two', 'Subtitle', 'custom_text', 250, 40, { textValue: 'B', fontSize: 60, fontFamily: 'Outfit' }),
+    layer('one', 'Title', 'custom_text', -250, 0, { textValue: 'A', fontSize: 80, fontFamily: 'Outfit', boundPartIds: ['two'] }),
+    layer('two', 'Subtitle', 'custom_text', 250, 40, { textValue: 'B', fontSize: 60, fontFamily: 'Outfit', boundPartIds: ['one'] }),
   ]);
 
   await page.locator('.actor-node', { hasText: 'Title' }).first().click();
-  await page.locator('.actor-node', { hasText: 'Subtitle' }).first().click({ modifiers: ['Control'] });
-  await page.getByRole('button', { name: 'Bind selected layers' }).click();
   await saveNow(page);
-
-  await page.locator('.actor-node', { hasText: 'Title' }).first().click();
   const before = await storedLayers(page);
   await dragPart(page, '.stage-svg [data-part-id="one"]', 60, -30);
   await saveNow(page);

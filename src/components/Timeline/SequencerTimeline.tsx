@@ -1195,6 +1195,8 @@ export const SequencerTimeline: React.FC = () => {
           onChangeKeyframeHandles={(keyframeId, patch) => {
             if (selectedTrack && graphChannel) updatePropertyKeyframeTemporalHandles(selectedTrack.id, graphChannel as AnimationChannel, keyframeId, patch);
           }}
+          onBatchStart={startBatchInteraction}
+          onBatchEnd={endBatchInteraction}
           initialModalOpen={true}
           onCloseModal={() => setIsCurveModalOpen(false)}
         />

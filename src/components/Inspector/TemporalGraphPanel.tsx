@@ -12,6 +12,9 @@ interface TemporalGraphPanelProps {
   mode: 'value' | 'speed';
   onChangeKeyframeValue?: (keyframeId: string, value: number) => void;
   onChangeKeyframeHandles?: (keyframeId: string, patch: TemporalHandlePatch) => void;
+  /** Opens/closes ONE undo entry around a continuous value drag. */
+  onInteractionStart?: () => void;
+  onInteractionEnd?: () => void;
 }
 
 interface GraphPoint {
@@ -29,6 +32,8 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
   mode,
   onChangeKeyframeValue,
   onChangeKeyframeHandles,
+  onInteractionStart,
+  onInteractionEnd,
 }) => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const dragDomainRef = useRef<{ min: number; max: number } | null>(null);
@@ -97,6 +102,17 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
     onChangeKeyframeValue(keyframe.id, keyframe.value + (event.key === 'ArrowUp' ? step : -step));
   };
 
+  /**
+   * A dragged point is one continuous gesture: the transaction opens on the press
+   * and closes when the point is released, leaves the graph, or the pointer is
+   * cancelled — a drag across hundreds of values stays one undo entry.
+   */
+  const endPointDrag = () => {
+    setDraggingId(null);
+    dragDomainRef.current = null;
+    onInteractionEnd?.();
+  };
+
   const headingId = `temporal-graph-title-${mode}`;
   const helperId = `temporal-graph-helper-${mode}`;
 
@@ -125,14 +141,10 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
           aria-labelledby={headingId}
           aria-describedby={helperId}
           onMouseMove={handleMouseMove}
-          onMouseUp={() => {
-            setDraggingId(null);
-            dragDomainRef.current = null;
-          }}
-          onMouseLeave={() => {
-            setDraggingId(null);
-            dragDomainRef.current = null;
-          }}
+          onMouseUp={endPointDrag}
+          onMouseLeave={endPointDrag}
+          onPointerCancel={endPointDrag}
+          onLostPointerCapture={endPointDrag}
           style={{ width: '100%', maxWidth: WIDTH, background: '#111827', border: '1px solid #293548', borderRadius: 4 }}
         >
           <line x1={PAD} y1={HEIGHT - PAD} x2={WIDTH - PAD} y2={HEIGHT - PAD} stroke="#334155" aria-hidden="true" />
@@ -155,6 +167,7 @@ export const TemporalGraphPanel: React.FC<TemporalGraphPanelProps> = ({
                   event.stopPropagation();
                   dragDomainRef.current = { min: minValue, max: maxValue };
                   setDraggingId(keyframe.id);
+                  onInteractionStart?.();
                 }}
                 aria-label={`Keyframe at frame ${keyframe.frame}, value ${keyframe.value.toFixed(2)}, use the Up and Down arrow keys to change it`}
                 onKeyDown={(event) => handleKeyframeKeyDown(event, keyframe)}

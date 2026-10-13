@@ -74,8 +74,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         <StyleAppearanceSection
           selectedPart={selectedPart}
           onPartPropChange={handlePartPropChange}
-          onColorInteractionStart={onColorInteractionStart}
-          onColorInteractionEnd={onColorInteractionEnd}
+          onInteractionStart={onColorInteractionStart}
+          onInteractionEnd={onColorInteractionEnd}
         />
       )}
       {!isTextBearing && (
@@ -101,6 +101,8 @@ export const StyleTab: React.FC<StyleTabProps> = ({
         selectedPart={selectedPart}
         characterParts={characterParts}
         onPartPropChange={handlePartPropChange}
+        onInteractionStart={onColorInteractionStart}
+        onInteractionEnd={onColorInteractionEnd}
         currentFrame={currentFrame}
         onAddMaskKeyframe={onAddMaskKeyframe}
         onAddMaskPathKeyframe={onAddMaskPathKeyframe}

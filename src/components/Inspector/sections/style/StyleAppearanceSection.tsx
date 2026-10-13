@@ -14,8 +14,9 @@ import { StyleEffectsSection } from './StyleEffectsSection';
 interface StyleAppearanceSectionProps {
   selectedPart: CharacterPart;
   onPartPropChange: (key: keyof CharacterPart, value: unknown) => void;
-  onColorInteractionStart?: () => void;
-  onColorInteractionEnd?: () => void;
+  /** Opens/closes ONE undo entry around a continuous pointer gesture in this section. */
+  onInteractionStart?: () => void;
+  onInteractionEnd?: () => void;
 }
 
 const ColorControl: React.FC<{
@@ -45,10 +46,21 @@ const ColorControl: React.FC<{
 export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
   selectedPart,
   onPartPropChange,
-  onColorInteractionStart,
-  onColorInteractionEnd,
+  onInteractionStart,
+  onInteractionEnd,
 }) => {
   const strokeAlignment = toStrokeAlignmentControlValue(selectedPart.strokeAlignment);
+  /**
+   * A slider is one continuous gesture: the transaction opens when the pointer
+   * goes down and closes when it comes up, so the whole drag is one undo entry
+   * while a keyboard step stays a discrete edit of its own.
+   */
+  const rangeGesture = {
+    onPointerDown: onInteractionStart,
+    onPointerUp: onInteractionEnd,
+    onPointerCancel: onInteractionEnd,
+    onBlur: onInteractionEnd,
+  };
   const hasCornerRadiusControl =
     selectedPart.type === 'custom_rect' ||
     selectedPart.type === 'custom_box' ||
@@ -70,6 +82,7 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           <input
             id="appearance-corner-radius"
             className="appearance-range"
+            {...rangeGesture}
             type="range"
             min={0}
             max={40}
@@ -90,8 +103,8 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           fallback="#00d2ff"
           onColorChange={(value) => onPartPropChange('fillColor', value)}
           onAlphaChange={(value) => onPartPropChange('fillOpacity', value)}
-          onInteractionStart={onColorInteractionStart}
-          onInteractionEnd={onColorInteractionEnd}
+          onInteractionStart={onInteractionStart}
+          onInteractionEnd={onInteractionEnd}
         />
       </div>
 
@@ -107,8 +120,8 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
           fallback="#101218"
           onColorChange={(value) => onPartPropChange('strokeColor', value)}
           onAlphaChange={(value) => onPartPropChange('strokeOpacity', value)}
-          onInteractionStart={onColorInteractionStart}
-          onInteractionEnd={onColorInteractionEnd}
+          onInteractionStart={onInteractionStart}
+          onInteractionEnd={onInteractionEnd}
         />
         <div className="stroke-inline-fields">
           <div className="appearance-field">
@@ -128,8 +141,8 @@ export const StyleAppearanceSection: React.FC<StyleAppearanceSectionProps> = ({
         <StyleEffectsSection
           selectedPart={selectedPart}
           onPartPropChange={onPartPropChange}
-          onColorInteractionStart={onColorInteractionStart}
-          onColorInteractionEnd={onColorInteractionEnd}
+          onColorInteractionStart={onInteractionStart}
+          onColorInteractionEnd={onInteractionEnd}
           embedded
         />
       </div>

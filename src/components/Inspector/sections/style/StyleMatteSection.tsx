@@ -7,6 +7,9 @@ import { resolveMatteMode, normalizeFeather, isMatteEligible, normalizeStrength,
 import type { MatteGradientStop } from '../../../../utils/matte';
 import { StyleCard } from './StyleCard';
 interface StyleMatteSectionProps {
+  /** Opens/closes ONE undo entry around a continuous pointer gesture in this section. */
+  onInteractionStart?: () => void;
+  onInteractionEnd?: () => void;
   selectedPart: CharacterPart;
   characterParts: CharacterPart[];
   onPartPropChange: (key: keyof CharacterPart, value: any) => void;
@@ -48,10 +51,23 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
   selectedPart,
   characterParts,
   onPartPropChange,
+  onInteractionStart,
+  onInteractionEnd,
   onAddMaskKeyframe,
   onAddMaskPathKeyframe,
   onChangeMaskPath,
 }) => {
+  /**
+   * A slider is one continuous gesture: the transaction opens when the pointer
+   * goes down and closes when it comes up, so the whole drag is one undo entry
+   * while a keyboard step stays a discrete edit of its own.
+   */
+  const rangeGesture = {
+    onPointerDown: onInteractionStart,
+    onPointerUp: onInteractionEnd,
+    onPointerCancel: onInteractionEnd,
+    onBlur: onInteractionEnd,
+  };
   const matte = selectedPart.matte;
   const authoredAngle = normalizeGradientAngle(matte?.gradient?.angle) ?? 0;
   const angleSourceKey = `${selectedPart.id}:${String(matte?.gradient?.angle)}`;
@@ -377,6 +393,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 <span style={{ color: '#00d2ff', fontWeight: 800, opacity: featherDisabled ? 0.45 : 1 }}>{featherValue}px</span>
               </label>
               <input
+                {...rangeGesture}
                 type="range"
                 aria-label="Feather"
                 min={0}
@@ -395,6 +412,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 <span style={{ color: '#00d2ff', fontWeight: 800, opacity: strengthDisabled ? 0.45 : 1 }}>{strengthValue}%</span>
               </label>
               <input
+                {...rangeGesture}
                 type="range"
                 aria-label="Strength"
                 min={0}
@@ -443,6 +461,7 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                   <span style={{ color: '#00d2ff', fontWeight: 800, opacity: gradientDisabled ? 0.45 : 1 }}>{angleValue}°</span>
                 </label>
                 <input
+                  {...rangeGesture}
                   type="range"
                   aria-label="Gradient angle"
                   min={0}
@@ -599,6 +618,8 @@ export const StyleMatteSection: React.FC<StyleMatteSectionProps> = ({
                 )}
               </div>
               <BezierPathEditor
+                onInteractionStart={onInteractionStart}
+                onInteractionEnd={onInteractionEnd}
                 path={activeLayerMask.path}
                 onChange={(path) => onChangeMaskPath
                   ? onChangeMaskPath(activeLayerMask.id, path)

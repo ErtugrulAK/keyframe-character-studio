@@ -24,6 +24,9 @@ interface InteractiveCubicBezierEditorProps {
     keyframeId: string,
     patch: { bezierIn?: TemporalHandle; bezierOut?: TemporalHandle },
   ) => void;
+  /** Opens/closes ONE undo entry around a continuous curve or graph drag. */
+  onBatchStart?: () => void;
+  onBatchEnd?: () => void;
 }
 
 const PRESET_BEZIERS: { label: string; points: [number, number, number, number] }[] = [
@@ -50,6 +53,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
   inactiveReason = null,
   onChangeKeyframeValue,
   onChangeKeyframeHandles,
+  onBatchStart,
+  onBatchEnd,
 }) => {
   const [copied, setCopied] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(initialModalOpen);
@@ -201,6 +206,7 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
     draggingPointRef.current = null;
     draggingPointerIdRef.current = null;
     setDraggingPoint(null);
+    onBatchEnd?.();
     suppressBackdropClickRef.current = true;
     window.setTimeout(() => {
       suppressBackdropClickRef.current = false;
@@ -245,7 +251,10 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
       draggingPointRef.current = pointNum;
       draggingPointerIdRef.current = event.pointerId;
       setDraggingPoint(pointNum);
-      event.currentTarget.setPointerCapture(event.pointerId);
+      event.currentTarget.setPointerCapture?.(event.pointerId);
+      // The whole sweep is one undo entry; the release (or the capture being
+      // taken back) closes it.
+      onBatchStart?.();
     };
 
     const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
@@ -585,6 +594,8 @@ export const InteractiveCubicBezierEditor: React.FC<InteractiveCubicBezierEditor
                   mode={graphMode}
                   onChangeKeyframeValue={onChangeKeyframeValue}
                   onChangeKeyframeHandles={onChangeKeyframeHandles}
+                  onInteractionStart={onBatchStart}
+                  onInteractionEnd={onBatchEnd}
                 />
               </div>
             )}

@@ -13,7 +13,9 @@
   font-family: var(--font-mono);
 }
 
-/* ── RESIZER (panel height, dragged by its top edge) ── */
+/* ── RESIZER (panel height, dragged by its top edge) ──
+   R3-03: the divider is a compact visible line inside a generous INVISIBLE hit
+   area (the 7px bar), and its live state is the KCS accent — never a neon glow. */
 .timeline-resizer-bar {
   height: 7px;
   width: 100%;
@@ -28,36 +30,39 @@
   z-index: 100;
   transition: background 0.15s ease;
 }
-.timeline-resizer-bar:hover { background: rgba(99, 102, 241, 0.25); }
+.timeline-resizer-bar:hover { background: rgba(148, 163, 184, 0.08); }
 .resizer-handle-pill {
   width: 42px; height: 3px;
-  background: var(--border-color);
+  background: var(--kcs-border-default);
   border-radius: var(--radius-xs);
-  transition: all 0.15s;
+  transition: background 0.15s ease, width 0.15s ease;
 }
 .timeline-resizer-bar:hover .resizer-handle-pill,
 .sequencer-timeline.is-resizing-rows .resizer-handle-pill {
-  background: var(--accent-indigo);
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+  background: var(--kcs-accent);
   width: 60px;
 }
 
-/* ── COLUMN RESIZER (outliner width) ── */
+/* ── COLUMN RESIZER (outliner width) ──
+   A 6px hit area around a 2px line: the border box keeps the target generous
+   while the painted line stays compact, and hover/active only strengthen the
+   accent — no filled bar, no glow. */
 .timeline-column-resizer {
   flex: 0 0 6px;
   width: 6px;
   align-self: stretch;
   cursor: col-resize;
   background: transparent;
-  border-left: 1px solid transparent;
-  border-right: 1px solid transparent;
+  border-left: 2px solid transparent;
+  border-right: 2px solid transparent;
+  /* The painted line is the padding box (2px); the borders stay hit area. */
+  background-clip: padding-box;
   z-index: 21;
   transition: background 0.15s ease;
 }
 .timeline-column-resizer:hover,
 .timeline-column-resizer.active {
-  background: var(--accent-indigo);
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.45);
+  background: var(--kcs-accent);
 }
 
 /*
@@ -70,39 +75,32 @@ body.kcs-resizing-rows * { cursor: row-resize !important; user-select: none; }
 body.kcs-resizing-columns,
 body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; }
 
-/* ── WORKSPACE COLLAPSE CONTROL ── */
-.timeline-workspace-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  flex: none;
+/* ── WORKSPACE COLLAPSE HANDLE ──
+   R3-01: the collapse control is an EDGE handle, not a labelled button. It is
+   attached to the panel's own top edge — the boundary the resize drag owns — and
+   is the horizontal mirror of the side panels' show/hide handle: same thin pill,
+   same panel-elevated surface, a bare chevron inside. It costs the tabs bar no
+   width, so the sequence tabs never reflow around it, and it stays on screen
+   while collapsed, which is what makes the collapsed strip a restore affordance. */
+.sidebar-handle.timeline-edge-toggle {
+  position: absolute;
+  top: 0;
+  right: 12px;
+  transform: translateY(-50%);
+  width: 46px;
+  height: 20px;
+  border-radius: var(--kcs-radius-control);
+  z-index: 120;
 }
-.timeline-collapse-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  height: 24px;
-  padding: 0 var(--space-xs);
-  background: var(--bg-dark);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  font-family: var(--font-main);
-  font-size: var(--font-size-caption);
-  font-weight: 700;
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-  cursor: pointer;
+
+.sidebar-handle.timeline-edge-toggle:hover {
+  background: var(--kcs-hover);
+  color: var(--kcs-text-primary);
 }
-.timeline-collapse-btn:hover {
-  background: var(--bg-panel-hover);
-  border-color: var(--accent-teal);
-  color: var(--text-primary);
-}
-.timeline-collapse-btn:focus-visible {
-  outline: 2px solid var(--kcs-border-focus);
-  outline-offset: 2px;
+
+.sidebar-handle.timeline-edge-toggle:focus-visible {
+  outline: 2px solid var(--kcs-focus);
+  outline-offset: 1px;
 }
 
 /*
@@ -663,34 +661,38 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   text-overflow: ellipsis;
 }
 
-.ue-kf-count {
-  font-size: 9px;
-  font-family: var(--font-main);
-  color: #4b5563;
-  background: #1a1d24;
-  min-width: 16px;
-  padding: 0 4px;
-  line-height: 14px;
-  text-align: center;
-  border-radius: var(--radius-xs);
-  border: 1px solid var(--border-color);
+/*
+ * R3-07 — the layer row's controls are a compact strip against the right edge.
+ * The row's own click target is the layer row itself, so the strip must never
+ * reach the middle of the row: with the six controls at 20px and a 1px gap the
+ * strip is 125px wide inside the 280px default column, which leaves the row's
+ * centre free for selection (a click there still selects the layer).
+ */
+.ue-track-controls {
+  display: flex;
+  gap: 1px;
   flex-shrink: 0;
 }
 
-.ue-track-controls {
-  display: flex;
-  gap: var(--space-3xs);
-  flex-shrink: 0;
+/* R3-07 — the layer's keyframe navigation. A borderless icon button in the same
+   row as the + action; the disabled pair is the "nothing on that side" state. */
+.track-icon-btn:disabled,
+.track-add-kf-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed;
+}
+.track-icon-btn:disabled:hover {
+  color: #4b5563;
 }
 
 .track-icon-btn {
-  width: 22px; height: 22px;
+  width: 20px; height: 20px;
   color: #4b5563;
 }
 .track-icon-btn:hover { color: #d1d5db; }
 
 .track-add-kf-btn {
-  width: 22px; height: 22px;
+  width: 20px; height: 20px;
   color: #4b5563;
   transition: color 0.15s;
 }
@@ -698,13 +700,14 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 
 /* ── CHANNEL GROUP ── */
 /* One nesting rail under the layer row: every property row hangs off the layer
-   it belongs to instead of floating as a top-level timeline row. */
+   it belongs to instead of floating as a top-level timeline row. The rail is a
+   whisper — it groups, it never competes with the layer row. */
 .ue-channel-group {
   display: flex;
   flex-direction: column;
   background: #0b0d10;
   margin-left: 10px;
-  border-left: 1px solid rgba(122, 157, 171, 0.22);
+  border-left: 1px solid var(--kcs-border-subtle);
 }
 
 .ue-transform-header {
@@ -712,7 +715,7 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   align-items: center;
   gap: var(--space-2xs);
   padding: 0 var(--space-xs) 0 var(--space-2xs);
-  border-bottom: 1px solid rgba(122, 157, 171, 0.1);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.07);
   background: transparent;
   cursor: pointer;
   user-select: none;
@@ -739,23 +742,29 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   color: #5c7180;
 }
 
-/* One nesting rail under the layer row: every property row hangs off the layer
-   it belongs to instead of floating as a top-level timeline row. */
-
+/*
+ * R3-05 — one step of indentation per level, on both sides of the tree:
+ *   L1 Transform / Trim Path header
+ *   L2 Position / Scale header and the leaf properties (Rotation, Opacity)
+ *   L3 the children of a named parent (X, Y, Start, End, Offset)
+ * `.ue-header-indent` shifts a NESTED header one step in, so a header and the
+ * leaves it owns always line up.
+ */
 .ue-subgroup-header {
   display: flex;
   align-items: center;
   gap: var(--space-2xs);
-  padding: 0 var(--space-xs) 0 var(--space-md);
+  padding: 0 var(--space-xs) 0 var(--space-2xs);
   border-bottom: none;
   background: transparent;
   cursor: pointer;
   user-select: none;
 }
 .ue-subgroup-header:hover { background: #12151d; }
-/* A header with no disclosure state (Trim Path) is not a control. */
-.ue-subgroup-header-static { cursor: default; }
-.ue-subgroup-header-static:hover { background: transparent; }
+.ue-header-indent {
+  width: 12px;
+  flex-shrink: 0;
+}
 .ue-subgroup-label {
   font-size: var(--font-size-caption);
   font-weight: 600;
@@ -763,11 +772,12 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   letter-spacing: 0.4px;
 }
 
+/* One chevron for every disclosure row — the layer row included. */
 .ue-sub-chevron {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #5c7180;
+  color: #6b7280;
   width: 14px;
 }
 
@@ -789,8 +799,8 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   width: 34px;
   flex-shrink: 0;
 }
-.ue-channel-indent-sm {
-  width: 20px;
+.ue-channel-indent-deep {
+  width: 56px;
   flex-shrink: 0;
 }
 

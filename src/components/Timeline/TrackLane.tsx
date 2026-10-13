@@ -127,9 +127,9 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
 }) => {
   const isTrackExpanded = track.expanded === true;
   const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
-  const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
+  const isPositionExpanded = isGroupExpanded(`${track.id}_position`, true);
   const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
-  const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
+  const isTrimPathExpanded = isGroupExpanded(`${track.id}_trim`, true);
 
   // M27 — minimal keyframe context menu (right-click on any keyframe).
   // The menu exposes "Duplicate Keyframes" (whole frame-group, 27A helper)
@@ -395,7 +395,11 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
         })}
       </div>
 
-      {/* ── CHANNEL LANES MATCHING SUB-GROUPS ── */}
+      {/* ── CHANNEL LANES MATCHING THE PROPERTY TREE ── */}
+      {/* R3-05: one lane per property row, in tree order — the tree row and its
+          lane are always the same band, and the hierarchy is the same on both
+          sides (Transform > Position/Rotation/Scale/Opacity, then Trim Path as
+          its own peer group). */}
       {isTrackExpanded && (
         <div className="ue-channel-lanes">
           {/* Transform Header Lane Spacer */}
@@ -403,13 +407,12 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
 
           {isTransformExpanded && (
             <>
-              {/* Location Header Lane Spacer */}
+              {/* Position Header Lane Spacer */}
               <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
-              {isLocationExpanded && ['x', 'y'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
+              {isPositionExpanded && ['x', 'y'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
 
-              {/* Rotation Header Lane Spacer */}
-              <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
-              {isRotationExpanded && ['rotation'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
+              {/* Rotation is a leaf of the tree, so it owns exactly one lane. */}
+              {renderChannelLane('rotation')}
 
               {/* Scale Sub-Group */}
               <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
@@ -424,12 +427,12 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               {/* V6 Layer Mask channels share the track and evaluator. */}
               {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
               {Object.keys(track.maskPathChannels ?? {}).map((channel) => renderChannelLane(channel as LayerMaskPathChannel))}
-
-              {/* Trim Path channel lanes */}
-              <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
-              {['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
             </>
           )}
+
+          {/* Trim Path is a peer of Transform in the tree, so its lanes are too. */}
+          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
+          {isTrimPathExpanded && ['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
         </div>
       )}
 

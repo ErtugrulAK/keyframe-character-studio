@@ -54,6 +54,7 @@ const renderBroadcastFrame = (
     totalFrames={30}
     onSelect={() => {}}
     onStartTranslateDrag={() => {}}
+    onDrillIn={() => {}}
     tracks={tracks}
     customPresets={[]}
     liveStuntsState={{}}
@@ -74,6 +75,7 @@ describe('StagePartLayers — named sequence broadcast evaluation', () => {
       totalFrames: 30,
       onSelect: () => {},
       onStartTranslateDrag: () => {},
+      onDrillIn: () => {},
       tracks: [track],
       customPresets: [],
       liveStuntsState: {},
@@ -181,6 +183,7 @@ describe('StagePartLayers — named sequence broadcast evaluation', () => {
         totalFrames={30}
         onSelect={() => {}}
         onStartTranslateDrag={() => {}}
+        onDrillIn={() => {}}
         tracks={[namedTrack]}
         customPresets={[]}
         liveStuntsState={{}}
@@ -210,6 +213,7 @@ describe('StagePartLayers — named sequence broadcast evaluation', () => {
         totalFrames={30}
         onSelect={() => {}}
         onStartTranslateDrag={() => {}}
+        onDrillIn={() => {}}
         tracks={[track]}
         customPresets={[]}
         liveStuntsState={{}}

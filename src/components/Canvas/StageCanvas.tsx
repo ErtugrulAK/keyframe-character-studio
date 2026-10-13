@@ -1,14 +1,15 @@
-import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useLayoutEffect, useCallback, useMemo } from 'react';
 import { flushSync } from 'react-dom';
 import { useAnimator } from '../../context/useAnimator';
 import { useEditorContextMenu } from '../../context/editorContextMenu';
-import type { CharacterPart, Transform } from '../../types/animator';
+import type { Transform } from '../../types/animator';
 import { type ScaleMode } from './overlays/TransformGizmo';
 import { getPartBounds } from '../../utils/bounds';
 import { getSelectionFrameBounds } from '../../utils/selectionFrame';
 import { rotateAboutWorldPivot, selectionFrameCenterWorld, type WorldPoint } from '../../utils/rotationGesture';
 import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
 import { stackingOrder } from '../../utils/stackingOrder';
+import { resolveStageSelectionTarget } from '../../utils/layerGrouping';
 import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
@@ -43,21 +44,6 @@ const EDGE_BY_SCALE_MODE: Record<string, EdgeId | undefined> = {
   scale_right: 'right',
   scale_top: 'top',
   scale_bottom: 'bottom',
-};
-
-/**
- * True when `partId` is a descendant of `groupId` through the relationship
- * chain (`parentId`, with the Boolean-group link as the other carrier).
- */
-const isDescendantOf = (parts: CharacterPart[], partId: string, groupId: string): boolean => {
-  const seen = new Set<string>();
-  let current = parts.find((part) => part.id === partId)?.parentId;
-  while (current && !seen.has(current)) {
-    if (current === groupId) return true;
-    seen.add(current);
-    current = parts.find((part) => part.id === current)?.parentId;
-  }
-  return false;
 };
 
 export const StageCanvas: React.FC = () => {
@@ -226,11 +212,11 @@ export const StageCanvas: React.FC = () => {
 
   /**
    * Group body drags: the pointer lands on a child, but the gesture belongs to
-   * the selected container. This remembers the layer under the pointer so a
-   * click that never moved can still select it, and records whether the gesture
-   * actually moved so the click-select after a real drag is suppressed.
+   * the container the click targets. This remembers the container when the
+   * gesture is a body drag, so the click the browser fires after the drag is
+   * suppressed instead of resolving the selection back to the pressed child.
    */
-  const pendingGroupClickRef = useRef<string | null>(null);
+  const groupBodyDragRef = useRef<string | null>(null);
   const groupDragMovedRef = useRef(false);
   const suppressClickSelectRef = useRef(false);
 
@@ -240,6 +226,19 @@ export const StageCanvas: React.FC = () => {
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTransform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
+  /**
+   * The selection the R4-09 resolver reads. `selectedPartIds` is the canonical
+   * set, but a few single-target callers (the marquee, the context menu, the
+   * timeline) move `selectedPartId` on its own, so the primary is folded in when
+   * it is missing: "is the user working inside this group" must never depend on
+   * which of the two stores happened to be updated.
+   */
+  const canvasSelectionIds = useMemo(
+    () => (selectedPartId && !selectedPartIds.includes(selectedPartId)
+      ? [...selectedPartIds, selectedPartId]
+      : selectedPartIds),
+    [selectedPartIds, selectedPartId],
+  );
   const outputOrigin = appMode === 'broadcast' ? getProjectCenter(projectResolution) : EDITOR_CAMERA_CENTER;
   const clientToSVG = useCallback(
     (clientX: number, clientY: number): { svgX: number; svgY: number } => {
@@ -314,26 +313,28 @@ export const StageCanvas: React.FC = () => {
     }
     e.stopPropagation();
 
-    // A gesture that starts inside the SELECTED group box moves the container as
-    // one unit: the pointer lands on a child, but the child is not the target of
-    // the drag. The container stays selected, and a click that never moved still
-    // selects the layer under the pointer (see handleMouseUp).
-    const selectedGroup = characterParts.find((part) => part.id === selectedPartId && part.isGroup === true);
-    const insideSelectedGroup = Boolean(
-      selectedGroup
-      && selectedPartIds.length <= 1
-      && partId !== selectedGroup.id
-      && isDescendantOf(characterParts, partId, selectedGroup.id),
-    );
-    pendingGroupClickRef.current = insideSelectedGroup ? partId : null;
+    // R4-09 — the pointer lands on a child, but the gesture belongs to the layer
+    // the click TARGETS: the child's group, unless the selection already lives
+    // inside that group (the explicit drill-in paths: a canvas double-click or an
+    // Outliner child row). A gesture that starts inside the selected group box
+    // therefore still moves the container as one unit, and a gesture on a
+    // drilled-in child moves that child.
+    const dragTargetId = resolveStageSelectionTarget(characterParts, partId, canvasSelectionIds);
+    const groupBodyDrag = dragTargetId !== partId;
+    groupBodyDragRef.current = groupBodyDrag ? dragTargetId : null;
     groupDragMovedRef.current = false;
-    const dragTargetId = insideSelectedGroup ? selectedGroup!.id : partId;
-    if (!insideSelectedGroup) {
-      if (!selectedPartIds.includes(partId)) {
-        handleSelectPart(partId);
+    if (groupBodyDrag) {
+      // Selecting the container on the way down is what makes a first click on a
+      // child select the group (and what the drag then moves).
+      if (!selectedPartIds.includes(dragTargetId)) {
+        handleSelectPart(dragTargetId);
       } else {
-        setSelectedPartId(partId);
+        setSelectedPartId(dragTargetId);
       }
+    } else if (!selectedPartIds.includes(partId)) {
+      handleSelectPart(partId);
+    } else {
+      setSelectedPartId(partId);
     }
 
     const transform = getComputedTransform(dragTargetId, currentFrame);
@@ -566,7 +567,7 @@ export const StageCanvas: React.FC = () => {
         // Past pointer jitter this is a drag, not a click on the layer under it.
         if (Math.hypot(deltaX, deltaY) > 2) {
           groupDragMovedRef.current = true;
-          suppressClickSelectRef.current = pendingGroupClickRef.current !== null;
+          suppressClickSelectRef.current = groupBodyDragRef.current !== null;
         }
         // ONE contract: updateCurrentTransform takes WORLD x/y and converts to
         // container-local per part (and propagates bonds). Passing the primary
@@ -689,21 +690,18 @@ export const StageCanvas: React.FC = () => {
       }
     }
 
-    // A gesture that began inside the selected group and never moved is a plain
-    // click on the layer under the pointer.
-    const pendingClickId = pendingGroupClickRef.current;
-    if (pendingClickId && !groupDragMovedRef.current) {
-      suppressClickSelectRef.current = false;
-      handleSelectPart(pendingClickId);
-    }
-    pendingGroupClickRef.current = null;
+    // R4-09: a gesture that began inside a group and never moved is a plain click
+    // on the group — the container selected on pointerdown stays the selection,
+    // and the child under the pointer is never selected by a click-through. The
+    // gesture refs only retire here.
+    groupBodyDragRef.current = null;
     groupDragMovedRef.current = false;
 
     if (isDragging) endBatchInteraction();
     setIsDragging(false);
     setDragMode(null);
     setMarqueeRect(null);
-  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId, booleanOperandEditingGroupId, handleSelectPart]);
+  }, [dragMode, shapeCreationPreview, pendingShapeType, pendingShapeName, clearShapeCreation, addCustomPart, startBatchInteraction, marqueeRect, characterParts, currentFrame, getComputedTransform, tracks, isDragging, endBatchInteraction, setSelectedPartIds, setSelectedPartId, booleanOperandEditingGroupId]);
   useEffect(() => {
     handleMouseUpRef.current = handleMouseUp;
   }, [handleMouseUp]);
@@ -1040,7 +1038,21 @@ export const StageCanvas: React.FC = () => {
                     suppressClickSelectRef.current = false;
                     return;
                   }
-                  handleSelectPart(id, event.ctrlKey || event.metaKey);
+                  // R4-09: a plain click selects the GROUP the geometry belongs
+                  // to; the layer itself is selected through an explicit
+                  // drill-in (`onDrillIn`) or from the timeline Outliner.
+                  handleSelectPart(
+                    resolveStageSelectionTarget(characterParts, id, canvasSelectionIds),
+                    event.ctrlKey || event.metaKey,
+                  );
+                }}
+                onDrillIn={(id) => {
+                  // Double-click enters the group: the pressed layer itself
+                  // becomes the selection, so the next click or drag on it edits
+                  // that layer. `selectedPartIds` keeps the primary a member of
+                  // the canonical set (the resolver reads it on the next press).
+                  setSelectedPartId(id);
+                  setSelectedPartIds([id]);
                 }}
                 customPresets={customPresets}
                 liveStuntsState={liveStuntsState}

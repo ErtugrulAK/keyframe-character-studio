@@ -146,16 +146,127 @@ test('B — a drag inside the selected group moves the whole group as one unit',
   expect(parseTransform(undone.b!).y).toBeCloseTo(startB.y, 6);
 });
 
-test('B — a click inside the selected group still selects the layer under it', async ({ page }) => {
+/**
+ * R4-09 — the empty canvas BETWEEN two grouped children. Clicking it clears the
+ * selection (it is on no layer's geometry), so it is also the neutral way these
+ * tests drop the group selection before a click.
+ */
+async function clickBetweenChildren(page: Page): Promise<void> {
+  const point = await page.evaluate(() => {
+    const first = document.querySelector('[data-part-id="a"]')!.getBoundingClientRect();
+    const second = document.querySelector('[data-part-id="b"]')!.getBoundingClientRect();
+    return { x: (first.right + second.left) / 2, y: first.top + first.height / 2 };
+  });
+  await page.mouse.click(point.x, point.y);
+}
+
+test('B — a click on a child of an UNSELECTED group selects the group', async ({ page }) => {
+  await seed(page, [shape('a', 'Alpha', -120, 0), shape('b', 'Beta', 120, 0)]);
+  await groupPair(page);
+
+  await clickBetweenChildren(page);
+  await expect(page.locator('.actor-node.primary-selected')).toHaveCount(0);
+
+  const before = await childTransforms(page);
+  await page.locator('[data-part-id="b"]').first().click();
+  // R4-09: the click targets the GROUP the geometry belongs to, not the child.
+  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Group/);
+  // The framed selection is still the container, so the first click never drew a
+  // child-level selection.
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(1);
+  // The click was not a gesture: nothing moved.
+  expect(await childTransforms(page)).toEqual(before);
+});
+
+test('B — a drag on a child of an UNSELECTED group moves the whole group and selects it', async ({ page }) => {
+  await seed(page, [shape('a', 'Alpha', -120, 0), shape('b', 'Beta', 120, 0)]);
+  await groupPair(page);
+
+  await clickBetweenChildren(page);
+  await expect(page.locator('.actor-node.primary-selected')).toHaveCount(0);
+
+  const before = await childTransforms(page);
+  const point = await page.evaluate(() => {
+    const rect = document.querySelector('[data-part-id="b"]')!.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  });
+
+  await dragHandle(page, point, { x: 60, y: -30 });
+
+  const after = await childTransforms(page);
+  const deltaA = parseTransform(after.a!);
+  const deltaB = parseTransform(after.b!);
+  const startA = parseTransform(before.a!);
+  const startB = parseTransform(before.b!);
+  // Both children travelled the same world delta: the CONTAINER moved.
+  expect(deltaA.x - startA.x).toBeCloseTo(deltaB.x - startB.x, 6);
+  expect(deltaA.y - startA.y).toBeCloseTo(deltaB.y - startB.y, 6);
+  expect(Math.hypot(deltaA.x - startA.x, deltaA.y - startA.y)).toBeGreaterThan(30);
+  // ...and the gesture left the group selected.
+  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Group/);
+});
+
+test('R4-09 — a plain click on a child never selects the child, but a double-click drills in', async ({ page }) => {
   await seed(page, [shape('a', 'Alpha', -120, 0), shape('b', 'Beta', 120, 0)]);
   await groupPair(page);
 
   const before = await childTransforms(page);
-  await page.locator('[data-part-id="b"]').first().click();
-  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Beta/);
-  // The click was not a gesture: nothing moved.
+  const child = page.locator('[data-part-id="b"]').first();
+
+  // Plain click: the group, whether or not it was already selected.
+  await child.click();
+  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Group/);
+  await clickBetweenChildren(page);
+  await child.click();
+  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Group/);
   expect(await childTransforms(page)).toEqual(before);
+
+  // The EXPLICIT drill-in path: a double-click enters the group and selects the
+  // very layer the pointer is on, so it can be edited without ungrouping.
+  await child.dblclick();
+  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Beta/);
+
+  // ...and the drilled-in child is then the drag target, not the container.
+  const startChild = await childTransforms(page);
+  const point = await page.evaluate(() => {
+    const rect = document.querySelector('[data-part-id="b"]')!.getBoundingClientRect();
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+  });
+  await dragHandle(page, point, { x: 50, y: 0 });
+  const after = await childTransforms(page);
+  const deltaA = parseTransform(after.a!);
+  const deltaB = parseTransform(after.b!);
+  const baseA = parseTransform(startChild.a!);
+  const baseB = parseTransform(startChild.b!);
+  expect(deltaB.x - baseB.x).toBeGreaterThan(30);
+  // Only the drilled-in child moved: its sibling stayed exactly where it was.
+  expect(deltaA.x - baseA.x).toBeCloseTo(0, 6);
+  expect(deltaA.y - baseA.y).toBeCloseTo(0, 6);
+  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Beta/);
 });
+
+test('R4-09 — clicking the empty gap between grouped children selects nothing', async ({ page }) => {
+  // Two small children far apart: the point between them is inside the group's
+  // aggregate box, but on no child's geometry.
+  await seed(page, [shape('a', 'Alpha', -220, 0), shape('b', 'Beta', 220, 0)]);
+  await groupPair(page);
+
+  const gap = await page.evaluate(() => {
+    const first = document.querySelector('[data-part-id="a"]')!.getBoundingClientRect();
+    const second = document.querySelector('[data-part-id="b"]')!.getBoundingClientRect();
+    return { x: (first.right + second.left) / 2, y: first.top + first.height / 2 };
+  });
+  const aggregate = await page.locator('[data-testid="group-aggregate-box"]').boundingBox();
+  expect(aggregate).not.toBeNull();
+  // The point really is inside the aggregate box — it is only outside the children.
+  expect(gap.x).toBeGreaterThan(aggregate!.x);
+  expect(gap.x).toBeLessThan(aggregate!.x + aggregate!.width);
+
+  await page.mouse.click(gap.x, gap.y);
+  // Nothing to hit: the selection is cleared instead of selecting the group.
+  await expect(page.locator('.actor-node.primary-selected')).toHaveCount(0);
+});
+
 
 test('C — the geometryless group container emits no stray selection geometry', async ({ page }) => {
   await seed(page, [shape('a', 'Alpha', -120, 0), shape('b', 'Beta', 120, 0)]);

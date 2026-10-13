@@ -14,6 +14,11 @@ interface PartRendererProps {
   currentFrame: number;
   onSelect: (partId: string, event: React.MouseEvent) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
+  /**
+   * R4-09 — the explicit drill-in: a double-click selects THIS layer instead of
+   * its group, which is how a grouped child is edited without ungrouping.
+   */
+  onDrillIn: (partId: string) => void;
   /** Pre-evaluated layer data from the composition engine */
   evaluatedLayer: EvaluatedLayer;
   /** Dynamic Boolean contours evaluated for the current frame. */
@@ -38,6 +43,7 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
   currentFrame,
   onSelect,
   onStartTranslateDrag,
+  onDrillIn,
   evaluatedLayer,
   booleanContours,
   matteClipPathId,
@@ -97,12 +103,28 @@ export const PartRenderer: React.FC<PartRendererProps> = ({
     pathContent = renderShapePart({ part: rp, fill, stroke, isSelected, isGhost });
   }
 
+  /**
+   * R4-09 — the canvas pointer contract of one layer.
+   *
+   * A single click and the drag it may become are resolved by the canvas
+   * (`StageCanvas`): they target the layer's GROUP, so clicking a child selects
+   * the container. The double-click is the EXPLICIT drill-in of the vector
+   * editor: the completed sequence selects this very layer, which is how a
+   * grouped child is edited without ungrouping. `StageCanvas` still targets the
+   * clicked layer while the selection already lives inside its group, so the
+   * drilled-in layer stays draggable.
+   */
+  const layerPointerHandlers = {
+    onClick: (e: React.MouseEvent) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onSelect(part.id, e); } },
+    onMouseDown: (e: React.MouseEvent) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onStartTranslateDrag(part.id, e); } },
+    onDoubleClick: (e: React.MouseEvent) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onDrillIn(part.id); } },
+  };
+
   const transformedContent = (
     <g
       transform={`translate(${outputOrigin.x + el.transform.x}, ${outputOrigin.y + el.transform.y}) rotate(${el.transform.rotation}) scale(${el.transform.scaleX}, ${el.transform.scaleY})`}
       style={{ opacity: finalOpacity, cursor: isGhost ? 'default' : 'pointer', filter: filterId ? `url(#${filterId})` : undefined }}
-      onClick={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onSelect(part.id, e); } }}
-      onMouseDown={(e) => { if (!isGhost && e.button === 0) { e.stopPropagation(); onStartTranslateDrag(part.id, e); } }}
+      {...layerPointerHandlers}
     >
       <defs>
         {!isGhost && el.content.shadowColor && (

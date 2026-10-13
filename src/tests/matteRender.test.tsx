@@ -58,6 +58,7 @@ function renderStage(
       totalFrames={60}
       onSelect={() => {}}
       onStartTranslateDrag={() => {}}
+      onDrillIn={() => {}}
       tracks={tracks}
       customPresets={[]}
       liveStuntsState={{}}

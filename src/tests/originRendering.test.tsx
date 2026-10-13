@@ -33,6 +33,7 @@ const render = (
     totalFrames={60}
     onSelect={() => {}}
     onStartTranslateDrag={() => {}}
+    onDrillIn={() => {}}
     tracks={[{ id: 't', partId: 'A', name: 'A', color: '#fff', keyframes: [], channels: makeEmptyChannels(), visible: true, locked: false } as any]}
     customPresets={[]}
     liveStuntsState={{}}
@@ -98,6 +99,7 @@ describe('resolution-derived renderer origin', () => {
         totalFrames={60}
         onSelect={() => {}}
         onStartTranslateDrag={() => {}}
+        onDrillIn={() => {}}
         tracks={[
           { id: 'parent-track', partId: 'parent', name: 'Parent', color: '#fff', keyframes: [], channels: makeEmptyChannels(), visible: true, locked: false },
           { id: 'image-track', partId: 'image', name: 'Image', color: '#fff', keyframes: [], channels: makeEmptyChannels(), visible: true, locked: false },
@@ -131,6 +133,7 @@ describe('resolution-derived renderer origin', () => {
         totalFrames={60}
         onSelect={() => {}}
         onStartTranslateDrag={() => {}}
+        onDrillIn={() => {}}
         tracks={[]}
         customPresets={[]}
         liveStuntsState={{}}

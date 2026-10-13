@@ -55,6 +55,11 @@ interface StagePartLayersProps {
   totalFrames: number;
   onSelect: (id: string, event: React.MouseEvent) => void;
   onStartTranslateDrag: (partId: string, e: React.MouseEvent) => void;
+  /**
+   * R4-09 — the explicit drill-in of the canvas: a double-click on a layer
+   * selects that layer instead of the group it belongs to.
+   */
+  onDrillIn: (partId: string) => void;
   tracks: (AnimationTrackData & RuntimeTrackState)[];
   customPresets: CustomMotionPreset[];
   liveStuntsState: Record<string, { stunt: string; progress: number; loop?: boolean; customPresetId?: string }>;
@@ -106,6 +111,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
   totalFrames,
   onSelect,
   onStartTranslateDrag,
+  onDrillIn,
   tracks,
   customPresets,
   liveStuntsState,
@@ -762,6 +768,7 @@ export const StagePartLayers: React.FC<StagePartLayersProps> = ({
               currentFrame={currentFrame}
               onSelect={onSelect}
               onStartTranslateDrag={onStartTranslateDrag}
+              onDrillIn={onDrillIn}
               isSelected={selectedPartIds.includes(el.id) || selectedPartId === el.id}
               evaluatedLayer={el}
               booleanContours={booleanContours}

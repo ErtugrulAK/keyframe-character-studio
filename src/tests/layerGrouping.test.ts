@@ -12,6 +12,8 @@ import {
   getGroupChildren,
   getGroupDescendants,
   groupSelectionBlockReason,
+  resolveOutermostGroupAncestor,
+  resolveStageSelectionTarget,
   ungroupBlockReason,
 } from '../utils/layerGrouping';
 
@@ -86,6 +88,65 @@ const groupOf = (parts: CharacterPart[], tracks: Track[], ids: string[], groupId
 };
 
 describe('layer group authoring', () => {
+  /**
+   * R4-09 — the canvas click target. A plain click selects the group the
+   * geometry belongs to; the layer itself is only the target while the
+   * selection already lives inside that group (the explicit drill-in paths).
+   */
+  describe('canvas selection target', () => {
+    // outer > { inner > { leaf, sibling }, lone }
+    const nested = [
+      makePart('outer', 0, { isGroup: true }),
+      makePart('inner', 0, { isGroup: true, parentId: 'outer' }),
+      makePart('leaf', 10, { parentId: 'inner' }),
+      makePart('sibling', 30, { parentId: 'inner' }),
+      makePart('lone', 60, { parentId: 'outer' }),
+      makePart('free', 90),
+    ];
+
+    it('resolves the outermost group of a nested layer', () => {
+      expect(resolveOutermostGroupAncestor(nested, 'leaf')).toBe('outer');
+      expect(resolveOutermostGroupAncestor(nested, 'inner')).toBe('outer');
+      expect(resolveOutermostGroupAncestor(nested, 'outer')).toBeNull();
+      expect(resolveOutermostGroupAncestor(nested, 'free')).toBeNull();
+    });
+
+    it('a click on a child of an unselected group selects the group', () => {
+      expect(resolveStageSelectionTarget(nested, 'leaf', [])).toBe('outer');
+      expect(resolveStageSelectionTarget(nested, 'lone', [])).toBe('outer');
+      // Nested groups behave the same way: the outermost container wins.
+      expect(resolveStageSelectionTarget(nested, 'inner', [])).toBe('outer');
+    });
+
+    it('a click on an ungrouped layer selects the layer', () => {
+      expect(resolveStageSelectionTarget(nested, 'free', [])).toBe('free');
+    });
+
+    it('keeps the container when the container itself is the selection', () => {
+      expect(resolveStageSelectionTarget(nested, 'leaf', ['outer'])).toBe('outer');
+      expect(resolveStageSelectionTarget(nested, 'inner', ['outer'])).toBe('outer');
+    });
+
+    it('targets the layer once the selection already lives inside the group', () => {
+      // A drilled-in child (canvas double-click / Outliner row).
+      expect(resolveStageSelectionTarget(nested, 'sibling', ['leaf'])).toBe('sibling');
+      expect(resolveStageSelectionTarget(nested, 'leaf', ['leaf'])).toBe('leaf');
+      // A Shift-selected pair of children stays a child-level selection.
+      expect(resolveStageSelectionTarget(nested, 'leaf', ['leaf', 'sibling'])).toBe('leaf');
+    });
+
+    it('a selection inside another group never unlocks this one', () => {
+      const parts = [
+        ...nested,
+        makePart('other', 0, { isGroup: true }),
+        makePart('otherChild', 10, { parentId: 'other' }),
+      ];
+      expect(resolveStageSelectionTarget(parts, 'leaf', ['otherChild'])).toBe('outer');
+      // ...but it stays inside its own group.
+      expect(resolveStageSelectionTarget(parts, 'otherChild', ['otherChild'])).toBe('otherChild');
+    });
+  });
+
   describe('selection rules', () => {
     it('needs two layers', () => {
       const parts = [makePart('a', 0)];

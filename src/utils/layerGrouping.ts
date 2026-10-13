@@ -82,6 +82,79 @@ export const getGroupDescendants = (parts: CharacterPart[], groupId: string): Ch
   return parts.filter((part) => collected.has(part.id));
 };
 
+/**
+ * The relationship chain above `partId`, nearest ancestor first, cycle-safe.
+ * This is the chain the evaluator and every grouping operation walk.
+ */
+const ancestorChain = (parts: CharacterPart[], partId: string): CharacterPart[] => {
+  const byId = new Map(parts.map((part) => [part.id, part]));
+  const chain: CharacterPart[] = [];
+  const seen = new Set<string>();
+  let current = byId.get(partId)?.parentId ?? null;
+  while (current && !seen.has(current)) {
+    seen.add(current);
+    const parent = byId.get(current);
+    if (!parent) break;
+    chain.push(parent);
+    current = parent.parentId ?? null;
+  }
+  return chain;
+};
+
+/**
+ * The OUTERMOST group a layer belongs to, or `null` when it is not grouped.
+ *
+ * Walking the chain to the top rather than stopping at the first group is what
+ * makes nested groups predictable: a layer inside an inner group inside an outer
+ * group belongs to the outer group.
+ */
+export const resolveOutermostGroupAncestor = (
+  parts: CharacterPart[],
+  partId: string,
+): string | null => {
+  const outerMostFirst = ancestorChain(parts, partId).reverse();
+  return outerMostFirst.find((ancestor) => ancestor.isGroup)?.id ?? null;
+};
+
+/** True when `partId` sits inside `groupId`. A layer is never inside itself. */
+const liesInsideGroup = (parts: CharacterPart[], partId: string, groupId: string): boolean => (
+  ancestorChain(parts, partId).some((ancestor) => ancestor.id === groupId)
+);
+
+/**
+ * R4-09 — the layer a CANVAS click targets (vector-editor model).
+ *
+ * A plain click on any child geometry selects the GROUP the child belongs to
+ * (the outermost group ancestor), never the child itself: grouping would be
+ * meaningless if the first click on a child stole the selection back from the
+ * container. An empty gap between children never reaches this resolver at all —
+ * the renderer hit-tests real child geometry — so the aggregate box can never be
+ * selected by clicking through a hole.
+ *
+ * Child editing stays available through the two EXPLICIT direct-selection paths,
+ * which both leave the same trace: the layer itself becomes part of the
+ * selection.
+ *   - Double-click a child on the canvas (`onDrillIn` in `PartRenderer`).
+ *   - Click the child's row in the timeline Outliner.
+ * Once the selection is a set of layers that live INSIDE one group, the user is
+ * working inside that group: a click there targets the layer under the pointer
+ * again (that is what lets a Shift-selected pair of children be dragged as a
+ * set, and what keeps an Outliner-selected child draggable on the canvas).
+ * Clicking another group, or an ungrouped layer, targets that thing's own group,
+ * so the container can never be lost by accident.
+ */
+export const resolveStageSelectionTarget = (
+  parts: CharacterPart[],
+  partId: string,
+  selectionIds: string[],
+): string => {
+  const outermost = resolveOutermostGroupAncestor(parts, partId);
+  if (outermost === null) return partId;
+  const insideGroup = selectionIds.some((id) => id !== outermost && liesInsideGroup(parts, id, outermost));
+  return insideGroup ? partId : outermost;
+};
+
+
 // ─── Fold math ────────────────────────────────────────────────────────────
 
 /**

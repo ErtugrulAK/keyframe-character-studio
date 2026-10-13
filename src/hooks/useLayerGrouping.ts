@@ -75,7 +75,7 @@ export const useLayerGrouping = (): LayerGrouping => {
       showToast(ungroupBlockReason(characterParts, tracks, selectedPartId ?? '') ?? 'Select a layer group to ungroup.', 'info');
       return;
     }
-    const outcome = dissolveLayerGroup(characterParts, tracks, selectedGroup.id, (partId) => getComputedTransform(partId, currentFrame));
+    const outcome = dissolveLayerGroup(characterParts, tracks, selectedGroup.id);
     if (!outcome.ok) {
       showToast(outcome.reason, 'error');
       return;

@@ -7,8 +7,11 @@ import type {
   Transform,
 } from '../types/animator';
 import { getPartLocalBounds, getPartWorldBounds, type PartLocalBounds, type PartWorldBounds } from './bounds';
-import { worldToContainerLocal } from './containerMath';
+import { PART_ANCHOR_OFFSETS, TOOLBAR_COLORS } from './constants';
+import { composeWorldTransform, worldToContainerLocal } from './containerMath';
 import { makeEmptyChannels } from './defaults';
+import { evaluateTransform } from './evaluateTransform';
+import { generateId } from './idGenerator';
 import { isRelationshipChainRelated, relationshipParentId } from './partBinding';
 
 /**
@@ -38,8 +41,10 @@ import { isRelationshipChainRelated, relationshipParentId } from './partBinding'
  *     which preserves every keyframe time and easing exactly. That map only
  *     exists while the composed container rotation is 0 (a rotation would mix a
  *     child's x and y across channels, which independent channels cannot carry).
- * Directories, scales and mirrors are all affine, so only rotation is refused,
- * and only for an animated child.
+ * Directories, scales and mirrors are all affine, so grouping refuses only the
+ * rotation case, and only for an animated child. Ungrouping never refuses it: an
+ * animated container is baked into its children instead (see the ungroup section
+ * below).
  */
 
 /** The container layer type: a freeform with no path or points draws nothing. */
@@ -78,6 +83,13 @@ export const getGroupDescendants = (parts: CharacterPart[], groupId: string): Ch
 
 // ─── Fold math ────────────────────────────────────────────────────────────
 
+/**
+ * The sequence scope a keyframe belongs to. This is the evaluator's own rule
+ * (`evaluateTransform` filters by `keyframe.templateId || 'Sequence'`), so every
+ * decision below is taken with exactly the scope the evaluator will use.
+ */
+const keyframeScope = (keyframe: { templateId?: string }): string => keyframe.templateId || 'Sequence';
+
 interface ChannelAffine {
   a: number;
   b: number;
@@ -113,19 +125,29 @@ const foldTransform = (transform: Transform, fold: LocalFold): Transform => {
 const foldChannels = (
   channels: Record<TrackChannel, PropertyKeyframe[]>,
   fold: LocalFold,
+  scope?: string,
 ): Record<TrackChannel, PropertyKeyframe[]> => {
   const next = { ...channels };
   LOCAL_CHANNELS.forEach((channel) => {
-    next[channel] = (channels[channel] ?? []).map((keyframe) => ({
-      ...keyframe,
-      value: fold[channel].a * keyframe.value + fold[channel].b,
-    }));
+    next[channel] = (channels[channel] ?? []).map((keyframe) => (
+      scope !== undefined && keyframeScope(keyframe) !== scope
+        ? keyframe
+        : { ...keyframe, value: fold[channel].a * keyframe.value + fold[channel].b }
+    ));
   });
   return next;
 };
 
-const foldLegacyKeyframes = (keyframes: Keyframe[] | undefined, fold: LocalFold): Keyframe[] | undefined => (
-  keyframes?.map((keyframe) => ({ ...keyframe, transform: foldTransform(keyframe.transform, fold) }))
+const foldLegacyKeyframes = (
+  keyframes: Keyframe[] | undefined,
+  fold: LocalFold,
+  scope?: string,
+): Keyframe[] | undefined => (
+  keyframes?.map((keyframe) => (
+    scope !== undefined && keyframeScope(keyframe) !== scope
+      ? keyframe
+      : { ...keyframe, transform: foldTransform(keyframe.transform, fold) }
+  ))
 );
 
 /** True when the layer's own transform is animated on any sequence. */
@@ -335,13 +357,27 @@ export const groupSelectionBlockReason = (parts: CharacterPart[], ids: string[])
   return null;
 };
 
-/** Why the selected group cannot be ungrouped, or `null` when it can. */
+/**
+ * Why the selected group cannot be ungrouped, or `null` when it can.
+ *
+ * An animated container ungroups: its motion is baked into every child (see
+ * `dissolveLayerGroup`). The one combination the bake cannot carry is a child
+ * whose position is pinned by a stage anchor: `evaluateTransform` replaces such
+ * a child's x/y with the anchor offsets AFTER keyframe resolution, so a baked
+ * position would be discarded and the layer would jump to its pin the moment the
+ * container's motion stopped holding it. The refusal names the layer, so it is
+ * actionable, and it only fires for a container that actually animates.
+ */
 export const ungroupBlockReason = (parts: CharacterPart[], tracks: Track[], groupId: string): string | null => {
   const group = parts.find((part) => part.id === groupId);
   if (!group || !group.isGroup) return 'Select a layer group to ungroup.';
-  if (getGroupChildren(parts, groupId).length === 0) return 'This group has no layers.';
+  const children = getGroupChildren(parts, groupId);
+  if (children.length === 0) return 'This group has no layers.';
   if (isLocalTransformAnimated(tracks.find((track) => track.partId === groupId))) {
-    return 'Ungroup cannot redistribute an animated group. Remove the group keyframes first.';
+    const anchored = children.find((child) => child.anchor && child.anchor !== 'none');
+    if (anchored) {
+      return `An animated group cannot be ungrouped onto "${anchored.name}": a stage anchor pins that layer's position. Clear the anchor first.`;
+    }
   }
   return null;
 };
@@ -459,48 +495,249 @@ export type UngroupOutcome =
   | { ok: false; reason: string };
 
 /**
- * Dissolve a group: every child keeps its exact current world pose and moves up
- * to the group's own parent, then the container and its track are removed.
+ * Ungrouping removes a container layer, so the container's motion has to end up
+ * inside every child: afterwards a child's `parentId` is the container's parent,
+ * and `evaluateTransform` must produce the same world pose it produced before —
+ * `childStandalone(t) = containerLocal(t) ∘ childLocal(t)` — at every frame.
+ *
+ * Two exact paths, chosen per sequence scope:
+ *
+ *   - Affine fold (no key explosion). While the container's own local transform
+ *     is constant in a scope and carries no rotation, composing it onto a child
+ *     is a per-channel affine map (`foldAffine`). Every authored key keeps its
+ *     frame time and easing verbatim: an animated child under a still container
+ *     keeps the animation its author wrote, merely re-based.
+ *
+ *   - Sampled bake (a rotated or moving container). The product evaluates whole
+ *     frames, and composing two channel interpolations is not representable as
+ *     channel keys in general (a container rotation mixes a child's x and y
+ *     across channels; a moving container multiplies two curves). So the bake
+ *     samples the exact standalone transform at EVERY integer frame of the union
+ *     span `[min, max]` of the container's and the child's own local key frames
+ *     in that scope and writes the samples as linear channel keys.
+ *     `interpolateChannel` returns a key's value at its own frame and clamps
+ *     outside the authored range, so the baked track reproduces the value the
+ *     product displayed at every integer frame, and the end keys carry the same
+ *     clamped constants the two source curves held outside the span. Inside a
+ *     sampled scope a child's own easing cannot survive the composition; it is
+ *     replaced by the per-frame truth of what the product displayed.
+ *
+ * Nothing else is rewritten. Opacity, masks and Trim Path are never inherited
+ * from the container, so they stay exactly as authored; the container and its
+ * track are removed.
+ */
+
+/** The authored transform the evaluator starts a layer from, anchor applied. */
+const authoredLocalTransform = (part: CharacterPart): Transform => {
+  const anchor = part.anchor && part.anchor !== 'none' ? part.anchor : null;
+  if (!anchor) return part.baseTransform;
+  const offsets = PART_ANCHOR_OFFSETS[anchor] || PART_ANCHOR_OFFSETS.none;
+  return {
+    ...part.baseTransform,
+    x: offsets.ax + (part.anchorOffsetX ?? 0),
+    y: offsets.ay + (part.anchorOffsetY ?? 0),
+  };
+};
+
+/** The frames at which this layer's OWN local transform is keyed in one scope. */
+const localKeyFramesInScope = (track: Track | undefined, scope: string): number[] => {
+  if (!track) return [];
+  const frames: number[] = [];
+  const collect = (keyframes: { frame: number; templateId?: string }[]) => keyframes.forEach((keyframe) => {
+    if (keyframeScope(keyframe) === scope) frames.push(keyframe.frame);
+  });
+  LOCAL_CHANNELS.forEach((channel) => collect(track.channels?.[channel] ?? []));
+  collect(track.keyframes ?? []);
+  return frames;
+};
+
+/** Every scope this layer's own local transform animates in, in a stable order. */
+const localTransformScopes = (track: Track | undefined): string[] => {
+  if (!track) return [];
+  const scopes = new Set<string>();
+  const collect = (keyframes: { templateId?: string }[]) => keyframes.forEach((keyframe) => scopes.add(keyframeScope(keyframe)));
+  LOCAL_CHANNELS.forEach((channel) => collect(track.channels?.[channel] ?? []));
+  collect(track.keyframes ?? []);
+  return [...scopes].sort();
+};
+
+/** A child's own transform once the container is gone, at one frame and scope. */
+const standaloneTransformAt = (
+  parts: CharacterPart[],
+  tracks: Track[],
+  childId: string,
+  parentId: string | undefined,
+  scope: string,
+  frame: number,
+): Transform => {
+  const world = evaluateTransform(parts, tracks, scope, childId, frame);
+  if (!parentId) return world;
+  return worldToContainerLocal(world, evaluateTransform(parts, tracks, scope, parentId, frame));
+};
+
+/** Replace one scope's local channels with the sampled standalone transform. */
+const bakeScopeChannels = (options: {
+  channels: Record<TrackChannel, PropertyKeyframe[]>;
+  childId: string;
+  scope: string;
+  span: number[];
+  sampleAt: (frame: number) => Transform;
+}): Record<TrackChannel, PropertyKeyframe[]> => {
+  const { channels, childId, scope, span, sampleAt } = options;
+  const min = Math.min(...span);
+  const max = Math.max(...span);
+  const samples: Transform[] = [];
+  for (let frame = min; frame <= max; frame += 1) samples.push(sampleAt(frame));
+  const next = { ...channels };
+  LOCAL_CHANNELS.forEach((channel) => {
+    const kept = (channels[channel] ?? []).filter((keyframe) => keyframeScope(keyframe) !== scope);
+    // Deterministic ids: one baked key per (child, channel, frame, scope).
+    const baked = samples.map((sample, index) => ({
+      id: `bake_${childId}_${channel}_${min + index}_${scope}`,
+      frame: min + index,
+      value: sample[channel],
+      easing: 'linear' as const,
+      templateId: scope,
+    }));
+    next[channel] = [...kept, ...baked].sort((a, b) => a.frame - b.frame);
+  });
+  return next;
+};
+
+/**
+ * Fold the container's motion into one child's animation, or return the child's
+ * track unchanged when there is nothing to re-base.
+ */
+const bakeChildAnimation = (options: {
+  child: CharacterPart;
+  track: Track | undefined;
+  groupTrack: Track | undefined;
+  groupLocal: Transform;
+  scopes: string[];
+  parts: CharacterPart[];
+  tracks: Track[];
+  parentId: string | undefined;
+}): Track | undefined => {
+  const { child, track, groupTrack, groupLocal, scopes, parts, tracks, parentId } = options;
+  const fold = foldAffine(groupLocal);
+  // A rotated container mixes a child's x and y across channels, and a zero
+  // scale has no matching per-channel map, so both take the sampled path.
+  const canFold = fold !== null && groupLocal.scaleX !== 0 && groupLocal.scaleY !== 0;
+  let channels = track ? { ...makeEmptyChannels(), ...track.channels } : undefined;
+  let keyframes = track?.keyframes;
+  let changed = false;
+
+  scopes.forEach((scope) => {
+    if (!localKeyFramesInScope(groupTrack, scope).length && canFold) {
+      if (track && localKeyFramesInScope(track, scope).length) {
+        channels = foldChannels(channels!, fold!, scope);
+        keyframes = foldLegacyKeyframes(keyframes, fold!, scope);
+        changed = true;
+      }
+      return;
+    }
+    // The union span of both layers' local keys. An empty span means neither
+    // layer animates its own transform in this scope: the base fold carries it.
+    const span = [...localKeyFramesInScope(groupTrack, scope), ...localKeyFramesInScope(track, scope)];
+    if (span.length === 0) return;
+    channels = bakeScopeChannels({
+      channels: channels!,
+      childId: child.id,
+      scope,
+      span,
+      sampleAt: (frame) => standaloneTransformAt(parts, tracks, child.id, parentId, scope, frame),
+    });
+    changed = true;
+  });
+
+  if (!changed) return track;
+  const base: Track = track ?? {
+    id: generateId('track'),
+    partId: child.id,
+    name: child.name,
+    color: TOOLBAR_COLORS[0],
+    visible: true,
+    locked: false,
+    expanded: false,
+    keyframes: [],
+    channels: makeEmptyChannels(),
+  };
+  return { ...base, channels: channels ?? makeEmptyChannels(), keyframes: keyframes ?? [] };
+};
+
+/**
+ * Dissolve a group: every child keeps its exact evaluated world pose at every
+ * frame and moves up to the group's own parent, then the container and its track
+ * are removed. See the bake rules above for how a moving container is carried.
  */
 export const dissolveLayerGroup = (
   parts: CharacterPart[],
   tracks: Track[],
   groupId: string,
-  worldOf: (partId: string) => Transform,
 ): UngroupOutcome => {
   const blocked = ungroupBlockReason(parts, tracks, groupId);
   if (blocked) return { ok: false, reason: blocked };
   const group = parts.find((part) => part.id === groupId)!;
   const children = getGroupChildren(parts, groupId);
   const parentId = group.parentId;
-  const parentWorld = parentId ? worldOf(parentId) : IDENTITY;
-  // Removing the container means composing its own parent-local transform back
-  // onto each child, the exact inverse of what grouping did.
-  const containerLocal = worldToContainerLocal(worldOf(groupId), parentWorld);
   const childIds = children.map((child) => child.id);
-  const tracksByPart = new Map(tracks.map((track) => [track.partId, track]));
+  const groupTrack = tracks.find((track) => track.partId === groupId);
+  const groupLocal = authoredLocalTransform(group);
+  // Every scope either layer animates its own local transform in. A scope
+  // nobody animates sees both layers at their authored base, which is what the
+  // base fold below writes — no key is invented for it.
+  const scopes = [...new Set(
+    [groupTrack, ...tracks.filter((track) => childIds.includes(track.partId))]
+      .flatMap((track) => localTransformScopes(track)),
+  )].sort();
 
-  if (!foldAffine(containerLocal) && animatedChildNames(childIds, tracksByPart, parts).length > 0) {
-    return {
-      ok: false,
-      reason: 'Ungroup is exact only while the group has no rotation. Reset the group rotation to 0 to ungroup keyframed layers.',
-    };
-  }
+  const nextParts = parts
+    .filter((part) => part.id !== groupId)
+    .map((part) => {
+      if (!childIds.includes(part.id)) return part;
+      // The container's authored local transform is what a child still sees in
+      // every scope nobody animates, so its children take that exact pose.
+      const local = composeWorldTransform(groupLocal, part.baseTransform);
+      return {
+        ...part,
+        parentId,
+        baseTransform: {
+          ...part.baseTransform,
+          x: local.x,
+          y: local.y,
+          rotation: local.rotation,
+          scaleX: local.scaleX,
+          scaleY: local.scaleY,
+        },
+      };
+    });
 
-  const folded = foldChildrenInto({
-    parts: parts.filter((part) => part.id !== groupId),
-    tracks: tracks.filter((track) => track.partId !== groupId),
-    childIds,
-    parentId,
-    compose: containerLocal,
-    newParentWorld: parentWorld,
-    worldOf,
+  const nextTracks = tracks
+    .filter((track) => track.partId !== groupId)
+    .map((track) => (childIds.includes(track.partId)
+      ? bakeChildAnimation({
+        child: children.find((child) => child.id === track.partId)!,
+        track,
+        groupTrack,
+        groupLocal,
+        scopes,
+        parts,
+        tracks,
+        parentId,
+      }) ?? track
+      : track));
+  children.forEach((child) => {
+    if (tracks.some((track) => track.partId === child.id)) return;
+    const baked = bakeChildAnimation({
+      child, track: undefined, groupTrack, groupLocal, scopes, parts, tracks, parentId,
+    });
+    if (baked) nextTracks.push(baked);
   });
 
   return {
     ok: true,
-    parts: folded.parts,
-    tracks: folded.tracks,
+    parts: nextParts,
+    tracks: nextTracks,
     childIds,
     ...(parentId ? { parentId } : {}),
   };

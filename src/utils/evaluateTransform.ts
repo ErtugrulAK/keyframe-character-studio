@@ -12,6 +12,7 @@ import type { CharacterPart, Transform, Keyframe, PropertyKeyframe, AnimationTra
 import type { WorldTransform } from '../types/composition';
 import { interpolateTransform, interpolateChannel } from './defaults';
 import { PART_ANCHOR_OFFSETS } from './constants';
+import { composeWorldTransform } from './containerMath';
 
 /**
  * Evaluate the animated transform for a single layer at a given frame.
@@ -72,22 +73,7 @@ export function evaluateTransform(
       const parentPart = layers.find((p) => p.id === relationshipParentId);
       if (parentPart && parentPart.id !== currentPartId) {
         const parentTransform = evaluate(parentPart.id);
-        const rad = (parentTransform.rotation * Math.PI) / 180;
-        const cos = Math.cos(rad);
-        const sin = Math.sin(rad);
-        const scaledChildX = finalComputed.x * parentTransform.scaleX;
-        const scaledChildY = finalComputed.y * parentTransform.scaleY;
-        const rotatedChildX = scaledChildX * cos - scaledChildY * sin;
-        const rotatedChildY = scaledChildX * sin + scaledChildY * cos;
-        finalComputed = {
-          ...finalComputed,
-          x: parentTransform.x + rotatedChildX,
-          y: parentTransform.y + rotatedChildY,
-          rotation: parentTransform.rotation + finalComputed.rotation,
-          scaleX: parentTransform.scaleX * finalComputed.scaleX,
-          scaleY: parentTransform.scaleY * finalComputed.scaleY,
-          opacity: finalComputed.opacity,
-        };
+        finalComputed = composeWorldTransform(parentTransform, finalComputed);
       }
     }
     visiting.delete(currentPartId);

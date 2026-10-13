@@ -39,17 +39,40 @@ const makeTrack = (partId: string, overrides: Partial<Track> = {}): Track => ({
   ...overrides,
 });
 
-const channel = (frames: [number, number][]): PropertyKeyframe[] => frames.map(([frame, value], index) => ({
-  id: `${frame}_${index}`,
+const channel = (frames: [number, number][], templateId = 'Sequence'): PropertyKeyframe[] => frames.map(([frame, value], index) => ({
+  id: `${templateId}_${frame}_${index}`,
   frame,
   value,
   easing: 'linear' as const,
-  templateId: 'Sequence',
+  templateId,
 }));
 
 const worldAt = (parts: CharacterPart[], tracks: Track[], frame: number) => (
   (partId: string): Transform => evaluateTransform(parts, tracks, 'Sequence', partId, frame)
 );
+
+const POSE_CHANNELS = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const;
+
+/**
+ * The bake's contract: after ungrouping, every child evaluates to the pose it
+ * had inside the container, at every frame of the sampled range.
+ */
+const expectSameEvaluatedPose = (
+  before: { parts: CharacterPart[]; tracks: Track[] },
+  after: { parts: CharacterPart[]; tracks: Track[] },
+  ids: string[],
+  frames: number[],
+  scope = 'Sequence',
+) => {
+  ids.forEach((id) => frames.forEach((frame) => {
+    const expected = evaluateTransform(before.parts, before.tracks, scope, id, frame);
+    const actual = evaluateTransform(after.parts, after.tracks, scope, id, frame);
+    POSE_CHANNELS.forEach((poseChannel) => {
+      expect(actual[poseChannel], `${id}.${poseChannel} at frame ${frame} in ${scope}`)
+        .toBeCloseTo(expected[poseChannel], 9);
+    });
+  }));
+};
 
 const groupOf = (parts: CharacterPart[], tracks: Track[], ids: string[], groupId = 'g', frame = 0) => {
   const outcome = createLayerGroup(parts, tracks, ids, {
@@ -304,7 +327,7 @@ describe('layer group authoring', () => {
           : part)),
         tracks: group.tracks,
       };
-      const outcome = dissolveLayerGroup(moved.parts, moved.tracks, 'g', worldAt(moved.parts, moved.tracks, 0));
+      const outcome = dissolveLayerGroup(moved.parts, moved.tracks, 'g');
       if (!outcome.ok) throw new Error(outcome.reason);
 
       expect(outcome.parts).toHaveLength(2);
@@ -324,40 +347,193 @@ describe('layer group authoring', () => {
         parts: group.parts.map((part) => (part.id === 'g' ? { ...part, baseTransform: { ...part.baseTransform, x: 30, scaleX: 2, scaleY: 2 } } : part)),
         tracks: group.tracks,
       };
-      const outcome = dissolveLayerGroup(scaled.parts, scaled.tracks, 'g', worldAt(scaled.parts, scaled.tracks, 0));
+      const outcome = dissolveLayerGroup(scaled.parts, scaled.tracks, 'g');
       if (!outcome.ok) throw new Error(outcome.reason);
-      [0, 7, 20].forEach((frame) => {
-        expect(evaluateTransform(outcome.parts, outcome.tracks, 'Sequence', 'a', frame).x)
-          .toBeCloseTo(evaluateTransform(scaled.parts, scaled.tracks, 'Sequence', 'a', frame).x, 6);
-      });
+      expectSameEvaluatedPose(scaled, outcome, ['a', 'b'], [0, 7, 20]);
     });
 
-    it('refuses to redistribute an animated group', () => {
+    it('keeps the animated child’s own key times and easing when the group is static', () => {
+      const eased = (frame: number, value: number, easing: 'linear' | 'easeIn'): PropertyKeyframe => ({
+        id: `kf_${frame}`, frame, value, easing, templateId: 'Sequence',
+      });
+      const animated = makeTrack('a', { channels: { ...makeEmptyChannels(), x: [eased(0, -100, 'linear'), eased(20, 100, 'easeIn')] } });
+      const group = groupOf([makePart('a', 0), makePart('b', 100)], [animated, makeTrack('b')], ['a', 'b']);
+      const moved = {
+        parts: group.parts.map((part) => (part.id === 'g' ? { ...part, baseTransform: { ...part.baseTransform, x: 30, scaleX: 2 } } : part)),
+        tracks: group.tracks,
+      };
+      const outcome = dissolveLayerGroup(moved.parts, moved.tracks, 'g');
+      if (!outcome.ok) throw new Error(outcome.reason);
+
+      const baked = outcome.tracks.find((track) => track.partId === 'a')!.channels.x;
+      // Two authored keys, two folded keys: the affine fold re-bases values and
+      // never rewrites an author's timing or easing.
+      expect(baked.map((key) => [key.frame, key.easing])).toEqual([[0, 'linear'], [20, 'easeIn']]);
+      expect(baked[0].value).toBeCloseTo(30 + 2 * -100, 9);
+      expect(baked[1].value).toBeCloseTo(30 + 2 * 100, 9);
+    });
+
+    it('bakes a moving container into a static child at every integer frame', () => {
+      const group = groupOf([makePart('a', -100), makePart('b', 100)], [makeTrack('a'), makeTrack('b')], ['a', 'b']);
+      const animated = {
+        parts: group.parts,
+        tracks: group.tracks.map((track) => (track.partId === 'g'
+          ? { ...track, channels: { ...makeEmptyChannels(), x: channel([[0, 0], [10, 90], [20, 10]]) } }
+          : track)),
+      };
+      const outcome = dissolveLayerGroup(animated.parts, animated.tracks, 'g');
+      if (!outcome.ok) throw new Error(outcome.reason);
+
+      expectSameEvaluatedPose(animated, outcome, ['a', 'b'], [0, 1, 5, 10, 15, 20, 25]);
+      // The documented sampling rule: one linear key per channel and integer
+      // frame of the union span, and nothing outside it.
+      const baked = outcome.tracks.find((track) => track.partId === 'b')!.channels;
+      ['x', 'y', 'rotation', 'scaleX', 'scaleY'].forEach((localChannel) => {
+        expect(baked[localChannel].map((key) => key.frame), localChannel)
+          .toEqual(Array.from({ length: 21 }, (_, frame) => frame));
+        expect(baked[localChannel].every((key) => key.easing === 'linear'), localChannel).toBe(true);
+      });
+      expect(baked.opacity).toHaveLength(0);
+    });
+
+    it('bakes a rotating and scaling container into an animated child at every frame', () => {
+      const child = makeTrack('a', { channels: { ...makeEmptyChannels(), y: channel([[0, -100], [20, 100]]) } });
+      const group = groupOf([makePart('a', 0), makePart('b', 100)], [child, makeTrack('b')], ['a', 'b']);
+      const animated = {
+        parts: group.parts,
+        tracks: group.tracks.map((track) => (track.partId === 'g'
+          ? {
+            ...track,
+            channels: {
+              ...makeEmptyChannels(),
+              rotation: channel([[0, 0], [10, 90], [20, -45]]),
+              scaleX: channel([[0, 1], [10, 2], [20, 0.5]]),
+              scaleY: channel([[0, 1], [10, 0.25], [20, 3]]),
+            },
+          }
+          : track)),
+      };
+      const outcome = dissolveLayerGroup(animated.parts, animated.tracks, 'g');
+      if (!outcome.ok) throw new Error(outcome.reason);
+      expectSameEvaluatedPose(animated, outcome, ['a', 'b'], [0, 3, 7, 10, 14, 20]);
+    });
+
+    it('bakes a combined container transform onto every child of the group', () => {
+      const child = makeTrack('b', { channels: { ...makeEmptyChannels(), rotation: channel([[0, 0], [16, 180]]) } });
+      const group = groupOf([makePart('a', -100), makePart('b', 100), makePart('c', 300)], [makeTrack('a'), child, makeTrack('c')], ['a', 'b', 'c']);
+      const animated = {
+        parts: group.parts,
+        tracks: group.tracks.map((track) => (track.partId === 'g'
+          ? {
+            ...track,
+            channels: {
+              ...makeEmptyChannels(),
+              x: channel([[0, 0], [8, 60], [16, -40]]),
+              y: channel([[0, 0], [8, -30], [16, 20]]),
+              rotation: channel([[0, 0], [8, 30], [16, -60]]),
+              scaleX: channel([[0, 1], [8, 1.5], [16, 0.75]]),
+              scaleY: channel([[0, 1], [8, 0.5], [16, 2]]),
+            },
+          }
+          : track)),
+      };
+      const outcome = dissolveLayerGroup(animated.parts, animated.tracks, 'g');
+      if (!outcome.ok) throw new Error(outcome.reason);
+
+      expect(outcome.parts.map((part) => part.id)).toEqual(['a', 'b', 'c']);
+      expect(outcome.parts.every((part) => part.parentId === undefined)).toBe(true);
+      expect(outcome.parts.every((part) => part.baseTransform.opacity === 1)).toBe(true);
+      expectSameEvaluatedPose(animated, outcome, ['a', 'b', 'c'], [0, 2, 8, 12, 16, 20]);
+    });
+
+    it('bakes the container’s motion per sequence and folds the scopes it never animated', () => {
+      const childTrack = makeTrack('a', {
+        channels: {
+          ...makeEmptyChannels(),
+          x: channel([[0, -100], [20, 100]], 'Boot'),
+          y: channel([[0, -50], [12, 50]]),
+        },
+      });
+      const staticTrack = makeTrack('b');
+      const group = groupOf([makePart('a', 0), makePart('b', 100)], [childTrack, staticTrack], ['a', 'b']);
+      const animated = {
+        parts: group.parts.map((part) => (part.id === 'g'
+          ? { ...part, baseTransform: { ...part.baseTransform, x: 30, scaleX: 2, scaleY: 2 } }
+          : part)),
+        tracks: group.tracks.map((track) => (track.partId === 'g'
+          ? { ...track, channels: { ...makeEmptyChannels(), x: channel([[0, 0], [20, 120]], 'Boot') } }
+          : track)),
+      };
+      const outcome = dissolveLayerGroup(animated.parts, animated.tracks, 'g');
+      if (!outcome.ok) throw new Error(outcome.reason);
+
+      expectSameEvaluatedPose(animated, outcome, ['a', 'b'], [0, 4, 9, 14, 20], 'Boot');
+      expectSameEvaluatedPose(animated, outcome, ['a', 'b'], [0, 6, 12, 20], 'Sequence');
+
+      const baked = outcome.tracks.find((track) => track.partId === 'a')!.channels;
+      // 'Sequence' was never animated by the container, so the affine fold
+      // re-bases the child's own key: same frame, same easing, value composed
+      // by the container's constant local transform. 'Boot' is sampled frame by
+      // frame on all five channels — a sampled scope must not fall back to a
+      // stale channel value.
+      const groupLocal = animated.parts.find((part) => part.id === 'g')!.baseTransform;
+      expect(groupLocal.rotation).toBe(0);
+      const authoredY = animated.tracks.find((track) => track.partId === 'a')!.channels.y
+        .filter((key) => (key.templateId || 'Sequence') === 'Sequence');
+      const foldedY = baked.y.filter((key) => (key.templateId || 'Sequence') === 'Sequence');
+      expect(foldedY.map((key) => [key.frame, key.easing])).toEqual(authoredY.map((key) => [key.frame, key.easing]));
+      foldedY.forEach((key, index) => {
+        expect(key.value).toBeCloseTo(groupLocal.y + groupLocal.scaleY * authoredY[index].value, 9);
+      });
+      expect(baked.x.filter((key) => (key.templateId || 'Sequence') === 'Sequence')).toEqual([]);
+      expect(baked.x.filter((key) => key.templateId === 'Boot').map((key) => key.frame))
+        .toEqual(Array.from({ length: 21 }, (_, frame) => frame));
+      // Every local channel is sampled for 'Boot' (a stale fallback would leak
+      // the child's un-baked value), and opacity is never touched.
+      ['y', 'rotation', 'scaleX', 'scaleY'].forEach((localChannel) => {
+        expect(baked[localChannel].filter((key) => key.templateId === 'Boot').map((key) => key.frame), localChannel)
+          .toEqual(Array.from({ length: 21 }, (_, frame) => frame));
+      });
+      expect(baked.opacity.filter((key) => key.templateId === 'Boot')).toHaveLength(0);
+    });
+
+    it('ungroups an animated group whose children are static or animated', () => {
+      const group = groupOf([makePart('a', -100), makePart('b', 100)], [makeTrack('a'), makeTrack('b')], ['a', 'b']);
+      const animatedGroup = {
+        parts: group.parts,
+        tracks: group.tracks.map((track) => (track.partId === 'g'
+          ? { ...track, channels: { ...track.channels, x: channel([[0, 0], [20, 200]]) } }
+          : track)),
+      };
+      expect(ungroupBlockReason(animatedGroup.parts, animatedGroup.tracks, 'g')).toBeNull();
+      expect(dissolveLayerGroup(animatedGroup.parts, animatedGroup.tracks, 'g').ok).toBe(true);
+    });
+
+    it('refuses an animated group only when a child is pinned by a stage anchor', () => {
       const parts = [makePart('a', -100), makePart('b', 100)];
       const tracks = [makeTrack('a'), makeTrack('b')];
       const group = groupOf(parts, tracks, ['a', 'b']);
+      // The anchor is set on a layer that was grouped while it had none — the
+      // only way a container can hold one (`groupSelectionBlockReason` refuses
+      // to group an anchored layer in the first place).
+      const anchored = group.parts.map((part) => (part.id === 'a' ? { ...part, anchor: 'center' as const } : part));
       const animatedGroup = {
-        parts: group.parts,
-        tracks: group.tracks.map((track) => (track.partId === 'g' ? { ...track, channels: { ...track.channels, x: channel([[0, 0]]) } } : track)),
+        parts: anchored,
+        tracks: group.tracks.map((track) => (track.partId === 'g'
+          ? { ...track, channels: { ...track.channels, x: channel([[0, 0], [20, 200]]) } }
+          : track)),
       };
+      // The evaluator re-pins an anchored child's position after keyframe
+      // resolution, so a baked position could never survive.
       expect(ungroupBlockReason(animatedGroup.parts, animatedGroup.tracks, 'g'))
-        .toBe('Ungroup cannot redistribute an animated group. Remove the group keyframes first.');
-      expect(dissolveLayerGroup(animatedGroup.parts, animatedGroup.tracks, 'g', worldAt(animatedGroup.parts, animatedGroup.tracks, 0)))
-        .toEqual({ ok: false, reason: 'Ungroup cannot redistribute an animated group. Remove the group keyframes first.' });
-    });
-
-    it('refuses a rotated group whose children are keyframed', () => {
-      const animated = makeTrack('a', { channels: { ...makeEmptyChannels(), x: channel([[0, -100], [20, 100]]) } });
-      const source = [makePart('a', 0), makePart('b', 100)];
-      const group = groupOf(source, [animated, makeTrack('b')], ['a', 'b']);
-      const rotated = {
-        parts: group.parts.map((part) => (part.id === 'g' ? { ...part, baseTransform: { ...part.baseTransform, rotation: 30 } } : part)),
-        tracks: group.tracks,
-      };
-      expect(dissolveLayerGroup(rotated.parts, rotated.tracks, 'g', worldAt(rotated.parts, rotated.tracks, 0))).toEqual({
+        .toBe('An animated group cannot be ungrouped onto "a": a stage anchor pins that layer\'s position. Clear the anchor first.');
+      expect(dissolveLayerGroup(animatedGroup.parts, animatedGroup.tracks, 'g')).toEqual({
         ok: false,
-        reason: 'Ungroup is exact only while the group has no rotation. Reset the group rotation to 0 to ungroup keyframed layers.',
+        reason: 'An animated group cannot be ungrouped onto "a": a stage anchor pins that layer\'s position. Clear the anchor first.',
       });
+      // The same container ungroups as soon as the anchor is cleared.
+      const cleared = { parts: group.parts, tracks: animatedGroup.tracks };
+      expect(ungroupBlockReason(cleared.parts, cleared.tracks, 'g')).toBeNull();
     });
 
     it('still ungroups a rotated group whose children are static', () => {
@@ -368,15 +544,9 @@ describe('layer group authoring', () => {
         parts: group.parts.map((part) => (part.id === 'g' ? { ...part, baseTransform: { ...part.baseTransform, rotation: 30, scaleX: 1.5 } } : part)),
         tracks: group.tracks,
       };
-      const outcome = dissolveLayerGroup(rotated.parts, rotated.tracks, 'g', worldAt(rotated.parts, rotated.tracks, 0));
+      const outcome = dissolveLayerGroup(rotated.parts, rotated.tracks, 'g');
       if (!outcome.ok) throw new Error(outcome.reason);
-      ['a', 'b'].forEach((id) => {
-        const kept = evaluateTransform(outcome.parts, outcome.tracks, 'Sequence', id, 0);
-        const expected = evaluateTransform(rotated.parts, rotated.tracks, 'Sequence', id, 0);
-        expect(kept.x).toBeCloseTo(expected.x, 6);
-        expect(kept.y).toBeCloseTo(expected.y, 6);
-        expect(kept.scaleX).toBeCloseTo(expected.scaleX, 6);
-      });
+      expectSameEvaluatedPose(rotated, outcome, ['a', 'b'], [0, 5]);
     });
 
     it('reports a group with no layers and a selection that is not a group', () => {
@@ -410,14 +580,14 @@ describe('layer group authoring', () => {
         });
       };
 
-      const innerOut = dissolveLayerGroup(transformed.parts, transformed.tracks, 'inner', worldAt(transformed.parts, transformed.tracks, 0));
+      const innerOut = dissolveLayerGroup(transformed.parts, transformed.tracks, 'inner');
       if (!innerOut.ok) throw new Error(innerOut.reason);
       expect(innerOut.parentId).toBe('outer');
       expect(innerOut.parts.filter((part) => part.parentId === 'outer').map((part) => part.id))
         .toEqual(['a', 'b', 'c']);
       expectSamePose(innerOut.parts, innerOut.tracks);
 
-      const outerOut = dissolveLayerGroup(innerOut.parts, innerOut.tracks, 'outer', worldAt(innerOut.parts, innerOut.tracks, 0));
+      const outerOut = dissolveLayerGroup(innerOut.parts, innerOut.tracks, 'outer');
       if (!outerOut.ok) throw new Error(outerOut.reason);
       expectSamePose(outerOut.parts, outerOut.tracks);
       expect(validateCritical({ layers: outerOut.parts }).filter((error) => error.severity === 'critical')).toEqual([]);

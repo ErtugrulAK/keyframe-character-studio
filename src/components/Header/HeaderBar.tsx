@@ -1,5 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { sanitizeFilenameComponent } from '../../utils/pathSafety';
+import { downloadBlob } from '../../utils/fileDownload';
+import { GifExportPanel } from './GifExportPanel';
+import type { SceneData as ExportableSceneData } from '../../types/composition';
 import { useAnimator } from '../../context/useAnimator';
 import {
   Download,
@@ -106,6 +109,8 @@ export const HeaderBar: React.FC = () => {
   const [isOGrafExporting, setIsOGrafExporting] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState<boolean>(false);
+  /** The scene snapshot the GIF panel summarises and exports, taken when it opens. */
+  const [gifExportScene, setGifExportScene] = useState<ExportableSceneData | null>(null);
 
   /**
    * The one OGraf compile path: the package export compiles the current scene
@@ -164,15 +169,24 @@ export const HeaderBar: React.FC = () => {
 
   const handleExport = () => {
     const json = exportProject();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
     const cleanFileName = `${sanitizeFilenameComponent(sceneTitle || 'Template', 'Template')}.json`;
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = cleanFileName;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadBlob(new TextEncoder().encode(json), cleanFileName, 'application/json');
     showToast(`Exported "${cleanFileName}"`, 'success');
+  };
+
+  /**
+   * Opens the GIF panel on a SNAPSHOT of the current scene: the summary the user
+   * reads and the frames that are written come from the same document, so an edit
+   * made afterwards can never make the panel lie.
+   */
+  const handleOpenGifPanel = () => {
+    setIsExportMenuOpen(false);
+    try {
+      setGifExportScene(JSON.parse(exportProject()) as ExportableSceneData);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unexpected failure.';
+      showToast(`Could not read the current scene for a GIF export: ${message}`, 'error');
+    }
   };
 
   const handleOGrafExport = async () => {
@@ -183,15 +197,7 @@ export const HeaderBar: React.FC = () => {
       if (notifyOGrafDiagnostics(showToast, plan.diagnostics)) return;
 
       const archive = await createOGrafBrowserZip(plan);
-      const blob = new Blob([new Uint8Array(archive.bytes).buffer as ArrayBuffer], { type: 'application/zip' });
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = archive.fileName;
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
-      URL.revokeObjectURL(url);
+      downloadBlob(archive.bytes, archive.fileName, 'application/zip');
       showToast(`Exported "${archive.fileName}"`, 'success');
     } catch (error) {
       const remediation = describeOGrafPackageWriteFailure(error);
@@ -535,7 +541,25 @@ export const HeaderBar: React.FC = () => {
                 >
                   {isOGrafExporting ? 'Exporting OGraf…' : 'OGraf Package'}
                 </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  className="header-action-btn"
+                  style={{ width: '100%', justifyContent: 'flex-start' }}
+                  onClick={handleOpenGifPanel}
+                >
+                  Animated GIF
+                </button>
               </div>
+            )}
+            {gifExportScene && (
+              <GifExportPanel
+                scene={gifExportScene}
+                sceneTitle={sceneTitle}
+                onClose={() => setGifExportScene(null)}
+                onBlocked={(diagnostics) => { notifyOGrafDiagnostics(showToast, diagnostics); }}
+                showToast={showToast}
+              />
             )}
           </div>
 

@@ -86,12 +86,18 @@ function assertExportable(sceneData: SceneData, options: OGrafExportOptions): vo
   }
 }
 
-export function evaluateOGrafScene(
+/**
+ * The scene mapped onto the editor's own frame evaluation, WITHOUT the export
+ * gate: the same mapping `evaluateOGrafScene` uses, for callers that rasterise
+ * the editor's frames (the animated GIF export) instead of generating a runtime.
+ * A scene that cannot be rendered at all is still caught — by the renderer
+ * itself, and by `validateSceneForOGraf` where the caller chooses to ask.
+ */
+export function evaluateSceneFrame(
   sceneData: SceneData,
   frame: number,
-  options: OGrafExportOptions = {},
+  sequenceId: string = 'Sequence',
 ): OGrafEvaluatedScene {
-  assertExportable(sceneData, options);
   const layers = sceneData.layers.map(toCharacterPart);
   const evaluated: EvaluatedFrame = evaluateFrame(
     layers,
@@ -101,7 +107,7 @@ export function evaluateOGrafScene(
     createRuntime(),
     [],
     undefined,
-    options.sequenceId || 'Sequence',
+    sequenceId,
   );
   const evaluatedLayers = evaluated.layers.map((layer) => {
     const source = sceneData.layers.find((candidate) => candidate.id === layer.id);
@@ -120,4 +126,13 @@ export function evaluateOGrafScene(
     fps: sceneData.fps,
     layers: evaluatedLayers,
   };
+}
+
+export function evaluateOGrafScene(
+  sceneData: SceneData,
+  frame: number,
+  options: OGrafExportOptions = {},
+): OGrafEvaluatedScene {
+  assertExportable(sceneData, options);
+  return evaluateSceneFrame(sceneData, frame, options.sequenceId || 'Sequence');
 }

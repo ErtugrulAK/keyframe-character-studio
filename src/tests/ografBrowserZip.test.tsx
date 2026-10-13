@@ -104,8 +104,9 @@ describe('HeaderBar OGraf export integration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     expect(screen.getByRole('menuitem', { name: 'JSON', exact: true })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true })).toBeTruthy();
-    // The single-file legacy export is gone: the menu offers exactly these two.
-    expect(screen.getAllByRole('menuitem')).toHaveLength(2);
+    expect(screen.getByRole('menuitem', { name: 'Animated GIF', exact: true })).toBeTruthy();
+    // The single-file legacy export is gone: the menu offers exactly these three.
+    expect(screen.getAllByRole('menuitem')).toHaveLength(3);
     fireEvent.click(screen.getByRole('menuitem', { name: 'OGraf Package', exact: true }));
     await waitFor(() => expect(click).toHaveBeenCalledTimes(1));
     expect(downloads[0]).toBe('my-project-demo-ograf.zip');
@@ -244,9 +245,9 @@ describe('HeaderBar OGraf export integration', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Export', exact: true }));
     // The OGraf item reports its in-flight state through both its label and its
-    // disabled flag; JSON stays available throughout.
+    // disabled flag; JSON and the GIF panel stay available throughout.
     const menuItems = screen.getAllByRole('menuitem') as HTMLButtonElement[];
-    expect(menuItems.map((item) => item.disabled)).toEqual([false, true]);
+    expect(menuItems.map((item) => item.disabled)).toEqual([false, true, false]);
     expect(menuItems[1].textContent).toContain('Exporting OGraf');
     fireEvent.click(menuItems[1]);
     expect(createZipMock).toHaveBeenCalledTimes(1);

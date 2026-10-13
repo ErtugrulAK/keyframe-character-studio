@@ -1,0 +1,205 @@
+/* Export as GIF: a compact panel under the header's Export control. Docked, not
+   a modal — the editor stays usable while it is open, because the export runs
+   against a snapshot and cannot be changed by later edits. */
+
+.gif-export-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1000;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm);
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-panel);
+  background: var(--kcs-bg-elevated);
+  box-shadow: var(--kcs-shadow-dialog);
+  color: var(--kcs-text-secondary);
+  font-size: var(--font-size-body);
+}
+
+.gif-export-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+}
+
+.gif-export-header h2 {
+  margin: 0;
+  color: var(--kcs-text-primary);
+  font-size: var(--font-size-body);
+  font-weight: 700;
+}
+
+.gif-export-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--kcs-control-xs);
+  height: var(--kcs-control-xs);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: var(--kcs-text-secondary);
+  cursor: pointer;
+}
+
+.gif-export-close > svg {
+  width: 14px;
+  height: 14px;
+}
+
+.gif-export-close:hover,
+.gif-export-close:focus-visible {
+  border-color: var(--kcs-border-default);
+  background: var(--kcs-bg-hover);
+  color: var(--kcs-text-primary);
+}
+
+.gif-export-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-xs);
+  margin: 0;
+  padding: var(--space-xs);
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-bg-panel);
+}
+
+.gif-export-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.gif-export-summary dt {
+  color: var(--kcs-text-muted);
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gif-export-summary dd {
+  margin: 0;
+  color: var(--kcs-text-primary);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.gif-export-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-xs);
+}
+
+.gif-export-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--kcs-text-label);
+  font-size: var(--font-size-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.gif-export-controls select {
+  height: var(--kcs-control-sm);
+  padding: 0 6px;
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-bg-input);
+  color: var(--kcs-text-primary);
+  font: inherit;
+  font-size: var(--font-size-body);
+}
+
+.gif-export-note,
+.gif-export-blocked,
+.gif-export-done {
+  margin: 0;
+  color: var(--kcs-text-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-relaxed);
+}
+
+.gif-export-blocked {
+  color: var(--kcs-danger);
+}
+
+.gif-export-done {
+  color: var(--kcs-accent);
+}
+
+.gif-export-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--kcs-text-secondary);
+  font-size: var(--font-size-caption);
+}
+
+.gif-export-progress-track {
+  height: 6px;
+  border-radius: var(--kcs-radius-pill);
+  background: var(--kcs-bg-input);
+  overflow: hidden;
+}
+
+.gif-export-progress-value {
+  height: 100%;
+  background: var(--kcs-accent);
+  transition: width var(--kcs-motion-fast) linear;
+}
+
+.gif-export-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-xs);
+}
+
+.gif-export-actions button {
+  min-height: var(--kcs-control-md);
+  padding: 0 13px;
+  border-radius: var(--kcs-radius-control);
+  font: inherit;
+  font-size: var(--font-size-caption);
+  cursor: pointer;
+}
+
+.gif-export-cancel {
+  border: 1px solid var(--kcs-border-default);
+  background: transparent;
+  color: var(--kcs-text-secondary);
+}
+
+.gif-export-cancel:hover:not(:disabled),
+.gif-export-cancel:focus-visible {
+  border-color: var(--kcs-border-focus);
+  background: var(--kcs-bg-hover);
+  color: var(--kcs-text-primary);
+}
+
+.gif-export-run {
+  border: 1px solid var(--kcs-accent);
+  background: transparent;
+  color: var(--kcs-accent);
+  font-weight: 700;
+}
+
+.gif-export-run:hover:not(:disabled),
+.gif-export-run:focus-visible {
+  background: var(--kcs-accent);
+  border-color: var(--kcs-accent);
+  color: var(--kcs-bg-canvas);
+}
+
+.gif-export-run:disabled,
+.gif-export-cancel:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

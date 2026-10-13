@@ -13,26 +13,9 @@ import { LiveDirectorPanel } from './components/Broadcast/LiveDirectorPanel';
 
 import './kcsEditorTheme.css';
 const MainAppContent: React.FC = () => {
-  const { setIsPlaying, appMode } = useAnimator();
+  const { appMode } = useAnimator();
   const [isLeftToolbarVisible, setIsLeftToolbarVisible] = useState(true);
   const [isInspectorVisible, setIsInspectorVisible] = useState(true);
-
-  // Keyboard shortcut: Spacebar toggles play/pause
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (appMode === 'broadcast') return;
-      if (['INPUT', 'SELECT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) {
-        return;
-      }
-      if (e.code === 'Space') {
-        e.preventDefault();
-        setIsPlaying((prev) => !prev);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setIsPlaying, appMode]);
 
   // R2-07 — the browser's native context menu is suppressed for the whole
   // editor: canvas, layer list, sequence tabs, toolbar, timeline, Details and

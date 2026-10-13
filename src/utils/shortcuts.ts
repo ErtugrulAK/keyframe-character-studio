@@ -1,0 +1,320 @@
+/**
+ * The ONE shortcut authority of the editor.
+ *
+ * Every keyboard command the editor claims is declared here once, with its
+ * gesture, its category and the scope it is live in. The global handler
+ * (`hooks/useKeyboardShortcuts`), the shortcut reference UI
+ * (`components/Shortcuts/ShortcutReferenceDialog`) and the command strip's
+ * hints all read this table, so a binding cannot exist in one place and be
+ * documented in another.
+ *
+ * ── Gesture grammar ────────────────────────────────────────────────────────
+ * A gesture is `modifier+…+key`:
+ *   - `mod`   — Ctrl on Windows/Linux, Cmd on macOS (one token, both platforms)
+ *   - `shift` — Shift
+ *   - `alt`   — Alt/Option
+ *   - the key is `KeyboardEvent.key` case-folded, with the names `space`,
+ *     `escape`, `delete`, `backspace`, `enter` and `plus` for the keys whose
+ *     own character is a separator or invisible.
+ *
+ * ── Normalization and the collision audit (round four, part four) ──────────
+ * What the editor claimed BEFORE this round (audited from the live handlers:
+ * `App.tsx`, `useKeyboardShortcuts`, `useFreeformDraw`, the timeline marquee and
+ * lane, the context menu, the dialogs and every focused control):
+ *
+ * | Gesture        | Owner before                        | Verdict                                    |
+ * |----------------|-------------------------------------|--------------------------------------------|
+ * | `space`        | `App.tsx` play/pause                | kept (see the non-adoption note below)      |
+ * | `v` / `h`      | global: select / pan tool           | kept                                       |
+ * | `plus` `=` `-` | global: camera zoom step            | kept                                       |
+ * | `mod+z`        | global: undo                        | kept                                       |
+ * | `mod+shift+z`  | global: redo                        | kept                                       |
+ * | `mod+y`        | global: redo                        | kept (Windows habit, no conflict)          |
+ * | `mod+c/v/d`    | global: copy / paste / duplicate     | kept                                       |
+ * | `delete`/`backspace` | global: keyframes, else layer | kept, and now scoped (see below)           |
+ * | `escape`       | global: cancel armed gesture        | kept, extended into one priority chain      |
+ * | `enter`        | freeform draw: commit a path        | kept (owned by the drawing tool)           |
+ * | `escape`       | timeline marquee: cancel the drag   | kept (the gesture owns Escape while active) |
+ * | `arrowleft/right` | timeline lane: walk keyframe focus | kept (focused element, timeline scope) |
+ * | `enter`/`space` | timeline diamond: select keyframe  | kept (focused element, timeline scope)     |
+ * | `shift+f10` / context-menu key | layer context menu   | kept                                       |
+ * | `tab`/`shift+tab`, `escape` | dialogs: trap / dismiss | kept (dialogs own their keys)          |
+ *
+ * NO DESTRUCTIVE COLLISION existed in that set: no two live bindings produced
+ * the same command for the same gesture, and no plain letter was claimed by two
+ * owners. The one genuine collision was a SCOPE collision rather than a gesture
+ * one — `delete` reached the layer-delete path while the pointer was on the
+ * timeline — and it is resolved below.
+ *
+ * Added by this round (all free, all non-destructive):
+ * `mod+a` select all, `mod+g` group, `mod+shift+g` ungroup, `?` shortcut
+ * reference, `r` rectangle, `o` circle, `t` text, `p` pen.
+ *
+ * Deliberately NOT adopted:
+ *   - `space` hold = temporary pan. Space is this editor's play/pause toggle
+ *     (and the browser's own activation key for a focused button), so a
+ *     hold-to-pan would either fire playback on every pan or need a delay
+ *     heuristic that makes playback feel broken. Pan keeps its own `h` tool.
+ *   - Arrow-key nudging of the selected layer. There is no relative-move
+ *     authority in the editor (position writes are absolute and keyframe-aware,
+ *     through `usePartPropertyAuthoring`), the step size is a product decision,
+ *     and the arrows already walk focus in the timeline lane and the value
+ *     graph. Nudging needs an authority, not a keymap entry.
+ *   - `shift+1` fit stage and `shift+2` zoom to selection. The camera authority
+ *     exposes a zoom STEP and a re-centre that keeps the zoom; it has no fit
+ *     math, and inventing one would change the camera-invariance contract the
+ *     stage's fit is built on.
+ *   - `escape` clearing the LAYER selection. Non-modal surfaces (the colour
+ *     picker, the in/out preset popovers, the tangent overlay, the drawing tool)
+ *     own Escape while they are open, so a global deselect would also fire
+ *     behind them. Clicking empty stage space is the editor's deselect gesture,
+ *     and the reference UI says so.
+ *   - `mod+x` cut. The editor's Cut is the context menu's copy + a delete that
+ *     DISSOLVES a selected Boolean group; the global Delete path does not know
+ *     that authority, so a global `mod+x` would either duplicate it or behave
+ *     differently from the menu's own Cut.
+ */
+
+export type ShortcutPlatform = 'mac' | 'other';
+
+export type ShortcutCategory = 'tools' | 'create' | 'selection' | 'edit' | 'timeline' | 'view' | 'help';
+
+/**
+ * Where a binding is live. `global` commands run anywhere the editor owns the
+ * keyboard; `canvas` commands belong to the stage; `timeline` commands are owned
+ * by the timeline's own focused controls.
+ */
+export type ShortcutScope = 'global' | 'canvas' | 'timeline';
+
+export type ShortcutCommandId =
+  | 'tool-select' | 'tool-pan'
+  | 'create-rectangle' | 'create-circle' | 'create-text' | 'tool-pen'
+  | 'select-all' | 'group-layers' | 'ungroup-layers'
+  | 'undo' | 'redo' | 'copy' | 'paste' | 'duplicate' | 'delete-selection' | 'cancel-gesture' | 'context-menu'
+  | 'keyframe-select' | 'keyframe-walk' | 'marquee-cancel'
+  | 'play-pause' | 'zoom-in' | 'zoom-out'
+  | 'shortcut-reference';
+
+export interface ShortcutCommand {
+  id: ShortcutCommandId;
+  /** Human label used by the reference UI (and only there). */
+  label: string;
+  category: ShortcutCategory;
+  /** The gestures that trigger it, in display order. Never shared within a scope. */
+  gestures: string[];
+  scope: ShortcutScope;
+  /** One line about what the command does where it is not self-evident. */
+  detail?: string;
+}
+
+export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutCategory, string> = {
+  tools: 'Tools',
+  create: 'Create',
+  selection: 'Selection and grouping',
+  edit: 'Edit',
+  timeline: 'Timeline',
+  view: 'View and playback',
+  help: 'Help',
+};
+
+/** The reference UI's band order. */
+export const SHORTCUT_CATEGORY_ORDER: ShortcutCategory[] = ['tools', 'create', 'selection', 'edit', 'timeline', 'view', 'help'];
+
+export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
+  { id: 'tool-select', label: 'Select tool', category: 'tools', gestures: ['v'], scope: 'global' },
+  { id: 'tool-pan', label: 'Pan tool', category: 'tools', gestures: ['h'], scope: 'global' },
+  { id: 'tool-pen', label: 'Pen / freeform draw', category: 'tools', gestures: ['p'], scope: 'global', detail: 'Enter commits the path, Esc cancels it.' },
+
+  { id: 'create-rectangle', label: 'Rectangle', category: 'create', gestures: ['r'], scope: 'global', detail: 'Then drag on the stage to place it.' },
+  { id: 'create-circle', label: 'Circle', category: 'create', gestures: ['o'], scope: 'global', detail: 'Then drag on the stage to place it.' },
+  { id: 'create-text', label: 'Text layer', category: 'create', gestures: ['t'], scope: 'global' },
+
+  { id: 'select-all', label: 'Select all layers', category: 'selection', gestures: ['mod+a'], scope: 'global' },
+  { id: 'group-layers', label: 'Group selected layers', category: 'selection', gestures: ['mod+g'], scope: 'global' },
+  { id: 'ungroup-layers', label: 'Ungroup selected layer', category: 'selection', gestures: ['mod+shift+g'], scope: 'global' },
+
+  { id: 'undo', label: 'Undo', category: 'edit', gestures: ['mod+z'], scope: 'global' },
+  { id: 'redo', label: 'Redo', category: 'edit', gestures: ['mod+shift+z', 'mod+y'], scope: 'global' },
+  { id: 'copy', label: 'Copy selected layer', category: 'edit', gestures: ['mod+c'], scope: 'global' },
+  { id: 'paste', label: 'Paste layer', category: 'edit', gestures: ['mod+v'], scope: 'global' },
+  { id: 'duplicate', label: 'Duplicate selected layer', category: 'edit', gestures: ['mod+d'], scope: 'global' },
+  {
+    id: 'delete-selection',
+    label: 'Delete keyframes, else the layer',
+    category: 'edit',
+    gestures: ['delete', 'backspace'],
+    scope: 'global',
+    detail: 'While the timeline owns focus only keyframes are deleted, so a layer cannot be removed from there by accident.',
+  },
+  {
+    id: 'cancel-gesture',
+    label: 'Cancel, step out, deselect keyframes',
+    category: 'edit',
+    gestures: ['escape'],
+    scope: 'global',
+    detail: 'In priority order: cancel the armed gesture or the Boolean operand edit, leave a grouped child for its container, then clear the timeline keyframe selection. Clicking empty stage space clears the layer selection.',
+  },
+  { id: 'context-menu', label: 'Layer context menu', category: 'edit', gestures: ['shift+f10', 'contextmenu'], scope: 'global' },
+
+  { id: 'keyframe-select', label: 'Select the focused keyframe', category: 'timeline', gestures: ['enter', 'space'], scope: 'timeline', detail: 'With a keyframe diamond focused: selects it and moves the playhead to it.' },
+  { id: 'keyframe-walk', label: 'Walk focus along the lane', category: 'timeline', gestures: ['arrowleft', 'arrowright'], scope: 'timeline', detail: 'With a keyframe diamond focused.' },
+  { id: 'marquee-cancel', label: 'Cancel a timeline marquee', category: 'timeline', gestures: ['escape'], scope: 'timeline', detail: 'While a marquee drag is in flight it restores the selection it started from.' },
+
+  { id: 'play-pause', label: 'Play / pause', category: 'view', gestures: ['space'], scope: 'global' },
+  { id: 'zoom-in', label: 'Zoom in', category: 'view', gestures: ['plus', '='], scope: 'canvas' },
+  { id: 'zoom-out', label: 'Zoom out', category: 'view', gestures: ['-'], scope: 'canvas' },
+
+  { id: 'shortcut-reference', label: 'Keyboard shortcut reference', category: 'help', gestures: ['?'], scope: 'global' },
+];
+
+/** The DOM attribute a surface carries to declare that it owns a shortcut scope. */
+export const SHORTCUT_SCOPE_ATTRIBUTE = 'data-shortcut-scope';
+
+export interface KeyboardLike {
+  key: string;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  altKey: boolean;
+  shiftKey: boolean;
+}
+
+const MODIFIER_LABELS: Record<ShortcutPlatform, { mod: string; shift: string; alt: string; join: string }> = {
+  mac: { mod: '⌘', shift: '⇧', alt: '⌥', join: '' },
+  other: { mod: 'Ctrl', shift: 'Shift', alt: 'Alt', join: '+' },
+};
+
+const KEY_LABELS: Record<string, string> = {
+  space: 'Space',
+  escape: 'Esc',
+  delete: 'Delete',
+  backspace: 'Backspace',
+  enter: 'Enter',
+  arrowleft: '←',
+  arrowright: '→',
+  arrowup: '↑',
+  arrowdown: '↓',
+  plus: '+',
+  contextmenu: 'Menu key',
+  f10: 'F10',
+};
+
+const SHIFT_IMPLICIT_KEYS = ['?', 'plus'];
+
+/** `KeyboardEvent.key` folded onto the grammar's key names. */
+export const normalizeShortcutKey = (key: string): string => {
+  if (key === ' ') return 'space';
+  if (key === '+') return 'plus';
+  const lower = key.toLowerCase();
+  if (lower === 'esc') return 'escape';
+  if (lower === 'del') return 'delete';
+  return lower;
+};
+
+/** macOS is the only platform whose primary modifier is Cmd rather than Ctrl. */
+export const detectShortcutPlatform = (
+  nav: { platform?: string; userAgent?: string } | undefined = typeof navigator === 'undefined' ? undefined : navigator,
+): ShortcutPlatform => {
+  const source = `${nav?.platform ?? ''} ${nav?.userAgent ?? ''}`.toLowerCase();
+  return source.includes('mac') ? 'mac' : 'other';
+};
+
+/**
+ * True when one gesture fired. Modifiers are matched EXACTLY, so `g` never
+ * fires for `mod+g` and `mod+g` never fires for `mod+shift+g`. A key whose own
+ * character implies Shift (`?`, `+`) ignores the shift state instead of
+ * demanding it, which is what keeps the same binding working on layouts where
+ * that character sits somewhere else.
+ */
+export const matchesShortcutGesture = (
+  event: KeyboardLike,
+  gesture: string,
+  platform: ShortcutPlatform,
+): boolean => {
+  const parts = gesture.split('+');
+  const key = parts[parts.length - 1];
+  const modifiers = parts.slice(0, -1);
+  const wantsMod = modifiers.includes('mod');
+  const wantsShift = modifiers.includes('shift');
+  const wantsAlt = modifiers.includes('alt');
+  const primaryModifier = platform === 'mac' ? event.metaKey : event.ctrlKey;
+  const otherModifier = platform === 'mac' ? event.ctrlKey : event.metaKey;
+  if (wantsMod ? !primaryModifier : (primaryModifier || otherModifier)) return false;
+  if (wantsAlt !== event.altKey) return false;
+  if (!SHIFT_IMPLICIT_KEYS.includes(key) && wantsShift !== event.shiftKey) return false;
+  return normalizeShortcutKey(event.key) === key;
+};
+
+/**
+ * The command a keyboard event fires, or `null`.
+ *
+ * `scopes` decides which surfaces are being resolved. The default is the two
+ * that are dispatched from the editor's global handler; `timeline` is excluded
+ * on purpose, because those bindings belong to the timeline's own focused
+ * controls (they are declared here so the reference UI can list them, not so a
+ * global listener can duplicate them).
+ *
+ * Commands are resolved in table order, and the table never gives one gesture to
+ * two commands in the same scope (a unit test pins that), so the order only
+ * decides which of two DIFFERENT gestures wins when an event matches both.
+ */
+export const GLOBALLY_DISPATCHED_SCOPES: ShortcutScope[] = ['global', 'canvas'];
+
+export const resolveShortcutCommand = (
+  event: KeyboardLike,
+  platform: ShortcutPlatform,
+  scopes: ShortcutScope[] = GLOBALLY_DISPATCHED_SCOPES,
+): ShortcutCommand | null => {
+  for (const command of SHORTCUT_COMMANDS) {
+    if (!scopes.includes(command.scope)) continue;
+    if (command.gestures.some((gesture) => matchesShortcutGesture(event, gesture, platform))) return command;
+  }
+  return null;
+};
+
+export const findShortcutCommand = (id: ShortcutCommandId): ShortcutCommand => {
+  const command = SHORTCUT_COMMANDS.find((candidate) => candidate.id === id);
+  if (!command) throw new Error(`Unknown shortcut command "${id}".`);
+  return command;
+};
+
+const keyLabel = (key: string): string => KEY_LABELS[key] ?? key.toUpperCase();
+
+/** `mod+shift+g` → `Ctrl+Shift+G` on Windows/Linux and `⇧⌘G` on macOS. */
+export const formatShortcutGesture = (gesture: string, platform: ShortcutPlatform): string => {
+  const labels = MODIFIER_LABELS[platform];
+  const parts = gesture.split('+');
+  const key = parts[parts.length - 1];
+  const modifiers = parts.slice(0, -1);
+  const modifierLabels = modifiers.map((modifier) => (
+    modifier === 'mod' ? labels.mod : modifier === 'shift' ? labels.shift : labels.alt
+  ));
+  // macOS writes the modifiers in the order ⇧⌥⌘, unseparated, before the key.
+  const ordered = platform === 'mac' ? modifierLabels.slice().reverse() : modifierLabels;
+  return [...ordered, keyLabel(key)].join(labels.join);
+};
+
+/** Every gesture of a command, platform-formatted and `/`-joined. */
+export const formatShortcutCommand = (id: ShortcutCommandId, platform: ShortcutPlatform): string =>
+  findShortcutCommand(id).gestures.map((gesture) => formatShortcutGesture(gesture, platform)).join(' / ');
+
+/**
+ * The FIRST gesture of a command, for the places that show one hint beside an
+ * action (a menu row, a tooltip): those read badly with every alias.
+ */
+export const formatShortcutHint = (id: ShortcutCommandId, platform: ShortcutPlatform): string =>
+  formatShortcutGesture(findShortcutCommand(id).gestures[0], platform);
+
+/**
+ * The same binding in the WAI-ARIA `aria-keyshortcuts` syntax (`Control+G`,
+ * `Meta+G`), for controls that advertise the key they run.
+ */
+export const ariaKeyshortcuts = (id: ShortcutCommandId, platform: ShortcutPlatform): string =>
+  findShortcutCommand(id).gestures.map((gesture) => {
+    const parts = gesture.split('+');
+    const key = parts[parts.length - 1];
+    const modifiers = parts.slice(0, -1).map((modifier) => (
+      modifier === 'mod' ? (platform === 'mac' ? 'Meta' : 'Control') : modifier === 'shift' ? 'Shift' : 'Alt'
+    ));
+    const ariaKey = key.length === 1 ? key.toUpperCase() : `${key[0].toUpperCase()}${key.slice(1)}`;
+    return [...modifiers, ariaKey].join('+');
+  }).join(' ');

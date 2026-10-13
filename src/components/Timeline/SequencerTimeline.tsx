@@ -808,6 +808,7 @@ export const SequencerTimeline: React.FC = () => {
   return (
     <footer
       ref={timelineRef}
+      data-shortcut-scope="timeline"
       className={`sequencer-timeline ${isTimelineCollapsed ? 'is-collapsed' : ''} ${resizeAxis === 'rows' ? 'is-resizing-rows' : ''}`}
       style={isTimelineCollapsed ? undefined : { height: `${timelineHeight}px` }}
       data-collapsed={isTimelineCollapsed ? 'true' : 'false'}

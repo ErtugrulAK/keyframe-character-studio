@@ -7,7 +7,11 @@ import {
   groupSelectionBlockReason,
   ungroupBlockReason,
 } from '../utils/layerGrouping';
-import type { CharacterPart } from '../types/animator';
+import type { CharacterPart, Track, Transform } from '../types/animator';
+import type { ToastOptions } from './useToast';
+
+/** The toast writer the context exposes. */
+type ShowToast = (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
 
 /**
  * The one layer-group authoring authority for the current selection.
@@ -30,22 +34,42 @@ export interface LayerGrouping {
   ungroupSelection: () => void;
 }
 
-export const useLayerGrouping = (): LayerGrouping => {
-  const {
-    currentFrame,
-    selectedPartId,
-    selectedPartIds,
-    characterParts,
-    tracks,
-    setCharacterParts,
-    setTracks,
-    setSelectedPartId,
-    setSelectedPartIds,
-    getComputedTransform,
-    startBatchInteraction,
-    endBatchInteraction,
-    showToast,
-  } = useAnimator();
+/**
+ * The inputs the group authority reads. It takes them explicitly rather than
+ * from the context so the state provider can build the SAME actions for the
+ * keyboard commands without a second implementation.
+ */
+export interface LayerGroupingDependencies {
+  currentFrame: number;
+  selectedPartId: string | null;
+  selectedPartIds: string[];
+  characterParts: CharacterPart[];
+  tracks: Track[];
+  setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
+  setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
+  setSelectedPartId: (id: string | null) => void;
+  setSelectedPartIds: (ids: string[]) => void;
+  getComputedTransform: (partId: string, frame: number) => Transform;
+  startBatchInteraction: () => void;
+  endBatchInteraction: () => void;
+  showToast: ShowToast;
+}
+
+export const createLayerGroupingActions = ({
+  currentFrame,
+  selectedPartId,
+  selectedPartIds,
+  characterParts,
+  tracks,
+  setCharacterParts,
+  setTracks,
+  setSelectedPartId,
+  setSelectedPartIds,
+  getComputedTransform,
+  startBatchInteraction,
+  endBatchInteraction,
+  showToast,
+}: LayerGroupingDependencies): LayerGrouping => {
 
   const selectedGroup = characterParts.find((part) => part.id === selectedPartId && part.isGroup === true);
   const groupBlockReason = groupSelectionBlockReason(characterParts, selectedPartIds);
@@ -97,3 +121,6 @@ export const useLayerGrouping = (): LayerGrouping => {
     ungroupSelection,
   };
 };
+
+/** The same authority, wired to the animator context for UI callers. */
+export const useLayerGrouping = (): LayerGrouping => createLayerGroupingActions(useAnimator());

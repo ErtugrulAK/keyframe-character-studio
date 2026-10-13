@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Plus,
   ChevronDown,
+  Keyboard,
 } from 'lucide-react';
 import { NewItemModal } from '../Modal/NewItemModal';
 import { ConfirmationDialog } from '../Modal/ConfirmationDialog';
@@ -96,6 +97,7 @@ export const HeaderBar: React.FC = () => {
     deleteProjectTemplate,
     fps,
     setFps,
+    openShortcutReference,
   } = useAnimator();
 
   const [editingTmplId, setEditingTmplId] = useState<string | null>(null);
@@ -539,6 +541,14 @@ export const HeaderBar: React.FC = () => {
 
           <button className="btn-icon reset-btn" onClick={resetProject} title="Reset Canvas Project">
             <RotateCcw size={15} />
+          </button>
+          <button
+            className="btn-icon"
+            onClick={openShortcutReference}
+            title="Keyboard shortcuts (?)"
+            aria-label="Keyboard shortcuts"
+          >
+            <Keyboard size={15} />
           </button>
         </div>
       </header>

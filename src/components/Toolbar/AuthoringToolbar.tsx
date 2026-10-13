@@ -22,6 +22,12 @@ import { useLayerGrouping } from '../../hooks/useLayerGrouping';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { BooleanOperationIcon } from '../Inspector/BooleanOperationIcon';
 import type { BooleanOperation } from '../../utils/booleanGeometry';
+import {
+  ariaKeyshortcuts,
+  detectShortcutPlatform,
+  formatShortcutHint,
+  type ShortcutCommandId,
+} from '../../utils/shortcuts';
 import './AuthoringToolbar.css';
 
 /** The four Boolean operations, in the order the Inspector presents them. */
@@ -95,6 +101,12 @@ export const AuthoringToolbar: React.FC = () => {
   const { handleZIndexChange } = usePartPropertyAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
 
+  // Tooltips and the accessible shortcut of each band read the ONE shortcut
+  // table, so a hint cannot advertise a key the editor does not bind, and the
+  // labels follow the platform (Ctrl on Windows/Linux, ⌘ on macOS).
+  const platform = detectShortcutPlatform();
+  const hint = (id: ShortcutCommandId) => formatShortcutHint(id, platform);
+
   const toolButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedPart = characterParts.find((part) => part.id === selectedPartId);
   // Creation needs two Boolean-eligible operands; an existing group switches
@@ -131,7 +143,8 @@ export const AuthoringToolbar: React.FC = () => {
           className={`authoring-toolbar-button${activeTool === 'select' ? ' active' : ''}`}
           aria-label="Select"
           aria-pressed={activeTool === 'select'}
-          title="Select tool (V)"
+          title={`Select tool (${hint('tool-select')})`}
+          aria-keyshortcuts={ariaKeyshortcuts('tool-select', platform)}
           tabIndex={activeCanvasToolIndex <= 0 ? 0 : -1}
           onClick={() => setActiveTool('select')}
           onKeyDown={handleToolKeyDown}
@@ -144,7 +157,8 @@ export const AuthoringToolbar: React.FC = () => {
           className={`authoring-toolbar-button${activeTool === 'pan' ? ' active' : ''}`}
           aria-label="Pan"
           aria-pressed={activeTool === 'pan'}
-          title="Pan tool (H)"
+          title={`Pan tool (${hint('tool-pan')})`}
+          aria-keyshortcuts={ariaKeyshortcuts('tool-pan', platform)}
           tabIndex={activeCanvasToolIndex === 1 ? 0 : -1}
           onClick={() => setActiveTool('pan')}
           onKeyDown={handleToolKeyDown}
@@ -160,7 +174,7 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Add rectangle"
-          title="Add a rectangle, then drag on the stage to place it"
+          title={`Add a rectangle (${hint('create-rectangle')}), then drag on the stage to place it`}
           onClick={() => armShapeCreation('custom_rect', 'Rectangle')}
         >
           <Square />
@@ -169,7 +183,7 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Add circle"
-          title="Add a circle, then drag on the stage to place it"
+          title={`Add a circle (${hint('create-circle')}), then drag on the stage to place it`}
           onClick={() => armShapeCreation('custom_circle', 'Circle')}
         >
           <Circle />
@@ -178,7 +192,7 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Add text"
-          title="Add a text layer"
+          title={`Add a text layer (${hint('create-text')})`}
           onClick={() => addCustomPart('custom_text', 'Text')}
         >
           <Type />
@@ -188,7 +202,7 @@ export const AuthoringToolbar: React.FC = () => {
           className={`authoring-toolbar-button${penActive ? ' active' : ''}`}
           aria-label="Pen"
           aria-pressed={penActive}
-          title={penActive ? 'Stop drawing a path (Esc)' : 'Draw a freeform path'}
+          title={penActive ? 'Stop drawing a path (Esc)' : `Draw a freeform path (${hint('tool-pen')})`}
           onClick={() => setActiveTool(penActive ? 'select' : 'freeform_draw')}
         >
           <PenTool />
@@ -241,7 +255,8 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Group layers"
-          title={canGroup ? 'Group the selected layers' : 'Group needs two or more selected layers'}
+          title={canGroup ? `Group the selected layers (${hint('group-layers')})` : 'Group needs two or more selected layers'}
+          aria-keyshortcuts={ariaKeyshortcuts('group-layers', platform)}
           disabled={!canGroup}
           onClick={groupSelection}
         >
@@ -252,8 +267,9 @@ export const AuthoringToolbar: React.FC = () => {
           className="authoring-toolbar-button"
           aria-label="Ungroup layers"
           title={selectedGroup
-            ? 'Ungroup and keep every layer in place'
+            ? `Ungroup and keep every layer in place (${hint('ungroup-layers')})`
             : 'Ungroup needs a selected group'}
+          aria-keyshortcuts={ariaKeyshortcuts('ungroup-layers', platform)}
           disabled={!selectedGroup}
           onClick={ungroupSelection}
         >
@@ -308,7 +324,7 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Zoom out"
-          title="Zoom out (-)"
+          title={`Zoom out (${hint('zoom-out')})`}
           onClick={() => dispatchViewportCommand('zoom-out')}
         >
           <ZoomOut />
@@ -326,7 +342,7 @@ export const AuthoringToolbar: React.FC = () => {
           type="button"
           className="authoring-toolbar-button"
           aria-label="Zoom in"
-          title="Zoom in (+)"
+          title={`Zoom in (${hint('zoom-in')})`}
           onClick={() => dispatchViewportCommand('zoom-in')}
         >
           <ZoomIn />

@@ -38,6 +38,10 @@ import { useToast, type ToastOptions } from '../hooks/useToast';
 import { usePresets, type SavePresetInput, type UpdatePresetInput } from '../hooks/usePresets';
 import { useProjectState } from '../hooks/useProjectState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { createLayerGroupingActions } from '../hooks/useLayerGrouping';
+import { resolveOutermostGroupAncestor } from '../utils/layerGrouping';
+import { selectAllLayers } from '../utils/layerSelection';
+import { ShortcutReferenceDialog } from '../components/Shortcuts/ShortcutReferenceDialog';
 import type { ImportResult } from '../utils/importValidation';
 
 export interface AnimatorContextType {
@@ -194,6 +198,12 @@ export interface AnimatorContextType {
   stopLiveStunt: (partId: string) => void;
   setStuntLoopState: (loop: boolean) => void;
   stopAllLiveStunts: () => void;
+
+  /**
+   * Opens the keyboard shortcut reference. The one authority for it lives here
+   * because both ways in — the header control and the `?` key — are editor-wide.
+   */
+  openShortcutReference: () => void;
 }
 
 export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -441,6 +451,36 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 
 
+  const { getComputedTransform } = useMath({
+    characterParts,
+    tracks,
+    activeTemplateId,
+  });
+
+  /**
+   * The layer-group actions the keyboard commands run. They are the SAME actions
+   * the toolbar, the Inspector and the context menu run (one implementation,
+   * `createLayerGroupingActions`), built here from the provider's own locals
+   * because a hook cannot be called from inside its own provider.
+   */
+  const { groupSelection, ungroupSelection } = createLayerGroupingActions({
+    currentFrame,
+    selectedPartId,
+    selectedPartIds,
+    characterParts,
+    tracks,
+    setCharacterParts,
+    setTracks,
+    setSelectedPartId,
+    setSelectedPartIds,
+    getComputedTransform,
+    startBatchInteraction,
+    endBatchInteraction,
+    showToast,
+  });
+
+  const [isShortcutReferenceOpen, setIsShortcutReferenceOpen] = useState<boolean>(false);
+
   useKeyboardShortcuts({
     selectedPartId,
     undo,
@@ -451,14 +491,35 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     deleteSelectedKeyframes,
     deletePart,
     setActiveTool,
+    activeTool,
     cancelShapeCreation: pendingShapeType ? clearShapeCreation : undefined,
-    exitBooleanOperandEditing: () => setBooleanOperandEditingGroupId(null),
-  });
-
-  const { getComputedTransform } = useMath({
-    characterParts,
-    tracks,
-    activeTemplateId,
+    exitBooleanOperandEditing: () => {
+      if (!booleanOperandEditingGroupId) return false;
+      setBooleanOperandEditingGroupId(null);
+      return true;
+    },
+    armShapeCreation,
+    addCustomPart,
+    selectAllLayers: () => selectAllLayers(characterParts, { setSelectedPartIds, setSelectedPartId }),
+    groupSelection,
+    ungroupSelection,
+    /** Escape steps out of a grouped child onto the container that holds it. */
+    exitGroupDrillIn: () => {
+      if (!selectedPartId) return false;
+      const container = resolveOutermostGroupAncestor(characterParts, selectedPartId);
+      if (container === null || container === selectedPartId) return false;
+      setSelectedPartIds([container]);
+      setSelectedPartId(container);
+      return true;
+    },
+    clearKeyframeSelection: () => {
+      if (selectedKeyframeIds.length === 0) return false;
+      selectKeyframes([], 'replace');
+      return true;
+    },
+    setIsPlaying,
+    appMode,
+    openShortcutReference: () => setIsShortcutReferenceOpen(true),
   });
 
 
@@ -663,6 +724,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         stopAllLiveStunts,
         renamePartAndTrack,
         reorderParts,
+        openShortcutReference: () => setIsShortcutReferenceOpen(true),
         sceneTitle,
         setSceneTitle,
         projectTemplates,
@@ -682,6 +744,11 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }}
     >
       {children}
+
+      <ShortcutReferenceDialog
+        isOpen={isShortcutReferenceOpen}
+        onClose={() => setIsShortcutReferenceOpen(false)}
+      />
 
       {/* Floating Glassmorphism Toast Notification Portal */}
       <ToastPortal toasts={toasts} removeToast={removeToast} />

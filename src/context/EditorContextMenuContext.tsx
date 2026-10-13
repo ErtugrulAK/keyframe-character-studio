@@ -5,6 +5,9 @@ import { useBooleanAuthoring } from '../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../hooks/useLayerGrouping';
 import { EditorContextMenu, type ContextMenuGroup } from '../components/Canvas/EditorContextMenu';
 import { isBlockingModalOpen } from '../utils/modalBoundary';
+import { isEditableElement } from '../utils/keyboardFocus';
+import { detectShortcutPlatform, formatShortcutHint, type ShortcutCommandId } from '../utils/shortcuts';
+import { selectAllLayers } from '../utils/layerSelection';
 
 /**
  * The one right-click menu of the editor, shared by the stage and the outliner.
@@ -39,12 +42,21 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
 
   const closeContextMenu = useCallback(() => setMenu(null), []);
 
+  /**
+   * The hint beside a menu row is the keymap's own label for that binding, so a
+   * menu row can never advertise a key the editor does not bind, and the labels
+   * follow the platform (`Ctrl+C` on Windows/Linux, `⌘C` on macOS).
+   */
+  const hint = useCallback(
+    (id: ShortcutCommandId) => formatShortcutHint(id, detectShortcutPlatform()),
+    [],
+  );
+
   /** Select All writes through the ordinary selection setters — no separate authority. */
-  const selectAll = useCallback(() => {
-    const ids = characterParts.map((part) => part.id);
-    setSelectedPartIds(ids);
-    setSelectedPartId(ids.length > 0 ? ids[ids.length - 1] : null);
-  }, [characterParts, setSelectedPartId, setSelectedPartIds]);
+  const selectAll = useCallback(
+    () => selectAllLayers(characterParts, { setSelectedPartIds, setSelectedPartId }),
+    [characterParts, setSelectedPartId, setSelectedPartIds],
+  );
 
   /** Delete mirrors the Inspector's own trash action, including Boolean groups. */
   const deleteSelection = useCallback(() => {
@@ -70,8 +82,8 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     if (targetId === null) {
       const groups: ContextMenuGroup[] = [];
       const emptyStage: ContextMenuGroup = [];
-      if (clipboardData) emptyStage.push({ id: 'paste', label: 'Paste', shortcut: 'Ctrl+V', run: pasteCopiedPart });
-      if (characterParts.length > 0) emptyStage.push({ id: 'select-all', label: 'Select All', run: selectAll });
+      if (clipboardData) emptyStage.push({ id: 'paste', label: 'Paste', shortcut: hint('paste'), run: pasteCopiedPart });
+      if (characterParts.length > 0) emptyStage.push({ id: 'select-all', label: 'Select All', shortcut: hint('select-all'), run: selectAll });
       if (emptyStage.length > 0) groups.push(emptyStage);
       return groups;
     }
@@ -90,16 +102,16 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
         },
       });
     }
-    if (hasPrimary) clipboardGroup.push({ id: 'copy', label: 'Copy', shortcut: 'Ctrl+C', run: copySelectedPart });
+    if (hasPrimary) clipboardGroup.push({ id: 'copy', label: 'Copy', shortcut: hint('copy'), run: copySelectedPart });
     clipboardGroup.push({
       id: 'paste',
       label: 'Paste',
-      shortcut: 'Ctrl+V',
+      shortcut: hint('paste'),
       disabled: !clipboardData,
       run: pasteCopiedPart,
     });
-    if (hasPrimary) clipboardGroup.push({ id: 'duplicate', label: 'Duplicate', shortcut: 'Ctrl+D', run: duplicateSelectedPart });
-    if (hasPrimary) clipboardGroup.push({ id: 'delete', label: 'Delete', shortcut: 'Del', run: deleteSelection });
+    if (hasPrimary) clipboardGroup.push({ id: 'duplicate', label: 'Duplicate', shortcut: hint('duplicate'), run: duplicateSelectedPart });
+    if (hasPrimary) clipboardGroup.push({ id: 'delete', label: 'Delete', shortcut: hint('delete-selection'), run: deleteSelection });
 
     const arrangement: ContextMenuGroup = [
       { id: 'bring-forward', label: 'Bring Forward', disabled: !single || index <= 0, run: () => reorderParts(index, index - 1) },
@@ -118,7 +130,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     return [
       clipboardGroup,
       ...(groupActions.length > 0 ? [groupActions] : []),
-      [{ id: 'select-all', label: 'Select All', run: selectAll }],
+      [{ id: 'select-all', label: 'Select All', shortcut: hint('select-all'), run: selectAll }],
       arrangement,
     ];
   }, [
@@ -129,6 +141,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     deleteSelection,
     duplicateSelectedPart,
     groupSelection,
+    hint,
     pasteCopiedPart,
     reorderParts,
     selectAll,
@@ -182,13 +195,7 @@ export const EditorContextMenuProvider: React.FC<{ children: React.ReactNode }> 
     const handleKeyDown = (event: KeyboardEvent) => {
       const isMenuKey = event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10');
       if (!isMenuKey || isBlockingModalOpen()) return;
-      const active = document.activeElement;
-      if (active && (
-        active.tagName === 'INPUT'
-        || active.tagName === 'TEXTAREA'
-        || active.tagName === 'SELECT'
-        || (active as HTMLElement).isContentEditable
-      )) return;
+      if (isEditableElement(document.activeElement)) return;
       const stage = document.querySelector('.stage-canvas-container');
       if (!stage) return;
       const node = selectedPartId ? document.querySelector(`[data-part-id="${selectedPartId}"]`) : null;

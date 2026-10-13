@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FreeformPoint } from '../types/animator';
 import { MIN_FREEFORM_POINTS, simplifyFreeformPoints } from '../utils/freeform';
+import { isEditableElement } from '../utils/keyboardFocus';
 
 /** Mouse movement (CSS px) that switches a click into a freehand stroke. */
 const STROKE_THRESHOLD = 4;
@@ -86,8 +87,7 @@ export const useFreeformDraw = ({ enabled, getStagePoint, onComplete, onCancel }
   useEffect(() => {
     if (!enabled) return;
     const handleKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target && (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))) return;
+      if (isEditableElement(document.activeElement)) return;
       if (e.key === 'Enter' && pointsRef.current.length > 0) {
         e.preventDefault();
         e.stopPropagation();

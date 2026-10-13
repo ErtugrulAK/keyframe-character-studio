@@ -1,0 +1,150 @@
+/* The keyboard shortcut reference: the shortcut table, rendered.
+   Same dialog language as the editor's other modals (backdrop, elevated
+   surface, one close control), with a two-column list per category so the key
+   column stays aligned down the panel. */
+
+.shortcut-reference-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-md);
+  background: rgba(7, 10, 16, 0.68);
+  backdrop-filter: blur(3px);
+}
+
+.shortcut-reference {
+  display: flex;
+  flex-direction: column;
+  width: min(720px, 100%);
+  max-height: min(640px, 88vh);
+  border: 1px solid var(--kcs-border-subtle);
+  border-radius: var(--kcs-radius-panel);
+  background: var(--kcs-bg-elevated);
+  box-shadow: var(--kcs-shadow-dialog);
+  overflow: hidden;
+}
+
+.shortcut-reference-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md) var(--space-sm);
+  border-bottom: 1px solid var(--kcs-border-subtle);
+}
+
+.shortcut-reference-header h2 {
+  margin: 0;
+  color: var(--kcs-text-primary);
+  font-size: var(--font-size-body-lg);
+  font-weight: 700;
+}
+
+.shortcut-reference-platform {
+  margin: 4px 0 0;
+  color: var(--kcs-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.shortcut-reference-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--kcs-control-sm);
+  height: var(--kcs-control-sm);
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: var(--kcs-text-secondary);
+  cursor: pointer;
+}
+
+.shortcut-reference-close > svg {
+  width: 15px;
+  height: 15px;
+}
+
+.shortcut-reference-close:hover,
+.shortcut-reference-close:focus-visible {
+  border-color: var(--kcs-border-default);
+  background: var(--kcs-bg-hover);
+  color: var(--kcs-text-primary);
+}
+
+.shortcut-reference-close:focus-visible {
+  outline: 2px solid var(--kcs-focus);
+  outline-offset: -2px;
+}
+
+.shortcut-reference-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-md);
+  overflow-y: auto;
+}
+
+.shortcut-reference-group h3 {
+  margin: 0 0 8px;
+  color: var(--kcs-text-label);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.shortcut-reference-group dl {
+  margin: 0;
+  border-top: 1px solid var(--kcs-border-subtle);
+}
+
+.shortcut-reference-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 5px 0;
+  border-bottom: 1px solid var(--kcs-border-subtle);
+}
+
+.shortcut-reference-row dt {
+  color: var(--kcs-text-secondary);
+  font-size: var(--font-size-body);
+}
+
+.shortcut-reference-detail,
+.shortcut-reference-scope {
+  display: block;
+  margin-top: 2px;
+  color: var(--kcs-text-muted);
+  font-size: var(--font-size-caption);
+  line-height: var(--line-height-relaxed);
+}
+
+.shortcut-reference-scope {
+  color: var(--kcs-accent);
+}
+
+.shortcut-reference-row dd {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 4px;
+  margin: 0;
+}
+
+.shortcut-reference-row kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--kcs-border-default);
+  border-bottom-width: 2px;
+  border-radius: var(--kcs-radius-control);
+  background: var(--kcs-bg-input);
+  color: var(--kcs-text-primary);
+  font-family: var(--font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: var(--font-size-caption);
+  white-space: nowrap;
+}

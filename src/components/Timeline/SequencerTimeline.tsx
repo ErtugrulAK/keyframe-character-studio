@@ -32,6 +32,7 @@ import { TrackLane, type KeyframePress } from './TrackLane';
 import { CHANNEL_META, clampPanelSize, KEYFRAME_DRAG_THRESHOLD_PX, OUTLINER_DEFAULT_WIDTH, OUTLINER_MAX_WIDTH, OUTLINER_MIN_WIDTH, resolveTimelineHeightCeiling, TIMELINE_DEFAULT_HEIGHT, TIMELINE_MIN_HEIGHT } from './timelineConstants';
 import { copyKeyframeGroupData, type KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { TrackOutlinerRow } from './TrackOutlinerRow';
+import { frameToSeconds, secondsToFrame } from '../../utils/timebase';
 import { InlineRename } from '../Shared/InlineRename';
 import './SequencerTimeline.css';
 
@@ -946,12 +947,12 @@ export const SequencerTimeline: React.FC = () => {
                 step={0.5}
                 min={0.5}
                 max={40}
-                value={Number((activeSequenceDurationFrames / fps).toFixed(1))}
+                value={Number(frameToSeconds(activeSequenceDurationFrames, fps).toFixed(1))}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => {
                   const sec = parseFloat(e.target.value);
                   if (!isNaN(sec) && sec > 0) {
-                    const durationFrames = Math.round(sec * fps);
+                    const durationFrames = Math.round(secondsToFrame(sec, fps));
                     updateMotionTemplateDuration(activeTemplateId, durationFrames);
                     setTotalFrames(durationFrames);
                   }
@@ -961,11 +962,11 @@ export const SequencerTimeline: React.FC = () => {
             </span>
             <div className="duration-preset-group" role="group" aria-label="Sequence duration presets">
               {[1, 2, 3, 5, 10].map((sec) => (
-                <button key={sec} className={`duration-preset-pill ${activeSequenceDurationFrames === sec * fps ? 'active' : ''}`} onClick={() => {
-                  const durationFrames = sec * fps;
+                <button key={sec} className={`duration-preset-pill ${activeSequenceDurationFrames === secondsToFrame(sec, fps) ? 'active' : ''}`} onClick={() => {
+                  const durationFrames = secondsToFrame(sec, fps);
                   updateMotionTemplateDuration(activeTemplateId, durationFrames);
                   setTotalFrames(durationFrames);
-                }} title={`Set the sequence to ${sec} seconds`} aria-pressed={activeSequenceDurationFrames === sec * fps}>{sec}s</button>
+                }} title={`Set the sequence to ${sec} seconds`} aria-pressed={activeSequenceDurationFrames === secondsToFrame(sec, fps)}>{sec}s</button>
               ))}
             </div>
             <button className="fit-pill-btn crop-btn" onClick={handleCropToContent} title="Crop the sequence to the last keyframe">

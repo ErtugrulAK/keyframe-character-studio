@@ -4,6 +4,7 @@ import { Diamond, Plus, Trash2, Play } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../../utils/channelKeyframeGroups';
 import { SmartNumberInput } from '../inputs/SmartNumberInput';
+import { frameToSeconds } from '../../../utils/timebase';
 
 interface KeyframesTabProps {
   selectedPart: CharacterPart;
@@ -35,7 +36,7 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
   const groups = groupChannelKeyframesByFrame(track ? resolveTrackChannels(track) : undefined, activeTmpl);
 
   const formatTime = (frame: number) => {
-    const totalSec = frame / fps;
+    const totalSec = frameToSeconds(frame, fps);
     return `${totalSec.toFixed(2)}s`;
   };
 

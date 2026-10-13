@@ -590,7 +590,7 @@ test('grouping folds the keyframes of every sequence and ungroups exactly', asyn
   expect(await snapshot(page)).toBe(before);
 });
 
-test('ungroup refuses an animated container and writes nothing', async ({ page }) => {
+test('ungroup dissolves an animated container and keeps every child in its world pose', async ({ page }) => {
   await seed(page, [
     { id: 'a', name: 'Alpha', x: -120, zIndex: 1 },
     { id: 'b', name: 'Beta', x: 120, zIndex: 2 },
@@ -605,11 +605,22 @@ test('ungroup refuses an animated container and writes nothing', async ({ page }
   const containerTrack = (await persisted(page)).tracks.find((track) => track.partId === containerId)!;
   expect(Object.values(containerTrack.channels).some((channel) => channel.length > 0)).toBe(true);
   const keyedSnapshot = await snapshot(page);
+  const worldBefore = [await renderedTransform(page, 'a'), await renderedTransform(page, 'b')];
 
+  // R3-13: the blanket refusal is gone. An animated container dissolves, the
+  // motion it owned ends up inside every child (so the children keep the world
+  // pose they had while they hung off it), and the container track goes with it.
   await toolbarButton(page, 'Ungroup layers').click();
-  await expect(page.getByText('Ungroup cannot redistribute an animated group. Remove the group keyframes first.')).toBeVisible();
+  await expect(groupRows(page)).toHaveCount(0);
+  const ungrouped = await persisted(page);
+  expect(ungrouped.layers.some((layer) => layer.isGroup)).toBe(false);
+  expect(ungrouped.tracks.some((track) => track.partId === containerId)).toBe(false);
+  expect([await renderedTransform(page, 'a'), await renderedTransform(page, 'b')]).toEqual(worldBefore);
+
+  // One history entry: a single undo restores the container, its keys and the
+  // children's parenting, with the document byte-identical to the keyed state.
+  await page.locator('button[title="Undo"]').click();
   await expect(groupRows(page)).toHaveCount(1);
-  // The refusal is a read: the document is byte-identical.
   expect(await snapshot(page)).toBe(keyedSnapshot);
 });
 

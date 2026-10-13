@@ -79,12 +79,14 @@ test.describe('KCS V5.1 consolidated recovery', () => {
     expect(transition).toContain('transform 0.24s');
 
     await page.getByRole('button', { name: 'Hide Inspector' }).click();
-    await expect(page.locator('.main-layout')).toHaveClass(/inspector-hidden/u);
+    // R3-02: the panel visibility flags and the handles they position live on the
+    // editor SHELL, not on the workspace row the timeline resize changes.
+    await expect(page.locator('.app-container')).toHaveClass(/inspector-hidden/u);
     await expect(page.getByRole('button', { name: 'Show Inspector' })).toBeVisible();
     await expect.poll(() => sidebar.evaluate((node) => Math.round(node.getBoundingClientRect().width))).toBe(0);
 
     await page.getByRole('button', { name: 'Show Inspector' }).click();
-    await expect(page.locator('.main-layout')).not.toHaveClass(/inspector-hidden/u);
+    await expect(page.locator('.app-container')).not.toHaveClass(/inspector-hidden/u);
     await expect(page.getByRole('button', { name: 'Hide Inspector' })).toBeVisible();
     await expect.poll(() => sidebar.evaluate((node) => Math.round(node.getBoundingClientRect().width))).toBeGreaterThan(0);
   });

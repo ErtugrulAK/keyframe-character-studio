@@ -205,8 +205,11 @@ the world on any frame`.
   **No force push, no rebase, no history rewrite.**
 - PR **#9** — OPEN, **not merged** — `https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`,
   base `main`.
-- Exact head SHA, mergeability and CI run id/conclusion: recorded in
-  `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` (refreshed after the push).
+- Pushed head: `d545cfca58978e82357c7f8ed8da8d1360710278` (`d545cfc`); the push moved the remote branch
+  `14035e3..d545cfc` and was a fast-forward.
+- PR #9 head `d545cfca58978e82357c7f8ed8da8d1360710278`, mergeable **MERGEABLE**, merge state **CLEAN**.
+- CI **CI Pipeline** run **`38420352883`** (`pull_request`) on that head — conclusion **success**
+  (`https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38420352883`).
 
 ## 7. Live surfaces (never touched)
 

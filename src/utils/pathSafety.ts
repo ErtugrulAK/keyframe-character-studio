@@ -37,6 +37,20 @@ function replaceControlCharacters(value: string): string {
   return Array.from(value, (character) => character.charCodeAt(0) < 0x20 ? '-' : character).join('');
 }
 
+/**
+ * Fold accents to their base letters: an NFKD decomposition followed by the
+ * removal of the combining marks it leaves behind (`Café` → `Cafe`). The mark
+ * is NOT a separator — without this step an accented letter becomes `cafe-` and
+ * an ASCII slug reads `cafe-de-mo`, a mangled word.
+ *
+ * This is the fold for ASCII identifiers (an OGraf graphic id and the package
+ * file name derived from it). `sanitizeFilenameComponent` deliberately does NOT
+ * fold: a user-facing scene export keeps its own Unicode file name.
+ */
+export function foldDiacritics(value: string): string {
+  return value.normalize('NFKD').replace(/\p{M}+/gu, '');
+}
+
 export function normalizePackagePath(value: string): string {
   return value.replace(/\\/gu, '/');
 }

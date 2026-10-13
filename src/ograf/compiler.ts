@@ -1,5 +1,5 @@
 import type { SceneData } from '../types/composition';
-import { isSafePackageRelativePath, sanitizeFilenameComponent } from '../utils/pathSafety';
+import { foldDiacritics, isSafePackageRelativePath, sanitizeFilenameComponent } from '../utils/pathSafety';
 import { validateSceneForOGraf } from './validation';
 import { describeOGrafValueForDiagnostics } from './diagnostics';
 import {
@@ -22,8 +22,7 @@ function hashString(value: string): string {
 }
 
 export function sanitizeOGrafId(value: string): string {
-  const sanitized = value
-    .normalize('NFKD')
+  const sanitized = foldDiacritics(value)
     .replace(/[^a-zA-Z0-9._-]+/gu, '-')
     .replace(/-+/gu, '-')
     .replace(/^[-.]+|[-.]+$/gu, '')

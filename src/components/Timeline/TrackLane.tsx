@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe } from '../../types/animator';
 import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
-import { groupChannelKeyframesByFrame } from '../../utils/channelKeyframeGroups';
+import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
 import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
 
 interface TrackLaneProps {
@@ -20,11 +20,18 @@ interface TrackLaneProps {
   onToggleKeyframe: (id: string) => void;
   onSelectPart: (partId: string, shiftKey: boolean) => void;
   onSetFrame: (frame: number) => void;
-  onStartDragKf: (drag: { trackId: string; keyframeId: string }) => void;
-  onStartDragPKf: (drag: { trackId: string; channel: AnimationChannel; keyframeId: string }) => void;
+  /**
+   * A keyframe drag started. The handler resolves the moving set itself: a press
+   * on an already-selected keyframe keeps the selection, so the whole selected
+   * set moves as one (`selectedKeyframeIds` is the only selection store).
+   */
+  onStartDragKf: (drag: { trackId: string; keyframeId: string; additive: boolean }) => void;
+  onStartDragPKf: (drag: { trackId: string; channel: AnimationChannel; keyframeId: string; additive: boolean }) => void;
   onHoverKf: (hover: { frame: number; label: string } | null) => void;
   onDeleteKeyframe: (trackId: string, keyframeId: string) => void;
   onDeletePropertyKeyframe: (trackId: string, channel: AnimationChannel, keyframeId: string) => void;
+  /** Delete every keyframe of one frame group (all stores) of a track. */
+  onDeleteKeyframeGroup: (trackId: string, frame: number) => void;
   onUpdateMaskPathKeyframeFrame: (trackId: string, channel: LayerMaskPathChannel, keyframeId: string, frame: number) => void;
   onDeleteMaskPathKeyframe: (trackId: string, channel: LayerMaskPathChannel, keyframeId: string) => void;
   onDuplicateKeyframeGroup: (trackId: string, frame: number) => void;
@@ -40,8 +47,13 @@ interface TrackLaneProps {
  * and property diamonds) when the track is expanded.
  */
 
-/** Diamonds that participate in the local arrow-key focus walk inside one lane. */
+/**
+ * Diamonds that participate in the local arrow-key focus walk inside one lane.
+ */
 const LANE_DIAMOND_SELECTOR = '.keyframe-diamond, .ue-prop-diamond';
+
+/** A press that travels less than this is a click, not a drag (the marquee rule). */
+const KEYFRAME_DRAG_THRESHOLD_PX = 3;
 
 /**
  * The modifier that means "fold this key into the selection instead of
@@ -104,6 +116,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   onHoverKf,
   onDeleteKeyframe,
   onDeletePropertyKeyframe,
+  onDeleteKeyframeGroup,
   onUpdateMaskPathKeyframeFrame: _onUpdateMaskPathKeyframeFrame,
   onDeleteMaskPathKeyframe,
   onDuplicateKeyframeGroup,
@@ -169,34 +182,53 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   };
 
   const activeTmpl = activeTemplateId || 'Sequence';
-  // M6: canonical frame-group model — one timeline point per frame.
-  // Legacy composite keyframes are only rendered for tracks that have NO
-  // channel data (imported old projects), keeping legacy compatibility.
+  // M6/R3-10: ONE read truth. The layer row and the channel lanes are both
+  // projections of the keyframes the evaluator resolves (`resolveTrackChannels`),
+  // so no store — canonical or legacy — can show on one row and hide on another.
+  const resolvedChannels = resolveTrackChannels(track);
   const useCanonical = hasChannelDataForTemplate(track, activeTmpl);
-  const groups = groupChannelKeyframesByFrame(track.channels, activeTmpl);
+  const groups = groupChannelKeyframesByFrame(resolvedChannels, activeTmpl);
   const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
   const sortedKfs = [...activeKfs].sort((a, b) => a.frame - b.frame);
   const selectedKeyframeIdSet = new Set(selectedKeyframeIds);
+  /** Client X of the press that is still in flight, to tell a click from a drag. */
+  const keyPressOriginRef = useRef<number | null>(null);
 
   /**
    * A key click either replaces the keyframe selection or folds this single key
-   * into it, according to the multi-select modifier.
+   * into it, according to the multi-select modifier — unless the press was the
+   * end of a DRAG. A drag moves the selection it started from, so the click the
+   * browser fires afterwards must not collapse that set to the key under the
+   * pointer. A press that did not travel is a click and selects as it always has.
    */
-  const handleKeyframeClick = (id: string, additive: boolean) => {
+  const handleKeyframeClick = (event: React.MouseEvent, id: string, additive: boolean) => {
+    const origin = keyPressOriginRef.current;
+    keyPressOriginRef.current = null;
+    if (origin && Math.abs(event.clientX - origin) > KEYFRAME_DRAG_THRESHOLD_PX) return;
     if (additive) onToggleKeyframe(id);
     else onSelectKeyframe(id);
   };
 
-  // Delete every channel keyframe at a frame (frame-group delete, same as
-  // KeyframesTab handleDelete).
+  /**
+   * A keyframe press starts a drag. A key that is already part of the selection
+   * keeps it — that is what lets a marquee/Shift selection be moved as one set —
+   * while a press on an unselected key selects exactly that key.
+   */
+  const beginKeyframePress = (event: React.MouseEvent, id: string): boolean => {
+    const additive = isAdditiveSelection(event);
+    keyPressOriginRef.current = event.clientX;
+    if (!additive && !selectedKeyframeIdSet.has(id)) onSelectKeyframe(id);
+    return additive;
+  };
+
+  /**
+   * Delete one frame group. The frame — not a channel id — identifies it, so a
+   * frame whose keys come from the legacy composite list is deleted just like a
+   * canonical one (the layer row never offers an action it cannot perform).
+   */
   const handleDeleteGroup = (e: React.MouseEvent, frame: number) => {
     e.preventDefault();
-    const group = groups.find((g) => g.frame === frame);
-    if (!group) return;
-    for (const ch of group.channels) {
-      const kf = group.keyframes[ch];
-      if (kf) onDeletePropertyKeyframe(track.id, ch, kf.id);
-    }
+    onDeleteKeyframeGroup(track.id, frame);
   };
   const renderChannelLane = (ch: AnimationChannel) => {
     const isPathChannel = ch.endsWith(':path');
@@ -210,7 +242,7 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
       ? track.maskPathChannels?.[ch as LayerMaskPathChannel]
       : ch.includes(':')
         ? track.maskChannels?.[ch as LayerMaskChannel]
-        : track.channels?.[ch as TrackChannel];
+        : resolvedChannels[ch as TrackChannel];
     const chKfs = [...(source ?? [])]
       .filter((keyframe) => (keyframe.templateId || 'Sequence') === activeTmpl)
       .sort((a, b) => a.frame - b.frame) as (PropertyKeyframe | PathKeyframe)[];
@@ -238,8 +270,13 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               className={`ue-prop-diamond ${isSelected ? 'selected' : ''}`}
               data-keyframe-id={keyframe.id}
               style={{ left: `${keyframe.frame * frameWidth}px`, color: meta.color } as React.CSSProperties}
-              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(keyframe.id, isAdditiveSelection(e)); onSetFrame(keyframe.frame); }}
-              onMouseDown={(e) => { e.stopPropagation(); onStartDragPKf({ trackId: track.id, channel: ch, keyframeId: keyframe.id }); if (!isAdditiveSelection(e)) onSelectKeyframe(keyframe.id); onSetFrame(keyframe.frame); }}
+              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, keyframe.id, isAdditiveSelection(e)); onSetFrame(keyframe.frame); }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                const additive = beginKeyframePress(e, keyframe.id);
+                onStartDragPKf({ trackId: track.id, channel: ch, keyframeId: keyframe.id, additive });
+                onSetFrame(keyframe.frame);
+              }}
               onMouseEnter={() => onHoverKf({ frame: keyframe.frame, label: `${meta.label}: ${valueLabel}` })}
               onMouseLeave={() => onHoverKf(null)}
               onContextMenu={(e) => openKfMenu(e, keyframe.frame, onDelete)}
@@ -306,15 +343,14 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
               data-keyframe-id={representativeId}
               style={{ left: `${group.frame * frameWidth}px`, color: track.color }}
-              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(representativeId, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(group.frame); }}
+              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, representativeId, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(group.frame); }}
               onMouseDown={(e) => {
-                // BUGFIX: canonical frame-group diamonds are draggable too —
-                // the drag moves the WHOLE frame group (all channel keyframes
-                // at this frame stay together). Legacy tracks already dragged
-                // composite keyframes; canonical tracks had no drag at all.
+                // Canonical frame-group diamonds drag the WHOLE frame group (all
+                // channel keyframes at this frame stay together), or the whole
+                // selected set when this diamond is part of one (R3-04).
                 e.stopPropagation();
-                onStartDragKf({ trackId: track.id, keyframeId: representativeId });
-                if (!isAdditiveSelection(e)) onSelectKeyframe(representativeId);
+                const additive = beginKeyframePress(e, representativeId);
+                onStartDragKf({ trackId: track.id, keyframeId: representativeId, additive });
               }}
               onMouseEnter={() => onHoverKf({ frame: group.frame, label: `${track.name} | ${group.channels.join(',')} | ${group.easing}` })}
               onMouseLeave={() => onHoverKf(null)}
@@ -337,8 +373,12 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
               className={`keyframe-diamond ${isKfSelected ? 'selected' : ''}`}
               data-keyframe-id={kf.id}
               style={{ left: `${kf.frame * frameWidth}px`, color: track.color }}
-              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(kf.id, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(kf.frame); }}
-              onMouseDown={(e) => { e.stopPropagation(); onStartDragKf({ trackId: track.id, keyframeId: kf.id }); if (!isAdditiveSelection(e)) onSelectKeyframe(kf.id); }}
+              onClick={(e) => { e.stopPropagation(); handleKeyframeClick(e, kf.id, isAdditiveSelection(e)); onSelectPart(track.partId, e.shiftKey); onSetFrame(kf.frame); }}
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                const additive = beginKeyframePress(e, kf.id);
+                onStartDragKf({ trackId: track.id, keyframeId: kf.id, additive });
+              }}
               onMouseEnter={() => onHoverKf({ frame: kf.frame, label: `${track.name} | ${kf.easing}` })}
               onMouseLeave={() => onHoverKf(null)}
               onContextMenu={(e) => openKfMenu(e, kf.frame, () => onDeleteKeyframe(track.id, kf.id))}

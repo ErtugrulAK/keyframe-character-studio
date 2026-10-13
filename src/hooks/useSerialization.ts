@@ -299,9 +299,11 @@ function fromSceneData(
       // M8e-prepB: "channels exist" now means they carry ACTUAL keyframe data —
       // an all-empty channel structure (e.g. 10 empty arrays) falls back to the
       // legacy conversion instead of silently dropping populated keyframes[].
-      channels: ((t.channels && Object.values(t.channels).some((arr) => arr.length > 0))
-        ? t.channels
-        : convertLegacyKeyframesToChannels(t.keyframes || [])) as Track['channels'],
+      // R3-11: the resolution is the EVALUATOR's own (`fillChannelsFromLegacyKeyframes`),
+      // so a file with partially populated channels plus a legacy keyframe list
+      // imports what it plays — nothing can be hidden from the timeline, and a
+      // channel the legacy list still drives becomes canonical at import.
+      channels: fillChannelsFromLegacyKeyframes(t.channels, t.keyframes || []) as Track['channels'],
       maskChannels: t.maskChannels,
       maskPathChannels: migrateMaskPathChannels(t.maskPathChannels),
       // H-04: the authoring state exported with the track has to come back, or a

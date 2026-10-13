@@ -173,15 +173,16 @@ describe('keyframe add preserves the evaluated pose (finding F)', () => {
     const captured = worldToContainerLocal(before, groupWorld);
 
     // A fresh track has no channel data, so the first `+` materializes the
-    // legacy composite keyframe — it must capture the container-local pose too.
+    // canonical transform keyframe group — it must capture the container-local
+    // pose too (one canonical authored truth: no legacy composite write).
     act(() => { clickAddKeyframe(h.container, 'Rect B'); });
     expectSamePose(h.pose(b), before);
-    const composite = h.trackOf(b).keyframes[0];
-    expect(composite.transform.x).toBeCloseTo(captured.x, 9);
-    expect(composite.transform.y).toBeCloseTo(captured.y, 9);
+    const authoredChannels = h.trackOf(b).channels;
+    expect(authoredChannels?.x?.[0].value).toBeCloseTo(captured.x, 9);
+    expect(authoredChannels?.y?.[0].value).toBeCloseTo(captured.y, 9);
+    expect(h.trackOf(b).keyframes).toHaveLength(0);
 
-    // Keying one channel switches the store to the canonical channel path; the
-    // capture must stay container-local there as well.
+    // Keying one channel keeps the same container-local capture.
     act(() => { h.ctx().toggleTrackExpanded(h.trackOf(b).id); });
     act(() => { clickChannelKeyframe(h.container, 'Rect B', 'x'); });
     expect(h.trackOf(b).channels?.x?.[0].value).toBeCloseTo(captured.x, 9);
@@ -195,7 +196,7 @@ describe('keyframe add preserves the evaluated pose (finding F)', () => {
 
     act(() => { clickAddKeyframe(h.container, 'Rect B'); });
     expect(h.trackOf(b).channels?.x?.length).toBe(1);
-    expect(h.trackOf(b).keyframes.length).toBe(1);
+    expect(h.trackOf(b).keyframes.length).toBe(0);
     expectSamePose(h.pose(b), before);
     expectSamePose(h.pose(a), aBefore);
     expectSamePose(h.pose(groupId), groupWorld);
@@ -228,8 +229,12 @@ describe('keyframe add preserves the evaluated pose (finding F)', () => {
     act(() => { clickAddKeyframe(h.container, 'Rect A'); });
 
     expectSamePose(h.pose(id), before);
-    // Fresh layer → composite keyframe, tagged with the active sequence.
-    expect(h.trackOf(id).keyframes[0].templateId).toBe('Outro');
+    // Fresh layer → the canonical transform keyframe group, tagged with the
+    // active sequence on every channel it materializes.
+    for (const channel of POSE_CHANNELS) {
+      expect(h.trackOf(id).channels?.[channel]?.[0].templateId, channel).toBe('Outro');
+    }
+    expect(h.trackOf(id).keyframes).toHaveLength(0);
     act(() => { h.ctx().toggleTrackExpanded(h.trackOf(id).id); });
     act(() => { clickChannelKeyframe(h.container, 'Rect A', 'x'); });
     const xKfs = h.trackOf(id).channels?.x ?? [];
@@ -240,7 +245,7 @@ describe('keyframe add preserves the evaluated pose (finding F)', () => {
     // The Sequence channels stay untouched by the Outro authoring.
     act(() => { h.ctx().setActiveTemplateId('Sequence'); });
     expect((h.trackOf(id).channels?.x ?? []).length).toBe(1);
-    expect(h.trackOf(id).keyframes.length).toBe(1);
+    expect(h.trackOf(id).keyframes).toHaveLength(0);
   });
 
   it('does not drift across repeated add/remove cycles', () => {

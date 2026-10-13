@@ -7,7 +7,6 @@ describe('useInspector Hook', () => {
   const mockSetTracks = vi.fn();
   const mockSetCharacterParts = vi.fn();
   const mockGetComputedTransform = vi.fn().mockReturnValue({ x:0, y:0, rotation:0, scaleX:1, scaleY:1, opacity:1 });
-  const mockAddKeyframeToTrack = vi.fn();
 
   const mockTracks: Track[] = [
     {
@@ -16,7 +15,17 @@ describe('useInspector Hook', () => {
     }
   ] as any;
 
-  it('updates current transform on existing keyframe', () => {
+  /**
+   * React applies queued `setTracks` updaters in order, so the assertions
+   * compose them the same way — the end state of the edit, not one updater.
+   */
+  const applyTrackUpdates = (base: Track[]): Track[] => {
+    let state = base;
+    for (const call of mockSetTracks.mock.calls) state = call[0](state);
+    return state;
+  };
+
+  it('updates current transform on the channel of a legacy-composite track', () => {
     const { result } = renderHook(() => useInspector({
       selectedPartId: 'part_1',
       selectedPartIds: ['part_1'],
@@ -26,20 +35,22 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
+    mockSetTracks.mockClear();
     act(() => {
       result.current.updateCurrentTransform({ x: 50 });
     });
 
-    expect(mockSetTracks).toHaveBeenCalled();
-    const updateFn = mockSetTracks.mock.calls[0][0];
-    const newTracks = updateFn(mockTracks);
-    expect(newTracks[0].keyframes[0].transform.x).toBe(50);
+    // The legacy composite list is migrated first, then the edit lands on the
+    // canonical channel — one authored truth, and no keyframe can hide.
+    const newTracks = applyTrackUpdates(mockTracks);
+    expect(newTracks[0].keyframes).toHaveLength(0);
+    expect(newTracks[0].channels.x).toHaveLength(1);
+    expect(newTracks[0].channels.x[0].value).toBe(50);
   });
 
-  it('adds keyframe if none exists on current frame when updating transform', () => {
+  it('adds a channel keyframe at the current frame when the transform changes off a keyed frame', () => {
     const { result } = renderHook(() => useInspector({
       selectedPartId: 'part_1',
       selectedPartIds: ['part_1'],
@@ -49,14 +60,17 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
+    mockSetTracks.mockClear();
     act(() => {
       result.current.updateCurrentTransform({ y: 100 });
     });
 
-    expect(mockAddKeyframeToTrack).toHaveBeenCalledWith('track_1', 10);
+    const newTracks = applyTrackUpdates(mockTracks);
+    expect(newTracks[0].keyframes).toHaveLength(0);
+    expect(newTracks[0].channels.y.map((k) => k.frame)).toEqual([0, 10]);
+    expect(newTracks[0].channels.y.find((k) => k.frame === 10)!.value).toBe(100);
   });
 
   // ─── M4: channel-aware Inspector edits ─────────────────────────────
@@ -99,7 +113,6 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
     act(() => {
@@ -131,7 +144,6 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
     act(() => {
@@ -157,7 +169,6 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
     act(() => {
@@ -186,7 +197,6 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
     act(() => {
@@ -198,7 +208,7 @@ describe('useInspector Hook', () => {
     expect(newTracks[1].channels.x[0].value).toBe(10);
   });
 
-  it('M4-5: legacy-only track keeps legacy behavior (regression)', () => {
+  it('M4-5/R3-10: a legacy-only track migrates and the edit lands on the channel', () => {
     const { result } = renderHook(() => useInspector({
       selectedPartId: 'part_1',
       selectedPartIds: ['part_1'],
@@ -208,15 +218,16 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
+    mockSetTracks.mockClear();
     act(() => {
       result.current.updateCurrentTransform({ x: 50 });
     });
 
-    const newTracks = mockSetTracks.mock.calls.at(-1)[0](mockTracks);
-    expect(newTracks[0].keyframes[0].transform.x).toBe(50);
+    const newTracks = applyTrackUpdates(mockTracks);
+    expect(newTracks[0].keyframes).toHaveLength(0);
+    expect(newTracks[0].channels.x[0].value).toBe(50);
   });
 
   it('M4-6: channel empty for property → baseTransform fallback (no keyframe invented)', () => {
@@ -233,7 +244,6 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
     act(() => {
@@ -264,7 +274,6 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
     act(() => {
@@ -288,7 +297,6 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts: mockSetCharacterParts,
       getComputedTransform: mockGetComputedTransform,
-      addKeyframeToTrack: mockAddKeyframeToTrack
     }));
 
     act(() => {
@@ -327,7 +335,6 @@ describe('useInspector Hook', () => {
       setTracks: mockSetTracks,
       setCharacterParts,
       getComputedTransform: vi.fn((id: string) => id === 'group' ? groupTransform : currentWorld),
-      addKeyframeToTrack: mockAddKeyframeToTrack,
     }));
 
     act(() => result.current.updateCurrentTransform({ x: 150, y: 50 }));
@@ -374,7 +381,6 @@ describe('useInspector bonded layers', () => {
       setTracks: vi.fn(),
       setCharacterParts,
       getComputedTransform,
-      addKeyframeToTrack: vi.fn(),
     }));
 
     act(() => result.current.updateCurrentTransform({ x: 30, y: 12 }));
@@ -400,7 +406,6 @@ describe('useInspector bonded layers', () => {
       setTracks: vi.fn(),
       setCharacterParts,
       getComputedTransform,
-      addKeyframeToTrack: vi.fn(),
     }));
 
     act(() => result.current.updateCurrentTransform({ x: 30, y: 12 }));

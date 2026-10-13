@@ -104,6 +104,10 @@ export interface AnimatorContextType {
   // Actions
   addKeyframeToTrack: (trackId: string, frame: number) => void;
   deleteKeyframe: (trackId: string, keyframeId: string) => void;
+  /** Delete every keyframe of one frame group (all stores) of a track. */
+  deleteKeyframeFrameGroup: (trackId: string, frame: number) => void;
+  /** Move the whole selected keyframe set by a frame delta (one gesture = one entry). */
+  moveSelectedKeyframes: (selectedIds: string[], delta: number, expandFrameGroups: boolean) => number;
   updateKeyframeFrame: (trackId: string, keyframeId: string, newFrame: number) => void;
   updateKeyframeBezierPoints: (trackId: string, keyframeId: string, points: [number, number, number, number]) => void;
   updateCurrentTransform: (newTransform: Partial<Transform>, partIdOverride?: string) => void;
@@ -338,6 +342,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     toggleTrackLock,
     toggleTrackExpanded,
     addPropertyKeyframe,
+    moveSelectedKeyframes,
+    deleteKeyframeFrameGroup,
     updatePropertyKeyframeValue,
     updatePropertyKeyframeTemporalHandles,
     deletePropertyKeyframe,
@@ -356,6 +362,7 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     characterParts,
     tracks,
     setTracks,
+    tracksRef,
     selectedPartId,
     setSelectedPartId,
     selectedPartIds,
@@ -471,7 +478,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setTracks,
     setCharacterParts,
     getComputedTransform,
-    addKeyframeToTrack,
   });
 
 
@@ -597,6 +603,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         getComputedTransform,
         addKeyframeToTrack,
         deleteKeyframe,
+        deleteKeyframeFrameGroup,
+        moveSelectedKeyframes,
         deletePart,
         updateKeyframeFrame,
         updateKeyframeBezierPoints,

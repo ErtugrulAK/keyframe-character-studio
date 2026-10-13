@@ -117,26 +117,28 @@ describe('AnimatorContext Integration Tests', () => {
     expect(context.canUndo).toBe(true);
     const track = context.tracks[0];
 
-    // Add keyframe
+    // Add keyframe: the aggregate action authors the canonical channel group.
     act(() => {
       context.addKeyframeToTrack(track.id, 10);
     });
 
-    const keyframesCount = context.tracks[0].keyframes.length;
+    const keyframesCount = context.tracks[0].channels.x.length;
+    expect(keyframesCount).toBe(1);
+    expect(context.tracks[0].channels.x[0].frame).toBe(10);
 
     // Undo keyframe add
     act(() => {
       context.undo();
     });
 
-    expect(context.tracks[0].keyframes.length).toBe(keyframesCount - 1);
+    expect(context.tracks[0].channels.x.length).toBe(keyframesCount - 1);
 
     // Redo keyframe add
     act(() => {
       context.redo();
     });
 
-    expect(context.tracks[0].keyframes.length).toBe(keyframesCount);
+    expect(context.tracks[0].channels.x.length).toBe(keyframesCount);
   });
 
   it('Import + History: undoing an import restores the whole document, not only its layers', () => {

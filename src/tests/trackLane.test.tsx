@@ -59,6 +59,7 @@ function renderLane(track: Track) {
     onHoverKf: vi.fn(),
     onDeleteKeyframe: vi.fn(),
     onDeletePropertyKeyframe: vi.fn(),
+    onDeleteKeyframeGroup: vi.fn(),
     onDuplicateKeyframeGroup: vi.fn(),
     kfClipboard: null,
     onCopyKeyframes: vi.fn(),
@@ -135,7 +136,7 @@ describe('M6 — TrackLane canonical render', () => {
     expect(props.onSetFrame).toHaveBeenCalledWith(25);
   });
 
-  test('7: right-click opens menu; Delete Keyframe deletes all channel keyframes at that frame', () => {
+  test('7: right-click opens menu; Delete Keyframe deletes the frame group at that frame', () => {
     const track = makeTrack({
       channels: {
         x: [pk('x0', 25, 1)], y: [pk('y0', 25, 2)],
@@ -145,8 +146,9 @@ describe('M6 — TrackLane canonical render', () => {
     fireEvent.contextMenu(container.querySelector('.keyframe-diamond')!);
     expect(screen.getByLabelText('Delete Keyframe')).toBeTruthy(); // menu opened
     fireEvent.click(screen.getByLabelText('Delete Keyframe'));
-    expect(props.onDeletePropertyKeyframe).toHaveBeenCalledWith('trk_1', 'x', 'x0');
-    expect(props.onDeletePropertyKeyframe).toHaveBeenCalledWith('trk_1', 'y', 'y0');
+    // The frame identifies the group: every store at that (frame, sequence) goes.
+    expect(props.onDeleteKeyframeGroup).toHaveBeenCalledWith('trk_1', 25);
+    expect(props.onDeletePropertyKeyframe).not.toHaveBeenCalled();
   });
 
   test('8: legacy-only track keeps legacy composite render', () => {
@@ -437,6 +439,7 @@ function trackLaneBaseProps(track: Track) {
     onHoverKf: vi.fn(),
     onDeleteKeyframe: vi.fn(),
     onDeletePropertyKeyframe: vi.fn(),
+    onDeleteKeyframeGroup: vi.fn(),
     onDuplicateKeyframeGroup: vi.fn(),
     kfClipboard: null,
     onCopyKeyframes: vi.fn(),

@@ -1,7 +1,8 @@
-import type { CharacterPart, Track, Transform, TrackChannel, PropertyKeyframe } from '../types/animator';
+import type { CharacterPart, Track, Transform, TrackChannel } from '../types/animator';
 import { worldToContainerLocal } from '../utils/containerMath';
 import { resolveBoundPartners } from '../utils/partBinding';
 import { generateId } from '../utils/idGenerator';
+import { migrateLegacyKeyframesToCanonical, migrateTrackLegacyKeyframes } from '../utils/trackMutations';
 
 interface UseInspectorOptions {
   selectedPartId: string | null;
@@ -13,7 +14,6 @@ interface UseInspectorOptions {
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
   setCharacterParts: React.Dispatch<React.SetStateAction<CharacterPart[]>>;
   getComputedTransform: (partId: string, frame: number) => Transform;
-  addKeyframeToTrack: (trackId: string, frame: number) => void;
 }
 
 // Transform fields → canonical channel names (6 animated properties)
@@ -36,53 +36,24 @@ export const useInspector = ({
   setTracks,
   setCharacterParts,
   getComputedTransform,
-  addKeyframeToTrack,
 }: UseInspectorOptions) => {
   const applyTransformToPart = (id: string, newTransform: Partial<Transform>, activeTmpl: string) => {
     const track = tracks.find((t) => t.partId === id);
     if (!track) return;
 
-    // M4: channel-aware path — if this track carries canonical channel data
-    // for the active template, Inspector edits write to channels.
-    const hasChannelData = !!(track.channels && (Object.values(track.channels) as PropertyKeyframe[][])
-      .some((arr) => arr.some((k) => (k.templateId || 'Sequence') === activeTmpl)));
-
-    if (hasChannelData) {
-      applyTransformToChannels(id, track, newTransform, activeTmpl);
-      return;
+    // R3-10/R3-11: ONE canonical authored truth. A track whose animation still
+    // lives in the legacy composite list is migrated into the canonical channels
+    // first, so the edit lands on the channel the timeline and the evaluator
+    // read, and no other channel's keys can disappear or hide.
+    if (track.keyframes && track.keyframes.length > 0) {
+      setTracks((prev) => migrateTrackLegacyKeyframes(prev, track.id));
     }
 
-    const activeKfs = (track.keyframes || []).filter((k) => (k.templateId || 'Sequence') === activeTmpl);
-    const hasActiveKfOnFrame = activeKfs.some((k) => k.frame === currentFrame);
-
-    if (hasActiveKfOnFrame) {
-      setTracks((prev) =>
-        prev.map((tr) => {
-          if (tr.id !== track.id) return tr;
-          return {
-            ...tr,
-            keyframes: (tr.keyframes || []).map((k) =>
-              k.frame === currentFrame && (k.templateId || 'Sequence') === activeTmpl
-                ? { ...k, transform: { ...k.transform, ...newTransform } }
-                : k
-            ),
-          };
-        })
-      );
-    } else if (activeKfs.length > 0) {
-      setCharacterParts((prev) =>
-        prev.map((p) =>
-          p.id === id ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
-        )
-      );
-      addKeyframeToTrack(track.id, currentFrame);
-    } else {
-      setCharacterParts((prev) =>
-        prev.map((p) =>
-          p.id === id ? { ...p, baseTransform: { ...p.baseTransform, ...newTransform } } : p
-        )
-      );
-    }
+    // Channel-aware path — the ONLY transform write path. Inspector edits write
+    // to a channel that already carries keys for the active sequence (updating
+    // or inserting a keyframe at the playhead) and to the base transform for a
+    // channel that carries none, so a layer with no animation stays static.
+    applyTransformToChannels(id, migrateLegacyKeyframesToCanonical(track), newTransform, activeTmpl);
   };
 
   /**

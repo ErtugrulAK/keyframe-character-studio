@@ -990,8 +990,11 @@ describe('useSerialization Hook', () => {
     expect(restored.channels.x[1].value).toBe(200);
     expect(restored.channels.opacity[0].value).toBe(0);
     expect(restored.channels.opacity[1].value).toBeCloseTo(0.5, 5);
-    // No legacy-derived keyframes injected into channels
-    expect(restored.channels.y).toHaveLength(0);
+    // The legacy list still drives y (no canonical y keyframe at all), so its
+    // values are materialized into y at import instead of being hidden — with
+    // the legacy value, never overriding canonical x/opacity.
+    expect(restored.channels.y.map((k) => k.frame)).toEqual([0, 60]);
+    expect(restored.channels.y[0].value).toBe(0);
     // Legacy keyframes array still preserved verbatim (compat)
     expect(restored.keyframes).toHaveLength(2);
     expect(restored.keyframes[0].transform.x).toBe(999);
@@ -1163,11 +1166,15 @@ describe('useSerialization Hook', () => {
     expect(imported.ok).toBe(true);
 
     const restored = (mockSetTracks.mock.calls.at(-1)![0] as Track[]).find(t => t.partId === 'L1')!;
-    // canonical x preserved; legacy values NOT injected anywhere
+    // Canonical x wins (the legacy 999 must not overwrite it); the channels the
+    // legacy list still drives are materialized with the legacy values, so the
+    // imported document shows exactly the animation it plays.
     expect(restored.channels.x).toHaveLength(1);
     expect(restored.channels.x[0].value).toBe(100);
-    expect(restored.channels.y).toHaveLength(0);
-    expect(restored.channels.opacity).toHaveLength(0);
+    expect(restored.channels.y.map((k) => k.frame)).toEqual([0]);
+    expect(restored.channels.y[0].value).toBe(999);
+    expect(restored.channels.opacity.map((k) => k.frame)).toEqual([0]);
+    expect(restored.channels.opacity[0].value).toBe(1);
   });
 
   it('M8e-prepB: empty channels + empty legacy → channels stay empty (no crash)', () => {

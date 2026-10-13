@@ -1,13 +1,17 @@
 import { useState, useCallback } from 'react';
-import type { CharacterPart, Track, AnimationChannel, EasingType, Keyframe, Transform, BezierPath, LayerMaskPathChannel } from '../types/animator';
+import type { CharacterPart, Track, TrackChannel, AnimationChannel, EasingType, Transform, BezierPath, LayerMaskPathChannel } from '../types/animator';
 import { layerMaskPathChannel } from '../types/animator';
-import { generateId } from '../utils/idGenerator';
 import { generateTransitionChannelKeyframes } from '../utils/motionTransitions';
 import { hasChannelDataForTemplate } from '../utils/timelineMetrics';
-import { resolveAuthoredLocalTransform } from '../utils/channelKeyframeGroups';
+import { buildTransformSnapshot, resolveAuthoredLocalTransform } from '../utils/channelKeyframeGroups';
 import { 
   updateKeyframeBezierPointsMutator,
   addPropertyKeyframeMutator,
+  addTransformKeyframeGroupMutator,
+  migrateTrackLegacyKeyframes,
+  resolveKeyframeMoveTargets,
+  moveKeyframesMutator,
+  deleteFrameGroupsMutator,
   updatePropertyKeyframeValueMutator,
   updatePropertyKeyframeTemporalHandlesMutator,
   updatePropertyKeyframeFrameMutator,
@@ -28,6 +32,8 @@ interface UseTimelineOptions {
   characterParts: CharacterPart[];
   tracks: Track[];
   setTracks: React.Dispatch<React.SetStateAction<Track[]>>;
+  /** Live mirror of `tracks`; a drag gesture reads and writes it between renders. */
+  tracksRef: React.MutableRefObject<Track[]>;
   selectedPartId: string | null;
   setSelectedPartId: (id: string | null) => void;
   selectedPartIds: string[];
@@ -48,6 +54,7 @@ export const useTimeline = ({
   characterParts,
   tracks,
   setTracks,
+  tracksRef,
   selectedPartId,
   setSelectedPartId,
   selectedPartIds,
@@ -105,32 +112,32 @@ export const useTimeline = ({
   ]);
 
   // Keyframe & Track Actions
+  /**
+   * R3-10: the layer-level ("aggregate") keyframe action authors ONE canonical
+   * transform keyframe group — the x/y/rotation/scaleX/scaleY/opacity and Trim
+   * Path channels at this frame, from the layer's evaluated authored pose. The
+   * layer row and the expanded channel rows are then two views of the same
+   * keys, and any legacy composite animation is migrated instead of hidden.
+   */
   const addKeyframeToTrack = (trackId: string, frame: number) => {
-    setTracks((prevTracks) =>
-      prevTracks.map((tr) => {
-        if (tr.id !== trackId) return tr;
-        const currentTransform = resolveAuthoredLocalTransform(tr.partId, frame, { parts: characterParts, worldOf: getComputedTransform });
-        const activeTmpl = activeTemplateId || 'Sequence';
-        const existingIdx = (tr.keyframes || []).findIndex((k) => k.frame === frame && (k.templateId || 'Sequence') === activeTmpl);
-
-        const newKf: Keyframe = {
-          id: generateId('kf'),
-          frame,
-          transform: { ...currentTransform },
-          easing: 'easeInOut',
-          templateId: activeTemplateId || 'Sequence',
-        };
-
-        let newKfs = [...(tr.keyframes || [])];
-        if (existingIdx >= 0) {
-          newKfs[existingIdx] = newKf;
-        } else {
-          newKfs.push(newKf);
-          newKfs.sort((a, b) => a.frame - b.frame);
-        }
-        return { ...tr, keyframes: newKfs };
-      })
-    );
+    const track = tracks.find((candidate) => candidate.id === trackId);
+    if (!track) return;
+    const authored = resolveAuthoredLocalTransform(track.partId, frame, { parts: characterParts, worldOf: getComputedTransform });
+    const part = characterParts.find((candidate) => candidate.id === track.partId);
+    const values: Partial<Record<TrackChannel, number>> = {
+      ...buildTransformSnapshot(authored),
+      trimPathStart: part?.trimPathStart ?? 0,
+      trimPathEnd: part?.trimPathEnd ?? 1,
+      trimPathOffset: part?.trimPathOffset ?? 0,
+    };
+    setTracks((prev) => addTransformKeyframeGroupMutator(
+      prev,
+      trackId,
+      frame,
+      activeTemplateId || 'Sequence',
+      values,
+      'easeInOut',
+    ));
   };
 
   const deleteKeyframe = (trackId: string, keyframeId: string) => {
@@ -191,7 +198,41 @@ export const useTimeline = ({
     value: number,
     easing: EasingType = 'easeInOut'
   ) => {
-    setTracks((prev) => addPropertyKeyframeMutator(prev, trackId, channel, frame, value, easing, activeTemplateId || 'Sequence'));
+    setTracks((prev) => addPropertyKeyframeMutator(
+      migrateTrackLegacyKeyframes(prev, trackId),
+      trackId,
+      channel,
+      frame,
+      value,
+      easing,
+      activeTemplateId || 'Sequence',
+    ));
+  };
+
+  /**
+   * R3-04: move the whole timeline keyframe selection by `delta` frames — one
+   * gesture, one history entry (the caller batches), clamped to the project range
+   * and stopped at the first frame that would overwrite unrelated animation.
+   * Returns the delta actually applied, so a drag keeps its pointer mapping.
+   *
+   * The gesture reads and writes the live tracks ref: consecutive `mousemove`
+   * events of one drag can arrive before React re-renders, and a drag must never
+   * move the set twice from the same base.
+   */
+  const moveSelectedKeyframes = (selectedIds: string[], delta: number, expandFrameGroups: boolean): number => {
+    const templateId = activeTemplateId || 'Sequence';
+    const current = tracksRef.current;
+    const targets = resolveKeyframeMoveTargets(current, selectedIds, templateId, expandFrameGroups);
+    const outcome = moveKeyframesMutator(current, targets, delta, totalFrames);
+    if (outcome.appliedDelta === 0) return 0;
+    tracksRef.current = outcome.tracks;
+    setTracks(outcome.tracks);
+    return outcome.appliedDelta;
+  };
+
+  /** Delete every frame group at one frame of one track (all stores). */
+  const deleteKeyframeFrameGroup = (trackId: string, frame: number) => {
+    setTracks((prev) => deleteFrameGroupsMutator(prev, trackId, [frame], activeTemplateId || 'Sequence'));
   };
 
   const updatePropertyKeyframeValue = (trackId: string, channel: AnimationChannel, keyframeId: string, value: number) => {
@@ -376,6 +417,8 @@ export const useTimeline = ({
     toggleTrackLock,
     toggleTrackExpanded,
     addPropertyKeyframe,
+    moveSelectedKeyframes,
+    deleteKeyframeFrameGroup,
     updatePropertyKeyframeValue,
     updatePropertyKeyframeTemporalHandles,
     deletePropertyKeyframe,

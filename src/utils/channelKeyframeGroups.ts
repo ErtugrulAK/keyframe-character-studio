@@ -7,8 +7,9 @@
  * authored pose a keyframe must capture (see `resolveAuthoredLocalTransform`).
  */
 
-import type { CharacterPart, PropertyKeyframe, TrackChannel, Transform } from '../types/animator';
+import type { CharacterPart, PropertyKeyframe, Track, TrackChannel, Transform } from '../types/animator';
 import { worldToContainerLocal } from './containerMath';
+import { fillChannelsFromLegacyKeyframes } from './legacyKeyframeConversion';
 import { relationshipParentId } from './partBinding';
 
 export interface ChannelKeyframeGroup {
@@ -28,6 +29,20 @@ export interface ChannelKeyframeGroup {
 export const DISPLAY_CHANNELS = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity'] as const;
 export const TRIM_PATH_CHANNELS = ['trimPathStart', 'trimPathEnd', 'trimPathOffset'] as const;
 export const ANIMATABLE_CHANNELS: TrackChannel[] = [...DISPLAY_CHANNELS, ...TRIM_PATH_CHANNELS];
+
+/**
+ * The keyframes a track's channels resolve to: its canonical channel keys plus
+ * every legacy composite keyframe the evaluator still falls back to.
+ *
+ * This is the ONE read truth behind the aggregate (layer) row, the channel
+ * lanes and the Inspector keyframe list — the row is a *projection* of the
+ * animation that plays, never a second store. The resolution is exactly the
+ * evaluator's (`fillChannelsFromLegacyKeyframes`), so a surface can neither show
+ * a key that has no effect nor hide a frame the animation uses.
+ */
+export function resolveTrackChannels(track: Track): Record<TrackChannel, PropertyKeyframe[]> {
+  return fillChannelsFromLegacyKeyframes(track.channels, track.keyframes || []);
+}
 
 /**
  * Group per-channel keyframes by frame, filtered to the active template.

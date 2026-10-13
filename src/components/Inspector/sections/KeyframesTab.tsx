@@ -2,7 +2,7 @@ import React from 'react';
 import { useAnimator } from '../../../context/useAnimator';
 import { Diamond, Plus, Trash2, Play } from 'lucide-react';
 import type { CharacterPart } from '../../../types/animator';
-import { groupChannelKeyframesByFrame, DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, resolveAuthoredLocalTransform } from '../../../utils/channelKeyframeGroups';
+import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../../utils/channelKeyframeGroups';
 import { SmartNumberInput } from '../inputs/SmartNumberInput';
 
 interface KeyframesTabProps {
@@ -17,12 +17,10 @@ interface KeyframesTabProps {
 export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
   const {
     tracks,
-    characterParts,
     currentFrame,
     setCurrentFrame,
-    getComputedTransform,
-    addPropertyKeyframe,
-    deletePropertyKeyframe,
+    addKeyframeToTrack,
+    deleteKeyframeFrameGroup,
     updatePropertyKeyframeFrame,
     activeTemplateId,
     fps,
@@ -32,43 +30,26 @@ export const KeyframesTab: React.FC<KeyframesTabProps> = ({ selectedPart }) => {
   const track = tracks.find((t) => t.partId === selectedPart.id);
   const activeTmpl = activeTemplateId || 'Sequence';
 
-  const groups = groupChannelKeyframesByFrame(track?.channels, activeTmpl);
+  // R3-10/R3-11: the SAME projection the timeline reads, so the panel can never
+  // disagree with the layer row about which animation exists.
+  const groups = groupChannelKeyframesByFrame(track ? resolveTrackChannels(track) : undefined, activeTmpl);
 
   const formatTime = (frame: number) => {
     const totalSec = frame / fps;
     return `${totalSec.toFixed(2)}s`;
   };
 
-  // M3: "Add keyframe" = snapshot the current evaluated transform into the
-  // six canonical channels at the current frame (same semantics as the old
-  // composite keyframe add).
+  // M3/R3-10: "Add keyframe" is the ONE canonical transform keyframe group
+  // action (materializes every transform channel at the current frame).
   const handleAdd = () => {
     if (!track) return;
-    const t = resolveAuthoredLocalTransform(selectedPart.id, currentFrame, { parts: characterParts, worldOf: getComputedTransform });
-    const snapshot: Record<string, number> = {
-      x: t.x,
-      y: t.y,
-      rotation: t.rotation,
-      scaleX: t.scaleX,
-      scaleY: t.scaleY,
-      opacity: t.opacity,
-      trimPathStart: selectedPart.trimPathStart ?? 0,
-      trimPathEnd: selectedPart.trimPathEnd ?? 1,
-      trimPathOffset: selectedPart.trimPathOffset ?? 0,
-    };
-    for (const ch of [...DISPLAY_CHANNELS, ...TRIM_PATH_CHANNELS]) {
-      addPropertyKeyframe(track.id, ch, currentFrame, snapshot[ch], 'easeInOut');
-    }
+    addKeyframeToTrack(track.id, currentFrame);
   };
 
   const handleDelete = (frame: number) => {
     if (!track) return;
-    const group = groups.find((g) => g.frame === frame);
-    if (!group) return;
-    for (const ch of group.channels) {
-      const kf = group.keyframes[ch];
-      if (kf) deletePropertyKeyframe(track.id, ch, kf.id);
-    }
+    // The frame group is the unit: every store at that (frame, sequence) goes.
+    deleteKeyframeFrameGroup(track.id, frame);
   };
 
   const handleFrameChange = (oldFrame: number, newFrame: number) => {

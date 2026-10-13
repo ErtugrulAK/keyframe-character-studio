@@ -2,9 +2,10 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { flushSync } from 'react-dom';
 import { useAnimator } from '../../context/useAnimator';
-import { type PropertyKeyframe, type TrackChannel, type AnimationChannel } from '../../types/animator';
-import { computeMaxFrame, hasChannelDataForTemplate, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
-import { DISPLAY_CHANNELS, TRIM_PATH_CHANNELS, buildTransformSnapshot, resolveAuthoredLocalTransform } from '../../utils/channelKeyframeGroups';
+import { type TrackChannel, type AnimationChannel } from '../../types/animator';
+import { computeMaxFrame, resolveCurveSegment, resolveCurveTarget, type CurveSegmentKeyframe } from '../../utils/timelineMetrics';
+import { resolveAuthoredLocalTransform } from '../../utils/channelKeyframeGroups';
+import { locateKeyframe } from '../../utils/trackMutations';
 import {
   Plus,
   ZoomIn,
@@ -71,7 +72,10 @@ export const SequencerTimeline: React.FC = () => {
     selectedKeyframeIds,
     selectKeyframes,
     addKeyframeToTrack,
-    updateKeyframeFrame,
+    deleteKeyframeFrameGroup,
+    moveSelectedKeyframes,
+    startBatchInteraction,
+    endBatchInteraction,
     toggleTrackVisibility,
     toggleTrackEditVisibility,
     renamePartAndTrack,
@@ -88,7 +92,6 @@ export const SequencerTimeline: React.FC = () => {
     canRedo,
     addPropertyKeyframe,
     deletePropertyKeyframe,
-    updatePropertyKeyframeFrame,
     duplicateKeyframeGroup,
     pasteKeyframeClipboard,
     updateKeyframeBezierPoints,
@@ -188,8 +191,22 @@ export const SequencerTimeline: React.FC = () => {
     [kfClipboard, pasteKeyframeClipboard]
   );
 
-  const [draggingKf, setDraggingKf] = useState<{ trackId: string; keyframeId: string } | null>(null);
-  const [draggingPKf, setDraggingPKf] = useState<{ trackId: string; channel: AnimationChannel; keyframeId: string } | null>(null);
+  /**
+   * The timeline's ONE keyframe drag gesture (R3-04). The moving set is captured
+   * once at press time from the one selection store, and every `mousemove` moves
+   * exactly that set by the pointer's frame delta — a marquee or Shift selection
+   * therefore moves as one set, one gesture is one history entry, and consecutive
+   * moves of one drag can never be applied twice.
+   */
+  const [keyframeDrag, setKeyframeDrag] = useState<{
+    ids: string[];
+    /** The frame the gesture started at: the pointer delta is measured from it. */
+    anchorFrame: number;
+    /** The frame the set currently sits at (advances by what actually moved). */
+    appliedFrame: number;
+    /** True when the grabbed diamond is the layer row's frame-group diamond. */
+    expandFrameGroups: boolean;
+  } | null>(null);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [hoveredKf, setHoveredKf] = useState<{ frame: number; label: string } | null>(null);
 
@@ -208,6 +225,37 @@ export const SequencerTimeline: React.FC = () => {
     },
     [totalFrames, FRAME_WIDTH]
   );
+
+  /**
+   * A keyframe press starts the timeline's ONE drag gesture and captures the
+   * moving set: the whole selection when the press lands on a keyframe the user
+   * already selected (that is what makes a marquee/Shift selection movable as a
+   * set), and just that keyframe otherwise. The gesture is batched, so the whole
+   * drag collapses into a single undo step.
+   *
+   * `expandFrameGroups` carries the unit that was grabbed: the layer row's
+   * diamond stands for its whole frame group, a channel diamond for its own key.
+   */
+  const beginKeyframeDrag = (
+    drag: { keyframeId: string; additive: boolean },
+    expandFrameGroups: boolean,
+  ) => {
+    const templateId = activeTemplateId || 'Sequence';
+    let anchorFrame: number | null = null;
+    for (const track of tracks) {
+      const located = locateKeyframe(track, drag.keyframeId, templateId);
+      if (located) {
+        anchorFrame = located.frame;
+        break;
+      }
+    }
+    if (anchorFrame === null) return;
+    const ids = drag.additive || selectedKeyframeIds.includes(drag.keyframeId)
+      ? selectedKeyframeIds
+      : [drag.keyframeId];
+    startBatchInteraction();
+    setKeyframeDrag({ ids, anchorFrame, appliedFrame: anchorFrame, expandFrameGroups });
+  };
 
   /**
    * Timeline marquee (box) selection.
@@ -405,58 +453,34 @@ export const SequencerTimeline: React.FC = () => {
     (e: MouseEvent) => {
       if (isScrubbing) {
         setCurrentFrame(getFrameFromMouse(e.clientX));
-      } else if (draggingKf) {
-        // BUGFIX: drag a keyframe (or a whole canonical frame group) to a new
-        // frame. getFrameFromMouse clamps to [0, totalFrames]. Legacy
-        // composite keyframes move individually; canonical (M6 channel)
-        // frame-group diamonds move EVERY channel keyframe at their original
-        // frame together — the x/y/rotation/scale group never splits.
+      } else if (keyframeDrag) {
+        // R3-04: ONE drag gesture moves the WHOLE captured set by the pointer's
+        // frame delta. `getFrameFromMouse` clamps to [0, totalFrames], the
+        // mutator clamps again and stops at the first frame it would overwrite,
+        // and `appliedFrame` advances by what actually moved — so a clamped drag
+        // stays pointer-exact instead of drifting.
         const targetFrame = getFrameFromMouse(e.clientX);
-        const tr = tracks.find((t) => t.id === draggingKf.trackId);
-        if (tr) {
-          const legacyKf = (tr.keyframes || []).find((k) => k.id === draggingKf.keyframeId);
-          if (legacyKf) {
-            updateKeyframeFrame(tr.id, draggingKf.keyframeId, targetFrame);
-          } else {
-            const activeTmpl = activeTemplateId || 'Sequence';
-            const origFrame = Object.values(tr.channels ?? {})
-              .flat()
-              .find((k) => k.id === draggingKf.keyframeId)?.frame;
-            if (origFrame !== undefined) {
-              for (const [ch, arr] of Object.entries(tr.channels ?? {})) {
-                const kf = (arr as PropertyKeyframe[]).find(
-                  (k) => (k.templateId || 'Sequence') === activeTmpl && k.frame === origFrame,
-                );
-                if (kf) updatePropertyKeyframeFrame(tr.id, ch as TrackChannel, kf.id, targetFrame);
-              }
-            }
+        const step = targetFrame - keyframeDrag.appliedFrame;
+        if (step !== 0) {
+          const applied = moveSelectedKeyframes(keyframeDrag.ids, step, keyframeDrag.expandFrameGroups);
+          if (applied !== 0) {
+            setKeyframeDrag({ ...keyframeDrag, appliedFrame: keyframeDrag.appliedFrame + applied });
           }
-        }
-      } else if (draggingPKf) {
-        const targetFrame = getFrameFromMouse(e.clientX);
-        if (draggingPKf.channel.endsWith(':path')) {
-          updateMaskPathKeyframeFrame(
-            draggingPKf.trackId,
-            draggingPKf.channel as `${string}:path`,
-            draggingPKf.keyframeId,
-            targetFrame,
-          );
-        } else {
-          updatePropertyKeyframeFrame(draggingPKf.trackId, draggingPKf.channel, draggingPKf.keyframeId, targetFrame);
         }
       }
     },
-    [isScrubbing, draggingKf, draggingPKf, getFrameFromMouse, setCurrentFrame, updateKeyframeFrame, updatePropertyKeyframeFrame, updateMaskPathKeyframeFrame, tracks, activeTemplateId]
+    [isScrubbing, keyframeDrag, getFrameFromMouse, setCurrentFrame, moveSelectedKeyframes]
   );
 
   const handleMouseUp = useCallback(() => {
     setIsScrubbing(false);
-    setDraggingKf(null);
-    setDraggingPKf(null);
-  }, []);
+    setKeyframeDrag(null);
+    // One gesture = one history entry (idempotent: the global mouseup also ends a batch).
+    endBatchInteraction();
+  }, [endBatchInteraction]);
 
   useEffect(() => {
-    if (isScrubbing || draggingKf || draggingPKf) {
+    if (isScrubbing || keyframeDrag) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
     }
@@ -464,7 +488,7 @@ export const SequencerTimeline: React.FC = () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isScrubbing, draggingKf, draggingPKf, handleMouseMove, handleMouseUp]);
+  }, [isScrubbing, keyframeDrag, handleMouseMove, handleMouseUp]);
 
   /**
    * Timeline workspace sizing — ONE source of truth.
@@ -649,34 +673,6 @@ export const SequencerTimeline: React.FC = () => {
             ? (part?.trimPathOffset ?? 0)
             : (transform as unknown as Record<string, number>)[channel] ?? (channel === 'maskScale' ? 1 : 0);
     addPropertyKeyframe(trackId, channel, currentFrame, val);
-  };
-
-  // M7: Outliner "Add Composite Keyframe" → canonical 6-channel snapshot at
-  // the current frame (same behavior as KeyframesTab handleAdd).
-  // Legacy-only tracks (imported old projects, no channel data) keep the
-  // legacy composite keyframe path.
-  const handleAddKeyframeSnapshot = (trackId: string, frame: number) => {
-    const track = tracks.find((t) => t.id === trackId);
-    if (!track) return;
-    const activeTmpl = activeTemplateId || 'Sequence';
-    if (!hasChannelDataForTemplate(track, activeTmpl)) {
-      addKeyframeToTrack(trackId, frame);
-      return;
-    }
-    const t = resolveAuthoredLocalTransform(track.partId, frame, { parts: characterParts, worldOf: getComputedTransform });
-    const snapshot = buildTransformSnapshot(t);
-    for (const ch of DISPLAY_CHANNELS) {
-      addPropertyKeyframe(trackId, ch, frame, snapshot[ch], 'easeInOut');
-    }
-    const part = characterParts.find((candidate) => candidate.id === track.partId);
-    const trimValues = {
-      trimPathStart: part?.trimPathStart ?? 0,
-      trimPathEnd: part?.trimPathEnd ?? 1,
-      trimPathOffset: part?.trimPathOffset ?? 0,
-    };
-    for (const ch of TRIM_PATH_CHANNELS) {
-      addPropertyKeyframe(trackId, ch, frame, trimValues[ch], 'easeInOut');
-    }
   };
 
   // State for sub-group collapsing (e.g., location, rotation, scale)
@@ -940,7 +936,10 @@ export const SequencerTimeline: React.FC = () => {
                   onToggleEditVisible={toggleTrackEditVisibility}
                   onToggleVisible={toggleTrackVisibility}
                   onToggleLock={toggleTrackLock}
-                  onAddKeyframe={handleAddKeyframeSnapshot}
+                  // M7/R3-10: the ONE canonical transform keyframe group action — it
+                  // materializes every transform channel at the frame and migrates
+                  // any legacy composite animation instead of hiding it.
+                  onAddKeyframe={addKeyframeToTrack}
                   onAddChannelKeyframe={handleAddChannelKeyframe}
                   isGroupExpanded={isGroupExpanded}
                   onToggleSubGroup={toggleSubGroup}
@@ -994,11 +993,12 @@ export const SequencerTimeline: React.FC = () => {
                 onToggleKeyframe={(id) => selectKeyframes([id], 'toggle')}
                 onSelectPart={handleSelectPart}
                 onSetFrame={setCurrentFrame}
-                onStartDragKf={setDraggingKf}
-                onStartDragPKf={setDraggingPKf}
+                onStartDragKf={(drag) => beginKeyframeDrag(drag, true)}
+                onStartDragPKf={(drag) => beginKeyframeDrag(drag, false)}
                 onHoverKf={setHoveredKf}
                 onDeleteKeyframe={deleteKeyframe}
                 onDeletePropertyKeyframe={deletePropertyKeyframe}
+                onDeleteKeyframeGroup={deleteKeyframeFrameGroup}
                 onUpdateMaskPathKeyframeFrame={updateMaskPathKeyframeFrame}
                 onDeleteMaskPathKeyframe={deleteMaskPathKeyframe}
                 onDuplicateKeyframeGroup={duplicateKeyframeGroup}

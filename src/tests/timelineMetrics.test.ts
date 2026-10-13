@@ -8,7 +8,7 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { computeMaxFrame, hasChannelDataForTemplate, resolveAdjacentKeyframeFrame, resolveCurveSegment, resolveLayerKeyframeFrames } from '../utils/timelineMetrics';
+import { computeMaxFrame, hasChannelDataForTemplate, resolveAdjacentKeyframeFrame, resolveChannelKeyframeFrames, resolveConnectorSegments, resolveCurveSegment, resolveLayerKeyframeFrames } from '../utils/timelineMetrics';
 import { updateKeyframeBezierPointsMutator } from '../utils/trackMutations';
 import type { Track, TrackChannel, PropertyKeyframe, Keyframe } from '../types/animator';
 
@@ -193,5 +193,129 @@ describe('R3-07 — per-layer keyframe navigation', () => {
     expect(resolveAdjacentKeyframeFrame(frames, 12, 'previous')).toBe(0);
     expect(resolveAdjacentKeyframeFrame(frames, 12, 'next')).toBe(48);
     expect(resolveAdjacentKeyframeFrame([], 5, 'next')).toBeNull();
+  });
+
+  /*
+   * R4-05 — the policy the per-layer control (and now every property-level
+   * control) is pinned to. 0 keys and 1 key are the cases that must never
+   * promise a jump the layer cannot make, and navigation never wraps.
+   */
+  test('0 keys: the layer resolves no frame and both directions stay disabled', () => {
+    const track = makeTrack('a');
+    const frames = resolveLayerKeyframeFrames(track, 'Sequence');
+    expect(frames).toEqual([]);
+    expect(resolveAdjacentKeyframeFrame(frames, 20, 'previous')).toBeNull();
+    expect(resolveAdjacentKeyframeFrame(frames, 20, 'next')).toBeNull();
+  });
+
+  test('keys of another template do not arm the control', () => {
+    const track = makeTrack('a', { channels: { x: [pk('x1', 40, 1, 'Outro')] } });
+    const frames = resolveLayerKeyframeFrames(track, 'Sequence');
+    expect(frames).toEqual([]);
+    expect(resolveAdjacentKeyframeFrame(frames, 40, 'previous')).toBeNull();
+    expect(resolveAdjacentKeyframeFrame(frames, 40, 'next')).toBeNull();
+  });
+
+  test('1 key: disabled on both sides while the playhead sits on it', () => {
+    const track = makeTrack('a', { channels: { x: [pk('x1', 24)] } });
+    const frames = resolveLayerKeyframeFrames(track, 'Sequence');
+    expect(frames).toEqual([24]);
+    expect(resolveAdjacentKeyframeFrame(frames, 24, 'previous')).toBeNull();
+    expect(resolveAdjacentKeyframeFrame(frames, 24, 'next')).toBeNull();
+  });
+
+  test('1 key: only the direction that reaches it is enabled', () => {
+    const track = makeTrack('a', { channels: { x: [pk('x1', 24)] } });
+    const frames = resolveLayerKeyframeFrames(track, 'Sequence');
+    // Before the key: forward reaches it, backward has nothing to reach.
+    expect(resolveAdjacentKeyframeFrame(frames, 0, 'previous')).toBeNull();
+    expect(resolveAdjacentKeyframeFrame(frames, 0, 'next')).toBe(24);
+    // After the key: backward reaches it, forward has nothing to reach.
+    expect(resolveAdjacentKeyframeFrame(frames, 60, 'previous')).toBe(24);
+    expect(resolveAdjacentKeyframeFrame(frames, 60, 'next')).toBeNull();
+  });
+
+  test('2+ keys: each side is enabled only when that side has a key, and never wraps', () => {
+    const track = makeTrack('a', { channels: { x: [pk('x1', 0)], opacity: [pk('o1', 30)] } });
+    const frames = resolveLayerKeyframeFrames(track, 'Sequence');
+    expect(frames).toEqual([0, 30]);
+    expect(resolveAdjacentKeyframeFrame(frames, 0, 'previous')).toBeNull();
+    expect(resolveAdjacentKeyframeFrame(frames, 30, 'next')).toBeNull();
+    expect(resolveAdjacentKeyframeFrame(frames, 0, 'next')).toBe(30);
+    expect(resolveAdjacentKeyframeFrame(frames, 30, 'previous')).toBe(0);
+  });
+
+  describe('R4-05 — per-property navigation', () => {
+    const track = makeTrack('a', {
+      channels: { x: [pk('x1', 10), pk('x2', 50)], opacity: [pk('o1', 80)] },
+    });
+
+    test('reads only the property\'s own frames', () => {
+      expect(resolveChannelKeyframeFrames(track, 'x', 'Sequence')).toEqual([10, 50]);
+      expect(resolveChannelKeyframeFrames(track, 'opacity', 'Sequence')).toEqual([80]);
+      expect(resolveChannelKeyframeFrames(track, 'rotation', 'Sequence')).toEqual([]);
+    });
+
+    test('a key on a sibling property never arms this property', () => {
+      const xFrames = resolveChannelKeyframeFrames(track, 'x', 'Sequence');
+      // The layer moves on past frame 80, but X has nothing after 50.
+      expect(resolveAdjacentKeyframeFrame(xFrames, 50, 'next')).toBeNull();
+      expect(resolveAdjacentKeyframeFrame(xFrames, 50, 'previous')).toBe(10);
+      expect(resolveAdjacentKeyframeFrame(xFrames, 10, 'previous')).toBeNull();
+      // Opacity is the mirror image: its own single key, its own directions.
+      const oFrames = resolveChannelKeyframeFrames(track, 'opacity', 'Sequence');
+      expect(resolveAdjacentKeyframeFrame(oFrames, 80, 'previous')).toBeNull();
+      expect(resolveAdjacentKeyframeFrame(oFrames, 80, 'next')).toBeNull();
+      expect(resolveAdjacentKeyframeFrame(oFrames, 0, 'next')).toBe(80);
+    });
+
+    test('scopes the property read to the active template', () => {
+      const templated = makeTrack('b', {
+        channels: { x: [pk('x1', 5), pk('x2', 45, 1, 'Outro')] },
+      });
+      expect(resolveChannelKeyframeFrames(templated, 'x', 'Sequence')).toEqual([5]);
+      expect(resolveChannelKeyframeFrames(templated, 'x', 'Outro')).toEqual([45]);
+    });
+
+    test('a legacy composite keyframe still counts for its channels', () => {
+      const legacy = makeTrack('c', { keyframes: [lkf('k0', 0), lkf('k20', 20)] });
+      expect(resolveChannelKeyframeFrames(legacy, 'x', 'Sequence')).toEqual([0, 20]);
+      expect(resolveChannelKeyframeFrames(legacy, 'opacity', 'Sequence')).toEqual([0, 20]);
+    });
+  });
+});
+
+describe('R4-08 — connector segments clear the keyframe glyphs', () => {
+  test('one segment per gap, each cleared of both glyphs', () => {
+    expect(resolveConnectorSegments([0, 10, 30], 5, 9)).toEqual([
+      { left: 9, width: 32 },   // 0→10 is a 50px span: 9px cleared at each end
+      { left: 59, width: 82 },  // 10→30 is a 100px span
+    ]);
+  });
+
+  test('a single keyframe owns no connector at all', () => {
+    expect(resolveConnectorSegments([12], 5, 9)).toEqual([]);
+    expect(resolveConnectorSegments([], 5, 9)).toEqual([]);
+  });
+
+  test('keys closer together than two glyph gaps emit no segment', () => {
+    // Two frames at 5px are a 10px span, less than the 18px of clearance.
+    expect(resolveConnectorSegments([4, 6], 5, 9)).toEqual([]);
+    // Exactly two gaps is still empty: the segment would have zero width.
+    expect(resolveConnectorSegments([0, 2], 9, 9)).toEqual([]);
+  });
+
+  test('every emitted segment starts after the previous glyph and ends before the next', () => {
+    const frameWidth = 7;
+    // Every gap here is wider than two glyph gaps, so segments and gaps align 1:1.
+    const frames = [3, 11, 40];
+    const segments = resolveConnectorSegments(frames, frameWidth, 9);
+    expect(segments).toHaveLength(2);
+    segments.forEach((segment, index) => {
+      const from = frames[index] * frameWidth;
+      const to = frames[index + 1] * frameWidth;
+      expect(segment.left).toBeGreaterThanOrEqual(from + 9);
+      expect(segment.left + segment.width).toBeLessThanOrEqual(to - 9);
+    });
   });
 });

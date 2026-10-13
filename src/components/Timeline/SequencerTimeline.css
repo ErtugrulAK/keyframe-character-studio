@@ -44,25 +44,35 @@
 }
 
 /* ── COLUMN RESIZER (outliner width) ──
-   A 6px hit area around a 2px line: the border box keeps the target generous
-   while the painted line stays compact, and hover/active only strengthen the
-   accent — no filled bar, no glow. */
+   R4-02: the same language as the panel-height divider above — a compact centred
+   pill, neutral at rest, strengthened to the KCS accent on hover/while dragging,
+   inside a generous INVISIBLE hit area (the 6px strip, which stays fully
+   transparent). No filled bar, no glow. */
 .timeline-column-resizer {
   flex: 0 0 6px;
   width: 6px;
   align-self: stretch;
+  position: relative;
   cursor: col-resize;
   background: transparent;
-  border-left: 2px solid transparent;
-  border-right: 2px solid transparent;
-  /* The painted line is the padding box (2px); the borders stay hit area. */
-  background-clip: padding-box;
   z-index: 21;
-  transition: background 0.15s ease;
 }
-.timeline-column-resizer:hover,
-.timeline-column-resizer.active {
+.timeline-column-resizer::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 42px;
+  border-radius: var(--radius-xs);
+  background: var(--kcs-border-default);
+  transition: background 0.15s ease, height 0.15s ease;
+}
+.timeline-column-resizer:hover::after,
+.timeline-column-resizer.active::after {
   background: var(--kcs-accent);
+  height: 60px;
 }
 
 /*
@@ -788,6 +798,18 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   white-space: nowrap;
 }
 
+/*
+ * R4-05 — a property row's controls are the layer row's trio one level down:
+ * [◀][+][▶], scoped to THAT property's keys, right-aligned as one compact strip
+ * so the row's label keeps its room and the stack stays 24px tall.
+ */
+.ue-channel-controls {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
 /* Trajectory Line Connecting Keyframes Across Channel Lane */
 .ue-trajectory-line {
   position: absolute;
@@ -925,6 +947,11 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
  * outline in its channel colour; a selected key is filled with that colour, so
  * the state reads at a glance without an oversized symbol. The centre of the hit
  * target — and of the glyph — is the keyframe's exact frame/time coordinate.
+ *
+ * R4-08 — "hollow" is only true if nothing shows through it. The interpolation
+ * connector is therefore drawn as one segment per gap, cleared of both glyphs
+ * (`resolveConnectorSegments` + `KEYFRAME_GLYPH_GAP_PX`), so the 8px outline and
+ * its 18px hit target stay exactly the size they were.
  */
 .keyframe-diamond {
   position: absolute; top: 50%;

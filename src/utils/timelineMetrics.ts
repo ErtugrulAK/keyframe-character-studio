@@ -104,6 +104,34 @@ export function resolveCurveSegment(
 export const TIMELINE_CHANNEL_ORDER: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];
 
 /**
+ * The distinct frames a keyframe list animates in ONE template, ascending.
+ * One frame is ONE navigation target: several keyframes on the same frame (and
+ * the legacy composite list the projection also carries) resolve to a single
+ * playhead position.
+ */
+const templateKeyframeFrames = (keyframes: PropertyKeyframe[], activeTemplateId: string): number[] => {
+  const frames = new Set<number>();
+  keyframes.forEach((keyframe) => {
+    if ((keyframe.templateId || 'Sequence') === activeTemplateId) frames.add(keyframe.frame);
+  });
+  return [...frames].sort((a, b) => a - b);
+};
+
+/**
+ * The frames of ONE channel, ascending and deduplicated: the same rule as
+ * `resolveLayerKeyframeFrames`, applied to the same projection, so the
+ * property-level navigation can never reach a frame the property does not
+ * animate. A channel the projection does not carry has no frames at all.
+ */
+export function resolveChannelKeyframeFrames(
+  track: Track,
+  channel: TrackChannel,
+  activeTemplateId: string,
+): number[] {
+  return templateKeyframeFrames(resolveTrackChannels(track)[channel] ?? [], activeTemplateId);
+}
+
+/**
  * R3-07 — the frames a layer's animation occupies in one template, ascending
  * and deduplicated.
  *
@@ -113,17 +141,35 @@ export const TIMELINE_CHANNEL_ORDER: TrackChannel[] = ['x', 'y', 'rotation', 'sc
  * legacy composite key the evaluator no longer reads) is never a target.
  */
 export function resolveLayerKeyframeFrames(track: Track, activeTemplateId: string): number[] {
-  const frames: number[] = [];
+  const frames = new Set<number>();
   Object.values(resolveTrackChannels(track)).forEach((keyframes) => {
-    keyframes.forEach((keyframe) => {
-      if ((keyframe.templateId || 'Sequence') !== activeTemplateId) return;
-      // One frame is ONE target: several channels keyed on the same frame (and
-      // the legacy composite list the projection also carries) still navigate
-      // to a single playhead position.
-      if (!frames.includes(keyframe.frame)) frames.push(keyframe.frame);
-    });
+    templateKeyframeFrames(keyframes, activeTemplateId).forEach((frame) => frames.add(frame));
   });
-  return frames.sort((a, b) => a - b);
+  return [...frames].sort((a, b) => a - b);
+}
+
+/**
+ * R4-08 — the visible interpolation connector of one lane, as SEGMENTS.
+ *
+ * Each segment spans the gap between two neighbouring keyframes and stops
+ * `glyphGapPx` short of the keyframe at either end, so the line can never be
+ * seen through the interior of a hollow glyph. Masking by geometry is what keeps
+ * the glyph exactly its compact size (its outline is never enlarged) and the hit
+ * target untouched. Two keys closer together than two gaps own no visible
+ * connector, so the segment is simply not emitted.
+ */
+export function resolveConnectorSegments(
+  frames: number[],
+  frameWidth: number,
+  glyphGapPx: number,
+): Array<{ left: number; width: number }> {
+  const segments: Array<{ left: number; width: number }> = [];
+  for (let index = 1; index < frames.length; index += 1) {
+    const span = (frames[index] - frames[index - 1]) * frameWidth;
+    const width = span - glyphGapPx * 2;
+    if (width > 0) segments.push({ left: frames[index - 1] * frameWidth + glyphGapPx, width });
+  }
+  return segments;
 }
 
 /**
@@ -131,6 +177,18 @@ export function resolveLayerKeyframeFrames(track: Track, activeTemplateId: strin
  * (next) `frame`. Null when the layer has no keyframe on that side, so the
  * control disables itself instead of jumping to a frame the layer never
  * animates. Pure navigation: this only ever resolves a frame number.
+ *
+ * R4-05 — the ONE policy every keyframe navigation control obeys (the per-layer
+ * pair and the per-property pairs), so no control can promise a jump it cannot
+ * make:
+ *   - 0 keys:      both directions are null (both controls disabled).
+ *   - exactly 1:   standing ON the key disables both (there is nowhere to go);
+ *                  otherwise only the direction that REACHES it is enabled.
+ *   - 2 or more:   `previous` only when an earlier key exists, `next` only when a
+ *                  later one does.
+ * Navigation NEVER wraps: the first key has no previous, the last has no next.
+ * "Previous" also means the key strictly before a key the playhead already
+ * stands on, which is what makes the control a step, not a no-op.
  */
 export function resolveAdjacentKeyframeFrame(
   keyframeFrames: number[],

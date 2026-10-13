@@ -2,7 +2,7 @@ import React from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Diamond, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
 import type { CharacterPart, Track, TrackChannel } from '../../types/animator';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
-import { resolveAdjacentKeyframeFrame, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
+import { resolveAdjacentKeyframeFrame, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
 import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {
@@ -121,6 +121,17 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
     const chKfs = filterByTemplate
       ? (track.channels?.[ch] ?? []).filter((k) => (k.templateId || 'Sequence') === activeTmpl)
       : (track.channels?.[ch] ?? []);
+    /*
+     * R4-05 — the property's OWN endpoints, resolved from the same channel
+     * projection the property's lane diamonds are painted from: the arrows can
+     * neither skip a key this property holds nor stop on a frame that belongs to
+     * a sibling channel. Same policy as the layer pair (see
+     * `resolveAdjacentKeyframeFrame`): nothing on a side disables that side, and
+     * navigation never wraps.
+     */
+    const channelKeyframeFrames = resolveChannelKeyframeFrames(track, ch, activeTmpl);
+    const previousChannelFrame = resolveAdjacentKeyframeFrame(channelKeyframeFrames, currentFrame, 'previous');
+    const nextChannelFrame = resolveAdjacentKeyframeFrame(channelKeyframeFrames, currentFrame, 'next');
     return (
       <div
         key={ch}
@@ -137,15 +148,46 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
         <span className="ue-channel-label" style={{ color: meta.color }} title={`${meta.label}${chKfs.length ? ` — ${chKfs.length} keyframe${chKfs.length === 1 ? '' : 's'}` : ''}`}>
           {TREE_LABEL[ch] ?? meta.label}
         </span>
-        <button
-          className="btn-icon track-add-kf-btn"
-          style={{ color: meta.color }}
-          onClick={() => onAddChannelKeyframe(track.id, ch, track.partId)}
-          title={`Add ${meta.label} keyframe`}
-          aria-label={`Add ${meta.label} keyframe`}
-        >
-          <Diamond size={11} aria-hidden="true" />
-        </button>
+        <div className="ue-channel-controls">
+          {/* [◀][+][▶] scoped to THIS property — the layer row's own trio, one
+              level down: the row states its property, its nav strip states the
+              property's keys. */}
+          <button
+            className="btn-icon track-icon-btn"
+            onClick={(e) => { e.stopPropagation(); if (previousChannelFrame !== null) onJumpToFrame(previousChannelFrame); }}
+            disabled={previousChannelFrame === null}
+            title={previousChannelFrame === null
+              ? `${meta.label} of ${displayName} has no earlier keyframe`
+              : `Go to the previous ${meta.label} keyframe of ${displayName} (frame ${previousChannelFrame})`}
+            aria-label={previousChannelFrame === null
+              ? `Previous ${meta.label} keyframe of ${displayName} (none)`
+              : `Previous ${meta.label} keyframe of ${displayName}, frame ${previousChannelFrame}`}
+          >
+            <ChevronLeft size={13} aria-hidden="true" />
+          </button>
+          <button
+            className="btn-icon track-add-kf-btn"
+            style={{ color: meta.color }}
+            onClick={(e) => { e.stopPropagation(); onAddChannelKeyframe(track.id, ch, track.partId); }}
+            title={`Add ${meta.label} keyframe`}
+            aria-label={`Add ${meta.label} keyframe`}
+          >
+            <Diamond size={11} aria-hidden="true" />
+          </button>
+          <button
+            className="btn-icon track-icon-btn"
+            onClick={(e) => { e.stopPropagation(); if (nextChannelFrame !== null) onJumpToFrame(nextChannelFrame); }}
+            disabled={nextChannelFrame === null}
+            title={nextChannelFrame === null
+              ? `${meta.label} of ${displayName} has no later keyframe`
+              : `Go to the next ${meta.label} keyframe of ${displayName} (frame ${nextChannelFrame})`}
+            aria-label={nextChannelFrame === null
+              ? `Next ${meta.label} keyframe of ${displayName} (none)`
+              : `Next ${meta.label} keyframe of ${displayName}, frame ${nextChannelFrame}`}
+          >
+            <ChevronRight size={13} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     );
   };

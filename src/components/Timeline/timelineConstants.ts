@@ -29,6 +29,14 @@ export const CHANNEL_ROW_HEIGHT = 24; // sub-channel row
 export const KEYFRAME_DRAG_THRESHOLD_PX = 3;
 
 /**
+ * R4-08 — the clearance between a keyframe glyph and the interpolation connector
+ * that runs into it. The glyph is an 8px box rotated 45° (≈11.3px across, ≈14.1px
+ * while hovered); 9px clears even the hovered corner, so a hollow keyframe never
+ * shows the connector through its interior and the glyph never grows to hide it.
+ */
+export const KEYFRAME_GLYPH_GAP_PX = 9;
+
+/**
  * Timeline workspace sizing. These are the ONLY bounds of the timeline panel:
  * the height resizer and the outliner column divider both clamp through
  * `clampPanelSize`, so a drag can never leave the workspace in a size the other

@@ -65,8 +65,10 @@ test('each Boolean operation renders its own icon and accessible name', async ({
   const operations = ['union', 'subtract', 'intersect', 'exclude'] as const;
   const paths: string[] = [];
   for (const operation of operations) {
-    const button = page.getByRole('button', { name: `Create ${operation} Boolean`, exact: true });
+    const label = `${operation[0].toUpperCase()}${operation.slice(1)}`;
+    const button = page.getByRole('button', { name: `Boolean ${label}` });
     await expect(button).toBeVisible();
+    await expect(button).toBeEnabled();
     const svg = button.locator('svg');
     await expect(svg).toHaveCount(1);
     // Union and Exclude share the operand geometry and differ by fill rule, so

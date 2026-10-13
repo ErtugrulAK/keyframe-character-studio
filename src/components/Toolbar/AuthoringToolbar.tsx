@@ -7,6 +7,7 @@ import {
   Grid,
   Group,
   Hand,
+  Link2,
   MousePointer2,
   PenTool,
   Square,
@@ -19,6 +20,7 @@ import {
 import { useAnimator } from '../../context/useAnimator';
 import { useBooleanAuthoring } from '../../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../../hooks/useLayerGrouping';
+import { usePartBindingAuthoring } from '../../hooks/usePartBindingAuthoring';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { BooleanOperationIcon } from '../Inspector/BooleanOperationIcon';
 import type { BooleanOperation } from '../../utils/booleanGeometry';
@@ -53,7 +55,8 @@ const dispatchViewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') =>
  * Every control reads and writes the authority the rest of the app uses —
  * `activeTool`/`showGrid` from the animator context, shape creation through
  * `armShapeCreation`, camera commands through the shared command channel, the
- * shared z-index write path, and the shared Boolean and layer-group authorities.
+ * shared z-index write path, and the shared Boolean, layer-group and layer-bond
+ * authorities.
  * It owns no document state of its own, so a view-only tool cannot touch the
  * project, and it holds no second copy of any command. Paint is deliberately NOT
  * here: fill and stroke are authored in the Inspector's Appearance section,
@@ -84,6 +87,7 @@ export const AuthoringToolbar: React.FC = () => {
   } = useBooleanAuthoring();
   const { handleZIndexChange } = usePartPropertyAuthoring();
   const { selectedGroup, canGroup, groupSelection, ungroupSelection } = useLayerGrouping();
+  const { canBind, bindBlockReason, canRelease, bindSelection, releaseBinding } = usePartBindingAuthoring();
 
   const toolButtonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedPart = characterParts.find((part) => part.id === selectedPartId);
@@ -248,6 +252,35 @@ export const AuthoringToolbar: React.FC = () => {
           onClick={ungroupSelection}
         >
           <Ungroup size={14} />
+        </button>
+      </div>
+
+      <span className="authoring-toolbar-divider" aria-hidden="true" />
+
+      {/*
+        R3-12 — Bind/Bond is a structural command, so it lives here with the other
+        authoring operations instead of in the Details inspector.
+      */}
+      <div className="authoring-toolbar-group" role="group" aria-label="Layer bond">
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Bind selected layers"
+          title={bindBlockReason ?? 'Bond the selected layers: only position follows'}
+          disabled={!canBind}
+          onClick={bindSelection}
+        >
+          <Link2 size={14} />
+        </button>
+        <button
+          type="button"
+          className="authoring-toolbar-button"
+          aria-label="Unbind selected layer"
+          title={canRelease ? 'Release the bond on this layer' : 'Unbind needs a bonded layer'}
+          disabled={!canRelease}
+          onClick={releaseBinding}
+        >
+          <Unlink size={14} />
         </button>
       </div>
 

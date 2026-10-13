@@ -48,14 +48,15 @@ async function seed(page: Page, layers: Record<string, unknown>[]): Promise<void
 }
 
 /**
- * The Boolean buttons name themselves through an explicit `aria-label` of
- * `Create <operation> Boolean`; that label overrides the capitalised visible
- * caption, so the locator must match the accessible name exactly.
+ * Boolean creation is an authoring command, so the top authoring toolbar owns
+ * it: each operation button names itself `Boolean <Operation>` and the icon is
+ * the same shared `BooleanOperationIcon`.
  */
 type BooleanOperation = 'union' | 'subtract' | 'intersect' | 'exclude';
 
 async function clickBoolean(page: Page, operation: BooleanOperation): Promise<void> {
-  await page.getByRole('button', { name: `Create ${operation} Boolean`, exact: true }).click();
+  const label = `${operation[0].toUpperCase()}${operation.slice(1)}`;
+  await page.getByRole('button', { name: `Boolean ${label}` }).click();
 }
 
 /** Selects two layers in the outliner and runs one Boolean operation. */

@@ -228,7 +228,7 @@ describe('AuthoringToolbar', () => {
 
   it('never fires a disabled action', () => {
     renderToolbar();
-    const disabled = ['Boolean Union', 'Boolean Subtract', 'Dissolve Boolean', 'Group layers', 'Ungroup layers', 'Bring forward', 'Send backward'];
+    const disabled = ['Boolean Union', 'Boolean Subtract', 'Dissolve Boolean', 'Group layers', 'Ungroup layers', 'Bind selected layers', 'Unbind selected layer', 'Bring forward', 'Send backward'];
     for (const name of disabled) {
       fireEvent.click(screen.getByRole('button', { name }));
     }

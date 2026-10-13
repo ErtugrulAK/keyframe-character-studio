@@ -72,10 +72,13 @@ test('a shape and a text bonded together move as one, and unbinding separates th
     layer('label', 'Label', 'custom_text', 300, 0, { textValue: 'Hello', fontSize: 90, fontFamily: 'Outfit' }),
   ]);
 
-  // Both selected: the BIND card offers the bond.
+  // Both selected: the toolbar's bond action is enabled (Bind/Bond is a
+  // structural command and lives on the authoring toolbar, not in Details).
   await page.locator('.actor-node', { hasText: 'Box' }).first().click();
   await page.locator('.actor-node', { hasText: 'Label' }).first().click({ modifiers: ['Control'] });
-  await page.getByRole('button', { name: 'Bind', exact: true }).click();
+  const bindButton = page.getByRole('button', { name: 'Bind selected layers' });
+  await expect(bindButton).toBeEnabled();
+  await bindButton.click();
   await saveNow(page);
 
   const bound = await storedLayers(page);
@@ -98,10 +101,11 @@ test('a shape and a text bonded together move as one, and unbinding separates th
   expect(labelAfter.x).toBeCloseTo(labelBefore.x! + deltaX, 0);
   expect(labelAfter.y).toBeCloseTo(labelBefore.y! + deltaY, 0);
 
-  // Release: the BIND card lists the group and offers Unbind.
+  // Release: the toolbar offers the bond release for the selected bonded layer.
   await page.locator('.actor-node', { hasText: 'Label' }).first().click();
-  await expect(page.getByRole('region', { name: 'Bound layers' })).toBeVisible();
-  await page.getByRole('button', { name: 'Unbind' }).click();
+  const unbindButton = page.getByRole('button', { name: 'Unbind selected layer' });
+  await expect(unbindButton).toBeEnabled();
+  await unbindButton.click();
   await saveNow(page);
 
   const released = await storedLayers(page);
@@ -124,7 +128,7 @@ test('two text layers can be bonded as well', async ({ page }) => {
 
   await page.locator('.actor-node', { hasText: 'Title' }).first().click();
   await page.locator('.actor-node', { hasText: 'Subtitle' }).first().click({ modifiers: ['Control'] });
-  await page.getByRole('button', { name: 'Bind', exact: true }).click();
+  await page.getByRole('button', { name: 'Bind selected layers' }).click();
   await saveNow(page);
 
   await page.locator('.actor-node', { hasText: 'Title' }).first().click();

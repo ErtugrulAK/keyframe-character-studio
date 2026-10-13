@@ -51,13 +51,15 @@ test.describe('KCS V5.1 manual QA gates', () => {
     await seed(page, [layer('a', 'Operand A', 'custom_rect', -40), layer('b', 'Operand B', 'custom_circle', 40)]);
     await page.locator('.actor-node', { hasText: 'Operand A' }).click();
     await page.locator('.actor-node', { hasText: 'Operand B' }).click({ modifiers: ['Control'] });
-    // The Boolean buttons expose `Create <operation> Boolean` as their accessible name.
-    await page.getByRole('button', { name: 'Create union Boolean', exact: true }).click();
-    await expect(page.getByText('BOOLEAN', { exact: true })).toBeVisible();
+    // Boolean authoring lives on the top toolbar: creating a union from the
+    // selection activates the union operation there.
+    const booleanUnion = page.getByRole('button', { name: 'Boolean Union' });
+    await booleanUnion.click();
+    await expect(booleanUnion).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('[data-testid="freeform-vertex-marker"]')).toHaveCount(0);
     await expect(page.locator('.nested-node.actor-node', { hasText: 'Operand A' })).toBeVisible();
     await expect(page.locator('.nested-node.actor-node', { hasText: 'Operand B' })).toBeVisible();
-    await page.locator('.boolean-dissolve-button').click();
+    await page.getByRole('button', { name: 'Dissolve Boolean' }).click();
     await expect(page.locator('.actor-node', { hasText: 'Operand A' })).toHaveCount(1);
     await expect(page.locator('.actor-node', { hasText: 'Operand B' })).toHaveCount(1);
     await expect(page.getByText('Boolean dissolved; operands preserved.', { exact: true })).toBeVisible();

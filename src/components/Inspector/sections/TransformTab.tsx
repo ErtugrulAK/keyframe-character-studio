@@ -21,7 +21,6 @@ interface TransformTabProps {
   updateCurrentPropertyChannel?: (channel: TrackChannel, value: number) => void;
   handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
   handleZIndexChange?: (zIndex: number) => void;
-  editWorkflowContent?: React.ReactNode;
   // M25 — user-saved custom preset library (passed through to the card)
   customPresets: CustomMotionPreset[];
   onSavePreset: (input: SavePresetInput) => CustomMotionPreset | null;
@@ -53,99 +52,97 @@ export const TransformTab: React.FC<TransformTabProps> = ({
   onPasteAnimation,
   onClearAnimation,
   clipboardSourceId,
-  editWorkflowContent,
 }) => {
 
   return (
     <>
-      {editWorkflowContent}
-        <StyleCard title="TRANSFORM" collapsible defaultOpen={false}>
-          <div className="transform-property-list">
-            <TransformPositionRotationCard
-              transform={transform}
-              coordinateSystem={coordinateSystem}
-              onUpdate={updateCurrentTransform}
+      <StyleCard title="TRANSFORM" collapsible defaultOpen={false}>
+        <div className="transform-property-list">
+          <TransformPositionRotationCard
+            transform={transform}
+            coordinateSystem={coordinateSystem}
+            onUpdate={updateCurrentTransform}
+          />
+
+          <TransformScaleCard
+            transform={transform}
+            onUpdate={updateCurrentTransform}
+          />
+
+          {/* Opacity is never inherited, so a container's opacity would not
+              reach the layers inside it — the control is not offered. */}
+          {!selectedPart.isGroup && (
+            <TransformOpacityCard
+              opacity={transform.opacity}
+              onOpacityChange={(opacity) => updateCurrentTransform({ opacity })}
+              keyframedAtCurrentFrame={opacityKeyframedAtCurrentFrame ?? false}
+              onToggleKeyframe={onToggleOpacityKeyframe}
             />
+          )}
 
-            <TransformScaleCard
-              transform={transform}
-              onUpdate={updateCurrentTransform}
+          {handleZIndexChange && (
+            <TransformZIndexCard
+              zIndex={selectedPart.zIndex}
+              onZIndexChange={handleZIndexChange}
             />
+          )}
+        </div>
+      </StyleCard>
 
-            {/* Opacity is never inherited, so a container's opacity would not
-                reach the layers inside it — the control is not offered. */}
-            {!selectedPart.isGroup && (
-              <TransformOpacityCard
-                opacity={transform.opacity}
-                onOpacityChange={(opacity) => updateCurrentTransform({ opacity })}
-                keyframedAtCurrentFrame={opacityKeyframedAtCurrentFrame ?? false}
-                onToggleKeyframe={onToggleOpacityKeyframe}
-              />
-            )}
+      {/* 4 control points only make sense for regular shapes — hand-drawn
+          freeform polygons use the per-vertex editor below instead */}
+      {selectedPart.type !== 'custom_freeform' && (
+        <StyleCard title="CONTROL POINTS" collapsible defaultOpen={false}>
+          <TransformControlPoints
+            selectedPart={selectedPart}
+            transform={transform}
+            coordinateSystem={coordinateSystem}
+            onUpdate={updateCurrentTransform}
+          />
+        </StyleCard>
+      )}
 
-            {handleZIndexChange && (
-              <TransformZIndexCard
-                zIndex={selectedPart.zIndex}
-                onZIndexChange={handleZIndexChange}
-              />
+
+      {/* Canonical animation-data actions remain useful for named sequences.
+          The legacy procedural IN/OUT editor is intentionally de-emphasized
+          without removing its data model or runtime support. */}
+      {onCopyAnimation && (
+        <StyleCard title="ANIMATION DATA" collapsible defaultOpen={false}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            <button
+              type="button"
+              className="btn-secondary"
+              title="Copy animation from this element"
+              aria-label="Copy Animation"
+              onClick={onCopyAnimation}
+            >
+              Copy Animation
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              title="Paste animation onto selected element"
+              aria-label="Paste Animation"
+              disabled={!clipboardSourceId || clipboardSourceId === selectedPart.id}
+              onClick={onPasteAnimation}
+            >
+              Paste Animation
+            </button>
+            {onClearAnimation && (
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ color: '#f87171' }}
+                title="Clear animation (IN/OUT presets, durations and keyframes)"
+                aria-label="Clear Animation"
+                onClick={onClearAnimation}
+              >
+                Clear Animation
+              </button>
             )}
           </div>
         </StyleCard>
-
-        {/* 4 control points only make sense for regular shapes — hand-drawn
-            freeform polygons use the per-vertex editor below instead */}
-        {selectedPart.type !== 'custom_freeform' && (
-          <StyleCard title="CONTROL POINTS" collapsible defaultOpen={false}>
-            <TransformControlPoints
-              selectedPart={selectedPart}
-              transform={transform}
-              coordinateSystem={coordinateSystem}
-              onUpdate={updateCurrentTransform}
-            />
-          </StyleCard>
-        )}
-
-
-        {/* Canonical animation-data actions remain useful for named sequences.
-            The legacy procedural IN/OUT editor is intentionally de-emphasized
-            without removing its data model or runtime support. */}
-        {onCopyAnimation && (
-          <StyleCard title="ANIMATION DATA" collapsible defaultOpen={false}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                title="Copy animation from this element"
-                aria-label="Copy Animation"
-                onClick={onCopyAnimation}
-              >
-                Copy Animation
-              </button>
-              <button
-                type="button"
-                className="btn-secondary"
-                title="Paste animation onto selected element"
-                aria-label="Paste Animation"
-                disabled={!clipboardSourceId || clipboardSourceId === selectedPart.id}
-                onClick={onPasteAnimation}
-              >
-                Paste Animation
-              </button>
-              {onClearAnimation && (
-                <button
-                  type="button"
-                  className="btn-secondary"
-                  style={{ color: '#f87171' }}
-                  title="Clear animation (IN/OUT presets, durations and keyframes)"
-                  aria-label="Clear Animation"
-                  onClick={onClearAnimation}
-                >
-                  Clear Animation
-                </button>
-              )}
-            </div>
-          </StyleCard>
-        )}
+      )}
     </>
   );
 };

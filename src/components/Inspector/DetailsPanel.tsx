@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useAnimator } from '../../context/useAnimator';
-import { useBooleanAuthoring } from '../../hooks/useBooleanAuthoring';
 import { usePartPropertyAuthoring } from '../../hooks/usePartPropertyAuthoring';
 import { makeEmptyChannels } from '../../utils/defaults';
 import { evaluateLayerMasks } from '../../utils/evaluateLayerMasks';
@@ -9,30 +8,25 @@ import { StyleTab } from './sections/StyleTab';
 import type { TrimPathChannel } from './sections/style/TrimPathSection';
 import { evaluateTrimPath } from '../../utils/trimPath';
 import { DuplicateTab } from './sections/DuplicateTab';
-import { isBooleanEligible, type BooleanOperation } from '../../utils/booleanGeometry';
-import { BooleanOperationIcon } from './BooleanOperationIcon';
-import { bindParts, isRelationshipChainRelated, resolveBondGroup, unbindPart } from '../../utils/partBinding';
-import { getGroupChildren } from '../../utils/layerGrouping';
-import { useLayerGrouping } from '../../hooks/useLayerGrouping';
 import { layerMaskChannel } from '../../types/animator';
 import {
   Sliders,
   Copy,
   Trash2,
   CopyPlus,
-  Unlink,
-  Lock,
-  Unlock,
 } from 'lucide-react';
 
+/**
+ * Details is the Inspector's information surface: it reports and edits the
+ * SELECTED object's own properties. Structural commands — Group, Bind, Boolean —
+ * are authoring operations and live in the top authoring toolbar (and the
+ * editor's context menu), so they are not duplicated here.
+ */
 export const DetailsPanel: React.FC = () => {
   const {
     currentFrame,
     selectedPartId,
-    selectedPartIds,
     characterParts,
-    setSelectedPartId,
-    setSelectedPartIds,
     setCharacterParts,
     setTracks,
     getComputedTransform,
@@ -58,19 +52,9 @@ export const DetailsPanel: React.FC = () => {
     tracks,
     activeTemplateId,
       coordinateSystem,
-    booleanOperandEditingGroupId,
-    setBooleanOperandEditingGroupId,
   } = useAnimator();
 
   const [activeTabSection, setActiveTabSection] = useState<'edit' | 'duplicate'>('edit');
-  const {
-    booleanEligibleParts,
-    selectedBooleanGroup,
-    createBooleanGroup,
-    updateBooleanOperation,
-    dissolveBooleanGroup,
-  } = useBooleanAuthoring();
-  const { selectedGroup } = useLayerGrouping();
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTrack = selectedPartId ? tracks.find((track) => track.partId === selectedPartId) : undefined;
@@ -161,174 +145,6 @@ export const DetailsPanel: React.FC = () => {
     showToast('Animation cleared', 'success');
   };
 
-  const bindSelection = selectedPartIds
-    .map((id) => characterParts.find((part) => part.id === id))
-    .filter((part): part is NonNullable<typeof part> => Boolean(part));
-  const bondGroupIds = selectedPart ? resolveBondGroup(characterParts, selectedPart.id) : [];
-
-  /** Bond the selected layers so a position change on one moves the others. */
-  const createBind = () => {
-    const ids = bindSelection.map((part) => part.id);
-    if (ids.length < 2) return;
-    const blocked = ids.some((first, index) =>
-      ids.slice(index + 1).some((second) => isRelationshipChainRelated(characterParts, first, second)));
-    if (blocked) {
-      showToast('Those layers are already parent and child; bonding them would move the child twice.', 'info');
-      return;
-    }
-    startBatchInteraction();
-    setCharacterParts((parts) => bindParts(parts, ids));
-    endBatchInteraction();
-    showToast('Layers bonded: moving one moves the others.', 'success');
-  };
-
-  const releaseBind = () => {
-    if (!selectedPart) return;
-    startBatchInteraction();
-    setCharacterParts((parts) => unbindPart(parts, selectedPart.id));
-    endBatchInteraction();
-    showToast('Bond released.', 'info');
-  };
-
-  const bindWorkflowContent = selectedPart && bondGroupIds.length > 1 ? (
-    <section className="boolean-editor-section" aria-label="Bound layers">
-      <div className="inspector-section-label">BIND</div>
-      <p className="boolean-description">Bonded layers move together. Only position follows; rotation and scale stay their own.</p>
-      <div className="boolean-operands-list" aria-label="Bonded layers">
-        {bondGroupIds.map((boundId) => (
-          <button
-            key={boundId}
-            type="button"
-            className="boolean-operand-button"
-            onClick={() => {
-              setSelectedPartIds([boundId]);
-              setSelectedPartId(boundId);
-            }}
-          >
-            {characterParts.find((part) => part.id === boundId)?.name ?? boundId}
-          </button>
-        ))}
-      </div>
-      <button type="button" className="btn-secondary boolean-dissolve-button" onClick={releaseBind}>
-        <Unlink size={12} /> Unbind
-      </button>
-    </section>
-  ) : bindSelection.length >= 2 ? (
-    <section className="shape-operations-section" aria-label="Layer binding">
-      <div className="inspector-section-label">BIND</div>
-      <p className="shape-operations-description">Bond the selected layers so a position change on one moves the others.</p>
-      <div className="shape-operations-grid">
-        <button type="button" onClick={createBind} title="Bond the selected layers">Bind</button>
-      </div>
-    </section>
-  ) : null;
-
-  const groupChildren = selectedGroup ? getGroupChildren(characterParts, selectedGroup.id) : [];
-  // Details reports structure, it does not command it: grouping and ungrouping
-  // are authoring commands and live in the top toolbar and the editor's context
-  // menu. What stays here is the read-only membership of the selected group.
-  const groupWorkflowContent = groupChildren.length > 0 ? (
-    <section className="boolean-editor-section" aria-label="Layer group">
-      <div className="inspector-section-label">GROUP</div>
-      <p className="boolean-description">Layers in this group move, scale and rotate together. Opacity stays per layer.</p>
-      <div className="boolean-operands-list" aria-label="Grouped layers">
-        {groupChildren.map((child) => (
-          <button
-            key={child.id}
-            type="button"
-            className="boolean-operand-button"
-            onClick={() => {
-              setSelectedPartIds([child.id]);
-              setSelectedPartId(child.id);
-            }}
-          >
-            {child.name}
-          </button>
-        ))}
-      </div>
-    </section>
-  ) : null;
-
-  const booleanWorkflowContent = selectedBooleanGroup ? (
-    <section className="boolean-editor-section" aria-label="Boolean operation">
-      <div className="inspector-section-label">BOOLEAN</div>
-      <p className="boolean-description">Combine vector geometry. Operands remain authored and editable.</p>
-      <label className="boolean-operation-field">
-        <span>Operation</span>
-        <select
-          aria-label="Boolean operation"
-          value={selectedBooleanGroup.booleanOperation ?? 'union'}
-          onChange={(event) => updateBooleanOperation(event.target.value as BooleanOperation)}
-        >
-          <option value="union">Union</option>
-          <option value="subtract">Subtract</option>
-          <option value="intersect">Intersect</option>
-          <option value="exclude">Exclude</option>
-        </select>
-      </label>
-      <button
-        type="button"
-        className={`boolean-operand-mode-button ${booleanOperandEditingGroupId === selectedBooleanGroup.id ? 'active' : ''}`}
-        aria-pressed={booleanOperandEditingGroupId === selectedBooleanGroup.id}
-        onClick={() => setBooleanOperandEditingGroupId(
-          booleanOperandEditingGroupId === selectedBooleanGroup.id ? null : selectedBooleanGroup.id,
-        )}
-      >
-        {booleanOperandEditingGroupId === selectedBooleanGroup.id ? <Unlock size={12} /> : <Lock size={12} />}
-        {booleanOperandEditingGroupId === selectedBooleanGroup.id ? 'Lock Operands' : 'Edit Operands'}
-      </button>
-      {booleanOperandEditingGroupId === selectedBooleanGroup.id && (
-        <p className="boolean-editing-status">Operand editing is active. Drag a child shape on the canvas.</p>
-      )}
-      <div className="boolean-operands-list" aria-label="Boolean operands">
-        {selectedBooleanGroup.booleanOperandIds?.map((operandId) => (
-          <button
-            key={operandId}
-            type="button"
-            className="boolean-operand-button"
-            onClick={() => {
-              setSelectedPartIds([operandId]);
-              setSelectedPartId(operandId);
-            }}
-          >
-            {characterParts.find((part) => part.id === operandId)?.name ?? operandId}
-          </button>
-        ))}
-      </div>
-      {selectedBooleanGroup.booleanContours?.length === 0 && (
-        <p className="boolean-empty-message">Boolean result is empty.</p>
-      )}
-      <button type="button" className="btn-secondary boolean-dissolve-button" onClick={dissolveBooleanGroup}>
-        <Unlink size={12} /> Dissolve Boolean
-      </button>
-    </section>
-  ) : booleanEligibleParts.length >= 2 ? (
-    <section className="shape-operations-section" aria-label="Shape operations">
-      <div className="inspector-section-label">BOOLEAN</div>
-      <p className="shape-operations-description">Combine the selected shapes, freeform paths or text layers into a non-destructive Boolean result.</p>
-      <div className="shape-operations-grid">
-        {(['union', 'subtract', 'intersect', 'exclude'] as const).map((operation) => (
-          <button
-            key={operation}
-            type="button"
-            className="shape-operation-button"
-            onClick={() => createBooleanGroup(operation)}
-            title={`Create ${operation} Boolean`}
-            aria-label={`Create ${operation} Boolean`}
-          >
-            <BooleanOperationIcon operation={operation} />
-            <span>{operation[0].toUpperCase() + operation.slice(1)}</span>
-          </button>
-        ))}
-      </div>
-    </section>
-  ) : selectedPart && isBooleanEligible(selectedPart) ? (
-    <section className="shape-operations-section shape-operations-hint" aria-label="Boolean operations unavailable">
-      <div className="inspector-section-label">BOOLEAN</div>
-      <p>Boolean: select 2 shapes, freeform paths or text layers.</p>
-    </section>
-  ) : null;
-
   return (
     <div className="details-container">
       {/* 1. Header Bar */}
@@ -370,11 +186,11 @@ export const DetailsPanel: React.FC = () => {
             <button
               type="button"
               className="btn-icon-small danger"
-              onClick={selectedBooleanGroup ? dissolveBooleanGroup : () => deletePart(selectedPart.id)}
-              title={selectedBooleanGroup ? 'Dissolve Boolean and preserve operands' : 'Delete Actor Instance'}
-              aria-label={selectedBooleanGroup ? 'Dissolve Boolean' : 'Delete Actor Instance'}
+              onClick={() => deletePart(selectedPart.id)}
+              title="Delete Actor Instance"
+              aria-label="Delete Actor Instance"
             >
-              {selectedBooleanGroup ? <Unlink size={12} /> : <Trash2 size={12} />}
+              <Trash2 size={12} />
             </button>
           </div>
         </div>
@@ -407,7 +223,6 @@ export const DetailsPanel: React.FC = () => {
                 } : undefined}
                 handlePartPropChange={handlePartPropChange}
                 handleZIndexChange={handleZIndexChange}
-                editWorkflowContent={<>{groupWorkflowContent}{booleanWorkflowContent}{bindWorkflowContent}</>}
                 customPresets={customPresets}
                 onSavePreset={savePreset}
                 onUpdatePreset={updatePreset}

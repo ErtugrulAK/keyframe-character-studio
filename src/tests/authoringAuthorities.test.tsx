@@ -47,13 +47,15 @@ vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx }));
 
 import { useBooleanAuthoring } from '../hooks/useBooleanAuthoring';
 import { useLayerGrouping } from '../hooks/useLayerGrouping';
+import { usePartBindingAuthoring } from '../hooks/usePartBindingAuthoring';
 import { usePartPropertyAuthoring } from '../hooks/usePartPropertyAuthoring';
 
-/** Renders both extracted authorities exactly as DetailsPanel/toolbar consume them. */
+/** Renders every extracted authority exactly as DetailsPanel/toolbar consume them. */
 const renderAuthoring = () => renderHook(() => ({
   part: usePartPropertyAuthoring(),
   boolean: useBooleanAuthoring(),
   grouping: useLayerGrouping(),
+  binding: usePartBindingAuthoring(),
 }));
 
 /** The document the most recent `setCharacterParts` write would produce. */
@@ -233,5 +235,68 @@ describe('shared authoring authorities', () => {
     expect(animatorCtx.setSelectedPartIds).toHaveBeenCalledWith(['a', 'b']);
     expect(animatorCtx.setSelectedPartId).toHaveBeenCalledWith('a');
     expect(animatorCtx.showToast).toHaveBeenCalledWith('Ungrouped 2 layers; positions kept.', 'success');
+  });
+
+  it('bonds the selection in one batch, through the shared bind authority', () => {
+    const a = shape('a');
+    const b = shape('b');
+    animatorCtx.characterParts = [a, b];
+    animatorCtx.selectedPartIds = ['a', 'b'];
+    animatorCtx.selectedPartId = 'b';
+    const authoring = renderAuthoring().result.current;
+
+    expect(authoring.binding.canBind).toBe(true);
+    authoring.binding.bindSelection();
+
+    expect(animatorCtx.startBatchInteraction).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.endBatchInteraction).toHaveBeenCalledTimes(1);
+    const next = appliedParts([a, b]);
+    expect(next.find((part) => part.id === 'a')?.boundPartIds).toEqual(['b']);
+    expect(next.find((part) => part.id === 'b')?.boundPartIds).toEqual(['a']);
+    expect(animatorCtx.showToast).toHaveBeenCalledWith('Layers bonded: moving one moves the others.', 'success');
+  });
+
+  it('refuses to bond a parent and its own child, and reports why', () => {
+    const parent = shape('p');
+    const child = shape('c', { parentId: 'p' });
+    animatorCtx.characterParts = [parent, child];
+    animatorCtx.selectedPartIds = ['p', 'c'];
+    animatorCtx.selectedPartId = 'c';
+    const authoring = renderAuthoring().result.current;
+
+    expect(authoring.binding.canBind).toBe(false);
+    expect(authoring.binding.bindBlockReason)
+      .toBe('Those layers are already parent and child; bonding them would move the child twice.');
+    authoring.binding.bindSelection();
+    expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
+    expect(animatorCtx.showToast).toHaveBeenCalledWith(
+      'Those layers are already parent and child; bonding them would move the child twice.',
+      'info',
+    );
+  });
+
+  it('releases the bond of the selected layer and reports an unbonded selection instead', () => {
+    const a = shape('a', { boundPartIds: ['b'] });
+    const b = shape('b', { boundPartIds: ['a'] });
+    const free = shape('free');
+    animatorCtx.characterParts = [a, b, free];
+    animatorCtx.selectedPartId = 'a';
+    animatorCtx.selectedPartIds = ['a'];
+    const authoring = renderAuthoring().result.current;
+
+    expect(authoring.binding.canRelease).toBe(true);
+    authoring.binding.releaseBinding();
+    const next = appliedParts([a, b, free]);
+    expect(next.find((part) => part.id === 'a')?.boundPartIds).toBeUndefined();
+    expect(next.find((part) => part.id === 'b')?.boundPartIds).toBeUndefined();
+    expect(animatorCtx.showToast).toHaveBeenCalledWith('Bond released.', 'info');
+
+    vi.clearAllMocks();
+    animatorCtx.selectedPartId = 'free';
+    animatorCtx.selectedPartIds = ['free'];
+    const second = renderAuthoring().result.current;
+    expect(second.binding.canRelease).toBe(false);
+    second.binding.releaseBinding();
+    expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
   });
 });

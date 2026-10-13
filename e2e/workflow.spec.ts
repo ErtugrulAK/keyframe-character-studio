@@ -70,10 +70,16 @@ async function clickStagePoint(page: Page, offsetX: number, offsetY: number): Pr
     await page.getByRole('button', { name: /Mirror Y/i }).click();
     await expect(page.locator('.ue-outliner').getByText('Circle Mirror Y').first()).toBeVisible();
 
-    // Play the sequence, then pause it (the transport button toggles its title)
+    // Play the sequence, then pause it (the transport button toggles its title).
+    // The transport is asserted into its PLAYING state and back instead of waiting
+    // a fixed second: a default document is 60 frames at 60 FPS — exactly 1.000 s —
+    // so a fixed 1 s wait lands on the FINISHED state the exact timebase guarantees
+    // and the pause control is never seen. Asserting the two transitions is the
+    // stronger contract, and no duration-dependent sleep is involved.
     await page.getByTitle('Play', { exact: true }).click();
-    await page.waitForTimeout(1000);
+    await expect(page.getByTitle('Pause', { exact: true })).toBeVisible();
     await page.getByTitle('Pause', { exact: true }).click();
+    await expect(page.getByTitle('Play', { exact: true })).toBeVisible();
 
     // Copy / Paste parts
     await page.keyboard.press('Control+C');

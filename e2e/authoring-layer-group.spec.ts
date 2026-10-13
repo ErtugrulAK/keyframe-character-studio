@@ -110,13 +110,37 @@ test('the aggregate frame moves, rotates and scales the layers together', async 
   await expect(page.getByTestId('group-aggregate-box')).toHaveCount(1);
 });
 
-test('the frame never intercepts the pointer: a click inside it still selects the layer', async ({ page }) => {
+test('the frame never intercepts the pointer: a click targets the group and a double-click drills in', async ({ page }) => {
   await seed(page, [shape('a', 'Alpha', -120), shape('b', 'Beta', 120)]);
   await selectLayers(page, ['Alpha', 'Beta']);
   await groupSelection(page);
 
-  await page.locator('[data-part-id="b"]').first().click();
+  const child = page.locator('[data-part-id="b"]').first();
+
+  // The decorative aggregate frame stays INERT: the point at the child's centre
+  // resolves to the child's own geometry, so the pointer reaches the canvas
+  // selection path instead of being swallowed by the overlay.
+  const hitsChild = await child.evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return hit !== null && hit.closest('[data-part-id="b"]') !== null;
+  });
+  expect(hitsChild).toBe(true);
+
+  // R4-09: a first canvas click on a child TARGETS the group container, so the
+  // framed selection stays the container and no child-level selection is drawn.
+  // The click landing here at all is what proves the frame does not intercept.
+  await child.click();
+  await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Group/);
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(1);
+  await expect(page.getByTestId('transform-gizmo')).toHaveCount(1);
+
+  // ...and the EXPLICIT drill-in of the same pointer: a canvas double-click
+  // enters the group and makes the child itself primary, without ungrouping.
+  await child.dblclick();
   await expect(page.locator('.actor-node.primary-selected')).toHaveText(/Beta/);
+  await expect(page.getByTestId('group-aggregate-box')).toHaveCount(0);
+  await expect(page.getByTestId('transform-gizmo')).toHaveCount(1);
 });
 
 test('ungroup restores the layers in place, with no stale frame', async ({ page }) => {

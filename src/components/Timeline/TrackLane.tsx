@@ -141,7 +141,6 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
   onFrameFromClientX,
 }) => {
   const isTrackExpanded = track.expanded === true;
-  const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
   const isPositionExpanded = isGroupExpanded(`${track.id}_position`, true);
   const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
   const isTrimPathExpanded = isGroupExpanded(`${track.id}_trim`, true);
@@ -434,41 +433,34 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
       </div>
 
       {/* ── CHANNEL LANES MATCHING THE PROPERTY TREE ── */}
-      {/* R3-05: one lane per property row, in tree order — the tree row and its
-          lane are always the same band, and the hierarchy is the same on both
-          sides (Transform > Position/Rotation/Scale/Opacity, then Trim Path as
-          its own peer group). */}
+      {/* R4-06: one lane per property row, in tree order — the tree row and its
+          lane are always the same band. There is no `Transform` band, because
+          the tree has no `Transform` row: Position / Rotation / Scale / Opacity
+          are the layer's own properties, and Trim Path is their peer. */}
       {isTrackExpanded && (
         <div className="ue-channel-lanes">
-          {/* Transform Header Lane Spacer */}
+          {/* Position Header Lane Spacer */}
           <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
+          {isPositionExpanded && ['x', 'y'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
 
-          {isTransformExpanded && (
-            <>
-              {/* Position Header Lane Spacer */}
-              <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
-              {isPositionExpanded && ['x', 'y'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
+          {/* Rotation is a leaf of the tree, so it owns exactly one lane. */}
+          {renderChannelLane('rotation')}
 
-              {/* Rotation is a leaf of the tree, so it owns exactly one lane. */}
-              {renderChannelLane('rotation')}
+          {/* Scale Sub-Group */}
+          <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
+          {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
 
-              {/* Scale Sub-Group */}
-              <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
-              {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
+          {/* Opacity: the outliner lists it between the scale group and the
+              trim group, so the lane sits in exactly the same place — the
+              property tree and the lanes stay row-for-row aligned, and
+              authored opacity keys are visible on the timeline. */}
+          {renderChannelLane('opacity')}
 
-              {/* Opacity: the outliner lists it between the scale group and the
-                  trim group, so the lane sits in exactly the same place — the
-                  property tree and the lanes stay row-for-row aligned, and
-                  authored opacity keys are visible on the timeline. */}
-              {renderChannelLane('opacity')}
+          {/* V6 Layer Mask channels share the track and evaluator. */}
+          {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
+          {Object.keys(track.maskPathChannels ?? {}).map((channel) => renderChannelLane(channel as LayerMaskPathChannel))}
 
-              {/* V6 Layer Mask channels share the track and evaluator. */}
-              {Object.keys(track.maskChannels ?? {}).map((channel) => renderChannelLane(channel as AnimationChannel))}
-              {Object.keys(track.maskPathChannels ?? {}).map((channel) => renderChannelLane(channel as LayerMaskPathChannel))}
-            </>
-          )}
-
-          {/* Trim Path is a peer of Transform in the tree, so its lanes are too. */}
+          {/* Trim Path is a peer of the transform channels in the tree, so its lanes are too. */}
           <div className="ue-channel-header-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }} />
           {isTrimPathExpanded && ['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelLane(chKey as TrackChannel))}
         </div>

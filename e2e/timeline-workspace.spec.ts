@@ -353,7 +353,7 @@ test('R2-09 — the property tree and the timeline lanes stay row-for-row aligne
       .map((node) => node.getBoundingClientRect().top);
     // Document order on both sides: the owner row, then its property rows.
     return {
-      tree: top('.ue-outliner-list .ue-track-row, .ue-outliner-list .ue-transform-header, .ue-outliner-list .ue-subgroup-header, .ue-outliner-list .ue-channel-row'),
+      tree: top('.ue-outliner-list .ue-track-row, .ue-outliner-list .ue-subgroup-header, .ue-outliner-list .ue-channel-row'),
       lanes: top('.ue-track-lanes .ue-track-lane, .ue-track-lanes .ue-channel-header-lane, .ue-track-lanes .ue-channel-lane'),
     };
   });

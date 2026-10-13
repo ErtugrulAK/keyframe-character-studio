@@ -86,15 +86,16 @@ describe('R3-05/R3-06 — the timeline property tree', () => {
       0,
     );
 
-    expect(screen.getByRole('button', { name: 'Transform property group of Body' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Position properties of Body' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Trim Path properties of Body' })).toBeTruthy();
+    // R4-06 — `Transform` is the internal model name, not a level the user reads
+    // through: no wrapper row, and no row that only restates the layer.
+    expect(screen.queryByRole('button', { name: 'Transform property group of Body' })).toBeNull();
 
     // Linearised tree order: the leaves sit under the parent that names them.
-    const tree = [...view.container.querySelectorAll('.ue-transform-header, .ue-subgroup-header, .ue-channel-row')]
+    const tree = [...view.container.querySelectorAll('.ue-subgroup-header, .ue-channel-row')]
       .map((row) => row.textContent?.trim());
     expect(tree).toEqual([
-      'TransformBody',
       'Position',
       'X',
       'Y',

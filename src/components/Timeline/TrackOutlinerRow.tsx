@@ -102,7 +102,6 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   // to the track name only when the part is missing.
   const displayName = parts.find((p) => p.id === track.partId)?.name ?? track.name;
   const isTrackExpanded = track.expanded === true;
-  const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
   const isPositionExpanded = isGroupExpanded(`${track.id}_position`, true);
   const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
   const isTrimPathExpanded = isGroupExpanded(`${track.id}_trim`, true);
@@ -299,45 +298,28 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           role="group"
         >
           {/*
-            R3-05 — the tree is the animation's own hierarchy:
-              Transform > { Position > {X, Y}, Rotation, Scale > {X, Y}, Opacity }
-              Trim Path > { Start, End, Offset }
-            The lanes mirror it row for row, so a property row and its lane are
-            always the same band.
+            R4-06 — the tree is the animation's own hierarchy, with no redundant
+            wrapper row:
+              Position > {X, Y}, Rotation, Scale > {X, Y}, Opacity, Trim Path >
+              {Start, End, Offset}
+            `Transform` stays the INTERNAL name of the model (the channels and the
+            evaluator), but it is not a level the user has to read through: the
+            layer row is the owner, and these are its properties. The lanes mirror
+            the tree row for row, so a property row and its lane are always the
+            same band.
           */}
-          <div
-            className="ue-transform-header"
-            data-owner-part-id={track.partId}
-            aria-label={`Transform property group of ${displayName}`}
-            aria-expanded={isTransformExpanded}
-            role="button"
-            tabIndex={0}
-            title={`Transform properties of ${displayName}`}
-            style={{ height: CHANNEL_ROW_HEIGHT }}
-            onClick={() => onToggleSubGroup(`${track.id}_transform`, true)}
-            onKeyDown={activateOnKey(() => onToggleSubGroup(`${track.id}_transform`, true))}
-          >
-            <DisclosureChevron expanded={isTransformExpanded} />
-            <span className="ue-transform-label">Transform</span>
-            <span className="ue-owner-name">{displayName}</span>
-          </div>
+          {renderGroupHeader(`${track.id}_position`, 'Position', isPositionExpanded, true)}
+          {isPositionExpanded && ['x', 'y'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
 
-          {isTransformExpanded && (
-            <>
-              {renderGroupHeader(`${track.id}_position`, 'Position', isPositionExpanded, true)}
-              {isPositionExpanded && ['x', 'y'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
+          {/* Rotation is one channel: it is a leaf of the tree, not a group. */}
+          {renderChannelRow('rotation', 'ue-channel-indent', true)}
 
-              {/* Rotation is one channel: it is a leaf of the tree, not a group. */}
-              {renderChannelRow('rotation', 'ue-channel-indent', true)}
+          {renderGroupHeader(`${track.id}_scale`, 'Scale', isScaleExpanded, false)}
+          {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
 
-              {renderGroupHeader(`${track.id}_scale`, 'Scale', isScaleExpanded, false)}
-              {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
+          {renderChannelRow('opacity', 'ue-channel-indent')}
 
-              {renderChannelRow('opacity', 'ue-channel-indent')}
-            </>
-          )}
-
-          {/* Trim Path is a peer of Transform, not one of its children. */}
+          {/* Trim Path is a peer of the transform channels, not one of their children. */}
           {renderGroupHeader(`${track.id}_trim`, 'Trim Path', isTrimPathExpanded, true)}
           {isTrimPathExpanded && ['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
         </div>

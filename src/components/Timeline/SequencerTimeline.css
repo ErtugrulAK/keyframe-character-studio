@@ -710,38 +710,6 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   border-left: 1px solid var(--kcs-border-subtle);
 }
 
-.ue-transform-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2xs);
-  padding: 0 var(--space-xs) 0 var(--space-2xs);
-  border-bottom: 1px solid rgba(148, 163, 184, 0.07);
-  background: transparent;
-  cursor: pointer;
-  user-select: none;
-}
-.ue-transform-header:hover { background: #161a24; }
-.ue-transform-label {
-  font-size: var(--font-size-caption);
-  font-weight: 700;
-  color: #9fb3bf;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-}
-
-/* The owning layer's name rides on the Transform row itself, so the property
-   group can never read as belonging to no layer. */
-.ue-owner-name {
-  margin-left: auto;
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: var(--font-size-caption);
-  font-weight: 600;
-  color: #5c7180;
-}
-
 /*
  * R3-05 — one step of indentation per level, on both sides of the tree:
  *   L1 Transform / Trim Path header
@@ -1145,7 +1113,6 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 }
 
 .ue-track-row,
-.ue-transform-header,
 .ue-track-lane,
 .ue-channel-lane {
   border-bottom-color: rgba(122,157,171,.14);
@@ -1159,7 +1126,6 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 
 .ue-track-row:hover,
 .ue-channel-row:hover,
-.ue-transform-header:hover,
 .ue-subgroup-header:hover {
   background: #15232c;
 }

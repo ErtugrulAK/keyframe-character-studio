@@ -108,10 +108,9 @@ describe('timeline property-row ownership (finding G)', () => {
     expect(block.getAttribute('data-owner-name')).toBe('Rect A');
     expect(block.getAttribute('aria-label')).toBe('Properties of Rect A');
 
-    const header = block.querySelector('.ue-transform-header') as HTMLElement;
+    const header = block.querySelector('.ue-subgroup-header') as HTMLElement;
     expect(header.getAttribute('data-owner-part-id')).toBe(first);
-    expect(header.getAttribute('aria-label')).toBe('Transform property group of Rect A');
-    expect(header.textContent).toContain('Rect A');
+    expect(header.getAttribute('aria-label')).toBe('Position properties of Rect A');
 
     const owners = [...block.querySelectorAll('.ue-channel-row')]
       .map((row) => row.getAttribute('data-owner-part-id'));
@@ -146,18 +145,24 @@ describe('timeline property-row ownership (finding G)', () => {
 
     const block = h.trackRow('Rect A').querySelector('.ue-channel-group') as HTMLElement;
     const labels = [...block.querySelectorAll('[aria-label]')].map((node) => node.getAttribute('aria-label'));
-    expect(labels).toContain('Transform property group of Rect A');
-    expect(labels.filter((label) => label?.includes('Rect A')).length).toBeGreaterThanOrEqual(4);
+    expect(labels.filter((label) => label?.includes('properties of'))).toEqual([
+      'Position properties of Rect A',
+      'Scale properties of Rect A',
+      'Trim Path properties of Rect A',
+    ]);
 
-    const header = block.querySelector('.ue-transform-header') as HTMLElement;
+    // R4-06 — the first header under the layer is Position: there is no
+    // `Transform` wrapper row to collapse, and the group itself still names its
+    // owner when its rows are hidden.
+    const header = block.querySelector('.ue-subgroup-header') as HTMLElement;
     expect(header.getAttribute('aria-expanded')).toBe('true');
 
     // Enter collapses the disclosure the same way a click does, and the owner
     // name does not disappear with the rows underneath it.
     act(() => { fireEvent.keyDown(header, { key: 'Enter' }); });
-    const collapsed = h.trackRow('Rect A').querySelector('.ue-transform-header') as HTMLElement;
-    expect(collapsed.getAttribute('aria-expanded')).toBe('false');
+    const collapsed = h.trackRow('Rect A').querySelector('.ue-channel-group') as HTMLElement;
     expect(collapsed.getAttribute('data-owner-part-id')).toBe(id);
-    expect(collapsed.textContent).toContain('Rect A');
+    expect(collapsed.getAttribute('data-owner-name')).toBe('Rect A');
+    expect(collapsed.getAttribute('aria-label')).toBe('Properties of Rect A');
   });
 });

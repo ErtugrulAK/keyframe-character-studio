@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { Track, TrackChannel, AnimationChannel, LayerMaskChannel, LayerMaskPathChannel, PropertyKeyframe, PathKeyframe } from '../../types/animator';
 import type { KeyframeCopyPayload } from '../../utils/keyframeCopyPaste';
-import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, TRACK_ROW_HEIGHT } from './timelineConstants';
+import { CHANNEL_META, CHANNEL_ROW_HEIGHT, KEYFRAME_DRAG_THRESHOLD_PX, KEYFRAME_GLYPH_GAP_PX, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { groupChannelKeyframesByFrame, resolveTrackChannels } from '../../utils/channelKeyframeGroups';
-import { hasChannelDataForTemplate } from '../../utils/timelineMetrics';
+import { hasChannelDataForTemplate, resolveConnectorSegments } from '../../utils/timelineMetrics';
 
 interface TrackLaneProps {
   track: Track;
@@ -263,16 +263,17 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
       .sort((a, b) => a.frame - b.frame) as (PropertyKeyframe | PathKeyframe)[];
     return (
       <div key={ch} className="ue-channel-lane" style={{ height: CHANNEL_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%` }}>
-        {chKfs.length > 0 && (
+        {chKfs.length > 0 && resolveConnectorSegments(
+          chKfs.map((keyframe) => keyframe.frame),
+          frameWidth,
+          KEYFRAME_GLYPH_GAP_PX,
+        ).map((segment, index) => (
           <div
+            key={`trajectory-${index}`}
             className="ue-trajectory-line"
-            style={{
-              left: `${chKfs[0].frame * frameWidth}px`,
-              width: `${(chKfs[chKfs.length - 1].frame - chKfs[0].frame) * frameWidth}px`,
-              backgroundColor: meta.color,
-            }}
+            style={{ left: `${segment.left}px`, width: `${segment.width}px`, backgroundColor: meta.color }}
           />
-        )}
+        ))}
         {chKfs.map((keyframe) => {
           const valueLabel = isPathChannel ? 'geometry' : String((keyframe as PropertyKeyframe).value.toFixed(2));
           const isSelected = selectedKeyframeIdSet.has(keyframe.id);
@@ -326,15 +327,20 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
         style={{ height: TRACK_ROW_HEIGHT, width: `${(totalFrames + 3) * frameWidth}px`, backgroundSize: `${frameWidth}px 100%`, position: 'relative' }}
         onContextMenu={openPasteMenu}
       >
-        {/* Span bars between composite keyframes (legacy-only track view) */}
+        {/* Span bars between composite keyframes (legacy-only track view).
+            R4-08: the bar is the legacy connector, so it clears the glyph at
+            either end exactly like the canonical connector below. */}
         {!useCanonical && sortedKfs.map((kf, idx) => {
           if (idx === sortedKfs.length - 1) return null;
           const nextKf = sortedKfs[idx + 1];
+          const span = (nextKf.frame - kf.frame) * frameWidth;
+          const width = span - KEYFRAME_GLYPH_GAP_PX * 2;
+          if (width <= 0) return null;
           return (
             <div
               key={`span-${kf.id}`}
               className="keyframe-span-bar"
-              style={{ left: `${kf.frame * frameWidth}px`, width: `${(nextKf.frame - kf.frame) * frameWidth}px`, borderColor: track.color }}
+              style={{ left: `${kf.frame * frameWidth + KEYFRAME_GLYPH_GAP_PX}px`, width: `${width}px`, borderColor: track.color }}
               title={`${kf.easing} (${kf.frame}→${nextKf.frame})`}
             >
               <span className="span-easing-tag">{kf.easing}</span>
@@ -345,17 +351,19 @@ export const TrackLane: React.FC<TrackLaneProps> = ({
             connecting trajectory line on the parent lane as the channel lanes
             do — frame-group diamonds at different frames now display the
             interpolation connection that actually exists at runtime (M6
-            frame-group model; legacy tracks keep the span bars above). */}
-        {useCanonical && groups.length > 1 && (
+            frame-group model; legacy tracks keep the span bars above).
+            R4-08: one segment per gap, cleared of both glyphs. */}
+        {useCanonical && resolveConnectorSegments(
+          groups.map((group) => group.frame),
+          frameWidth,
+          KEYFRAME_GLYPH_GAP_PX,
+        ).map((segment, index) => (
           <div
+            key={`trajectory-${index}`}
             className="ue-trajectory-line"
-            style={{
-              left: `${groups[0].frame * frameWidth}px`,
-              width: `${(groups[groups.length - 1].frame - groups[0].frame) * frameWidth}px`,
-              backgroundColor: track.color,
-            }}
+            style={{ left: `${segment.left}px`, width: `${segment.width}px`, backgroundColor: track.color }}
           />
-        )}
+        ))}
         {/* M6: canonical frame-group diamonds (one per frame, channel info in hover/title) */}
         {useCanonical ? groups.map((group) => {
           const representativeId = group.keyframes[group.channels[0]].id;

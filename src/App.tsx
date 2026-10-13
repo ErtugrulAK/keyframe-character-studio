@@ -50,12 +50,14 @@ const MainAppContent: React.FC = () => {
 
   return (
     /*
-     * R3-02 — the two dock handles are children of the editor SHELL, not of the
-     * workspace row. Their vertical anchor is `50%` of the shell's height, and
-     * the shell is the viewport: resizing (or collapsing) the timeline changes
-     * only the workspace row, so the handles can no longer be dragged up and down
-     * with a panel they are not attached to. The shell also owns the two panel
-     * visibility flags whose edge geometry the handles read.
+     * R3-02 / R4-01 — the two dock handles are children of the editor WORKSPACE
+     * ROW (`.main-layout`), the box the timeline resize shortens from below. The
+     * row's TOP edge never moves — only its height does — so a handle pinned a
+     * fixed distance below that edge keeps the same vertical centre at every
+     * timeline height, and can never be dragged over the timeline the way a
+     * viewport-50% anchor could be in a short window. The shell (`app-container`)
+     * still owns the two panel visibility flags whose edge geometry the handles
+     * read, and the panel geometry tokens they measure.
      */
     <div className={`app-container ${isLeftToolbarVisible ? '' : 'left-toolbar-hidden'} ${isInspectorVisible ? '' : 'inspector-hidden'}`}>
       <HeaderBar />
@@ -68,31 +70,31 @@ const MainAppContent: React.FC = () => {
             isHidden={!isInspectorVisible}
           />
         )}
+        {appMode === 'edit' && (
+          <button
+            type="button"
+            className="sidebar-handle left-toolbar-toggle"
+            aria-label={isLeftToolbarVisible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
+            aria-expanded={isLeftToolbarVisible}
+            aria-controls="left-toolbar-panel"
+            onClick={() => setIsLeftToolbarVisible((visible) => !visible)}
+          >
+            {isLeftToolbarVisible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+          </button>
+        )}
+        {appMode === 'edit' && (
+          <button
+            type="button"
+            className="sidebar-handle inspector-dock-toggle"
+            aria-label={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
+            aria-expanded={isInspectorVisible}
+            aria-controls="right-inspector-panel"
+            onClick={() => setIsInspectorVisible((visible) => !visible)}
+          >
+            {isInspectorVisible ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          </button>
+        )}
       </div>
-      {appMode === 'edit' && (
-        <button
-          type="button"
-          className="sidebar-handle left-toolbar-toggle"
-          aria-label={isLeftToolbarVisible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
-          aria-expanded={isLeftToolbarVisible}
-          aria-controls="left-toolbar-panel"
-          onClick={() => setIsLeftToolbarVisible((visible) => !visible)}
-        >
-          {isLeftToolbarVisible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-        </button>
-      )}
-      {appMode === 'edit' && (
-        <button
-          type="button"
-          className="sidebar-handle inspector-dock-toggle"
-          aria-label={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
-          aria-expanded={isInspectorVisible}
-          aria-controls="right-inspector-panel"
-          onClick={() => setIsInspectorVisible((visible) => !visible)}
-        >
-          {isInspectorVisible ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-        </button>
-      )}
       {appMode === 'edit' ? <SequencerTimeline /> : <LiveDirectorPanel />}
     </div>
   );

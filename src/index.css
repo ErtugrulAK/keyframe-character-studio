@@ -200,10 +200,10 @@ body, html, #root {
   width: 100%;
   height: 100%;
   background: var(--bg-darkest);
-  /* R3-02: the shell is the positioning authority for the side-panel handles,
-     whose vertical anchor is a percentage of THIS box — a height the timeline
-     resize never changes. It is also the inherited scope of the panel geometry
-     tokens (`--left-rail-width`, `--left-drawer-width`, `--right-inspector-width`). */
+  /* R3-02: the shell is the positioning authority of the panel geometry tokens
+     (`--left-rail-width`, `--left-drawer-width`, `--right-inspector-width`) and
+     the owner of the two panel visibility flags whose edge geometry the dock
+     handles read. */
   position: relative;
 }
 
@@ -213,7 +213,13 @@ body, html, #root {
   min-height: 0;
   width: 100%;
   overflow: hidden;
+  /* R4-01: the workspace row is the dock handles' positioning authority. Its TOP
+     edge never moves when the timeline is resized (only its height does), so a
+     handle pinned below that edge cannot be pushed onto the timeline in a short
+     window, and `--kcs-panel-handle-top` states the single inset both handles
+     share. */
   position: relative;
+  --kcs-panel-handle-top: 32px;
 }
 
 /* Typography standardization across app UI */

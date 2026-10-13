@@ -441,3 +441,161 @@ test('R3-07 — the layer row keeps its middle clickable for selection', async (
   await page.mouse.click(centre.x, centre.y);
   await expect(page.getByTestId('transform-gizmo')).toHaveCount(1);
 });
+
+/**
+ * R4-01 — the side-panel show/hide handles are the timeline's OWN compact
+ * edge-handle family: a thin pill with a bare chevron, symmetric left and right,
+ * anchored to the UPPER EDITOR WORKSPACE (a fixed inset below the workspace
+ * row's top edge). The workspace row is the box the timeline resize shortens
+ * from BELOW, so its top edge never moves and a handle pinned to it can neither
+ * be dragged onto the timeline nor wander when the window is short — at the
+ * minimum, the default and the maximum height, and after a window resize.
+ */
+test('R4-01 — the dock handles stay clear of the timeline at min, default and max heights', async ({ page }) => {
+  await seed(page);
+
+  const geometry = () => page.evaluate(() => {
+    const read = (selector: string) => {
+      const node = document.querySelector(selector);
+      if (!node) throw new Error(`${selector} is missing`);
+      const rect = node.getBoundingClientRect();
+      return {
+        label: (node.textContent ?? '').trim(),
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    const row = document.querySelector('.main-layout')!.getBoundingClientRect();
+    const panel = document.querySelector('[data-testid="sequencer-timeline"]')!.getBoundingClientRect();
+    return {
+      left: read('.left-toolbar-toggle'),
+      right: read('.inspector-dock-toggle'),
+      rowTop: row.top,
+      rowBottom: row.bottom,
+      timelineTop: panel.top,
+      timelineHeight: panel.height,
+    };
+  });
+
+  const expectClear = (label: string, boxes: Awaited<ReturnType<typeof geometry>>) => {
+    for (const [side, handle] of [['left', boxes.left], ['right', boxes.right]] as const) {
+      // The handle never paints a single pixel over the timeline...
+      expect(handle.bottom, `${label}: the ${side} handle paints over the timeline`).toBeLessThanOrEqual(boxes.timelineTop);
+      // ...because it lives inside the workspace row, above the timeline.
+      expect(handle.top, `${label}: the ${side} handle left the workspace row`).toBeGreaterThanOrEqual(boxes.rowTop);
+      expect(handle.bottom, `${label}: the ${side} handle left the workspace row`).toBeLessThanOrEqual(boxes.rowBottom);
+    }
+  };
+
+  const atDefault = await geometry();
+  // A compact edge handle: no label, no bulky tab.
+  for (const handle of [atDefault.left, atDefault.right]) {
+    expect(handle.label).toBe('');
+    expect(handle.width).toBeLessThanOrEqual(22);
+    expect(handle.height).toBeLessThanOrEqual(48);
+    expect(handle.height).toBeGreaterThan(handle.width);
+  }
+  // Symmetric: both handles ride the same inset below the workspace top edge.
+  expect(Math.abs(atDefault.left.top - atDefault.right.top)).toBeLessThanOrEqual(1);
+  expect(atDefault.left.top - atDefault.rowTop).toBeGreaterThan(0);
+  expect(atDefault.left.top - atDefault.rowTop).toBeLessThan(60);
+  expectClear('default', atDefault);
+
+  // Minimum height: the panel gives the stage nearly everything back.
+  await dragBy(page, page.getByTestId('timeline-height-resizer'), { y: 400 });
+  expect(Math.abs((await timelineHeight(page)) - MIN_HEIGHT)).toBeLessThanOrEqual(1);
+  const atMinimum = await geometry();
+  expectClear('minimum', atMinimum);
+
+  // Maximum height: as tall as this window can afford while the stage keeps its share.
+  let atMaximum = await timelineHeight(page);
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    await dragBy(page, page.getByTestId('timeline-height-resizer'), { y: -200 });
+    const next = await timelineHeight(page);
+    if (next === atMaximum) break;
+    atMaximum = next;
+  }
+  expect(atMaximum, 'the drag never resized the panel').toBeGreaterThan(MIN_HEIGHT + 40);
+  const maxBoxes = await geometry();
+  expectClear('maximum', maxBoxes);
+  // The height really changed across the checkpoints, so they are not the same layout.
+  expect(maxBoxes.timelineHeight).toBeGreaterThan(atMinimum.timelineHeight + 40);
+
+  // The anchor is the workspace row's TOP edge: a resize never moved the handles.
+  expect(Math.abs(maxBoxes.left.top - atDefault.left.top)).toBeLessThanOrEqual(1);
+  expect(Math.abs(maxBoxes.right.top - atDefault.right.top)).toBeLessThanOrEqual(1);
+  expect(Math.abs(atMinimum.left.top - atDefault.left.top)).toBeLessThanOrEqual(1);
+  expect(Math.abs(atMinimum.right.top - atDefault.right.top)).toBeLessThanOrEqual(1);
+
+  // Window-resize safe: a short window re-clamps the panel, and the handles still
+  // cannot reach the timeline (a viewport-50% anchor could).
+  await page.setViewportSize({ width: 1120, height: 620 });
+  await expect.poll(() => timelineHeight(page)).toBeLessThan(atMaximum);
+  expectClear('short window', await geometry());
+  await page.setViewportSize({ width: 1280, height: 720 });
+  expectClear('restored window', await geometry());
+});
+
+/**
+ * R4-02 — the outliner divider speaks the same language as the panel-height
+ * divider: a compact pill, NEUTRAL at rest, strengthened to the KCS accent only
+ * while hovered or dragged, inside a generous invisible hit strip. No filled
+ * bar, no glow, and no colour outside the editor's own teal accent.
+ */
+test('R4-02 — the outliner divider matches the timeline resize-handle language', async ({ page }) => {
+  await seed(page);
+  const divider = page.getByTestId('timeline-column-resizer');
+  await expect(divider).toBeVisible();
+
+  const painted = () => page.evaluate(() => {
+    const node = document.querySelector('[data-testid="timeline-column-resizer"]')!;
+    const strip = getComputedStyle(node);
+    const pill = getComputedStyle(node, '::after');
+    const box = node.getBoundingClientRect();
+    // Resolve the accent through the cascade, so the test reads the theme value
+    // the divider itself would paint.
+    const probe = document.createElement('div');
+    probe.style.color = 'var(--kcs-accent)';
+    node.parentElement!.appendChild(probe);
+    const accent = getComputedStyle(probe).color;
+    probe.remove();
+    return {
+      stripWidth: box.width,
+      stripBackground: strip.backgroundColor,
+      pillBackground: pill.backgroundColor,
+      pillWidth: parseFloat(pill.width),
+      pillHeight: parseFloat(pill.height),
+      pillShadow: pill.boxShadow,
+      accent,
+      heightPillBackground: getComputedStyle(document.querySelector('.resizer-handle-pill')!).backgroundColor,
+    };
+  });
+
+  const rest = await painted();
+  // Generous INVISIBLE hit strip: 6px of pointer target, nothing painted.
+  expect(rest.stripWidth).toBeGreaterThanOrEqual(6);
+  expect(rest.stripBackground).toBe('rgba(0, 0, 0, 0)');
+  // Minimal painted geometry: a thin, short, glow-free pill.
+  expect(rest.pillWidth).toBeLessThanOrEqual(4);
+  expect(rest.pillHeight).toBeGreaterThan(20);
+  expect(rest.pillHeight).toBeLessThan(80);
+  expect(rest.pillShadow).toBe('none');
+  // Neutral by default — the same tone the height divider rests in.
+  expect(rest.pillBackground).not.toBe(rest.accent);
+  expect(rest.pillBackground).toBe(rest.heightPillBackground);
+
+  await divider.hover();
+  // The pill carries a 150ms transition, so the painted colour settles.
+  await expect.poll(async () => (await painted()).pillBackground).toBe(rest.accent);
+  await expect.poll(async () => (await painted()).pillHeight).toBeGreaterThan(rest.pillHeight);
+  const hovered = await painted();
+  expect(hovered.pillShadow).toBe('none');
+
+  // The accent is the editor's TEAL, never a purple/indigo glow.
+  const channels = (hovered.accent.match(/\d+/g) ?? []).map(Number);
+  expect(channels).toHaveLength(3);
+  expect(channels[1]).toBeGreaterThan(channels[0]);
+  expect(channels[1]).toBeGreaterThan(channels[2]);
+});

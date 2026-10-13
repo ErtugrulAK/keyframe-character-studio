@@ -1061,16 +1061,22 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   background: var(--kcs-accent);
   box-shadow: none;
 }
-/* V3.4 mirrored sidebar handle authority. */
+/* V3.4 mirrored sidebar handle authority.
+   R4-01 — ONE compact edge-handle family for every panel boundary: a thin
+   elevated pill whose interior is a bare chevron, attached to the edge it
+   collapses. The side handles are the VERTICAL member (20×46, riding a panel's
+   left/right edge); the timeline's collapse control is the horizontal mirror
+   (46×20, riding the panel's top edge). No labelled bulky tab, symmetric left
+   and right, and the chevron always points the way the panel will move. */
 .sidebar-handle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 48px;
+  width: 20px;
+  height: 46px;
   padding: 0;
   border: 0;
-  border-radius: 0;
+  border-radius: var(--kcs-radius-control);
   background: var(--kcs-panel-elevated);
   color: var(--kcs-text-muted);
   cursor: pointer;

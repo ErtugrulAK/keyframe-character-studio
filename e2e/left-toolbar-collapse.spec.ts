@@ -92,8 +92,9 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   expect(Math.abs(expandedLayout.leftHandleCenter - expandedLayout.drawerRight)).toBeLessThanOrEqual(1);
   expect(expandedLayout.drawerPointerEvents).toBe('auto');
   expect(expandedLayout.drawerVisibility).toBe('visible');
-  expect(expandedLayout.leftHandleWidth).toBe(26);
-  expect(expandedLayout.rightHandleWidth).toBe(26);
+  // R4-01 — the compact edge-handle family: a thin vertical pill, chevron only.
+  expect(expandedLayout.leftHandleWidth).toBe(20);
+  expect(expandedLayout.rightHandleWidth).toBe(20);
   expect(expandedLayout.rightHandleTransition).toContain('right');
   expect(expandedLayout.rightWidth).toBeGreaterThan(0);
 

@@ -772,15 +772,16 @@
   visibility: hidden;
 }
 
-/* R3-02 — the handle rides the SHELL edge: `top: 50%` resolves against the
-   shell's constant height, so a timeline resize never moves it vertically. */
+/* R3-02 / R4-01 — the handle rides the WORKSPACE ROW's edge: a fixed inset below
+   the row's top edge (a boundary a timeline resize never moves), so the handle
+   keeps its place at every timeline height and can never reach the timeline. */
 .app-container .left-toolbar-toggle {
   position: absolute;
-  top: 50%;
+  top: var(--kcs-panel-handle-top);
   left: calc(var(--left-rail-width) + var(--left-drawer-width));
   right: auto;
   z-index: 100;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, 0);
   /* The handle rides the collapsing edge instead of teleporting to it. */
   transition: background-color 160ms ease, color 160ms ease, outline-color 160ms ease,
     left 240ms ease, transform 240ms ease;
@@ -788,7 +789,7 @@
 
 .app-container.left-toolbar-hidden .left-toolbar-toggle {
   left: 0;
-  transform: translate(0, -50%);
+  transform: translate(0, 0);
 }
 /* Project drawer: resolution presets and dimension fields reuse the card/input grammar. */
 .project-drawer-content {

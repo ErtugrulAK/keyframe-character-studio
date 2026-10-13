@@ -36,17 +36,20 @@
   visibility: hidden;
 }
 
-/* R3-02 — the inspector handle is anchored to the SHELL, like the left one. */
+/* R3-02 / R4-01 — the inspector handle is anchored to the WORKSPACE ROW too, at
+   the same fixed inset below its top edge as the left one: symmetric handles,
+   and a vertical position a timeline resize can never change or push onto the
+   timeline. */
 .app-container:not(.inspector-hidden) .inspector-dock-toggle {
-  top: 50%;
+  top: var(--kcs-panel-handle-top);
   right: min(var(--right-inspector-width), max(250px, 34vw));
-  transform: translate(50%, -50%);
+  transform: translate(50%, 0);
 }
 
 .app-container.inspector-hidden .inspector-dock-toggle {
-  top: 50%;
+  top: var(--kcs-panel-handle-top);
   right: 0;
-  transform: translate(0, -50%);
+  transform: translate(0, 0);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -54,6 +54,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The header's `?` (First export help) button and the **OGraf Single File (Legacy)** export entry. The export menu now offers exactly **JSON** and **OGraf Package**; the legacy single-file `.mjs` export is gone, so its fail-closed guard went with it, and the first-export guidance component is no longer reachable from the header.
 
 ### Fixed
+- Manual QA round 4 (part 2), findings R4-15, R4-16, R4-13 and R4-06. Playback integrates **elapsed wall-clock time** instead of advancing one authored frame per `requestAnimationFrame` callback, so the monitor's refresh rate can no longer change an animation's duration: a 2-second animation authored at 30, 60 or 120 FPS reaches the same end at t=2s and the same midpoint at t=1s on a 30/60/120/144 Hz display, and a stalled or throttled callback recovers the time it lost. `src/utils/timebase.ts` is the one frame↔second authority (`seconds = frame / fps`), the timeline's duration control and the keyframe panel convert through it, and a hand-edited FPS that cannot carry the mapping (0, negative, non-finite, fractional) is refused at the FPS authority instead of poisoning every later conversion. The contract is recorded in **FPS/TIMEBASE CONTRACT** below.
+- Manual QA round 4, finding R4-16. Dev preview freshness is explicit instead of left to browser heuristics. The dev entry document answers `Cache-Control: no-store` (a dev-only Vite plugin, `kcs-dev-document-freshness`), so no intermediary between a LAN browser and the dev server may replay a stored document, while the app's source modules, public assets and pre-bundled dependencies keep Vite's own revalidating and caching headers and a production build is untouched. A dev-only guard retires any service worker registration left on a secure dev origin by an earlier server, so a stale offline shell cannot serve an old build. The audit that motivated this is recorded in **DEV FRESHNESS CONTRACT** below: there is no service worker and no Cache Storage use in this repository, a plain-HTTP LAN origin cannot register one at all, and what a returning LAN user actually sees is their own **persisted document** restored from `localStorage` — a different axis from code freshness.
+- Manual QA round 4, finding R4-13. The exported OGraf ZIP is verified portable rather than assumed: the central directory is decoded by a reader written for the test (not by the library that wrote the file), every entry name is a relative forward-slash path with no drive letter, traversal or backslash, the compression method is stored/deflate, each local header agrees with its central record, the CRCs are non-zero and the end-of-central-directory count matches. A real export was then extracted by four independent implementations — fflate, Info-ZIP `unzip`, bsdtar/libarchive and Python's `zipfile` (plus PowerShell's .NET `ZipFile`) — with a space-containing asset path and an accented scene title, and every one reported the same files and valid CRCs. An accented title now folds to its base letters in the graphic id and package name (`Café Démo` → `cafe-demo`) instead of leaving a stray separator (`cafe-de-mo`); a scene export's own file name still keeps its Unicode. A foreign package with a non-ASCII, reserved or case-colliding entry is refused with a diagnostic instead of being mis-decoded.
+- Manual QA round 4, finding R4-06. The timeline property tree no longer shows a redundant `Transform` wrapper row: it reads **Position > {X, Y}, Rotation, Scale > {X, Y}, Opacity, Trim Path > {Start, End, Offset}**, one level shallower and still row-for-row aligned with the lanes (the wrapper's outliner row and its lane spacer are both gone, so the R2-09 alignment contract holds unchanged). `Transform` remains the internal name of the model; the layer row is the owner the properties hang from.
 - Manual QA round 4, findings R4-03, R4-04, R4-07 and R4-14. The timeline keyframe gesture is a **pointer** gesture: the press arms it and keeps the moving set, the drag begins once the pointer crosses the shared threshold, the pressed diamond holds the pointer captured for the whole sweep, and `pointerup`, `pointercancel`, a lost capture or a move with no button held end it at once — so a release can no longer be missed and leave the keys travelling with the cursor until the next click. `Delete`/`Backspace` deletes the **whole** canonical keyframe selection in one document write (one undo entry that restores the exact set), keeps normal editing while a text field owns focus, and never falls through to deleting a layer while keyframes are selected.
 - Ungrouping an animated container bakes its motion **sparsely**: a channel the composition leaves constant takes one key, a channel it merely translates keeps the container's own key times and easings, and only a channel whose composition no single easing can carry is subdivided — one key per frame remains the last resort and is now recorded as a reason on the ungroup outcome. The evaluated pose stays identical at every displayed frame (measured against the evaluator, including the OGraf runtime and static export paths).
 - A continuous authoring gesture is **one** undo entry: colour spectrum, hue and alpha drags, the Inspector's sliders (corner radius, matte feather/strength/gradient angle), the value graph, the cubic-bezier handles and the mask-path vertices each open one transaction on the press and close it on the release, so a sweep through hundreds of values no longer fills the history. Discrete edits stay discrete, and a timeline or panel resize is UI state that never enters document history.
@@ -119,6 +123,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The project-owned Playfair Display font is now verified against its pinned SHA-256 instead of its 4-byte sfnt signature alone, so a truncated or mutated file is refused instead of shipping as ready and failing in the decoder. A caller-supplied catalog font is never checked against that hash.
 - The live documents no longer list the root `npx tsc --noEmit` as project type-check evidence; the root `tsconfig.json` only references the app and node projects, so that command checks no project file. The effective gate is `npx tsc -b --pretty false`, and the contributing guide, the pull-request checklist and the CI status document now name it.
 - The dependency audit is clean again. `proxy-addr` 2.0.7 -> 2.0.8, `source-map-js` 1.2.1 -> 1.2.2 and `fast-uri` 3.1.7 -> 3.1.8 are lock refreshes inside the ranges their parents already declare, so no direct dependency moved. `shell-quote` needed a scoped `overrides` entry under `concurrently`: concurrently pins the exact vulnerable version `1.9.0` and has no newer release, so no range-based or parent-bump fix exists, and the alternative npm proposes is a semver-major downgrade of concurrently. The override cannot change this repository's behaviour — concurrently's only `quote()` consumer requires additional CLI arguments the `dev` script never passes, and 1.11.0+ exports the same `quote`/`parse` API with no dependencies. The Express `proxy-addr` advisory was already unreachable (KCS never sets `trust proxy`, and Express defaults it to `false`), and is fixed anyway. No script, engine, workflow or application source change; the API still binds loopback only and the CORS allowlist is unchanged.
+
+### FPS/TIMEBASE CONTRACT (manual QA round 4, part 2 — release critical)
+
+The ONE mapping between frames and time is `seconds = frame / fps` and
+`frame = seconds * fps`; `src/utils/timebase.ts` is its named authority and every
+conversion in the editor goes through it.
+
+- The project FPS is an authored **time mapping**, never a redraw budget. Changing it re-maps frames to
+  seconds; it does not change what the viewer sees.
+- The monitor/browser refresh rate has **no** effect on authored duration: playback integrates elapsed
+  wall-clock time and steps the playhead by whole authored frames (`usePlayback`). A dropped or throttled
+  callback recovers its time instead of stretching the animation. 30, 60 and 120 FPS authorings of the same
+  animation reach the same frame at the same instant, and the same midpoint at half the duration.
+- The FPS is a positive **whole** number of frames per second. Fractional rates such as 59.94 are NOT
+  supported and are never faked: the Lottie importer rounds `fr` and reports `LOTTIE_FRACTIONAL_FPS`, and
+  the editor offers 24/30/60/120 with 60 as the new-document default. A document whose FPS cannot carry the
+  mapping (0, negative, non-finite, fractional) keeps the current rate at the FPS authority.
+- Sequence duration: the timeline's duration field and its `1s…10s` presets write `round(seconds * fps)`
+  frames and read `frameToSeconds`, so the seconds the user types are the seconds the animation lasts.
+- Save/load: `fps` and `totalFrames` are persisted and restored unchanged, so a reloaded document keeps its
+  exact duration.
+- OGraf: the package carries the same `fps` on SceneData and asks for it in `renderRequirements.frameRate.ideal`;
+  the generated runtime advances by elapsed time (`|targetFrame - startFrame| / fps * 1000` ms → progress).
+  An exported graphic therefore keeps its wall-clock duration in a host whose own timeline FPS differs — a
+  **Reality Hub Timeline FPS does not have to match the KCS FPS**; only the graphic's frame count and FPS
+  define its duration.
+- Any GIF/video export (round 4, part 3) must map `frameDelayMs = 1000 / fps` per authored frame, for the
+  same reason: frame count × delay = wall-clock duration, independent of the encoding cadence.
+
+### DEV FRESHNESS CONTRACT (manual QA round 4, part 2)
+
+Stale **app code** must never be the explanation for "the LAN URL shows old content".
+
+- This repository has **no service worker and no PWA manifest**, and the dev server is reached over plain HTTP
+  (`http://172.16.0.172:5173`), which is not a secure context: `navigator.serviceWorker` and Cache Storage do
+  not exist there, so no offline shell can be registered on that origin. The only `localStorage` keys the app
+  writes are the autosave document and the custom presets.
+- A secure dev origin (localhost/HTTPS) is the one place a stale service worker could survive a rewrite of the
+  dev server, so a dev-only guard (`src/utils/devFreshness.ts`, called from `main.tsx`) retires any
+  registration it finds. Retired registrations no longer intercept navigation; their caches are left alone
+  because a cache with no controlling worker is never served.
+- When the dev server is running, a fresh navigation gets current source: Vite answers the entry document and
+  every source module with `Cache-Control: no-cache` + ETag (verified against a running dev server), so
+  content is revalidated rather than reused.
+- The entry **document** additionally answers `Cache-Control: no-store` in dev (the `kcs-dev-document-freshness`
+  plugin in `vite.config.ts`), so no intermediary between a LAN browser and the dev server may replay a stored
+  document. It is deliberately narrow: modules, public assets and pre-bundled dependencies keep their own dev
+  caching, and a production build keeps its immutable hashed-asset caching.
+- An offline navigation cannot masquerade as a live instance: with no service worker there is no offline shell.
+- What is NOT stale code: the editor restores the last autosaved **document** from `localStorage` on boot, so a
+  returning LAN user sees their previous project (its scene title and its layers) rendered by current source.
+  That is persistence, and it is a separate axis from code freshness.
 
 ### Release candidate `1.1.0-rc.2` (unreleased package metadata)
 - Cut on 2026-10-08 from the exact smoke-tested code commit `6c27ef35d48d61a5e1163d2c91734c864fcafa01`; the annotated candidate and its draft prerelease exist, and the earlier candidate remains historical and unchanged.

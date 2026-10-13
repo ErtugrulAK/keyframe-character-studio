@@ -1,5 +1,6 @@
 import type {
   CharacterPart,
+  EasingType,
   Keyframe,
   PropertyKeyframe,
   Track,
@@ -9,7 +10,7 @@ import type {
 import { getPartLocalBounds, getPartWorldBounds, type PartLocalBounds, type PartWorldBounds } from './bounds';
 import { PART_ANCHOR_OFFSETS, TOOLBAR_COLORS } from './constants';
 import { composeWorldTransform, worldToContainerLocal } from './containerMath';
-import { makeEmptyChannels } from './defaults';
+import { applyEasing, deriveAutoBezierControlPoints, interpolateChannel, lerp, makeEmptyChannels } from './defaults';
 import { evaluateTransform } from './evaluateTransform';
 import { generateId } from './idGenerator';
 import { isRelationshipChainRelated, relationshipParentId } from './partBinding';
@@ -491,7 +492,19 @@ export const createLayerGroup = (
 // ─── Ungroup ──────────────────────────────────────────────────────────────
 
 export type UngroupOutcome =
-  | { ok: true; parts: CharacterPart[]; tracks: Track[]; childIds: string[]; parentId?: string }
+  | {
+    ok: true;
+    parts: CharacterPart[];
+    tracks: Track[];
+    childIds: string[];
+    parentId?: string;
+    /**
+     * Every channel the bake could not carry with fewer keys, with the reason:
+     * the dense per-frame fallback is recorded rather than silent, because the
+     * timeline it produces is the one a user would ask about.
+     */
+    bakeNotes?: string[];
+  }
   | { ok: false; reason: string };
 
 /**
@@ -575,31 +588,220 @@ const standaloneTransformAt = (
   return worldToContainerLocal(world, evaluateTransform(parts, tracks, scope, parentId, frame));
 };
 
-/** Replace one scope's local channels with the sampled standalone transform. */
+/**
+ * The strict bound a baked channel may leave at a displayed frame: the evaluated
+ * pose must be the same number the product drew (float noise only), not merely a
+ * close one.
+ */
+const BAKE_TOLERANCE = 1e-10;
+
+/** An easing a baked segment may be authored with, copied from a source key when it has one. */
+interface SegmentEasing {
+  easing: EasingType;
+  bezierControlPoints?: [number, number, number, number];
+}
+
+/** The easings a segment may take when no source key at its start names one. */
+const BAKE_FALLBACK_EASINGS: EasingType[] = ['linear', 'easeIn', 'easeOut', 'easeInOut'];
+
+/** The keys of one channel of one track inside one sequence scope, in time order. */
+const scopeChannelKeys = (track: Track | undefined, channel: LocalChannel, scope: string): PropertyKeyframe[] => (
+  [...(track?.channels?.[channel] ?? [])]
+    .filter((keyframe) => keyframeScope(keyframe) === scope)
+    .sort((left, right) => left.frame - right.frame)
+);
+
+/**
+ * The easings a baked segment starting at `frame` may take: whatever the source
+ * key sitting on that frame authored — which is what keeps an authored curve
+ * verbatim when the composition preserves it — then the standard set, so a
+ * segment the sources never eased still has something exact to fit.
+ *
+ * `autoBezier` is resolved to the concrete control points the evaluator would
+ * derive from the source's own neighbours: the evaluator never reads the name,
+ * and a baked key must be able to reproduce the curve it stood for.
+ */
+const segmentEasingsAt = (
+  sources: Array<Track | undefined>,
+  channel: LocalChannel,
+  scope: string,
+  frame: number,
+): SegmentEasing[] => {
+  const named: SegmentEasing[] = [];
+  sources.forEach((track) => {
+    const keys = scopeChannelKeys(track, channel, scope);
+    const index = keys.findIndex((keyframe) => keyframe.frame === frame);
+    if (index === -1) return;
+    const keyframe = keys[index];
+    if (keyframe.easing === 'autoBezier') {
+      named.push({
+        easing: 'bezier',
+        bezierControlPoints: deriveAutoBezierControlPoints(
+          keyframe,
+          keys[index + 1] ?? keyframe,
+          keys[index - 1],
+          keys[index + 2],
+        ),
+      });
+      return;
+    }
+    named.push({
+      easing: keyframe.easing,
+      ...(keyframe.bezierControlPoints ? { bezierControlPoints: keyframe.bezierControlPoints } : {}),
+    });
+  });
+  const taken = new Set(named.map((basis) => basis.easing));
+  return [...named, ...BAKE_FALLBACK_EASINGS.filter((easing) => !taken.has(easing)).map((easing) => ({ easing }))];
+};
+
+/**
+ * Bake ONE channel of ONE scope into the sparsest key list that still evaluates
+ * to the exact standalone value at every displayed frame. The ladder, in order:
+ *
+ *  1. Key-union composition: keys at the union of the two layers' own key frames,
+ *     each segment keeping the easing its source key authored. Exact whenever the
+ *     composition is itself a per-channel curve — a purely translated container, a
+ *     container whose rotation and scale never change, or an animation both layers
+ *     share — and that is the common case, where the timeline used to receive one
+ *     key per frame of the whole span.
+ *  2. Adaptive subdivision, and only in the segments whose measured error exceeds
+ *     `BAKE_TOLERANCE`: a segment that cannot be carried by one easing is split at
+ *     the frame where it misses worst, until it is exact.
+ *  3. The dense per-frame bake, last resort, for a channel that is genuinely not
+ *     representable (a rotating container mixing a child's x and y across
+ *     channels). `dense` reports that the reason had to be taken.
+ */
+const bakeScopeChannel = (options: {
+  channel: LocalChannel;
+  childId: string;
+  scope: string;
+  /** Every integer frame of the span, in order. */
+  displayed: number[];
+  /** The exact standalone value of this channel at one frame of the span. */
+  truthAt: (frame: number) => number;
+  sources: Array<Track | undefined>;
+}): { keys: PropertyKeyframe[]; dense: boolean } => {
+  const { channel, childId, scope, displayed, truthAt, sources } = options;
+  const min = displayed[0];
+  const truth = displayed.map(truthAt);
+  const valueAt = (frame: number) => truth[frame - min];
+  /** A channel the composition leaves constant needs exactly one key, not a span. */
+  const constantValue = truth[0];
+  const isConstant = truth.every((value) => Math.abs(value - constantValue) <= BAKE_TOLERANCE);
+  const build = (frames: number[], easings: SegmentEasing[]): PropertyKeyframe[] => frames.map((frame, index) => {
+    const basis = easings[index] ?? { easing: 'linear' as const };
+    return {
+      id: `bake_${childId}_${channel}_${frame}_${scope}`,
+      frame,
+      value: valueAt(frame),
+      easing: basis.easing,
+      ...(basis.bezierControlPoints ? { bezierControlPoints: basis.bezierControlPoints } : {}),
+      templateId: scope,
+    };
+  });
+  /** How far the authored list strays from the truth at the frames the product draws. */
+  const errorOf = (keys: PropertyKeyframe[]): number => displayed.reduce((worst, frame) => (
+    Math.max(worst, Math.abs(interpolateChannel(keys, frame, valueAt(frame)) - valueAt(frame)))
+  ), 0);
+  /** The largest error strictly inside one segment, and where it sits. */
+  const segmentMiss = (left: PropertyKeyframe, right: PropertyKeyframe): { miss: number; frame: number } => {
+    const duration = right.frame - left.frame;
+    let worst = { miss: 0, frame: left.frame };
+    for (let frame = left.frame + 1; frame < right.frame; frame += 1) {
+      const progress = (frame - left.frame) / duration;
+      const eased = applyEasing(progress, left.easing, left.bezierControlPoints);
+      const miss = Math.abs(lerp(left.value, right.value, eased) - valueAt(frame));
+      if (miss > worst.miss) worst = { miss, frame };
+    }
+    return worst;
+  };
+
+  if (isConstant) return { keys: build([displayed[0]], [{ easing: 'linear' }]), dense: false };
+  // The union of the two layers' OWN key times: the sparse candidate the sources
+  // themselves authored. Anything beyond it is a frame the bake had to invent.
+  const sourceFrames = [...new Set([...displayed.filter((frame) => sources.some(
+    (track) => scopeChannelKeys(track, channel, scope).some((keyframe) => keyframe.frame === frame),
+  )), displayed[0], displayed[displayed.length - 1]])].sort((left, right) => left - right);
+  let frames = sourceFrames;
+  let keys = build(frames, frames.map((frame) => segmentEasingsAt(sources, channel, scope, frame)[0]));
+  let error = errorOf(keys);
+  while (error > BAKE_TOLERANCE) {
+    const missing: number[] = [];
+    keys.forEach((key, index) => {
+      const right = keys[index + 1];
+      if (!right) return;
+      // The segment is re-eased to whichever candidate carries it best BEFORE it is
+      // split, so a segment one easing can already hold exactly is never subdivided.
+      let best: SegmentEasing | null = null;
+      let bestMiss = Number.POSITIVE_INFINITY;
+      segmentEasingsAt(sources, channel, scope, key.frame).forEach((basis) => {
+        const miss = segmentMiss({ ...key, easing: basis.easing, bezierControlPoints: basis.bezierControlPoints }, right).miss;
+        if (miss < bestMiss) {
+          bestMiss = miss;
+          best = basis;
+        }
+      });
+      if (best && bestMiss <= BAKE_TOLERANCE) {
+        keys = keys.map((candidate, position) => (
+          position === index
+            ? { ...candidate, easing: best!.easing, ...(best!.bezierControlPoints ? { bezierControlPoints: best!.bezierControlPoints } : {}) }
+            : candidate
+        ));
+        return;
+      }
+      missing.push(segmentMiss(key, right).frame);
+    });
+    const next = [...new Set([...frames, ...missing])].sort((left, right) => left - right);
+    // Nothing left to split: no frame the bake could add carries the segment.
+    if (next.length === frames.length) break;
+    frames = next;
+    keys = build(frames, frames.map((frame) => segmentEasingsAt(sources, channel, scope, frame)[0]));
+    error = errorOf(keys);
+  }
+  if (error > BAKE_TOLERANCE) {
+    // Last resort: every frame of the span carries a key, so the pose is exact by
+    // construction. It only happens for a channel whose composition a single
+    // easing can never carry.
+    frames = displayed;
+    keys = build(frames, frames.map((frame) => segmentEasingsAt(sources, channel, scope, frame)[0]));
+  }
+  return { keys, dense: frames.length > sourceFrames.length };
+};
+
+/** Replace one scope's local channels with the sparsest exact standalone pose. */
 const bakeScopeChannels = (options: {
   channels: Record<TrackChannel, PropertyKeyframe[]>;
   childId: string;
+  childName: string;
   scope: string;
   span: number[];
   sampleAt: (frame: number) => Transform;
+  sources: Array<Track | undefined>;
+  notes: string[];
 }): Record<TrackChannel, PropertyKeyframe[]> => {
-  const { channels, childId, scope, span, sampleAt } = options;
+  const { channels, childId, childName, scope, span, sampleAt, sources, notes } = options;
   const min = Math.min(...span);
   const max = Math.max(...span);
-  const samples: Transform[] = [];
-  for (let frame = min; frame <= max; frame += 1) samples.push(sampleAt(frame));
+  const displayed: number[] = [];
+  for (let frame = min; frame <= max; frame += 1) displayed.push(frame);
+  // ONE evaluation per displayed frame, shared by every channel: the exact pose
+  // the product drew, sampled where it draws.
+  const poses: Transform[] = displayed.map((frame) => sampleAt(frame));
   const next = { ...channels };
   LOCAL_CHANNELS.forEach((channel) => {
     const kept = (channels[channel] ?? []).filter((keyframe) => keyframeScope(keyframe) !== scope);
-    // Deterministic ids: one baked key per (child, channel, frame, scope).
-    const baked = samples.map((sample, index) => ({
-      id: `bake_${childId}_${channel}_${min + index}_${scope}`,
-      frame: min + index,
-      value: sample[channel],
-      easing: 'linear' as const,
-      templateId: scope,
-    }));
-    next[channel] = [...kept, ...baked].sort((a, b) => a.frame - b.frame);
+    const baked = bakeScopeChannel({
+      channel,
+      childId,
+      scope,
+      displayed,
+      truthAt: (frame) => poses[frame - min][channel],
+      sources,
+    });
+    if (baked.dense) {
+      notes.push(`"${childName}" ${scope} · ${channel}: baked per frame (this composition has no sparse per-channel equivalent)`);
+    }
+    next[channel] = [...kept, ...baked.keys].sort((left, right) => left.frame - right.frame);
   });
   return next;
 };
@@ -617,8 +819,10 @@ const bakeChildAnimation = (options: {
   parts: CharacterPart[];
   tracks: Track[];
   parentId: string | undefined;
+  /** Dense-bake reasons, collected for the ungroup outcome. */
+  notes: string[];
 }): Track | undefined => {
-  const { child, track, groupTrack, groupLocal, scopes, parts, tracks, parentId } = options;
+  const { child, track, groupTrack, groupLocal, scopes, parts, tracks, parentId, notes } = options;
   const fold = foldAffine(groupLocal);
   // A rotated container mixes a child's x and y across channels, and a zero
   // scale has no matching per-channel map, so both take the sampled path.
@@ -643,9 +847,14 @@ const bakeChildAnimation = (options: {
     channels = bakeScopeChannels({
       channels: channels!,
       childId: child.id,
+      childName: child.name,
       scope,
       span,
       sampleAt: (frame) => standaloneTransformAt(parts, tracks, child.id, parentId, scope, frame),
+      // The two curves the composition is built from: the sparsest exact bake
+      // keeps the key times and easings these two actually authored.
+      sources: [groupTrack, track],
+      notes,
     });
     changed = true;
   });
@@ -712,6 +921,7 @@ export const dissolveLayerGroup = (
       };
     });
 
+  const bakeNotes: string[] = [];
   const nextTracks = tracks
     .filter((track) => track.partId !== groupId)
     .map((track) => (childIds.includes(track.partId)
@@ -724,12 +934,13 @@ export const dissolveLayerGroup = (
         parts,
         tracks,
         parentId,
+        notes: bakeNotes,
       }) ?? track
       : track));
   children.forEach((child) => {
     if (tracks.some((track) => track.partId === child.id)) return;
     const baked = bakeChildAnimation({
-      child, track: undefined, groupTrack, groupLocal, scopes, parts, tracks, parentId,
+      child, track: undefined, groupTrack, groupLocal, scopes, parts, tracks, parentId, notes: bakeNotes,
     });
     if (baked) nextTracks.push(baked);
   });
@@ -740,6 +951,7 @@ export const dissolveLayerGroup = (
     tracks: nextTracks,
     childIds,
     ...(parentId ? { parentId } : {}),
+    ...(bakeNotes.length > 0 ? { bakeNotes } : {}),
   };
 };
 

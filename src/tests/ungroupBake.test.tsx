@@ -211,13 +211,47 @@ describe('R3-13 — ungrouping an animated group', () => {
     // both the container's and the child's curves were clamped constants.
     const maxDelta = expectSamePoses(before, h, [a, b], frames);
     expect(maxDelta).toBeLessThan(1e-9);
-    // The container's motion now lives in the child's own channels: the union
-    // span [0, 20] is baked frame by frame, and the container's opacity 0 never
+    // The container's motion now lives in the child's own channels, and it does so
+    // SPARSELY: the container's rotation mixes this child's offset across x and y,
+    // so those two channels genuinely need every displayed frame, while rotation
+    // and scale carry the container's own three keys and the channels the
+    // composition leaves constant carry one. The container's opacity 0 never
     // reaches a child.
     const baked = h.ctx().tracks.find((track) => track.partId === b)!.channels;
     expect(baked.x.map((key) => key.frame)).toEqual(Array.from({ length: 21 }, (_, frame) => frame));
+    expect(baked.rotation.map((key) => key.frame)).toEqual([0, 8, 20]);
     expect(baked.rotation[0].value).toBeCloseTo(0, 9);
-    expect(baked.rotation[20].value).toBeCloseTo(140, 9);
+    expect(baked.rotation[2].value).toBeCloseTo(140, 9);
+    expect(baked.scaleX.map((key) => key.frame)).toEqual([0, 8, 20]);
+    expect(baked.scaleY.map((key) => key.frame)).toEqual([0, 8, 20]);
+    const bakedKeyCount = ['x', 'y', 'rotation', 'scaleX', 'scaleY']
+      .flatMap((localChannel) => baked[localChannel as keyof typeof baked] ?? []).length;
+    expect(bakedKeyCount).toBeLessThan(60);
+    expect(baked.opacity).toHaveLength(0);
+  });
+
+  it('preserves a position-only container animation SPARSELY instead of one key per frame', () => {
+    const h = renderHarness();
+    const a = h.addRect('Rect A', 60, 20);
+    const b = h.addRect('Rect B', 320, 180);
+    const groupId = h.group([a, b]);
+    // A container that only travels: its own three key times are the whole story.
+    h.authorKeys(groupId, [0, 12, 30], (frame) => ({ x: 40 + frame * 5, y: -20 + frame * 2 }));
+
+    const frames = Array.from({ length: 34 }, (_, frame) => frame);
+    const before = capturePoses(h, [a, b], frames);
+
+    h.ungroup(groupId);
+
+    const maxDelta = expectSamePoses(before, h, [a, b], frames);
+    expect(maxDelta).toBeLessThan(1e-9);
+    const baked = h.ctx().tracks.find((track) => track.partId === b)!.channels;
+    // Three source keys, three baked keys — NOT one per frame of the 31-frame span.
+    expect(baked.x.map((key) => key.frame)).toEqual([0, 12, 30]);
+    expect(baked.y.map((key) => key.frame)).toEqual([0, 12, 30]);
+    ['rotation', 'scaleX', 'scaleY'].forEach((localChannel) => {
+      expect(baked[localChannel as keyof typeof baked]?.map((key) => key.frame), localChannel).toEqual([0]);
+    });
     expect(baked.opacity).toHaveLength(0);
   });
 
@@ -240,9 +274,11 @@ describe('R3-13 — ungrouping an animated group', () => {
     // At frame 0 the container is unrotated, so each child's x carries its own
     // offset scaled by the container's 2 — the two differ.
     expect(Math.abs(aKeys.x[0].value - bKeys.x[0].value)).toBeGreaterThan(1);
-    // The container's rotation is shared by both children (their own is 0).
-    expect(aKeys.rotation[10].value).toBeCloseTo(90, 9);
-    expect(bKeys.rotation[10].value).toBeCloseTo(90, 9);
+    // The container's rotation is shared by both children (their own is 0), and it
+    // travels with the container's own two key times.
+    expect(aKeys.rotation.map((key) => key.frame)).toEqual([0, 10]);
+    expect(aKeys.rotation.find((key) => key.frame === 10)!.value).toBeCloseTo(90, 9);
+    expect(bKeys.rotation.find((key) => key.frame === 10)!.value).toBeCloseTo(90, 9);
   });
 
   it('restores the whole document through undo and redo', () => {

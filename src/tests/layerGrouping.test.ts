@@ -373,7 +373,7 @@ describe('layer group authoring', () => {
       expect(baked[1].value).toBeCloseTo(30 + 2 * 100, 9);
     });
 
-    it('bakes a moving container into a static child at every integer frame', () => {
+    it('bakes a travelling container into a static child with the container’s OWN key times', () => {
       const group = groupOf([makePart('a', -100), makePart('b', 100)], [makeTrack('a'), makeTrack('b')], ['a', 'b']);
       const animated = {
         parts: group.parts,
@@ -384,14 +384,16 @@ describe('layer group authoring', () => {
       const outcome = dissolveLayerGroup(animated.parts, animated.tracks, 'g');
       if (!outcome.ok) throw new Error(outcome.reason);
 
+      // The exact pose first, at every sampled frame...
       expectSameEvaluatedPose(animated, outcome, ['a', 'b'], [0, 1, 5, 10, 15, 20, 25]);
-      // The documented sampling rule: one linear key per channel and integer
-      // frame of the union span, and nothing outside it.
+      // ...then the sparse rule that carries it: a channel the composition merely
+      // translates keeps the container's OWN key times (three, not twenty-one), and
+      // a channel the composition leaves constant needs exactly one key.
       const baked = outcome.tracks.find((track) => track.partId === 'b')!.channels;
-      ['x', 'y', 'rotation', 'scaleX', 'scaleY'].forEach((localChannel) => {
-        expect(baked[localChannel].map((key) => key.frame), localChannel)
-          .toEqual(Array.from({ length: 21 }, (_, frame) => frame));
-        expect(baked[localChannel].every((key) => key.easing === 'linear'), localChannel).toBe(true);
+      expect(baked.x.map((key) => key.frame)).toEqual([0, 10, 20]);
+      expect(baked.x.every((key) => key.easing === 'linear')).toBe(true);
+      ['y', 'rotation', 'scaleX', 'scaleY'].forEach((localChannel) => {
+        expect(baked[localChannel].map((key) => key.frame), localChannel).toEqual([0]);
       });
       expect(baked.opacity).toHaveLength(0);
     });
@@ -486,13 +488,13 @@ describe('layer group authoring', () => {
         expect(key.value).toBeCloseTo(groupLocal.y + groupLocal.scaleY * authoredY[index].value, 9);
       });
       expect(baked.x.filter((key) => (key.templateId || 'Sequence') === 'Sequence')).toEqual([]);
-      expect(baked.x.filter((key) => key.templateId === 'Boot').map((key) => key.frame))
-        .toEqual(Array.from({ length: 21 }, (_, frame) => frame));
-      // Every local channel is sampled for 'Boot' (a stale fallback would leak
-      // the child's un-baked value), and opacity is never touched.
+      expect(baked.x.filter((key) => key.templateId === 'Boot').map((key) => key.frame)).toEqual([0, 20]);
+      // Every local channel is baked for 'Boot' (a stale fallback would leak the
+      // child's un-baked value): the travelling channel keeps the container's own
+      // key times and the constant ones carry one key each.
       ['y', 'rotation', 'scaleX', 'scaleY'].forEach((localChannel) => {
         expect(baked[localChannel].filter((key) => key.templateId === 'Boot').map((key) => key.frame), localChannel)
-          .toEqual(Array.from({ length: 21 }, (_, frame) => frame));
+          .toEqual([0]);
       });
       expect(baked.opacity.filter((key) => key.templateId === 'Boot')).toHaveLength(0);
     });

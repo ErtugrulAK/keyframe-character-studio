@@ -8,7 +8,7 @@
  */
 
 import { describe, test, expect } from 'vitest';
-import { computeMaxFrame, hasChannelDataForTemplate, resolveCurveSegment } from '../utils/timelineMetrics';
+import { computeMaxFrame, hasChannelDataForTemplate, resolveAdjacentKeyframeFrame, resolveCurveSegment, resolveLayerKeyframeFrames } from '../utils/timelineMetrics';
 import { updateKeyframeBezierPointsMutator } from '../utils/trackMutations';
 import type { Track, TrackChannel, PropertyKeyframe, Keyframe } from '../types/animator';
 
@@ -155,5 +155,43 @@ describe('M5 — resolveCurveSegment', () => {
     expect(segment?.from.id).toBe('b');
     expect(segment?.list.map((k) => k.id)).toEqual(['b', 'c']);
     expect(resolveCurveSegment(list, 'Outro', 'a', 0)).toBeNull();
+  });
+});
+
+describe('R3-07 — per-layer keyframe navigation', () => {
+  test('resolves every canonical channel frame once, in frame order', () => {
+    const track = makeTrack('a', {
+      channels: {
+        x: [pk('x1', 30), pk('x2', 0)],
+        opacity: [pk('o1', 30)],
+        trimPathEnd: [pk('t1', 90)],
+      },
+    });
+    expect(resolveLayerKeyframeFrames(track, 'Sequence')).toEqual([0, 30, 90]);
+  });
+
+  test('reads the legacy composite list the evaluator still resolves', () => {
+    const track = makeTrack('a', { keyframes: [lkf('k0', 0), lkf('k20', 20)] });
+    expect(resolveLayerKeyframeFrames(track, 'Sequence')).toEqual([0, 20]);
+  });
+
+  test('scopes the read to the active template', () => {
+    const track = makeTrack('a', {
+      channels: { x: [pk('x1', 0, 5), pk('x2', 45, 9, 'Outro')] },
+    });
+    expect(resolveLayerKeyframeFrames(track, 'Sequence')).toEqual([0]);
+    expect(resolveLayerKeyframeFrames(track, 'Outro')).toEqual([45]);
+  });
+
+  test('previous/next are strictly adjacent and null at the ends', () => {
+    const frames = [0, 12, 48];
+    expect(resolveAdjacentKeyframeFrame(frames, 20, 'previous')).toBe(12);
+    expect(resolveAdjacentKeyframeFrame(frames, 20, 'next')).toBe(48);
+    expect(resolveAdjacentKeyframeFrame(frames, 0, 'previous')).toBeNull();
+    expect(resolveAdjacentKeyframeFrame(frames, 48, 'next')).toBeNull();
+    // Standing ON a keyframe still moves to the neighbouring key.
+    expect(resolveAdjacentKeyframeFrame(frames, 12, 'previous')).toBe(0);
+    expect(resolveAdjacentKeyframeFrame(frames, 12, 'next')).toBe(48);
+    expect(resolveAdjacentKeyframeFrame([], 5, 'next')).toBeNull();
   });
 });

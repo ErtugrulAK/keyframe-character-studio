@@ -1,4 +1,4 @@
-.main-layout {
+.app-container {
   --right-inspector-width: 360px;
 }
 .motion-design-right-sidebar {
@@ -36,13 +36,14 @@
   visibility: hidden;
 }
 
-.main-layout:not(.inspector-hidden) .inspector-dock-toggle {
+/* R3-02 — the inspector handle is anchored to the SHELL, like the left one. */
+.app-container:not(.inspector-hidden) .inspector-dock-toggle {
   top: 50%;
   right: min(var(--right-inspector-width), max(250px, 34vw));
   transform: translate(50%, -50%);
 }
 
-.main-layout.inspector-hidden .inspector-dock-toggle {
+.app-container.inspector-hidden .inspector-dock-toggle {
   top: 50%;
   right: 0;
   transform: translate(0, -50%);

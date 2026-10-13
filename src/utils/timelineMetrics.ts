@@ -8,6 +8,7 @@
 
 import type { AnimationChannel, LayerMaskChannel, PropertyKeyframe, Track, TrackChannel } from '../types/animator';
 import { TRACK_CHANNELS } from '../types/animator';
+import { resolveTrackChannels } from './channelKeyframeGroups';
 
 /**
  * Longest frame across BOTH legacy keyframes and canonical channel keyframes,
@@ -101,6 +102,53 @@ export function resolveCurveSegment(
 
 /** Channel display order (same as DISPLAY_CHANNELS in the editor panel) */
 export const TIMELINE_CHANNEL_ORDER: TrackChannel[] = ['x', 'y', 'rotation', 'scaleX', 'scaleY', 'opacity', 'trimPathStart', 'trimPathEnd', 'trimPathOffset'];
+
+/**
+ * R3-07 — the frames a layer's animation occupies in one template, ascending
+ * and deduplicated.
+ *
+ * The read is `resolveTrackChannels`, the ONE projection behind the aggregate
+ * layer row and the channel lanes, so a frame the user can SEE on the layer is
+ * always a frame the navigation can reach — and a frame no surface shows (a
+ * legacy composite key the evaluator no longer reads) is never a target.
+ */
+export function resolveLayerKeyframeFrames(track: Track, activeTemplateId: string): number[] {
+  const frames: number[] = [];
+  Object.values(resolveTrackChannels(track)).forEach((keyframes) => {
+    keyframes.forEach((keyframe) => {
+      if ((keyframe.templateId || 'Sequence') !== activeTemplateId) return;
+      // One frame is ONE target: several channels keyed on the same frame (and
+      // the legacy composite list the projection also carries) still navigate
+      // to a single playhead position.
+      if (!frames.includes(keyframe.frame)) frames.push(keyframe.frame);
+    });
+  });
+  return frames.sort((a, b) => a - b);
+}
+
+/**
+ * R3-07 — the nearest keyframe frame strictly BEFORE (previous) or AFTER
+ * (next) `frame`. Null when the layer has no keyframe on that side, so the
+ * control disables itself instead of jumping to a frame the layer never
+ * animates. Pure navigation: this only ever resolves a frame number.
+ */
+export function resolveAdjacentKeyframeFrame(
+  keyframeFrames: number[],
+  frame: number,
+  direction: 'previous' | 'next',
+): number | null {
+  let nearest: number | null = null;
+  keyframeFrames.forEach((candidate) => {
+    if (direction === 'previous' ? candidate >= frame : candidate <= frame) return;
+    if (nearest === null) {
+      nearest = candidate;
+      return;
+    }
+    const closer = direction === 'previous' ? candidate > nearest : candidate < nearest;
+    if (closer) nearest = candidate;
+  });
+  return nearest;
+}
 
 /**
  * The exact identity a curve edit belongs to, resolved *inside one track*.

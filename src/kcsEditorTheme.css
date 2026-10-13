@@ -136,14 +136,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (max-width: 1100px) {
   .header-bar { padding: 0 8px; gap: 6px; }
   .left-drawer-panel { width: 224px; }
-  .motion-design-right-sidebar { --right-inspector-width: 320px; }
+  .motion-design-right-sidebar,
+  .app-container { --right-inspector-width: 320px; }
 }
 @media (max-width: 800px) {
   .header-brand { flex-basis: auto; }
   .header-center-controls { order: 3; flex-basis: 100%; }
   .header-bar { height: auto; min-height: 48px; padding-block: 4px; }
   .left-drawer-panel { width: 196px; }
-  .motion-design-right-sidebar { --right-inspector-width: 286px; }
+  .motion-design-right-sidebar,
+  .app-container { --right-inspector-width: 286px; }
 }
 @media (prefers-reduced-motion: reduce) {
   button, .motion-design-right-sidebar, .left-toolbar-container { transition: none !important; }

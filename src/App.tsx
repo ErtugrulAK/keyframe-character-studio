@@ -49,42 +49,50 @@ const MainAppContent: React.FC = () => {
   }, []);
 
   return (
-    <div className="app-container">
+    /*
+     * R3-02 — the two dock handles are children of the editor SHELL, not of the
+     * workspace row. Their vertical anchor is `50%` of the shell's height, and
+     * the shell is the viewport: resizing (or collapsing) the timeline changes
+     * only the workspace row, so the handles can no longer be dragged up and down
+     * with a panel they are not attached to. The shell also owns the two panel
+     * visibility flags whose edge geometry the handles read.
+     */
+    <div className={`app-container ${isLeftToolbarVisible ? '' : 'left-toolbar-hidden'} ${isInspectorVisible ? '' : 'inspector-hidden'}`}>
       <HeaderBar />
       {appMode === 'edit' && <AuthoringToolbar />}
-      <div className={`main-layout ${isLeftToolbarVisible ? '' : 'left-toolbar-hidden'} ${isInspectorVisible ? '' : 'inspector-hidden'}`}>
-        {appMode === 'edit' && (
-          <button
-            type="button"
-            className="sidebar-handle left-toolbar-toggle"
-            aria-label={isLeftToolbarVisible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
-            aria-expanded={isLeftToolbarVisible}
-            aria-controls="left-toolbar-panel"
-            onClick={() => setIsLeftToolbarVisible((visible) => !visible)}
-          >
-            {isLeftToolbarVisible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-          </button>
-        )}
+      <div className="main-layout">
         {appMode === 'edit' && <LeftToolbar isHidden={!isLeftToolbarVisible} />}
         <StageCanvas />
-        {appMode === 'edit' && (
-          <button
-            type="button"
-            className="sidebar-handle inspector-dock-toggle"
-            aria-label={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
-            aria-expanded={isInspectorVisible}
-            aria-controls="right-inspector-panel"
-            onClick={() => setIsInspectorVisible((visible) => !visible)}
-          >
-            {isInspectorVisible ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-          </button>
-        )}
         {appMode === 'edit' && (
           <PropertyInspector
             isHidden={!isInspectorVisible}
           />
         )}
       </div>
+      {appMode === 'edit' && (
+        <button
+          type="button"
+          className="sidebar-handle left-toolbar-toggle"
+          aria-label={isLeftToolbarVisible ? 'Hide Left Toolbar' : 'Show Left Toolbar'}
+          aria-expanded={isLeftToolbarVisible}
+          aria-controls="left-toolbar-panel"
+          onClick={() => setIsLeftToolbarVisible((visible) => !visible)}
+        >
+          {isLeftToolbarVisible ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+        </button>
+      )}
+      {appMode === 'edit' && (
+        <button
+          type="button"
+          className="sidebar-handle inspector-dock-toggle"
+          aria-label={isInspectorVisible ? 'Hide Inspector' : 'Show Inspector'}
+          aria-expanded={isInspectorVisible}
+          aria-controls="right-inspector-panel"
+          onClick={() => setIsInspectorVisible((visible) => !visible)}
+        >
+          {isInspectorVisible ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        </button>
+      )}
       {appMode === 'edit' ? <SequencerTimeline /> : <LiveDirectorPanel />}
     </div>
   );

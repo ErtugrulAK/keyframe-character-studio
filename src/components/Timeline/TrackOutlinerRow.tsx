@@ -1,7 +1,8 @@
 import React from 'react';
-import { ChevronDown, ChevronRight, Diamond, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Diamond, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
 import type { CharacterPart, Track, TrackChannel } from '../../types/animator';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
+import { resolveAdjacentKeyframeFrame, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
 import { InlineRename } from '../Shared/InlineRename';
 
 interface TrackOutlinerRowProps {
@@ -26,9 +27,35 @@ interface TrackOutlinerRowProps {
   onToggleLock: (trackId: string) => void;
   onAddKeyframe: (trackId: string, frame: number) => void;
   onAddChannelKeyframe: (trackId: string, channel: TrackChannel, partId: string) => void;
+  /** R3-07 — moves the playhead to a frame. Navigation only: never a document write. */
+  onJumpToFrame: (frame: number) => void;
   isGroupExpanded: (key: string, defaultVal?: boolean) => boolean;
   onToggleSubGroup: (key: string, defaultVal?: boolean) => void;
 }
+
+/**
+ * R3-05 — the tree label of a channel is its own name inside a named parent:
+ * the hierarchy reads Layer > Transform > { Position > {X, Y}, Rotation,
+ * Scale > {X, Y}, Opacity } and Layer > Trim Path > {Start, End, Offset}. The
+ * full channel name stays on the row's own add button and on the lane diamonds,
+ * where no parent row carries the context.
+ */
+const TREE_LABEL: Partial<Record<TrackChannel, string>> = {
+  x: 'X',
+  y: 'Y',
+  scaleX: 'X',
+  scaleY: 'Y',
+  trimPathStart: 'Start',
+  trimPathEnd: 'End',
+  trimPathOffset: 'Offset',
+};
+
+/** Every disclosure row shows the same chevron, at the same size. */
+const DisclosureChevron: React.FC<{ expanded: boolean }> = ({ expanded }) => (
+  <span className="ue-sub-chevron">
+    {expanded ? <ChevronDown size={12} aria-hidden="true" /> : <ChevronRight size={12} aria-hidden="true" />}
+  </span>
+);
 
 /** Enter/Space activate a disclosure row the same way a click does. */
 const activateOnKey = (toggle: () => void) => (event: React.KeyboardEvent) => {
@@ -65,6 +92,7 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   onToggleLock,
   onAddKeyframe,
   onAddChannelKeyframe,
+  onJumpToFrame,
   isGroupExpanded,
   onToggleSubGroup,
 }) => {
@@ -75,15 +103,22 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
   const displayName = parts.find((p) => p.id === track.partId)?.name ?? track.name;
   const isTrackExpanded = track.expanded === true;
   const isTransformExpanded = isGroupExpanded(`${track.id}_transform`, true);
-  const isLocationExpanded = isGroupExpanded(`${track.id}_location`, true);
-  const isRotationExpanded = isGroupExpanded(`${track.id}_rotation`, false);
+  const isPositionExpanded = isGroupExpanded(`${track.id}_position`, true);
   const isScaleExpanded = isGroupExpanded(`${track.id}_scale`, false);
+  const isTrimPathExpanded = isGroupExpanded(`${track.id}_trim`, true);
+
+  /**
+   * R3-07 — the layer's own keyframe endpoints. Both endpoints are resolved from
+   * the SAME projection the lane diamonds are painted from, so the navigation can
+   * neither skip a visible keyframe nor stop on a frame the layer does not animate.
+   */
+  const keyframeFrames = resolveLayerKeyframeFrames(track, activeTemplateId || 'Sequence');
+  const previousKeyframeFrame = resolveAdjacentKeyframeFrame(keyframeFrames, currentFrame, 'previous');
+  const nextKeyframeFrame = resolveAdjacentKeyframeFrame(keyframeFrames, currentFrame, 'next');
 
   const renderChannelRow = (ch: TrackChannel, indentClass: string, filterByTemplate: boolean = false) => {
     const meta = CHANNEL_META[ch];
     const activeTmpl = activeTemplateId || 'Sequence';
-    // NOTE: only the rotation channel filters by template in the original
-    // outliner; location/scale/opacity show the unfiltered count.
     const chKfs = filterByTemplate
       ? (track.channels?.[ch] ?? []).filter((k) => (k.templateId || 'Sequence') === activeTmpl)
       : (track.channels?.[ch] ?? []);
@@ -97,19 +132,51 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
       >
         <span className={indentClass} />
         <span className="ue-channel-color-bar" style={{ backgroundColor: meta.color }} />
-        <span className="ue-channel-label" style={{ color: meta.color }}>{meta.label}</span>
-        <span className="ue-kf-count" style={{ color: meta.color }}>{chKfs.length}</span>
+        {/* R3-06 — the row states the property, not how many keys it holds: the
+            diamonds on the lane are the count, and a bare counter next to every
+            property row was pure noise. */}
+        <span className="ue-channel-label" style={{ color: meta.color }} title={`${meta.label}${chKfs.length ? ` — ${chKfs.length} keyframe${chKfs.length === 1 ? '' : 's'}` : ''}`}>
+          {TREE_LABEL[ch] ?? meta.label}
+        </span>
         <button
           className="btn-icon track-add-kf-btn"
           style={{ color: meta.color }}
           onClick={() => onAddChannelKeyframe(track.id, ch, track.partId)}
           title={`Add ${meta.label} keyframe`}
+          aria-label={`Add ${meta.label} keyframe`}
         >
-          <Diamond size={11} />
+          <Diamond size={11} aria-hidden="true" />
         </button>
       </div>
     );
   };
+
+  /** One named parent row of the property tree (same shape, same chevron). */
+  const renderGroupHeader = (
+    key: string,
+    label: string,
+    expanded: boolean,
+    defaultExpanded: boolean,
+    indentClass: string = 'ue-header-indent',
+  ) => (
+    <div
+      className="ue-subgroup-header"
+      data-owner-part-id={track.partId}
+      data-property-group={key}
+      aria-label={`${label} properties of ${displayName}`}
+      aria-expanded={expanded}
+      role="button"
+      tabIndex={0}
+      title={`${label} properties of ${displayName}`}
+      style={{ height: CHANNEL_ROW_HEIGHT }}
+      onClick={() => onToggleSubGroup(key, defaultExpanded)}
+      onKeyDown={activateOnKey(() => onToggleSubGroup(key, defaultExpanded))}
+    >
+      <span className={indentClass} />
+      <DisclosureChevron expanded={expanded} />
+      <span className="ue-subgroup-label">{label}</span>
+    </div>
+  );
 
   return (
     <div key={track.id} className="ue-track-group">
@@ -127,8 +194,10 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           className="ue-expand-btn"
           onClick={(e) => { e.stopPropagation(); onToggleExpand(track.id); }}
           title={isTrackExpanded ? 'Collapse' : 'Expand properties'}
+          aria-label={`${isTrackExpanded ? 'Collapse' : 'Expand'} properties of ${displayName}`}
+          aria-expanded={isTrackExpanded}
         >
-          {isTrackExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+          {isTrackExpanded ? <ChevronDown size={12} aria-hidden="true" /> : <ChevronRight size={12} aria-hidden="true" />}
         </button>
 
         <span className="ue-color-dot" style={{ backgroundColor: track.color }} />
@@ -178,14 +247,49 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
             {track.locked ? <Lock size={12} className="text-gold" /> : <Unlock size={12} />}
           </button>
 
+          {/*
+            R3-07 — [◀][+][▶] around the layer's own keyframe action. The arrows
+            move the PLAYHEAD to the nearest keyframe of this layer on either
+            side (every canonical channel counts, through the lane projection);
+            they write no keyframe, and they disable themselves when the layer
+            has nothing on that side.
+          */}
+          <button
+            className="btn-icon track-icon-btn"
+            onClick={(e) => { e.stopPropagation(); if (previousKeyframeFrame !== null) onJumpToFrame(previousKeyframeFrame); }}
+            disabled={previousKeyframeFrame === null}
+            title={previousKeyframeFrame === null
+              ? `${displayName} has no earlier keyframe`
+              : `Go to the previous keyframe of ${displayName} (frame ${previousKeyframeFrame})`}
+            aria-label={previousKeyframeFrame === null
+              ? `Previous keyframe of ${displayName} (none)`
+              : `Previous keyframe of ${displayName}, frame ${previousKeyframeFrame}`}
+          >
+            <ChevronLeft size={13} aria-hidden="true" />
+          </button>
+
           {/* 4. Add Keyframe Button */}
           <button className="btn-icon track-add-kf-btn" onClick={(e) => { e.stopPropagation(); onAddKeyframe(track.id, currentFrame); }} title="Add Composite Keyframe">
             <Plus size={12} />
           </button>
+
+          <button
+            className="btn-icon track-icon-btn"
+            onClick={(e) => { e.stopPropagation(); if (nextKeyframeFrame !== null) onJumpToFrame(nextKeyframeFrame); }}
+            disabled={nextKeyframeFrame === null}
+            title={nextKeyframeFrame === null
+              ? `${displayName} has no later keyframe`
+              : `Go to the next keyframe of ${displayName} (frame ${nextKeyframeFrame})`}
+            aria-label={nextKeyframeFrame === null
+              ? `Next keyframe of ${displayName} (none)`
+              : `Next keyframe of ${displayName}, frame ${nextKeyframeFrame}`}
+          >
+            <ChevronRight size={13} aria-hidden="true" />
+          </button>
         </div>
       </div>
 
-      {/* ── TRANSFORM & SUB-GROUPS (when expanded) ── */}
+      {/* ── TRANSFORM & TRIM PATH PROPERTY TREES (when expanded) ── */}
       {isTrackExpanded && (
         <div
           className="ue-channel-group"
@@ -194,7 +298,13 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           aria-label={`Properties of ${displayName}`}
           role="group"
         >
-          {/* Transform Category Header */}
+          {/*
+            R3-05 — the tree is the animation's own hierarchy:
+              Transform > { Position > {X, Y}, Rotation, Scale > {X, Y}, Opacity }
+              Trim Path > { Start, End, Offset }
+            The lanes mirror it row for row, so a property row and its lane are
+            always the same band.
+          */}
           <div
             className="ue-transform-header"
             data-owner-part-id={track.partId}
@@ -207,85 +317,29 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
             onClick={() => onToggleSubGroup(`${track.id}_transform`, true)}
             onKeyDown={activateOnKey(() => onToggleSubGroup(`${track.id}_transform`, true))}
           >
-            <span className="ue-sub-chevron">{isTransformExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
+            <DisclosureChevron expanded={isTransformExpanded} />
             <span className="ue-transform-label">Transform</span>
             <span className="ue-owner-name">{displayName}</span>
           </div>
 
           {isTransformExpanded && (
             <>
-              {/* 1. Location Sub-Group */}
-              <div
-                className="ue-subgroup-header"
-                data-owner-part-id={track.partId}
-                aria-label={`Location properties of ${displayName}`}
-                aria-expanded={isLocationExpanded}
-                role="button"
-                tabIndex={0}
-                title={`Location properties of ${displayName}`}
-                style={{ height: CHANNEL_ROW_HEIGHT }}
-                onClick={() => onToggleSubGroup(`${track.id}_location`, true)}
-                onKeyDown={activateOnKey(() => onToggleSubGroup(`${track.id}_location`, true))}
-              >
-                <span className="ue-sub-chevron">{isLocationExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
-                <span className="ue-subgroup-label">Location</span>
-              </div>
+              {renderGroupHeader(`${track.id}_position`, 'Position', isPositionExpanded, true)}
+              {isPositionExpanded && ['x', 'y'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
 
-              {isLocationExpanded && ['x', 'y'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent'))}
+              {/* Rotation is one channel: it is a leaf of the tree, not a group. */}
+              {renderChannelRow('rotation', 'ue-channel-indent', true)}
 
-              {/* 2. Rotation Sub-Group */}
-              <div
-                className="ue-subgroup-header"
-                data-owner-part-id={track.partId}
-                aria-label={`Rotation properties of ${displayName}`}
-                aria-expanded={isRotationExpanded}
-                role="button"
-                tabIndex={0}
-                title={`Rotation properties of ${displayName}`}
-                style={{ height: CHANNEL_ROW_HEIGHT }}
-                onClick={() => onToggleSubGroup(`${track.id}_rotation`, false)}
-                onKeyDown={activateOnKey(() => onToggleSubGroup(`${track.id}_rotation`, false))}
-              >
-                <span className="ue-sub-chevron">{isRotationExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
-                <span className="ue-subgroup-label">Rotation</span>
-              </div>
+              {renderGroupHeader(`${track.id}_scale`, 'Scale', isScaleExpanded, false)}
+              {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
 
-              {isRotationExpanded && ['rotation'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent', true))}
-
-              {/* 3. Scale Sub-Group */}
-              <div
-                className="ue-subgroup-header"
-                data-owner-part-id={track.partId}
-                aria-label={`Scale properties of ${displayName}`}
-                aria-expanded={isScaleExpanded}
-                role="button"
-                tabIndex={0}
-                title={`Scale properties of ${displayName}`}
-                style={{ height: CHANNEL_ROW_HEIGHT }}
-                onClick={() => onToggleSubGroup(`${track.id}_scale`, false)}
-                onKeyDown={activateOnKey(() => onToggleSubGroup(`${track.id}_scale`, false))}
-              >
-                <span className="ue-sub-chevron">{isScaleExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}</span>
-                <span className="ue-subgroup-label">Scale</span>
-              </div>
-
-              {isScaleExpanded && ['scaleX', 'scaleY'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent'))}
-
-              {/* 4. Opacity Row */}
-              {['opacity'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-sm'))}
-
-              {/* 5. Trim Path channels */}
-              <div
-                className="ue-subgroup-header ue-subgroup-header-static"
-                data-owner-part-id={track.partId}
-                title={`Trim Path properties of ${displayName}`}
-                style={{ height: CHANNEL_ROW_HEIGHT }}
-              >
-                <span className="ue-subgroup-label">Trim Path</span>
-              </div>
-              {['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-sm'))}
+              {renderChannelRow('opacity', 'ue-channel-indent')}
             </>
           )}
+
+          {/* Trim Path is a peer of Transform, not one of its children. */}
+          {renderGroupHeader(`${track.id}_trim`, 'Trim Path', isTrimPathExpanded, true)}
+          {isTrimPathExpanded && ['trimPathStart', 'trimPathEnd', 'trimPathOffset'].map((chKey) => renderChannelRow(chKey as TrackChannel, 'ue-channel-indent-deep'))}
         </div>
       )}
     </div>

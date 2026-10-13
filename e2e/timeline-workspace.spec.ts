@@ -235,6 +235,20 @@ test('R2-01 — the timeline collapses to a restore strip and expands to the pre
   await expect(toggle).toBeVisible();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
 
+  /*
+   * R3-01 — the control is an EDGE HANDLE, not a labelled button: it carries no
+   * text, and it straddles the panel's own top edge (the boundary the height
+   * drag owns) instead of floating somewhere inside the header.
+   */
+  expect((await toggle.textContent())?.trim()).toBe('');
+  const edgeGeometry = await page.evaluate(() => {
+    const handle = document.querySelector('[data-testid="timeline-collapse-toggle"]')!.getBoundingClientRect();
+    const panel = document.querySelector('[data-testid="sequencer-timeline"]')!.getBoundingClientRect();
+    return { handleCenter: handle.top + handle.height / 2, handleHeight: handle.height, panelTop: panel.top };
+  });
+  expect(Math.abs(edgeGeometry.handleCenter - edgeGeometry.panelTop)).toBeLessThanOrEqual(2);
+  expect(edgeGeometry.handleHeight).toBeLessThanOrEqual(24);
+
   // Author a non-default height first: expanding must bring THIS one back.
   await dragBy(page, page.getByTestId('timeline-height-resizer'), { y: -100 });
   const authored = await timelineHeight(page);
@@ -350,4 +364,80 @@ test('R2-09 — the property tree and the timeline lanes stay row-for-row aligne
   rows.tree.forEach((top, index) => {
     expect(Math.abs(rows.lanes[index] - top), `row ${index} is misaligned`).toBeLessThanOrEqual(1);
   });
+});
+
+/**
+ * R3-02 — the side-panel show/hide handles are anchored to the editor SHELL, not
+ * to the workspace row. Their `top: 50%` resolves against a box the timeline
+ * resize never changes, so dragging the timeline from its minimum to its maximum
+ * and back must leave them exactly where they were.
+ */
+test('R3-02 — the side-panel handles do not move when the timeline height changes', async ({ page }) => {
+  await seed(page);
+
+  const handleBoxes = () => page.evaluate(() => {
+    const box = (selector: string) => {
+      const node = document.querySelector(selector);
+      if (!node) throw new Error(`${selector} is missing`);
+      const rect = node.getBoundingClientRect();
+      return { top: Math.round(rect.top), height: Math.round(rect.height) };
+    };
+    return { left: box('.left-toolbar-toggle'), right: box('.inspector-dock-toggle') };
+  });
+
+  const before = await handleBoxes();
+  const startHeight = await timelineHeight(page);
+  expect(Math.abs(startHeight - DEFAULT_HEIGHT)).toBeLessThanOrEqual(1);
+
+  // Minimum: the panel gives the stage nearly everything back.
+  await dragBy(page, page.getByTestId('timeline-height-resizer'), { y: 400 });
+  const atMinimum = await timelineHeight(page);
+  expect(Math.abs(atMinimum - MIN_HEIGHT)).toBeLessThanOrEqual(1);
+  const minimumHandles = await handleBoxes();
+  expect(minimumHandles.left.top).toBe(before.left.top);
+  expect(minimumHandles.right.top).toBe(before.right.top);
+
+  // Maximum: the panel takes as much as the window can spare.
+  let atMaximum = atMinimum;
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    await dragBy(page, page.getByTestId('timeline-height-resizer'), { y: -200 });
+    const next = await timelineHeight(page);
+    if (next === atMaximum) break;
+    atMaximum = next;
+  }
+  expect(atMaximum, 'the drag never resized the panel').toBeGreaterThan(MIN_HEIGHT + 40);
+  const maximumHandles = await handleBoxes();
+  expect(maximumHandles.left.top).toBe(before.left.top);
+  expect(maximumHandles.right.top).toBe(before.right.top);
+
+  // ...and back to the minimum: the handles never moved at any height.
+  await dragBy(page, page.getByTestId('timeline-height-resizer'), { y: 2000 });
+  expect(Math.abs((await timelineHeight(page)) - MIN_HEIGHT)).toBeLessThanOrEqual(1);
+  expect(await handleBoxes()).toEqual(before);
+});
+
+/**
+ * R3-07 — the layer row now carries keyframe navigation next to its own actions.
+ * That strip is compact and right-aligned on purpose: the MIDDLE of a layer row
+ * must stay a selection target, because clicking a row's middle is how a layer is
+ * selected from the timeline (and what every canvas measurement spec relies on).
+ */
+test('R3-07 — the layer row keeps its middle clickable for selection', async ({ page }) => {
+  await seed(page);
+  const row = page.locator('.ue-track-row').first();
+  const box = await row.boundingBox();
+  expect(box).not.toBeNull();
+  const centre = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+
+  // The controls (edit eye, broadcast eye, lock, ◀, +, ▶) sit against the right
+  // edge and never reach the middle of the row.
+  const underCentre = await page.evaluate((point) => {
+    const node = document.elementFromPoint(point.x, point.y);
+    return node ? node.className : '';
+  }, centre);
+  expect(String(underCentre)).toContain('ue-track-name');
+
+  // The middle click selects the layer, like it always has.
+  await page.mouse.click(centre.x, centre.y);
+  await expect(page.getByTestId('transform-gizmo')).toHaveCount(1);
 });

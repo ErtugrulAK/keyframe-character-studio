@@ -14,6 +14,7 @@ import {
   Pause,
   SkipBack,
   SkipForward,
+  ChevronsLeft,
   Repeat,
   Undo2,
   Redo2,
@@ -701,6 +702,27 @@ export const SequencerTimeline: React.FC = () => {
       data-collapsed={isTimelineCollapsed ? 'true' : 'false'}
       data-testid="sequencer-timeline"
     >
+      {/*
+        R3-01 — the collapse control is an EDGE HANDLE, not a labelled button.
+        It is attached to the panel's top edge (the boundary the resize drag
+        owns), it speaks the same compact chevron handle language as the side
+        panels' show/hide handles, and it stays reachable while collapsed — which
+        is what makes the collapsed strip a restore affordance. The authored
+        height is never touched, so expanding restores it exactly.
+      */}
+      <button
+        type="button"
+        className="sidebar-handle timeline-edge-toggle"
+        data-testid="timeline-collapse-toggle"
+        aria-expanded={!isTimelineCollapsed}
+        aria-controls="timeline-workspace-body"
+        aria-label={isTimelineCollapsed ? 'Expand timeline' : 'Collapse timeline'}
+        title={isTimelineCollapsed ? 'Expand the timeline panel' : 'Collapse the timeline panel'}
+        onClick={toggleTimelineCollapsed}
+      >
+        {isTimelineCollapsed ? <ChevronUp size={14} aria-hidden="true" /> : <ChevronDown size={14} aria-hidden="true" />}
+      </button>
+
       {/* Top Resizer Handle Bar (the expanded panel's own height authority) */}
       {!isTimelineCollapsed && (
         <div
@@ -782,28 +804,6 @@ export const SequencerTimeline: React.FC = () => {
             <Plus size={13} />
           </button>
         </div>
-
-        {/*
-          The workspace collapse control lives in the panel's own header band —
-          the same place and shape as every other KCS panel toggle, never a
-          floating tab. It stays reachable while collapsed, which is what makes
-          the collapsed strip a restore affordance.
-        */}
-        <div className="timeline-workspace-actions">
-          <button
-            type="button"
-            className="timeline-collapse-btn"
-            data-testid="timeline-collapse-toggle"
-            aria-expanded={!isTimelineCollapsed}
-            aria-controls="timeline-workspace-body"
-            aria-label={isTimelineCollapsed ? 'Expand timeline' : 'Collapse timeline'}
-            title={isTimelineCollapsed ? 'Expand the timeline panel' : 'Collapse the timeline panel'}
-            onClick={toggleTimelineCollapsed}
-          >
-            {isTimelineCollapsed ? <ChevronUp size={13} aria-hidden="true" /> : <ChevronDown size={13} aria-hidden="true" />}
-            <span>{isTimelineCollapsed ? 'Expand' : 'Collapse'}</span>
-          </button>
-        </div>
       </div>
 
       <ConfirmationDialog
@@ -865,7 +865,16 @@ export const SequencerTimeline: React.FC = () => {
         </div>
 
         <div className="timeline-header-center timeline-transport-band">
-          <button className="btn-icon transport-btn" onClick={() => setCurrentFrame((f) => Math.max(0, f - 1))} title="Step Back"><SkipBack size={16} /></button>
+          {/* R3-09 — navigation only: the playhead moves, the document never does. */}
+          <button
+            className="btn-icon transport-btn"
+            onClick={() => setCurrentFrame(0)}
+            title="Go to frame 0"
+            aria-label="Go to frame 0"
+          >
+            <ChevronsLeft size={16} aria-hidden="true" />
+          </button>
+          <button className="btn-icon transport-btn" onClick={() => setCurrentFrame((f) => Math.max(0, f - 1))} title="Step Back" aria-label="Step back one frame"><SkipBack size={16} aria-hidden="true" /></button>
           <button
             className={`play-main-btn-teal ${isPlaying ? 'playing' : ''}`}
             onClick={() => {
@@ -875,11 +884,28 @@ export const SequencerTimeline: React.FC = () => {
               setIsPlaying(!isPlaying);
             }}
             title={isPlaying ? 'Pause' : 'Play'}
+            aria-label={isPlaying ? 'Pause playback' : 'Play animation'}
+            aria-pressed={isPlaying}
           >
-            {isPlaying ? <Pause size={18} /> : <Play size={18} className="translate-x-px" />}
+            {isPlaying ? <Pause size={18} aria-hidden="true" /> : <Play size={18} className="translate-x-px" aria-hidden="true" />}
           </button>
-          <button className="btn-icon transport-btn" onClick={() => setCurrentFrame((f) => Math.min(totalFrames, f + 1))} title="Step Forward"><SkipForward size={16} /></button>
-          <button className={`btn-icon transport-btn ${isLooping ? 'active' : ''}`} onClick={() => setIsLooping(!isLooping)} title="Toggle Loop"><Repeat size={15} /></button>
+          <button className="btn-icon transport-btn" onClick={() => setCurrentFrame((f) => Math.min(totalFrames, f + 1))} title="Step Forward" aria-label="Step forward one frame"><SkipForward size={16} aria-hidden="true" /></button>
+          {/*
+            R3-08 — the loop toggle reports its state twice: `aria-pressed` for
+            assistive technology and the existing `.active` treatment for the eye.
+            The wrap itself is the playback authority's (`usePlayback`), and the
+            flag is view state — it is deliberately NOT serialized with the
+            project.
+          */}
+          <button
+            className={`btn-icon transport-btn ${isLooping ? 'active' : ''}`}
+            onClick={() => setIsLooping(!isLooping)}
+            title={isLooping ? 'Loop playback is on: the sequence wraps from the end to frame 0' : 'Loop playback is off: playback stops on the last frame'}
+            aria-label="Loop playback"
+            aria-pressed={isLooping}
+          >
+            <Repeat size={15} aria-hidden="true" />
+          </button>
         </div>
 
         <div className="timeline-header-right timeline-actions-band">
@@ -943,6 +969,9 @@ export const SequencerTimeline: React.FC = () => {
                   onAddChannelKeyframe={handleAddChannelKeyframe}
                   isGroupExpanded={isGroupExpanded}
                   onToggleSubGroup={toggleSubGroup}
+                  // R3-07 — the layer row's keyframe navigation moves the playhead
+                  // and nothing else: the callback writes the frame cursor only.
+                  onJumpToFrame={setCurrentFrame}
                 />
               );
             })}

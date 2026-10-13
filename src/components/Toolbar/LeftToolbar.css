@@ -755,7 +755,7 @@
   width: calc(var(--left-rail-width) + var(--left-drawer-width));
   flex-basis: calc(var(--left-rail-width) + var(--left-drawer-width));
 }
-.main-layout {
+.app-container {
   --left-rail-width: 56px;
   --left-drawer-width: 280px;
 }
@@ -772,7 +772,9 @@
   visibility: hidden;
 }
 
-.main-layout .left-toolbar-toggle {
+/* R3-02 — the handle rides the SHELL edge: `top: 50%` resolves against the
+   shell's constant height, so a timeline resize never moves it vertically. */
+.app-container .left-toolbar-toggle {
   position: absolute;
   top: 50%;
   left: calc(var(--left-rail-width) + var(--left-drawer-width));
@@ -784,7 +786,7 @@
     left 240ms ease, transform 240ms ease;
 }
 
-.main-layout.left-toolbar-hidden .left-toolbar-toggle {
+.app-container.left-toolbar-hidden .left-toolbar-toggle {
   left: 0;
   transform: translate(0, -50%);
 }

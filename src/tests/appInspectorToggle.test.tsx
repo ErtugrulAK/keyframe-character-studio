@@ -29,7 +29,9 @@ describe('App Inspector visibility', () => {
 
     expect(toggle()).toHaveAccessibleName('Hide Inspector');
     expect(toggle()).toHaveClass('inspector-dock-toggle');
-    expect(toggle().parentElement).toHaveClass('main-layout');
+    // R3-02: the handle is anchored to the editor SHELL — a box the timeline
+    // resize never changes — so its vertical anchor is timeline-independent.
+    expect(toggle().parentElement).toHaveClass('app-container');
     expect(screen.getAllByRole('button', { name: /Inspector/ })).toHaveLength(1);
     fireEvent.click(toggle());
     expect(toggle()).toHaveAccessibleName('Show Inspector');

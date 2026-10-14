@@ -199,14 +199,32 @@ test('the snap toggle turns the lock off, and no guide is drawn', async ({ page 
 
 /**
  * The threshold is a SCREEN radius: a miss of N screen pixels behaves the same
- * at every zoom. Bravo's left edge is the target (world −60) and Alpha starts
- * 200 world units to its left, so the drag delta is `200 − missWorld`.
+ * at every zoom. Bravo's left edge is the target, so the drag moves Alpha until
+ * its left edge is exactly N SCREEN pixels short of Bravo's.
+ *
+ * Both edges are read from the same rendered frame and the pointer then moves
+ * by their own difference, so the miss is that many real screen pixels without
+ * converting through the camera scale twice — a scale read before the drag and
+ * again inside it can disagree (the stage box is measured asynchronously) and
+ * would silently change how far the pointer actually travels.
  */
 async function dragMissOfScreenPixels(page: Page, screenPx: number) {
-  await dragByWorld(page, 'a', 200 - screenPx / (await pxPerWorld(page)));
+  const alpha = await boxOf(page, 'a');
+  const bravo = await boxOf(page, 'b');
+  const startX = alpha.x + alpha.width / 2;
+  const startY = alpha.y + alpha.height / 2;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await expect(page.locator('.stage-canvas-container')).toHaveClass(/interaction-dragging/);
+  await page.mouse.move(startX + (bravo.x - alpha.x) - screenPx, startY, { steps: 6 });
 }
 
 test('the snap threshold is a screen radius at any zoom: a 4px miss locks, a 16px miss does not', async ({ page }) => {
+  // The tests of this file that drag a layer rely on the DEFAULT: snapping is
+  // armed, and the View band's switch is what turns it off.
+  await seed(page, SNAP_SEED());
+  await expect(page.getByRole('button', { name: 'Toggle snapping' })).toHaveAttribute('aria-pressed', 'true');
+
   for (const zoom of ['100%', 'in', 'out']) {
     // A fresh document and a fresh camera per zoom, so the two misses below are
     // measured against exactly the state the zoom keys produced.

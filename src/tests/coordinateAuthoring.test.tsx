@@ -1,14 +1,14 @@
 import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { Transform } from '../types/animator';
-import { TransformPositionRotationCard } from '../components/Inspector/sections/transform/TransformPositionRotationCard';
+import { TransformPositionCard } from '../components/Inspector/sections/transform/TransformPositionCard';
 
 const transform: Transform = { x: 0, y: 0, rotation: 10, scaleX: 1, scaleY: 1, opacity: 1 };
 
 const editPosition = (coordinateSystem: 'legacy-unknown' | 'project-unit-center-v1', value: string) => {
   const onUpdate = vi.fn();
   const { container } = render(
-    <TransformPositionRotationCard
+    <TransformPositionCard
       transform={transform}
       coordinateSystem={coordinateSystem}
       onUpdate={onUpdate}
@@ -35,7 +35,7 @@ describe('coordinate V2 transform authoring boundary', () => {
     const rawUpdate = vi.fn();
 
     const { container } = render(
-      <TransformPositionRotationCard
+      <TransformPositionCard
         transform={transform}
         coordinateSystem="project-unit-center-v1"
         onUpdate={rawUpdate}

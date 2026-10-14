@@ -844,10 +844,6 @@
   min-width: 0;
 }
 
-.transform-field-grow {
-  flex: 1;
-}
-
 .transform-field-label {
   flex: 0 0 12px;
   font-size: 10px;
@@ -858,6 +854,46 @@
 .transform-field .input-control {
   flex: 1;
   min-width: 0;
+}
+
+/*
+ * R5-14 — the compact transform trio. Rotation, Scale and Opacity share one
+ * three-column grid, so each field keeps a column of its own at every inspector
+ * width (the dock can be as narrow as 250px) instead of stacking into three
+ * full-width rows.
+ */
+.transform-compact-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.transform-compact-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+/* The cell header is the group title's own line, plus the one glyph action a
+   cell can own (the aspect lock). It is a fixed line box, so a cell that carries
+   the lock button still aligns its input with its neighbours, and nothing may
+   overflow the column. */
+.transform-compact-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3xs);
+  height: 16px;
+  min-width: 0;
+}
+
+.transform-compact-head .transform-property-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .transform-compact-action {
@@ -878,36 +914,25 @@
   background: rgba(56, 189, 248, 0.14);
 }
 
+/* R5-14 — the aspect lock. The labelled "Locked"/"Free" button left the row; the
+   capability stays as one compact glyph in the Scale cell's header, so a free
+   (non-uniform) canvas corner drag remains reachable. */
 .transform-scale-lock {
-  gap: var(--space-3xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--text-muted);
+  cursor: pointer;
 }
 
 .transform-scale-lock.is-locked {
   color: var(--accent-green);
-  border-color: rgba(16, 185, 129, 0.4);
-  background: rgba(16, 185, 129, 0.12);
-}
-
-.transform-layer-row {
-  justify-content: space-between;
-}
-
-.transform-layer-value {
-  min-width: 36px;
-  color: var(--accent-cyan);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  text-align: right;
-}
-
-.transform-layer-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-2xs);
-  min-width: 0;
 }
 
 .control-point-editor {

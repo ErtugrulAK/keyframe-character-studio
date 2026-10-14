@@ -63,11 +63,6 @@ export const DetailsPanel: React.FC = () => {
     : undefined;
   const inspectorPart = selectedPart && evaluatedMasks ? { ...selectedPart, masks: evaluatedMasks } : selectedPart;
   const transform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
-  const opacityKeyframeAtFrame = selectedTrack
-    ? (selectedTrack.channels?.opacity ?? []).find(
-      (keyframe) => keyframe.frame === currentFrame && (keyframe.templateId || 'Sequence') === (activeTemplateId || 'Sequence'),
-    )
-    : undefined;
 
   /**
    * Trim Path authoring follows the same rule as every other scalar channel:
@@ -104,10 +99,8 @@ export const DetailsPanel: React.FC = () => {
   };
 
   const {
-    handlePartPropChange,
     handleDisplayedPartPropChange,
     handlePartColorChange,
-    handleZIndexChange,
   } = usePartPropertyAuthoring();
 
   // M26 — copy/paste/clear ANIMATION (26A data layer + 26B UI).
@@ -212,17 +205,6 @@ export const DetailsPanel: React.FC = () => {
                 coordinateSystem={coordinateSystem}
                 currentFrame={currentFrame}
                 updateCurrentTransform={updateCurrentTransform}
-                updateCurrentPropertyChannel={updateCurrentPropertyChannel}
-                opacityKeyframedAtCurrentFrame={Boolean(opacityKeyframeAtFrame)}
-                onToggleOpacityKeyframe={selectedTrack && transform ? () => {
-                  if (opacityKeyframeAtFrame) {
-                    deletePropertyKeyframe(selectedTrack.id, 'opacity', opacityKeyframeAtFrame.id);
-                    return;
-                  }
-                  addPropertyKeyframe(selectedTrack.id, 'opacity', currentFrame, transform.opacity);
-                } : undefined}
-                handlePartPropChange={handlePartPropChange}
-                handleZIndexChange={handleZIndexChange}
                 customPresets={customPresets}
                 onSavePreset={savePreset}
                 onUpdatePreset={updatePreset}
@@ -245,7 +227,6 @@ export const DetailsPanel: React.FC = () => {
                 coordinateSystem={coordinateSystem}
                 handlePartPropChange={handleDisplayedPartPropChange}
                 handlePartColorChange={handlePartColorChange}
-                handleZIndexChange={handleZIndexChange}
                 currentFrame={currentFrame}
                 evaluatedTrim={evaluatedTrim}
                 trimKeyframedAtFrame={trimKeyframedAtFrame}

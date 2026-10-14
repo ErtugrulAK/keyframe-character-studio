@@ -1,11 +1,11 @@
 import React from 'react';
-import type { CharacterPart, CustomMotionPreset, Transform, TrackChannel } from '../../../types/animator';
+import type { CharacterPart, CustomMotionPreset, Transform } from '../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../types/composition';
 import type { SavePresetInput, UpdatePresetInput } from '../../../hooks/usePresets';
-import { TransformPositionRotationCard } from './transform/TransformPositionRotationCard';
+import { TransformPositionCard } from './transform/TransformPositionCard';
+import { TransformRotationCard } from './transform/TransformRotationCard';
 import { TransformScaleCard } from './transform/TransformScaleCard';
 import { TransformOpacityCard } from './transform/TransformOpacityCard';
-import { TransformZIndexCard } from './transform/TransformZIndexCard';
 import { TransformControlPoints } from './transform/TransformControlPoints';
 import { StyleCard } from './style/StyleCard';
 
@@ -15,12 +15,6 @@ interface TransformTabProps {
   coordinateSystem: SceneCoordinateSystem;
   currentFrame: number;
   updateCurrentTransform: (newTransform: Partial<Transform>) => void;
-  /** True when the opacity channel owns a keyframe on the current frame. */
-  opacityKeyframedAtCurrentFrame?: boolean;
-  onToggleOpacityKeyframe?: () => void;
-  updateCurrentPropertyChannel?: (channel: TrackChannel, value: number) => void;
-  handlePartPropChange?: (key: keyof CharacterPart, value: any) => void;
-  handleZIndexChange?: (zIndex: number) => void;
   // M25 — user-saved custom preset library (passed through to the card)
   customPresets: CustomMotionPreset[];
   onSavePreset: (input: SavePresetInput) => CustomMotionPreset | null;
@@ -38,16 +32,20 @@ interface TransformTabProps {
 
 /**
  * Transform inspector section. Thin composition of focused section components:
- * position/rotation, scale, z-index, container assignment, and control points.
+ * the Position row, the compact Rotation / Scale / Opacity trio, control points,
+ * and the canonical animation-data actions.
+ *
+ * R5-14 — Details states the transform and nothing else: no "Reset 0°", no
+ * labelled aspect-lock button and no keyframe action, because keyframing is the
+ * timeline property row's authority. R5-15 — the layer's paint order is not
+ * repeated here either: Arrange lives on the authoring toolbar, which writes
+ * through the same z-index path.
  */
 export const TransformTab: React.FC<TransformTabProps> = ({
   selectedPart,
   transform,
   coordinateSystem,
   updateCurrentTransform,
-  opacityKeyframedAtCurrentFrame,
-  onToggleOpacityKeyframe,
-  handleZIndexChange,
   onCopyAnimation,
   onPasteAnimation,
   onClearAnimation,
@@ -58,34 +56,34 @@ export const TransformTab: React.FC<TransformTabProps> = ({
     <>
       <StyleCard title="TRANSFORM" collapsible defaultOpen={false}>
         <div className="transform-property-list">
-          <TransformPositionRotationCard
+          <TransformPositionCard
             transform={transform}
             coordinateSystem={coordinateSystem}
             onUpdate={updateCurrentTransform}
           />
 
-          <TransformScaleCard
-            transform={transform}
-            onUpdate={updateCurrentTransform}
-          />
-
-          {/* Opacity is never inherited, so a container's opacity would not
-              reach the layers inside it — the control is not offered. */}
-          {!selectedPart.isGroup && (
-            <TransformOpacityCard
-              opacity={transform.opacity}
-              onOpacityChange={(opacity) => updateCurrentTransform({ opacity })}
-              keyframedAtCurrentFrame={opacityKeyframedAtCurrentFrame ?? false}
-              onToggleKeyframe={onToggleOpacityKeyframe}
+          {/* R5-14 — the compact trio: one row, three cells, each with its own
+              column at every inspector width. */}
+          <div className="transform-compact-grid">
+            <TransformRotationCard
+              transform={transform}
+              onUpdate={updateCurrentTransform}
             />
-          )}
 
-          {handleZIndexChange && (
-            <TransformZIndexCard
-              zIndex={selectedPart.zIndex}
-              onZIndexChange={handleZIndexChange}
+            <TransformScaleCard
+              transform={transform}
+              onUpdate={updateCurrentTransform}
             />
-          )}
+
+            {/* Opacity is never inherited, so a container's opacity would not
+                reach the layers inside it — the control is not offered. */}
+            {!selectedPart.isGroup && (
+              <TransformOpacityCard
+                opacity={transform.opacity}
+                onOpacityChange={(opacity) => updateCurrentTransform({ opacity })}
+              />
+            )}
+          </div>
         </div>
       </StyleCard>
 

@@ -11,28 +11,30 @@ const part = {
   fillColor: '#ff0000', strokeColor: '#101218', zIndex: 3,
 } as CharacterPart;
 
+const setIsScaleLocked = vi.fn();
 vi.mock('../context/useAnimator', () => ({
   useAnimator: () => ({
     isScaleLocked: true,
-    setIsScaleLocked: vi.fn(),
+    setIsScaleLocked,
   }),
 }));
 
 describe('TransformTab compact presentation', () => {
-  const renderTab = (onUpdate = vi.fn(), onZIndexChange = vi.fn()) => render(
+  const renderTab = (onUpdate = vi.fn()) => render(
     <TransformTab
       selectedPart={part}
       transform={transform}
       coordinateSystem="project-unit-center-v1"
       currentFrame={0}
       updateCurrentTransform={onUpdate}
-      handleZIndexChange={onZIndexChange}
       customPresets={[]}
       onSavePreset={vi.fn()}
       onUpdatePreset={vi.fn()}
       onDeletePreset={vi.fn()}
     />,
   );
+
+  const expandTransform = () => fireEvent.click(screen.getByRole('button', { name: 'Expand TRANSFORM' }));
 
   it('starts Transform and Control Points closed without authored mutations', () => {
     const onUpdate = vi.fn();
@@ -43,27 +45,65 @@ describe('TransformTab compact presentation', () => {
     expect(container.querySelector('input[aria-label="Position X"]')).toBeNull();
     expect(onUpdate).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Expand TRANSFORM' }));
+    expandTransform();
     expect(screen.getByLabelText('Position X')).toHaveValue(10);
     expect(screen.getByLabelText('Position Y')).toHaveValue(20);
-    expect(screen.getByLabelText('Rotation')).toHaveValue(15);
-    expect(screen.getByLabelText('Layer index')).toHaveTextContent('3');
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
-  it('keeps rotation reset and layer callbacks unchanged', () => {
+  it('R5-14 — Position is one two-column row followed by one compact trio row', () => {
+    const { container } = renderTab();
+    expandTransform();
+
+    // Position keeps its own row and its two columns.
+    const positionRow = container.querySelector('.transform-position-row');
+    expect(positionRow).not.toBeNull();
+    expect(positionRow!.querySelectorAll('input')).toHaveLength(2);
+
+    // Rotation, Scale and Opacity are cells of ONE grid.
+    const trio = container.querySelector('.transform-compact-grid');
+    expect(trio).not.toBeNull();
+    const cells = trio!.querySelectorAll('.transform-compact-cell');
+    expect(cells).toHaveLength(3);
+    expect([...cells].map((cell) => cell.querySelector('.transform-property-title')?.textContent))
+      .toEqual(['Rotation', 'Scale', 'Opacity']);
+    expect(screen.getByLabelText('Rotation')).toHaveValue(15);
+    expect(screen.getByLabelText('Scale')).toHaveValue(100);
+    expect(screen.getByLabelText('Opacity')).toHaveValue(100);
+  });
+
+  it('R5-14 — Details no longer duplicates the reset, the labelled lock or keyframing', () => {
     const onUpdate = vi.fn();
-    const onZIndexChange = vi.fn();
-    renderTab(onUpdate, onZIndexChange);
-    fireEvent.click(screen.getByRole('button', { name: 'Expand TRANSFORM' }));
+    const { container } = renderTab(onUpdate);
+    expandTransform();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Reset 0°' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Bring Forward (+1)' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Send Backward (-1)' }));
+    expect(screen.queryByRole('button', { name: 'Reset 0°' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Locked|Free/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Keyframe/ })).toBeNull();
+    // ...and the removed actions write nothing on their own.
+    expect(onUpdate).not.toHaveBeenCalled();
+    expect(container.querySelector('.transform-layer-value')).toBeNull();
+  });
 
-    expect(onUpdate).toHaveBeenCalledWith({ rotation: 0 });
-    expect(onZIndexChange).toHaveBeenNthCalledWith(1, 4);
-    expect(onZIndexChange).toHaveBeenNthCalledWith(2, 2);
+  it('R5-14 — the aspect lock stays reachable as one compact glyph', () => {
+    renderTab();
+    expandTransform();
+
+    const lock = screen.getByRole('button', { name: 'Lock aspect ratio' });
+    expect(lock).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(lock);
+    expect(setIsScaleLocked).toHaveBeenCalledWith(false);
+  });
+
+  it('R5-14 — Scale still writes both channels together, and rotation stays editable', () => {
+    const onUpdate = vi.fn();
+    renderTab(onUpdate);
+    expandTransform();
+
+    fireEvent.change(screen.getByLabelText('Scale'), { target: { value: '150' } });
+    expect(onUpdate).toHaveBeenCalledWith({ scaleX: 1.5, scaleY: 1.5 });
+    fireEvent.change(screen.getByLabelText('Rotation'), { target: { value: '45' } });
+    expect(onUpdate).toHaveBeenCalledWith({ rotation: 45 });
   });
 
   it('opens the matrix separately and preserves edge labels', () => {

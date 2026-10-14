@@ -93,10 +93,12 @@ test('BUG 3 — layer order (Bring Forward / Send Backward) preserves keyframes'
   const framesBefore = await timelineKeyframeFrameValues(page);
   expect(framesBefore).toEqual([0, 20, 40]);
 
-  // Layer order changes: Bring Forward ×2, Send Backward ×1.
-  await page.getByRole('button', { name: 'Bring Forward (+1)', exact: true }).click();
-  await page.getByRole('button', { name: 'Bring Forward (+1)', exact: true }).click();
-  await page.getByRole('button', { name: 'Send Backward (-1)', exact: true }).click();
+  // Layer order changes: Bring Forward ×2, Send Backward ×1. R5-15 — Arrange is
+  // the authoring toolbar's own group; it writes the same z-index path the
+  // inspector used to duplicate.
+  await page.getByRole('button', { name: 'Bring forward', exact: true }).click();
+  await page.getByRole('button', { name: 'Bring forward', exact: true }).click();
+  await page.getByRole('button', { name: 'Send backward', exact: true }).click();
 
   // Re-select The Cow; the consolidated surface keeps keyframes reachable.
   await page.getByText('The Cow', { exact: true }).first().click();

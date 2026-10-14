@@ -10,43 +10,52 @@ interface TransformScaleCardProps {
 }
 
 /**
- * Scale row used inside the unified TRANSFORM section: a single percentage
- * input (50 = half size, 200 = double size) with the aspect-lock toggle.
- * The lock is shared with the canvas corner-drag scaling.
+ * R5-14 — Scale as one cell of the compact transform trio: a single percentage
+ * input (50 = half size, 200 = double size) that writes `scaleX` and `scaleY`
+ * together, exactly as this control has always done — the two channels stay
+ * independent in the model, and the aspect lock below is what governs a uniform
+ * canvas corner drag.
+ *
+ * The labelled "Locked"/"Free" button is gone from the row; the capability stays
+ * as one compact glyph in the cell's header, because removing it outright would
+ * make a free (non-uniform) corner drag unreachable.
  */
 export const TransformScaleCard: React.FC<TransformScaleCardProps> = ({ transform, onUpdate }) => {
   const { isScaleLocked, setIsScaleLocked } = useAnimator();
   const avgScale = (Math.abs(transform.scaleX) + Math.abs(transform.scaleY)) / 2;
 
   return (
-    <div className="transform-property-group">
-      <div className="transform-property-title">Scale</div>
-      <div className="transform-property-row">
-        <label className="transform-field transform-field-grow">
-          <span className="transform-field-label text-blue">%</span>
-          <SmartNumberInput
-            value={Math.round(avgScale * 100)}
-            min={5}
-            max={2000}
-            step={1}
-            precision={0}
-            ariaLabel="Scale"
-            onChange={(val) => {
-              const factor = val / 100;
-              onUpdate({ scaleX: factor, scaleY: factor });
-            }}
-          />
-        </label>
+    <div className="transform-compact-cell">
+      <div className="transform-compact-head">
+        <span className="transform-property-title">Scale</span>
         <button
           type="button"
-          className={`btn-secondary transform-compact-action transform-scale-lock ${isScaleLocked ? 'is-locked' : ''}`}
+          className={`transform-scale-lock${isScaleLocked ? ' is-locked' : ''}`}
+          aria-pressed={isScaleLocked}
+          aria-label="Lock aspect ratio"
+          title={isScaleLocked
+            ? 'Aspect ratio locked: the canvas corner drag keeps the shape uniform'
+            : 'Aspect ratio free: the canvas corner drag scales X and Y independently'}
           onClick={() => setIsScaleLocked(!isScaleLocked)}
-          title={isScaleLocked ? 'Aspect Ratio Locked (Uniform Scale)' : 'Aspect Ratio Unlocked (Free Scale)'}
         >
-          {isScaleLocked ? <Link size={10} /> : <Unlink size={10} />}
-          <span>{isScaleLocked ? 'Locked' : 'Free'}</span>
+          {isScaleLocked ? <Link size={11} aria-hidden="true" /> : <Unlink size={11} aria-hidden="true" />}
         </button>
       </div>
+      <label className="transform-field">
+        <span className="transform-field-label text-blue">%</span>
+        <SmartNumberInput
+          value={Math.round(avgScale * 100)}
+          min={5}
+          max={2000}
+          step={1}
+          precision={0}
+          ariaLabel="Scale"
+          onChange={(val) => {
+            const factor = val / 100;
+            onUpdate({ scaleX: factor, scaleY: factor });
+          }}
+        />
+      </label>
     </div>
   );
 };

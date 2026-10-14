@@ -529,8 +529,12 @@ test.describe('corner resize anchors the opposite corner', () => {
     await seed(page, [alpha]);
     await selectLayer(page, 'Alpha');
     await page.getByRole('button', { name: 'Expand TRANSFORM' }).first().click();
-    await page.locator('.transform-scale-lock').first().click();
-    await expect(page.locator('.transform-scale-lock').first()).toHaveText(/Free/);
+    // R5-14 — the aspect lock is one compact glyph in the Scale cell; the
+    // labelled "Locked"/"Free" button is gone, the capability is not.
+    const lock = page.getByRole('button', { name: 'Lock aspect ratio' });
+    await expect(lock).toHaveAttribute('aria-pressed', 'true');
+    await lock.click();
+    await expect(lock).toHaveAttribute('aria-pressed', 'false');
     await selectLayer(page, 'Alpha');
     // Off-diagonal target: only free scaling can put the corner on the pointer.
     const result = await dragCorner(page, 'alpha', worldOf(alpha), 'br', 1.35, { offset: { x: -22, y: 30 } });

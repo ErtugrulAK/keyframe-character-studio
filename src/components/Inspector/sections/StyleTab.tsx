@@ -19,7 +19,6 @@ interface StyleTabProps {
   handlePartColorChange: (key: 'fillColor' | 'strokeColor', color: string) => void;
   transform?: Transform;
   coordinateSystem?: SceneCoordinateSystem;
-  handleZIndexChange?: (zIndex: number) => void;
   currentFrame?: number;
   onAddMaskKeyframe?: (maskId: string, property: LayerMaskChannelProperty, value: number) => void;
   onAddMaskPathKeyframe?: (maskId: string, path: BezierPath) => void;

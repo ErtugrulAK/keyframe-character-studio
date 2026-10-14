@@ -3,16 +3,18 @@ import type { Transform } from '../../../../types/animator';
 import type { SceneCoordinateSystem } from '../../../../types/composition';
 import { SmartNumberInput } from '../../inputs/SmartNumberInput';
 
-interface TransformPositionRotationCardProps {
+interface TransformPositionCardProps {
   transform: Transform;
   coordinateSystem: SceneCoordinateSystem;
   onUpdate: (partial: Partial<Transform>) => void;
 }
 
 /**
- * Position (X/Y) and rotation rows used inside the unified TRANSFORM section.
+ * R5-14 — the TRANSFORM section's Position row: the project-space X and Y
+ * columns, side by side. The field reports the evaluated transform at the
+ * current frame and every edit goes through the canonical transform path.
  */
-export const TransformPositionRotationCard: React.FC<TransformPositionRotationCardProps> = ({ transform, coordinateSystem, onUpdate }) => {
+export const TransformPositionCard: React.FC<TransformPositionCardProps> = ({ transform, coordinateSystem, onUpdate }) => {
   const usesRawProjectUnits = coordinateSystem === 'project-unit-center-v1';
   const positionDisplayScale = usesRawProjectUnits ? undefined : 0.01;
 
@@ -42,26 +44,6 @@ export const TransformPositionRotationCard: React.FC<TransformPositionRotationCa
             onChange={(val) => onUpdate({ y: -val })}
           />
         </label>
-      </div>
-
-      <div className="transform-property-title">Rotation</div>
-      <div className="transform-property-row">
-        <label className="transform-field transform-field-grow">
-          <span className="transform-field-label text-blue">°</span>
-          <SmartNumberInput
-            value={transform.rotation}
-            ariaLabel="Rotation"
-            onChange={(val) => onUpdate({ rotation: val })}
-          />
-        </label>
-        <button
-          type="button"
-          className="btn-secondary transform-compact-action"
-          onClick={() => onUpdate({ rotation: 0 })}
-          title="Reset rotation angle to 0°"
-        >
-          Reset 0°
-        </button>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 import type { CharacterPart, Transform } from '../types/animator';
 import type { PartWorldBounds } from './bounds';
 import { getLayerWorldBounds } from './layerGrouping';
+import { unionWorldBounds, worldBoundsCenter } from './layoutGeometry';
 import { mirrorTransform } from './mirror';
 import { relationshipAncestorIds } from './partBinding';
 import { rotateAboutWorldPivot } from './rotationGesture';
@@ -37,13 +38,21 @@ import { rotateAboutWorldPivot } from './rotationGesture';
  *   is already on the edge is left completely alone (no zero-delta write, so no
  *   keyframe is created for a property that did not move).
  *
- * DISTRIBUTE — needs at least three measurable targets. Targets are ordered by
- *   their box CENTRE along the axis, ties broken by layer id, so the plan is
- *   deterministic for equal centres. The two extreme targets keep their
- *   positions (the span of the selection is never changed by a distribute) and
- *   every interior target's centre is placed at an even step between the two
- *   extremes: `first + (last - first) * i / (n - 1)`. This is distribution by
- *   centres, not by gaps: it is defined for overlapping layers as well.
+ * DISTRIBUTE — needs at least three measurable targets, and the authority ships
+ *   TWO policies, each its own command:
+ *     · `planDistribute` — by box CENTRE (round five, unchanged). Targets ordered
+ *       by centre along the axis, ties broken by layer id; the two extremes keep
+ *       their positions and every interior centre takes an even step
+ *       `first + (last - first) * i / (n - 1)`. Defined for overlapping layers.
+ *     · `planDistributeByGap` — by EDGE GAP (this round, the equal-spacing
+ *       command). Targets ordered by leading edge, ties broken by layer id; the
+ *       two extremes keep their outer edges and the interior boxes slide so the
+ *       gap between consecutive boxes is equal. This is the AE "distribute
+ *       spacing" behaviour and it is the right one for objects of DIFFERENT
+ *       widths or heights, which centre spacing spaces unevenly.
+ *   The two are separate on purpose: neither can be expressed as the other
+ *   without changing a shipped command's result, and each is documented here as
+ *   the policy of its own command.
  *
  * ROTATE — ±90°, pivoting on the COLLECTIVE selection centre (a single target
  *   pivots on its own visual centre, of which the collective box is the same
@@ -82,18 +91,6 @@ export interface ArrangeTarget {
 
 /** Sub-pixel deltas are not a move: they must not create a keyframe. */
 const POSITION_EPSILON = 1e-6;
-
-const unionBounds = (bounds: PartWorldBounds[]): PartWorldBounds => ({
-  minX: Math.min(...bounds.map((item) => item.minX)),
-  minY: Math.min(...bounds.map((item) => item.minY)),
-  maxX: Math.max(...bounds.map((item) => item.maxX)),
-  maxY: Math.max(...bounds.map((item) => item.maxY)),
-});
-
-const boundsCenter = (bounds: PartWorldBounds): { x: number; y: number } => ({
-  x: (bounds.minX + bounds.maxX) / 2,
-  y: (bounds.minY + bounds.maxY) / 2,
-});
 
 /**
  * The layers an arrange command acts on: the canonical selection, minus every
@@ -138,12 +135,12 @@ export const collectArrangeTargets = (
  */
 export const planAlign = (targets: ArrangeTarget[], edge: AlignEdge): ArrangePlan | null => {
   if (targets.length < 2) return null;
-  const reference = unionBounds(targets.map((target) => target.bounds));
-  const referenceCenter = boundsCenter(reference);
+  const reference = unionWorldBounds(targets.map((target) => target.bounds));
+  const referenceCenter = worldBoundsCenter(reference);
   const plan: ArrangePlan = {};
 
   targets.forEach(({ id, transform, bounds }) => {
-    const center = boundsCenter(bounds);
+    const center = worldBoundsCenter(bounds);
     let deltaX = 0;
     let deltaY = 0;
     if (edge === 'left') deltaX = reference.minX - bounds.minX;
@@ -172,8 +169,8 @@ export const planAlign = (targets: ArrangeTarget[], edge: AlignEdge): ArrangePla
 export const planDistribute = (targets: ArrangeTarget[], axis: DistributeAxis): ArrangePlan | null => {
   if (targets.length < 3) return null;
   const axisCenter = (target: ArrangeTarget) => axis === 'horizontal'
-    ? boundsCenter(target.bounds).x
-    : boundsCenter(target.bounds).y;
+    ? worldBoundsCenter(target.bounds).x
+    : worldBoundsCenter(target.bounds).y;
 
   // Deterministic order: by centre along the axis, ties broken by layer id.
   const ordered = [...targets].sort((a, b) => (
@@ -197,13 +194,68 @@ export const planDistribute = (targets: ArrangeTarget[], axis: DistributeAxis): 
 };
 
 /**
+ * Even out the spacing of three or more targets' EDGE GAPS along one axis: the
+ * gap between consecutive boxes (edge to edge) is made equal, so objects of
+ * different widths read as evenly spaced — the look AE calls "distribute
+ * spacing". The extreme boxes hold the span (their outer edges never move) and
+ * the interior boxes slide until every gap matches. Returns `null` when the
+ * selection cannot be distributed.
+ *
+ * This is the SECOND, additive distribute policy of the authority. Round five's
+ * `planDistribute` distributes by CENTRE and is left exactly as it shipped (its
+ * command and its documentation are unchanged); this one distributes by GAP and
+ * backs the new equal-spacing commands. They are deliberately separate: centre
+ * spacing is right for equal-size objects and gap spacing is right for objects
+ * of different widths, and neither can be expressed as the other without
+ * changing an already-shipped command's result.
+ *
+ * A negative gap is meaningful and allowed (the boxes overlap); the arithmetic
+ * is the same, and the extremes still hold the span.
+ */
+export const planDistributeByGap = (targets: ArrangeTarget[], axis: DistributeAxis): ArrangePlan | null => {
+  if (targets.length < 3) return null;
+  // Three call sites for the same box edge, so it is a named local.
+  const leading = (target: ArrangeTarget) => axis === 'horizontal' ? target.bounds.minX : target.bounds.minY;
+  const size = (target: ArrangeTarget) => axis === 'horizontal'
+    ? target.bounds.maxX - target.bounds.minX
+    : target.bounds.maxY - target.bounds.minY;
+
+  // Deterministic order: by leading edge along the axis, ties broken by layer id.
+  const ordered = [...targets].sort((a, b) => (
+    leading(a) - leading(b) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+  ));
+
+  const start = leading(ordered[0]);
+  const last = ordered[ordered.length - 1];
+  const end = axis === 'horizontal' ? last.bounds.maxX : last.bounds.maxY;
+  const gap = (end - start - targets.reduce((sum, target) => sum + size(target), 0)) / (ordered.length - 1);
+
+  const plan: ArrangePlan = {};
+  let cursor = start;
+  ordered.forEach((target, index) => {
+    if (index > 0) {
+      // The exterior targets (first and last) stay exactly where they are: their
+      // outer edges ARE the span. Only the interior boxes take the even step.
+      const delta = cursor - leading(target);
+      if (index < ordered.length - 1 && Math.abs(delta) > POSITION_EPSILON) {
+        const patch: ArrangePatch = axis === 'horizontal' ? { x: target.transform.x + delta } : { y: target.transform.y + delta };
+        if (Number.isFinite(patch.x ?? patch.y)) plan[target.id] = patch;
+      }
+    }
+    cursor += size(target) + gap;
+  });
+
+  return plan;
+};
+
+/**
  * Turn every target ±90° about the collective selection centre, as one rigid
  * body: each target keeps its place in the arrangement because they all share
  * the same pivot.
  */
 export const planRotate = (targets: ArrangeTarget[], direction: RotateDirection): ArrangePlan => {
   if (targets.length === 0) return {};
-  const pivot = boundsCenter(unionBounds(targets.map((target) => target.bounds)));
+  const pivot = worldBoundsCenter(unionWorldBounds(targets.map((target) => target.bounds)));
   const degrees = direction === 'cw' ? 90 : -90;
   const plan: ArrangePlan = {};
 
@@ -222,7 +274,7 @@ export const planRotate = (targets: ArrangeTarget[], direction: RotateDirection)
  */
 export const planFlip = (targets: ArrangeTarget[], axis: FlipAxis): ArrangePlan => {
   if (targets.length === 0) return {};
-  const center = boundsCenter(unionBounds(targets.map((target) => target.bounds)));
+  const center = worldBoundsCenter(unionWorldBounds(targets.map((target) => target.bounds)));
   const plan: ArrangePlan = {};
 
   targets.forEach(({ id, transform }) => {

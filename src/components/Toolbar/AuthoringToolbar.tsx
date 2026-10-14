@@ -5,9 +5,11 @@ import {
   AlignEndHorizontal,
   AlignEndVertical,
   AlignHorizontalSpaceAround,
+  AlignHorizontalSpaceBetween,
   AlignStartHorizontal,
   AlignStartVertical,
   AlignVerticalSpaceAround,
+  AlignVerticalSpaceBetween,
   ArrowDown,
   ArrowUp,
   Circle,
@@ -17,6 +19,7 @@ import {
   Grid,
   Group,
   Hand,
+  Magnet,
   MousePointer2,
   PenTool,
   RotateCcw,
@@ -91,9 +94,9 @@ const dispatchViewportCommand = (type: 'zoom-in' | 'zoom-out' | 'reset-view') =>
  * right — selection/navigation, creation, Boolean, grouping, align, distribute,
  * rotate/flip, arrange, view — and each band is one `role="group"`, so the
  * structure is announced, not just painted. Every control reads and writes the
- * authority the rest of the app uses: `activeTool`/`showGrid` from the animator
- * context, shape creation through `armShapeCreation`, camera commands through the
- * shared command channel, the shared z-index write path, the shared Boolean and
+ * authority the rest of the app uses: `activeTool`/`showGrid`/`snapEnabled` from
+ * the animator context, shape creation through `armShapeCreation`, camera
+ * commands through the shared command channel, the shared z-index write path, the shared Boolean and
  * layer-group authorities, and the ONE vector arrange authority
  * (`useVectorArrangeAuthoring`) for align, distribute, rotate and flip. It owns
  * no document state of its own, so a view-only tool cannot touch the project, and
@@ -126,6 +129,8 @@ export const AuthoringToolbar: React.FC = () => {
     setActiveTool,
     showGrid,
     setShowGrid,
+    snapEnabled,
+    setSnapEnabled,
     selectedPartId,
     characterParts,
     armShapeCreation,
@@ -348,11 +353,13 @@ export const AuthoringToolbar: React.FC = () => {
           icon={AlignHorizontalSpaceAround}
           disabled={!arrange.canDistribute}
           title={arrange.canDistribute
-            ? 'Even out the spacing of the selection (the outer two layers hold the span)'
+            ? 'Even out the selection (the outer two layers hold the span)'
             : 'Distribute needs three or more layers with measurable geometry'}
           items={[
             { id: 'horizontal', label: 'Distribute horizontally', icon: AlignHorizontalSpaceAround, run: () => arrange.distribute('horizontal') },
             { id: 'vertical', label: 'Distribute vertically', icon: AlignVerticalSpaceAround, run: () => arrange.distribute('vertical') },
+            { id: 'horizontal-spacing', label: 'Distribute horizontal spacing', icon: AlignHorizontalSpaceBetween, run: () => arrange.distributeGap('horizontal') },
+            { id: 'vertical-spacing', label: 'Distribute vertical spacing', icon: AlignVerticalSpaceBetween, run: () => arrange.distributeGap('vertical') },
           ]}
         />
       </div>
@@ -461,6 +468,18 @@ export const AuthoringToolbar: React.FC = () => {
           onClick={() => setShowGrid(!showGrid)}
         >
           <Grid />
+        </button>
+        <button
+          type="button"
+          className={`authoring-toolbar-button${snapEnabled ? ' active' : ''}`}
+          aria-label="Toggle snapping"
+          aria-pressed={snapEnabled}
+          title={snapEnabled
+            ? 'Snapping is on — turn it off to place layers freely'
+            : 'Snapping is off — turn it on to align to the stage and other layers'}
+          onClick={() => setSnapEnabled(!snapEnabled)}
+        >
+          <Magnet />
         </button>
         <button
           type="button"

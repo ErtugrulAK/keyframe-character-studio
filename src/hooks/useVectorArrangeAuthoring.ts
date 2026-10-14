@@ -5,6 +5,7 @@ import {
   collectArrangeTargets,
   planAlign,
   planDistribute,
+  planDistributeByGap,
   planFlip,
   planRotate,
   type AlignEdge,
@@ -37,6 +38,8 @@ export interface VectorArrange {
   canTransform: boolean;
   align: (edge: AlignEdge) => void;
   distribute: (axis: DistributeAxis) => void;
+  /** Equal EDGE-GAP distribution (the equal-spacing command). */
+  distributeGap: (axis: DistributeAxis) => void;
   rotate: (direction: RotateDirection) => void;
   flip: (axis: FlipAxis) => void;
 }
@@ -71,6 +74,11 @@ const ALIGN_LABELS: Record<AlignEdge, string> = {
 const DISTRIBUTE_LABELS: Record<DistributeAxis, string> = {
   horizontal: 'Distributed horizontally',
   vertical: 'Distributed vertically',
+};
+
+const DISTRIBUTE_GAP_LABELS: Record<DistributeAxis, string> = {
+  horizontal: 'Evened horizontal spacing',
+  vertical: 'Evened vertical spacing',
 };
 
 export const createVectorArrangeActions = ({
@@ -119,6 +127,11 @@ export const createVectorArrangeActions = ({
     canTransform: targets.length >= 1,
     align: (edge) => commit(planAlign(targets, edge), 'Align needs two measurable layers.', ALIGN_LABELS[edge]),
     distribute: (axis) => commit(planDistribute(targets, axis), 'Distribute needs three measurable layers.', DISTRIBUTE_LABELS[axis]),
+    distributeGap: (axis) => commit(
+      planDistributeByGap(targets, axis),
+      'Distribution needs three measurable layers.',
+      DISTRIBUTE_GAP_LABELS[axis],
+    ),
     rotate: (direction) => commit(
       planRotate(targets, direction),
       'Select a layer to rotate.',

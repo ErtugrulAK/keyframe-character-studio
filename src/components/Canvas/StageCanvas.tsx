@@ -37,6 +37,7 @@ import {
 import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter, type CoordinatePoint } from '../../utils/projectCoordinates';
 import { buildFreeformPath, normalizeFreeformPoints } from '../../utils/freeform';
+import { resolveBondGroup } from '../../utils/partBinding';
 import { useFreeformDraw } from '../../hooks/useFreeformDraw';
 import { CanvasGridOverlay } from './overlays/CanvasGridOverlay';
 import { FreeformTangentOverlay } from './overlays/FreeformTangentOverlay';
@@ -422,7 +423,12 @@ export const StageCanvas: React.FC = () => {
       ...collectStageSnapCandidates(stageBounds),
       ...collectLayerSnapCandidates({
         parts: characterParts,
-        movingIds: movingTargets.map((target) => target.id),
+        // The layers the gesture really moves: the arrangement targets PLUS every
+        // layer bonded to them. A bond carries its partners by the same world
+        // delta (`updateCurrentTransform`), so a partner is leaving the box a
+        // snap would lock onto — it must not be a candidate, exactly like the
+        // containers that carry the moving layers.
+        movingIds: movingTargets.flatMap((target) => resolveBondGroup(characterParts, target.id)),
         worldOf,
         isVisible: (part) => tracks.find((track) => track.partId === part.id)?.editVisible !== false,
       }),

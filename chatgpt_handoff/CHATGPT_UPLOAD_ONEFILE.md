@@ -1,176 +1,206 @@
-# KCS camera-transition blocker — remediation one-file handoff
+# KCS QA aggregation — PR #9 + PR #10 combined into PR #11
 
-Branch `fix/manual-qa-round1-remediation` (PR #9, open, NOT merged). Worktree
-`C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1`. This record answers one
-question: why the right inspector's SHOW transition painted a frame of new stage geometry with old camera
-compensation, and what was changed so it cannot. Manual QA rounds 1–5 (A–J, R2-01…R2-12, R3-01…R3-13,
-R4-01…R4-16, R5-01…R5-15) are recorded in `reports/progress_165…171_*` and unchanged by this round.
+QA aggregation only. `qa/pr9-pr10-combined` is built from the **current head of PR #9** and replays
+**only PR #10's own commits** on top, so the two open pull requests can be exercised together on one
+branch and one live preview. No new feature work, no fix for the user's pending findings, no merge, no
+release.
 
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. No other file in this bundle needs uploading.
+Worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa`
+Canonical repo (untouched, still on `main` @ `8e2df61`, clean):
+`C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
+
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. No other file in the latest bundle needs to be uploaded.
 
 ---
 
-## 1. The failure, reproduced before any edit
+## 1. Integration graph
 
 ```
-CI=1 PORT=5015 npx playwright test e2e/camera-transition-stability.spec.ts --workers=8 --retries=0 --repeat-each=5
+BASE        04eee5e8   merge-base(fac2bc1, 74603de)
+P9 head     fac2bc1    origin/fix/manual-qa-round1-remediation   (PR #9, OPEN)
+P10 head    74603de    origin/feat/ae-layout-crop-snapping       (PR #10, OPEN)
+P11 head    ce04dd0    qa/pr9-pr10-combined  (validated code + tests head, pushed)
 ```
 
-**8 failed / 12 passed.** Every failure is the inspector's SHOW sample, and they are deterministic:
+`P10` does **not** contain `P9` (verified: `git log --oneline fac2bc1..74603de` lists exactly the nine
+`BASE..P10` commits). The branch was therefore created from `origin/fix/manual-qa-round1-remediation`
+(`fac2bc1`) — not from `main`, not from `P10` — and only PR #10's *own* commits were replayed.
 
-| Test | Recorded failure |
-| --- | --- |
-| `the right inspector never counter-moves the world while it animates` | `inspector show: frame 6 t=136.1ms alpha x drifted -9.109px (stage 924.8px)` |
-| `repeated chrome toggles never drift the world on any frame` | `repeat Show Inspector: frame 5 t=137.6ms alpha x drifted -28.859px (stage 1221.3px)` |
+### Replayed commits (PR #10-only, `BASE..P10`, products + tests only)
 
-The camera-family profile (`… e2e/camera-transition-stability.spec.ts e2e/camera-invariance.spec.ts
---repeat-each=3`) gave the same two test names with the same two magnitudes: **5 failed / 22 passed**.
-HIDE, the left toolbar and the timeline were clean in every run, and the wonder point of the spec
-(`DRIFT_TOLERANCE_PX = 1`) was never touched.
+| # | original | replayed on `qa/pr9-pr10-combined` | subject |
+| - | -------- | --------------------------------- | ------- |
+| 1 | `0bf21c3` | `2409e23` | feat: add shared layout geometry authority and equal-spacing distribution |
+| 2 | `802cebc` | `b84e476` | feat: add smart snapping and guides |
+| 3 | `913f3a3` | `bce84d1` | feat: add stage crop and region of interest |
+| 4 | `3c62d85` | `30056e0` | test: migrate the authoring toolbar band contract to the crop bands |
+| 5 | `decc14e` | `ee602c4` | fix: keep the layers a drag carries out of the snap targets |
+| 6 | `9fd713a` | `226dade` | test: pin the snapping-driven drag contracts in the affected specs |
+| 7 | `55ed8c7` | `ce04dd0` | test: measure the snap threshold against the stage edge alone |
 
-**Why 28.859px.** The panel is anchored to the stage's left edge, so a compensation that is one frame late
-moves the authored world by exactly half of the stage box's step in that frame:
-`28.859375 × 2 = 57.71875px`, and `9.109375 × 2 = 18.21875px` — both are one frame of the inspector's own
-240ms width transition. That is the "one painted frame with new geometry and the previous frame's
-compensation" signature.
+**Deliberately NOT replayed:** `cd8fe7c` (docs: record the ae-inspired layout crop and snapping features)
+and `74603de` (docs: refresh the ae-inspired layout crop and snapping handoff) — both are PR #10-era
+documentation snapshots that would ship a stale state. The combined record is produced fresh here
+instead.
 
-## 2. Root cause (proven at frame level, not inferred)
+Cherry-picks carried `-x`, so every replayed commit records its original SHA in its message.
 
-The stage camera is a **projection of the stage box**: the SVG's translate is
-`camera centre − stage box centre`, so a box the DOM has already changed but the camera has not yet been
-told about paints the authored world against a box it no longer has.
+## 2. Conflicts and resolutions
 
-The inspector's width was animated by the browser: `PropertyInspector.css` declared
-`transition: width 240ms ease, min-width …, flex-basis …, transform …, opacity …`, and a later
-`.motion-design-right-sidebar` rule in the same file re-declared the same list and therefore won. The panel
-moved inside the frame's own style/layout step, and the only thing that could tell the camera about the new
-box was the asynchronous `ResizeObserver` on `.stage-canvas-container` — which reports **the size it
-gathered**, and which Chromium may deliver after the frame that already painted a newer box has gone out.
+Exactly **one** conflict, and it is an additive one.
 
-Temporary instrumentation (removed before the commit) recorded the failing frame and the commit that
-produced its compensation:
+`git diff --name-only 04eee5e fac2bc1` ∩ `git diff --name-only 04eee5e 74603de` = `CHANGELOG.md`,
+`chatgpt_handoff/**` (all of it skipped with the two docs-only commits) and **one source file**:
+`src/components/Canvas/StageCanvas.tsx`. That is the only place where the two lineages touch code.
 
-```
-stage commits: 2884ms:resize-observer:w=943.00(ro=943.00) 2891ms:resize-observer:w=924.72(ro=924.72) …
->> STALE f 5 t=126.9 insp=19.22 stageW=924.781 tx=-179.500   drift=-9.109
-        f 6 t=134.8 insp=59.13 stageW=884.875 tx=-170.273   drift=0.000
-```
+| step | file | conflict | resolution | reason |
+| ---- | ---- | -------- | ---------- | ------ |
+| `913f3a3` (crop) | `src/components/Canvas/StageCanvas.tsx`, import block | `HEAD` added `import { REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout'`; the pick added `type CoordinatePoint` to the existing `projectCoordinates` import | **both kept** — one `projectCoordinates` line carrying `type CoordinatePoint`, plus the `workspaceLayout` line | purely additive: PR #10 needs `CoordinatePoint` for `clientToStage`, PR #9 needs the two shared command constants; neither replaces the other |
 
-- The frame painted the stage box **924.781px** with `tx = -179.500` — the compensation for a box of
-  **943.00px** (instrumentation printed `-170.391` as the value the live box needs).
-- The compensation came from the observer callback that had reported **`w=943.00`**; the next callback
-  (`w=924.72`) painted the correct value on the following frame.
-- `943.00 − 924.781 = 18.219`, and half of it is **9.109** — the drift on that frame, exactly.
-- That frame's panel width was **19.2px** (the CSS transition's first real step, `360 × ease(1/14.4)`),
-  and the compensation belonged to the frame when the panel's outer box was still **1.00px**
-  (`width: 0` plus the panel's own non-transitioned 1px `border-left`, which `box-sizing: border-box` keeps
-  as a 1px outer box).
-- One run recorded two stale frames in a row (`-9.109px`, then `-19.836px`) — the same lag twice.
-- HIDE, in the same page and the same run, never showed it: every callback reported its own frame's size
-  (`683@603.2/live603.2`, `700@642.8/live642.8`, …), so geometry and compensation always matched. HIDE's
-  first layout after the class flip is the transition's own first step (`width: 0` and `border-left: 0`
-  together — no size change at progress 0), while SHOW's is the discrete 1.00px state a deferred report can
-  straddle.
+`802cebc` (snapping) and `decc14e` (snap targets) auto-merged — the snap context is inserted into the
+translate-drag body and the camera guard lives on the `applyStageBox` measurement path, so the two hunks
+never overlap. No other commit conflicted.
 
-Round 5 had already replaced the timeline's `transition: height` with a frame-committed JS ease for this
-same reason (5.883px of transient drift); the inspector had been left on the browser-side transition, which
-is why the blocker survived that round.
+**Nothing was reverted to make anything apply.** The conflict rule ("never revert the current PR #9
+camera fix back to the older PR #10 state; preserve the PR #10 feature") never had to be invoked,
+because the only overlap was an import list.
 
-## 3. The implementation
+## 3. Combined proof — both sides are present
 
-One layout authority, not a second one:
+### PR #9 side (manual-QA rounds 1–5 + the camera-transition blocker fix)
 
-- **`src/utils/workspaceLayout.ts`** — `commitWorkspaceLayout(apply)` (the function the timeline already
-  used: `flushSync(apply)` then the stage's `remeasure-stage-box` command, so a size write and the camera's
-  correction land in ONE task), `createFrameEase(write, settle)` (the R5-03 frame-committed ease, extracted
-  from the timeline and now shared: one monotone ease-out cubic frame at a time, an exact final value, and a
-  re-target that continues from the value the running frame last wrote), `panelEdgeStyle(width)` (how a
-  travelling edge is expressed: `width`, `min-width`, `flex-basis` in border-box pixels) and
-  `PANEL_EDGE_TRANSITION_MS = 240`.
-- **`src/hooks/useDockedPanelEdge.ts`** — drives a docked panel's edge. The toggle measures the width the
-  panel has RIGHT NOW (the in-flight interpolated width if one is running, otherwise the resting width the
-  stylesheet resolved) before the target class flips; hands the width back to the stylesheet and flips the
-  target class in ONE commit (which also folds the box that class resolves to into the camera); reads that
-  box's width as the animation's target, so the **stylesheet stays the single source of both resting
-  widths** (the inspector's `min(360px, max(250px, 34vw))` clamp included — nothing is re-derived in JS);
-  writes one interpolated width per animation frame through `commitWorkspaceLayout`, so the box and the
-  camera correction are committed before that frame paints; and clears the inline width on the settle frame,
-  so the resting width is the stylesheet's exact value. Rapid re-toggling cancels the in-flight frame and
-  eases from the interpolated width — no jump, no second animation.
-- **Both docked panels use it** (`src/App.tsx`): the right inspector and the left dock. `width`,
-  `min-width` and `flex-basis` are gone from both transition lists, so the browser can never animate the box
-  the camera is a projection of. The `.hidden` dock's geometry is no longer `!important` (an `!important`
-  stylesheet declaration beats an inline style, which would have blocked the travelling width). The slide,
-  fade, border, shadow and `visibility` polish is unchanged; `prefers-reduced-motion` still snaps to the
-  target through the same path.
-- `applyStageBox` gained one guard: a frame-committed edge has already folded the exact box in, so the
-  observer skips a box identical to the one it holds. The `ResizeObserver` remains the measurement fallback
-  for every layout change nobody committed (window resize, mode switches, drawers, broadcast).
+| Claim | Evidence on `qa/pr9-pr10-combined` |
+| ----- | --------------------------------- |
+| Frame-committed layout authority | `src/utils/workspaceLayout.ts` (`WORKSPACE_LAYOUT_COMMAND_EVENT`, `REMEASURE_STAGE_BOX_COMMAND`, `commitWorkspaceLayout`, `createFrameEase`, `panelEdgeStyle`, `PANEL_EDGE_TRANSITION_MS`) |
+| `useDockedPanelEdge` | `src/hooks/useDockedPanelEdge.ts` present; both docked panels (`LeftToolbar`, `PropertyInspector`) take `edgeWidth` + `panelRef` and write `panelEdgeStyle(edgeWidth)` |
+| The `StageCanvas` frame-commit guard | line 158: `// A frame-committed edge (see commitWorkspaceLayout) has already folded` … `if (previous && !reanchor && previous.left === box.left && previous.top === box.top && previous.width === box.width && previous.height === box.height) return;` |
+| Shared event names actually wired | `if (type === REMEASURE_STAGE_BOX_COMMAND)` (line 954) and `window.addEventListener(WORKSPACE_LAYOUT_COMMAND_EVENT, …)` / matching `removeEventListener` (lines 970–971) |
+| Right inspector off browser-side geometry transitions | `src/components/Inspector/PropertyInspector.css` rule `.motion-design-right-sidebar`: `transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease;` with the comment that width/min-width/flex-basis are deliberately absent; the only other mentions of `width` next to `transition` in that file are comments |
+| Left dock off browser-side geometry transitions | `src/components/Toolbar/LeftToolbar.css` rule `.left-toolbar-container` (the element `panelRef` is attached to): the P9 fix replaced `transition: width 240ms ease, min-width 240ms ease, flex-basis 240ms ease, …` with `transition: transform 240ms ease, opacity 240ms ease, visibility 240ms ease, …`; and `.left-toolbar-container.hidden` lost its `!important` on width/min-width/flex-basis so the inline travelling width can win. (The file also keeps legacy `.left-drawer-panel` rules that still list a width transition — that class has **no** consumer in `src/**` outside the stylesheet, so it is not in the DOM and cannot animate the measured box; it is pre-existing in `04eee5e` and was left alone, deliberately, to keep the QA branch byte-identical to PR #9 outside the replay.) |
+| Right inspector + left dock fix | `useDockedPanelEdge` consumed by both panels (above) |
+| Key-drag playhead separation | `src/components/Timeline/SequencerTimeline.tsx`: `.playhead-line` in `MARQUEE_BLOCKERS`, the "how close to the playhead line a press still counts as on the playhead" band, and the geometric playhead-column exclusion for the marquee |
+| Group marquee normalization | `src/utils/layerGrouping.ts`: `resolveMarqueeSelection` + `normalizeDegrees` and the rotated-child guard |
+| Round-5 vector arrange | `src/utils/vectorArrange.ts`: `planDistribute` present alongside PR #10's `planDistributeByGap` |
+| Compact Transform Details | inspector Transform Details work rides in the P9 lineage (`src/components/Inspector/PropertyInspector.tsx`) |
+| Rounds 1–5 records | `reports/progress_165_pre_qa_repository_cleanup.md` … `reports/progress_171_manual_qa_round_five_remediation.md`, `reports/progress_173_camera_transition_blocker_remediation.md` — unchanged by this task |
 
-## 4. Validation (all on isolated ports; 5173/5000 never bound, stopped or restarted)
+### PR #10 side (AE layout / crop / snapping / distribution)
 
-| Gate | Result |
-| --- | --- |
-| Repro before the fix | **8 failed / 12 passed** (transition spec, `--repeat-each=5`) and **5 failed / 22 passed** (camera family, `--repeat-each=3`) |
-| Targeted stress | `--repeat-each=10 --workers=8 --retries=0`: **60 passed / 0 failed**, `worstDelta=0.000px` on every sampled trace |
-| Camera family | `--repeat-each=5 --workers=8 --retries=0`: **55 passed / 0 failed** |
-| **FULL Chromium** | `npx playwright test --workers=8 --retries=0`: **398 passed / 0 failed / 0 flaky** (396 previous + this round's 2 new camera tests) |
-| Local gate | `npm run check` green (lint, `tsc`, **166 files / 2,482 tests**, production build); `node scripts/check-state-consistency.mjs` PASS (52 checks); `npm run validate:ograf` valid; `PORT=5015 npm run qa:release` 2 passed; `PORT=5015 npm run qa:v6` 3 passed; `npm audit --audit-level=low` 0 vulnerabilities; `git diff --check` clean |
+| Claim | Evidence on `qa/pr9-pr10-combined` |
+| ----- | --------------------------------- |
+| Equal-gap distribution | `src/utils/vectorArrange.ts` → `planDistributeByGap` (line 215), on top of the shared bounds maths |
+| Snapping resolver + guides | `src/utils/layoutGeometry.ts` → `resolveSnap`, `collectLayerSnapCandidates`, `collectStageSnapCandidates`, `SNAP_THRESHOLD_SCREEN_PX`, `SnapGuide`/`SnapLine`; `StageCanvas` freezes the snap context at pointerdown (`dragSnapRef`) and renders `snap-guides` as `pointerEvents="none"` chrome |
+| Toggle snapping | `AuthoringToolbar.tsx` `aria-label="Toggle snapping"`; `snapEnabled` from the animator context gating `resolveSnap` |
+| Crop / ROI authoring | `src/utils/stageCrop.ts` (`STAGE_CROP_HANDLES`, `isStageCropHandle`, `stageCropRectFromDrag`, `resizeStageCropRect`, `translateStageCropRect`, `isStagePointInsideRect`, `stageSpaceToEditorRect`, `editorPointToStageSpace`) + `src/hooks/useStageCropAuthoring.ts`; overlay drawn in `StageCanvas` with `data-crop-active` / `data-crop-handle` |
+| `Apply crop` | `AuthoringToolbar.tsx` line 503 `aria-label="Apply crop"`, disabled until a region exists; the region writes **nothing** until applied |
+| Two crop-to-content modes | `AuthoringToolbar.tsx` group `aria-label="Crop to content"` with `crop-to-selection` ("Crop to current selection at current frame") and `crop-to-visible-content` ("Crop to visible content at current frame") |
+| Export parity | `useStageCropAuthoring.applyCropRegion` commits through `setCharacterParts` + `setProjectResolution` as **one** batch interaction, i.e. the crop is a document edit on the same resolution/transform authority the export reads — not a viewport change. Asserted end to end by `e2e/ae-layout-crop.spec.ts`: after `Apply crop` the artboard becomes the region, the inter-layer geometry is preserved, and one `Control+z` restores both the stage size and the placement (redo exact) |
 
-No tolerance was widened (`DRIFT_TOLERANCE_PX` is still 1), no retry added, no sleep inserted, no test
-skipped, no assertion weakened, no animation disabled and no duration shortened.
+### The checks the brief called out specifically
 
-**Specs.** `e2e/camera-transition-stability.spec.ts` gained two tests — double mid-edge reversals in both
-directions (toggles scheduled relative to the click that landed, so they are genuinely mid-edge on a loaded
-page) and the whole inspector contract at a short, a clamped-narrow and a wide viewport (the docked width
-must come back to the stylesheet's exact value with no inline override left behind) — and its
-single-direction samples now also assert the panel's own edge visits intermediate widths in ONE direction.
-`e2e/v51-recovery.spec.ts`'s inspector test was **migrated, not relaxed**: it had asserted the panel's
-browser-side `transition: width 0.24s`, which is precisely the mechanism this fix removes, and now asserts
-the geometry is absent from the transition list, that the non-geometric polish keeps its 240ms, and that the
-travelling inline width is handed back when the edge settles. Four new unit tests pin the shared ease's
-contract (one monotone value per frame, an exact settle, a re-target from the interpolated value, a cancel
-that stops writing).
+- **The PR #10 replay did NOT overwrite the camera fix.** `git diff fac2bc1 HEAD -- src/components/Canvas/StageCanvas.tsx` contains **no deletion of any P9-introduced line**: every removed line is one PR #10 rewrote (`projectCoordinates` import line, the `dragMode`/`dragStart` type unions, the raw `initialTransform.x + deltaX` pair, the `useCallback` dependency list, the container `className`). The guards were re-verified by grep at lines 158–162, 954, 970–971 (table above).
+- **The snapping `StageCanvas` changes did NOT break camera invariance.** The snap path only rewrites the *authored* transform delta (`snappedDx`/`snappedDy` feed `updateCurrentTransform`) and explicitly comments "Snapping changes only the authored transform delta — never the camera"; the camera path (`applyStageBox` + `commitWorkspaceLayout`) is untouched. Proven by measurement: `e2e/camera-invariance.spec.ts` and `e2e/camera-transition-stability.spec.ts` are green in the full suite with `worstDelta=0.000px` / `worstDrift=0.000px` on every sampled trace and world drift `dx=0.000 dy=0.000`.
+- **Toolbar conflicts caused NO feature loss.** `AuthoringToolbar.tsx` is touched by PR #10 only (no P9 change to that file), so the crop band, the crop-to-content menu and the snapping toggle all landed whole; `git diff fac2bc1 HEAD -- src/components/Toolbar/AuthoringToolbar.tsx` is exactly PR #10's diff. `e2e/authoring-toolbar.spec.ts` was migrated, not weakened, by `30056e0`.
+- **No duplicate geometry authority.** `layoutGeometry.ts` holds the one union/centre formula (`unionWorldBounds`, `worldBoundsCenter`) + the one snap formula (`resolveSnap`); `vectorArrange.ts` imports from it (`import { unionWorldBounds, worldBoundsCenter } from './layoutGeometry'`), `useStageCropAuthoring.ts` imports `unionWorldBounds` from it, and `SNAP_THRESHOLD_SCREEN_PX` is defined in `layoutGeometry.ts` alone — the only other files mentioning it are `StageCanvas.tsx` (consumer) and `src/tests/layoutGeometry.test.ts`. `src/utils/layerGrouping.ts` does keep a small **local, pre-existing** `unionWorldBounds` helper (present at `04eee5e`, untouched by PR #10) that PR #10 did not introduce and did not replace; PR #10 added exactly one shared authority and no second copy of it.
+- **The Undo contracts still hold.** `e2e/camera-transition-stability.spec.ts` records `undoDisabled=false` on every drift sample and the full suite is green; crop is one undo step with exact redo (`ae-layout-crop.spec.ts`); distribution is "one history entry" (`ae-layout-snapping.spec.ts`).
 
-## 5. PR #10 comparison (read-only; that worktree was never modified)
+## 4. Validation on `ce04dd0` (isolated ports only)
 
-`git diff 04eee5e 74603de` (PR #9's head vs PR #10's head `feat/ae-layout-crop-snapping`):
+| Command | Result |
+| ------- | ------ |
+| `npx tsc -b --pretty false` | exit 0, no diagnostics |
+| `npm run lint` (oxlint) | exit 0, clean |
+| `npm test` (vitest) | **169 files / 2537 tests passed**, 0 failed |
+| `npm run build` | built clean (chunk-size advisory only, pre-existing) |
+| `npm run validate:ograf` | `fixtures/ograf/minimal.ograf.json: valid OGraf v1 manifest` |
+| `PORT=5016 npm run qa:release` | **2 passed** (release gate, `KCS_RELEASE_GATE=1`, UI 5189 / API 5016) |
+| `PORT=5016 npm run qa:v6` | **3 passed** (`KCS_V6_QA=1`, UI 5187 / API 5016) |
+| `npm run check` | green (lint + tsc + 2537 tests + build) |
+| `node scripts/check-state-consistency.mjs` | **PASS (52 checks)** |
+| `npm audit --audit-level=low` | **0 vulnerabilities** |
+| `git diff --check` | clean |
 
-- Among all camera/layout/chrome authorities PR #10 changes exactly two files:
-  `src/components/Canvas/StageCanvas.tsx` and `src/components/Canvas/StageCanvas.css`.
-- `src/utils/viewportMath.ts` (the camera model and `getStageCameraTransform`), `src/App.tsx`,
-  `src/components/Timeline/*` and `src/components/Inspector/*` are **byte-identical** between the heads.
-- The StageCanvas diff is crop/snap authoring; grepping it for every camera-timing line
-  (`applyStageBox`, `readStageBox`, `ResizeObserver`, `getStageCameraTransform`, `stageBox`, `flushSync`,
-  `remeasure`, `canvas-viewport-command`, the `<svg>`, `stage-canvas-container`) matches ONE line — the
-  extra `crop-mode` class. The CSS adds only decorative overlay rules (no geometry, no transition).
-- **Conclusion: the failure is inherited from PR #9, not amplified by PR #10** — the same inspector
-  transition/observer race, with a load-sensitive magnitude (half of one frame's stage-width step). Round
-  5's 0.000px isolation record and the 9.109px record differ in frame timing, not in code.
+Focused Chromium (`CI=1 PORT=5016`, `--project=chromium --workers=4 --retries=0`) over
+`camera-transition-stability`, `camera-invariance`, `timeline-keyframe-gesture`, `group-interaction`,
+`authoring-toolbar`, `ae-layout-crop`, `ae-layout-snapping`, `ograf-editor-export`, `gif-export`:
+**50 passed / 0 failed**.
 
-## 6. Pull request, live surfaces and protected state
+**FULL Chromium suite** — `CI=1 PORT=5016 npx playwright test --project=chromium --workers=8
+--retries=0`: **406 passed / 0 failed / 0 flaky** (3.8m). 398 of them are the PR #9-green set; the
+round adds 8 from the replayed PR #10 specs.
 
-- **PR #9 — OPEN, NOT merged**: `https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`.
-  Validated code + tests head **`42d89d5`** (`42d89d588d48a00682ee111702dbfb92179c08f4`); the round record
-  is the commit above it; the handoff refresh (this bundle) rides on top. Pushed as a **fast-forward**
-  (`04eee5e..a3c2e04`) with an explicit refspec — no force, no rebase.
-- **Live surfaces:** 5173 serves THIS worktree (vite listener pid 50876, HTTP 200); API 5000 (pid 18280)
-  unchanged and `/api/health` 200. Only isolated test ports were used (UI 5188 / API 5015), and
-  `npm run dev` was never run.
-- **No merge, no tag, no release, no npm publication.** `main`, `origin/main`, the canonical checkout, every
-  other worktree, the release tags and the published `v1.1.0-rc.2` prerelease were preserved; no
-  dependency/package/lockfile/workflow/OMP-config change.
+Camera contract, measured on that run: `DRIFT_TOLERANCE_PX` unchanged at **1px**, no retry, no sleep, no
+skip, no widened tolerance. Sampled numbers:
 
-## 7. Concise user retest (on 5173)
+- dock transitions: `[transition] repeat Show Left Toolbar | frames=35 | animating=29 | worstDelta=0.000px | magnificationSpread=0.00000`; the same `0.000px` for repeat Hide, Hide/Show Inspector, the inspector reversals, the timeline collapse/expand and all three viewports.
+- repeated toggles: `[camera-drift] inspector toggled 10x | alpha dx=0.00 dy=0.00 | beta dx=0.00 dy=0.00 | node dx=0.00 dy=0.00` (and the same for the left toolbar, the timeline resize and the panned-camera samples).
+- timeline height drag: `frames=146 | timelineHeight 320.0->441.0 | worstDrift=0.000px | perFrameDrift=0.00,…` (every frame `0.00`).
+- corner-anchor resize: `opposite drift world dx=0.000 dy=0.000 (px dx=0.00 dy=0.00)`.
 
-1. Open a project, select a layer, and **show/hide the right inspector** repeatedly — the scene must not
-   slide left/right while the panel moves, and the panel must travel the same 240ms as before.
-2. With the inspector mid-animation, click the toggle again (rapid show→hide and hide→show) — the panel must
-   reverse from where it is, with no jump and no second animation, and the scene must stay put.
-3. Do the same with the **left dock**, then resize the **timeline** and toggle either sidebar while the
-   timeline edge is still moving — the stage keeps cropping, never moving the authored world.
-4. Watch the inspector at a narrow window (the panel's `min(360px, max(250px, 34vw))` clamp) and at a wide
-   one — the resting width must be exactly what it was before the toggle.
+5173 and 5000 were never bound by any test: the isolated run uses UI **5188** and API **5016**
+(`CI=1` ⇒ `isIsolatedQaRun` ⇒ port 5188), and `npm run dev` was never used.
 
-Expected: the world point under the cursor never drifts, the magnification never changes, and every edge
-still eases. Report anything that moves with the exact frame and the two widths involved.
+## 5. Pull request #11
+
+- Number/URL: **#11** — `https://github.com/ErtugrulAK/keyframe-character-studio/pull/11`
+- Base `main`, head `qa/pr9-pr10-combined`, title `qa: combine manual-qa remediation and AE layout features`
+- Validated code + tests head: **`ce04dd0a4972b69b4635e2d20995c642f6a67d14`** (`ce04dd0`)
+- Pushed with an explicit refspec — `git push -u origin HEAD:refs/heads/qa/pr9-pr10-combined` — no force, no rebase, no history rewrite
+- Mergeability: **`mergeable: MERGEABLE`, `mergeStateStatus: CLEAN`**, `state: OPEN`, not a draft
+- CI: workflow **CI Pipeline**, run id **38583648143** (`https://github.com/ErtugrulAK/keyframe-character-studio/actions/runs/38583648143`), head `ce04dd0`, **conclusion `success`** (Build, Lint & Test Verification green: OGraf fixture, lint, tsc, vitest, production build). The docs-refresh commit for this record rides on top and its own run is recorded on the PR.
+- **PR #9 and PR #10 are unchanged and not merged** — #9 is still `OPEN` at head `fac2bc1`, #10 is still `OPEN` at head `74603de`; neither was closed, edited or pushed to by this task.
+
+## 6. Live surfaces
+
+- 5173 now serves THIS worktree: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-combined-qa`.
+  - vite listener PID **before: 50876** (the PR #9 worktree, `…-omp-manual-qa-r1`); **after: 17568** (bash wrapper 37868). Only the 5173 listener tree was stopped; 5173 answers **HTTP 200**.
+  - Module-freshness proof over HTTP (both sides served by the same 5173): `GET /src/utils/workspaceLayout.ts` → 200, `GET /src/hooks/useDockedPanelEdge.ts` → 200 (**PR #9 side**); `GET /src/utils/layoutGeometry.ts` → 200, `GET /src/utils/stageCrop.ts` → 200 (**PR #10 side**). `GET /src/components/Canvas/StageCanvas.tsx` → 200 and its body contains `WORKSPACE_LAYOUT_COMMAND_EVENT`, `REMEASURE_STAGE_BOX_COMMAND` and `frame-committed` (PR #9) **and** `resolveSnap`, `stageCrop` (PR #10) — the one file both lineages touch serves both fixes.
+- API 5000 is **unchanged**: pid **18280** before and after, `/api/health` → 200. Never stopped, restarted or rebound.
+- No merge, no tag, no GitHub release, no npm publication, no dependency/lockfile/workflow/OMP-config change. The canonical checkout was never written to.
+
+## 7. Combined manual QA list (5173 — the merge gate for PR #11)
+
+PR #9 side:
+
+1. Show/hide the right inspector repeatedly — the scene must not slide; toggle it again mid-animation both ways; it must reverse from where it is (no jump, no second animation).
+2. Repeat with the left dock, and toggle a sidebar while the timeline edge is still moving.
+3. Check the inspector at a narrow and a wide window — the resting width must match what it was before.
+4. Re-run the rounds 1–5 items you can still reach: right inspector / left dock behaviour, keyframe drag next to the playhead, group marquee selection, Round-5 vector arrange, compact Transform Details.
+
+PR #10 side:
+
+5. Distribution: select 3+ layers, distribute on an axis — the edge gaps must come out equal, the overall span must be held, and one undo must restore everything.
+6. Snapping: toggle snapping off/on; drag a layer onto another layer's edge and onto the stage edge — it must lock with a guide; confirm the guide disappears on release; at two different zooms, a 4px miss locks and a 16px miss does not.
+7. Crop: arm crop, drag a region, resize one handle (the opposite edge must stay put), move the region, press Escape (it must drop without cropping); then `Apply crop` — the stage becomes the region and every layer keeps its pixel measured from the new origin; check one undo restores the stage size **and** the placement, and redo is exact.
+8. Crop-to-content: use both entries of the `Crop to content` menu at the current frame.
+9. Export: run the OGraf export after a crop and confirm the cropped resolution/placement is what ships.
+
+### Pending findings — NOT fixed by this task (carried as open only)
+
+- sidebar toggle handle placement aesthetics;
+- GIF panel too long;
+- GIF panel should close on click-outside;
+- GIF max FPS should be 120;
+- property rows should show keyframes only on the channels actually animated/changed;
+- Align / Center / Distribute should be direct toolbar icons, not dropdowns;
+- Distribute behaviour to be revisited against the Boxy reference;
+- remove the unnecessary top-right action toasts;
+- Shortcut Reference visual redesign;
+- remove the Add/Remove Keyframe controls from the Inspector (e.g. Trim Path);
+- resizing a group that contains a rotated child with a horizontal edge scales the child on the wrong axis.
+
+A single remediation prompt will follow after the user finishes PR #10 manual QA.
+
+## 8. Runway state
+
+No tag created, moved or deleted. No GitHub release. Nothing published to npm. No merge. PR #9, PR #10
+and PR #11 all stay open; the user's manual QA on 5173 is the gate.
+
+Bundle source files (16) — the doc mirrors are byte-identical to their repository sources:
+
+- CHANGELOG.md, NEXT_SESSION.md, PROJECT_STATE.md
+- KCS_GROUPED_ROADMAP_EXECUTION_PLAN.md, KCS_RELEASE_CANDIDATE_SUMMARY.md
+- README.md, manifest.txt, OMP_FINAL_RESPONSE.md
+- progress_165_pre_qa_repository_cleanup.md … progress_171_manual_qa_round_five_remediation.md, progress_173_camera_transition_blocker_remediation.md
+
+Upload only chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md. No other file in the latest bundle needs to be uploaded.

@@ -1,7 +1,8 @@
 .left-toolbar-container {
   display: flex;
   height: 100%;
-  z-index: 90;
+  /* R5-02 — docked panel layer of the editor stack. */
+  z-index: var(--kcs-layer-panel);
   /* Collapse/expand is declared once, in the V3.2 grammar block below. */
 }
 
@@ -668,18 +669,11 @@
 .left-toolbar-container.tool-capturing .left-drawer-panel {
   pointer-events: none;
 }
-/* V3.4 mirrored handle geometry: attach the left hinge to the rail edge. */
+/* V3.4 mirrored handle geometry: the rail stays the drawer's own flex sibling.
+   The handle's placement authority is the V3.5 block below (and, for the dock
+   boundary it rides, the `R5-01` block at the end of this file). */
 .left-sidebar-nav {
   position: relative;
-}
-
-.left-toolbar-toggle {
-  position: absolute;
-  top: 50%;
-  right: -13px;
-  margin: 0;
-  z-index: 3;
-  transform: translateY(-50%);
 }
 /* V3.5 in-flow drawer dock: keep the rail in the main layout while the
    contextual panel is a flex item that can fully relinquish its footprint. */
@@ -734,17 +728,6 @@
   visibility: visible;
 }
 
-/* The control follows the drawer edge while expanded, but remains reachable
-   against the rail edge after the drawer gives up its layout footprint. */
-.left-toolbar-toggle {
-  left: calc(var(--left-rail-width) + var(--left-drawer-width) - 13px);
-  right: auto;
-}
-
-.left-toolbar-container.collapsed .left-toolbar-toggle {
-  left: calc(var(--left-rail-width) - 13px);
-}
-
 @media (prefers-reduced-motion: reduce) {
   .left-drawer-panel,
   .left-toolbar-toggle {
@@ -772,24 +755,24 @@
   visibility: hidden;
 }
 
-/* R3-02 / R4-01 — the handle rides the WORKSPACE ROW's edge: a fixed inset below
-   the row's top edge (a boundary a timeline resize never moves), so the handle
-   keeps its place at every timeline height and can never reach the timeline. */
+/* R3-02 / R4-01 / R5-01 — the handle rides the WORKSPACE ROW's edge (a fixed
+   inset below the row's top edge, a boundary a timeline resize never moves) and
+   the DRAWER'S OUTER BOUNDARY: its inner edge coincides with the drawer's right
+   edge, so it is anchored to the panel boundary itself and stays fully on the
+   workspace side. It therefore cannot cover the drawer's own content — the
+   labels, cards and rows that begin at that edge keep their first 10px. */
 .app-container .left-toolbar-toggle {
   position: absolute;
   top: var(--kcs-panel-handle-top);
   left: calc(var(--left-rail-width) + var(--left-drawer-width));
   right: auto;
-  z-index: 100;
-  transform: translate(-50%, 0);
   /* The handle rides the collapsing edge instead of teleporting to it. */
   transition: background-color 160ms ease, color 160ms ease, outline-color 160ms ease,
-    left 240ms ease, transform 240ms ease;
+    left 240ms ease;
 }
 
 .app-container.left-toolbar-hidden .left-toolbar-toggle {
   left: 0;
-  transform: translate(0, 0);
 }
 /* Project drawer: resolution presets and dimension fields reuse the card/input grammar. */
 .project-drawer-content {

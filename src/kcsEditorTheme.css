@@ -49,6 +49,29 @@
   --kcs-selected: var(--kcs-bg-selected);
   --kcs-hover: var(--kcs-bg-hover);
   --kcs-focus: var(--kcs-border-focus);
+  /*
+   * R5-02 — the ONE editor stack. Every docked surface, edge handle, chrome band
+   * and overlay is placed on this scale; a new surface joins it instead of
+   * inventing a layer of its own.
+   *
+   *   90   docked panels (left toolbar, inspector, timeline) — and the popovers
+   *        they own, which are painted inside the panel they hang off.
+   *   100  the panel edge handles. They ride a panel's OUTER boundary, on the
+   *        workspace side, so nothing inside a panel is underneath them and only
+   *        an overlay can cover them.
+   *   200  authoring chrome: the toolbar band and the popover it owns.
+   *   300  header chrome. It owns the surfaces that hang BELOW the bar — the
+   *        Export dropdown and the GIF panel — which are painted over the
+   *        toolbar band, so the header must beat the toolbar as well as the
+   *        handles. A chrome element that sat at the handle layer would trap its
+   *        overlay in its own stacking context and the handle would win the tie
+   *        on DOM order.
+   *   1000+ dialogs, context menus and toasts.
+   */
+  --kcs-layer-panel: 90;
+  --kcs-layer-handle: 100;
+  --kcs-layer-chrome: 200;
+  --kcs-layer-chrome-overlay: 300;
   /* Existing domain styles share the editor palette without a second theme. */
   --bg-darkest: var(--kcs-bg-canvas);
   --bg-dark: var(--kcs-bg-rail);
@@ -553,10 +576,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 
 
-.keyframe-diamond.selected,
-.ue-prop-diamond.selected {
-  box-shadow: 0 0 0 2px rgba(41, 211, 183, .18);
-}
+/*
+ * R5-04 — a keyframe selected with the MOUSE says so with the filled diamond
+ * and nothing else. This rule used to draw a 2px ring around the key's 18px hit
+ * target: the target is a square box, so a pointer selection painted a square
+ * around the key that competed with the diamond itself. Keyboard focus stays
+ * visible through `:focus-visible` (see `.keyframe-diamond:focus-visible`).
+ */
 
 @media (prefers-reduced-motion: reduce) {
   .header-center-controls > div > button,
@@ -1077,6 +1103,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   padding: 0;
   border: 0;
   border-radius: var(--kcs-radius-control);
+  /* R5-02 — the handle layer of the editor stack (see the tokens in this file):
+     below chrome overlays, above every docked panel it rides. */
+  z-index: var(--kcs-layer-handle);
   background: var(--kcs-panel-elevated);
   color: var(--kcs-text-muted);
   cursor: pointer;

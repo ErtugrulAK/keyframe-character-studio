@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, Diamond, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Lock, Plus, Tv, Unlock } from 'lucide-react';
 import type { CharacterPart, Track, TrackChannel } from '../../types/animator';
 import { CHANNEL_META, CHANNEL_ROW_HEIGHT, TRACK_ROW_HEIGHT } from './timelineConstants';
 import { resolveAdjacentKeyframeFrame, resolveChannelKeyframeFrames, resolveLayerKeyframeFrames } from '../../utils/timelineMetrics';
@@ -141,17 +141,20 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
         style={{ height: CHANNEL_ROW_HEIGHT }}
       >
         <span className={indentClass} />
-        <span className="ue-channel-color-bar" style={{ backgroundColor: meta.color }} />
         {/* R3-06 — the row states the property, not how many keys it holds: the
             diamonds on the lane are the count, and a bare counter next to every
-            property row was pure noise. */}
-        <span className="ue-channel-label" style={{ color: meta.color }} title={`${meta.label}${chKfs.length ? ` — ${chKfs.length} keyframe${chKfs.length === 1 ? '' : 's'}` : ''}`}>
+            property row was pure noise.
+            R5-07 — the row is neutral too: no coloured tick and no tinted label,
+            because the channel colour already lives on the lane keyframes and
+            the connector the row belongs to. */}
+        <span className="ue-channel-label" title={`${meta.label}${chKfs.length ? ` — ${chKfs.length} keyframe${chKfs.length === 1 ? '' : 's'}` : ''}`}>
           {TREE_LABEL[ch] ?? meta.label}
         </span>
         <div className="ue-channel-controls">
           {/* [◀][+][▶] scoped to THIS property — the layer row's own trio, one
               level down: the row states its property, its nav strip states the
-              property's keys. */}
+              property's keys. The strip is neutral (R5-06/R5-07): a plain plus
+              adds the key, a greyed pair means that side has nothing. */}
           <button
             className="btn-icon track-icon-btn"
             onClick={(e) => { e.stopPropagation(); if (previousChannelFrame !== null) onJumpToFrame(previousChannelFrame); }}
@@ -167,12 +170,11 @@ export const TrackOutlinerRow: React.FC<TrackOutlinerRowProps> = ({
           </button>
           <button
             className="btn-icon track-add-kf-btn"
-            style={{ color: meta.color }}
             onClick={(e) => { e.stopPropagation(); onAddChannelKeyframe(track.id, ch, track.partId); }}
             title={`Add ${meta.label} keyframe`}
             aria-label={`Add ${meta.label} keyframe`}
           >
-            <Diamond size={11} aria-hidden="true" />
+            <Plus size={12} aria-hidden="true" />
           </button>
           <button
             className="btn-icon track-icon-btn"

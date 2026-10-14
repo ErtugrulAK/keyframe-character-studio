@@ -31,7 +31,10 @@
   overflow-y: hidden;
   background: var(--kcs-bg-shell);
   border-bottom: 1px solid var(--kcs-border-subtle);
-  z-index: 90;
+  /* R5-02 — chrome band of the editor stack: it owns overlays that hang over the
+     workspace (the colour popover), so it must sit ABOVE the panel edge handles
+     and lift them with it. */
+  z-index: var(--kcs-layer-chrome);
 }
 
 .authoring-toolbar-group {

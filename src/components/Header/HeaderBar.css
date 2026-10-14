@@ -9,7 +9,16 @@
   padding: 0 var(--space-md);
   gap: var(--space-md);
   row-gap: 6px;
-  z-index: 100;
+  /*
+   * R5-02 — header chrome, the top of the editor stack below dialogs. It owns
+   * the Export dropdown and the GIF panel, which hang BELOW the bar and are
+   * painted over the authoring toolbar band, so the bar must beat the toolbar
+   * and the panel edge handles. The bar is a flex item, so its z-index counts
+   * even while it is not positioned: it is a stacking context either way, and a
+   * bar sitting at the handle layer would have trapped the GIF panel inside it —
+   * the handle then won the tie on DOM order and painted over the panel.
+   */
+  z-index: var(--kcs-layer-chrome-overlay);
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 

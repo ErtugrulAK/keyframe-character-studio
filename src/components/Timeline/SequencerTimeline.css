@@ -7,7 +7,8 @@
   border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  z-index: 90;
+  /* R5-02 — docked panel layer of the editor stack. */
+  z-index: var(--kcs-layer-panel);
   box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.6);
   position: relative;
   font-family: var(--font-mono);
@@ -696,14 +697,20 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   flex-shrink: 0;
 }
 
-/* R3-07 — the layer's keyframe navigation. A borderless icon button in the same
-   row as the + action; the disabled pair is the "nothing on that side" state. */
+/* R3-07 / R5-06 — the layer's keyframe navigation, and the property rows' own
+   copy of it (R4-05). One NEUTRAL strip: the arrows and the add action share a
+   single grey, and the channel colour lives where the keys are — the lane
+   diamonds and their connector — never on a row's action button. An endpoint
+   with nothing on its side is simply greyed out like every other disabled
+   control: it is the ordinary "nothing there" state, so it never paints the
+   not-allowed/forbidden cursor over the timeline. */
 .track-icon-btn:disabled,
 .track-add-kf-btn:disabled {
-  opacity: 0.28;
-  cursor: not-allowed;
+  opacity: 0.3;
+  cursor: default;
 }
-.track-icon-btn:disabled:hover {
+.track-icon-btn:disabled:hover,
+.track-add-kf-btn:disabled:hover {
   color: #4b5563;
 }
 
@@ -716,9 +723,8 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
 .track-add-kf-btn {
   width: 20px; height: 20px;
   color: #4b5563;
-  transition: color 0.15s;
 }
-.track-add-kf-btn:hover { color: var(--accent-gold); }
+.track-add-kf-btn:hover { color: #d1d5db; }
 
 /* ── CHANNEL GROUP ── */
 /* One nesting rail under the layer row: every property row hangs off the layer
@@ -794,19 +800,12 @@ body.kcs-resizing-columns * { cursor: col-resize !important; user-select: none; 
   flex-shrink: 0;
 }
 
-.ue-channel-color-bar {
-  width: 2px;
-  height: 12px;
-  border-radius: var(--radius-xs);
-  flex-shrink: 0;
-  opacity: 0.85;
-}
-
 .ue-channel-label {
   flex: 1;
+  /* R5-07 — neutral: the property's identity is its label and its lane. */
+  color: var(--kcs-text-muted);
   font-size: var(--font-size-caption);
   font-weight: 600;
-  opacity: 0.9;
   white-space: nowrap;
 }
 

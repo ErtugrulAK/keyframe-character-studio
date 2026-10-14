@@ -78,7 +78,10 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
       drawerPointerEvents: drawerStyle.pointerEvents,
       drawerVisibility: drawerStyle.visibility,
       leftHandleWidth: Math.round(handleRect.width),
-      leftHandleCenter: Math.round(handleRect.left + handleRect.width / 2),
+      // R5-01 — the handle is anchored to the drawer's OUTER boundary: its inner
+      // (left) edge coincides with the drawer's right edge, so it rides the panel
+      // boundary itself while staying fully on the workspace side.
+      leftHandleLeft: Math.round(handleRect.left),
       drawerRight: Math.round(drawerRect.right),
       rightHandleWidth: Math.round(rightHandle.getBoundingClientRect().width),
       rightHandleTransition: getComputedStyle(rightHandle).transition,
@@ -89,7 +92,7 @@ test('Left Toolbar collapse/expand — stable stage origin, hidden drawer, reach
   expect(expandedLayout.railWidth).toBe(56);
   expect(expandedLayout.drawerWidth).toBeGreaterThan(0);
   expect(expandedLayout.drawerMinWidth).toBe(`${expandedLayout.drawerWidth}px`);
-  expect(Math.abs(expandedLayout.leftHandleCenter - expandedLayout.drawerRight)).toBeLessThanOrEqual(1);
+  expect(Math.abs(expandedLayout.leftHandleLeft - expandedLayout.drawerRight)).toBeLessThanOrEqual(1);
   expect(expandedLayout.drawerPointerEvents).toBe('auto');
   expect(expandedLayout.drawerVisibility).toBe('visible');
   // R4-01 — the compact edge-handle family: a thin vertical pill, chevron only.

@@ -23,6 +23,8 @@ const animatorCtx = {
   setActiveTool: vi.fn(),
   showGrid: false,
   setShowGrid: vi.fn(),
+  snapEnabled: true,
+  setSnapEnabled: vi.fn(),
   selectedPartId: null as string | null,
   selectedPartIds: [] as string[],
   setSelectedPartId: vi.fn(),
@@ -90,6 +92,19 @@ describe('AuthoringToolbar', () => {
     expect(animatorCtx.setShowGrid).toHaveBeenCalledWith(false);
   });
 
+  it('toggles canvas snapping through the shared context flag the stage reads', () => {
+    animatorCtx.snapEnabled = true;
+    renderToolbar();
+
+    const snap = screen.getByRole('button', { name: 'Toggle snapping' });
+    expect(snap).toHaveAttribute('aria-pressed', 'true');
+    // It lives in the View band beside the grid, as presentation state.
+    expect(within(screen.getByRole('group', { name: 'View controls' })).getByRole('button', { name: 'Toggle snapping' })).toBe(snap);
+
+    fireEvent.click(snap);
+    expect(animatorCtx.setSnapEnabled).toHaveBeenCalledWith(false);
+  });
+
   it('sends zoom and reset view down the established camera command channel', () => {
     renderToolbar();
     const dispatched: string[] = [];
@@ -109,7 +124,7 @@ describe('AuthoringToolbar', () => {
 
   it('never writes the document for view-only tools', () => {
     renderToolbar();
-    for (const name of ['Select', 'Pan', 'Toggle grid', 'Zoom in', 'Zoom out', 'Reset view']) {
+    for (const name of ['Select', 'Pan', 'Toggle grid', 'Toggle snapping', 'Zoom in', 'Zoom out', 'Reset view']) {
       fireEvent.click(screen.getByRole('button', { name }));
     }
     expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
@@ -303,6 +318,34 @@ describe('AuthoringToolbar', () => {
     expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledTimes(1);
     expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledWith({ x: 0 }, 'b');
     expect(screen.queryByRole('menu', { name: 'Align' })).toBeNull();
+  });
+
+  it('offers the equal-spacing distribute commands in the existing Distribute band', () => {
+    animatorCtx.characterParts = [
+      shape('a'),
+      shape('b', { baseTransform: { x: 40, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
+      shape('c', { baseTransform: { x: 400, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 } }),
+    ];
+    setSelection(['a', 'b', 'c'], 'b');
+    renderToolbar();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Distribute' }));
+    const menu = screen.getByRole('menu', { name: 'Distribute' });
+    expect(within(menu).getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'Distribute horizontally',
+      'Distribute vertically',
+      'Distribute horizontal spacing',
+      'Distribute vertical spacing',
+    ]);
+
+    // The equal-spacing command is the SAME write path and ONE batch; the middle
+    // box takes the even gap while the extremes hold the span.
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Distribute horizontal spacing' }));
+    expect(animatorCtx.startBatchInteraction).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.endBatchInteraction).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledWith({ x: 200 }, 'b');
+    expect(screen.queryByRole('menu', { name: 'Distribute' })).toBeNull();
   });
 
   it('rotates and flips the selection with the same authority, disabled without one', () => {

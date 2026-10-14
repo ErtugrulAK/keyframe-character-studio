@@ -161,6 +161,9 @@ export interface AnimatorContextType {
   showToast: (message: string, type?: 'success' | 'error' | 'info', options?: ToastOptions) => void;
   isScaleLocked: boolean;
   setIsScaleLocked: (locked: boolean) => void;
+  /** The canvas snapping (smart guides) master switch; the View band toggles it. */
+  snapEnabled: boolean;
+  setSnapEnabled: (enabled: boolean) => void;
   addPropertyKeyframe: (trackId: string, channel: AnimationChannel, frame: number, value: number, easing?: EasingType) => void;
   updatePropertyKeyframeValue: (trackId: string, channel: AnimationChannel, keyframeId: string, value: number) => void;
   updatePropertyKeyframeTemporalHandles: (trackId: string, channel: AnimationChannel, keyframeId: string, patch: { bezierIn?: { x: number; y: number }; bezierOut?: { x: number; y: number } }) => void;
@@ -213,6 +216,11 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Shared scale-lock state: used by the inspector scale card AND the canvas
   // corner-drag scaling so both respect the same setting.
   const [isScaleLocked, setIsScaleLocked] = useState<boolean>(true);
+
+  // Canvas snapping master switch. It is presentation state (a preference), not
+  // document state, so it lives beside scale-lock on the provider; the View band
+  // toggles it and the stage's translate gesture reads it.
+  const [snapEnabled, setSnapEnabled] = useState<boolean>(true);
 
   const [coordinateSystem, setCoordinateSystem] = useState<SceneCoordinateSystem>('project-unit-center-v1');
 
@@ -663,6 +671,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         clearShapeCreation,
         setIsScaleLocked,
         isScaleLocked,
+        snapEnabled,
+        setSnapEnabled,
         tracks,
         setTracks,
         characterParts,

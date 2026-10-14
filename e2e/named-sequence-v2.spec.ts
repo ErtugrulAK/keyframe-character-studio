@@ -65,6 +65,16 @@ test('Named Sequence V2 — stable IDs, authoring metadata, Broadcast status, an
   // The active sequence must drive both painted geometry and the selection
   // gizmo. Previously a named-sequence edit moved only the gizmo because the
   // stage evaluated the default sequence instead of the selected one.
+  //
+  // This measurement is the PURE pointer delta of a stage drag, so snapping —
+  // armed by default in the View band — must be off: the shape was created at
+  // the stage centre, and the 40px downward drag lands its own top edge exactly
+  // on the stage's centre line, which is a legitimate lock for the feature and
+  // would report a snapped pose instead of the dragged one.
+  const snapping = page.getByRole('button', { name: 'Toggle snapping' });
+  await expect(snapping).toHaveAttribute('aria-pressed', 'true');
+  await snapping.click();
+  await expect(snapping).toHaveAttribute('aria-pressed', 'false');
   await page.mouse.move(firstPose.x + firstPose.width / 2, firstPose.y + firstPose.height / 2);
   await page.mouse.down();
   await page.mouse.move(firstPose.x + firstPose.width / 2 + 100, firstPose.y + firstPose.height / 2 + 40, { steps: 5 });

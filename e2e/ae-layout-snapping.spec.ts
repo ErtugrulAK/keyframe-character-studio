@@ -189,7 +189,7 @@ test('the snap toggle turns the lock off, and no guide is drawn', async ({ page 
   await page.getByRole('button', { name: 'Toggle snapping' }).click();
 
   // A 16px miss: with snapping on this would lock; off it stays a free move.
-  await dragMissOfScreenPixels(page, 16);
+  await dragLayerMissOfScreenPixels(page, 16);
   await expect(page.locator('.snap-guide')).toHaveCount(0);
   const alpha = await boxOf(page, 'a');
   const bravo = await boxOf(page, 'b');
@@ -198,17 +198,49 @@ test('the snap toggle turns the lock off, and no guide is drawn', async ({ page 
 });
 
 /**
- * The threshold is a SCREEN radius: a miss of N screen pixels behaves the same
- * at every zoom. Bravo's left edge is the target, so the drag moves Alpha until
- * its left edge is exactly N SCREEN pixels short of Bravo's.
- *
- * Both edges are read from the same rendered frame and the pointer then moves
- * by their own difference, so the miss is that many real screen pixels without
- * converting through the camera scale twice — a scale read before the drag and
- * again inside it can disagree (the stage box is measured asynchronously) and
- * would silently change how far the pointer actually travels.
+ * ONE layer, well away from every stage line except the one it approaches. The
+ * threshold test has to isolate a SINGLE candidate: a moving box carries its own
+ * centre and its far edge, and a candidate near one of THOSE is a legitimate lock
+ * of its own. `SNAP_SEED` cannot serve here — Alpha's right edge reaches the
+ * stage's centre line exactly when its left edge is a 16px miss from Bravo's.
  */
-async function dragMissOfScreenPixels(page: Page, screenPx: number) {
+const THRESHOLD_SEED = [layer('a', 'Alpha', 0, -200)];
+
+/** The stage artboard's LEFT edge in client pixels, as the app projects it. */
+async function stageLeftEdgeScreenX(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const rect = document.querySelector('svg.stage-svg clipPath#artboard-clip rect');
+    const svg = document.querySelector('svg.stage-svg') as SVGSVGElement | null;
+    if (!rect || !svg) throw new Error('artboard unavailable');
+    const matrix = svg.getScreenCTM();
+    if (!matrix) throw new Error('stage CTM unavailable');
+    const point = new DOMPoint(Number(rect.getAttribute('x')), Number(rect.getAttribute('y')));
+    return point.matrixTransform(matrix).x;
+  });
+}
+
+/**
+ * Drags Alpha until its left edge is exactly `screenPx` SCREEN pixels short of
+ * the stage's left edge. Both the layer box and the artboard are read from the
+ * SAME rendered frame and the pointer moves by their own difference, so the miss
+ * is that many real screen pixels at whatever zoom the camera ended up at.
+ */
+async function dragStageMissOfScreenPixels(page: Page, screenPx: number) {
+  const alpha = await boxOf(page, 'a');
+  const edge = await stageLeftEdgeScreenX(page);
+  const startX = alpha.x + alpha.width / 2;
+  const startY = alpha.y + alpha.height / 2;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await expect(page.locator('.stage-canvas-container')).toHaveClass(/interaction-dragging/);
+  await page.mouse.move(startX - ((alpha.x - edge) - screenPx), startY, { steps: 6 });
+}
+
+/**
+ * A 16px miss of another LAYER's edge, used where snapping is switched off and
+ * the exact distance therefore cannot decide anything.
+ */
+async function dragLayerMissOfScreenPixels(page: Page, screenPx: number) {
   const alpha = await boxOf(page, 'a');
   const bravo = await boxOf(page, 'b');
   const startX = alpha.x + alpha.width / 2;
@@ -219,27 +251,47 @@ async function dragMissOfScreenPixels(page: Page, screenPx: number) {
   await page.mouse.move(startX + (bravo.x - alpha.x) - screenPx, startY, { steps: 6 });
 }
 
+/**
+ * The live snap state, as a failure message that names what actually happened:
+ * the guide's own line, the layer box, the artboard edge, the measured miss, the
+ * camera zoom and the rendered px-per-unit. A count assertion alone cannot say
+ * WHICH line locked.
+ */
+async function snapReport(page: Page): Promise<string> {
+  const guides = await page.locator('.snap-guide').evaluateAll((elements) => elements.map((element) => (
+    element.hasAttribute('x1')
+      ? `x=${element.getAttribute('x1')}`
+      : `y=${element.getAttribute('y1')}`
+  )));
+  const alpha = await boxOf(page, 'a');
+  const edge = await stageLeftEdgeScreenX(page);
+  const zoom = await page.locator('.stage-canvas-container').getAttribute('data-camera-zoom');
+  return `zoom=${zoom} pxPerWorld=${(await pxPerWorld(page)).toFixed(5)}`
+    + ` alpha.x=${alpha.x.toFixed(2)} stageLeft=${edge.toFixed(2)} miss=${(alpha.x - edge).toFixed(2)}px`
+    + ` guides=[${guides.join(', ')}]`;
+}
+
 test('the snap threshold is a screen radius at any zoom: a 4px miss locks, a 16px miss does not', async ({ page }) => {
-  // The tests of this file that drag a layer rely on the DEFAULT: snapping is
-  // armed, and the View band's switch is what turns it off.
-  await seed(page, SNAP_SEED());
+  // The View band arms snapping by DEFAULT, and these measurements rely on it.
+  await seed(page, THRESHOLD_SEED);
   await expect(page.getByRole('button', { name: 'Toggle snapping' })).toHaveAttribute('aria-pressed', 'true');
 
   for (const zoom of ['100%', 'in', 'out']) {
-    // A fresh document and a fresh camera per zoom, so the two misses below are
-    // measured against exactly the state the zoom keys produced.
-    await seed(page, SNAP_SEED());
+    // A fresh document and camera per zoom. The miss is measured from the rendered
+    // frame at every iteration, so the statement is the same at whatever zoom the
+    // camera settles on: 4 screen pixels lock, 16 screen pixels do not.
+    await seed(page, THRESHOLD_SEED);
     await selectLayers(page, ['Alpha']);
     if (zoom === 'in') await page.keyboard.press('=');
     if (zoom === 'out') for (let step = 0; step < 13; step += 1) await page.keyboard.press('-');
 
-    await dragMissOfScreenPixels(page, 4);
-    await expect(page.locator('.snap-guide')).toHaveCount(1);
+    await dragStageMissOfScreenPixels(page, 4);
+    await expect(page.locator('.snap-guide'), `4px miss did not lock: ${await snapReport(page)}`).toHaveCount(1);
     await page.mouse.up();
     await page.keyboard.press('Control+z');
 
-    await dragMissOfScreenPixels(page, 16);
-    await expect(page.locator('.snap-guide')).toHaveCount(0);
+    await dragStageMissOfScreenPixels(page, 16);
+    await expect(page.locator('.snap-guide'), `16px miss locked: ${await snapReport(page)}`).toHaveCount(0);
     await page.mouse.up();
     await page.keyboard.press('Control+z');
   }

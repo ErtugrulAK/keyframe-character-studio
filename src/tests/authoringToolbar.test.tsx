@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CharacterPart } from '../types/animator';
 
@@ -34,7 +34,9 @@ const animatorCtx = {
   currentFrame: 0,
   activeTemplateId: 'Sequence',
   updatePropertyKeyframeValue: vi.fn(),
-  getComputedTransform: vi.fn(() => ({ x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 })),
+  getComputedTransform: vi.fn((partId: string) => animatorCtx.characterParts
+    .find((part) => part.id === partId)?.baseTransform
+    ?? { x: 0, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 }),
   showToast: vi.fn(),
   startBatchInteraction: vi.fn(),
   endBatchInteraction: vi.fn(),
@@ -42,6 +44,7 @@ const animatorCtx = {
   setBooleanOperandEditingGroupId: vi.fn(),
   armShapeCreation: vi.fn(),
   addCustomPart: vi.fn(),
+  updateCurrentTransform: vi.fn(),
 };
 
 vi.mock('../context/useAnimator', () => ({ useAnimator: () => animatorCtx }));
@@ -233,7 +236,10 @@ describe('AuthoringToolbar', () => {
 
     // The bands are announced, so the strip's structure is readable and testable
     // rather than implied by pixels.
-    const bands = ['Canvas tools', 'Create', 'Boolean operations', 'Layer group', 'Arrange', 'View controls'];
+    const bands = [
+      'Canvas tools', 'Create', 'Boolean operations', 'Layer group',
+      'Align', 'Distribute', 'Rotate and flip', 'Arrange', 'View controls',
+    ];
     expect(screen.getAllByRole('group').map((group) => group.getAttribute('aria-label'))).toEqual(bands);
 
     // R4-10 — Bind/Unbind left the toolbar. The bond model is untouched, so the
@@ -244,12 +250,18 @@ describe('AuthoringToolbar', () => {
 
   it('never fires a disabled action', () => {
     renderToolbar();
-    const disabled = ['Boolean Union', 'Boolean Subtract', 'Dissolve Boolean', 'Group layers', 'Ungroup layers', 'Bring forward', 'Send backward'];
+    const disabled = [
+      'Boolean Union', 'Boolean Subtract', 'Dissolve Boolean', 'Group layers', 'Ungroup layers',
+      'Align', 'Distribute', 'Rotate counter-clockwise', 'Rotate clockwise', 'Flip horizontal', 'Flip vertical',
+      'Bring forward', 'Send backward',
+    ];
     for (const name of disabled) {
       fireEvent.click(screen.getByRole('button', { name }));
     }
     expect(animatorCtx.setCharacterParts).not.toHaveBeenCalled();
     expect(animatorCtx.setTracks).not.toHaveBeenCalled();
+    expect(animatorCtx.updateCurrentTransform).not.toHaveBeenCalled();
+    expect(animatorCtx.startBatchInteraction).not.toHaveBeenCalled();
   });
 
   it('arranges the selected layer through the shared z-index path', () => {
@@ -266,6 +278,59 @@ describe('AuthoringToolbar', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Send backward' }));
     const backward = animatorCtx.setCharacterParts.mock.calls[1][0] as (parts: CharacterPart[]) => CharacterPart[];
     expect(backward([part])[0].zIndex).toBe(1);
+  });
+
+  it('runs the vector commands through the shared transform write path, in one batch', () => {
+    const transform = { x: 200, y: 0, rotation: 0, scaleX: 1, scaleY: 1, opacity: 1 };
+    animatorCtx.characterParts = [shape('a'), shape('b', { baseTransform: transform })];
+    setSelection(['a', 'b'], 'b');
+    renderToolbar();
+
+    // Two measurable layers: the band is available and reports it.
+    const align = screen.getByRole('button', { name: 'Align' });
+    expect(align).not.toBeDisabled();
+    expect(align).toHaveAttribute('aria-haspopup', 'menu');
+    expect(screen.getByRole('button', { name: 'Distribute' })).toBeDisabled();
+
+    fireEvent.click(align);
+    const menu = screen.getByRole('menu', { name: 'Align' });
+    fireEvent.click(within(menu).getByRole('menuitem', { name: 'Align left' }));
+
+    // ONE contract: world-space patches go through updateCurrentTransform, and
+    // the whole command is one batch interaction (one history entry).
+    expect(animatorCtx.startBatchInteraction).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.endBatchInteraction).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledTimes(1);
+    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledWith({ x: 0 }, 'b');
+    expect(screen.queryByRole('menu', { name: 'Align' })).toBeNull();
+  });
+
+  it('rotates and flips the selection with the same authority, disabled without one', () => {
+    const part = shape('a');
+    animatorCtx.characterParts = [part];
+    setSelection([], null);
+    const view = renderToolbar();
+    expect(screen.getByRole('button', { name: 'Rotate clockwise' })).toBeDisabled();
+
+    setSelection(['a'], 'a');
+    view.rerender(<AuthoringToolbar />);
+    const rotate = screen.getByRole('button', { name: 'Rotate clockwise' });
+    expect(rotate).not.toBeDisabled();
+    fireEvent.click(rotate);
+    expect(animatorCtx.startBatchInteraction).toHaveBeenCalledTimes(1);
+    const [rotatedPatch, rotatedId] = animatorCtx.updateCurrentTransform.mock.calls[0];
+    expect(rotatedId).toBe('a');
+    expect(rotatedPatch.rotation).toBe(90);
+    expect(rotatedPatch.x).toBeCloseTo(0, 6);
+    expect(rotatedPatch.y).toBeCloseTo(0, 6);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Flip vertical' }));
+    expect(animatorCtx.updateCurrentTransform).toHaveBeenCalledTimes(2);
+    const [flippedPatch, flippedId] = animatorCtx.updateCurrentTransform.mock.calls[1];
+    expect(flippedId).toBe('a');
+    expect(flippedPatch).toMatchObject({ scaleX: 1, scaleY: -1 });
+    expect(flippedPatch.y).toBeCloseTo(0, 6);
+    expect(flippedPatch.rotation).toBeCloseTo(0, 6);
   });
 
   it('creates shapes, text and the freeform path through the existing authorities', () => {

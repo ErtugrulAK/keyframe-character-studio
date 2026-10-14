@@ -427,6 +427,24 @@ const layerWorldBounds = (
   return getPartWorldBounds(part, worldOf(part.id), 0, 0);
 };
 
+/**
+ * World bounds of ONE layer, walked exactly as the group machinery walks it: a
+ * container measures as the art inside it (nested groups included) and a
+ * container with nothing measurable inside has NO bounds at all.
+ *
+ * This is the measurement the alignment commands arrange with — the same box
+ * `createLayerGroup` centres a new container on — so an arrange command and a
+ * group operation can never disagree about where a layer is.
+ */
+export const getLayerWorldBounds = (
+  parts: CharacterPart[],
+  partId: string,
+  worldOf: (partId: string) => Transform,
+): PartWorldBounds | null => {
+  const part = parts.find((candidate) => candidate.id === partId);
+  return part ? layerWorldBounds(parts, part, worldOf, 0) : null;
+};
+
 // ─── Selection rules ──────────────────────────────────────────────────────
 
 const resolveSelection = (parts: CharacterPart[], ids: string[]): CharacterPart[] => {

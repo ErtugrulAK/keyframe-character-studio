@@ -45,19 +45,22 @@ const relationshipParentOf = (parts: CharacterPart[], partId: string): string | 
  * carries the parent's position into the child, and the bond would add the same
  * delta again on the child's own transform.
  */
-export const isRelationshipChainRelated = (parts: CharacterPart[], aId: string, bId: string): boolean => {
-  const reachable = (startId: string, targetId: string): boolean => {
-    const seen = new Set<string>();
-    let cursor = relationshipParentOf(parts, startId);
-    while (cursor && !seen.has(cursor)) {
-      if (cursor === targetId) return true;
-      seen.add(cursor);
-      cursor = relationshipParentOf(parts, cursor);
-    }
-    return false;
-  };
-  return aId !== bId && (reachable(aId, bId) || reachable(bId, aId));
+export const relationshipAncestorIds = (parts: CharacterPart[], partId: string): string[] => {
+  const chain: string[] = [];
+  const seen = new Set<string>([partId]);
+  let cursor = relationshipParentOf(parts, partId);
+  while (cursor && !seen.has(cursor)) {
+    seen.add(cursor);
+    chain.push(cursor);
+    cursor = relationshipParentOf(parts, cursor);
+  }
+  return chain;
 };
+
+export const isRelationshipChainRelated = (parts: CharacterPart[], aId: string, bId: string): boolean => (
+  aId !== bId
+  && (relationshipAncestorIds(parts, aId).includes(bId) || relationshipAncestorIds(parts, bId).includes(aId))
+);
 
 /**
  * Bond the given parts to each other, dropping each one's links to parts outside

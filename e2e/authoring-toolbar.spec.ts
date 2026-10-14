@@ -24,8 +24,7 @@ const layer = (id: string, name: string, x: number, y: number) => ({
   fillEnabled: true, strokeEnabled: false, width: 160, height: 120,
 });
 
-async function seed(page: Page): Promise<void> {
-  const layers = [layer('alpha', 'Alpha', -120, -60), layer('beta', 'Beta', 140, 90)];
+async function seed(page: Page, layers = [layer('alpha', 'Alpha', -120, -60), layer('beta', 'Beta', 140, 90)]): Promise<void> {
   const scene = JSON.stringify({
     version: 1, coordinateSystem: 'project-unit-center-v1',
     width: 1920, height: 1080, fps: 30, totalFrames: 60,
@@ -84,10 +83,14 @@ test('the toolbar is a compact strip that drives the shared tool and grid state'
   // toolbar is gone, so there is exactly one place a tool or view control lives.
   await expect(page.locator('.viewport-tools-overlay')).toHaveCount(0);
 
-  // R4-10 — the command bands are announced in one order, and Bind/Unbind is no
-  // longer one of the strip's controls (the bond model itself is untouched).
-  await expect(bar.getByRole('group')).toHaveCount(6);
-  for (const name of ['Canvas tools', 'Create', 'Boolean operations', 'Layer group', 'Arrange', 'View controls']) {
+  // R4-10 / R5-12 — the command bands are announced in one order, and
+  // Bind/Unbind is no longer one of the strip's controls (the bond model itself
+  // is untouched).
+  await expect(bar.getByRole('group')).toHaveCount(9);
+  for (const name of [
+    'Canvas tools', 'Create', 'Boolean operations', 'Layer group',
+    'Align', 'Distribute', 'Rotate and flip', 'Arrange', 'View controls',
+  ]) {
     await expect(bar.getByRole('group', { name })).toBeVisible();
   }
   await expect(page.getByRole('button', { name: 'Bind selected layers' })).toHaveCount(0);
@@ -120,7 +123,76 @@ test('the toolbar is a compact strip that drives the shared tool and grid state'
   await expect(gridRects).toHaveCount(gridWasVisible ? 1 : 0);
 });
 
-test('view-only tools never write the document', async ({ page }) => {
+const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+
+test('the vector bands align, distribute, rotate and flip the selection as one authority', async ({ page }) => {
+  await seed(page, [layer('alpha', 'Alpha', -260, 0), layer('beta', 'Beta', -60, 0), layer('gamma', 'Gamma', 260, 0)]);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await settle(page);
+
+  /** The rendered layers, in paint order, with their world-space boxes. */
+  const boxes = () => page.locator('.stage-svg [data-part-id]').evaluateAll((nodes) => nodes.map((node) => {
+    const rect = node.getBoundingClientRect();
+    return {
+      id: node.getAttribute('data-part-id'),
+      left: Math.round(rect.left * 100) / 100,
+      width: Math.round(rect.width * 100) / 100,
+      center: Math.round((rect.left + rect.width / 2) * 100) / 100,
+    };
+  }));
+
+  const row = (name: string) => page.locator('.actor-node', { hasText: name }).first();
+  await row('Alpha').click();
+  await row('Beta').click({ modifiers: ['Control'] });
+  await row('Gamma').click({ modifiers: ['Control'] });
+  const before = await boxes();
+  expect(new Set(before.map((box) => box.left)).size).toBe(3);
+
+  // Align: the three left edges meet on the collective left edge.
+  await toolbarButton(page, 'Align').click();
+  await page.getByRole('menu', { name: 'Align' }).getByRole('menuitem', { name: 'Align left' }).click();
+  await settle(page);
+  const aligned = await boxes();
+  for (const box of aligned) expect(Math.abs(box.left - aligned[0].left)).toBeLessThanOrEqual(1);
+
+  // ONE command, ONE undo entry: the strip's Undo walks it back in one step.
+  await page.locator('button[title="Undo"]').click();
+  await settle(page);
+  expect(await boxes()).toEqual(before);
+  await page.locator('button[title="Redo"]').click();
+  await settle(page);
+  expect(await boxes()).toEqual(aligned);
+
+  // Distribute: the outer two hold the span and the middle centre is halfway.
+  const spread = (await boxes()).map((box) => box.center).sort((a, b) => a - b);
+  await toolbarButton(page, 'Distribute').click();
+  await page.getByRole('menu', { name: 'Distribute' }).getByRole('menuitem', { name: 'Distribute horizontally' }).click();
+  await settle(page);
+  const distributed = (await boxes()).map((box) => box.center).sort((a, b) => a - b);
+  expect(distributed[0]).toBeCloseTo(spread[0], 0);
+  expect(distributed[2]).toBeCloseTo(spread[2], 0);
+  expect(distributed[1] - distributed[0]).toBeCloseTo(distributed[2] - distributed[1], 0);
+
+  // Rotate and flip from the keyboard, on the one selected layer.
+  await row('Alpha').click();
+  const disclosure = page.getByRole('button', { name: /(?:Expand|Collapse) TRANSFORM/ });
+  await expect(disclosure).toBeVisible();
+  if (await disclosure.getAttribute('aria-expanded') === 'false') await disclosure.click();
+  await expect(page.locator('input[aria-label="Rotation"]')).toHaveValue('0');
+
+  await page.keyboard.press(`${modifier}+Shift+ArrowRight`);
+  await expect(page.locator('input[aria-label="Rotation"]')).toHaveValue('90');
+  await page.keyboard.press(`${modifier}+Shift+ArrowLeft`);
+  await expect(page.locator('input[aria-label="Rotation"]')).toHaveValue('0');
+
+  // The flip is a real document change: the authored scale is mirrored.
+  await page.keyboard.press('Shift+H');
+  expect(await snapshot(page)).toContain('"scaleX":-1');
+  await page.keyboard.press('Shift+V');
+  expect(await snapshot(page)).toContain('"scaleY":-1');
+});
+
+
   await seed(page);
   const before = await snapshot(page);
   const undoWasDisabled = await page.locator('button[title="Undo"]').isDisabled();

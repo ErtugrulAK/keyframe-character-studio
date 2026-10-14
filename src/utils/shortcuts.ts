@@ -50,7 +50,31 @@
  * `mod+a` select all, `mod+g` group, `mod+shift+g` ungroup, `?` shortcut
  * reference, `r` rectangle, `o` circle, `t` text, `p` pen.
  *
+ * ── Round five: the vector transform quartet ───────────────────────────────
+ * The toolbar's new authoring commands (align, distribute, rotate, flip) all end
+ * up in `utils/vectorArrange`; four of them also get a key, because they are
+ * atomic one-shot commands a user repeats:
+ *
+ * | Gesture                 | Command              | Why this gesture                |
+ * |-------------------------|----------------------|---------------------------------|
+ * | `mod+shift+arrowleft`   | Rotate 90° CCW       | an arrow points the way it turns |
+ * | `mod+shift+arrowright`  | Rotate 90° CW        | the mirrored arrow               |
+ * | `shift+h`               | Flip horizontal      | H is the axis, and Shift is the "transform" layer over the plain tool letters |
+ * | `shift+v`               | Flip vertical        | V is the axis                    |
+ *
+ * The two flip bindings are deliberately the SHIFTED TOOL LETTERS: plain
+ * `v`/`h` still pick the Select/Pan tool, and modifiers are matched exactly, so
+ * `Ctrl+Shift+V` (paste as plain text elsewhere) is never this editor's flip.
+ * The rotate pair carries `mod` so it can never be confused with the timeline's
+ * plain arrow walking, and no binding in this table is a prefix of another.
+ *
  * Deliberately NOT adopted:
+ *   - A key for Align (six edges) and Distribute (two axes). Both are
+ *     multi-item commands whose target depends on the measurable selection — an
+ *     align of two layers and a distribute of three are different commands with
+ *     the same intent — so a single letter would have to guess. They live in the
+ *     authoring toolbar, where the choices are named, and are deliberately
+ *     absent from this reference rather than documented with a fake key.
  *   - `space` hold = temporary pan. Space is this editor's play/pause toggle
  *     (and the browser's own activation key for a focused button), so a
  *     hold-to-pan would either fire playback on every pan or need a delay
@@ -77,7 +101,12 @@
 
 export type ShortcutPlatform = 'mac' | 'other';
 
-export type ShortcutCategory = 'tools' | 'create' | 'selection' | 'edit' | 'timeline' | 'view' | 'help';
+/**
+ * The reference UI's bands, in the order a reader walks the editor: what the
+ * pointer does, what it creates, how it arranges what is selected, the timeline,
+ * grouping, the view, and the general commands.
+ */
+export type ShortcutCategory = 'selection' | 'create' | 'transform' | 'timeline' | 'grouping' | 'view' | 'general';
 
 /**
  * Where a binding is live. `global` commands run anywhere the editor owns the
@@ -90,6 +119,7 @@ export type ShortcutCommandId =
   | 'tool-select' | 'tool-pan'
   | 'create-rectangle' | 'create-circle' | 'create-text' | 'tool-pen'
   | 'select-all' | 'group-layers' | 'ungroup-layers'
+  | 'rotate-ccw' | 'rotate-cw' | 'flip-horizontal' | 'flip-vertical'
   | 'undo' | 'redo' | 'copy' | 'paste' | 'duplicate' | 'delete-selection' | 'cancel-gesture' | 'context-menu'
   | 'keyframe-select' | 'keyframe-walk' | 'marquee-cancel'
   | 'play-pause' | 'zoom-in' | 'zoom-out'
@@ -108,53 +138,63 @@ export interface ShortcutCommand {
 }
 
 export const SHORTCUT_CATEGORY_LABELS: Record<ShortcutCategory, string> = {
-  tools: 'Tools',
-  create: 'Create',
-  selection: 'Selection and grouping',
-  edit: 'Edit',
+  selection: 'Selection and navigation',
+  create: 'Creation',
+  transform: 'Transform and arrange',
   timeline: 'Timeline',
-  view: 'View and playback',
-  help: 'Help',
+  grouping: 'Grouping and Boolean',
+  view: 'View',
+  general: 'General',
 };
 
 /** The reference UI's band order. */
-export const SHORTCUT_CATEGORY_ORDER: ShortcutCategory[] = ['tools', 'create', 'selection', 'edit', 'timeline', 'view', 'help'];
+export const SHORTCUT_CATEGORY_ORDER: ShortcutCategory[] = ['selection', 'create', 'transform', 'grouping', 'timeline', 'view', 'general'];
 
 export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
-  { id: 'tool-select', label: 'Select tool', category: 'tools', gestures: ['v'], scope: 'global' },
-  { id: 'tool-pan', label: 'Pan tool', category: 'tools', gestures: ['h'], scope: 'global' },
-  { id: 'tool-pen', label: 'Pen / freeform draw', category: 'tools', gestures: ['p'], scope: 'global', detail: 'Enter commits the path, Esc cancels it.' },
+  { id: 'tool-select', label: 'Select tool', category: 'selection', gestures: ['v'], scope: 'global' },
+  { id: 'tool-pan', label: 'Pan tool', category: 'selection', gestures: ['h'], scope: 'global' },
+  { id: 'select-all', label: 'Select all layers', category: 'selection', gestures: ['mod+a'], scope: 'global' },
 
   { id: 'create-rectangle', label: 'Rectangle', category: 'create', gestures: ['r'], scope: 'global', detail: 'Then drag on the stage to place it.' },
   { id: 'create-circle', label: 'Circle', category: 'create', gestures: ['o'], scope: 'global', detail: 'Then drag on the stage to place it.' },
   { id: 'create-text', label: 'Text layer', category: 'create', gestures: ['t'], scope: 'global' },
+  { id: 'tool-pen', label: 'Pen / freeform draw', category: 'create', gestures: ['p'], scope: 'global', detail: 'Enter commits the path, Esc cancels it.' },
 
-  { id: 'select-all', label: 'Select all layers', category: 'selection', gestures: ['mod+a'], scope: 'global' },
-  { id: 'group-layers', label: 'Group selected layers', category: 'selection', gestures: ['mod+g'], scope: 'global' },
-  { id: 'ungroup-layers', label: 'Ungroup selected layer', category: 'selection', gestures: ['mod+shift+g'], scope: 'global' },
-
-  { id: 'undo', label: 'Undo', category: 'edit', gestures: ['mod+z'], scope: 'global' },
-  { id: 'redo', label: 'Redo', category: 'edit', gestures: ['mod+shift+z', 'mod+y'], scope: 'global' },
-  { id: 'copy', label: 'Copy selected layer', category: 'edit', gestures: ['mod+c'], scope: 'global' },
-  { id: 'paste', label: 'Paste layer', category: 'edit', gestures: ['mod+v'], scope: 'global' },
-  { id: 'duplicate', label: 'Duplicate selected layer', category: 'edit', gestures: ['mod+d'], scope: 'global' },
   {
-    id: 'delete-selection',
-    label: 'Delete keyframes, else the layer',
-    category: 'edit',
-    gestures: ['delete', 'backspace'],
+    id: 'rotate-ccw',
+    label: 'Rotate 90° counter-clockwise',
+    category: 'transform',
+    gestures: ['mod+shift+arrowleft'],
     scope: 'global',
-    detail: 'While the timeline owns focus only keyframes are deleted, so a layer cannot be removed from there by accident.',
+    detail: 'Pivots on the selection centre, so the whole selection turns as one body.',
   },
   {
-    id: 'cancel-gesture',
-    label: 'Cancel, step out, deselect keyframes',
-    category: 'edit',
-    gestures: ['escape'],
+    id: 'rotate-cw',
+    label: 'Rotate 90° clockwise',
+    category: 'transform',
+    gestures: ['mod+shift+arrowright'],
     scope: 'global',
-    detail: 'In priority order: cancel the armed gesture or the Boolean operand edit, leave a grouped child for its container, then clear the timeline keyframe selection. Clicking empty stage space clears the layer selection.',
+    detail: 'Pivots on the selection centre, so the whole selection turns as one body.',
   },
-  { id: 'context-menu', label: 'Layer context menu', category: 'edit', gestures: ['shift+f10', 'contextmenu'], scope: 'global' },
+  {
+    id: 'flip-horizontal',
+    label: 'Flip horizontal',
+    category: 'transform',
+    gestures: ['shift+h'],
+    scope: 'global',
+    detail: 'Mirrors about the selection centre; a layer stays exactly where it was on screen.',
+  },
+  {
+    id: 'flip-vertical',
+    label: 'Flip vertical',
+    category: 'transform',
+    gestures: ['shift+v'],
+    scope: 'global',
+    detail: 'Mirrors about the selection centre; a layer stays exactly where it was on screen.',
+  },
+
+  { id: 'group-layers', label: 'Group selected layers', category: 'grouping', gestures: ['mod+g'], scope: 'global' },
+  { id: 'ungroup-layers', label: 'Ungroup selected layer', category: 'grouping', gestures: ['mod+shift+g'], scope: 'global' },
 
   { id: 'keyframe-select', label: 'Select the focused keyframe', category: 'timeline', gestures: ['enter', 'space'], scope: 'timeline', detail: 'With a keyframe diamond focused: selects it and moves the playhead to it.' },
   { id: 'keyframe-walk', label: 'Walk focus along the lane', category: 'timeline', gestures: ['arrowleft', 'arrowright'], scope: 'timeline', detail: 'With a keyframe diamond focused.' },
@@ -164,7 +204,29 @@ export const SHORTCUT_COMMANDS: ShortcutCommand[] = [
   { id: 'zoom-in', label: 'Zoom in', category: 'view', gestures: ['plus', '='], scope: 'canvas' },
   { id: 'zoom-out', label: 'Zoom out', category: 'view', gestures: ['-'], scope: 'canvas' },
 
-  { id: 'shortcut-reference', label: 'Keyboard shortcut reference', category: 'help', gestures: ['?'], scope: 'global' },
+  { id: 'undo', label: 'Undo', category: 'general', gestures: ['mod+z'], scope: 'global' },
+  { id: 'redo', label: 'Redo', category: 'general', gestures: ['mod+shift+z', 'mod+y'], scope: 'global' },
+  { id: 'copy', label: 'Copy selected layer', category: 'general', gestures: ['mod+c'], scope: 'global' },
+  { id: 'paste', label: 'Paste layer', category: 'general', gestures: ['mod+v'], scope: 'global' },
+  { id: 'duplicate', label: 'Duplicate selected layer', category: 'general', gestures: ['mod+d'], scope: 'global' },
+  {
+    id: 'delete-selection',
+    label: 'Delete keyframes, else the layer',
+    category: 'general',
+    gestures: ['delete', 'backspace'],
+    scope: 'global',
+    detail: 'While the timeline owns focus only keyframes are deleted, so a layer cannot be removed from there by accident.',
+  },
+  {
+    id: 'cancel-gesture',
+    label: 'Cancel, step out, deselect keyframes',
+    category: 'general',
+    gestures: ['escape'],
+    scope: 'global',
+    detail: 'In priority order: cancel the armed gesture or the Boolean operand edit, leave a grouped child for its container, then clear the timeline keyframe selection. Clicking empty stage space clears the layer selection.',
+  },
+  { id: 'context-menu', label: 'Layer context menu', category: 'general', gestures: ['shift+f10', 'contextmenu'], scope: 'global' },
+  { id: 'shortcut-reference', label: 'Keyboard shortcut reference', category: 'general', gestures: ['?'], scope: 'global' },
 ];
 
 /** The DOM attribute a surface carries to declare that it owns a shortcut scope. */
@@ -305,8 +367,28 @@ export const formatShortcutHint = (id: ShortcutCommandId, platform: ShortcutPlat
   formatShortcutGesture(findShortcutCommand(id).gestures[0], platform);
 
 /**
+ * The `KeyboardEvent.key` spelling of a grammar key. `aria-keyshortcuts` is
+ * expressed in that vocabulary, so an arrow is `ArrowLeft`, never `Arrowleft`,
+ * and a modifier name is spelled out (`Control`, `Meta`).
+ */
+const ARIA_KEY_NAMES: Record<string, string> = {
+  arrowleft: 'ArrowLeft',
+  arrowright: 'ArrowRight',
+  arrowup: 'ArrowUp',
+  arrowdown: 'ArrowDown',
+  escape: 'Escape',
+  delete: 'Delete',
+  backspace: 'Backspace',
+  enter: 'Enter',
+  space: 'Space',
+  contextmenu: 'ContextMenu',
+  plus: '+',
+};
+
+/**
  * The same binding in the WAI-ARIA `aria-keyshortcuts` syntax (`Control+G`,
- * `Meta+G`), for controls that advertise the key they run.
+ * `Meta+G`, `Control+Shift+ArrowRight`), for controls that advertise the key
+ * they run.
  */
 export const ariaKeyshortcuts = (id: ShortcutCommandId, platform: ShortcutPlatform): string =>
   findShortcutCommand(id).gestures.map((gesture) => {
@@ -315,6 +397,6 @@ export const ariaKeyshortcuts = (id: ShortcutCommandId, platform: ShortcutPlatfo
     const modifiers = parts.slice(0, -1).map((modifier) => (
       modifier === 'mod' ? (platform === 'mac' ? 'Meta' : 'Control') : modifier === 'shift' ? 'Shift' : 'Alt'
     ));
-    const ariaKey = key.length === 1 ? key.toUpperCase() : `${key[0].toUpperCase()}${key.slice(1)}`;
+    const ariaKey = ARIA_KEY_NAMES[key] ?? (key.length === 1 ? key.toUpperCase() : `${key[0].toUpperCase()}${key.slice(1)}`);
     return [...modifiers, ariaKey].join('+');
   }).join(' ');

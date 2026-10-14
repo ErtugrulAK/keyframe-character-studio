@@ -8,6 +8,7 @@ import {
   type ShortcutCommandId,
   type ShortcutPlatform,
 } from '../utils/shortcuts';
+import type { FlipAxis, RotateDirection } from '../utils/vectorArrange';
 
 /**
  * The commands the editor's global keyboard handler can run. Callers provide
@@ -38,6 +39,12 @@ export interface EditorShortcutCommands {
   selectAllLayers?: () => void;
   groupSelection?: () => void;
   ungroupSelection?: () => void;
+  /**
+   * The vector transform commands, run through the same arrange authority the
+   * toolbar's Rotate/Flip buttons use.
+   */
+  rotateSelection?: (direction: RotateDirection) => void;
+  flipSelection?: (axis: FlipAxis) => void;
   /** Moves the selection out of a grouped child onto its container; true when it did. */
   exitGroupDrillIn?: () => boolean;
   /** Clears the timeline's keyframe selection; true when there was one. */
@@ -90,6 +97,8 @@ export const useKeyboardShortcuts = ({
   selectAllLayers,
   groupSelection,
   ungroupSelection,
+  rotateSelection,
+  flipSelection,
   exitGroupDrillIn,
   clearKeyframeSelection,
   setIsPlaying,
@@ -136,6 +145,16 @@ export const useKeyboardShortcuts = ({
           return;
         case 'ungroup-layers':
           ungroupSelection?.();
+          return;
+        case 'rotate-ccw':
+        case 'rotate-cw':
+          event.preventDefault();
+          rotateSelection?.(id === 'rotate-cw' ? 'cw' : 'ccw');
+          return;
+        case 'flip-horizontal':
+        case 'flip-vertical':
+          event.preventDefault();
+          flipSelection?.(id === 'flip-vertical' ? 'vertical' : 'horizontal');
           return;
         case 'undo':
           event.preventDefault();
@@ -257,6 +276,8 @@ export const useKeyboardShortcuts = ({
     selectAllLayers,
     groupSelection,
     ungroupSelection,
+    rotateSelection,
+    flipSelection,
     exitGroupDrillIn,
     clearKeyframeSelection,
     setIsPlaying,

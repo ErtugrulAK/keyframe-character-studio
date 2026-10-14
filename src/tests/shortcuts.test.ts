@@ -41,7 +41,7 @@ describe('shortcut keymap', () => {
     // in DIFFERENT scopes: the marquee owns it while a drag is in flight.
     expect(conflicts).toEqual([]);
     const escapeOwners = SHORTCUT_COMMANDS.filter((command) => command.gestures.includes('escape')).map((command) => command.id);
-    expect(escapeOwners).toEqual(['cancel-gesture', 'marquee-cancel']);
+    expect([...escapeOwners].sort()).toEqual(['cancel-gesture', 'marquee-cancel']);
   });
 
   it('keeps every gesture inside the declared grammar', () => {
@@ -118,6 +118,10 @@ describe('shortcut keymap', () => {
     expect(ariaKeyshortcuts('group-layers', 'mac')).toBe('Meta+G');
     expect(ariaKeyshortcuts('ungroup-layers', 'other')).toBe('Control+Shift+G');
     expect(ariaKeyshortcuts('redo', 'other')).toBe('Control+Shift+Z Control+Y');
+    // Arrow keys are spelled the way `KeyboardEvent.key` spells them.
+    expect(ariaKeyshortcuts('rotate-cw', 'other')).toBe('Control+Shift+ArrowRight');
+    expect(ariaKeyshortcuts('rotate-ccw', 'mac')).toBe('Meta+Shift+ArrowLeft');
+    expect(ariaKeyshortcuts('flip-horizontal', 'other')).toBe('Shift+H');
     expect(ariaKeyshortcuts('tool-select', 'other')).toBe('V');
   });
 

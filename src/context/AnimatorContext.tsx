@@ -39,6 +39,7 @@ import { usePresets, type SavePresetInput, type UpdatePresetInput } from '../hoo
 import { useProjectState } from '../hooks/useProjectState';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { createLayerGroupingActions } from '../hooks/useLayerGrouping';
+import { createVectorArrangeActions } from '../hooks/useVectorArrangeAuthoring';
 import { resolveOutermostGroupAncestor } from '../utils/layerGrouping';
 import { selectAllLayers } from '../utils/layerSelection';
 import { ShortcutReferenceDialog } from '../components/Shortcuts/ShortcutReferenceDialog';
@@ -479,7 +480,41 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     showToast,
   });
 
+  const {
+    updateCurrentTransform,
+    updateCurrentPropertyChannel,
+    updatePartMedia,
+  } = useInspector({
+    selectedPartId,
+    selectedPartIds,
+    activeTemplateId,
+    characterParts,
+    currentFrame,
+    tracks,
+    setTracks,
+    setCharacterParts,
+    getComputedTransform,
+  });
+
   const [isShortcutReferenceOpen, setIsShortcutReferenceOpen] = useState<boolean>(false);
+
+  /**
+   * The vector arrange commands the keyboard runs. They are the SAME actions the
+   * toolbar's align/distribute/rotate/flip controls run (one implementation,
+   * `createVectorArrangeActions`), built here from the provider's own locals
+   * because a hook cannot be called from inside its own provider.
+   */
+  const { rotate: rotateSelection, flip: flipSelection } = createVectorArrangeActions({
+    currentFrame,
+    selectedPartId,
+    selectedPartIds,
+    characterParts,
+    getComputedTransform,
+    updateCurrentTransform,
+    startBatchInteraction,
+    endBatchInteraction,
+    showToast,
+  });
 
   useKeyboardShortcuts({
     selectedPartId,
@@ -503,6 +538,8 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     selectAllLayers: () => selectAllLayers(characterParts, { setSelectedPartIds, setSelectedPartId }),
     groupSelection,
     ungroupSelection,
+    rotateSelection,
+    flipSelection,
     /** Escape steps out of a grouped child onto the container that holds it. */
     exitGroupDrillIn: () => {
       if (!selectedPartId) return false;
@@ -520,26 +557,6 @@ export const AnimatorProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setIsPlaying,
     appMode,
     openShortcutReference: () => setIsShortcutReferenceOpen(true),
-  });
-
-
-
-
-
-  const {
-    updateCurrentTransform,
-    updateCurrentPropertyChannel,
-    updatePartMedia,
-  } = useInspector({
-    selectedPartId,
-    selectedPartIds,
-    activeTemplateId,
-    characterParts,
-    currentFrame,
-    tracks,
-    setTracks,
-    setCharacterParts,
-    getComputedTransform,
   });
 
 

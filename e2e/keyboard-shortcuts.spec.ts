@@ -60,11 +60,17 @@ test('the reference lists the bindings for this platform and closes on Escape', 
   // The keys are the platform's own labels, and the categories are the table's.
   const expected = modifier === 'Meta' ? '⌘G' : 'Ctrl+G';
   await expect(dialog).toContainText(expected);
-  for (const category of ['Tools', 'Create', 'Selection and grouping', 'Edit', 'Timeline', 'View and playback', 'Help']) {
+  for (const category of [
+    'Selection and navigation', 'Creation', 'Transform and arrange', 'Grouping and Boolean',
+    'Timeline', 'View', 'General',
+  ]) {
     await expect(dialog.getByRole('region', { name: category })).toBeVisible();
   }
+  // The transform quartet is listed with the platform's own arrow labels.
+  await expect(dialog.getByRole('region', { name: 'Transform and arrange' }))
+    .toContainText(modifier === 'Meta' ? '⇧⌘←' : 'Ctrl+Shift+←');
   // Every command in the table is on screen — count the rows rather than spot-check.
-  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(24);
+  await expect(dialog.locator('.shortcut-reference-row')).toHaveCount(28);
 
   await page.keyboard.press('Escape');
   await expect(dialog).toHaveCount(0);

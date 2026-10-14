@@ -103,3 +103,66 @@
   opacity: 0.4;
   cursor: default;
 }
+
+/* The trigger of a command-set band stays lit while its menu is open, the same
+   way an active tool does: the strip never has to be read twice to know which
+   band owns the floating menu. */
+.authoring-toolbar-button.is-open {
+  background: rgba(53, 200, 176, 0.14);
+  border-color: rgba(53, 200, 176, 0.38);
+  color: var(--kcs-text-primary);
+}
+
+/* The band menu: portalled to the body (the strip scrolls horizontally, so a
+   panel inside it would be clipped) and placed by the shared floating-panel
+   authority. Chrome-overlay band of the editor stack: it hangs over the
+   workspace, exactly like the toolbar it belongs to. */
+.authoring-toolbar-menu {
+  z-index: var(--kcs-layer-chrome-overlay);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 196px;
+  padding: 4px;
+  border: 1px solid var(--kcs-border-default);
+  border-radius: var(--kcs-radius-panel);
+  background: var(--kcs-bg-elevated);
+  box-shadow: var(--kcs-shadow-dialog);
+}
+
+.authoring-toolbar-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: var(--kcs-control-sm);
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--kcs-radius-control);
+  background: transparent;
+  color: var(--kcs-text-secondary);
+  font-size: var(--font-size-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.authoring-toolbar-menu-item > svg {
+  width: 15px;
+  height: 15px;
+  flex: 0 0 auto;
+}
+
+.authoring-toolbar-menu-item:hover,
+.authoring-toolbar-menu-item:focus-visible {
+  background: var(--kcs-hover);
+  color: var(--kcs-text-primary);
+}
+
+.authoring-toolbar-menu-item:focus-visible {
+  outline: 2px solid var(--kcs-focus);
+  outline-offset: -2px;
+}
+
+.authoring-toolbar-menu-item:active {
+  background: var(--kcs-bg-active);
+}

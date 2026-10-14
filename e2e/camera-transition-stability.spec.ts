@@ -44,6 +44,10 @@ interface Frame {
   stageWidth: number;
   stageHeight: number;
   cameraZoom: string;
+  /** The timeline panel's own animated edge, and the handle pinned to it. */
+  timelineHeight: number;
+  panelTop: number;
+  handleCentreY: number;
 }
 
 async function seed(page: Page): Promise<void> {
@@ -116,6 +120,8 @@ async function sampleTransition(page: Page, toggleLabel: string, durationMs = 60
         return { x: projected.x, y: projected.y };
       };
       const stageBox = stage.getBoundingClientRect();
+      const panelBox = document.querySelector('.sequencer-timeline')!.getBoundingClientRect();
+      const handleBox = document.querySelector('[data-testid="timeline-collapse-toggle"]')!.getBoundingClientRect();
       frames.push({
         t: performance.now() - started,
         alpha: project(points.alpha),
@@ -126,6 +132,9 @@ async function sampleTransition(page: Page, toggleLabel: string, durationMs = 60
         stageWidth: stageBox.width,
         stageHeight: stageBox.height,
         cameraZoom: document.querySelector('.stage-canvas-container')?.getAttribute('data-camera-zoom') ?? '',
+        timelineHeight: panelBox.height,
+        panelTop: panelBox.top,
+        handleCentreY: handleBox.top + handleBox.height / 2,
       });
       const elapsed = performance.now() - started;
       if (!clicked && elapsed >= 80) {
@@ -148,9 +157,14 @@ async function sampleTransition(page: Page, toggleLabel: string, durationMs = 60
   });
 }
 
-/** Frames whose stage box is more than 4px away from the first sample. */
+/**
+ * Frames whose stage box is more than 4px away from the first sample, on either
+ * axis: a panel edge changes the stage's width, the timeline's changes its
+ * height, and both are real layout animations this spec has to observe.
+ */
 const movingFrames = (frames: Frame[]): Frame[] => frames.filter(
-  (frame) => Math.abs(frame.stageWidth - frames[0].stageWidth) > 4,
+  (frame) => Math.abs(frame.stageWidth - frames[0].stageWidth) > 4
+    || Math.abs(frame.stageHeight - frames[0].stageHeight) > 4,
 );
 
 function reportFrames(label: string, frames: Frame[]): void {
@@ -165,7 +179,8 @@ function reportFrames(label: string, frames: Frame[]): void {
   const zoomSpread = Math.max(...frames.map((frame) => Math.abs(frame.a - baseline.a)));
   console.log(
     `[transition] ${label} | frames=${frames.length} | animating=${movingFrames(frames).length} `
-    + `| stage ${baseline.stageWidth.toFixed(1)}->${frames[frames.length - 1].stageWidth.toFixed(1)} `
+    + `| stage ${baseline.stageWidth.toFixed(1)}x${baseline.stageHeight.toFixed(1)}`
+    + `->${frames[frames.length - 1].stageWidth.toFixed(1)}x${frames[frames.length - 1].stageHeight.toFixed(1)} `
     + `| worstDelta=${worst.toFixed(3)}px | magnificationSpread=${zoomSpread.toFixed(5)}`,
   );
 }
@@ -249,4 +264,54 @@ test('repeated chrome toggles never drift the world on any frame', async ({ page
     expectStable(`repeat ${label}`, frames);
     await settle(page);
   }
+});
+
+/**
+ * R5-03 — the panel edge really eased: it visited intermediate heights and moved
+ * in ONE direction the whole way (no bounce, no counter-motion, no delayed
+ * correction), and the edge handle stayed pinned to that moving edge.
+ */
+function expectEasedEdge(label: string, frames: Frame[], direction: 'grow' | 'shrink'): void {
+  const heights = frames.map((frame) => frame.timelineHeight);
+  const distinct = new Set(heights.map((height) => Math.round(height))).size;
+  expect(distinct, `${label}: the panel edge teleported instead of easing`).toBeGreaterThanOrEqual(3);
+  const travelled = Math.abs(heights[heights.length - 1] - heights[0]);
+  expect(travelled, `${label}: the panel edge never moved`).toBeGreaterThan(80);
+  console.log(`[transition] ${label} | edge(px)=${heights.map((height) => height.toFixed(1)).join(',')}`);
+
+  for (let index = 1; index < heights.length; index += 1) {
+    const step = heights[index] - heights[index - 1];
+    const counter = direction === 'shrink' ? step > 0.5 : step < -0.5;
+    expect(
+      counter,
+      `${label}: the edge counter-moved on frame ${index} by ${step.toFixed(2)}px`,
+    ).toBe(false);
+  }
+
+  frames.forEach((frame, index) => {
+    expect(
+      Math.abs(frame.handleCentreY - frame.panelTop),
+      `${label}: the edge handle left the panel edge on frame ${index}`,
+    ).toBeLessThanOrEqual(2);
+  });
+}
+
+test('R5-03 — the timeline eases between collapsed and expanded without moving the world', async ({ page }) => {
+  await seed(page);
+
+  const collapse = await sampleTransition(page, 'Collapse timeline', 900);
+  reportFrames('timeline collapse', collapse);
+  expectStable('timeline collapse', collapse);
+  expectEasedEdge('timeline collapse', collapse, 'shrink');
+  await settle(page);
+  const collapsedHeight = await page.evaluate(() => document.querySelector('.sequencer-timeline')!.getBoundingClientRect().height);
+  expect(collapsedHeight.toFixed(1), 'the collapsed strip is not the header band').toBe('39.0');
+
+  const expand = await sampleTransition(page, 'Expand timeline', 900);
+  reportFrames('timeline expand', expand);
+  expectStable('timeline expand', expand);
+  expectEasedEdge('timeline expand', expand, 'grow');
+  await settle(page);
+  const expandedHeight = await page.evaluate(() => document.querySelector('.sequencer-timeline')!.getBoundingClientRect().height);
+  expect(expandedHeight.toFixed(1), 'expanding did not restore the authored height').toBe('320.0');
 });

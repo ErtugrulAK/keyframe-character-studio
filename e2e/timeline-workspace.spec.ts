@@ -265,9 +265,13 @@ test('R2-01 — the timeline collapses to a restore strip and expands to the pre
   await expect(toggle).toHaveAttribute('aria-expanded', 'false');
   await expect(toggle).toHaveAccessibleName('Expand timeline');
   await expect(page.locator('.timeline-body')).toBeHidden();
+  // R5-03: the edge now EASES to the collapsed height, so it is polled until it
+  // has settled instead of read straight after the toggle.
+  await expect.poll(() => timelineHeight(page), {
+    message: 'the collapsed strip never settled to a compact header',
+  }).toBeLessThan(60);
   const collapsedHeight = await timelineHeight(page);
-  expect(collapsedHeight, 'the collapsed strip is not a compact header').toBeLessThan(60);
-  expect(collapsedHeight).toBeGreaterThan(20);
+  expect(collapsedHeight, 'the collapsed strip is not a compact header').toBeGreaterThan(20);
   // The restore affordance survives the collapse.
   await expect(toggle).toBeVisible();
 
@@ -275,7 +279,9 @@ test('R2-01 — the timeline collapses to a restore strip and expands to the pre
   await expect(page.getByTestId('sequencer-timeline')).toHaveAttribute('data-collapsed', 'false');
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(page.locator('.timeline-body')).toBeVisible();
-  expect(await timelineHeight(page), 'expanding did not restore the authored height').toBeCloseTo(authored, 0);
+  await expect.poll(() => timelineHeight(page), {
+    message: 'expanding did not restore the authored height',
+  }).toBeCloseTo(authored, 0);
   expect(await page.locator('.playhead-line').getAttribute('data-frame'), 'collapse destroyed timeline state').toBe(frameBefore);
   expect(await page.locator('.ue-track-row').count(), 'collapse destroyed timeline state').toBe(tracksBefore);
 });

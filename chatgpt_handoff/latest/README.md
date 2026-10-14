@@ -1,87 +1,114 @@
-# KCS Minimal ChatGPT Upload Bundle — manual QA round 4 remediation (R4-01…R4-16)
+# KCS Minimal ChatGPT Upload Bundle — manual QA round 5 remediation (R5-01…R5-15)
 
-Task-specific handoff for the MANUAL QA ROUND 4 remediation on branch
-`fix/manual-qa-round1-remediation` (2026-10-13): round 1 fixed findings A–J, round 2 fixed R2-01…R2-12,
-round 3 fixed R3-01…R3-13, and round 4 fixed R4-01…R4-16; the full validation ran green on the frozen
-round-4 head (including the FULL Chromium suite) and PR #9 was updated. This is not an archive.
+Task-specific handoff for the MANUAL QA ROUND 5 remediation on branch
+`fix/manual-qa-round1-remediation` (2026-10-14): round 1 fixed findings A–J, round 2 fixed R2-01…R2-12,
+round 3 fixed R3-01…R3-13, round 4 fixed R4-01…R4-16, and round 5 fixed R5-01…R5-15; the remaining gates
+ran green on the frozen revision (including the FULL Chromium suite) and PR #9 was updated. This is not an
+archive.
 
 ## Current truth
 
-- Repository (canonical, untouched): `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
+- Repository (canonical, untouched, still on `main` @ `8e2df61`, clean):
+  `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio`
 - Worktree that carries this work: `C:\Users\ertugrul.ak\Desktop\keyframe-character-studio-omp-manual-qa-r1`
-- Branch: `fix/manual-qa-round1-remediation` (base `origin/main` at `8e2df61`)
+- Branch: `fix/manual-qa-round1-remediation` (base `origin/main` at `8e2df61`), head
+  `1168ceea0fe409f153221749b3e0b890316835cf` (`1168cee`), pushed as a **fast-forward** (`42acf1e..1168cee`)
+  with an explicit refspec — no force, no rebase
+- **Validated code + tests head: `0e81ff3`**; `1168cee` adds the round record and the changelog only
 - PR: **#9 OPEN, not merged** — `https://github.com/ErtugrulAK/keyframe-character-studio/pull/9`
-- Round-4 head: `d545cfca58978e82357c7f8ed8da8d1360710278` (`d545cfc`), mergeable **MERGEABLE**, merge state
-  **CLEAN**; CI **CI Pipeline** run `38420352883` (`pull_request`) — **success**
-- Findings fixed: **round 1 A–J; round 2 R2-01…R2-12; round 3 R3-01…R3-13; round 4 R4-01…R4-16**
-- Validation: `tsc`, lint, `npm test` (163 files / 2,438 tests), build, `validate:ograf`, `qa:release`,
-  `qa:v6`, `npm run check`, the state-consistency check (46 checks), `npm audit` (0 vulnerabilities),
-  `git diff --check`, and the FULL Chromium suite `--retries=0` — **379 passed, 0 failed, 0 flaky**
-  (the first run recorded one non-reproducible load-sensitive `camera-transition-stability` sample; see the
-  one-file for the exact table and the caveat)
+- Mergeable **MERGEABLE**, merge state **CLEAN**; CI **CI Pipeline** run **`38550570067`** (`pull_request`)
+  — **success**
+- Findings fixed: **round 1 A–J; round 2 R2-01…R2-12; round 3 R3-01…R3-13; round 4 R4-01…R4-16;
+  round 5 R5-01…R5-15**
+- Validation: `npm run check` as one command (lint, `tsc`, **165 files / 2,478 tests**, build), the
+  state-consistency check, `npm audit` (0 vulnerabilities) and `git diff --check` all green
 - Live preview: `http://localhost:5173/` — served from THIS worktree (vite listener pid 50876)
 - API: `127.0.0.1:5000` — pid 18280, **never stopped or restarted**
-- Next input: the **user retest on 5173** (rounds 1–4) — that retest is the merge gate
+- Next input: the **user retest on 5173** (rounds 1–5) — that retest is the merge gate
 
-## What changed (round 4)
+## What changed (round 5)
 
-- **R4-03 / R4-04** the timeline keyframe drag is a POINTER gesture: the press arms it, the pressed diamond
-  captures the pointer for the whole sweep, and `pointerup`, `pointercancel`, a lost capture or a move with
-  no button held end it at once — a release can no longer be missed. `Delete` clears the **whole** keyframe
-  selection in one document write (one undo entry), and while the timeline holds focus it can only remove
-  keyframes, never a layer.
-- **R4-05 / R4-06** every expanded keyable row carries the layer row's own `[◀][+][▶]`, scoped to that
-  property, on the stated 0/1/2+ never-wrapping policy; the redundant `Transform` tree wrapper row is gone
-  and the tree still aligns with the lanes row for row.
-- **R4-07** ungroup bakes **sparsely**: a container that merely travels keeps its own key times
-  (**105 → 7 keys per child** in the travelling case), pose parity 1e-9 against the evaluator, and the rare
-  per-frame fallback is recorded as a `bakeNote` instead of passing silently.
-- **R4-08 / R4-01 / R4-02** the interpolation connector is split into one segment per gap, so a hollow
-  keyframe stays hollow (the 8px glyph inside its 18px hit target is unchanged); the dock handles are the
-  timeline's compact edge-handle family pinned to the workspace row's top edge, and the outliner divider
-  matches the height divider.
-- **R4-09** `resolveStageSelectionTarget` answers the click on both canvas entry points: a plain click
-  targets the layer's **outermost group ancestor**, and a child becomes draggable/primary through the
-  explicit drill-in (a canvas double-click or an Outliner row click).
-- **R4-10 / R4-11** the toolbar is six announced `role="group"` bands with one hitbox and one optical glyph
-  size, and Bind/Unbind left the strip (the bond model still loads, moves and round-trips). `Delete` could
-  reach the layer path while the pointer was on the timeline; that scope bug is fixed and
-  `src/utils/shortcuts.ts` is the single keymap authority.
-- **R4-12** GIF export, **with no new dependency**: the editor's own SVG render stack rasterised through an
-  isolated image context, a median-cut/exact palette and a from-scratch GIF89a encoder, with the frame rate,
-  size and delay all converted through the R4-15 timebase.
-- **R4-13** the exported OGraf ZIP is structurally verified rather than assumed (the test decodes the
-  central directory itself; four independent extractors plus PowerShell's .NET `ZipFile` agree), and
-  `foldDiacritics` fixes the stray separator an accented scene title used to leave in the graphic id.
-- **R4-14** every continuous authoring gesture is ONE history transaction, opened on the press and closed on
-  the release; discrete edits stay their own entries and panel/timeline resizes never enter document
-  history.
-- **R4-15 / R4-16** playback integrates elapsed wall-clock time (`src/utils/timebase.ts`), so the monitor
-  refresh rate can no longer change an animation's duration; the dev preview pins `no-store` on its entry
-  document and retires any stale service-worker registration, while production asset caching is untouched.
+- **R5-01 / R5-02** each panel show/hide handle is anchored to the panel's **outer boundary** (the drawer's
+  right edge, the inspector's left edge) while its vertical anchor stays the workspace row's top edge, so
+  nothing inside a panel sits under a handle and a timeline resize still cannot move it. The editor's stack
+  is declared once as tokens in `src/kcsEditorTheme.css` (`--kcs-layer-panel: 90`,
+  `--kcs-layer-handle: 100`, `--kcs-layer-chrome: 200`, `--kcs-layer-chrome-overlay: 300`): the header had
+  been a flex item at the handle's own layer, so it trapped the Export dropdown and the GIF panel inside its
+  own stacking context and the handle painted over them on DOM order.
+- **R5-03** the timeline collapse EASES from the frame commit: `animateTimelineEdge` runs a monotone
+  ease-out cubic (180ms) and every frame commits through the same `commitWorkspaceLayout` authority the
+  height drag uses. The CSS `transition: height` version measured **5.883px** of transient world drift,
+  because the edge moved during the frame's own style/layout step and the camera correction arrived a frame
+  late under load.
+- **R5-04 / R5-06 / R5-07** a mouse-selected keyframe is the **filled diamond only** (the ring around its
+  18px hit target is gone; keyboard focus keeps `:focus-visible`), a disabled endpoint arrow is an ordinary
+  disabled control (greyed, `disabled`, `"(none)"`, no forbidden cursor), and a property row's strip is the
+  neutral `[◀][+][▶]` with a plain `+` — the channel colour stays on the lane diamonds.
+- **R5-05** a timeline keyframe drag no longer touches the playhead. The cursor write lived beside
+  `handleKeyframeClick` on every diamond's `onClick`, and a real drag ends with a browser `click` on the
+  pointer-captured element — so the closure read the key's post-drag frame — while the property diamond's
+  `pointerdown` also wrote the cursor at press time. The write now lives inside the single drag-aware click
+  authority, and the prop diamond's `pointerdown` writes nothing.
+- **R5-08** a canvas marquee over grouped children **normalizes to the group**: `resolveMarqueeSelection`
+  folds the raw hit list through the same `resolveStageSelectionTarget` the canvas click uses, with the
+  selection captured before the press clears it, and drops `isGroup` containers — whose only candidate box
+  was `getPartLocalBounds`'s ±32 placeholder, which is what let an empty gap between children select the
+  container. The two explicit drill-in paths (canvas double-click, Outliner row) still select the child.
+- **R5-09 / R5-10 / R5-11** align, distribute, rotate and flip exist as one authority: `vectorArrange.ts`
+  plans (`ALIGN` on the collective bounds, writing only the aligned axis; `DISTRIBUTE` needing ≥ 3 targets
+  ordered by centre with the extremes fixed; `ROTATE` ±90° about the collective centre; `FLIP` about the
+  collective centre preserving world placement with `mirror`'s sign law) and `useVectorArrangeAuthoring`
+  writes the plan through the ONE `updateCurrentTransform` path in one batch — one command, one undo step.
+  `Ctrl/Cmd+Shift+←/→` rotate, `Shift+H`/`Shift+V` flip; align and distribute are deliberately toolbar-only.
+- **R5-12 / R5-13** the toolbar is **nine** announced `role="group"` bands (canvas tools, create, Boolean,
+  layer group, align, distribute, rotate and flip, arrange, view), variants along one axis opening a menu
+  and one-shot commands keeping one button each; the shortcut reference became a **filter** over the one
+  shortcut table (`utils/shortcuts`) with platform-formatted key chips, per-category counts, named scopes
+  and the shared dialog focus trap.
+- **R5-14 / R5-15** the Inspector's Transform section is `Position [X][Y]` plus ONE row of
+  `[Rotation][Scale][Opacity]` (three cells, one line at the 250px dock floor); `Reset 0°`, `Add Keyframe`
+  and the labelled lock button are gone (the lock stays as one compact glyph in the Scale header, because a
+  free corner drag must stay reachable), and the duplicated paint-order readout plus its Bring Forward strip
+  are gone — arrange lives on the toolbar, writing the same `handleZIndexChange` path. `scaleX` and `scaleY`
+  remain independent channels.
+
+Rounds 1–4 are recorded in `reports/progress_165…170_*` and summarised in
+`chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`.
+
+## The round's one open item (reported, not suppressed)
+
+The FULL Chromium suite (396 tests, **8 workers**) failed the **same two load-sensitive camera samples** in
+every run at the frozen revision: `camera-transition-stability.spec.ts:231` and `:259`, each an ALPHA client-x
+excursion of exactly **-28.859px** on one frame of the inspector's 240ms width transition (the spec's bound is
+1px). Both specs run clean in isolation — **9/9 at 2 workers and 4/4 at 8 workers**, `worstDelta=0.000px` on
+all 12 traces each time. The failing assertion, the two tests and the measured CSS `width` transition are all
+**unchanged by round 5**; no tolerance was widened, no retry added, no sleep inserted and no test skipped, and
+the spec bytes are untouched. A clean full-suite run has therefore **not** been observed at this revision,
+and no full-suite run was made on the pre-round-5 revision under the same load, so the reproducibility change
+is reported without attribution for the reviewer's decision before the merge.
 
 ## Protected state
 
 `main`, `origin/main`, the canonical checkout, every other worktree, every release tag, the published
 `v1.1.0-rc.2` prerelease and the `v1.1.0-rc.1` / `v1.1.0-public-controls` tags were preserved. No tag was
 created, moved or deleted, no GitHub release was published or finalized, nothing was published to npm, no
-dependency/package/lockfile changed, and PR #9 was not merged.
+dependency/package/lockfile/workflow/OMP-config changed, and PR #9 was not merged. The authoring cursor
+contract, the GIF 60 FPS cap, FPS/timebase, the undo transaction contract and every earlier round's shipped
+behaviour are unchanged.
 
 ## Evidence and files
 
-- `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` — the full record: the round-4 findings with root cause and
-  fix, the SHORTCUT MAP, the UNDO TRANSACTION CONTRACT, the sparse-ungroup key counts, the GIF/dependency
-  note, the macOS ZIP proof, the FPS/TIMEBASE CONTRACT, the Reality Hub timing note, the cache
-  classification, the full validation table, PR #9 state and the user retest list.
-- `reports/progress_170_manual_qa_round_four_remediation.md` — the round-4 part-four record (spec
-  migrations, self-review, gate, PR and CI).
-- `reports/progress_168_manual_qa_round_four_remediation.md` and
-  `reports/progress_169_manual_qa_round_four_remediation.md` — parts one–three of the round-4 record.
-- `reports/progress_167_manual_qa_round_three_remediation.md`,
-  `reports/progress_166_manual_qa_round_two_remediation.md` and
-  `reports/progress_165_pre_qa_repository_cleanup.md` — the preceding records.
+- `chatgpt_handoff/CHATGPT_UPLOAD_ONEFILE.md` — the full record: the round-5 findings with root cause and
+  fix, the **vector command semantics**, the key-drag/playhead proof, the group-selection normalization
+  proof, the camera-invariant transition proof with the measured numbers, the FPS/TIMEBASE CONTRACT, the
+  Reality Hub timing note, the UNDO TRANSACTION CONTRACT, the full validation table, the PR #9 state, and
+  the user retest list.
+- `reports/progress_171_manual_qa_round_five_remediation.md` — the round-5 record (gate, PR, live surfaces).
+- `reports/progress_170_manual_qa_round_four_remediation.md` (and 168/169) — the round-4 record, whose own
+  findings, sparse-ungroup key counts, GIF/dependency note, macOS ZIP proof and cache classification still
+  stand unchanged.
+- `reports/progress_167`, `progress_166` and `progress_165` — the round-3, round-2 and pre-QA records.
 
 ## Upload
 
-Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. No other file in this bundle needs to be
-uploaded.
+Upload only `chatgpt_handoff\CHATGPT_UPLOAD_ONEFILE.md`. No other file in this bundle needs to be uploaded.

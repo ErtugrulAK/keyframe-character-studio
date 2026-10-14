@@ -119,3 +119,18 @@
 .stage-canvas-container.panning {
   cursor: grabbing;
 }
+
+/*
+ * Smart guides: the KCS accent lines a live snap draws through the matched
+ * geometry. Decorative chrome only — the overlay they live in is
+ * `pointer-events: none` and the lines are gone the moment the snap ends.
+ */
+.snap-guides {
+  pointer-events: none;
+}
+
+.snap-guide {
+  stroke: var(--accent-cyan);
+  opacity: 0.9;
+  stroke-dasharray: 4, 3;
+}

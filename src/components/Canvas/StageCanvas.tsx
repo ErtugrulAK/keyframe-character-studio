@@ -10,6 +10,17 @@ import { rotateAboutWorldPivot, selectionFrameCenterWorld, type WorldPoint } fro
 import { resolveCornerResize, resolveEdgeResize, type CornerBounds, type CornerId, type EdgeId } from '../../utils/cornerResize';
 import { stackingOrder } from '../../utils/stackingOrder';
 import { resolveMarqueeSelection, resolveStageSelectionTarget } from '../../utils/layerGrouping';
+import { collectArrangeTargets } from '../../utils/vectorArrange';
+import {
+  collectLayerSnapCandidates,
+  collectStageSnapCandidates,
+  resolveSnap,
+  unionWorldBounds,
+  SNAP_THRESHOLD_SCREEN_PX,
+  type SnapGuide,
+  type SnapLine,
+} from '../../utils/layoutGeometry';
+import type { PartWorldBounds } from '../../utils/bounds';
 import { clampZoom, clientToCameraPoint, getCursorAnchoredCameraCenter, getLocalDelta, getPartsInMarquee, getPointerDelta, getShapeCreationBounds, getShapeCreationPlacement, getStageCameraTransform, getStageFitScale, type StageBox, type StageCameraView } from '../../utils/viewportMath';
 import { EDITOR_CAMERA_CENTER, EDITOR_CAMERA_VIEWBOX, getProjectCenter } from '../../utils/projectCoordinates';
 import { REMEASURE_STAGE_BOX_COMMAND, WORKSPACE_LAYOUT_COMMAND_EVENT } from '../../utils/workspaceLayout';
@@ -65,6 +76,7 @@ export const StageCanvas: React.FC = () => {
     addCustomPart,
     updatePartMedia,
     showGrid,
+    snapEnabled,
     totalFrames,
     projectResolution,
     appMode,
@@ -237,6 +249,18 @@ export const StageCanvas: React.FC = () => {
   const [dragInitialAngle, setDragInitialAngle] = useState<number>(0);
   const [dragInitialLocalX, setDragInitialLocalX] = useState<number>(1);
   const [dragInitialLocalY, setDragInitialLocalY] = useState<number>(1);
+  /** The smart guides of the snap that is active right now (empty while free). */
+  const [snapGuides, setSnapGuides] = useState<SnapGuide[]>([]);
+
+  /**
+   * The snap context of the live translate drag, captured ONCE at pointerdown:
+   * the moving item's evaluated world box and every candidate line. Both are
+   * frozen for the gesture because the drag writes the moving layers on every
+   * move — re-measuring them mid-drag would make the moving box (and therefore
+   * the snap) chase its own writes. `pxPerWorld` is the camera scale at the
+   * moment the drag began, so the screen-pixel threshold stays stable.
+   */
+  const dragSnapRef = useRef<{ bounds: PartWorldBounds; candidates: SnapLine[]; pxPerWorld: number } | null>(null);
 
   const selectedPart = characterParts.find((p) => p.id === selectedPartId);
   const selectedTransform = selectedPartId ? getComputedTransform(selectedPartId, currentFrame) : null;
@@ -353,6 +377,36 @@ export const StageCanvas: React.FC = () => {
 
     const transform = getComputedTransform(dragTargetId, currentFrame);
     if (!transform) return;
+
+    // The snap context for this gesture, frozen now: the moving item's evaluated
+    // world box (the union of the selection's group-aware boxes) and every
+    // candidate line. `SNAP_THRESHOLD_SCREEN_PX` is a SCREEN radius; the camera
+    // scale converts it to world units so the feel is identical at any zoom.
+    const dragSelectionIds = selectedPartIds.includes(dragTargetId) ? canvasSelectionIds : [dragTargetId];
+    const worldOf = (id: string) => getComputedTransform(id, currentFrame);
+    const movingTargets = collectArrangeTargets(characterParts, dragSelectionIds, worldOf);
+    const movingBounds = movingTargets.length > 0
+      ? unionWorldBounds(movingTargets.map((target) => target.bounds))
+      : null;
+    const stageBounds: PartWorldBounds = {
+      minX: EDITOR_CAMERA_CENTER.x - projectResolution.width / 2,
+      minY: EDITOR_CAMERA_CENTER.y - projectResolution.height / 2,
+      maxX: EDITOR_CAMERA_CENTER.x + projectResolution.width / 2,
+      maxY: EDITOR_CAMERA_CENTER.y + projectResolution.height / 2,
+    };
+    const candidates = [
+      ...collectStageSnapCandidates(stageBounds),
+      ...collectLayerSnapCandidates({
+        parts: characterParts,
+        movingIds: movingTargets.map((target) => target.id),
+        worldOf,
+        isVisible: (part) => tracks.find((track) => track.partId === part.id)?.editVisible !== false,
+      }),
+    ];
+    dragSnapRef.current = movingBounds
+      ? { bounds: movingBounds, candidates, pxPerWorld: Math.max(1e-6, zoomLevel * (cameraView?.baseScale ?? 1)) }
+      : null;
+    setSnapGuides([]);
 
     startBatchInteraction();
     setIsDragging(true);
@@ -587,12 +641,31 @@ export const StageCanvas: React.FC = () => {
           groupDragMovedRef.current = true;
           suppressClickSelectRef.current = groupBodyDragRef.current !== null;
         }
+        // Snap the PROPOSED world delta onto the frozen candidate lines. X and Y
+        // resolve independently, so a corner lock is two axis snaps; the guides
+        // are the matched lines the overlay draws. Snapping changes only the
+        // authored transform delta — never the camera.
+        const snapContext = dragSnapRef.current;
+        let snappedDx = deltaX;
+        let snappedDy = deltaY;
+        if (snapContext) {
+          const resolution = resolveSnap({
+            movingBounds: snapContext.bounds,
+            delta: { x: deltaX, y: deltaY },
+            candidates: snapContext.candidates,
+            thresholdWorld: SNAP_THRESHOLD_SCREEN_PX / snapContext.pxPerWorld,
+            enabled: snapEnabled,
+          });
+          snappedDx = resolution.delta.x;
+          snappedDy = resolution.delta.y;
+          setSnapGuides(resolution.guides);
+        }
         // ONE contract: updateCurrentTransform takes WORLD x/y and converts to
         // container-local per part (and propagates bonds). Passing the primary
         // part's world position moves the whole selection when it is multi.
         updateCurrentTransform({
-          x: dragStart.initialTransform.x + deltaX,
-          y: dragStart.initialTransform.y + deltaY,
+          x: dragStart.initialTransform.x + snappedDx,
+          y: dragStart.initialTransform.y + snappedDy,
         });
         return;
       }
@@ -672,7 +745,7 @@ export const StageCanvas: React.FC = () => {
       }
     },
     // The pointer-up effect owns the current mouse-up callback; adding the later-declared callback here would create a declaration cycle.
-    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked]
+    [isDragging, dragMode, dragStart, clientToSVG, dragInitialAngle, dragInitialLocalX, dragInitialLocalY, selectedPartId, updateCurrentTransform, shapeCreationStart, pendingShapeType, isScaleLocked, snapEnabled]
   );
 
   const handleMouseUp = useCallback((commitShape: boolean = true) => {
@@ -719,6 +792,11 @@ export const StageCanvas: React.FC = () => {
     // gesture refs only retire here.
     groupBodyDragRef.current = null;
     groupDragMovedRef.current = false;
+
+    // The snap guides are chrome of the live gesture: they go the moment the
+    // drag does, along with the frozen context that produced them.
+    dragSnapRef.current = null;
+    setSnapGuides([]);
 
     if (isDragging) endBatchInteraction();
     setIsDragging(false);
@@ -1151,6 +1229,36 @@ export const StageCanvas: React.FC = () => {
                 vectorEffect="non-scaling-stroke"
                 pointerEvents="none"
               />
+
+              {/* Smart guides of the live snap: decorative chrome, no pointer
+                  events, gone the instant the snap is no longer active. */}
+              {snapGuides.length > 0 && (
+                <g className="snap-guides" pointerEvents="none" aria-hidden="true">
+                  {snapGuides.map((guide) => (guide.axis === 'x'
+                    ? (
+                      <line
+                        key={`snap-x-${guide.value}`}
+                        className="snap-guide"
+                        x1={guide.value}
+                        y1={0}
+                        x2={guide.value}
+                        y2={EDITOR_CAMERA_VIEWBOX.height}
+                        strokeWidth={1 / zoomLevel}
+                      />
+                    )
+                    : (
+                      <line
+                        key={`snap-y-${guide.value}`}
+                        className="snap-guide"
+                        x1={0}
+                        y1={guide.value}
+                        x2={EDITOR_CAMERA_VIEWBOX.width}
+                        y2={guide.value}
+                        strokeWidth={1 / zoomLevel}
+                      />
+                    )))}
+                </g>
+              )}
 
               {/* Interactive Transform Gizmo (Only in Edit Mode when not hard-hidden) */}
               {appMode !== 'broadcast' && (
